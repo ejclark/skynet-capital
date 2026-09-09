@@ -3,10 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { fetchDesk, matchesFilter, parseDeskQuery, toggleQualifier } from "../live/desk";
-import { BlotterRow } from "../shell/blotter-row";
 import { DeskRail } from "../shell/desk-rail";
+import { DeskTilesGrid } from "../shell/desk-tiles-grid";
 import { PageFrame } from "../shell/frame";
 import { LandmarkHero } from "../shell/landmark-hero";
+import { PositionsTable } from "../shell/positions-table";
 import { ViewTabs } from "../shell/view-tabs";
 
 /**
@@ -123,70 +124,12 @@ function DeskPage(): ReactElement {
         <p className="note-stop">Account unreachable — this desk can't read positions right now.</p>
       ) : (
         <>
-          <div className="desk-tiles">
-            <div className="desk-tile">
-              <span className="desk-k">Open positions</span>
-              <span className="desk-v num">{d.tiles.openPositions}</span>
-            </div>
-            <div className="desk-tile">
-              <span className="desk-k">Invested</span>
-              <span className="desk-v num">{d.tiles.invested}</span>
-            </div>
-            <div className="desk-tile">
-              <span className="desk-k">Day P/L</span>
-              <span className={`desk-v num tone-${d.tiles.dayTone}`}>{d.tiles.dayPl}</span>
-              <span className="desk-note">today's move</span>
-            </div>
-            <div className="desk-tile">
-              <span className="desk-k">Unrealized</span>
-              <span className={`desk-v num tone-${d.tiles.unrealizedTone}`}>
-                {d.tiles.unrealized}
-              </span>
-              <span className="desk-note">{d.tiles.unrealizedNote}</span>
-            </div>
-            <div className="desk-tile">
-              <span className="desk-k">Cash</span>
-              <span className="desk-v num">{d.tiles.cash}</span>
-              <span className="desk-note">dry powder</span>
-            </div>
-          </div>
+          <DeskTilesGrid tiles={d.tiles} />
 
           <ViewTabs deskId={d.id} query={query} onPick={setFilter} />
           <FilterBar query={query} onChange={setFilter} />
 
-          {shown.length === 0 ? (
-            <p className="note">
-              {d.positions.length === 0
-                ? "No open positions — waiting is a position."
-                : "No positions match this filter."}
-            </p>
-          ) : (
-            <div className="blotter-card">
-              <div className="blotter-scroll">
-                <table className="blotter">
-                  <thead>
-                    <tr>
-                      <th className="fold-col" aria-label="Row detail" />
-                      <th>Symbol</th>
-                      <th className="num">Qty</th>
-                      <th className="num col-detail">Cost / share</th>
-                      <th className="num">Mark</th>
-                      <th className="num col-detail">Cost basis</th>
-                      <th className="num">Value</th>
-                      <th className="num col-detail">Day P/L</th>
-                      <th className="num">Total P/L</th>
-                      <th className="num col-detail">Return</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shown.map((position) => (
-                      <BlotterRow key={position.symbol} position={position} deskId={d.id} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          <PositionsTable positions={shown} deskId={d.id} totalCount={d.positions.length} />
         </>
       )}
       {d.error ? null : (

@@ -64,6 +64,7 @@ function ExitIcon(): ReactElement {
 /** Every route under the Profile rail lights the Profile tab. `/` is a thin redirect to
  *  `/leaderboard` now (#2321), so it no longer belongs to this family. */
 export const PROFILE_PATHS = [
+  "/accounts",
   "/learn",
   "/onboarding",
   "/playbooks",
