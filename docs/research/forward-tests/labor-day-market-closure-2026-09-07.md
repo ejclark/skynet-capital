@@ -355,3 +355,49 @@ that reasoning no longer holds and is corrected here.** With `closeOutWithinDays
 out after **2026-09-13**, banking one score halves what a missed dispatch would orphan, from two tests
 to one. The 23:48 refusal was still right on its own terms (it declined to *engineer* a boundary
 crossing); what changed is that the boundary passed on its own.
+
+**A scoring hazard on the Treasury side — found 2026-09-09 08:02 ET, before FT-…-2 is scored. No row
+above is edited.** Every hazard recorded here so far has been a Yahoo bar. This one is
+`api.fiscaldata.treasury.gov`: an auction that has not priced yet returns `bid_to_cover_ratio` as the
+**string `"null"`**, not JSON `null`. `Number("null")` is **NaN**, and the obvious filter
+(`value !== null`) admits it. Observed live in this session — today's unpriced `91282CRF0` entered a
+10Y trailing-12 series and turned its mean into `NaN`. That failure is loud and therefore safe; the
+variants that are **not** loud are the risk: `Number(x) || 0` scores an unpriced auction as a **0.00
+bid-to-cover**, which drags a 12-auction trailing mean down by roughly 0.2 and would make nearly any
+print look strong against it. `parseFloat` gives NaN silently inside a comparison, and `NaN < 2.35`
+is `false`, so a naive scorer would read an unpriced auction as a **pass**.
+
+**Guard for FT-…-2, in force from now:** coerce the literal string `"null"` to null before any
+numeric conversion, and score only a row whose own `bid_to_cover_ratio` parses to a **finite** number.
+If it does not, the test is unscorable that pull — never inferred from a neighbouring auction and
+never defaulted. The check is on the **2026-09-09** `91282CRF0` row specifically, matched by CUSIP.
+Repo-side: nothing under `src/`, `scripts/` or `app/` reads `auctions_query` (grep, this session), so
+this is a hazard for lane sessions doing the arithmetic by hand, not a defect in shipped code.
+
+**A pre-print prior, committed 2026-09-09 08:02 ET — about five hours before the auction.** Pairing
+every 10Y with the 3Y auctioned 1–4 days earlier (**n=183**, 2010-01 → 2026-08; 182 of them at a
+1-day gap), each auction's bid-to-cover taken as an excess over its own trailing-12 same-tenor:
+
+| | n | mean 10Y excess | P(10Y ≥1.0sd below its trailing-12) |
+|---|---|---|---|
+| All pairs | 183 | +0.036 | **10.9% (20/183)** |
+| After a **firm** 3Y (excess > 0) | 90 | **+0.067** | **7.8% (7/90)** |
+| After a **soft** 3Y (excess ≤ 0) | 93 | +0.007 | 14.0% (13/93) |
+
+Carry-over is real but weak: **Pearson +0.223, Spearman +0.152**. 2026's 3Y was firm (**+0.064**,
+z +0.77), and the registered **2.35** line is deeper than 1.0sd — **z −1.29** against the all-taps
+trailing-12 and **z −1.82** against the on-cycle one, whose historical base rates are **4.4%** and
+**1.1%**. **So FT-…-2 is expected to pass at roughly 95–99%.** This is registered as a prior and
+**not as a new forward test**: it predicts the same auction FT-…-2 already registers, and a second row
+would score one event twice. Its purpose is to fix, in advance, how much a pass is allowed to mean —
+**almost nothing, exactly as with FT-…-1; only a fail carries information.** Two counterweights are
+recorded with it rather than netted out: September is the 10Y's weakest month (mean excess **−0.054**,
+n=32), and the auction sits inside a live oil shock (Brent above **$100** intraday on 09-09, +7%).
+
+**Anchor cohorts re-derived at 08:02 ET, with one that does not reproduce.** On-cycle (≥$30B)
+trailing-12 comes back **2.5017 / sd 0.0832**, matching the 2026-09-08 20:01 ET reading (2.502) on the
+mean to four figures. All-taps comes back **2.4650 / sd 0.0889** against the **2.451 / 0.098** stated
+at registration — the difference is which off-cycle `9-Year N-Month` taps a cohort admits. The
+on-cycle cohort is definition-stable and the all-taps one is not. **This changes nothing about
+scoring:** FT-…-2 scores on the literal registered line, **bid-to-cover ≥ 2.35 passes**, as
+pre-committed on 2026-09-08 at 13:52 ET. The cohort question governs only how extreme a fail reads.
