@@ -70,15 +70,61 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
 };
 
 /**
- * S2 (never hold the print) + E1 (don't trade the open), entry side. Returns null to drop the
- * buy, or the intent untouched. The S2 exit side (flattening an EXISTING position before a
- * print) is an action, not a clamp — it belongs to the playbook engine, which owns exits.
+ * Why a raw intent never made it into `approved` — named so a caller can compute the guard's
+ * opportunity cost (would this have paid off?) without re-deriving the logic below. Kept as a
+ * closed, stable string union: a new refusal path in this file must add a case here rather than
+ * falling through to a vague default, which is exactly what made refusals unattributed before.
+ */
+export type GuardRefusalReason =
+  /** The graduated risk ladder's BLOCK rung (buys only — see `applyGuards`'s own comment on why
+   *  gating buys alone is sufficient). */
+  | "ladder-block"
+  /** S2: a print falls inside the flat window and the intent didn't claim `allowThroughPrint`. */
+  | "s2-print"
+  /** E1: before the configured open-deferral time and the intent didn't claim `urgent`. */
+  | "e1-open"
+  /** #885's symbol-targeting filter: the subscription aims at OTHER symbols only. */
+  | "subscription-filter"
+  /** No live quote for the symbol, or a non-positive ask — nothing to size against. */
+  | "no-quote"
+  /** Cash on hand rounds down to zero shares at the ask. */
+  | "insufficient-cash"
+  /** The per-position cap (`maxPositionPct`) leaves zero room at the current equity/holding. */
+  | "position-cap"
+  /** The subscription's own capital allocation leaves zero room. */
+  | "subscription-budget"
+  /** A sell against a symbol with nothing (or a non-positive quantity) held. */
+  | "nothing-held";
+
+/** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
+ *  paired with which rule refused it. */
+export interface GuardRefusal {
+  readonly intent: OrderIntent;
+  readonly reason: GuardRefusalReason;
+}
+
+/** `approved` is exactly what `applyGuards` has always returned; `refused` is additive — every
+ *  raw intent this cycle that did NOT make it into `approved`, in original order, each with the
+ *  specific rule that dropped it. `refused.length === intents.length - approved.length` always. */
+export interface GuardResult {
+  readonly approved: readonly OrderIntent[];
+  readonly refused: readonly GuardRefusal[];
+}
+
+type DisciplineOutcome =
+  | { readonly ok: true; readonly intent: OrderIntent }
+  | { readonly ok: false; readonly reason: "s2-print" | "e1-open" };
+
+/**
+ * S2 (never hold the print) + E1 (don't trade the open), entry side. The S2 exit side
+ * (flattening an EXISTING position before a print) is an action, not a clamp — it belongs to the
+ * playbook engine, which owns exits.
  */
 function clampDiscipline(
   intent: OrderIntent,
   context: MarketContext,
   discipline: TradeDiscipline,
-): OrderIntent | null {
+): DisciplineOutcome {
   const print = printWithin(
     intent.symbol,
     context.asOf,
@@ -86,14 +132,32 @@ function clampDiscipline(
     discipline.calendar,
   );
   if (print && !intent.allowThroughPrint) {
-    return null; // S2: don't open what you'd be forced to flatten before the print.
+    return { ok: false, reason: "s2-print" }; // don't open what you'd be forced to flatten before the print.
   }
   const openUntil = discipline.deferOpenUntilEt ?? "10:00";
   if (!intent.urgent && etTimeOf(context.asOf) < openUntil) {
-    return null; // E1: the open's spread is a certain cost; a non-urgent entry can wait it out.
+    return { ok: false, reason: "e1-open" }; // the open's spread is a certain cost; a non-urgent entry can wait.
   }
-  return intent;
+  return { ok: true, intent };
 }
+
+type BuySizingOutcome =
+  | { readonly ok: true; readonly intent: OrderIntent }
+  | {
+      readonly ok: false;
+      readonly reason: Extract<
+        GuardRefusalReason,
+        | "subscription-filter"
+        | "no-quote"
+        | "insufficient-cash"
+        | "position-cap"
+        | "subscription-budget"
+      >;
+    };
+
+type SellSizingOutcome =
+  | { readonly ok: true; readonly intent: OrderIntent }
+  | { readonly ok: false; readonly reason: Extract<GuardRefusalReason, "nothing-held"> };
 
 /** Clamp a buy so it neither overspends cash nor breaches the per-position cap. */
 function clampBuy(
@@ -101,10 +165,10 @@ function clampBuy(
   portfolio: Portfolio,
   context: MarketContext,
   config: RiskConfig,
-): OrderIntent | null {
+): BuySizingOutcome {
   const quote = context.quotes[intent.symbol];
   if (!quote || quote.ask <= 0) {
-    return null;
+    return { ok: false, reason: "no-quote" };
   }
 
   // Subscription capital sub-allocation: a playbook trades exactly one symbol, so
@@ -118,7 +182,7 @@ function clampBuy(
   // only, same posture as every discipline guard in this file: a guard blocks opening risk, never
   // closing it, so an exit is never gated by this filter (see `clampSell`).
   if (subscription?.symbols?.length && !subscription.symbols.includes(intent.symbol)) {
-    return null;
+    return { ok: false, reason: "subscription-filter" };
   }
 
   const equity = computeEquity(portfolio, context.quotes);
@@ -127,37 +191,50 @@ function clampBuy(
 
   const affordable = Math.floor(portfolio.cash / quote.ask);
   const withinPosition = Math.floor(positionBudget / quote.ask);
+
+  const subscriptionBudgetShares = subscription
+    ? Math.floor(Math.max(0, subscription.capitalAllocated - existingValue) / quote.ask)
+    : undefined;
+
   const bounds = [intent.quantity, affordable, withinPosition];
-
-  if (subscription) {
-    const subscriptionBudget = Math.max(0, subscription.capitalAllocated - existingValue);
-    bounds.push(Math.floor(subscriptionBudget / quote.ask));
-  }
-
+  if (subscriptionBudgetShares !== undefined) bounds.push(subscriptionBudgetShares);
   const quantity = Math.min(...bounds);
 
-  return quantity > 0 ? { ...intent, quantity } : null;
+  if (quantity > 0) {
+    return { ok: true, intent: { ...intent, quantity } };
+  }
+  // Attribute the specific bound that hit zero — checked in the same priority a reader would
+  // reach for the fix: no cash at all is the most actionable, the position cap next, the
+  // subscription's own allocation last (it's the narrowest and rarest budget of the three).
+  if (affordable <= 0) return { ok: false, reason: "insufficient-cash" };
+  if (withinPosition <= 0) return { ok: false, reason: "position-cap" };
+  return { ok: false, reason: "subscription-budget" };
 }
 
 /** Clamp a sell so it never sells more than is actually held (no accidental shorting). */
-function clampSell(intent: OrderIntent, portfolio: Portfolio): OrderIntent | null {
+function clampSell(intent: OrderIntent, portfolio: Portfolio): SellSizingOutcome {
   const held = heldQuantity(portfolio, intent.symbol);
   const quantity = Math.min(intent.quantity, Math.max(0, held));
-  return quantity > 0 ? { ...intent, quantity } : null;
+  return quantity > 0
+    ? { ok: true, intent: { ...intent, quantity } }
+    : { ok: false, reason: "nothing-held" };
 }
 
 /**
- * Apply all guards to a batch of intents against a single portfolio snapshot.
- * Note: guards size each intent against the *starting* portfolio for the cycle;
- * intra-cycle interaction between orders is deliberately out of scope for slice 1.
+ * Apply all guards to a batch of intents against a single portfolio snapshot, and say why for
+ * every one that didn't survive — the data `docs/plans/where-are-we-documenting-*.md`'s "guard
+ * opportunity cost" measure scores against. Note: guards size each intent against the *starting*
+ * portfolio for the cycle; intra-cycle interaction between orders is deliberately out of scope
+ * for slice 1.
  */
-export function applyGuards(
+export function applyGuardsWithVerdicts(
   intents: readonly OrderIntent[],
   portfolio: Portfolio,
   context: MarketContext,
   config: RiskConfig = DEFAULT_RISK_CONFIG,
-): OrderIntent[] {
+): GuardResult {
   const approved: OrderIntent[] = [];
+  const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   for (const intent of intents) {
     // The ladder's BLOCK rung, ahead of everything else: no point sizing an order that is refused.
@@ -167,23 +244,42 @@ export function applyGuards(
     // blocking buys alone satisfies the rung exactly: new risk is refused, EXISTING POSITIONS ARE
     // UNTOUCHED, and exits stay open — including the force-flatten sells the bottom rung emits.
     if (intent.side === "buy" && ladderBlocks) {
+      refused.push({ intent, reason: "ladder-block" });
       continue;
     }
     // Trade discipline next (S2/E1, buys only): a dropped entry needs no sizing.
-    const disciplined =
-      intent.side === "buy" && config.discipline
-        ? clampDiscipline(intent, context, config.discipline)
-        : intent;
-    if (!disciplined) {
-      continue;
+    let disciplined = intent;
+    if (intent.side === "buy" && config.discipline) {
+      const outcome = clampDiscipline(intent, context, config.discipline);
+      if (!outcome.ok) {
+        refused.push({ intent, reason: outcome.reason });
+        continue;
+      }
+      disciplined = outcome.intent;
     }
-    const guarded =
+    const outcome =
       disciplined.side === "buy"
         ? clampBuy(disciplined, portfolio, context, config)
         : clampSell(disciplined, portfolio);
-    if (guarded) {
-      approved.push(guarded);
+    if (outcome.ok) {
+      approved.push(outcome.intent);
+    } else {
+      refused.push({ intent, reason: outcome.reason });
     }
   }
-  return approved;
+  return { approved, refused };
+}
+
+/**
+ * The pre-existing surface — every current caller (the trading engine, the readiness evals, the
+ * risk specs) keeps this exact signature and behavior unchanged. `applyGuardsWithVerdicts` is the
+ * additive superset the autonomous audit trail reads from.
+ */
+export function applyGuards(
+  intents: readonly OrderIntent[],
+  portfolio: Portfolio,
+  context: MarketContext,
+  config: RiskConfig = DEFAULT_RISK_CONFIG,
+): OrderIntent[] {
+  return [...applyGuardsWithVerdicts(intents, portfolio, context, config).approved];
 }

@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderForecast } from "../domain/types.js";
+import type { GuardRefusalReason } from "../engine/guards.js";
 import { formatPrice } from "./desk-data.js";
 
 /**
@@ -29,10 +30,25 @@ interface CycleOutcomeView {
   readonly fill?: string;
 }
 
+/** Human-readable label per `GuardRefusalReason` — the exact finding a doctrine call sheet quotes
+ *  ("Sauron wanted NVDA at −0.82 panic; S2 blocked it") reads from this, not the raw enum value. */
+const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
+  "ladder-block": "blocked by the risk ladder",
+  "s2-print": "blocked by S2 (flat through the print)",
+  "e1-open": "deferred by E1 (waiting out the open)",
+  "subscription-filter": "outside the subscription's aimed symbols",
+  "no-quote": "no live quote for the symbol",
+  "insufficient-cash": "insufficient cash",
+  "position-cap": "the per-position cap left no room",
+  "subscription-budget": "the subscription's own budget was exhausted",
+  "nothing-held": "nothing held to sell",
+};
+
 /** A raw intent the risk guards refused outright — nothing survived to become an `IntentOutcome`,
- *  so this is the persona's own ask, unfiltered. `applyGuards` does not yet name which guard fired
- *  (S2, E1, the ladder, the position cap) — see `docs/plans/where-are-we-documenting-*.md` PR 2 —
- *  so this is deliberately unattributed rather than guessed. */
+ *  so this is the persona's own ask, unfiltered. `guardReason` is present whenever
+ *  `DecisionRecord.refusals` was captured (see `applyGuardsWithVerdicts`); absent for records
+ *  written before that field existed, or for a path (beta-scout) that hasn't wired it yet — in
+ *  which case this is honestly unattributed rather than guessed. */
 interface RefusedIntentView {
   readonly symbol: string;
   readonly side: string;
@@ -40,6 +56,7 @@ interface RefusedIntentView {
   readonly strategy?: string;
   readonly reason: string;
   readonly expectation?: string;
+  readonly guardReason?: string;
 }
 
 export interface DecisionCycleView {
@@ -124,13 +141,19 @@ export function decisionCyclesView(records: readonly DecisionRecord[]): Decision
         })),
         ...(status === "refused"
           ? {
-              refusedIntents: record.rawIntents.map((intent) => ({
-                symbol: intent.symbol,
-                side: intent.side,
-                quantity: intent.quantity,
-                ...(intent.strategy ? { strategy: intent.strategy } : {}),
-                reason: intent.reason,
-                ...(intent.expectation ? { expectation: intent.expectation } : {}),
+              // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
+              // record captured it; fall back to the bare raw intents (no guard named) for a
+              // record written before that field existed, or a path that doesn't populate it yet.
+              refusedIntents: (
+                record.refusals ?? record.rawIntents.map((intent) => ({ intent }))
+              ).map((r) => ({
+                symbol: r.intent.symbol,
+                side: r.intent.side,
+                quantity: r.intent.quantity,
+                ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
+                reason: r.intent.reason,
+                ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
+                ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
               })),
             }
           : {}),

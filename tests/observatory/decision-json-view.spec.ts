@@ -79,6 +79,41 @@ describe("decisionCyclesView", () => {
     expect(view[0]?.outcomes).toEqual([]);
   });
 
+  it("names the specific guard on a refusal when refusals were captured", () => {
+    // The exact finding this whole capture chain exists to surface, verbatim.
+    const nvda = intent({
+      symbol: "NVDA",
+      side: "buy",
+      quantity: 60,
+      reason: "Imposing order: panic -0.82 exhausting — claiming the discarded at 1.12x",
+    });
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [nvda],
+        guardedIntents: [],
+        outcomes: [],
+        refusals: [{ intent: nvda, reason: "s2-print" }],
+      }),
+    ]);
+    expect(view[0]?.refusedIntents?.[0]).toMatchObject({
+      symbol: "NVDA",
+      guardReason: "blocked by S2 (flat through the print)",
+    });
+  });
+
+  it("falls back to an unattributed refusal when the record predates guard-reason capture", () => {
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [intent({ symbol: "NVDA" })],
+        guardedIntents: [],
+        outcomes: [],
+        // no `refusals` field — an older record, or a path that hasn't wired it yet.
+      }),
+    ]);
+    expect(view[0]?.refusedIntents?.[0]).not.toHaveProperty("guardReason");
+    expect(view[0]?.refusedIntents?.[0]?.symbol).toBe("NVDA");
+  });
+
   it("never mixes refusedIntents into a cycle that has real outcomes — a partial clamp is not a refusal", () => {
     const view = decisionCyclesView([
       record({
