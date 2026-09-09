@@ -1,0 +1,11 @@
+{
+  "id": "uk-ppi-2026-12-16",
+  "kind": "macro-print",
+  "title": "UK PPI — November 2026 producer price inflation (ONS, 07:00 London / 02:00 ET), the same minute as UK CPI and inside the MPC's final meeting day",
+  "date": "2026-12-16",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/producerpriceinflationuknovember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Producer price inflation, UK: November 2026', 'Release date: 16 December 2026 7:00am', and 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-12-16, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-12-16 LANE, 2026-09-09. Why it earns a slot: it publishes at the SAME 07:00 London minute as UK CPI, on the day the December MPC meeting ends (BoE minutes convention — the 17 December announcement follows a meeting ending 16 December), so any 02:00 ET sterling or gilt tick that morning has two candidate causes and only one of them is the one the parent ledger is about. Same reason uk-ppi-2026-11-18 was proposed by the uk-cpi-2026-11-18 lane. It also carries the cleanest read on the SI 2026/987 electricity VAT zero-rate: the zero rate covers DOMESTIC supply only, so business electricity keeps its VAT and PPI input costs see the Ofgem cap without the tax cut — the counterfactual CPI cannot show. Tiered LOW on the same grounds as its CPI sibling: symbols: [], no rates- or sterling-keyed house playbook, and this calendar's whole symbol universe is eight US mega-caps. Estimate widens caution only; it licenses no date-keyed action."
+}
