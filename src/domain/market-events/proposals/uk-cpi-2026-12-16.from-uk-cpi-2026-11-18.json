@@ -1,0 +1,11 @@
+{
+  "id": "uk-cpi-2026-12-16",
+  "kind": "macro-print",
+  "title": "UK CPI — November 2026 consumer price inflation (ONS, 07:00 London / 02:00 ET), the last data the MPC sees before it votes on 17 December",
+  "date": "2026-12-16",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/consumerpriceinflationuknovember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Consumer price inflation, UK: November 2026', 'Release date: 16 December 2026 7:00am', and states 'This release is not yet published'. The one-day gap to the MPC is corroborated from a second primary: bankofengland.co.uk/monetary-policy/upcoming-mpc-dates, fetched direct 2026-09-09, lists 'Thursday 17 December' as a 2026 announcement date WITHOUT a Monetary Policy Report. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-11-18, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-11-18 LANE, 2026-09-09. Why it earns a slot: it prints 07:00 London the morning BEFORE the 2026-12-17 MPC announcement, exactly the placement uk-cpi-2026-09-16 held for the September vote, and it is the SECOND month of the SI 2026/987 electricity VAT zero-rate rather than the first — so the year-on-year electricity effect is fully in the base by then while the month-on-month step is gone. That makes it the cleaner read of the two: the October print (2026-11-18) mixes the VAT cut with the +4% Ofgem cap step and the +8% gas move in one month, and the November print does not. It also lands 41 days after the 05 November Monetary Policy Report, so it is the second observation against that forecast round rather than the first. Tiered LOW on the same grounds as its siblings: symbols: [], no rates- or sterling-keyed house playbook, attribution value only. Estimate widens caution only."
+}
