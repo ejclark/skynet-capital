@@ -178,7 +178,7 @@ function DeskPage(): ReactElement {
                       <th>Symbol</th>
                       <th className="num">Qty</th>
                       <th className="num col-detail">Cost / share</th>
-                      <th className="num">Price</th>
+                      <th className="num">Mark</th>
                       <th className="num col-detail">Cost basis</th>
                       <th className="num">Value</th>
                       <th className="num col-detail">Day P/L</th>
