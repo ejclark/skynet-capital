@@ -2,7 +2,7 @@
 
 | # | Hypothesis | Prediction | Kill switch | Score by | Outcome |
 |---|---|---|---|---|---|
-| FT-labor-day-market-closure-2026-09-07-1 | **The Labor Day vol rebound, measured with its own control** — implied vol is marked down into the pre-holiday Friday close and snaps back on reopen ([ledger leg 7](../events/labor-day-market-closure-2026-09-07.md)). Registered **2026-09-06 at D-1**, so it scores in two days rather than in a future quarter. Base rates from SPY/^VIX daily bars 1993-01-29 → 2026-09-04, instrument cache busted first: **Labor Day 82% (27/33)**, median ΔVIX **+0.680**; any Monday holiday **75% (120/161)**, **+0.590**; ordinary weekend **61% (935/1,529)**, **+0.240**; and mean ΔVIX on the pre-holiday Friday itself **−0.233**. **The prior is stated at registration and it is high, so a pass is weak and only a fail carries information** — 27 of 33 prior instances would have passed. It is registered anyway because this is the [presidents-day sibling's](../events/presidents-day-market-closure-2027-02-15.md) headline claim getting its first live scored instance, and because this session's control changes what it means: conditioned on Friday VIX < 15 (today: **14.53**), an **ordinary** weekend already reopens higher **68% (353/521)** against **50% (1,492/2,956)** for any session — most of the effect is the weekend, and only ~14pp is the extra holiday day | **^VIX closes above 14.53** (its 2026-09-04 close) on Tuesday **2026-09-08** | VIX closing **at or below 14.53** on 2026-09-08 — the live instance fails and the stance's short-vol-carry caution drops back to a historical base rate with no 2026 observation behind it. **Confound named before the fact, and it runs WITH the prediction, not against it:** 09-08 also carries the 3Y note, ~$304B of displaced bill supply, and the first pricing of two calendar days of weekend news — so a pass cannot be attributed to the holiday gap alone and is scored as an observation, never as a mechanism. **Void** (not scored) if NYSE trades on 2026-09-07 | 2026-09-09 | _open_ |
+| FT-labor-day-market-closure-2026-09-07-1 | **The Labor Day vol rebound, measured with its own control** — implied vol is marked down into the pre-holiday Friday close and snaps back on reopen ([ledger leg 7](../events/labor-day-market-closure-2026-09-07.md)). Registered **2026-09-06 at D-1**, so it scores in two days rather than in a future quarter. Base rates from SPY/^VIX daily bars 1993-01-29 → 2026-09-04, instrument cache busted first: **Labor Day 82% (27/33)**, median ΔVIX **+0.680**; any Monday holiday **75% (120/161)**, **+0.590**; ordinary weekend **61% (935/1,529)**, **+0.240**; and mean ΔVIX on the pre-holiday Friday itself **−0.233**. **The prior is stated at registration and it is high, so a pass is weak and only a fail carries information** — 27 of 33 prior instances would have passed. It is registered anyway because this is the [presidents-day sibling's](../events/presidents-day-market-closure-2027-02-15.md) headline claim getting its first live scored instance, and because this session's control changes what it means: conditioned on Friday VIX < 15 (today: **14.53**), an **ordinary** weekend already reopens higher **68% (353/521)** against **50% (1,492/2,956)** for any session — most of the effect is the weekend, and only ~14pp is the extra holiday day | **^VIX closes above 14.53** (its 2026-09-04 close) on Tuesday **2026-09-08** | VIX closing **at or below 14.53** on 2026-09-08 — the live instance fails and the stance's short-vol-carry caution drops back to a historical base rate with no 2026 observation behind it. **Confound named before the fact, and it runs WITH the prediction, not against it:** 09-08 also carries the 3Y note, ~$304B of displaced bill supply, and the first pricing of two calendar days of weekend news — so a pass cannot be attributed to the holiday gap alone and is scored as an observation, never as a mechanism. **Void** (not scored) if NYSE trades on 2026-09-07 | 2026-09-09 | **PASS** — scored **2026-09-09 01:06 ET**, on time, from a cache-busted pull dated strictly after 2026-09-08 ET as the registered sampling-date guard requires (the first correctly-timed pull; five earlier sessions refused). `^VIX` **2026-09-08 close = 15.72** against the **14.53** line, **+1.19**. **Scored as an observation and never as a mechanism, exactly as registered** — the prior was 27/33 (82%), so this pass carries almost no information, and the session ran three named confounds (the $304B slate, Brent's Houthi-driven run from 96.28 to a 97.92 settle, and Canada's counter-tariffs effective that day). ΔVIX ranks **21st of 34 (62nd pctile)** — an ordinary rebound, not an outsized one. **And the hypothesis's OTHER half failed:** vol was marked **UP** into the pre-holiday Friday (ΔVIX **+0.21** on 2026-09-04, against the registered cohort mean of **−0.233**), putting 2026 in the weaker of the two branches measured below |
 | FT-labor-day-market-closure-2026-09-07-2 | **The compression null — stacking the September coupon block into four sessions does not strain its own demand** ([ledger leg 4](../events/labor-day-market-closure-2026-09-07.md)). The calendar entry was filed on the reading that ~$304B auctioning in one session with only Tuesday 09-08 standing between the weekend and the 10Y reopening is a stress structure. Measured this session from `api.fiscaldata.treasury.gov` `auctions_query` (fetched 2026-09-06), with each September auction's bid-to-cover taken as an **excess over its own trailing-12 same-tenor auctions** so era and size are controlled: across the **5** prior compressed Septembers (2009, 2010, 2015, 2020, 2021 — the years Labor Day fell on Sep 6 or 7) the excess runs **10Y +0.183 / 3Y −0.024 / 30Y +0.126** against **+0.031 / −0.003 / +0.036** for the 12 normal Septembers. Never worse in any tenor — and the 10Y gap is **entirely 2009 (+0.394) and 2010 (+0.369)**; excluding them leaves **+0.050 vs +0.031**, indistinguishable. **The honest reading is "no effect detected at n=5," not "compression helps,"** and the prediction below is therefore a null registered as a null | The **2026-09-09** 10-Year reopening (`91282CRF0`, $39B) prints **bid-to-cover at or above 2.35**, scored from a cache-busted re-fetch of `auctions_query`. Anchor: trailing-12 10Y mean **2.451**, sd **0.098**, min **2.30** (through 2026-08-12); 2.35 is ~1.0 sd below the mean and above only one of the last twelve | A print **below 2.35** → the first compressed instance to show the degradation the seeding thesis predicts; leg 4's "no effect detected" acquires a counter-instance and the stance is re-argued rather than patched. **Attribution is required, not assumed:** the same auction sits between PPI (09-10) and CPI (09-11) inside the FOMC blackout with 09-16 hike odds ~58–65%, so a weak print is scored with the concurrent `^TNX`/`^VIX` tape recorded alongside it and is credited to the compression only if it is separable. **Void** (not scored) if Treasury re-announces, resizes or postpones the 09-09 reopening. Scoring either way licenses nothing: `symbols: []`, no rates-keyed house playbook (grep 0/0), no position taken | 2026-09-10 | _open_ |
 
 **Rules.** Score from re-run instrument data — `scripts/research/market-data.mjs` bars for `^VIX`
@@ -291,3 +291,67 @@ proposed by the `jobs-2026-10-02` lane). Third-party session context matches our
 **−1.18%**, S&P **−0.58% to 7,673.52**, Nasdaq **−0.32%** — a risk-off session driven by oil. The
 registered "scored as an observation, never as a mechanism" clause is now carrying three named
 alternative explanations, not one.
+
+**FT-…-1 SCORED — 2026-09-09 01:06 ET. The guard cleared on the clock, not on an argument, and the
+Outcome cell above is filled for the first time. No row above is edited.** The registered rule scores
+the 09-08 `^VIX` close only from a pull made on a calendar date **strictly after 2026-09-08 (ET)**.
+This pull is dated **2026-09-09 ET** — the first that qualifies. It returns `^VIX` 09-08 = **15.72**,
+identical to the 16:53, 20:01 and 23:48 ET readings, with `meta.regularMarketTime` **16:15:01 ET** =
+its `currentTradingPeriod.regular.end`. **15.72 > 14.53 → PASS.** Five consecutive sessions refused to
+score this on numbers that were already passing; the sixth scored it on the same number, one guard
+later. Nothing about the reading changed — only its provenance did, which was the whole point.
+
+**The Cboe session-hours mechanism gets its cleanest out-of-sample confirmation here, in the one
+window nobody had sampled.** Every prior pull was made *after* 03:00 ET, so the claim "`^VIX` carries
+a same-day bar from 03:00 ET onward because Cboe global trading hours run 03:00–16:15 ET" had never
+been checked from the other side. This pull is at **01:06 ET, before that open**, and `^VIX`'s last
+bar is **2026-09-08** — no 09-09 bar exists. The mechanism predicted exactly that, and the phantom
+list is unchanged: `^VIX`-with-no-`^GSPC` since 2000 is still **2** dates (2026-05-25, 2026-09-07, the
+latter still carrying its bogus 15.30 close). `SPY`'s 09-08 bar remains populated at **765.96**
+(n=8,459), so the un-populating episode stays resolved.
+
+**The load-bearing finding, and it qualifies the pass rather than celebrating it: leg 7's mechanism
+is a CONJUNCTION, and nobody had ever measured it as one.** The hypothesis text above says implied
+vol "is marked down into the pre-holiday Friday close **and** snaps back on reopen." Every number
+this ledger has quoted measures one half or the other in isolation — the 82% rebound rate, the
+−0.233 mean Friday markdown — never both in the same year. Measured this session from cache-busted
+`^VIX` bars, using `^GSPC` as the trading calendar so the 09-07 phantom cannot contaminate it
+(n=33, 1993–2025):
+
+| Leg of the mechanism | Base rate | Registered as |
+|---|---|---|
+| Rebound alone (ΔVIX > 0 on the Tuesday) | **27/33 (82%)**, median **+0.680** | quoted |
+| Markdown alone (ΔVIX < 0 on the pre-holiday Friday) | **19/33 (58%)**, mean **−0.233** | quoted as a mean only |
+| **Both, in the same year** | **18/33 (55%)** | **never measured** |
+
+So the full claim the hypothesis makes holds **55% of the time**, not 82%. The 82% figure describes
+the rebound half alone, and reading it as the mechanism's rate overstates it by 27 points.
+
+**The conditional split is the more interesting half, and it runs in the mechanism's favour:**
+
+| Pre-holiday Friday | n | Rebounded on reopen | Median ΔVIX |
+|---|---|---|---|
+| Vol marked **down** (ΔVIX < 0) | 19 | **18 (95%)** | +0.710 |
+| Vol marked **up or flat** | 14 | **9 (64%)** | +0.535 |
+
+Fisher exact two-tailed **p = 0.062** — suggestive at n=33, not significant, and stated as such. It is
+internally coherent with the story the ledger tells (decay that was actually marked out is the decay
+that gets paid back), and it splits the headline 82% into a 95% branch and a 64% branch.
+
+**Which makes 2026's pass weaker than the raw number looks.** `^VIX` went 14.32 → **14.53** on Friday
+2026-09-04: **+0.21**, the 24th of 34 pre-holiday Fridays, i.e. **no markdown at all**. 2026 therefore
+sat in the **64% branch**, not the 95% one, and rebounded anyway — into a session already carrying an
+oil shock, a $304B auction slate and a tariff step. The registered caution ("do not carry short vol
+across the reopen") survives and is arguably better founded than before, because the conditional now
+gives it a mechanism rather than a bare frequency. What does **not** survive is any reading of this
+pass as the holiday gap doing the work: 2026 is a year where the gap was *not* pre-marked.
+
+**FT-…-2 re-verified live at 01:06 ET and is the only test left open.** A cache-busted
+`auctions_query` (HTTP 200) shows `91282CRF0` still **$39B**, announce-dated 2026-09-03,
+`bid_to_cover_ratio` **`null`** — no re-announcement, resize or postponement, so the void clause has
+not fired and the **2.35** line stands exactly as pre-committed on 2026-09-08. It prints ~13:00 ET
+**today**. **Scoring FT-…-1 now was declined at 23:48 ET on the reasoning that it "buys nothing" —
+that reasoning no longer holds and is corrected here.** With `closeOutWithinDays: 6` ageing this event
+out after **2026-09-13**, banking one score halves what a missed dispatch would orphan, from two tests
+to one. The 23:48 refusal was still right on its own terms (it declined to *engineer* a boundary
+crossing); what changed is that the boundary passed on its own.
