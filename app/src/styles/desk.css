@@ -210,6 +210,20 @@ table.blotter {
   font-size: 13px;
 }
 
+/* "All accounts" Positions (#2321): one blotter-card per account, a plain heading between them —
+   the account switcher already carries the human/bot chip, this just repeats it as a section
+   label so a long scroll of positions still names whose book you're reading. */
+.accounts-group {
+  margin-top: 20px;
+}
+.accounts-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
 /* responsive disclosure: detail columns live on wide screens, fold below (the round-1 verdict) */
 .col-detail {
   display: none;
