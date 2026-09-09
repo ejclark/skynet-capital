@@ -1349,3 +1349,18 @@ panel's per-agent stop is the only steering today; the ledger could carry the ou
 and the routing label applied, so what Eric sees is also what he can send back ("re-run #1327 at
 xhigh", "un-board that item"). Rule of three already met — three hand-written status tables today.
 _(src: Eric · while: watching the #1343 research run in the workflow view, 2026-09-04)_
+
+### A self-check after a fully-failed research batch, instead of relying on the next unrelated push
+The event-research lane is deliberately event-driven with no cron ("cron jobs are generally
+terrible", Eric 2026-08-19) — every push is the tick, and the workflow's own header accepts the
+residual: "a completely quiet repo checks nothing until the next merge or a manual scan dispatch."
+That residual became real on 2026-09-08: `claude-code-action@v1`'s floating tag moved to a broken
+release mid-session (docs/LESSONS.md), every matrix leg in two consecutive batches failed, zero PRs
+merged, and the self-perpetuating chain went fully silent with nothing to re-trigger it short of an
+unrelated push. Pinning the action version (this PR) removes the actual trigger for THIS incident,
+but the structural gap survives it: any failure mode that kills 100% of a batch still leaves the
+lane dark until something else pushes. A cheap mitigation — e.g. the existing CI-failure repair
+lane already fires in real time on `conclusion == 'failure'`; worth checking whether it actually
+fired for this incident (I found no capsule issue for it, unconfirmed why) before designing
+anything new — is a smaller, separate question than the pin itself.
+_(src: Claude · while: root-causing the 2026-09-08 event-research backlog, #2221/pin-PR)_

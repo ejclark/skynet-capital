@@ -154,7 +154,7 @@ jobs:
             carries the evidence but nothing will repair it.
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           # Without this the lane can DETECT but never REPAIR. A run of this lane is woken by
           # `workflow_run` and inherits the failed run's actor, so a failure that a bot triggered
@@ -182,7 +182,7 @@ jobs:
       # with the other workflow_dispatch step by construction (`pr_number` vs `issue_number`, never
       # both on the same dispatch), so exactly one of the three steps here ever runs per invocation.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != ''
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -203,7 +203,7 @@ jobs:
       # stays mutually exclusive with the step above by construction, same as that step is with the
       # `needs.triage.outputs.issue` one.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number != ''
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
