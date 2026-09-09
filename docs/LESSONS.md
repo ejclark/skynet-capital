@@ -2284,7 +2284,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   wrong" — then, on the proposal to raise it, a sharper question: is the 2026-09-05 burst incident
   actually the same `claude-code-action` install-crash class just fixed (this doc, the entry above),
   meaning the whole throttle was built to work around a phantom problem?
-- **ROOT CAUSE (of the confusion):** the 2026-09-05 entry above was written blind — its own text
+- **ROOT CAUSE:** (of the confusion) the 2026-09-05 entry above was written blind — its own text
   says "the action hides the refusal text" — so its ROOT CAUSE line inferred "the shape of a
   refused first call (rate-limit or capacity)" without ever seeing the actual result payload.
   Re-pulling the raw logs for that incident's own covering SHAs (77a71ca, 8d12068, aaa0b3d,
