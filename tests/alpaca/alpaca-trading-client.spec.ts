@@ -154,6 +154,40 @@ describe("AlpacaTradingClient", () => {
     });
   });
 
+  describe("getOrder", () => {
+    it("returns the order by id, fill fields included", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/o1": {
+          status: 200,
+          body: {
+            id: "o1",
+            symbol: "NVDA",
+            qty: "10",
+            side: "buy",
+            status: "filled",
+            filled_qty: "10",
+            filled_avg_price: "176.42",
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const order = await client.getOrder("o1");
+
+      expect(order).toMatchObject({ id: "o1", filled_avg_price: "176.42" });
+      expect(transport.gets).toEqual(["/v2/orders/o1"]);
+    });
+
+    it("throws AlpacaApiError for an unknown id", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/ghost": { status: 404, body: { message: "not found" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.getOrder("ghost")).rejects.toBeInstanceOf(AlpacaApiError);
+    });
+  });
+
   describe("cancelOrder", () => {
     it("resolves on a 204 with no body", async () => {
       const transport = new FakeTradingTransport({ "/v2/orders/o1": { status: 204, body: null } });

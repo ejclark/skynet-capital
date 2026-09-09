@@ -17,6 +17,30 @@ class FakeTradingTransport implements AlpacaTradingTransport {
   }
 }
 
+/** Like `FakeTradingTransport`, but a GET path can be scripted to answer DIFFERENTLY each call —
+ *  the `pollFill` retry loop's own test needs "unfilled, then filled" from the SAME `getOrder` id. */
+class SequencedGetTransport implements AlpacaTradingTransport {
+  private readonly getCallsByPath = new Map<string, number>();
+  constructor(
+    private readonly postResponses: Record<string, JsonResponse>,
+    private readonly getSequences: Record<string, readonly JsonResponse[]>,
+  ) {}
+  get(path: string): Promise<JsonResponse> {
+    const n = this.getCallsByPath.get(path) ?? 0;
+    this.getCallsByPath.set(path, n + 1);
+    const sequence = this.getSequences[path] ?? [];
+    return Promise.resolve(
+      sequence[Math.min(n, sequence.length - 1)] ?? { status: 404, body: null },
+    );
+  }
+  post(path: string, _body: unknown): Promise<JsonResponse> {
+    return Promise.resolve(this.postResponses[path] ?? { status: 404, body: null });
+  }
+  delete(): Promise<JsonResponse> {
+    return Promise.resolve({ status: 404, body: null });
+  }
+}
+
 const adapterWith = (
   responses: Record<string, JsonResponse>,
   deps?: ConstructorParameters<typeof AlpacaBrokerAdapter>[1],
@@ -47,17 +71,67 @@ describe("AlpacaBrokerAdapter", () => {
   });
 
   describe("submit", () => {
-    it("reports a filled result when the order is accepted", async () => {
-      const adapter = adapterWith({
-        "/v2/orders": {
-          status: 200,
-          body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+    it("reports a filled result when the order is accepted, with no price when the fill poll never resolves", async () => {
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+          // No "/v2/orders/o1" entry — getOrder 404s every attempt, same as an unfindable id.
         },
-      });
+        { sleep: () => Promise.resolve() },
+      );
 
       const result = await adapter.submit(buy);
 
       expect(result).toMatchObject({ status: "filled", filledQuantity: 100, orderId: "o1" });
+      expect(result.filledPrice).toBeUndefined();
+    });
+
+    it("polls getOrder and captures the real fill price once Alpaca reports it (#2287 PR 7 prerequisite)", async () => {
+      const transport = new SequencedGetTransport(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+        },
+        {
+          // Unfilled on the first getOrder, then a real fill on the retry.
+          "/v2/orders/o1": [
+            { status: 200, body: { id: "o1", status: "new" } },
+            {
+              status: 200,
+              body: { id: "o1", status: "filled", filled_qty: "100", filled_avg_price: "176.42" },
+            },
+          ],
+        },
+      );
+      const client = new AlpacaTradingClient(transport);
+      const adapter = new AlpacaBrokerAdapter(client, { sleep: () => Promise.resolve() });
+
+      const result = await adapter.submit(buy);
+
+      expect(result).toMatchObject({ status: "filled", filledQuantity: 100, filledPrice: 176.42 });
+    });
+
+    it("a throwing/404ing getOrder poll never turns a real fill into a rejection", async () => {
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+          "/v2/orders/o1": { status: 500, body: { message: "boom" } },
+        },
+        { sleep: () => Promise.resolve() },
+      );
+
+      const result = await adapter.submit(buy);
+
+      expect(result.status).toBe("filled");
+      expect(result.filledPrice).toBeUndefined();
     });
 
     it("carries the broker's order id even on a same-request rejection (#885)", async () => {
