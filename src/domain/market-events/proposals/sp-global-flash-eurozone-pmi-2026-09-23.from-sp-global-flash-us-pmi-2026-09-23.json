@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-flash-eurozone-pmi-2026-09-23",
+  "kind": "macro-print",
+  "title": "S&P Global Flash Eurozone PMI (Sep 2026) — 08:00 UTC / 04:00 ET, the same-morning European read that sets the tone the US flash lands into",
+  "date": "2026-09-23",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own PMI calendar, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-09-09 (HTTP 200, 23,858 bytes) by the sp-global-flash-us-pmi-2026-09-23 initial research: 'September 23 ... 08:00 UTC S&P Global Flash Eurozone PMI', part of a same-morning block the same page lists as 07:15 UTC France, 07:30 UTC Germany, 08:00 UTC Eurozone and 08:30 UTC UK. 08:00 UTC is 04:00 ET under EDT — five and a half hours before the US flash. Estimate, not confirmed, on the same standing schema gap the US entry carries: market-events-data.ts defines no confirmed-source prefix for a private PMI compiler, and this lane never self-confirms an event it discovered in-sweep.",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BECAUSE IT IS THE ONE NAMED, DATED, SAME-MORNING CONFOUND FOR THE US FLASH WINDOW THIS CALENDAR DOES NOT SEE. The sp-global-flash-us-pmi-2026-09-23 research measured the US 09:45-10:00 ET window as loud (above its own median in 11 of 14 instrument-days across three release days) and could not rule out that some of that is European flash PMI risk-tone still bleeding through the US open — the European block prints on the SAME calendar date, from the SAME compiler, on the SAME reference month, hours before the US cash open. Any future intraday test of the US flash needs this entry visible to state honestly whether its window is clean. Filed low precisely because it is a tone-setter and not a US-hours catalyst: it lands at 04:00 ET, well outside every window this calendar measures, and nothing here asserts it moves a US 15-minute window on its own. NOT MEASURED: no first-hand bar work was done on the European block; the confound is named, not sized, and sizing it is the job of whichever session picks this up. Cheap, dated, self-adjudicating falsifier: the release either lands 2026-09-23 at 08:00 UTC or it does not, settling in 14 days. Discovered during the sp-global-flash-us-pmi-2026-09-23 initial research (2026-09-09)."
+}
