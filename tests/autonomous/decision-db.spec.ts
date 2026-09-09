@@ -255,4 +255,94 @@ describe("DecisionDb", () => {
     raw.close();
     db = openDecisionDb(dbPath); // afterEach expects a live handle
   });
+
+  it("maxAtAll reports the latest at per persona, absent for a persona with no rows", () => {
+    db.record({
+      at: 5,
+      personaId: "sauron",
+      mode: "observe",
+      rawIntents: [],
+      guardedIntents: [],
+      outcomes: [],
+    });
+    db.record({
+      at: 9,
+      personaId: "sauron",
+      mode: "observe",
+      rawIntents: [],
+      guardedIntents: [],
+      outcomes: [],
+    });
+    db.record({
+      at: 3,
+      personaId: "beta-scout",
+      mode: "observe",
+      rawIntents: [],
+      guardedIntents: [],
+      outcomes: [],
+    });
+
+    expect(db.maxAtAll()).toEqual({ sauron: 9, "beta-scout": 3 });
+  });
+
+  it("listSince returns only rows strictly after the given at, oldest first, bounded", () => {
+    for (let i = 1; i <= 5; i++) {
+      db.record({
+        at: i,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+      });
+    }
+    expect(db.listSince("sauron", 2).map((r) => r.at)).toEqual([3, 4, 5]);
+    expect(db.listSince("sauron", 0, 2).map((r) => r.at)).toEqual([1, 2]);
+    expect(db.listSince("sauron", 999)).toEqual([]);
+  });
+
+  it("recordBatch writes every entry idempotently, as one transaction", () => {
+    db.recordBatch([
+      {
+        at: 1,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+      },
+      {
+        at: 2,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+      },
+    ]);
+    db.recordBatch([
+      {
+        at: 2,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+      }, // already there
+      {
+        at: 3,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+      },
+    ]);
+    expect(
+      db
+        .listByPersona("sauron")
+        .map((r) => r.at)
+        .sort(),
+    ).toEqual([1, 2, 3]);
+  });
 });
