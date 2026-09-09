@@ -12,6 +12,7 @@ import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
+import type { CouncilDeps } from "./council-form.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -208,4 +209,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;
+  /**
+   * `GET/POST /api/council` — the Sunday Council's weekly thesis line (issue #2224 shape 1). Omit
+   * to disable (offline mode) — the shell renders the honest "not switched on yet" state instead
+   * of the composer.
+   */
+  readonly council?: CouncilDeps;
 }

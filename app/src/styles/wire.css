@@ -288,3 +288,33 @@
   gap: 6px;
   line-height: 1.5;
 }
+
+/* The Council (issue #2224 shape 1) — one line, once a week. */
+.council-compose {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.council-compose input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--sans);
+}
+.council-submit {
+  width: auto;
+  flex: none;
+}
+.council-count {
+  margin: 0 0 12px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.council-entries li span {
+  line-height: 1.5;
+}

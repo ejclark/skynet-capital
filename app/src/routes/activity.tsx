@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { FormEvent, ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { fetchCouncil, submitThesis } from "../live/council";
 import {
   fetchWire,
   matchesWire,
@@ -51,12 +52,13 @@ const KIND_CHIPS = [
   ["is:human", "Humans"],
 ] as const;
 
-type ActivitySection = "feed" | "pnl" | "pulse";
+type ActivitySection = "feed" | "pnl" | "pulse" | "council";
 
 const SECTIONS: readonly PageSection<ActivitySection>[] = [
   { id: "feed", label: "Trading activity" },
   { id: "pnl", label: "Booked P&L" },
   { id: "pulse", label: "Feedback pulse" },
+  { id: "council", label: "The Council" },
 ];
 
 /** The rail: the page's sections first, then — only while the feed is the current one — its filter
@@ -227,6 +229,88 @@ function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
   );
 }
 
+const COUNCIL_MAX_CHARS = 280;
+
+/** THE COUNCIL (issue #2224 shape 1) — one line per member per week, visible inside the gate
+ *  (`docs/THE-GAME.md:117`: "the argument is the product"). Resubmitting replaces this week's own
+ *  line, so the composer prefills from `mine` rather than always starting blank — the affordance
+ *  is "edit your line," never "post again." */
+function CouncilSection(): ReactElement {
+  const queryClient = useQueryClient();
+  const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
+  const [draft, setDraft] = useState<string | undefined>();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | undefined>();
+
+  if (council.isPending) return <p className="note">Tuning in…</p>;
+  if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
+  const data = council.data;
+  if (!data.enabled) {
+    return <p className="note">The Council isn't switched on yet in this deployment.</p>;
+  }
+
+  const text = draft ?? data.mine?.text ?? "";
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setNote(undefined);
+    try {
+      const result = await submitThesis(text);
+      if (result.ok) {
+        setDraft(undefined);
+        setNote(undefined);
+        await queryClient.invalidateQueries({ queryKey: ["council"] });
+      } else {
+        setNote(result.error ?? "Couldn't save that.");
+      }
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="wire-panel">
+      <h2 className="wire-h">The Council</h2>
+      <p className="note">
+        One line, once a week: your thesis and your bot's stance. Visible to the whole league — the
+        argument is the product.
+      </p>
+      <form className="council-compose" onSubmit={(e) => void submit(e)}>
+        <input
+          type="text"
+          value={text}
+          maxLength={COUNCIL_MAX_CHARS}
+          placeholder="I think NVDA runs, because…"
+          onChange={(e) => setDraft(e.target.value)}
+          disabled={busy}
+        />
+        <button
+          type="submit"
+          className="btn btn-primary council-submit"
+          disabled={busy || text.trim().length === 0}
+        >
+          {busy ? "Saving…" : data.mine ? "Update" : "Commit"}
+        </button>
+      </form>
+      <p className="council-count num">{COUNCIL_MAX_CHARS - text.length} left</p>
+      {note ? <p className="set-err">{note}</p> : null}
+      {data.entries.length === 0 ? (
+        <p className="note">Nobody's spoken yet this week — be the first.</p>
+      ) : (
+        <ul className="wire-fdbk council-entries">
+          {data.entries.map((entry) => (
+            <li key={entry.id}>
+              <span>{entry.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** The feed section — its filter bar travels with it, because the filter is the feed's control and
  *  not the page's (a bar for a list the section switch has paged away from is noise). */
 function FeedSection({
@@ -305,8 +389,10 @@ function WirePage(): ReactElement {
       <FeedSection wire={feed} query={query} onChange={setFilter} />
     ) : id === "pnl" ? (
       <PnlSection wire={feed} />
-    ) : (
+    ) : id === "pulse" ? (
       <PulseSection wire={feed} />
+    ) : (
+      <CouncilSection />
     );
 
   return (

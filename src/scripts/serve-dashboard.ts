@@ -142,6 +142,7 @@ async function main(): Promise<void> {
   const {
     allowlist,
     botControls,
+    council,
     subscriptions,
     knownPersonaIds,
     auth,
@@ -262,6 +263,14 @@ async function main(): Promise<void> {
     // `/wire`'s cross-participant feed: the same stores, called with no id.
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
+    // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
+    // no separate switch, matching Mission Control's own always-on-when-wired posture.
+    council: {
+      load: () => council.load(),
+      submit: (week, memberId, text, at) => {
+        council.submit(week, memberId, { text, at: at.toISOString() });
+      },
+    },
     progression: progressionService,
     // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
     // bridge, works regardless of which machine's volume this process runs on) over the JSONL
