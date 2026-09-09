@@ -1,0 +1,11 @@
+{
+  "id": "uk-ppi-2026-10-21",
+  "kind": "macro-print",
+  "title": "UK PPI — September 2026, including services July to September 2026 (ONS, 07:00 London / 02:00 ET) — the quarterly SPPI print, same minute as the September CPI",
+  "date": "2026-10-21",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/producerpriceinflationukseptember2026includingservicesjulytoseptember2026, fetched direct 2026-09-09 (HTTP 200, 40,395 bytes) — the ONS release page reads verbatim 'Producer price inflation, UK: September 2026 including services, July to September 2026', 'Release date: 21 October 2026 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has no slot for the UK Office for National Statistics. Proposed by the never-assessed initial research of uk-ppi-2026-11-18, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-ppi-2026-11-18 LANE, 2026-09-09. Two reasons it earns its own slot rather than a footnote in the November ledger. FIRST, IT IS A DIFFERENT DATASET: the September reference month is one of the four bulletins a year that also carries Services Producer Price Inflation (the publisher's own previous-releases listing, fetched, shows the services rider on the Mar/Jun/Sep/Dec reference months and on no others), so 10-21 covers UK services producer prices and 11-18 does not. SECOND, IT IS THE SAME-MINUTE TWIN OF AN ALREADY-TRACKED EVENT: 07:00 London on 2026-10-21 is also uk-cpi-2026-10-21, so the 02:00 ET attribution problem this lane documents applies to it identically. It is additionally the nearest scoring venue for the input-PPI re-acceleration call registered as FT-uk-ppi-2026-11-18-1/-2: first-week Brent in sterling ran +12.0% m/m in August 2026 and +16.3% MTD in September against a flat Sep-2025 base (m/m 0.0%), and crude carries 6.9% of the input basket. Tiered LOW on the same grounds as its siblings: symbols: [], no rates- or sterling-keyed house playbook. Estimate widens caution only. Not proposed here, but verified from the same publisher pages the same day so the next lane need not re-fetch: UK PPI for August 2026 publishes 2026-09-16 07:00 (only 7 days out, and the analysis it would carry is already in this lane's ledger)"
+}

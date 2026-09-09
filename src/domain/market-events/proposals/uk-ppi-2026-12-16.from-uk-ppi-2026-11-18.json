@@ -1,0 +1,11 @@
+{
+  "id": "uk-ppi-2026-12-16",
+  "kind": "macro-print",
+  "title": "UK PPI — November 2026 producer price inflation (ONS, 07:00 London / 02:00 ET), the last UK price data before the 17 December MPC vote",
+  "date": "2026-12-16",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/producerpriceinflationuknovember2026, fetched direct 2026-09-09 (HTTP 200, 39,983 bytes) — the ONS release page reads verbatim 'Producer price inflation, UK: November 2026', 'Release date: 16 December 2026 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has no slot for the UK Office for National Statistics. Proposed by the never-assessed initial research of uk-ppi-2026-11-18, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-ppi-2026-11-18 LANE, 2026-09-09. It is the same-minute twin of uk-cpi-2026-12-16 — 07:00 London on 2026-12-16, verified from the publisher's own release page, the morning BEFORE the 17 December MPC announcement (a meeting without a Monetary Policy Report, per the BoE dates page as cited in events/uk-cpi-2026-11-18.md). That makes 12-16 the crowded slot the November CPI lane already identified, with a second ONS release in it: whatever moves at 02:00 ET that morning has two ONS candidates, not one. It is also the second scoring venue for the input-PPI re-acceleration call (FT-uk-ppi-2026-11-18-2) and the first print whose collection date, 'on or near' 1 December 2026 per the ONS PPI QMI, sits clear of the 1 October Ofgem step and the 1 October SI 2026/987 commencement — neither of which reaches PPI anyway, since PPI index numbers exclude VAT entirely and its energy prices are an industrial-and-commercial panel outside the domestic cap. Tiered LOW on the same grounds as its siblings: symbols: [], no rates- or sterling-keyed house playbook, attribution value only. Estimate widens caution only; it licenses no date-keyed action"
+}
