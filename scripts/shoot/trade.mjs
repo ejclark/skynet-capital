@@ -143,6 +143,11 @@ const desk = {
 
 const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" };
 
+// The Symbol field's tier-2 live fallback (Phase 0.8b): "GATO" (Gatos Silver) is a genuine
+// curated-directory miss — not in src/domain/ticker-directory/* — so typing it proves the debounced
+// live Alpaca lookup, not the tier-1 static match every other scene in this file exercises.
+const symbolSearch = { hits: [{ symbol: "GATO", name: "Gatos Silver" }] };
+
 // Twenty daily bars for the chart section (#2017 Phase 1 chart build-out, the mount slice) —
 // deterministic, hand-shaped rather than realistic finance: the closes walk up with real
 // pullbacks and one sharp down day (bar 19) so the frame proves BOTH candle colours, and the
@@ -329,6 +334,8 @@ const { page, origin, shoot, close } = await openShell({
     // Matched by pathname alone (`lib.mjs`'s `stubBody`), so one key covers any `?symbol=&days=`.
     "/api/trade/bars": () => currentBars,
     "/api/wire": () => currentWire,
+    // Matched by pathname alone too, so one key covers any `?q=`.
+    "/api/symbols/search": () => symbolSearch,
   },
 });
 
@@ -550,5 +557,25 @@ await page.getByText(/^Chain ·/).waitFor();
 await page.getByText("⚡").first().waitFor();
 const shootEarningsBadge = shooter(page, resolve("docs/shots/earnings-badge"));
 await shootEarningsBadge("earnings-badge-phone");
+
+// The Symbol field's tier-2 live fallback (Phase 0.8b) — a curated-directory miss ("GATO" isn't
+// in src/domain/ticker-directory/*) falls through, after the 300ms debounce, to a live Alpaca
+// asset lookup instead of leaving the member with free text alone. Fresh nav (no `?symbol=`
+// committed) so the field starts blank. The earnings-badge scene above installed a FIXED fake
+// clock (`page.clock.setFixedTime`) — a fixed clock never advances, so the debounce's real
+// `setTimeout` would never fire — `resume()` hands time back to the real clock first.
+await page.clock.resume();
+currentPlays = freshPlays;
+currentChain = chain;
+currentQuote = quote;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101`);
+await page.getByLabel("Symbol").waitFor();
+await page.getByLabel("Symbol").fill("GATO");
+// Real wait on the specific dropdown content the debounced fetch lands, never a fixed sleep —
+// the default Playwright timeout is comfortably longer than the 300ms debounce window.
+await page.getByText("GATO - Gatos Silver").waitFor();
+const shootSymbolTier2 = shooter(page, resolve("docs/shots/symbol-tier2"));
+await shootSymbolTier2("symbol-tier2-phone");
 
 await close();

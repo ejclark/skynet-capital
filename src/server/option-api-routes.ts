@@ -27,6 +27,7 @@ import {
 } from "./page-shell.js";
 import { type ParticipantProgression, playLocked } from "./progression-service.js";
 import { serveQuote } from "./quote-route.js";
+import { serveSymbolSearch } from "./symbol-search-route.js";
 
 /** Trade-type codes that ride the OPTION preview/review pipeline. */
 const OPTION_CODES = new Set(["201", "202", "301", "302"]);
@@ -70,6 +71,10 @@ async function reviewEstimates(
  *   GET  /api/trade/bars           → daily OHLC+volume bars for the chart section (#2017 Phase 1's
  *                                    chart build-out), same requester-only client and fail-soft
  *                                    `barsNote` degrade (`bars-route.ts`).
+ *   GET  /api/symbols/search        → tier-2 live Alpaca symbol lookup (Phase 0.8b), the Symbol
+ *                                    field's fallback on a curated-directory miss — same
+ *                                    requester-only client and fail-soft `{hits:[]}` degrade
+ *                                    (`symbol-search-route.ts`).
  *   POST /api/trade/option/review  → the pure `option-ticket.ts` rules against the desk snapshot
  *                                    plus best-effort premium/spot estimates. A refused order is
  *                                    a rendered explanation, never an error.
@@ -282,6 +287,7 @@ export async function serveOptionApi(
     path !== "/api/trade/chain" &&
     path !== "/api/trade/quote" &&
     path !== "/api/trade/bars" &&
+    path !== "/api/symbols/search" &&
     !isOrder
   ) {
     return false;
@@ -298,6 +304,10 @@ export async function serveOptionApi(
   }
   if (path === "/api/trade/bars") {
     if (requireGet(req, res)) await serveBars(res, req.url ?? "/", config, requesterId);
+    return true;
+  }
+  if (path === "/api/symbols/search") {
+    if (requireGet(req, res)) await serveSymbolSearch(res, req.url ?? "/", config, requesterId);
     return true;
   }
   const raw = await readJsonPost(req, res, OPTION_BODY_CAP_BYTES);
