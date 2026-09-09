@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 /**
  * THE PROFILE RAIL (#1119, the canvas's left rail under the Profile tab): Accounts (the standings
  * board — every desk, bots and humans), Milestones (the table of contents), its three chapters —
- * Onboarding · Trading Desk · Playbooks — Feedback (Eric, 2026-09-03: the ledger of filings that
+ * Onboarding · Trading · Playbooks — Feedback (Eric, 2026-09-03: the ledger of filings that
  * became GitHub issues lives under Profile now that filing itself is Moneypenny's rail), and
  * Settings (Eric, 2026-09-04: it's a user-geared page, so it belongs in the Profile rail like its
  * siblings rather than reachable only through the topbar's icon-only gear shortcut, which stays
@@ -39,7 +39,7 @@ const ITEMS: readonly {
   { id: "accounts", glyph: "≣", label: "Accounts", to: "/" },
   { id: "milestones", glyph: "◆", label: "Milestones", to: "/learn" },
   { id: "onboarding", glyph: "▦", label: "Onboarding", to: "/onboarding", sub: true },
-  { id: "ladder", glyph: "⇄", label: "Trading Desk", to: "/learn/trading", sub: true },
+  { id: "ladder", glyph: "⇄", label: "Trading", to: "/learn/trading", sub: true },
   { id: "playbooks", glyph: "⛁", label: "Playbooks", to: "/playbooks", sub: true },
   { id: "feedback", glyph: "✎", label: "Feedback", to: "/feedback" },
   { id: "settings", glyph: "⚙", label: "Settings", to: "/settings" },
