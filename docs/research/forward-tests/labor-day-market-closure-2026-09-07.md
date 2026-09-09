@@ -440,3 +440,42 @@ now **3** (2026-05-25, 2026-09-07 @ 15.30, and today's live bar); `SPY`-with-no-
 the same rule, the same reason, one more symbol. The settled 09-08 marks are unaffected: `^VIX`
 **15.72** (FT-…-1, PASS, reproduced a seventh time), `^GSPC` **7673.52**, `SPY` **765.96**, `^TNX`
 **4.806**.
+
+**The last channel that could have carried this event's soft datum into FT-…-2 is measured NULL —
+2026-09-09 10:49 ET, about 2.2 h before the print. No note above and no registered row is altered.**
+Three channels have already been measured for this test: the 3Y→10Y bid-to-cover carry (weakly
+positive, **+0.223**, and 2026's 3Y was firm), composition-vs-cover within a single 10Y
+(**−0.003**, orthogonal), and the pre-auction concession (**flat**, and 2026's is 63rd-percentile
+ordinary). The one thing never asked is the one every ledger row has flagged as this event's only
+internally consistent soft signal: **the displaced 13-week bill**. It printed **2.61** on 09-08 —
+**−0.1525** against its own trailing-12, **z −0.64**, the **4th weakest of the 27** Tuesday-after-
+Labor-Day instances and the **5th of 19** on indirect share, at the **26th percentile** of all **871**
+13W auctions since 2010. Does a soft bill on the displaced Tuesday predict a soft coupon the next day?
+
+**Measured from a cache-busted `auctions_query` (HTTP 200), pairing every 10Y with the 13W/26W
+auctioned 1–2 days earlier**, each auction's bid-to-cover taken as an excess over its own trailing-12
+same-term (n=**205**, 2010-01-13 → 2026-08-12; 43 pairs at a 1-day gap, 162 at 2):
+
+| | Pearson | Spearman | P(10Y ≥1sd below its own trailing-12) |
+|---|---|---|---|
+| **13W → next 10Y** | **+0.008** | **+0.045** | after a soft 13W **13.3%** · after a firm one **11.2%** |
+| **26W → next 10Y** | +0.090 | +0.129 | after a soft 26W **12.1%** · after a firm one **12.3%** |
+| all 205 pairs | — | — | **12.2% (25/205)** |
+| **weakest 13W quartile** (n=51) | — | — | **9.8% (5/51)** — *below* the base rate |
+
+**The structurally matched subset says the same thing, which is the check that matters here.** A
+compressed Labor Day year puts the bills on Tuesday and the 10Y on Wednesday — a **1-day** gap,
+which is the minority cohort above (43 of 205). Restricted to it — and it contains **2010-09-08**,
+itself one of the five prior compressed Septembers — the carry is **Pearson +0.049**, the cohort
+tail is **9.3% (4/43)**, and the post-soft-13W tail is **8.0%**. No relationship in the pooled
+sample, none in the matched one.
+
+**What this is allowed to change, and what it is not.** It is registered as a **prior, not as a new
+forward test** — like the 08:02 ET 3Y→10Y prior, it predicts the very auction FT-…-2 already
+registers, and a second row would score one event twice. It does not move the registered line: FT-…-2
+scores on **bid-to-cover ≥ 2.35**, exactly as pre-committed on 2026-09-08 at 13:52 ET. What it does
+is remove the last available *ex ante* story for a fail: with four channels measured (3Y carry,
+composition, concession, bills) and all four null or running mildly with the prediction, the **~95–99%
+pass prior stands un-caveated**, and a fail — if one comes — would arrive with no measured precursor
+in the compressed session itself. That makes a fail *more* informative, not less, which is the whole
+reason to commit this before 13:00 ET rather than after.
