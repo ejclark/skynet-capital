@@ -1,0 +1,11 @@
+{
+  "id": "sloos-2027-05-03",
+  "kind": "macro-print",
+  "title": "Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS), 14:00 ET",
+  "date": "2027-05-03",
+  "status": "estimate",
+  "source": "EST: derived from the Federal Reserve's own stated convention, quoted verbatim onto this calendar by the confirmed sloos-2026-11-02 entry from federalreserve.gov/data/sloos.htm — 'The Federal Reserve generally conducts the survey quarterly, timing it so that results are available for the January/February, April/May, August, and October/November meetings of the Federal Open Market Committee' — plus the release pattern all four 2026 editions obeyed (2026-02-02, 2026-05-04, 2026-08-03, 2026-11-02: each the Monday after an FOMC decision, and each the same Monday as that quarter's Treasury borrowing-estimate release). The Fed's 2027 FOMC calendar, fetched direct from federalreserve.gov/monetarypolicy/fomccalendars.htm on 2026-09-09 (HTTP 200), puts the April 2027 meeting on 27-28, so the Monday after is 2027-05-03. Filed estimate on two counts: federalreserve.gov publishes no 2027-may newsevents page this far out, so the 14:00 ET slot could not be read from a primary, and this lane may not self-confirm an event it discovered in-sweep. Discovered in the never-assessed initial research of treasury-borrowing-estimates-2027-05-03, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED as the second same-day confound for treasury-borrowing-estimates-2027-05-03, and it lands ONE HOUR before it (14:00 ET vs 15:00 ET), which is the tightest collision on that session. The pairing is not a coincidence of 2027: both releases key off the same monthly geometry, and every 2026 edition shared its date with the borrowing estimates. Precedent on this calendar is exact — sloos-2026-11-02 (confirmed) sits on treasury-borrowing-estimates-2026-11-02, and that ledger names SLOOS first in its 'do not attribute any 11-02 move to this release' list. Impact LOW matches sloos-2026-11-02. The residual date risk is the weekday, not the week: the Fed has occasionally released SLOOS on a Tuesday of the same week, so a pulse that finds a 2027-may newsevents page should re-read it. Proposed as an estimate; nothing here licenses an entry."
+}

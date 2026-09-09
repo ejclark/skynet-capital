@@ -1,0 +1,11 @@
+{
+  "id": "ism-manufacturing-2027-05-03",
+  "kind": "macro-print",
+  "title": "ISM Manufacturing PMI (Apr 2027 data), 10:00 ET",
+  "date": "2027-05-03",
+  "status": "estimate",
+  "source": "EST: ISM's own release-schedule paragraph as already read verbatim onto this calendar by ism-manufacturing-2027-01-05 — 'The full text version of the ISM(R) Manufacturing PMI(R) Report is posted on ISM(R)'s website at www.ismrob.org on the first business day* of every month after 10:00 a.m. ET. The one exception is in January when the report is released on the second business day of the month.' with the footnote '*Unless the New York Stock Exchange is closed.' May 2027 opens on Saturday 2027-05-01, so the first business day is Monday 2027-05-03; it is not a US federal holiday (the nearest is Memorial Day, already tracked as memorial-day-market-closure-2027-05-31) and the NYSE trades a normal session. Not January, so the second-business-day exception does not apply. ismworld.org has been a reCAPTCHA wall to this lane since 2026-09-02, so no 2027 ROB calendar could be read and the prefix stays EST:. Discovered in the never-assessed initial research of treasury-borrowing-estimates-2027-05-03, 2026-09-09",
+  "impact": "high",
+  "symbols": [],
+  "notes": "DISCOVERED as the same-day, one-hour-earlier confound for treasury-borrowing-estimates-2027-05-03: ISM prints at 10:00 ET and the borrowing estimates at 15:00 ET on the same Monday, so a close-to-close read of that session contains both. This is structural rather than coincidental — 21 of the 47 borrowing-estimate releases since 2015 fall on the first business day of the month, and the sibling treasury-borrowing-estimates-2026-11-02 named ISM Manufacturing as one of the two same-day entries that made 2026-11-02 unattributable. The proposing ledger measured the consequence: on the 17 borrowing-estimate releases that were both first-business-day and not FOMC meeting-eves, SPY closed 11/17 up at +0.478% (p=0.079) against +0.092% on the 120 first-business-days that were not release days — an unexplained gap that this entry is the leading candidate to own. Impact HIGH matches the five existing ism-manufacturing entries. Proposed as an estimate; nothing here licenses an entry."
+}
