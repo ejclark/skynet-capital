@@ -5,6 +5,34 @@
  * ONE model, exactly like the blotter's bar.
  */
 
+/** "Why did that trade fire?" — absent for a human trade, or a bot trade whose decision wasn't
+ *  found (predates the audit trail, or the store is unwired). Never a fabricated placeholder. */
+export interface WireTradeReasoning {
+  readonly reason: string;
+  readonly strategy?: string;
+  readonly expectation?: string;
+  /** Set only when the risk guards resized the persona's raw ask before it reached the broker. */
+  readonly guardDelta?: string;
+}
+
+/** One system-vitals budget-bar gauge (`docs/plans/where-are-we-documenting-*.md` PR 6) — a word,
+ *  a number, and (only when `measured`) a bar fraction. Hue never carries meaning alone
+ *  (`docs/BRAND.md` → Accessibility): the word/number ride with every bar. */
+export interface VitalGauge {
+  readonly label: string;
+  readonly measured: boolean;
+  readonly fraction?: number;
+  readonly valueText: string;
+  readonly detailText?: string;
+}
+
+export interface WireTradeVitals {
+  readonly lossHeadroom: VitalGauge;
+  readonly edgeVsHold: VitalGauge;
+  readonly proof: VitalGauge;
+  readonly breadth: VitalGauge;
+}
+
 export interface WireTrade {
   readonly key: string;
   readonly side: "buy" | "sell";
@@ -16,6 +44,8 @@ export interface WireTrade {
   readonly kind: "human" | "bot";
   readonly reconstructed: boolean;
   readonly when: string;
+  readonly reasoning?: WireTradeReasoning;
+  readonly vitals?: WireTradeVitals;
 }
 
 export interface WirePnl {

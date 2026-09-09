@@ -12,6 +12,7 @@ import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import { type DecisionDb, openDecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
+import type { OrderIntent } from "../domain/types.js";
 import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
@@ -50,6 +51,11 @@ export interface InsightsBridgeHandle {
   /** The app-side decision store's own read, for `readDecisions` wiring in `serve-dashboard.ts` —
    *  `undefined` when `SKYNET_INSIGHTS_DIR` is unset, exactly mirroring `seedAppDecisionDb`. */
   readonly readDecisions?: (personaId: string) => Promise<DecisionRecord[]>;
+  /** The exact order-id join (PR 6) — same dark-when-unset posture as `readDecisions`, and the
+   *  SAME store: a decision surfaces here the instant replication has landed it, no separate wait. */
+  readonly findByOrderId?: (
+    orderId: string,
+  ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -113,7 +119,10 @@ export function startInsightsBridge(
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
     ...(decisionDb
-      ? { readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId) }
+      ? {
+          readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId),
+          findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+        }
       : {}),
   };
 }

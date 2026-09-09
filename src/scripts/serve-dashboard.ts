@@ -272,6 +272,10 @@ async function main(): Promise<void> {
       : auditDir
         ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) }
         : {}),
+    // The wire route's "why did that trade fire" join (PR 6) — no JSONL fallback: the fuzzy
+    // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
+    // the replicated store supports an exact order-id index.
+    ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,

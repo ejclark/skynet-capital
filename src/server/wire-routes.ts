@@ -1,7 +1,11 @@
 import type { ServerResponse } from "node:http";
+import type { DecisionRecord } from "../autonomous/decision-record.js";
+import type { OrderIntent } from "../domain/types.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import type { EquitySample } from "../observatory/history-store.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
+import { attachWireReasoning } from "../observatory/wire-reasoning.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
@@ -23,6 +27,14 @@ export interface WireRouteDeps {
    *  honest empty state instead of a feed. */
   readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
+  /** The exact order-id join into the decision store (PR 6, issue #2287) — omit to render every
+   *  row with no reasoning/vitals attached, never a fabricated one. */
+  readonly findByOrderId?: (
+    orderId: string,
+  ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** One participant's equity history — the "Loss headroom" gauge's input. Omit and every gauge
+   *  renders its honest "not yet measured" state instead of guessing. */
+  readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
 }
 
 /**
@@ -38,17 +50,24 @@ export interface WireRouteDeps {
  * feedback-status fetch below — the two used to disagree (a bare `60` and a bare `40` on the same
  * page), which is exactly the two-bounds-on-one-view smell PR 5 exists to remove.
  */
+interface AssembledWire {
+  readonly trades: {
+    readonly rows: ReturnType<typeof attachWireReasoning>;
+    readonly nextCursor?: string;
+  };
+  readonly pnl: ReturnType<typeof buildWirePnlRows>;
+  readonly feedback: FeedbackLogEntry[];
+  readonly feedbackStatuses?: Awaited<
+    ReturnType<NonNullable<WireRouteDeps["fetchFeedbackStatus"]>>
+  >;
+}
+
 async function assembleWire(
   config: WireRouteDeps,
   limit: number,
   underlyingFilter?: string,
   before?: string,
-): Promise<{
-  trades: ReturnType<typeof buildWireTradeRows>;
-  pnl: ReturnType<typeof buildWirePnlRows>;
-  feedback: FeedbackLogEntry[];
-  feedbackStatuses?: Awaited<ReturnType<NonNullable<WireRouteDeps["fetchFeedbackStatus"]>>>;
-}> {
+): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
   const records = config.readAllTradeActivity ? await config.readAllTradeActivity() : [];
   const feedback = config.readAllFeedback ? await config.readAllFeedback() : [];
@@ -61,8 +80,29 @@ async function assembleWire(
     config.fetchFeedbackStatus && feedbackForStatus.length
       ? await config.fetchFeedbackStatus(feedbackForStatus.map((e) => e.issueNumber))
       : undefined;
+  const page = buildWireTradeRows(records, participants, { limit, before }, underlyingFilter);
+
+  // "the why" and "the vitals" (PR 6, issue #2287) — only bot rows can resolve either, and only
+  // when both deps are wired; a plain deployment renders every row exactly as before this PR.
+  const botParticipantIds = [
+    ...new Set(page.rows.filter((r) => r.kind === "bot").map((r) => r.participantId)),
+  ];
+  const historyByParticipant = config.readHistory
+    ? new Map(
+        await Promise.all(
+          botParticipantIds.map(
+            async (id) => [id, await config.readHistory?.(id)] as [string, readonly EquitySample[]],
+          ),
+        ),
+      )
+    : undefined;
+  const rows = attachWireReasoning(page.rows, {
+    ...(config.findByOrderId ? { findByOrderId: config.findByOrderId } : {}),
+    ...(historyByParticipant ? { historyByParticipant } : {}),
+  });
+
   return {
-    trades: buildWireTradeRows(records, participants, { limit, before }, underlyingFilter),
+    trades: { rows, ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}) },
     pnl: buildWirePnlRows(participants),
     feedback: feedbackForStatus,
     ...(feedbackStatuses ? { feedbackStatuses } : {}),

@@ -13,6 +13,7 @@ const trade = (over: Record<string, unknown> = {}) => ({
   price: 176.42,
   at: "2026-08-28T14:00:00Z",
   reconstructed: false,
+  orderId: "ord-1",
   ...over,
 });
 
