@@ -58,7 +58,8 @@ export function ExpirationField({
   }
   const next = chainData.symbol ? nextPrint(chainData.symbol, new Date().toISOString()) : undefined;
   return (
-    <div className="exp-tabs">
+    // biome-ignore lint/a11y/useSemanticElements: a <fieldset>'s UA border/padding/legend chrome fights this scrolling pill strip — the ARIA group pattern is the standard alternative for a custom toggle-button group.
+    <div className="exp-tabs" role="group" aria-labelledby={`${id}-label`}>
       {chainData.expirations.map((exp) => {
         const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
         const active = exp === chainData.expiration;
