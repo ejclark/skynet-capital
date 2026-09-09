@@ -2,18 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import {
-  type DeskPosition,
-  fetchDesk,
-  matchesFilter,
-  parseDeskQuery,
-  toggleQualifier,
-} from "../live/desk";
+import { fetchDesk, matchesFilter, parseDeskQuery, toggleQualifier } from "../live/desk";
 import { BlotterRow } from "../shell/blotter-row";
 import { DeskRail } from "../shell/desk-rail";
 import { PageFrame } from "../shell/frame";
 import { LandmarkHero } from "../shell/landmark-hero";
-import { TimelineDrawer } from "../shell/timeline-drawer";
 import { ViewTabs } from "../shell/view-tabs";
 
 /**
@@ -92,7 +85,6 @@ function DeskPage(): ReactElement {
       });
     }, 300);
   };
-  const [timelineFor, setTimelineFor] = useState<DeskPosition | null>(null);
 
   if (desk.isPending)
     return (
@@ -188,11 +180,7 @@ function DeskPage(): ReactElement {
                   </thead>
                   <tbody>
                     {shown.map((position) => (
-                      <BlotterRow
-                        key={position.symbol}
-                        position={position}
-                        onTimeline={setTimelineFor}
-                      />
+                      <BlotterRow key={position.symbol} position={position} deskId={d.id} />
                     ))}
                   </tbody>
                 </table>
@@ -214,14 +202,6 @@ function DeskPage(): ReactElement {
           </span>
         </Link>
       )}
-      {timelineFor ? (
-        <TimelineDrawer
-          deskId={d.id}
-          symbol={timelineFor.symbol}
-          display={timelineFor.display}
-          onClose={() => setTimelineFor(null)}
-        />
-      ) : null}
       <footer className="obs-foot num">
         as of {generatedAt} · click a symbol for its fill timeline
       </footer>

@@ -52,12 +52,20 @@ interface DeskPositionView {
 interface DeskTiles {
   readonly openPositions: number;
   readonly invested: string;
+  /** Raw twin of `invested`, for cross-account summing (#2321) — never for display. */
+  readonly investedRaw: number;
   readonly dayPl: string;
   readonly dayTone: Tone;
+  /** Raw twin of `dayPl`. */
+  readonly dayPlRaw: number;
   readonly unrealized: string;
   readonly unrealizedNote: string;
   readonly unrealizedTone: Tone;
+  /** Raw twin of `unrealized`. */
+  readonly unrealizedRaw: number;
   readonly cash: string;
+  /** Raw twin of `cash`. */
+  readonly cashRaw: number;
 }
 
 export interface DeskView {
@@ -110,12 +118,16 @@ export function deskView(snapshot: ParticipantSnapshot): DeskView {
     tiles: {
       openPositions: snapshot.positions.length,
       invested: formatCurrency(invested),
+      investedRaw: invested,
       dayPl: formatSigned(dayTotal),
       dayTone: plClass(dayTotal),
+      dayPlRaw: dayTotal,
       unrealized: formatSigned(unrealized),
       unrealizedNote: `${pct(returnOnCost)} on cost`,
       unrealizedTone: plClass(unrealized),
+      unrealizedRaw: unrealized,
       cash: formatCurrency(snapshot.cash),
+      cashRaw: snapshot.cash,
     },
     positions,
   };

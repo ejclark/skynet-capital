@@ -30,12 +30,20 @@ export interface DeskPosition {
 export interface DeskTiles {
   readonly openPositions: number;
   readonly invested: string;
+  /** Raw twin of `invested`, for cross-account summing (#2321) — never for display. */
+  readonly investedRaw: number;
   readonly dayPl: string;
   readonly dayTone: Tone;
+  /** Raw twin of `dayPl`. */
+  readonly dayPlRaw: number;
   readonly unrealized: string;
   readonly unrealizedNote: string;
   readonly unrealizedTone: Tone;
+  /** Raw twin of `unrealized`. */
+  readonly unrealizedRaw: number;
   readonly cash: string;
+  /** Raw twin of `cash`. */
+  readonly cashRaw: number;
 }
 
 export interface Desk {
