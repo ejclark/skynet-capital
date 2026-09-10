@@ -1,0 +1,11 @@
+{
+  "id": "uk-retail-sales-2027-01-22",
+  "kind": "macro-print",
+  "title": "UK retail sales, Great Britain — December 2026 (ONS, 07:00 London / 02:00 ET) — the Christmas print, and the five-week period that owns Cyber Monday",
+  "date": "2027-01-22",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/retailsalesgreatbritaindecember2026, fetched direct 2026-09-10 (HTTP 200) — the ONS release page reads verbatim 'Retail Sales; Great Britain: December 2026', 'Release date: 22 January 2027 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has CENSUS: for the US retail print and no slot for the UK Office for National Statistics",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-retail-sales-2026-12-18 LANE, 2026-09-10, discovered in that event's adjacency sweep of the ONS retail-sales release calendar. It is the MIRROR of the parent entry and the second half of the same mechanic. The parent ledger derives the ONS RSI reporting-period rule -- 4-4-5 week periods ending on the Saturday nearest 31 December -- and applies it to 2026: the November period runs 1-28 November and captures Black Friday (27 November) plus its Saturday, while the DECEMBER period runs 29 November 2026 to 2 January 2027, five weeks, and owns Cyber Monday (30 November), the whole Christmas run and the first two days of January. Anything the November print does not capture lands here, and this is where a late-November-versus-December spend shift would show. It is also the print that closes the 2026 RSI year, so it carries the annual revision that the parent's first-estimate caveat points at. Expected LOW on the same measured grounds as every UK sibling: symbols [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Estimate widens caution only; nothing date-keyed may act on this."
+}

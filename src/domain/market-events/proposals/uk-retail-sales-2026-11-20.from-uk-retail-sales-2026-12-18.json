@@ -1,0 +1,11 @@
+{
+  "id": "uk-retail-sales-2026-11-20",
+  "kind": "macro-print",
+  "title": "UK retail sales, Great Britain — October 2026 (ONS, 07:00 London / 02:00 ET) — the month-on-month base the 12-18 Black Friday print is measured against",
+  "date": "2026-11-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/retailsalesgreatbritainoctober2026, fetched direct 2026-09-10 (HTTP 200) — the ONS release page reads verbatim 'Retail sales, Great Britain: October 2026', 'Release date: 20 November 2026 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has CENSUS: for the US retail print and no slot for the UK Office for National Statistics",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-retail-sales-2026-12-18 LANE, 2026-09-10, discovered in that event's adjacency sweep of the ONS retail-sales release calendar. It is load-bearing for the parent entry in the most literal way available: a seasonally adjusted month-on-month change is measured against the immediately preceding month, so THIS print is the base of the November number published 2026-12-18, and every November bulletin read this session also revised it (the November 2025 bulletin revised October 2025 from a 1.1% fall to a 0.9% fall in the same breath as its own first estimate). It also carries the parent ledger's one flagged-not-claimed observation: across 2013-2025 the three years where Black Friday fell OUTSIDE the ONS November reporting period (2013, 2019, 2024) printed October seasonally adjusted volume m/m of -1.0%, -0.6% and -0.7% -- mean -0.77%, standard deviation 0.17 -- against +0.31% (sd 0.95) in the ten Black-Friday-inside years. 2026 is a Black-Friday-inside year, so this print is the near-dated test of whether that n=3 cluster is a mechanism or a coincidence (registered as FT-uk-retail-sales-2026-12-18-3). Expected LOW on the same measured grounds as every UK sibling: symbols [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Estimate widens caution only; nothing date-keyed may act on this."
+}

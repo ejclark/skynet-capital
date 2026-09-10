@@ -1,0 +1,11 @@
+{
+  "id": "uk-retail-sales-2026-09-18",
+  "kind": "macro-print",
+  "title": "UK retail sales, Great Britain — August 2026 (ONS, 07:00 London / 02:00 ET) — the dress rehearsal for 12-18: an ONS retail print on a US quad-witching Friday",
+  "date": "2026-09-18",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/retailsalesgreatbritainaugust2026, fetched direct 2026-09-10 (HTTP 200) — the ONS release page reads verbatim 'Retail Sales; Great Britain: August 2026', 'Release date: 18 September 2026 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has CENSUS: for the US retail print and no slot for the UK Office for National Statistics",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-retail-sales-2026-12-18 LANE, 2026-09-10, discovered in that event's adjacency sweep of the ONS retail-sales release calendar. It earns a slot for one reason its date makes urgent: 2026-09-18 is the third Friday of September 2026 and therefore US quad-witching, so this print reproduces the EXACT configuration the 2026-12-18 entry is about -- an ONS retail release at 02:00 ET opening a US quadruple-witching session -- eight days from the proposal rather than ninety-nine. Whatever the 12-18 ledger claims about that configuration is testable here first. The parent ledger's measurement is that the pairing is the modal case, not a hazard: the November-edition ONS release landed on quad-witching in five of the last six years and the S&P 500's overnight gap on those five dates never exceeded 0.43% against an all-day median absolute of 0.213%. Expected LOW on the same measured grounds as every UK sibling: symbols [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Estimate widens caution only; nothing date-keyed may act on this."
+}
