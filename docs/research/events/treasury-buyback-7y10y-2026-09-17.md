@@ -1,8 +1,8 @@
 # Treasury liquidity-support buyback operation (7-10Y nominal, $4B cap, 1:40pm ET) — treasury-buyback-7y10y-2026-09-17
 
-**Kind:** rates · **Date:** 2026-09-17 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations, August 2026 refunding, masthead "For Publication August 5, 2026" — PDF re-fetched and its text layer independently decompressed this session, HTTP 200, 125,547 bytes, md5 `79b65955e74a59f6bebff3adf8ba7b35`; row reads verbatim announce 9/16/2026 · operation 9/17/2026 1:40 pm – 2:00 pm · settle 9/18/2026 · Liquidity Support · Nominal Coupons 7Y to 10Y · 09/18/2033 – 09/17/2036 · min $0 · max $4 billion; tentative by construction, and the confirming primary is the 09-16 announcement — checked 2026-09-08) · **Impact:** medium
-**Last assessed:** 2026-09-08
-<!-- probe-ref: {"symbols":{},"vix":15.5,"daysBand":"medium:8+","adjacentIds":["boj-decision-2026-09-18","buyback-blackout-start-2026-09-12","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"screenStreak":0,"blocked":[]} -->
+**Kind:** rates · **Date:** 2026-09-17 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations — the **REVISED** schedule published 2026-09-09, masthead "For Publication September 9, 2026", PDF fetched direct and its text layer independently decompressed 2026-09-10, HTTP 200, 89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`, `xmp:CreateDate` 2026-09-09T09:44:39-04:00 from `BuybackCalendar-August-2026-Updated_20260909.docx`; this row is **verbatim unchanged** from the superseded 08-05 edition — announce 9/16/2026 · operation 9/17/2026 1:40 pm – 2:00 pm · settle 9/18/2026 · Liquidity Support · Nominal Coupons 7Y to 10Y · 09/18/2033 – 09/17/2036 · min $0 · max $4 billion — while six long-end rows in the same document were rewritten. Still `estimate`: the document says "Tentative" on its own masthead and the confirming primary is the 09-16 operation announcement — checked 2026-09-10) · **Impact:** medium
+**Last assessed:** 2026-09-10
+<!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"medium:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"screenStreak":0,"blocked":[]} -->
 
 ## At a glance
 
@@ -19,20 +19,43 @@ $4B. Second correction: despite the label, **no 7-Year note has ever been eligib
 is ten 10-Year notes, and the count is derivable rather than awaited. Trade nothing; 09-17 sits one
 day after the FOMC with four other dated events on it.
 
+**Updated 9/10 (D-7) — the replacement schedule landed, it rewrote six rows, and it did not touch
+this one.** Treasury published the revised buyback calendar on **2026-09-09 at 09:44 ET** (masthead
+"For Publication September 9, 2026", md5 `c49a5351…`, fetched and decompressed direct). Six long-end
+rows — 9/24, 10/1, 10/8, 10/15, 10/27, 11/4 — had their Maximum Purchase Amount replaced with
+**"= or > $4 billion"**, converting a published ceiling into a published floor. **This event's row is
+verbatim identical to the superseded edition**, hard **$4 billion** and all, as are the other two
+non-long-end nominal rows (2Y-3Y 10/6, 1Mo-2Y 11/5). No footnote defines the new wording and **no
+press release accompanied it** (newest is sb0626, Iran sanctions; sb0607 is still the last buyback
+release). So the fired kill switch resolves *for* the stance: Treasury reconsidered the program four
+days ago and affirmatively left the belly alone. Two things also got sharper. The 09-10 long-end
+operation accepted **$5.187B** — **6.2x what this bucket bought in all of 2026 ($835M)** in one
+afternoon — so "cap parity is not purchase parity" now rests on a live print, not just history. And
+the chronic under-fill this doc called a regularity with an **unknown mechanism** has one: across all
+**100** nominal liquidity-support operations ever run, **no operation has ever filled its cap at
+cover below 1.5x** (n=11, mean fill 16.9%, best 49.7%), while at cover ≥ 3x it fills 60 of 64. This
+bucket's mean cover is **1.32x**. Dealers not offering is the constraint, not Treasury refusing —
+and the 09-10 print confirmed it out-of-sample, posting its bucket's **first non-full fill in 22
+operations** the moment a tripled cap dropped cover to 1.75x. Registered as `FT-…-3`. Still a read,
+still nothing to trade.
+
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (9/8, D-9) | Stand aside | High | Nine days out, parameters still **estimate**, and the instrument's own history says it buys a few hundred million dollars of off-the-run 10-Year notes — there is nothing here to trade at any distance. | Treasury publishing the replacement buyback schedule before **2026-09-16** with this bucket's cadence, cap or sector definition materially changed |
-| This week | Watch the **2026-09-10** 10-20Y operation as the read-across test | Medium | Its 09-09 announcement is the first hard sb0607 number, and whether it *fills* $4B is exactly the evidence that decides whether this doc's cap-parity correction is right. | The **2026-09-10** operation accepting well under $4B — the long end would then behave like this bucket, and "cap parity is not purchase parity" loses its asymmetry |
-| This month | Read the 09-16 list and the 09-17 accepted number, trade neither | Medium | Two checkable numbers: the 11:00am ET preliminary list (predicted: ten 10-Year notes, 2033-11-15 → 2036-02-15) and **par accepted vs the $4B cap** (predicted: under $1.07B, the bucket's all-time high). | The **2026-09-17** operation accepting **≥ $1.2B**, or the 09-16 list containing a 7-Year note or a count other than 10 |
-| This quarter | Stand aside on belly buybacks as a rates driver | High | Three operations in 2026 bought **$835M combined** — against $61B of 10Y+30Y issuance in the single week of 09-09/09-10. It is plumbing, not a lever. | Treasury adding sectors, frequency or size to the belly at the **2026-11-04** refunding, or any single 7-10Y operation clearing $2B |
+| Today (9/10, D-7) | Stand aside | High | Seven days out, parameters still **estimate**, and the instrument's own history says it buys a few hundred million dollars of off-the-run 10-Year notes — there is nothing here to trade at any distance. | The **09-16 announcement** carrying a maximum other than **$4 billion**, or the "= or > " wording spreading to this bucket — either would mean the 09-09 revision's decision to leave the belly alone was not the decision it appeared to be |
+| This week | Watch **cover**, not the headline, on 09-17 — and read the 09-16 list at 11:00am ET | Medium | The cover→fill step function is now the mechanism (0 full fills in 11 at cover <1.5x, 60 of 64 at ≥3x), so cover is the number that predicts the result and it is published in the same release. | The **2026-09-17** operation filling **≥ 50% of its announced maximum on cover below 1.5x** — never once in 100 operations; the mechanism would be wrong, not merely noisy |
+| This month | Read the 09-16 list and the 09-17 accepted number, trade neither | Medium | Two checkable numbers: the 11:00am ET preliminary list (predicted: ten 10-Year notes, 2033-11-15 → 2036-02-15, re-derived 9/10 from the auction universe itself) and **par accepted vs the $4B cap** (predicted: under $1.07B, the bucket's all-time high). | The **2026-09-17** operation accepting **≥ $1.2B**, or the 09-16 list containing a 7-Year note or a count other than 10 |
+| This quarter | Stand aside on belly buybacks as a rates driver | High | Three operations in 2026 bought **$835M combined**, and the long end bought **$5.187B in a single afternoon on 09-10**. It is plumbing, not a lever. | Treasury extending the **"= or > $4 billion"** floor wording to the 7-10Y row, or adding belly sectors/frequency at the **2026-11-04** refunding, or any single 7-10Y operation clearing $2B |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **09-16, 11:00am ET** — preliminary eligible list posts. Ten CUSIPs, 2033-11-15 → 2036-02-15, no
   7-Year note, is the base case (`FT-…-1`). Any other shape breaks the derivation, not just the count.
-- **09-16 announced maximum** — expect **$4B**, the standing cap since 2024-09-10. Reading a $4B
-  print as "sb0607 took effect" would be an error: sb0607 names the 10Y-20Y and 20Y-30Y **nominal**
-  sectors only and does not touch this bucket.
+- **09-16 announced maximum** — expect a hard **$4B**, which the 09-09 revised schedule reaffirmed
+  verbatim while converting six long-end rows to "= or > $4 billion". A $4B print is *not* evidence
+  sb0607 took effect here; the "= or > " wording appearing on this row would be.
+- **09-17 cover (offered ÷ maximum)** — the number that predicts the result, published with it.
+  Below 1.5x is the base case (6 of 9 prior operations; bucket mean 1.32x) and no operation in 100
+  has filled its cap from there (`FT-…-3`).
 - **09-17 accepted vs cap** — under ~$1.07B is the whole nine-operation history (`FT-…-2`). A fill
   above that is the first evidence the belly's price gap has closed and belongs in the corridor's
   stance docs as one sentence.
@@ -40,9 +63,11 @@ day after the FOMC with four other dated events on it.
   error and not a signal; it is what a strict relative-value price test does.
 - **Never** — no position keyed to this operation, and no attribution of that afternoon's tape to
   it. Four other dated events share 09-17 and the FOMC decision is 23½ hours earlier.
-- **Watch (dated)** — 10-20Y operation **9/10** · CPI **9/11** · 20Y bond + TIPS 10-30Y buyback
-  **9/15** · FOMC **9/16** · 10Y TIPS auction, coupon announcement, this operation **9/17** · opex +
-  BoJ **9/18** · 20-30Y operation **9/24** · refunding **11/4**.
+- **Watch (dated)** — ~~10-20Y operation **9/10**~~ (done: $6B max, $5.187B accepted) · CPI **9/11**
+  · 20Y bond + TIPS 10-30Y buyback **9/15** · FOMC **9/16** · **$19B 10Y TIPS reopening 1:00pm**,
+  coupon announcement, housing starts, Philly Fed, BoE, this operation **9/17** · opex + BoJ
+  **9/18** · 20-30Y operation **9/24**, the first test of the "= or > $4 billion" wording ·
+  refunding **11/4**.
 
 ## Initial research
 
@@ -183,6 +208,24 @@ millions** figure across two or three issues near par — under the bucket's all
 — passing without a tape effect separable from the FOMC 23½ hours earlier, the 1:00pm TIPS auction,
 the coupon announcement and opex the next day.
 
+**Added 2026-09-10 — the mechanism behind the under-fill, and the schedule's two-tier answer.** The
+`## Initial research` section listed the bucket's chronic under-fill as a *demonstrated regularity
+with an unknown mechanism*. It has one, and it is **cover, not the belly**: across every nominal
+liquidity-support operation the program has ever run (n=**100**, 2024-05-29 → 2026-09-10,
+`buybacks_operations`, primary), fill against cap is a step function of cover — **cover < 1.5x:
+0 full fills in 11**, mean fill **16.9%**, best ever **49.7%** · cover 1.5–3x: 5 of 25, mean 58.8% ·
+cover ≥ 3x: **60 of 64**. The 7Y-10Y bucket's mean cover is **1.32x**, under 1.5x in **6 of 9**
+operations; its 5Y-7Y neighbour on an identical $4B cap runs the same shape and is **0 for 8**. So
+Treasury is not refusing belly paper — dealers are not offering it, and a strict relative-value price
+test then takes only the cheap tail of a thin stack. The **2026-09-10** long-end print is the
+out-of-sample confirmation: tripling the cap to $6B dropped cover from its 3.7–15x range to
+**1.75x**, and the bucket posted its **first non-full fill in 22 operations** (86%). This does not
+change the call; it changes what to read on 09-17 — **cover first, headline second** (`FT-…-3`).
+Separately, the revised schedule published 09-09 makes the two-tier structure explicit: six long-end
+rows now read **"= or > $4 billion"** (a floor with a maximum revealed one business day ahead), while
+this row, 2Y-3Y and 1Mo-2Y keep hard figures. Treasury reopened the program's parameters and
+affirmatively left this bucket where it was.
+
 **Two corrections this doc owns.** (1) **Cap parity is not purchase parity.** The proposal note and
 the `treasury-buyback-increase-2026-09-09` ledger's "it is parity, not escalation" read both compare
 caps. On accepted par the long end at $2B already bought 4x this bucket at $4B, so sb0607 plausibly
@@ -195,17 +238,23 @@ count is derivable from the maturity window and the first-coupon rule rather tha
 - **The 09-16 preliminary list is not ten CUSIPs running 2033-11-15 → 2036-02-15, or contains a
   7-Year note** — legs 4 and 5 are wrong; correct this doc and the calendar note the same day, and
   flag it to the `treasury-buyback-2y3y-2026-10-06` sibling, whose eligibility model is the same shape.
-- **The 09-16 announced maximum is anything other than $4B** — the standing cap moved without a
-  published release; re-read the program's terms before any further inference, and check whether the
-  replacement schedule finally posted.
+- **The 09-16 announcement carries anything other than a hard $4B** — in particular the
+  **"= or > $4 billion"** wording the 09-09 revision gave the long end. That would reverse this
+  bucket's exclusion from the discretionary tier four days after Treasury wrote it, and it is now
+  the single most informative line in the announcement.
+- **09-17 fills ≥ 50% of the announced maximum on cover below 1.5x** — never once in 100 operations;
+  the cover→fill mechanism added above would be wrong rather than noisy, and the under-fill goes
+  back to being unexplained.
 - **09-17 par accepted is ≥ $1.2B** — above every observation in the bucket's history; the belly's
   price gap would be closing, which is the one outcome that would make these operations worth
   tracking as more than plumbing.
-- **The 2026-09-10 10-20Y operation accepts well under $4B** — the long end would be behaving like
-  this bucket, which weakens leg 3's asymmetry and reopens the parity question in the other direction.
-- **Treasury publishes the replacement buyback schedule, or the 2026-11-04 refunding adds sectors,
-  frequency or size to the belly** — a genuinely different program; propose the changed operations
-  as their own dated entries rather than folding them into this stance.
+- ~~**The 2026-09-10 10-20Y operation accepts well under $4B**~~ — **did not fire (2026-09-10).** It
+  accepted **$5.187B** against a $6B maximum. Leg 3's asymmetry survives and strengthens.
+- ~~**Treasury publishes the replacement buyback schedule**~~ — **fired 2026-09-09, resolved for the
+  stance (2026-09-10).** The revision left this row verbatim unchanged, and every operation it
+  schedules already has a calendar entry, so there was nothing to propose. It remains live in its
+  other half: **the 2026-11-04 refunding adding sectors, frequency or size to the belly** — a
+  genuinely different program, to be proposed as its own dated entries rather than folded in here.
 - **Any single 7-10Y operation clears $2B accepted** — leg 2's nine-operation regularity breaks and
   the "least-used instrument" framing goes with it.
 
@@ -214,6 +263,7 @@ count is derivable from the maturity window and the first-coupon rule rather tha
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-08 | D-9 | **Initial research; canonical `<id>.json` written, promoting the proposal from the `treasury-buyback-increase-2026-09-09` D-1 sweep.** **The finding: this is the least-used operation in the program, which refutes the framing it was filed under.** All nine 7Y-10Y operations ever run (`buybacks_operations`, 219 rows, plain curl, HTTP 200): offered/accepted **2024-07-24 $3.71B/$0** · 2024-09-10 $3.07B/$0.449B · 2024-12-09 $3.46B/$0.195B · 2025-03-18 $4.90B/$0.985B · 2025-06-17 $3.96B/**$1.066B** · 2025-10-16 $10.44B/$0.192B · 2026-01-16 $5.94B/$0.210B · 2026-03-12 $3.39B/$0.055B · 2026-06-16 $5.07B/$0.570B — **0 full fills in 9**, mean accepted **$414M**, median **$210M**, mean fill **10.3%**, and cover **below 1.0x four times** (range 0.77–2.61x), so the cap has never been the binding constraint. **Correction — cap parity is not purchase parity:** mean *accepted* per op since 2025 by nominal bucket is 1Mo-2Y **$3.433B** · 3Y-5Y $3.076B · 2Y-3Y $2.148B · **10Y-20Y $2.000B (21/21 full fills)** · 20Y-30Y $1.863B (20/22) · 5Y-7Y $1.465B · **7Y-10Y $0.513B**, so the long end at its OLD $2B cap already bought 4x this bucket at $4B; sb0607 is plausibly the largest actual-purchase change in the nominal program even while being cap-parity, and both claims belong in the record. **Correction — no 7-Year note has ever been eligible:** `buybacks_security_details` for all three 2026 ops shows ten 10-Year notes on the Feb/May/Aug/Nov cycle every time (01-16: 2033-02-15→2035-05-15; 03-12: 2033-05-15→2035-08-15; 06-16: 2033-08-15→2035-11-15), mechanically necessary since a 7Y note maturing 2033-2036 was issued 09/2026+. **Eligible list derived, 3/3:** three-year window = 12 quarterly 10Y maturities, minus the two not past first coupon = **10**, the invariant across all nine ops (`max_nbr_offers` 9 every time); for 09/18/2033–09/17/2036 that predicts **2033-11-15 → 2036-02-15**. Accepted prices here are near par (95.7–103.5), so the long end's "$2B par ≈ $1.3B cash" nuance does NOT read across. **Scale:** $835M bought across all three 2026 ops vs $61B of 10Y+30Y issuance in the 09-09/09-10 week alone. **Event tape (primary):** schedule PDF re-fetched **HTTP 200, 125,547 bytes, md5 `79b65955…`**, masthead still "For Publication August 5, 2026" — **20 days after sb0607 and still no replacement schedule**; row verbatim announce 9/16 · op 9/17 1:40–2:00pm · settle 9/18 · 7Y to 10Y · 09/18/2033–09/17/2036 · max **$4B**. Treasury press index re-read 09-08: newest is **sb0623** (09-08, Iran sanctions) and **sb0607 remains the last buyback release**. **One aggregator error recorded:** a search relay returned announce 09-17/op 09-18, one day late on both; the decompressed PDF is primary. **Two forward tests registered** — `FT-…-1` (09-16 list = ten CUSIPs, 2033-11-15→2036-02-15, no 7Y note; scores 09-17) and `FT-…-2` (accepted **< $1.066B** and < 30% of cap; scores 09-18). **Adjacency — peers:** n/a (`symbols: []`). **Rates (primary, Treasury par CSV, latest published row 09-04):** 2Y **4.37** · 5Y 4.54 · 7Y **4.65** · 10Y **4.78** · 20Y 5.25 · 30Y 5.24; 09-07 was Labor Day so no newer close exists. **Volatility:** VIX **15.50** (Cboe delayed quote, 10:24 ET 09-08) vs the **14.53** 09-04 close, +0.97 — under the 3-point bar. **Macro:** Aug payrolls **+162k vs ~53k cons.** (09-04) put Sep-16 hike odds at **~58.7%** (CME FedWatch via press, 09-07); **Fed blackout runs 09-05 → 09-17**, so nothing Fed-side can move this corridor before the decision. **Geopolitical:** Brent **$97.05** on 09-07, highest since July 2026, on resumed US-Iran strikes — inflation-side pressure on the belly. **Corridor: 27 tracked events inside ±5 days**, the binding ones being FOMC 09-16, the 10Y TIPS auction 1:00pm and the coupon announcement on 09-17 itself, and opex + BoJ 09-18 — nothing that afternoon is attributable. **One new dated event proposed:** `treasury-buyback-1mo2y-2026-11-05`, the last schedule row and the only one untracked anywhere; it is the opposite pole at an identical $4B cap (10/10 full fills on $16.5–69.0B offers) and so the cleanest control for the correction above. Every other schedule row is already tracked or a sibling lane's proposal. | — (stance set) | 2026-09-10 (medium; D-9 sits in the 8+/7d band → 09-15, but days-out crosses 8 on 09-10 and the band tightens to 2d, which makes 09-10 the real first due date) |
+| 2026-09-10 | D-7 | **The replacement schedule landed, rewrote six rows, and left this one verbatim.** Revised PDF fetched direct + text layer decompressed (HTTP 200, **89,250 bytes**, md5 `c49a5351bf2d31a367817abc62be51bd`, masthead "For Publication **September 9, 2026**", `xmp:CreateDate` **2026-09-09T09:44:39-04:00** from `BuybackCalendar-August-2026-Updated_20260909.docx`) — supersedes the 08-05 / 125,547-byte / `79b65955…` edition four ledger rows called unpublished. **This row is character-identical**: announce 9/16 · op 9/17 1:40–2:00pm · settle 9/18 · Nominal Coupons 7Y to 10Y · 09/18/2033–09/17/2036 · $0 · **$4 billion**. Six long-end rows (9/24, 10/1, 10/8, 10/15, 10/27, 11/4) now read **"= or > $4 billion"** — a floor, not a ceiling; 2Y-3Y (10/6) and 1Mo-2Y (11/5) keep hard figures, as do both TIPS rows. **No footnote defines the new wording** (only the two standard 11:00am CUSIP-disclosure notes) and **no press release accompanied it** — press index re-read 09-10: sb0626 (09-10, Iran), sb0625/sb0624 (09-09, fraud/cyber), **sb0607 still the last buyback release**. **KILL SWITCH "replacement schedule publishes" FIRED, resolves FOR the stance** — Treasury reopened the parameters and left the belly alone; every row it schedules already has a calendar entry, so **no proposal is filed this pulse**. **KILL SWITCH "09-10 accepts well under $4B" DID NOT FIRE:** $10.489B offered / **$5.187B accepted** vs a **$6B** max (not $4B) — **6.2x this bucket's entire 2026 purchases ($835M) in one afternoon**; leg 3 strengthens on a live print. **NEW LEG — the under-fill has a mechanism, and it is cover:** across all **100** nominal liquidity-support ops ever run (2024-05-29→2026-09-10), fill vs cap steps on cover — **<1.5x: 0 full fills in 11**, mean fill **16.9%**, best **49.7%** · 1.5–3x: 5/25, 58.8% · **≥3x: 60/64**. This bucket's mean cover **1.32x** (<1.5x in 6 of 9); 5Y-7Y on the same $4B cap is 0/8. Dealers under-offer; Treasury's price test then takes the cheap tail. **Confirmed out-of-sample by 09-10:** tripling the long-end cap dropped cover to **1.75x** and produced that bucket's **first non-full fill in 22** (86%). Registered `FT-…-3`. **FT-…-1 re-derived from the security universe, not the three past lists:** `auctions_query` maturity 2033-09-18→2036-09-17 returns **18 notes — 6 TIPS (Jan/Jul 15) + 12 nominal 10Y (Feb/May/Aug/Nov 15)**; drop 2036-08-15 (on-the-run, **$39B reopening 09-09**) and 2036-05-15 (first coupon 2026-11-15, unpaid) = **10, 2033-11-15→2036-02-15**, exactly as predicted, and **zero 7-Year notes exist in the window at all**. **Adjacency — peers:** n/a (`symbols: []`). **Rates (Treasury par CSV, 09-10 close):** 2Y **4.56** · 5Y 4.75 · 7Y **4.84** · 10Y **4.95** (2026 high) · 20Y 5.39 · 30Y 5.37 — the sector this operation buys sold off **+16bp (7Y) / +15bp (10Y) in two sessions** since the last row. **Volatility:** VIX **17.84** (Cboe, 09-10 16:15 ET) vs **15.50** on 09-08, **+2.34** — under the 3-point bar. **Macro/geopolitical:** PPI hot on 09-10; **Brent $108.99, +13.2% from $96.28 on 09-04** on US–Iran escalation, into CPI 09-11 and a live FOMC 09-16. **Corridor 27 → 36 events inside ±5 days** (+9, all already tracked: BoE 09-17, Philly Fed 09-17, Empire State/UK labour 09-15, Bund 30Y + UK CPI 09-16, Missouri TRO expiry + UK PSF 09-22) — and 09-17 itself now carries a sized **$19B 10Y TIPS reopening at 1:00pm** (91282CRE3, mat **2036-07-15** — *inside* this operation's window yet ineligible, being a TIPS in a Nominal Coupons operation). Nothing that afternoon is attributable. Status stays **`estimate`**: the document says "Tentative" on its own masthead and the 09-16 announcement is still the confirming primary. | **No change to the call** (stand aside; read, don't trade). Two additions: the under-fill's mechanism is now **cover**, so 09-17's cover is the number to read first; and the kill-switch list swaps "does the replacement schedule change this?" for **"does the '= or > ' wording reach this row on 09-16?"** | 2026-09-12 (medium, D-7 → the 0+/2d band) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
