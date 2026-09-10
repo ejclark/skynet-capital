@@ -71,6 +71,24 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A STEO release hour is quieter than an ordinary noon hour" as a citable base rate (FT-47)** —
+  added 2026-09-10 from the [eia-steo-2026-09-09 close-out](events/eia-steo-2026-09-09.md). The null
+  was built on **n=8 in-sample 2026 release days** (CL=F noon-hour median |move| 0.16% vs 0.27%) and
+  **failed on its first out-of-sample observation**: 2026-09-09's 12:00–13:00 ET bar returned
+  **−1.005%** against a recomputed **p90 of 0.816%** (n=503) — the **94th percentile**. **The
+  publication is not what died; the base rate is.** A ~90%-pass-by-construction null measured
+  in-sample on one war-distorted calendar year, with no significance test, cannot support a "the
+  release window is a non-event" claim — it had one degree of freedom and spent it. Do not
+  re-propose a scheduled-publication release-window null from a single-year in-sample bucket; require
+  an out-of-sample holdout and a confound-dated attribution before citing one. **Two details that
+  cut both ways and must travel with the kill:** only **1 of 4** instruments breached (BZ=F p86.5,
+  USO p80.6, XLE p26.2 all stayed inside), and the move was **fully retraced within two hours** on a
+  day that closed **+3.246%** — so "the hour is not reliably quiet" is the honest claim, not "the
+  STEO moves crude." The sibling tracked-name nulls in
+  [`eia-steo-2026-10-06`](events/eia-steo-2026-10-06.md) and
+  [`eia-steo-2026-11-10`](events/eia-steo-2026-11-10.md) are measured on different instruments and
+  are **not** killed by this — they inherit the caveat, not the verdict.
+
 - **3Y front-end auction demand fenced by a range-of-n band (FT-20)** — added 2026-09-09 from the
   [treasury-3y-note-2026-09-08 close-out](events/treasury-3y-note-2026-09-08.md). The 2026-09-08 3Y
   covered **2.72** against a `2.54–2.71` band drawn as the observed range of the eight prior 2026
