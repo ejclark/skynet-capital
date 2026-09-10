@@ -1,0 +1,11 @@
+{
+  "id": "uk-pink-book-2026-10-30",
+  "kind": "macro-print",
+  "title": "UK Balance of Payments, The Pink Book 2026 (ONS, 09:30 London) — the Blue Book's twin, published in the same slot",
+  "date": "2026-10-30",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/ukbalanceofpaymentsthepinkbook2026, fetched direct 2026-09-10 (HTTP 200) — reads verbatim 'Provisional release date: 30 October 2026 9:30am' and 'This release is not yet published'. The same slot, to the minute, as ons.gov.uk/releases/uknationalaccountsthebluebook2026, which the proposing lane owns. Filed estimate on the same three counts as its twin: the ONS labels the date PROVISIONAL, the confirmed-prefix taxonomy has no slot for a foreign national statistics institute, and this lane does not self-confirm an event it discovered in-sweep",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-blue-book-2026-10-30 LANE, 2026-09-10, during that event's never-assessed initial research. Proposed because it is the same publication moment as the Blue Book — 09:30 London on 2026-10-30 — and because the Blue Book's own release-policy statement names the balance-of-payments bulletin as one of the sources its data are consistent with, so the two are not independent observations of the UK external position but two bound volumes of one September dataset. Concretely, Blue Book 2025's background notes (fetched direct 2026-09-10, HTTP 200) list 'our Balance of payments bulletin, published on 30 September 2025' alongside 'our GDP quarterly national accounts bulletin, published on 30 September 2025'. The proposing lane makes NO claim about this release's own market impact and did NOT run a Pink-Book event study: the LOW tier is inherited from the ONS family and from the twin's measured null, not argued from Pink Book publication days. Its practical value to the corridor is the opposite of a signal — it is a second ONS document landing in the 2026-10-28 Budget's wake, and therefore a second thing that could be misread as the cause of a 2026-10-30 gilt move that belongs to the Budget, the FOMC or the BoJ. Estimate widens caution only; nothing date-keyed may act on this."
+}
