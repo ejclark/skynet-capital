@@ -1,27 +1,45 @@
 # US markets closed — Labor Day (compresses the September coupon block into a four-session week) — labor-day-market-closure-2026-09-07
 
 **Kind:** sector · **Date:** 2026-09-07 (estimate — NEWS: NYSE `nyse.com/markets/hours-calendars` 2026 holiday table + SIFMA full bond close, reproduced by 5 U.S.C. 6103 and by Treasury moving its whole Monday bill slate to Tuesday 09-08; the `estimate` label is a taxonomy gap, not a doubt about the date) · **Impact:** low
-**Last assessed:** 2026-09-09
-<!-- probe-ref: {"symbols":{},"vix":15.72,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","beige-book-2026-09-02","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","challenger-job-cuts-2026-09-03","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","existing-home-sales-2026-09-10","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","iea-omr-2026-09-11","ism-services-2026-09-03","jgb-liquidity-enhancement-1-5y-2026-09-10","jobs-2026-09-04","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11","waller-economic-outlook-2026-09-03"],"screenStreak":0,"blocked":[]} -->
-<!-- NOTE on the block above: "vix" still holds the 2026-09-08 SETTLED close, 15.72 — now identical
-     across EIGHT cache-busted pulls (16:53, 20:01, 23:48 ET on 09-08 and 01:06, 02:41, 08:02,
-     09:28, 10:49 ET on 09-09; ^VIX meta.regularMarketTime 16:15:01 ET = exactly its
-     currentTradingPeriod.regular.end). This pull is at 10:49 ET — the first AFTER the 09:30 ET
-     equity open — and it closes the session-hours loop: ^GSPC now carries its own in-progress
-     2026-09-09 bar, so the 09:28 ET asymmetry resolves exactly as the Cboe mechanism predicts.
-     ^TNX-with-no-^GSPC is back to 0 of 9,208 and ^VIX-with-no-^GSPC back to 2 (2026-05-25,
-     2026-09-07 @ 15.30). Today's bars are notes, never readings — the registered sampling-date
-     guard bars any bar dated the same calendar day as the pull, and it governs ^TNX as well as
-     ^VIX: ^VIX 16.07, ^GSPC 7652.05, SPY 763.78, ^TNX 4.804, all in progress. FT-...-1 remains
-     scored PASS (15.72 vs 14.53). SPY is deliberately absent from "symbols" as always (the event
-     tracks none); its 09-08 bar is populated at 765.96 (n=8,460), so the un-populating episode
-     stays resolved. adjacentIds re-verified 10:49 ET via the calendar dir + proposals: 35,
-     SET-IDENTICAL to the previous row (added [], removed []). -->
+**Last assessed:** 2026-09-10
+<!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","beige-book-2026-09-02","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","challenger-job-cuts-2026-09-03","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","existing-home-sales-2026-09-10","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","iea-omr-2026-09-11","ism-services-2026-09-03","jgb-liquidity-enhancement-1-5y-2026-09-10","jobs-2026-09-04","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11","waller-economic-outlook-2026-09-03"],"screenStreak":0,"blocked":[]} -->
+<!-- NOTE on the block above: CLOSE-OUT pull, 2026-09-10 18:36 ET. "vix" now advances to 17.84, the
+     2026-09-10 close, and this is the FIRST pull in this event's twelve that reads a same-calendar-day
+     bar — which needs its reason stated, because eleven prior rows refused to. The registered
+     sampling-date guard exists to stop an IN-PROGRESS bar being read as a close; today the four
+     symbols prove settlement from meta rather than from a wall clock: ^VIX regularMarketTime
+     16:15 ET = exactly its currentTradingPeriod.regular.end, SPY 16:00 = its end, ^TNX 14:59 against
+     a 15:00 end, ^GSPC 17:05 PAST its 16:00 end. The pull is 18:36 ET, after every one. So the guard
+     is satisfied BY MECHANISM, which is the generalizable form the next closure ledger should
+     inherit — check meta.regularMarketTime against regular.end, do not wait a calendar day.
+     Settled marks: ^VIX 17.84, ^GSPC 7591.70, SPY 757.83, ^TNX 4.944. The scored readings this
+     close-out actually rests on are the 09-09 AUCTION PRINT (2.710, from fiscaldata, not a bar) and
+     the 09-09 session closes (^VIX 16.46, ^GSPC 7636.36, ^TNX 4.837), all dated strictly before the
+     pull under any reading. ^VIX-with-no-^GSPC holds at 2 of 9,242 (2026-05-25, 2026-09-07 @ 15.30);
+     ^TNX- and SPY-with-no-^GSPC are 0. SPY stays deliberately absent from "symbols" (the event tracks
+     none). adjacentIds re-verified 18:36 ET over the calendar dir + proposals: 35, SET-IDENTICAL to
+     the previous row for a second consecutive pulse (added [], removed []) — no proposal is owed. -->
 
 ## At a glance
 
-**TL;DR.** **Stand aside — and cut the seeding thesis in half, because the measurable part is on the
-rates side and the alarming part is not there at all.** This entry was filed on the claim that the
+**TL;DR.** **CLOSED 2026-09-10. Both forward tests passed, the seeding thesis is refuted with live
+data rather than only with history, and the correct call was a stand-aside from the first row to the
+last.** The entry was filed on the reading that ~$304B stacked into one session ahead of the 10Y reopening is
+a stress structure. It is not. **FT-…-2 PASSED with room** — the 09-09 10Y printed **bid-to-cover
+2.710** against the registered **2.35** line, **+0.2083** over its own on-cycle trailing-12 (**z +2.50,
+91st percentile of 203** since 2010) — and the whole compressed block came in firm, not just the tested
+leg: **3Y +0.064 · 10Y +0.208 · 30Y +0.211** excess, indirect share **+3.6 / +14.5 / +20.0pp**, and
+primary-dealer takedown **10.84% / 4.30% (3rd lowest of 203) / 2.20% (the LOWEST of 201 since 2010)**.
+Three independent demand channels, three tenors, all pointing the same way. **FT-…-1 also passed**
+(`^VIX` 15.72 vs 14.53 on 09-08), and the pre-committed *relocation* claim scored too: the auction day
+ran **3.10bp** against its predicted **3.31bp** cohort mean, and the Fri→Wed pair **5.30bp vs 7.17bp** —
+the reopen borrowed from the auction day rather than adding to the week, exactly as written before the
+print. **What the row was worth was a refusal**, and the durable output is three base rates the sibling
+closure ledgers inherit (n=27 displaced bills, n=33 reopen rates/vol, n=205 bill→coupon carry), not a
+trade. Full scoring in [`## Outcome`](#outcome). *Everything below is the live-stance record as it stood
+before the close-out and is preserved unedited.*
+
+**The stance as it stood.** This entry was filed on the claim that the
 holiday compresses the September coupon block into four sessions, stacking ~$304B of Tuesday supply
 on top of the 3Y note. The supply number is real and re-verified from Treasury's own API — $304B
 ranks in the **top 0.8% of all auction days since 2023** (6 of 728 above it). What does **not**
@@ -56,10 +74,10 @@ and a grep of both house playbook docs for holiday/closure keying returns **zero
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today | **Stand aside** — the session on the date is closed and there is nothing to size | High | D+1, the closed session has passed; `symbols: []`, `impact: low`, and `grep -icE 'holiday\|labor day\|closure\|half-day\|early close'` over `trade-playbooks.md` + `multi-symbol-sweep.md` returns **0 and 0**, run this session | A house playbook keyed on holiday-adjacent sessions written and back-tested before **2026-09-07** — the "nothing is calendar-keyed" leg dies and this sheet is rebuilt on measured data |
-| This week | **Do not carry short vol across the reopen, and treat Tue 09-08 as an attribution sink — now SCORED: FT-…-1 PASSED** | High | `^VIX` closed **15.72** on 2026-09-08 vs the registered **14.53** line (**+1.19**), scored 2026-09-09. A pass was the 82% prior, so it adds little — and **the mechanism's other half failed**: vol was marked **UP** into the pre-holiday Friday (**+0.21** vs a cohort mean of −0.233). New measurement: markdown-**and**-rebound co-occur in only **18/33 (55%)** of prior years, not 82%; conditionally the rebound runs **95% (18/19)** after a markdown and **64% (9/14)** without one (Fisher p=0.062). 2026 sat in the 64% branch and rebounded anyway | The next Monday-holiday reopen in the sibling ledger — **2027-02-16** — closing `^VIX` at or below its **2027-02-12** pre-holiday close, which would break the cohort's second consecutive live instance ([presidents-day sibling](presidents-day-market-closure-2027-02-15.md)) |
-| This month | **Do not build a supply-stress thesis on the compression — it has no measured footprint** | Medium | Across the 5 prior compressed Septembers the 10Y/3Y/30Y excess bid-to-cover is **+0.183 / −0.024 / +0.126** against **+0.031 / −0.003 / +0.036** in normal Septembers — never worse, and the 10Y edge is 2009–2010 alone. **The mechanism itself now has n=27, not n=5** (2026-09-09): every Labor Day displaces the Monday bill slate, and Tuesday-after-Labor-Day excess bid-to-cover runs **13W +0.088 / 26W +0.044** against **−0.003 / −0.005** for all other auctions of those terms since 2000 (n=1,365 each). Held at Medium, not raised: 2026's own displaced 13W is the **4th weakest of the 27**, and its **composition** ranks the same way (indirect **−2.88pp**, 5th weakest of 19) while the 26W and the 3Y both come in **firm** — the softness is one bill, not the session. **And the block was never compressed at all** (2026-09-09): its span is **3 calendar days in 6 of 6** compressed years, and the only **2-day** blocks in 18 years — **2016 and 2022** — are *normal* weeks |  The **2026-09-09** 10Y reopening printing bid-to-cover **below 2.35** (trailing-12 mean 2.451, sd 0.098, min 2.30) — the first compressed instance to show the degradation the thesis predicts. Registered as **FT-labor-day-market-closure-2026-09-07-2** |
-| This quarter | **Watch the promotion and the recurrence, not the tape** | Medium | The date is quadruple-sourced (NYSE, SIFMA, 5 U.S.C. 6103, and Treasury's own Monday→Tuesday bill shift) and still `estimate` purely because the prefix taxonomy has no slot for an exchange calendar. The structure returns on the same rule — Labor Day on Sep 6 or 7 — next in **2031** and **2032** | A `NYSE:`-class prefix added to the source taxonomy before **2026-12-31** — the entry promotes to `confirmed` and this call retires |
+| Today | **Stand aside — and this is now the CLOSED verdict, not a live call.** The session on the date passed shut; the whole corridor it opened has since printed and nothing in it was ever sizeable here | High | D+1, the closed session has passed; `symbols: []`, `impact: low`, and `grep -icE 'holiday\|labor day\|closure\|half-day\|early close'` over `trade-playbooks.md` + `multi-symbol-sweep.md` returns **0 and 0**, run this session | A house playbook keyed on holiday-adjacent sessions written and back-tested before **2026-09-07** — the "nothing is calendar-keyed" leg dies and this sheet is rebuilt on measured data |
+| This week | **CLOSED — do not carry short vol across the reopen. FT-…-1 PASSED, and the week that followed made the caution look cheap for reasons that are NOT the holiday** | High | `^VIX` closed **15.72** on 2026-09-08 vs the registered **14.53** line (**+1.19**), scored 2026-09-09. A pass was the 82% prior, so it adds little — and **the mechanism's other half failed**: vol was marked **UP** into the pre-holiday Friday (**+0.21** vs a cohort mean of −0.233). New measurement: markdown-**and**-rebound co-occur in only **18/33 (55%)** of prior years, not 82%; conditionally the rebound runs **95% (18/19)** after a markdown and **64% (9/14)** without one (Fisher p=0.062). 2026 sat in the 64% branch and rebounded anyway | The next Monday-holiday reopen in the sibling ledger — **2027-02-16** — closing `^VIX` at or below its **2027-02-12** pre-holiday close, which would break the cohort's second consecutive live instance ([presidents-day sibling](presidents-day-market-closure-2027-02-15.md)) |
+| This month | **CLOSED — do not build a supply-stress thesis on the compression; it now has a measured footprint and the footprint runs the OTHER way. FT-…-2 PASSED** | High (raised from Medium on the live print) | The 2026-09-09 10Y reopening printed **2.710** against the registered **2.35** line, **+0.2083** over its own on-cycle trailing-12 (z **+2.50**, **91st pctile of 203**). The block's other two tenors agree — 3Y **+0.064**, 30Y **+0.211** — as do composition (indirect **+3.6 / +14.5 / +20.0pp**) and dealer takedown (**10.84% / 4.30% = 3rd lowest of 203 / 2.20% = LOWEST of 201** since 2010). The 6th compressed instance is the strongest of the six on the 10Y, so leg 4 closes as *refuted with live data*, not merely "no effect detected at n=5." Raised to High because three independent channels across three tenors replaced a single n=5 historical cut | A future compressed September (**2031** or **2032**) printing 10Y bid-to-cover **more than 1sd below its own on-cycle trailing-12** — the first genuine counter-instance, which would put this back at Medium on n=7. Nothing before then can move it: the structure does not recur |
+| This quarter | **CLOSED — the promotion did not happen and the entry retires as `estimate`; watch the recurrence, not the tape** | Medium | The date is quadruple-sourced (NYSE, SIFMA, 5 U.S.C. 6103, and Treasury's own Monday→Tuesday bill shift) and still `estimate` purely because the prefix taxonomy has no slot for an exchange calendar. The structure returns on the same rule — Labor Day on Sep 6 or 7 — next in **2031** and **2032** | A `NYSE:`-class prefix added to the source taxonomy before **2026-12-31** — the entry promotes to `confirmed` and this call retires |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
@@ -382,13 +400,20 @@ ledger's framing is corrected accordingly. Every statement carries the event's *
 - **The 10Y reopening shows the degradation the compression thesis predicts** — bid-to-cover on
   **2026-09-09** below **2.35** (trailing-12 mean 2.451, sd 0.098, min 2.30). Leg 4's "no effect
   detected" acquires its first counter-instance and this stance is re-argued, not patched.
-  Registered as **FT-labor-day-market-closure-2026-09-07-2**, score by 2026-09-10.
+  Registered as **FT-labor-day-market-closure-2026-09-07-2**, score by 2026-09-10. **→ DID NOT FIRE,
+  and missed by a wide margin. Scored 2026-09-10 18:36 ET: bid-to-cover 2.710, PASS (+0.360 over the
+  line, z +2.50 over its own on-cycle trailing-12, 91st pctile of 203).** Leg 4 acquires no
+  counter-instance; it gains its strongest supporting instance instead.
 - **A house playbook that keys on holiday-adjacent sessions is written and back-tested** — leg 9
-  goes stale and the stand-aside is re-argued on measured data rather than on absence.
+  goes stale and the stand-aside is re-argued on measured data rather than on absence. **→ DID NOT
+  FIRE. Re-grepped at close-out: `docs/plans/trade-playbooks.md` 0, `docs/research/multi-symbol-sweep.md` 0.**
 - **A `NYSE:`-class prefix is added to the source taxonomy** — the entry promotes to `confirmed`
-  and the "This quarter" call retires.
+  and the "This quarter" call retires. **→ DID NOT FIRE. The taxonomy in `market-events-data.ts` still
+  carries exactly `BEA: BLS: CENSUS: EST: FED: IR: NEWS: TSY:` and no exchange slot, checked at
+  close-out. The entry retires `estimate` on taxonomy grounds with a quadruple-sourced date.**
 - **Treasury re-announces the 09-08 slate** (size change, postponement, or a CMB added) — legs 1
-  and 2 re-date and the $304B figure must be recomputed before it is quoted again.
+  and 2 re-date and the $304B figure must be recomputed before it is quoted again. **→ DID NOT FIRE.
+  Every auction priced exactly as filed; the 10Y took $39,000,040,000 against a $39B offering.**
 
 ## Assessment ledger
 
@@ -408,6 +433,8 @@ ledger's framing is corrected accordingly. Every statement carries the event's *
 | 2026-09-09 | −2 | **Deferred a tenth time, 3.5 h short — and the row's real work is withdrawing the one live datum that pointed the seeding thesis's way, which was my own.** Run **2026-09-09 09:28 ET**. FT-…-2's 10Y (`91282CRF0`) prints ~13:00 ET; cache-busted `auctions_query` (HTTP 200) shows **$39B**, reopening, ann. 09-03, `bid_to_cover_ratio` still the literal string **`"null"`** (the 08:02 row's hazard, reproduced) → **live, not void**. Writing `## Outcome` now silences the scanner permanently (`event-scan.mjs:152`) and orphans it; the churn is filed as **#2485**. **THE CORRECTION — the 13:52 row's 3Y composition figure is backwards.** It recorded indirect **61.7% vs 64.6%** trailing-12 = **−2.8pp**, "the one soft spot." Recomputed from a cache-busted `auctions_query` over the full 3-Year series (**234** auctions, every one `security_term` `3-Year`, **zero reopenings**, so this cohort carries none of the definitional ambiguity that split the 10Y anchors): trailing-12 indirect through 2026-08-11 is **58.12%**, and 2026-09-08's **61.74%** is **+3.62pp**. The same row's cover anchor (**2.656 / sd 0.083**, excess **+0.064**) reproduces to three figures from the identical pull, so the error is isolated to the indirect figure and **64.6%** appears in no window I can construct. **Consequence, against my own earlier reading: the $304B session's cover AND its composition both printed above trailing-12** — the live compressed session contains nothing supporting the stress thesis. At-a-glance corrected; **no ledger row edited**. **LOAD-BEARING FIND A — composition and cover are ORTHOGONAL, which bounds what that correction is allowed to mean.** Indirect-share excess **carries strongly** from a 3Y to the 10Y auctioned 1–4 days later — **Pearson +0.496 / Spearman +0.504**, n=183, 2010+, more than twice the **+0.223** the 08:02 row measured for bid-to-cover; after a firm-composition 3Y the next-day 10Y runs **+3.01pp** indirect excess vs **−4.69pp** after a soft one. But **within** a single 10Y auction, indirect excess and bid-to-cover excess correlate **−0.003** (n=268). So the corrected firm 3Y composition predicts a firm 10Y *composition* and updates FT-…-2 **not at all** — and the 13:52 row's "strong cover, soft composition" framing called a *split* something that measurably cannot split. **LOAD-BEARING FIND B — the concession channel is null, pre-committed before the print.** Across **268** 10Y auctions since 2010, the pre-auction `^TNX` move vs bid-to-cover excess over own trailing-12: **+0.021 / +0.067** (5 sessions), **+0.052 / +0.073** (10), **+0.016 / +0.040** (20). Tertile means at 5 sessions **−0.008 / −0.040 / +0.024**. Z-based tail risk *does* decline (P(z ≤ −1) **24.7 → 15.7 → 12.2%**) but **does not survive to the absolute line the test scores on** — P(BTC < 2.35) is **14.6 / 12.4 / 14.4%**, flat. **And 2026's concession is ordinary despite the headline level:** `^TNX` 4.758 → **4.806** = **+4.8bp over 5 sessions (63rd pctile)**, +10.2bp over 10 (73rd), while 4.806 is the highest *level* since Oct 2023 — level is not concession, and the two prior rows quoting 4.806 invited that conflation. Net: no update to the 08:02 prior of **~95–99% pass**; one fewer story available to explain a fail. **Third find — the n=19 composition base rate for the displaced bills**, which the 23:48 row's cover-only work lacked: Tue-after-Labor-Day indirect excess **13W +1.59pp / 26W +1.05pp** (n=19 each; allotment fields start later than BTC, hence 19 not 27) vs **+0.13pp** for all other auctions of those terms since 2000 (n=931 each), **t 0.79 / 0.48** — same direction, same non-significance as the cover result. 2026 splits identically: **13W −2.88pp, 5th weakest of 19**; **26W +4.28pp, 13th of 19**. The 13W is the one internally consistent soft signal this event has (4th weakest of 27 on cover, 5th of 19 on composition); the 26W and 3Y are both firm on both. **HAZARD EXTENDED TO A SECOND SYMBOL, and this one is the close-out's own tape:** at 09:28 ET — after Cboe's 03:00 ET open, before the 09:30 ET equity open — **`^TNX` carries an in-progress 2026-09-09 bar (4.808)** while `^GSPC` carries none. Every prior row observed this for `^VIX` only. Measured: `^TNX`-with-no-`^GSPC` is **1 of 9,208 bars since 2000 — today**; `^VIX`-with-no-`^GSPC` now **3** (2026-05-25, 09-07 @ 15.30, today live); `SPY`-with-no-`^GSPC` **0 of 8,459**; `^GSPC`-with-no-`^VIX` **0 of 9,238**. FT-…-2's kill switch requires the concurrent `^TNX`/`^VIX` tape beside a weak print, so **the registered sampling-date guard is recorded in the fragment as governing `^TNX` too** — no registered row edited. **FT-…-1 unmoved, reproduced a seventh time:** `^VIX` 09-08 **15.72** vs 14.53, **PASS**. Settled marks `^GSPC` **7673.52**, `SPY` **765.96** (n=8,459), `^TNX` **4.806**. **No kill switch fired:** **no 09-07 auction row**; 09-08 settled at exactly **$304B** (13W 92 @2.61 + 26W 79 @2.88 + 6W 75 @2.93 + 3Y 58 @2.72); 30Y 09-10 **$22B**, 17W 09-09 $72B, 4W/8W 09-10 $90B/$85B → week **$612B**, max-day share **49.7%**, unchanged. Adjacency — peers n/a; **corridor 35 ids ±5d, SET-IDENTICAL** to the prior row (added `[]`, removed `[]`) → no new dated adjacent event, **no proposal**. **Geopolitics from our own bars, and the shock has cleared $100:** `BZ=F` settled **97.92** on 09-08, its 09-09 bar in progress at **100.69** (a note, not a reading); `CL=F` 93.03 → **95.69**. Press corroborates Brent **$100.80, +2.94%**, high **$100.95** — first above $100 since July — after US Central Command destroyed **five Iranian tankers** answering a ballistic-missile attempt on a US warship, plus the Houthi strikes on Saudi facilities; Hormuz flows reported **below 2mb/d**. **A dated emergency OPEC+/IEA response was searched for a third time and none is scheduled** — the only collective action on record is the **2026-03-11** 400mb release, past → nothing to propose. **Hike odds are INHERITED AND DATED, not refreshed:** today's aggregator surfaces CME **58.7%** (a 09-07 read; no newer CME print found) with Kalshi **48%** / Polymarket **49%** — i.e. the ~10pp spread, against the **54.5% / 53.5%** our 02:41 row read live seven hours earlier. The venues disagree and so do the reads; **no level asserted**. `## Outcome` is owed to the first dispatch after **13:00 ET today**; hard deadline **2026-09-13**. | None — stand aside holds. FT-…-1 stays **PASS** (unchanged); FT-…-2 unscored, its auction 3.5 h out, prior unchanged at ~95–99%. The 13:52 row's 3Y composition sign is corrected in At-a-glance, withdrawing the session's only soft-composition datum; cover and composition are shown orthogonal, so it changes no call; the concession channel is measured **null**. No registered row and no ledger row edited. | 2026-09-09, after 13:00 ET (close-out; hard deadline 2026-09-13) |
 | 2026-09-09 | −2 | **Deferred an eleventh time, 2.2 h short — and the row closes the last channel by which the compressed session's own softness could have predicted the test it cannot yet score.** Run **2026-09-09 10:49 ET**. FT-…-2's 10Y (`91282CRF0`) prints ~13:00 ET; cache-busted `auctions_query` (HTTP 200) shows **$39B**, reopening, ann. 09-03, `bid_to_cover_ratio` the literal string **`"null"`** (the 08:02 hazard, reproduced a third time) → **live, not void**. Writing `## Outcome` now silences the scanner permanently (`event-scan.mjs:152` — the passed branch sets `nextDueDate: today` and never reads `lastAssessed`) and orphans it; hard deadline **2026-09-13**. **THE LOAD-BEARING FIND — bill→coupon demand carry is NULL, so this event's one soft datum is measurably non-informative for FT-…-2.** Every prior row has recorded the displaced **13W** as the single internally consistent soft signal (**2.61 = −0.1525** excess, **z −0.64**, 4th weakest of the 27 Tue-after-Labor-Day instances, 5th of 19 on composition, **26th pctile** of all **871** 13W since 2010) — and none had asked whether a soft bill predicts a soft coupon. Pairing every 10Y with the 13W/26W auctioned **1–2 days earlier** (n=**205**, 2010-01-13 → 2026-08-12; 43 at a 1-day gap, 162 at 2), each auction's bid-to-cover taken as an excess over its own trailing-12 same-term: **13W Pearson +0.008 / Spearman +0.045**; **26W +0.090 / +0.129**. Tail risk is flat — P(the 10Y prints ≥1sd below its own trailing-12) is **12.2% (25/205)** overall, **13.3%** after a soft 13W, **11.2%** after a firm one, and **9.8% (5/51)** in the *weakest* 13W quartile, i.e. if anything below base rate. **The structurally matched subset agrees**: restricted to the 1-day gap a compressed year actually produces (bills Tue → 10Y Wed; n=**43**, and it contains **2010-09-08**, itself a compressed Labor Day) Pearson is **+0.049** and the post-soft-13W tail **8.0%** against a **9.3%** cohort base rate. **So the 08:02 prior of ~95–99% stands unchanged and is now un-caveated from this side too:** the 3Y carried weakly *for* the 10Y (+0.223), composition is orthogonal to cover (−0.003), the concession channel is null, and the displaced bills do not carry at all. Registered as a **prior, not a new forward test** — it predicts the same auction FT-…-2 already registers. **Second find — the churn is SELF-SUSTAINING, which is #2485's sharpest evidence yet:** this lane's own deferral PR is a merge to `main`, and a merge to `main` is the tick that re-dispatches it. Shipping this row therefore *schedules* the next forced deferral at roughly the moment it merges — ~11:30 ET, still ~90 min short of the print — so the eleven deferrals are not merely frequent, each one causes the next. Filed as a comment on #2485; not patched here (`event-scan.mjs` is not this lane's to change mid-close-out). **Fourth out-of-sample check of the Cboe session-hours mechanism, from the one regime that closes the loop:** this pull is **after** the 09:30 ET equity open and `^GSPC` now carries its own in-progress 09-09 bar, so the 09:28 ET asymmetry resolves exactly as predicted — `^TNX`-with-no-`^GSPC` back to **0 of 9,208**, `^VIX`-with-no-`^GSPC` back to **2** (2026-05-25, 2026-09-07 @ 15.30), `SPY`-with-no-`^GSPC` **0 of 8,460**, `^GSPC`-with-no-`^VIX` **0 of 9,239**. All four sampling regimes (pre-03:00, 03:00–09:30, post-09:30, post-close) have now been tested and every one matched. Today's bars are notes, never readings, under the registered guard: `^VIX` **16.07**, `^GSPC` **7652.05**, `SPY` **763.78**, `^TNX` **4.804**, all in progress. **FT-…-1 unmoved, reproduced an eighth time:** `^VIX` 09-08 **15.72** vs 14.53, **PASS**; settled marks `^GSPC` **7673.52**, `SPY` **765.96** (n=8,460), `^TNX` **4.806**. **No kill switch fired:** **no 09-07 auction row**; 09-08 settled at exactly **$304B** (13W 92 @2.61 + 26W 79 @2.88 + 6W 75 @2.93 + 3Y 58 @2.72, hy 4.4740); 30Y 09-10 **$22B**, 17W 09-09 $72B, 4W/8W 09-10 $90B/$85B → week **$612B**, max-day share **49.7%**, unchanged. Adjacency — peers n/a (`symbols: []`); **corridor 35 ids ±5d, SET-IDENTICAL** to the prior row (added `[]`, removed `[]`, via `readCalendarDir` + `computeAdjacentIds`) → no new dated adjacent event, **no proposal**. **Geopolitics from our own bars, and the shock has held above $100:** `BZ=F` settled **97.92** on 09-08, its 09-09 bar in progress at **100.99** (a note, not a reading); `CL=F` 93.03 → **95.92**. Press corroborates Brent **~$100.76** after US strikes on Iranian tankers and the Houthi drone/missile attacks on Aramco facilities at Abha, Jazan, Najran and Khamis Mushait (73 wounded, several facilities suspended); Goldman lifted Dec-2026 Brent/WTI by **$5 to $85/$80**. **A dated emergency OPEC+/IEA response was searched for a FOURTH time and none is scheduled** — the only collective action on record remains the **2026-03-11** 400mb release, past → nothing to propose. **Hike odds are still the 09-07 CME read, inherited and dated:** **58.7%** for 09-16, with no newer CME print found across four consecutive sessions of looking, and prediction venues continuing to price a hike materially lower. No level asserted. `## Outcome` is owed to the first dispatch after **13:00 ET today**. | None — stand aside holds. FT-…-1 stays **PASS** (unchanged, eighth reproduction); FT-…-2 unscored, its auction 2.2 h out, and its ~95–99% pass prior now un-caveated from the bill side — the compressed session's one soft datum does not carry into the coupon. No registered row and no ledger row edited. | 2026-09-09, after 13:00 ET (close-out; hard deadline 2026-09-13) |
 
+| 2026-09-10 | −3 | **CLOSE-OUT WRITTEN — twelfth run, first one that could score, and FT-…-2 PASSES by a wide margin.** Run **2026-09-10 18:36 ET**. Cache-busted `auctions_query` (HTTP 200): `91282CRF0` printed **btc 2.710**, hy **4.834**, $39,000,040,000 accepted on a $39B offering — no resize, so not void. Against the 2.35 line: **+0.360**; against its own on-cycle trailing-12 (2.5017/0.0832): **+0.2083, z +2.50, 91st pctile of 203**. The block's other tenors agree — 3Y **+0.064**, 30Y **+0.211** — and dealer takedown reads **10.84% / 4.30% (3rd lowest of 203) / 2.20% (lowest of 201)**. The event's one soft datum, the displaced 13W, predicted nothing, as pre-committed. **The relocation claim scored too:** D+2 |Δ10Y| **3.10bp** vs its predicted **3.31bp** mean (55th pctile), pair **5.30bp vs 7.17bp** — no excess, as written before the print. D+3 ran hot (**10.70bp**, 85th) on PPI and the 30Y, not on a closed Monday. Adjacency: 35 ids, set-identical a second time; no proposal owed. `## Outcome` written; this doc goes quiet. | Stance unchanged in direction, raised in confidence: stand-aside held, and "no effect detected at n=5" becomes *refuted with live data* | — (closed) |
+
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer
@@ -415,3 +442,115 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
 (`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-10 18:36 ET, D+3, inside the 6-day window that expires 2026-09-13).** Scored from
+re-run instrument data after the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`), never from memory: a fresh `api.fiscaldata.treasury.gov`
+`auctions_query` (HTTP 200) for every auction in the compressed week, and Yahoo daily bars via
+`scripts/research/market-data.mjs` for `^VIX` / `^GSPC` / `SPY` / `^TNX`. Macro / market-structure mode
+carries no symbol-keyed instrument — `symbols: []` by design.
+
+**Both forward tests passed, and the second one passed by a margin its own registration did not price.**
+
+| | Registered line | Printed | Verdict |
+|---|---|---|---|
+| **FT-…-1** — vol marked down into the Friday, rebounds on reopen | `^VIX` **above 14.53** on 2026-09-08 | **15.72** (+1.19) | **PASS**, scored 2026-09-09 |
+| **FT-…-2** — the compression null: stacking the block does not strain its demand | 10Y bid-to-cover **≥ 2.35** on 2026-09-09 | **2.710** (+0.360) | **PASS**, scored today |
+
+### What actually printed — the whole block, not just the tested leg
+
+The test registered one number. The close-out measures all three tenors of the compressed block on
+three independent demand channels, each as an excess over its own **on-cycle nominal** trailing-12
+(TIPS excluded — see the anchor note below), so era and size are controlled rather than ignored:
+
+| | Bid-to-cover | Excess (z) | Excess pctile since 2010 | Indirect share vs trailing-12 | Primary-dealer takedown |
+|---|---|---|---|---|---|
+| **3Y** 09-08 (`91282CRL7`, $58B) | 2.720 | **+0.064** (z +0.77) | 66th (n=200) | 61.74% vs 58.12% = **+3.62pp** | 10.84% (7th pctile) |
+| **10Y** 09-09 (`91282CRF0`, $39B) | **2.710** | **+0.2083** (z +2.50) | **91st** (n=203) | 78.98% vs 64.50% = **+14.49pp** (96th) | **4.30% — 3rd LOWEST of 203** |
+| **30Y** 09-10 (`912810UW6`, $22B) | 2.610 | **+0.2108** (z +2.19) | **90th** (n=199) | 79.33% vs 59.36% = **+19.97pp** | **2.20% — the LOWEST of 201** |
+
+Dealer takedown is the channel that settles it. Primary dealers are the residual bidder: they take
+what nobody else wanted. The 30Y left them **2.20%**, the smallest share of any 30-year auction in the
+201 held since 2010, and the 10Y left them **4.30%**, third-smallest of 203. A week that was supposed
+to strain demand for duration instead produced the least dealer absorption on record at the long end.
+
+**So leg 4 closes REFUTED WITH LIVE DATA, not merely "no effect detected at n=5."** The initial
+research was careful to say the n=5 historical cut could rule out the stress reading but could not
+establish that compression is benign. The sixth instance is now in hand and it is the **strongest of
+the six** on the 10Y (+0.208 against 2010's +0.178, 2021's +0.168, 2015's +0.050, 2020's −0.179).
+Three channels, three tenors, one direction.
+
+### The event's own soft datum stayed isolated, exactly as pre-committed
+
+The one internally consistent soft signal this event ever produced was the **displaced 13-week bill**
+— 2.61 on 09-08, **−0.1525** against its own trailing-12, 4th weakest of the 27 Tuesday-after-Labor-Day
+instances. The 10:49 ET row on 09-09 measured, ~2.2 h before the print and pre-committed, that a soft
+displaced bill predicts nothing about the next day's coupon (13W→10Y Pearson **+0.008** over n=205;
+**+0.049** on the structurally matched 1-day-gap subset). It predicted nothing. Four channels were
+measured *ex ante* — 3Y→10Y carry, composition-vs-cover, pre-auction concession, bill→coupon — all
+null or mildly favourable, and the print landed above all of them.
+
+### The relocation claim scored too, and it was the sharper prediction
+
+Leg 6 said the Tuesday reopen is a **1.7×** rates session; the 09-09 02:41 ET row sharpened that into
+a falsifiable shape — the excess **fully reverses on the auction day**, leaving no excess over the
+pair. Measured against the 33 prior Labor Days (`^TNX`, 1993→):
+
+| | Cohort mean | 2026 | Rank / pctile |
+|---|---|---|---|
+| D+1 (Fri→Tue reopen) | 6.50bp | **2.20bp** | 5th of 34, **12th pctile** |
+| **D+2 (the auction day)** | **3.31bp** | **3.10bp** | 19th of 34, 55th pctile |
+| Fri→Wed pair | 7.17bp | **5.30bp** | 16th of 34, 45th pctile |
+| D+3 | 5.47bp | 10.70bp | 29th of 34, 85th pctile |
+
+D+2 landed **within 0.21bp of the mean it was predicted to land on**, and the pair showed the no-excess
+result the row committed to. D+3 ran hot — but 09-10 carried PPI and the 30Y reopening, and the cohort
+statistic makes no claim about it. The prediction was about where the reopen's energy *goes*, and it
+went where the row said.
+
+### The tape kept selling, and none of it belongs to a closed Monday
+
+`^GSPC` **7718.60 → 7673.52 → 7636.36 → 7591.70** (three straight down sessions, **−1.64%** Fri→Thu);
+`^VIX` **14.53 → 15.72 → 16.46 → 17.84** (**+3.31**, the **85th pctile** of the cohort's Fri→D+3 ΔVIX);
+`^TNX` **4.784 → 4.806 → 4.837 → 4.944**. This is the attribution guard doing its job in the direction
+it was least likely to be invoked: the week looks like the compression thesis was right if you read
+only the tape. It was not. Brent above **$100**, Canada's counter-tariffs effective 09-08, PPI on
+09-10 and CPI on 09-11 inside the 09-05→09-17 FOMC blackout are each a better explanation than a
+session on which nothing traded — and the auction results are the direct measurement of the channel
+the thesis actually named, which came in firm while the tape sold off.
+
+### Kill switches — all four unfired, and the anchor note
+
+None of the four remaining kill switches fired (each is annotated in place above). One disclosure the
+score does not depend on but the record should carry: the **registered anchor** (trailing-12 mean
+2.451, sd 0.098, **min 2.30**) is the *all-taps* 10Y series, and its 2.30 minimum is **2026-07-23 — a
+10-year TIPS** (`inflation_index_security: Yes`). The on-cycle nominal series is **2.5017 / 0.0832 /
+min 2.39**, which reproduces the 08:02 ET row's own **z −1.82 (on-cycle)** for the 2.35 line to two
+decimals, so this was already known and disclosed, not newly discovered. The registered line is
+**absolute**, so the verdict is identical on either anchor — and on the clean one the line sat
+*deeper*, which makes the pass wider, never narrower.
+
+### What this event was worth, stated honestly
+
+**Its calls were refusals and every one of them was correct, which in a compounding book is P&L.**
+Nothing here was ever tradeable: `symbols: []`, `impact: low`, the date is `estimate`, and the
+house-playbook grep returned **0/0** at seeding and **0/0** again at close-out. The row earned its
+place by splitting a correct arithmetic claim (**$304B in one session is real, top 0.8% of 728
+auction days**) from an incorrect consequence (**that this strains demand**) — and then by testing the
+consequence rather than repeating it. The durable output is three measured base rates the sibling
+closure ledgers inherit: **n=27** displaced-bill auctions, **n=33** Labor Day reopens on rates and vol,
+**n=205** bill→coupon demand carry. The structure returns in **2031** and **2032**; a session working
+those will find the mechanism already measured.
+
+**The scoring-guard thread closes with a generalizable rule.** Eleven rows deferred this close-out,
+each correctly, because a registered sampling-date guard barred reading a bar dated the same calendar
+day as the pull — a rule written after a 07:44 ET pull would have scored FT-…-1 a day early off an
+in-progress bar. Today's pull shows the cheaper form of the same protection: check
+`meta.regularMarketTime` against `currentTradingPeriod.regular.end` per symbol (`^VIX` 16:15 = its end,
+`SPY` 16:00 = its end, `^TNX` 14:59 against 15:00, `^GSPC` 17:05 past a 16:00 end) rather than waiting
+a calendar day. The churn itself is already filed as bottleneck **#2485**; this is the mechanism half
+of the answer, and the next closure ledger should inherit it.
+
+**This document is closed.** The scanner goes quiet on this event from here.
