@@ -1,8 +1,8 @@
 # Treasury cash-management buyback operation (1Mo-2Y nominal, $12.5B cap, 1:40pm ET) — treasury-buyback-cash-mgmt-2026-09-09
 
 **Kind:** rates · **Date:** 2026-09-09 (estimate, EST: treasury.gov *Tentative Schedule of Treasury Buyback Operations*, August 2026 Quarterly Refunding, masthead "For Publication August 5, 2026" — PDF re-fetched direct this session, plain curl, HTTP 200, 125,547 bytes, md5 `79b65955e74a59f6bebff3adf8ba7b35`, text layer independently decompressed; row reads announce 9/8/2026 · operation 9/9/2026 1:40 pm – 2:00 pm · settle 9/10/2026 · Cash Management · Nominal Coupons 1Mo to 2Y · 10/10/2026 – 09/09/2028 · min $0 · max $12.5 billion) · **Impact:** medium
-**Last assessed:** 2026-09-08
-<!-- probe-ref: {"symbols":{},"vix":15.50,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jobs-2026-09-04","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11"],"screenStreak":0,"blocked":[]} -->
+**Last assessed:** 2026-09-10
+<!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jgb-liquidity-enhancement-1-5y-2026-09-10","jobs-2026-09-04","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11"],"screenStreak":0,"blocked":[]} -->
 
 ## At a glance
 
@@ -412,6 +412,7 @@ cash-management cluster this doc expects is **not yet dated** and cannot be prop
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-08 | D-1 | **Initial research; canonical `<id>.json` written, standing in for the one proposal (`from-treasury-20y-bond-2026-09-15`).** **The finding: cash management is a separate programme from liquidity support, not a big version of one.** All **26** cash-management operations on record (`buybacks_operations`, 219 rows, plain curl) buy **1Mo-2Y and nothing else**; full-cap fills **22 of 26**, **≥96% in 24 of 26**, mean **95.3%**, min **34.6%**. **The "1Mo-2Y fills 10 of 10" figure the sibling ledgers quote is the LIQUIDITY-SUPPORT bucket (n=10) and is NOT this event's base rate.** **Offers have exceeded the cap in 26 of 26** (cover **1.43–5.25x**, median 2.68x) — *including both big misses* (2024-12-19 drew 2.05x and took 49.7%; 2025-04-23 drew 1.43x and took 34.6%) — so **a short fill is price discretion, never scarcity**. **TGA does not predict the fill** (misses at **$788B** / **$576B** vs a **$786B** median on full fills; TGA closed **$903.9B** 09-03) — the intuitive story, killed. **Structural fact about this date:** the announcement snaps the schedule's range to real maturities (09-03: schedule 10/04/2026–09/03/2028 → announced **2026-10-15 → 2028-08-31**), and the same snap on 09-09's 10/10/2026–09/09/2028 gives the **identical window** — so **09-09 is a second bite at the same ~45-name apple six days after 09-03 took $12.5B out of it**. Announced **begin** is near-meaningless (first eligible maturity a median **130.5d** above it, range 0–320; 09-03's gap was 212d); announced **end** matched the top eligible maturity in **16 of 26** and was exactly 15d shy in the other 10. Prelim list **44** → final **45** on 09-03 (912828X88 added). **Reference classes disagree and both are stated:** 2nd-in-cluster **6/7 full, 99.5% mean**; cluster-ender **4/7, 83.0%**; 09-09 is both, and the tightest class — two-operation clusters, 2nd op — is **100% · 100% · 96.6% (n=3)**. **Clusters have run at every quarter-turn since 2024-09, 8 for 8.** **What it buys (09-03 results XML):** 24 issues took the whole $12.5B in **$0.3–1.9B** clips at prices **93.97–100.28**, largest line **91282CKZ3 4.375% 2027-07-15, $1.944B at 100.205** — a *premium* — vs liquidity support's $35–336M clips of low-90s paper. **Proposal corrected:** its "larger than every long-end operation combined" is **wrong** — the schedule carries nine long-end nominal operations at $2B = **$18B** vs this one's $12.5B; the defensible version is **6.25x any single** long-end operation, and the two September cash-management operations (**$25B**) do beat $18B. Cash management is **$25B of the schedule's $69B cap in 2 of 20 operations**. **Impact raised low → medium** to match every other buyback operation this calendar tracks. **Event tape (primary):** schedule PDF re-fetched **HTTP 200, 125,547 bytes, md5 79b65955e74a59f6bebff3adf8ba7b35 — byte-identical to the 09-05 fetch**, so `sb0607`'s replacement schedule is **still unpublished 20 days on**; row verbatim announce 9/8 · operation 9/9 1:40–2:00pm · settle 9/10 · Cash Management · 1Mo to 2Y · 10/10/2026–09/09/2028 · max **$12.5B**. **Stays `estimate`:** the confirming primary posts **11:00am ET on 09-08** and this session ran at **10:10am ET** — `BBPA_20260909*.xml` returned **404** on four candidate paths (not-yet-published, not blocked; the 09-03 equivalent returned HTTP 200). **Three forward tests registered** — `FT-…-1` (announcement carries $12.5B and 2026-10-15 → 2028-08-31; scores 09-08), `FT-…-2` (accepted **≥ $12.0B**; scores 09-10), `FT-…-3` (**≥43 of 09-03's 45** CUSIPs reappear; scores 09-09). **Adjacency — peers:** n/a (`symbols: []`). **Rates (primary, Treasury par CSV fetched direct, 09-04 — 09-07 was Labor Day):** 1Mo 3.79 · 1Yr **4.13** · 2Yr **4.37** · 10Yr 4.78 · 30Yr 5.24; `^TNX` 4.780 / `^FVX` 4.552 / `^IRX` 3.760 (09-08) agree. **Volatility:** VIX **15.50** intraday 09-08 vs **14.53** close 09-04 — under the 3pt threshold. *Data-quality note:* Yahoo returns a `^VIX` row for **09-07** (15.30) that cannot be a session — Labor Day closure, and `^TNX`/`^FVX`/`^IRX` all skip it. **Macro (inherited, dated):** Aug payrolls **+162K vs ~53K** (09-04); FOMC blackout live 09-05 → 09-17. **Adjacency — 26 tracked entries inside the ±5-day corridor; NOTHING new proposed:** all are already in the calendar, and the schedule's remaining operations (09-29, 10-01, 10-15, 10-21, 10-27, 11-04, 11-05) are sector-cadence-only under the siblings' specific-warrant rule. The December cash-management cluster this doc expects is not dated until the 11-04 refunding publishes. | **Stance set** — read-not-trade; base case is a full or near-full **$12.5B** take on offers above the cap but below 09-03's $28.272B | 2026-09-10 (medium; the event is D-1 and passes 09-09, so the next assessment is the close-out, due within `closeOutWithinDays` = 6) |
+| 2026-09-10 | D+1 | **Close-out. All three forward tests CONFIRMED from re-fetched primaries; no kill switch fired.** `BBPA_20260909174000.xml` (announced **2026-09-08T11:00-04:00**) carries **$12,500,000,000 · 2026-10-15 → 2028-08-31 · 45 eligible** — `FT-…-1` exact on all three values. `BBR_20260909174000.xml`: **$28.027B offered → $12.500B accepted = 100.0% of cap**, 27 issues, cover **2.242x**, prices **93.832–100.258** → `FT-…-2` (≥$12.0B). Eligible lists **45 of 45 identical** to 09-03 → `FT-…-3` cleared with room (predicted ≥43). **The finding the close-out adds: the universe was identical but the book did NOT thin.** Offers went **$28.272B → $28.027B, −0.87%**, six days after $12.5B of par was retired from those same 45 names — a fixed pool would have dropped ~44%. So leg 8 survives a direct depletion test: the constraint is willingness to offer at a price out of a float far larger than any operation, never a drainable stock. **Composition rotated anyway** — 27 lines vs 24; 09-03's top line (91282CKZ3, $1.944B @100.205) took **$0.225B**, and 91282CCR0 ($1.340B @93.965 on 09-03) took **nothing**; new top line 91282CLQ2 **$1.570B @99.589**. **Leg 13 does not generalise** (prelim→final: 09-03 44→45, 09-09 45→45; n=2, 1 of 2 changed). **The tentative schedule was REPLACED and it does not touch this operation** — re-fetched HTTP 200, **89,250 bytes, md5 c49a5351bf2d31a367817abc62be51bd**, masthead now **"For Publication September 9, 2026"**; both cash-management rows verbatim unchanged, **no third September operation added** (so 09-09 was the cluster-ender, confirmed by the replacement). What changed is all long-end — 9/10 10Y-20Y **$2B → $6B**, and 9/24 · 10/1 · 10/8 · 10/15 · 10/27 · 11/4 → **"= or > $4 billion"**; that is `sb0607` landing and it belongs to `treasury-buyback-increase-2026-09-09`. **One of this ledger's own claims is retired by it** (leg 3/4): cash management's $25B beat the long end's $18B on the **August-5** schedule and does **not** on the September-9 one (long-end nominal now **≥$34B**), and "3.1x once the doubling lands" understated it — the next long-end operation printed $6B, making $12.5B **2.08x**. **Base rates restated with 09-09 in them** (`buybacks_operations` re-pulled, n=**27**, all 1Mo-2Y): full cap **23/27**, ≥96% **25/27**, mean **95.5%**, min 34.6%; offers > cap **27/27**; 2nd-in-cluster **7/8, 99.6%**; cluster-ender **5/8, 85.1%**; two-op-cluster 2nd **3/4, 99.2%** — **09-09 was both classes and the tighter one won**. **Adjacency — rates (Treasury par CSV, direct):** 09-08 → 09-09 1Yr **4.15→4.17**, 2Yr **4.39→4.43** (+4bp) but 10Yr **4.80→4.83** and 30Yr **5.25→5.28** moved with it, on a day carrying the 10Y auction 40 minutes earlier — a parallel shift with an auction in it, which is exactly the explanation the >3bp kill switch excludes; **no intraday series fetched and no 20-minute attribution made**, as promised. 09-10 sold off hard (2Yr **4.56**, 10Yr **4.95**) on PPI/ECB/30Y. **Volatility:** VIX **15.72** (09-08) → **16.46** (09-09) → **17.84** (09-10), +2.12 — under the 3pt threshold; the phantom Labor-Day `^VIX` row (09-07, 15.30, absent from `^TNX`/`^FVX`/`^IRX`) **reproduced**. **TGA:** $903.9B (09-03) → $880.0B (09-08) → **$843.7B** (09-09) — full fill at both ends of a $60B drawdown, consistent with leg 9's null. **Sibling:** the newly-$6B 09-10 10Y-20Y operation took **$5.187B of $6.0B on $10.489B offered (86.5%)** — `treasury-buyback-10y20y-2026-09-10`'s to score. **Status flipped `estimate` → `confirmed` (`TSY:`)** — the confirming primary this research ran 50 minutes ahead of now exists and was fetched. **Adjacency — 29 tracked entries in the ±5-day corridor (26 on 09-08; the three new ones were added by sibling lanes), NOTHING new proposed:** the replacement schedule dates no event this calendar lacks, and its cap changes belong to already-owned files. | **Stance held and now closed** — read-not-trade was unfalsified; base case hit 7 of 7, one of them (offers below $28.272B) by only 0.87% and treated as a coin flip, not evidence | — (closed; `## Outcome` written, the scanner goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -422,3 +423,204 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out written 2026-09-10, D+1, inside the 6-day window.** The operation cleared its full
+**$12.5B** cap and every registered test hit, so the headline is not the result — it is the
+**mechanism the result lets us measure for the first time.** 09-09 bid for an eligible universe
+that was **literally identical** to 09-03's, six days after 09-03 took $12.5B of par out of it, and
+**the offer book barely moved**. That is a controlled depletion test the programme's 27-operation
+history had never handed anyone, and it settles what a short fill in this programme would mean.
+
+**Sourcing — what "re-run instrument data" means here.** `symbols: []`, so `earnings-cycle.mjs` and
+`intraday-edges.mjs` have no target. Their caches were busted anyway per the standing rule
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and the analog was
+honoured instead: **nothing below is from memory of the tape.** Every number is a fetch made this
+session — the three operation XMLs and 09-03's pair from `treasurydirect.gov` (all HTTP 200), the
+full `buybacks_operations` history and DTS `operating_cash_balance` from `api.fiscaldata.treasury.gov`,
+Treasury's own 2026 par-yield CSV, the tentative-schedule PDF re-fetched and its streams re-inflated,
+and Yahoo v8 chart pulls for `^VIX`/`^TNX`/`^FVX`/`^IRX`. Nothing was blocked; `probe-ref.blocked`
+stays empty.
+
+### 1. What happened, against what was filed
+
+| Filed (2026-09-08, D-1) | What happened | Verdict |
+|---|---|---|
+| Announcement carries max **$12,500,000,000** | `BBPA_20260909174000.xml`, announced **2026-09-08T11:00:00-04:00**: `maxParAmountRedeemed` **12500000000** | **Correct, exact** |
+| Window **2026-10-15 → 2028-08-31** | `maturityDateRangeBegin` **2026-10-15**, `maturityDateRangeEnd` **2028-08-31** | **Correct, exact** |
+| Final eligible list **44–50** CUSIPs | **45** | **Correct** |
+| Overlaps 09-03's 45 by **≥ 43** | **45 of 45 — the lists are identical** | **Correct, and stronger than filed** |
+| Offers **well above** the cap | **$28,027,000,000** = **2.242x** | **Correct** |
+| Offers **below** 09-03's $28.272B | **$28.027B** — below by **$245M (0.87%)** | **Correct, but by a margin too thin to claim as a read** (see §2) |
+| Accepts **at or near** the full $12.5B | **$12,500,000,000 — 100.0% of cap**, 27 issues | **Correct** |
+| `medium` impact | Carried unchanged | **Held** |
+| `estimate` label | Confirming primary now exists; flipped **`confirmed` / `TSY:`** | **Resolved as the research said it would be** |
+
+Seven of seven. That is a good day and also a *small* one: the base case was mostly arithmetic off a
+published schedule plus a snap rule, and the only genuinely uncertain call was the fill.
+
+### 2. THE FINDING — an identical universe, and a book that did not thin
+
+This is the transferable part, and it is worth more than the fill.
+
+Leg 11 predicted the eligible windows would snap to the same real maturities, and they did: **45 of
+45 CUSIPs, no additions, no drops.** So 09-09 was a second bite at exactly the same apple. The
+intuitive consequence is that the second bite should find less fruit — $12.5B of par had just been
+retired out of a 45-name set. It did not:
+
+| | 2026-09-03 | 2026-09-09 | Change |
+|---|---|---|---|
+| Eligible CUSIPs | 45 | **45** (same names) | **0** |
+| Total par offered | $28.272B | **$28.027B** | **−0.87%** |
+| Cover | 2.262x | **2.242x** | −0.02x |
+| Total par accepted | $12.500B | **$12.500B** | 0 |
+| Issues accepted | 24 | **27** | +3 |
+| Accepted price range | 93.965 – 100.281 | **93.832 – 100.258** | ~unchanged |
+
+**If the offer book were a fixed stock, retiring $12.5B from it should have cut the second
+operation's offers by roughly 44%. It cut them by under one percent.** The book is therefore not a
+queue being drained; it is a *price-elastic flow* drawn from outstanding float that dwarfs any single
+operation. That is the load-bearing upgrade to leg 8, which until now rested on "offers have exceeded
+the cap in 26 of 26" — an observation that had never been stress-tested. It has been now.
+
+**The rule for the next session, stated so it generalises past this date:** in a cash-management
+buyback, a short fill is **always** a statement about the prices offered, never about the paper being
+gone — and *the previous operation over the same universe tells you nothing about how much will be
+offered at the next one*. Before reading any buyback shortfall as a demand signal, check total par
+offered against the cap first. In 27 of 27 operations that check has come back oversubscribed,
+**including both of the programme's big misses** (2024-12-19 drew 2.05x and took 49.7%; 2025-04-23
+drew 1.43x and took 34.6%).
+
+**And the composition rotated even though the universe did not** — which is what a price-discretion
+operation working a fresh offer stack should look like, and not what draining a queue looks like:
+
+| CUSIP | Matures | 2026-09-03 | 2026-09-09 |
+|---|---|---|---|
+| 91282CKZ3 4.375% | 2027-07-15 | **$1.944B @100.205** (top line) | **$0.225B @100.164** |
+| 91282CCR0 1.000% | 2028-07-31 | **$1.340B @93.965** | **nothing** |
+| 91282CLQ2 3.875% | 2027-10-15 | $1.462B @99.635 | **$1.570B @99.589** (top line) |
+| 91282CAD3 0.375% | 2027-07-31 | not accepted | **$1.533B @96.690** |
+
+Same forty-five names, a materially different clearing set, and the same $12.5B out the door in
+$0.001–1.570B clips. Twenty-seven lines against twenty-four — Treasury spread the same money wider.
+
+### 3. The two reference classes, resolved — the tighter one won
+
+Leg 7 stated a disagreement rather than picking a side: 09-09 was **both** the second operation of a
+cluster (7 of 8 full before it) **and** its last (4 of 7 before it, mean 83.0%, holding both big
+misses). Base rates re-pulled from the full history this session, now n=**27**:
+
+| Reference class | n | Full fill | Mean | Min |
+|---|---|---|---|---|
+| All cash-management operations | **27** | **23** | **95.5%** | 34.6% |
+| Second operation of a cluster | **8** | **7** | **99.6%** | 96.6% |
+| Cluster-ender | **8** | **5** | **85.1%** | 34.6% |
+| Two-operation clusters, second op | **4** | **3** | **99.2%** | 96.6% |
+
+The base case used the tightest class (then n=3) and said its sample size out loud. It was right, and
+**n is now 4** — still small, still said out loud. All **27** operations on record remain **1Mo-2Y**,
+so the bucket kill switch is untouched.
+
+### 4. The tentative schedule was replaced mid-window — and it leaves this operation alone
+
+The initial research recorded that `sb0607`'s promised replacement schedule was still unpublished
+twenty days on (the PDF was byte-identical across three fetches, md5 `79b65955…`, 125,547 bytes).
+**It has now published.** Re-fetched this session: **HTTP 200, 89,250 bytes, md5
+`c49a5351bf2d31a367817abc62be51bd`**, streams re-inflated and every row re-read; masthead now reads
+**"For Publication September 9, 2026."**
+
+What did **not** change is this event: both cash-management rows are verbatim identical
+(**9/3 and 9/9, 1Mo-2Y, $12.5B**), and **no third September cash-management operation was added** —
+so 09-09 really was the cluster's last leg, now confirmed by a *replacement* schedule rather than a
+tentative one. Leg 15's claim that `sb0607` does not touch this operation's cap, sector or cadence is
+**SUPPORTED by the replacement itself.**
+
+What did change is entirely long-end: **9/10 10Y-20Y $2B → $6 billion**, and **9/24 · 10/1 · 10/8 ·
+10/15 · 10/27 · 11/4 → "= or > $4 billion."** That is `sb0607` landing, and it belongs to
+[`treasury-buyback-increase-2026-09-09`](treasury-buyback-increase-2026-09-09.md) and the long-end
+operation ledgers, not here — one file per owner, and this session writes none of theirs.
+
+**One of this ledger's own claims is retired by it, and is recorded rather than smoothed.** Leg 3/4
+argued that the two September cash-management operations (**$25B**) exceed the schedule's whole
+long-end nominal total (**$18B**). True of the August-5 schedule; **false of the September-9 one**,
+where the long-end nominal total is now **≥$34B** (2 + 2 + 6 + six rows at ≥4) against the same $25B.
+And "$12.5B is 3.1x any single long-end operation once `sb0607`'s doubling lands" *understated* the
+increase: the very next long-end operation printed **$6B**, making it **2.08x**. The structural
+finding — cash management is a distinct front-end programme, not a big liquidity-support operation —
+is untouched; only the size-ratio framing moves, and it moves against this ledger.
+
+### 5. Every kill switch, checked
+
+| Kill switch | Result |
+|---|---|
+| Announcement printing a max other than $12.5B, or a window other than 2026-10-15 → 2028-08-31 | **Did not fire** — exact on all three |
+| Operation accepting under $12.0B | **Did not fire** — $12.500B, 100% |
+| Fewer than 43 of 09-03's 45 CUSIPs reappearing | **Did not fire** — 45 of 45 |
+| A cash-management operation at any bucket other than 1Mo-2Y | **Did not fire** — 27 of 27 are 1Mo-2Y |
+| Total par offered below $12.5B | **Did not fire** — $28.027B |
+| The 1:40–2:00pm window moving 1–2Y yields >3bp with no auction or CPI explanation | **Did not fire, and deliberately not attributed** (below) |
+| The 2026-11-04 refunding carrying no December cash-management cluster | **Not scoreable** — the refunding has not published, and this doc goes quiet (§7) |
+
+**On the front-end move, stated precisely because the temptation is to over-read it.** Treasury's par
+curve, fetched direct: 09-08 → 09-09 the **1Yr went 4.15 → 4.17** and the **2Yr 4.39 → 4.43 (+4bp)**,
+which is over the 3bp trigger in isolation. It is not in isolation: the **10Yr went 4.80 → 4.83** and
+the **30Yr 5.25 → 5.28** on the same day, so the curve shifted roughly in parallel, on a session
+carrying the **10-Year note auction at 1:00pm ET — forty minutes before this operation opened**. A
+parallel shift with an auction in it is exactly the "auction-result explanation" the switch excludes.
+**No intraday series was fetched, because none would settle a twenty-minute window**, and the initial
+research promised no such attribution would be attempted. It is not attempted. (For completeness:
+09-10 sold off much harder — 2Yr **4.56**, 10Yr **4.95**, 30Yr **5.37** — on PPI, the ECB and the 30Y
+auction, none of it this event's.)
+
+### 6. Adjacency at close
+
+- **Volatility.** VIX **15.72** (09-08 close) → **16.46** (09-09) → **17.84** (09-10): **+2.12** over
+  the window, under the 3-point materiality threshold but the highest reading since 09-01. The
+  data-quality artifact the initial research flagged **reproduced exactly** — Yahoo again returns a
+  `^VIX` row for **2026-09-07** (15.30) that cannot be a session, while `^TNX`/`^FVX`/`^IRX` all skip
+  Labor Day. Worth a second sighting: it is a `^VIX`-specific quirk, not a one-off.
+- **The cash balance, once more not predicting anything.** DTS closing TGA: **$903.9B** (09-03) →
+  **$880.0B** (09-08) → **$843.7B** (09-09). Both operations filled to the cap across a **$60B**
+  drawdown. Leg 9's null result survives its second look.
+- **The long-end sibling, same week.** The newly-**$6B** 10Y-20Y operation on **09-10** took
+  **$5.187B on $10.489B offered — 86.5%**, a partial fill at the increased cap. Noted as adjacency
+  only; scoring it is [`treasury-buyback-10y20y-2026-09-10`](treasury-buyback-10y20y-2026-09-10.md)'s
+  job.
+- **Corridor.** **29** tracked entries now sit within ±5 days of this event, up from 26 on 09-08; the
+  three new ones (`canada-counter-tariffs-effective-2026-09-08`,
+  `existing-home-sales-2026-09-10`, `jgb-liquidity-enhancement-1-5y-2026-09-10`) were filed by sibling
+  lanes and are already canonical. **Nothing new is proposed by this close-out:** the replacement
+  schedule dates no operation this calendar lacks, and its cap changes belong to files this session
+  does not own.
+
+### 7. Honest limits, and the one thing left open
+
+**The depletion test is n=1.** One pair of consecutive operations over one identical universe. A
+0.87% offer decline is a strong hint that the book is a flow rather than a stock; it is not a measured
+elasticity, and no significance test is applied. The right posture is the one in §2 — *check offers
+against the cap before reading any shortfall* — not a number.
+
+**n=4 for the class the base case used**, and one future operation moves its mean materially.
+
+**No intraday data anywhere in this document.** Every rate is a daily close or a par-curve point. The
+twenty-minute window is unmeasured by construction, not by omission.
+
+**The Jan–Mar 2027 exclusion is still unexplained** (leg 12) — and it is now *stable*: the same 45
+names were eligible on both 09-03 and 09-09, so whatever excludes those eleven CUSIPs persists across
+operations rather than being a one-day artifact. No CFR or FAQ text was fetched to explain it this
+session either. Recorded, still not resolved.
+
+**One kill switch will never be scored here.** *"The 2026-11-04 refunding schedule carrying no
+December cash-management cluster"* is dated **after** this document goes quiet, and the quarter-turn
+regularity (**8 of 8 since 2024-09**) is this ledger's most interesting untested claim. It survives
+only if a future session picks it up: the natural owner is whatever event covers the **2026-11-04
+refunding announcement**, and the check is one field on one PDF — does the November schedule carry a
+December **Cash Management** row? Said plainly rather than registered as a test nobody would score.
+
+**Final stance, closed.** The read was right and the read was that there was nothing to trade. A
+$12.5B front-end buyback that clears its cap on a 2.24x book, forty minutes after a 10-Year auction,
+in a week holding PPI, CPI, the ECB and a 30-Year, is plumbing — and this ledger's value was never the
+call. It was correcting the base rate a sibling ledger would otherwise have carried across (**22 of
+26**, now 23 of 27 — not the liquidity-support bucket's 10 of 10), and establishing that a shortfall
+here would be Treasury refusing a price. The second half of that is no longer an inference.
