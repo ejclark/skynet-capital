@@ -1,257 +1,84 @@
 # 10-Year Treasury Note auction (reopening) — treasury-10y-note-2026-09-09
 
 **Kind:** rates · **Date:** 2026-09-09 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-09-09
-<!-- probe-ref: {"symbols":{},"vix":15.72,"daysBand":"high:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jobs-2026-09-04","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11"],"screenStreak":0,"blocked":[{"url":"https://www.opec.org/press-releases.html","status":403,"at":"2026-09-09"},{"url":"https://www.bls.gov/news.release/cpi.nr0.htm","status":403,"at":"2026-09-09"}]} -->
+**Last assessed:** 2026-09-10
+<!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"high:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jgb-liquidity-enhancement-1-5y-2026-09-10","jobs-2026-09-04","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11"],"screenStreak":0,"blocked":[{"url":"https://www.opec.org/press-releases.html","status":403,"at":"2026-09-09"},{"url":"https://www.bls.gov/news.release/cpi.nr0.htm","status":403,"at":"2026-09-09"},{"url":"https://www.cnbc.com/2026/09/09/treasury-yields-oil-inflation.html","status":403,"at":"2026-09-10"},{"url":"https://www.cnbc.com/2026/09/10/us-treasurys-bonds-yield.html","status":403,"at":"2026-09-10"},{"url":"https://www.cnn.com/2026/09/10/investing/oil-iran-war-diesel","status":451,"at":"2026-09-10"}]} -->
 
 ## At a glance
 
-**TL;DR.** This is the benchmark auction of the September coupon block — a **reopening of the
-Aug-12 10-year** — and it lands first in a three-day compound stack: 10Y (9/9) → 30Y reopening
-(9/10) → **August CPI (9/11)**. The nuance that matters: the belly-and-10Y is the *strong* part of
-the curve right now, not the weak part. The long-end sell-off driving 30Y yields to a **19-year
-high** (~5.33% intraday on 8/18) is a **term-premium/fiscal story**, but foreign demand for the
-10Y has held up remarkably — the Aug-12 new issue drew **near-record indirect (76.7%) demand and
-stopped on the screws** (tail +0.1bp, bid-to-cover 2.53 vs a 2.47 six-month average). So the base
-case here is a well-bid reopening; the *tail risk* is contagion — the long-end weakness migrating
-into the belly, or a hot 9/11 CPI forcing a concession the day after. **Updated 9/2:** the Aug-12
-predecessor's metrics are now **primary-verified at Treasury** (fiscaldata: $42B offered, 4.683%
-high yield, B/C 2.53, indirect 76.73%) and the 9/9 security is confirmed as a reopening of exactly
-that note (**CUSIP 91282CRF0**, announce 9/3) — the doc's central "the 10Y is the strong tenor" leg
-no longer rests on secondary trackers. Meanwhile the setup got hotter on three fronts: September
-**hike odds ~66–68%** (from ~56–60%), a fresh **Iran/Hormuz oil shock** (Brent +4.4% to ~$91–92)
-that reverses 8/30's "oil leg removed" finding, and the 10Y at **4.79%** — highest since Jan 2025 and
-**11bp of concession above the Aug-12 stop**. Auction **date is confirmed**; the reopening **size is
-still unannounced** and every forward demand figure is **estimate**. No symbol-keyed action —
-guard-shaped, no-new-duration-risk window. **Updated 9/4:** the size finally exists and it is the
-quiet, favorable answer — **$39B**, primary-sourced twice (fiscaldata + TreasuryDirect, announced
-9/3), which is the **run-rate reopening size, not an increase**: the Jun-10 and Jul-08 reopenings
-were also $39B, and the whole September block came at run-rate (3Y $58B, 30Y $22B). **The supply leg
-is removed** — the doc's own D7 kill switch, fired in the base case's favour, and the two prior $39B
-reopenings both drew *better* stats than the $42B new issues. The Fed channel also cooled: Waller's
-9/3 dovish signal knocked hike odds from ~66–68% to ~48–50%, and a hot **+162k** August jobs print
-(vs ~53–56k consensus) only pulled them back to **~52–60%** — net *below* D7, with the Chair and a
-Governor publicly split and blackout starting 9/5. Against that, **oil escalated hard** (Brent
-~$95–96, a six-week high, Iran striking Kuwait/Jordan/Bahrain). Stance unchanged and still
-guard-shaped — the base case is simply better evidenced than it has ever been. **Updated 9/5** (run
-after Friday's close; markets are shut until the 3Y prices Monday): the week closed with the auction
-side unchanged and **two corrections that both cut against the last row's optimism**. First, D5
-banked Energy Sec. Wright's ">17mb/d through Hormuz" as the reason the oil shock is risk-premium
-rather than lost barrels — independent tanker trackers put the same day near **9.1mb/d**, a 28-day
-average of **6.85mb/d** against a ~15mb/d pre-war baseline, and Kpler has regional exports at ~65% of
-pre-war. The counterweight is **weaker than credited**, so the inflation-uncertainty leg into 9/11
-CPI is stronger, not weaker. Second, leg 5's three-row name-level gap is finally **closed, and the
-read did not fire**: on a session where the 10Y rose on a hot jobs print and the S&P fell 0.38%,
-**CRWV +5.7% and MRVL +7.1%** — the high-duration book rallied *through* the rate impulse on a
-sector-idiosyncratic bid. Rates→duration transmission is not automatic, which removes any basis for
-reading name-level moves next week as an auction tell. Housekeeping: FedWatch settled at the **low
-end** of D5's band (**52.6%**, vs 49.4% the prior day), blackout is now **in effect**, VIX closed
-**14.53** (still YTD lows), and the 10Y's high-water-mark dispute is **resolved from the primary
-series** — D7's "highest since January 2025" is the correct one. Stance unchanged, still guard-shaped.
-**Updated 9/8** (run pre-open, ~07:40 ET, the morning of the block's only pre-auction session): the
-auction side is **unchanged and re-verified a fourth time** ($39B / CUSIP 91282CRF0 / announced 9/3),
-and the same Treasury endpoint now confirms D3's Labor Day finding from the other side — 9/8's bills
-*are* the displaced Monday slate ($92B + $79B + $75B, all announced 9/3) and the following week's are
-back on Monday 9/14. What moved is **pricing, not evidence**, and it moved against the holder in three
-places at once. The **10Y printed 4.81%** — a fresh high and now **~12.7bp of concession** above the
-Aug-12 4.683% stop (from ~9.7bp), with FRED DGS10 putting the last close at or above 4.81 at
-**2023-10-31**. September **hike odds rose to 58.7%** (from 52.6% on 9/4) *during blackout*, which
-means oil repriced the Fed, exactly the channel D3 said was the only one left open. And **VIX is
-15.75** pre-open against the 14.53 carried since D4 — the first break off the YTD lows in ten
-sessions. Oil is the engine: Brent **~$98.7** (+3.8% since 9/4, approaching $100) on a **new
-mechanism** — Houthi strikes igniting fires at Saudi oil facilities on 9/8, i.e. producing and
-refining infrastructure, not just Hormuz transit. **OPEC+ is now scored** (D3 carried it): quotas
-**held** for October, no supply relief. Two things cut the other way and are stated as such: Iran says
-an **Iran–Oman Hormuz agreement is "days away"**, the first credible de-escalation path since D7; and
-the August CPI consensus consistent with BLS's own series is core **easing to ~2.4%** — so the market
-is pricing a hike off *energy* while the core gauge points down, which makes 9/11 the two-way event,
-not this auction. Stance unchanged, still guard-shaped.
-**Updated 9/6:** the auction side is re-verified a third time and still **$39B**, but the *runway* is
-one session shorter than every prior row has assumed — **Monday 9/7 is Labor Day** and the market is
-shut (NYSE full closure; SIFMA full bond close; Treasury's own record shows the 13-week bill moving
-off Monday for the first time in ten weeks). So the four-day corridor is the week's **only** four
-sessions: exactly one trading day (**Tue 9/8**) stands between now and the reopening, it carries the
-displaced Monday bill slate *plus* the 3Y (**~$304B auctioning in one session**), and the weekend's
-escalation — the IRGC hitting three tankers in Hormuz on 9/5, the US destroying or disabling three
-Iranian tankers in reply — cannot price until then. The oil counterweight D4 downgraded is now
-**three independent trackers against the official series** (Kpler 10-day avg 13 vessels/day, Lloyd's
-List ~12/day, PortWatch 7/day, against a ~100-ship / ~20mb/d pre-war baseline), and it gained a **new
-dated mechanism**: Kpler puts Hormuz at ~40% of 2025 flows with a ~550mb crude shortfall "bridged so
-far by inventory draws and truce-window buffers **that thin from September**" — i.e. the cushion that
-has muted the price impact runs out in the month this auction and the 9/11 CPI land in. OPEC+ met
-today on October quotas; **no statement was available at this row's run time** — left unscored.
-Stance unchanged, still guard-shaped.
-**Updated 9/9** (run 20:12 ET Tue 9/8 — the 3Y result and the full 9/8 session, both of which D1 could
-not see, are in hand; the reopening prices ~17 hours after this row): **the block's only pre-auction
-demand read came in two-sided, and each half maps onto one of this doc's two open questions.** The 3Y
-**stopped through** (4.4740% vs a 4.475% when-issued, **−0.1bp**) *into* the ~$304B of same-session
-crowding — the exact branch D3's amended switch called "a stronger positive than the original switch
-credited" — on the **best 3Y cover of 2026** (2.720 vs a 2.620 average) with **dealers at only 10.91%**
-(14.07% average), so real money absorbed it. **But indirects printed 62.15% vs 65.51%, 3.4pp light —
-the third consecutive coupon auction where foreign demand fell short and domestics filled in** (directs
-26.94% vs 20.4%). Supply is clearing at these yields *and* the buyer mix is shifting domestic; only
-tomorrow tells us whether the second half reaches the benchmark. Three structural findings, all new:
-**(1)** auction day is the opposite of 9/8 — $39B 10Y plus one 17-week bill (**$72B**) ≈ **$111B**, so
-the crowding discount **does not apply** and tomorrow is a clean read; **(2)** 10Y **reopenings average
-72.66% indirect vs 67.45% for new issues** (n=27 from the primary), a +5.2pp gap every prior row missed
-by benchmarking a reopening against a blended average; **(3)** the five-row aggregator phantom is
-identified — "$39B / 4.033% / indirect 83.1%" is the **2025-09-10** reopening, a year to the day before
-this one. The tape moved mildly and mostly favourably: the curve barely budged on the quarter's most
-crowded session (10Y **4.80** close on Treasury's par curve, so D1's pre-open 4.81 is corrected and the
-concession is **~11.7bp**), and the blackout hike-odds climb **stalled at 58.1%**. Against it: **Brent
-$99.51**, at the $100 handle, with no evidence found of the Iran–Oman IMO filing D1 named as the
-de-escalation tell. And **leg 5 inverted a second time, harder** — **CRWV +11.72%** while **NVDA
-−2.01%** on a session with yields at a fresh high and the S&P −0.58%, so the tier did not move as a
-tier and leg 5 is downgraded to refuted-as-a-same-week-read-through. Stance unchanged, still
-guard-shaped; one forward test registered.
+**TL;DR.** **The auction is scored, and it answered its own question while the tape ignored the
+answer.** The reopening priced at 1:00pm ET on **2026-09-09** (**confirmed**) and on demand it was
+the **best 10-year auction of its lineage**: $39B at a **4.8340%** high yield, **bid-to-cover 2.710 —
+the highest of 28 nominal 10Y auctions since June 2024** — indirects **79.18%** (6.5pp *above* the
+72.66% reopening mean, 4th of 28), directs 16.51%, and **primary dealers at 4.31%**, the
+second-lowest takedown in the same set. It **stopped through by ~1.5bp**. Every figure but the tail
+is read straight off Treasury's own `auctions_query` for CUSIP **91282CRF0** (results
+`R_20260909_2.pdf`). **So the contagion question this document was built on is answered: no.** The
+light-indirect run that ran through the 5Y, 7Y and 3Y did **not** reach the curve-setting tenor —
+[FT-treasury-10y-note-2026-09-09-1](../forward-tests/treasury-10y-note-2026-09-09.md) **passes by
+11.2pp** — and the next day's 30Y reopening confirmed it harder (indirects **79.48%**, dealers
+**2.21%**, the lowest of *its* own 28-auction lineage). **And the curve sold off anyway.** The
+best-bid auction in two years bought **1.6 basis points**, of which **0.8bp survived to the close**
+(^TNX 4.845 pre-auction → 4.829 low → 4.837 close), and the 10-year gave back **12bp the next day**:
+Treasury's par curve reads 10Y **4.80 (9/8) → 4.83 (9/9) → 4.95 (9/10)**, a two-day **+15bp
+bear-flattening** to the highest 10-year since November 2023. **The driver is oil, and it is
+measurable rather than narrated** — Brent **97.92 → 101.21 → 109.19** (+11.5% in two sessions) after
+the US destroyed five Iranian tankers and Trump said on 9/9 he is "not looking for a deal with Iran",
+and **4.8bp of 9/10's 10.7bp move was already done before PPI printed at 8:30am ET**. PPI itself was
+exactly the divergence this doc named at D0: headline **+0.4% m/m in line**, **5.4% y/y vs 5.3%
+expected** on a **+4.2% energy** component, **core +0.2% vs +0.3% expected** — *softer* at the core.
+September hike odds went **58.1% (9/8) → ~68.7% (9/10, 06:15PM EDT)**, leaving D10's ~75% threshold
+about 6pp away. **The lesson this close-out banks is the one the doc did not have going in:**
+primary-market demand and the direction of yields **decoupled completely** — two auctions that drew
+near-record real-money sponsorship sat inside the sharpest two-day selloff of the corridor, because
+the marginal price was being set by an energy-driven inflation repricing an auction cannot
+arbitrate. The guard held and cost nothing; **CPI 9/11 and the 9/16 FOMC are the live documents from
+here**, not this one.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (9/9) | Stand aside through the 1:00pm ET print — and read it on **indirects**, not on cover | High | The 3Y already answered the cover question (2.720, best of 2026; **stopped through** −0.1bp despite ~$304B of crowding) and left the foreign-demand one open (indirects 62.15%, 3.4pp light, third straight). Today is a **clean** session — $39B plus one 17-week bill ≈ $111B, against 9/8's ~$304B — so unlike yesterday's, this print carries no crowding discount in either direction. Nothing here is tradable: the auction side is settled at a fifth verification and CPI is still two days out. | An indirect share **below 68.0%** on **2026-09-09** (registered as FT-treasury-10y-note-2026-09-09-1; 10Y reopenings average 72.66%) — the light-indirect run reaching the curve-setting tenor, which is the contagion signal leg 3 rates SUPPORTED against |
-| This week | The oil channel still drives this auction, but its grip on the Fed loosened right before the print | Medium | Hike odds **stalled at 58.1%** on 9/8 (from 58.7% on 9/7) even as Brent added another 3.4% to **$99.51** — the first blackout session where oil rose and the Fed path did not follow. Brent sits at the $100 handle on the onshore mechanism (Saudi facilities, not just Hormuz transit), with OPEC MOMR (9/10) and IEA OMR (9/11) inside the corridor and no evidence found of the Iran–Oman IMO filing. | Brent breaking back under ~$85 on the Iran–Oman agreement actually being lodged with the IMO, removing the inflation-uncertainty leg for the third time in this doc |
-| This month | Flat the print for high-duration names — but stop reading their tape as a rates tell | High | The corridor still has no spare session (9/9 10Y+buyback+STEO · 9/10 30Y+PPI+ECB+buyback op · 9/11 CPI+MTS) into a coin-flip FOMC, so CRWV/NVDA/AVGO/MRVL stay sized for both tails. What changed is the *reading*: leg 5's transmission failed a second time on 9/8, with **CRWV +11.72% and NVDA −2.01% in the same session**, so name-level moves this week carry sector flow, not auction information. | A weak print on **2026-09-09** — indirects below 68.0%, bid-to-cover below ~2.47, or a positive tail — which would make the duration book's exposure a rates story again rather than a sector one |
-| This quarter | The Fed is being priced off energy, not off core — and that gap is still the quarter's real risk | Medium | Supply is closed at run-rate and the front-end demand read cleared. What is left is a hike priced at **58.1%** on an oil impulse while August CPI consensus consistent with BLS's own series has **core easing to ~2.4%** (July actual **2.48%**). Term premium persists (10Y **4.80**, 30Y 5.25) with no fresh supply catalyst, so the quarter turns on whether energy keeps overriding core. | An in-line-or-cooler **core** CPI on **2026-09-11** that nonetheless leaves September hike odds above ~55% — that would mean the energy channel has decoupled from the gauge the Fed says it watches |
+| Today (9/10, D+1) | **Closed — the event is spent, and it is not admissible as a rates signal in either direction** | High | The print is scored from the primary and it was outstanding on every demand metric (cover **2.710**, best of 28; indirects **79.18%**; dealers **4.31%**; stopped through ~1.5bp). It bought **1.6bp**, kept **0.8bp** to the close, and was overwhelmed by **12bp** the following session. There is nothing left in it to trade and nothing in it that forecasts the next session. | A Treasury revision to the 2026-09-09 result on `auctions_query` for CUSIP **91282CRF0** that materially moves the 79.18% indirect share or the 2.710 cover — the only route by which the scored facts change |
+| This week | **CPI on 2026-09-11 owns what is left of the week — stay flat the print, exactly as through the auction** | High | The auction-specific risk resolved favourably and the macro risk widened in its place: hike odds **~68.7%**, Brent **$109.19**, 10Y **4.95%**. PPI split the way D0 predicted — energy **+4.2%** pushing the y/y to 5.4% while **core came in softer** at +0.2% vs +0.3% — so Friday's **core** is the one number that arbitrates between the two stories. | A core CPI at or under **+0.2% m/m** on **2026-09-11** that still leaves September hike odds above **~65%** — the energy channel would then have fully decoupled from the gauge the Fed says it watches, and this doc's D0 read of that divergence was too generous to the buyer |
+| This month | **Flat the 9/16 FOMC corridor for the high-duration book — the auction result bought no cover** | High | The corridor's remaining stack (CPI+MTS 9/11 · 20Y 9/15 · **FOMC 9/16** · TIPS 9/17 · OpEx 9/18) now runs into a **~68.7%**-priced hike that rose **10.6pp in two sessions on oil alone**, with VIX up from 15.72 to **17.84**. CRWV/NVDA/AVGO/MRVL stay sized for both tails; a well-bid coupon block changed none of that. | September hike odds settling above **~85%** or below **~30%** before **2026-09-16** — a decision the market has already resolved no longer needs corridor discipline |
+| This quarter | **Coupon-auction demand has stopped being a readable term-premium signal — read oil and core instead** | Medium | Two consecutive best-in-lineage auctions (10Y 9/9 dealers **4.31%**, 30Y 9/10 dealers **2.21%**, both near-record-low) sat inside a **+15bp** two-day selloff. Supply is clearing at whatever yield the market names, so the auction is a *lagging* read on term premium this quarter, not a leading one. | A 10Y or 30Y auction before **2026-12-31** that tails **≥2bp** with indirects **below 65%** — genuine demand deterioration at the benchmark would restore auctions as the channel this quarter's evidence says they stopped being |
 
-**Signals & conditions** — the buy/sell/hold triggers:
+**Signals & conditions** — the closed state; the full switch-by-switch history is in
+*Stance & kill switches* below and is not repeated here:
 
-- **Weak print** (bid-to-cover materially below the ~2.47–2.59 recent range, a positive tail, or
-  indirect share dropping well below the ~71% average toward the mid-60s) — this would be the tell
-  that the *long-end* term-premium weakness has migrated into the *benchmark*, a materially bigger
-  signal than a soft 20Y/30Y because the 10Y sets the whole curve; caution widens on all
-  high-duration names into the 9/11 CPI.
-- **Strong print** (bid-to-cover ≥2.53, negative tail, indirect back near/above 76%) — continues
-  the well-bid belly pattern (Aug-12, Jul-8), near-term relief; does **not** resolve the structural
-  long-end/fiscal story or the Fed-path risk.
-- **Never** — no directional bet on the auction outcome; no new unhedged duration exposure opened
-  into the 1:00pm ET release, and none carried naked through the 9/9→9/11 stack.
-- **Belly indirect trend** (added 8/30, **extended to a third print 9/9**) — the run is now three
-  consecutive coupon auctions light on indirects against their own tenor's average: 5Y 8/26 **61.5%**
-  vs ~65%, 7Y 8/27 **60.8%** vs 65.1%, and now **3Y 9/8 62.15% vs a 65.51% six-auction average**
-  (−3.4pp), domestics filling the gap every time (3Y directs **26.94%** vs a 20.4% average). Read the
-  switch's literal wording precisely: it asks for a third light read ***at the 10Y***, and that has not
-  happened — the third light print landed at a different tenor. So the pattern strengthened while the
-  switch's own condition stays pending, and today's 1:00pm ET print is what settles it.
-- **Reopenings are not new issues** (added 9/9, and it re-bases every indirect threshold in this doc) —
-  measured from the primary this session (`auctions_query`, full 10Y lineage `original_security_term =
-  10-Year`, 2024-06 → 2026-08, n=27): **reopenings average 72.66% indirect** against **67.45% for new
-  issues**, a **+5.2pp** gap, and cover better too (2.570 vs 2.453). Every prior row benchmarked this
-  reopening against the blended ~71%, which the same pull confirms (70.92% over the full set) but which
-  is the *wrong* comparison for a reopening. The Aug-12 76.7% this doc leans on is a **new-issue**
-  print, so it flatters the comparison in the opposite direction. The honest bar for today is ~72–73%,
-  and "light by the same margin the 3Y/5Y/7Y ran" is ~68%.
-- **Size announcement** (added 9/2, ~~resolved 9/4~~) — **$39B, announced 9/3**, primary-sourced
-  twice. This was the supply-side switch and it came in benign: identical to the Jun-10 and Jul-08
-  reopenings, with no increase anywhere in the block. Kept here as the receipt, not as a live signal.
-- **Fed silence** (added 9/4, ~~in effect 9/5~~, **answered 9/8**) — blackout is **live**, so hike odds
-  cannot be moved by a Fed voice before the auction. This row answers which of the three remaining
-  channels did the work: odds went **52.6% (9/4) → 58.7% (9/7)** with no Fed voice and no 3Y result
-  yet, so **oil repriced the Fed**. Still inside both D10 thresholds (~35% / ~75%). *(9/9: **the climb
-  stalled**. Investing.com's Fed Rate Monitor, derived from CME 30-day fed-funds futures and timestamped
-  **2026-09-08 07:55PM EDT**, reads hike **58.1%** / hold 41.9% — flat-to-down from 58.7% on 9/7 while
-  Brent added another 3.4%. So the first blackout session in which oil rose and the Fed path did **not**
-  follow. Corroborating band, not a substitute: a Trading Economics summary the same day puts it
-  "roughly 60%". One earlier search summary claimed "nearly 56%" with no timestamp and is not adopted.)*
-- **Oil into the print** (added 9/4, **counterweight downgraded 9/5**) — Brent settled **$95.04** on
-  9/4, a six-week high, with Iran striking Kuwait, Jordan and Bahrain. D5 offset this with Energy
-  Sec. Wright's claimed **wartime-record ~17mb/d** Hormuz transit; independent tanker trackers put
-  the same day at **~9.1mb/d** (28-day average **6.85mb/d**, pre-war ~15mb/d) and Kpler has regional
-  exports at ~**65% of pre-war**. Treat the shock as part realised supply loss, not pure risk premium
-  — sustained above ~$90 into 9/11 CPI keeps inflation uncertainty in, with more force than D5 had it.
-- **Name-level decoupling** (added 9/5) — on 9/4 the 10Y rose on a hot jobs print and the S&P fell
-  0.38%, yet **CRWV +5.7%** and **MRVL +7.1%** (NVDA +0.8%, AVGO +0.2%) on a positioning-unwind bid in
-  beaten-down AI silicon. The rates→high-duration channel of leg 5 did **not** operate. Read
-  name-level moves through 9/11 as sector flow first, auction/rate tell second. *(9/6: no sessions
-  since, so this stands unchallenged — the next test is 9/8.)* **(9/9: the 9/8 test ran and it inverted
-  again, harder — and this time the tier split internally.** On a session with the 10Y at a fresh high,
-  VIX up 1.19 and the S&P **−0.58%**, **CRWV closed 99.83, +11.72%** while **NVDA closed 225.73,
-  −2.01%**; MRVL +0.83%, AVGO +2.98%. CRWV's move is squarely idiosyncratic — Nvidia raised its stake,
-  Truist lifted its target to $165, and the ~$104B Q2 backlog is still repricing the name — and the fact
-  that **NVDA itself fell while CRWV rose 11.7%** means the "high-duration AI" tier did not behave as a
-  tier at all. Two consecutive tests, both failed: **leg 5 is downgraded from conditional (D4) to
-  refuted as a same-week read-through**, retaining only 8/18 as evidence about an acute rate-*shock*
-  session, not an ordinary rising-yield one. Nothing in the name tape this week is auction information.**
-- **The 3Y answered, and the answer splits** (added 9/9 — this is the row's headline signal) — primary
-  (`auctions_query`, CUSIP 91282CRL7, results `R_20260908_3.pdf`): $58B, high yield **4.4740%**, cover
-  **2.720**, competitive accepted $57.619B of which indirect $35.809B = **62.15%**, direct $15.525B =
-  **26.94%**, primary dealers $6.285B = **10.91%**, allocation at the high 29.35%. The tail is
-  secondary-sourced (fiscaldata publishes no when-issued): investinglive puts WI at **4.475%**, a
-  **−0.1bp stop-through**. **Two readings, opposite directions.** *Clearing:* it stopped through into
-  ~$304B of same-session crowding, cover was the **best 3Y of 2026** (vs a 2.620 six-auction average)
-  and dealers took **10.91% against a 14.07% average**, so real money absorbed it rather than the
-  syndicate. *Mix:* indirects were 3.4pp light and domestics filled in. The block's first read therefore
-  says **supply is clearing at these yields** and **the buyer mix is shifting domestic** simultaneously
-  — and only the 10Y print tells us whether the second half reaches the benchmark.
-- **Auction day is uncrowded, which is new and load-bearing** (added 9/9) — the crowding discount D3
-  installed was specific to 9/8. `upcoming_auctions` re-fetched this session shows **9/9 carrying the
-  $39B 10Y plus a single 17-week bill ($72B, 912797WP8, announced 9/8) ≈ $111B**, against 9/8's ~$304B,
-  and the day's other Treasury operation is a **buy**, not a sale. So today's print is a **clean** read
-  in both directions: a tail cannot be excused as crowding, and a stop-through cannot be inflated by it.
-- **The same-day buyback is front-end, not duration support** (added 9/9, and it is recorded to stop a
-  mis-bank) — `treasury-buyback-cash-mgmt-2026-09-09` puts a **$12.5B-cap** cash-management operation at
-  **1:40pm ET**, forty minutes after this reopening prices. It is tempting to read that as a same-day
-  bid for the tenor being sold; it is not. That event's own initial research is explicit that the sector
-  is **1Mo–2Y** and that it "buys nothing at any tenor the long-end ledgers care about, so this is a
-  cash/front-end supply signal, not duration support." The same-sector operation is the **10–20Y** one
-  on **9/10**, which D10 already banked.
-- **The compressed 9/8 session** (added 9/6, ~~superseded D5's "the 3Y is the block's *first*
-  demand read"~~, **spent 9/9**) — its purpose is served: the 3Y priced into the crowding and stopped
-  through anyway. Kept as the receipt for why that stop-through counts for more than a clean-day one,
-  and because the same crowding does **not** apply to today. As written on 9/6: — **Labor Day 9/7 shuts the market**, so Tue 9/8 is the *only* session between now and
-  the 1:00pm ET reopening. Treasury moved the whole Monday bill slate onto it: 13-week **$92B** +
-  26-week **$79B** + 6-week **$75B**, on top of the **$58B** 3Y note — **~$304B in one session**, where a
-  normal week splits it across two days. That session must also price two calendar days of Hormuz
-  escalation in one go. A tailing 3Y *into* that crowding is a weaker signal than a tailing 3Y on a
-  clean day, and should be discounted accordingly; a stop-through *despite* it is a stronger one.
-- **Oil cushion exhaustion** (added 9/6) — the reason the Hormuz shock has not fed through to prices
-  more violently is physical, not political: Kpler puts the MoU window's Hormuz average at **6.1mb/d
-  against a ~15mb/d 2025 baseline (~40%)**, a **~550mb crude shortfall** "bridged so far by inventory
-  draws and truce-window buffers **that thin from September**" — floating storage fell **61mb → 16mb**
-  within three weeks of signing. The cushion runs out in the same month as this auction and the 9/11
-  CPI. This is the first *forward* argument in this doc for the inflation-uncertainty leg rather than
-  a re-read of a past reading.
-- **The oil shock moved onshore** (added 9/6 as *cushion exhaustion*, **widened 9/8**) — every prior
-  row's oil leg was a **transit** story (how much crude clears Hormuz). On **9/8** Houthi drone/missile
-  strikes ignited fires at Saudi oil facilities and utilities in the southern region — operations
-  temporarily suspended, 73 wounded, the area of the **400kb/d Jazan refinery** and the third-plus
-  strike on it since 8/9. That is **producing and refining infrastructure inside a producer**, a wider
-  channel than transit, and Brent responded: **~$98.65 (+1.54%)** intraday 9/8, **+3.8% since 9/4**,
-  **+12.5% on the month**, approaching $100. Read the corridor's two oil-agency reports — **OPEC MOMR
-  9/10** and **IEA OMR 9/11** — as live inputs now rather than routine. *(9/9: the 9/8 **close**
-  confirms it and takes it further — Brent front-month **$99.51** and WTI **$94.57** as of 20:03 ET,
-  **+3.4% from the $96.28 close of 9/4**, i.e. the $100 handle. CNBC's 9/8 report — "Brent crude nears
-  $100 after strikes on Saudi energy sites" — records Brent's highest since **July 23**, with the
-  Houthis claiming the 400kb/d Jazan refinery and other domestic-market facilities and 73 wounded. The
-  onshore mechanism is now the price driver, not a widened description of the old one.)*
-- **The de-escalation vector, stated honestly** (added 9/8) — on **9/7** Iran's foreign-ministry
-  spokesman said an **Iran–Oman agreement on Hormuz shipping is "days away"**, in final stages,
-  covering a temporary safe route and to be **documented with the IMO**; Brent briefly pared gains on
-  it. This is the first credible path to the oil switch's ~$85 branch since D7. It is *reported*, not
-  signed, and the tape is pricing the escalation instead — but a doc that only logs escalation is
-  not an honest doc. *(9/9: **no evidence found of the filing**, and the honest form of that statement
-  matters — this sweep surfaced only the *August* track of the same negotiation (a temporary two-lane
-  Hormuz route reported 8/26; an 8/7 report that the arrangement bars US and Israeli vessels) and
-  nothing dated 9/8 or later. Absence of a found filing is weaker than a confirmed absence, so this is
-  recorded as "not found," not "did not happen." Per the switch's own wording — absent a filing by the
-  9/11 CPI, treat "days away" as negotiating posture — **the leg stays in**.)*
-- **The Fed is priced off energy, not off core** (added 9/8, and it is this row's most consequential
-  read) — hike odds rose **6.1pp during blackout** on an oil impulse, while the August CPI consensus
-  consistent with **BLS's own series** has **core easing to ~2.4% y/y** (July actual, computed from the
-  BLS API this session: headline **+3.36%**, core **+2.48%**). So the hike is being priced off the
-  component the Fed explicitly looks through. For a 10Y buyer this cuts *toward* the base case — an
-  in-line core print on 9/11 argues 58.7% is rich — but it also means the auction is being held
-  through a gauge/price divergence that resolves two days after it prices.
-- **Watch (dated)** — ~~coupon-block size announcement Sep 3~~ · ~~jobs Sep 4~~ · ~~Fed blackout
-  begins Sep 5~~ · ~~OPEC+ Sep 6~~ (**scored 9/8: October quotas held at September levels, 31.01mb/d
-  ex-compensations; next meeting Oct 4**) · ~~Labor Day market closure Sep 7~~ · ~~3Y note + displaced
-  bill slate **Sep 8**~~ (**scored 9/9: stopped through −0.1bp, cover 2.720, indirects 62.15%**) ·
-  buyback increase effective **Sep 9** (auction day, ≥$4B/op, 10–30Y) · **cash-management buyback
-  Sep 9** (1:40pm ET, 1Mo–2Y, $12.5B cap — front end, not this tenor) · EIA STEO **Sep 9** ·
-  **existing-home sales Sep 10** · 30Y reopening + PPI +
-  **ECB decision** + 10–20Y buyback operation + 20Y/TIPS coupon announcement + **OPEC MOMR Sep 10** ·
-  **CPI + Monthly Treasury Statement + IEA OMR Sep 11** · G20 energy ministerial + Gastech **Sep 14** ·
-  20Y reopening + **FOMC Sep 15–16** · 10Y TIPS **Sep 17** · quarterly OpEx **Sep 18** · **OPEC+
-  ministerial Oct 4** (undated within this doc's horizon: the reported **Iran–Oman Hormuz agreement**,
-  said on 9/7 to be days away).
+- **The contagion switch fired on its favourable branch, and it is retired.** The 8/30 switch asked
+  for a third light indirect print **at the 10Y**; the reopening printed **79.18%** against a
+  **72.66%** reopening mean (n=18 prior, primary-measured). The 5Y/7Y/3Y run was a front-end and
+  belly phenomenon and did not reach the benchmark. **Leg 3 — "the 10Y is the strong tenor" — is
+  SUPPORTED on the strongest evidence this doc ever produced.**
+- **The 9/10 30Y was the doc's own named confirm/deny, and it confirmed harder.** $22B reopening,
+  high yield **5.3080%**, cover **2.610**, indirects **79.48%** (2nd of 28 since 2024-06 vs a 65.51%
+  mean), primary dealers **2.21% — the lowest of the whole set**. Foreign sponsorship is intact at
+  *both* ends of the curve.
+- **The oil switch fired hard, in the escalation direction, and it is what actually moved rates.**
+  Brent **$97.92 (9/8) → $101.21 (9/9) → $109.19 (9/10)**, WTI to **$104.06** — the switch's ~$90
+  branch never came close to its ~$85 de-escalation branch. The **Iran–Oman off-ramp is dead**:
+  Trump said on 9/9 he is not seeking a deal, and no IMO filing was ever found.
+- **The Fed switch's "stall" observation from D0 was wrong within 48 hours.** Hike odds went
+  **58.1% (9/8) → ~68.7% (9/10 06:15PM EDT, Investing.com Fed Rate Monitor; ~70% on the Reuters/Globe
+  and Mail read, 63% on prediction markets)**. Oil resumed repricing the Fed with force, and D10's
+  **~75%** threshold — "the auction's buyer is holding through a policy-uncertainty event" — is now
+  the live risk into 9/16 rather than a hypothetical.
+- **The VIX ~18 condition arrived one session late.** D5 asked for a re-expansion above ~18 *before*
+  9/9 as the tell that the tape had started pricing the corridor. VIX closed **16.46** on auction day
+  and **17.84** on 9/10 — the corridor got priced the day *after* the auction, not before it.
+- **Leg 5 split its own two forms on consecutive sessions, which is the cleanest read this doc got
+  on it.** Its *refuted* form (an ordinary rising-yield session) failed a third time on **9/9**:
+  yields +3bp, and **MRVL +4.1%** while CRWV −4.9%. Its *retained* form (an acute rate-**shock**
+  session, the 8/18 description) got a confirming observation on **9/10**: 10Y **+12bp** and the
+  tier moved as a tier — **CRWV −6.1%, MRVL −3.4%, NVDA −2.4%, AVGO −1.0%**, S&P −0.6%. The
+  distinction D0 drew survives; the same-week read-through stays refuted.
+- **Never, and it held.** No directional bet was taken on the auction, no new unhedged duration was
+  opened into the 1:00pm ET release, and nothing was carried naked through the 9/9→9/11 stack. The
+  guard cost nothing and the 9/10 session is what it was for.
+- **Watch (dated), what is left** — **CPI + Monthly Treasury Statement + IEA OMR 9/11** ·
+  buyback-blackout start 9/12 · G20 energy ministerial + Gastech **9/14** · 20Y reopening 9/15 ·
+  **FOMC 9/15–16** · 10Y TIPS 9/17 · quarterly OpEx 9/18 · **OPEC+ ministerial Oct 4**. Everything
+  dated before 9/10 is scored in the rows below.
 
 ## Initial research
 
@@ -516,6 +343,22 @@ the reason it does not move has changed from "the evidence is two-sided" to "the
 has largely resolved and what remains is macro." One forward test registered
 ([FT-treasury-10y-note-2026-09-09-1](../forward-tests/treasury-10y-note-2026-09-09.md)).
 
+**Final stance (2026-09-10, receipt: the D+1 ledger row and `## Outcome` below) — the guard is stood
+down because the event is spent, not because the risk resolved.** The reopening printed and it
+vindicated the doc's central leg on the strongest evidence it ever produced: cover **2.710** (best of
+28), indirects **79.18%** against a **72.66%** reopening mean, dealers **4.31%**, a **~1.5bp
+stop-through**, and a 30Y the next day that was better still on sponsorship (dealers **2.21%**). The
+no-new-naked-duration guard therefore expired unused — no position was ever taken, so there is
+nothing to close and no P&L either way. What the doc must hand forward is the finding it did **not**
+hold going in: **auction demand and the direction of yields decoupled**. The two best-sponsored
+coupon auctions of their respective lineages sat inside a **+15bp** two-day bear-flattening driven by
+an **11.5% two-session move in Brent**, with **4.8bp of 9/10's move done before PPI even printed**.
+For every downstream rates ledger that reads "a strong auction is relief," the correct amendment is:
+a strong auction says supply is clearing, and says nothing about the path — in a regime where the
+marginal price is set by an energy-driven inflation repricing, the coupon block is a lagging read.
+The live documents from here are [`cpi-2026-09-11`](cpi-2026-09-11.md) and
+[`fomc-2026-09-16`](fomc-2026-09-16.md), and nothing in this event licenses an entry in either.
+
 **Kill switches:**
 
 - **Weak benchmark print** (bid-to-cover materially below ~2.47, a positive tail, or indirect share
@@ -653,7 +496,53 @@ has largely resolved and what remains is macro." One forward test registered
   9/10 30Y+PPI+ECB+buyback op · 9/11 CPI+MTS+UMich). There is no day on which a bad print can be
   digested before the next one lands. A **second** adverse print inside the corridor — a weak 3Y
   followed by a weak 10Y, or a weak 10Y followed by a hot CPI — compounds rather than averages, and
-  is the specific sequence the no-new-naked-duration guard exists for.
+  is the specific sequence the no-new-naked-duration guard exists for. *(Scored 2026-09-10: the
+  compounding sequence **did** run, but not through the auctions. 9/9 and 9/10 both printed
+  best-in-lineage demand and the corridor still added **+15bp** of 10-year, because the second and
+  third adverse inputs were **oil** (Brent +11.5% over the pair) and a **hot y/y PPI on energy**, not
+  a weak print. The guard was correctly specified and correctly held; the trigger it named was the
+  wrong one.)*
+- **Resolved 2026-09-10 — the contagion switch fired on its favourable branch and is retired.** The
+  8/30 switch, re-based on 9/9, read "below ~68% is the light print, below the mid-60s is the
+  contagion signal." The reopening printed **79.18%** indirect — **11.2pp above the light threshold
+  and 6.5pp above the 72.66% reopening mean**, 4th of 28 in the nominal 10Y lineage since 2024-06.
+  The 5Y/7Y/3Y light run was a front-end and belly phenomenon; it did not reach the benchmark. **Leg
+  3 is SUPPORTED**, and [FT-treasury-10y-note-2026-09-09-1](../forward-tests/treasury-10y-note-2026-09-09.md)
+  is **scored PASS** — with its own stated caveat honoured: a pass was the two-in-three base-rate
+  outcome, so the informative part is the **margin**, not the binary.
+- **Resolved 2026-09-10 — the strong-print switch fired, and its own stated limit is the whole
+  finding.** The switch read "bid-to-cover ≥2.53, negative tail, indirect near/above 76% → confirms
+  the well-bid belly pattern, near-term relief; does **not** resolve the structural long-end/fiscal
+  story or the Fed-path risk." All three conditions were met (**2.710 / ~−1.5bp / 79.18%**) and the
+  qualifier is what actually happened: the relief was **1.6bp intraday, 0.8bp to the close**, and the
+  structural story took the 10-year **12bp higher the next day**. Retired with the note that this
+  doc's own switch under-promised correctly and over-promised nowhere.
+- **Resolved 2026-09-10 — the oil switch fired on escalation, and the de-escalation branch is dead.**
+  Brent **$97.92 → $101.21 → $109.19** over 9/8–9/10 (WTI to **$104.06**), far above the ~$90
+  "inflation-uncertainty stays in" level and never near the ~$85 exit. The Iran–Oman off-ramp added
+  on 9/8 is closed: no IMO filing was found, and **Trump said on 9/9 he is "not looking for a deal
+  with Iran"** while the US destroyed five Iranian tankers. Retired as a live watch for this event;
+  it belongs to [`cpi-2026-09-11`](cpi-2026-09-11.md) and [`fomc-2026-09-16`](fomc-2026-09-16.md) now.
+- **Refuted 2026-09-10 — D0's "the oil→Fed channel stalled" reading lasted 48 hours.** The 9/9 switch
+  said "if odds keep flattening or fall through ~55% while Brent holds the $100 handle, the energy
+  channel is exhausting itself." It did not exhaust: odds went **58.1% (9/8) → ~68.7% (9/10, 06:15PM
+  EDT)**, a **+10.6pp** move on oil, through blackout, with **~6pp left to D10's ~75% threshold**.
+  Recorded as a wrong call rather than an ambiguous one — a single flat session was read as a trend
+  and it was noise.
+- **Split-decision 2026-09-10 — leg 5's two forms went opposite ways on consecutive sessions.** The
+  *refuted* same-week read-through failed a third time on **9/9** (yields +3bp, **MRVL +4.1%** while
+  CRWV −4.9% — the tier again did not move as a tier). The *retained* acute-rate-**shock** form got a
+  confirming observation on **9/10** (10Y **+12bp**; CRWV **−6.1%**, MRVL **−3.4%**, NVDA **−2.4%**,
+  AVGO **−1.0%**, S&P −0.6% — the tier moved together and in the predicted direction). One
+  confirmation does not reinstate a read-through that failed three times, so the D0 downgrade stands;
+  what it earns is a sharper boundary — the channel needs a **shock**, not a drift.
+- **Added 2026-09-10, and it is the finding this event hands forward — the auction is a lagging read
+  on term premium, not a leading one.** 9/9 and 9/10 produced the best cover of the 10Y lineage and
+  the lowest dealer takedown of the 30Y lineage, and the curve bear-flattened **+15bp** across the
+  pair. This is not a switch for this closed event; it is an amendment every downstream rates ledger
+  should carry, and it has a falsifier: **a 10Y or 30Y auction before 2026-12-31 that tails ≥2bp with
+  indirects below 65%** would show demand deterioration is still capable of leading the tape, and
+  restore the framing this pair of prints removed.
 
 ## Assessment ledger
 
@@ -669,9 +558,150 @@ has largely resolved and what remains is macro." One forward test registered
 | 2026-09-06 | D3 | Adjacency sweep, run on a **Sunday with the tape shut since Friday's close** — so every rate, vol and equity reading below is Friday 9/4's, carried unchanged from D4, and nothing in this row is a new price observation. **Event tape — unchanged, re-verified a third consecutive session.** fiscaldata `upcoming_auctions` re-fetched direct this session still returns the 9/9 security as **9-Year 11-Month, reopening = Yes, CUSIP 91282CRF0, offering $39,000,000,000, announced 2026-09-03, issue 2026-09-15**, with 3Y **$58B** (91282CRL7, 9/8) and 30Y **$22B** (912810UW6, 9/10) alongside; the 20Y reopening (912810UX4, 9/15) and 10Y TIPS reopening (91282CRE3, 9/17) both still show `offering_amt: null` pending their 9/10 announcement. No size revision, no re-announcement, no when-issued yield. The supply leg stays closed. **THE MATERIAL FINDING — the corridor is one session shorter than this doc has been assuming, and nobody had written it down.** **Monday 2026-09-07 is Labor Day and US markets are closed.** Sourced three ways: nyse.com/markets/hours-calendars fetched direct this session lists 'Labor Day: Monday, September 7' among its 2026 full closures with no September early close; SIFMA's US Holiday Recommendations panel recommends a **full** fixed-income close (not an early one) the same day; and 5 U.S.C. 6103 fixes Labor Day on the first Monday in September, which in 2026 is the 7th. **Confirmed mechanically from a Treasury primary that does not depend on either holiday calendar:** `auctions_query` for the 13-Week bill shows a **Monday** auction for ten consecutive weeks (2026-07-06 through 2026-08-31, every one $92B) with exactly one exception in the series — **2026-09-08, a Tuesday**. Treasury moved the entire Monday bill slate a day because the market is shut. **Three consequences, all of which tighten the guard.** (1) **The runway is one session, not two.** D5 called the 9/8 3Y 'the block's first hard demand read'; with 9/7 gone it is the *only* read before this reopening prices. (2) **That session is crowded.** The displaced Monday slate — 13-week **$92B** (912797VG9), 26-week **$79B** (912797WK9), 6-week **$75B** (912797UL9) — lands on 9/8 *on top of* the $58B 3Y, so **~$304B auctions in a single session** where a normal week splits it across two. This is a read-quality problem, not a supply-signal one: a 3Y tail attributable to same-session crowding says nothing about the 10Y, so the D5 switch is amended rather than kept verbatim (a tailing 3Y **with weak indirects** is the warning; a tail on cover alone is inconclusive this week; a stop-through *despite* the crowding is a stronger positive than originally credited). (3) **Two calendar days of escalation arrive unpriced**, and they arrive into that same compressed session. The week's four corridor days are now the week's only four sessions — 9/8 3Y+bills · 9/9 10Y+buyback start+EIA STEO+Apple event · 9/10 30Y+PPI+ECB+10–20Y buyback op+20Y/TIPS announcement · 9/11 CPI+MTS+UMich — with no day on which a bad print can be digested before the next lands. **PROPOSED in this PR as a new calendar entry:** `labor-day-market-closure-2026-09-07` (`estimate`, `NEWS:`, impact low, kind `sector` — the same least-wrong kind the three sibling closure entries documented, EventKind having no market-structure member). Filed estimate, not confirmed, on the sibling precedent: the source taxonomy has no prefix for an exchange's or a trade association's own holiday calendar and this lane may not self-confirm what it discovered in-sweep. The date is not in doubt; the label is about taxonomy. **Geopolitical — escalated over the closed weekend.** On Saturday **9/5** the IRGC navy said it targeted **three oil tankers** transiting Hormuz on 'an unauthorized route' plus three US-affiliated vessels elsewhere; US forces **destroyed one Iranian tanker and permanently disabled two more** after the IRGC fired ballistic missiles toward a US aircraft carrier and destroyer (neither hit, no injuries) — the **fourth** Iranian tanker disabled since 9/1 under a stated 'tanker for tanker' policy (ABC News live updates, 9/5). Vance's 9/3 line that the US will not talk to Tehran until attacks on commercial shipping stop is the diplomatic backdrop and predates D4's cut-off, so it is context, not new. **Oil — D4's downgrade of the counterweight is now corroborated, and it gained a forward mechanism.** D4 disputed Energy Sec. Wright's '>17mb/d wartime record' on one tracker (TankerTrackers via Fortune). Al Jazeera's 9/3 tracker comparison makes it **three independent commercial trackers against the official series**: **Kpler** 6 vessels Wednesday, 11 Tuesday, 5 Monday, **10-day average 13/day**; **Lloyd's List Intelligence** ~**12 transits/day** for 8/26–9/1 (~14 non-Iranian-linked/day 8/17–23); **PortWatch** ~**7/day** since March — against a pre-war baseline of ~**100 ships and ~20mb/d**. Officials on the other side: Trump '~30 ships every night', two US officials '40 ships / 18mb/d on Tuesday', Bessent 'at least 10mb/d, 15–17mb/d on Monday'. Trackers attribute the gap to a US operational count that sweeps in naval auxiliaries, offshore support, tugs, coastal craft and dhows, plus dark transits with transponders off. **The new mechanism, and it is the most consequential thing in this row after the holiday:** Kpler (8/19) puts the MoU window's Hormuz average at **6.1mb/d vs a ~15mb/d 2025 baseline — ~40%** — a **~550mb crude shortfall** 'bridged so far by inventory draws and truce-window buffers **that thin from September**', with floating storage falling **61mb at signing → 16mb within three weeks** and total crude on water closing ~130mb. So the muted price pass-through has been a *physical cushion*, and that cushion depletes in the same month as this auction and the 9/11 CPI. This is the first forward-looking argument this doc has for the inflation-uncertainty leg rather than a re-reading of a past claim. Prices unchanged from D4 (Brent settled **$95.04** on 9/4, ~$96 intraday, +~9% on the week, its strongest since mid-July; WTI $91.48). **OPEC+ (9/6) — met today, UNRESOLVED at this row's run time.** The seven core members convened on October quotas; no statement was published or indexed when this session ran, so nothing is scored. Pre-meeting sourcing is unchanged from D4 — delegates via Bloomberg point to holding quotas steady for the rest of 2026 after September's +188kb/d completed the 1.65mb/d voluntary-cut rollback, with the 8/2 statement making no Q4 reference. A pause would be oil-supportive on top of the geopolitical bid. **Carried to the next row explicitly rather than guessed at.** **Fed path — frozen, unchanged.** Blackout live since 9/5; no Fed voice is legal before the auction. September hike odds last read **52.6%** (CME FedWatch, 9/4), still below D7's ~66–68% and inside neither D10 threshold (~35% / ~75%). Nothing can move them until 9/10 PPI and 9/11 CPI. **Rates / volatility — no new prints.** Treasury par-yield curve 9/4 (carried): 2Y **4.37**, 10Y **4.78**, 20Y 5.25, 30Y **5.24**; concession above the Aug-12 4.683% stop stands at **~9.7bp**. VIX **14.53** (9/4 close), still YTD lows, unchanged and nine days into the observation that the tape has not begun pricing the corridor. **Peers / name level.** No sessions since 9/4, so D4's CRWV +5.68% / MRVL +7.05% decoupling stands unchallenged with no new tape; the next test is 9/8. **Adjacency — 22 tracked entries now sit within 5 days of this event, up from 18 at D4.** Three arrived from sibling lanes since D4: **`ecb-decision-2026-09-10`** (new to this doc and directly on-point — the ECB Governing Council decision and press conference land the *same day* as the 30Y reopening and PPI, putting a foreign policy-rate anchor inside the corridor on a day this doc had treated as purely domestic supply), `treasury-coupon-announcement-2026-09-10` (fixes the 20Y and 10Y TIPS sizes) and `missouri-map-ballot-deadline-2026-09-08`. **One new dated adjacency PROPOSED in this PR:** `labor-day-market-closure-2026-09-07`, above. **The aggregator trap:** no new instance this sweep; the 2025 '$39B / 4.033% / indirect 83.1%' result flagged at D7, D5 and D4 remains the live hazard precisely because this year's size genuinely is $39B. | **No change to the stance — but this is the second consecutive row whose net movement is *away* from the prior row's optimism, and the first to correct a structural assumption rather than a reading.** Still guard-shaped, still no entry; the auction side is unchanged and well-set ($39B re-verified a third time, ~9.7bp concession, Fed frozen at 52.6%). What changed is the shape of the runway: Labor Day removes the week's spare session, leaving one crowded ~$304B day (9/8) as the only pre-auction read and the only place two days of Hormuz escalation can price. The oil leg strengthened on both evidence (three trackers, not one) and mechanism (the inventory cushion thins from September). One kill switch amended (the 9/8 3Y, now with a crowding discount); two added (oil-cushion depletion as a non-price test; the no-spare-session compounding condition); two signal bullets added (the compressed 9/8 session; oil cushion exhaustion). OPEC+ carried unscored | 2026-09-07 (high, 0-7d band: daily) |
 | 2026-09-08 | D1 | Adjacency sweep, run **pre-open at ~07:40 ET on 9/8** — so the 3Y (1:00pm ET) and today's cash session both price *after* this row, and every equity/name-level reading below is still Friday 9/4's. **Event tape — unchanged, re-verified a fourth consecutive session, and it corroborates D3 from the other side.** fiscaldata `upcoming_auctions` re-fetched direct still returns the 9/9 security as **9-Year 11-Month, reopening = Yes, CUSIP 91282CRF0, offering $39,000,000,000, announced 2026-09-03, issue 2026-09-15** — no revision, no re-announcement, still no when-issued yield. The same endpoint independently confirms the Labor Day displacement D3 inferred from the 13-week series: 9/8 carries **13-week $92B (912797VG9) + 26-week $79B (912797WK9) + 6-week $75B (912797UL9), all announced 9/3**, alongside the **$58B 3Y (91282CRL7)** — **~$304B in one session**, now primary-sourced rather than reconstructed — while the *following* week's 13-week and 26-week bills (912797VH7, 912797UD7) sit back on **Monday 9/14**. The displacement was holiday-specific, not a schedule change. Supply leg stays closed. **Rates — a new high, and the high-water-mark question settles at the new level.** The 10Y printed **4.81%** on 9/8 (Trading Economics quote; **secondary** — H.15 and Treasury's par-yield curve have no print after 9/4 because of the holiday, and both still read 10Y **4.78** / 2Y 4.37 / 30Y 5.24 there). At 4.81 the concession above the Aug-12 **4.683%** stop is **~12.7bp**, up from the ~9.7bp carried since D4 — the largest of any row in this doc. Pulled **FRED DGS10** (2022-01-01→2026-09-08) this session to adjudicate: the most recent close at or above **4.81** is **2023-10-31 (4.88)**, and the most recent at or above **4.79** is **2025-01-13**. So D7's "highest since January 2025" was correct *at 4.79* and today's "highest since October 2023" is correct *at 4.81* — the conflict D5 flagged and D4 resolved dissolves entirely: both characterisations are right at their own thresholds, and the series has simply crossed the next one. **Fed path — odds rose during blackout, and that identifies the mover.** CME FedWatch put a September 25bp **hike at 58.7% as of 9/7**, up from the **52.6%** recorded on 9/4 — **+6.1pp with no Fed voice legal since 9/5 and no 3Y result yet**. D3 wrote that only oil, the 9/8 3Y and positioning could reprice this event before the auction; this row answers which one did. Still inside both D10 thresholds (~35% / ~75%). **Macro — the August CPI consensus, and the aggregator trap fires in a genuinely new place.** One aggregator gave August consensus as headline **+0.3% m/m to 2.9% y/y "after 2.7% in July"** and core **+0.3% m/m to 3.1% y/y "after 3.1%"**. Computed straight from **BLS's own API** this session (`CUUR0000SA0` and `CUUR0000SA0L1E`, 2025–2026), July 2026 actuals are headline **+3.36% y/y** and core **+2.48% y/y** — that July baseline is wrong by ~0.66pp on headline and ~0.62pp on core and does not describe this series. The consensus consistent with the primary is headline **holding ~3.4%** and core **easing to ~2.4%**. Recorded prominently because this is the **third distinct aggregator error** in this doc and the first on the *macro* side rather than the auction side. **The implication is not housekeeping:** hike odds rose 6.1pp on the energy channel while the core gauge the Fed says it looks to is expected to *ease*. **Blocked sources, recorded not substituted:** `bls.gov/news.release/cpi.nr0.htm` returned **403** even with browser headers (the known lane blind spot) — `api.bls.gov` was used instead and is equally primary; `opec.org/press-releases.html` returned **402** and the 8/2 `pr-detail` page still shows no 9/6 communiqué, so the OPEC+ outcome below is `NEWS:`-sourced, not `EST:`-primary. Both are in this ledger's `probe-ref.blocked`. **Geopolitical — OPEC+ scored, and the oil mechanism moved onshore.** (a) **D3's carried item closes.** The seven OPEC+ countries met virtually 9/6 and **held October quotas at September levels**: Saudi **10.478**, Russia **9.949**, Iraq **4.431**, Kuwait **2.676**, Kazakhstan **1.628**, Algeria **1.007**, Oman **0.841** mb/d, group total ex-compensations **31.01mb/d**; next meeting **4 October**. Rationale reported: the Hormuz disruption limits the group's ability to move physical supply, and members' sustainable-capacity audits must set 2027 baselines before further unwinding. The pause pre-meeting sourcing expected did happen — so **no offsetting barrels**. (b) **The new mechanism, and it is this row's most consequential finding after the pricing.** Every prior row's oil leg was a *transit* story. On **9/8**, Houthi drone/missile attacks **ignited fires at Saudi oil facilities and utilities in the southern region**, temporarily suspending operations, with **73 wounded** — the area of the **400kb/d Jazan refinery**, and the third-plus strike on it since 8/9. That is producing and refining infrastructure **inside a producer**, a materially wider channel than chokepoint transit. Prices followed: Brent **$97.89** on 9/7 and **~$98.65 (+1.54%)** intraday 9/8, against the **$95.04** 9/4 settle — **+3.8% in two sessions, +12.5% on the month**, approaching $100. (c) **The counter-vector, stated because a doc that only logs escalation is not honest.** On **9/7** Iran's foreign-ministry spokesman Esmail Baghaei said an **Iran–Oman agreement on Hormuz shipping is "days away"**, in final stages, covering a temporary safe route and **to be documented with the IMO**; Brent briefly pared gains on it. This is the first credible path to the oil switch's ~$85 de-escalation branch since D7 — reported, not signed. **Volatility — the first break off the YTD lows.** VIX reads **15.75** pre-open on 9/8 (Cboe global-trading-hours session via the Yahoo chart feed) against the **14.53** 9/4 close carried since D4 — **+1.22**, inside the 3-point materiality threshold but the first directional move after **ten sessions** of the standing "the tape has not begun pricing the corridor" observation. Honesty note: the same feed also shows a **15.30 bar dated 9/7**, a session on which **^GSPC and ^TNX show no bar at all** and NYSE/SIFMA were fully closed; that is not reconcilable with a full holiday, so it is flagged and **not adopted** as a close. **Equities / name level — no new closes, so leg 5 is still untested.** Pre-open 9/8 futures: **Dow −0.8% (53,013), S&P 500 −0.3% (7,691.3), Nasdaq 100 flat (29,593)** — risk-off into the crowded session, but led by the **Dow** rather than the duration-sensitive index, the opposite ordering leg 5 would predict. The 9/4 closes were re-verified this session (CRWV **89.36**, MRVL **223.55**, NVDA **230.36**, AVGO **357.90**; S&P 7,718.60), so D4's CRWV +5.68% / MRVL +7.05% decoupling still stands unchallenged with no new tape — **today's session is its test, and it lands after this row.** **Adjacency — 25 tracked entries now sit within 5 days, up from 22 at D3.** D3's own `labor-day-market-closure-2026-09-07` proposal is now the canonical file. Three arrived from sibling lanes since D3, and two of them matter more than they would have a week ago because the oil leg is the live one: **`opec-momr-2026-09-10`** and **`iea-omr-2026-09-11`** put both major agencies' supply/demand balances *inside* the corridor, on the 30Y and CPI days respectively; `qss-q2-2026-09-09` is the third. **No new dated adjacency proposed in this PR.** The one dated item this sweep surfaced — OPEC+'s next ministerial on **4 October** — is already proposed twice by sibling lanes (`opec-plus-meeting-2026-10-04.from-opec-plus-meeting-2026-09-06.json` and `.from-treasury-3y-note-2026-09-08.json`), and `opec-jmmc-68th-2026-10-04` already tracks the same-day JMMC; a third proposal would be noise, not information. The Iran–Oman deal carries no date. **The aggregator trap:** the 2025 "$39B / 4.033% / indirect 83.1%" auction result flagged at D7, D5, D4 and D3 remains live precisely because this year's size genuinely is $39B — and it now has a macro-side sibling (the wrong July CPI baseline, above). | **No change to the stance — but this is the third consecutive row whose net is *away* from optimism, and the first where the movement is in the tape rather than in the evidence.** Still guard-shaped, still no entry. The auction side is unchanged and well-set for a fourth session ($39B, and the concession has *widened* to ~12.7bp, which is compensation). What moved is all three prices at once — 10Y to a fresh 4.81%, hike odds to 58.7% *during blackout*, VIX off the YTD lows — with oil identifiable as the sole mover, and the oil mechanism itself widened from Hormuz transit to onshore Saudi infrastructure. Offsetting and recorded honestly: an Iran–Oman Hormuz deal is reportedly days away, and core CPI consensus points *down* to ~2.4%, so the hike is being priced off energy rather than off the Fed's own gauge. One kill switch resolved (OPEC+, mildly adverse); three added (the oil switch is no longer a Hormuz switch; the IMO filing as the de-escalation tell; the energy/core divergence, which kills the Fed leg in either direction on 9/11). Two signal bullets added, one answered (Fed silence — oil did it). The 10Y high-water-mark question is settled at both thresholds from FRED DGS10. OPEC+ scored | 2026-09-09 (high, 0-7d band: daily) |
 | 2026-09-09 | D0 | Adjacency sweep, run **20:12 ET on Tue 9/8** — the evening before the 1:00pm ET reopening, so this row sees the two things D1 (pre-open, 07:40 ET) explicitly could not: **the 3Y result and the full 9/8 cash session**. The auction prices ~17 hours after this row. **THE MATERIAL FINDING — the block's only pre-auction demand read came in, and it splits cleanly along this doc's two open questions.** Primary (`api.fiscaldata.treasury.gov` `auctions_query`, CUSIP **91282CRL7**, results `R_20260908_3.pdf`, fetched direct this session): $58B offered, high yield **4.4740%**, bid-to-cover **2.720**, competitive accepted $57,619,163,700 of which indirect $35,809,000,000 = **62.15%**, direct $15,525,163,700 = **26.94%**, primary dealers $6,285,000,000 = **10.91%**, allocation at the high 29.35%, single-price, coupon 4.375%. The **tail is secondary-sourced** and stated as such — fiscaldata publishes no when-issued level; investinglive puts WI at **4.475%** against the 4.474% stop, a **−0.1bp stop-through**, and rttnews independently reports the same $58B / 4.474% / 2.72 with a ten-auction cover average of 2.65. **The clearing side is strong.** Cover 2.720 against a **2.620** six-auction average computed from the primary this session is the **best 3Y bid-to-cover of 2026** (Aug 2.71, Jul 2.60, Jun 2.64, May 2.54, Apr 2.68, Mar 2.55) and the best since 2025-11-10; dealers took **10.91% against a 14.07% average**, so real money absorbed the paper rather than the syndicate. And it did that *into* the ~$304B of displaced same-session supply — the favourable branch of D3's amended switch, fired exactly as written. **The mix side is not.** Indirects **62.15%** against a **65.51%** six-auction average is **3.4pp light**, with directs at 26.94% against a 20.4% average filling the gap — the **third consecutive coupon auction** with that signature (5Y 8/26 61.5% vs ~65%; 7Y 8/27 60.8% vs 65.1%). Read the 8/30 switch's wording precisely: it asks for a third light print ***at the 10Y***, and the third light print landed at a different tenor, so the pattern strengthened while the switch's own condition stays pending on today's result. **A discrepancy resolved by arithmetic, not by preference.** investinglive prints indirects at **64.2%** against the primary's 62.15%; its three shares sum to **102.0%** while the primary's sum to exactly **100.00%**, and its cover, directs and dealers match the primary to the decimal. The primary figure stands and the shortfall is 3.4pp, not 1.3pp — which matters because this is the metric the 10Y's own kill switch keys on. **STRUCTURAL FINDING 1 — today is uncrowded, and every prior row's crowding framing was about 9/8 only.** `upcoming_auctions`, re-fetched direct (a **fifth** consecutive verification of the reopening: 9-Year 11-Month, reopening = Yes, CUSIP **91282CRF0**, offering **$39,000,000,000**, announced 2026-09-03, issue 2026-09-15, still no when-issued), shows **9/9 carrying the $39B 10Y plus one 17-week bill ($72B, 912797WP8, announced 9/8) ≈ $111B**, against 9/8's ~$304B, with the day's other Treasury operation a **buy**. So the discount D3 installed does not apply here and today's print is a clean read in both directions: a tail cannot be excused as crowding, a stop-through cannot be inflated by it. **STRUCTURAL FINDING 2 — this doc has been benchmarking a reopening against the wrong series.** Pulling the full 10Y lineage from the primary (`original_security_term = 10-Year`, which is the only way to catch reopenings — they file under *9-Year 11-Month* and *9-Year 10-Month*, so a `security_term:eq:10-Year` filter silently returns new issues only; n=27, 2024-06 → 2026-08): **reopenings average 72.66% indirect and cover 2.570; new issues average 67.45% and cover 2.453** — a **+5.2pp** demand gap nobody had recorded. The blended average is 70.92%, which vindicates the '~71%' this doc has carried since D21 as a *number* while showing it is the **wrong basis** for a reopening; and Aug-12's 76.7%, the doc's other anchor, is a **new-issue** print, so it overstates the bar from the other side. Corrected reading for today: **~72–73% is par**, **~68% is light by the same margin the 3Y/5Y/7Y ran**, mid-60s is the contagion signal. **STRUCTURAL FINDING 3 — the five-row aggregator phantom now has a name.** The '$39B 10Y / 4.033% / indirect 83.1% / dealers 4.2%' result discarded at D7, D5, D4, D3 and D1 as 'some 2025 figure' is, in the primary, the **2026-09-10 minus one year** auction: **2025-09-10, $39B, HY 4.0330, B/C 2.650, indirect 83.13%, dealers 4.21%** — the September 10Y reopening one year to the day before this one, which is exactly why it keeps surfacing on searches for this event and why the size matches. Identified rather than merely flagged. **Rates — the curve barely moved on the most crowded session of the quarter, and D1's reading is corrected against the primary.** Treasury's Daily Par Yield Curve (home.treasury.gov CSV, fetched direct) for **9/8**: 2Y **4.39**, 3Y 4.44, 5Y 4.57, 7Y 4.68, 10Y **4.80**, 20Y **5.26**, 30Y **5.25** — against 9/4 that is 10Y **+2bp**, 2Y +2bp, 30Y +1bp, 3Y −1bp. D1 recorded a pre-open **4.81** from Trading Economics and computed ~12.7bp of concession; on the primary close the figure is **4.80** and the concession above the Aug-12 **4.683%** stop is **~11.7bp** — still the widest of any row in this doc, and the correction is 1bp, not a reversal. That ~$304B cleared with a 2bp move is itself a supportive datapoint. **Fed path — the blackout climb stalled, which is new information about the mover.** Investing.com's Fed Rate Monitor (CME 30-day fed-funds futures), timestamped **2026-09-08 07:55PM EDT**: September hike **58.1%** / hold 41.9%, against the **58.7%** of 9/7. So on a session where Brent added another 3.4%, the oil→Fed channel D1 identified as the sole mover **did not transmit**. Still inside both D10 thresholds (~35% / ~75%). A Trading Economics summary the same day puts it 'roughly 60%', consistent as a band; an untimestamped search summary claiming 'nearly 56%' is **not adopted**. **Volatility — the break off the YTD lows is confirmed at the close.** VIX closed **15.72** on 9/8 (Yahoo/Cboe daily bar) against the 15.75 pre-open D1 carried and the **14.53** of 9/4 — **+1.19** on the session, inside the 3-point materiality threshold but the first close off the lows after ten sessions. D1's flagged anomaly **persists and is still not adopted**: the same feed shows a 15.30 VIX bar dated **9/7**, a full NYSE/SIFMA holiday on which ^GSPC shows no bar at all. **Leg 5 — the test D1 said 'lands after this row' ran, and it inverted a second time, harder.** 9/8 closes vs 9/4, taken from Yahoo daily bars and cross-checked against the same session's hourly series: **CRWV 89.36 → 99.83 = +11.72%**, **NVDA 230.36 → 225.73 = −2.01%**, MRVL 223.55 → 225.41 = +0.83%, AVGO 357.90 → 368.56 = +2.98%; **S&P 7,718.60 → 7,673.52 = −0.58%**, Nasdaq 26,506.99 → 26,421.41 = −0.32%. So on a session with the 10Y at a fresh high, VIX up and the index down, the single highest-duration, most debt-financed name in the sensitivity tier rose **11.7%** — and **NVDA fell 2.0% in the same session**, meaning the tier did not move as a tier at all. Attribution is idiosyncratic and dated: Nvidia raised its stake in CoreWeave, Truist lifted its target to $165, and Q2's ~$104B backlog is still repricing the name. Two consecutive failed tests, the second with an internal split, so **leg 5 is downgraded from D4's 'conditional' to refuted as a same-week read-through**, retaining only 8/18 as evidence about an acute rate-*shock* session. **The aggregator trap fired twice more, once in a new place.** (a) A stock aggregator reported CRWV '+14.68%, latest close $102.48'; the hourly cross-check puts the 9/8 close at **99.83** with an intraday high near 103.2, so 102.48 is an intraday level quoted as a close — the **sixth** instance in this doc and the second on the equity side, and note the Motley Fool's 'soared 12%' matches the verified close. (b) A search summary served **stale 3Y figures** ($42B / 3.202% / B/C 2.50) attributed to 9/8; the underlying rttnews article itself is correct ($58B / 4.474% / 2.72), so the error was the summary layer, not the source — recorded because the two failure modes need different defences. **Geopolitical / oil — the $100 handle, and the de-escalation tell did not fire.** Brent front-month **$99.51** and WTI **$94.57** at 20:03 ET 9/8, **+3.4%** from the $96.28 close of 9/4; CNBC 9/8 ('Brent crude nears $100 after strikes on Saudi energy sites') records Brent's highest since **July 23**, with the Houthis claiming the **400kb/d Jazan refinery** and other domestic-market facilities and **73 wounded**. D1's onshore mechanism is confirmed as the price driver. On the other side, **no evidence was found** of the Iran–Oman IMO filing D1 named as the tell: this sweep surfaced only the *August* track of the same negotiation (a temporary two-lane Hormuz route reported 8/26; an 8/7 report that the arrangement bars US and Israeli vessels) and nothing dated 9/8 or later. Stated as 'not found', not 'did not happen' — and per the switch's own wording the leg **stays in** absent a filing by 9/11. **Blocked sources, re-tested rather than carried or dropped:** `bls.gov/news.release/cpi.nr0.htm` still **403** with browser headers and `opec.org/press-releases.html` now **403** (it was 402 at D1); both re-recorded in this ledger's `probe-ref.blocked` with today's date. Nothing in this row depends on either. **Adjacency — 27 distinct tracked entries within 5 days, up from 25 at D1.** Two arrived from sibling lanes, and the on-point one needs its caveat carried, not just its name: **`treasury-buyback-cash-mgmt-2026-09-09`** is a **$12.5B-cap** cash-management buyback at **1:40pm ET on auction day**, forty minutes after this reopening prices — but its own initial research is explicit that the sector is **1Mo–2Y** and that it 'buys nothing at any tenor the long-end ledgers care about, so this is a cash/front-end supply signal, not duration support.' Recorded with that caveat precisely so this doc does not mis-bank it as a same-day bid for the tenor being sold; the same-sector operation is the **10–20Y** one on 9/10. The second is `existing-home-sales-2026-09-10`, a rate-sensitive print on the 30Y day. **No new dated adjacency proposed in this PR** — every dated item this sweep surfaced is already tracked, and the Iran–Oman agreement still carries no date. **One forward test registered:** `FT-treasury-10y-note-2026-09-09-1`, the doc's first — leg 3's 'the 10Y is the strong tenor' put where it can be scored, predicting an indirect share **≥ 68.0%** at today's reopening, base rate stated (12 of the last 18 reopenings cleared it, 66.7%), score-by 2026-09-10 from the primary. | **No change to the stance — but this is the first row since D10 whose net moves *toward* the base case, and the reason it does not move has itself changed.** Still guard-shaped, still no entry. The auction side is verified a fifth time ($39B, ~11.7bp concession) and the block's first demand read **cleared**: a stop-through into ~$304B of crowding, the best 3Y cover of 2026, a below-average dealer takedown, a 2bp curve move on the quarter's most crowded session, and a hike-odds climb that stalled at 58.1%. What is unresolved is narrower than it was: the light-indirect run reached a third tenor but not yet the benchmark, and today's session is clean enough to settle it. Against that, Brent is at $100 with no IMO filing found. Prior rows held the stance because the evidence was two-sided; this one holds it because the auction-specific risk has largely resolved and **what remains is macro — CPI on 9/11, not this print**. One kill switch resolved on its favourable branch (the 9/8 3Y); one re-based rather than retired (the indirect thresholds, now reopening-relative); one retired as refuted (leg 5's name-level read-through); one added (the Fed-path stall). Three signal bullets added, three answered. Leg 5 downgraded to refuted-as-same-week-read-through. The five-row aggregator phantom identified as the 2025-09-10 reopening. One forward test registered | 2026-09-10 (high, 0-7d band: daily — but the event passes today, so the next assessment is the close-out) |
+| 2026-09-10 | D+1 | **Close-out row — the auction is scored from the primary, and so is the tape it produced.** Instrument caches busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); rates events carry `symbols: []` so the scoring sources are Treasury's own `auctions_query` and daily par-yield-curve CSV, both re-fetched this session, plus Yahoo 5-minute bars for the intraday reaction. **The result** (CUSIP 91282CRF0, results `R_20260909_2.pdf`): $39B, high yield **4.8340%**, **bid-to-cover 2.710 — the highest of 28 nominal 10Y auctions since 2024-06** — competitive accepted $38.902B of which indirect $30.804B = **79.18%**, direct $6.421B = **16.51%**, primary dealers $1.677B = **4.31%** (2nd-lowest of the same 28), allocation at the high **89.25%**, avg/median yield 4.769%. Tail is secondary-sourced as ever (fiscaldata publishes no when-issued): **stopped through ~1.5bp**. **The doc's central question is answered — no contagion.** 79.18% sits **6.5pp above the 72.66% reopening mean** this doc measured at D0 (n=18 prior reopenings, reproduced exactly this session) and **11.2pp above** the 68.0% light threshold, so the 5Y/7Y/3Y light-indirect run was front-end/belly and did not reach the benchmark. `FT-treasury-10y-note-2026-09-09-1` **scored PASS**, with its own stated caveat honoured — a pass was the two-in-three base-rate outcome (12 of 18, reproduced), so the margin is the information, not the binary. **The 9/10 30Y — this doc's own named confirm/deny — confirmed harder:** $22B, 5.3080%, cover 2.610, indirects **79.48%** (2nd of 28 vs a 65.51% mean), dealers **2.21%**, the lowest of its whole lineage. **And the tape moved the other way.** Intraday (Yahoo 5m, ^TNX): **4.845 at 12:55pm ET → 4.829 low at 2:00pm → 4.837 close** — the best-bid auction in two years bought **1.6bp** and kept **0.8bp**; TLT +0.20% over the same window and back to +0.13% by the bell. Treasury par curve: 10Y **4.80 (9/8) → 4.83 (9/9) → 4.95 (9/10)**, 2Y 4.39 → 4.43 → 4.56, 30Y 5.25 → 5.28 → 5.37 — a **two-day +15bp bear-flattening** to the highest 10-year since **November 2023**. **Adjacency sweep — the cause is oil, and the decomposition is measured, not narrated.** Brent **97.92 → 101.21 → 109.19** (+11.5% over the pair), WTI to **104.06**, after the US destroyed five Iranian tankers following ballistic-missile attempts on a US warship and **Trump said on 9/9 he is "not looking for a deal with Iran"** — which closes the Iran–Oman off-ramp D1 added and D0 could not find an IMO filing for. Of 9/10's **+10.7bp** in ^TNX, **+4.8bp printed overnight before PPI** (4.837 close → 4.885 at 8:25am ET) and only **+1.2bp** on the 8:30am print itself; the 1:00pm 30Y auction — best sponsorship of its lineage — produced **+0.8bp of yield**, and yields rose 2bp further in the hour after. **PPI (BLS, 9/10)** split exactly as D0 predicted: headline **+0.4% m/m in line** with the Dow Jones consensus, **5.4% y/y vs 5.3% expected** on a **+4.2% energy** component, but **core +0.2% vs +0.3% expected** — hot on energy, *softer* at the core. **Fed:** September hike odds **58.1% (9/8) → ~68.7% (Investing.com Fed Rate Monitor, timestamped 2026-09-10 06:15PM EDT; ~70% on the Reuters/Globe and Mail read, 63% on prediction markets)** — D0's "the oil→Fed channel stalled" reading is **refuted within 48 hours**, and D10's ~75% threshold is ~6pp away. **Vol:** VIX **15.72 (9/8) → 16.46 (9/9) → 17.84 (9/10)** — D5's "above ~18 before 9/9" tell arrived a session late, after the auction rather than before it. **Names, recorded and bounded:** leg 5's refuted same-week form failed a **third** time on 9/9 (yields +3bp, **MRVL +4.1%** against CRWV −4.9%), while its retained acute-shock form got a confirming observation on 9/10 (10Y +12bp; **CRWV −6.1%, MRVL −3.4%, NVDA −2.4%, AVGO −1.0%**, S&P −0.6%) — one confirmation does not reinstate a read-through that has failed three times. **Blocked sources, recorded not substituted:** cnbc.com 403 ×2 and cnn.com 451 today, all three logged in `probe-ref.blocked`; every figure above is from a primary or an explicitly-named secondary. **No new dated adjacency proposed** — the two ids added to the corridor since D0 (`canada-counter-tariffs-effective-2026-09-08`, `jgb-liquidity-enhancement-1-5y-2026-09-10`) were both already tracked by other lanes. | **Closed. Leg 3 SUPPORTED on the strongest evidence this doc produced; the guard expired unused and cost nothing; leg 5's same-week form stays refuted.** The stance is stood down because the event is spent, not because the risk resolved — the finding handed forward is that **auction demand and the direction of yields decoupled**, so a coupon auction is a *lagging* read on term premium in an energy-driven regime. Live documents from here: `cpi-2026-09-11`, `fomc-2026-09-16`. | — (closed; `## Outcome` filled, no further checks) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-10, D+1 — the morning after the 30Y reopening, this doc's own named
+confirm/deny, closed its session).** Rates-auction mode runs no `earnings-cycle` / `intraday-edges`
+instrument (`symbols: []` by design), so the caches were busted as the protocol requires
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and the scoring is
+done from three sources re-fetched **this session**, never from memory of the tape:
+`api.fiscaldata.treasury.gov`'s `auctions_query` for the auction itself, Treasury's **daily par
+yield curve** CSV for the rate path, and Yahoo **5-minute** bars for the intraday reaction window.
+
+**The headline verdict: the doc got its question right, got its answer right, and learned that the
+answer does not price.** This document was built on one load-bearing question — *will the long-end
+term-premium weakness contaminate the benchmark?* The answer is an emphatic **no**. And the curve
+bear-flattened **15 basis points** across the two auction sessions anyway.
+
+### What printed — the best 10-year auction of its lineage
+
+Primary: `auctions_query`, CUSIP **91282CRF0**, results `R_20260909_2.pdf`, announced 2026-09-03,
+issues 2026-09-15.
+
+| Metric | 2026-09-09 (this reopening) | 2026-08-12 (predecessor, new issue) | Reopening mean, n=18 prior | Verdict |
+|---|---|---|---|---|
+| Offering | **$39.0B** | $42.0B | $39B run-rate | run-rate, as announced 9/3 |
+| High yield | **4.8340%** | 4.6830% | — | **+15.1bp** of concession vs the predecessor |
+| **Bid-to-cover** | **2.710** | 2.530 | 2.570 | **highest of 28 nominal 10Y auctions since 2024-06** |
+| **Indirect** | **79.18%** | 76.73% | **72.66%** | **+6.5pp vs the reopening mean**, 4th of 28 |
+| Direct | 16.51% | 14.67% | — | ordinary |
+| **Primary dealers** | **4.31%** | 8.60% | 10.32% | **2nd-lowest of 28** — real money took it down |
+| Allocation at high | 89.25% | 65.27% | — | — |
+| Tail | **~−1.5bp (stopped through)** | +0.1bp (on the screws) | — | **secondary-sourced** — fiscaldata publishes no when-issued |
+
+**The 9/10 30Y reopening, which this doc named at D21 as the intervening confirm/deny, confirmed
+harder:** $22B, CUSIP 912810UW6, high yield **5.3080%**, cover **2.610**, indirects **79.48%** (2nd
+of 28 30Y auctions since 2024-06, against a **65.51%** mean), primary dealers **2.21% — the lowest
+of that entire lineage**. Foreign sponsorship was intact at *both* ends of the curve in the same
+48 hours.
+
+### The rate path, from Treasury's own par curve — and the number that scores this doc
+
+| Tenor | 09-08 | 09-09 (10Y auction) | 09-10 (30Y auction + PPI) | 2-day Δ |
+|---|---|---|---|---|
+| 2y | 4.39 | 4.43 | **4.56** | **+17bp** |
+| 3y | 4.44 | 4.49 | 4.63 | +19bp |
+| 5y | 4.57 | 4.61 | 4.75 | +18bp |
+| **10y** | 4.80 | **4.83** | **4.95** | **+15bp** |
+| 20y | 5.26 | 5.28 | 5.39 | +13bp |
+| **30y** | 5.25 | 5.28 | **5.37** | **+12bp** |
+
+**2s30s flattened 5bp** (86 → 81) — a bear-flattening, i.e. the market repricing *policy*, not a
+higher long-run inflation path. The 10-year at **4.95%** is its highest since **November 2023**.
+
+**The intraday reaction, which is the measurement that scores the auction rather than the week**
+(Yahoo 5-minute bars, `^TNX`, 2026-09-09; 1:00pm ET = 17:00 UTC):
+
+| Clock (ET) | `^TNX` | Note |
+|---|---|---|
+| 09:35 open | 4.808 | the session went on to close **+2.9bp** from here, all of it before 1pm |
+| **12:55 (pre-auction)** | **4.845** | the concession the auction was bid into |
+| 13:00 (bid deadline) | 4.833 | −1.2bp |
+| **14:00 (post-auction low)** | **4.829** | **−1.6bp — the whole rally the result bought** |
+| 16:00 close | **4.837** | **−0.8bp survives to the bell** |
+
+TLT ran 81.629 → 81.790 (**+0.20%**) over the same window and gave half of it back, closing 81.735.
+**A 2.710 cover, a 79.18% indirect share and a 1.5bp stop-through were worth 1.6 basis points, and
+0.8 of them stuck.** The following session took 12bp back.
+
+### Why the tape ignored it — the decomposition, measured
+
+`^TNX` moved **+10.7bp** on 9/10 (4.837 → 4.944). Where it came from:
+
+| Window | `^TNX` | Δ | What was happening |
+|---|---|---|---|
+| 9/9 close → 8:25am ET | 4.837 → **4.885** | **+4.8bp** | **overnight, before any US data** — Brent 101.36 → 105.16 |
+| 8:30am ET (PPI) | 4.885 → 4.897 | +1.2bp | the print itself |
+| 8:30am → 12:55pm | 4.897 → 4.914 | +1.7bp | Brent grinding to ~106.75 |
+| **1:00pm (30Y auction)** | 4.914 → **4.922** | **+0.8bp** | the **best-sponsored 30Y of its lineage** — yields *rose* |
+| 1:05pm → close | 4.922 → **4.944** | +2.2bp | Brent 107.18 → 108.95 |
+
+**Forty-five percent of the day's move was done before the US inflation print, and the auction
+contributed nothing.** The engine, priced: **Brent 97.92 (9/8) → 101.21 (9/9, +3.4%) → 109.19 (9/10,
++7.9%)**, WTI to **104.06** — an **11.5% two-session move** after the US destroyed five Iranian
+tankers following ballistic-missile attempts on a US warship, and **Trump said on 9/9 he is "not
+looking for a deal with Iran."** That statement closes the **Iran–Oman Hormuz off-ramp** D1 added on
+9/8 and D0 could not find an IMO filing for; the switch's ~$85 de-escalation branch never came within
+$20 of firing.
+
+**PPI (BLS, released 2026-09-10) split exactly the way D0's "the Fed is priced off energy, not off
+core" read said it would:** headline **+0.4% m/m, in line** with the Dow Jones consensus; **5.4% y/y
+against 5.3% expected**, on a **+4.2%** energy component; **core +0.2% against +0.3% expected** —
+*softer* at the core. September hike odds nonetheless went **58.1% (9/8) → ~68.7%**
+(Investing.com Fed Rate Monitor, timestamped **2026-09-10 06:15PM EDT**; ~70% on the Reuters/Globe
+and Mail read the same day, 63% on prediction markets). VIX **15.72 → 16.46 → 17.84**.
+
+### What this scores
+
+| Claim | Verdict | On what evidence |
+|---|---|---|
+| **Leg 3 — the 10Y is the *strong* tenor** | **SUPPORTED**, on the best evidence the doc produced | 79.18% indirect (+6.5pp vs the reopening mean), best cover of 28, 2nd-lowest dealer takedown, ~1.5bp stop-through |
+| **Leg 4 — the load-bearing risk is contagion, not a standalone weak 10Y** | **Correct framing, and the risk did not materialise** | the 5Y/7Y/3Y light-indirect run stopped at the belly; the 30Y next day printed 79.48% indirect |
+| **Leg 2 — the long-end sell-off is term-premium/fiscal, not Fed** | **Partly REFUTED for this window** | 2s30s *flattened* 5bp on a 15bp selloff and hike odds rose 10.6pp — this leg of the move was a **policy** repricing off energy, not term premium |
+| **Leg 5 — a weak print hits high-duration names fastest** | **Same-week read-through stays REFUTED; the acute-shock form survives** | 9/9 split the tier again (**MRVL +4.1%** vs CRWV −4.9% on +3bp); 9/10's +12bp shock moved it as a tier (**CRWV −6.1%, MRVL −3.4%, NVDA −2.4%, AVGO −1.0%**) |
+| **Leg 6 — the Fed channel is separate and still live** | **SUPPORTED, and it turned out to be the dominant one** | odds 58.1% → ~68.7% in two sessions with the Fed in blackout — moved entirely by oil |
+| **The stance (no new duration, no directional bet)** | **Held; expired unused; cost nothing** | no position was taken at any point, so there is no P&L either way — and the 9/10 session is what the guard existed for |
+
+**Forward test:** [FT-treasury-10y-note-2026-09-09-1](../forward-tests/treasury-10y-note-2026-09-09.md)
+**scored PASS** — indirect **79.18% ≥ 68.0%**, clearing by **11.2pp**. Its own honesty clause is
+honoured: the base rate it stated up front (**12 of the last 18 reopenings cleared 68.0%**) was
+reproduced exactly from the primary this session, so a pass was the two-in-three outcome and the
+binary carries little information. **The margin is what carries it** — 79.18% is not a marginal pass
+at the threshold but 6.5pp *above* the reopening mean and 4th of 28 in the lineage. Even so, per the
+test's own wording, **a pass does not promote leg 3 beyond SUPPORTED**, and no legacy `FT-N` row in
+`forward-tests/legacy.md` names this event.
+
+### The finding this event hands forward
+
+**Primary-market demand and the direction of yields decoupled completely, and that is a general
+lesson, not a curiosity about one week.** Two coupon auctions with near-record real-money
+sponsorship — a 10Y with the best cover of its 28-auction lineage and a 30Y with the lowest dealer
+takedown of its own — sat inside the sharpest two-day selloff of the corridor. The mechanism is not
+mysterious: **a concession large enough to draw exceptional sponsorship is itself the evidence that
+something else is setting the price.** Real money bought 4.83% precisely *because* an energy-driven
+inflation repricing had put it there, and the auction has no ability to arbitrate that repricing.
+
+For every downstream rates ledger in this calendar, the amendment is one sentence: **a strong
+auction says supply is clearing; it says nothing about the path.** The falsifier is dated and
+specific — **a 10Y or 30Y auction before 2026-12-31 that tails ≥2bp with indirects below 65%**
+would show demand deterioration is still capable of *leading* the tape, and would restore the
+framing this pair of prints removed.
+
+**Honest limits.** The tail (~1.5bp stop-through) is the one figure here that is **not** primary —
+`auctions_query` publishes no when-issued yield, so it rests on a secondary auction tracker, as it
+has in every row of this doc. Three cited sources were **blocked** this session (cnbc.com 403 ×2,
+cnn.com 451) and are recorded in `probe-ref.blocked` rather than silently substituted; nothing
+above depends on them. The 9/11 CPI — the event this doc has called the week's load-bearing one
+since D21 — had **not printed** when this close-out was written, so the energy-versus-core question
+is handed to [`cpi-2026-09-11`](cpi-2026-09-11.md) unresolved, and the 9/16 FOMC to
+[`fomc-2026-09-16`](fomc-2026-09-16.md). The intraday decomposition attributes the overnight 4.8bp
+to oil on co-movement and timing, not on a causal test; no other dated headline was found in that
+window, but co-movement is weaker evidence than a print with a timestamp. This doc goes quiet here.
