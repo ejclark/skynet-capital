@@ -44,6 +44,7 @@ type Explain = {
     vix: number | null;
     daysBand: string;
     adjacentIds: string[];
+    adjacentStrongIds: string[];
     screenStreak: number;
   };
   intervalDays: number;
@@ -145,7 +146,41 @@ describe("event-material-scan decide()", () => {
     expect(out.reasons.some((r) => r.startsWith("days-band-transition:"))).toBe(true);
   });
 
-  it("a new adjacent calendar event since the last row is material", () => {
+  it("a new STRONG adjacent (confirmed, high/critical) since the last row is material", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      adjacentIds: ["cpi-2026-09-11", "some-estimate-2026-09-10"],
+      adjacentStrongIds: ["cpi-2026-09-11"],
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["new-adjacent-event:cpi-2026-09-11"]);
+  });
+
+  it("weak corridor churn (estimate/low-impact, filtered out upstream) screens instead of buying a session (#2946)", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      adjacentIds: ["some-estimate-2026-09-10", "another-estimate-2026-09-12"],
+      adjacentStrongIds: [],
+    });
+    expect(verdict).toBe(0);
+    expect(out.verdict).toBe("screen");
+    expect(out.reasons).toEqual([]);
+  });
+
+  it("a legacy probe-ref (no adjacentStrongIds) diffs against its old all-id list — a truly new strong entrance still trips", () => {
+    const { verdict, out } = explain({
+      ledger: {
+        lastAssessed: "2026-09-01",
+        probeRef: { ...quietProbeRef, adjacentIds: ["old-confirmed-2026-09-10"] },
+      },
+      adjacentIds: ["old-confirmed-2026-09-10", "fomc-2026-09-16"],
+      adjacentStrongIds: ["old-confirmed-2026-09-10", "fomc-2026-09-16"],
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["new-adjacent-event:fomc-2026-09-16"]);
+  });
+
+  it("a caller that omits adjacentStrongIds falls back to the pre-filter behavior (every adjacent can trip)", () => {
     const { verdict, out } = explain({
       ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
       adjacentIds: ["cpi-2026-09-11"],
@@ -185,6 +220,23 @@ describe("event-material-scan applyScreen()", () => {
     expect(text).not.toMatch(/\|\s*—\s*\(screen[^)]*\).*assessment made\)[\s\S]*no change/i);
     // The original row survives untouched — append-only.
     expect(text).toContain("| 2026-09-01 | D-10 | Initial pulse. | — (stance set) | 2026-09-04 |");
+  });
+
+  it("names new corridor entries in the screen row — recorded, never assessed (#2946)", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      adjacentIds: ["some-estimate-2026-09-10", "another-estimate-2026-09-12"],
+      adjacentStrongIds: [],
+      ledgerText: LEDGER_TEXT,
+    });
+    expect(verdict).toBe(0);
+    const text = out.ledgerText ?? "";
+    expect(text).toContain("**Deterministic screen (no Claude session).**");
+    expect(text).toContain(
+      "new in corridor since last pulse: `another-estimate-2026-09-12`, `some-estimate-2026-09-10` (recorded, not assessed)",
+    );
+    // and the fresh readings carry both lists forward for the next pulse's diff
+    expect(text).toContain('"adjacentStrongIds":[]');
   });
 
   it("replaces an existing probe-ref block on the next screen instead of duplicating it", () => {

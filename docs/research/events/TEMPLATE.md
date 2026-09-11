@@ -2,7 +2,7 @@
 
 **Kind:** <kind> · **Date:** <YYYY-MM-DD> (<confirmed|estimate>, <source>) · **Impact:** <tier>
 **Last assessed:** <YYYY-MM-DD>
-<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"screenStreak":0,"blocked":[]} -->
+<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
 
 <!-- The `**Last assessed:**` line is scripts/event-scan.mjs's machine contract — update it with
      every assessment, or the scanner will keep marking this event due. Process:
@@ -11,8 +11,10 @@
      The `<!-- probe-ref: {...} -->` line right after it is scripts/event-material-scan.mjs's
      contract (issue #724) — the deterministic screen's reference state for THIS event: the last
      recorded price for each symbol in the table row, the last VIX reading, the cadence band label,
-     the adjacent-event ids known at the time, and how many consecutive pulses have been screened
-     (not researched) in a row. Populate it with today's real readings when writing THIS initial
+     the adjacent-event ids known at the time (adjacentIds) and the confirmed high/critical subset
+     that may trip a session (adjacentStrongIds, #2946), and how many consecutive pulses have been
+     screened (not researched) in a row. Populate it with today's real readings when writing THIS
+     initial
      research (it is what lets the event's very next `interval-elapsed` pulse be screenable instead
      of automatically material) — never hand-invent numbers, pull today's actual price/VIX the same
      way the adjacency sweep already does. Every later pulse (screened or full-session) REPLACES
