@@ -117,7 +117,7 @@ protocol above, unchanged.
 `**Last assessed:**`:
 
 ```
-<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,"daysBand":"critical:8+","adjacentIds":[],"screenStreak":0} -->
+<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,"daysBand":"critical:8+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
 ```
 
 This is the probe's one source of truth for "what did we see last time" — embedded in the ledger
@@ -137,7 +137,7 @@ in that file's header):
 | Underlying price move | ≥ 5% since the last recorded price, per tracked symbol | past ordinary daily noise for this calendar's names; peers are NOT probed (v1 simplification — a full session's adjacency sweep still checks them by hand) |
 | VIX regime | ≥ 3 points absolute since the last recorded reading | this calendar's own ledgers already treat a few-point VIX move as regime-relevant |
 | Cadence band transition | any change in the matched `assessment-cadence.json` band | a tightening/loosening interval is itself information worth a real look |
-| New adjacent event | any calendar entry within 5 days of this event's date not seen on the last pulse | the same "corridor" framing the adjacency sweep already uses by hand |
+| New adjacent event | a **confirmed, high/critical-impact** calendar entry within 5 days of this event's date not seen in the last pulse's `adjacentStrongIds` | the same "corridor" framing the adjacency sweep already uses by hand — filtered (#2946): at 446 events a corridor averages ~30 adjacents but ~3 strong ones, so the unfiltered rule tripped on the calendar's own churn (5 screens in 13 days). Weaker adjacents are **named in the screen row** (recorded, not assessed), not paid for |
 | Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
 | No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
 | Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |

@@ -25,6 +25,16 @@
 //     "corridor" framing this repo's own pulse checks already use (NVDA/MRVL/Jackson-Hole reads as
 //     one 3-day corridor); a new dated entry landing inside that window is exactly the kind of find
 //     a human adjacency sweep would flag.
+//   - THE ADJACENCY FILTER (#2946, 2026-09-10): only a CONFIRMED, high/critical-impact entry may
+//     trip `new-adjacent-event` ("strong" below); weaker adjacents are NAMED in the screen row
+//     (recorded, not assessed) instead of buying a session. Measured defeat of the unfiltered
+//     rule: at 446 events a corridor averages ~30 adjacents against ~3 strong ones, so calendar
+//     churn (252 pending proposals, ~338 new events/week) tripped the check on nearly every pulse —
+//     the probe produced 5 screens in its first 13 live days because its own subject's growth kept
+//     reading as material. An estimate→confirmed flip DOES trip once probe-refs carry
+//     adjacentStrongIds (the id was never in the strong set); a legacy probe-ref without that key
+//     falls back to its old all-id list, which can suppress ONE flip trip per legacy ledger — the
+//     bounded, documented under-trip; the other direction (an extra session) is the safe failure.
 //   - STALENESS_CEILING     3  — every 3rd consecutive pulse is forced material regardless of the
 //     readings (the issue's own suggested default), so an event can never coast on screens forever;
 //     a real session re-establishes the baseline at least that often.
@@ -42,6 +52,14 @@ export const PRICE_MOVE_THRESHOLD = 0.05;
 export const VIX_MOVE_THRESHOLD = 3;
 export const ADJACENCY_WINDOW_DAYS = 5;
 export const STALENESS_CEILING = 3;
+
+const STRONG_ADJACENT_IMPACTS = new Set(["critical", "high"]);
+
+/** "Strong" = the only adjacency allowed to trip a material verdict (#2946's filter): a confirmed
+ *  date on a high/critical-impact entry. Estimate/low/medium corridor churn feeds the calendar
+ *  itself, so treating it as material made the probe re-buy a session for its own subject's growth. */
+export const isStrongAdjacent = (a) =>
+  a?.status === "confirmed" && STRONG_ADJACENT_IMPACTS.has(a?.impact);
 
 export const daysBetween = (fromDate, toDate) =>
   Math.round(
@@ -94,9 +112,12 @@ function vixReason(probeRef, market) {
     : [];
 }
 
-function adjacencyReasons(probeRef, adjacentIds) {
-  const prior = new Set(probeRef.adjacentIds ?? []);
-  return adjacentIds.filter((id) => !prior.has(id)).map((id) => `new-adjacent-event:${id}`);
+function adjacencyReasons(probeRef, adjacentStrongIds) {
+  // Legacy probe-refs predate adjacentStrongIds: their all-id adjacentIds list doubles as the
+  // prior strong set (membership only ever meant "was adjacent"), so a genuinely new strong
+  // entrance still trips — see the header's filter note for the one bounded under-trip this buys.
+  const prior = new Set(probeRef.adjacentStrongIds ?? probeRef.adjacentIds ?? []);
+  return adjacentStrongIds.filter((id) => !prior.has(id)).map((id) => `new-adjacent-event:${id}`);
 }
 
 function stalenessReason(probeRef) {
@@ -106,12 +127,12 @@ function stalenessReason(probeRef) {
 /** Every threshold check against the prior probe-ref, in one pass. Pushes a short machine-readable
  *  reason string per trip; an empty return means nothing tracked moved. Each check is its own tiny
  *  function so this stays a flat concatenation, not a branch tree. */
-function tripReasons(event, probeRef, market, adjacentIds, band) {
+function tripReasons(event, probeRef, market, adjacentStrongIds, band) {
   return [
     ...daysBandReason(probeRef, band),
     ...priceMoveReasons(event.symbols ?? [], probeRef, market),
     ...vixReason(probeRef, market),
-    ...adjacencyReasons(probeRef, adjacentIds),
+    ...adjacencyReasons(probeRef, adjacentStrongIds),
     ...stalenessReason(probeRef),
   ];
 }
@@ -120,18 +141,24 @@ function tripReasons(event, probeRef, market, adjacentIds, band) {
  * The probe's verdict for one `interval-elapsed` pulse. Pure — every input is a plain value, so
  * this is fully exercisable through `--explain` (see event-material-scan.mjs).
  *
+ * `state.adjacentIds` is the full corridor (recorded verbatim in the probe-ref); the tripping list
+ * is `state.adjacentStrongIds` — already filtered through isStrongAdjacent by the caller. A caller
+ * that omits it (e.g. a hand-run `--explain`) gets the conservative default: every adjacent can
+ * trip, exactly the pre-filter behavior.
+ *
  * `state.ledger.probeRef` missing (an event whose ledger predates this contract, or whose initial
  * research never seeded one) is treated as "material" — `no-reference-baseline` — the safe default:
  * with nothing to diff against, a probe cannot honestly call anything quiet. That one full session
  * seeds the block for every screen after it.
  */
 export function decide(state) {
-  const { event, today, cadence, ledger, market = {}, adjacentIds = [] } = state;
+  const { event, today, cadence, ledger, market = {}, adjacentIds = [], adjacentStrongIds } = state;
+  const strong = adjacentStrongIds ?? adjacentIds;
   const daysOut = daysBetween(today, event.date);
   const band = bandFor(event.impact, daysOut, cadence);
   const probeRef = ledger?.probeRef ?? null;
   const reasons = probeRef
-    ? tripReasons(event, probeRef, market, adjacentIds, band)
+    ? tripReasons(event, probeRef, market, strong, band)
     : ["no-reference-baseline"];
 
   const verdict = reasons.length ? "material" : "screen";
@@ -146,6 +173,7 @@ export function decide(state) {
       vix: market.vix ?? null,
       daysBand: band.label,
       adjacentIds: [...adjacentIds].sort(),
+      adjacentStrongIds: [...strong].sort(),
       screenStreak,
     },
   };
@@ -187,6 +215,20 @@ function describeReadings(state, decision) {
       : `band unchanged (${decision.readings.daysBand})`,
   );
   bits.push(`${decision.readings.adjacentIds.length} adjacent event(s) tracked`);
+  // The adjacency filter's other half (#2946): churn too weak to trip a session is still NAMED
+  // here — the corridor stays visible to the next real assessment without buying one. Capped so a
+  // heavy-calendar week cannot inflate the deterministic row.
+  const priorIds = new Set(prior?.adjacentIds ?? []);
+  const freshIds = (state.adjacentIds ?? []).filter((id) => !priorIds.has(id)).sort();
+  if (freshIds.length > 0) {
+    const named = freshIds
+      .slice(0, 6)
+      .map((id) => `\`${id}\``)
+      .join(", ");
+    bits.push(
+      `new in corridor since last pulse: ${named}${freshIds.length > 6 ? ` +${freshIds.length - 6} more` : ""} (recorded, not assessed)`,
+    );
+  }
   return `Readings — ${bits.join(", ")}. Nothing tracked crossed its threshold.`;
 }
 
