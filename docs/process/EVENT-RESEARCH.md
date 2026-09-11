@@ -9,9 +9,17 @@ this doc defines *what* each assessment does. The event router's event-research 
 (`.github/workflows/moneypenny-events.yml`, ticked by every merge to main — registered in docs/ROUTINES.md)
 executes it; a human session following this doc by hand is equally valid.
 
-**Adding an event is the trigger.** Ship it as an ordinary PR; the scanner's `never-assessed`
-rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml` opens an
-`[event-research] <id>` issue within seconds of the merge). No other ceremony.
+**Adding an event is the trigger — above the floor.** Ship it as an ordinary PR; the scanner's
+`never-assessed` rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml`
+opens an `[event-research] <id>` issue within seconds of the merge). No other ceremony.
+**Just-in-time below the floor** (#2946, 2026-09-11): a low/medium-impact event does not buy its
+initial session the moment it lands — it waits for its outermost cadence band (low: D-15, medium:
+D-31; `EARLY_STANCE_IMPACTS` in `scripts/event-scan.mjs`). Measured because the calendar
+self-feeds: 338 initial sessions in 7 days, ~89% for low/medium events whose corridors were still
+churning — the initial went stale before the event arrived. High/critical keep the immediate
+initial (the stance has positioning value weeks out); below the floor the deterministic screen's
+corridor rows carry the event for free until its window, and the initial fires once, when the
+corridor has settled.
 
 **One file per event, named by its id.** The calendar is `src/domain/market-events/<id>.json`
 (issue #1449) — there is no shared array and no ordering to keep; the loader sorts `(date, id)`

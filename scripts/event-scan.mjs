@@ -142,7 +142,22 @@ function loadLedgers() {
 }
 
 /** The adaptive-cadence decision for one event — the pure function at the system's core.
- *  Tested through the CLI (--due --today=… with fixture files), matching the handoff pattern. */
+ *  Tested through the CLI (--due --today=… with fixture files), matching the handoff pattern.
+ *
+ *  THE JUST-IN-TIME BRAKE (#2946, 2026-09-10/11) — never-assessed used to fire the moment an
+ *  event landed in the calendar, at ANY impact and ANY distance. With the calendar self-feeding
+ *  (proposals loading as events; 641 canonical + 469 pending over 2026-09-10→11 ALONE), that made
+ *  every arrival buy an Opus session immediately: 338 initial sessions in 7 days, ~89% of them
+ *  for low/medium-impact events weeks or months away — where the adjacency corridor is still
+ *  churning and the research goes stale before the event. High/critical keep the old behavior
+ *  (an early stance is the point of tracking them — the call sheet has positioning value weeks
+ *  out). Below that floor the initial becomes JUST-IN-TIME: assessed once, on entering the
+ *  event's outermost cadence band (low: D-15, medium: D-31 — the distance at which its own
+ *  cadence table starts pulsing it at the tighter intervals), then ordinary cadence and one
+ *  close-out. Same coverage, spread over time, bought when the corridor has settled. The
+ *  deterministic screen's corridor rows carry the event for free until then. */
+const EARLY_STANCE_IMPACTS = new Set(["critical", "high"]);
+
 function assessmentDue(event, ledger, today, cadence) {
   const days = daysBetween(today, event.date);
   const none = { due: false, reason: null, intervalDays: null, nextDueDate: null };
@@ -154,8 +169,14 @@ function assessmentDue(event, ledger, today, cadence) {
     return none;
   }
 
-  if (!ledger?.lastAssessed)
+  if (!ledger?.lastAssessed) {
+    if (
+      !EARLY_STANCE_IMPACTS.has(event.impact) &&
+      days > (cadence.bands[event.impact]?.[0]?.minDaysOut ?? 0)
+    )
+      return none;
     return { due: true, reason: "never-assessed", intervalDays: null, nextDueDate: today };
+  }
 
   const band = cadence.bands[event.impact].find((b) => days >= b.minDaysOut);
   const interval = band.intervalDays;
