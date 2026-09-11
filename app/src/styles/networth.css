@@ -1,0 +1,117 @@
+/* The Accounts page's Summary section — a net-worth hero (total value + the day's move) with an
+ * ROI strip across 7D/1M/3M/1Y, plus a per-account roster for "All accounts". Reuses the desk
+ * tile atoms (.desk-k/.desk-v/.desk-note, .tone-*, .chip-*) so it reads as one system with the
+ * blotter; the hero is the one place a number gets to be loud. Mobile-first: the ROI strip is
+ * 4-up on desktop, 2-up on phone, and the roster scrolls horizontally rather than collapsing. */
+
+.networth {
+  margin-bottom: 16px;
+}
+
+.networth-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--elev-base);
+  margin-bottom: 12px;
+}
+
+.networth-hero-main {
+  background: var(--surface);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.networth-value {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.networth-day {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.networth-day .desk-note {
+  font-weight: 400;
+}
+
+.networth-hero-note {
+  margin-top: 2px;
+}
+
+.networth-roi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.networth-tile {
+  background: var(--surface);
+  padding: var(--tile-py) 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.networth-tile--partial .desk-note {
+  font-style: italic;
+}
+
+.networth-roster-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+}
+.networth-roster {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 13px;
+}
+.networth-roster th,
+.networth-roster td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.networth-roster thead th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.networth-roster tbody tr:last-child th,
+.networth-roster tbody tr:last-child td {
+  border-bottom: none;
+}
+.networth-roster .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+.networth-roster th[scope="row"] {
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .networth-roi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .networth-value {
+    font-size: 24px;
+  }
+}

@@ -15,6 +15,7 @@ import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { serveNetWorthJson } from "./networth-api-routes.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
@@ -142,6 +143,10 @@ export async function serveJsonApi(
   }
   if (path === "/api/board") {
     serveBoardJson(res, url, config, channel);
+    return true;
+  }
+  if (path === "/api/accounts/networth") {
+    await serveNetWorthJson(res, config, session);
     return true;
   }
   if (path.startsWith("/api/desk/")) {

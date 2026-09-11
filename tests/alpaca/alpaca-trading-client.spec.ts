@@ -206,4 +206,37 @@ describe("AlpacaTradingClient", () => {
       await expect(client.cancelOrder("o1")).rejects.toBeInstanceOf(AlpacaApiError);
     });
   });
+
+  describe("getPortfolioHistory", () => {
+    it("requests the period+timeframe and returns the parsed history on 200", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": {
+          status: 200,
+          body: {
+            timestamp: [1697241600, 1697760000],
+            equity: [2784.79, 2748.73],
+            profit_loss: [0, -25.42],
+            profit_loss_pct: [0, -0.0129],
+            base_value: 2784.79,
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const history = await client.getPortfolioHistory("1W");
+
+      expect(transport.gets).toEqual(["/v2/account/portfolio/history?period=1W&timeframe=1D"]);
+      expect(history.base_value).toBe(2784.79);
+      expect(history.profit_loss_pct).toEqual([0, -0.0129]);
+    });
+
+    it("throws AlpacaApiError on a non-2xx status", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": { status: 429, body: { message: "rate limited" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.getPortfolioHistory("1A")).rejects.toBeInstanceOf(AlpacaApiError);
+    });
+  });
 });
