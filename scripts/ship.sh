@@ -32,8 +32,12 @@ set -euo pipefail
 # it mechanically rather than from a prose copy, several of which had drifted. `ship automerge`
 # now ENFORCES that answer rather than trusting the reader to act on it — see `checkarm` below.
 
-TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
-[ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env" >&2; exit 1; }
+# gh-keyring fallback last, so a session never needs to wrap every call in
+# `GH_TOKEN="$(gh auth token)" …` — that env-assignment prefix makes the whole command unparsable
+# to the permission matcher, which cost a human approval tap per ship (Eric, 2026-09-10: "stop
+# asking for permission of trivial tasks like this").
+TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}}"
+[ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env and no gh login" >&2; exit 1; }
 API="https://api.github.com"
 
 # owner/repo from origin, handling both the proxy URL (.../git/OWNER/REPO) and normal remotes.
