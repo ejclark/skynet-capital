@@ -1,0 +1,131 @@
+/* The Cockpit (#2321) — the Accounts page's sticky-header layout: a condensed net-worth hero
+ * and section switch that stay visible while the section detail scrolls below. Progressive
+ * disclosure: the at-a-glance (value, day move, ROI) is always visible; the full detail (positions,
+ * activity, roster) reveals one section at a time.
+ *
+ * The section switch moves here from the rail — not a tab strip (frame.tsx's "no tab strip" rule
+ * was about a third horizontal band before the page's heading; the Cockpit's switch is part of the
+ * sticky header, which IS the page identity). The active button carries the same accent-bar shape
+ * difference as the rail's SectionSwitch, oriented for a horizontal row. */
+
+.cockpit-head {
+  position: sticky;
+  top: 64px;
+  z-index: 4;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0 0;
+  margin-bottom: 16px;
+}
+
+/* horizontal section switch (variant="horizontal" on SectionSwitch) */
+.cockpit-nav {
+  display: flex;
+  gap: 0;
+  margin: 10px 0 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cockpit-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.cockpit-nav-btn {
+  padding: 7px 14px;
+  border: none;
+  background: none;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--sans);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.cockpit-nav-btn:hover {
+  color: var(--text);
+}
+.cockpit-nav-btn[aria-pressed="true"] {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+/* condensed net-worth hero — the sticky at-a-glance */
+.networth-condensed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 10px;
+}
+.networth-condensed-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.networth-condensed-values {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.networth-condensed-value {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.networth-condensed-day {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.networth-condensed-roi {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.networth-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+}
+.networth-pill-label {
+  color: var(--muted);
+  font-size: 11px;
+}
+.networth-pill-value {
+  font-weight: 700;
+}
+.networth-pill--partial {
+  font-style: italic;
+}
+
+/* the Summary section body — cash/position detail + roster (the hero is in the sticky header) */
+.networth-detail {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 700px) {
+  .networth-condensed-value {
+    font-size: 18px;
+  }
+  .networth-condensed-roi {
+    gap: 6px;
+  }
+  .networth-pill {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+}

@@ -25,6 +25,7 @@
     "record:session": "tsx src/scripts/record-session.ts",
     "confirm:print-dates": "tsx src/scripts/confirm-print-dates.ts",
     "brief:morning": "tsx src/scripts/morning-brief.ts",
+    "shoot:accounts": "tsx scripts/shoot/accounts.mjs",
     "shoot:login": "tsx scripts/shoot/login.mjs",
     "scan:layout-resize": "npm run build --prefix app && tsx scripts/layout-resize-scan.mjs",
     "shoot:straddle": "tsx scripts/shoot/straddle.mjs",

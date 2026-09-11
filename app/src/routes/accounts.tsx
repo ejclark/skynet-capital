@@ -7,11 +7,16 @@ import {
   fetchDesk,
   fetchDeskActivity,
 } from "../live/desk";
-import { fetchNetWorth, type NetWorthStatsView } from "../live/networth";
+import {
+  type AccountNetWorthView,
+  type AccountsNetWorthView,
+  fetchNetWorth,
+  type NetWorthStatsView,
+} from "../live/networth";
 import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { PageFrame } from "../shell/frame";
-import { NetWorthSummary } from "../shell/networth-summary";
+import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
 import { PositionsTable } from "../shell/positions-table";
 import { ProfileRail } from "../shell/profile-rail";
 import { SectionSwitch } from "../shell/section-switch";
@@ -19,18 +24,20 @@ import { type PageSection, resolveSection } from "../shell/sections";
 import { EventLine } from "../shell/timeline-drawer";
 
 /**
- * PROFILE > ACCOUNTS (#2321) — the unified per-account view: Summary / Positions / Activity for
- * one owned account, or "All accounts" combined. Human and bot accounts render through the exact
- * same path — Alpaca has no such distinction, so this page never branches on `kind` beyond the
- * switcher's own label.
+ * PROFILE > ACCOUNTS (#2321) — the Cockpit: a unified per-account view whose sticky header carries
+ * the net-worth at-a-glance (total value, day move, ROI pills) and a horizontal section switch that
+ * stay visible while the section detail (Positions, Activity, roster) scrolls below. One owned
+ * account or "All accounts" combined, human and bot alike — Alpaca has no such distinction, so this
+ * page never branches on `kind` beyond the switcher's own label.
  *
- * The Summary section is the NET WORTH view: total value (± the day's move) and flow-adjusted ROI
- * over 7D/1M/3M/1Y, served as one `/api/accounts/networth` payload that carries every owned
- * account plus the aggregate — so one fetch serves both the single-account view (pick the row) and
- * "All accounts" (use the total), and the switcher never triggers a re-fetch. The windows' returns
- * come straight from Alpaca's own portfolio history (flow-adjusted, so a deposit never reads as a
- * gain); the aggregate per window is `Σend / Σbase − 1` across the accounts that reported one.
- * Positions and Activity still run through `fetchDesk` / `PositionsTable` as before.
+ * PROGRESSIVE DISCLOSURE: the sticky {@link NetWorthCondensed} is the always-visible summary layer;
+ * the section switch reveals one section's full detail at a time (Positions blotter, Activity
+ * timeline, or the Summary roster + cash/position detail). The net-worth payload is one
+ * `/api/accounts/networth` fetch that carries every owned account plus the aggregate, so the
+ * switcher never triggers a re-fetch. Windows' returns come straight from Alpaca's own portfolio
+ * history (flow-adjusted, so a deposit never reads as a gain); the aggregate per window is
+ * `Σend / Σbase − 1` across the accounts that reported one. Positions and Activity still run through
+ * `fetchDesk` / `PositionsTable` as before, and the desk fetch is skipped on Summary.
  */
 
 type AccountsSection = "summary" | "positions" | "activity";
@@ -45,18 +52,54 @@ function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
   return Promise.all(ids.map((id) => fetchDesk(id)));
 }
 
-function SummarySection({ accountId }: { readonly accountId: string }): ReactElement {
-  const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
-  if (networth.isPending) return <p className="note">Reading your net worth…</p>;
-  if (networth.isError || !networth.data)
-    return <p className="note">Net worth is unreachable right now.</p>;
+/** Resolve the net-worth stats for the selected account (or the aggregate for "All accounts").
+ *  Returns the stats, a caption for the hero label, the roster (non-empty only for "All"), and
+ *  whether the aggregate is in view — so {@link AccountsBody} and {@link CockpitBody} share one
+ *  resolution path without re-deriving it. */
+function resolveNetWorth(
+  data: AccountsNetWorthView | undefined,
+  accountId: string,
+): {
+  readonly stats: NetWorthStatsView | null;
+  readonly caption: string;
+  readonly roster: readonly AccountNetWorthView[];
+  readonly allAccounts: boolean;
+} {
+  if (!data) return { stats: null, caption: "this account", roster: [], allAccounts: false };
   const all = accountId === ALL_ACCOUNTS;
-  const row = all ? null : (networth.data.accounts.find((a) => a.id === accountId) ?? null);
-  const stats: NetWorthStatsView | null = all ? networth.data.total : row;
-  if (!stats) return <p className="note">No account selected.</p>;
-  const caption = all ? "all accounts" : (row?.name ?? "this account");
+  if (all)
+    return { stats: data.total, caption: "all accounts", roster: data.accounts, allAccounts: true };
+  const row = data.accounts.find((a) => a.id === accountId) ?? null;
+  return { stats: row, caption: row?.name ?? "this account", roster: [], allAccounts: false };
+}
+
+/** The Summary section body — the cash/position detail and per-account roster that live below the
+ *  sticky condensed hero. For a single account this is the dry-powder note; for "All accounts" the
+ *  roster table reads the whole book at a glance. The hero itself (value, day move, ROI) is in the
+ *  Cockpit header, not duplicated here. */
+function SummaryDetail({
+  stats,
+  allAccounts,
+  roster,
+  loading,
+  error,
+}: {
+  readonly stats: NetWorthStatsView | null;
+  readonly allAccounts: boolean;
+  readonly roster: readonly AccountNetWorthView[];
+  readonly loading: boolean;
+  readonly error: boolean;
+}): ReactElement {
+  if (loading) return <p className="note">Reading your net worth…</p>;
+  if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
-    <NetWorthSummary stats={stats} caption={caption} roster={all ? networth.data.accounts : []} />
+    <div className="networth-detail">
+      <p className="desk-note">
+        {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
+        positions
+      </p>
+      {allAccounts ? <NetWorthRoster accounts={roster} /> : null}
+    </div>
   );
 }
 
@@ -161,22 +204,6 @@ function AccountsPage(): ReactElement {
       accountId={selected as string}
       deskIds={deskIds}
       section={section}
-      rail={
-        <>
-          <ProfileRail current="accounts" />
-          <hr />
-          <SectionSwitch
-            sections={SECTIONS}
-            current={section}
-            onSelect={(next) =>
-              void navigate({
-                search: (prev) => ({ ...prev, section: next === "summary" ? undefined : next }),
-                replace: true,
-              })
-            }
-          />
-        </>
-      }
       accounts={accounts}
       onSelectAccount={(id) =>
         void navigate({
@@ -184,24 +211,27 @@ function AccountsPage(): ReactElement {
           replace: true,
         })
       }
+      onSelectSection={(next) =>
+        void navigate({
+          search: (prev) => ({ ...prev, section: next === "summary" ? undefined : next }),
+          replace: true,
+        })
+      }
     />
   );
 }
 
-function AccountsBody({
+/** The scrollable section content — owns the desks query (enabled only off-Summary) and reads the
+ *  shared net-worth query for the Summary detail. React Query deduplicates the net-worth fetch that
+ *  {@link AccountsBody} already started for the sticky header. */
+function CockpitBody({
+  section,
   deskIds,
   accountId,
-  section,
-  rail,
-  accounts,
-  onSelectAccount,
 }: {
+  readonly section: AccountsSection;
   readonly deskIds: readonly string[];
   readonly accountId: string;
-  readonly section: AccountsSection;
-  readonly rail: ReactElement;
-  readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
-  readonly onSelectAccount: (id: string) => void;
 }): ReactElement {
   const desks = useQuery({
     queryKey: ["desks", deskIds.join(",")],
@@ -211,32 +241,72 @@ function AccountsBody({
     // fetch on every summary view is still a wasted fetch).
     enabled: section !== "summary",
   });
+  const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
+
+  if (section === "summary") {
+    const { stats, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
+    return (
+      <SummaryDetail
+        stats={stats}
+        allAccounts={allAccounts}
+        roster={roster}
+        loading={networth.isPending}
+        error={networth.isError}
+      />
+    );
+  }
+  if (desks.isPending) return <p className="note">Reading the desk…</p>;
+  if (desks.isError) return <p className="note">This account is unreachable.</p>;
+  if (!desks.data) return <p className="note">No data.</p>;
+  if (section === "positions") return <PositionsSection desks={desks.data} />;
+  return <ActivitySection deskIds={deskIds} />;
+}
+
+function AccountsBody({
+  deskIds,
+  accountId,
+  section,
+  accounts,
+  onSelectAccount,
+  onSelectSection,
+}: {
+  readonly deskIds: readonly string[];
+  readonly accountId: string;
+  readonly section: AccountsSection;
+  readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
+  readonly onSelectAccount: (id: string) => void;
+  readonly onSelectSection: (section: AccountsSection) => void;
+}): ReactElement {
+  const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
+  const { stats, caption } = resolveNetWorth(networth.data, accountId);
 
   return (
-    <PageFrame rail={rail}>
-      <header className="page-header">
-        <h1>Accounts</h1>
-        <p>Your book — one account or all of them, the same way every time.</p>
-      </header>
-      <AccountSwitcher
-        accounts={accounts}
-        selectedId={accountId}
-        onSelect={onSelectAccount}
-        allowAll
-      />
-      {section === "summary" ? (
-        <SummarySection accountId={accountId} />
-      ) : desks.isPending ? (
-        <p className="note">Reading the desk…</p>
-      ) : desks.isError ? (
-        <p className="note">This account is unreachable.</p>
-      ) : desks.data ? (
-        section === "positions" ? (
-          <PositionsSection desks={desks.data} />
-        ) : (
-          <ActivitySection deskIds={deskIds} />
-        )
-      ) : null}
+    <PageFrame rail={<ProfileRail current="accounts" />}>
+      <h1 className="visually-hidden">Accounts</h1>
+      <div className="cockpit">
+        <div className="cockpit-head">
+          <AccountSwitcher
+            accounts={accounts}
+            selectedId={accountId}
+            onSelect={onSelectAccount}
+            allowAll
+          />
+          {stats ? (
+            <NetWorthCondensed stats={stats} caption={caption} />
+          ) : (
+            <p className="note">
+              {networth.isError ? "Net worth is unreachable right now." : "Reading your net worth…"}
+            </p>
+          )}
+          <SectionSwitch
+            sections={SECTIONS}
+            current={section}
+            onSelect={onSelectSection}
+            variant="horizontal"
+          />
+        </div>
+        <CockpitBody section={section} deskIds={deskIds} accountId={accountId} />
+      </div>
     </PageFrame>
   );
 }

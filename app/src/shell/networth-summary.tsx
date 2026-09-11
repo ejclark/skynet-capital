@@ -2,10 +2,10 @@ import type { ReactElement } from "react";
 import type { AccountNetWorthView, NetWorthStatsView, NetWorthWindowView } from "../live/networth";
 
 /**
- * The Accounts page's Summary section (#2321) — a net-worth hero (total value + the day's move)
- * with an ROI strip across four windows (7D/1M/3M/1Y), and, for "All accounts", a per-account
- * roster so the book reads at a glance. Every figure arrives server-formatted; this component
- * only places it. The same shape serves one account (its row) and all accounts (the aggregate),
+ * The Accounts page's net-worth components (#2321) — the Cockpit's sticky at-a-glance
+ * ({@link NetWorthCondensed}), the per-account roster ({@link NetWorthRoster}), and the legacy
+ * composite ({@link NetWorthSummary}). Every figure arrives server-formatted; these components
+ * only place it. The same shape serves one account (its row) and all accounts (the aggregate),
  * so the view never branches on how many accounts are selected beyond choosing which stats to show.
  * @category desk
  */
@@ -50,7 +50,7 @@ function NetWorthHero({
   );
 }
 
-function NetWorthRoster({
+export function NetWorthRoster({
   accounts,
 }: {
   readonly accounts: readonly AccountNetWorthView[];
@@ -94,6 +94,45 @@ function NetWorthRoster({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** The Cockpit's sticky at-a-glance — a condensed net-worth hero that stays visible while the
+ *  section detail (Positions, Activity, roster) scrolls below. Shows the total value, the day's
+ *  move, and ROI pills (7D/1M/3M/1Y); the cash/position detail and the per-account roster live in
+ *  the Summary section body, not here, so the sticky bar stays compact. Same server-formatted
+ *  strings as {@link NetWorthHero}, placed tighter for a bar that never leaves the viewport. */
+export function NetWorthCondensed({
+  stats,
+  caption,
+}: {
+  readonly stats: NetWorthStatsView;
+  readonly caption: string;
+}): ReactElement {
+  return (
+    <div className="networth-condensed">
+      <div className="networth-condensed-main">
+        <span className="desk-k">Net worth · {caption}</span>
+        <div className="networth-condensed-values">
+          <span className="networth-condensed-value num">{stats.value}</span>
+          <span className={`networth-condensed-day num tone-${stats.dayTone}`}>
+            {stats.dayChange}
+            <span className="desk-note">today</span>
+          </span>
+        </div>
+      </div>
+      <div className="networth-condensed-roi">
+        {stats.windows.map((w) => (
+          <span
+            key={w.label}
+            className={`networth-pill tone-${w.tone}${w.partial ? " networth-pill--partial" : ""}`}
+          >
+            <span className="networth-pill-label">{w.label}</span>
+            <span className="networth-pill-value num">{w.value}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
