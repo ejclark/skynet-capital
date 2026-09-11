@@ -24,6 +24,21 @@ export interface AlpacaAccount {
   readonly options_trading_level?: string | number;
 }
 
+/** Alpaca portfolio-history payload (subset) — `/v2/account/portfolio/history`. Equity and its
+ *  already-flow-adjusted cumulative return over the requested window: `profit_loss_pct[i]` is the
+ *  account's return (as a fraction, e.g. `0.0123` = 1.23%) from `base_value` to `equity[i]`.
+ *  `base_value` is the window-start equity (the previous close when `base_value_asof` is set, else
+ *  the first returned point — the honest baseline Alpaca itself measures from, so the windows this
+ *  app shows can never disagree with the broker's own chart). Points are left-labeled; arrays align
+ *  per index. A `null` in any array marks a span the broker had no value for — skipped, never 0. */
+export interface AlpacaPortfolioHistory {
+  readonly timestamp: number[];
+  readonly equity: (number | null)[];
+  readonly profit_loss: (number | null)[];
+  readonly profit_loss_pct: (number | null)[];
+  readonly base_value: number | null;
+}
+
 /** Alpaca position payload (subset). */
 export interface AlpacaPosition {
   readonly symbol: string;
@@ -89,6 +104,23 @@ export class AlpacaTradingClient {
 
   async getPositions(): Promise<AlpacaPosition[]> {
     return ensureOk<AlpacaPosition[]>(await this.transport.get("/v2/positions"));
+  }
+
+  /**
+   * Equity + flow-adjusted cumulative return over a window (`/v2/account/portfolio/history`). `period`
+   * is Alpaca's `number+unit` form (`"1W"`, `"1M"`, `"3M"`, `"1A"`, …); `timeframe` defaults to `"1D"`
+   * — daily resolution is valid for every window this app shows and keeps payloads small, so the
+   * four windows the net-worth view needs (7D/1M/3M/1Y) are four cheap calls, each returning the
+   * window's own `base_value` → last-`equity` arc (Alpaca's own flow-adjusted return, never a
+   * locally differenced guess that a deposit would distort). A non-2xx throws `AlpacaApiError`, same
+   * as every other read — the caller swallows it per-account so one unreachable account never blanks
+   * the aggregate.
+   */
+  async getPortfolioHistory(period: string, timeframe = "1D"): Promise<AlpacaPortfolioHistory> {
+    const query = new URLSearchParams({ period, timeframe });
+    return ensureOk<AlpacaPortfolioHistory>(
+      await this.transport.get(`/v2/account/portfolio/history?${query.toString()}`),
+    );
   }
 
   /** Most-recent orders (any status), newest first — the account's transaction history. */
