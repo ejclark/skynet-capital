@@ -237,6 +237,67 @@ table.blotter {
     display: none;
   }
 }
+
+/* close action column + inline close panel (#738 — close from the portfolio) */
+.act-col {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.close-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.row-close > td {
+  background: var(--surface-2);
+}
+.close-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+.close-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.close-panel-sym {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.close-panel-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.close-panel-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.close-panel-qty input {
+  width: 64px;
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+.close-panel-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+.close-panel-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 @media (max-width: 700px) {
   .desk-tiles {
     grid-template-columns: repeat(2, 1fr);

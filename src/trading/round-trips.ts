@@ -69,6 +69,13 @@ export interface TradeFill {
   readonly playbookId?: string;
   /** The mode the playbook ran in. Meaningless without `playbookId`. */
   readonly playbookMode?: PlaybookMode;
+  /**
+   * The broker order id — carried from the CLOSING fill (unlike `playbookId`, which rides the
+   * opening lot). Used by `desk-json-view.ts` to join realized P/L back onto the activity row
+   * that closed the position. Absent for fills with no order id (e.g. lifecycle-synthesized
+   * closes that were never a real broker order).
+   */
+  readonly orderId?: string;
 }
 
 /** A matched, closed trade: shares bought and later sold. */
@@ -98,6 +105,8 @@ export interface RoundTrip {
    *  whichever playbook opened it, not whatever later closed it. */
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  /** The closing order's broker id — from the CLOSING fill, used to join P/L to activity rows. */
+  readonly orderId?: string;
 }
 
 /** An unmatched lot still open at the end of the fill window. */
@@ -199,6 +208,7 @@ function tripFrom(
     holdMs: holdMs(lot.at, fill.at),
     ...(short ? { short: true } : {}),
     ...attributionOf(lot),
+    ...(fill.orderId ? { orderId: fill.orderId } : {}),
   };
 }
 

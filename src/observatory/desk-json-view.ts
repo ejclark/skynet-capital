@@ -148,6 +148,12 @@ export interface DeskActivityEvent {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+  /** Realized P/L on a closing fill — absent on opening fills and fills that didn't close a lot. */
+  readonly realizedPl?: string;
+  /** Return percentage on a closing fill — absent on opening fills. */
+  readonly returnPct?: string;
+  /** Tone for the realized P/L — `pos`/`neg`/`flat`, absent when no P/L. */
+  readonly realizedTone?: Tone;
 }
 
 export interface DeskActivityPage {
@@ -160,11 +166,20 @@ export interface DeskActivityPage {
 /** The desk's recent activity as data (`/api/desk/:id/activity`): journal lines collapsed to the
  *  latest state per order (the store's own fold), newest first, keyset-paginated (PR 5). Without
  *  an origin index every row reads `unknown` — the honest default when no audit evidence was
- *  handed in. */
+ *  handed in. `realizedByOrder` carries the per-order realized P/L the round-trip matcher computed
+ *  from the full ledger — attached to closing fills so the activity table shows what each close
+ *  earned, absent on opens. */
 export function deskActivityView(
   records: readonly TradeActivityRecord[],
   origins: OrderOriginIndex = NO_ORIGIN_EVIDENCE,
-  opts: { readonly limit?: number; readonly before?: string } = {},
+  opts: {
+    readonly limit?: number;
+    readonly before?: string;
+    readonly realizedByOrder?: ReadonlyMap<
+      string,
+      { readonly realized: number; readonly returnPct: number }
+    >;
+  } = {},
 ): DeskActivityPage {
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
   const { items, nextCursor } = paginateDesc(
@@ -172,18 +187,28 @@ export function deskActivityView(
     (record) => record.at,
     { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
   );
-  const activity = items.map((record) => ({
-    orderId: record.orderId,
-    symbol: record.symbol,
-    display: humanizeOptionSymbol(record.symbol),
-    side: record.side,
-    quantity: record.quantity,
-    filled: record.filledQuantity,
-    price: record.price === undefined ? "—" : formatPrice(record.price),
-    status: record.status,
-    at: record.at,
-    backfilled: record.source === "backfill",
-    origin: orderOrigin(record, origins),
-  }));
+  const activity = items.map((record) => {
+    const pl = opts.realizedByOrder?.get(record.orderId);
+    return {
+      orderId: record.orderId,
+      symbol: record.symbol,
+      display: humanizeOptionSymbol(record.symbol),
+      side: record.side,
+      quantity: record.quantity,
+      filled: record.filledQuantity,
+      price: record.price === undefined ? "—" : formatPrice(record.price),
+      status: record.status,
+      at: record.at,
+      backfilled: record.source === "backfill",
+      origin: orderOrigin(record, origins),
+      ...(pl
+        ? {
+            realizedPl: formatSigned(pl.realized),
+            returnPct: pct(pl.returnPct),
+            realizedTone: plClass(pl.realized) as Tone,
+          }
+        : {}),
+    };
+  });
   return { activity, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }

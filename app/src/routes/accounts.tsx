@@ -15,13 +15,13 @@ import {
 } from "../live/networth";
 import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
+import { ActivityTable } from "../shell/activity-table";
 import { PageFrame } from "../shell/frame";
 import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
 import { PositionsTable } from "../shell/positions-table";
 import { ProfileRail } from "../shell/profile-rail";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
-import { EventLine } from "../shell/timeline-drawer";
 
 /**
  * PROFILE > ACCOUNTS (#2321) — the Cockpit: a unified per-account view whose sticky header carries
@@ -152,13 +152,7 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
     return <p className="note">No durable activity ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
-  return (
-    <ul className="tl">
-      {activity.data.events.map((event) => (
-        <EventLine key={`${event.orderId}-${event.at}`} event={event} />
-      ))}
-    </ul>
-  );
+  return <ActivityTable events={activity.data.events} />;
 }
 
 const asId = (raw: unknown): string | undefined =>
