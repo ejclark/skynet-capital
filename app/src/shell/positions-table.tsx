@@ -43,6 +43,7 @@ export function PositionsTable({
               <th className="num col-detail">Day P/L</th>
               <th className="num">Total P/L</th>
               <th className="num col-detail">Return</th>
+              <th className="act-col" aria-label="Close position" />
             </tr>
           </thead>
           <tbody>

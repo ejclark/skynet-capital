@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import { decisionCyclesView } from "../observatory/decision-json-view.js";
+import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
@@ -45,12 +46,19 @@ export async function serveDeskJson(
       config.readOrderAudit?.(id),
     ]);
     const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
+    // Realized P/L per closing order — from the round-trip matcher over the full merged ledger,
+    // so a paginated activity page still carries P/L computed from the complete fill history.
+    const realizedMap = records ? realizedByOrder(deskLedger(found, records)) : undefined;
     res.end(
       JSON.stringify(
         records
           ? {
               available: true,
-              ...deskActivityView(records, origins, { limit, before: before ?? undefined }),
+              ...deskActivityView(records, origins, {
+                limit,
+                before: before ?? undefined,
+                ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
+              }),
             }
           : { available: false, activity: [] },
       ),

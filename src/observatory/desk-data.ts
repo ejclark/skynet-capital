@@ -83,6 +83,7 @@ export function fillsFrom(
         ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
         ...(tag ? { playbookId: tag.playbookId } : {}),
         ...(tag?.playbookMode ? { playbookMode: tag.playbookMode } : {}),
+        ...(row.orderId ? { orderId: row.orderId } : {}),
       };
     });
 }
@@ -110,6 +111,38 @@ export function deskLedger(
   playbookTags?: PlaybookTagsByOrder,
 ): RoundTripLedger {
   return matchRoundTrips(fillsFrom(mergedDeskActivity(snapshot, durable), playbookTags));
+}
+
+/**
+ * Build a per-order realized-P/L map from a round-trip ledger, for joining onto activity rows.
+ * A single closing order can trigger multiple round-trips (a sell that closes several FIFO lots),
+ * so realized is summed and returnPct is blended as `Σrealized / Σbasis × 100` — the one number
+ * that honestly reads "this close earned $X on $Y of cost." Trips without an `orderId` (lifecycle
+ * closes that were never a real broker order) are excluded — they have no activity row to enrich.
+ */
+export function realizedByOrder(
+  ledger: RoundTripLedger,
+): ReadonlyMap<string, { readonly realized: number; readonly returnPct: number }> {
+  const map = new Map<string, { realized: number; basis: number }>();
+  for (const trip of ledger.trips) {
+    if (!trip.orderId) continue;
+    const existing = map.get(trip.orderId);
+    const basis = trip.entryPrice * trip.quantity;
+    if (existing) {
+      existing.realized += trip.realized;
+      existing.basis += basis;
+    } else {
+      map.set(trip.orderId, { realized: trip.realized, basis });
+    }
+  }
+  const result = new Map<string, { readonly realized: number; readonly returnPct: number }>();
+  for (const [orderId, { realized, basis }] of map) {
+    result.set(orderId, {
+      realized,
+      returnPct: basis > 0 ? (realized / basis) * 100 : 0,
+    });
+  }
+  return result;
 }
 
 /** The account state an order ticket is reviewed against. */

@@ -301,7 +301,7 @@ describe("fillsFrom (lifecycle events, #468 criterion 6)", () => {
     expect(fills).toEqual([]);
   });
 
-  it("attaches playbook attribution by order id, and never surfaces orderId itself (#885)", () => {
+  it("attaches playbook attribution by order id, and carries orderId through for P/L joining (#885 relaxed)", () => {
     const tags = indexPlaybookTags([{ orderId: "o1", playbookId: "S1-NVDA" }]);
     const fills = fillsFrom(
       [
@@ -319,7 +319,15 @@ describe("fillsFrom (lifecycle events, #468 criterion 6)", () => {
       tags,
     );
     expect(fills).toEqual([
-      { symbol: "NVDA", side: "buy", quantity: 10, price: 100, at: "t1", playbookId: "S1-NVDA" },
+      {
+        symbol: "NVDA",
+        side: "buy",
+        quantity: 10,
+        price: 100,
+        at: "t1",
+        orderId: "o1",
+        playbookId: "S1-NVDA",
+      },
     ]);
   });
 });

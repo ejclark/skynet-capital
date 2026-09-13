@@ -134,6 +134,12 @@ export interface DeskActivityEvent {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+  /** Realized P/L on a closing fill — absent on opening fills. */
+  readonly realizedPl?: string;
+  /** Return percentage on a closing fill — absent on opening fills. */
+  readonly returnPct?: string;
+  /** Tone for the realized P/L — absent when no P/L. */
+  readonly realizedTone?: Tone;
 }
 
 export interface DeskActivity {
