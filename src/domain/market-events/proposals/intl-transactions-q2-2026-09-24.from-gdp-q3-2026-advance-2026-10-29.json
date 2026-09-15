@@ -1,0 +1,11 @@
+{
+  "id": "intl-transactions-q2-2026-09-24",
+  "kind": "macro-print",
+  "title": "U.S. International Transactions and International Investment Position, Q2 2026 (BEA)",
+  "date": "2026-09-24",
+  "status": "estimate",
+  "source": "EST: bea.gov/news/schedule fetched direct 2026-09-15 (HTTP 200, 75,123 bytes) — the Upcoming Releases table reads verbatim 'September 24 | 8:30 AM | News | U.S. International Transactions and Investment Position, 2nd Quarter 2026', the same page and the same fetch that re-verified 'October 29 | 8:30 AM | GDP (Advance Estimate), 3rd Quarter 2026' for the proposing event. Filed estimate on one count only, and it is not date doubt: this lane may not self-confirm an event it discovered in-sweep. A later pass citing this same BEA primary independently may flip it to confirmed with the BEA: prefix. Checked 2026-09-15",
+  "impact": "low",
+  "symbols": [],
+  "notes": "The balance-of-payments half of the net-export line that dominates the Q3 2026 GDP nowcast's composition, and the only BEA quarterly on the September schedule that this calendar did not already carry — its own Q3 sibling intl-transactions-q3-2026-12-18 is on the calendar, this Q2 edition was not. Impact low is about MARKET impact, not information value: it is quarterly, backward-looking to a quarter whose GDP is already twice-estimated, symbols: [], and no house playbook is macro-keyed. Its research value is attribution — the current-account and financial-account detail behind the AI-hardware import surge that took GDPNow's net-export contribution to -1.44pp (09-10 vintage) while adding to equipment investment on the other side of the identity. The monthly trade reads already tracked (advance-economic-indicators-*, intl-trade-full-report-*) carry the goods detail; this carries the financing side. Discovered during the gdp-q3-2026-advance-2026-10-29 pulse-check adjacency sweep (2026-09-15)."
+}
