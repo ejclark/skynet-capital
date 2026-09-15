@@ -1,8 +1,13 @@
 # Monthly Treasury Statement (Aug 2026 data) — mts-august-2026-09-11
 
 **Kind:** macro-print · **Date:** 2026-09-11 (confirmed, TSY: fiscaldata.treasury.gov MTS PDFs — 2:00 p.m. ET, promoted from estimate this session) · **Impact:** medium
-**Last assessed:** 2026-09-10
-<!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","iea-omr-2026-09-11","import-export-prices-2026-09-16","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11","vix-expiration-2026-09-16"],"screenStreak":0,"blocked":[{"url":"https://www.bls.gov/news.release/ppi.nr0.htm","status":403,"at":"2026-09-10"},{"url":"https://www.cbo.gov/publication/monthly-budget-review","status":403,"at":"2026-09-10"}]} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.56,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","iea-omr-2026-09-11","import-export-prices-2026-09-16","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11","vix-expiration-2026-09-16"],"screenStreak":0,"blocked":[{"url":"https://www.bls.gov/news.release/ppi.nr0.htm","status":403,"at":"2026-09-10"},{"url":"https://www.cbo.gov/publication/monthly-budget-review","status":403,"at":"2026-09-10"}]} -->
+
+> **Closed out 2026-09-15 (D+4).** The print landed and this ledger goes quiet — see
+> [**`## Outcome`**](#outcome). The decision header below is preserved **as it stood at D-1**, not
+> rewritten: its stand-aside was right, and its point estimate was wrong. Read the Outcome for the
+> scoring.
 
 ## At a glance
 
@@ -378,6 +383,8 @@ tape moved everything *except* the channel a deficit print feeds.
 | 2026-09-08 | D-3 | **Nothing repriced; every find this pulse is in the data, not the tape.** Labor Day (09-07) shut the cash market, so the last regular-session close is still **2026-09-04** — TLT **82.21**, SPY **770.19**, ^TNX **4.784**, all unchanged from the last row. ^VIX is the only series with a print since: **14.53 (09-04 close) → 15.67** (the deterministic probe's 09-08 reading), with a **15.30** bar even on the 09-07 holiday that the equity series have no counterpart for — the source of a holiday VIX bar is not established here, but **+1.14 either way is under the 3-point threshold**. The Fiscal Data DTS is likewise still final **through 09-03** (09-04's edition posts this afternoon), so **the base case is re-affirmed, not re-derived: ≈$233B, band $200–265B; FT-50's $195–270B untouched.** **Find 1, the load-bearing one — the refund wave is not collapsing on schedule.** September's first three business days already carry **$6.175B** of CBP outflow ($0.104 · **$5.484** · $0.587B), the **largest three-business-day start of any FY2026 month** — August's was $1.604B, July's $3.129B, June's $1.861B — and 09-02's $5.48B is the biggest single CBP day since **2026-07-06** ($8.20B) and **2.4× August's largest** ($2.25B on 08-07). This is the *same data vintage* the 09-05 row had, read on a line that row never opened; it converts that row's trade-press-sourced "disbursement trough, not an ending" into Treasury primary data. **Deliberately not annualized** — the first-three-day share of the finished month has run 3.6% (Jun) to 12.9% (Aug), far too unstable to forecast a month from. The **≥$25B/month** kill switch is **not live**. **Find 2 — a correction to leg 5's wording, in the direction that strengthens it.** "August 2026 carries **zero** shifted benefit batches" is wrong: the DTS shows **VA – Benefits $17.85B paid Monday 2026-08-31** and only **$0.013B** on Tuesday 09-01, so August *borrowed* September's VA batch in a month whose 1st **was** an ordinary business day. Six control months — 05-01 $17.59B · 06-01 $17.48B · 07-01 $17.53B · 07-31 $17.72B · 2026-02-27 $17.37B · 2025-08-29 $15.78B — show VA pays on the 1st unless the 1st is a non-business day, so 08-31 breaks the pattern rather than following it. **Nothing numeric moves**: the $202.1B ex-debt gap and the $74.1B five-line swing are actuals that already contain it, and the MTS is cash-basis on the same flows. But a **clean August would have printed ≈$18B lower**, so the calendar distortion is *larger* than this doc claims, not smaller. **Find 3 — leg 5's other half confirmed from the far side.** Medicare Rx **$18.95B**, military retirement **$6.16B**, active-duty pay **$5.07B** and SSI **$5.16B** all paid **2026-09-01** — **$35.34B** landing squarely in September, exactly as a Tuesday 1st predicts; nothing beyond VA pulled back. Adjacency sweep — **peers:** n/a (`symbols: []`). **Macro:** the week's one new fact is **Waller, 2026-09-03** — *"if inflation comes in hot, I would consider a rate hike"*, otherwise *"I'm willing to sit and wait and be patient"*, naming the **09-11 CPI** as what would *"largely determine"* his September vote. Hike odds ~65% pre-remarks → **roughly 50/50**; CME on 09-07 at **49.4% hike / 50.6% hold** against the ~60% this ledger logged on 09-05 (press-sourced, and a rival tracker printed 58.7% the same day, so the level is reported as a range rather than a point). A sitting governor publicly conditioning his vote on the 08:30 print that **shares this event's date** makes leg 10 over-determined and FT-51's advance exclusion of 09-11 stronger, not weaker. FOMC blackout began 09-05, so no further official commentary is due before the print. **Volatility:** as above, no threshold crossed. **Geopolitical/policy:** no new tariff ruling; CAPE trade-press figures unchanged at **$132.5B accepted / $106.6B paid to Treasury** (as of 2026-08-21). **Debt:** **$40.1030T on 09-03**, unchanged from the last row, ~**$0.997T** under the $41.1T ceiling — kill switch not live. **cbo.gov still 403** to both `curl -A Mozilla` and WebFetch, so the MBR stays undatable and is again **not** proposed. **Corridor: 20 → 29** tracked events within ±5 days (the probe's own count) — new since 09-05: ECB 09-10, OPEC MOMR 09-10, the 09-10 coupon announcement, QSS Q2 09-09, **IEA OMR 09-11**, the Missouri ballot deadline 09-08, NAHB 09-16, the Labor Day closure itself, and a sibling's TIPS-buyback proposal 09-15. **09-11 now carries CPI 08:30, UMich prelim 10:00, the IEA OMR, the capped S&P pro-forma reference close and this print at 14:00.** The 09-07 closure also compressed the coupon corridor into a **four-session week**, Treasury having moved the Monday bill slate onto 09-08 beside the 3Y. **Calendar re-verified on the primary:** the November-2025 MTS was re-downloaded today (HTTP 200) and re-extracted with `pdftotext -layout` — Aug-2026 → **September 11, 2026**; Sep-2026 → **(1)**, no date; Oct-2026 → **November 12, 2026**; Nov-2026 → **December 10, 2026**; Dec-2026 → January 13, 2027. **One dated adjacency proposed:** `mts-november-2026-12-10` (`estimate`, `EST:` on that table, in this PR) — the calendar held only 09-11 and 11-12, and 12-10's collision with the already-tracked `cpi-2026-12-10` is the counterexample that makes 11-12 the test date rather than a coincidence. **One correction banked:** `existing-home-sales-2026-11-12` (10:00 ET) has since been added to 11-12, so FT-51's "clean of every tracked event" no longer holds literally; it does **not** void the test, whose void clause is a dated non-MTS headline inside 13:30–16:00 ET. | — (stance holds; find 1 sharpens an existing signal, finds 2–3 correct wording without moving a number, and no new forward test is registered) | 2026-09-10 (medium, <8d band: every 2d) |
 | 2026-09-10 | D-1 | **The tape repriced violently and none of it was fiscal — this pulse is the stance's natural experiment.** Since the last row an **Iran/Hormuz supply shock** took **Brent $96.28 → $109.16 (+13.4%)**, **+7.9% today alone**, and the tape followed: **VIX 14.53 → 17.84 (+3.31, the first crossing of this system's own 3-point regime threshold)**, TLT **82.21 → 80.78 (-1.74%)**, SPY **770.19 → 757.83 (-1.60%)**, ^TNX **4.784 → 4.944**. **Find 1, the load-bearing one — the corridor resolved AGAINST the supply story.** All three coupons cleared at announced size ($119B, no size shock, as the 09-05 row predicted): 3Y 09-08 $58B **btc 2.72** / ind 61.7% / dealers 10.8%; 10Y reopening 09-09 $39B **btc 2.71 (+2.6σ)** / ind **79.0%** / dealers **4.3%**; and today's 30Y reopening 09-10 $22B **btc 2.61 (+2.3σ** on the 12 nominal 30Y auctions since 2025-09, mean 2.399, sd 0.092**)** / indirects **79.3% (+3.6σ**, highest of the 12 by nine points**)** / primary dealers **2.2% (-3.3σ**, lowest by 2.4 points**)**. So the market took the quarter's long-end paper eagerly on the very session the long end sold off. **The curve says the same thing from the other side**: 5y **+18.3bp** vs 30y **+11.5bp** (3m +9bp, 10y +16.0bp), i.e. a belly-led bear **flattener** — 30y-5y narrowed 6.8bp to 0.628 — the signature of a Fed-path/inflation repricing, not a term-premium/supply one. **The 'This week' falsifier was a conjunction and only half fired**: btc 2.61 clears its ~2.45 bar decisively, Brent went the opposite way from its <$90 clause, and that divergence is exactly why the conjunction was the right construction — the auction half alone would have read 'anxiety drained' while risk premia were in fact rising. The tail clause is **not scored**: Treasury publishes no when-issued quote, so only bid-to-cover and bidder composition are measurable on a primary. **Find 2 — the base case re-verified on the primary at D-1, the last look before the print.** August TGA ex-debt, recomputed from the Fiscal Data API today (account_type 'Treasury General Account (TGA)', Public Debt lines stripped, 77 deposit / 99 withdrawal rows): deposits **$420.89B**, withdrawals **$622.97B**, gap **$202.08B**; CBP **$12.453B**; interest on Treasury securities **$110.621B**; customs receipts **$25.001B** — every figure matching initial research to the digit, **final and unrevised**. Central estimate **~$233B**, **FT-50's $195-270B band untouched**. **Find 3 — a trim to the last row's own claim, banked honestly.** 09-08 called September's start 'the largest three-business-day start of any FY2026 month'. True on three days; **false on six**. September MTD is **$8.514B through six business days** against July's **$12.874B** and August's $4.802B, and the pace collapsed after 09-04 — **09-08 $0.362B, 09-09 $0.096B**, the month's two quietest days — leaving **$5.48B of the $8.51B in a single day (09-02)**. Six-day share of the finished month: 3.7% (May), 6.1% (Jun), 36.2% (Jul), 38.6% (Aug) — even less stable than the three-day share. **>=$25B/month kill switch not live**; a lumpy queue, not a trend either way. **Find 4 — a clean negative that rules a line out of the base case.** With oil this violent the obvious worry is an unexamined energy line: there is none. **DOE cash deposits ran $0.68-1.36B/month across all of FY2026 with no step at the March-2026 172M-barrel SPR action** (DOE withdrawals flat $4.4-5.9B), because that action was an **exchange** — oil returned Nov 2026-Sep 2028 at an 18-22% return premium (energy.gov) — so it never generated receipts and never touched the deficit. The only real feedback is small: **DOI oil-and-gas lease proceeds $0.92-1.37B/mo through early FY2026 → $1.43-2.33B May-Aug**, ~$0.5B/mo against a $200B gap. Adjacency sweep — **peers:** n/a (`symbols: []`). **Macro:** **PPI today (08:30)** — final demand **+0.4% m/m, 5.4% y/y**, but **core +0.2% vs a +0.3% consensus**, i.e. core UNDERSHOT; final demand goods +1.1% after two declines with **over a third of it diesel fuel +24.1%**. The hot print is energy pass-through, not broadening — which is the honest qualifier on the 'hot PPI' headline. **bls.gov returned 403** to a browser-header curl (the lane's documented blind spot), so the figures are press-sourced (CNBC/BLS summary) and logged in `probe-ref.blocked`. Sep-16 hike odds are quoted as a **range, not a point**, because venues disagree by ~12 points: CME ~56-60%, Kalshi 48%, Polymarket 49% (all press-sourced). **A hot CPI tomorrow at 08:30, with Waller having said on 09-03 it would 'largely determine' his vote and oil now at $109, makes 09-11 the most CPI-owned session this print has ever shared** — leg 10 is over-determined and FT-51's advance exclusion of 09-11 is stronger again. **Volatility:** VIX +3.31 — **materiality threshold crossed**, logged as a regime shift, and it changes nothing about the stance because the shift is in the wrong channel. **Geopolitical:** the Iran/Hormuz escalation is the week's cause; the corridor already tracks `unsc-iran-panel-mandate-vote-2026-09-17`, `opec-momr-2026-09-10`, `iea-omr-2026-09-11` and `opec-plus-meeting-2026-10-04`, and **no new dated oil/Iran event was found on a source** — the IEA's emergency-release machinery last fired 2026-03-11 and no follow-on ministerial carries a date. **Debt:** **$40.0743T on 09-09**, DOWN from $40.1030T on 09-03, so headroom **widened to ~$1.026T** under the $41.1T ceiling — kill switch not live. **cbo.gov still 403** (DataDome JS challenge) to a browser-header curl; MBR still undatable, again **not** proposed, logged in `probe-ref.blocked`. **Corridor: 29 → 41** within ±5 days; new since 09-08 are existing-home-sales 09-10, jgb-liquidity-enhancement 09-10, treasury-buyback-cash-mgmt 09-09, canada-counter-tariffs 09-08, empire-state + jgb-20y + sp-global-IMI + uk-labour-market 09-15, and bund-30y + google-adtech-unseal + tic-monthly + uk-cpi 09-16. **One dated adjacency proposed:** **`mts-december-2026-2027-01-13`** (`estimate`, `EST:`, in this PR). The November-2025 MTS PDF was **re-downloaded by this session** (HTTP 200, 3,622,616 bytes) and re-extracted with `pypdf`; p.40's table ends **'December 2026 / January 13, 2027'**, and the 8th-federal-workday rule computes 2027-01-13 exactly (Jan 1 a holiday, MLK on the 18th). It is the edition `mts-november-2026-12-10`'s own notes named as the gap — **the only MTS past the 2026-12-11 CR expiry**, hence the concrete address of FT-50/FT-51's funding-lapse void clause — and it collides with the tracked `treasury-30y-bond-2027-01-13`, repeating the auction-before-accountant ordering this row just measured. **No forward test registered:** nothing here is a stance change — finds 1 and 4 corroborate the stance on new data, find 2 re-verifies it, find 3 corrects a prior row's wording without moving a number. | — (stance holds, and is better supported than when written: the one week that stressed the tape moved oil, vol and the Fed path while the fiscal/supply channel this print feeds stayed bid) | 2026-09-12 — but the print lands **2026-09-11**, so the next assessment is the **close-out** (`event-passed-unscored`, within 6 days) |
 
+| 2026-09-15 | D+4 | **Close-out. The print was $166.80B — outside FT-50's $195–270B band, so FT-50 FAILS**, $28.2B below the floor and **−$65.9B (−2.07σ)** from the $232.7B central estimate. Re-fetched from `mts_table_1` today (HTTP 200): receipts **$360.03B**, outlays **$526.83B**, deficit **$166.80B** vs **$344.79B** a year earlier (**−51.6% y/y**). **The DTS input was right and the mapping was wrong** — August TGA ex-debt re-pulled today is unrevised at deposits $420.89B / withdrawals $622.97B / gap **$202.08B**, matching three prior rows to the digit. **The omitted variable was on this page twice before the print: DTS cash interest.** The MTS accrues interest on public issues (its own Disclosure Statement) while the DTS pays it in lumps; across the 12 months to August, corr(DTS cash interest, DTS→MTS bias) = **−0.843**, cash interest running **$11.9B (Jan) → $110.6B (Aug, the sample max)**. Re-fit on the *same* 11 calibration months, `bias = 87.4 − 0.970 × cashInterest` (R² 0.616, residual SE **$21.2B** vs the constant model's $32.5B) predicts August **out-of-sample at $182.1B** — residual **−$15.3B, −0.72 SE**. The 09-05 and 09-10 rows both logged "$110.621B" as a reconciliation check and never used it as a predictor. **The two mechanism calls are SUPPORTED on Treasury's own words**: the Highlight box reads *"accelerated into July, because August 1, 2026, the normal payment date, fell on a non-business day"* and *"Outlays for veterans benefit payments shifted from September 1, 2026 to August 2026"* — the second confirming the 09-08 VA correction verbatim. **Both "read these two lines" calls paid**: net interest **crossed $1T** (FY2026 **$1,017.0B** through 11 months vs $933.5B, **+8.9%**, September still to come) and customs duties FYTD are **$167.3B vs $165.2B (+1.3%)** — a fiscal year in which the tariff windfall was refunded away to nothing. **The stand-aside cost nothing:** 09-11 SPY **+0.85%**, TLT **+0.11%**, ^TNX +3.1bp, VIX 17.84 → 15.84, and the 1:30pm→close window was TLT **−0.12%** / SPY **−0.15%** — inside FT-51's bands but **not scored**, 09-11 having been excluded in advance and the session belonging to a **core CPI +0.3%** surprise. **Calendar re-confirmed on the current edition:** the August statement's own Scheduled Release page reads *"The release date for the September 2026 Statement is subject to completion of year-end reporting requirements"*, promoting the 09-05 correction from the annual table to the live edition. **For the siblings, computed and handed off:** Nov 1 2026 is a **Sunday**, so **October 2026 is a two-batch month** (its own Oct-1 Thursday batch plus November's, paid Fri 10-30) and **November 2026 a zero-batch month** — the mirror of August. **And the tempting explanation is refuted before anyone writes it down:** batch count does *not* drive the wedge — Feb-2026 was two-batch with bias −33.6 and Aug-2026 zero-batch with −35.3. Interest timing is the driver, not the payment calendar. **No new forward test registered**, on this repo's own orphan-Outcome precedent (a test scoring after its author's close-out leaves the cell for nobody to fill): the amended mapping is handed to [`mts-october-2026-11-12`](mts-october-2026-11-12.md) in `## Outcome`, **and so is FT-51**, whose 2026-11-13 score-by this close-out orphans. | **FAIL on the number, SUPPORTED on the stance** — the pre-computability claim is re-derived rather than repeated; "inert" never depended on it | — (closed; this doc goes quiet) |
+
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer
@@ -385,3 +392,203 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-15, D+4 — two days inside the `closeOutWithinDays: 6` deadline).** Macro-print
+mode runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design), so "re-run
+instrument data" here means the **statement itself re-fetched from Treasury's primaries today** —
+`fiscaldata.treasury.gov` `mts_table_1`, `mts_table_9` and
+`dts/deposits_withdrawals_operating_cash` by plain `curl` (HTTP 200 on every call), plus the
+**August 2026 MTS PDF** (`MonthlyTreasuryStatement_202608.pdf`, 3,241,289 bytes, text-extracted with
+`pypdf`) — and daily + hourly bars pulled this session after the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Nothing below is scored
+off a press level where a primary exists.
+
+**The headline verdict: the stance was right, the number was wrong, and the two were never the same
+claim.** This doc argued the print was *inert* **because** it was *pre-computable*. The print
+refuted the "because" — **$166.80B against a $195–270B band, FT-50 FAILS** — while leaving "inert"
+standing on the independent 35-observation measurement it always rested on (the release window ran
+TLT **−0.12%** / SPY **−0.15%**). Six rows of stand-aside cost nothing. The causal story was doing
+rhetorical work the data already did on its own, and the failure is worth more than the pass would
+have been: **the mapping was not broken, it was misspecified, and the omitted variable was printed
+on this page twice before the print.**
+
+### What printed — re-verified from the primary
+
+| Line | Aug 2026 | Aug 2025 | Δ y/y |
+|---|---|---|---|
+| Receipts | **$360.03B** | $344.32B | +$15.71B |
+| Outlays | **$526.83B** | $689.11B | **−$162.28B** |
+| **Deficit** | **$166.80B** | **$344.79B** | **−$177.99B (−51.6%)** |
+| FY-to-date deficit (11 mo) | **$1,965.59B** | $1,973.30B | −$7.71B (**−0.4%**) |
+
+**The This-quarter call lands exactly as written.** The "deficit is improving" headline arrived —
+a *halving* year over year — and at the fiscal-year level the improvement is **−0.4%, i.e. nothing**.
+Treasury's own Highlight box supplies the reason in its own words, and it is this doc's leg 5
+verbatim, including the correction the 09-08 row banked three days before the statement said it:
+
+> *"Outlays for military active duty and retirement, veterans benefits, Supplemental Security
+> Income, and Medicare payments to health maintenance organizations and prescription drug plans
+> accelerated into July, because August 1, 2026, the normal payment date, fell on a non-business
+> day. Outlays for veterans benefit payments shifted from September 1, 2026 to August 2026."*
+
+The second sentence is the **09-08 VA finding confirmed on the primary** — that row inferred the
+$17.85B Monday 08-31 batch from the DTS against six control months, and Treasury published the same
+conclusion. The function detail (`mts_table_9`, both years re-fetched today) shows where the
+$162B of missing outlays sits:
+
+| Function ($B) | Aug 2026 | Aug 2025 | Δ |
+|---|---|---|---|
+| **Medicare** | **24.78** | **141.37** | **−116.60** |
+| Income Security | 37.48 | 59.51 | −22.03 |
+| Veterans Benefits and Services | 35.08 | 49.85 | −14.77 |
+| National Defense | 72.46 | 82.63 | −10.17 |
+| Commerce and Housing Credit | **−0.53** | 9.59 | −10.12 |
+| **Net Interest** | 85.61 | 92.70 | −7.09 |
+| *(receipts)* Individual Income Taxes | 179.04 | 153.14 | **+25.90** |
+| *(receipts)* **Customs Duties** | **12.84** | **29.50** | **−16.67** |
+
+One line carries two-thirds of the swing, and it is a payment calendar, not a policy.
+
+### Scoring FT-50 — FAIL, and the diagnosis is the deliverable
+
+| | Value |
+|---|---|
+| FT-50 band | **$195–270B** (central $232.7B ±1.2σ, σ $31.9B as registered) |
+| Actual | **$166.80B** |
+| Miss vs band floor | **−$28.2B** |
+| Miss vs central | **−$65.9B = −2.07σ** |
+| Prior worst single miss in-sample | Feb-2026, −$33.6B |
+
+**The input was not the problem.** August TGA ex-debt flows, re-pulled from the Fiscal Data API
+today, are **final and unrevised**: deposits **$420.89B**, withdrawals **$622.97B**, gap
+**$202.08B** — matching initial research and the 09-05, 09-08 and 09-10 rows to the digit. What
+failed is the step that turns that gap into a deficit: a **constant** bias of +$30.6B.
+
+**The omitted variable is interest, and the MTS says so in its own Disclosure Statement** — *"interest
+on the public debt (public issues) is recognized on the accrual basis"* while every other line is
+modified-cash. The DTS, being pure cash, pays that interest in mid-month lumps. So the wedge between
+them should be large and negative exactly when cash interest is large, and it is:
+
+| Month | DTS cash interest | DTS→MTS bias |
+|---|---|---|
+| 2026-01 | $11.9B | **+58.4** |
+| 2026-07 | $43.2B | +61.9 |
+| 2025-10 | $40.4B | +69.3 |
+| 2026-06 | $55.9B | +5.2 |
+| 2025-11 | $77.5B | +33.7 |
+| **2026-02** | **$109.5B** | **−33.6** |
+| **2026-08** | **$110.6B** | **−35.3** |
+
+**corr(DTS cash interest, bias) = −0.843** across the 12 months to August. Re-fitting on the *same
+eleven* calibration months FT-50 used, and applying the result **out-of-sample** to August:
+
+```
+bias = 87.4 − 0.970 × (DTS cash interest, $B)        R² = 0.616,  residual SE $21.2B
+                                                      (constant-bias model: sd $32.5B)
+
+Aug-2026:  202.08 + [87.4 − 0.970 × 110.6]  =  $182.1B      actual $166.80B
+           residual −$15.3B  =  −0.72 SE                     (constant model: −$65.9B, −2.07σ)
+```
+
+Two things follow, and the second is the uncomfortable one.
+
+- **The mapping is misspecified, not broken.** A one-regressor correction cuts the error by 35% and
+  brings August back inside an ordinary residual. "The MTS restates what the DTS already published"
+  survives; "therefore a constant offset reproduces it to ±$32B" does not.
+- **FT-50 registered its test on the single month its own model was weakest at, and did not check.**
+  August 2026 carried the **highest cash interest in the sample ($110.6B)** — the exact point where
+  a constant-bias model is maximally wrong. Worse, the number was already on this page: the 09-05 and
+  09-10 rows both logged *"interest on Treasury securities $110.621B"* and used it as a reconciliation
+  tick, never as a predictor. **The variable that would have moved the estimate from $233B to $182B
+  was in this ledger twice, in bold, before the print.** The lesson generalizes past the MTS: *a
+  figure you re-derive every session to prove your inputs match is a figure you have not asked whether
+  your model should contain.*
+
+**One honest deflation before this gets over-read.** A single −2.07σ draw is weak evidence against a
+constant-bias model on its own — under normality you would see one about 4% of the time, and n=11 is
+a thin calibration. What makes this a re-derivation rather than a shrug is that the residual is
+*explained by a pre-existing, mechanically-motivated variable that the MTS's own accounting
+disclosure predicts the sign of* — not fitted after the fact to whatever correlated. The amended
+model is still unvalidated out-of-sample on more than this one point.
+
+**And the tempting wrong answer, refuted before anyone writes it down.** The obvious story is that
+the payment-calendar distortion broke the wedge. It did not: **Feb-2026 was a two-batch month** (Mar 1
+2026 fell on a Sunday, so the March batch paid Friday 02-27) with bias **−33.6**, and **Aug-2026 was a
+zero-batch month** with bias **−35.3**. Opposite calendars, near-identical wedge. Batch count moves
+the *deficit*; it does not move the *DTS→MTS wedge*. Interest does.
+
+### FT-51 — NOT scored here, and this close-out orphans it
+
+FT-51 tests the **2026-11-12** release window and scores **2026-11-13**, after this doc goes quiet.
+It is recorded, not assessed. For context only — **explicitly not a score**, 09-11 having been
+excluded in advance as unfalsifiably CPI-confounded:
+
+| 2026-09-11 | 1:30pm→close | FT-51 band | Session |
+|---|---|---|---|
+| TLT | 80.965 → 80.865, **−0.12%** | ±0.60% | 80.78 → 80.87, **+0.11%** |
+| SPY | 765.41 → 764.18, **−0.15%** | ±0.72% | 757.83 → 764.29, **+0.85%** |
+| ^TNX | — | — | 4.944 → 4.975, **+3.1bp** |
+| ^VIX | — | — | 17.84 → **15.84**, **−2.00** |
+
+The exclusion was correct: the session belonged to an **08:30 core CPI of +0.3% against the +0.2%
+the books priced** (sibling [`ppi-2026-09-10`](ppi-2026-09-10.md)'s close-out, scored from BLS
+primaries), and SPY closed **+0.85%** on a day the MTS release window was flat. Nothing about the
+14:00 print is separable from that.
+
+**FT-51 now has no owner.** Its author closes out today; its score-by is eight weeks away. This
+repo already banked the rule — *a test scoring after its author's close-out leaves the Outcome cell
+for nobody to fill* — and FT-51 is a live instance of it, created on 2026-09-03 and only visible
+now. **[`mts-october-2026-11-12`](mts-october-2026-11-12.md)'s lane should score FT-51 in
+[`forward-tests/legacy.md`](../forward-tests/legacy.md) at its own close-out**, which falls in the
+right window by construction.
+
+### The two lines this doc said to read — both paid
+
+- **Net interest crossed $1 trillion.** FY2026 through eleven months: **$1,017.0B**, against
+  **$933.5B** for FY2025's same eleven (**+$83.5B, +8.9%**) — up from the $931B-through-ten this
+  ledger carried, **with September still to come**. The structural half of the long-end story is now
+  a four-comma number, and it is the one line in this statement that compounds rather than oscillates.
+- **The tariff windfall has been refunded away to nothing — on a fiscal-year basis.** Customs duties
+  **FYTD $167.3B vs $165.2B (+$2.1B, +1.3%)**: after the SCOTUS IEEPA ruling and the CIT refund
+  order, eleven months of tariff collection nets out to roughly a normal year. The monthly detail is
+  unchanged in shape — CBP outflows **$23.3B (May) → $51.0B (Jun) → $35.5B (Jul) → $12.5B (Aug)**,
+  FYTD $136.5B — and September remains a **lumpy queue, not a trend**: **$9.232B MTD through eight
+  business days** (through 09-11, the DTS's latest final edition), of which **$5.48B landed on
+  09-02** and the print day itself carried $0.573B. **The ≥$25B/month kill switch is not live.**
+
+### Handed to the siblings
+
+- **The amended mapping, for [`mts-october-2026-11-12`](mts-october-2026-11-12.md) to register as
+  its own forward test** — deliberately **not** registered here, on the orphan-Outcome precedent this
+  close-out just watched bite FT-51. The recipe is above and reproducible from two Fiscal Data calls:
+  take the month-end DTS TGA snapshot, strip `Public Debt Cash Issues` / `Public Debt Cash Redemp.`,
+  read `Interest on Treasury Securities` off the same snapshot, and apply
+  `deficit ≈ gap + 87.4 − 0.970 × cashInterest`. Registering it at **±1.2 SE (±$25B)** would be a
+  *tighter* band than FT-50's ±$39B — the right shape for a model claiming to be better.
+- **October 2026 is a two-batch month; November 2026 is a zero-batch month.** **Nov 1 2026 falls on a
+  Sunday**, so November's benefit batch pays **Friday 2026-10-30** while October keeps its own
+  (Oct 1 is a Thursday). The 11-12 print will therefore carry the *opposite* distortion to this one
+  and the 12-10 print the *same* one — so **11-12 is not the calendar-neutral month FT-51's framing
+  implicitly wanted**, and any "improvement persisting" read of it must adjust first. Dec 1 2026 is a
+  Tuesday, so nothing pulls back out of November.
+- **The September-data edition still has no release date, now confirmed in the current edition.**
+  The August statement's own Scheduled Release page reads *"The release date for the September 2026
+  Statement is subject to completion of year-end reporting requirements"* — promoting the 09-05
+  calendar correction from the annual table to the live document. **2026-11-12 remains the next MTS.**
+
+### Honest limits of this close-out
+
+- **`cbo.gov` was never reachable in this event's life** (403 / DataDome on every attempt across five
+  sessions, logged in `probe-ref.blocked`), so the Monthly Budget Review — which publishes *ahead* of
+  the MTS and would have been the natural cross-check on the refund figures — was never read. Every
+  CAPE dollar figure in this doc stayed trade-press-sourced and is labelled as such.
+- **The amended mapping has exactly one out-of-sample point.** R² 0.616 on n=11 with one regressor is
+  a hypothesis, not a validated model, and $15.3B of August's miss remains unexplained by it.
+- **No adjacency proposals this session.** Close-out mode, and the three MTS editions this lane
+  discovered (`mts-october-2026-11-12`, `mts-november-2026-12-10`, `mts-december-2026-2027-01-13`)
+  are already on the calendar or in this lane's own proposals directory.
+- **Nothing here licenses a trade.** `symbols: []`, no house playbook is macro-keyed, and the one
+  measurement that changed is an accounting identity's specification. The stand-aside was correct on
+  the day and is correct for the next edition.
