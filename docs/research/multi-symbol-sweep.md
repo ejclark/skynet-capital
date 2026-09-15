@@ -71,6 +71,40 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **The 10-Year-over-5-Year sector ordering in JGB 1–5y liquidity-enhancement auctions
+  (FT-jgb-liquidity-enhancement-1-5y-2026-09-10-1)** — added 2026-09-15 from the
+  [jgb-liquidity-enhancement-1-5y-2026-09-10 close-out](events/jgb-liquidity-enhancement-1-5y-2026-09-10.md).
+  It predicted 10-Year overweight above 5-Year on the 2026-09-10 page, on a 5-of-5 ¥700bn-era record
+  (means 1.28× vs 0.27×); the page printed **10-Year 0.468× against 5-Year 0.500×**. **The ordering
+  died, not the arithmetic.** The hypothesis's own defence — that a pairwise ratio is immune to the
+  missing-bond error in the shared ¥321.15tn denominator — held exactly: on the uncorrected basis it
+  reads 0.464× vs 0.496×, the same way. What killed it is that the whole page moved somewhere else.
+  **2-Year No.488 — nine days old, coupon 1.7% — took ¥273.7bn, 39.2% of a ¥697.9bn auction**, so
+  the 10-Year and 5-Year were competing for a residual, and their gap is **¥1.9bn**. Do not
+  re-propose a sector-pair ordering without conditioning on the front-end take: at a 2-Year
+  overweight of 3.75× the remaining four sectors are not being ranked by preference, they are
+  splitting what is left. **Two details that must travel with the kill:** the margin is thin enough
+  that the 5-of-6 record is still 83%, so this is a kill of the *test as written* (a strict
+  inequality with no tolerance band), not a demonstration that the 10-Year is no longer favoured;
+  and the sibling `FT-jgb-liquidity-enhancement-1-5y-2026-11-20-1` registered the same observation
+  from the other side and scores in its own lane, so it is not killed by this row.
+
+- **`corr(pocket, ≥1% coupon share)` as evidence that JGB menu composition drives reopening demand**
+  — added 2026-09-15 from the same close-out, a **self-kill** with no forward-test id: the number was
+  published in that ledger's own initial research six days earlier and did not survive its first
+  out-of-sample print. Across the five ¥700bn prints the "≥1% coupon pocket" slid monotonically
+  **+1.205 → −0.878** and the correlation read **−0.978 (t = −8.04, n = 5)**. 2026-09-10 printed
+  **+1.050** — the second-highest of the era, at the same ¥700bn on a menu identical bar the 2-Year
+  window — and the same code over the same six menus now gives **−0.492 (t = −1.13, n = 6)**. Do not
+  cite a correlation computed on five points as a mechanism, however large the t-statistic; an n = 5
+  fit has one degree of freedom to spare and a single reversal spends it. **What survives and must
+  travel with the kill:** the *size* refutation is untouched (the decay ran at a constant ¥700bn, so
+  "a bigger auction reached deeper into the menu" is still dead), and the composition-contamination
+  claim itself **strengthened** — the +1.050 pocket was **43.0pp 2-Year against 21.9pp 20-Year**, a
+  statistic built for seasoned pre-2012 super-long paper carried by the newest bond on the menu.
+  The ±2sd cover and excess-bid bands from the same n = 5 sample **also both broke on this print**
+  (cover 4.418 against a 2.49–4.37 band), which is the same lesson on a second instrument.
+
 - **An end-horizon projection cell as a standalone terminal-policy test
   (FT-ecb-decision-2026-09-10-1)** — added 2026-09-15 from the
   [ecb-decision-2026-09-10 close-out](events/ecb-decision-2026-09-10.md). It predicted the September
