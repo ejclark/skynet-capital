@@ -1,43 +1,42 @@
 # 20-Year Treasury Bond auction (reopening) — treasury-20y-bond-2026-09-15
 
 **Kind:** rates · **Date:** 2026-09-15 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-09-13
-<!-- probe-ref: {"symbols":{},"vix":15.84,"daysBand":"high:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-30y-bond-2026-09-10"],"screenStreak":2} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.76,"daysBand":"high:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-30y-bond-2026-09-10"],"screenStreak":0,"blocked":[{"url":"https://www.cnbc.com/2026/09/14/10-year-us-treasury-is-closing-in-on-5percent.html","status":"403","at":"2026-09-15"}]} -->
 
 ## At a glance
 
-**TL;DR.** This is the 20-year reopening of CUSIP **912810UX4** (sold 2026-08-19 at 5.204%), landing
-the **day before the Sep-16 FOMC**. The guard is unchanged for a **seventh** pass — no new duration
-risk into either day of the pair — but the *reason* for it moved further today than on any pass
-since D-17. **(1) The terms exist: $13B, confirmed at the primary.** Treasury's own upcoming-auctions
-feed now carries `912810UX4 … 13,000,000,000`, announced today — six-for-six on 2026 reopenings, and
-the size label finally leaves `estimate`. **(2) The long end's demand is fine; its price is not.**
-Today's $22B 30Y reopening stopped **5.308%**, the highest 30-year auction yield since **August
-2001**, and it **stopped through** its when-issued by **2.7bp** with bid-to-cover **2.612** and
-dealers taking **2.2%** against an 11.5% average. The tape sold off anyway: 30Y **5.37%**, decisively
-through the 5.31% closing high this ledger set as its term-premium trigger, 10Y **4.95%**, 20Y
-**5.39%** — now **18.6bp above** the yield 912810UX4 was originally sold at. **(3) The buyback stopped
-being a passive offset and became a catalyst — a negative one.** Treasury published the updated
-schedule (masthead 9/9) at a **$6B** cap, tripling the norm and beating `sb0607`'s "$4B" floor, and
-the market read it as *under*-delivery against a $10B+ whisper. Then the operation took only
-**$5.187B of $6B** on $10.489B offered — **the first 10–20Y operation of 2026 not to fill its cap**.
-It did buy **$671M** in the 2044–2046 band, its first since 5/28 and mostly *high*-coupon paper —
-but **912810UX4 is absent from the 40-name eligible list**, so `FT-…-1` holds. **(4) The biggest
-correction: D-6's CPI read was wrong, and backwards.** FactSet's own page, published today, has
-August CPI at **3.3% headline / 2.4% core** y/y, and a 17-economist survey has core **+0.2% m/m**
-with every estimate rounding to 0.2%. The energy-led-headline-over-tame-core split D-6 declared
-*gone* is the live consensus — so an in-line core is the **modal** outcome and only a **+0.3% beat**
-arms the policy leg, the inverse of what D-6 wrote. PPI printed **+0.4% m/m / +5.4% y/y** on energy
-**+4.2%** and diesel **+24.1%**, Brent went to **$109.06** (+7.8% in a session), the ECB hiked to
-2.50%, and hike odds hit **64.3%** — the highest this ledger has recorded. Still no directional
-rates bet.
+**TL;DR.** Auction day. The 20-year reopening of CUSIP **912810UX4** (sold 2026-08-19 at 5.204%)
+prices at **1:00pm ET today**, $13B, the **day before the Sep-16 FOMC**; this row is written
+**pre-auction, ~11:30 ET**. The guard holds for an **eighth** pass — no new duration risk into either
+day of the pair — and for the first time the reason includes **a scored miss of this ledger's own
+call**. **(1) The D-5 "This week" call is FALSIFIED by its own registered falsifier.** It read the
+9/11 CPI as an asymmetry (consensus core **+0.2%** against a **64.3%** hike price) and named
+"core at **+0.3% m/m or higher**" as the print that kills it. Core printed **+0.3%** — unrounded
+**+0.2898%** off BLS's own SA index — with headline **+0.4% / 3.4%**. Fired; the call is wrong and
+scored wrong. **(2) But the curve did the opposite of what a term-premium ledger would expect.** On a
+hot core the tape **bear-FLATTENED**: 09-10 → 09-14 Treasury CMT has 2Y **4.56 → 4.65** (+9bp) and
+3Y +10bp, against 10Y **4.95 → 4.97** (+2bp), 20Y **5.39 → 5.37** (−2bp) and 30Y **5.37 → 5.34**
+(−3bp). **2s30s went 81 → 69bp.** The long end *rallied* on the inflation print. **(3) The duration
+damage landed in equities, not in bonds.** TLT was flat across the whole sequence (**80.78 → 80.87 →
+80.93**, own probe) while the high-duration complex was cut: CRWV **89.12 → 82.98** (−6.9%), MRVL
+**236.10 → 218.82** (−7.3%), AVGO **360.83 → 344.72** (−4.5%), NVDA **218.36 → 210.96**. Kill switch 5
+fires a **fourth** consecutive pass. **(4) The same tenor cleared strongly overnight, in Tokyo.**
+MOF's own result page for today's ¥700bn 20Y (issue 197, 3.7%) reads lowest accepted **98.10 /
+3.869%**, average **98.25 / 3.856%**, ¥2,131.3bn bid against ¥532.1bn accepted — **bid-to-cover 4.01**
+versus a **3.73** 12-month average, tail **0.15** vs 0.17. **(5) What is left unpriced is the dots,
+not the decision.** A 25bp hike is **87.5%** on Polymarket's $172.8M book (stamped 15:22Z today) and
+**94.5%** on CME FedWatch (press, from 87.3% a day earlier) — up from 64.3% at D-5. Levels are at
+cycle extremes anyway: 10Y through **5.00%** (own probe; 5.02% and a July-2007 high per press), 20Y
+**5.4260%** intraday, and this reopening carries a **16.6bp** concession to its own issue yield on the
+09-14 close. Still no directional rates bet.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (9/10, D-5) | Stand aside — the day's news is all *inputs*, and none of it is tradeable here | High | Terms published at **$13B** (primary), the 30Y stopped through by **2.7bp**, the buyback under-filled at a **$6B** cap, PPI ran **+0.4%** — four dated facts, and this event's own auction is still five days out. | Nothing dated today for this event beyond its own 11:00 ET terms, which landed exactly on the anticipated number |
-| This week | Read **CPI 9/11 against what is priced**, not against the headline — the consensus expects core to *decelerate* while rates price a hike | Medium | Core consensus is **+0.2% m/m / 2.4% y/y** (17 estimates, range 0.16–0.24%), yet the hike-odds aggregate is **64.3%** after an *energy* print; Kalshi puts core above 0.2% at only **28%**. | A **2026-09-11** core CPI at **+0.3% m/m or higher**, which would confirm the hawkish pricing on its own terms rather than on oil's, and remove the asymmetry this call rests on |
-| This month | Flat the 9/15→9/16 pair — and the auction is now the *easier* of the two days | Medium | The 30Y just cleared $22B at a near-record stop-through with dealers at 2.2%, and this reopening carries an **18.6bp** concession to its own issue yield; the FOMC, with the SEP and a 64.3% hike price, carries the variance. | The **2026-09-15** reopening printing a **positive tail**, which would say the 20Y's demand problem is tenor-specific after all and put the auction day back on par with the meeting |
-| This quarter | The term-premium leg is now running the tape, and Treasury's own bid cannot stop it | Medium | The 30Y closed **5.37%**, through the 5.31% high that defined this call; a **tripled** $6B buyback still failed to fill and yields rose on both its announcement and its result — the clearest evidence yet that supply, not sponsorship, is the binding constraint. | The 30Y closing under **5.10%** before the 2026-11-04 refunding, which would retire the higher-term-premium story this call rests on |
+| Today (9/15, D-0) | Stand aside through the 1:00pm ET release — an eighth pass, and the only thing that resolves today is this ledger's own `FT-…-3` | High | Terms are ordinary ($13B, six-for-six, re-read at two Treasury primaries today), the same-tenor JGB 20Y cleared at **B/C 4.01** against a **3.73** 12-month average hours ago, and the **16.6bp** concession is *narrower* than D-5's 18.6bp — nothing here is an edge in either direction. | A 2026-09-15 result strong enough (negative tail **and** bid-to-cover ≥2.75) that duration bought at 1:00pm ET and held to the 09-16 close would have paid — standing aside would then have been right for the wrong reason |
+| This week | The 09-16 risk is **the dots and the press conference, not the decision** — the hike itself is already paid for | Medium | Polymarket prices 25bp-increase **87.5%** ($172.8M book, stamp 15:22Z 09-15) and CME FedWatch **94.5%** (press, 87.3% a day earlier); the 2Y has already taken **+9bp** since 09-10 while the 30Y took **−3bp**, so the curve has done the hike in advance. | A **2026-09-16 hold**, or a 2s10s that *steepens* more than 5bp on statement day — either says the decision itself, not the projections, still carried the variance |
+| This month | Hold the flat-the-pair guard, but the two days have swapped what they carry: the auction is a **level/supply** event, the FOMC is now a **path/dots** event | Medium | **16.6bp** concession on the 09-14 CMT close (5.37% vs the 5.204% issue yield), a same-day 20Y in Tokyo that beat its 12-month demand average, and a hike 87.5–94.5% pre-paid — the unpriced quantity sits in the SEP, not in either day's supply. | The **2026-09-15** reopening printing a **positive tail**, which would put tenor-specific demand back in the picture and make the auction the harder day after all (`FT-…-3`'s own line) |
+| This quarter | The term-premium leg is still the standing story, but since CPI it stopped being the **marginal** one — the long end has been the stable part of this curve | Medium | 10Y through **5.00%** on the level (own probe; press reads 5.02%, a July-2007 high) — yet across the hot core print 30Y **−3bp** against 2Y **+9bp**, **2s30s 81 → 69bp**. A term-premium tape does not flatten on an inflation upside surprise. | **2s30s closing wider than 81bp** (its 09-10 level) before the 2026-11-04 refunding, which would say the long end took the marginal move back and the D-5 framing was right after all |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
@@ -69,14 +68,25 @@ rates bet.
   $6B cap and then the short-fill as under-delivery against a $10B+ whisper, and long-end yields rose
   on both. Treat the **10/1** 10–20Y operation (cap now written `= or > $4 billion`) as a scheduled
   risk event, not as background support.
-- **CPI on 9/11 remains the pair's hinge — and D-6 had the bar the wrong way round** (corrected
-  9/10). Consensus is a hot, **energy-led headline over a decelerating core**: core **+0.2% m/m**
-  (median of 17 estimates, every one inside 0.16–0.24%) and **2.4% y/y**, against headline ~**+0.4%
-  m/m** and **3.3–3.4% y/y** (FactSet Insight, published 9/10, read direct). So an in-line core is
-  the *modal* outcome and does **not** arm the policy leg; the print that does is a **+0.3% core
-  beat**, which Kalshi prices at **28%**. Blackout 9/5–9/17 means no Fed voice can reframe it.
-- **Brent above ~$95 FIRED and the level has lost its discriminating power** — **$109.06** on the
-  9/10 bar, **+7.8%** in a session and ~$14 past the trigger, on CENTCOM destroying five Iranian
+- **CPI printed and the hinge swung hawkish — this ledger's D-5 "This week" call is FALSIFIED**
+  (scored 9/15). Core **+0.3% m/m / 2.4% y/y** (unrounded **+0.2898%** from BLS's own SA index,
+  337.765 ÷ 336.789, per the sibling [`cpi-2026-09-11`](cpi-2026-09-11.md) close-out), headline
+  **+0.4% / 3.4%**, gasoline **+3.9%**, shelter **+0.3%** and accelerating. The D-5 falsifier read
+  "core at **+0.3% m/m or higher**" — fired, on a print that cleared the line by **0.0002pp** of
+  rounding. Unlike D-11's badly-drawn switch, the *claim* broke with it: the asymmetry the call
+  rested on is gone, so this is a clean falsification, not a technicality.
+- **The corroborating read, same tenor, same day, different sovereign: Tokyo cleared it easily**
+  (new 9/15). MOF's own result page for today's ¥700bn 20Y reopening (issue 197, coupon 3.7%,
+  maturity 2046-06-20) reads lowest accepted **98.10 / 3.869%**, weighted average **98.25 /
+  3.856%**, **¥2,131.3bn** competitive bids against **¥532.1bn** accepted. Bloomberg puts
+  bid-to-cover at **4.01** (prior 3.98, 12-month average **3.73**) and the price tail at **0.15**
+  (prior 0.17) — *stronger than average demand at a 20-year yield near cycle highs*. That is the
+  same message the 9/10 US 30Y sent, from an independent market and hours ahead of the 1:00pm ET
+  release: at the right price, the global 20-year tenor is bid.
+- **Brent above ~$95 FIRED and the level has lost its discriminating power** — **$103.16** on the
+  9/15 bar (own probe, 11:25 ET), off the **$109.06** peak of 9/10 by **−5.4%** but still ~$8 past a
+  trigger that stopped discriminating a week ago. The 9/10 reading and its drivers, kept for the
+  record: **+7.8%** in a session on CENTCOM destroying five Iranian
   tankers, the IRGC striking back at two US warships and eighteen vessels, a Houthi seizure of a
   western Yemeni port, and attacks on Saudi energy sites. Re-cut the level at close-out. The
   companion "**or any Kharg Island strike**" is a **badly-drawn condition**, named not scored: read
@@ -84,25 +94,47 @@ rates bet.
   on **2026-03-13** while deliberately sparing oil infrastructure, exports uninterrupted). Read as
   meant — a strike on the **export terminal** — it still has **not** fired; the nearest event is a
   US missile on a small tanker **four miles from** Kharg on 9/8.
-- **The 30Y re-taking 5.31% has FIRED** (9/10). Treasury CMT closed the 30Y at **5.37%**, ~6bp
-  *through* its 2026-08-17 closing high, with the 10Y at **4.95%** (highest since 2023) and the 20Y
-  at **5.39%**. The whole curve bear-steepened +9 to +13bp in one session and the 2Y took +13bp, so
-  this is the term-premium leg **and** the policy leg moving together, not term premium alone.
-- **The chair is still the curve's largest single driver** — Bloomberg (2026-08-28) counts the three
-  biggest daily curve moves since Warsh took office in May as all following his own appearances. The
-  9/16 press conference, D+1 here, carries more curve risk than the auction; size around the meeting.
-- **The chair is still the curve's largest single driver**, and the 9/16 press conference — D+1 here
-  — now carries a **64.3%** hike price and the SEP alongside it. Size around the meeting, not the
+- **The 30Y re-taking 5.31% FIRED on 9/10 and has not extended — the marginal move went to the
+  front end** (updated 9/15). Treasury CMT closes, 09-10 → 09-14: 2Y **4.56 → 4.65** (+9bp), 3Y
+  **4.63 → 4.73** (+10bp), 10Y **4.95 → 4.97** (+2bp), 20Y **5.39 → 5.37** (−2bp), 30Y **5.37 →
+  5.34** (−3bp). **2s30s 81 → 69bp, 2s10s 39 → 32bp.** A hot core CPI *flattened* this curve. The
+  level story is intact and at a cycle extreme — the 10Y traded through **5.00%** today (own probe;
+  press reads 5.02% and a July-2007 high, with the 20Y at **5.4260%** and the 30Y **5.3860%**
+  intraday) — but the marginal bid/offer since the print has been about the Fed path, not term
+  premium.
+- **The duration damage this week landed in equities, not in bonds** (new 9/15) — the sharpest
+  reframing of leg 5 this ledger has made. Own Yahoo probe, 09-10 → 09-14 closes: **TLT 80.78 →
+  80.87 → 80.93** (flat across the print, **80.74** intraday today) while **CRWV 89.12 → 82.98
+  (−6.9%)**, **MRVL 236.10 → 218.82 (−7.3%)**, **AVGO 360.83 → 344.72 (−4.5%)**, **NVDA 218.36 →
+  210.96 (−3.4%)**. Kill switch 5 (">5% single-session move in CRWV") fires a **fourth** consecutive
+  pass, and this time the long bond did not move at all — so the transmission ran through the
+  discount rate and AI-capex financing fear, **not** through term premium. Leg 5's reaction function
+  survives; its stated *mechanism* ("a weak 20Y print hits high-duration names") does not need a
+  weak 20Y print, or any long-end move, to operate.
+- **The chair is still the curve's largest single driver, and now he is the only unpriced part of
+  the pair** — Bloomberg (2026-08-28) counts the three biggest daily curve moves since Warsh took
+  office in May as all following his own appearances. With the hike itself at **87.5%** (Polymarket,
+  $172.8M book, stamp 15:22Z 09-15) and **94.5%** (CME FedWatch, press), the 9/16 14:00 ET SEP and
+  the press conference after it are where the variance moved. Size around the meeting, not the
   auction.
-- **Watch (dated)** — CPI **Sep 11**, 08:30 ET (the hinge; core consensus +0.2%) · UMich prelim
-  **Sep 11** · Monthly Treasury Statement **Sep 11** · IEA OMR **Sep 11** · buyback blackout starts
-  **Sep 12** · **this auction, $13B, Sep 15 1:00pm ET** · JGB 20Y auction **Sep 15** (same day,
-  global long end) · TIPS 10–30Y buyback **Sep 15** ($500M cap) · **FOMC Sep 15–16**, statement +
-  SEP 14:00 ET **Sep 16** · Bund 30Y **Sep 16** · UK CPI **Sep 16** · retail sales **Sep 16** ·
-  TIC **Sep 16** · 10Y TIPS reopening **$19B Sep 17** · BoE **Sep 17** · 7–10Y buyback **Sep 17** ·
-  Fed blackout through **Sep 17** · BoJ **Sep 18** · quarterly OpEx **Sep 18** (this bond's
-  settlement date) · 20–30Y buyback **Sep 24** · next 10–20Y buyback **Oct 1** · OPEC+ **Oct 4** ·
-  ECB **Oct 29** · midterms **Nov 3** · quarterly refunding **Nov 4**.
+- **The inflation internals stayed hot on auction morning, and the primary caught a bad secondary
+  number before it entered this row** (new 9/15). The NY Fed's own Empire State release reads
+  *"The headline general business conditions index fell thirteen points but remained positive at
+  7.6"* with **prices paid 63.1** (+5) and **prices received 28.1** (+5) — both accelerating. An
+  aggregated search read of the same release returned **−8.7**, a sign error large enough to invert
+  the growth call; it was discarded at the NY Fed primary. Two more secondary misreads were caught
+  the same way this pass (see the ledger row), which makes **four** instances of D-5's
+  read-it-at-the-primary rule paying since it was written five days ago.
+- **Watch (dated)** — **this auction, $13B, Sep 15 1:00pm ET** · JGB 20Y auction **Sep 15** (cleared;
+  B/C 4.01 vs a 3.73 12-month average) · TIPS 10–30Y buyback **Sep 15** ($500M cap) · Empire State
+  **Sep 15** (7.6; prices paid 63.1) · **FOMC Sep 15–16**, statement + SEP 14:00 ET **Sep 16** ·
+  Bund 30Y **Sep 16** · UK CPI **Sep 16** · retail sales **Sep 16** · TIC **Sep 16** · VIX
+  expiration **Sep 16** · 10Y TIPS reopening **$19B Sep 17** · BoE **Sep 17** · 7–10Y buyback
+  **Sep 17** · coupon announcement **Sep 17** · Fed blackout through **Sep 17** · BoJ **Sep 18** ·
+  quarterly OpEx **Sep 18** (this bond's settlement date) · 20–30Y buyback **Sep 24** · next 10–20Y
+  buyback **Oct 1** · OPEC+ **Oct 4** · next 20Y reopening **Oct 21** (announce Oct 15, settle
+  Oct 23 — Treasury tentative schedule, text layer read direct 9/15) · ECB **Oct 29** · midterms
+  **Nov 3** · quarterly refunding **Nov 4**.
 
 ## Initial research
 
@@ -444,6 +476,74 @@ a same-sector print that just cleared $22B at a near-record stop-through — and
 variance sits. One new prediction with a score-by date is registered as
 `FT-treasury-20y-bond-2026-09-15-3`.
 
+**Stance update (2026-09-15, D-0, written pre-auction ~11:30 ET; receipt: the 2026-09-15 ledger row
+below).** The guard is unchanged for an **eighth** consecutive pass — no new duration risk into the
+1:00pm ET release, none carried naked into tomorrow's 14:00 ET statement. This pass reached a session
+on the **staleness ceiling** (`event-material-scan` verdict `material`, reason `staleness-ceiling`
+after two consecutive screens), not on a threshold crossing, and it is the last full pass before
+close-out. Four things moved, and the first is a miss of this ledger's own.
+
+*First, the D-5 "This week" call is falsified, cleanly.* It read the 9/11 CPI as an asymmetry —
+consensus core **+0.2% m/m** against a hike price of **64.3%** — and registered "a 2026-09-11 core
+CPI at **+0.3% m/m or higher**" as the print that kills it. Core printed **+0.3%**, unrounded
+**+0.2898%** off BLS's own seasonally-adjusted index (337.765 ÷ 336.789; the sibling
+[`cpi-2026-09-11`](cpi-2026-09-11.md) close-out owns the primary read), with headline **+0.4% /
+3.4%**, gasoline **+3.9%** contributing *over one third* of the monthly all-items rise, and shelter
+**+0.3%** accelerating. The falsifier fired by **0.0002pp** of rounding — close enough that D-7's
+badly-drawn-falsifier test has to be applied honestly. It passes: unlike D-11's switch, which missed
+by two points while the claim behind it broke, here the claim broke *with* the switch. The asymmetry
+was the call, and there is no asymmetry left. Scored **wrong**, no hedge.
+
+*Second, and this is the finding: the curve did the opposite of what a term-premium ledger predicts.*
+On an upside core surprise the tape **bear-flattened**. Treasury CMT closes, 09-10 → 09-14: 2Y
+**4.56 → 4.65** (+9bp), 3Y **4.63 → 4.73** (+10bp), 10Y **4.95 → 4.97** (+2bp), 20Y **5.39 → 5.37**
+(−2bp), 30Y **5.37 → 5.34** (−3bp). **2s30s 81 → 69bp; 2s10s 39 → 32bp.** The long end *rallied*
+into hot inflation, because the market read the print as *more Fed now*, and more Fed now is a
+front-end event. That does not retire the D-5 "this quarter" call — the **level** is at a cycle
+extreme, with the 10Y trading through **5.00%** today (own probe; press reads 5.02%, its highest
+since July 2007, alongside a 20Y intraday **5.4260%** and a 30Y **5.3860%**) — but it demotes it
+from *the* story to *the standing* story. The marginal move since CPI belongs to the policy leg, and
+the call's falsifier is re-cut from a 30Y level to the curve shape that would actually prove it
+(2s30s back above 81bp), because a level falsifier could not distinguish the two legs in the first
+place.
+
+*Third, the D-5 conclusion "the auction is the easier half of the pair" survives — but for a
+different reason than it was written on, and the pair's risk has redistributed inside day two.* At
+D-5 the argument was that the FOMC carried the variance because a **64.3%** hike price was a coin
+flip with a fat side. It is no longer a coin flip: Polymarket's $172.8M book (fetched direct, stamp
+`2026-09-15T15:22:25Z`) prices **25bp increase 87.5% / no change 12.5% / ≥50bp 0.95%**, and CME
+FedWatch is reported at **94.5%**, up from 87.3% a day earlier. A decision priced at 87.5–94.5% is
+not where variance lives; the **SEP and the press conference** are, and the cross-venue gap has
+re-opened to ~7 points with CME the hawkish side — the same shape D-7 recorded, inverted in level.
+Meanwhile the auction's own case got quietly better on two counts. Its terms were re-read at two
+Treasury primaries this morning — the `upcoming_auctions` feed (`912810UX4 · 19-Year 11-Month ·
+reopening · 13,000,000,000 · announced 2026-09-10 · auction 2026-09-15 · issue 2026-09-18`) and the
+tentative-schedule PDF text layer (`20-Year BOND R / Thursday, September 10, 2026 / Tuesday,
+September 15, 2026 / Friday, September 18, 2026`) — and the **same tenor cleared strongly overnight
+in Tokyo**: MOF's own result page for the ¥700bn reopening of issue 197 gives lowest accepted
+**98.10 / 3.869%** against a weighted average **98.25 / 3.856%**, ¥2,131.3bn bid on ¥532.1bn
+accepted, **bid-to-cover 4.01** versus a **3.73** twelve-month average and a price tail of **0.15**
+versus 0.17 (Bloomberg for the comparatives). An independent sovereign's 20-year cleared above its
+own demand average at a cycle-high yield, hours before ours prices. The concession is **16.6bp** to
+912810UX4's 5.204% issue yield on the 09-14 CMT close — *narrower* than D-5's 18.6bp, which is the
+one thing in this paragraph that argues the other way.
+
+*Fourth, leg 5's mechanism is wrong even though its reaction function keeps working.* Kill switch 5
+fires a **fourth** consecutive pass: CRWV **89.12 → 82.98** across 09-10 → 09-14 (**−6.9%**, and
+**−6.75%** in the single 09-11 → 09-14 session), with MRVL **236.10 → 218.82** (−7.3%), AVGO
+**360.83 → 344.72** (−4.5%) and NVDA **218.36 → 210.96** (−3.4%). But **TLT did not move**: 80.78 →
+80.87 → 80.93 across the same sequence, **80.74** intraday today. The initial research's leg 5 said
+"a weak 20Y print hits high-duration, debt-financed AI names hardest and fastest." This week the
+names took 4–7% with **no weak print and no long-end move at all** — the transmission ran through the
+front-end discount rate and AI-capex financing fear. The reaction function is confirmed; the causal
+story attached to it is too narrow, and the close-out should test the equity leg against the *policy*
+leg, not against the auction.
+
+Nothing here licenses an entry. One prediction with a score-by date is registered as
+`FT-treasury-20y-bond-2026-09-15-4`; `FT-…-3` resolves at 1:00pm ET today and is scored at close-out,
+not here. Three secondary-source numbers were discarded at their primaries this pass (see the row),
+which is D-5's own rule earning its keep four times in five days.
+
 **Kill switches:**
 
 - **Confirmed-weak print** (bid-to-cover materially below ~2.55, a positive tail, or direct-bidder
@@ -496,6 +596,22 @@ variance sits. One new prediction with a score-by date is registered as
   "Treasury can lean on the long end" half of the supply-leg story entirely. Falls outside this
   event's close-out window, so it is a switch for the sibling operations to carry, not one this
   ledger will score.
+- **The 2026-09-16 FOMC re-steepening 2s30s past 81bp** (added at D-0, replacing D-5's 30Y-level
+  falsifier for the "this quarter" call) — the hot 9/11 core flattened this curve from **81bp** to
+  **69bp** on Treasury's own CMT, which is a policy-leg tape, not a term-premium one. A CMT close on
+  **2026-09-16 or 2026-09-17** with 2s30s wider than **81bp** would say the long end took the
+  marginal move back and the D-5 framing was right after all. Registered as
+  `FT-treasury-20y-bond-2026-09-15-4`.
+- **A 2026-09-16 hold** (added at D-0) — a 25bp hike is **87.5%** on Polymarket's $172.8M book and
+  **94.5%** on CME FedWatch; a hold is the one outcome that is genuinely unpriced on the second day
+  of this pair, and it would re-price the whole front end against every position sized for the guard.
+  The decision itself is owned by [`fomc-2026-09-16`](fomc-2026-09-16.md); only its read-through to
+  this pair is tracked here, and it is not re-registered as a forward test.
+- **A weak 2026-09-15 result with TLT still unmoved** (added at D-0) — leg 5's mechanism, tested
+  directly. The high-duration complex fell 4–7% this week on **no** long-end move (TLT 80.78 →
+  80.93); if a soft 20Y print lands and the equity leg reacts again while the long bond stays put,
+  the "weak auction → AI selloff" causal story in the initial research is finished as a mechanism
+  and survives only as a correlation with the front end. Scored at close-out.
 
 ## Assessment ledger
 
@@ -513,6 +629,7 @@ variance sits. One new prediction with a score-by date is registered as
 | 2026-09-10 | D-5 | Adjacency sweep, written **post-close 18:50 ET 09-10** — announcement day, and the four dated items the D-6 row queued all landed. Band unchanged (**high:0+**, every 1d). **Peers:** n/a — `symbols: []`. **Kill switch 5 fires for a third consecutive pass — and for the FIRST time in the direction it was written for.** High-duration reference tape (own Yahoo probe, 09-08 → 09-09 → 09-10 closes): CRWV 99.83 → 94.94 → **89.12** (**−6.13% today**, −10.73% over two sessions), NVDA 225.73 → 223.67 → **218.36** (−2.37%), MRVL 225.41 → 235.01 → **226.96** (−3.43%), AVGO 368.56 → 364.38 → **360.83** (−0.97%), S&P 7673.52 → 7636.36 → **7591.70** (−0.58%, a third straight down session). The switch reads ">5% single-session move in CRWV or another high-duration name on or around auction day"; at D-5, on a session the whole curve sold off 9–13bp and the index fell, CRWV fell 6.1% and the tier ordering leg 5 predicted — CRWV worst, then NVDA/MRVL/AVGO — **held on the session**. D-7 and D-6 recorded the switch firing on upside idiosyncratic moves and declined to score them; this one is **scored**, and it is the live-cycle confirmation of leg 5's reaction function that the switch was written to obtain. *Honest bound:* one session, and the two prior fires were idiosyncratic, so CRWV's signal-to-noise as a duration proxy is still the **wording** problem D-6 flagged for the close-out, not a resolved one. **Event tape — the terms exist, at the number that was always in print.** `upcoming_auctions` (fiscaldata, primary, fetched today) carries `912810UX4 · Bond · 19-Year 11-Month · reopening Yes · offering_amt **13,000,000,000** · announcement **2026-09-10** · auction **2026-09-15** · issue **2026-09-18**`, and `auctions_query` confirms the security is the 5.125% of 2046-08-15 first sold 2026-08-19 at 5.204% on $16B. That matches `sb0590`'s Sep-26 anticipated row exactly and makes 2026's reopenings **six-for-six at $13B**; the D-7 kill switch "an announcement above $13B" is **retired unfired**, `FT-treasury-20y-bond-2026-09-15-2`'s void clause (a size other than $13B) is **not** triggered, and the size label leaves `estimate` for a published Treasury figure. **The 30Y reopening is the pass's central datum, and it is same-sector rather than cross-tenor.** $22B of 912810UW6 stopped **5.308%** at 1:00pm ET — **the highest 30-year auction yield since August 2001** — **stopping through** its **5.335%** when-issued by **2.7bp**, reported as the second-largest stop-through ever recorded for the tenor, on bid-to-cover **2.612**, the strongest since February 2026. Computed from `auctions_query` on total accepted **ex-SOMA** (SOMA accepted **$0**): on comp accepted $21.9575B, **indirect 79.48 / direct 18.31 / dealer 2.21**; on total accepted $22.0000B, **79.33 / 18.27 / 2.20**. Dealers at **2.2% against an 11.5% average** is an exceptionally low take-down — end users cleared the whole thing. *Why it earns the headline in a 20Y ledger, where the 3Y at D-6 got a caveat instead:* this is the long end, one week from this auction, in the same refunding block, and it is the first direct evidence in this doc that **sponsorship is not the long end's problem**. *Honest limit:* the 30Y is not the 20Y, the tenors' buyer bases overlap without matching, and the 2.7bp stop-through figure and the 11.5% dealer average are **secondary** (auction trackers) — Treasury publishes no when-issued level, which is the same source class this ledger has now been burned by three times, so both are labelled rather than leaned on. **Rates — the term-premium trigger this doc set FIRED, and the whole curve went with it** (Treasury CMT, primary, fetched today): 09-08 → 09-09 → 09-10, 2Y 4.39 → 4.43 → **4.56** · 3Y 4.44 → 4.49 → **4.63** · 10Y 4.80 → 4.83 → **4.95** · 20Y 5.26 → 5.28 → **5.39** · 30Y 5.25 → 5.28 → **5.37**. **The 30Y is ~6bp THROUGH its 08-17 closing high of 5.31**, the level this doc's signal list named as "the term-premium leg is running the tape again"; the 10Y at 4.95% is a fresh high since 2023. But +13bp on the 2Y in the same session means this is **not** term premium alone — a bear-steepening driven at both ends, which is what an energy-inflation shock does. **20s30s +2bp** (5.39 vs 5.37) from +1bp at D-7/D-6, so the 20Y cheapened another basis point to the 30Y; at **5.39%** it is now ~**18.6bp above** the 5.204% at which 912810UX4 was sold, from 5.6bp at D-6 — a materially bigger concession going in. **The buyback resolved, and it inverted from offset to catalyst.** The updated tentative buyback schedule `sb0607` promised and D-6 recorded as missing **is published** — home.treasury.gov's Tentative-Buyback-Schedule.pdf, text layer decompressed and read direct today (89,250 bytes), masthead **"August 2026 Refunding Quarter · For Publication September 9, 2026"**, its 09-10 row reading verbatim `9/9/2026 · 9/10/2026 · 1:40pm–2:00pm · 9/11/2026 · Liquidity Support · Nominal Coupons 10Y to 20Y · 09/11/2036 – 09/10/2046 · $0 · **$6 billion**`, with every forward long-end row rewritten from a fixed cap to a floor (`= or > $4 billion`). Corroborated from two announcement XMLs fetched direct: `BBPA_20260910174000.xml` stamped **2026-09-09T11:00:00-04:00** and `BBA_20260910174000.xml` stamped **2026-09-10T11:00:00-04:00**, both `maxParAmountRedeemed **6,000,000,000**`, `numberIssuesEligible **40**`, range **2037-02-15 – 2046-08-15**. So the cap **tripled** the $2B norm and came in **above** `sb0607`'s "at least $4B" floor: **D-6's kill switch (a preliminary announcement carrying a cap below $4B) is retired unfired**, emphatically. **Then the operation did not fill.** `buybacks_operations`: **$10.489B offered, $5.187B accepted** against the $6B cap, 23 of 40 issues, a **49.5%** take — **the first of 2026's twelve 10–20Y operations to leave cap unused**, after eleven that filled every dollar against $7.4–36.0B stacks. Read honestly that is Treasury's own **price discipline**, not a shortage of offers. But the tape read the $6B cap as under-delivery against a $10B+ whisper and the short-fill as confirmation, and long-end yields rose on **both** — press wraps for 09-09 and 09-10 are explicit that the buyback disappointed and sent yields higher. The instrument this ledger argued about for five passes as a passive offset is now a **scheduled event that can move the tape against the long end**; the **2026-10-01** operation inherits that status and is added as a kill switch. **`FT-treasury-20y-bond-2026-09-15-1`'s observation is complete and the prediction holds — while the claim next to it flips.** **912810UX4 is absent from the 40-name eligible list in both the preliminary and final announcements**, even though the published range **ends on 2046-08-15, its exact maturity date**: the eligible line at that maturity is the 2016-vintage **912810RT7, coupon 2.250%**, not the 5.125% on-the-run, and 912810UV8 (2046-05-15) is likewise absent while 912810RS9 2.500% carries that date. Off-the-run-only is now measured **n=2** (08-11, 09-10). *The cell stays `_open_` — per `forward-tests.md`, the Outcome column is the one cell a close-out fills; the observation is banked here so that scoring is mechanical.* **But the band got bought, and D-7's own hedge is refuted.** `buybacks_security_details` for 09-10: **$671M accepted across nine 2044–2046 lines** — the first acceptance in that band since **2026-05-28** — and concentrated in **high**-coupon recent-vintage paper: 912810UB2 4.625% **$303M** · 912810UJ5 4.750% **$202M** · 912810UQ9 4.625% **$78M** · 912810RE0 3.625% $51M · 912810UF3 4.625% $19M · 912810UT3 4.625% $9M · UD8/UL0/UN6 $3M each, while the low-coupon legacy lines (RT7, RS9, RK6, RM2, RN0, RP5, RQ3) took **$0**. D-7's honest bound — "cheapest-to-deliver economics favour low-coupon bonds, so $0 in high-coupon 2045/2046 lines is partly mechanical" — is **contradicted by observation**; D-6's prediction that a bigger cap would force the operation "materially deeper into the list" is **confirmed**. The band ($671M = 12.9% of accepted) gets support; the reopened CUSIP does not. **Macro — PPI printed hot and energy-led, at the primary.** BLS *Producer Price Indexes*, 09-10 08:30 ET (`ppi.nr0.htm`, fetched direct): final demand **+0.4% m/m** SA and **+5.4%** for the 12 months ended August NSA; final demand goods **+1.1%**, services **+0.1%**; **"over three-fourths"** of the broad rise attributable to final demand **energy +4.2%**, with **diesel +24.1%**; final demand less foods, energy and trade services **+0.3% m/m** (after +0.4% in July) and **+4.7%** 12-month. That is the shared-energy-driver mechanism this ledger named at D-14 arriving as a government statistic, one day before CPI. **Event tape — the largest correction of this pass, and it inverts D-6.** D-6 recorded the 09-11 CPI consensus as "+0.3% m/m headline **and** core, headline 2.9% / core **3.1%** y/y (FactSet via Morningstar, 09-08)" and concluded core "was marked up a tenth to meet headline… an in-line core is now itself a firm print, and only a **miss** retires the policy leg." Read at the primary today: **FactSet's own Insight page, published 2026-09-10, projects August CPI at 3.3% headline y/y and 2.4% core y/y**; an independent 09-10 read puts core at **+0.2% m/m — the median of 17 economists, with every estimate inside 0.16%–0.24%** — core y/y **2.4%, down from 2.5%**, headline ~**+0.4% m/m / ~3.4% y/y**. **So the "energy-led headline over tame core" split D-6 declared gone is the live consensus, and D-6's conclusion is exactly backwards:** an in-line core is the **modal** outcome and does not arm the policy leg; the print that does is a **+0.3% core beat**, which Kalshi prices at **28%** (87% chance core exceeds 0.1%, only 28% above 0.2%). **Blocked, recorded not substituted:** Morningstar — the secondary D-6 read FactSet through — returns **HTTP 403** today, so its figures cannot be re-checked at their own source; logged in `probe-ref.blocked` with a second 403 (a Goldman CPI-preview substack). **Pattern named, third instance:** this is the third time a load-bearing conclusion here rested on a secondary's number and a primary overturned it, after July's direct share (10.2% tracker vs **16.1%** Treasury) and the Aug-19 size ($18B press vs **$16B** Treasury) — each ran a full pass first. The rule adopted in the Stance section is the response. **Fed path — the highest reading this ledger has recorded, and it repriced on the wrong leg for the consensus.** Live prediction-market read fetched today (defirate aggregator, page-stamped ~15:48 PDT 09-10): **Kalshi hike 63.5% / hold 34.5% / cut 0.5%; Polymarket hike 64.5% / hold 34.5%; aggregate hike 64.3%, +10.8 on the session.** Corroborated independently: a 09-10 wrap puts **Polymarket at 63% "following Thursday's producer-price data, up from approximately 50% earlier in the week."** Against D-6's aggregate of 54.3% that is ~10 points in one pass, and the highest this venue family has printed here (prior high 54.9%, D-14). **CME is stale on this row and is labelled, not counted:** its last coherent reads remain **58% (09-04, 09-07)** with a 09-08/09-09-vintage secondary reporting ~56–60.6%; no fresh CME reading was obtained today, so the cross-venue gap is not re-measured. **The observation that matters is the disagreement:** rates and prediction markets repriced hawkishly off **PPI and oil** while the consensus for tomorrow's **core** is a deceleration — both tails stay live into a pair whose second day carries a 64% hike price *and* the SEP. **Volatility regime:** VIX (own probe) 14.53 (09-04) → 15.72 (09-08) → **16.46 (09-09)** → **17.84 (09-10)**. That is **+2.12** against the D-6 probe-ref of 15.72 — still inside the 3pt screen threshold, but the **largest single-interval move this ledger has logged**, a fifth consecutive higher reading, and the first time the level has left the 14–16 band it held all month. Independently corroborated: the sibling [`aapl-iphone-18-launch-2026-09-09`](aapl-iphone-18-launch-2026-09-09.md) probe-ref carries the same 17.84 today. D-11 called the guard's convexity "cheap"; it is no longer as cheap, which is a cost note, not a reason to drop it. **Geopolitical / energy — the driver went vertical.** Brent (own BZ=F probe, read 22:43 UTC 09-10): **$109.06**, from **$101.21** (09-09) and 97.92 (09-08) — **+7.76% in a session, +11.4% in two**; WTI 96.05 → **$103.90**. Press corroborates the level ("about $108 a barrel on Thursday afternoon, up from $101.53 on Wednesday"; oil up more than 8% in September). Dated drivers: CENTCOM destroyed **five** Iranian tankers in the Gulf of Oman and near Kharg earlier in the week; the IRGC navy said on **09-10** it targeted **two US Navy vessels, eight oil tankers and ten other ships** in response; Iran-aligned Houthi forces **seized a key port on Yemen's western coast** and struck Saudi energy assets at **Abha, Khamis Mushait, Jazan and Najran**, forcing a temporary halt to some operations (Saudi Foreign Ministry); Trump said the conflict will not end **until after the November midterms**. **"Brent above ~$95" remains FIRED and is now ~$14 past its trigger** — the level has lost its discriminating power and is flagged for re-cutting at close-out. **The companion "or any Kharg Island strike" is a badly-drawn condition, named rather than scored:** read on its literal words it was **already satisfied before it was written**, since a USAF raid struck Kharg Island's *military* sites (mine and missile storage) on **2026-03-13** while deliberately sparing oil infrastructure, with satellite imagery days later showing three tankers still moored and exports uninterrupted. Read as plainly meant — a strike on the **export terminal** — it still has **not** fired; the nearest event is Iranian state media reporting a US missile on a small tanker **four miles from** Kharg on 09-08. Rows are append-only, so the wording is corrected in *Signals & conditions* rather than in the original switch, the same treatment D-6 gave kill switch 5. **Global long end:** the **ECB hiked 25bp to a 2.50% deposit rate** (refi 2.65%, MLF 2.90%), its second hike in three months, explicitly citing the Iran conflict's inflationary pressure; it held its 2026 inflation forecast at **3.0%** and revised **2027 to 2.5% and 2028 to 2.1%, both higher**. Lagarde called the hike a "no brainer" and said the Governing Council **did not discuss** the future path, with markets moving to price more ahead. Logged as adjacency and as corroboration that the same energy input is repricing a second developed long end — with a third, the **JGB 20Y auction, on this auction's own date**. **Adjacency:** the corridor now carries **43** tracked ids, seven newly inside it since D-6 — `boe-decision-2026-09-17`, `bund-30y-auction-2026-09-16`, `empire-state-mfg-2026-09-15`, `jgb-liquidity-enhancement-1-5y-2026-09-10`, `sp-global-investment-manager-index-2026-09-15`, `uk-cpi-2026-09-16`, `uk-labour-market-2026-09-15` — **all seven already tracked**. Checked explicitly against today's two new primary documents and found already on the calendar: **every operation on the newly published buyback schedule** (`treasury-buyback-20y30y-2026-09-24`, `treasury-buyback-tips-1y10y-2026-09-29`, `treasury-buyback-10y20y-2026-10-01`, `treasury-buyback-2y3y-2026-10-06`, `treasury-buyback-20y30y-2026-10-08`, `treasury-buyback-10y20y-2026-10-15`, `treasury-buyback-20y30y-2026-10-27`, `treasury-buyback-10y20y-2026-11-04`, `treasury-buyback-1mo2y-2026-11-05`), plus `opec-plus-meeting-2026-10-04`, `ecb-decision-2026-10-29`, `midterm-elections-2026-11-03` and `treasury-refunding-2026-11-04`. One identification resolved rather than proposed: the **$19B 9-Year-10-Month reopening announced today for 09-17** (91282CRE3) carries a **2.375% coupon**, i.e. it is the **10-Year TIPS**, already tracked as `treasury-10y-tips-2026-09-17` — not an unlisted nominal. **So no new dated adjacency is proposed**, the second consecutive such row, and a fair reading of a 43-id corridor. | See **Stance update (2026-09-10, D-5)** above — guard unchanged for a seventh pass, but the auction is now the **easier** half of the pair: terms landed at **$13B** (six-for-six), the same-sector 30Y **stopped through by 2.7bp** with dealers at **2.2%** so sponsorship is not the long end's problem, and the price is — 30Y **5.37%** through its 5.31% trigger, 20Y **5.39%** and an **18.6bp** concession. The buyback resolved at a **tripled $6B** cap, then **under-filled for the first time in 2026** and sold the long end on both news; **912810UX4 is off the 40-name eligible list** (FT-1 holds) while the 2044–2046 band took **$671M** of mostly high-coupon paper (D-7's hedge refuted). Largest correction: D-6's CPI consensus was wrong at the primary and **backwards** — core is expected at **+0.2% / 2.4% y/y**, so an in-line core no longer arms the policy leg, even as hike odds hit **64.3%** on PPI **+0.4%** and Brent **$109** | **2026-09-11** (high, 0–7d band: every 1d) — CPI 08:30 ET, the hinge, against a +0.2% core consensus |
 | 2026-09-11 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 17.8 (+0.0pt since last), band unchanged (high:0+), 46 adjacent event(s) tracked, new in corridor since last pulse: `bowman-stress-testing-2026-09-18`, `eia-weekly-petroleum-status-2026-09-16`, `uk-retail-sales-2026-09-18` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-12 |
 | 2026-09-13 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 15.8 (-2.0pt since last), band unchanged (high:0+), 46 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-14 |
+| 2026-09-15 | D-0 | Adjacency sweep, written **pre-auction ~11:30 ET** on auction day; the release is 1:00pm ET and no result exists as this is written. Band unchanged (**high:0+**, every 1d); reached a session on the **staleness ceiling** (`event-material-scan` verdict `material`, reason `staleness-ceiling`, `screenStreak` 2 → reset 0), not on a crossing — VIX **17.76** (+1.9pt vs the 09-13 screen's 15.8, inside the 3pt band), 46 adjacencies, 5 strong, none new. **Peers:** n/a — `symbols: []`. **(1) THIS LEDGER'S D-5 "This week" CALL IS FALSIFIED.** Its registered falsifier was "a 2026-09-11 core CPI at **+0.3% m/m or higher**." Core printed **+0.3% m/m / 2.4% y/y** — unrounded **+0.2898%** off BLS's own SA index (337.765 ÷ 336.789, read at the primary by the sibling [`cpi-2026-09-11`](cpi-2026-09-11.md) close-out) — with headline **+0.4% / 3.4%**, gasoline **+3.9%** (*"over one third of the monthly all items increase"*) and shelter **+0.3%** accelerating. Fired by 0.0002pp of rounding, so D-7's badly-drawn-falsifier test is applied: it **passes** — the claim (an asymmetry between a +0.2% consensus and a 64.3% hike price) broke *with* the switch, unlike D-11's, which missed while its claim broke. Scored **wrong**, unhedged. **(2) THE ROW'S HEADLINE FINDING: a hot core BEAR-FLATTENED the curve.** Treasury CMT closes, 09-10 → 09-14 — 2Y **4.56 → 4.65** (+9bp), 3Y **4.63 → 4.73** (+10bp), 10Y **4.95 → 4.97** (+2bp), 20Y **5.39 → 5.37** (−2bp), 30Y **5.37 → 5.34** (−3bp); **2s30s 81 → 69bp, 2s10s 39 → 32bp**. The long end *rallied* on an inflation upside surprise, which is a policy-leg tape, not the term-premium tape D-5 declared was "running." The level story is untouched and at a cycle extreme — 10Y through **5.00%** today (own `^TNX` probe, 11:25 ET; press reads **5.02%**, highest since July 2007, with 20Y **5.4260%** and 30Y **5.3860%** intraday) — so the D-5 "this quarter" call is **demoted, not reversed**, and its falsifier is re-cut from a 30Y level to **2s30s > 81bp**, the only form that can tell the two legs apart. **(3) The same tenor cleared strongly overnight in Tokyo.** MOF's own result page for today's ¥700bn 20Y (issue 197, 3.7%, maturity 2046-06-20), fetched direct: lowest accepted **98.10 / 3.869%**, weighted average **98.25 / 3.856%**, **¥2,131.3bn** competitive bids on **¥532.1bn** accepted; Bloomberg puts bid-to-cover at **4.01** (prior 3.98, 12-month average **3.73**) and the tail at **0.15** (prior 0.17) — above-average demand at a cycle-high yield, hours before ours prices, and independent corroboration of `FT-…-3`'s premise. **(4) Terms re-read at two Treasury primaries this morning:** `upcoming_auctions` carries `912810UX4 · 19-Year 11-Month · reopening · 13,000,000,000 · announced 2026-09-10 · auction 2026-09-15 · issue 2026-09-18`, and the tentative-schedule PDF text layer reads `20-Year BOND R / Thursday, September 10, 2026 / Tuesday, September 15, 2026 / Friday, September 18, 2026`. Concession **16.6bp** to the 5.204% issue yield on the 09-14 close — *narrower* than D-5's 18.6bp. **(5) The pair's variance moved inside day two.** Polymarket's $172.8M book (fetched direct, stamp `2026-09-15T15:22:25Z`): **25bp increase 87.5% / no change 12.5% / ≥50bp 0.95% / cuts 0.3%**; CME FedWatch reported at **94.5%**, from 87.3% a day earlier (press). Up from a 64.3% aggregate at D-5 — so the *decision* is pre-paid and the **SEP + press conference** carry what is left; cross-venue gap re-opened to ~7pt with CME hawkish. **(6) Kill switch 5 fires a FOURTH consecutive pass — and breaks its own mechanism.** Own Yahoo probe 09-10 → 09-14 closes: CRWV **89.12 → 88.99 → 82.98** (−6.9%; −6.75% in the 09-11 → 09-14 session), MRVL **236.10 → 218.82** (−7.3%), AVGO **360.83 → 344.72** (−4.5%), NVDA **218.36 → 210.96** (−3.4%) — while **TLT 80.78 → 80.87 → 80.93** (**80.74** intraday today) did not move. Leg 5 said "a weak 20Y print hits high-duration AI names"; this week they took 4–7% with no weak print and **no long-end move at all**, so the reaction function is confirmed and its causal story is not. **(7) Three secondary numbers discarded at their primaries** — D-5's read-it-at-the-primary rule paying a fourth time in five days. An aggregated read gave Empire State at **−8.7**; the NY Fed's own release says *"fell thirteen points but remained positive at 7.6"*, prices paid **63.1** (+5), prices received **28.1** (+5) — a sign error that would have inverted the growth call, and internals that are hawkish on auction morning. A second aggregated read asserted there is **no** 20Y auction on 09-15 (a 30Y instead) and a third dated the next 20Y to **October 15**; the tentative-schedule text layer gives **Wednesday, October 21, 2026** (announce Oct 15, settle Oct 23), matching the calendar's existing `treasury-20y-bond-2026-10-21` — no correction owed to a sibling. **(8) Macro/geopolitical:** Brent **$103.16** (own probe, 11:25 ET), **−5.4%** off the 09-10 peak of $109.06 but still ~$8 past a trigger that lost its discriminating power a week ago; Fed blackout runs through 09-17, so no official voice reframes any of this before the statement. **Adjacency proposals: none.** The sweep surfaced no dated event this calendar does not already carry — every rates item on the tentative schedule inside the horizon (5Y TIPS 10-22, 10Y TIPS 11-19, 2Y FRN 12-23, 20Y 10-21/11-18/12-23) already has a file. **Blocked:** `cnbc.com/2026/09/14/10-year-us-treasury-is-closing-in-on-5percent.html` returned **403**, recorded in `probe-ref.blocked`; the 10Y figures above come from this session's own `^TNX` probe and a secondary that is labelled as such. Noted for the mechanism's own sake: D-5's prose says it recorded a Morningstar 403 in `probe-ref.blocked`, but the block carried no `blocked` key until this row added one — the array is now live. | **Yes — a scored miss and a demotion.** D-5's "This week" call is **falsified** by its own falsifier (core +0.3%). D-5's "this quarter" term-premium call is **demoted from the marginal story to the standing story** on the 2s30s 81 → 69bp flattening, and its falsifier is re-cut to a curve shape. D-5's "the auction is the easier day" **survives on new evidence** (Tokyo's 20Y at B/C 4.01 vs a 3.73 average; terms re-read at two primaries) but its *reason* is replaced: the FOMC no longer carries decision risk at an 87.5–94.5% hike price, it carries **dots-and-presser** risk. Leg 5's mechanism is narrowed — reaction function confirmed, causal story refuted by an unmoved TLT. The **guard is unchanged for an eighth pass**: no new duration risk into 1:00pm ET, none carried naked into the 09-16 statement. `FT-treasury-20y-bond-2026-09-15-4` registered. | 2026-09-16 (close-out window opens; `closeOutWithinDays` 6 → by 2026-09-21) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
