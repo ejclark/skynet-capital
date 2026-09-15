@@ -1,43 +1,48 @@
 # Fed Beige Book (pre-FOMC edition) — beige-book-2026-10-14
 
 **Kind:** macro-print · **Date:** 2026-10-14 (confirmed, FED: federalreserve.gov/newsevents/2026-october.htm lists "Beige Book" at 2:00 p.m. on October 14, and the Board's Beige Book schedule page lists Oct 14 as the seventh of eight 2026 editions — both fetched direct 2026-08-31) · **Impact:** medium
-**Last assessed:** 2026-08-31
-<!-- probe-ref: {"symbols":{},"vix":14.43,"daysBand":"medium:31+","adjacentIds":["cpi-2026-10-14","fomc-blackout-start-2026-10-17","import-export-prices-2026-10-16","opex-2026-10-16","ppi-2026-10-15"],"screenStreak":0} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.62,"daysBand":"medium:8+","adjacentIds":["bund-30y-auction-2026-10-14","cpi-2026-10-14","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-5y-auction-2026-10-14","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.federalreserve.gov/monetarypolicy/beigebook202609-summary.htm","status":"404 — NOT a dead page: the Board slugs an edition by its COLLECTION-CUTOFF month, not its release month, so the 09-02 edition lives at beigebook202608-summary.htm (fetched 200 today, 88,596 bytes). The 09-02 close-out's recorded 404 is hereby resolved as a URL-convention miss","at":"2026-09-15"}]} -->
 
 ## At a glance
 
-**TL;DR.** Read it, don't trade it — and read **the twelve District reports, not the national
-summary**. The Fed's district-level read lands **Wednesday 2026-10-14 at 14:00 ET**, five and a half
-hours after **CPI** (`cpi-2026-10-14`, 08:30 ET, `confirmed`, `high`), which is what the tape will
-actually be trading that session. Worse for the trade case: every edition states a collection cutoff
-**~9 days before release** (July 2026 edition: cutoff **2026-07-06**, published 07-15; Oct 2025
-edition: cutoff **2025-10-06**, published 10-15 — both from the Board's own summary pages), so the
-**2026-10-14 report closes its books around 2026-10-05 and cannot contain one word about the CPI
-printing that same morning.** What *is* new since the September sibling ledger is evidence, not
-theory: two Fed-system studies — **Boston Fed CPP (Burke & Nelson, 2025-11-06)** and **Cleveland Fed
-EC 2024-08 (2024-04-16)** — both find the forecasting signal lives in **District-level dispersion,
-over and above the national summary**. That is a procedure change, not a trade. The one branch that
-changes this event's weight is **funding**: the Fed is self-funded and published on schedule through
-the Oct 1–Nov 12 2025 shutdown, while BLS does not — so a **2026-10-01** lapse deletes CPI 10-14 and
-leaves this district-anecdote read as close to the only fresh federal evidence the **10-28 FOMC**
-sees. Date is now **confirmed** (two Fed primaries re-fetched this session), which licenses nothing
-by itself; the stance is stand-aside either way.
+**TL;DR.** Still **read it, don't trade it** — and at D-29 the stand-aside is no longer an argument,
+it is a **measurement**. The 09-02 sibling edition ran this doc's cheapest kill switch live and it
+**did not fire**: the release hour moved SPY **−0.053%**, TLT **−0.024%** and ^TNX **0.0bp**, the
+5th-largest of that session's 7 regular hours, on a day the wraps credited to ADP and oil. That is
+the first own-instrument evidence this calendar has that a Beige Book release hour is not a mover,
+and it upgrades legs 2 and 5 from *one 2005 paper, carried forward* to *measured once, in this
+regime*. **The funding branch is dead, in the retiring direction:** H.R. 6500 was signed
+**2026-09-02** as **PL 119-103**, funding through **2026-12-11** — so there is no 10-01 lapse, CPI
+10-14 prints normally, and this edition stays second billing rather than becoming the 10-28 FOMC's
+sole fresh federal read. It got *more* crowded, not less: `retail-sales-2026-10-15` is now
+`confirmed` `high`, a **second** high-impact quantitative print inside the corridor. **What actually
+changed the content forecast is energy.** Brent closed **$90.49** on 08-31 and **$109.31** today,
+first printing above $100 on **09-09**; WTI **$106.51**; August PPI carried diesel **+24.1%**; AAA
+national regular went **$4.0954 → $4.1514** in the week to 09-08 against a seasonally *falling*
+median. The 09-02 edition's books shut **2026-08-24** with Brent at **$92.17** and it still logged
+only **one** robust-price District and a *net cooling* pace tally (same 8 / decreased 3 / increased
+1). This edition's books shut **2026-10-02 to 2026-10-05**, so it is the **first Beige Book whose
+collection window sits wholly inside the $100+ Brent regime** — that is the diff to read, and it is
+registered as a scoreable forward test, not a position. Date re-verified **confirmed** on both Fed
+primaries today; that licenses nothing, and the stance is stand-aside regardless.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-44) | **Stand aside** | High | A qualitative report with no consensus number cannot be surprised against, and at D-44 nothing about it is priced. | A published pre-release Beige Book whisper that moves Oct-28 odds on its own before **2026-10-14** |
-| This week | **Stand aside here; the read that matters this week is the 2026-09-02 edition** | High | The **09-02** sibling edition (D-2) sets the counts this one gets diffed against, and the **House CR floor vote** is the week's actual decision. | The 09-02 release moving the tape in its own 14:00–15:00 ET hour, which would retire the weak-reaction leg this doc rests on |
-| This month | **Watch the funding branch, not the report** | Medium | A lapse from **2026-10-01** deletes CPI 10-14 and promotes this edition from second-billing to near-sole evidence into 10-28. | A CR signed before **2026-09-30**, which retires the lapse branch and leaves this an ordinary second-billing publication |
+| Today (D-29) | **Stand aside** | High | Nothing about a qualitative report with no consensus number is priced at D-29, and the one measurement that exists says its release hour does not move. | A published pre-release Beige Book whisper that moves Oct-28 odds on its own before **2026-10-14** |
+| This week | **Stand aside here; the week belongs to the 09-16 FOMC** | High | Hike odds read **91.4%** futures-derived (09-14) into a **09-16** decision with an SEP; a D-29 qualitative report is not this week's question. | This report being named a driver in any 09-15-to-09-18 session wrap, which would mean it carries pre-release weight it has never had |
+| This month | **Second billing is now confirmed, not conditional — read the energy diff** | Medium | The CR signed **2026-09-02** killed the lapse branch, and `retail-sales-2026-10-15` (`confirmed`, `high`) adds a second quantitative print to the corridor. | The 10-14 edition being published on any date other than 10-14, or CPI 10-14 slipping — either would re-open the "sole fresh evidence" case this row just closed |
 | This quarter | **Change how it is read, not whether it is traded — District reports over the national summary** | Medium | Two Fed-system studies (Boston Fed 2025-11-06; Cleveland Fed EC 2024-08) find District dispersion carries forecasting content the national summary does not. | A measured study showing the national summary dominates District dispersion for near-term forecasting, which would send the procedure back to two headline counts |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Never** — size anything to a 14:00 ET qualitative release; on **10-14** it is second billing to CPI at 08:30 the same morning.
-- **Read the twelve District reports, not the national summary** — Boston Fed (2025-11-06) finds the recession-forecasting value comes from District reports, not the summary.
-- **Diff two counts** against the 09-02 edition; July 15 baseline is prices **9 moderate / 2 robust / 1 slight** and labor **5 gains / 7 little-to-no change**.
-- **The cutoff caps it** — books close ~**2026-10-05**; nothing in this report can reflect CPI 10-14, PPI 10-15, or the blackout.
-- **The branch that re-weights this event** — no CR signed by **2026-09-30**: CPI 10-14 dies, this survives (the Fed published through the 2025 lapse), and it becomes the 10-28 FOMC's freshest federal read.
-- **Watch (dated)** — Beige Book **09-02** · funding deadline **09-30** · FOMC minutes **10-07** (est) · CPI + this report **10-14** · PPI **10-15** · import/export + opex + last legal Fed voice **10-16** · blackout falls **10-17** · FOMC **10-28**.
+- **Never** — size anything to a 14:00 ET qualitative release; on **10-14** it is second billing to CPI 08:30, with retail sales **10-15** behind it.
+- **The reaction leg is measured now** — 09-02's release hour: SPY **−0.053%**, TLT **−0.024%**, ^TNX flat, 5th of 7 hours. n=1, and 10-14 is the second sample (`FT-beige-book-2026-10-14-2`).
+- **Diff against 09-02, not July** — prices **8 moderate / 2 modest / 1 slight / 1 robust**, pace *same 8 · decreased 3 · increased 1*; labor **7 gains / 5 no change**; activity **10 of 12** slight-to-moderate.
+- **The energy call** — books shut **10-02 to 10-05**, wholly inside Brent **>$100** (first close 09-09, **$109.31** today): expect the price count to firm to **≥2 robust/strong** (`FT-beige-book-2026-10-14-1`).
+- **The funding branch is closed** — **PL 119-103** signed 09-02 funds to **12-11**; CPI 10-14 prints, and this stays second billing.
+- **Where this edition will live** — the Board slugs by **cutoff month**, not release month (10 editions checked, 5 discriminating): `beigebook202610-summary.htm`, and the 09-02 sibling's recorded 404 was that convention, not a dead page.
+- **Watch (dated)** — FOMC **09-16** · FOMC minutes **10-07** · CPI + this report **10-14** · PPI + retail sales **10-15** · import/export + opex **10-16** · blackout falls **10-17** · FOMC **10-28**.
 
 ## Initial research
 
@@ -201,42 +206,61 @@ national summary's two counts as a headline check rather than the job.
 ## Stance & kill switches
 
 **Stand aside. Read the 12 District reports as evidence into 10-28; take no position sized to the
-release.** Date is now `confirmed` (two federalreserve.gov primaries, 2026-08-31) — which removes a
-caution-widener but licenses nothing, since the reasons not to trade this are structural, not
-date-related. Concretely: no new risk opened for the 14:00 ET release, no adjustment to any tracked
-name on its content alone, and the 10-14 session is treated as a **CPI** session with a Beige Book in
-it. The July counts (prices 9/2/1, labor 5/7) are logged for diffing, to be superseded by the 09-02
-edition's counts at the next pulse.
+release.** Unchanged in direction and **strengthened in ground** (2026-09-15). The reason has moved
+from a carried-forward 2005 paper to an own-instrument measurement: the 09-02 sibling edition's
+release hour moved SPY **−0.053%** / TLT **−0.024%** / ^TNX **0.0bp**, 5th of 7 regular hours on a
+session the wraps credited to ADP and oil ([`beige-book-2026-09-02`](beige-book-2026-09-02.md)
+close-out). Date re-verified `confirmed` on both federalreserve.gov primaries today. Concretely: no
+new risk opened for the 14:00 ET release, no adjustment to any tracked name on its content alone,
+and the 10-14 session is treated as a **CPI** session with a Beige Book in it — now with retail sales
+(`confirmed`, `high`) the next morning as well.
 
-**Kill switches:**
+**Two things changed this pulse, and both are recorded as stance amendments rather than a reversal.**
+First, **the funding branch is closed in the retiring direction**: H.R. 6500 was signed 2026-09-02 as
+**PL 119-103**, funding through 2026-12-11
+([`government-funding-deadline-2026-09-30`](government-funding-deadline-2026-09-30.md)), so CPI 10-14
+prints and this edition never becomes the 10-28 FOMC's sole fresh federal read. The `medium` impact
+tier that was flagged for re-check under a lapse stays `medium`. Second, **the diff baseline resets
+from July to September**, and the content forecast now has an energy driver the September edition
+could not see: its books shut 2026-08-24 with Brent at **$92.17**, while this edition's shut
+**2026-10-02 to 2026-10-05**, wholly inside a **>$100** Brent regime (first close 09-09; **$109.31**
+on 09-15). Both amendments are read against a `confirmed` date and neither licenses an entry.
 
-- **The 2026-09-02 edition moving the tape in its own 14:00–15:00 ET hour with the release as the
-  named driver** — falsifies leg 5 for this regime and forces the reaction function to be rebuilt
-  from scratch rather than patched. This is the cheapest test available and it resolves in two days.
-- **No CR signed by 2026-09-30** — the lapse branch opens: CPI 10-14 dies, this report survives, and
-  its weight into 10-28 rises enough that the `medium` impact tier gets re-checked at the next pulse.
-  Kills "second billing," not the stand-aside.
-- **Four or more Districts describing "robust" or "strong" price growth on 2026-10-14** (vs two in
-  July) — district-side corroboration of the inflation-breadth case, landing inside a live hike
-  debate three days before the blackout; re-read the Oct-28 odds channel.
-- **Three or fewer Districts reporting employment gains on 2026-10-14** (vs five in July), or
+**Kill switches** (restated against the **2026-09-02** baseline — prices 8 moderate / 2 modest /
+1 slight / **1 robust**, pace *same 8 · decreased 3 · increased 1*; labor **7 gains / 5 no change**;
+activity 10 of 12 slight-to-moderate):
+
+- **Fewer than two Districts describing "robust" or "strong" price growth on 2026-10-14** — kills
+  the energy pass-through call registered as `FT-beige-book-2026-10-14-1`. If a ~20% Brent move
+  across the entire collection window cannot firm the price language, the Beige Book's price tally
+  is not an energy transmission channel and should stop being read as one.
+- **Four or more Districts describing "robust" or "strong" price growth** — the *upside* of the same
+  test: district-side corroboration of inflation breadth, landing three days before the blackout
+  inside a live hike debate. Re-read the Oct-28 odds channel; still not a position in this doc.
+- **Three or fewer Districts reporting employment gains on 2026-10-14** (vs **seven** on 09-02), or
   explicit layoff language — the district-side contradiction of "quite stable … consistent with full
-  employment," with no jobs print left before 10-28 to adjudicate it.
-- **A measurable tape move in the 2026-10-14 14:00–15:00 ET hour attributable to this release rather
-  than the morning's CPI** — falsifies leg 2. Stated with its own difficulty: on a CPI day the two
-  are hard to disentangle, so the test is the 14:00 hour specifically, not the session.
-- **The 10-14 release slipping or the time changing** — the entry is now `confirmed`; a schedule
-  change is a calendar correction, not a market signal.
+  employment." Re-based upward and correspondingly less likely to fire after August payrolls printed
+  **+162,000** vs a **+55k** consensus with July revised **−23,000 → +21,000**.
+- **The 2026-10-14 14:00–15:00 ET hour showing a larger absolute SPY move than the CPI-digestion
+  hour** — falsifies leg 2's "second billing" directly, and is registered as
+  `FT-beige-book-2026-10-14-2`. Stated with its difficulty: on a CPI day the two are hard to
+  disentangle, so the test is the hour-versus-hour comparison, never the session.
+- **The 10-14 release slipping or the time changing** — the entry is `confirmed`; a schedule change
+  is a calendar correction, not a market signal.
 
-**No forward test registered.** The stance takes no position sized to any branch, so there is nothing
-to score in [`forward-tests.md`](../forward-tests.md); the kill switches above carry the
-falsification, each with its date.
+**Two forward tests registered 2026-09-15** in
+[`forward-tests/beige-book-2026-10-14.md`](../forward-tests/beige-book-2026-10-14.md). Both are
+content/measurement claims that **size nothing** — the stance remains stand-aside and no branch of
+either outcome opens a position. `FT-beige-book-2026-10-14-1` predicts the energy pass-through in the
+price tally; `FT-beige-book-2026-10-14-2` takes the second sample of the release-hour measurement the
+09-02 close-out banked as a baseline and explicitly declined to promote on n=1.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-31 | D-44 | **Initial research.** Date/time verified on **two** federalreserve.gov primaries fetched today (October-2026 calendar: "Beige Book … October 14, 2:00 p.m."; Beige Book schedule page: Oct 14 is the seventh of eight 2026 editions) and the entry **promoted `estimate` → `confirmed` (`FED:`)** by its own initial-research session, per the convention `fomc-blackout-start-2026-10-17` and `import-export-prices-2026-10-16` both settled on 2026-08-31; the 09-02 sibling's non-promotion predates it. **Cutoff convention now measured, closing the 09-02 ledger's open limit:** July-2026 edition "collected on or before **July 6, 2026**" (published 07-15) and Oct-2025 edition "on or before **October 6, 2025**" (published 10-15) — **9 days** both times, so this edition closes books ~**2026-10-05** and cannot reflect CPI 10-14/PPI 10-15. **New evidence leg (not in the 09-02 doc):** two Fed-system studies locate the forecasting signal in **District dispersion, not the national summary** — Boston Fed CPP, Burke & Nelson **2025-11-06** ("the information that matters most … comes from the individual District reports rather than from the national summary"; helps most at short horizons; overlaps term spread/EBP/S&P but "not wholly redundant") and Cleveland Fed **EC 2024-08**, Filippou/Garciga/Mitchell/Nguyen **2024-04-16** (District heterogeneity forecasts recessions "over and above" national sentiment). Both 403'd to plain fetch; retrieved with browser headers. Forecasting axis ≠ reaction axis, so leg 5 (Zavodny & Ginther 2005, carried from the sibling, not re-derived) stands. **Adjacency sweep:** *peers* n/a (`symbols: []`). *Macro* — **CPI 10-14 08:30 ET is the same session and outranks this**; corridor is CPI 10-14 → PPI 10-15 → import/export + opex 10-16 → blackout 10-17. Hike-odds pricing still 08-28 vintage (CME ~59%, FedWatch 55.7–57.5%, Kalshi 48%, Polymarket 69% any-2026-hike, unreconciled); a fresh search returned contradictory aggregator figures and was **discarded, not averaged**. *Vol* — VIX **14.43** (2026-08-28 close, Yahoo via the material-scan probe path); 10y **4.72%**; baseline set, nothing to diff yet. *Geopolitical* — Brent **90.39** on 08-31, up from ~87.8 on 08-26, and July's edition already names energy and tariffs as cost drivers, so this is a live line in the report. *Funding* — base case still averted (both chambers passed a CR, one-week expiry gap, nothing signed); **2025 precedent verified**: the Fed published the Oct-2025 Beige Book on schedule **during** the Oct 1–Nov 12 2025 shutdown while BLS deleted the October CPI, so a lapse **upgrades** this event — calibrated down by the 2025 edition yielding one shutdown line, not a study. *Event tape* — no consensus, whisper or implied move exists for a qualitative report. **New calendar entry proposed:** `beige-book-2026-11-25` as `estimate` (the eighth 2026 edition, off the same Board schedule page, the pre-FOMC edition against the confirmed `fomc-2026-12-09`); governor speeches remain deliberately un-proposed per the 09-02 precedent, and the October calendar lists none anyway. | **New stance:** stand aside; read the twelve District reports rather than two national-summary counts, and treat 10-14 as a CPI session with a Beige Book in it. | 2026-09-21 (medium, 31+ band: every 21d) |
+| 2026-09-15 | D-29 | **Material on three probe reasons** (band `medium:31+`→`medium:8+`, VIX `+3.2pt`, new adjacent `retail-sales-2026-10-15`). **The cheapest kill switch ran and did NOT fire.** The 09-02 sibling's close-out measured its own release hour off Yahoo 5-min bars: SPY **−0.053%**, TLT **−0.024%**, ^TNX **0.0bp** — 5th of 7 regular hours by absolute move, and 43% of the ADP-digestion hour's range; no wrap named the release. Legs 2 and 5 upgrade from *one 2005 paper carried forward* to *measured once in this regime*. **Funding branch closed, retiring direction:** H.R. 6500 signed **2026-09-02** = **PL 119-103**, funds to **2026-12-11** — CPI 10-14 prints, this stays second billing, `medium` tier stands. The "This month" falsifier fired exactly as written. **Diff baseline reset July→September, re-verified at the Board primary today** (`beigebook202608-summary.htm`, HTTP 200, prepared at **Minneapolis**, cutoff **August 24, 2026**): prices **8 moderate / 2 modest / 1 slight / 1 robust**, pace *same 8 · decreased 3 · increased 1*; labor **3 modest + 4 slight = 7 gains / 5 no change**; activity **10 of 12** slight-to-moderate; outlook cites "higher energy prices, policy, and international conflict," and auto sales "dampened by … **high fuel prices**." Also new and second-order for the AI-infra sleeve: the summary names "defense and **data center**-related orders" and "a high concentration of activity related to data center projects." **Method finding — the 09-02 close-out's recorded 404 is resolved, not a dead page:** the Board slugs an edition by its **collection-cutoff month**, not release month. Verified on 10 editions, **5 discriminating** (2025-06-04→`202505`, 2025-09-03→`202508`, 2026-03-04→`202602`, 2026-06-03→`202605`, 2026-09-02→`202608`) with `202506`/`202509`/`202512` as 404 negative controls. This edition will be **`beigebook202610-summary.htm`**. **Adjacency sweep:** *peers* n/a (`symbols: []`). *Macro* — August payrolls **+162,000** vs **+55k** consensus, July revised **−23,000→+21,000**, u-rate **4.1%** (09-04); August PPI **+0.4% m/m / 5.4% y/y** vs 5.3% expected on energy **+4.2%**, **diesel +24.1%**, services +0.1% (09-10); August core CPI **+0.3%** (unrounded 0.29%, 09-11). **09-16 FOMC is tomorrow at 91.4% hike futures-derived / 86.2% venue VWAP**, with the year-end book at **49.3%** on two-or-more 2026 hikes — the 10-28 transmission channel this doc is second-order to is live in a way it was not on 08-31. *Vol* — VIX **14.43→17.62** (+3.19; 08-31 close 14.92), ^TNX **4.76→5.01** (10y through **5%**), ^FVX 4.51→4.84. *Geopolitical* — **the content driver.** Brent **$90.49** (08-31) → **$109.31** (09-15), first $100 close **09-09**; WTI **$106.51**; AAA national regular **$4.0954→$4.1514** week to 09-08 against a seasonally falling median; Hormuz tanker hit 09-14, a major Saudi pipeline still offline. The 09-02 edition's books shut at Brent **$92.17** and still logged net *cooling*; this edition's shut **10-02 to 10-05** (the sibling `beige-book-2027-05-26` FT-3 measures the convention as *the Monday nine days before, slipping to the prior Friday ~a quarter of the time*, n=27), i.e. **wholly inside the $100+ regime** — registered as `FT-beige-book-2026-10-14-1`. *Event tape* — still no consensus, whisper or implied move (structural). Corridor grew **5→28** adjacents; the only new *strong* one is **`retail-sales-2026-10-15`** (`confirmed`, `high`), a second quantitative print burying this release further. Board October calendar re-fetched today (HTTP 200, 92,711 bytes): Beige Book **14, 2:00 p.m.** unchanged, **still zero governor/president speeches listed** (leg 6 re-verified), and it now lists **FOMC Minutes Oct 7, 2:00 p.m.** — a primary that would promote `fomc-minutes-2026-10-07` from `estimate`, left to that event's own lane per one-file-per-owner. **No new dated calendar entry proposed:** all 28 corridor ids are already canonical or another lane's proposal, and the one Board-calendar item not obviously ours — G.19 Consumer Credit **10-07** — is already `consumer-credit-2026-10-07.json`. | **Amended, not reversed:** stand aside holds and is now *measured*; the funding branch is closed (CPI 10-14 prints, second billing confirmed), the diff baseline is September's not July's, and the read to prepare is the **energy pass-through into the price tally** — two forward tests registered. | 2026-09-22 (medium, 8+ band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
