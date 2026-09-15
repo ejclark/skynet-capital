@@ -71,6 +71,21 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **The Gulf shut-in recovery showing up in the IEA's August-month figure
+  (FT-iea-omr-2026-09-11-2)** — added 2026-09-15 from the
+  [iea-omr-2026-09-11 close-out](events/iea-omr-2026-09-11.md). It predicted the September 2026 OMR
+  would put August Middle East production shut in **under 8.3 mb/d**, the July figure, on Goldman's
+  2026-08-28 read that Gulf exports had recovered to 15–16 mb/d (~2/3 of pre-war). The September
+  edition printed **10.1 mb/d below pre-war** — supply **21.9 mb/d**, down 2.0 m/m — and Gulf exports
+  at **~13 mb/d, "nearly half their pre-war level."** Both halves of the thesis died: the shut-in
+  widened and the export recovery reversed. **Do not re-propose a Gulf-supply recovery off a
+  sell-side export estimate while the US–Iran standoff is unresolved** — the IEA deferred full
+  Middle East recovery to 2027 in the same edition, and the EIA's September STEO independently has
+  shut-ins *rising* 4.98 → 6.72 mb/d over the same two months. **One detail that must travel with
+  the kill:** this does not reinstate the unsourced "~10 mb/d" figure that
+  [`opec-plus-meeting-2026-09-06`](events/opec-plus-meeting-2026-09-06.md) carried for **July** —
+  July really was 8.3, and the number reached ~10 a month later by escalation.
+
 - **The 10-Year-over-5-Year sector ordering in JGB 1–5y liquidity-enhancement auctions
   (FT-jgb-liquidity-enhancement-1-5y-2026-09-10-1)** — added 2026-09-15 from the
   [jgb-liquidity-enhancement-1-5y-2026-09-10 close-out](events/jgb-liquidity-enhancement-1-5y-2026-09-10.md).
