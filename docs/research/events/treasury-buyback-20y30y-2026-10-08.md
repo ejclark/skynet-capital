@@ -1,12 +1,39 @@
 # Treasury liquidity-support buyback operation (20-30Y nominal, 1:40pm ET) — treasury-buyback-20y30y-2026-10-08
 
-**Kind:** rates · **Date:** 2026-10-08 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations, August 2026 Quarterly Refunding, published 2026-08-05 — PDF re-fetched and text-layer decompressed direct 2026-09-05, row reads announce 10/7, operation 10/8 1:40–2:00pm ET, settle 10/9, Liquidity Support, Nominal Coupons 20Y to 30Y, 10/09/2046–10/08/2056, min $0, max $2 billion **superseded** by sb0607) · **Impact:** medium
-**Last assessed:** 2026-09-05
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:31+","adjacentIds":["ecb-account-2026-10-08","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","ism-services-2026-10-05","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-2y3y-2026-10-06"],"screenStreak":0} -->
+**Kind:** rates · **Date:** 2026-10-08 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations, August 2026 Refunding Quarter — as of 2026-09-15 the primary is the **replacement** schedule, masthead "For Publication September 9, 2026", re-fetched direct and its text layer independently decompressed this session, HTTP 200, **89,250 bytes**, md5 `c49a5351bf2d31a367817abc62be51bd`, superseding the 125,547-byte August-5 document the initial research read. This row's date fields are byte-for-byte identical across the two — announce 10/7/2026 · operation 10/8/2026 1:40 pm–2:00 pm · settle 10/9/2026 · Liquidity Support · Nominal Coupons 20Y to 30Y · 10/09/2046–10/08/2056 · min $0 — but the **maximum changed**, from a flat `$2 billion` to **`= or > $4 billion`**, which is what sb0607 promised and what the initial research recorded as still unpublished) · **Impact:** medium
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.62,"daysBand":"medium:8+","adjacentIds":["consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0} -->
 
 ## At a glance
 
-**TL;DR.** Still **a read, not a trade** — but this corridor has been repeating a fact that is wrong,
+**TL;DR.** *(Rewritten 2026-09-15 at D-23. The direction is unchanged — read, not trade — but the
+model under it is now two models, and one of this doc's own registered tests is refuted out of sample
+before it scores. The 09-05 text is preserved verbatim below and in the ledger's first row.)*
+**A read, not a trade — and the number that decides it is now the announced maximum, not the date.**
+Three things this doc named as its own checks all landed. **One —** Treasury **republished** the
+buyback schedule (masthead *"For Publication September 9, 2026"*, re-fetched direct this session,
+**89,250 bytes**, md5 `c49a5351…`) and **this row's `$2 billion` became `= or > $4 billion`**; the
+supersession premise held. **Two —** the **09-10** 10Y-20Y operation, which this doc's "This week"
+horizon called *"the identical structure this event repeats a month later, in the one other sector
+with a 0-under-fill record,"* **broke that record on its first try at a raised cap**: max **$6B**,
+offered **$10.489B** (cover **1.75x**), accepted **$5.187B = 86.5%** — and it did so at **D+0**,
+40 minutes after a $22B 30-Year reopening, the exact structure 10-08 has. **Three — `FT-…-2`'s
+mechanism is dead.** That under-fill's largest single-CUSIP clip was **$1,703M**, eleven times the
+**≤ $150M** ceiling the shape test assigns to an under-fill, with **four** clips ≥ $312M. **The
+synthesis, and it reconciles this doc with the [2Y-3Y sibling's](treasury-buyback-2y3y-2026-10-06.md)
+cover rule rather than losing to it: there are two under-fill species and each doc found one.** *Type
+1, the price test* — this bucket's own two, at a $2B cap, on cover of **12.72x** and **18.00x**, every
+clip ≤ $150M, deep (10–39% fill); the cover rule cannot touch them, nothing near 2.5x was involved.
+*Type 2, the cover under-fill* — 09-10, a cap lifted **above** the offer book, a $1.7B block clearing
+freely, shallow. The clip test diagnoses Type 1 and is **silent** on Type 2. **So 10-08 reduces to
+arithmetic on 10-07's announced number:** at **$6B** this bucket needs a book above **$15.0B**
+(2.50x) — **$15.36B** for the 2.56x floor no $4B-or-larger operation has ever filled below — against a
+book that has not printed under **$19.87B** in 2026, i.e. ~**25% of headroom**; at **$4B** it is
+**4.97x** and ample; **at $8B the last book gives 2.48x and the call flips**. **09-24 prints this
+bucket's first number under the open-ended cap, nine days out, for free.** Date and cap `estimate`,
+`symbols: []`. Nothing here is a position.
+
+*(Superseded 2026-09-05 framing, kept for the record:)* Still **a read, not a trade** — but this corridor has been repeating a fact that is wrong,
 and the primary data corrects it. Every sibling ledger warns that "the cap is a ceiling, not a
 purchase" and cites **2026-03-19** as the precedent, the [10-15 doc](treasury-buyback-10y20y-2026-10-15.md)
 calling it *"one precedent, and the only one."* There is a **second**: on **2025-11-20** Treasury took
@@ -25,23 +52,55 @@ attributable to a 20-minute plumbing operation.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (2026-09-05, D-33) | Stand aside | High | Saturday, no session; markets reopen **09-08** after Labor Day. Thirty-three days out, `symbols: []`, no house playbook (S1/S2/E1/S3/S4 + G1) is rates-keyed, and the whole enlarged programme is worth ~1bp of 10Y support through year-end (BofA, 8/26, via press). | Treasury acting on the long end past `sb0607` before **2026-10-07** — a cap above $4B, added sectors or frequency, or the promised replacement schedule finally publishing with a materially bigger lever |
-| This week | Watch the **2026-09-09** announcement and **2026-09-10** operation — this doc's checks are free and early | High | The 09-09 announcement prints the **first hard number the doubled cap ever gets**, and 09-10 is itself a same-day auction/buyback pair (30Y reopening 1:00pm, 10-20Y operation 1:40pm) — the identical structure this event repeats a month later, in the one other sector with a 0-under-fill record. | The **2026-09-09** announcement printing a maximum below $4B, or being pulled — `sb0607`'s supersession premise fails and the [09-09 increase sibling](treasury-buyback-increase-2026-09-09.md) carries the same premise |
-| This month | Read the **09-24** operation as the out-of-sample test of this doc's own finding, and hold nothing through it | Medium | Same sector, and the window model makes a falsifiable call on it: the nearest prior nominal long-end auction is the **09-15** 20-Year reopening, i.e. **D+9** — outside the D+1..2 risk window — so it should fill to the announced cap. A cheap score three weeks before this event. | The **2026-09-24** operation accepting materially less than its announced maximum — the auction-proximity window is not what separates under-fills, and this doc's central finding is a post-hoc artifact |
-| This quarter | Stand aside on the programme as a yield driver; **2026-11-04** is where sizing is actually decided | Medium | `sb0607`'s doubling expires 11-04 by its own text and this sector's remaining operations inside it are **10-08** and **10-27**. Long-end yields have made fresh highs *since* the doubling was announced (10Y **4.784**, 30Y **5.246** on 09-04) — deficits and the Fed path are the drivers, not $2B a fortnight. | The **2026-11-04** refunding statement making the enlarged size permanent and larger, or long-end yields easing durably across the 09-24, 10-08 and 10-27 operations with no macro explanation — either means the lever is bigger than ~1bp |
+| Today (2026-09-15, D-23) | **Stand aside** | High | `symbols: []`, no house playbook is rates-keyed, and nothing about 10-08 has happened — its announcement is 22 days out. **FOMC 09-16 owns the long end this week**, not a 1:40pm plumbing operation: a **hike** reads **91.4%** futures-derived / **86.2%** venue VWAP, the 10Y has crossed **5.01%** (from 4.784 on 09-04) and VIX has gone **14.53 → 17.62**. | Nothing at this horizon; a stand-aside on a `symbols: []` plumbing event 23 days out has no falsifier that is not just the calls below |
+| This week | **Read the 2026-09-24 announcement (09-23) for the maximum before reading anything else** | High | It is the **first 20Y-30Y number under the open-ended cap**, and it decides which arithmetic 10-08 runs. If it prints **$6B** like 09-10, this bucket's 2.50x line sits at a **$15.0B** book and its last print was $19.87B; if it prints **$8B**, the last book gives **2.48x** and the base case inverts. The operation then prints the book and the fill the next day — a full out-of-sample test of both species, free, two weeks early. | The **09-23** announcement printing a maximum at or above **$8B** — the cover margin this doc's base case rests on is gone before 10-08 is announced, and `FT-…-3` is at risk on its own clause |
+| This month | **Base case is still a full fill on 10-08, but it is now conditional on the announced maximum, not on the date** | Medium | Downgraded from the 09-05 reading, which rested on D+0 being **2 of 2**. 09-10 showed D+0 is not protective — it under-filled at D+0 — and that cover (1.75x), not the auction date, explained it. What survives is arithmetic: this bucket's book has printed **$19.87–36.47B** across **24 consecutive** operations since 2024-11-20, so any maximum at or under **$6B** clears 2.50x with room. | The **10-07** announcement printing a maximum above **$6B**, **or** the **09-24** offer book coming in under **$15.4B** — either puts 10-08 inside the Type-2 zone and `FT-…-1`'s full-fill call with it |
+| This quarter | **Stand aside on the programme as a yield driver — leg 7 just got its cleanest confirmation** | High | Upgraded from Medium on a dated measurement, not a view: on **09-10** the programme made its **largest long-end purchase ever**, $5.187B — **2.6× anything that sector had ever bought** — and the 10Y rose **10bp that session** and **23bp over the week**, through 5%. ~1bp of support is what the tape says it is worth. **11-04 is still where sizing is decided**; the 09-09 republication left the front end at a flat $4B while six long-end rows went open-ended. | The **11-04** refunding statement making the enlarged size permanent and larger, **or** long-end yields easing durably across the 09-24, 10-08 and 10-27 operations with no macro explanation — either means the lever is bigger than ~1bp |
+| _(superseded 09-05)_ Today (2026-09-05, D-33) | Stand aside | High | Saturday, no session; markets reopen **09-08** after Labor Day. Thirty-three days out, `symbols: []`, no house playbook (S1/S2/E1/S3/S4 + G1) is rates-keyed, and the whole enlarged programme is worth ~1bp of 10Y support through year-end (BofA, 8/26, via press). | Treasury acting on the long end past `sb0607` before **2026-10-07** — a cap above $4B, added sectors or frequency, or the promised replacement schedule finally publishing with a materially bigger lever |
+| _(superseded 09-05)_ This week | Watch the **2026-09-09** announcement and **2026-09-10** operation — this doc's checks are free and early | High | The 09-09 announcement prints the **first hard number the doubled cap ever gets**, and 09-10 is itself a same-day auction/buyback pair (30Y reopening 1:00pm, 10-20Y operation 1:40pm) — the identical structure this event repeats a month later, in the one other sector with a 0-under-fill record. | The **2026-09-09** announcement printing a maximum below $4B, or being pulled — `sb0607`'s supersession premise fails and the [09-09 increase sibling](treasury-buyback-increase-2026-09-09.md) carries the same premise |
+| _(superseded 09-05)_ This month | Read the **09-24** operation as the out-of-sample test of this doc's own finding, and hold nothing through it | Medium | Same sector, and the window model makes a falsifiable call on it: the nearest prior nominal long-end auction is the **09-15** 20-Year reopening, i.e. **D+9** — outside the D+1..2 risk window — so it should fill to the announced cap. A cheap score three weeks before this event. | The **2026-09-24** operation accepting materially less than its announced maximum — the auction-proximity window is not what separates under-fills, and this doc's central finding is a post-hoc artifact |
+| _(superseded 09-05)_ This quarter | Stand aside on the programme as a yield driver; **2026-11-04** is where sizing is actually decided | Medium | `sb0607`'s doubling expires 11-04 by its own text and this sector's remaining operations inside it are **10-08** and **10-27**. Long-end yields have made fresh highs *since* the doubling was announced (10Y **4.784**, 30Y **5.246** on 09-04) — deficits and the Fed path are the drivers, not $2B a fortnight. | The **2026-11-04** refunding statement making the enlarged size permanent and larger, or long-end yields easing durably across the 09-24, 10-08 and 10-27 operations with no macro explanation — either means the lever is bigger than ~1bp |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+*Amended 2026-09-15 (D-23). The first six bullets are new or rewritten; the rest stand as written,
+with the two marked `superseded` kept for the record.*
+
 - **Never a position keyed to this operation**, and never an attribution of 10-08's tape to it.
   `symbols: []`, date and cap `estimate`, no house playbook is rates-keyed.
+- **The cap on this row is no longer a number — it is `= or > $4 billion`.** The replacement schedule
+  (masthead 2026-09-09, md5 `c49a5351…`, fetched direct this session) made **six** long-end rows
+  open-ended and left the front end at a flat $4B. **Never quote $2B as the expectation**; the
+  operative number prints **2026-10-07**.
+- **Two under-fill species, and they need different tests.** *Type 1 — the price test:* a cap far
+  below the book, every clip small, a deep under-fill. Both of this bucket's own (**2025-11-20** at
+  **12.72x** cover, **2026-03-19** at **18.00x**). *Type 2 — the cover under-fill:* a cap lifted above
+  the book, blocks clearing freely, a shallow miss (**2026-09-10**, 1.75x cover, 86.5%, a **$1,703M**
+  top clip). The [2Y-3Y sibling's](treasury-buyback-2y3y-2026-10-06.md) cover rule governs Type 2 and
+  says nothing about Type 1; this doc's clip test does the reverse.
+- **The one number to run on 10-07, stated as arithmetic:** cover = offer book ÷ announced maximum,
+  and **2.50x** is the line (**2.56x** is the lowest cover any $4B-or-larger operation has ever
+  filled at). At **$4B → 4.97x** on the last book; **$6B → 3.31x**; **$8B → 2.48x, below the line**.
+- **D+0 is not protective and this doc should stop leaning on it.** 09-10 was **D+0** after a $22B 30Y
+  reopening and under-filled anyway; cover explained it and the auction date added nothing. The
+  D+1..2 window survives only as a **Type-1** statement (2 of 5 there, 0 of 21 elsewhere).
+- **The offer-book thinning is programme-wide, not a 10Y-20Y quirk** — measured this session and new:
+  eligible universes are flat (**35–40** CUSIPs in both buckets all year) while par offered **per
+  eligible CUSIP** fell **$1,001M → $262M** in 10Y-20Y (Mar→Sep, **−74%**) and **$1,029M → $552M** in
+  20Y-30Y (Mar→Aug, **−46%**). Dealers are offering less; Treasury has no less to buy. 20Y-30Y is on
+  the same path, roughly six months behind.
+- **Leg 7 confirmed on the tape, not asserted:** on **09-10** the programme bought **$5.187B**, its
+  largest long-end take ever and **2.6×** anything that sector had bought, and the **10Y rose 10bp
+  that session and 23bp over the week**, through **5%**. ~1bp of support is the honest scale.
 - **The corridor's "only one under-fill" claim is retired.** Two, not one: **2026-03-19** ($0.205B of
   $2.000B, 10.3%) and **2025-11-20** ($0.785B of $2.000B, 39.3%). Base rate **2 of 26** (7.7%).
-- **Full fill is a long-end property, not a programme property.** Under-fills by bucket across all 131
+- _(superseded 09-15 — the 09-10 under-fill puts 10Y-20Y at 1/26)_ **Full fill is a long-end property, not a programme property.** Under-fills by bucket across all 131
   liquidity-support operations: 20-30Y **2/26** · 10-20Y **0/25** · 1Mo-2Y **0/10** — versus 7Y-10Y
   **9/9** · 5Y-7Y **10/10** · 2Y-3Y **7/9** · TIPS 10Y-30Y **4/4**. Importing a belly intuition into
   this sector is the actual error.
-- **The dated risk window: D+1 to D+2 after a nominal 20Y/30Y auction** — 2 of 5 under-filled there,
-  **0 of 21** elsewhere. **2026-10-08 is D+0**, and D+0 is **2 of 2** full fill.
+- _(superseded 09-15 — D+0 under-filled on 09-10; this now reads as a Type-1-only statement)_ **The
+  dated risk window: D+1 to D+2 after a nominal 20Y/30Y auction** — 2 of 5 under-filled there,
+  **0 of 21** elsewhere. **2026-10-08 is D+0**, and D+0 is **2 of 2** full fill *in this bucket*.
 - **The shape test, and the sharpest single number here:** all **24** full fills had a largest
   single-CUSIP accepted clip **≥ $312M** (median $1,042M); both under-fills had **≤ $150M**. Complete
   separation. Registered as [`FT-treasury-buyback-20y30y-2026-10-08-2`](../forward-tests.md).
@@ -51,11 +110,15 @@ attributable to a 20-minute plumbing operation.
 - **It still cannot bid for the bond being sold that morning** — eligibility, not range: CUSIP
   **912810UW6** is on-the-run through 10-08 and its first coupon (2027-02-15) is unpaid. Derived and
   registered by the [same-day 30Y sibling](treasury-30y-bond-2026-10-08.md); inherited here, not
-  re-litigated.
+  re-litigated. **New this session, and it removes a question rather than raising one:** the 20-Year
+  reopened **2026-09-15** (**912810UX4**, $13B, 5.420%) matures **2046-08-15**, *before* this
+  operation's range starts at **2046-10-09** — so neither the 09-15 nor the 10-21 20-Year is an
+  eligibility question here at all. It is out on **range**, which needs no FAQ clause to settle.
 - **Watch (dated):** 10-20Y **09-10** · 20-30Y **09-24** · 2Y-3Y **10-06** · **this operation 10-08**
   · 10-20Y **10-15** · 20-30Y **10-27** · 10-20Y **11-04** · 30Y auctions **09-10** and **10-08** ·
   20Y auctions **09-15** and **10-21** · CPI **09-11** and **10-14** · FOMC **09-16** and **10-28** ·
-  refunding **11-04**, where `sb0607` expires.
+  refunding **11-04**, where `sb0607` expires. *(09-15: 10-20Y **09-10** and the 20Y auction **09-15**
+  have now run; 7Y-10Y **09-17** and 10-20Y **10-01** join the list as further free cover-rule tests.)*
 
 ## Initial research
 
@@ -268,6 +331,24 @@ wholly inherited** from the same-day 30Y sibling.
 
 ## Stance & kill switches
 
+**Stance amendment, 2026-09-15 (D-23) — receipt is the second ledger row.** The direction does not
+move: **read, not trade**. The *mechanism* does, on three primary observations. **(a)** The published
+cap on this row is now **`= or > $4 billion`** (replacement schedule, masthead 2026-09-09), so the
+base case's "at least $4B" is no longer an inference from `sb0607` but the schedule's own text — and
+**$2B must never be quoted as the expectation**. **(b)** The **2026-09-10** 10Y-20Y operation broke a
+25-of-25 full-fill record at **D+0** after a $22B 30-Year reopening, on **1.75x** cover, taking
+**$5.187B of $6B**. D+0 is therefore **not protective**, and this doc's 09-05 reliance on it is
+withdrawn; the D+1..2 window survives only as a statement about **Type-1** (price-test) under-fills.
+**(c)** That under-fill's largest clip was **$1,703M** — so `FT-…-2`'s stated *mechanism* ("an
+under-fill is no block cleared") is **refuted out of sample before the test scores**. The row is
+append-only and the test is **not** withdrawn or reworded; what is recorded here, plainly and in
+advance, is that **its under-fill branch is now expected to fail** if 10-08 under-fills, and that the
+separation it found describes a **$2B-cap regime** this event will not run under. `FT-…-1` (full
+fill) **stands**, and now rests on arithmetic rather than on a date: at any announced maximum **at or
+below $6B**, the last offer book (**$19.87B**) gives cover of **3.31x or better**, above the **2.56x**
+floor at which no $4B-or-larger operation has ever filled. **At $8B it gives 2.48x and the call
+inverts** — which is why **10-07's number**, not 10-08's date, is now the thing to read.
+
 **Stance (date and cap `estimate`-labeled — tentative schedule, published cap superseded, confirming
 primary is the 10-07 announcement).** The 2026-10-08 20-30Y liquidity-support buyback is a **data
 release, not a catalyst**: no position keyed to it, no attribution of that day's tape to it. Base
@@ -302,8 +383,18 @@ auctions — are either already tracked or are exactly the ~1bp operations this 
 worth a calendar slot (the 09-10 sibling's rule: a specific warrant earns an entry, sector cadence
 alone does not). Ten tracked events already sit inside this event's ±5-day corridor.
 
+**A third forward test registered 2026-09-15** — `FT-treasury-buyback-20y30y-2026-10-08-3`, scoreable
+**2026-10-09**: the **cover-form** restatement of `FT-…-1`, which makes the base case falsifiable on a
+number published the day before rather than on a base rate. It predicts that 10-08's fill is decided
+by `offer book ÷ announced maximum` against a **2.50x** line, and that this operation clears it.
+
 **Kill switches:**
 
+- _(2026-09-15: the first switch below is now the sharper of the two — 09-24's announcement is **8
+  days** out and prints this bucket's first maximum under the open-ended cap.)_ **New switch:** the
+  **2026-10-07 announcement printing a maximum above $6B**, or the **09-24 offer book coming in under
+  $15.4B** — either puts 10-08 inside the Type-2 (cover) zone and inverts `FT-…-1`/`FT-…-3` before the
+  operation runs.
 - **The 2026-09-24 or 2026-10-27 operation accepting materially less than its announced maximum** —
   both are outside the D+1..2 window (D+9 and D+6), so either would refute the window model directly
   and return the under-fill risk to "unknown trigger." This is the cheapest test and it comes first.
@@ -331,6 +422,7 @@ alone does not). Ten tracked events already sit inside this event's ±5-day corr
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-05 | D-33 | **Initial research.** **The finding — the corridor's "only one under-fill" claim is false.** Every rates ledger here warns "the cap is a ceiling, not a purchase" citing **2026-03-19** alone; the [10-15 sibling](treasury-buyback-10y20y-2026-10-15.md) calls it *"one precedent, and the only one."* `buybacks_operations` (219 rows, primary, pulled this session) shows a second: **2025-11-20, $25.436B offered, $0.785B accepted of a $2.000B cap — 39.3% fill, 10 issues.** Sector base rate is **2 of 26 (7.7%)**, not 1 of 11. **Under-fill is a long-end rarity, not a programme property** — across all **131** liquidity-support operations: 20-30Y **2/26**, 10-20Y **0/25**, 1Mo-2Y **0/10**, versus 7Y-10Y **9/9**, 5Y-7Y **10/10**, 2Y-3Y 7/9, TIPS 16/31; the belly is price-constrained, the long end cap-constrained. **Dated risk window found:** both under-fills landed **D+1..2 after a nominal 20Y/30Y auction** — 2 of 5 there, **0 of 21** elsewhere, Fisher exact two-tailed **p = 0.031** (uncorrected, post-hoc, n=2 positives — flagged in Honest limits). **2026-10-08 is D+0**: the auction-schedule PDF (HTTP 200, 17,195 bytes) puts **30-Year BOND R** on *Thursday, October 08, 2026*, 1:00pm, **40 minutes before** the 1:40pm operation, next 20-Year **10-21**. D+0 is **2 of 2** full fill, the twin being **2026-04-09** — same-day $22B 30Y reopening, the sector's **largest book ever ($36.47B)**, full $2.00B taken from **one $1.9B clip**. **Mechanism, at CUSIP level (`buybacks_security_details`, 5,878 rows):** all **24** full fills had a largest single-CUSIP clip **≥ $312M** (median $1,042M); both under-fills **≤ $150M** ($150M/10 issues; $100M/5 issues) — complete separation, 2× gap. An under-fill is *no block clearing relative value*, not Treasury refusing the market. **Method trap recorded:** fiscaldata files 30-Year **TIPS** under `security_type: Bond` (2025-02-20, 2025-08-21, 2026-02-19); separable on `cpi_base_reference_period`, and a naive filter corrupts the gap table. **Null controls, recorded so they are not re-run:** offer volume, month, and reopening-vs-new-issue do not predict fill. **Two forward tests registered** — `FT-…-1` (10-08 accepts the full announced maximum; scores 2026-10-09) and `FT-…-2` (the shape test: largest clip ≥$312M on a fill, ≤$150M on an under-fill; scores 2026-10-09). **Event tape (primary):** buyback schedule PDF re-fetched **HTTP 200, 125,547 bytes — unrevised**, masthead still "For Publication August 5, 2026", so `sb0607`'s promised replacement schedule is **still unpublished 17 days on**; row verbatim announce 10/7 · operation 10/8 1:40–2:00pm · settle 10/9 · 20Y-30Y · 10/09/2046–10/08/2056 · max **$2B (superseded)**. This is the **second of three** 20-30Y operations inside `sb0607`'s 09-09→11-04 window (**09-24 · 10-08 · 10-27**). **Eligibility inherited, not re-derived:** 912810UW6 remains excluded on the FAQ's on-the-run and first-coupon clauses per the [same-day 30Y sibling](treasury-30y-bond-2026-10-08.md). **Adjacency — peers:** n/a (`symbols: []`). **Rates:** 10Y **4.784** · 30Y **5.246** (`^TNX`/`^TYX`, 09-04) — above where they sat when the doubling was announced. **Volatility:** VIX **14.53** (09-04) vs 15.20 on 09-02 and 16.34 on 09-01; calm and falling. 2026-09-05 is a **Saturday**, Labor Day 09-07, next session 09-08. **Macro (inherited, dated):** Aug payrolls **+162K vs ~53K** (09-04) reversed Waller's 09-03 dovish turn; FOMC blackout live 09-05→09-17. **Adjacency — 10 tracked entries already inside the ±5-day corridor; NOTHING new proposed:** the 09-24, 10-15, 10-27 and 11-04 operations and the 09-15/10-21 20-Year auctions are dated, known, and deliberately not filed on the ~1bp rule. | **Stance set** — read-not-trade, inherited; what is new is that the corridor's central caution now has a corrected base rate, a dated risk window this event sits outside, and a shape test | 2026-09-12 (medium; D-33 sits in the 31+/21d band, but days-out crosses 30 on 09-08 and the band tightens to 7d, which makes 09-12 the real first due date) |
+| 2026-09-15 | D-23 | **Pulse. Three of this doc's own pre-registered checks landed, and one of its two forward tests lost its mechanism.** **(1) The schedule was replaced.** `Tentative-Buyback-Schedule.pdf` re-fetched direct this session, HTTP 200, **89,250 bytes**, md5 `c49a5351bf2d31a367817abc62be51bd`, masthead **"For Publication September 9, 2026"** — superseding the 125,547-byte August-5 document (md5 `79b65955…`) the initial research read. **This row's maximum went from a flat `$2 billion` to `= or > $4 billion`**; dates, times and range are byte-identical. Six long-end rows became open-ended; the front end (10-06 2Y-3Y) stayed at a flat $4B. **(2) The 09-10 operation — this doc's own "This week" check — under-filled.** 10Y-20Y, max **$6B** (tripled), offered **$10.489B** (cover **1.75x**), accepted **$5.187B = 86.5%**, 23 issues of 40 eligible: the **first under-fill in 26** operations in that bucket. It ran at **D+0**, 40 minutes after the **$22B 30-Year reopening** (912810UW6, high yield **5.308%**) — the exact structure 10-08 has — so **D+0 is not protective** and this doc's 09-05 lean on it is withdrawn. **(3) `FT-…-2`'s mechanism is refuted out of sample.** That under-fill's largest single-CUSIP clip was **$1,703M** (912810ST6, 2040-11-15), **11×** the ≤$150M ceiling the shape test assigns to an under-fill, with **four** clips ≥$312M and a top-1 share of only 32.8%. The row is append-only and the test is not reworded: recorded in advance that **its under-fill branch is now expected to fail**. **The synthesis — two under-fill species, and this corridor's two docs each found one.** *Type 1, price test:* cap far below the book, all clips small, deep miss — this bucket's **2025-11-20** (cover **12.72x**) and **2026-03-19** (**18.00x**), which the [2Y-3Y sibling's](treasury-buyback-2y3y-2026-10-06.md) cover rule cannot touch. *Type 2, cover under-fill:* cap lifted above the book, blocks clear freely, shallow miss — 09-10. **10-08 is now arithmetic on 10-07's number:** at **$4B → 4.97x**, **$6B → 3.31x**, **$8B → 2.48x**, all on the last book (**$19.87B**, 08-18); the 2.50x line needs **$15.0B** at $6B and the 2.56x floor **$15.36B**. **New, measured this session:** the offer-book thinning is **programme-wide, not a 10Y-20Y quirk** — eligible universes flat at **35–40** CUSIPs in both buckets all year while par offered **per eligible CUSIP** fell **$1,001M → $262M** in 10Y-20Y (Mar→Sep, −74%) and **$1,029M → $552M** in 20Y-30Y (Mar→Aug, −46%). **Leg 7 confirmed on the tape:** the programme's largest long-end purchase ever ($5.187B, **2.6×** anything that sector had bought) landed 09-10 and the 10Y rose **10bp that session, 23bp on the week**. **Eligibility — one question removed:** the 20-Year reopened **09-15** (**912810UX4**, $13B, 5.420%) matures **2046-08-15**, *before* this operation's 2046-10-09 range start, so no 20-Year is an eligibility question here; 912810UW6's exclusion is unchanged and still inherited from the [30Y sibling](treasury-30y-bond-2026-10-08.md). **D+0 premise re-verified at the primary:** `Tentative-Auction-Schedule.pdf`, HTTP 200, **17,195 bytes** (unrevised), reads **30-Year BOND R · announce Thursday October 01, 2026 · auction Thursday October 08, 2026 · settle October 15, 2026**. **Adjacency — peers:** n/a (`symbols: []`). **Macro:** Aug **CPI core +0.3%** (unrounded 0.29%) and Aug **PPI +0.4% m/m / 5.4% y/y** vs 5.3% expected, both hot on energy; a **hike** at FOMC 09-16 reads **91.4%** futures-derived / **86.2%** venue VWAP, and the year-end book prices **49.3%** on two-or-more 2026 hikes. **Rates:** 10Y **5.01** (from 4.784 on 09-04, **+23bp**, through 5%) · 30Y **5.38** (+13bp) — a bear flattener, policy-path repricing. **Volatility:** VIX **17.62** vs **14.53** on 09-04 (**+3.09**, past the probe's materiality threshold); it broke a 28-session 14–17 range on 09-10. **Geopolitical:** Brent broke **$100** to ~**$108.5** on $16.36 of Nov→Mar backwardation — a supply curve, and the energy leg under both hot prints. **Adjacency — 20 tracked entries inside the ±5-day corridor (1 confirmed high/critical, ism-services-2026-10-05); NOTHING new proposed:** every dated item this sweep surfaced — the 09-17, 09-24, 09-29, 10-01, 10-06, 10-15, 10-21, 10-27, 11-04 and 11-05 operations and the 10-21 20-Year — is already a tracked event file. **One forward test registered:** `FT-…-3`, the cover-form restatement of the base case, scoring 2026-10-09. | **Mechanism changed, direction unchanged** — read-not-trade stands; D+0 withdrawn as protective, `FT-…-2`'s under-fill branch expected to fail, `FT-…-1` re-grounded on cover arithmetic with $8B as the inversion point | 2026-09-22 (medium, D-23 in the 8+/7d band) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
