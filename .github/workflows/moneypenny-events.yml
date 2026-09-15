@@ -416,6 +416,32 @@ jobs:
             echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
           echo "::endgroup::"
 
+      # THE COST METER (#2946). The step above prints the result envelope ONLY on failure, so the
+      # expensive path — a session that ran to completion — was the unmeasured one. That is why a
+      # lane which spent a full weekly token quota in ~24 hours showed nothing about it in its own
+      # logs: every successful session's total_cost_usd was read by nothing and discarded.
+      #
+      # One line per session, on every outcome. The ::notice:: makes it greppable in the run log;
+      # the step summary row aggregates all matrix legs into a single per-tick table, which is the
+      # view that answers "what did this push cost" without opening a job. Cheap enough to be
+      # unconditional — it is a jq read of a file the CLI already wrote.
+      - if: always()
+        name: Record this session's cost
+        run: |
+          F=/home/runner/work/_temp/claude-execution-output.json
+          ID='${{ matrix.event.id }}'
+          if [ ! -f "$F" ]; then
+            echo "::notice::cost — event=$ID no execution-output.json (died before Claude Code ran)"
+            echo "- \`$ID\` — no result envelope (died before Claude Code ran)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          COST=$(jq -r '.total_cost_usd // "?"' "$F")
+          TURNS=$(jq -r '.num_turns // "?"' "$F")
+          MS=$(jq -r '.duration_ms // "?"' "$F")
+          ERR=$(jq -r '.is_error // "?"' "$F")
+          echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
+          echo "- \`$ID\` — **\$$COST** · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
+
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
   # `feedback` — that label event is the work order (Eric: "I expected the issues to get received
