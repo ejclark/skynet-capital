@@ -4,7 +4,7 @@
   "title": "JOLTS Job Openings (Aug 2026)",
   "date": "2026-09-29",
   "status": "confirmed",
-  "source": "BLS: bls.gov/schedule/2026/09_sched_list.htm — 10:00 ET, checked 2026-08-18",
+  "source": "BLS: bls.gov/schedule/2026/09_sched_list.htm — 10:00 ET, checked 2026-08-18. Re-verified at a second BLS primary 2026-09-15 (bls.gov/schedule/news_release/jolts.htm, fetched direct, HTTP 200): the table reads verbatim 'August 2026 | Sep. 29, 2026 | 10:00 AM', with the next row 'September 2026 | Nov. 03, 2026 | 10:00 AM' independently re-confirming the tracked jolts-2026-11-03.",
   "impact": "medium",
   "symbols": [],
   "notes": "Second JOLTS in the window; fast turnaround per BLS's own schedule."
