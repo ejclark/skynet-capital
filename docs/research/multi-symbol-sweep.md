@@ -71,6 +71,40 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **An end-horizon projection cell as a standalone terminal-policy test
+  (FT-ecb-decision-2026-09-10-1)** — added 2026-09-15 from the
+  [ecb-decision-2026-09-10 close-out](events/ecb-decision-2026-09-10.md). It predicted the September
+  2026 ECB staff round holding **2028 headline HICP at or below 2.0%**; the round printed **2.1%**,
+  so the ECB raised its own end-horizon path and the row is killed **by one tenth**. **The framing
+  died, not the economics.** A single cell three years out, one tenth wide, cannot carry a
+  terminal-rate verdict: the same round states *"Headline inflation is expected to stabilise close
+  to 2.0% over the medium term, as the contribution from energy inflation is seen to be close to
+  zero"* — 2.1% is a path arriving at target, not a permanent overshoot — and the cell is mechanically
+  anchored by a **backwardated** oil strip (Brent assumptions **$89.5 / $78.0 / $73.6**), so it can
+  read benign while the near horizon is marked sharply higher. Which is exactly what happened:
+  **2027 went to 2.5% from 2.3%** and core to 2.6%, the joint read being "above target through 2027",
+  i.e. the argument **for** more tightening. Do not re-propose an end-horizon projection cell alone;
+  pair it with the near-horizon cell, as `FT-ecb-decision-2026-09-10-3` did — that sibling was
+  registered two days before the print for precisely this confound and **passed**. **One detail that
+  cuts both ways and must travel with the kill:** the timing argument attached to FT-3 was wrong on
+  the facts (the round's cut-off is **19 August 2026**, 22 days, not the ~8 inferred from the
+  March-2026 precedent), so the energy spike sat **outside** the assumptions and the staff marked
+  inflation up anyway — the bad premise made the lane's inference too *dovish*, not too hawkish.
+
+- **A channel kill written as an absolute percent move on a high-beta name
+  (the ECB "tracked name moves >2% in the 08:15–09:30 ET window" test)** — added 2026-09-15 from the
+  same close-out, and this one is a **method** kill with no forward-test id because it never had a
+  chance to be informative either way. Re-run `intraday-edges.mjs` gap distributions:
+  **|overnight gap| > 2% occurs on 19% of NVDA sessions, 20% AVGO, 32% MRVL and 54% CRWV**, whose
+  **median |gap| is 2.19%** — the kill line sat *below* CRWV's median, so "fired" and "did not fire"
+  carried almost the same information. On the event day two names crossed the raw line (MRVL
+  **-2.88%**, CRWV **-5.33%**) and **none** crossed on attribution: against QQQ's own **-1.22%** gap,
+  every beta-adjusted residual landed inside **±1σ** (NVDA +0.54σ, AVGO +0.53σ, MRVL **-0.04σ**,
+  CRWV -0.83σ, n=729 / CRWV n=367). Do not re-propose an absolute-percent event-attribution
+  threshold; use a **beta-adjusted residual in σ against the bench**. **And do not lay the window
+  over another tracked event's release time** — 08:15–09:30 ET contained the **08:30 ET PPI** print
+  (`ppi-2026-09-10`), so the window could not have attributed even a real move to the right cause.
+
 - **"A STEO release hour is quieter than an ordinary noon hour" as a citable base rate (FT-47)** —
   added 2026-09-10 from the [eia-steo-2026-09-09 close-out](events/eia-steo-2026-09-09.md). The null
   was built on **n=8 in-sample 2026 release days** (CL=F noon-hour median |move| 0.16% vs 0.27%) and

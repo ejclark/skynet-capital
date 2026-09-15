@@ -1,42 +1,44 @@
 # ECB Governing Council monetary-policy decision + press conference (Berlin) — ecb-decision-2026-09-10
 
 **Kind:** macro-print · **Date:** 2026-09-10 (estimate, EST: ecb.europa.eu Governing Council meeting calendar (press/calendars/mgcgc), re-fetched direct 2026-09-05 — reads verbatim "Governing Council of the ECB: monetary policy meeting hosted by the Deutsche Bundesbank in Berlin, Germany (Day 2), followed by press conference" on 10/09/2026, with a separate "Press conference following the Governing Council meeting of the ECB in Berlin" row the same date; filed estimate per this lane's no-self-confirm limit and because no confirmed source prefix exists for a non-Fed central bank) · **Impact:** medium
-**Last assessed:** 2026-09-10
-<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11"],"screenStreak":0,"blocked":[{"url":"https://rateprobability.com/ecb","status":403,"at":"2026-09-08"},{"url":"https://www.cnbc.com/quotes/.VIX","status":403,"at":"2026-09-08"},{"url":"https://ecb-watch.eu/","status":"200-but-client-rendered (body reads 'Loading data…'; no figures served to a fetcher)","at":"2026-09-08"},{"url":"https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query","status":"000 (curl, no response — runner egress)","at":"2026-09-10"},{"url":"https://www.treasurydirect.gov/instit/annceresult/press/preanre/2026/R_20260910_1.pdf","status":"200-but-unparsed (binary PDF, no extractable text)","at":"2026-09-10"}]} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.16,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11"],"adjacentStrongIds":["cpi-2026-09-11","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":0,"blocked":[{"url":"https://rateprobability.com/ecb","status":403,"at":"2026-09-08"},{"url":"https://www.cnbc.com/quotes/.VIX","status":403,"at":"2026-09-08"},{"url":"https://ecb-watch.eu/","status":"200-but-client-rendered (body reads 'Loading data…'; no figures served to a fetcher)","at":"2026-09-08"},{"url":"https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query","status":"000 (curl, no response — runner egress)","at":"2026-09-10"},{"url":"https://www.treasurydirect.gov/instit/annceresult/press/preanre/2026/R_20260910_1.pdf","status":"200-but-unparsed (binary PDF, no extractable text)","at":"2026-09-10"},{"url":"https://www.ecb.europa.eu/press/press_conference/monetary-policy-statement/2026/html/ecb.is260910~5b4603b5aa.en.html","status":404,"at":"2026-09-15"},{"url":"https://www.ecb.europa.eu/pub/pdf/other/ecb.projections202609_ecbstaff~8e340fc69d.en.pdf","status":"200-but-unparsed (binary PDF; the HTML edition of the same round was fetched and used instead)","at":"2026-09-15"}]} -->
 
 ## At a glance
 
-**TL;DR.** *(Rewritten 2026-09-10, post-decision.)* **The hike was dead information, exactly as
-written — and the projections underneath it were not.** The ECB delivered 25bp to a **2.50%**
-deposit rate (effective **09-16**), and the fetched primaries then broke this ledger's own terminal
-call: September staff HICP is **3.0 / 2.5 / 2.1** for 2026/27/28, so **2028 printed 2.1%, above
-2.0%** — **FT-…-1 is killed** — while **2027 came in at 2.5%** vs June's 2.3%, so **FT-…-3
-passed**. The finding is the *pair*: staff marked the inflation path **up** while cutting the Brent
-assumption **down** ($89.5/$78.0/$73.6 vs June's $96.9/$82.2/$77.1), so the revision is second-round
-and demand, not an energy-assumption artifact. Markets read it the same way — **~85bp of further
-tightening by end-2027, up from just under 70bp pre-announcement, with December fully priced**. The
-one leg that survived is the dovish mechanism: *"Wages do not show a material response to the energy
-shock at this stage"*, compensation per employee **3.3%** in Q2, **down from 3.5%**. Still nothing
-tradable here — `symbols: []`, no rates-keyed playbook. What the entry *did* buy is attribution, and
-it paid on its first live test: **10Y Bund +6.4bp to ~3.50%** and **US 30Y +~6bp to 5.35%** in the
-same session. Date remains **estimate** — no confirmed prefix exists for a non-Fed central bank.
+**TL;DR.** *(Rewritten 2026-09-15 at close-out — this event is scored and now goes quiet.)* **The
+stand-aside was right for the entry's entire life, and the close-out's re-run instruments say so
+with numbers rather than with the argument that motivated it.** On 09-10 no tracked name moved on
+this event beyond its own beta: the overnight gaps were NVDA **-1.44%**, AVGO **-1.21%**, MRVL
+**-2.88%**, CRWV **-5.33%** against a QQQ gap of **-1.22%**, and every beta-adjusted residual lands
+inside **±1σ** (MRVL **-0.04σ**, CRWV **-0.83σ**) — two names crossed the raw 2% kill line, **zero**
+crossed on attribution. The forward tests split as the D-0 row read them, now confirmed from
+primaries re-fetched today: staff HICP **3.0 / 2.5 / 2.1**, so **FT-…-1 is killed** (2028 at 2.1%)
+and **FT-…-3 passed** (2027 at 2.5% vs June's 2.3%); **FT-…-2 stays open to 2026-12-18**. The entry's
+actual product was **attribution**, and it held past its own date — the 10Y Bund is **3.5439%** on
+09-15, still climbing, so the 09-10 US long end was neither the auction's verdict alone nor a
+one-day ECB artifact. Two corrections this lane owes itself are in `## Outcome`: the 09-10 VIX
+close was **17.84**, not the 16.46 logged (that is 09-09's), and on the strip this lane can actually
+fetch, December is **unchanged** (2.70% vs 2.71% on 09-04) while **October** repriced to **65%** — a
+pull-forward, not more tightening. Date stays **estimate**: no confirmed prefix exists for a non-Fed
+central bank.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today | **Stand aside — and it held through the event itself** | High | `symbols: []`, no rates-keyed playbook; the hike was ~89–99% priced going in and nothing this book holds was sized to 08:15 or 08:45 ET. The 09-10 equity tape moved on energy and the US long end (SPX **-0.58%**, NDX **-0.65%**), not on Berlin | A tracked name (NVDA/AVGO/MRVL/CRWV) moving **>2%** in the **08:15–09:30 ET** window on **2026-09-10** attributable to the presser — scored at close-out from re-run instrument data, not from this row |
-| This week | **The auction is not the whole story — and this is now measured, not asserted** | High | Both long ends moved together on 09-10: **10Y Bund +6.4bp to ~3.5025%** (2011 high) alongside **US 30Y +~6bp to 5.35%** (June-2007 high), with the $22B reopening stopping at **5.308%** vs 5.216% in August. The confound this entry was created to name is real and dated | The **2026-09-10** euro session having closed with 10Y Bund within **±3bp** of its 09-09 level — it did not (+6.4bp), so this call now stands unless the close-out's re-fetch contradicts the level |
-| This month | **The terminal call is wounded — hold it at low confidence, and let 10-29 settle it, not this row** | Low | The ECB raised **both** out-year HICP cells on a **lower** oil path and said inflation stays *"well above target for an extended period"*; the strip moved to price December in full. Against that, wages are decelerating (**3.5% → 3.3%**) and Lagarde pre-committed to nothing | A hike at **2026-10-29**, or the 10-08 account showing the Council debating one — the "shortest hiking campaign since 2011" framing would be finished ahead of FT-…-2's own 12-17 scoring date |
-| This quarter | **Never size a US position to a non-Fed central bank on this calendar** | High | Euro policy reaches this book only second-order (dollar translation, global term premium) and both channels are already owned by [`fomc-2026-09-16`](fomc-2026-09-16.md); neither is instrumented here. EUR/USD **1.1619** on a hawkish ECB day, ~flat vs 1.1611 on 09-08, is the translation channel declining to move | The deposit rate being **above 2.50%** at the **2026-12-17** decision — the market strip beats the poll, the hiking cycle is longer than this doc assumes, and the euro leg earns a real weight (registered as **FT-ecb-decision-2026-09-10-2**) |
+| Today | **Stand aside — scored, and the channel kill did not fire** | High | Re-run `intraday-edges` data: every tracked name's 09-10 overnight gap is inside **±1σ** of what its beta on QQQ's own **-1.22%** gap predicts. MRVL cleared the raw 2% line with a residual of **-0.08%** — the whole move was the index | Nothing left: the test is scored. The line itself was mis-specified and is retired — **\|gap\| > 2% occurs on 54% of CRWV sessions** (median 2.19%), so an absolute-percent trigger was below the name's own noise. Future ECB ledgers use a σ residual |
+| This week | **The auction never was the whole story — and the confound outlived the event** | High | 10Y Bund **3.5439%** on **2026-09-15** (fetched), **+1.3bp** on the day and still making highs after the decision. The synchronised long end extended rather than retraced, so 09-10's **+6.4bp** Bund / **+~6bp** US 30Y pairing was a regime, not a one-session artifact | The 10Y Bund falling back **below ~3.40%** (its 09-08 level) while the US 30Y holds above 5.30% — the euro leg would be over-weighted and the 09-10 pairing coincidental after all |
+| This month | **The terminal call stays wounded at Low — 10-29 settles it, not this close-out** | Low | The staff raised **both** out-year HICP cells on a **lower** Brent path, and October hike odds went **~28–29% (09-10) → 65% (09-14, fetched)**. Against that: December's implied level is **unchanged** at 2.70%, wages decelerated **3.5% → 3.3%**, and Lagarde pre-committed to nothing | A hike at **2026-10-29**, or the **2026-10-08** account showing the Council debating one — "shortest hiking campaign since 2011" would be finished ahead of FT-…-2's own 12-17 date |
+| This quarter | **Never size a US position to a non-Fed central bank on this calendar** | High | The close-out measured the null directly: four tracked names, one hawkish ECB surprise, **zero** attributable moves. Euro policy reaches this book only via dollar translation and global term premium, both already owned by [`fomc-2026-09-16`](fomc-2026-09-16.md) and neither instrumented here | The deposit rate being **above 2.50%** after the **2026-12-17** decision — the strip beats the poll and the euro leg earns real weight (open as **FT-ecb-decision-2026-09-10-2**, score by 2026-12-18) |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Never** — no entry, exit or hedge was keyed to 2026-09-10 and none is keyed to 10-29 or 12-17. A hike priced at ~89–99% was a settled fact wearing an event's clothes, and that part of the call was right.
-- **The number that decides the terminal question is now 2027, not 2028** — 2027 headline printed **2.5%** (June 2.3%) and 2027 core **2.6%** (June 2.5%). Read against a **falling** Brent assumption, that is the ECB marking up the non-energy path (09-10).
-- **The staleness escape was real after all, and it cuts hawkish** — the September round's cut-off is **19 August 2026**, 22 days before publication, not the ~8 days this ledger asserted at D-2. Brent closed **$107.63** on 09-10 against a **$89.5** 2026 assumption, so the marked-up path sits on oil ~$18 *below* spot.
-- **The second read came back dovish and is the one leg still standing** — Lagarde did **not** attach the shock to wages: *"Wages do not show a material response to the energy shock at this stage"*, compensation per employee **3.3%** Q2 vs **3.5%** Q1 (09-10, ECB primary).
-- **The attribution rule (the practical use of this entry), now with a result** — before crediting the 09-10 US 30Y auction with the day's long end, check the Bund. Answer for 09-10: **+6.4bp**, a 2011 high, on the same session the US 30Y hit a June-2007 high. The auction does not get sole credit.
-- **The dovish material still on the tape** — August euro headline **3.3%** was energy (**14.3%**) over **services 3.3% → 3.0%** and **core 2.4%**. The US side rhymed on 09-10: PPI **+0.4% m/m** headline (energy **+4.2%**, diesel **+24.1%**) over core **+0.2%** vs **+0.3%** consensus.
-- **Watch (dated)** — **this decision 09-10** (est, delivered) · CPI **09-11** · FOMC **09-16** · Eurostat final HICP **09-17** · this meeting's **Economic Bulletin 09-24** · **account 2026-10-08**, the first look at how close October was · **SPF Q4 2026-10-30** (est, proposed in this PR) · next ECB decision **2026-10-29** · ECB decision **2026-12-17**, FT-…-2's scoring date.
+- **Never, and it is now measured** — no entry, exit or hedge was keyed to 2026-09-10, and the re-run instruments found no tracked name moving on the event beyond its beta. A hike priced ~89–99% was a settled fact wearing an event's clothes.
+- **A channel kill must be a σ residual, not an absolute percent** — the 2% line sat **below CRWV's median** overnight gap (2.19%; >2% on 54% of sessions, MRVL 32%, AVGO 20%, NVDA 19%). This is the close-out's most transferable finding.
+- **Never lay a kill window over another tracked event's release time** — 08:15–09:30 ET contained the **08:30 ET PPI** print (`ppi-2026-09-10`), so the window could not have attributed even a real move to Berlin.
+- **The number that decided the terminal question was 2027, not 2028** — 2027 headline **2.5%** (June 2.3%), core **2.6%**, on a **falling** Brent assumption ($89.5/$78.0/$73.6). The re-fetch adds the qualifier: the round says inflation *"stabilise[s] close to 2.0% over the medium term"*, so FT-1's kill is a narrow threshold miss, not a dead mechanism.
+- **The dovish leg still stands but now carries a hawkish clause** — *"Wages do not show a material response to the energy shock at this stage"* (compensation per employee **3.3%** Q2 vs 3.5% Q1) sits beside the projections' *"wage growth is expected to remain above its long-term average level."*
+- **Prefer a fetchable strip to a press-cited one** — the D-0 row's press figures ("~70bp → ~85bp, December fully priced") are not corroborated by the one series this lane can fetch: **2.70% (09-14) vs 2.71% (09-04)** implied for December, ~79bp/3.2 hikes. Recorded, not resolved; FT-2 untouched.
+- **Watch (dated)** — this meeting's **Economic Bulletin 09-24** · **account 2026-10-08**, the first look at how close October was · **SPF Q4 2026-10-30** (est, proposed at D-0) · next ECB decision **2026-10-29** · ECB decision **2026-12-17**, FT-…-2's scoring date.
 
 ## Initial research
 
@@ -318,3 +320,137 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+*Close-out, **2026-09-15** (D+5, inside `closeOutWithinDays: 6`). Every figure below is either
+**re-run instrument data** (caches busted first: `rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`, then `intraday-edges.mjs` re-run for NVDA/AVGO/MRVL/CRWV and
+QQQ) or a **primary re-fetched today** — never the D-0 row, and never memory of the tape.*
+
+**Verdict: the stand-aside was right for the entry's whole life, and it is now measured rather than
+asserted.** No tracked name moved on this event beyond its own beta; the one commitment the entry
+existed to make — attribution before crediting a US auction with a global long end — was tested on
+its own date and has since held past it. The terminal call stays wounded at Low and belongs to
+FT-2's **2026-12-18** scoring date, not to this section.
+
+### 1. Channel kill — DID NOT FIRE, and the test as written was mis-specified
+
+The kill: *a tracked name (NVDA/AVGO/MRVL/CRWV) moving >2% in the 08:15–09:30 ET window on
+2026-09-10 attributable to the presser.*
+
+**What the instrument can and cannot see.** `intraday-edges.mjs` returns regular-session bars only
+(78 five-minute bars per session, first bar **09:30 ET**). There are no pre-market bars, so the
+08:15–09:30 window is observable only as the **overnight gap into the 09:30 open** — the channel
+through which a pre-market repricing actually lands. That is the measurement used below, and it is
+named rather than papered over.
+
+| Name | 09-10 overnight gap | Beta to QQQ | Gap QQQ predicts | Residual | In σ |
+|---|---|---|---|---|---|
+| NVDA | **-1.44%** | 1.76 | -2.04% | +0.60% | **+0.54σ** |
+| AVGO | **-1.21%** | 1.78 | -2.05% | +0.84% | **+0.53σ** |
+| MRVL | **-2.88%** | 2.37 | -2.79% | -0.08% | **-0.04σ** |
+| CRWV | **-5.33%** | 2.74 | -2.99% | -2.34% | **-0.83σ** |
+
+*(QQQ's own 09-10 gap: **-1.22%**. Betas and residual σ fitted on the full cached hourly sample —
+n=729 sessions, CRWV n=367 — from the re-run instrument data.)*
+
+**Two names crossed the raw 2% line; zero crossed on attribution.** Every residual sits inside
+±1σ, and MRVL — which cleared the threshold at -2.88% — has a residual of **-0.08%**: its entire
+gap is a 2.37 beta applied to the index. CRWV's -5.33% is -0.83σ, i.e. a big number that is
+ordinary for CRWV. **Leg 8's "no tracked symbol carries a euro channel" survived its own test.**
+
+**The transferable finding is that the threshold was never a test.** Re-run gap distributions,
+|overnight gap| > 2%: **NVDA 19%** of sessions · **AVGO 20%** · **MRVL 32%** · **CRWV 54%**, whose
+median |gap| is **2.19%**. The kill line sat **below CRWV's median** — an absolute-percent trigger
+on a high-beta name fires on the name's ordinary noise, so a "fire" would have carried no
+information either. The honest form is the beta-adjusted residual this close-out used.
+
+**And the window was unattributable by construction.** 08:15–09:30 ET contains the **08:30 ET US
+PPI** print (`ppi-2026-09-10`, +0.4% m/m headline). Even a genuine >2σ residual could not have
+been assigned to Berlin rather than to Washington. Two design errors, both free to avoid next time.
+
+### 2. Forward tests — FT-1 **killed**, FT-3 **passed**, FT-2 untouched
+
+September 2026 ECB staff projections, **re-fetched from ecb.europa.eu 2026-09-15**: HICP
+**3.0 / 2.5 / 2.1** · core **2.5 / 2.6 / 2.3** · GDP **0.9 / 1.4 / 1.5** · Brent assumptions
+**$89.5 / $78.0 / $73.6** · cut-off **19 August 2026**. Key rates re-verified on the ECB's own
+key-rates table: deposit **2.50%** / MRO **2.65%** / MLF **2.90%**, effective **2026-09-16** — so
+the **priced kill** and the **date kill** both close having never fired.
+
+- **FT-ecb-decision-2026-09-10-1 — KILLED.** It predicted 2028 headline HICP **at or below 2.0%**;
+  the round printed **2.1%**. The ECB did raise its own end-horizon path.
+- **FT-ecb-decision-2026-09-10-3 — PASSED.** It predicted 2027 headline **at or above 2.5%**; the
+  round printed exactly **2.5%** (June: 2.3%), with 2027 core **2.6%**. It was registered at D-2 to
+  stop an FT-1 result being read alone, and it did that job: the joint read is *"above target
+  through 2027, 2.0% only by 2028"*, which is the argument **for** further hikes.
+- **FT-ecb-decision-2026-09-10-2 — open, unedited.** Score-by **2026-12-18**. This close-out scores
+  nothing about December and touches no cell of that row.
+
+**One qualification the re-fetch adds and the D-0 row did not have.** The projections state
+*"Headline inflation is expected to stabilise close to 2.0% over the medium term, as the
+contribution from energy inflation is seen to be close to zero"* — so 2.1% is a path **arriving**
+at target, not an endorsement of a permanent overshoot. FT-1 is still killed (2.1% > 2.0% is the
+cell that was pre-registered, and thresholds are not renegotiated after the fact), but it is a
+**narrow threshold miss, not a repudiation of the supply-side mechanism**. Against that, a hawkish
+sentence the ledger's dovish wage leg must now carry forward: *"wage growth is expected to remain
+above its long-term average level."*
+
+### 3. The attribution commitment held past its own date — the entry's justification
+
+10Y Bund **3.5439%** on **2026-09-15** (tradingeconomics, fetched today), **+1.3bp** on the day.
+The synchronised long-end move did not retrace after the decision; it **extended**. So the 09-10 US
+long end was neither the auction's verdict alone nor a one-day ECB artifact — it is a standing
+regime through at least 09-15, which is exactly what the D-5 row refused to assume from a
+six-session move and what the D-0 row measured on one.
+
+**Dispersion recorded, not resolved:** press on 09-10 called **3.5025%** a *2011* high, while
+tradingeconomics on 09-15 calls above 3.5% the *"highest level since June 2009"*. Both cannot
+describe the same threshold; named, not blended.
+
+### 4. Two corrections this lane owes on its own rows
+
+*Rows are append-only and stand as written; the corrections live here.*
+
+- **The 09-10 VIX close was 17.84, not 16.46.** The D-0 row logged 16.46 and left the dispersion
+  open against a review reading *"above the 17 level."* Yahoo's own daily series, fetched today:
+  09-08 **15.72** · 09-09 **16.46** · 09-10 **17.84** · 09-11 **15.84** · 09-14 **17.10** · 09-15
+  **17.16**. **16.46 is 09-09's close, placed in the 09-10 slot**; the "above 17" reading was the
+  right one. Δ on the 15.72 baseline is **+2.12**, still inside the 3-point screen threshold, so
+  nothing downstream changes — but the probe-ref now carries a real reading.
+- **The strip moved less than the D-0 row's press-cited figures imply — and in a different
+  place.** That row cited *"~85bp of further tightening by end-2027, up from just under 70bp"* and
+  *"December fully priced"*, all press-sourced. On the one strip this lane can actually **fetch**
+  (centralbank.watch), the December cumulative implied level is **2.70% (09-14 data)** against
+  **2.71% (09-04 data)** — **unchanged** — on ~**79bp / ~3.2 hikes** through 2027-09 vs ~80bp/3.2
+  on 09-04. What did move hard is **October: 65%** hike odds on 09-14 against the ~28–29%
+  press-cited on 09-10. The honest read is a **pull-forward, not an increase in total tightening**.
+  Two further details kept rather than smoothed: the page's *"current deposit facility rate 2.25%"*
+  is **correct** on 09-14, since 2.50% is effective 09-16; and its own 65%-October figure does not
+  reconcile with its 2.55% expected post-October level once that locked step is counted, so the
+  implied-**level** series is what is compared like-for-like above, both figures recorded as
+  fetched. **None of this scores FT-2**, whose date is 12-18.
+
+### 5. What the next ECB ledger inherits
+
+1. **Write a channel kill as a beta-adjusted residual in σ against the bench, never as an absolute
+   percent move** — an absolute 2% line sits below CRWV's median overnight gap.
+2. **Never lay an observation window over another tracked event's release time** — 08:15–09:30 ET
+   contained `ppi-2026-09-10`, so the window could not attribute even a real move.
+3. **Prefer a fetchable strip series to a press-cited one** for any pricing claim a later row will
+   compare against. Here the two disagreed and only one could be checked.
+
+**Adjacency:** no new dated event found this run; the D-0 row's `ecb-spf-q4-2026-10-30` proposal
+(`status: "estimate"`) already stands and is the next dated instrument that re-measures FT-2's
+disagreement. **Blocked today:** the guessed monetary-policy-*statement* URL returned **404**, so
+the *"Wages do not show a material response to the energy shock at this stage"* sentence is **not
+re-verified today** and rests on the D-0 row's own primary fetch — stated rather than assumed. The
+decisions release itself re-fetched clean and carries *"Inflation is set to remain well above
+target for an extended period"* and *"The Governing Council is not pre-committing to a particular
+rate path."*
+
+**Status stays `estimate`.** The ECB published the decision on the date, but
+`market-events-data.ts`'s confirmed-prefix taxonomy still defines no slot for a non-Fed central
+bank, so there is no honest prefix to flip to. The date is not in doubt; the label is about the
+taxonomy, and it belongs to whoever owns that file — not to this lane. This document now goes
+quiet.
