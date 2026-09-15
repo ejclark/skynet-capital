@@ -1,52 +1,63 @@
 # ISM Manufacturing PMI (Sep 2026 data) — ism-manufacturing-2026-10-01
 
 **Kind:** macro-print · **Date:** 2026-10-01 (**confirmed** as of 2026-09-05, ISM: the August-data report's own "next report" line names Thursday, October 1, 2026 at 10:00 a.m. ET verbatim — ismworld.org's ROB calendar is still SSO-gated, so the primary is ISM's authorized wire distribution) · **Impact:** high
-**Last assessed:** 2026-09-05
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"high:21+","adjacentIds":["adp-employment-2026-09-30","apple-eu-dma-terms-2026-10-01","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","ism-services-2026-10-05","jobs-2026-10-02","jolts-2026-09-29","mrvl-investor-day-2026-10-06","mu-2026-09-29-print","opec-jmmc-68th-2026-10-04","pce-2026-09-30","sp-select-sector-secondary-reweight-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26"],"screenStreak":0} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.72,"daysBand":"high:8+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.coinbase.com/predictions/event/KXISMPMI-26SEP","status":"403","at":"2026-09-15"},{"url":"https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/","status":"302 to ecommerce.ismworld.org/SSO/Login.aspx (SSO gate, standing)","at":"2026-09-05"}]} -->
 
 ## At a glance
 
-**TL;DR.** **Both branches this doc was built on resolved inside a week, and both resolved toward
-"ordinary."** The date is now **confirmed** — ISM's own August release names "Thursday, October 1,
-2026 at 10:00 a.m. ET" verbatim, which retires this doc's own claim that promotion was structurally
-impossible here. The **shutdown branch is dead**: Trump signed H.R. 6500 on **2026-09-02**, funding
-through **12-11**, so the 10-02 payrolls will print and this is no longer any corridor's only read.
-And **Chicago was adjudicated**: 09-01 printed **54.6** — a 1.0-point step down, nowhere near the
-sub-50 that would have vindicated Chicago's 47.1. The stability leg survives; the shutdown leg is a
-footnote. What is left is a print whose relative weight went **down**, because the corridor around it
-went from 6 tracked events to **18** — PCE, GDP-third, Chicago PMI, ADP and a G20 trade ministerial
-all on 09-30, payrolls on 10-02. One genuinely new reason to read it: **September is the first survey
-window that fully contains the Iran escalation.** WTI ran **$83.40 → $91.22** (08-28 → 09-04, +9.4%),
-and ISM *Services* Prices already printed **72.6** on 09-03 — its highest since Aug 2022 — with ISM's
-own chair naming Middle East conflict and "petroleum-related products, diesel, and gasoline… up in
-price." Manufacturing Prices was **flat at 71.1** in August. This is where that fuel channel lands.
-Still not a trade: `symbols: []`, no macro-keyed playbook, and the reaction-function story stayed
-refuted twice more.
+**TL;DR.** **The fuel channel this doc named as a watch ten days ago stopped being conditional — it
+is now a physical supply disruption, and the September survey window sits entirely inside it.** WTI
+went **$91.48 (09-04) → $104.75 (09-15)**, **+14.5%** since the last row and **+25.6%** since 08-28,
+on supply and not demand: five Iranian tankers destroyed near Kharg Island, Houthi strikes on four
+Saudi facilities, an Iranian blockade of GCC exports, Saudi's East-West pipeline (the 7 mb/d Red Sea
+workaround) shut after strikes from Iraqi territory, Hormuz traffic down to ~10 ships/day, Saudi
+output at its lowest since 1990, and **$16.36** of Nov→Mar backwardation pricing the shock as
+persistent. It is already in producer prices — August PPI energy **+4.2%**, diesel **+24.1%** — and
+**today's Empire State survey read the same September window this ISM will**: activity decelerating
+(headline **7.6**, −13pts; new orders **2.0**; shipments **−3.2**) while **prices paid hit 63.1**, a
+fresh four-year high. Manufacturing Prices sat flat at **71.1** for two months. The doc's informative
+line is **Prices ≥ 73** and it is now the **base case**, not a watch — registered as
+`FT-ism-manufacturing-2026-10-01-1`. Second thing that changed: **a real distribution finally
+exists.** Kalshi's ladder is live at D-16 (not D-8), **1,878 contracts** of open interest, implied
+mean **54.4**, modal bin **54.0–54.9 at 32%** — the first measured consensus proxy this doc has ever
+had, and the last row's "no distribution" reading was a **field-name artifact** on our side. Still
+not a trade: `symbols: []`, no macro-keyed playbook, and no reaction lean survives.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-26) | Stand aside | High | `symbols: []`, no house playbook is macro-keyed, and a `confirmed` date removes doubt without creating a reason to act. Kalshi's strike ladder opened 09-01 but returns no quotes, volume or open interest — structure, no distribution. | Nothing dated today; a confirmed date still buys no edge, and no September consensus or tradeable distribution exists to be surprised against |
-| This week | Watch **Prices**, and specifically the fuel channel | Medium | The September survey window is the first to fully contain the Iran escalation: WTI **+9.4%** since 08-28 and ISM Services Prices **72.6** (highest since Aug 2022) with petroleum named by ISM's own chair. Manufacturing Prices sat **flat at 71.1** in August. | Crude retracing under ~$83 (its 08-28 level) before the September survey window closes, which removes the input before it can print |
-| This month | Watch the **09-16 FOMC**, then re-read this print into it | Medium | Hike odds are venue-split ~50–66% and moving on every data point; the 09-16 decision, not this release, sets the rate regime this print is read against — and it is the last FOMC with an SEP before the 10-28 meeting, which has none. | The **2026-09-16** FOMC resolving the hike question decisively in either direction, which makes this print regime-confirmation rather than regime-input |
-| This quarter | Stand aside; treat the release as **one input among many**, not a signal | High | The corridor densified from 6 tracked adjacents to **18**, with PCE + GDP-third + Chicago PMI + ADP on 09-30 and payrolls on 10-02. A print the Fed acts on brackets this one on both sides. | A second lapse threat re-emerging before **12-11** and again deleting the federal prints around a Q4 ISM, which would restore the scarcity argument this row retires |
+| Today (D-16) | Stand aside | High | `symbols: []` and no house playbook is macro-keyed, so a measured consensus creates a **reading**, not a position. The Kalshi ladder is thin (1,878 OI, zero posted liquidity) and settles at 09:59 ET on the print — it is a scoreboard, not a venue we would size into. | Nothing dated today; a distribution existing still buys no edge while the release is symbol-less and no playbook targets it |
+| This week | Read **Prices first**, and expect **≥ 73** | Medium | WTI **+25.6%** since 08-28 with the whole September collection window inside the shock; PPI energy **+4.2%** / diesel **+24.1%** already carried it into producer prices; Empire State prices paid **63.1** (four-year high) read the same month. 73.0 is only a **+1.9** step from 71.1 and was last printed in **June**. | WTI closing under **~$83** (its 08-28 level) before the survey window closes, or the Nov→Mar backwardation flattening under ~$5 — either removes the input before ISM can record it |
+| This month | The **09-16 FOMC** settles the regime tomorrow, and it settles **hawkish** | High | Futures-derived hike odds **91.4%** (centralbank.watch, data as of 09-14), venue VWAP **86.2%**; the year-end book prices **49.3%** on two-or-more 2026 hikes against a June SEP median implying one. If the Fed hikes into an unresolved energy shock, this release's **Prices** line becomes its most policy-relevant number. | A **hold** on 2026-09-16, which would mean the Fed is discounting the energy shock as supply-side and demotes this print's Prices line straight back to noise |
+| This quarter | Stand aside; **one input among many**, and now among **52** | High | The corridor densified **18 → 52** tracked adjacents. Two of them read the same subject: **S&P Global's US manufacturing PMI final lands 09:45 ET on 10-01**, fifteen minutes ahead of this one, and its **flash prints 09-23** carrying the only published consensus in this survey's month. | A second funding lapse threat re-emerging before **12-11** and again deleting the federal prints around a Q4 ISM, which would restore the scarcity argument the last row retired |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never a trade on this print.** `symbols: []` and no house playbook is macro-keyed (S1/S2/E1/S3/S4
-  + G1 are all symbol/earnings-keyed). `confirmed` removes date doubt; it does not create an edge.
-- **Prices breaking above ~73** → the fuel channel landed; the hawkish line under an
-  inflation-anchored Fed, tightening caution on the longest-duration names (CRWV, then the semis).
-- **Prices holding flat near 71 again** (Aug 71.1, unchanged from July) → the least informative
-  outcome available, exactly as August delivered; read it as no information, not as relief.
+  + G1 are all symbol/earnings-keyed). A measured consensus does not change that; it sharpens reading.
+- **Prices ≥ 73 is the base case now, not the watch** — `FT-ism-manufacturing-2026-10-01-1`. It reads
+  as the hawkish line under an inflation-anchored Fed, tightening caution on the longest-duration
+  names (CRWV, then the semis).
+- **Prices holding flat near 71 a third month** → the shock did not reach the survey, and the doc's
+  whole fuel thesis is wrong on its own best test case; read it as a refutation, not as relief.
+- **The headline is the noisy leg, not the signal** — Kalshi's implied mean **54.4** is flat to
+  August's **54.6**, and this doc's own leg-3 rule (a regional survey does not extrapolate onto the
+  national series) applies to **Empire State's −13pt activity drop exactly as it applied to
+  Chicago's 47.1**. Prices is different in kind: the driver is a national fuel shock common to every
+  district, not a district idiosyncrasy.
 - **A sub-50 headline** → kills the stability leg; the 2026 expansion streak (eight straight months
-  above 50 through August) breaks and Chicago's collapse is retro-vindicated after all.
-- **Do not price a yield reaction into this release.** Three observations now, all pointing the wrong
-  way for the "hot ISM lifts yields" story — see the stance; the honest position is no reaction lean.
-- **Watch (dated):** UNSC Iran panel mandate **2026-09-26** · Dallas Fed mfg **2026-09-28** · JOLTS +
-  consumer confidence + MU print **2026-09-29** · PCE + GDP-third + Chicago PMI + ADP + G20 trade
-  ministerial **2026-09-30** · **this print 2026-10-01 (confirmed)** · jobs **2026-10-02** · OPEC
-  JMMC **2026-10-04** · ISM Services **2026-10-05** · MRVL investor day **2026-10-06** · FOMC
-  **2026-10-28** (no SEP).
+  above 50 through August) breaks and Chicago's collapse is retro-vindicated after all. Kalshi prices
+  that tail at **~1%**.
+- **Do not price a yield reaction into this release.** Three observations, all pointing the wrong way
+  for the "hot ISM lifts yields" story, and **no new one since 09-03** — the honest position is
+  unchanged: no reaction lean.
+- **Watch (dated):** **FOMC 2026-09-16** (decides the regime) · **S&P Global flash US PMI 09-23** —
+  the only surprise-testable read on this same survey window · Trump–Xi summit **09-24** · UNSC Iran
+  panel mandate **09-26** · Dallas Fed mfg **09-28** · JOLTS + consumer confidence **09-29** · PCE +
+  GDP-third + Chicago PMI + ADP + MU print + **EIA weekly petroleum (proposed est)** **09-30** ·
+  **this print 2026-10-01 (confirmed)**, with S&P Global mfg final 09:45 and construction spending
+  10:00 the same morning · jobs **10-02** · OPEC+ and JMMC **10-04** · ISM Services **10-05** · FOMC
+  **10-28** (no SEP).
 
 ## Initial research
 
@@ -264,22 +275,105 @@ is the reasoning under it, and three of the four things this doc was built to wa
    survey bracketed on both sides by prints the Fed actually acts on is one input among many — the
    exact inverse of the scarcity case the initial research built.
 
+**Amendment, 2026-09-15 (D-16) — the fuel channel stopped being a branch and became the base case,
+and the doc got its first measured consensus.** Stance stays **stand-aside** — `symbols: []`, no
+macro-keyed playbook, and nothing here creates an entry. What changes is that this doc now carries a
+**registered, falsifiable prediction** for the first time, and it is on the Prices line rather than
+the headline.
+
+1. **The crude move is a supply disruption, not a price wobble, and it spans the whole collection
+   window.** WTI daily closes: **$91.48 (09-04) → $93.03 (09-08) → $96.05 (09-09) → $102.48 (09-10)
+   → $100.05 (09-11) → $101.39 (09-14) → $104.75 (09-15)** — **+14.5%** since the last row,
+   **+25.6%** from the 08-28 baseline the original watch was written against. Brent **$108.47**. The
+   drivers are physical and dated: US forces destroyed five Iranian tankers near Kharg Island and in
+   the Gulf of Oman (09-09/09-10), Houthi strikes hit four Saudi facilities, Hormuz traffic fell to
+   ~10 ships/day, Iran blockaded GCC exports, Saudi Arabia shut its **East-West pipeline** — the
+   7 mb/d Red Sea workaround — after strikes from Iraqi territory, GCC–Iran restart talks were
+   postponed by Tehran, and Saudi output sits at its **lowest since 1990**, so no swing producer can
+   offset it. The curve agrees it persists: **$16.36** of Nov→Mar **backwardation** (per the
+   [`fomc`](fomc-2026-09-16.md) D-1 row). **The retracement kill switch is not close to firing** —
+   it asked for WTI under ~$83 and got $104.75.
+2. **It is already in producer prices, one month early.** August PPI (BLS primary, via the
+   [`ppi`](ppi-2026-09-10.md) close-out): final demand **+0.4% m/m / +5.4% y/y**, **energy +4.2%**,
+   **diesel +24.1%**, transportation & warehousing **+2.3%** — and August contained only the first
+   days of this. September is the first full month.
+3. **Today's Empire State read the same September window, and returned exactly the configuration
+   this doc is watching.** NY Fed release 2026-09-15: general business conditions **7.6** (down
+   **13 points**), new orders **2.0**, shipments **−3.2**, employment 10.6, **prices paid 63.1**
+   (+5, a fresh four-year high above its May peak), **prices received 28.1** (+5), six-month-ahead
+   29.0 — input *and* selling prices *"accelerated from already elevated levels."* **Activity
+   decelerating while prices accelerate.**
+4. **But this doc's own rule cuts both ways, and it is applied here rather than quietly dropped.**
+   Leg 3's finding is that a regional survey does not extrapolate onto the national series — that is
+   why Chicago's 47.1 was refused as a national forecast, and it is why **Empire State's −13pt
+   activity drop is refused as one too**. The **Prices** leg is different *in kind*, not merely
+   convenient: a national/global fuel shock is a common input to every district, whereas a
+   district's activity swing is idiosyncratic. So the registered prediction goes on Prices only, and
+   the headline call stays deliberately agnostic.
+5. **Kill switch "a published September consensus emerges" — FIRED, at D-16.** Kalshi
+   `KXISMPMI-26SEP`, fetched direct 2026-09-15, now carries a live distribution: **≥51 $0.99 · ≥52
+   $0.95 · ≥53 $0.85 · ≥54 $0.63 · ≥55 $0.31 · ≥56 $0.12 · ≥57 $0.05 · ≥58 $0.01**, total open
+   interest **1,878** contracts with **950** traded in the last 24h across the 54/55/56 strikes.
+   Implied bins: modal **54.0–54.9 at 32%**, median in the 54s, **implied mean 54.4** — essentially
+   flat to August's 54.6, with the sub-50 tail at **~1%**. Posted liquidity is **$0.00** on every
+   strike, so this is a scoreboard to read, never a venue to size into.
+6. **And the last row's "no distribution" reading was our error, at least in part — recorded as a
+   research miss.** The D-26 row reported the endpoint returning "null for every price, volume and
+   open-interest field." The un-suffixed legacy keys (`yes_bid`, `last_price`, `volume`,
+   `open_interest`) **are** undefined in the current Kalshi API version; the live values sit on
+   `_dollars`/`_fp`-suffixed keys (`last_price_dollars`, `open_interest_fp`). Whether the ladder
+   actually held positions on 09-05 cannot be recovered from this endpoint and **is not claimed
+   either way** — what is claimed is that the reading method was wrong, and the fix is to read the
+   suffixed keys on every future pulse.
+7. **The rate regime settles tomorrow, hawkish, and that raises what Prices means.** Futures-derived
+   hike odds **91.4%** (centralbank.watch, *"data as of September 14"*), venue VWAP **86.2%**
+   (Kalshi 85.5% / Polymarket 86.5%); August core CPI printed **+0.3%** (unrounded 0.29%) against a
+   65%-priced +0.2%, and the year-end book now prices **49.3%** on two-or-more 2026 hikes against a
+   June SEP median implying one. A Fed hiking into an unresolved supply shock is a Fed for whom this
+   release's Prices line is the most policy-relevant number in it.
+8. **Regime and corridor.** VIX **14.53 → 17.72** (+3.19, probe reading today; the Yahoo daily bar
+   closes **17.69** — a late-tick difference, recorded rather than reconciled) — the probe's 3-point
+   regime threshold tripped, and the year-low regime five sibling docs flagged for weeks is over.
+   10Y **4.78 → 4.99** (+21bp), and the 09-10→09-14 move was a **bear flattener** (2Y +9bp, 30Y
+   −3bp, 2s10s 39→32bp) — a policy-path repricing. **XLI**, the nearest tradeable proxy to this
+   print's subject, fell **175.27 → 168.76, −3.7%**. Cadence band **high:21+ → high:8+** (interval
+   7d → 3d). Corridor **18 → 52** tracked adjacents; the strong subset is
+   `ism-services-2026-10-05`, `jobs-2026-10-02`, `mu-2026-09-30-print` (MU's print moved 09-29 →
+   09-30) and `pce-2026-09-30`.
+9. **Two adjacents now read the same subject as this print, and one of them beats it to the tape.**
+   [`sp-global-manufacturing-pmi-2026-10-01`](sp-global-manufacturing-pmi-2026-10-01.md) publishes
+   its US manufacturing final at **09:45 ET on 10-01**, fifteen minutes before this release; per its
+   own ledger the **final carries no published consensus and the flash does**, which makes
+   [`sp-global-flash-us-pmi-2026-09-23`](sp-global-flash-us-pmi-2026-09-23.md) the only
+   surprise-testable read on this same September survey window — and it lands **D-8**, in time to
+   move this doc before the print.
+
 **Kill switches:**
 
-- ~~**A CR is signed before 2026-09-30**~~ — **FIRED 2026-09-02**, scored in the amendment above.
+- ~~**A CR is signed before 2026-09-30**~~ — **FIRED 2026-09-02**, scored in the 09-05 amendment.
   Retired.
 - ~~**No CR by 2026-09-30**~~ — dead by the same signature; the inverse branch cannot occur. Retired.
 - ~~**ISM prints sub-50 on 2026-09-01**~~ — **did not fire**; 54.6 printed, missing the trigger by
   4.6 points. Retired, and leg 3 is upgraded from argued to tested.
-- **A published September consensus emerges** — resolves leg 9; re-run the surprise framing against a
-  real number instead of trend extrapolation. **Not fired at D-26:** no street forecast is findable,
-  and Kalshi's `KXISMPMI-26SEP` ladder (8 cumulative strikes, "at least 51" through "at least 58",
-  opened 2026-09-01 16:00 ET) returns **no quotes, volume or open interest** on its public endpoint —
-  the venue exists, the distribution does not. The 09-01 sibling's own history says expect a real
-  distribution around D-8.
-- **Prices break above ~73, or the crude move reverses under ~$83** — the fuel channel either lands
-  in the September survey or is removed before it can; this replaces the retired shutdown pair as the
-  doc's live dated watch.
+- ~~**A published September consensus emerges**~~ — **FIRED 2026-09-15 at D-16**, a week earlier
+  than the 09-01 sibling's D-8 history predicted. Kalshi's `KXISMPMI-26SEP` ladder carries a live
+  distribution (implied mean **54.4**, modal bin 54.0–54.9 at 32%, 1,878 OI); the surprise framing is
+  now measured against a number rather than extrapolated from trend. Retired — superseded by the
+  headline-vs-distribution watch below. Still **no street consensus** published, so this is a
+  prediction-market proxy and is labelled as one everywhere.
+- ~~**The crude move reverses under ~$83**~~ — dead in practice, not merely unfired: WTI closed
+  **$104.75** on 09-15, **+25.6%** from the $83.40 that defined the trigger, on a physical supply
+  disruption with no swing producer. Retired as a live switch; replaced by the backwardation test
+  below, which is the version that could still plausibly move.
+- **Prices print below 73.0 on 2026-10-01** — the shock did not reach the survey and this doc's
+  central live claim is refuted on its own best test case. Registered as
+  `FT-ism-manufacturing-2026-10-01-1`; scores 2026-10-02.
+- **The Nov→Mar WTI backwardation flattens under ~$5, or WTI closes under $90, before 2026-09-30** —
+  the supply premium is unwinding inside the collection window, which weakens the Prices call without
+  needing the (now implausible) full retrace to $83. Currently **$16.36** and **$104.75**.
+- **The Fed holds on 2026-09-16** — at 91.4% futures-derived odds this is the tail, but it is the one
+  outcome that demotes the Prices line straight back to noise: a Fed treating the shock as
+  supply-side and looking through it is a Fed that does not act on an ISM Prices print either.
 - **The Fed stops being inflation-anchored** — a payroll print pulling hike odds down hard, or the
   question repricing from hold-vs-hike to hold-vs-cut — at which point the headline reclaims primacy
   over the Prices line and this doc's reading order inverts. **Not fired, and the 09-04 payrolls
@@ -287,7 +381,12 @@ is the reasoning under it, and three of the four things this doc was built to wa
   revised **up a combined +55k** (BLS USDL-26-1435), and hike odds rose rather than fell. Level stays
   venue-split — ~59–60% CME FedWatch post-print per the [`jobs`](jobs-2026-09-04.md) close-out,
   against a ~50% reading in same-day AP/Yahoo wire copy that credits dovish Waller remarks; the
-  direction is the reliable part, the level is not.
+  direction is the reliable part, the level is not. **Still not fired at D-16, and the venue spread
+  this switch complained about has collapsed:** August core CPI printed **+0.3%** on 09-11 against a
+  65%-priced +0.2%, and hike-25 now reads **91.4%** futures-derived against an **86.2%** venue VWAP —
+  a ~5-point spread where it was ~10. Cut odds are still **0.0%** everywhere. The Fed is more
+  inflation-anchored than when this switch was written, not less, which is why the reading order
+  (Prices before headline) is now the doc's registered position rather than its caution.
 - **A clean, unconfounded observation of this release's day-of reaction arrives** (an ISM print not
   sharing its session with a Fed event or a weekend risk headline) — leg 4's non-finding can then be
   replaced with a measurement instead of a caveat. **Still not fired — and two more observations
@@ -298,7 +397,10 @@ is the reasoning under it, and three of the four things this doc was built to wa
   configuration at the strongest levels of the year — and the 10Y **fell** 3.4bp to 4.762% while
   QQQ rose 1.19%, which the services ledger scores as an outright **REFUTATION** of that mechanism
   on its own best test case. Three observations, no directional lean survives; **price no reaction
-  into 10-01.**
+  into 10-01.** **Nothing new at D-16 — and that is the honest report, not an omission:** no ISM
+  print has landed since 09-03, so the count stays at three and the non-finding is unchanged. The
+  next candidate observation is this release itself, and it will be confounded again — S&P Global's
+  manufacturing final lands 09:45 ET and construction spending 10:00 ET the same morning.
 
 ## Assessment ledger
 
@@ -306,6 +408,7 @@ is the reasoning under it, and three of the four things this doc was built to wa
 |---|---|---|---|---|
 | 2026-08-29 | D-33 | Initial research banked (above). **Date:** stays `estimate` — ismworld.org's ROB calendar fetched directly today and returned a 302 to `ecommerce.ismworld.org/SSO/Login.aspx`, independently re-confirming the sibling's gated-primary limit; 2026-10-01 is a Thursday with no holiday, so the first-business-day rule lands there and aggregators converge. **The rule was tested out-of-sample:** PRNewswire's July ISM release datelines **2026-08-03** (2026-08-01 was a Saturday) — which confirms the cadence rule *and* records that the [`09-01 sibling`](ism-manufacturing-2026-09-01.md) dates that release 08-01 in four places; not edited there (rows are append-only), corrected here, and it matters because that doc's reaction leg is pinned to a session that did not exist. **Base rates established:** ISM 2026 = 52.4 · 52.7 · 52.7 · 54.0 · 53.3 · **55.6** (Feb→Jul), a 3.2pt range, largest monthly move +2.3, six-month sample σ ≈ **1.2**, seventh straight month above 50 after eleven at-or-below through Dec 2025 — against Chicago's trailing-12m σ **7.59** and 47.1–62.7 range. Different windows; the order of magnitude is the point, and it says Chicago's 47.1 does not extrapolate. July subcomponents (PRNewswire primary): New Orders 56.7, Production 58.5, Employment 52.8, Supplier Deliveries 58.9, Inventories 51.2, **Prices 71.1**, Backlog 55.0, New Export Orders 53.0. Adjacency sweep — **peers:** n/a, `symbols: []`; nearest tracked prints are MSFT 10/27, GOOG+META 10/28, AAPL+AMZN 10/29, all outside the window. **Macro surprises:** Warsh's 2026-08-28 Jackson Hole keynote pinned the hawkish case to inflation and drove September hike odds ~35% → 56–59% (sibling [`jackson-hole`](jackson-hole-2026-08-28.md) close-out) — carried, not re-derived; it is why Prices outranks the headline in this doc's reading order. **Volatility regime:** VIX **14.51** (`event-material-scan` probe, 2026-08-28 close) — baseline established, nothing to diff against yet. **Geopolitical/policy — the material finding:** FY2026 funding lapses end of **2026-09-30**, so a shutdown would begin the morning of this print. Senate passed a CR to Dec 11 on 08-08 (90–6); House passed its own to Dec 4 on 07-21 (220–205); **neither enacted**, reconciliation still required and the signature "remains uncertain" (Conference Board + CRFB FY2027 tracker, both 2026-08-12); House returned 08-31 to take up the Senate version, vote expected first week of September, White House SAP supportive. Why it lands here: **ISM is private and publishes through a lapse; BLS does not** — in the 2025 lapse BLS skipped the October Employment Situation (household data never collected, not retroactively) and cancelled the October CPI outright, first break in 77+ years. So in the un-averted branch the **10-02 payrolls do not print and this becomes the corridor's only hard read**, into an Oct 27–28 FOMC with no SEP. **Event tape:** no September consensus, whisper or prediction-market bin exists at D-33 (calendars carry the date, no forecast) — the sibling found none at D-13 and a full Polymarket distribution by D-8, which is the expected timing. Also recorded: the 08-03 print beat by 1.6pt while the 10Y **fell ~6bp to 4.688%** and equities rallied (Dow ATH 53,178.41 +1.32%, S&P +1.48%, Nasdaq +2.1%) — the opposite sign to this calendar's working yield-channel story, confounded by weekend risk-off headlines, and recorded as a non-finding rather than a reversal. **New dated adjacency found → proposed in this PR:** the **FY2027 funding deadline / shutdown trigger** is not on the calendar at all despite falling the night before this print and gating whether the 10-02 payrolls exist; added as `government-funding-deadline-2026-09-30`, `status: estimate` (`NEWS:`), with the `geopolitical` kind used for a domestic policy checkpoint and that imperfect fit named rather than fixed from this lane. | — (stance set) | 2026-09-05 (high, ≥21d band: every 7d) |
 | 2026-09-05 | D-26 | **Both branches this doc was built on resolved inside one week, and the date got confirmed — read the stance amendment for the scoring.** **(1) Date PROMOTED `estimate` → `confirmed`.** ISM's August release (PRNewswire 302865127, dateline 2026-09-01 10:00 ET) states verbatim: *"The next ISM® Manufacturing PMI® Report featuring September 2026 data will be released at 10:00 a.m. ET on Thursday, October 1, 2026."* `market-events-data.ts` updated in this PR with an `ISM:` prefix. **This retires a standing claim in this doc's own Honest limits** — that promotion was *structurally* impossible from this lane because ismworld.org is SSO-gated. The gated page is real and was re-fetched today (still a 302 to `ecommerce.ismworld.org/SSO/Login.aspx`, third consecutive session), but it was never the only ISM primary: every report names its own successor, and the [`ism-services-2026-10-05`](ism-services-2026-10-05.md) entry took exactly this path on 2026-09-04 (FT-47, PASS). Recorded as a research miss, not a data change. Independent corroboration: Kalshi's `KXISMPMI-26SEP` ladder settles `2026-10-01T13:59:00Z` = **09:59 ET**, one minute before the stated release. **(2) Kill switch 1 FIRED — the shutdown branch is dead.** House adopted the Senate-passed **H.R. 6500 370–48 on 09-01**; **signed 2026-09-02**, funding through **12-11** (whitehouse.gov "Congressional Bill H.R. 6500 Signed into Law"). Legs 5–6 collapse to a footnote as specified: 10-02 payrolls will print, this is not the corridor's only read, and the funding tape leaves this doc. The cliff moved to 12-11, already tracked as [`government-funding-deadline-2026-12-11`](government-funding-deadline-2026-12-11.md). **(3) Kill switch 3 did NOT fire — the stability leg passed its test.** ISM 09-01 printed **54.6** vs 55.2 consensus (New Orders 53.7, Employment 51.2, **Prices 71.1 flat**, Backlog 51.8) — an eighth straight month above 50 and **4.6 points clear** of the sub-50 trigger. Leg 3's "Chicago does not extrapolate" claim is now tested, not argued. **Adjacency sweep — peers:** n/a, `symbols: []`. **Macro surprises, three since the last row:** ISM mfg 54.6 (09-01, miss); ISM **Services 55.4** (09-03) beating by 1.3–1.4 with Business Activity 61.7, New Orders 60.9 and **Prices 72.6, highest since Aug 2022**; **payrolls +162k vs ~+55k** (09-04, BLS USDL-26-1435) with June/July revised **up a combined +55k**. Hike odds rose on the payrolls print — **~59–60% CME FedWatch** post-print per the [`jobs`](jobs-2026-09-04.md) close-out, against ~50% in same-day wire copy crediting dovish Waller remarks; logged as a venue spread, direction reliable, level not. **Volatility regime:** VIX round-tripped — 14.51 → **16.34** (09-01) → 15.20 → 14.32 → **14.53** (09-04 close, probe today). Net **+0.02** against the reference block, far inside the 3pt threshold; the intra-window spike exceeded it and reverted, so the year-low regime the sibling docs have flagged for five rows is intact. **Geopolitical — the finding that replaces the shutdown branch.** New US strikes on Iran 09-01 sent crude up ~5% intraday, and it has stayed there: WTI **$83.40 (08-28) → $91.22 (09-04), +9.4%** (Yahoo daily closes, fetched today). **September is the first ISM survey window that fully contains this** — August's manufacturing Prices was flat at 71.1 and could not see it, while ISM's own services chair named the Middle East conflict and *"petroleum-related products, diesel, and gasoline… again reported as up in price"* in the same August window. The informative Prices line therefore moves from ">70" (now the expected outcome, seven months running) to **">~73"**. `unsc-iran-panel-mandate-expiry-2026-09-26` is now tracked inside the corridor. **Event tape:** still **no published September consensus** at D-26 — leg 9 stands, and the sibling's history (none at D-13, a full distribution by D-8) says that is on schedule. New this row: a **prediction-market venue now exists** — Kalshi `KXISMPMI-26SEP`, 8 cumulative strikes ("at least 51" → "at least 58"), opened 2026-09-01 16:00 ET — but its public endpoint returns **null for every price, volume and open-interest field**, so this is structure without a distribution and is recorded as such rather than as a bin read. Coinbase's mirror 403'd, Kalshi's web page 429'd. **Reaction function — two more observations, both against the yield-channel story.** 09-01: ISM missed on four lines and the 10Y **rose** 3.8bp to 4.796% on a globally-driven session where two of three wraps did not mention ISM. 09-03: services delivered the exact "hot activity + hot prices" configuration leg 4 named as maximally yield-forcing, and the 10Y **fell** 3.4bp to 4.762% with QQQ +1.19% — scored an outright REFUTATION in that ledger. Three observations, no lean survives; the stance's no-reaction-assumed position is reinforced, not revised. **Corridor densified 6 → 18 tracked adjacents** (probe today): +`dallas-fed-mfg-2026-09-28`, `unsc-iran-panel-mandate-expiry-2026-09-26`, `consumer-confidence-2026-09-29`, `crwv-fully-connected-2026-09-29`, `adp-employment-2026-09-30`, `g20-trade-ministerial-milwaukee-2026-09-30`, `gdp-q2-2026-third-2026-09-30`, `pce-2026-09-30`, `sp-select-sector-secondary-reweight-2026-09-30`, `apple-eu-dma-terms-2026-10-01` (same day), `opec-jmmc-68th-2026-10-04`, `ism-services-2026-10-05`. **This inverts the initial research's scarcity case:** a private survey bracketed by PCE/GDP-third on 09-30 and payrolls on 10-02 is one input among many, so this print's *relative* weight falls. One bookkeeping item closes: the last row flagged the Chicago ledger citing a `consumer-confidence-2026-09-29` adjacency that was not on the calendar — **it is now**, so the flag resolves rather than persisting. **New dated adjacency proposed: none** — every event found this sweep is already on the calendar, and the only calendar edit in this PR is the promotion above. | **Amended** — kill switches 1 (fired) and 3 (did not fire) both retired, date confirmed, Prices bar raised to ~73; stance stays **stand-aside** | 2026-09-12 (high, ≥21d band: every 7d) |
+| 2026-09-15 | D-16 | **The fuel channel stopped being a branch, a real distribution appeared, and one of our own readings was wrong — read the stance amendment for the scoring.** **(1) Crude: the retracement kill switch is not merely unfired, it is dead.** WTI daily closes (Yahoo, fetched today): **$91.48 (09-04) → $93.03 (09-08) → $96.05 (09-09) → $102.48 (09-10) → $100.05 (09-11) → $101.39 (09-14) → $104.75 (09-15)** — **+14.5%** since the last row, **+25.6%** from the 08-28 baseline the ">$83 retrace" switch was written against. Brent **$108.47**, with **$16.36** Nov→Mar **backwardation** (via the [`fomc`](fomc-2026-09-16.md) D-1 row) — the curve pricing the shock as persistent, not a spike. **It is supply, and it is dated:** five Iranian tankers destroyed near Kharg Island and in the Gulf of Oman (09-09/10), Houthi strikes on four Saudi facilities, Hormuz traffic ~10 ships/day, an Iranian blockade of GCC exports, Saudi's **East-West pipeline** — the 7 mb/d Red Sea workaround — shut after strikes from Iraqi territory, GCC–Iran restart talks postponed by Tehran, Saudi output at its **lowest since 1990**. No swing producer stands by to offset it. **(2) It reached producer prices a month early.** August PPI (BLS primary, [`ppi`](ppi-2026-09-10.md) close-out): final demand **+0.4% m/m / +5.4% y/y**, **energy +4.2%**, **diesel +24.1%**, transportation & warehousing **+2.3%** — from a month containing only the shock's first days. **(3) Adjacency sweep — peers:** n/a, `symbols: []`. **Macro surprises, four since the last row.** **PPI 09-10** as above, with services-less-trade-transport **flat at +0.0%** — the fuel leg carried the whole release. **CPI 09-11**: headline **+0.4% m/m / 3.4% y/y**, **core +0.3%** (unrounded 0.29%) against the **+0.2%** the books priced at 65%, **energy +2.1%** — and it moved September Fed pricing further in two sessions than any input the CPI doc tracked in 25 days. **Empire State 09-15 — the finding of this row**, because it is the first survey to read *this ISM's own September window*: general business conditions **7.6, down 13 points**; new orders **2.0**; shipments **−3.2**; employment 10.6; **prices paid 63.1 (+5, a fresh four-year high above the May peak)**; prices received **28.1 (+5)**; six-month-ahead 29.0, with input *and* selling prices *"accelerated from already elevated levels"* (NY Fed release, fetched direct today). **Activity decelerating while prices accelerate** — the exact configuration this doc was watching for. **The doc's own leg-3 rule is applied to it rather than dropped:** a regional survey does not extrapolate onto the national series, which is why Chicago's 47.1 was refused and why **Empire State's −13pt activity drop is refused too**. The **Prices** leg is different in kind — a national fuel shock is a common input to every district; a district's activity swing is idiosyncratic. **Volatility regime — the probe's threshold tripped:** VIX **14.53 → 17.72** (+3.19, probe today; the Yahoo daily bar closes **17.69**, a late-tick difference recorded rather than reconciled), with the path 15.30 · 15.72 · 16.46 · **17.84 (09-10)** · 15.84 · 17.10 · 17.72. The year-low regime five sibling docs flagged for weeks is **over**. **Rates:** 10Y **4.78 → 4.99** (+21bp); the 09-10→09-14 leg was a **bear flattener** (2Y +9bp, 30Y −3bp, 2s10s 39→**32bp**) — a policy-path repricing, which corrects the D-6 FOMC row's inflation-path reading. **XLI**, the nearest tradeable proxy to this print's subject, **175.27 → 168.76, −3.7%**. **(4) Event tape — kill switch "a published September consensus emerges" FIRED, at D-16 rather than the D-8 the sibling's history predicted.** Kalshi `KXISMPMI-26SEP`, fetched direct today: **≥51 $0.99 · ≥52 $0.95 · ≥53 $0.85 · ≥54 $0.63 · ≥55 $0.31 · ≥56 $0.12 · ≥57 $0.05 · ≥58 $0.01**; open interest **1,878** contracts, **950** traded in 24h across the 54/55/56 strikes; posted liquidity **$0.00** on every strike. Implied bins → modal **54.0–54.9 at 32%**, median in the 54s, **implied mean 54.4**, sub-50 tail **~1%** — essentially flat to August's **54.6**. This is a prediction-market proxy and is labelled as one; **no street consensus is published**, so leg 9's original claim survives in its narrow form. **(5) A research miss, recorded.** The D-26 row reported this endpoint returning "null for every price, volume and open-interest field." The un-suffixed legacy keys (`yes_bid`, `last_price`, `volume`, `open_interest`) **are** undefined in the current Kalshi API version; the live values sit on `_dollars`/`_fp`-suffixed keys (`last_price_dollars`, `open_interest_fp`). Whether the ladder actually held positions on 09-05 is **not recoverable** from this endpoint and is claimed in neither direction — what is claimed is that the reading method was wrong. Coinbase's mirror **403'd** again (logged in `probe-ref.blocked`). **(6) Reaction function — nothing new, which is the honest report.** No ISM print has landed since 09-03, so the count stays at three confounded observations and leg 4's non-finding is untouched. The next candidate is this release, and it will be confounded again. **(7) Corridor 18 → 52 tracked adjacents**, band **high:21+ → high:8+** (7d → 3d). New strong subset: `ism-services-2026-10-05`, `jobs-2026-10-02`, **`mu-2026-09-30-print`** (MU's print moved 09-29 → 09-30) and `pce-2026-09-30`. **Two adjacents now read this print's own subject, and one beats it to the tape:** [`sp-global-manufacturing-pmi-2026-10-01`](sp-global-manufacturing-pmi-2026-10-01.md) publishes the US manufacturing final at **09:45 ET on 10-01**, fifteen minutes ahead of this release, and per its own ledger the **final carries no published consensus while the flash does** — making [`sp-global-flash-us-pmi-2026-09-23`](sp-global-flash-us-pmi-2026-09-23.md) the only surprise-testable read on this same September window, landing **D-8**. Also newly inside the corridor: `construction-spending-2026-10-01` (10:00 ET, the same minute), `boj-tankan-2026-10-01`, `eurostat-hicp-flash-2026-10-01`, `treasury-coupon-announcement-2026-10-01`, `treasury-buyback-10y20y-2026-10-01`, `opec-plus-meeting-2026-10-04` beside the JMMC, and `trump-xi-summit-2026-09-24` (high, at D-7 just outside the 5-day probe window). **(8) FOMC settles the regime tomorrow, hawkish:** futures-derived hike-25 **91.4%** (centralbank.watch, *"data as of September 14"*) against a venue VWAP **86.2%** (Kalshi 85.5% / Polymarket 86.5%), cut **0.0%**, and the year-end book at **49.3%** on two-or-more 2026 hikes versus a June SEP median implying one. **New dated adjacency found → proposed in this PR:** the **EIA Weekly Petroleum Status Report of 2026-09-30** — the last weekly US crude/gasoline/distillate inventory read before this print, 10:30 ET on the Wednesday before it, inside a live supply disruption and on the same day as PCE/GDP-third/Chicago PMI/ADP. The calendar tracks the monthly oil reports and one weekly instance (`proposals/eia-weekly-petroleum-status-2026-09-16`) but not this one; added as `proposals/eia-weekly-petroleum-status-2026-09-30.from-ism-manufacturing-2026-10-01.json`, `status: estimate` (`EST:`), verified against EIA's own schedule page today (standard Wednesday rule; the 2026 holiday-exception table lists 09-10 and then 10-15, so no exception reaches 09-30). **One forward test registered:** `FT-ism-manufacturing-2026-10-01-1` — **September ISM Manufacturing Prices ≥ 73.0**, scoring 2026-10-02. | **Amended** — the fuel channel moves from watch to **base case** with a registered, falsifiable prediction on Prices; the consensus kill switch **fired** and the crude-retrace switch is retired as dead; stance stays **stand-aside** | 2026-09-18 (high, ≥8d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
