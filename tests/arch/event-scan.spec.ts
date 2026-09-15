@@ -51,6 +51,151 @@ function validateFixture(
   }
 }
 
+/** A fixture calendar + ledger + forward-test register, read through the real CLI's `--due` mode
+ *  on a pinned date. `ledgers` maps event id → ledger markdown, `fragments` maps event id →
+ *  forward-test fragment markdown; omitting either models an event that has neither. */
+function dueFixture(
+  today: string,
+  events: Record<string, object>,
+  ledgers: Record<string, string> = {},
+  fragments: Record<string, string> = {},
+): { id: string; reason: string; forwardTestsBeyondWindow?: { id: string; scoreBy: string }[] }[] {
+  const dir = mkdtempSync(join(tmpdir(), "event-scan-due-"));
+  try {
+    for (const sub of ["events/proposals", "ledgers", "forward-tests"])
+      mkdirSync(join(dir, sub), { recursive: true });
+    for (const [id, event] of Object.entries(events))
+      writeFileSync(join(dir, "events", `${id}.json`), JSON.stringify(event, null, 2));
+    for (const [id, md] of Object.entries(ledgers))
+      writeFileSync(join(dir, "ledgers", `${id}.md`), md);
+    for (const [id, md] of Object.entries(fragments))
+      writeFileSync(join(dir, "forward-tests", `${id}.md`), md);
+    writeFileSync(
+      join(dir, "earnings-calendar.ts"),
+      "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+    );
+    return JSON.parse(
+      execFileSync(
+        "node",
+        [
+          "scripts/event-scan.mjs",
+          "--due",
+          `--today=${today}`,
+          `--events-dir=${join(dir, "events")}`,
+          `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
+          `--ledger-dir=${join(dir, "ledgers")}`,
+          `--forward-tests-dir=${join(dir, "forward-tests")}`,
+        ],
+        { cwd: process.cwd(), encoding: "utf8", stdio: "pipe" },
+      ),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** An un-closed-out ledger: the `**Last assessed:**` line the scanner contracts on, no `## Outcome`. */
+const openLedger = (assessed: string) => `# fixture\n\n**Last assessed:** ${assessed}\n`;
+
+/** One forward-test fragment row. `outcome` empty = unscored. */
+const fragment = (rows: [id: string, scoreBy: string, outcome: string][]) =>
+  `| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |\n|---|---|---|---|---|---|\n${rows
+    .map(([id, scoreBy, outcome]) => `| ${id} | h | p | k | ${scoreBy} | ${outcome} |`)
+    .join("\n")}\n`;
+
+// THE FORWARD-TEST HOLD (#2988). A close-out is dispatched from D+1 and is never screened, but its
+// contract is to score its own registered predictions from settled data — so a test whose score-by
+// is later than D+1 makes every dispatch until that date a session that can only re-read state and
+// leave. Measured on gastech-2026-09-14: three dispatches in 38 minutes, no new information
+// available to any of them. The wait is clamped to closeOutWithinDays, because a close-out that
+// ages out of its window is lost permanently (withinHorizon's note) — a wrong hold is far worse
+// than a wrong dispatch, so every ambiguity here has to resolve toward dispatching.
+describe("event-scan close-out hold", () => {
+  const passed = { ...entry("alpha", "2026-09-14"), impact: "low" };
+  const ledgers = { alpha: openLedger("2026-09-15") };
+
+  it("holds the close-out until its own unscored test is scoreable, then dispatches", () => {
+    const frag = { alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-18", "_open_"]]) };
+    expect(dueFixture("2026-09-15", { alpha: passed }, ledgers, frag)).toEqual([]);
+    expect(dueFixture("2026-09-17", { alpha: passed }, ledgers, frag)).toEqual([]);
+    // 09-18 is the score-by itself: the window has closed, so the session can finally score it.
+    expect(dueFixture("2026-09-18", { alpha: passed }, ledgers, frag).map((e) => e.reason)).toEqual(
+      ["event-passed-unscored"],
+    );
+  });
+
+  it("never holds past closeOutWithinDays — it names the test and dispatches instead", () => {
+    // Score-by 2026-09-25 is D+11, past the 6-day close-out ceiling: waiting would destroy the
+    // outcome record rather than delay it, so the session goes out now and is told why.
+    const due = dueFixture("2026-09-15", { alpha: passed }, ledgers, {
+      alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-25", "_open_"]]),
+    });
+    expect(due).toEqual([
+      expect.objectContaining({
+        id: "alpha",
+        reason: "event-passed-unscored",
+        forwardTestsBeyondWindow: [{ id: "FT-alpha-2026-09-14-1", scoreBy: "2026-09-25" }],
+      }),
+    ]);
+  });
+
+  it("dispatches exactly as before when there is nothing scoreable to wait for", () => {
+    const cases: Record<string, string> = {
+      "no fragment at all": "",
+      "every row already scored": fragment([
+        ["FT-alpha-2026-09-14-1", "2026-09-18", "**pass** — scored 2026-09-15"],
+      ]),
+      "score-by already past": fragment([["FT-alpha-2026-09-14-1", "2026-09-14", "_open_"]]),
+      "no readable score-by": fragment([["FT-alpha-2026-09-14-1", "when it settles", "_open_"]]),
+    };
+    for (const [why, frag] of Object.entries(cases))
+      expect([
+        why,
+        dueFixture("2026-09-15", { alpha: passed }, ledgers, frag ? { alpha: frag } : {}).map(
+          (e) => e.reason,
+        ),
+      ]).toEqual([why, ["event-passed-unscored"]]);
+  });
+
+  it("reads the register's real row shapes — escaped pipes, date-led cells, trailing qualifiers", () => {
+    // Every one of these appears in the committed register (measured 2026-09-15 over 1,700 rows):
+    // `\|` inside a cell, a prediction cell that itself starts with a date, a score-by carrying an
+    // `(est.)` qualifier, and rows of 5 and 8 cells against a 6-column header. Header-index
+    // mapping breaks on all of it; "the last cell that starts with a date" survives it.
+    const md =
+      `| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |\n|---|---|---|---|---|---|\n` +
+      `| FT-alpha-2026-09-14-1 | median \\|move\\| 1.95% | 2026-09-14 prints below p75 | k | 2026-09-18 (est.) | — |\n` +
+      `| FT-alpha-2026-09-14-2 | h | p | k | 2026-09-16 |\n` +
+      `| FT-alpha-2026-09-14-3 | h | c2c | extra | cell | k | 2026-09-14 | _open_ |\n`;
+    expect(dueFixture("2026-09-15", { alpha: passed }, ledgers, { alpha: md })).toEqual([]);
+    // Row 1 (em-dash outcome, qualified date) and row 2 (no outcome cell) both still pend at
+    // 09-16; row 3's score-by is already past, so it never held anything.
+    expect(dueFixture("2026-09-17", { alpha: passed }, ledgers, { alpha: md })).toEqual([]);
+    expect(
+      dueFixture("2026-09-18", { alpha: passed }, ledgers, { alpha: md }).map((e) => e.reason),
+    ).toEqual(["event-passed-unscored"]);
+  });
+
+  it("leaves an already-closed-out event and an upcoming event untouched", () => {
+    const frag = { alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-18", "_open_"]]) };
+    // A ledger with `## Outcome` is silent forever — the hold must not resurrect it.
+    expect(
+      dueFixture(
+        "2026-09-15",
+        { alpha: passed },
+        { alpha: `${openLedger("2026-09-15")}\n## Outcome\n\nscored.\n` },
+        frag,
+      ),
+    ).toEqual([]);
+    // An event that has not happened yet routes on cadence, never through the close-out branch.
+    expect(
+      dueFixture("2026-09-13", { alpha: passed }, { alpha: openLedger("2026-09-01") }, frag).map(
+        (e) => e.reason,
+      ),
+    ).toEqual(["interval-elapsed"]);
+  });
+});
+
 // Event-calendar contract gate — the committed calendar (src/domain/market-events/*.json +
 // earnings-calendar.ts) and every assessment ledger (docs/research/events/) must satisfy the
 // contract scripts/event-scan.mjs enforces, because the event lane acts on its word. Static

@@ -105,6 +105,24 @@ tape**. Score any forward tests this event carried — its own fragment
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
 `forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event forever.
 
+**A close-out waits for its own predictions** (issue #2988, 2026-09-15). The scanner marks a passed
+event `event-passed-unscored` from D+1 and a close-out is never screened — but scoring a prediction
+before its stated window closes is falsification, so a session dispatched before the event's own
+forward tests are scoreable can only re-read state and leave. Measured on `gastech-2026-09-14`:
+**three dispatches in 38 minutes**, no new information available to any of them, because each
+research PR's own merge re-triggered the push-driven sweep and the `research/<event-id>` branch key
+only dedupes while that PR is still *open*. `scripts/event-scan.mjs` now reads the event's own
+fragment (`scripts/forward-test-pending.mjs` — pure text, no network, no `npm ci`) and **holds the
+close-out until the latest unscored score-by**, reporting `close-out-held-for-forward-test` with
+that date on the human report. The wait is **clamped to `closeOutWithinDays`**: a test scoring after
+the ceiling is a *structural* conflict, not a timing one — the event would age out of its close-out
+window entirely — so the scanner dispatches immediately and names the test in `--due`'s
+`forwardTestsBeyondWindow`, and the session records those rows unscoreable at close-out on purpose,
+exactly as before. An unreadable row, a missing fragment, or an already-scored row all behave
+exactly as they did: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
+outcome record permanently while a wrong dispatch only costs a session. Legacy `FT-N` rows in
+`forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace to match on.
+
 **Registering a forward test** (initial research, or a stance change mid-run) appends one row to
 `docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
 with `<n>` counting up inside that file only. Never a row in `forward-tests.md` itself (the index
