@@ -37,6 +37,7 @@ import {
   horizonProblems,
   runValidate,
 } from "./event-scan-validation.mjs";
+import { closeOutHold } from "./forward-test-pending.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
 
 const ROOT = process.cwd();
@@ -51,6 +52,8 @@ const EVENTS_DIR = arg("events-dir") ?? join(ROOT, "src", "domain", "market-even
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
+const FORWARD_TESTS_DIR =
+  arg("forward-tests-dir") ?? join(ROOT, "docs", "research", "forward-tests");
 
 /** Whole calendar days from today's UTC date to `date` (negative = past) — mirrors
  *  earnings-calendar.ts daysUntil, re-implemented because this script must not need `npm ci`. */
@@ -184,6 +187,10 @@ function loadLedgers() {
  *  deterministic screen's corridor rows carry the event for free until then. */
 const EARLY_STANCE_IMPACTS = new Set(["critical", "high"]);
 
+/** The close-out is due, but its own forward tests cannot be scored yet (#2988) — not-due, with a
+ *  real `nextDueDate` rather than silence, so the hold reads as a decision on the human report. */
+const HELD = "close-out-held-for-forward-test";
+
 /** THE RESEARCH HORIZON (#2946, slice 2 — the pool cut, where the dispatch ceiling was the burst
  *  cut). Nothing beyond `horizon.maxDaysOut` is ever due, and between `allImpactsWithinDays` and
  *  that outer edge only high/critical qualify. An event does not leave the calendar — it simply
@@ -213,8 +220,30 @@ function assessmentDue(event, ledger, today, cadence) {
   if (days < 0) {
     // Passed. One closing outcome assessment inside the close-out window, then silence forever.
     // Ahead of the horizon check on purpose — see withinHorizon's note on permanent ageing-out.
-    if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays)
-      return { due: true, reason: "event-passed-unscored", intervalDays: null, nextDueDate: today };
+    if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays) {
+      // THE FORWARD-TEST HOLD (#2988) — a close-out that cannot score its own predictions yet is
+      // a dispatch that can only re-read state and leave. See forward-test-pending.mjs for the
+      // measurement (3 sessions in 38 minutes on gastech-2026-09-14) and the parsing rules.
+      const { hold, until, beyondWindow } = closeOutHold(
+        event.id,
+        event.date,
+        today,
+        cadence.closeOutWithinDays,
+        FORWARD_TESTS_DIR,
+      );
+      if (hold) return { ...none, reason: HELD, nextDueDate: until };
+      // Structural, not timing: the test scores after this event's close-out ceiling, so waiting
+      // would age the outcome record out entirely. Dispatch now and NAME it, so the session
+      // records those rows unscoreable at close-out on purpose rather than by omission. `reason`
+      // itself is deliberately unchanged — moneypenny/events.mjs sorts on the exact string.
+      return {
+        due: true,
+        reason: "event-passed-unscored",
+        intervalDays: null,
+        nextDueDate: today,
+        ...(beyondWindow.length ? { forwardTestsBeyondWindow: beyondWindow } : {}),
+      };
+    }
     return none;
   }
 
@@ -258,6 +287,13 @@ function printDue(rows) {
       intervalDays: verdict.intervalDays,
       reason: verdict.reason,
       ledger: ledger?.file ?? `docs/research/events/${e.id}.md`,
+      // Present only on a close-out whose own forward tests score AFTER its window closes (#2988):
+      // the session is told the conflict is structural rather than its own timing. The workflow's
+      // matrix forwards `{id, reason}` only, so this reaches a human reading `--due`, not the
+      // prompt — moneypenny-events.yml is envelope-protected and not this lane's to widen.
+      ...(verdict.forwardTestsBeyondWindow
+        ? { forwardTestsBeyondWindow: verdict.forwardTestsBeyondWindow }
+        : {}),
     }));
   process.stdout.write(`${JSON.stringify(due, null, 2)}\n`);
 }
@@ -310,7 +346,9 @@ function main() {
   const rows = tables.all
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))
     .map((r) => ({ ...r, verdict: assessmentDue(r.e, r.ledger, today, cadence) }))
-    .filter((r) => r.verdict.due || r.days >= 0)
+    // A held close-out (#2988) has already passed, so `days >= 0` would hide it — and a hold that
+    // is invisible is indistinguishable from an event the scanner forgot. Keep it on the report.
+    .filter((r) => r.verdict.due || r.days >= 0 || r.verdict.reason === HELD)
     .sort((a, b) => compareEventOrder(a.e, b.e));
 
   if (has("due")) printDue(rows);
