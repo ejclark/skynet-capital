@@ -1,5 +1,6 @@
 {
-  "$comment": "Assessment cadence per impact tier: bands are 'at least minDaysOut days before the event -> reassess every intervalDays days'. Bands sorted by minDaysOut descending; the terminal band must have minDaysOut 0. closeOutWithinDays: a passed event gets ONE closing outcome assessment within this many days, then ages out forever. Consumed by scripts/event-scan.mjs; validated by its --validate mode and tests/domain/assessment-cadence.spec.ts.",
+  "$comment": "Assessment cadence per impact tier: bands are 'at least minDaysOut days before the event -> reassess every intervalDays days'. Bands sorted by minDaysOut descending; the terminal band must have minDaysOut 0. closeOutWithinDays: a passed event gets ONE closing outcome assessment within this many days, then ages out forever. horizon: nothing further out than maxDaysOut is ever due, and past allImpactsWithinDays only critical/high qualify — the pool cut of #2946 (5,375 -> 2,320 remaining-life pulses, -57%, measured 2026-09-15). Close-outs are exempt: they expire permanently, so the horizon must never destroy an outcome record. Consumed by scripts/event-scan.mjs; validated by its --validate mode and tests/domain/assessment-cadence.spec.ts.",
+  "horizon": { "maxDaysOut": 60, "allImpactsWithinDays": 30 },
   "bands": {
     "critical": [
       { "minDaysOut": 61, "intervalDays": 7 },
