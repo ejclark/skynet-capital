@@ -11,7 +11,11 @@
 // ("weekly at two months out, daily in the final week") lives entirely here, unit-testable.
 //
 //   node scripts/event-scan.mjs               # human report: every event, band, due mark
-//   node scripts/event-scan.mjs --due         # JSON array of events due for assessment ([] = no-op)
+//   node scripts/event-scan.mjs --due         # JSON array of events due for assessment ([] = no-op).
+//                                             # Bounded by assessment-cadence.json's `horizon`
+//                                             # (#2946): nothing past maxDaysOut, and past
+//                                             # allImpactsWithinDays only critical/high. Close-outs
+//                                             # are exempt — they expire permanently.
 //   node scripts/event-scan.mjs --validate    # enforce the contract (exit 1 on violation)
 //   node scripts/event-scan.mjs --dump        # extracted tables as JSON (the drift gate's input)
 //   ... --today=YYYY-MM-DD                    # deterministic date override for tests
@@ -27,7 +31,12 @@
 // never an empty result — a scheduled caller must not mistake "broken" for "nothing due".
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { compareEventOrder, DATE_RE, runValidate } from "./event-scan-validation.mjs";
+import {
+  compareEventOrder,
+  DATE_RE,
+  horizonProblems,
+  runValidate,
+} from "./event-scan-validation.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
 
 const ROOT = process.cwd();
@@ -124,6 +133,23 @@ function loadCadence() {
   return JSON.parse(readFileSync(CADENCE_FILE, "utf8"));
 }
 
+/** Fail closed on the horizon for the modes that actually decide what to research (--due and the
+ *  human report): an absent or nonsensical horizon must never read as "no horizon", which is the
+ *  uncapped behaviour of #2946. Deliberately NOT inside loadCadence — throwing there would
+ *  pre-empt `--validate`, which exists to REPORT every contract violation at once (a bad horizon
+ *  would hide all the others behind a stack trace), and would couple `--dump` to a field it never
+ *  reads. The rule itself lives once, in event-scan-validation.mjs, so the two callers cannot
+ *  drift apart. */
+function assertHorizon(cadence) {
+  const problems = horizonProblems(cadence.horizon);
+  if (problems.length)
+    throw new Error(
+      `event-scan: ${CADENCE_FILE} — refusing to scan with no valid research horizon (#2946):\n` +
+        `${problems.map((p) => `  - ${p}`).join("\n")}\n` +
+        "Run --validate for the full contract report.",
+    );
+}
+
 /** The ledger's machine contract: docs/research/events/<id>.md with a `**Last assessed:**` line
  *  and (once closed out) an `## Outcome` section. */
 function loadLedgers() {
@@ -158,16 +184,43 @@ function loadLedgers() {
  *  deterministic screen's corridor rows carry the event for free until then. */
 const EARLY_STANCE_IMPACTS = new Set(["critical", "high"]);
 
+/** THE RESEARCH HORIZON (#2946, slice 2 — the pool cut, where the dispatch ceiling was the burst
+ *  cut). Nothing beyond `horizon.maxDaysOut` is ever due, and between `allImpactsWithinDays` and
+ *  that outer edge only high/critical qualify. An event does not leave the calendar — it simply
+ *  stops buying sessions until it comes inside the horizon, which is also when its research stops
+ *  going stale before the print.
+ *
+ *  WHY A SNAPSHOT UNDERSTATES THIS, and the number that justifies the thresholds: "due today"
+ *  only falls 108 → 98, because most of the deep backlog is already inside 30 days. But an event
+ *  90 days out pulses repeatedly on its way in, so the honest measure is pulses over every
+ *  upcoming event's remaining life: 5,375 → 2,320, a 57% cut (630 upcoming events, measured
+ *  2026-09-15). A tighter 30-day/all-impacts horizon scores 61% — four points more for losing all
+ *  long-lead preparation on high/critical prints, which is why 60/30 is the chosen knee.
+ *
+ *  Close-outs are deliberately upstream of this check: a passed event ages out of
+ *  closeOutWithinDays permanently, so the horizon must never be able to destroy an outcome record
+ *  (the same invariant the dispatch ceiling's close-out floor protects in moneypenny/events.mjs). */
+function withinHorizon(event, days, cadence) {
+  const horizon = cadence.horizon;
+  if (days > horizon.maxDaysOut) return false;
+  return days <= horizon.allImpactsWithinDays || EARLY_STANCE_IMPACTS.has(event.impact);
+}
+
 function assessmentDue(event, ledger, today, cadence) {
   const days = daysBetween(today, event.date);
   const none = { due: false, reason: null, intervalDays: null, nextDueDate: null };
 
   if (days < 0) {
     // Passed. One closing outcome assessment inside the close-out window, then silence forever.
+    // Ahead of the horizon check on purpose — see withinHorizon's note on permanent ageing-out.
     if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays)
       return { due: true, reason: "event-passed-unscored", intervalDays: null, nextDueDate: today };
     return none;
   }
+
+  // `beyond-horizon` rather than a bare `none`, so the human report says WHY an event is quiet
+  // instead of printing an empty cadence note. `due` stays false, so it never reaches --due.
+  if (!withinHorizon(event, days, cadence)) return { ...none, reason: "beyond-horizon" };
 
   if (!ledger?.lastAssessed) {
     if (
@@ -251,6 +304,8 @@ function main() {
     runValidate(tables, cadence, ledgers);
     return;
   }
+
+  assertHorizon(cadence);
 
   const rows = tables.all
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))

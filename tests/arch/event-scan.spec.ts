@@ -17,10 +17,15 @@ const entry = (id: string, date: string) => ({
   symbols: [],
 });
 
-/** A fixture events DIRECTORY (one JSON file per event, issue #1449) + an empty calendar and
- *  ledger dir, validated through the real CLI. `files` maps file name → entry, so a spec can put
- *  an entry under the wrong name on purpose. */
-function validateFixture(files: Record<string, object>): string {
+/** A fixture events DIRECTORY (one JSON file per event, issue #1449) + a calendar and ledger dir,
+ *  validated through the real CLI. `files` maps file name → entry, so a spec can put an entry
+ *  under the wrong name on purpose. `prints` seeds earnings-calendar.ts, whose rows become DERIVED
+ *  events that exist without any file in the directory — the case the proposal depth cap has to
+ *  treat as established. */
+function validateFixture(
+  files: Record<string, object>,
+  prints: readonly { symbol: string; date: string; status: string; source: string }[] = [],
+): string {
   const dir = mkdtempSync(join(tmpdir(), "event-scan-"));
   try {
     mkdirSync(join(dir, "events", "proposals"), { recursive: true });
@@ -28,7 +33,7 @@ function validateFixture(files: Record<string, object>): string {
       writeFileSync(join(dir, "events", name), `${JSON.stringify(event, null, 2)}\n`);
     writeFileSync(
       join(dir, "earnings-calendar.ts"),
-      "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+      `export const UPCOMING_PRINTS: readonly EarningsPrint[] = ${JSON.stringify(prints)};\n`,
     );
     return execFileSync(
       "node",
@@ -114,6 +119,74 @@ describe("event-scan contract", () => {
         "proposals/bravo.from-zulu.json": proposal("bravo"),
       }),
     ).toThrow(/proposer "zulu" is not an event this calendar knows/);
+  });
+
+  // THE PROPOSAL DEPTH CAP (#2946). A proposal loads as a real event, so it becomes
+  // never-assessed, buys its own opus session, and that session's adjacency sweep writes more
+  // proposals — the loop that took the calendar to 641 canonical + 469 pending in two days and
+  // spent a weekly token quota in ~24 hours. Requiring the proposer to be CANONICAL means each
+  // generation must be paid for by real research before it can produce the next.
+  it("--validate caps discovery at one generation — a proposal cannot parent another", () => {
+    const proposal = (id: string) => ({
+      ...entry(id, "2026-05-01"),
+      status: "estimate",
+      source: "EST: fixture",
+    });
+    // bravo exists only as a proposal, so charlie is a second generation — refused.
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "proposals/bravo.from-alpha.json": proposal("bravo"),
+        "proposals/charlie.from-bravo.json": proposal("charlie"),
+      }),
+    ).toThrow(/proposer "bravo" is itself only a proposal — discovery is capped at ONE generation/);
+
+    // Once bravo has been researched into its canonical file, it may propose — the cycle is
+    // broken by requiring real work between generations, not by forbidding depth outright.
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "bravo.json": entry("bravo", "2026-05-01"),
+        "proposals/charlie.from-bravo.json": proposal("charlie"),
+      }),
+    ).not.toThrow();
+
+    // A shadowed proposal never loads, so the rule must not fire on it.
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "bravo.json": entry("bravo", "2026-05-01"),
+        "charlie.json": entry("charlie", "2026-05-01"),
+        "proposals/bravo.from-alpha.json": proposal("bravo"),
+        "proposals/charlie.from-bravo.json": proposal("charlie"),
+      }),
+    ).not.toThrow();
+  });
+
+  // A DERIVED earnings print is established by earnings-calendar.ts and has no file in the events
+  // directory, so a naive "proposer must be a canonical FILE" depth cap rejects anything a print
+  // proposes — and the rejection is unfixable, because writing `<print-id>.json` by hand is itself
+  // refused by the "earnings are derived" rule. Three print-parented proposals exist in the real
+  // calendar today and pass only because all three happen to be shadowed.
+  it("--validate lets a derived earnings print parent a proposal — it is established, not speculative", () => {
+    const print = {
+      symbol: "GOOG",
+      date: "2026-10-28",
+      status: "confirmed",
+      source: "IR: fixture",
+    };
+    expect(() =>
+      validateFixture(
+        {
+          "proposals/adtech-ruling-2026-10-02.from-goog-2026-10-28-print.json": {
+            ...entry("adtech-ruling-2026-10-02", "2026-10-02"),
+            status: "estimate",
+            source: "EST: fixture",
+          },
+        },
+        [print],
+      ),
+    ).not.toThrow();
   });
 
   it("the loader prefers the canonical file, else the first proposal by name, and rejects a bad proposal", () => {

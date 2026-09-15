@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -93,6 +93,22 @@ beforeAll(() => {
     );
   }
 
+  // Cadence math and the research horizon are separate concerns: this file asks WHICH events are
+  // due under the band table, while horizon (#2946) asks whether an event is close enough to be
+  // worth researching at all. Several fixtures below deliberately sit at 61+ days to pin the
+  // outermost band boundaries, which the committed 60-day horizon would otherwise suppress — so
+  // run against the REAL committed bands with only the horizon widened. The horizon's own
+  // behaviour is specced in research-horizon.spec.ts.
+  const cadenceFile = join(dir, "assessment-cadence.json");
+  const realCadence = JSON.parse(readFileSync("assessment-cadence.json", "utf8"));
+  writeFileSync(
+    cadenceFile,
+    JSON.stringify({
+      ...realCadence,
+      horizon: { maxDaysOut: 100_000, allImpactsWithinDays: 100_000 },
+    }),
+  );
+
   const out = execFileSync(
     "node",
     [
@@ -102,6 +118,7 @@ beforeAll(() => {
       `--events-dir=${join(dir, "market-events")}`,
       `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
       `--ledger-dir=${ledgerDir}`,
+      `--cadence-file=${cadenceFile}`,
     ],
     { cwd: process.cwd(), encoding: "utf8" },
   );

@@ -47,6 +47,30 @@ function validateCadence(cadence, problems) {
   for (const tier of TIERS) validateTierBands(tier, cadence.bands?.[tier], problems);
   if (!(Number.isInteger(cadence.closeOutWithinDays) && cadence.closeOutWithinDays >= 1))
     problems.push("cadence: closeOutWithinDays must be an integer >= 1");
+  problems.push(...horizonProblems(cadence.horizon));
+}
+
+/** The research horizon (#2946), as a list of problems so BOTH callers share one definition:
+ *  `--validate` reports them, and event-scan's loadCadence throws on any of them in every mode.
+ *  Validated rather than defaulted on purpose — an absent or nonsensical horizon must never read
+ *  as "no horizon", which is the uncapped behaviour that spent a weekly token quota in ~24 hours.
+ *  Same fail-closed doctrine as the dispatch ceiling's budget file. */
+export function horizonProblems(horizon) {
+  if (!horizon || typeof horizon !== "object")
+    return ["cadence: horizon { maxDaysOut, allImpactsWithinDays } is required (#2946)"];
+
+  const { maxDaysOut, allImpactsWithinDays } = horizon;
+  const problems = [];
+  if (!(Number.isInteger(maxDaysOut) && maxDaysOut >= 1))
+    problems.push("cadence: horizon.maxDaysOut must be an integer >= 1");
+  if (!(Number.isInteger(allImpactsWithinDays) && allImpactsWithinDays >= 0))
+    problems.push("cadence: horizon.allImpactsWithinDays must be an integer >= 0");
+  if (problems.length === 0 && allImpactsWithinDays > maxDaysOut)
+    problems.push(
+      "cadence: horizon.allImpactsWithinDays must be <= maxDaysOut — the inner band cannot " +
+        "reach past the outer edge",
+    );
+  return problems;
 }
 
 // The date policy made lintable: confirmed needs a trusted prefix, estimates an honest one.
@@ -106,8 +130,41 @@ function validateProposal(file, event, knownIds, problems) {
   return id;
 }
 
-function validateFileNames(files, knownIds, problems, warnings) {
-  const canonicalIds = new Set();
+/** THE PROPOSAL DEPTH CAP (#2946) — discovery gets exactly ONE generation.
+ *
+ *  A research session's adjacency sweep writes what it finds as `proposals/<id>.from-<proposer>`,
+ *  and a proposal loads as a real event, so it becomes `never-assessed`, buys its own session, and
+ *  sweeps again. That is the loop that took the calendar to 641 canonical + 469 pending in two
+ *  days and spent a weekly token quota in ~24 hours. Requiring the proposer to be CANONICAL — an
+ *  event someone actually researched into `<proposer>.json` — breaks the cycle: a proposal cannot
+ *  parent another proposal, so each generation must be paid for by real research before it can
+ *  produce the next.
+ *
+ *  "Established" means canonical files AND derived earnings prints. A print is established by
+ *  earnings-calendar.ts, not by speculation, so it is a legitimate parent — and it has no file in
+ *  this directory to point at. Treating prints as unestablished would wedge the calendar outright:
+ *  the refusal below tells the author to write `<proposer>.json`, which for a print is itself
+ *  refused by the "earnings are derived from earnings-calendar.ts" rule, leaving no legal move.
+ *  Three print-parented proposals already exist; they pass today only because all three happen to
+ *  be shadowed.
+ *
+ *  Honest scope: as of 2026-09-15 this fires on nothing (43 live proposals, all depth 1, after
+ *  #2951's just-in-time brake choked the recursion). It is insurance against a failure that has
+ *  already happened once, not a fix for a live one — free to enforce, and the calendar can no
+ *  longer silently grow a second generation. */
+function validateProposalDepth(file, establishedIds, problems) {
+  const proposer = file.match(PROPOSAL_FILE_RE)?.[2];
+  if (proposer === undefined || establishedIds.has(proposer)) return;
+  problems.push(
+    `${where(file)}: proposer "${proposer}" is itself only a proposal — discovery is capped at ` +
+      `ONE generation (#2946). Research "${proposer}" into ${proposer}.json first, or drop this file.`,
+  );
+}
+
+function validateFileNames(files, knownIds, derivedIds, problems, warnings) {
+  // Derived earnings prints are established by earnings-calendar.ts and have no file here, so they
+  // seed the set: they can parent a proposal, and they shadow one that duplicates their id.
+  const canonicalIds = new Set(derivedIds);
   const proposalsFor = new Map();
   for (const { file, event } of files ?? []) {
     if (!file.startsWith("proposals/")) {
@@ -122,14 +179,17 @@ function validateFileNames(files, knownIds, problems, warnings) {
     if (id !== null) proposalsFor.set(id, (proposalsFor.get(id) ?? []).concat(file));
   }
   for (const [id, list] of proposalsFor) {
-    if (canonicalIds.has(id))
+    if (canonicalIds.has(id)) {
       warnings.push(
         `${id}: ${list.length} inert proposal(s) shadowed by ${id}.json — safe to prune`,
       );
-    else if (list.length > 1)
+      continue; // shadowed proposals never load, so the depth rule below cannot apply to them
+    }
+    if (list.length > 1)
       warnings.push(
         `${id}: ${list.length} competing proposals (${list.join(", ")}) — the first by name stands in until ${id}.json exists`,
       );
+    for (const file of list) validateProposalDepth(file, canonicalIds, problems);
   }
 }
 
@@ -142,14 +202,15 @@ function validateLedgers(ledgers, ids, problems, warnings) {
   }
 }
 
-function validate({ curated, all, files }, cadence, ledgers) {
+function validate({ curated, derived, all, files }, cadence, ledgers) {
   const problems = [];
   const warnings = [];
   const ids = new Set();
+  const derivedIds = new Set((derived ?? []).map((e) => e.id));
   validateCadence(cadence, problems);
   for (const e of all) validateEvent(e, ids, problems);
   const knownIds = new Set([...ids, ...ledgers.keys()]);
-  validateFileNames(files, knownIds, problems, warnings);
+  validateFileNames(files, knownIds, derivedIds, problems, warnings);
   for (const e of curated)
     if (e.kind === "earnings")
       problems.push(
