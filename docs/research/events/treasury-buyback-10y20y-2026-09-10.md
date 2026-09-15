@@ -1,8 +1,8 @@
 # Treasury liquidity-support buyback operation (10-20Y nominal, 1:40pm ET) — treasury-buyback-10y20y-2026-09-10
 
 **Kind:** rates · **Date:** 2026-09-10 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations, Q3 2026 refunding, published 2026-08-05 — announce 09-09, operation 09-10 1:40pm ET, settle 09-11; tentative, and its $2B cap predates press release sb0607 — checked 2026-08-30) · **Impact:** medium
-**Last assessed:** 2026-09-10
-<!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11"],"screenStreak":0,"blocked":[{"url":"https://www.bls.gov/news.release/ppi.nr0.htm","status":403,"at":"2026-09-10"}]} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.09,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","existing-home-sales-2026-09-10","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11"],"adjacentStrongIds":["cpi-2026-09-11","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":0,"blocked":[{"url":"https://www.bls.gov/news.release/ppi.nr0.htm","status":403,"at":"2026-09-10"}]} -->
 
 ## At a glance
 
@@ -18,6 +18,23 @@ books, going into CPI (9/11) and a live-hike FOMC (9/15–16). Two dated things 
 **2026-09-09 announcement**, which gives this event its first hard number (does the max step to
 sb0607's **$4B**, or stay at the schedule's stale **$2B**?), and the operation's offer total. No
 position keyed to any of it.
+
+**Closed 9/15 (D+5, close-out) — both forward tests PASS on re-pulled primary data, and the week
+after is a bigger finding than the operation was.** Re-fetched this session, not recalled:
+`buybacks_operations` for `operation_date = 2026-09-10` returns **max $6.000B · offered $10.489B ·
+accepted $5.187B · 23 of 40 issues** — **cover 1.75x**, **fill 86.4%**. **FT-…-1 (offers below
+$15.72B) PASSES**; **FT-…-2 (cover below 6.0x) PASSES**, void clause untriggered. The *interesting*
+result is what the long end did next: the par curve for **9/11 (CPI day) and 9/14** reads 10Y
+**4.96 → 4.97**, 20Y **5.38 → 5.37**, 30Y **5.35 → 5.34**. August CPI printed **+0.40% m/m /
++3.40% y/y headline, core +2.45% y/y** (BLS API primary) and the **10Y moved +1bp** — about what
+the whole enlarged buyback program is worth through end-2026. So this doc's "This week" falsifier
+landed *on its own boundary*: **"CPI owns the week" was wrong**, though not for the reason the
+falsifier implied. Nothing owned the week; the 12bp repricing was already done on 9/10 by PPI, an
+ECB hike and Brent, and CPI confirmed rather than surprised. The lesson is about ranking: an event's
+tape impact is a function of **whether it surprises**, never of its category. The long end
+(20Y/30Y) actually **eased 3bp** across the two sessions after the operation while the 2Y rose 9bp
+(**4.56 → 4.65**), so the bear-flattening continued with no buyback fingerprint anywhere in it.
+Stance **stand aside** held, was correct, and is now final. This document goes quiet.
 
 **Updated 9/10 (D-0) — it happened, both watches resolved, and the surprise was Treasury's number,
 not the dealers'.** The announced maximum printed **$6B**, **50% above sb0607's $4B floor** and above
@@ -74,13 +91,18 @@ the 4 billion per issue" keeps **$4B a floor with an open ceiling**.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (9/10, D-0) | Stand aside — the operation is done and paid nothing | High | It ran 1:40–2:00pm ET as scheduled and is now history (`confirmed`): **$6B** announced max, **$10.489B** offered, **$5.187B** accepted, **1.75x** cover, **86%** fill. Nothing in that was tradeable, and the day's 10Y move (+12bp to **4.95**) has four better-credentialed owners — PPI **+0.40% m/m**, an ECB hike to **2.50%**, a **$22B** 30Y reopening, and Brent **+7.8%** to **$109.14**. The one thing the day did produce is information, and it is about **Treasury's** behaviour, not dealers': it paid 50% over its own stated floor without saying so anywhere but the announcement. | Nothing — this horizon closed. Its retrospective falsifier is the close-out's own: 10-20Y yields moving >5bp inside the 1:40–2:00pm window attributable to the operation, which daily par data cannot show either way |
-| This week | Let **CPI (9/11)** and **FOMC (9/15–16)** own the week; the buyback contributes nothing to either | High | Headline PPI at **+5.41% y/y** is 2026's hottest, driven by energy pass-through with core contained (**+4.62%**) — which makes tomorrow's CPI the print that actually re-prices the long end, from a 10Y already at a 2026 high of **4.95**. This event's residual work this week is bookkeeping: both forward tests have their determining data (**offers $10.489B < $15.72B**; **cover 1.75x < 6.0x**, void clause untriggered because the max printed *above* $4B) and get formally scored at close-out. | A CPI print that moves the 10Y less than the buyback's own ~1bp program effect — which would invert this doc's entire ranking of what matters on this calendar |
-| This month | The watch survives but its denominator moved — carry the **announced maximum** alongside the offer number, or cover is meaningless | Medium | The schedule now prints "**= or > $4 billion**" for every remaining long-end operation (**10/1** and **10/15** in this bucket; 9/24, 10/8, 10/27 in the 20-30Y sibling), so the cap is discretionary and knowable only at T-1. Cover is a ratio against a number Treasury chooses per operation: today it chose $6B and turned a would-be 5.2x print into **1.75x**. Comparing 10/1's cover to today's without both maxima on the record is an arithmetic error waiting to happen. | The **2026-10-01** operation announcing a maximum at or below **$4B** — that would make "= or >" a formality and restore a stable denominator, reversing this whole caution |
-| This quarter | Stand aside on the program as a yield driver — and note the *thin queue plus rising yields* combination refutes the framework, not just a number | Medium | The house two-branch read (offers ≫ cap with yields rising = size was never the constraint; offers thinning with yields stabilising = well-timed plumbing) had no branch for **offers collapsing to 1.75x while 10Y rises 12bp**. The resolution is that the queue measures *dealer inventory*, not market stress: the same day, the 30Y reopening drew **2.61** cover and **79.3%** indirects, its best of 2026, so real money took the paper down directly and dealers never accumulated what the buyback exists to drain. ~1bp of program support remains the right order of magnitude against deficits, the Fed path and a $109 Brent. | Long-end yields easing durably across the **10/1** and **10/15** operations with no macro explanation, or the **2026-11-04** refunding restoring a published long-end maximum rather than extending the "= or >" notation |
+| Today (9/15, D+5) | Stand aside — closed. The operation is scored and this document goes quiet | High | Re-pulled from `buybacks_operations` this session: **$6B** max · **$10.489B** offered · **$5.187B** accepted · **1.75x** cover · **86.4%** fill · 23 of 40 issues. Both forward tests **PASS** on that record. Nothing about it was tradeable then and nothing is now; the residual value of this event is the *mechanism* finding below, which belongs to its sibling operations, not to this date. | Nothing — this horizon is closed. Its retrospective falsifier was 10-20Y yields moving >5bp inside the 1:40–2:00pm window attributable to the operation, which daily par data cannot show either way; recorded **unmeasurable, not passed** |
+| This week | Let **FOMC (9/16)** own what is left of it — and note that **CPI did not own its half**, which is the week's real lesson | High | August CPI printed **+0.40% m/m / +3.40% y/y** headline with core at **+2.45% y/y** (BLS API primary, released 9/11) and the 10Y moved **+1bp**, 4.95 → **4.96**; the 20Y fell 1bp and the 30Y fell 2bp. The whole 12bp repricing had already happened on **9/10** on PPI, the ECB hike and a 7.8% Brent day — CPI confirmed rather than surprised, so it moved nothing. Ranking events by *category* was the error; tape impact is a function of **surprise**. | An FOMC decision on **9/16** that moves the 10Y less than the ~1bp this whole buyback program is worth — which would say the long end has stopped responding to scheduled US macro altogether, not that the buyback matters |
+| This month | The watch survives but its denominator moved — carry the **announced maximum** alongside the offer number, or cover is meaningless. **This is the only part of this event with a future, and it belongs to the siblings** | Medium | Schedule re-fetched **9/15** (89,250 bytes, masthead "For Publication September 9, 2026", unchanged since): every remaining long-end row reads "**= or > $4 billion**" — 9/24, **10/1**, 10/8, **10/15**, 10/27, **11/4** — while 7-10Y (9/17) and 2-3Y (10/6) keep a hard **$4B** and TIPS **$500M**/**$750M**. So the cap is discretionary and knowable only at T-1: on 9/10 Treasury chose $6B and turned a would-be 5.2x print into **1.75x**. The first live test is **9/24** (announced 9/23), in `treasury-buyback-20y30y-2026-09-24`. | The **2026-09-24** or **2026-10-01** operation announcing a maximum at or below **$4B** — that would make "= or >" a formality and restore a stable denominator, reversing this whole caution |
+| This quarter | Stand aside on the program as a yield driver — and carry forward that a **thin queue does not mean a firm long end** | Medium | The house two-branch read (offers ≫ cap with yields rising = size was never the constraint; offers thinning with yields stabilising = well-timed plumbing) had no branch for **offers collapsing to 1.75x while the 10Y rose 12bp**. The queue measures *dealer inventory*, not market stress: the same day the 30Y reopening drew **2.61** cover and **79.3%** indirects, its best of 2026, so end investors took the paper down directly and dealers never accumulated what the buyback exists to drain. The five sessions since confirm the indifference in both directions — 20Y/30Y **eased 3bp** while the 2Y rose 9bp to **4.65**, a continued bear-flattening with no buyback fingerprint in it. | Long-end yields easing durably across the **10/1** and **10/15** operations with no macro explanation, or the **2026-11-04** refunding restoring a published long-end maximum rather than extending the "= or >" notation |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **CLOSED 9/15 — no signal on this event remains live.** Both forward tests scored **PASS** off
+  re-pulled `buybacks_operations` (offers **$10.489B**, cover **1.75x**), the kill switches are
+  settled, and the only condition still worth watching — a long-end announcement printing a maximum
+  above the "= or > $4B" floor — is now the **siblings'** to carry (`9/24`, `10/1`, `10/15`, `11/4`),
+  not this document's. Everything below is the record as it stood before close-out.
 - **RESOLVED 9/10 — the 9/9 announced max printed $6B.** The third branch fired: Bessent's 8/20
   "could be more than the 4 billion per issue" was literal, not hedging. Read as a Treasury
   escalating into weakness (10Y at a 2026 high the same week), **not** as a bullish surprise, and
@@ -477,3 +499,113 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-09-15 (D+5, inside the 6-day close-out window).** This is a `rates` event with
+`symbols: []`, so no `earnings-cycle`/`intraday-edges` run applies; the instrument caches were
+nonetheless busted before the session per the standing rule, and **every number below was re-fetched
+from its primary this session, not carried from the D-0 row**. Sources, all HTTP 200 on a plain
+curl: `api.fiscaldata.treasury.gov` `buybacks_operations` (the operation, and all 56 of 2026's
+operations for the baseline), `home.treasury.gov` daily par yield curve CSV, `api.bls.gov` v2 for
+CPI, `home.treasury.gov/system/files/221/Tentative-Buyback-Schedule.pdf`, the Treasury press-release
+index, CBOE `_VIX.json`, Yahoo `BZ=F` for Brent.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** |
+| Total par offered | **$10,489,000,000** |
+| Total par accepted | **$5,187,000,000** |
+| Cover (offered ÷ max) | **1.75x** |
+| Fill (accepted ÷ max) | **86.4%** |
+| Issues | **23 accepted of 40 eligible** |
+| Window / settlement | 1:40–2:00pm ET **2026-09-10**, settled **2026-09-11** |
+
+Recomputed against the bucket's own 2026 record (twelve 10-20Y nominal liquidity operations, all
+pulled this session): offers ran **$28.65 · 22.89 · 20.85 · 17.84 · 36.05 · 18.06 · 19.69 · 18.39 ·
+15.72 · 16.30 · 7.40 · 10.49B**, and the first eleven each filled the full **$2B** cap. So 9/10 is
+the **second-lowest offer volume** of the twelve, the **lowest cover** (next: 8/11's 3.70x), and the
+**first non-full fill in the bucket's 2026 history**. Every figure matches the D-0 row exactly —
+which is the point of re-pulling rather than quoting it.
+
+### Forward tests — both PASS
+
+- **FT-treasury-buyback-10y20y-2026-09-10-1** — *offers below $15.72B*. **PASS: $10.489B**, 52% of
+  the bucket's $20.17B 2026 mean. The test's own stated risk was **cap elasticity** — that a larger
+  announced maximum would itself pull more paper out. Treasury **tripled** the scheduled cap ($2B →
+  $6B) and offers still came in at half the year's mean, so the risk did not bite; if anything the
+  result points the other way, which makes the pass stronger than its registration assumed.
+- **FT-treasury-buyback-10y20y-2026-09-10-2** — *cover below 6.0x*. **PASS: 1.75x** ($10.489B ÷
+  $6.0B). **Void clause untriggered** — it voided on a max printing *below* $4B, and the max printed
+  **above** it. One honest deduction from the margin: because Treasury chose a **larger** max than
+  the $4B the test anchored on, the cover threshold mechanically became easier ($36.0B rather than
+  $24.0B), so the *ratio* is a cheap pass. The hypothesis's substantive claim is not: it predicted
+  that a bigger cap moves this bucket **out of the automatic-fill regime**, and the accompanying
+  **86.4% partial fill — the bucket's first non-full fill in twelve** — is the confirmation that
+  matters. At 1.75x cover, 2026's other sub-3x nominal-coupon operations averaged 62% fill, so
+  Treasury bought willingly into a thin book rather than holding out on price.
+
+No legacy `FT-N` row in `forward-tests/legacy.md` refers to this event. No new forward test is
+registered: the close-out is terminal for this document, so a prediction filed here would have no
+session left to score it.
+
+### The five sessions after — the part worth carrying
+
+Par curve, fetched direct (2Y · 10Y · 20Y · 30Y): **9/8** 4.39 / 4.80 / 5.26 / 5.25 → **9/10** 4.56
+/ **4.95** / 5.39 / 5.37 → **9/11** 4.63 / **4.96** / 5.38 / 5.35 → **9/14** 4.65 / **4.97** / 5.37 /
+5.34.
+
+- **CPI did not move the long end.** August CPI (released 9/11) printed **+0.40% m/m** SA headline,
+  **+3.40% y/y** NSA against July's +3.36%, with core **+0.29% m/m / +2.45% y/y** — computed from
+  BLS series `CUSR0000SA0`, `CUUR0000SA0`, `CUSR0000SA0L1E`, `CUUR0000SA0L1E`. The 10Y moved
+  **+1bp** on the day; the 20Y fell 1bp and the 30Y fell 2bp.
+- **That lands this doc's "This week" falsifier on its own boundary, and the honest reading is that
+  the falsifier's *inference* was wrong, not just its call.** It read: *a CPI print that moves the
+  10Y less than the buyback's own ~1bp program effect — which would invert this doc's entire ranking
+  of what matters on this calendar.* CPI moved the 10Y by about that ~1bp, so **"CPI owns the week"
+  was wrong**. But nothing inverts: the buyback did not become the bigger event. The 12bp repricing
+  had already happened on **9/10** on a hot PPI, an ECB hike and a 7.8% Brent day, and CPI
+  *confirmed* that read rather than surprising against it (core at 2.45% y/y is exactly the contained
+  half PPI had already shown). The correction is to the framing itself: **an event's tape impact is a
+  function of whether it surprises, never of its category.** A calendar that ranks by tier will keep
+  making this error.
+- **The long end was indifferent to the buyback in both directions.** Across 9/11 and 9/14 the
+  20Y/30Y **eased 3bp** while the 2Y rose **9bp** to 4.65 — the bear-flattening continued with no
+  buyback fingerprint anywhere in it, which is the same conclusion the operation-day tape supported
+  and a second, independent observation of it.
+- **The mechanism change is intact and unannounced five days on.** The schedule PDF re-fetched today
+  is the **89,250-byte** 9/9 revision, unchanged, masthead "For Publication September 9, 2026"; every
+  remaining long-end row still reads **"= or > $4 billion"** (9/24, 10/1, 10/8, 10/15, 10/27, 11/4)
+  while 7-10Y (9/17) and 2-3Y (10/6) keep **$4B** and TIPS **$500M**/**$750M**. Treasury's
+  press-release index now carries **sb0627–sb0629** newer than sb0626 and the word *buyback* appears
+  **zero** times on it. A 50% escalation and a change to how the long-end cap is published both
+  shipped entirely through the plumbing.
+- **Adjacent tape, dated.** VIX **17.09** (CBOE, 2026-09-15 10:06 ET) vs 17.84 at the 9/10 close —
+  **−0.75**, the post-event calm-down. Brent **$102.40** (Yahoo `BZ=F`, 9/15) vs **$107.63** on 9/10
+  on the same series — off **4.9%** from the operation-day close, so the energy leg that drove the
+  9/10 repricing has partially unwound. *(The D-0 row's **$109.14** came from a different source;
+  both are carried with their source named rather than reconciled, per the honesty rules.)*
+
+### Verdict vs. the stance
+
+**The stance was `stand aside`, it never changed across five assessments plus this close-out, and it
+was correct.** Nothing about the 1:40–2:00pm window was tradeable, no position was keyed to it, and
+no attribution of any day's tape to it survives contact with the data. The base case as amended at
+D-2 scored **half right**: the fill call was right (partial, 86.4%) and the D-2 amendment that
+removed *"and Treasury fills it"* is what made it right, while the **size** call was wrong in a
+direction the doc had opened at D-7 and declined to weight ($6B, 50% over sb0607's floor), and the
+**offer** call was wrong the other way (1.75x, not "a multiple of the cap"). Kill switches **1, 3, 4
+and 5 fired**; **2 is recorded unmeasurable, not passed** — the no-other-news condition never
+obtained and daily par data cannot attribute a 20-minute window either way.
+
+**What routes onward, and to whom.** Nothing here licenses an action. Two findings belong to the
+sibling operations rather than to this date, and are stated here so those lanes inherit them:
+**(1)** the long-end maximum is no longer published — record the announced max *with* every offer
+number or cover is not comparable across operations, first live test **2026-09-24**
+(`treasury-buyback-20y30y-2026-09-24`), then **2026-10-01** and **2026-10-15** in this bucket and the
+**2026-11-04** refunding, where sizing beyond this quarter gets addressed; **(2)** a thin buyback
+queue is **not** a positive long-end technical — it measures dealer inventory, and 9/10 showed it
+collapsing to a 2026-low cover on the same afternoon a $22B 30Y reopening drew the year's best bid.
+The scanner goes quiet on this event.
