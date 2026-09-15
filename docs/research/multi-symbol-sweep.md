@@ -71,6 +71,33 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **A published elasticity applied to a realized price where the paper's regressor is an
+  *expectation* (FT-umich-sentiment-prelim-2026-09-11-2)** — added 2026-09-15 from the
+  [umich-sentiment-prelim-2026-09-11 close-out](events/umich-sentiment-prelim-2026-09-11.md). It
+  bounded the September UMich year-ahead inflation expectation at **≤4.2%** (an up-move of ≤0.2pp)
+  by multiplying FRBSF Economic Letter **2026-24**'s **+0.24pp per 10pp** coefficient against the
+  **realized** in-window pump move of **+2.2% m/m**. The print was **4.6%** — three times the bound,
+  and past the row's own **≥4.3%** kill line. **The coefficient was not wrong; the input was.** That
+  paper keys to a revision in **expected** gas-price growth, and +0.6pp through it requires a
+  **~25pp** expectational revision — which no realized series in the window approaches (EIA Jul
+  **$3.932** → Aug **$4.058** → AAA at the 09-07 cut-off **$4.1505** is **+5.6%** cumulative; BLS's
+  seasonally-adjusted August gasoline index **+3.9%**) and which the window's *forward-looking* shock
+  supplies easily: **Brent +8.7%** (88.58 on 08-25 → 96.28 on 09-04), US strikes across Iran on
+  09-01, Iran's 09-07 Hormuz headline, a record Labor Day pump average and a record diesel print.
+  **The survey separates the two channels itself, which is why this is a clean kill rather than a
+  near miss:** the **Expectations** sub-index fell **−11.1% m/m** against **−1.9%** for **Current
+  Economic Conditions**, a 5.8x split, and the director's commentary names year-ahead expectations
+  for personal finances and business conditions as what "plunged." A realized-price shock lands on
+  current conditions; this one did not touch it. **Do not re-propose a magnitude bound built from a
+  realized price when the cited coefficient's regressor is an expectation** — read the paper's
+  left- and right-hand variables before sizing anything with it. **The tell, generalized and worth
+  more than the rule:** the parent doc's *prose* had been carrying a war for four rows while its
+  *arithmetic* carried a pump price. When those two disagree inside one document, the arithmetic is
+  the part to re-derive. **One detail that must travel with the kill:** the sibling direction test
+  (`-1`, "year-ahead prints above 4.0%") **passed** on the same print, so the transmission mechanism
+  is intact and only its sizing died — a kill here is not licence to drop the energy→expectations
+  channel from the next UMich ledger.
+
 - **The Gulf shut-in recovery showing up in the IEA's August-month figure
   (FT-iea-omr-2026-09-11-2)** — added 2026-09-15 from the
   [iea-omr-2026-09-11 close-out](events/iea-omr-2026-09-11.md). It predicted the September 2026 OMR
