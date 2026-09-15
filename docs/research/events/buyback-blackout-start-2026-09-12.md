@@ -1,52 +1,55 @@
 # Corporate buyback blackout window begins closing (pre-Q3-earnings) — buyback-blackout-start-2026-09-12
 
 **Kind:** sector · **Date:** 2026-09-12 (estimate, NEWS: Citadel Securities GMI note, Scott Rubner, published 2026-08-31 — "begins closing around September 12"; desk primary 403s, read via press summaries) · **Impact:** low
-**Last assessed:** 2026-09-11
-<!-- probe-ref: {"symbols":{},"vix":15.61,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","boe-decision-2026-09-17","bund-30y-auction-2026-09-16","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","qss-q2-2026-09-09","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-note-2026-09-09","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","retail-sales-2026-09-16","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":1} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.58,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","boe-decision-2026-09-17","bund-30y-auction-2026-09-16","canada-counter-tariffs-effective-2026-09-08","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","qss-q2-2026-09-09","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-note-2026-09-09","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","retail-sales-2026-09-16","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":0,"blocked":["citadelsecurities.com — HTTP 403 (Cloudflare), re-checked 2026-09-15; the $1.1T and 09-12 figures stay press-summary-grade"]} -->
 
 ## At a glance
 
-**TL;DR.** **Stand aside, and specifically: do not trade this date.** Two facts sink it before the
-mechanism is even argued. First, **2026-09-12 is a Saturday** — the tracked date is not a trading
-session at all, and the first session it can touch is Monday **2026-09-14**. Second, there is no
-market-wide buyback-blackout date to trade: issuer blackouts are per-company policy, and the three
-policy shapes that actually appear in filed insider-trading policies (14 days before quarter-end ·
-the close of the 10th day of the quarter's third month · the 15th calendar day of the quarter-end
-month) spread the start across roughly **09-10 → 09-16**. So this is a **ramp, not a gate**, and
-Rubner's "around" is the honest word. The ramp's leading edge is real and identifiable, though:
-Apple's fiscal Q4 ends **2026-09-26** (EDGAR primary — FY2025 closed 2025-09-27, FQ3 FY2026 closed
-2026-06-27), so a standard 14-day rule puts the market's single largest repurchaser (**$100B**
-authorization, 2026-04-30) into blackout on exactly **09-12**, while calendar-quarter names
-(MSFT/GOOG/META/AMZN, quarter-end 09-30) get **09-16**. That coincidence is why the date reads
-precise when it isn't. The mechanism is real but small and its size is knowable: Goldman puts 2026
-repurchases at **~$1.4T**, its desk's own executions "typically decline by ~30%" in blackout, and
-its 2026 Q1/Q2 analogue was **$4.5–5.5B/day** of corporate bid leaving the tape. The folk theory
-that this makes the tape fall is **refuted** by the only formal study found (State Street /
-Bartolini, S&P 500 Buyback Index, monthly 1994-03-31 → 2018-10-31: no significant negative alpha in
-blackout windows), and the 2018 counter-anecdote is inseparable from the same quarter-end
-seasonality it is offered as evidence for. **And for our own tracked names the fading bid is
-mostly not there:** GOOG has repurchased nothing in 2026, META nothing in Q1 2026 (both redirecting
-cash to AI capex), AMZN's share count is *rising*, and NVDA/AVGO/MRVL/MU are on off-calendar fiscal
-years that do not join a Sep-30 ramp at all. Citadel's own note says **67% of the largest authorized
-buybacks YTD sit outside Technology**. All trading-adjacent statements here carry this event's
-`estimate` label; nothing below licenses an entry.
+**TL;DR.** *Closed out.* **The stand-aside was right and cost nothing — and the window that was
+supposed to test it was destroyed by three shocks that have nothing to do with corporate flow.**
+The tracked date was a **Saturday**, as this ledger said at D-8; the first affected session was
+**2026-09-14**, and the S&P fell **−0.483%** on it (7,656.98 → 7,619.98). But the **Philadelphia
+Semiconductor Index fell −5.86%** the same session, because Anthropic's Dario Amodei published
+*"We Must Pace the Frontier"* on **Saturday 2026-09-12** and Altman, Hassabis and Musk cosigned it
+within hours. On top of that the **10-year yield touched 5.012% intraday on 09-14** — its first
+5-handle since 2023 — and **Saudi Arabia shut the ~7 mb/d East–West pipeline** after attacks from
+Iraqi territory, taking Brent to **$109**, a four-month high. None of the three was on the calendar
+when **FT-buyback-blackout-start-2026-09-12-1** was registered on 2026-09-04, and that test's own
+pre-registered clause voids on exactly this case — *"a geopolitical shock… the window's whole value
+is its cleanliness"* — so it scores **VOID**: not killed, not passed, and no evidence either way
+about the mechanism. **The void is not hiding a comfortable pass.** Measured from this session's
+re-pulled bars at **10:58 ET on 09-15 — an intraday print, not a close** — the two-session return
+was **−1.02%**, straddling the **−1.0%** kill line, with the day's range spanning −0.52% to −1.10%.
+Had the window been clean it would have been a coin-flip, which is its own argument for the void.
+**The sharpest observation is the one the buyback thesis got backwards: AAPL — the name leg 2 named
+as the ramp's leading edge, entering blackout on exactly 09-12 — closed *up* +0.244% on 09-14**, the
+session it was supposed to lose the market's largest single corporate bid, while the index fell and
+semis fell six percent. **And the transmission leg held on re-check:** Alphabet has still
+repurchased **nothing** in 2026 ($69.5B unused as of 06-30) and Meta **nothing** in Q1, both
+redirecting cash into the AI capex the Amodei essay just put in doubt. This document's one stated
+job was defensive — keep the 09-14 → 09-18 corridor from being read as a buyback story — and the
+tape made that job real on day one. **Recommendation carried out of close-out: retire the
+market-wide date; a per-name AAPL row keyed to its 2026-09-26 fiscal quarter-end is the only honest
+successor.** All statements carry this event's `estimate` label; none licensed an entry, and none
+does now.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-8) | **Stand aside** | High | The date is `estimate`, eight days out, and is a **Saturday** — there is no session on it to trade, and no house playbook (S1/S2/E1/S3/S4/G1) is buyback- or flow-keyed | Nothing dated today; a flow-keyed house playbook does not exist to be triggered |
-| This week | **Stand aside** | High | The ramp has not started: the earliest issuer-policy shape puts a start at ~**09-10** and the first *affected session* is **2026-09-14**. This week's tape belongs to PPI (9/10) and CPI (9/11), not to this | A named issuer disclosing a repurchase suspension dated before **2026-09-11**, which would put a real bid removal inside this week rather than after it |
-| This month | **Watch the 09-14 → 09-18 corridor; do not attribute it to this** | Medium | The corporate bid thins from ~09-14 into the FOMC (9/16) and a record **$6.2T** gamma roll-off (9/18) — but 2nd-half-September is *already* the weakest half-month of the year (median ~−0.5%) and is keyed to the same quarter-end, so the two are collinear by construction and neither can be scored against the other | S&P 500 down worse than **−1.0%** over the clean 2026-09-11 close → 2026-09-15 close window (the only two sessions before FOMC/witching contaminate it) — that would put a mark on the ramp's leading edge the null result says shouldn't be there. Registered as **FT-buyback-blackout-start-2026-09-12-1** |
-| This quarter | **Retire or re-derive this entry at close-out — don't carry it forward as a date** | Medium | SEC Rule 10b-18 is a safe harbour, not a calendar, so no primary source can ever promote **09-12** to `confirmed` as written; Apple did not even file an Exhibit 19 insider-trading policy with its FY2025 10-K, so the largest name's actual rule is not primary-readable | A tracked issuer publishing its repurchase-blackout dates directly, which would make a per-name derived entry honest where a market-wide one never was |
+| Today (D+3, closed) | **Stand aside** | High | The event is closed and scored: **FT-…-1 VOID** on its own contamination clause, no position ever taken, zero cost. Today's tape belongs to the **FOMC (09-16)** — money markets >90% on a 25bp hike — not to a fading corporate bid | Nothing; the event has passed. A revival would need a house playbook that is flow-keyed, and none exists |
+| This week | **Stand aside — and do not read 09-16 → 09-18 as buybacks** | High | Three larger stories own the rest of the corridor: FOMC + VIX SOQ **09-16**, the record **~$6.2T** witching **09-18**, and a 10y at **5.01%**. The corporate-flow leg is the smallest term in that sum and cannot be separated from it | A named issuer disclosing a repurchase suspension that measurably moves its own tape — none found on re-check this session |
+| This month | **Retire the market-wide date; re-derive per name or not at all** | High | The close-out confirmed it from the tape: the ramp's own leading edge, **AAPL**, closed **+0.244%** on the first affected session while the S&P fell 0.483% and the SOX fell 5.86%. A gate the largest repurchaser's own tape ignores is not a gate | AAPL underperforming QQQ by more than **3pp** across 09-14 → 09-30 with no competing attribution — the one shape that would justify a per-name successor entry |
+| This quarter | **Never re-file a "buyback blackout starts on date X" row** | High | Leg 9 held on re-check: 10b-18 is a safe harbour, not a calendar; citadelsecurities.com **still returns HTTP 403** (re-checked today); Apple filed no Exhibit 19 with its FY2025 10-K. No primary can ever promote this date, so the entry can only ever be `estimate` | A tracked issuer publishing its own repurchase-blackout dates — which would license a per-name entry, never a market-wide one |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Never trade the date.** **2026-09-12 is a Saturday** (`estimate`); the first affected session is **2026-09-14**.
-- **Treat it as a ramp ~09-12 → 09-16**, not a gate — AAPL (fiscal Q4 ends 09-26) leads, calendar-quarter names (MSFT/GOOG/META/AMZN) follow on ~09-16.
-- **Size it honestly:** ~**$4.5–5.5B/day** of corporate bid and a **~30%** execution decline (Goldman desk figures) against >**$1.1T** of authorizations in an open window (Citadel, 2026-08-31) — all vendor estimates, never OCC/primary counts.
-- **The causal claim is refuted, not merely unproven** — State Street (Bartolini), monthly 1994-03-31 → 2018-10-31, S&P 500 Buyback Index: no significant negative alpha in blackout windows.
-- **Our names are the wrong names for this trade** — GOOG **$0** repurchased in 2026, META **$0** in Q1 2026, AMZN share count rising; NVDA/AVGO/MRVL/MU are off-cycle fiscal years. AAPL is the one real exception.
-- **Watch (dated)** — PPI **09-10** · CPI **09-11** · first affected session **09-14** · FOMC + VIX SOQ **09-16** · triple witching **09-18** · quarter end **09-30**. The corridor's other two stabilizer stories live in [`opex-2026-09-18.md`](opex-2026-09-18.md), not here.
-- **Relevance kill** — Citadel or Goldman publishing a revised open-window date that moves off 09-12 by more than two sessions, before **2026-09-14**.
+- **Closed and scored — no signal, no position, zero cost.** `FT-…-1` is **VOID**: three off-calendar shocks destroyed the clean window it needed.
+- **The 09-14 move was semis, not buybacks** — SOX **−5.86%**, NVDA **−3.36%**, against S&P **−0.483%**, on Amodei's 09-12 essay cosigned by Altman/Hassabis/Musk.
+- **The leading edge went the wrong way** — **AAPL +0.244%** on 09-14, the exact session leg 2 put the largest repurchaser into blackout.
+- **Two further off-calendar shocks in the same window** — 10y touched **5.012%** (first since 2023); Saudi shut the **~7 mb/d** East–West pipeline, Brent **$109**.
+- **Transmission leg re-confirmed** — GOOG **$0** repurchased in 2026 ($69.5B unused at 06-30), META **$0** in Q1; no resumption found, no AAPL suspension found.
+- **Measurement honesty** — the 09-15 leg is an **intraday** fetch (10:58 ET), not a close: **−1.02%** cumulative, day range −0.52% to −1.10%. The void does not depend on it.
+- **The successor, if any** — an AAPL-specific row keyed to its **2026-09-26** fiscal quarter-end. A market-wide date row is structurally unconfirmable and should not return.
 
 ## Initial research
 
@@ -243,6 +246,7 @@ would require the `confirmed` status this event can never have.
 |---|---|---|---|---|
 | 2026-09-04 | D-8 | Initial research banked (above). **Headline finding: 2026-09-12 is a Saturday** — the tracked date is not a session, and the first affected one is 2026-09-14; unlike `fomc-blackout-start-2026-09-05`'s rule-derived Saturday, this one is a desk note rounding a distribution. **Second finding: the start is a ramp ~09-10 → 09-16**, whose leading edge is Apple — EDGAR filing metadata pulled direct today (FY2025 period 2025-09-27, FQ3 FY2026 period 2026-06-27) puts Apple's fiscal Q4 end at **2026-09-26**, so a standard 14-day rule lands the largest single repurchaser ($100B authorization, 2026-04-30) on exactly 09-12, while calendar-quarter names get 09-16. **Third: the causal claim is refuted** — State Street/Bartolini, S&P 500 Buyback Index, monthly 1994-03-31 → 2018-10-31, finds no significant negative alpha in blackout windows (read via two secondary summaries; the PDF text layer did not decode). Sizing, all vendor-grade: GS ~$1.4T of 2026 repurchases, desk executions "typically decline ~30%" in blackout, $4.5–5.5B/day of bid removed in the Q1/Q2-2026 analogue; Citadel >$1.1T of authorizations in an open window through August. Adjacency sweep: **peers** — `symbols: []`, no issuer; the tracked-name read is leg 7 and it cuts against relevance (GOOG **$0** repurchased in 2026 with $69.5B unused as of 06-30; META **$0** in Q1 2026; AMZN share count rising; NVDA/AVGO/MRVL/MU on off-calendar fiscal years — MU already in blackout into its 09-29 print; AAPL the one real exception; Citadel: 67% of the largest YTD authorizations sit outside Technology). **Macro** — the 09-04 payroll print beat hard (+162k vs ~53k consensus, unemployment 4.1%), taking Sep-16 hike odds to ~60% after Waller's 09-03 remarks had knocked them from ~66% to ~49–50%: two-sided again, and irrelevant to this gate except that it loads the same corridor. **Volatility** — VIX **14.02** intraday 14:58 ET today against a 14.32 close on 09-03 (Yahoo, fetched this session; the sibling opex ledger recorded 14.07 for this session earlier — ~0.05 of intraday spread, immaterial); S&P 500 ~7,718, a 2026-low vol regime going into the corridor. **Geopolitical** — nothing touching corporate repurchase policy; the Hormuz/oil channel is tracked in the FOMC and opex ledgers, not here. **Event tape** — 09-14 → 09-18 stacks this thinning bid, FOMC + VIX SOQ (9/16) and a record ~$6.2T gamma roll-off (9/18) on top of the year's weakest seasonal half-month (2nd-half September, median ~−0.5%), which is keyed to the *same* quarter-end — collinear by construction, so the corridor is an attribution trap, not a setup; the midterm-year prior cuts the other way (+1.0% average September in 2026's configuration). Citadel primary re-checked and still **HTTP 403**, so `estimate` stands and cannot ever be promoted as written (10b-18 is a safe harbour, not a calendar; Apple's FY2025 10-K filed **no Exhibit 19**, so even its actual rule is not primary-readable). **No new dated adjacency found** — every corridor item above is already on the calendar; nothing proposed to `market-events.ts` this pulse. | — (stance set: stand aside on all four horizons, plus a recommendation to re-derive per name or retire the entry at close-out; no directional call and no size) | 2026-09-11 (low, 0–14d band: every 7d) |
 | 2026-09-11 | D-1 | **Deterministic screen (no Claude session).** Readings — VIX 15.6 (+1.6pt since last), band unchanged (low:0+), 50 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-09-17`, `bund-30y-auction-2026-09-16`, `canada-counter-tariffs-effective-2026-09-08`, `ecb-decision-2026-09-10`, `eia-weekly-petroleum-status-2026-09-16`, `empire-state-mfg-2026-09-15` +24 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-18 |
+| 2026-09-15 | D+3 | **Close-out, scored from bars re-pulled today after the mandated cache bust — never from memory.** **The FT window was contaminated and scores VOID.** Three shocks landed inside 09-14/09-15, none on the calendar at registration (2026-09-04): Amodei's *"We Must Pace the Frontier"* essay, published **Saturday 09-12**, cosigned within hours by Altman, Hassabis and Musk — **SOX −5.86%** (11,824.00 → 11,131.28), **NVDA −3.36%**, MU −5.3%, INTC −5.6% on 09-14; the **10y touching 5.012%** intraday 09-14, its first 5-handle since 2023 (^TNX closed **4.96**, then **5.01** intraday today); and **Saudi Arabia shutting the ~7 mb/d East–West pipeline** after attacks from Iraqi territory, **Brent $109**, a four-month high. The test's own clause names "a geopolitical shock" verbatim, so this is **VOID, not killed** — and it is not concealing a clean pass: S&P **7,656.98 (09-11) → 7,619.98 (09-14) = −0.483%**, then **7,578.05 intraday at 10:58 ET on 09-15 = −1.031% cumulative** (live quote 7,579.05 → −1.018%), day range −0.519% to −1.101%, i.e. straddling the −1.0% line with the close still hours away. **The decisive observation cuts against the mechanism anyway: AAPL closed +0.244%** (332.27 → 333.08) on 09-14 — the exact session leg 2 put the market's largest repurchaser into blackout — while the index and semis fell. **Transmission leg (leg 7) re-confirmed:** GOOG still **$0** repurchased in 2026 ($69.5B unused at 06-30), META **$0** in Q1, both redirecting cash to AI capex; no resumption and no AAPL suspension found, so the transmission kill did not fire. **Leg 9 re-confirmed:** citadelsecurities.com returned **HTTP 403** again today (recorded in `probe-ref.blocked`), so the $1.1T and 09-12 figures stay press-summary-grade and the date can never be promoted. Adjacency sweep — **peers**: `symbols: []`, none. **Macro**: FOMC 09-16 now >90% priced for +25bp; the 5% 10y is the live repricing. **Volatility**: VIX 15.84 (09-11) → 17.10 (09-14) → **17.58** intraday today, +1.97 off the reference. **Geopolitical**: Saudi pipeline / Hormuz / Bab al-Mandeb, owned by the oil ledgers, not this one. **Event tape**: the AI-pact follow-on (Altman: a cross-industry safety agreement "imminent") is real but **undated**, and the ASEAN AI Summit that press placed "this month" in fact ran **09-01/09-02** — so **nothing dated was found and nothing is proposed** this pulse. | — (closed; stand aside CONFIRMED on every horizon at zero cost, `FT-…-1` **VOID**, and the retire-or-re-derive recommendation from initial research is carried out as the standing call) | — (closed; `## Outcome` filled, the scanner goes quiet on this event) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -251,3 +255,114 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-15, D+3, inside the 6-day `closeOutWithinDays` window).** Sector mode runs no
+`earnings-cycle` / `intraday-edges` instrument — `symbols: []`, no issuer — so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was performed and had
+no instrument target; every figure below comes from a source re-fetched **today**, never from memory of
+the tape: Yahoo daily bars for `^GSPC`, `^VIX`, `^SOX`, `^TNX`, `NVDA` and `AAPL` pulled through
+`scripts/research/market-data.mjs` into the freshly-emptied cache, a live `^GSPC` chart-meta quote, a
+direct browser-UA `curl` against citadelsecurities.com, and dated press for the three shocks.
+
+**The measurement caveat, stated first because it bounds everything else.** This session ran at
+**10:58 ET on 2026-09-15**, so the 09-15 bar Yahoo returns is an **in-progress intraday print, not a
+close** (`regularMarketTime` 2026-09-15T14:58:03Z, `regularMarketPrice` 7,579.05, day range
+7,572.69–7,617.26). The forward test's window ends at the 09-15 *close*, roughly five hours after this
+session. That would normally force the close-out to wait — but the test voids on contamination, and the
+contamination is established independently of where 09-15 settles, so the verdict below is final while
+the return figure is as-of-fetch and labelled as such everywhere it appears.
+
+### What actually happened: three off-calendar shocks, none of them corporate flow
+
+| Shock | Landed | Evidence (re-pulled today) |
+|---|---|---|
+| Amodei publishes *"We Must Pace the Frontier"*; Altman, Hassabis, Musk cosign within hours | Essay **Sat 2026-09-12**; first tradeable session **09-14** | **^SOX 11,824.00 → 11,131.28 = −5.86%** on 09-14; **NVDA 218.29 → 210.96 = −3.36%**; MU −5.3%, INTC −5.6% per press |
+| 10-year Treasury yield breaks 5% | Intraday **09-14**, peak **5.012%**, first since 2023 | **^TNX 4.97 (09-11) → 4.96 (09-14 close) → 5.01 (09-15 intraday)** — it touched and reversed, then went through today |
+| Saudi Arabia shuts the ~7 mb/d East–West pipeline after attacks from Iraqi territory | **09-14**, alongside Houthi movement toward Bab al-Mandeb | Brent **$109**, a four-month high; still **$102** on 09-15 |
+
+The S&P's own move across those sessions is small next to any of them: **−0.483%** on 09-14
+(7,656.98 → 7,619.98), and **−1.031% cumulative** at this session's 10:58 ET fetch (7,578.05; the live
+quote read 7,579.05 → −1.018%). A −0.48% index session sitting on top of a −5.86% semiconductor session
+is an index absorbing a concentrated sector shock, which is the opposite of the broad, flow-driven
+softening a fading corporate bid would produce.
+
+### Scoring `FT-buyback-blackout-start-2026-09-12-1` — **VOID**
+
+The test predicted the S&P would return **≥ −1.0%** from the 2026-09-11 close to the 2026-09-15 close,
+and pre-registered its own escape: *"**Void** (not killed) if a dated non-buyback catalyst lands inside
+09-14/09-15 that was not on the calendar at registration (an unscheduled Fed leak, a geopolitical shock,
+an emergency print) — the window's whole value is its cleanliness, and a contaminated window scores
+nothing."* Three such catalysts landed. The Amodei essay is the unscheduled-shock case almost exactly;
+the Saudi pipeline closure is the geopolitical case verbatim; the 5% print is a repricing the calendar
+did not carry as a dated row. The test scores **VOID**, and the mechanism leg (leg 4's null) is neither
+supported nor damaged — it goes back on the shelf untested.
+
+**Three honesty notes on that verdict, because a void is the convenient answer and deserves the
+scrutiny:**
+
+1. **The void was pre-registered, not invented here.** The clause was written on 2026-09-04, eight days
+   before any of these shocks, and it names "a geopolitical shock" in those words.
+2. **The void is not rescuing a losing prediction.** At fetch time the window sat at **−1.02%**, a
+   hair past the −1.0% line, with the day spanning **−0.52% to −1.10%** — genuinely a coin-flip with the
+   close still ahead. Calling it void forfeits an observation that might have gone either way; it does
+   not bank one.
+3. **Voiding costs us the test.** This was the only clean window the corridor offered — 09-16 carries
+   the FOMC and the VIX SOQ, 09-18 the record ~$6.2T witching. There is no rerun this quarter, and the
+   next honest attempt is a *per-name* one, not another market-wide date.
+
+### The stance held, and one leg got sharper than the ledger had it
+
+**Stand aside was right on all four horizons, at zero cost** — no position was taken or implied at any
+point, and the corridor was not quiet, which is what makes that worth something rather than nothing.
+
+**The finding worth carrying forward is that the ramp's leading edge went the wrong way.** Leg 2 argued
+that Apple's fiscal Q4 end (2026-09-26, from EDGAR filing metadata) puts the market's single largest
+repurchaser — a **$100B** authorization approved 2026-04-30 — into blackout on exactly **09-12**, making
+AAPL the first and largest bid to fade. On **09-14**, the first session that could show it, **AAPL closed
++0.244%** (332.27 → 333.08) while the S&P fell 0.483% and semis fell 5.86%. One session is one session
+and the shock that day was sector-specific, so this is not a refutation — but it is the first
+out-of-sample look at the one name the thesis was most specific about, and it went against the thesis.
+
+**Legs re-checked at close-out:**
+
+- **Leg 7 (transmission) — held.** Alphabet has still repurchased **nothing** in 2026, with **$69.5B**
+  remaining under authorization as of 2026-06-30; Meta repurchased **nothing** in Q1 2026. Both are
+  redirecting cash into AI capex — the same capex the Amodei essay put in doubt, which is a real irony
+  and not a mechanism: the AI-slowdown shock hits these names through capex expectations, not through
+  a repurchase window. No resumption was found and no AAPL suspension was found, so the **transmission
+  kill did not fire**.
+- **Leg 9 (unconfirmability) — held.** citadelsecurities.com returned **HTTP 403** to a browser-UA
+  `curl` again today, unchanged across all three sessions that tried it; recorded in
+  `probe-ref.blocked`. SEC Rule 10b-18 remains a safe harbour rather than a calendar, and Apple's FY2025
+  10-K still carries no Exhibit 19 insider-trading policy. The date was never promotable and is not now.
+- **Leg 8 (no playbook to fire into) — held.** Nothing in `trade-playbooks.md` became flow- or
+  expiration-keyed in the intervening eleven days.
+- **The date kill did not fire.** No revised open-window date was published by Citadel or Goldman
+  before 2026-09-14.
+
+### The recommendation, carried out of close-out
+
+**Retire the market-wide entry.** Initial research said a row reading "buyback blackout starts on date
+X" can never be honest because no such date exists, and close-out confirms it from two directions: the
+primary is permanently unfetchable, and the one name whose blackout date *is* derivable traded up on the
+day it was supposed to lose its bid. **If a successor is wanted, it is an AAPL-specific row keyed to the
+2026-09-26 fiscal quarter-end**, carrying its own per-name falsifier — not another market-wide date. That
+is a calendar decision rather than a research one, so it is recorded here and not acted on from this
+lane.
+
+### Honest limits on this close-out
+
+The 09-15 leg of every return figure is an **intraday** print taken at 10:58 ET, not a close, and is
+labelled as such everywhere; the void verdict does not rest on it, but no reader should quote −1.02% as
+a settled two-session return. The three shocks are established from dated press, not from primary
+documents — Amodei's essay was read through summaries rather than his own site, the 5.012% intraday
+high is Bloomberg's and CNBC's figure rather than a TreasuryDirect series, and the pipeline closure is
+press-sourced. Attribution of the 09-14 index move to the AI shock is an inference from the sector
+dispersion (SOX −5.86% against S&P −0.483%), not a decomposition. The per-name repurchase facts come
+from filing summaries with as-of dates, not a systematic 10-Q pull, and the most recent of them
+(Alphabet's $69.5B, Meta's Q1 zero) predate Q3 entirely — a Q3 resumption would not yet be visible
+anywhere I looked. And the core question this event existed to answer — does the corporate bid fading
+mark the tape — is exactly as unanswered today as it was on 2026-09-04, which is the real cost of the
+void.
