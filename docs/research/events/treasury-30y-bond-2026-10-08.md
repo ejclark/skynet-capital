@@ -1,64 +1,65 @@
 # 30-Year Treasury Bond auction (second reopening) — treasury-30y-bond-2026-10-08
 
 **Kind:** rates · **Date:** 2026-10-08 (estimate, EST: treasury.gov Tentative Auction Schedule PDF, text layer decompressed direct 2026-09-05 — row reads `30-Year BOND R / Thursday, October 01, 2026 / Thursday, October 08, 2026 / Thursday, October 15, 2026`) · **Impact:** medium
-**Last assessed:** 2026-09-05
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:31+","adjacentIds":["ecb-account-2026-10-08","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","ism-services-2026-10-05","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","treasury-10y-note-2026-10-07","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08"],"screenStreak":0} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.1,"daysBand":"medium:8+","adjacentIds":["consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","treasury-10y-note-2026-10-07","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"https://stooq.com/q/d/l/?s=^vix","status":"JS_CHALLENGE","at":"2026-09-15"},{"url":"https://stooq.com/q/d/l/?s=^move","status":"JS_CHALLENGE","at":"2026-09-15"},{"url":"https://stooq.com/q/d/l/?s=cb.f","status":"JS_CHALLENGE","at":"2026-09-15"}]} -->
 
 ## At a glance
 
-**TL;DR.** **Two intuitions about this auction are both wrong, and the primaries say so.** The first is
-that selling the *same* 30-year bond a third time must fatigue demand: across **18 complete nominal 30Y
-cycles** since 2022, second reopenings printed bid-to-cover **2.401** against first reopenings' **2.405**
-— a gap of **0.004** — and the second reopening is the *steadiest* of the three legs (σ 0.057 vs a new
-issue's 0.115), with the **highest** indirect share and the **lowest** dealer take. The second is that
-the buyback operation running **40 minutes after** this auction is a support bid for the bond being sold.
-Its maturity range (**10/09/2046–10/08/2056**) does cover CUSIP **912810UW6** (matures 2056-08-15) — which
-is exactly why September's ledger's "wrong sector" answer does **not** carry here — but TreasuryDirect's
-buyback FAQ excludes on-the-run securities **and** any security not past its first coupon payment date, and
-912810UW6 fails both (first coupon **2027-02-15**). That clause, not a recency habit, is what produces the
-**0/20 on-the-run and 0/20 first-off-the-run** eligibility record across every nominal 20Y–30Y operation
-on file — including **2026-04-09**, the one prior date a 20-30Y buyback shared a day with a 30Y auction,
-which excluded that morning's bond. So the honest read is a **non-event with two free dated checks before
-it** — the 09-10 first reopening (D-28) and the 10-07 preliminary CUSIP list (D-1). Date is `estimate`,
-`symbols: []`, nothing here is a trade.
+**TL;DR.** **Two of this ledger's own kill switches fired, and the re-derivation they demanded flips which
+way this auction is likely to miss.** The 09-10 first reopening of this exact CUSIP printed bid-to-cover
+**2.610** — outside the 2.30–2.52 band, **3.60σ** above the prior-20 mean, the strongest 30Y *reopening*
+since 2022, with the lowest dealer take (**2.21%** of competitive) of all 57 nominal 30Y auctions on file.
+The intuitive follow-on — a hot first reopening means a hot second — is this doc's **third refuted
+intuition**: across 18 complete cycles R1→R2 correlates **−0.506**, the five hottest R1s were followed by
+R2s averaging **−0.130**, and the regression puts 10-08 at **2.309**, the *bottom* edge of the band. So
+FT-1's risk has flipped from breaking the ceiling to breaking the floor. Today's 20Y reopening is the
+counter-test and it agrees: five sessions after the 30Y's 79.5% indirect / 2.2% dealer print, the 20Y
+cleared at **5.420%** on indirect **52.5%** and dealer **16.9%** — the 09-10 strength did not generalise
+across the long end. Separately, `sb0607`'s replacement buyback schedule finally published **09-09** and
+moved the 10-08 operation's size line from a hard **$2B cap** to a **"= or > $4 billion" floor**, which
+**voids FT-2 by its own clause** without touching the mechanism it tested — so the eligibility claim is
+re-registered as FT-4, with a free early read on **09-23**. And the tape is no longer the calm one this doc
+baselined: MOVE **83.90** (a 3-month high), Brent **$109.24** (+14% off the 09-04 anchor), 2s30s **69bp**
+(18bp flatter). Date is `estimate`, `symbols: []`, nothing here is a trade.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (2026-09-05, D-33) | Stand aside | High | Saturday — no session, markets reopen Tuesday **09-08** after Labor Day. `symbols: []`, no house playbook is rates-keyed, and every number this event turns on is either already in writing (`sb0590`: **$22B**) or unresolvable for 26 more days. | Treasury moving coupon issuance off the published grid before **2026-10-01** — an off-cycle size change or a coupon CMB kills the "already in writing" premise that this whole doc rests on |
-| This week | Stand aside, and let **09-10 do this doc's work for free** | High | The **09-10** first reopening of this identical CUSIP prints at 1:00pm ET, 28 days early, on the same $22B size — it tests the 2.30–2.52 band and the second-reopening claim at zero cost, and its own ledger already carries the full corridor read. | The **2026-09-10** reopening clearing bid-to-cover **outside 2.30–2.52** — the 20-auction band this doc's central prediction rests on breaks a month before the auction it was written for |
-| This month | Watch the **10-07 CUSIP list**, not the auction | High | The preliminary eligible-CUSIP list publishes **11:00am ET 2026-10-07**, a day before the auction, and settles the same-day-buyback question mechanically. The auction itself is the most-predictable leg: **$22B** (20/20), CUSIP **912810UW6** (15/15 cycles reopened exactly twice), bid-to-cover inside **2.30–2.52** (20/20). | **912810UW6 appearing on the 2026-10-07 preliminary list** — the FAQ's on-the-run and first-coupon clauses are not applied as written, and the same-day operation becomes a genuine bid for the line being sold |
-| This quarter | The long end's supply grid is knowable through **2026-11-04**; do not carry naked duration through the 10-14/10-28 stack | Medium | `sb0590`'s size table stops at Oct-26, so **11-04** is where issuance guidance can legitimately move. Between now and then the corridor stacks CPI + Beige Book **10-14**, the dealer agenda **10-16**, blackout **10-17** and FOMC **10-28** — and 30Y sits at **5.24%**, ~9bp under its 8/17 cycle-high close. | The **2026-11-04** refunding statement dropping the "maintain nominal coupon auction sizes for at least the next several quarters" language, or raising the 30Y off $22B — the fiscal-supply leg firing directly rather than by narrative |
+| Today (2026-09-15, D-23) | Stand aside | High | `symbols: []`, no house playbook is rates-keyed, and today's own long-end print (20Y at **5.420%**, dealer **16.9%**) says the regime is still repricing rather than settling. The 10-01 announcement is 16 days out; nothing before it is actionable. | Treasury moving coupon issuance off the published grid before **2026-10-01** — an off-cycle size change or a coupon CMB kills the "already in writing" premise this whole doc rests on |
+| This week | Watch the **09-23 11:00am ET** preliminary CUSIP list, not the tape | High | The 09-24 20Y–30Y operation is the first long-end buyback under the new **"≥ $4B"** floor, and its eligible list tests the on-the-run/first-coupon exclusion **15 days before** the 10-07 list does, at zero cost. | **912810UW6 appearing on the 2026-09-23 preliminary list** — the FAQ's clauses are not applied as written, and the eligibility finding dies a fortnight before the auction it was written for |
+| This month | Expect the 10-08 print **below 2.610**, nearer the band's floor than its ceiling | Medium | R1→R2 correlates **−0.506** over 18 cycles, the five hottest R1s reverted **−0.130** on average, and the regression's point estimate at R1=2.61 is **2.309**. Medium, not high, because **2.61 is out of sample** (in-sample R1 max 2.52) so the extrapolation is the weak link. | **The 2026-10-08 auction clearing at or above 2.610** — mean reversion fails on the one cycle it was registered for, and the persistence reading takes over |
+| This quarter | The supply grid is knowable only through **2026-11-04**; do not carry naked duration through the 10-14/10-28 stack | Medium | MOVE **83.90** is a 3-month high (+14.8% since 09-04), Brent is +14%, and August PPI printed **+0.40%** m/m against +0.3% — the long end is being repriced by inflation, not by supply, and `sb0590`'s size table stops at Oct-26. | The **2026-11-04** refunding statement dropping the "maintain nominal coupon auction sizes for at least the next several quarters" language, or raising the 30Y off $22B — the fiscal-supply leg firing directly rather than by narrative |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never a directional bet on an auction.** `symbols: []`, date is `estimate`, no house playbook
   (S1/S2/E1/S3/S4 + G1) is rates-keyed. This is a no-new-duration window, not a trade.
-- **The size is pre-published and carries no information at $22B** — `sb0590` (2026-08-05) Oct-26 row
-  puts the 30-Year at **$22 billion**, and 20 consecutive completed $22B reopenings since 2024-03-13
-  agree. Read only a **deviation** as information; $22B is the null.
-- **The demand band, primary-derived and quotable:** those same 20 reopenings printed bid-to-cover
-  **2.30–2.52** (mean 2.409, σ 0.056) across clearing yields **4.015% → 5.058%** — a 104bp span that the
-  band did not widen for. Registered as **FT-treasury-30y-bond-2026-10-08-1**.
-- **A second reopening is not a tired reopening.** 18 complete cycles: bid-to-cover NEW **2.371** · R1
-  **2.405** · R2 **2.401**; indirect share 66.6% / 66.7% / **67.8%**; dealer take 14.0% / 12.9% / **12.6%**.
-  Paired R2−R1 mean **−0.004**, positive in 8 of 18.
-- **No same-day rescue bid — and the September reason does not apply.** The 10-08 operation is
-  **20Y–30Y**, range **10/09/2046–10/08/2056**, which *does* cover 912810UW6 (2056-08-15). The exclusion is
-  the FAQ's, not the range's: on-the-run, **and** first coupon **2027-02-15** not yet paid. Record across
-  all 20 nominal 20Y–30Y operations: on-the-run **0/20**, first-off-the-run **0/20**, second-off-the-run
-  **20/20**. Registered as **FT-treasury-30y-bond-2026-10-08-2**.
-- **Predicted top of the 10-07 eligible list: 912810UR7 (2056-02-15)** — 912810UU0's first coupon is
-  **2026-11-15**, still unpaid on 10-08, so it stays excluded and the list tops out exactly where
-  2026-08-18's did.
-- **The buyback buys old paper, not new.** On 2026-08-18 the $2B cap filled from **three** issues maturing
-  **2048–2051** against **$19.87B offered** across 36 eligible CUSIPs. Liquidity support is a bid for
-  illiquid off-the-runs; it is not a term-premium backstop for the current line.
-- **Watch (dated):** OPEC+ JMMC **10-04** · ISM Services **10-05** · 3Y **10-06** + MRVL investor day
-  **10-06** + 2Y-3Y buyback **10-06** · 10Y **10-07** + FOMC minutes **10-07** + the preliminary CUSIP
+- **The size is still the null at $22B** — `sb0590` (2026-08-05) Oct-26 row, and 21 consecutive completed
+  $22B reopenings since 2024-03-13 including 09-10. Read only a **deviation** as information.
+- **The band broke, but on the R1 leg, not the R2 leg.** With 09-10 the modern $22B series is n=21, mean
+  **2.419**, σ **0.069**, range **2.30–2.61** — yet **all 18 R2s on record still sit inside 2.30–2.52**.
+  FT-1 stands, on the narrower base it always had.
+- **Mean reversion, not persistence, is the R1→R2 relation** — corr **−0.506**, OLS `R2 = 3.484 − 0.450·R1`,
+  residual σ **0.052**, 1-sd interval at R1=2.61 of **2.24–2.38**. Registered as
+  **FT-treasury-30y-bond-2026-10-08-3**.
+- **The 09-10 strength did not generalise.** Today's 20Y reopening cleared **5.420%** (+21.6bp over the
+  08-19 new issue) on indirect **52.5%** and dealer **16.9%** — against the 30Y's 79.5% / 2.2% five
+  sessions earlier. Treat 2.610 as auction-specific until a second long-end print repeats it.
+- **The same-day buyback still cannot bid for this bond; only the size line moved.** The 09-09 schedule
+  keeps the 10-08 operation's date, 1:40pm ET time, 20Y–30Y sector and **10/09/2046–10/08/2056** range and
+  raises the size to a **"= or > $4 billion"** floor. Eligibility is the FAQ's on-the-run and first-coupon
+  clauses, untouched by a size line. Re-registered as **FT-treasury-30y-bond-2026-10-08-4**.
+- **Predicted top of both the 09-23 and 10-07 eligible lists: 912810UR7 (2056-02-15)** — 912810UU0's first
+  coupon is **2026-11-15**, unpaid on both dates, so it stays excluded exactly as on 2026-08-18.
+- **The buyback's channel is unchanged; its scale is not.** The first enlarged operation (09-10, 10Y–20Y)
+  took **$5.187B against $10.489B offered** — the first 10Y–20Y op since 2024-05 not to fill its ceiling.
+  It is still a bid for illiquid off-the-runs, now roughly 2.5x the size the initial research assumed.
+- **Watch (dated):** FOMC **09-16** · 09-24 buyback's CUSIP list **09-23 11:00am ET** · OPEC+ **10-04** ·
+  ISM Services **10-05** · 3Y **10-06** · 10Y **10-07** + FOMC minutes **10-07** + the preliminary CUSIP
   list **10-07 11:00am ET** · **this auction 10-08 1:00pm ET** + ECB account **10-08** + 20-30Y buyback
-  **10-08 1:40pm ET** · IMF/World Bank **10-12/18** · CPI + Beige Book **10-14** · settlement + 20Y
-  announcement **10-15** · dealer agenda + OpEx **10-16** · blackout **10-17** · 20Y auction **10-21** ·
-  FOMC **10-28** · borrowing estimates **11-02** · refunding **11-04**.
+  **10-08 1:40pm ET** · bond market closed **10-12** · CPI + Beige Book **10-14** · settlement **10-15** ·
+  blackout **10-17** · 20Y auction **10-21** · FOMC **10-28** · borrowing estimates **11-02** ·
+  refunding **11-04**.
 
 ## Initial research
 
@@ -267,6 +268,28 @@ action exists to take.
 - **FT-treasury-30y-bond-2026-10-08-2** — **912810UW6 does not appear** on the preliminary eligible-CUSIP
   list published 11:00am ET **2026-10-07** for that day's 20Y–30Y operation.
 
+**Stance change, 2026-09-15 (D-23) — receipt: the ledger row of the same date.** The guard-shaped
+conclusion survives and hardens; the word *non-event* does not. Two kill switches fired. The 09-10 first
+reopening printed **2.610**, outside the band, so the re-derivation the first kill switch demanded has been
+done rather than patched: the band's failure is confined to the **R1** leg (all 18 R2s on record remain
+inside 2.30–2.52), and the R1→R2 relation is **mean-reverting at corr −0.506**, which moves FT-1's risk
+from the ceiling to the floor. `sb0607`'s replacement buyback schedule published **09-09**, moving the
+10-08 operation's size line, which fires FT-2's own **void** clause verbatim — recorded as such rather than
+argued away, with the mechanism re-registered as FT-4 under the new schedule. Meanwhile the baseline this
+doc was written against no longer holds: MOVE at a **3-month high**, Brent **+14%**, an **18bp**
+bear-flattening, and August PPI at **+0.40%** against +0.3%. So this is no longer "a non-event with two free
+checks" — it is **a live demand test inside a repriced long end**, still stand-aside because `symbols: []`
+and the date is `estimate`, but now carrying three dated checks rather than two and a directional
+expectation about *how* the print will miss.
+
+**Predictions registered 2026-09-15** (same TEMPLATE rule; rows in the fragment, not here):
+
+- **FT-treasury-30y-bond-2026-10-08-3** — the 10-08 second reopening clears bid-to-cover **below 2.610**,
+  the 09-10 first reopening's print.
+- **FT-treasury-30y-bond-2026-10-08-4** — re-registration of the voided FT-2 under the **2026-09-09**
+  schedule: **912810UW6 does not appear** on the 10-07 11:00am ET preliminary eligible-CUSIP list, with the
+  **09-23** list for the 09-24 operation as its free early read.
+
 **Kill switches:**
 
 - **The 09-10 first reopening printing outside 2.30–2.52** — the band leg 4 rests on breaks a month before
@@ -290,6 +313,7 @@ action exists to take.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-05 | D-33 | Initial research banked (doc above). **The schedule is primary-verified:** the tentative auction PDF (HTTP 200, 17,195 bytes, text layer decompressed direct) reads `30-Year BOND R / Thursday, October 01, 2026 / Thursday, October 08, 2026 / Thursday, October 15, 2026`, matching the calendar entry exactly; status stays `estimate`. **Finding 1 — no second-reopening fatigue (leg 3):** 18 complete nominal 30Y cycles from `auctions_query` give bid-to-cover NEW **2.371** (σ 0.115) · R1 **2.405** (σ 0.064) · **R2 2.401 (σ 0.057)**, paired R2−R1 **−0.004** and positive in 8/18, with R2 carrying the highest indirect share (67.8%) and lowest dealer take (12.6%) of the three legs — the intuitive "force-fed duration" read is refuted on the tenor where it is most often asserted. **Finding 2 — the modern band (leg 4):** the 20 completed $22B reopenings since 2024-03-13 printed **2.30–2.52** (mean 2.409, σ 0.056) across clearing yields **4.015% → 5.058%**, a 104bp span the band did not widen for; registered as FT-treasury-30y-bond-2026-10-08-1. **Finding 3 — the same-day buyback cannot bid for this bond, for a different reason than September's (leg 5):** the 10-08 1:40pm ET operation is **20Y–30Y**, range **10/09/2046–10/08/2056**, which **does** cover 912810UW6 (matures 2056-08-15) — so the September ledger's "wrong sector" answer does not transfer. What excludes it is TreasuryDirect's buyback FAQ (on-the-run securities, and any not past their first coupon payment date; 912810UW6 fails both, first coupon **2027-02-15**). This session's addition is that the clause **generates** the eligibility record rather than a recency habit doing so: across all 20 nominal 20Y–30Y operations the on-the-run 30Y was eligible **0/20**, the first-off-the-run **0/20** and the second-off-the-run **20/20**, and taking 2026-08-18 apart issue by issue, 912810UU0 (first coupon 2026-11-15) fails the coupon clause alone while 912810UR7 (first coupon 2026-08-15, three days earlier) clears both and tops the list. Direct precedent: **2026-04-09**, the only prior date a 20-30Y operation shared a day with a 30Y auction, excluded both that morning's bond (912810UR7, first coupon 2026-08-15) and 912810UP1 (2026-05-15), topping out at 912810UM8. Registered as FT-treasury-30y-bond-2026-10-08-2; predicted top of the 10-07 list is **912810UR7**, since 912810UU0's first coupon is still unpaid on 10-08. Honest limit: the FAQ was **not reachable this session** (four URLs 404), so its text is inherited from the 09-24 buyback sibling's 2026-09-02 direct read and only the arithmetic against it is first-hand. **Correction to this event's own calendar note:** "$69B security (25 + 22 + 22)" is offering-amount arithmetic; the 08-13 sale's total accepted was **$31.32B including a $6.32B SOMA add-on**, so $69B is a floor. **`sb0607` (2026-08-19) still unfulfilled at 17 days:** the buyback PDF re-fetched this session is **byte-identical at 125,547 bytes** to the 09-03/09-05 pulls, still mastheaded "For Publication August 5, 2026", both long-end rows capped at $2B. Adjacency — **peers:** n/a (`symbols: []`). **Macro:** the 10-06/10-07/10-08 stack pairs the 3Y and 10Y with **FOMC minutes 10-07** and the **ECB account 10-08**, both records of meetings already held (three and four weeks stale respectively; the account's own ledger measured ~1.1x baseline publication-day moves over 13 editions); CPI + Beige Book land 10-14, after settlement. **Volatility:** VIX **14.53**, MOVE **73.10** (09-04 closes), the latter having surrendered ~three-quarters of a +12.3% five-session climb in two sessions — the September sibling's standing rule that a sub-week MOVE swing is noise until it survives a week is adopted here rather than re-derived. **Geopolitical:** Brent **$95.83** (09-04), holding the post-09-01 Hormuz level rather than extending; OPEC+ JMMC meets **10-04** inside the corridor. **Event tape:** par curve 09-04 — 2Y 4.37 · 10Y 4.78 · 20Y 5.25 · **30Y 5.24**, 2s30s **87bp**, ~9bp under the 8/17 cycle-high close; the 09-10 R1 of this same CUSIP is confirmed at **$22.0B** on treasurydirect and prints 28 days before this auction, making it this doc's free intermediate falsifier. **New dated adjacency PROPOSED as `estimate` in the same PR:** `treasury-buyback-20y30y-2026-10-08` — announce 10-07, operation 10-08 1:40–2:00pm ET, settle 10-09, 20Y–30Y nominal coupons, range 10/09/2046–10/08/2056, cap $2B, off the same tentative buyback PDF. It is the load-bearing object of finding 3 and was previously undated in this calendar; its 10-07 11:00am ET preliminary CUSIP list is where FT-2 scores. | — (stance set: guard-shaped, no new duration; `symbols: []` so no symbol-keyed action exists) | 2026-09-26 (medium, 31+d band: every 21d) |
+| 2026-09-15 | D-23 | **Two kill switches fired; both re-derived, neither patched.** **(1) The 09-10 first reopening broke the band.** `auctions_query` (plain curl, HTTP 200, 241,289 bytes, re-pulled this session): 912810UW6's `29-Year 11-Month` leg cleared **5.3080%** at bid-to-cover **2.610** on $22.0B offered / $22.000B accepted, **no SOMA add-on** — outside the registered **2.30–2.52** band and **3.60σ** above the prior-20 mean (2.409, σ 0.056). Composition was the extreme, not just the ratio: indirect **79.48%** of competitive (2nd-highest of all 57 nominal 30Y auctions since 2022, behind 80.47% on 2024-10-10) and dealer **2.21%** (the **lowest of all 57**, next lowest 5.88%). Modern $22B series updated to **n=21, mean 2.419, σ 0.069, range 2.30–2.61**. **Re-derivation, as that kill switch required — and it produces this doc's third refuted intuition.** The natural follow-on ("a hot R1 means a hot R2") is backwards: across the 18 complete cycles, **corr(R1,R2) = −0.506**, OLS `R2 = 3.484 − 0.450·R1` with residual σ **0.052**, and the **five hottest R1s** (2.46–2.52) were followed by R2s averaging **−0.130**. At R1 = 2.610 the point estimate is **2.309** (1-sd interval 2.24–2.38). Two consequences stated plainly: **all 18 R2s on record still sit inside 2.30–2.52 (18/18)**, so FT-1 survives on the R2 leg even though the pooled band broke on an R1 — but its risk has **flipped from the ceiling to the floor**, since 2.309 sits 0.009 above the band's bottom. **Honest limit:** R1 = 2.61 is **outside the regression's in-sample R1 range (2.25–2.52)**, so this is extrapolation, which is why the month call is Medium. Registered as **FT-treasury-30y-bond-2026-10-08-3** (10-08 clears below 2.610). **(2) `sb0607`'s replacement buyback schedule published — FT-2 is void by its own clause.** Re-fetched direct this session: **89,250 bytes, md5 c49a5351bf2d31a367817abc62be51bd**, masthead **"For Publication September 9, 2026"**, against the stale edition's 125,547 bytes / md5 79b65955e74a59f6bebff3adf8ba7b35 that every prior row in this family recorded — independently matching the md5 the `treasury-buyback-increase-2026-09-09` close-out logged. The 10-08 row reads verbatim announce **10/7**, operation **10/8 1:40pm–2:00pm**, settle **10/9**, Liquidity Support, Nominal Coupons **20Y to 30Y**, range **10/09/2046–10/08/2056** — date, time, sector and range **all unchanged** — with the size line moving from a hard **`$0 / $2 billion`** to **`$0 / = or > $4 billion`**, a floor with discretion carried by every 10Y–20Y and 20Y–30Y row from 09-24 through 11-04 while every other sector keeps a hard number. FT-2's registered void clause names "sector, **date or cap**"; the cap moved, so **FT-2 is recorded void rather than argued around** — even though a purchase-size floor has no bearing on which CUSIPs are eligible, which is the FAQ's on-the-run and first-coupon clauses and is untouched. The mechanism is therefore **re-registered under the new schedule as FT-treasury-30y-bond-2026-10-08-4**, and this pulse's genuine addition is a **new free dated check two weeks earlier than 10-07**: the **09-24** 20Y–30Y operation (range 09/25/2046–09/24/2056, which also covers 912810UW6) publishes its preliminary eligible list **09-23 11:00am ET**, and 912810UW6 fails both clauses there too — on-the-run through 10-08, first coupon **2027-02-15**. Predicted top of the 09-23 list is **912810UR7**, same as 10-07. **Eligibility record unchanged at 0/20:** `buybacks_operations` shows **no 20Y–30Y operation since 2026-08-18** (only 09-03/09-09 1Mo–2Y, 09-10 10Y–20Y, and the 09-15 TIPS 10Y–30Y in flight), so no new observation has been added either way. **Leg 6 amended on scale, not on channel:** the first enlarged operation (09-10, 10Y–20Y) was set at **$6B** and took **$5,187,000,000 against $10,489,000,000 offered** — the first 10Y–20Y op since 2024-05 not to fill its ceiling — so the 10-08 20Y–30Y operation can plausibly run ~2.5x the $2B the initial research assumed, still ~4:1 oversubscribed and still buying off-the-runs. Adjacency — **peers:** n/a (`symbols: []`). **Macro:** the single mover named by a primary is **August PPI final demand +0.40% m/m SA / +5.44% y/y NSA vs +0.3% consensus** on 09-10 (BLS API, recorded on `treasury-buyback-increase-2026-09-09`); **FOMC decides 09-16**, and the minutes of that meeting publish **10-07**, inside this corridor. **Volatility — the September sibling's "a sub-week MOVE swing is noise until it survives a week" rule resolves to REGIME for the first time:** MOVE **83.90** (09-14) vs **73.10** (09-04), **+10.8 points / +14.8%**, the **3-month high** (3mo range 65.39–83.90, mean 73.24), and above 76 for **five consecutive sessions** (76.14 · 76.74 · 82.09 · 82.21 · 83.90). VIX **17.10** (09-14) vs 14.53, **+2.57** — below the screen's 3-point bar but the same direction. **Geopolitical:** Brent front-month **$109.24** (09-15) vs **$95.83** (09-04), **+14.0%**; Brent spot (EIA via FRED) ran 102.24 → **109.51** through 09-09. The initial research called oil "the one leg holding at an elevated level rather than retracing" — it did not hold, it extended, and OPEC+ meets **10-04** inside the corridor. **Event tape:** par curve 09-14 — 2Y **4.65** · 10Y **4.97** · 20Y **5.37** · **30Y 5.34**, **2s30s 69bp** against 87bp on 09-04, an **18bp bear-flattening** on 2Y **+28bp** vs 30Y **+10bp** — which *corroborates* leg 7's "the long end is not trading the Fed path" rather than contradicting it. The 30Y printed **5.37%** on 09-10, its highest par close of 2026. **The cleanest counter-test is today's own auction:** the **09-15 20Y reopening** (912810UX4, $13B) cleared **5.4200%** — **+21.6bp** over the 08-19 new issue's 5.204% — at bid-to-cover **2.57** but indirect **52.47%** and dealer **16.85%**, against the 30Y's 79.48%/2.21% five sessions earlier. The 09-10 composition **did not generalise across the long end**, which is the strongest single reason to read 2.610 as auction-specific rather than as a demand regime, and it points the same way the mean-reversion regression does. **Corridor grew from 9 adjacent ids to 20**, and the cadence band **transitioned medium:31+ → medium:8+** (21d → 7d interval). New in the corridor since the last row and worth naming: **sifma-bond-market-closure-2026-10-12** (the bond market is shut two sessions after this auction), **jgb-30y-auction-2026-10-08** (same-day foreign long-end supply, which the initial research did not have), **opec-plus-meeting-2026-10-04** beside the JMMC, and **ism-services-2026-10-05** — the corridor's only **confirmed high-impact** adjacent and now this event's sole `adjacentStrongIds` entry. **No new dated adjacency proposed, and the check is recorded rather than assumed:** every row of the new buyback schedule (09-15 → 11-05, twelve operations) and every Oct/Nov row of the auction schedule, including the **10-01 coupon announcement** where this event's `estimate` resolves, is **already a tracked calendar entry** — the first pulse in this family to find the corridor fully covered. Status stays **estimate**; the 10-01 announcement is 16 days out and `sb0590`'s **$22B** remains the null. | **CHANGED** — from "a non-event with two free checks" to **a live demand test in a repriced long end**: same stand-aside (still `symbols: []`, still `estimate`), but FT-1's risk flips ceiling → floor, FT-2 is void and re-registered as FT-4, and FT-3 adds a directional expectation about *how* 10-08 misses | 2026-09-22 (medium, 8+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
