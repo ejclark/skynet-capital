@@ -6,9 +6,10 @@ import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
+import { thesisView } from "../observatory/thesis-json-view.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { resolvePageSize } from "./pagination.js";
+import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
 /** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
@@ -22,7 +23,9 @@ export async function serveDeskJson(
   config: DashboardServerConfig,
 ): Promise<void> {
   const rest = decodeURIComponent(path.slice("/api/desk/".length));
-  const sub = ["activity", "decisions", "pulse"].find((name) => rest.endsWith(`/${name}`));
+  const sub = ["activity", "decisions", "pulse", "thesis"].find((name) =>
+    rest.endsWith(`/${name}`),
+  );
   const id = sub ? rest.slice(0, -(sub.length + 1)) : rest;
   const state = config.hub.getState();
   const found = state.participants.find((p) => p.id === id);
@@ -83,6 +86,33 @@ export async function serveDeskJson(
             }
           : { available: false, kind: "bot", cycles: [] },
       ),
+    );
+    return;
+  }
+  if (sub === "thesis") {
+    // A human desk has no persona/decision-cycle mind to show a thesis for — same gate as
+    // `/decisions`, same honest absence rather than an empty-but-present payload.
+    if (found.kind !== "bot") {
+      res.end(JSON.stringify({ available: false, kind: found.kind }));
+      return;
+    }
+    const [decisionRecords, activityRecords, samples] = await Promise.all([
+      config.readDecisions?.(id),
+      config.readTradeActivity?.(id),
+      config.readHistory?.(id) ?? [],
+    ]);
+    const decisions = decisionRecords
+      ? decisionCyclesView(decisionRecords, { limit: MAX_PAGE_SIZE })
+      : { cycles: [] };
+    const activity = activityRecords
+      ? deskActivityView(activityRecords, undefined, { limit: MAX_PAGE_SIZE }).activity
+      : [];
+    res.end(
+      JSON.stringify({
+        available: true,
+        kind: "bot",
+        thesis: thesisView(found.personaId, decisions, activity, samples),
+      }),
     );
     return;
   }

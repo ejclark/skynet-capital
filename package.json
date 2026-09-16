@@ -79,7 +79,8 @@
     "design:cards": "node scripts/design-cards.mjs",
     "shoot:activity": "tsx scripts/shoot/activity.mjs",
     "shoot:mission-control": "tsx scripts/shoot/mission-control.mjs",
-    "shoot:council": "tsx scripts/shoot/council.mjs"
+    "shoot:council": "tsx scripts/shoot/council.mjs",
+    "shoot:thesis": "tsx scripts/shoot/thesis.mjs"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",

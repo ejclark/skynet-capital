@@ -30,6 +30,7 @@ import { Route as UIdIndexRouteImport } from './routes/u.$id.index'
 import { Route as UIdDecisionsRouteImport } from './routes/u.$id.decisions'
 import { Route as UIdPlaybooksRouteImport } from './routes/u.$id.playbooks'
 import { Route as UIdPulseRouteImport } from './routes/u.$id.pulse'
+import { Route as UIdThesisRouteImport } from './routes/u.$id.thesis'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -136,6 +137,11 @@ const UIdPulseRoute = UIdPulseRouteImport.update({
   path: '/pulse',
   getParentRoute: () => UIdRoute,
 } as any)
+const UIdThesisRoute = UIdThesisRouteImport.update({
+  id: '/thesis',
+  path: '/thesis',
+  getParentRoute: () => UIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
+  '/u/$id/thesis': typeof UIdThesisRoute
   '/u/$id/': typeof UIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
+  '/u/$id/thesis': typeof UIdThesisRoute
   '/u/$id': typeof UIdIndexRoute
 }
 export interface FileRoutesById {
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
+  '/u/$id/thesis': typeof UIdThesisRoute
   '/u/$id/': typeof UIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/u/$id/decisions'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
+    | '/u/$id/thesis'
     | '/u/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/u/$id/decisions'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
+    | '/u/$id/thesis'
     | '/u/$id'
   id:
     | '__root__'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/u/$id/decisions'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
+    | '/u/$id/thesis'
     | '/u/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -446,6 +458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UIdPulseRouteImport
       parentRoute: typeof UIdRoute
     }
+    '/u/$id/thesis': {
+      id: '/u/$id/thesis'
+      path: '/thesis'
+      fullPath: '/u/$id/thesis'
+      preLoaderRoute: typeof UIdThesisRouteImport
+      parentRoute: typeof UIdRoute
+    }
   }
 }
 
@@ -453,6 +472,7 @@ interface UIdRouteChildren {
   UIdDecisionsRoute: typeof UIdDecisionsRoute
   UIdPlaybooksRoute: typeof UIdPlaybooksRoute
   UIdPulseRoute: typeof UIdPulseRoute
+  UIdThesisRoute: typeof UIdThesisRoute
   UIdIndexRoute: typeof UIdIndexRoute
 }
 
@@ -460,6 +480,7 @@ const UIdRouteChildren: UIdRouteChildren = {
   UIdDecisionsRoute: UIdDecisionsRoute,
   UIdPlaybooksRoute: UIdPlaybooksRoute,
   UIdPulseRoute: UIdPulseRoute,
+  UIdThesisRoute: UIdThesisRoute,
   UIdIndexRoute: UIdIndexRoute,
 }
 

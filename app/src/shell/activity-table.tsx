@@ -55,7 +55,7 @@ function ActivityRow({ event }: { readonly event: DeskActivityEvent }): ReactEle
         minute: "2-digit",
       });
   return (
-    <tr>
+    <tr id={`act-${event.orderId}`}>
       <td className="num">{stamp}</td>
       <td>
         <span className="sym">{event.display}</span>
