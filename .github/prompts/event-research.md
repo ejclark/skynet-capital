@@ -19,9 +19,9 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   (initial research + stance + kill switches + first ledger row).
 - `interval-elapsed` → pulse check appending ONE ledger row, including the mandatory adjacency sweep
   (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics touching the event's symbols) —
-  any dated adjacent event you discover is PROPOSED as a NEW FILE YOU OWN,
-  `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` (`"status": "estimate"`), in
-  the same PR, never `confirmed` and never as `<id>.json` (issue #1717: two sweeps discovering the
+  any dated adjacent event you discover **inside the research horizon** is PROPOSED as a NEW FILE
+  YOU OWN, `src/domain/market-events/proposals/<id>.from-<your-event-id>.json`
+  (`"status": "estimate"`), in the same PR, never `confirmed` and never as `<id>.json` (issue #1717: two sweeps discovering the
   same event on the same day both created `<id>.json`, the one add/add left after #1449). One file
   per owner (issue #1449): your own event's amendments go in
   `src/domain/market-events/<your-event-id>.json` and nowhere else — there is no shared array. On
@@ -30,6 +30,16 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   never reach you — `moneypenny-events.yml`'s deterministic screen already handled the quiet ones before
   this session started; you only see one because the probe found it material, or its own reference
   block was missing/stale, or the fetch failed. Research it exactly as any other pulse.)
+  **THE HORIZON LEASH (#2946).** Propose only what `assessment-cadence.json`'s `horizon` would
+  actually make due: nothing dated past `maxDaysOut`, and past `allImpactsWithinDays` only
+  critical/high. This sweep is what took the calendar to 641 canonical + 469 pending in two days
+  and spent a weekly token quota in ~24 hours — a proposal loads as a real event, becomes
+  `never-assessed`, buys its own session, and sweeps again. A proposal outside the horizon can
+  never become due, so it is pure clutter: it costs validation time and a reviewer's attention and
+  buys nothing. Note what you saw beyond the horizon in your ledger row instead — prose in a ledger
+  is free, a calendar file is not. (`scripts/event-scan-validation.mjs` separately caps discovery at
+  ONE generation: your proposer must be a canonical file or a derived earnings print, so a proposal
+  can never parent another.)
 - `event-passed-unscored` → closing outcome assessment, scoring registered forward tests from re-run
   instrument data (bust the instrument cache first:
   `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
