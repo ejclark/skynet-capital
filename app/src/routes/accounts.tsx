@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import {
+  type ConsiderationChip,
   type DeskActivityEvent,
   type DeskSnapshot,
   fetchDesk,
@@ -16,6 +17,7 @@ import {
 import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { ActivityTable } from "../shell/activity-table";
+import { ConsiderationsRail } from "../shell/considerations-rail";
 import { PageFrame } from "../shell/frame";
 import { HeroChart } from "../shell/hero-chart";
 import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
@@ -85,6 +87,7 @@ function SummaryDetail({
   loading,
   error,
   accountId,
+  considerations,
 }: {
   readonly stats: NetWorthStatsView | null;
   readonly allAccounts: boolean;
@@ -92,6 +95,7 @@ function SummaryDetail({
   readonly loading: boolean;
   readonly error: boolean;
   readonly accountId: string;
+  readonly considerations: readonly ConsiderationChip[];
 }): ReactElement {
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
@@ -101,9 +105,16 @@ function SummaryDetail({
         {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
         positions
       </p>
-      {/* One account at a time (#3186 slice 2) — the "All accounts" aggregate curve is a
-          fast-follow, not bundled into this slice; the roster table covers that view instead. */}
-      {allAccounts ? <NetWorthRoster accounts={roster} /> : <HeroChart accountId={accountId} />}
+      {/* One account at a time (#3186 slices 2 & 3) — the "All accounts" aggregate curve/rail is a
+          fast-follow, not bundled into these slices; the roster table covers that view instead. */}
+      {allAccounts ? (
+        <NetWorthRoster accounts={roster} />
+      ) : (
+        <>
+          <HeroChart accountId={accountId} />
+          <ConsiderationsRail chips={considerations} />
+        </>
+      )}
     </div>
   );
 }
@@ -232,18 +243,21 @@ function CockpitBody({
   readonly deskIds: readonly string[];
   readonly accountId: string;
 }): ReactElement {
+  const allAccountsSelected = accountId === ALL_ACCOUNTS;
   const desks = useQuery({
     queryKey: ["desks", deskIds.join(",")],
     queryFn: () => fetchDesks(deskIds),
-    // Summary reads from `/api/accounts/networth`, not the desk — skip the blotter fetch until the
-    // visitor opens Positions or Activity (the desk endpoint is cheap and cached, but a wasted
-    // fetch on every summary view is still a wasted fetch).
-    enabled: section !== "summary",
+    // Summary reads net worth from `/api/accounts/networth`, not the desk — but the considerations
+    // rail (#3186 slice 3) lives on Summary and needs the desk's own `considerations`, so the desk
+    // fetch stays enabled there too, for a single account (the "All accounts" roster view has no
+    // rail, same scope decision as the hero chart, so it skips the fetch same as before).
+    enabled: section !== "summary" || !allAccountsSelected,
   });
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
 
   if (section === "summary") {
     const { stats, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
+    const considerations = desks.data?.[0]?.desk.considerations ?? [];
     return (
       <SummaryDetail
         stats={stats}
@@ -252,6 +266,7 @@ function CockpitBody({
         loading={networth.isPending}
         error={networth.isError}
         accountId={accountId}
+        considerations={considerations}
       />
     );
   }
