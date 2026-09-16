@@ -246,3 +246,57 @@ export async function fetchDeskDecisions(id: string): Promise<DeskDecisions> {
   if (!res.ok) throw new Error(`GET /api/desk/${id}/decisions → ${res.status}`);
   return (await res.json()) as DeskDecisions;
 }
+
+/** The Thesis Drawer shell's data (#3186 slice 4a) — mirrors `ThesisView` in
+ *  `src/observatory/thesis-json-view.ts`. */
+export type ThesisVerdict = "entering" | "exiting" | "holding" | "standing aside" | "no data yet";
+
+export interface ThesisCall {
+  readonly verdict: ThesisVerdict;
+  readonly why: string;
+  readonly window?: string;
+  readonly invalidator?: string;
+  readonly asOf?: string;
+}
+
+export interface ThesisMarker {
+  readonly n: number;
+  readonly kind: "entry" | "exit";
+  readonly at: string;
+  readonly label: string;
+  readonly activityAnchor: string;
+}
+
+export interface ThesisHealth {
+  readonly measured: boolean;
+  readonly label: string;
+  readonly detail?: string;
+}
+
+export interface ThesisEquityPoint {
+  readonly t: string;
+  readonly value: number;
+}
+
+export interface ThesisData {
+  readonly personaId?: string;
+  readonly thesis?: string;
+  readonly call: ThesisCall;
+  readonly health: ThesisHealth;
+  readonly equity: readonly ThesisEquityPoint[];
+  readonly markers: readonly ThesisMarker[];
+}
+
+export interface DeskThesis {
+  readonly available: boolean;
+  readonly kind: "human" | "bot";
+  readonly thesis?: ThesisData;
+}
+
+export async function fetchDeskThesis(id: string): Promise<DeskThesis> {
+  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/thesis`, {
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`GET /api/desk/${id}/thesis → ${res.status}`);
+  return (await res.json()) as DeskThesis;
+}
