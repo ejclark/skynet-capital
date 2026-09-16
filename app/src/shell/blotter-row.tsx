@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { type DeskPosition, fetchDeskActivity } from "../live/desk";
+import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
+import { type DeskPosition, fetchDeskActivity, type PositionLot, type Tone } from "../live/desk";
 import { type OptionPreview, reviewOption, submitOption } from "../live/options";
 import { reviewTicket, submitTicket, type TicketPreview, type TicketResult } from "../live/ticket";
 import { EventLine } from "./timeline-drawer";
@@ -17,6 +18,68 @@ import { EventLine } from "./timeline-drawer";
  * @category trading
  */
 
+/** The 8 numeric columns shared byte-for-byte between the parent row and every lot row beneath
+ *  it (#3186 slice 1) — pulled into one component specifically so "a lot row uses the identical
+ *  column set as the parent" is enforced by sharing markup, not by two hand-kept-in-sync blocks. */
+function PositionCells({
+  quantity,
+  costPerShare,
+  price,
+  costBasis,
+  value,
+  dayPl,
+  dayTone,
+  totalPl,
+  totalTone,
+  returnPct,
+}: {
+  readonly quantity: string;
+  readonly costPerShare: string;
+  readonly price: string;
+  readonly costBasis: string;
+  readonly value: string;
+  readonly dayPl: string;
+  readonly dayTone: Tone;
+  readonly totalPl: string;
+  readonly totalTone: Tone;
+  readonly returnPct: string;
+}): ReactElement {
+  return (
+    <>
+      <td className="num">{quantity}</td>
+      <td className="num col-detail">{costPerShare}</td>
+      <td className="num">{price}</td>
+      <td className="num col-detail">{costBasis}</td>
+      <td className="num">{value}</td>
+      <td className={`num col-detail tone-${dayTone}`}>{dayPl}</td>
+      <td className={`num tone-${totalTone}`}>{totalPl}</td>
+      <td className={`num col-detail tone-${totalTone}`}>{returnPct}</td>
+    </>
+  );
+}
+
+/** A lot addressed as a `DeskPosition` of its own — the shape `ClosePanel` already knows how to
+ *  close, scoped to just this lot's quantity instead of the whole position (#3186 slice 1: closing
+ *  one options lot, not the whole position, is the common case). `totalPlRaw` isn't read by
+ *  `ClosePanel`; it's re-derived from the lot's own formatted figure rather than left stale. */
+function lotAsPosition(position: DeskPosition, lot: PositionLot): DeskPosition {
+  const rawTotalPl = Number(lot.totalPl.replace(/[^0-9.-]/g, "")) || 0;
+  return {
+    ...position,
+    quantity: lot.quantity,
+    costPerShare: lot.costPerShare,
+    price: lot.price,
+    costBasis: lot.costBasis,
+    value: lot.value,
+    dayPl: lot.dayPl,
+    dayTone: lot.dayTone,
+    totalPl: lot.totalPl,
+    totalPlRaw: rawTotalPl,
+    returnPct: lot.returnPct,
+    totalTone: lot.totalTone,
+  };
+}
+
 export function BlotterRow({
   position,
   deskId,
@@ -27,6 +90,8 @@ export function BlotterRow({
   const [open, setOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [lotsOpen, setLotsOpen] = useState(false);
+  const [closeLotId, setCloseLotId] = useState<string | undefined>(undefined);
   // The queryKey is shared across every row on this desk, so React Query fetches the ledger once
   // no matter how many symbols get expanded — `enabled` only gates when the FIRST row asks for it.
   const activity = useQuery({
@@ -63,15 +128,30 @@ export function BlotterRow({
             {position.display}
           </button>
           <span className="sym-sub">{position.detail}</span>
+          {position.lots && position.lots.length > 0 ? (
+            <button
+              type="button"
+              className="sym-lots"
+              aria-expanded={lotsOpen}
+              aria-label={`${position.lots.length} lots for ${position.display}`}
+              onClick={() => setLotsOpen(!lotsOpen)}
+            >
+              · {position.lots.length} lots
+            </button>
+          ) : null}
         </td>
-        <td className="num">{position.quantity}</td>
-        <td className="num col-detail">{position.costPerShare}</td>
-        <td className="num">{position.price}</td>
-        <td className="num col-detail">{position.costBasis}</td>
-        <td className="num">{position.value}</td>
-        <td className={`num col-detail tone-${position.dayTone}`}>{position.dayPl}</td>
-        <td className={`num tone-${position.totalTone}`}>{position.totalPl}</td>
-        <td className={`num col-detail tone-${position.totalTone}`}>{position.returnPct}</td>
+        <PositionCells
+          quantity={position.quantity}
+          costPerShare={position.costPerShare}
+          price={position.price}
+          costBasis={position.costBasis}
+          value={position.value}
+          dayPl={position.dayPl}
+          dayTone={position.dayTone}
+          totalPl={position.totalPl}
+          totalTone={position.totalTone}
+          returnPct={position.returnPct}
+        />
         <td className="act-col">
           <button
             type="button"
@@ -79,10 +159,66 @@ export function BlotterRow({
             aria-expanded={closeOpen}
             onClick={() => setCloseOpen(!closeOpen)}
           >
-            Close
+            {position.lots && position.lots.length > 0 ? "Close all" : "Close"}
           </button>
         </td>
       </tr>
+      {lotsOpen && position.lots
+        ? position.lots.map((lot) => (
+            <tr className="row-lot" key={lot.lotId}>
+              <td className="fold-col" aria-hidden="true" />
+              <td>
+                <span className="sym-sub">Lot · {lot.openedAt}</span>
+              </td>
+              <PositionCells
+                quantity={lot.quantity}
+                costPerShare={lot.costPerShare}
+                price={lot.price}
+                costBasis={lot.costBasis}
+                value={lot.value}
+                dayPl={lot.dayPl}
+                dayTone={lot.dayTone}
+                totalPl={lot.totalPl}
+                totalTone={lot.totalTone}
+                returnPct={lot.returnPct}
+              />
+              <td className="act-col lot-actions">
+                <button
+                  type="button"
+                  className="btn mc-btn close-btn"
+                  aria-expanded={closeLotId === lot.lotId}
+                  onClick={() => setCloseLotId(closeLotId === lot.lotId ? undefined : lot.lotId)}
+                >
+                  Close lot
+                </button>
+                <button
+                  type="button"
+                  className="btn mc-btn"
+                  disabled
+                  title={ROLL_UNAVAILABLE_REASON}
+                  aria-label={`Roll — ${ROLL_UNAVAILABLE_REASON}`}
+                >
+                  Roll
+                </button>
+              </td>
+            </tr>
+          ))
+        : null}
+      {lotsOpen && position.lots
+        ? position.lots
+            .filter((lot) => lot.lotId === closeLotId)
+            .map((lot) => (
+              <tr className="row-close" key={`close-${lot.lotId}`}>
+                <td colSpan={11}>
+                  <ClosePanel
+                    deskId={deskId}
+                    position={lotAsPosition(position, lot)}
+                    onDone={() => setCloseLotId(undefined)}
+                  />
+                </td>
+              </tr>
+            ))
+        : null}
       {open ? (
         <tr className="row-more">
           <td colSpan={11}>

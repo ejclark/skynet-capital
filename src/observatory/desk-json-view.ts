@@ -1,5 +1,6 @@
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
+import type { OpenLot, RoundTripLedger } from "../trading/round-trips.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
 import { formatPrice } from "./desk-data.js";
@@ -16,7 +17,7 @@ import {
   type ParticipantSnapshot,
   unrealizedPl,
 } from "./participant-snapshot.js";
-import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
+import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
 
 /**
  * THE DESK AS DATA — the JSON view `/api/desk/:id` serves the React shell.
@@ -28,6 +29,31 @@ import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
  */
 
 type Tone = "pos" | "neg" | "flat";
+
+/**
+ * One still-open tax lot inside a position — the same 9 numeric/display fields as
+ * `DeskPositionView` itself (Slice 1 of #3186: a lot row must share the parent row's exact
+ * column set), plus a label identifying which fill opened it. Only ever attached when the
+ * lots reconstructed from the fill ledger provably account for the whole position (see
+ * `lotsFor`) — a position this app cannot honestly decompose renders with no `lots` at all
+ * rather than a partial or approximate breakdown.
+ */
+export interface PositionLot {
+  readonly lotId: string;
+  /** Pre-formatted, like every other display field on this view — never a raw ISO timestamp
+   *  for the client to reformat. */
+  readonly openedAt: string;
+  readonly quantity: string;
+  readonly costPerShare: string;
+  readonly price: string;
+  readonly costBasis: string;
+  readonly value: string;
+  readonly dayPl: string;
+  readonly dayTone: Tone;
+  readonly totalPl: string;
+  readonly returnPct: string;
+  readonly totalTone: Tone;
+}
 
 interface DeskPositionView {
   readonly symbol: string;
@@ -47,6 +73,63 @@ interface DeskPositionView {
   readonly returnPct: string;
   readonly totalTone: Tone;
   readonly weightPct: number;
+  /** Present only when the fill ledger's open lots for this symbol are all long and their
+   *  quantities sum exactly to the position's own — see `lotsFor`. */
+  readonly lots?: readonly PositionLot[];
+}
+
+/**
+ * Reconstruct a position's lot breakdown from the round-trip matcher's `open` lots (Slice 1 of
+ * #3186) — never independently re-derived, so a lot's qty/cost-basis/value/P&L are each a
+ * strict partition of the position's own (same `mark`, same `lastdayPrice` rule as the parent),
+ * and summing them algebraically reduces to exactly the parent row's figures.
+ *
+ * Deliberately conservative: a written/short lot has inverted P&L semantics this view doesn't
+ * attempt to render yet, and a truncated fill window can leave the reconstructed quantity short
+ * of the broker's own. Either case means an honest breakdown isn't possible, so `undefined` is
+ * returned — the caller falls back to today's aggregate-only row rather than showing a partial
+ * or silently-wrong lot list.
+ */
+function lotsFor(
+  symbol: string,
+  openLots: readonly OpenLot[] | undefined,
+  position: {
+    readonly quantity: number;
+    readonly marketValue: number;
+    readonly lastdayPrice?: number;
+  },
+  mark: number,
+): PositionLot[] | undefined {
+  const lots = (openLots ?? []).filter((lot) => lot.symbol === symbol);
+  if (lots.length === 0) return undefined;
+  if (lots.some((lot) => lot.short)) return undefined;
+
+  const wantQty = Math.abs(position.quantity);
+  const gotQty = lots.reduce((sum, lot) => sum + lot.quantity, 0);
+  if (Math.abs(gotQty - wantQty) > 1e-6) return undefined;
+
+  const lastday = position.lastdayPrice ?? 0;
+  return lots.map((lot, index): PositionLot => {
+    const value = lot.quantity * mark;
+    const basis = lot.quantity * lot.price;
+    const dayBase = lastday > 0 ? lastday * lot.quantity : basis;
+    const day = value - dayBase;
+    const total = value - basis;
+    return {
+      lotId: `${symbol}-${index}-${lot.at}`,
+      openedAt: formatTimestamp(lot.at),
+      quantity: lot.quantity.toLocaleString("en-US"),
+      costPerShare: formatPrice(lot.price),
+      price: formatPrice(mark),
+      costBasis: formatCurrency(basis),
+      value: formatCurrency(value),
+      dayPl: formatSigned(day),
+      dayTone: plClass(day),
+      totalPl: formatSigned(total),
+      returnPct: basis > 0 ? pct((total / basis) * 100) : "—",
+      totalTone: plClass(total),
+    };
+  });
 }
 
 interface DeskTiles {
@@ -77,7 +160,7 @@ export interface DeskView {
   readonly positions: readonly DeskPositionView[];
 }
 
-export function deskView(snapshot: ParticipantSnapshot): DeskView {
+export function deskView(snapshot: ParticipantSnapshot, ledger?: RoundTripLedger): DeskView {
   const invested = participantInvested(snapshot);
   const unrealized = participantUnrealized(snapshot);
   const returnOnCost = invested > 0 ? (unrealized / invested) * 100 : 0;
@@ -90,6 +173,7 @@ export function deskView(snapshot: ParticipantSnapshot): DeskView {
       const day = dayPl(position);
       const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
       const option = isOccSymbol(position.symbol);
+      const lots = lotsFor(position.symbol, ledger?.open, position, mark);
       return {
         symbol: position.symbol,
         display: humanizeOptionSymbol(position.symbol),
@@ -98,7 +182,10 @@ export function deskView(snapshot: ParticipantSnapshot): DeskView {
         quantity: position.quantity.toLocaleString("en-US"),
         costPerShare: formatPrice(position.avgPrice),
         price: formatPrice(mark),
-        costBasis: formatPrice(basis),
+        // Whole dollars for TOTAL-dollar figures (#3186 slice 1) — costPerShare/price above stay
+        // per-unit precision since an option premium can be sub-$1 and rounding it away loses the
+        // number entirely; costBasis is a total, same as value/dayPl/totalPl below.
+        costBasis: formatCurrency(basis),
         value: formatCurrency(position.marketValue),
         dayPl: formatSigned(day.amount),
         dayPct: day.pct === null ? "—" : pct(day.pct),
@@ -108,6 +195,7 @@ export function deskView(snapshot: ParticipantSnapshot): DeskView {
         returnPct: basis > 0 ? pct((pl / basis) * 100) : "—",
         totalTone: plClass(pl),
         weightPct: invested > 0 ? (Math.max(0, position.marketValue) / invested) * 100 : 0,
+        ...(lots ? { lots } : {}),
       };
     });
   return {

@@ -110,7 +110,7 @@ export interface RoundTrip {
 }
 
 /** An unmatched lot still open at the end of the fill window. */
-interface OpenLot {
+export interface OpenLot {
   readonly symbol: string;
   readonly quantity: number;
   readonly price: number;

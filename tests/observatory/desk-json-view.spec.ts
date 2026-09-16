@@ -4,6 +4,7 @@ import {
 } from "../../src/observatory/desk-json-view.js";
 import { orderOriginIndex } from "../../src/observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import type { OpenLot, RoundTripLedger } from "../../src/trading/round-trips.js";
 
 /** PR 5 (issue #2287) made `deskActivityView` return a paginated `{activity, nextCursor}` page
  *  rather than a bare array — unwrap `.activity` once here so the existing bare-array assertions
@@ -50,6 +51,71 @@ describe("deskView", () => {
     const view = deskView(snapshot({ positions: [], error: "account unreachable" }));
     expect(view.error).toBe("account unreachable");
     expect(view.positions).toEqual([]);
+  });
+
+  it("renders no lots at all with no ledger — today's aggregate-only row, unchanged", () => {
+    const view = deskView(snapshot());
+    expect(view.positions[0]?.lots).toBeUndefined();
+  });
+});
+
+/** Slice 1 of #3186 — the positions accordion's lot breakdown. */
+describe("deskView lots", () => {
+  const ledgerWith = (open: OpenLot[]): RoundTripLedger => ({
+    trips: [],
+    open,
+    unpricedFills: 0,
+    unmatchedSellQuantity: 0,
+    writtenQuantity: 0,
+    truncated: false,
+  });
+
+  it("splits a position into lots that sum exactly back to the parent row", () => {
+    // 100 @ $180.00 + 100 @ $198.40 = $37,840.00, the same as avgPrice(189.2) × qty(200).
+    const ledger = ledgerWith([
+      { symbol: "AAPL", quantity: 100, price: 180, at: "2026-09-10T14:00:00Z" },
+      { symbol: "AAPL", quantity: 100, price: 198.4, at: "2026-09-15T14:00:00Z" },
+    ]);
+    const view = deskView(snapshot(), ledger);
+    const aapl = view.positions[0];
+    expect(aapl?.lots).toHaveLength(2);
+    const lots = aapl?.lots ?? [];
+
+    const sumOf = (field: "quantity" | "costBasis" | "value" | "dayPl" | "totalPl") =>
+      lots.reduce((sum, lot) => sum + Number(lot[field].replace(/[^0-9.-]/g, "")), 0);
+
+    expect(sumOf("quantity")).toBe(200);
+    expect(sumOf("costBasis")).toBeCloseTo(200 * 189.2, 0);
+    expect(sumOf("value")).toBeCloseTo(42_930, 0);
+    expect(sumOf("dayPl")).toBeCloseTo(Number(aapl?.dayPl.replace(/[^0-9.-]/g, "")), 0);
+    expect(sumOf("totalPl")).toBeCloseTo(aapl?.totalPlRaw ?? Number.NaN, 0);
+  });
+
+  it("shows only whole-dollar cost basis on a lot, never cents", () => {
+    const ledger = ledgerWith([
+      { symbol: "AAPL", quantity: 200, price: 189.2, at: "2026-09-10T14:00:00Z" },
+    ]);
+    const view = deskView(snapshot(), ledger);
+    expect(view.positions[0]?.lots?.[0]?.costBasis).not.toMatch(/\.\d\d$/);
+  });
+
+  it("omits lots when the reconstructed quantity doesn't cover the whole position", () => {
+    // Only 150 of AAPL's 200 shares are visible — a truncated window, not a full breakdown.
+    const ledger = ledgerWith([
+      { symbol: "AAPL", quantity: 150, price: 189.2, at: "2026-09-10T14:00:00Z" },
+    ]);
+    expect(deskView(snapshot(), ledger).positions[0]?.lots).toBeUndefined();
+  });
+
+  it("omits lots for a written/short position — inverted P&L isn't rendered here", () => {
+    const ledger = ledgerWith([
+      { symbol: "AAPL", quantity: 200, price: 189.2, at: "2026-09-10T14:00:00Z", short: true },
+    ]);
+    expect(deskView(snapshot(), ledger).positions[0]?.lots).toBeUndefined();
+  });
+
+  it("omits lots for a symbol the ledger never opened", () => {
+    expect(deskView(snapshot(), ledgerWith([])).positions[0]?.lots).toBeUndefined();
   });
 });
 

@@ -164,6 +164,30 @@ table.blotter {
   font-size: 10.5px;
   color: var(--muted);
 }
+/* Lot-breakdown accordion (#3186 slice 1) — its own trigger, independent of the mobile-only
+   fold-col chevron above, since it's real information at every viewport width, not a
+   responsive-disclosure duplicate. */
+.sym-lots {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 4px;
+  font-size: 10.5px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.sym-lots:hover {
+  text-decoration: underline;
+}
+.row-lot td {
+  background: var(--surface-2);
+  border-left: 3px solid var(--accent);
+}
+.lot-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
 .expand-btn {
   border: 1px solid var(--border);
   background: var(--surface);

@@ -112,6 +112,7 @@ const pos = (
   returnPct,
   totalTone,
   weightPct,
+  lots,
 ) => ({
   symbol,
   display,
@@ -130,6 +131,7 @@ const pos = (
   returnPct,
   totalTone,
   weightPct,
+  ...(lots ? { lots } : {}),
 });
 
 const ericDesk = {
@@ -147,7 +149,7 @@ const ericDesk = {
         "100",
         "$172.40",
         "$181.32",
-        "$17,240.00",
+        "$17,240",
         "$18,132.00",
         "+$892.00",
         "+5.2%",
@@ -166,7 +168,7 @@ const ericDesk = {
         "200",
         "$198.50",
         "$201.10",
-        "$39,700.00",
+        "$39,700",
         "$40,220.00",
         "+$520.00",
         "+1.3%",
@@ -185,7 +187,7 @@ const ericDesk = {
         "3",
         "$5.10",
         "$7.42",
-        "$1,530.00",
+        "$1,530",
         "$2,226.00",
         "+$696.00",
         "+45.5%",
@@ -195,6 +197,37 @@ const ericDesk = {
         "+45.49%",
         "pos",
         0.2,
+        // Two lots (#3186 slice 1) summing exactly to the parent: 2 @ $5.00 + 1 @ $5.30 = $1,530.
+        [
+          {
+            lotId: "NVDA260918C00180000-0-a",
+            openedAt: "2026-09-08 14:12 UTC",
+            quantity: "2",
+            costPerShare: "$5.00",
+            price: "$7.42",
+            costBasis: "$1,000",
+            value: "$1,484",
+            dayPl: "+$34",
+            dayTone: "pos",
+            totalPl: "+$484",
+            returnPct: "+48.40%",
+            totalTone: "pos",
+          },
+          {
+            lotId: "NVDA260918C00180000-1-b",
+            openedAt: "2026-09-10 18:41 UTC",
+            quantity: "1",
+            costPerShare: "$5.30",
+            price: "$7.42",
+            costBasis: "$530",
+            value: "$742",
+            dayPl: "+$17",
+            dayTone: "pos",
+            totalPl: "+$212",
+            returnPct: "+40.00%",
+            totalTone: "pos",
+          },
+        ],
       ),
     ],
     tiles: {
@@ -229,7 +262,7 @@ const sauronDesk = {
         "50",
         "$340.20",
         "$338.00",
-        "$17,010.00",
+        "$17,010",
         "$16,900.00",
         "-$110.00",
         "-0.6%",
@@ -248,7 +281,7 @@ const sauronDesk = {
         "100",
         "$510.30",
         "$514.80",
-        "$51,030.00",
+        "$51,030",
         "$51,480.00",
         "+$450.00",
         "+0.9%",
@@ -357,6 +390,12 @@ await shootCockpit("accounts-summary-phone");
 await page.goto(`${origin}/app/accounts?section=positions`);
 await page.getByText("Nvidia").first().waitFor();
 await shootCockpit("accounts-positions-phone");
+
+// Lot breakdown (#3186 slice 1) — expand the NVDA call's lot accordion: two lots sharing the
+// parent row's exact columns, each with its own Close lot / Roll actions.
+await page.getByRole("button", { name: /lots for NVDA Sep 18 180 Call/ }).click();
+await page.getByText("$1,484").waitFor();
+await shootCockpit("accounts-positions-lots-phone");
 
 // Activity section — the order timeline below the sticky header.
 await page.goto(`${origin}/app/accounts?section=activity`);
