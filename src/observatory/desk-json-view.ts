@@ -1,8 +1,14 @@
+import type { OutpostCatalog } from "../discovery/play-cards.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { OpenLot, RoundTripLedger } from "../trading/round-trips.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
+import {
+  type ConsiderationChip,
+  considerationsFor,
+  type PositionForConsiderations,
+} from "./considerations-view.js";
 import { formatPrice } from "./desk-data.js";
 import {
   NO_ORIGIN_EVIDENCE,
@@ -158,13 +164,19 @@ export interface DeskView {
   readonly error?: string;
   readonly tiles: DeskTiles;
   readonly positions: readonly DeskPositionView[];
+  readonly considerations: readonly ConsiderationChip[];
 }
 
-export function deskView(snapshot: ParticipantSnapshot, ledger?: RoundTripLedger): DeskView {
+export function deskView(
+  snapshot: ParticipantSnapshot,
+  ledger?: RoundTripLedger,
+  outpost?: OutpostCatalog,
+): DeskView {
   const invested = participantInvested(snapshot);
   const unrealized = participantUnrealized(snapshot);
   const returnOnCost = invested > 0 ? (unrealized / invested) * 100 : 0;
   const dayTotal = snapshot.positions.reduce((sum, p) => sum + dayPl(p).amount, 0);
+  const forConsiderations: PositionForConsiderations[] = [];
   const positions = [...snapshot.positions]
     .sort((a, b) => b.marketValue - a.marketValue)
     .map((position): DeskPositionView => {
@@ -174,9 +186,17 @@ export function deskView(snapshot: ParticipantSnapshot, ledger?: RoundTripLedger
       const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
       const option = isOccSymbol(position.symbol);
       const lots = lotsFor(position.symbol, ledger?.open, position, mark);
+      const display = humanizeOptionSymbol(position.symbol);
+      forConsiderations.push({
+        symbol: position.symbol,
+        display,
+        marketValue: position.marketValue,
+        totalPl: pl,
+        returnPct: basis > 0 ? (pl / basis) * 100 : null,
+      });
       return {
         symbol: position.symbol,
-        display: humanizeOptionSymbol(position.symbol),
+        display,
         detail: option ? `${Math.abs(position.quantity)} ct` : "common shares",
         isOption: option,
         quantity: position.quantity.toLocaleString("en-US"),
@@ -203,6 +223,10 @@ export function deskView(snapshot: ParticipantSnapshot, ledger?: RoundTripLedger
     name: snapshot.displayName,
     kind: snapshot.kind === "bot" ? "bot" : "human",
     ...(snapshot.error ? { error: snapshot.error } : {}),
+    considerations: considerationsFor(
+      forConsiderations,
+      outpost ?? { cards: [], authors: [], symbols: [], triggers: [], traits: [] },
+    ),
     tiles: {
       openPositions: snapshot.positions.length,
       invested: formatCurrency(invested),

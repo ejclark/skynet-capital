@@ -45,6 +45,20 @@ export interface DeskPosition {
   readonly lots?: readonly PositionLot[];
 }
 
+/** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in
+ *  `src/observatory/considerations-view.ts`. */
+export interface ConsiderationChip {
+  readonly id: string;
+  readonly kind: "at-risk" | "opportunity";
+  readonly symbol: string;
+  readonly display: string;
+  readonly notional: string;
+  readonly delta: string;
+  readonly deltaTone: Tone;
+  readonly reason: string;
+  readonly action: { readonly label: string; readonly href: string };
+}
+
 export interface DeskTiles {
   readonly openPositions: number;
   readonly invested: string;
@@ -71,6 +85,7 @@ export interface Desk {
   readonly error?: string;
   readonly tiles: DeskTiles;
   readonly positions: readonly DeskPosition[];
+  readonly considerations: readonly ConsiderationChip[];
 }
 
 export interface DeskSnapshot {

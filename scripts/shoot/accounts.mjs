@@ -134,12 +134,40 @@ const pos = (
   ...(lots ? { lots } : {}),
 });
 
+// Considerations rail (#3186 slice 3) — one at-risk chip (a losing options lot) and one
+// opportunity chip (a house play matching a held symbol), so the screenshot proves both kinds.
+const ericConsiderations = [
+  {
+    id: "at-risk-NVDA260918C00180000",
+    kind: "at-risk",
+    symbol: "NVDA260918C00180000",
+    display: "NVDA Sep 18 180 Call",
+    notional: "$2,226",
+    delta: "-$310",
+    deltaTone: "neg",
+    reason: "NVDA Sep 18 180 Call is down 12.2% from cost.",
+    action: { label: "View position", href: "?section=positions#pos-NVDA260918C00180000" },
+  },
+  {
+    id: "opportunity-aapl-earnings",
+    kind: "opportunity",
+    symbol: "AAPL",
+    display: "AAPL",
+    notional: "—",
+    delta: "D-20 to D-6",
+    deltaTone: "flat",
+    reason: "Long AAPL into the earnings print — out of the market by the time the number lands.",
+    action: { label: "View play", href: "/app/outpost?symbol=AAPL" },
+  },
+];
+
 const ericDesk = {
   generatedAt: "2026-09-11T00:00:00Z",
   desk: {
     id: "human-eric",
     name: "Eric",
     kind: "human",
+    considerations: ericConsiderations,
     positions: [
       pos(
         "NVDA",
@@ -253,6 +281,7 @@ const sauronDesk = {
     id: "bot-sauron",
     name: "Sauron",
     kind: "bot",
+    considerations: [],
     positions: [
       pos(
         "TSLA",
@@ -413,7 +442,14 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.getByText("Portfolio").waitFor();
+// Considerations rail (#3186 slice 3), below the hero chart.
+await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-phone");
+
+// Expand the at-risk chip: notional larger than the P/L delta, the reason, and the action button.
+await page.getByRole("button", { name: /NVDA Sep 18 180 Call/ }).click();
+await page.getByText("$2,226").waitFor();
+await shootCockpit("accounts-considerations-expanded-phone");
 
 // Positions section — the blotter below the sticky header.
 await page.goto(`${origin}/app/accounts?section=positions`);
@@ -426,9 +462,10 @@ await page.getByRole("button", { name: /lots for NVDA Sep 18 180 Call/ }).click(
 await page.getByText("$1,484").waitFor();
 await shootCockpit("accounts-positions-lots-phone");
 
-// Activity section — the order timeline below the sticky header.
+// Activity section — the order timeline below the sticky header. Waits on the Symbol column
+// (always visible) rather than Status, which lives in a `col-detail` cell hidden at phone width.
 await page.goto(`${origin}/app/accounts?section=activity`);
-await page.getByText("filled").first().waitFor();
+await page.getByText("AAPL").first().waitFor();
 await shootCockpit("accounts-activity-phone");
 
 // All accounts — the aggregate view with the roster table in the Summary section.
@@ -442,6 +479,7 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.getByText("Portfolio").waitFor();
+await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
 await page.goto(`${origin}/app/accounts?account=all`);

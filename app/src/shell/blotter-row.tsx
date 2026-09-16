@@ -104,7 +104,7 @@ export function BlotterRow({
 
   return (
     <>
-      <tr>
+      <tr id={`pos-${position.symbol}`}>
         <td className="fold-col">
           <button
             type="button"
