@@ -1,49 +1,46 @@
 # Treasury liquidity-support buyback operation (TIPS 10-30Y, $500M cap, 1:40pm ET) — treasury-buyback-tips-10y30y-2026-09-15
 
 **Kind:** rates · **Date:** 2026-09-15 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations, masthead "For Publication August 5, 2026", PDF text layer read direct 2026-09-08 — plain curl, HTTP 200, 125,547 bytes, md5 `79b65955e74a59f6bebff3adf8ba7b35`) · **Impact:** low
-**Last assessed:** 2026-09-15
-<!-- probe-ref: {"symbols":{},"vix":17.58,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":1} -->
+**Last assessed:** 2026-09-16
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":0,"blocked":[]} -->
 
 ## At a glance
 
-**TL;DR.** A **$500 million** Treasury buyback of off-the-run inflation-protected bonds, 1:40–2:00pm
-ET, **estimate**-dated off a tentative schedule whose confirming announcement lands 9/14. It is
-**financially trivial and analytically the most interesting hour of the corridor**, and those two
-facts do not conflict. Trivial: Treasury *sold* **$8.0 billion** of 30-year TIPS on 8/20 at a
-**2.973%** real yield and will reopen the 10-year TIPS on 9/17 — a 16:1 issuance-to-cap ratio, and
-the last four operations of this kind took only **$91–142M**. Interesting: this is the **one
-operation in the 9/10→9/24 corridor that touches the instrument the long-end selloff is actually
-happening in.** Treasury's own daily curve settles the decomposition — the 30-year nominal yield rose
-**+38bp** in 2026 (4.86% → 5.24%), of which **+33bp is real yield** (2.63% → 2.96%) and only **+5bp
-is breakeven** (2.23% → 2.28%). **87% of the selloff is real.** Three things this research
-establishes off Treasury's own operations data that the calendar did not previously carry. **(1)
-sb0607 does not cover it** — its body names "nominal coupon securities" only, so the $500M cap is
-untouched while the nominal long end doubles to $4B; this is the doubled window's **control**. **(2)
-The cap has never bound, and not for lack of sellers** — offers exceeded the cap in **all four**
-operations under this label (1.5×–2.8×) and Treasury still took **18–28%** of it, a **9–15% hit rate
-on par offered**. That is price rationing, the exact inverse of the nominal long end, where the cap
-bound **25 of 25** and **24 of 26** times. **(3) "10Y to 30Y" is a maturity range, not a sector** —
-every eligible line in all four operations is a **Feb-15 maturity between 2040 and 2055**, the
-30-year TIPS strip, with **zero** 10-year TIPS lines. Two more: **110 days** will have passed since
-the last one (2026-05-28), the **longest gap** in the series since it began 2024-04-17, and this is
-the **only** TIPS 10-30Y row on the whole August-refunding schedule. Guard-shaped throughout — no
-directional position, and the `estimate` label widens caution rather than licensing anything.
+**TL;DR.** **Closed — and the surprise is worth more than the call was.** The operation ran and
+**the cap bound for the first time in this bucket's history**: **$2,088M offered · $500M accepted ·
+100% of cap · 6 of 16 issues** (Treasury `BBR_20260915174000.xml` and `buybacks_operations`, both
+re-pulled 2026-09-16). The $2.088B offer total is the **largest ever put into a long-TIPS buyback**,
+in either the current `10Y to 30Y` label or the predecessor `7.5Y to 30Y`. **The stance was right
+and the base case was wrong**, and they are separable: *read it, do not trade it* cost nothing and
+still holds — a full $500M is ~6% of the $8.0B of 30-year TIPS Treasury sold on 8/20 — while the
+predicted **$60M–$200M** take missed by 2.5×. **FT-…-1 is KILLED** (accepted ≥ $250M was its own
+kill line) and **FT-…-2 PASSES** at 2.3× its bar, and *that pairing is the finding*: the 110-day gap
+did rebuild the queue, and rebuilding it past ~$1.4B is precisely what makes the cap bind. Pooling
+the label with its predecessor — which the initial research deliberately declined to do — separates
+the two regimes cleanly: **every long-TIPS operation with ≥ $1.49B offered has filled ≥ 81% of cap
+(6 of 6, five at 100%); every one under $1.40B has filled ≤ 65% (8 of 8)**. The two forward tests
+were one test and the ledger never checked their joint region. What held without qualification is
+the framing: the 2026 long-end selloff is **88% real yield** (30Y nominal 4.86 → **5.36**, real 2.63
+→ **3.07**, breakeven 2.23 → **2.29**), the 30-year breakeven never left **2.15–2.34%**, and the 30Y
+real yield set its **2026 high of 3.07% on the operation date itself** — holders capitulated into
+Treasury's bid at the cycle's cheapest real prices. Status flipped **`estimate` → `confirmed`**
+(`TSY:`) on three direct Treasury primaries. This document is now quiet.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-7) | Stand aside | High | Nothing dated today for this event; its own terms do not exist until the **9/14** announcement (preliminary eligible CUSIPs 11:00am ET), and the date itself is still `estimate` off a tentative schedule. | A Treasury statement before **2026-09-14** extending sb0607's doubled sizing to TIPS, or moving/cancelling the 9/15 row |
-| This week | Watch the breakeven through CPI, not this operation | High | 9/10 (PPI + 30Y auction + coupon announcement + first doubled 10-20Y op + ECB) and **CPI 9/11** set the real-vs-nominal decomposition this operation is a footnote to; the 30-year breakeven has held **2.15–2.34%** all year and CPI is the thing that moves it. | The **2026-09-11** CPI print pushing the 30-year breakeven outside its 2026 range (>2.34% or <2.15%) on Treasury's own real yield curve — that would break the "all real, no inflation" read this doc rests on |
-| This month | Watch — read the print, do not trade it | Medium | Accepted par at 2:15pm ET 9/15 is a clean, cheap read on how Treasury prices off-the-run long TIPS at a 25-year real-yield high; but it lands the day before **FOMC 9/16** and the day of the **20Y auction**, so its own tape effect is unmeasurable by construction. | Accepted par **at or above $250M** on **2026-09-15** — half the cap, ~2× every operation since Nov-2025 — which would mean Treasury has loosened the price filter and the "control" framing needs re-doing (registered as FT-treasury-buyback-tips-10y30y-2026-09-15-1) |
-| This quarter | Stand aside on this program specifically | Medium | $500M/operation, one operation per refunding quarter, against **$8.0B** of 30-year TIPS sold on 8/20 alone — the program cannot move a real-yield curve, and the November 4 refunding is where any TIPS-side sizing change would actually appear. | Treasury extending the sb0607 doubling to TIPS, or adding long-TIPS operations, at or before the **2026-11-04** Quarterly Refunding — a genuinely different program than the one dated here |
+| Today (9/16, D+1) | Stand aside — closed. The operation is scored and this document goes quiet | High | Re-pulled from the primary this session: **$500M** cap · **$2,088M** offered · **$500M** accepted · **4.18×** cover · **100%** fill · 6 of 16 issues, settled 9/16. Nothing here was tradeable on 9/15 and nothing is now; the residual value is the **offer-threshold mechanism** below, which belongs to the sibling TIPS operations (9/29, 10/21) and not to this date. | Nothing — this horizon is closed. Its retrospective falsifier was a long-TIPS yield move attributable to the 1:40–2:00pm window, which daily par data cannot show either way; recorded **unmeasurable, not passed** |
+| This week | Let **FOMC (9/16)** own what is left of the corridor — this $500M owns none of it | High | The 30Y real yield rose **+11bp** from 2.96 (9/4) to **3.07** (9/15) through PPI, CPI and the 20Y auction, setting a 2026 high on the operation day. Against $8.0B of 30-year TIPS sold on 8/20, a full-cap $500M buyback is **6%** of three weeks' issuance — leg 6's scale arithmetic survived the cap fill intact, which is why a killed execution test changes no position. | An FOMC decision on **2026-09-16** followed by the 30Y real yield retracing below **2.96%** — which would say the real-yield high this operation printed into was a positioning artifact rather than the term-premium repricing this doc read it as |
+| This month | Watch the **offer side**, not the fill, at the **9/29** TIPS 1Y-10Y operation — the denominator is what moved | Medium | The pooled 15-operation long-TIPS record separates at roughly **$1.4–1.5B offered**: ≥ $1.49B fills ≥ 81% (6 of 6), ≤ $1.40B fills ≤ 65% (8 of 8). One counter-case sits on the line (2025-11-12, $1,392M → 28.4%). So the question for the next operation is whether the queue stays deep, not whether Treasury has "loosened" anything. 9/29 is the live read and it is the short bucket, which broke a six-operation full-fill streak at **54%** on 2026-07-22. | The **2026-09-29** TIPS 1Y-10Y operation printing offers above **$3.2B** and still filling under **70%** of its $750M cap — that would break the offer-threshold reading at the first test and restore the fixed-reservation-price story this close-out just killed. Scores in [`treasury-buyback-tips-1y10y-2026-09-29`](treasury-buyback-tips-1y10y-2026-09-29.md), not here |
+| This quarter | Stand aside on this program as a yield driver — and carry that **sb0607's TIPS exclusion survived the schedule revision** | Medium | The revised schedule (re-fetched 2026-09-16, masthead **"For Publication September 9, 2026"**, 89,250 bytes, md5 `c49a5351…`) keeps the 9/15 TIPS row at a hard **$500 million** and the 9/29 and 10/21 TIPS rows at **$750 million**, while every nominal long-end row now reads **"= or > $4 billion"**. Treasury raised the nominal ceiling into a floor and left TIPS alone through the revision — the control framing holds even though the execution test did not. | Treasury extending the sb0607 doubling to TIPS, or adding long-TIPS operations, at or before the **2026-11-04** Quarterly Refunding — a genuinely different program from the one scored here, and its own dated entry rather than an amendment to this one |
 
-**Signals & conditions** — the buy/sell/hold triggers:
+**Signals & conditions** — what actually fired, and where each one now lives:
 
-- **9/14, 11:00am ET** — the preliminary eligible-CUSIP list is the first place this operation's terms exist; until then the date is `estimate` and the cap is last quarter's number.
-- **9/15, ~2:15pm ET** — accepted par. Under ~$250M keeps the price-rationing read; at or above ~$250M breaks it and forces a reassessment.
-- **Total par offered ≥ $900M** would say the 110-day gap rebuilt a queue of off-the-run holders; under that says the offer decline (from $1.39B in Nov-2025 to $784M in May-2026) is structural.
-- **30-year breakeven leaving its 2026 range of 2.15–2.34%** — the one observation that would change what this instrument is telling us; energy is the live threat (Brent $96.02 on 9/1 per FRED, up from $89.75 on 8/28).
-- **sb0607's promised updated buyback schedule publishing** — still unpublished at 24 days (re-verified 2026-09-08, byte-identical); it is the only document that could restate this cap before 9/14.
-- **Watch (dated):** PPI + 30Y auction + coupon announcement + first doubled 10-20Y op + ECB **9/10** · CPI **9/11** · **this operation + 20Y auction 9/15** · FOMC **9/16** · 10Y TIPS reopening + 7-10Y buyback **9/17** · TIPS 1-10Y buyback **9/29** (proposed) · TIPS 1-10Y buyback + 5Y TIPS auction **10/21–10/22** (proposed) · Quarterly Refunding **11/4**.
+- **9/14, 11:00am ET — FIRED as written.** `BBPA_20260915174000.xml`, `announcementDTM` **2026-09-14T11:00:00-04:00**: cap **$500M**, **16** eligible issues, maturity range **2040-02-15 → 2056-02-15**. No void condition triggered, so both forward tests scored rather than lapsing.
+- **9/15, ~2:15pm ET — accepted par **$500M**, the full cap.** The "under ~$250M keeps the price-rationing read" trigger broke, and with it FT-…-1. Recorded, not re-litigated: the kill entry is in [`multi-symbol-sweep.md`](../multi-symbol-sweep.md).
+- **Total par offered ≥ $900M — FIRED at $2,088M**, 2.66× the prior operation's $784M and above the label's own prior maximum of $1,392M. The offer decline was a spacing artifact, exactly as FT-…-2 argued.
+- **30-year breakeven leaving 2.15–2.34% — did NOT fire.** It closed **2.29%** on 9/15 and **2.28%** on 9/11 post-CPI; the 2026 range closed at **2.15% (6/24) – 2.34% (5/19)**. Leg 5's decomposition survives and strengthens to **88% real**.
+- **sb0607's promised updated schedule — PUBLISHED 2026-09-09**, and it left TIPS at $500M/$750M. The only document that could have restated this cap did not.
+- **The eligible-set derivation (leg 4) is now Treasury's own statement, not ours.** The announced range begins **2040-02-15**, not the tentative schedule's rule-derived 09/16/2036 — Treasury published the front of the bucket as the first real Feb-15 TIPS maturity, confirming the "permanently a 30-year operation" reading at the one place it could have failed.
 
 ## Initial research
 
@@ -249,6 +246,7 @@ gap).
 |---|---|---|---|---|
 | 2026-09-08 | D-7 | **Initial research banked (above); canonical event file written from the one proposal that existed for this id** (`from-treasury-buyback-increase-2026-09-09`, filed the same day) — its read upheld and sharpened on three primary counts. **sb0607 fetched direct (HTTP 200, full body):** "nominal coupon securities (the 10-year to 20-year sector and the 20-year to 30-year sector)" — TIPS appear nowhere, so this $500M cap is the doubled window's control. **Schedule primary re-verified:** md5 `79b65955…`, 125,547 bytes, byte-identical to the 09-03/09-05/09-06 fetches on the sibling ledger; masthead still "For Publication August 5, 2026" at **24 days**, row verbatim announce 9/14, operation 9/15 1:40–2:00pm, settle 9/16, TIPS 10Y-30Y, 09/16/2036–09/15/2056, max $500M. **`buybacks_operations`, all 32 TIPS operations since 2024-04-17:** under the current 10Y-30Y label, 4 of 4 took **$142M/$108M/$110M/$91M** of a $500M cap (18.2–28.4%) on offers that **exceeded the cap every time** (2.78×/2.38×/1.51×/1.57×) — a 9.1–14.5% hit rate, i.e. price rationing, the inverse of nominals' 25/25 and 24/26 fills. **`buybacks_security_details`:** all 15–16 eligible lines every time are Feb-15 maturities 2040–2055 — zero 10Y TIPS, because the window opens 09/16/2036 and the longest 10Y TIPS (91282CRE3) matures 2036-07-15; 912810RL4 (0.750% '45) + 912810RR1 (1.000% '46) were 77% of both the 3/25 and 5/28 takes, RR1's accepted price walking 77.994→74.641. **Cadence:** 110 days since 2026-05-28, the longest gap in the series (prior max 98d), and 9/15 is the only TIPS 10Y-30Y row on the whole 8/6→11/5 schedule. **Adjacency — peers:** n/a (`symbols: []`). **Macro:** Treasury's own two daily curves put **87% of 2026's 30Y selloff in real yield** (2.63→2.96, +33bp) vs +5bp breakeven (2.23→2.28), 30Y real 10bp off its 8/17 high of 3.06%, breakeven inside 2.15–2.34% all year; corroborated at the 8/20 30Y TIPS reopening ($8.0B, **2.973%** real, btc 2.82, CUSIP 912810US5 — highest since Oct-2001 per tipswatch). Jobs +162k (9/4) and the 9/5→9/17 Fed blackout are carried from the sibling ledgers, not re-derived. **VIX** 15.69 (09-08 10:02 ET delayed quote) vs the **14.53** 09-04 close, +1.16, under the 3pt bar — noting Cboe's history file carries a spurious **09/07** row despite Labor Day, unused here. **Geopolitics:** Brent **$96.02** on 09-01 (FRED primary, from $89.75 on 08-28); later prints cited to the 20Y ledger, not verified here. **Event tape:** the operation's own terms do not exist until 9/14 11:00am ET. **Adjacency set: 35 tracked ids within 5 days** — the corridor is 9/10 (PPI + 30Y auction + coupon announcement + first doubled 10-20Y op + ECB), CPI 9/11, 20Y auction + this op 9/15, FOMC 9/16, 10Y TIPS reopening + 7-10Y op 9/17, so attribution on 9/15 is impossible by construction. **Two new dated events proposed** off the schedule primary, both the direct comparanda: `treasury-buyback-tips-1y10y-2026-09-29` (the bucket that fills its cap — and broke a 6-op streak at 54% on 2026-07-22) and `treasury-buyback-tips-1y10y-2026-10-21` (which stacks the day before the tracked 5Y TIPS auction). Registered FT-treasury-buyback-tips-10y30y-2026-09-15-**1** (accepted < $250M) and **-2** (offered ≥ $900M). | — (stance set) | 2026-09-15 (low, 0-14d band: every 7d) — but the event is 09-15, so the next assessment is effectively the close-out |
 | 2026-09-15 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 17.6 (+1.9pt since last), band unchanged (low:0+), 48 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-09-17`, `bowman-stress-testing-2026-09-18`, `bund-30y-auction-2026-09-16`, `eia-weekly-petroleum-status-2026-09-16`, `empire-state-mfg-2026-09-15`, `house-vote-ratepayer-protection-act-2026-09-17` +7 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-22 |
+| 2026-09-16 | D+1 | **Close-out — it ran, and the cap bound for the first time in this bucket's history.** All primaries re-fetched this session, HTTP 200 on plain curl: `BBPA_20260915174000.xml` (`announcementDTM` **2026-09-14T11:00-04:00**, cap **$500M**, **16** eligible, range **2040-02-15→2056-02-15**), `BBA_…xml` (9/15 11:00 ET, cap unchanged), `BBR_…xml` + fiscaldata `buybacks_operations` — **$2,088M offered · $500M accepted · 4.18× cover · 100% fill · 6 of 16 issues**, settled 9/16. The offer total is the **largest ever into a long-TIPS bucket** under either label (prior max $2,028M, 2025-03-26) and 2.66× the prior operation's $784M. **Composition flipped to the front of the bucket:** 912810QF8 (2.125% of '40) took **$275M — 55% of the whole operation** having never been accepted in any prior operation, while 912810RR1 (1.000% of '46), 77% of both the 3/25 and 5/28 takes, took **zero**; the other five lines were QV3 $55M @72.900, RL4 $85M @67.596, SB5 $70M @67.278, SM1 $10M @52.695, SV1 $5M @49.250. **Rates (Treasury's own curves, direct):** 30Y real **3.07%** on 9/15 — a **2026 high set on the operation date itself**, past the 8/17 3.06% — and the year's decomposition now reads nominal 4.86→**5.36** (+50bp), real 2.63→**3.07** (+44bp), breakeven 2.23→**2.29** (+6bp): **88% real**, up from 87% at D-7. Breakeven stayed inside **2.15–2.34%** through CPI (2.28 on 9/11). **Schedule:** revised PDF re-fetched, masthead **"For Publication September 9, 2026"**, 89,250 bytes, md5 `c49a5351…` — TIPS rows unchanged at $500M (9/15) and $750M (9/29, 10/21) while nominal long-end rows read "= or > $4 billion". **Kill switches: 1 FIRED** (accepted ≥ $250M); **3 did not**; **2 not fired through close-out**, horizon runs to 11/4 and belongs to a future entry; **4 not scoreable** (dated 9/29, routes to `treasury-buyback-tips-1y10y-2026-09-29`); **5 did not** — so both tests scored rather than voiding. **Forward tests: FT-…-1 KILLED, FT-…-2 PASS** — and their joint region was never priced, which is the lesson banked to the sweep doc's kill list. **Adjacency:** close-out mode, no sweep and nothing proposed; the 5-day corridor is unchanged at 48 tracked ids since the 9/15 screen. **VIX 17.20** at the 9/15 close (Cboe `VIX_History.csv`). **`<id>.json`: `status` flipped `estimate` → `confirmed`, source `EST:` → `TSY:`** on the three announcement/results primaries. | **Stance held and was correct — no position, nothing lost.** The base case ($60M–$200M) was wrong by 2.5×; the scale arithmetic and the 88%-real framing that motivated the stance both survived intact | — (closed; `## Outcome` below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -259,3 +257,147 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-09-16 (D+1).** A `rates` event with `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` run applies; the instrument caches were nonetheless busted before
+the session per the standing rule, and **every number below was re-fetched from its primary this
+session, not carried from the D-7 row**. Sources, all HTTP 200 on a plain curl:
+`treasurydirect.gov/instit/annceresult/press/preanre/2026/` for `BBPA_20260915174000.xml`,
+`BBA_20260915174000.xml` and `BBR_20260915174000.xml`; `api.fiscaldata.treasury.gov`
+`buybacks_operations` (all 33 TIPS operations since 2024-04-17) and `buybacks_security_details`
+(per-CUSIP, five operations); `home.treasury.gov` daily par **real** and nominal yield-curve CSVs
+(177 trading days of 2026); `home.treasury.gov/system/files/221/Tentative-Buyback-Schedule.pdf`;
+Cboe `VIX_History.csv`. No fetch failed; `probe-ref.blocked` is empty.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$500,000,000** (unchanged from the tentative schedule — sb0607 never reached TIPS) |
+| Total par offered | **$2,088,000,000** |
+| Total par accepted | **$500,000,000** |
+| Cover (offered ÷ max) | **4.18×** |
+| Fill (accepted ÷ max) | **100.0%** |
+| Hit rate (accepted ÷ offered) | **23.9%** |
+| Issues | **6 accepted of 16 eligible** |
+| Announced maturity range | **2040-02-15 → 2056-02-15** |
+| Window / settlement | 1:40–2:00pm ET **2026-09-15**, settled **2026-09-16** |
+
+Announcement chain, all three primaries read this session: preliminary **2026-09-14 11:00 ET**
+(16 eligible CUSIPs, cap $500M), final **2026-09-15 11:00 ET** (cap unchanged), results published
+against a 1:40–2:00pm window. Nothing moved, resized or cancelled, so the tests scored rather than
+voiding.
+
+**This is the first cap fill in the `10Y to 30Y` label's five-operation history**, and the $2.088B
+offer total is the **largest ever put into a long-TIPS buyback** under either this label or the
+predecessor `7.5Y to 30Y` (prior maximum $2,028M, 2025-03-26).
+
+### Forward tests — one killed, one passed, and they were the same test
+
+- **FT-treasury-buyback-tips-10y30y-2026-09-15-1** — *accepted par below $250M*. **KILLED: $500M**,
+  the full cap, twice the threshold and 5.5× the label's $109M median take. The row's own kill line
+  ("accepted at or above $250M") is exactly what printed, so this is a clean kill rather than a near
+  miss. **The offer surge alone does not explain it.** At the label's prior 9.1–14.5% hit rate,
+  $2,088M offered yields **$190M–$303M** — a midpoint of $237M, *under* the threshold. The realised
+  23.9% is censored from above by the cap, so Treasury's unconstrained take was **≥ 23.9%**: both
+  the queue deepened *and* the acceptance rate roughly doubled. Banked to the sweep doc's kill list.
+- **FT-treasury-buyback-tips-10y30y-2026-09-15-2** — *total par offered at or above $900M*.
+  **PASS: $2,088M**, 2.3× the bar, 2.66× the prior operation's $784M, and above the label's own
+  prior maximum of $1,392M. The monotonic offer decline ($1,392M → $1,190M → $757M → $784M) was a
+  spacing artifact and not a structural drying-up; 110 days — the longest gap since the operation
+  type began — rebuilt the queue far past what the test asked for.
+
+No legacy `FT-N` row in `forward-tests/legacy.md` refers to this event. No new forward test is
+registered: the close-out is terminal for this document, so a prediction filed here would have no
+session left to score it. The one live successor question is routed instead to
+[`treasury-buyback-tips-1y10y-2026-09-29`](treasury-buyback-tips-1y10y-2026-09-29.md), whose
+operation is the first test of the threshold below.
+
+### The mechanism finding — an offer threshold, not a reservation price
+
+The initial research built FT-…-1 on four observations under the current label and **deliberately
+declined to pool the predecessor's history** (honest limit 3: *"the pre-2025 `7.5Y to 30Y` history —
+which did fill its cap in 5 of 9 — is not the same instrument and is not pooled here"*). That
+exclusion is what killed the test. Pooled across all **15** long-TIPS operations since 2024-04-17,
+fill of cap tracks **par offered**, not a fixed Treasury posture:
+
+| Par offered | Operations | Fill of cap |
+|---|---|---|
+| **≥ $1.49B** | 6 — 2024-12-17, 2025-01-28, 2025-03-26, 2025-06-25, 2025-08-06, **2026-09-15** | 100% · 100% · 81.4% · 100% · 100% · **100%** |
+| **≤ $1.40B** | 8 — 2024-07-10, 2024-09-17, 2024-10-23, 2025-05-01, 2025-11-12, 2025-12-23, 2026-03-25, 2026-05-28 | 10.6% · 30.6% · 64.6% · 35.8% · 28.4% · 21.6% · 22.0% · 18.2% |
+
+Every operation above the line filled ≥ 81%; every one below filled ≤ 65%. (2024-04-17 is excluded
+from both rows — it carried a $200M cap, not $500M.) **The nearest counter-case sits on the line:**
+2025-11-12 took only 28.4% on $1,392M offered, ~$100M short of the threshold — so this is a
+threshold with a boundary case, not a law, and it should be stated that way anywhere it travels.
+
+**The two forward tests were one test, and the ledger never checked their joint region.** FT-…-2
+predicted the 110-day gap would rebuild offers past $900M. FT-…-1 predicted an accepted take under
+$250M. Priced marginally, both are consistent — 9.1–14.5% of $900M is $82–130M. Priced *jointly*
+against the pooled record, they are not: the offer level at which the cap starts binding is roughly
+$1.4–1.5B, so FT-…-2 passing large was the event most likely to kill FT-…-1. Had the ledger written
+its base case conditionally — *"$60M–$200M if offers stay under ~$1.4B; a cap fill above it"* — it
+would have described 9/15 correctly without changing the stance by one word.
+
+### What held, and what the corridor keeps
+
+- **The stance was correct and cost nothing.** *Read it, do not trade it.* No position, no size, no
+  rate-sensitive exposure. Leg 6's scale arithmetic survived the cap fill intact: even a full $500M
+  is **~6%** of the $8.0B of 30-year TIPS Treasury sold on 2026-08-20 alone. A killed execution test
+  does not move a stance whose premise was magnitude.
+- **The framing claim strengthened.** Treasury's own two curves, 2026-01-02 → 2026-09-15: 30Y
+  nominal **4.86 → 5.36** (+50bp), 30Y real **2.63 → 3.07** (+44bp), 30Y breakeven **2.23 → 2.29**
+  (+6bp) — **88% of the long-end selloff is real yield**, up from the 87% measured at D-7. The 10Y
+  reads the same way (nominal +81bp, real +68bp, breakeven +13bp — 84% real). The 30-year breakeven
+  never left **2.15% (6/24) – 2.34% (5/19)** all year and printed **2.28%** the day after CPI. The
+  corridor's duration risk is a supply-and-term-premium story, not an inflation-expectations one.
+- **The operation ran at the cycle's real-yield extreme, and that is the honest reading of the
+  offer wave.** The 30Y real yield's **2026 high of 3.07%** was set **on the operation date itself**
+  — past the 3.06% of 8/17 that the initial research cited as the high — and the 8/20 30-year TIPS
+  reopening had already drawn the highest real yield since October 2001. Holders of off-the-run long
+  TIPS put a record $2.088B in front of Treasury's bid at the cheapest real prices of the cycle.
+- **Composition flipped to the front of the bucket.** **912810QF8 (2.125% of 2040)** took
+  **$275M — 55% of the whole operation**, having been accepted in *none* of the four prior
+  operations; **912810RR1 (1.000% of 2046)**, which supplied 77% of both the 3/25 and 5/28 takes
+  alongside RL4, took **zero**. The rest: QV3 $55M @ 72.900 · RL4 $85M @ 67.596 · SB5 $70M @ 67.278
+  · SM1 $10M @ 52.695 · SV1 $5M @ 49.250. This was not the usual deep-discount-strip housekeeping;
+  it was broader, shorter-dated and in size.
+- **Leg 4 is now Treasury's own statement rather than our derivation.** The announced maturity range
+  begins **2040-02-15**, not the tentative schedule's rule-derived 09/16/2036 — Treasury published
+  the front of the bucket as the first real Feb-15 TIPS maturity. The "permanently a 30-year
+  operation" reading was confirmed at the one place it could have failed. 16 eligible lines, all
+  Feb-15 maturities 2040–2055, zero 10-year TIPS, for the fifth operation running.
+- **Leg 2 survived its last falsification point.** The revised schedule Treasury owed sb0607
+  published **2026-09-09** (masthead "For Publication September 9, 2026", 89,250 bytes, md5
+  `c49a5351bf2d31a367817abc62be51bd` — the 125,547-byte artifact this ledger byte-matched four times
+  is retired). It keeps the 9/15 TIPS row at a hard **$500 million** and the 9/29 and 10/21 TIPS
+  rows at **$750 million**, while every nominal long-end row now reads **"= or > $4 billion"**. The
+  control framing holds even though the execution test did not.
+
+### Honest limits on this close-out
+
+- **Why the acceptance rate doubled cannot be settled from published data.** Treasury does not
+  publish offer-level prices, so "the reservation spread widened" and "the offers came cheaper
+  relative to fair value" are observationally equivalent here. One weak indication for the latter:
+  912810RL4's weighted-average accepted price fell **72.228 → 67.596** (−6.4%) between 5/28 and
+  9/15, against a 20Y real-yield move of **2.48% → 2.90%** (+42bp) which at that bond's rough
+  duration accounts for most of it — so the price decline looks like the curve rather than like
+  Treasury paying up. That is an order-of-magnitude check, not a decomposition, and it is not
+  evidence for either story on its own.
+- **Attribution on 9/15 remains impossible by construction**, exactly as the initial research said.
+  The 20-year auction priced at 1:00pm the same day and FOMC landed the next morning. Both forward
+  tests scored the operation's own published numbers and never a yield move, which is why they were
+  scoreable at all.
+- **The threshold table is 15 observations across two label definitions**, with one counter-case
+  (2025-11-12) sitting on the line. It is a usable prior for the next operation and not a rule.
+- **Kill switches 2 and 4 outlive this document.** Switch 2's horizon runs to the **2026-11-04**
+  Quarterly Refunding and did not fire through close-out; switch 4's trigger is the **2026-09-29**
+  operation, which is not scoreable here. Both route to their own dated entries rather than being
+  recorded as passes.
+
+**`<id>.json` amended.** `status` flipped **`estimate` → `confirmed`** and the source prefix
+**`EST:` → `TSY:`**, on the three Treasury announcement/results primaries read this session. The
+operation is a matter of published record; the taxonomy gap the original `EST:` label recorded
+(a tentative schedule is tentative) no longer applies to an executed operation.
