@@ -239,4 +239,56 @@ describe("AlpacaTradingClient", () => {
       await expect(client.getPortfolioHistory("1A")).rejects.toBeInstanceOf(AlpacaApiError);
     });
   });
+
+  describe("getPortfolioHistoryByRange", () => {
+    it("requests an explicit date_start/date_end instead of a period token", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": {
+          status: 200,
+          body: {
+            timestamp: [1704153600],
+            equity: [100_000],
+            profit_loss: [0],
+            profit_loss_pct: [0],
+            base_value: 100_000,
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const history = await client.getPortfolioHistoryByRange("2026-01-01", "2026-09-16");
+
+      expect(transport.gets).toEqual([
+        "/v2/account/portfolio/history?date_start=2026-01-01&timeframe=1D&date_end=2026-09-16",
+      ]);
+      expect(history.base_value).toBe(100_000);
+    });
+
+    it("omits date_end when absent — Alpaca defaults it to today", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": {
+          status: 200,
+          body: { timestamp: [], equity: [], profit_loss: [], profit_loss_pct: [], base_value: 0 },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.getPortfolioHistoryByRange("2020-01-01");
+
+      expect(transport.gets).toEqual([
+        "/v2/account/portfolio/history?date_start=2020-01-01&timeframe=1D",
+      ]);
+    });
+
+    it("throws AlpacaApiError on a non-2xx status", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": { status: 500, body: { message: "broker down" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.getPortfolioHistoryByRange("2020-01-01")).rejects.toBeInstanceOf(
+        AlpacaApiError,
+      );
+    });
+  });
 });

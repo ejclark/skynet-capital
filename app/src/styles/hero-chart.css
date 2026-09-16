@@ -1,0 +1,92 @@
+/* The hero chart (#3186 slice 2) — the accounts page's equity-vs-S&P-500 overlay. Same tokens-only,
+   mobile-first doctrine as chart-section.css; deliberately a shorter canvas than the /trade chart
+   since it sits below the sticky net-worth hero rather than owning the page. */
+.hero-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 4px;
+  max-width: var(--col-wide);
+  min-width: 0;
+}
+/* The range selector — the same `.railctl` chip idiom as the chart studies, but single-select
+   (aria-pressed on exactly one at a time, not "any number on"). */
+.hero-chart-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.hero-chart-range-btn {
+  width: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hero-chart-range-btn.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.hero-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.hero-chart-legend-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-chart-legend b {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Hue is never the only signal a standing red/green-colourblind reader gets (CLAUDE.md →
+   Accessibility): the portfolio swatch is a solid dash, the benchmark's is a dashed one — the
+   same solid-vs-dashed distinction the chart itself draws with. */
+.hero-chart-legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+.hero-chart-legend-swatch--portfolio {
+  background: var(--pos);
+}
+.hero-chart-legend-swatch--benchmark {
+  background: repeating-linear-gradient(
+    to right,
+    var(--muted) 0,
+    var(--muted) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+.hero-chart-canvas {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--elev-recessed);
+}
+@media (min-width: 600px) {
+  .hero-chart-canvas {
+    height: 280px;
+  }
+}

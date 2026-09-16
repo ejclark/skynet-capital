@@ -17,6 +17,7 @@ import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { ActivityTable } from "../shell/activity-table";
 import { PageFrame } from "../shell/frame";
+import { HeroChart } from "../shell/hero-chart";
 import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
 import { PositionsTable } from "../shell/positions-table";
 import { ProfileRail } from "../shell/profile-rail";
@@ -83,12 +84,14 @@ function SummaryDetail({
   roster,
   loading,
   error,
+  accountId,
 }: {
   readonly stats: NetWorthStatsView | null;
   readonly allAccounts: boolean;
   readonly roster: readonly AccountNetWorthView[];
   readonly loading: boolean;
   readonly error: boolean;
+  readonly accountId: string;
 }): ReactElement {
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
@@ -98,7 +101,9 @@ function SummaryDetail({
         {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
         positions
       </p>
-      {allAccounts ? <NetWorthRoster accounts={roster} /> : null}
+      {/* One account at a time (#3186 slice 2) — the "All accounts" aggregate curve is a
+          fast-follow, not bundled into this slice; the roster table covers that view instead. */}
+      {allAccounts ? <NetWorthRoster accounts={roster} /> : <HeroChart accountId={accountId} />}
     </div>
   );
 }
@@ -246,6 +251,7 @@ function CockpitBody({
         roster={roster}
         loading={networth.isPending}
         error={networth.isError}
+        accountId={accountId}
       />
     );
   }
