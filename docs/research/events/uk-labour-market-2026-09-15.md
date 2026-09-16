@@ -1,8 +1,8 @@
 # UK labour market overview — earnings, unemployment and vacancies — uk-labour-market-2026-09-15
 
 **Kind:** macro-print · **Date:** 2026-09-15 (estimate, EST: ons.gov.uk/releases/uklabourmarketseptember2026, fetched direct 2026-09-09 — the ONS release-calendar entry reads "UK Labour Market: September 2026", "15 September 2026 at 7:00am", marked not yet published; corroborated from a second ONS primary, the August 2026 bulletin's own "Next release: 15 September 2026". Filed estimate per this lane's no-self-confirm limit and the confirmed-prefix taxonomy's lack of an ONS slot) · **Impact:** low
-**Last assessed:** 2026-09-09
-<!-- probe-ref: {"symbols":{},"vix":15.72,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","retail-sales-2026-09-16","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"screenStreak":0,"blocked":[]} -->
+**Last assessed:** 2026-09-16
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":0,"blocked":[]} -->
 
 ## At a glance
 
@@ -266,6 +266,7 @@ made, in `boe-decision-2026-09-17`'s FT-3, and is not re-litigated here.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-09 | D-6 | Initial research banked (above), on an id that existed only as `proposals/uk-labour-market-2026-09-15.from-boe-decision-2026-09-17.json` — read in full first; its placement finding is carried into the canonical `src/domain/market-events/uk-labour-market-2026-09-15.json` written in this PR. **Headline finding: the wires print the wrong cell.** Whole-economy regular pay **3.5%** y/y (Apr–Jun) is ONS-verbatim *"6.1% for the public sector and 2.8% for the private sector"* — a **3.3pp** blend, and the MPC's second-round-effects question is private-sector only. Private **2.8%** is the weakest since **Aug–Oct 2020** (press-cited Reuters read). **The tape already reads it that way:** on **2026-08-18** regular pay **beat** consensus (3.5% vs 3.4%) and total pay beat (4.1% vs 4.0%), and sterling **fell 0.1% to $1.352**. **Second finding, ONS primary:** the most-quoted cell is the least reliable — the **11 Aug 2026** letter to OSR states *"We will not be seeking reaccreditation for LFS and APS-derived outputs"*; LFS outputs move from *"official statistics in development"* to *"official statistics"*, one step below accredited; the **Aug 2026** transformation update dates TLFS at a **Jan 2027** progress check, a **Jul 2027** decision point and **Nov 2027** earliest transition after July 2026 concluded *"now is not the right time"*; and the bulletin says *"RTI currently provides the most reliable measure of employees."* **Levels, not just rates:** vacancies **707,000**, −6,000 (0.8%) on the quarter, and *"outside of the coronavirus (COVID-19) pandemic period, the last time there were 707,000 or fewer vacancies was in September to November 2014"*; payrolled employees **30.3m**, **−13,000** m/m and **−94,000 (0.3%)** y/y (July early estimate); unemployment **4.9%**, employment **75.1%**, inactivity **20.9%**; real regular pay **+0.5%** CPIH; claimant count **1.665m** (July). **The revision trap:** ONS says early-tax-year PAYE months *"have received larger-than-average upward revisions in recent years"*, so −94,000 is the provisional value of a series that revises up — direction robust, magnitude not. Adjacency sweep: **peers** — none, `symbols: []`. **Macro** — this print is inside the MPC's information set (meeting ends 09-16, announces 09-17), with `uk-cpi-2026-09-16` between; forward wage evidence agrees, July DMP firms expecting **3.4%** one year ahead vs 4% realised and energy pass-through netting ~zero (19% up / 17% down, press relay). **Volatility** — VIX **15.72** (09-08 close, Yahoo `^VIX`); no sterling-vol instrument available here. **Geopolitical** — the US–Iran energy shock is the named driver of the UK headline CPI print and the global long end, carried by reference from `boe-decision-2026-09-17` rather than re-fetched. **Event tape** — no September consensus or whisper was findable; searches returned the August print and 2026 annual forecasts only. **Adjacency ids:** 41 tracked within 5 days; the day's own ordering is the useful part — ONS **02:00 ET** is the session's first macro release by 6.5h, then JGB 20Y, Empire State **08:30 ET**, TIPS buyback and the 20Y auction **13:00 ET**. **Two dated adjacencies PROPOSED (`estimate`, own-owner files):** `uk-labour-market-2026-10-20` (ONS release-calendar entry fetched direct — the last labour read before the 10-28 Budget and the 11-05 MPR) and `boe-dmp-2026-10-02` (BoE's own September DMP page, fetched, stating *"This monthly Decision Maker Panel data will be published on 2 October 2026"* — the forward half of the same wage question). The TLFS milestones (Jan 2027 check, Jul 2027 decision, Nov 2027 transition) were hunted and **not proposed** — month-only, no exact date, and a guessed date is worse than a gap. **Three forward tests registered:** FT-1 (private regular pay ≤3.0%), FT-2 (the July payroll y/y revised less negative), FT-3 (LFS outputs labelled *"official statistics"*). **Honest weakness, named up front:** the reaction-function leg is **one print** and press-relayed, not a fetched tick series; the reference periods this release carries are inferred by shifting August's forward one month; a reported gilt move (10Y −2bp / 30Y −3bp) on unidentified "wage data" is named and **not carried**. No fetch failed this session — `blocked` is empty. | — (stance set: stand aside, no position, no play; three analytical commitments — private-sector regular pay is the only cell that carries information, the headline unemployment rate is discounted on the publisher's own instruction, and a pre-dawn 09-15 gilt/cable move is attributable here while nothing after 08:30 ET is) | 2026-09-16 (low, 0+d band: every 7d — which lands the day AFTER the event, so the next assessment is the close-out, not a pulse) |
+| 2026-09-16 | D+1 | **Close-out — the release landed on time and the headline was literally unchanged while its composition moved, which is the cleanest possible confirmation of this ledger's one finding.** ONS bulletin `uklabourmarket/september2026` fetched direct today: whole-economy regular pay **3.5%** (May–Jul, identical to Apr–Jun) split ONS-verbatim *"Annual average regular earnings growth was 6.3% for the public sector"* and *"2.9% for the private sector"* — the gap widened **3.3pp → 3.4pp**. **FT-1 PASS** (≤3.0% predicted, 2.9% printed) with the honest asterisk that 2.9% is *up* from 2.8%: the deceleration stalled at a low level rather than continuing. **FT-2 KILLED** — July payrolled employees restated **−101,000** y/y, *more* negative than the −94,000 registered, and the September bulletin's own revisions guidance now reads *"Revisions in recent months have tended to be made downwards"*, the opposite of the upward-bias line FT-2 was built on; August provisional **−145,000** y/y. **FT-3 KILLED** — the bulletin still carries *"LFS and APS derived outputs that are currently official statistics in development will move to official statistics"* (future tense) and *"Claimant Count statistics are currently designated as official statistics in development"*; the 08-11 letter has not reached the flagship release, re-opens at the 10-20 print. Rest of the print: unemployment **4.9%** (consensus 5.0% — a beat), employment **75.1%**, inactivity **20.9%**, total pay **3.9%** (from 4.1%), vacancies **702,000** Jun–Aug, −8,000 (1.1%), ONS-verbatim *"the last time there were 702,000 or fewer vacancies was in August to October 2014"*, claimant count **1.692m**, real regular pay **+0.6%** CPIH. **Composition kill did not fire** (split published); **date kill did not fire** (released 15 Sep 07:00; *"Next release: 20 October 2026"* corroborates the already-canonical `uk-labour-market-2026-10-20.json`). **Reaction-function kill did not fire** — GBP/USD *"down 0.17% to near 1.3478"* (FXStreet, 09-15 10:45), well inside the 0.5% threshold, and it fell on a print that *beat* on unemployment, which is leg 3's finding reproduced on a second print. **Channel kill not scoreable on instrument** — Yahoo served no 2026-09-15 daily bar for NVDA/AVGO/MRVL/CRWV at D+1 (two fetches, cache busted; `^VIX` did have one, **17.20**), so the >1% pre-market test could not be measured directly; no wire attributes any US semi move to the ONS release and the 09-16 FOMC owns that window. No new dated adjacency inside the horizon — 10-20 is canonical and `boe-dmp-2026-10-02` was already proposed by this event's initial research. No fetch failed; `blocked` empty. | — (stance held and cost nothing: stand aside was correct, and the analytical call "read one cell, not the headline" is validated by an unchanged 3.5% headline over a moved split) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -276,3 +277,126 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-16, D+1, inside the `closeOutWithinDays` window).** Macro-print mode with
+`symbols: []` runs no `earnings-cycle` / `intraday-edges` instrument — no issuer, no macro mode — so
+the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`)
+was performed and had no instrument target. Every figure below was re-fetched **today**, never recalled
+from the tape: the ONS `uklabourmarket/september2026` bulletin fetched direct (two passes — one for
+figures, one for the designation and revisions wording), Yahoo daily bars for `NVDA`, `AVGO`, `MRVL`,
+`CRWV`, `^VIX` and `GBPUSD=X` pulled twice into a freshly-emptied cache, and dated press for the
+sterling reaction and the consensus it printed against.
+
+### What actually printed
+
+The finding this ledger was built on got the cleanest confirmation available: **the headline did not
+move at all, and its composition did.** Whole-economy regular pay printed **3.5%** for May–Jul 2026 —
+the identical number to Apr–Jun — while the split underneath it widened from **6.1%/2.8%** to
+**6.3%/2.9%**, a gap of **3.4pp**. A reader who watched the headline learned nothing; a reader who
+watched the one cell learned that the public award cycle absorbed the whole of the drift.
+
+| Cell | Prior print (Apr–Jun) | Printed 2026-09-15 (May–Jul) | Read |
+|---|---|---|---|
+| Regular pay, whole economy | 3.5% | **3.5%** | unchanged — the composition artifact, visible |
+| Regular pay, **public sector** | 6.1% | **6.3%** | the drift went here |
+| Regular pay, **private sector** | 2.8% | **2.9%** | **FT-1 passes**; deceleration stalled, did not reverse |
+| Total pay (incl. bonuses) | 4.1% | **3.9%** | softening faster than regular pay |
+| Unemployment rate (LFS) | 4.9% | **4.9%** | a *beat* — consensus looked for 5.0% |
+| Employment / inactivity | 75.1% / 20.9% | **75.1% / 20.9%** | flat |
+| Vacancies | 707,000 (May–Jul) | **702,000** (Jun–Aug), −8,000 (1.1%) | ONS: *"the last time there were 702,000 or fewer vacancies was in August to October 2014"* |
+| Payrolled employees, **July y/y** | −94,000 (provisional) | **−101,000** (restated) | **FT-2 killed** — revised *down*, not up |
+| Payrolled employees, Aug y/y | — | **−145,000** (provisional) | the contraction is accelerating |
+| Claimant count | 1.665m (Jul) | **1.692m** (Aug) | up on month and on year |
+| Real regular pay (CPIH) | +0.5% | **+0.6%** | |
+| LFS designation | "official statistics in development" | **still "official statistics in development"** | **FT-3 killed** |
+
+### Scoring the three registered forward tests
+
+**`FT-uk-labour-market-2026-09-15-1` — PASS, with the asterisk stated rather than buried.** The test
+predicted private-sector regular earnings growth ex-bonus of **3.0% or less** for May–Jul 2026; ONS
+printed **2.9%**, ONS-verbatim *"Annual average regular earnings growth was 6.3% for the public sector
+and 2.9% for the private sector"*. That clears the line and is nowhere near the **≥3.3%** kill or the
+3.0–3.3% partial band. **The asterisk:** 2.9% is *higher* than the 2.8% it was registered against, so
+what survived is the **level** claim (private wage growth is near a post-2020 low) and not the **trend**
+claim the hypothesis title used — *"its deceleration survives one more print"*. The deceleration
+stalled. The test was written as a threshold and is scored as a threshold, but a second consecutive
+uptick at the 10-20 print would make the ledger's "This quarter" falsifier — re-acceleration above
+3.5% — a live question rather than a remote one, and that is the honest carry-forward.
+
+**`FT-uk-labour-market-2026-09-15-2` — KILLED, exactly on its pre-registered kill switch.** The test
+predicted the September bulletin would restate the July 2026 payrolled-employees annual change as
+**better than −94,000**; it restated it as **−101,000**, and the kill switch reads *"−94,000 or more
+negative"*. Two things make this a clean kill rather than a close one. First, the mechanism the test
+rested on has been reversed in the publisher's own words: the September bulletin states *"Revisions in
+recent months have tended to be made downwards, as shown in our LFS quality update: January 2026
+article"* — the opposite direction from the *"larger-than-average upward revisions in recent years"*
+guidance the registration quoted from the August bulletin. Second, the August provisional extends the
+same direction at **−145,000** y/y. Per the registration's own instruction, this is recorded as
+**strengthening** the loose-labour-market read, not weakening it: leg 5's level story was
+**understated**. Leg 6's MIXED grade was the right grade for the wrong reason — it doubted the
+magnitude and should have doubted the sign of the error term.
+
+**`FT-uk-labour-market-2026-09-15-3` — KILLED.** The test predicted the bulletin would describe its
+LFS-derived outputs as **"official statistics"** without the *"in development"* qualifier. It does not:
+the September release still carries *"LFS and APS derived outputs that are currently official
+statistics in development will move to official statistics"* — future tense, the same construction the
+18 August bulletin used one week after the 11 August letter — alongside *"Claimant Count statistics are
+currently designated as official statistics in development"* and *"The ONS will not be seeking
+reaccreditation."* The announced designation move has not reached the flagship release. Leg 4's
+substantive point is untouched (the publisher has stopped defending the series, and says so); what was
+premature was reading the *paperwork* as already done. The question re-opens at the **2026-10-20**
+print, where it belongs to that event's ledger, not this one.
+
+### The unregistered kill switches, scored
+
+- **Composition kill — did not fire.** The public/private split was published verbatim. The entry did
+  not shrink to a date marker.
+- **Date kill — did not fire.** Released **15 September 2026**, and the bulletin's own *"Next release:
+  20 October 2026"* corroborates the already-canonical `uk-labour-market-2026-10-20.json`.
+- **Reaction-function kill — did not fire, and leg 3 got a second observation.** GBP/USD was
+  *"down 0.17% to near 1.3478"* (FXStreet, 2026-09-15, 10:45) — a third of the 0.5% threshold. The
+  detail that matters: it fell on a print that **beat** on the most-quoted cell (4.9% against a 5.0%
+  consensus) and met on the headline wage number. That is the 2026-08-18 pattern reproduced — a
+  better-than-feared labour print that sterling shrugs at — which takes leg 3 from one observation to
+  two. Still two, still press-relayed, still not a reaction function.
+- **Channel kill — not scoreable on instrument, and recorded as such rather than passed.** Yahoo
+  returned **no 2026-09-15 daily bar** for NVDA, AVGO, MRVL or CRWV at this session's fetch (two
+  attempts, cache emptied between them; `^VIX` did return one, closing **17.20** against 17.10 on
+  09-14), so the *"**>1%** in the 02:00–09:30 ET window"* test could not be measured directly. What can
+  be said honestly is weaker than a pass and stronger than nothing: no wire coverage of 09-15
+  attributes any US semiconductor move to the ONS release, and the 09-16 FOMC owns that overnight
+  window by any reasonable attribution. The claim leg 9 makes — that no price channel runs from a UK
+  labour print to this book — is **not disproven and not independently confirmed** on this print.
+
+### The stance, judged
+
+**Stand aside was correct and cost nothing**, which is the least interesting way a call can be right
+and the most common one in this book. The three analytical commitments fared as follows. The first —
+*private-sector regular pay is the only cell that carries information* — is the one the print
+vindicated hardest, since the headline was numerically identical two months running while the thing it
+averages moved. The second — *discount the headline unemployment rate on the publisher's own
+instruction* — held on substance and failed on timing: the designation paperwork lags the letter, and
+the 4.9% print beating consensus by 0.1pp is exactly the kind of "surprise" a non-accredited survey
+generates. The third — the **attribution discipline** — was never tested, because the move it was built
+to attribute (0.17%) was too small to need attributing.
+
+**What carries forward, and where.** Nothing here is re-litigated in this ledger, which now goes quiet.
+The live question the print hands on is the **09-17 MPC vote**: the ledger's "This month" call had a
+second limb — *the hawkish bloc stays at three* — whose falsifier (*four or more members voting for an
+increase*) is not observable until **2026-09-17**, one day after this close-out. That limb was always
+`boe-decision-2026-09-17`'s to score (its FT-2), and press pricing on print day read *"another 6-3
+vote"* with the Bank Rate held at 3.75% for a sixth meeting. It is named here and scored there.
+
+**Honest limits on this close-out.** Every ONS figure is primary and fetched today; the **consensus**
+this print beat (5.0% unemployment, 3.5% regular pay expected) and the **sterling move** are
+**press-cited**, not read off a tick series — Yahoo's `GBPUSD=X` daily series skipped from 09-14 to
+09-16 with no 09-15 bar, so the intraday 02:00–07:00 ET window the reaction-function kill specifies was
+never available to this session at any resolution. The four tracked equities' missing 09-15 bars are
+recorded above as an instrument gap, not as a fetch failure — every request returned HTTP 200 with a
+short series — so `probe-ref.blocked` stays empty, correctly. **No new dated adjacency was proposed:**
+the only forward date the bulletin supplies (20 October 2026) is already canonical in this calendar,
+and `boe-dmp-2026-10-02` was proposed by this event's own initial research. The TLFS milestones
+(January 2027 progress check, July 2027 decision, November 2027 earliest transition) remain month-only
+and are still not proposed — a guessed date is worse than a gap.

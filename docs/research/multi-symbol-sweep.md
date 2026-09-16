@@ -215,6 +215,38 @@ robust, alpha fragile — is the finding.
   stop-through decayed to **−0.1bp**, so the cover and the foreign bid moved in opposite directions
   — a composition change no cover band of any width can see.
 
+- **A revision-direction test built on revision guidance quoted from an earlier vintage of the same
+  bulletin (FT-uk-labour-market-2026-09-15-2)** — added 2026-09-16 from the
+  [uk-labour-market-2026-09-15 close-out](events/uk-labour-market-2026-09-15.md). It predicted the
+  September ONS bulletin would restate July payrolled employees **better than −94,000**, on the
+  August bulletin's own statement that early-tax-year months *"have received larger-than-average
+  upward revisions in recent years."* July was restated **−101,000**, and the September bulletin now
+  says the opposite in its own words: *"Revisions in recent months have tended to be made downwards,
+  as shown in our LFS quality update: January 2026 article."* **The series was not misread; its
+  guidance had changed under the test.** A statistical agency's revision-bias language is itself a
+  revised quantity, republished monthly, and a one-print directional bet on it is a bet on last
+  month's methodology note. Do not re-propose a revision-direction test without re-reading the
+  publisher's *current* revisions section in the same pass that registers it — and prefer a
+  threshold on the underlying level, which does not decay. **One detail that must travel with the
+  kill:** it killed toward *more* contraction (August provisional **−145,000** y/y), so the loose
+  -labour-market read it was attached to is strengthened, not damaged — a kill here is not licence
+  to soften the payroll story in the next UK ledger.
+
+- **A one-print test on administrative wording, registered off an intent letter
+  (FT-uk-labour-market-2026-09-15-3)** — added 2026-09-16 from the same close-out. It predicted the
+  September bulletin would drop *"in development"* from its LFS-derived outputs, on ONS's
+  **11 August 2026** letter to OSR stating *"LFS and APS derived outputs that are currently official
+  statistics in development will move to official statistics."* The September release repeats that
+  sentence **verbatim and still in the future tense** — the same construction the 18 August bulletin
+  carried a week after the letter. A stated-intent letter is not a publication schedule, and the lag
+  from announcement to flagship-release wording has no published date to key on. Do not re-propose a
+  designation/paperwork change as a single-print test; register it as a standing watch item on the
+  series instead, scored whenever the phrasing moves. **The detail that must travel with the kill:**
+  the substantive read was never at stake — the publisher has stopped defending the LFS series and
+  says so in the same bulletin (*"The ONS will not be seeking reaccreditation"*) — so this kills the
+  **timing** claim only, and the instruction to prefer accredited PAYE RTI over the LFS unemployment
+  rate stands untouched.
+
 - **NVDA earnings-gap hold (anti-S2)** — added 2026-08-15 ([`nvda-aug-2026-print.md`](nvda-aug-2026-print.md)):
   win 9/14 vs the 60% ordinary-overnight base (p=0.486 — indistinguishable from any overnight);
   the +5.35% mean is carried entirely by four 2023-24 gaps (ex-top-4 +1.72%) against a pooled
