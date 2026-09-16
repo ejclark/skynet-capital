@@ -7,6 +7,23 @@
 
 export type Tone = "pos" | "neg" | "flat";
 
+/** One still-open tax lot inside a position — same column shape as `DeskPosition` (#3186 slice
+ *  1), only ever present when the server could account for the whole position from its lots. */
+export interface PositionLot {
+  readonly lotId: string;
+  readonly openedAt: string;
+  readonly quantity: string;
+  readonly costPerShare: string;
+  readonly price: string;
+  readonly costBasis: string;
+  readonly value: string;
+  readonly dayPl: string;
+  readonly dayTone: Tone;
+  readonly totalPl: string;
+  readonly returnPct: string;
+  readonly totalTone: Tone;
+}
+
 export interface DeskPosition {
   readonly symbol: string;
   readonly display: string;
@@ -25,6 +42,7 @@ export interface DeskPosition {
   readonly returnPct: string;
   readonly totalTone: Tone;
   readonly weightPct: number;
+  readonly lots?: readonly PositionLot[];
 }
 
 export interface DeskTiles {

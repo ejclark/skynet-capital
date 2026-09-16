@@ -105,10 +105,15 @@ export async function serveDeskJson(
   // prominence from real relative standing, health from real P/L, or the field stays absent.
   const power = botLandmarkProminence(state.participants).get(id);
   const empire = projectEmpire(found, power === undefined ? {} : { personaProminence: power });
+  // The lot breakdown (#3186 slice 1) needs the same durable ledger `/activity` already reads —
+  // absent with no ledger wired, same honest degrade every other branch here takes, and
+  // `deskView` already renders lot-free positions when `ledger` is undefined.
+  const durable = await config.readTradeActivity?.(id);
+  const ledger = durable ? deskLedger(found, durable) : undefined;
   res.end(
     JSON.stringify({
       generatedAt: state.generatedAt,
-      desk: deskView(found),
+      desk: deskView(found, ledger),
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
         : {}),
