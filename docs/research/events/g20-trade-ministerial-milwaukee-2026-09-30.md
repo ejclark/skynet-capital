@@ -1,41 +1,49 @@
 # G20 Trade Ministerial — Milwaukee, Wisconsin (US presidency) — g20-trade-ministerial-milwaukee-2026-09-30
 
 **Kind:** geopolitical · **Date:** 2026-09-30 (estimate, EST: ustr.gov press release 2026-05-19 + g20.org events-calendar and location pages, all read direct) · **Impact:** low
-**Last assessed:** 2026-09-04
-<!-- probe-ref: {"symbols":{},"vix":14.12,"daysBand":"low:15+","adjacentIds":["umich-sentiment-final-2026-09-25","durable-goods-2026-09-25","dallas-fed-mfg-2026-09-28","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","jolts-2026-09-29","mu-2026-09-29-print","adp-employment-2026-09-30","chicago-pmi-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","pce-2026-09-30","apple-eu-dma-terms-2026-10-01","ism-manufacturing-2026-10-01","jobs-2026-10-02","opec-jmmc-68th-2026-10-04","ism-services-2026-10-05"],"screenStreak":0} -->
+**Last assessed:** 2026-09-16
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.federalregister.gov/documents/2026/07/28/2026-15181/notice-of-actions-in-section-301-investigations-of-acts-policies-and-practices-of-various-economies","status":"302 -> unblock.federalregister.gov (HTML document pages only; the /api/v1/ JSON and full_text/text endpoints both served 200 and every FR fact in this ledger came from those)","at":"2026-09-16"}]} -->
 
 ## At a glance
 
-**TL;DR.** Read it, never trade it — but read this one, because it is the only G20 ministerial of
-the US host year whose stated agenda is the literal caption of a live US enforcement docket aimed at
-its own guests. USTR's own release (2026-05-19, found this pass; the calendar entry said no USTR
-release existed) has Ambassador Greer hosting **September 30 – October 1** to discuss, verbatim,
-"addressing structural excess capacity and production" — the exact title of Section 301
-investigations USTR opened **2026-03-11** into 16 economies, **seven of them fellow G20 members**.
-That docket blew through its own 2026-07-24 target with no determination, no proposed remedy and no
-tariff annex; its statutory ceiling is **2027-03-11**. That is a real dated risk — and it still does
-not run through this meeting. A Section 301 remedy arrives as a Federal Register Notice of Action,
-which USTR proved 68 days ago on the sibling forced-labor case (10%/12.5% over MFN across 60
-economies, effective 12:01 a.m. EDT **2026-07-24**) — acting *before* the ministerial on the same
-agenda item it will now discuss. Meanwhile the attribution window is the worst on this calendar:
-**17 tracked events within ±5 days**, five on day 1 alone, including PCE, ADP, GDP and the FY2027
-funding cliff. Status is **estimate**, on a schema gap and not on doubt.
+**TL;DR.** Still **read it, never trade it** — and at D-14 the docket question got *sharper*, not
+louder, because the sibling case's paperwork is now primary-sourced and it splits the risk in two.
+Pulling the forced-labor Notice of Action direct (FR **2026-15181**, USTR, "Notice of action",
+published 07-28, duties applicable **12:01 a.m. ET 2026-07-24**, **10%** and **12.5% ad valorem**
+across **60** economies) closed one of this ledger's own honest limits and exposed the template: it
+was preceded by a **"Notice of determinations, request for comments, and notice of public hearings"**
+(FR **2026-11296**, **2026-06-05**) that functioned as a **compliance window** — verbatim, India drew
+10% rather than 12.5% *"including India's adoption of a forced labor import prohibition subsequent to
+the publication of the June 5, 2026 FRN."* Initiation → determination notice was **85 days**;
+determination → action, **53**. The excess-capacity case was initiated **one day earlier**
+(2026-03-11) and at **189 days** has published **nothing** past its 2026-05-08 hearing transcript —
+verified twice today (USTR's case page; the FR API returns **0** documents matching "structural
+excess capacity" since 05-01, and USTR's entire FR output since 08-01 is **5** unrelated notices).
+So the **annex** branch of the kill switch is near-foreclosed on the template, and the **determination**
+branch is the live one — and a determination published at Milwaukee would make this the *opening of a
+rate-tier negotiation*, not a delivery venue. Two items pull the other way: Houston (this ledger's own
+designated leading indicator) closed 09-15 having seen the US deliver an instrument **on the meeting's
+own dateline** (EPA, datelined Houston 09-14), and **Goyal is confirmed coming to Milwaukee for a
+Greer bilateral** — India already at 10% since 07-24, a first-tranche BTA pending. The corridor
+**tripled to 55** tracked events within ±5 days. Status stays **estimate**, on the same schema gap.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-26) | Stand aside | High | `symbols: []`, no position to hold, and the docket that gives this date its only meaning has no published determination date. | A USTR Notice of Action or proposed tariff annex in the excess-capacity investigations published before 2026-09-30 |
-| This week | No exposure here — the live China venue this month is 2026-09-24 | Medium | Trump–Xi Washington (estimate) is leader-level and 6 days earlier; a trade ministerial is downstream of whatever it does or does not produce. | The 2026-09-24 visit being cancelled or postponed before that date, which pushes the China agenda onto ministerial margins including Milwaukee |
-| This month | Watch the docket, not the meeting | Medium | The 16-economy Section 301 excess-capacity case is past its 07-24 target and undetermined; a remedy is a Federal Register notice on USTR's clock, not a communiqué on the G20's. | A determination published on or about 2026-09-30/10-01 naming sectors and rates — which would make this the delivery venue, not a read |
-| This quarter (through 12/15) | Read only — never attribute 09-30/10-01 tape to this meeting | High | 17 tracked events sit within ±5 days; day 1 carries PCE + GDP + ADP + Chicago PMI + the FY2027 funding cliff, and day 2 is the first day of any shutdown. | A named, dated trade deliverable out of Milwaukee that resolves or extends the two-sided 2026-11-10 expiries |
+| Today (D-14) | Stand aside | High | `symbols: []`, no position to hold, and the docket that gives this date its only meaning still has no published determination — USTR's case page ends at the **2026-05-08** transcript and the FR API returns **0** matching documents since 05-01. | A USTR determination, proposed remedy or Notice of Action in the excess-capacity investigations published before 2026-09-30 |
+| This week | No exposure here — the live China venue this month is still 2026-09-24 | Medium | Trump–Xi Washington (estimate) holds: press has Xi in the US **09-23/25**, the White House on **09-24**, skipping the UNGA general debate; a trade ministerial is downstream of whatever it does or does not produce. | The 2026-09-24 visit being cancelled or postponed before that date, which pushes the China agenda onto ministerial margins including Milwaukee |
+| This month | Watch the docket, not the meeting — but watch the **determination**, not the annex | Medium | The sibling case ran determination-notice → action in **53 days**; no determination notice exists in the excess-capacity case, so a 09-30 tariff annex has no published predicate. A determination *with a comment window* is the branch Milwaukee could plausibly carry. | A determination published on or about 2026-09-30/10-01 naming sectors and rates — which would make this the delivery venue, not a read |
+| This quarter (through 12/15) | Read only — never attribute 09-30/10-01 tape to this meeting | High | The corridor tripled to **55** tracked events within ±5 days, **4** confirmed high (PCE, ISM mfg, jobs, ISM services); day 1 still carries PCE + GDP + ADP + Chicago PMI + the FY2027 funding cliff, and day 2 is the first day of any shutdown. | A named, dated trade deliverable out of Milwaukee that resolves or extends the two-sided 2026-11-10 expiries |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never** — trade "the G20 trade ministerial." No G20 ministerial of any track has a measured US-equity effect in this calendar's research.
 - **Never** — attribute a 09-30 move to Milwaukee before clearing PCE, GDP Q2-third, ADP, Chicago PMI and the funding cliff, all the same day.
-- **Watch (dated)** — G20 Energy Abundance Houston **2026-09-14/16 (est, proposed this PR)** · Trump–Xi **2026-09-24 (est)** · this ministerial **2026-09-30/10-01 (est)** · Sherpa III DC **2026-10-01/02** · FMCBG Bangkok **2026-10-15 (est)** · two-sided expiries **2026-11-10** · Section 304 ceiling **2027-03-11**.
-- **Upgrade flag** — a USTR determination, proposed remedy or tariff annex in the excess-capacity case naming semiconductors, electronics or robotics. Not tripped as of 2026-09-04.
-- **Read flag (not a trigger)** — does Milwaukee produce a consensus statement (as Chapel Hill did 09-02) or a chair's statement with China dissenting (as Asheville did 09-01)? Subject matter says Asheville.
-- **Downgrade flag** — a G20 member boycotting or sending sub-ministerial delegation, the mirror of the US's own 2025 Johannesburg boycott. Nothing announced as of 2026-09-04.
+- **Watch (dated)** — media credentialing closes **2026-09-21** (USTR, 08-20) · Trump–Xi **2026-09-24 (est)** · this ministerial **2026-09-30/10-01 (est)** · Sherpa III DC **2026-10-01/02** · FMCBG Bangkok **2026-10-15 (est)** · 2027 NTE comments close **2026-10-29** · two-sided expiries **2026-11-10** · Section 304 ceiling **2027-03-11**.
+- **Upgrade flag** — a USTR determination, proposed remedy or tariff annex in the excess-capacity case naming semiconductors, electronics or robotics. Not tripped as of 2026-09-16, verified at USTR's case page *and* the Federal Register API.
+- **Widened falsifier (2026-09-16)** — Houston's close-out missed its own kill switch by naming the wrong agency and instrument class. A **Commerce §232**, **CBP/DHS forced-labor entity-list** or **forced-labor §301** action datelined Milwaukee hits the same underlying claim; treat any of them as a trip.
+- **Read flag (not a trigger)** — does Milwaukee produce a consensus statement (as Chapel Hill did 09-02) or a chair's statement with China dissenting (as Asheville did 09-01)? Subject matter still says Asheville; Houston published **no documents at all**, so the sibling tell came back empty.
+- **Read flag, relocated (2026-09-16)** — the information is likelier to come from the **bilateral margins** than the plenary text: India's Goyal is reported attending specifically to hold a Greer bilateral on the pending BTA.
+- **Downgrade flag** — a G20 member boycotting or sending sub-ministerial delegation, the mirror of the US's own 2025 Johannesburg boycott. Nothing announced as of 2026-09-16.
 
 ## Initial research
 
@@ -230,6 +238,23 @@ Chicago PMI and the FY2027 funding cliff, and day 2 opens on the first morning o
 tape move in this window is attributable here. Estimate status widens caution only; nothing is
 date-keyed action, and `low` impact is affirmed on the meeting, with the docket flagged separately.
 
+**Amendment, 2026-09-16 (D-14 pulse, receipt: the row below).** The four horizon calls are unchanged
+and nothing is keyed. What changed is the *shape* of the watch, on primary paperwork this ledger's
+own honest-limits section asked a later pulse to pull. The sibling forced-labor case ran
+**initiation (2026-03-12) → "Notice of determinations, request for comments, and notice of public
+hearings" (FR 2026-11296, 2026-06-05, 85 days) → "Notice of action" (FR 2026-15181, published
+2026-07-28, duties applicable 12:01 a.m. ET 2026-07-24, 53 days)** — and the middle document was a
+**negotiation window**, not a formality: USTR's own text gives India **10%** rather than 12.5%
+*"including India's adoption of a forced labor import prohibition subsequent to the publication of
+the June 5, 2026 FRN."* The excess-capacity case, initiated **one day earlier**, has published no
+equivalent notice at **189 days**. So the watch splits: a **tariff annex** at Milwaukee has no
+published predicate and is the weaker branch, while a **determination with a comment window** is the
+branch this venue could carry — and if it did, the ministerial would be the *opening* of a rate-tier
+bargain rather than its delivery. Houston, proposed by this ledger's initial research as its own
+leading indicator, pushes the same direction on timing (an instrument datelined *at* the meeting,
+2026-09-14) and came back empty on the consensus-vs-split tell (no documents published). Still no
+trade: `symbols: []`, no determination date, and estimate status widens caution only.
+
 **Kill switches.**
 
 - *"The meeting is not the channel; the docket is"* dies on a USTR determination, proposed remedy or
@@ -252,19 +277,43 @@ date-keyed action, and `low` impact is affirmed on the meeting, with the docket 
   date or venue; the same fetch is the flip trigger if `CONFIRMED_PREFIX` ever gains a `USTR:` slot.
 - *"Greer hosts it in person"* is stated in his own release but not re-confirmed since 2026-05-19. A
   US delegation led below the Trade Representative would lower the meeting's information content
-  further; that is a downgrade signal, not a market one.
+  further; that is a downgrade signal, not a market one. **Re-confirmed 2026-09-16** by USTR's
+  2026-08-20 media-credentialing release, which again names him as host.
 
-**Forward test.** None registered in [`forward-tests.md`](../forward-tests.md). That register is the
-symbol-sweep's zero-capital **price**-hypothesis ledger; this doc's falsifiable claims are
-docket-timing, diplomatic-outcome and attribution claims, and their scoring venue is this event's own
-`## Outcome` close-out — the same reasoning [`g20-fmcbg-bangkok-2026-10-15`](g20-fmcbg-bangkok-2026-10-15.md)
-and [`g20-miami-2026-12-14`](g20-miami-2026-12-14.md) apply.
+*Added 2026-09-16 (the row below is the receipt) — both widen the falsifier rather than replace one;
+no existing switch is edited.*
+
+- *"The annex branch is near-foreclosed on the sibling's template"* dies on a Notice of Action or
+  tariff annex in the excess-capacity investigations published **without** a prior determination /
+  request-for-comments notice. That would prove the forced-labor sequence was case-specific rather
+  than procedural, and this ledger's whole timing read with it.
+- *"USTR-only is the right agency filter"* dies on any US trade instrument datelined Milwaukee
+  **2026-09-30/10-01** from a different agency or authority — Commerce **§232**, a CBP/DHS
+  forced-labor entity-list addition, or a Federal Register action in the *forced-labor* §301 case.
+  This is the transferable lesson from
+  [`g20-energy-abundance-ministerial-houston-2026-09-14`](g20-energy-abundance-ministerial-houston-2026-09-14.md),
+  whose close-out recorded that its own falsifier missed by enumerating DOE/White House when the hit
+  came from **EPA** — wrong agency, wrong instrument class. The underlying claim here is "the
+  multilateral text follows the unilateral action," and it is agency-agnostic; the old switch was not.
+
+**Forward test.** None at initial research: that register began as the symbol-sweep's zero-capital
+**price**-hypothesis ledger, and this doc's falsifiable claims are docket-timing, diplomatic-outcome
+and attribution claims whose scoring venue is this event's own `## Outcome` close-out — the same
+reasoning [`g20-fmcbg-bangkok-2026-10-15`](g20-fmcbg-bangkok-2026-10-15.md) and
+[`g20-miami-2026-12-14`](g20-miami-2026-12-14.md) apply. **Amended 2026-09-16:** the register's own
+contract ([`forward-tests.md`](../forward-tests.md) → *How to register*) imposes no price
+restriction, and the sibling Houston ledger registered a non-price test, so the D-14 pulse's
+sharpened claim is pre-registered rather than left to a close-out that could retrofit it —
+**`FT-g20-trade-ministerial-milwaukee-2026-09-30-1`** in
+[`forward-tests/g20-trade-ministerial-milwaukee-2026-09-30.md`](../forward-tests/g20-trade-ministerial-milwaukee-2026-09-30.md).
+Its score-by (2026-10-02) sits inside `closeOutWithinDays`, so this event's own close-out scores it.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-04 | D-26 | Initial research banked (above). **Agency primary found, superseding the entry's own source line** ("no separate USTR release was located this pass"): ustr.gov 2026-05-19 reads verbatim "Ambassador Jamieson Greer will host the G20 Trade Ministerial in Milwaukee, Wisconsin from Wednesday, September 30 to Thursday, October 1"; corroborated twice on g20.org (events-calendar and /location/, both HTTP 200 with browser headers). Stays `estimate` — `CONFIRMED_PREFIX` has no `USTR:` slot; fifth ledger to bank this gap, first with a **hosting-agency** primary. A `USTR:` prefix is recommended as its own PR, not done here. **Load-bearing finding:** Greer's stated agenda includes "addressing structural excess capacity and production" — verbatim the title of Section 301 investigations USTR initiated **2026-03-11** (91 FR 12886, dockets USTR-2026-0067/0068) into 16 economies, **7 of them G20 members** (China, EU, India, Indonesia, Japan, Korea, Mexico); hearings 05-05/05-08; illustrative sectors include "semiconductors… electronics… robotics… batteries… solar modules". The docket **blew its 2026-07-24 target** — no determination, remedy or annex; USTR's case page still ends at the 05-08 transcript. Statutory ceiling **2027-03-11** (19 U.S.C. 2414(a)(2)(B), 12 months from initiation). **But the channel is a Federal Register notice, not a communiqué** — USTR proved it on the sibling forced-labor case (10%/12.5% over MFN, 60 economies, effective 12:01 a.m. EDT **2026-07-24**), acting unilaterally on agenda item #1 two months before convening the discussion. **Base rate, measured, n=2 this week:** Chapel Hill Innovation 09-01/02 reached **consensus** (whitehouse.gov 09-02: Carolina Principles, AI Prosperity Objectives/Compact, 20 nations + AU, no dissent; Huang and Altman on stage) while Asheville FMCBG 08-31/09-01 produced **no communiqué** and a 4-paragraph China dissent — and the tape separates neither: SPX 7,711.76 (08-28) → 7,631.47 (09-01) → **7,747.71** (09-03, a high), net **+0.47%**; VIX 14.43 → 16.34 → 14.32. NVDA, the best case, ran 217.55 → **228.45** (+5.01%, +4.84% excess vs QQQ) but printed 08-26 (08-27 alone +8.74%) with AVGO printing into the window — unmeasurable, not zero. **Milwaukee resembles Asheville:** its caption is the finance track's fight (Asheville ¶10 "excessive and persistent external surpluses… overreliance on exports"; Bessent's "$1.2 trillion goods trade surplus from a single country", press-sourced), and the host's own billing is "Restoring balance to international trade". **Attribution:** 17 tracked events within ±5d — day 1 carries PCE + GDP-Q2-third + ADP + Chicago PMI + the FY2027 funding cliff; day 2 adds ISM mfg, Apple EU DMA terms, Sherpa III in DC and the first morning of any shutdown. **Caution on the remedy's durability** (Global Trade Alert): 33 evidentiary indicators vs 7 named policy interventions, 10 of 16 economies with symptoms but no named cause, 14 of 16 absent from USTR's own 2025 NTE overcapacity analysis. **Readings:** VIX 14.12 (live 09-04), SPX 7,747.71 (09-03 close). *Proposed to `market-events.ts` (estimate):* `g20-energy-abundance-ministerial-houston-2026-09-14` — the last observable US-hosted G20 sectoral ministerial before this one, and this event's own leading indicator on consensus-vs-split. Sherpa III (DC 10-01/02) deliberately not proposed, per the Bangkok ledger's call. | — (stance set: read it, never trade it; watch the Section 301 docket, not the meeting) | 2026-10-04 (low, 15+d band: every 30d) |
+| 2026-09-16 | D-14 | **Pulse. Stance holds on all four horizons; the watch splits in two.** Band crossed `low:15+` → **`low:0+`** (every 7d). **Kill switch 1 NOT tripped, verified two ways:** USTR's excess-capacity case page (direct today) still ends at the **2026-05-08** Day 4 transcript, and the FR API returns **0** documents matching "structural excess capacity" since 05-01 — USTR's complete FR output since 08-01 is **5** notices, none a determination/remedy/annex. **Load-bearing finding — the sibling template is now primary, closing this doc's own honest limit** ("a later pulse should pull it from the Federal Register"): forced-labor ran initiation **2026-03-12** → **FR 2026-11296** (2026-06-05) *"Notice of determinations, request for comments, and notice of public hearings"*, dockets USTR-2026-0265/0266, appear-by 06-22 (**85d**) → **FR 2026-15181** (published 07-28) *"Notice of action"* under **§301(b)/§304(a)**, **60** economies, **10%** and **12.5% ad valorem** confirmed verbatim, duties applicable **12:01 a.m. ET 2026-07-24** with an in-transit carve-out to 07-28, alongside Presidential Document **2026-15274** (**53d**). **The middle notice was a compliance window:** USTR's text gives India 10% not 12.5% *"including India's adoption of a forced labor import prohibition subsequent to the publication of the June 5, 2026 FRN."* Excess-capacity was initiated **2026-03-11**, a day *earlier*, and at **189d** has published no equivalent — **104d behind its sibling at the same milestone**. So the **annex** branch has no published predicate; the **determination** branch is the live one, and at Milwaukee it would open a rate-tier bargain, not deliver one. Registered as **`FT-…-1`** (score by 2026-10-02). **Houston closed 09-15 and cuts both ways** — this ledger proposed it as its own consensus-vs-split tell: the tell came back **empty** (g20.utoronto.ca lists Houston with no documents; track base rate 4/4 no-communiqué since 2022), but the US delivered a real instrument **on the meeting's dateline** (EPA, datelined Houston 09-14, repeal of most 2024 power-plant GHG standards) — which *raises* the prior on a determination at Milwaukee, and whose own close-out missed by naming the wrong agency/instrument class. **Two kill switches added** above (agency-agnostic falsifier; the template's own refutation). **Second agency primary:** USTR **2026-08-20**, "Media Credentialing Opens…", re-affirms 09-30/10-01, re-names Greer as host, deadline **2026-09-21**; still no time of day or venue. Event `source` updated; stays `estimate` (no `USTR:` in `CONFIRMED_PREFIX`). **First attendance datapoint** (press, Outlook Business 08-26): India's **Goyal** attending for a **Greer bilateral** on the pending BTA — India is one of the 7 G20 targets in the docket and already carries the 10% forced-labor rate; the read relocates toward the **margins**. **Macro regime shifted, raising the docket's cost not its timing:** CPI 09-11 core **+0.3% m/m** after PPI **+0.4%/5.4%** hot on **goods +1.1%**; FOMC decides **today 14:00 ET** at ~**91.4%** hike odds with **49.3%** on two-or-more 2026 hikes; Brent broke $100 to ~**$108**; 10Y ~**4.94–5.01%**. A 16-economy goods-tariff action would now land on a hiking Fed. **Readings (09-15 close, live Yahoo):** VIX **17.20** (vs 14.12 last row, **+3.08**, through the 3pt threshold), VIX3M **19.36** (contango), SPX **7,585.73** (−1.72% vs 09-04), QQQ **704.54** (−2.0%), NVDA **212.17** (−7.9%). **Corridor tripled: 55** events within ±5d (was 17), **4** confirmed high — `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`. **China legs unchanged:** Trump–Xi **09-24** on track (Xi in the US 09-23/25, White House 09-24, skipping the UNGA debate); the two-sided **11-10** expiries stand — USTR's only China-301 FR action since (2026-17925, 09-02) is a technical HTSUS conforming amendment effective 07-01 touching no exclusion expiry. **No new event proposed.** The one dated discovery is USTR's 2027 NTE comment deadline **2026-10-29** (FR **2026-18775**, 09-14) — the mechanism that would fill the record gap leg 9 flagged (14 of 16 economies absent from the 2025 NTE) — but at 43d out it is past `allImpactsWithinDays` (30) and is plainly low impact, so the **horizon leash** bars it; recorded here instead. **Blocked:** federalregister.gov HTML document pages 302 to `unblock.federalregister.gov` from this runner; the `/api/v1/` JSON and `full_text/text` endpoints both served 200 and every FR fact above came from those. | — (stance holds; watch narrowed from "a determination" to "a determination *notice with a comment window*", falsifier widened past USTR-only) | 2026-09-23 (low, 0+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
