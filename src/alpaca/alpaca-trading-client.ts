@@ -123,6 +123,27 @@ export class AlpacaTradingClient {
     );
   }
 
+  /**
+   * The same endpoint as `getPortfolioHistory`, addressed by an explicit date range instead of
+   * Alpaca's `period` token — for YTD/ALL (#3186 slice 2), which aren't `period` tokens Alpaca
+   * accepts. `dateStart`/`dateEnd` are `YYYY-MM-DD`; `dateEnd` is optional (Alpaca defaults it to
+   * today).
+   */
+  async getPortfolioHistoryByRange(
+    dateStart: string,
+    dateEnd?: string,
+    timeframe = "1D",
+  ): Promise<AlpacaPortfolioHistory> {
+    const query = new URLSearchParams({
+      date_start: dateStart,
+      timeframe,
+      ...(dateEnd ? { date_end: dateEnd } : {}),
+    });
+    return ensureOk<AlpacaPortfolioHistory>(
+      await this.transport.get(`/v2/account/portfolio/history?${query.toString()}`),
+    );
+  }
+
   /** Most-recent orders (any status), newest first — the account's transaction history. */
   getRecentOrders(limit = 15): Promise<AlpacaOrder[]> {
     return this.listOrders({ limit });

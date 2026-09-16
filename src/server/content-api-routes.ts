@@ -14,6 +14,7 @@ import { deskIndex } from "./collections-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
+import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
@@ -147,6 +148,11 @@ export async function serveJsonApi(
   }
   if (path === "/api/accounts/networth") {
     await serveNetWorthJson(res, config, session);
+    return true;
+  }
+  if (path.startsWith("/api/accounts/") && path.endsWith("/equity-curve")) {
+    const id = decodeURIComponent(path.slice("/api/accounts/".length, -"/equity-curve".length));
+    await serveEquityCurveJson(res, id, url, config, session);
     return true;
   }
   if (path.startsWith("/api/desk/")) {

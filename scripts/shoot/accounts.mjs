@@ -362,6 +362,32 @@ const sauronActivity = {
   ],
 };
 
+// Hero chart (#3186 slice 2) — a month of Eric's equity curve ending near the "1M +3.4%" window
+// pill above, and SPY's own daily closes over the same span for the benchmark overlay. Both are
+// deterministic (no randomness) so the screenshot is reproducible.
+function dailyPoints(days, endReturn, jitter) {
+  return Array.from({ length: days }, (_, i) => {
+    const t = i / (days - 1);
+    const value = endReturn * t + Math.sin(i / 2) * jitter;
+    const day = new Date(Date.UTC(2026, 7, 12 + i));
+    return { day, value };
+  });
+}
+const ericCurve = dailyPoints(23, 0.034, 0.004);
+const spyCurve = dailyPoints(23, 0.018, 0.003);
+
+const ericEquityCurve = {
+  range: "1M",
+  points: ericCurve.map((p) => ({ t: p.day.toISOString(), value: p.value })),
+};
+const spyBars = {
+  symbol: "SPY",
+  bars: spyCurve.map((p) => {
+    const close = 560 * (1 + p.value);
+    return { t: p.day.toISOString(), o: close, h: close, l: close, c: close, v: 0 };
+  }),
+};
+
 const { page, origin, close } = await openShell({
   name: "accounts",
   stubs: {
@@ -371,6 +397,8 @@ const { page, origin, close } = await openShell({
     "/api/desk/bot-sauron": sauronDesk,
     "/api/desk/human-eric/activity": ericActivity,
     "/api/desk/bot-sauron/activity": sauronActivity,
+    "/api/accounts/human-eric/equity-curve": ericEquityCurve,
+    "/api/trade/bars": spyBars,
   },
 });
 
@@ -381,9 +409,10 @@ const shootCockpit = shooter(page, out);
 await page.setViewportSize({ width: 390, height: 844 });
 
 // Summary section (default) — the sticky header with net-worth at-a-glance + section switch,
-// and the cash/position detail below. Single account (Eric) first.
+// the cash/position detail, and the hero chart (#3186 slice 2). Single account (Eric) first.
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
+await page.getByText("Portfolio").waitFor();
 await shootCockpit("accounts-summary-phone");
 
 // Positions section — the blotter below the sticky header.
@@ -412,6 +441,7 @@ await page.setViewportSize({ width: 1280, height: 900 });
 
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
+await page.getByText("Portfolio").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
 await page.goto(`${origin}/app/accounts?account=all`);
