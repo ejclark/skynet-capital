@@ -12,11 +12,28 @@ export interface DueEvent {
 }
 
 /**
- * The dispatch ceiling from research-dispatch-budget.json (#2946). Throws on a missing or
+ * The per-tick dispatch ceiling from research-dispatch-budget.json (#2946). Throws on a missing or
  * non-positive-integer `maxPerTick` — this gate fails closed, because an uncapped research batch
  * is the failure it exists to prevent.
  */
 export function loadDispatchCap(file?: string): number;
+
+/**
+ * The rolling-24h ceiling from research-daily-budget.json (#2946, second incident — the per-tick
+ * cap turned one burst into many small ones, but never bounded the day). Same fail-closed
+ * doctrine as loadDispatchCap.
+ */
+export function loadDailyBudget(file?: string): number;
+
+/**
+ * The cap dueForResearch actually spends this tick: min(per-tick ceiling, what's left of today's
+ * budget), floored at 0. All three inputs are independently overridable for tests.
+ */
+export function effectiveDispatchCap(opts?: {
+  tickCap?: number;
+  dailyCap?: number;
+  dispatchedToday?: number;
+}): number;
 
 /**
  * Which due events actually get researched this run: drop anything whose `research/<id>` branch

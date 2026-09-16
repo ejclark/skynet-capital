@@ -1,0 +1,5 @@
+{
+  "$comment": "Rolling 24h ceiling on TOTAL research-lane commits landed to main, on top of research-dispatch-budget.json's per-tick cap. Same policy-not-debt idiom as that file — no `--update` ratchet. Context: issue #2946.",
+  "maxPerDay": 24,
+  "$why": "The per-tick cap (6) bounds one push's burst, but 'every merge to main is a tick' means merges chain: a dispatched research PR merging is itself the next tick's trigger. Measured 2026-09-15/16: 116 docs(research) commits landed in a single rolling 24h window (14-22/hour for six straight hours) even with the per-tick ceiling live, because nothing bounded how many TICKS could fire in a day. 24 = 4 ticks' worth — enough to keep draining the backlog across a day without one day reproducing the original burn. Revisit once the cost meter (#2979) has a few real days of total_cost_usd to size this against actual spend instead of session count."
+}
