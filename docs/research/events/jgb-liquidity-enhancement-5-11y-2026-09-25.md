@@ -60,10 +60,12 @@ are both **estimate**; they widen caution and license nothing.
   land on the far side of a three-day closure and **Sep 24 is the only full session before the print**.
 - **MOF raised BOTH short zones while cutting the super-long** — 5-11y ¥500→¥650bn, **1-5y
   ¥500→¥600 (2025-09-08)→¥700bn (2025-11-21, six prints)**, super-long ¥450→¥250bn.
-- **The dislocation past 20 years just got worse, and the whole curve moved** (MOF par curve merged
-  through **2026-09-15**, 13,301 sessions from 1974) — the **30-year par yield 4.106% is now the 100.0th
-  percentile of 6,624 recorded sessions**, a new high for the series, up **+14.5bp** from 3.961% on
-  09-08; 40Y **4.105% = 99.9th**. 5s10s **+69.0bp = 68.6th percentile** of 9,940 (was 62.4th); 25s30s
+- **The dislocation past 20 years is back near its extreme, and the whole curve moved** (MOF par curve
+  merged through **2026-09-15**, 13,301 sessions from 1974) — the **30-year par yield 4.106% is the
+  99.95th percentile of 6,624 recorded sessions, 3rd-highest on record**. It is **not** a series high:
+  **2026-09-01 printed 4.131%** and **2026-09-02 4.122%**. The **+14.5bp** from 3.961% on 09-08 is a
+  **round trip** — the series peaked 09-01, fell to 3.956% on 09-09, and has returned to **2.5bp below
+  that peak** — not a breakout; 40Y **4.105% = 99.9th**. 5s10s **+69.0bp = 68.6th percentile** of 9,940 (was 62.4th); 25s30s
   **−1.4bp = 1.1th** of 5,506, still inverted. The band this auction covers sold off too but stayed
   ordinary: 5Y **2.338% = 56.9th**, 10Y **3.028% = 74.8th**.
 - **The corridor** — **63** tracked ids within ±5 days (**1 strong**: `pce-2026-09-30`, confirmed/high).
@@ -373,6 +375,24 @@ anything. **Leg 2 should from now on be quoted on the evidence that can move:** 
 carried by the *newest* bond on the menu. That last fact strengthens leg 1 in the same motion: a coupon
 statistic driven by 2-Year No.488 — nine days old, 1.7% coupon, 39.2% of the auction — is composition,
 not preference. The stance is unchanged and the refusal is unchanged.
+
+**Correction recorded 2026-09-16 (the D-9 row above is its receipt), and it corrects a statistic, not a
+stance.** That row, and the `## At a glance` bullet it fed, called the **30-year par yield 4.106%** on
+2026-09-15 *"a new high for the series"* at the **100.0th percentile of 6,624 sessions**. **It is the
+3rd-highest 30-year par yield on record, 99.95th percentile.** Recomputed twice from MOF's own curve
+(`jgbs/reference/interest_rate/data/jgbcm_all.csv` + the current-month `jgbcm.csv`, both HTTP 200,
+re-fetched 2026-09-16; 13,301 merged sessions from 1974-09-24, **6,624** carrying a 30-year point), the
+six highest ever are **2026-09-01 4.131% · 2026-09-02 4.122% · 2026-09-15 4.106% · 2026-08-18 4.096% ·
+2026-08-31 4.092% · 2026-08-28 4.084%**. The error came from measuring the move against **09-08's
+3.961%** rather than against the series: the curve peaked 09-01, fell to **3.956% on 09-09**, and came
+back to **2.5bp below** the peak. That is a **round trip**, and "a new high" inverts what the tape did —
+it makes an ongoing repricing read as an accelerating one. **The D-9 row is not edited** (rows append
+only; the wrong text stays on the record above, which is the point of this note), and the `At a glance`
+bullet — a live surfacing of the stance, not a dated row — is fixed directly. **Nothing downstream
+moves:** the stance is **stand aside, permanently**, it never rested on the level statistic, and no
+forward test is keyed to it. **The next appended row carries this sentence as its receipt:** *"Correction
+to the D-9 row: 30Y 4.106% on 2026-09-15 is the 3rd-highest on record (99.95th pct of 6,624), behind
+2026-09-01 4.131% and 2026-09-02 4.122% — not a series high."*
 
 **A note for the 10-22 lane, which scores first.** Its `FT-…-2` and `FT-…-4` are keyed to statistics this
 ledger finds unidentified. They should still be scored exactly as written — a registered prediction is
