@@ -71,6 +71,36 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **A base rate read off one regime, when the sibling forward test in the same document predicts
+  crossing into the other (FT-treasury-buyback-tips-10y30y-2026-09-15-1)** — added 2026-09-16 from
+  the [treasury-buyback-tips-10y30y-2026-09-15 close-out](events/treasury-buyback-tips-10y30y-2026-09-15.md).
+  It held that in long TIPS "the cap is decoration and Treasury's bid is the constraint," and
+  predicted the 2026-09-15 operation would accept **under $250M** of a $500M cap. It accepted
+  **$500M — the full cap**, on **$2,088M** offered: the first cap fill in the label's history and
+  the largest par ever offered into a long-TIPS buyback. **The base rate was not wrong; its
+  universe was.** The claim rested on the four operations under the current `10Y to 30Y` label
+  ($142M/$108M/$110M/$91M, 9.1–14.5% hit rates) with the predecessor `7.5Y to 30Y` history
+  **deliberately excluded** as "not the same instrument." Pool all **15** long-TIPS operations since
+  2024-04-17 and the excluded half carries the regime the test walked into: **every operation with
+  ≥ $1.49B offered filled ≥ 81% of cap (6 of 6, five at 100%); every one with ≤ $1.40B filled ≤ 65%
+  (8 of 8)**. Fill tracks **par offered**, not a fixed Treasury reservation posture. **Why this is a
+  clean kill rather than bad luck: the same document predicted the crossing.** Its sibling
+  FT-…-**2** argued the 110-day gap — the longest in the series — would rebuild offers past **$900M**,
+  and it **passed at $2,088M**. Priced marginally the two are consistent (9.1–14.5% of $900M is
+  $82–130M); priced jointly against the pooled record they are contradictory, because the cap starts
+  binding around $1.4–1.5B. **Do not register an execution base rate from a sub-sample when another
+  test in the same document predicts moving the variable that defines the sub-sample** — when two
+  forward tests share a mechanism, state the joint region (here: *"$60M–$200M if offers stay under
+  ~$1.4B; a cap fill above it"*), which would have described the print exactly. **The tell,
+  generalized:** an honest limit that says *"this history is not pooled here"* is a flag on the
+  live load-bearing assumption, not a disclaimer to be discharged by writing it down — go and check
+  what the excluded data would have predicted before the test is registered. **One detail that must
+  travel with the kill:** the parent stance — *read it, do not trade it* — was **correct and cost
+  nothing**, and the framing leg strengthened (the 2026 long-end selloff is **88% real yield**, the
+  30Y breakeven never left 2.15–2.34%). A killed execution test is not licence to drop the
+  operation type from coverage, and the offer-threshold finding it produced is worth more than the
+  test would have been had it passed.
+
 - **A published elasticity applied to a realized price where the paper's regressor is an
   *expectation* (FT-umich-sentiment-prelim-2026-09-11-2)** — added 2026-09-15 from the
   [umich-sentiment-prelim-2026-09-11 close-out](events/umich-sentiment-prelim-2026-09-11.md). It
