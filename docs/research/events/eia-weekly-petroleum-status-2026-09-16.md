@@ -1,8 +1,8 @@
 # EIA Weekly Petroleum Status Report (10:30 ET, decision-day morning) — eia-weekly-petroleum-status-2026-09-16
 
 **Kind:** sector · **Date:** 2026-09-16 (estimate, EST: eia.gov/petroleum/supply/weekly/ names "Next Release Date: Sep. 16, 2026" verbatim, fetched direct 2026-09-15 — the label stays `estimate` only because the schema defines no `EIA:` confirmed prefix) · **Impact:** low
-**Last assessed:** 2026-09-15
-<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0,"blocked":[]} -->
+**Last assessed:** 2026-09-17
+<!-- probe-ref: {"symbols":{},"vix":15.97,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0,"blocked":[]} -->
 
 ## At a glance
 
@@ -190,6 +190,7 @@ Two predictions with score-by dates are registered in
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-15 | D-1 | **Initial research.** Canonical `src/domain/market-events/eia-weekly-petroleum-status-2026-09-16.json` written from the one proposal naming this id (`from-fomc-2026-09-16`, 2026-09-10); its attribution rationale adopted unchanged. **Date upgraded** — eia.gov's WPSR landing page now states "Next Release Date: Sep. 16, 2026" verbatim (direct, HTTP 200) rather than the proposal's weekday arithmetic; stays `estimate` solely because the schema defines no `EIA:` confirmed prefix (same gap as the court-docket events). **The load-bearing measurement:** the 09-10 print (12:00 ET, Labor-Day shift) was bearish on every headline — crude **−0.390** vs **−1.554** consensus, gasoline **+1.269**, distillate **+2.086** — and WTI closed **+6.69%** (96.05→102.48), Brent **+6.34%**, on the Saudi East-West (7 mb/d) pipeline shutdown. **Mechanicals:** utilization **97.8%** (94.9 y/y), Gulf 98.3, Midwest 101.6; HO crack ~**$2.49/gal**; distillate **−11.9% y/y** with STEO forecasting sub-100 Mbbl in September; SPR **285.360**, **−29.6% y/y**; Cushing **21.824**. Crude direction left two-sided on purpose (max runs vs. exports 4,483→3,417 and net imports 2,287→3,407). **Sweep:** corridor 43 adjacents / 5 strong; one new dated candidate (WPSR **2026-09-23**) found and **deliberately not proposed** — no energy hook in its corridor, unlike 09-16 (FOMC) and 09-30 (ISM Prices), so filing it would be the #2946 churn cost. **Live:** VIX **17.49**, WTI **105.98**, Brent **109.03**, XLE **66.00** (~14:08 ET). No blocked sources. Consensus for the 09-11 week not findable — stated, not filled in | **Opening stance: stand aside**, with a written attribution rule. `FT-…-1` (utilization ≥ 96.0%) and `FT-…-2` (the print does not set the price) registered, both scoring 2026-09-16 | close-out, 2026-09-17 → 2026-09-22 (`closeOutWithinDays` 6); both forward tests score 2026-09-16, inside the window |
+| 2026-09-17 | D+1 (close-out) | **Close-out — scored from EIA Tables 4/9 and Yahoo daily bars, both re-fetched today, caches busted first.** Week ending 09-11 (released 09-16): commercial crude ex-SPR **423.429** (**−0.640** w/w, a draw), gasoline **207.732** (**+0.794**), distillate **107.859** (**+1.585**, a build — the "tight" leg widened, not tightened, this week), SPR **284.957** (**−0.403**). Utilization **96.8%** (**−1.0pt** w/w) — clears the 96.0 floor, **`FT-…-1` PASSES**; crude inputs eased to **17,330 kb/d** (−256) but the HO crack *widened* to **~$2.81/gal** (HO=F 5.2465 vs CL=F 102.43), fatter than the $2.49/gal that motivated the call. CL=F closed **105.83 (09-15) → 102.43 (09-16), −3.21%**, Brent **108.75 → 105.83, −2.69%** — a **draw paired with a price fall**, the mismatched sign: **`FT-…-2` PASSES**, second consecutive mismatch (n=2) for the attribution rule, still short of 2–3 for promotion and unable to separate "print ignored" from "FOMC's 14:00 ET statement overwhelmed it," exactly as stated at registration. VIX rose **17.20 → 17.71** into the print/FOMC session, then eased to **15.97** the next day. **No kill switch fired**: neither the print-reasserts pair (draw+up or build+down) nor sub-96.0 utilization occurred. No blocked sources | **Stance closed — stand aside was correct; zero capital, nothing to reverse.** Both forward tests scored PASS; the attribution rule now has two receipts | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -199,3 +200,93 @@ every row; a dated adjacent event found gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-17, D+1 — inside the `closeOutWithinDays: 6` deadline).** This is a macro/sector
+print carrying no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design, Leg 4), so
+"re-run instrument data" here means: EIA's own Table 4 and Table 9 CSVs (`ir.eia.gov/wpsr/table4.csv`,
+`ir.eia.gov/wpsr/table9.csv`) re-fetched direct today, cross-checked against the landing page's own
+release-date label, plus Yahoo daily bars for CL=F, BZ=F, HO=F, XLE and ^VIX pulled fresh after the
+mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`).
+Every prior-week figure below reproduced the initial-research session's own numbers to three decimal
+places, which is the corroboration that the current-week figures below are the CSVs' real content and
+not a summarizer's approximation. No blocked sources this session. Nothing below is scored from memory
+of the tape.
+
+**The headline verdict: the stand-aside call was right and free, and both pre-registered forward tests
+passed.** The event delivered an ordinary, unremarkable inventory print in the middle of the loudest
+day on the September calendar — and the tape ignored it a second time, exactly as `FT-…-2` predicted
+it would.
+
+### What printed — EIA Table 4/9, week ending 2026-09-11, released 2026-09-16
+
+| Series | Prior week (09-04) | This week (09-11) | w/w | Read |
+|---|---|---|---|---|
+| Commercial crude ex-SPR | 424.069 | **423.429** | **−0.640** | a draw — smaller than the −1.554 consensus the 09-10 print missed by, but a draw |
+| Total motor gasoline | 206.938 | **207.732** | **+0.794** | a build |
+| Distillate fuel oil | 106.274 | **107.859** | **+1.585** | a build — the "structural tightness" leg widened this week, not tightened |
+| SPR | 285.360 | **284.957** | **−0.403** | the drawdown continues, unrelated to the weekly commercial print |
+| Propane/propylene | 110.470 | **109.092** | **−1.378** | seasonal draw, not tracked by either forward test |
+| Percent utilization | 97.8% | **96.8%** | **−1.0pt** | eased but stayed **0.8pt above** `FT-…-1`'s 96.0 floor |
+| Crude inputs to refineries | 17,586 kb/d | **17,330 kb/d** | **−256** | consistent with the utilization dip |
+| Gross inputs to refineries | 17,629 kb/d | **17,449 kb/d** | **−180** | — |
+| Operable capacity | 18,027 kb/d | **18,027 kb/d** | unchanged | — |
+
+*(Prior-week column is this ledger's own initial-research reading, reproduced verbatim by today's
+re-fetch — the corroboration noted above.)*
+
+### The two forward tests — both PASS
+
+**`FT-eia-weekly-petroleum-status-2026-09-16-1` — refiners stay pinned at the top: PASS.** Utilization
+printed **96.8%**, clearing the registered 96.0 floor with 0.8pt to spare. The economic incentive did
+not shrink with the run rate — it grew: heating oil closed **$5.2465/gal** against WTI's **$102.43**,
+a crack of **≈$2.81/gal (≈$117.92/bbl)** on the print's own release day, wider than the **$2.49/gal**
+crack that motivated the call at registration. One clean pass; per the test's own stated limit, this
+is a run-rate confirmation, not a price view, and not yet a promotion.
+
+**`FT-eia-weekly-petroleum-status-2026-09-16-2` — the print is not the price-setter: PASS, n=2.**
+Commercial crude drew **−0.640 Mbbl**. Under the textbook convention (a draw is bullish) WTI should
+have risen; instead CL=F closed **105.83 → 102.43, −3.21%**, and Brent fell in step, **108.75 →
+105.83, −2.69%**. Draw paired with a price *fall* is the mismatched sign the test was built to catch.
+This is the **second consecutive mismatch** in this regime — the 09-10 print was bearish on every
+headline and WTI still rose +6.69%; the 09-16 print drew down and WTI still fell. Two observations in
+opposite mechanical directions both breaking the textbook link is a stronger receipt for the
+attribution rule than either alone, though the test's own stated limit still applies: this session
+**cannot separate** "the market ignored the print" from "the 14:00 ET FOMC statement on the same day
+overwhelmed anything the print could have said" — VIX rose **17.20 → 17.71** into that session before
+easing to **15.97** the next day, consistent with an FOMC-dominated tape rather than an energy-driven
+one, but that is a consistency check, not proof of mechanism. Promotion of the attribution rule from
+"registered" to "established" needs 2–3 prints per its own text; this is the second, not the third.
+
+### Calls scored against the horizon table
+
+- **Today** (stand aside, nothing to wait up for): **right.** No energy exposure existed before or
+  during the print; the call never had anything to be wrong about.
+- **This week** (stand aside on the print; the actual discipline is attribution): **right, and the
+  written rule did its job** — the 09-16 move is correctly *not* credited to this print under the
+  rule's own test, which is the rule's first live application.
+- **This month** (avoid treating any weekly print as an energy signal; watch distillate instead):
+  **the watch held, the print itself moved the wrong way for the thesis.** Distillate printed
+  **107.859 Mbbl**, a build, not the STEO's forecast path toward sub-100 Mbbl — one week's build does
+  not refute a monthly structural forecast, but it is the one line this call named to watch, and it
+  moved against the direction the call implied was coming. Recorded honestly rather than smoothed over.
+- **This quarter** (no energy exposure — the refusal is the call): **right and untested** — no house
+  playbook gained an energy leg and no tracked symbol gained crude exposure in this window, so Leg 4
+  stays REFUTED and the refusal stands unchallenged.
+
+### Honest limits, closed out
+
+- **Both tests are single observations at this close-out**, and `FT-…-2` is explicit that it cannot
+  distinguish "ignored" from "overwhelmed by a same-day FOMC statement." The next `eia-weekly-*` event
+  this lane researches is what turns two receipts into three.
+- **The distillate build is a genuine miss against "this month"'s framing**, not a scored forward-test
+  failure (no test was keyed to distillate's direction) — banked here so the next assessment of any
+  EIA weekly event starts from an accurate memory of this one, not a flattering one.
+- **The API Weekly Statistical Bulletin (09-15, 16:30 ET)** that the initial research flagged as the
+  real leading indicator was not re-fetched at close-out — it was superseded by the primary WPSR
+  itself publishing on schedule, which is what both forward tests were keyed to score against.
+
+**Stance:** closed at **stand aside**, as registered — zero capital, nothing to reverse. This document
+goes quiet; a future `eia-weekly-petroleum-status-*` event's own initial research is the next place
+this attribution rule gets tested.
