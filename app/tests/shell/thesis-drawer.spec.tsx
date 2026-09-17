@@ -63,11 +63,13 @@ describe("ThesisDrawer", () => {
     await waitFor(() => expect(screen.getByText("The thesis is unreachable.")).toBeInTheDocument());
   });
 
-  it("tells a human desk plainly that it has no persona thesis", async () => {
+  it("tells a human account plainly that it has no persona thesis", async () => {
     nextThesis = { available: false, kind: "human" };
     render(withClient(<ThesisDrawer id="human-eric" />));
     await waitFor(() =>
-      expect(screen.getByText("A human desk has no persona thesis to show.")).toBeInTheDocument(),
+      expect(
+        screen.getByText("A human account has no persona thesis to show."),
+      ).toBeInTheDocument(),
     );
   });
 
