@@ -23,7 +23,7 @@ const onboarding = {
     step(
       "first-message",
       "Say hello to Moneypenny",
-      "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Send her a message and the trading ladder opens.",
+      "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
       10,
       "/app/onboarding?moneypenny=intro",
       false,
@@ -71,9 +71,9 @@ const { page, origin, shoot, close } = await openShell({
 await page.goto(`${origin}/app/onboarding`);
 await page.getByRole("button", { name: "Meet Moneypenny ›" }).click();
 await page.getByText(/^Moneypenny · hi, I'm Moneypenny/).waitFor();
-await page.getByLabel("Message Moneypenny").fill("How am I doing on the desk?");
+await page.getByLabel("Message Moneypenny").fill("How am I doing on my account?");
 await page.keyboard.press("Enter");
-await page.locator(".mp-msg.mp-user").getByText("How am I doing on the desk?").waitFor();
+await page.locator(".mp-msg.mp-user").getByText("How am I doing on my account?").waitFor();
 await page.getByRole("button", { name: "Copy conversation" }).waitFor();
 await shoot("moneypenny-rail-header");
 
