@@ -53,6 +53,14 @@ Two established stacks, no webfont fetches (CSP-safe by construction):
 - **Terminal cadence** for machine/system copy (`detect_signal · rsi overbought`); **warm human
   cadence** for onboarding and framing.
 - Educational first — teach the play, name the "why," recap the outcome.
+- **Customer-facing copy never uses an internal component/type name as its own noun** (`desk`,
+  `rail`, `tile`) — use the one established plain name for a surface (its nav label — Leaderboard ·
+  Profile · Trade · Activity · Research · Settings — or a documented lore term below) everywhere it's
+  referenced. An account is "the account," never "the desk"; the order-review flow is "the gate";
+  the `/trade` page is "Trade." This is sized to the actual failure mode (undefined internal
+  shorthand drifting into copy one string at a time, 2026-09) rather than a heavyweight controlled
+  vocabulary — it doesn't ask writers to give up the cinematic-metaphor voice below, only to stop
+  reusing code's own nouns as user-facing ones.
 
 ## Core metaphors & motifs
 
@@ -66,6 +74,9 @@ The recurring visual/narrative language. New work should draw from these, or *ex
   execute`), HUD chrome.
 - **The empire built from capital** — the cityscape as generational wealth; the skyline breathes with
   the market (session lighting), and reads as a living market surface (ticker billboards, red rail).
+- **Named surfaces** — sanctioned, consistently-used feature names, not internal shorthand: **the
+  Trading Outpost** (browse every play in the house as a card), **the Playbook Store** (subscribe an
+  account's capital to a house playbook). Use the proper name every time the surface is referenced.
 
 ## The signature — the Living Universe
 

@@ -72,8 +72,8 @@ function PlaybooksPage(): ReactElement {
         <div className="join-eyebrow">Milestone M·03 · Playbooks · earned automation</div>
         <h1>Prove the play by hand, then arm it</h1>
         <p>
-          Every playbook is a strategy you first run <b>manually</b> on the desk. Fill the rung that
-          proves it and the playbook unlocks as a preview — armed, it will draft the ticket for you
+          Every playbook is a strategy you first run <b>manually</b> yourself. Fill the rung that
+          proves it and the playbook unlocks as a preview — armed, it will draft the order for you
           whenever its setup appears.
         </p>
       </header>
@@ -89,7 +89,7 @@ function PlaybooksPage(): ReactElement {
         ))}
       </div>
       <p className="note">
-        Armed playbooks will never fire on their own — they draft the ticket and wait for your
+        Armed playbooks will never fire on their own — they draft the order and wait for your
         confirm. Automation is earned, judgment stays yours.
       </p>
     </PageFrame>

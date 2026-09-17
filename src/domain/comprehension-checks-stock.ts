@@ -70,7 +70,7 @@ export const STOCK_CHECKS: readonly ComprehensionCheck[] = [
       ),
       q(
         "what-sell-is",
-        "On this desk, selling 100 shares you own is best described as…",
+        "On this account, selling 100 shares you own is best described as…",
         [
           "Closing a position you already hold",
           "Betting against the company",

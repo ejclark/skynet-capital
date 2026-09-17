@@ -177,7 +177,7 @@ export async function serveTradeApi(
   if (!config.submitTrade) {
     sendJson(res, 200, {
       ok: false,
-      refusals: ["Trading isn't wired in this deployment — the ticket reviews and refuses."],
+      refusals: ["Trading isn't wired in this deployment — the order reviews and refuses."],
     });
     return true;
   }

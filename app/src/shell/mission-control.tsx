@@ -78,7 +78,7 @@ export function MissionControl(): ReactElement | null {
           </button>
           <p className="mc-note">
             The everything-stops switch — <b>every</b> bot on the board stands down within ~30
-            seconds, not just one desk.
+            seconds, not just one account.
           </p>
         </div>
       )}

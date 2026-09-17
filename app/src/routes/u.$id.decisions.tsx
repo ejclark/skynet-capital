@@ -164,8 +164,8 @@ function DecisionsPage(): ReactElement {
       </header>
       {trail.kind !== "bot" ? (
         <p className="note">
-          {d.name} is a human desk — decision cycles are a bot's audit trail. The fill timeline on
-          the Active view is the human record.
+          {d.name} is a human account — decision cycles are a bot's audit trail. The fill timeline
+          on the Active view is the human record.
         </p>
       ) : !trail.available ? (
         <p className="note">

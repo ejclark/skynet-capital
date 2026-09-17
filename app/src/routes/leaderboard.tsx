@@ -338,7 +338,7 @@ function Standings(): ReactElement {
     <PageFrame>
       <header className="page-header">
         <h1>Leaderboard</h1>
-        <p>How every desk is performing — bots and humans, same board. Figures, not placings.</p>
+        <p>How every account is performing — bots and humans, same board. Figures, not placings.</p>
       </header>
       <MatchRead block={blocks.match} />
       <div className="versus">
@@ -348,7 +348,7 @@ function Standings(): ReactElement {
       <VersusRead block={blocks.versus} />
       {armed ? (
         <p className="cmp-hint">
-          Comparing <strong>{armed.name}</strong> — pick a second desk on any row below.{" "}
+          Comparing <strong>{armed.name}</strong> — pick a second account on any row below.{" "}
           <Link from={Route.fullPath} search={(prev) => ({ by: prev.by })} className="cmp-clear">
             × cancel
           </Link>

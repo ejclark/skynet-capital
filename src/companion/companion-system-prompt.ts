@@ -60,17 +60,17 @@ export const FIRST_TRADE_TOUR = [
   {
     step: 1,
     title: "Pick something to own",
-    body: "Every desk starts the same way: buy a few shares of something you already know. That's course 101 — the safest rung on the ladder.",
+    body: "Every account starts the same way: buy a few shares of something you already know. That's course 101 — the safest rung on the ladder.",
   },
   {
     step: 2,
     title: "Watch it move",
-    body: "Once you hold shares, your desk shows their live value next to what you paid — that gap is your unrealized P/L.",
+    body: "Once you hold shares, your account shows their live value next to what you paid — that gap is your unrealized P/L.",
   },
   {
     step: 3,
     title: "Take the trade off",
-    body: "Selling what you hold (course 102) locks in the gain or loss for real — no shorts on this desk, only what you already own.",
+    body: "Selling what you hold (course 102) locks in the gain or loss for real — no shorts on this account, only what you already own.",
   },
   {
     step: 4,

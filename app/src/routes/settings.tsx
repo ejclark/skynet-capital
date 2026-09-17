@@ -111,7 +111,7 @@ function ProfileForm({
             </option>
           ))}
         </select>
-        <p className="set-hint">Sets how your desk's day boundaries are drawn.</p>
+        <p className="set-hint">Sets how your account's day boundaries are drawn.</p>
       </div>
       <button
         type="button"
@@ -246,7 +246,7 @@ function DangerZone({
     <div className="set-danger">
       <p className="set-danger-head">Remove this account from the board</p>
       <p className="set-hint">
-        The desk, its history, and its place on the standings go with it. Type{" "}
+        The account, its history, and its place on the standings go with it. Type{" "}
         <strong>{account.name}</strong> to arm the button — the server verifies the name again.
       </p>
       <div className="set-danger-row">

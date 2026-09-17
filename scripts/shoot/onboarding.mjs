@@ -1,8 +1,8 @@
 // Visual harness for /app/onboarding — milestone M·01 from the REAL built shell (app/dist) over a
 // stub API, four frames: a brand-new member (the five-step guide as accordions, step 1 open), the
 // same member with step 5 opened (the connect form inside it), Moneypenny's rail open with her
-// intro (the whole shell pushed left), and a connected member (step 1 done, tiles live, steps 2–3
-// waiting). JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
+// intro (the whole shell pushed left), and a connected member (step 1 done, steps 2–3 waiting).
+// JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
 // frames are 1100px tall and need it to clear the cap.
 // Usage: npm run build --prefix app && npm run shoot:onboarding [outdir]
 import { openShell } from "./shell.mjs";
@@ -27,7 +27,7 @@ const steps = (connected) => [
   step(
     "first-message",
     "Say hello to Moneypenny",
-    "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Send her a message and the trading ladder opens.",
+    "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
     10,
     "/app/onboarding?moneypenny=intro",
     false,
@@ -35,7 +35,7 @@ const steps = (connected) => [
   step(
     "first-trade",
     "Make your first trade",
-    "The desk unlocks one rung at a time — buy a stock first, and each real fill opens the next play. No skipping ahead. Orders fill only while the market is open — 9:30 AM to 4:00 PM ET, Monday through Friday.",
+    "Your account unlocks one rung at a time — buy a stock first, and each real fill opens the next play. No skipping ahead. Orders fill only while the market is open — 9:30 AM to 4:00 PM ET, Monday through Friday.",
     10,
     "/app/trade?play=101",
     false,

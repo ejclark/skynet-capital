@@ -22,8 +22,8 @@ function CardBody({ id }: { readonly id: string }): ReactElement {
     queryFn: () => fetchDesk(id),
     staleTime: 30_000,
   });
-  if (desk.isPending) return <p className="hovercard-note">Reading the desk…</p>;
-  if (desk.isError) return <p className="hovercard-note">This desk is unreachable.</p>;
+  if (desk.isPending) return <p className="hovercard-note">Reading the account…</p>;
+  if (desk.isError) return <p className="hovercard-note">This account is unreachable.</p>;
   const d = desk.data.desk;
   if (d.error) return <p className="hovercard-note">Account unreachable right now.</p>;
   return (
@@ -94,7 +94,7 @@ export function DeskHoverName({
             <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
           </p>
           <CardBody id={id} />
-          <p className="hovercard-foot">Click through for the full desk</p>
+          <p className="hovercard-foot">Click through for the full account</p>
         </div>
       ) : null}
     </span>

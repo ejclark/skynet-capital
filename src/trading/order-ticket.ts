@@ -106,7 +106,7 @@ function validateQuantity(quantity: number, refusals: string[]): void {
     return;
   }
   if (!Number.isInteger(quantity)) {
-    refusals.push("Whole shares only — fractional quantities aren't supported on this desk.");
+    refusals.push("Whole shares only — fractional quantities aren't supported.");
   }
 }
 
@@ -117,7 +117,7 @@ function validateSell(
   warnings: string[],
 ): void {
   if (!held || held.quantity <= 0) {
-    refusals.push("You don't hold this symbol — this desk doesn't open short positions.");
+    refusals.push("You don't hold this symbol — this account doesn't open short positions.");
     return;
   }
   if (quantity > held.quantity) {
@@ -223,7 +223,7 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
     refusals.push("You can only trade your own account.");
   }
   if (!context.tradingEnabled) {
-    refusals.push("Trading from the desk is switched off for this deployment.");
+    refusals.push("Trading is switched off for this deployment.");
   }
   if (!SYMBOL_PATTERN.test(symbol)) {
     refusals.push("That doesn't look like a stock symbol.");

@@ -51,7 +51,7 @@ describe("MilestoneRow", () => {
       </ul>,
     );
     expect(screen.getByText(/filled 2026-09-01 · order ord-1/)).toBeInTheDocument();
-    expect(screen.queryByText("open the ticket →")).not.toBeInTheDocument();
+    expect(screen.queryByText("open Trade →")).not.toBeInTheDocument();
   });
 
   it("offers the ticket on an unearned row", () => {
@@ -68,7 +68,7 @@ describe("MilestoneRow", () => {
         />
       </ul>,
     );
-    expect(screen.getByRole("link", { name: "open the ticket →" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "open Trade →" })).toHaveAttribute(
       "href",
       "/app/trade?play=102",
     );

@@ -66,7 +66,7 @@ function validateShape(request: OptionTicketRequest, refusals: string[]): void {
 function gateNotes(context: OptionTicketContext, refusals: string[], warnings: string[]): void {
   if (!context.isSelf) refusals.push("You can only trade your own account.");
   if (!context.tradingEnabled) {
-    refusals.push("Trading from the desk is switched off for this deployment.");
+    refusals.push("Trading is switched off for this deployment.");
   }
   if (context.marketOpen === false) {
     warnings.push("The market is closed — this order queues until the next session opens.");
@@ -106,7 +106,7 @@ function validatePlay(
   refusals: string[],
 ): void {
   if (play?.kind !== "option" || !play.optionType) {
-    refusals.push("Pick one of the option plays the desk offers.");
+    refusals.push("Pick one of the available option plays.");
     return;
   }
   const levelNote = levelRefusal(request.code, context);
