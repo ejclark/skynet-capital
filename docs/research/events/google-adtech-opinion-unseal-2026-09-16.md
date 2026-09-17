@@ -1,8 +1,8 @@
 # US v. Google ad-tech — redaction-motion deadline on the sealed remedies opinion (E.D. Va.) — google-adtech-opinion-unseal-2026-09-16
 
 **Kind:** sector · **Date:** 2026-09-16 (estimate, NEWS: the 14-day redaction clause of Judge Leonie M. Brinkema's 2026-09-02 remedies order in *United States et al v. Google LLC*, No. 1:23-cv-00108 (E.D. Va.), reported by ppc.land, TechCrunch and Al Jazeera, all fetched direct 2026-09-08; the docket itself refused three times — CourtListener, Justia and Concurrences all 403, logged in `probe-ref.blocked`) · **Impact:** low
-**Last assessed:** 2026-09-15
-<!-- probe-ref: {"symbols":{"GOOG":340.37},"vix":17.56,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":1} -->
+**Last assessed:** 2026-09-17
+<!-- probe-ref: {"symbols":{"GOOG":339.36},"vix":17.71,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -223,6 +223,7 @@ reason this ledger registers two document tests and **zero** price tests.
 |---|---|---|---|---|
 | 2026-09-08 | D-8 | Initial research banked; **canonical `src/domain/market-events/google-adtech-opinion-unseal-2026-09-16.json` written from the one proposal that existed** (`.from-goog-2026-10-28-print`, filed today) — the proposal is now inert and left in place. **Headline: this is a process day, and this name's own ladder prices process days at ~zero.** Computed fresh from Yahoo daily closes: search-trial *opening* 2023-09-12 **−0.10%** excess vs QQQ; **this case's liability verdict** 2025-04-17 **−1.36%**; search-case **remedy decision** 2025-09-03 **+8.23%**; this case's remedy decision 2026-09-02→03 **+0.71%**. **Two framings corrected against the proposal, both toward *less* drama.** (1) The fork is not publish-vs-nothing: ppc.land quotes the order that absent a motion "the opinion is unsealed automatically", and that if redactions are granted "the opinion stays under seal and **a redacted version is filed publicly**" — so the reasoning publishes in **both** branches; the fork is completeness and timing. (2) The *obligations* are already reported — first look and last look prohibited, unified pricing rules deprecated, AdX real-time bid data shared with rival ad servers, equal latency and data signals (ppc.land) — while a second ppc.land piece says the set "belongs to the Final Judgment" and TechCrunch says the ruling "did not provide specifics"; **divergence flagged, not reconciled**. What is sealed is the reasoning. **Adjacency sweep.** *Peer/name tape:* GOOG **$331.80** (09-08) vs **$339.08** (09-03) — the entire post-ruling pop is retraced, **−2.17% excess** vs QQQ over those three sessions and **−1.51% excess** from the pre-ruling 09-01 close, while META ran **+6.92%**; the largest structural win available to the name is, six sessions later, net *negative* on a relative basis. *Policy/legal (the item that matters):* **both sides signalled appeal on day one** — Google "will appeal the underlying liability ruling", DOJ "evaluating appropriate next steps" (Al Jazeera, 2026-09-02) — so neither 09-16 nor 10-02 retires the overhang; the appellate track is undated and stays on the watch list, not the calendar. *Macro:* 09-16 is FOMC decision day (`confirmed`, 14:00 ET; venues converged to a coin flip, CME 58.7% / Kalshi 52.5% / Polymarket 51.5% per the sibling [`fomc-2026-09-16`](fomc-2026-09-16.md)), with retail sales and import/export prices 08:30, NAHB HMI 10:00, VIX AM settlement ~09:00 and triple-witching 09-18. *Volatility:* VIX **15.68** (09-08) vs 14.53 (09-04 close) — firming, still cheap; baseline established, no prior row to diff. (`event-material-scan` reads **GOOG 331.92 / VIX 15.63** against the Yahoo bar closes used above — a small source/timing divergence, flagged, not reconciled; the probe returns `screen` with no reasons against the block written here.) *Corridor:* the probe counts **30 tracked events** within ±5 days, which is why the date is judged **unattributable** rather than merely quiet. *Structure:* 09-16 sits **10 sessions before** the `goog-2026-10-28-print` D-20 entry close (2026-09-30) — the only reason the row earns its place. **No new dated adjacency to propose** — every dated item found is already tracked (`google-adtech-final-judgment-2026-10-02` was filed by the same sweep that filed this one), and the appeal deadlines depend on an entry date that does not exist yet. **Sources:** four outlets fetched direct at HTTP 200 (two ppc.land, techcrunch.com, aljazeera.com); **four primary attempts failed and are logged in `probe-ref.blocked`, never substituted silently** — CourtListener 403, Justia 403, Concurrences 403, justice.gov ATR case page 404. Two forward tests registered (`-1` branch, `-2` content), both scored from a public document rather than from 09-16's tape. Probe-ref populated with today's real readings. | — (stance set: stand aside on all four horizons; watch marker only) | 2026-09-15 (low, 0+ band: every 7d) |
 | 2026-09-15 | D-1 | **Deterministic screen (no Claude session).** Readings — GOOG $340.37 (2.6% since last), VIX 17.6 (+1.9pt since last), band unchanged (low:0+), 43 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-09-17`, `bowman-stress-testing-2026-09-18`, `bund-30y-auction-2026-09-16`, `eia-weekly-petroleum-status-2026-09-16`, `empire-state-mfg-2026-09-15`, `house-vote-ratepayer-protection-act-2026-09-17` +7 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-22 |
+| 2026-09-17 | D+1 | **Close-out — full detail in [`## Outcome`](#outcome).** Instrument cache busted first (`earnings-cycle`, `intraday-edges`); neither applies to this docket-keyed event, so price is a fresh, uncached Yahoo daily-bar pull, same method as initial research. **09-16 close-to-close: GOOG $341.43 → $339.36 (−0.61%), QQQ $704.54 → $704.72 (+0.03%), excess −0.63%.** VIX $17.20 → $17.71 (+0.51pt). This sits on the "process days price near zero" ladder the initial doc built (−0.10% trial opening, −1.36% adverse verdict, +8.23% remedy decision) — small, and per the ledger's own structural leg, unattributable: 09-16 was FOMC decision day, with retail sales, import/export prices and NAHB HMI also printing that morning. **Dispatched today under the #2988 forward-test hold rule, not on a quiet screen** — `event-scan.mjs --due` named `FT-google-adtech-opinion-unseal-2026-09-16-2` (score-by 2026-10-09) as beyond the 6-day `closeOutWithinDays` ceiling (2026-09-22), which forces immediate dispatch rather than a hold. **Neither registered forward test is scoreable today, and both stay `_open_` in their own fragment rather than being scored `unscoreable` here** — `-1`'s score-by (2026-09-21) is still four days out and sits *inside* the ceiling, `-2`'s (2026-10-09) is structurally beyond it; scoring either now, or writing a premature verdict into their Outcome cells, would be exactly the falsification the append-only rule forbids. **Honest limit, named rather than absorbed:** filling `## Outcome` below closes this ledger's own scanner entry forever (`hasOutcome` true → the event never dispatches again), which forecloses `-1` from ever getting its own dedicated close-out session even though its score-by falls inside the window that would otherwise have earned a held dispatch — a per-event hold decision orphans a within-window test whenever a sibling test on the same event sits beyond the window. Filed as issue-worthy rather than patched here (out of this session's one-event scope); both rows are left genuinely `_open_` in [`forward-tests/google-adtech-opinion-unseal-2026-09-16.md`](../forward-tests/google-adtech-opinion-unseal-2026-09-16.md) so a future manual read still finds them unscored rather than misfiled as data-unreachable. No adjacency sweep performed beyond the price/VIX read above — the event is closing out, not continuing to watch. | — (event passed; stance closed unexecuted — `estimate` date, `low` impact, stand-aside on all four horizons meant nothing was ever licensed, and nothing was entered) | none — closed |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
@@ -231,3 +232,67 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-09-17** (D+1). Sourced web/price research only, same method as initial research —
+this `sector`/legal event carries no earnings-cycle or intraday-edges instrument; the cache-bust
+step ran and found nothing to bust. Yahoo daily bars re-pulled uncached for GOOG, QQQ and `^VIX`.
+
+**Price — the call was right, and it was right for a reason the tape happened to confirm rather
+than one it was needed to prove.** GOOG closed 2026-09-16 at **$339.36**, down **−0.61%** from the
+09-15 close of $341.43; QQQ **+0.03%** the same session; **excess −0.63%**. Placed on the ladder
+this ledger built at initial research — trial *opening* **−0.10%**, this case's *adverse verdict*
+**−1.36%**, the search case's *remedy decision* **+8.23%**, this case's own *remedy decision*
+**+0.71%** — a filing deadline printing **−0.63%** is squarely inside "process days price near
+zero," not a new data point that moves the ladder. VIX ticked **17.20 → 17.71** (+3.0%), consistent
+with an FOMC decision session rather than anything docket-specific. **The corridor did its job**:
+FOMC (`fomc-2026-09-16`, decision 14:00 ET), retail sales and import/export prices (08:30),
+NAHB HMI (10:00) and the September VIX AM settlement (~09:00) all landed the same session, exactly
+the "unattributable" case the stance argued in advance — there is no honest way to attribute
+GOOG's −0.63% to a redaction-motion deadline over four same-day macro prints, which is the point:
+the call never needed to attribute it, because no position was keyed to the date.
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"A structural obligation surfaces in a redaction filing"** — **did not fire.** No redaction
+  filing, structural or otherwise, was located this session; nothing in the tape or press
+  contradicts the reported behavioral-remedy set.
+- **"The FOMC decision moves off 2026-09-16"** — **did not fire.** The corridor priced and traded
+  exactly where the initial doc placed it.
+- **"The `goog-2026-10-28-print` pre-print long opens before 2026-09-16"** — **did not fire** on
+  this ledger's own record; that lane's entry gate is IR-date confirmation, unchanged here.
+- **"An unopposed Final Judgment enters by 2026-10-02"** — **not yet resolvable**; 2026-10-02 is
+  still ahead of this close-out and belongs to `google-adtech-final-judgment-2026-10-02`'s own
+  ledger, not this one.
+
+**Forward tests — both unscoreable at this close-out, neither one scored.**
+[`FT-google-adtech-opinion-unseal-2026-09-16-1`](../forward-tests/google-adtech-opinion-unseal-2026-09-16.md)
+scores by **2026-09-21**, four days past this session's write date — inside the event's own
+6-day `closeOutWithinDays` ceiling (2026-09-22) but not yet reached.
+[`FT-google-adtech-opinion-unseal-2026-09-16-2`](../forward-tests/google-adtech-opinion-unseal-2026-09-16.md)
+scores by **2026-10-09**, past that ceiling — the structural conflict `event-scan.mjs --due` named
+under `forwardTestsBeyondWindow`, which is why this close-out dispatched today rather than holding.
+Scoring either now would be scoring a prediction before its stated window closes, which the
+append-only rule in `docs/process/EVENT-RESEARCH.md` calls falsification; both rows are left
+`_open_` in the forward-tests fragment rather than written `unscoreable`, since neither is actually
+data-unreachable — they are simply not due yet. **This does mean `-1` will not get a dedicated
+scoring session of its own**: writing this `## Outcome` section silences `event-scan.mjs` on this
+event permanently, and the scanner's forward-test hold is decided once per event (on the *latest*
+pending score-by) rather than per test — a sibling test beyond the ceiling forces the whole
+close-out early even for a test that was itself still inside it. Logged here rather than
+worked around in this session, which is scoped to this one event.
+
+**Verdict vs. the stance.** **Stand aside held, and cost nothing to hold.** No entry, exit or
+hedge was ever keyed to 2026-09-16; the session's −0.63% excess move on a day carrying an FOMC
+decision, three macro prints and a VIX settlement is exactly the noise floor the stance predicted,
+not evidence the stance needed. The event stays a watch marker for
+[`goog-2026-10-28-print`](goog-2026-10-28-print.md) ahead of its 2026-09-30 D-20 entry close, and
+for [`google-adtech-final-judgment-2026-10-02`](google-adtech-final-judgment-2026-10-02.md), which
+carries the dated obligations this ledger never did. Scanner goes quiet on this event now, with two
+forward tests left genuinely open rather than closed out — `-1` scores 2026-09-21,
+`-2` scores 2026-10-09, both to be read from whichever public document (docket, DOJ ATR posting, or
+credible report) is locatable on those dates, per each test's own kill-switch/void terms.
+
+Sources: Yahoo Finance daily bars (GOOG, QQQ, `^VIX`, re-pulled uncached 2026-09-17); this ledger's
+own initial research (2026-09-08) for the measured ladder and the corridor list; the sibling
+[`fomc-2026-09-16`](fomc-2026-09-16.md) ledger for the decision-day context.
