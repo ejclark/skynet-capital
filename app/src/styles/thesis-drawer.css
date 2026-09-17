@@ -12,6 +12,35 @@
   font-size: 14px;
   color: var(--muted);
 }
+/* The bot-controls cluster (#3186 slice 4b) — locked: visible, disabled, explained (the "Roll"
+   precedent from slice 1), since subscribing capital into a bot's own strategy has no backing
+   mechanism yet. A `disabled` fieldset dims uniformly rather than styling each control's disabled
+   state by hand. */
+.thesis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.thesis-controls legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.thesis-controls-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.thesis-controls-actions {
+  display: flex;
+  gap: 8px;
+}
 .thesis-call {
   padding: 12px 14px;
   border: 1px solid var(--border);

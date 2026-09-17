@@ -1,5 +1,6 @@
-// Visual harness for the Thesis Drawer (#3186 slice 4a) — a bot's standing call, thesis, and
-// track-record chart over the real built shell + stubbed APIs. JPEG ≤100KB (docs/PICTURES.md).
+// Visual harness for the Thesis Drawer (#3186 slices 4a + 4b) — a bot's standing call, thesis,
+// track-record chart, and locked bot-controls cluster over the real built shell + stubbed APIs.
+// JPEG ≤100KB (docs/PICTURES.md).
 // Shots live under docs/shots/pr-3186 — the parent issue's own number, kept stable across every
 // #3186 slice's screenshots (accounts.mjs does the same under pr-2321), not renumbered per PR.
 // Usage: npm run build --prefix app && npm run shoot:thesis [outdir]
@@ -12,6 +13,7 @@ const settings = {
   fleetSuspended: false,
   timezones: [],
   accounts: [
+    { id: "human-eric", name: "Eric", kind: "human", hostConfigured: true, profile: null },
     { id: "bot-sauron", name: "Sauron", kind: "bot", hostConfigured: true, profile: null },
   ],
 };

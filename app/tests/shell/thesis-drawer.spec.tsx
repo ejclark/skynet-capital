@@ -2,20 +2,36 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { DeskThesis } from "../../src/live/desk";
-import { ThesisDrawer } from "../../src/shell/thesis-drawer";
+import type { SettingsIndex } from "../../src/live/settings";
+import {
+  STEERING_RULES_UNAVAILABLE_REASON,
+  SUBSCRIBE_BOT_UNAVAILABLE_REASON,
+  ThesisDrawer,
+} from "../../src/shell/thesis-drawer";
 
 /**
- * `ThesisDrawer`'s degrade branches and rendered fields (#3186 slice 4a) — same doctrine as
+ * `ThesisDrawer`'s degrade branches and rendered fields (#3186 slices 4a + 4b) — same doctrine as
  * `hero-chart.spec.tsx`: everything here returns BEFORE `mountThesisChart`'s `createChart` call,
  * which throws under happy-dom. The real chart mount is covered by `thesis-chart-mount.spec.ts`.
  */
 
 let nextThesis: DeskThesis = { available: false, kind: "bot" };
 let thesisShouldFail = false;
+let nextSettings: SettingsIndex = {
+  authConfigured: true,
+  adminWired: false,
+  accounts: [],
+  fleetSuspended: false,
+  timezones: [],
+};
 
 rstest.mock("../../src/live/desk", () => ({
   fetchDeskThesis: () =>
     thesisShouldFail ? Promise.reject(new Error("down")) : Promise.resolve(nextThesis),
+}));
+
+rstest.mock("../../src/live/settings", () => ({
+  fetchSettings: () => Promise.resolve(nextSettings),
 }));
 
 function withClient(node: ReactElement) {
@@ -26,6 +42,13 @@ function withClient(node: ReactElement) {
 beforeEach(() => {
   thesisShouldFail = false;
   nextThesis = { available: false, kind: "bot" };
+  nextSettings = {
+    authConfigured: true,
+    adminWired: false,
+    accounts: [],
+    fleetSuspended: false,
+    timezones: [],
+  };
 });
 
 describe("ThesisDrawer", () => {
@@ -99,6 +122,64 @@ describe("ThesisDrawer", () => {
     render(withClient(<ThesisDrawer id="bot-sauron" />));
     await waitFor(() =>
       expect(screen.getByText("No equity history recorded yet.")).toBeInTheDocument(),
+    );
+  });
+
+  it("renders the bot-controls cluster locked, with the reason on each control", async () => {
+    nextSettings = {
+      authConfigured: true,
+      adminWired: false,
+      accounts: [
+        { id: "human-eric", name: "Eric", kind: "human", hostConfigured: true, profile: null },
+        { id: "bot-sauron", name: "Sauron", kind: "bot", hostConfigured: true, profile: null },
+      ],
+      fleetSuspended: false,
+      timezones: [],
+    };
+    nextThesis = {
+      available: true,
+      kind: "bot",
+      thesis: {
+        call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+        health: { measured: false, label: "not yet measured" },
+        equity: [],
+        markers: [],
+      },
+    };
+    render(withClient(<ThesisDrawer id="bot-sauron" />));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Subscribe/ })).toBeInTheDocument(),
+    );
+
+    // The fieldset disables every control uniformly — only human accounts appear as targets.
+    expect(screen.getByRole("group")).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Eric" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Sauron" })).not.toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: /Subscribe/ })).toHaveAttribute(
+      "title",
+      SUBSCRIBE_BOT_UNAVAILABLE_REASON,
+    );
+    expect(screen.getByRole("button", { name: /Steering Rules/ })).toHaveAttribute(
+      "title",
+      STEERING_RULES_UNAVAILABLE_REASON,
+    );
+  });
+
+  it("says plainly when the viewer has no account to subscribe from", async () => {
+    nextThesis = {
+      available: true,
+      kind: "bot",
+      thesis: {
+        call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+        health: { measured: false, label: "not yet measured" },
+        equity: [],
+        markers: [],
+      },
+    };
+    render(withClient(<ThesisDrawer id="bot-sauron" />));
+    await waitFor(() =>
+      expect(screen.getByText("No accounts to subscribe from.")).toBeInTheDocument(),
     );
   });
 });
