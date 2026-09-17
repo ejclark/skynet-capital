@@ -2,9 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchJourney } from "../live/learn";
-import { CourseCard, Hud } from "../shell/course-cards";
+import { CourseCard, Hud, ladderProgress } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
+import { MilestonePanel } from "../shell/milestone-panel";
 import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
@@ -34,6 +35,7 @@ function TradingLadderPage(): ReactElement {
       </PageFrame>
     );
   const data = journey.data;
+  const ladder = ladderProgress(data);
   return (
     <PageFrame rail={rail}>
       <ProfileMeta />
@@ -54,9 +56,11 @@ function TradingLadderPage(): ReactElement {
       ) : null}
       {data.gate ? <LadderGateCard note={data.gate.note} /> : null}
       <Hud journey={data} />
-      {data.courses.map((course) => (
-        <CourseCard key={course.level} course={course} />
-      ))}
+      <MilestonePanel title="Trading progression" done={ladder.done} total={ladder.total}>
+        {data.courses.map((course) => (
+          <CourseCard key={course.level} course={course} />
+        ))}
+      </MilestonePanel>
       <p className="note">
         Iron condors and anything with undefined risk stay off the ladder — a condor is a Playbook
         Store strategy (two spreads run together), never a rung.
