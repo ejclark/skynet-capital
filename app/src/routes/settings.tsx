@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { fetchGuestList } from "../live/admin";
@@ -418,7 +418,7 @@ function SettingsPage(): ReactElement {
         ) : !first ? (
           <p className="note">
             Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or
-            add your own from <a href="/app/onboarding">onboarding</a>.
+            add your own from <Link to="/onboarding">onboarding</Link>.
           </p>
         ) : (
           <>
