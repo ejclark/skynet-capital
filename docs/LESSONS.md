@@ -2326,3 +2326,43 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   2. **Doctrine line** — `docs/ENGINEERING.md`, EARS section: an EARS criterion that introduces a cap/limit/page size shared across a growing set of entities (participants, personas, symbols, …) must state the per-entity arithmetic in the same breath — a design-review habit a mechanical gate can't enforce, since it can't know whether the number chosen was ever actually checked against plausible N.
   3. **The bug itself** — `app/src/live/wire.ts`/`app/src/routes/activity.tsx`: `fetchWire` now parses the `Link` header into `nextCursor`, and the Activity feed's Trading-activity section has a "Load older trades" control that walks the cursor back, accumulating older pages client-side.
 - **SIDE QUESTS:** the desk's `/activity` and `/decisions` feeds share the identical unconsumed-cursor gap (`app/src/live/desk.ts`) — not fixed here (out of this incident's scope), logged → `docs/IDEAS.md`.
+
+### A wake-reply rule written in prose was skipped at generation time — no gate exists for "does this reply add anything"
+
+- **SHA:** n/a   **DATE:** 2026-09-17   **STATUS:** closed
+- **SIGNAL:** Eric, after a PR-merge confirmation reply restated what the merge notification itself
+  already said: "Asking me to unsubscribe to merged prs. In what scenario would i give a fuck? I
+  expect a singular ask, to update config so I'm never bothered with these types of requests." Then,
+  when the offered fix was only a promise to apply the existing rule going forward: "The tldr; is
+  'my bad' with no corrective action.. meaning the same lapse in judgement in the future is
+  guaranteed?"
+- **ROOT CAUSE:** `CLAUDE.md` already states the exact rule on point — "a wake with nothing new to
+  report earns silence (re-arm the check-in), not a recap" — written days before this incident and
+  loaded into every session's context. It was skipped anyway, because nothing in the harness
+  enforces it. A hook can gate a tool call (PreToolUse/PostToolUse) or a session-lifecycle event
+  (Stop, SessionStart), but there is no hook surface over the CONTENT of an assistant's own free-text
+  reply before it reaches the user. So "is this message worth sending" lives entirely as prose,
+  re-derived from scratch at every wake, with a nonzero failure rate on every occurrence and no
+  structural backstop. **What else crosses this system:** every other prose-only judgment rule in
+  `CLAUDE.md`/Orient shares this exact vulnerability — the interrogate-before-comply step, the
+  report-at-altitude doctrine, even the "never restate what the notification already said" line
+  itself — each is a rule a model can silently skip under momentum, with nothing catching the skip.
+- **PREVENTION:** two layers, deliberately unequal in strength — the honest ranking, not the
+  aspirational one.
+  1. **Gate (partial)** — `agentPushNotifEnabled: false` in `~/.claude/settings.json` (this
+     session). Does NOT stop the underlying behavior (generating an unneeded reply) — no such gate
+     exists in this harness today — but does mechanically stop the harm Eric actually named: a push
+     landing on his device for a zero-information message. Full-stop for that one channel, zero
+     judgment involved on every future occurrence.
+  2. **Doctrine line — deliberately NOT rewritten.** The existing `CLAUDE.md` rule was already
+     correct and specific; restating it again would repeat the exact mistake this entry documents (a
+     prose fix for a prose-failure class). The honest prevention available today is tier-1 partial
+     (the push channel above) plus this ledger entry — not a stronger doctrine line, because the
+     evidence from this incident is that more prose does not close this class of gap.
+- **SIDE QUESTS:** → `docs/IDEAS.md` — (a) whether a `MessageDisplay` hook (present in the harness's
+  hook-event enum, but only a `command`-type hook today, not `prompt`/`agent`) could be extended to
+  support a cheap LLM classifier gating "does this reply add anything" before display — the actual
+  tier-1 fix for the general class, not buildable inside this repo, worth raising as a capability
+  request; (b) an audit of `CLAUDE.md`/`orient.md` for every other prose-only judgment rule with no
+  gate behind it, ranked by consequence if skipped — the interrogate-before-comply step is the most
+  consequential candidate.

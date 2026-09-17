@@ -1399,3 +1399,29 @@ prescribes, so this isn't blocking — but every `ship open`/`ship merge` in a p
 Remote session will hit the same 415 until `api()` gains `-H "Content-Type: application/json"`.
 Cheap, mechanical, one-line fix; not made here to keep #3195 scoped to the reported bug.
 _(src: Claude · while: shipping #3195, the /api/wire pagination-consumer fix)_
+
+### A generation-time content gate for assistant replies (`MessageDisplay` hook, prompt/agent type) may not exist yet
+Retro'd 2026-09-17: a wake-reply rule in `CLAUDE.md` ("a wake with nothing new to report earns
+silence") was already correct and already loaded, and got skipped anyway generating an unneeded
+reply to a routine PR-merge confirmation. The harness's hook-event enum lists `MessageDisplay`
+among session hooks, but only a `command`-type hook is documented for it — `prompt`/`agent` hook
+types are explicitly scoped to tool events (PreToolUse/PostToolUse/PermissionRequest) only. If
+`MessageDisplay` (or an equivalent) supported a `prompt`-type hook, it could run a cheap classifier
+("does this reply add information the user doesn't already have") before an assistant message is
+shown — the actual tier-1 mechanical fix for this whole class of judgment lapse, as opposed to the
+partial workaround applied this session (`agentPushNotifEnabled: false`, which silences the push
+channel but not the underlying behavior). Not buildable from inside this repo — worth raising as a
+capability request to whoever owns the harness, not something to chase here.
+_(src: Claude · while: retro on the 2026-09-17 wake-reply lapse)_
+
+### Audit every prose-only judgment rule in CLAUDE.md/orient.md for whether it has a gate behind it
+Same retro as above surfaced the general pattern: any rule phrased as "always do X before Y" with
+no mechanical enforcement is a rule a model can silently skip under momentum, and the skip is
+invisible until a human catches the output. Candidates worth auditing, ranked by consequence if
+skipped: the interrogate-before-comply step (Orient step 2 — a compounding directive built straight
+from the prompt with no steelman/objection pass), the report-at-altitude doctrine (silence-worthy
+wakes vs. genuine escalations), and the envelope "never edit envelope.json to make this pass" line
+(currently enforced by `scripts/envelope-scan.mjs`, so likely already fine — worth confirming rather
+than assuming). Not a build — a scoping pass to find which of these, if any, could get even a
+partial mechanical backstop the way the wake-reply rule just did.
+_(src: Claude · while: retro on the 2026-09-17 wake-reply lapse)_
