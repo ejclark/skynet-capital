@@ -8,6 +8,7 @@ import { meetMoneypenny } from "../live/moneypenny";
 import { fetchOnboarding, type Onboarding, type OnboardingStep } from "../live/onboarding";
 import { AlpacaGuide } from "../shell/alpaca-guide";
 import { PageFrame } from "../shell/frame";
+import { MilestonePanel } from "../shell/milestone-panel";
 import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
@@ -160,7 +161,6 @@ function OnboardingPage(): ReactElement {
   const data = onboarding.data;
   const name = data.account?.displayName ?? data.viewerName;
   const firstOpen = data.steps.findIndex((s) => !s.done);
-  const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
   return (
     <PageFrame rail={<ProfileRail current="onboarding" />}>
       <ProfileMeta />
@@ -182,16 +182,7 @@ function OnboardingPage(): ReactElement {
           can be marked done.
         </p>
       ) : null}
-      <section className="ob-panel">
-        <div className="ob-panel-head">
-          <h2 className="ob-panel-title">Onboarding</h2>
-          <span className="ob-count num">
-            {data.done} / {data.total} complete
-          </span>
-        </div>
-        <div className="course-bar ob-bar">
-          <i style={{ width: `${pct}%` }} />
-        </div>
+      <MilestonePanel title="Onboarding" done={data.done} total={data.total}>
         <ol className="ob-steps">
           {data.steps.map((step, i) =>
             step.id === "connect" ? (
@@ -206,7 +197,7 @@ function OnboardingPage(): ReactElement {
             ),
           )}
         </ol>
-      </section>
+      </MilestonePanel>
     </PageFrame>
   );
 }
