@@ -1375,3 +1375,14 @@ item on #2321: judge it live through 2026-09-16 — if it reads as unreadable, t
 `position: sticky; left: 0` pin on `.row-timeline td` or breaking the timeline out to a sibling
 block under the table on narrow widths (a bottom sheet per `docs/PATTERNS.md`), not a redesign.
 _(src: Claude · while: screenshotting #2321's inline-accordion slice, 2026-09-09)_
+
+### The desk's `/activity` and `/decisions` feeds share the Activity page's exact pagination gap
+`#3187`'s retro found `/api/wire` unreachable past page one because no client read `nextCursor`/
+`Link`. The same `per_page`/`before` contract (`src/server/pagination.ts`) also governs
+`/api/desk/:id/activity` and `/api/desk/:id/decisions` (`src/server/desk-json-routes.ts`), and
+`app/src/live/desk.ts`'s `fetchDeskActivity`/`fetchDeskDecisions` show the identical pattern:
+fetch once, never read the cursor, no "load more". A trader-desk page with any real fill history
+past 30 rows, or a bot with more than 30 logged decisions, hits the same wall. Not fixed in
+`#3187` (scope was the Activity page Eric actually hit) — `tests/arch/pagination-consumer.spec.ts`
+only asserts SOME client consumer exists app-wide, so it stays green while these two remain silent.
+_(src: Claude · while: retro on #3187 — "what else crosses this shared contract")_

@@ -269,6 +269,12 @@
   color: var(--muted);
   white-space: nowrap;
 }
+.wire-load-more {
+  width: auto;
+  margin-top: 10px;
+  font-size: 11.5px;
+  padding: 6px 12px;
+}
 .wire-onramp {
   margin-top: 12px;
   border-top: 1px dashed var(--border);
