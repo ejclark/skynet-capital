@@ -1,8 +1,8 @@
 # Germany 30-Year Bund multi-ISIN auction (EUR 2.5bn, on FOMC day) — bund-30y-auction-2026-09-16
 
 **Kind:** rates · **Date:** 2026-09-16 (estimate, EST: deutsche-finanzagentur.de Q3 2026 issuance calendar + auction-process page + issuance-history workbook, all fetched direct 2026-09-09 — `estimate` because the confirmed-prefix taxonomy has no slot for a non-US sovereign debt office, not because the date is doubted) · **Impact:** low
-**Last assessed:** 2026-09-16
-<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":1} -->
+**Last assessed:** 2026-09-17
+<!-- probe-ref: {"symbols":{},"vix":17.71,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0,"blocked":[]} -->
 
 ## At a glance
 
@@ -316,12 +316,115 @@ conclusion from the wire copy:
 Three predictions carry score-by dates and are registered in
 [`forward-tests/bund-30y-auction-2026-09-16.md`](../forward-tests/bund-30y-auction-2026-09-16.md).
 
+## Outcome
+
+**Close-out (2026-09-17, D+1 — inside the `closeOutWithinDays: 6` deadline of 2026-09-22).** Rates
+mode runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design; their caches
+were busted anyway per the standing rule). **Every number below was re-fetched from a primary this
+session**, never carried from the D-7 row: Finanzagentur's issuance-results page (HTTP 200,
+re-fetched direct) and the DE000BU2T000 factsheet page (HTTP 200) for the auction itself; the
+already-cited Q3 2026 press-release PDF (`2026_06_25_PM_07_...pdf`), re-extracted with `pypdf` this
+session rather than re-read from the 09-09 summary; the US Treasury daily par-yield-curve CSV
+(2026, all dates); the Bundesbank SDMX series `BBSIS.D.I.ZAR.ZI.EUR.S1311.B.A604.R30XX...`
+(2026-09-05 → 2026-09-17); and the Cboe `VIX_History.csv`. No fetch of a cited source failed;
+`probe-ref.blocked` is empty.
+
+### The headline correction: this was never a two-30-year-line auction
+
+The initial research's title and every leg built on "Germany sells EUR 2.5bn across two 30-year
+reopening lines." **That premise is wrong, and the error is this document's own, not
+Finanzagentur's.** The EUR 1.0bn line that carried no ISIN at D-7 settled as **DE000BU2T000, a
+20-year Federal bond (3.40% coupon, maturity 2047-05-15)** — confirmed both by the auction-result
+table and by the bond's own factsheet page, which states its maturity segment as "20 years" in so
+many words. Re-extracting the *same* Q3 2026 press-release PDF the initial research already cited
+(`2026_06_25_PM_07`, Annex 1) shows its own table never called this slot "30 Y": every multi-ISIN
+row in the auction schedule, including 16-Sept-2026's, lists the undetermined second line as
+**"Bund 15/20/30 R"** — Finanzagentur's own combined-segment label (footnote 3: "securities with
+terms to maturity of 15/20/30 years") — which the initial research read down to "Bund 30 Y" using
+the interactive issuance-calendar *website's* placeholder rendering instead of the PDF's own more
+precise designation. **The website's calendar page still makes the same simplification going
+forward** — a fresh fetch of it today renders the still-undetermined 14-Oct-2026 and 11-Nov-2026
+second lines as "Bund 30 Y (R)" too, exactly as it rendered this one before 09-16 — so
+[`bund-30y-auction-2026-10-14`](bund-30y-auction-2026-10-14.md), proposed the same day
+(2026-09-09) under the identical "two 30-year lines" reading, is very likely carrying the same
+overspecification. That is a finding for whoever next assesses that sibling ledger, not an edit
+this lane may make to a file it does not own (`event-passed-unscored` mode, `docs/process/EVENT-
+RESEARCH.md` — one file per owner).
+
+**What this does and does not change.** It does not touch the load-bearing null (leg 2): that test
+was always specific to the *30-year segment*, computed as "total bids ÷ total offered" for 30-year
+lines only, and DE000BU2D012's own bid-to-offer (2.03, below) is what feeds it — the 20-year line
+was never part of that 213-date sample and including its EUR 1.0bn would have been a methodology
+error this close-out avoids repeating. It downgrades the framing of legs 1 and (implicitly) the
+allotment prediction in `FT-2`, which was written for a "two 30-year lines" world.
+
+### What actually printed — Finanzagentur's result page, verbatim
+
+| Line | ISIN | Coupon | Maturity | Offered | Allotted | Retention | Bid-to-cover | Bid-to-offer | Avg. yield |
+|---|---|---|---|---|---|---|---|---|---|
+| 30-year (R) | DE000BU2D012 | 2.90% | 2056-08-15 | EUR 1,500m | **EUR 1,257.41m** | 16.2% | 2.4 | **2.0** | 3.90% |
+| 20-year (R) | DE000BU2T000 | 3.40% | 2047-05-15 | EUR 1,000m | EUR 863.82m | 13.6% | 2.4 | 2.1 | 3.88% |
+| **Combined** | — | — | — | **EUR 2,500m** | **EUR 2,121.23m** | **15.2%** | — | — | — |
+
+Competitive bids on the 30-year line alone were EUR 1,348m plus EUR 1,701m non-competitive, for
+EUR 3,049m total against EUR 1,500m offered.
+
+### Forward tests — all three past the close-out window, none scored, all recorded
+
+**All three carry a score-by date past `closeOutWithinDays`'s 2026-09-22 ceiling** (FT-1 and FT-2:
+2026-09-23, one day over; FT-3: 2027-01-08) — the exact structural conflict issue #2988 describes.
+`event-scan.mjs` dispatched this close-out anyway (`forwardTestsBeyondWindow`) rather than holding
+it past the deadline. Per the doc's own rule, scoring a prediction ahead of its stated window is
+falsification even where the underlying data already exists (as it does here, same-day), so each
+row below is recorded with an interim reading and left formally unscored in
+[`forward-tests/bund-30y-auction-2026-09-16.md`](../forward-tests/bund-30y-auction-2026-09-16.md):
+
+- **`FT-bund-30y-auction-2026-09-16-1`** (spillover null) — kill switch needs bid-to-offer < 1.0
+  *and* a ≥10bp US 30Y CMT rise, same date. Actual: **2.03** and **−1bp** (5.36% → 5.35%). Neither
+  leg is remotely close; the null is, if anything, restated more cleanly now that the comparison is
+  correctly scoped to the 30-year line alone.
+- **`FT-bund-30y-auction-2026-09-16-2`** (allotment/retention) — kill switch needs total allotment
+  outside EUR 1.85–2.20bn or a rejected auction. Actual combined allotment **EUR 2,121.23m** — inside
+  the band, no rejection. But the prediction's own finer clause — DE000BU2D012 alone allotting
+  EUR 1.10–1.20bn, the band its five prior EUR 1.5bn tranches all held — **missed**: it allotted
+  **EUR 1,257.41m**, above the top of that band, the largest allotment in the ISIN's five-tranche
+  EUR 1.5bn history. A concession-driven demand pickup (retention **16.2%**, the second-lowest 30Y
+  print of 2026 after 08-26's 2.0%) rather than a repeat of the prior pattern.
+- **`FT-bund-30y-auction-2026-09-16-3`** (spread convergence, due 2026-12-31) — UST-minus-Bund 30Y
+  read **+145bp** on 2026-09-16 (5.35% − 3.90%), squarely inside the stated 2026 range (+130/+164bp)
+  and well off the +170bp kill level. One more data point tracking with the convergence thesis, nine
+  weeks before its score-by.
+
+### Kill switches (Stance section) — checked today, none fired
+
+Unlike the forward tests, the stance's six kill switches carry no score-by gate, so all are checked
+now: **(1)** no tracked name (NVDA/AVGO/MRVL/CRWV) moved on a Bund-attributed headline between
+09-09 and 09-16 — no evidence found. **(2)/(3)** scored above as FT-1/FT-2's kill conditions — did
+not fire. **(4)** the auction executed on schedule with both ISINs named, which could not have
+happened had the four-bank-business-day announcement broken; the exact 09-10 notice was not
+re-pinned today (its press-index URL now 404s post-quarter), so this is inferred from the outcome
+rather than independently dated. **(5)** not due until 2026-12-31; today's +145bp reading is
+recorded above. **(6)** Germany's Q4 2026 calendar (re-fetched today) still lists EUR 1.5bn +
+EUR 1.0bn on both 14-Oct and 11-Nov — the same EUR 2.5bn cadence, no cut.
+
+### Verdict
+
+**Stand aside was correct, and the correction makes it more correct, not less.** The transatlantic
+null held on a same-day US 30Y move of −1bp against a domestic Bundesbank 30Y move of 0bp — the
+cleanest possible instance of "no spillover" in the sample. The one place this ledger's own initial
+research erred (reading Finanzagentur's generic "15/20/30" placeholder as a firm "30 Y") did not
+matter to the load-bearing test, because that test was always scoped to the 30-year line alone —
+but it is worth banking as a reusable lesson: this calendar's own website mislabels an undetermined
+multi-ISIN slot, and the PDF annex, not the interactive page, is the primary to trust for tenor
+before D-4.
+
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-09 | D-7 | Initial research banked (above), written 03:50–07:00 UTC from Finanzagentur, Bundesbank, US Treasury and Federal Reserve primaries; the id existed only as `proposals/bund-30y-auction-2026-09-16.from-treasury-30y-bond-2026-09-10.json`, which was read first and is now shadowed by the canonical file written in this PR. **Terms are half-fixed and the missing half is dated:** the Q3 calendar gives `Bund 30 Y (R)` EUR 1.0bn with ISIN `-` plus DE000BU2D012 (2.90%, 15.08.2056) EUR 1.5bn on Wednesday 09-16; the auction-process page's four-bank-business-day rule and the Q3 press release put the second ISIN's announcement on **2026-09-10** (observed instance: the 09-09 reopening was announced 09-03). **The load-bearing finding is a double null.** Across **213** German 30Y auction dates 2003→2026-08-26, soft-vs-firm bid-to-offer moved the US 30Y CMT **−0.04bp** (SE 0.69, **t = −0.06**) and the Bundesbank 30Y **+0.35bp** (t = +0.66); undersubscribed-vs-covered (n=47) gave **+0.25bp** US (t = +0.30) and **+1.04bp** Bund (t = +1.60) against daily sds of 4.94/3.90bp. Only the domestic 1bp leg is even close. **The proposal's "FOMC dominates" premise is corrected:** **25 of 213** auction dates (11.7%) were FOMC decision days — including 2026-03-18, 2026-06-17 and 2025-09-17 (same bond, same setup) — and on them the US 30Y's mean \|Δ\| was **3.17bp** vs **3.87bp** on non-FOMC auction dates; all-session ratio 1.11x since 2003 and **0.95x** since 2022. **Two primaries reframe the event.** *(a) "Uncovered" is the format:* multi-price auctions plus a published retention quote (**21.5%** of auction volume in 2025) put bids under the offer on **22.1%** of 30Y dates since 2003 and 3 of 16 in 2026 — so the number to judge is allotment, ~**EUR 2.04bn** at the 2022-26 30Y retention rate of 18.6% (`FT-2`). *(b) Germany is Japan's mirror:* 30Y gross supply EUR **11.4bn (2022) → 32.5 → 27.5 → 37.0bn (2025) → 25.8bn YTD**, 13 → 33 lines, while `jgb-20y-auction-2026-09-15` measured Japan cutting 30–40%. **Rates (Bundesbank, primary):** 30Y **3.83%** on 09-08, the 2026 high and highest since **2011-05-05**; 10Y 3.41%; the 08-26 auction at a 3.68% average yield drew bid-to-offer **3.55** with **2.0%** retention, the strongest of 2026. **Spread:** UST−Bund 30Y **+142bp** (09-08); 2026 mean **+145bp**, range +130/+164 — the whole year below every prior year's mean (2019 +218 → 2025 +175) (`FT-3`). **Volatility:** VIX **15.72** (Yahoo, 09-08 close). **Peers:** n/a, `symbols: []`. **Adjacency:** 32 tracked ids in the ±5d corridor, all already known, headed by `fomc-2026-09-16` (same date), `treasury-20y-bond-2026-09-15`, `jgb-20y-auction-2026-09-15`, `tic-monthly-2026-09-16` and `ecb-decision-2026-09-10` (D-6, owns the euro-rates channel). **One new dated event PROPOSED (`estimate`):** `bund-30y-auction-2026-10-14` — the next German 30Y multi-ISIN (EUR 2.5bn per the Q4 calendar), the direct next observation for `FT-1`/`FT-2` and adjacent to `cpi-2026-10-14` and `beige-book-2026-10-14`. The 09-23 Bund 15Y is recorded here and not filed: wrong tenor for this ledger's question. No fetch failed; `probe-ref.blocked` empty. | Initial stance set — **stand aside permanently**; the entry is an attribution and allotment instrument, not a signal | 2026-09-16 (low, 0–14d band: every 7d) |
 | 2026-09-16 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 17.2 (+1.5pt since last), band unchanged (low:0+), 43 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-09-17`, `bowman-stress-testing-2026-09-18`, `eia-weekly-petroleum-status-2026-09-16`, `empire-state-mfg-2026-09-15`, `house-vote-ratepayer-protection-act-2026-09-17`, `japan-cpi-2026-09-18` +5 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-23 |
+| 2026-09-17 | D+1 | **Close-out row — scoring is in [`## Outcome`](#outcome) below**, from primaries re-fetched this session after the mandated cache bust (`symbols: []`, so `earnings-cycle`/`intraday-edges` had no target either way). **The headline correction: the second 16-Sept line was never a second 30-year bond.** Finanzagentur's own result page and the DE000BU2T000 factsheet (both fetched direct today) show the EUR 1.0bn line settled as a **20-year** reopening (DE000BU2T000, 3.40%, 15-05-2047) alongside the EUR 1.5bn 30-year line (DE000BU2D012) — re-reading the original Q3 press-release PDF (already cited 09-09, re-extracted today) shows its own table always carried this slot as **"Bund 15/20/30 R"**, the combined undetermined segment, not "30 Y" specifically; that overspecification was this doc's own, not the Finanzagentur's. **Kill switches checked, none fired:** #1 no tracked name (NVDA/AVGO/MRVL/CRWV) moved on a Bund-attributed headline; #2 the 30Y-segment bid-to-offer printed **2.03** (bids EUR 3,049m ÷ offered EUR 1,500m) against the US 30Y CMT's **−1bp** same-date move (5.36% → 5.35%, Treasury daily par-yield CSV) — nowhere near the <1.0-and-≥10bp bar; #3 combined allotment **EUR 2,121.23m** (1,257.41 + 863.82m) sits inside the EUR 1.85–2.20bn band and no bids were rejected, though DE000BU2D012 *alone* allotted **EUR 1,257.41m**, above the EUR 1.10–1.20bn band every one of its five prior EUR 1.5bn tranches held (retention 16.2% vs the ~18.6% 2022-26 norm) — a genuine miss on that finer claim inside FT-2, flagged not scored; #4 the auction executed on schedule with both ISINs named, so the announcement mechanics held even though the exact 09-10 press-notice date was not independently re-pinned today. Bundesbank 30Y was flat same-date (3.90% → 3.90%); UST-minus-Bund 30Y read **+145bp**, inside the stated 2026 range and well off the +170bp kill (`FT-3`, not due until 2026-12-31). **All three forward tests carry a score-by (2026-09-23 ×2, 2027-01-08) past `closeOutWithinDays`'s 2026-09-22 ceiling** — `event-scan.mjs` dispatched this close-out anyway per `forwardTestsBeyondWindow`, and all three are recorded unscoreable at close-out on purpose, each with an interim reading (see fragment). **Adjacency:** peers n/a (`symbols: []`); no macro surprise since the last row; VIX 17.71 (09-16 close, Cboe primary), +0.51 off 17.20, immaterial; no geopolitical development touching this channel; the corridor's own members (FOMC 09-16, TIC 09-16) are unscored siblings' own jobs, not this one's. **No new dated adjacency to propose** — the next 30Y line (10-14) is already tracked, and this row's own naming-convention finding is surfaced here for whoever next assesses `bund-30y-auction-2026-10-14` (proposed the same day under the same "two 30Y lines" misreading) rather than edited into that sibling's file. No fetch failed; `probe-ref.blocked` empty. | Terminal — **stand aside, confirmed correct**; refined from "two 30Y lines" to "one 30Y + one 20Y line," which strengthens rather than weakens the no-price-channel verdict | — (closed; `## Outcome` filled, scanner goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
