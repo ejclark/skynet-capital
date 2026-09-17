@@ -68,6 +68,20 @@ Write EARS acceptance criteria in plans, issues, and PRs; the `/ears` drill
 matching specs. Anti-patterns EARS kills: vague "should/support/handle", compound requirements
 (one `shall` per line), and unverifiable responses (if a spec can't assert it, rewrite it).
 
+**A shared cap over a growing set of entities gets its arithmetic run at design time, not
+discovered live** (Eric, 2026-09-17, on `/api/wire`'s 30-row page cap silently hiding a member's
+own older trades: "our concern is identifying constraints at scale... one user having more than 30
+trades, two users having 15 trades, 5 users having 6 trades — basic math problems"). The framing
+that matters is not "how much data exists" (volume is a red herring — a five-person league with
+modest activity crosses the exact same cap a thousand-user one would) but "how many entities share
+this one fixed budget, and what does each one's slice look like at plausible N." When an EARS
+criterion introduces a limit/cap/page size shared across participants, personas, symbols, or any
+other growing set, state the per-entity math in the same breath — a sentence, not a model: "at 5
+active participants this is 6 rows each," caught by reading the requirement, never by waiting for
+real accounts to hit it. `tests/arch/pagination-consumer.spec.ts` catches the one specific failure
+mode this produced (a paginated contract with zero client consumers); it cannot catch the design
+gap itself — that's a review habit, not a mechanical gate.
+
 **Automated enforcement.** The red-green-refactor loop is backed by deterministic gates, so the
 suite runs whether or not anyone remembers:
 - **Pre-commit** (husky) auto-formats staged files; **pre-push** runs the full `npm run verify`

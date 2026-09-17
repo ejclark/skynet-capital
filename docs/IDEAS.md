@@ -1375,3 +1375,27 @@ item on #2321: judge it live through 2026-09-16 — if it reads as unreadable, t
 `position: sticky; left: 0` pin on `.row-timeline td` or breaking the timeline out to a sibling
 block under the table on narrow widths (a bottom sheet per `docs/PATTERNS.md`), not a redesign.
 _(src: Claude · while: screenshotting #2321's inline-accordion slice, 2026-09-09)_
+
+### The desk's `/activity` and `/decisions` feeds share the Activity page's exact pagination gap
+`#3187`'s retro found `/api/wire` unreachable past page one because no client read `nextCursor`/
+`Link`. The same `per_page`/`before` contract (`src/server/pagination.ts`) also governs
+`/api/desk/:id/activity` and `/api/desk/:id/decisions` (`src/server/desk-json-routes.ts`), and
+`app/src/live/desk.ts`'s `fetchDeskActivity`/`fetchDeskDecisions` show the identical pattern:
+fetch once, never read the cursor, no "load more". A trader-desk page with any real fill history
+past 30 rows, or a bot with more than 30 logged decisions, hits the same wall. Not fixed in
+`#3187` (scope was the Activity page Eric actually hit) — `tests/arch/pagination-consumer.spec.ts`
+only asserts SOME client consumer exists app-wide, so it stays green while these two remain silent.
+_(src: Claude · while: retro on #3187 — "what else crosses this shared contract")_
+
+### `scripts/ship.sh`'s REST `api()` helper 415s in this session's proxy environment — missing `Content-Type`
+`ship open` on #3195 failed its REST PR-create call with `HTTP 415` from the agent proxy: `"Request
+bodies must declare Content-Type: application/json."` `scripts/ship.sh`'s `api()` (around line 53)
+sends `-d "$3"` via curl with `Authorization`/`Accept`/`X-GitHub-Api-Version`/`User-Agent` headers
+but never `Content-Type: application/json` — curl defaults to
+`application/x-www-form-urlencoded` for a bare `-d`, which `api.github.com` itself tolerates but
+this session's proxy apparently does not. Worked around this once with a direct PATCH carrying the
+header explicitly; the designed fallback (one `mcp__github__*` call) is what the skill already
+prescribes, so this isn't blocking — but every `ship open`/`ship merge` in a proxied Claude Code
+Remote session will hit the same 415 until `api()` gains `-H "Content-Type: application/json"`.
+Cheap, mechanical, one-line fix; not made here to keep #3195 scoped to the reported bug.
+_(src: Claude · while: shipping #3195, the /api/wire pagination-consumer fix)_

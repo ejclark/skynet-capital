@@ -9,6 +9,7 @@ import {
   parseWireQuery,
   toggleWireQualifier,
   type WireFeed,
+  type WireTrade,
 } from "../live/wire";
 import { PageFrame } from "../shell/frame";
 import { SectionSwitch } from "../shell/section-switch";
@@ -312,15 +313,26 @@ function CouncilSection(): ReactElement {
 }
 
 /** The feed section — its filter bar travels with it, because the filter is the feed's control and
- *  not the page's (a bar for a list the section switch has paged away from is noise). */
+ *  not the page's (a bar for a list the section switch has paged away from is noise).
+ *
+ *  `/api/wire` pages at 30 rows (`src/server/pagination.ts`'s default); on a league with any real
+ *  trading volume that's today's trades alone, so "load older trades" is not a nicety — without it
+ *  every trade before the current page is permanently unreachable from this screen even though the
+ *  activity store still has it (#3187). */
 function FeedSection({
   wire,
   query,
   onChange,
+  onLoadMore,
+  loadingMore,
+  loadMoreError,
 }: {
   readonly wire: WireFeed;
   readonly query: string;
   readonly onChange: (next: string) => void;
+  readonly onLoadMore?: () => void;
+  readonly loadingMore: boolean;
+  readonly loadMoreError: boolean;
 }): ReactElement {
   const filter = parseWireQuery(query);
   const shown = wire.trades.filter((trade) => matchesWire(trade, filter));
@@ -341,6 +353,17 @@ function FeedSection({
           ))}
         </ul>
       )}
+      {onLoadMore ? (
+        <button
+          type="button"
+          className="btn wire-load-more"
+          onClick={onLoadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? "Loading…" : "Load older trades"}
+        </button>
+      ) : null}
+      {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
     </section>
   );
 }
@@ -348,7 +371,35 @@ function FeedSection({
 function WirePage(): ReactElement {
   const { q, section: asked } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const wire = useQuery({ queryKey: ["wire"], queryFn: fetchWire, refetchOnWindowFocus: true });
+  const wire = useQuery({
+    queryKey: ["wire"],
+    queryFn: () => fetchWire(),
+    refetchOnWindowFocus: true,
+  });
+  // Older pages walked back via "load older trades" — kept separate from react-query's own cache
+  // so a window-focus refetch of the first page doesn't have to know how to merge into it; a fresh
+  // first page simply resets the walk-back (`useEffect` below).
+  const [olderTrades, setOlderTrades] = useState<readonly WireTrade[]>([]);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  useEffect(() => {
+    setOlderTrades([]);
+    setCursor(wire.data?.nextCursor);
+    setLoadMoreError(false);
+  }, [wire.data]);
+  const loadMore = () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    fetchWire(cursor)
+      .then((page) => {
+        setOlderTrades((prev) => [...prev, ...page.trades]);
+        setCursor(page.nextCursor);
+      })
+      .catch(() => setLoadMoreError(true))
+      .finally(() => setLoadingMore(false));
+  };
   // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
   const [query, setQuery] = useState(q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -384,9 +435,17 @@ function WirePage(): ReactElement {
     );
 
   const feed = wire.data;
+  const feedWithOlder: WireFeed = { ...feed, trades: [...feed.trades, ...olderTrades] };
   const render = (id: ActivitySection): ReactElement =>
     id === "feed" ? (
-      <FeedSection wire={feed} query={query} onChange={setFilter} />
+      <FeedSection
+        wire={feedWithOlder}
+        query={query}
+        onChange={setFilter}
+        onLoadMore={cursor ? loadMore : undefined}
+        loadingMore={loadingMore}
+        loadMoreError={loadMoreError}
+      />
     ) : id === "pnl" ? (
       <PnlSection wire={feed} />
     ) : id === "pulse" ? (

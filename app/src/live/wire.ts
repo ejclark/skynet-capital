@@ -70,13 +70,33 @@ export interface WireFeed {
   readonly pnl: readonly WirePnl[];
   readonly feedbackEnabled: boolean;
   readonly feedback: readonly WireFeedbackItem[];
+  /** Present only when the trade page was full — the `before` cursor for the next `/api/wire`
+   *  request, read off the server's `Link: rel="next"` header (GitHub's own pagination
+   *  convention, `src/server/pagination.ts`). Absent means there are no older trades to fetch. */
+  readonly nextCursor?: string;
 }
 
-export async function fetchWire(): Promise<WireFeed> {
-  const res = await fetch("/api/wire", { credentials: "same-origin" });
+/** `Link: <path?before=X>; rel="next"` → `X` — the one place this app parses that header, so a
+ *  caller never has to know its shape. Absent header, or no `rel="next"` entry, means the page
+ *  was short (no older rows exist). */
+function parseNextCursor(res: Response): string | undefined {
+  const link = res.headers.get("link");
+  if (!link) return undefined;
+  const match = /<[^>]*[?&]before=([^&>]+)[^>]*>\s*;\s*rel="next"/.exec(link);
+  const cursor = match?.[1];
+  return cursor ? decodeURIComponent(cursor) : undefined;
+}
+
+/** `before`, when given, asks for the page of trades strictly older than that cursor — the
+ *  Activity feed's "load older trades" control (#3187) uses this to walk back past the default
+ *  30-row page instead of stopping at whatever fit on the first fetch. */
+export async function fetchWire(before?: string): Promise<WireFeed> {
+  const qs = before ? `?before=${encodeURIComponent(before)}` : "";
+  const res = await fetch(`/api/wire${qs}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`wire ${res.status}`);
   const body = (await res.json()) as { wire: WireFeed };
-  return body.wire;
+  const nextCursor = parseNextCursor(res);
+  return { ...body.wire, ...(nextCursor ? { nextCursor } : {}) };
 }
 
 /** The options ticket's "who else traded this" row (#2017 Phase 1 slice 12) — the SAME feed,
