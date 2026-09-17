@@ -56,7 +56,7 @@ export function verifyOwnAccount(
   requesterId: string | undefined,
 ): AccountAccessResult {
   if (!deps.tradingEnabled) {
-    return { ok: false, refusals: ["Trading from the desk is switched off for this deployment."] };
+    return { ok: false, refusals: ["Trading is switched off for this deployment."] };
   }
   if (!requesterId || requesterId !== participantId) {
     return { ok: false, refusals: ["You can only trade your own account."] };

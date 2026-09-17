@@ -45,7 +45,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "first-message",
     title: "Say hello to Moneypenny",
     detail:
-      "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Send her a message and the trading ladder opens.",
+      "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
     points: ENGAGEMENT_MILESTONES.find((m) => m.id === "first-message")?.points ?? 0,
     // The rail, not a page: `?moneypenny=intro` opens the right rail with her intro script.
     route: "/app/onboarding?moneypenny=intro",
@@ -54,7 +54,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "first-trade",
     title: "Make your first trade",
     detail:
-      "The desk unlocks one rung at a time — buy a stock first, and each real fill opens the next play. No skipping ahead. Orders fill only while the market is open — 9:30 AM to 4:00 PM ET, Monday through Friday.",
+      "Your account unlocks one rung at a time — buy a stock first, and each real fill opens the next play. No skipping ahead. Orders fill only while the market is open — 9:30 AM to 4:00 PM ET, Monday through Friday.",
     points: ONBOARDING_STEP_POINTS,
     route: "/app/trade?play=101",
   },
@@ -65,7 +65,7 @@ export const ONBOARDING_MILESTONE = {
   id: "onboarding",
   code: "M·01",
   title: "Onboarding",
-  desc: "Get seated at the desk: connect Alpaca, say hello to Moneypenny, make your first trade.",
+  desc: "Get started: connect Alpaca, say hello to Moneypenny, make your first trade.",
 } as const;
 
 /** Total points the milestone can award — 30 with the canvas's per-step value. */

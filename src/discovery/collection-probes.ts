@@ -158,7 +158,7 @@ const FLIGHT_TO_SAFETY: CollectionProbe = {
   claim:
     "Bought the one name the tape did NOT hate while average sentiment across the tape sat at or below −0.3 — and did not buy it with sentiment flattened.",
   blurb:
-    "Risk-off. Not a bet on a bottom and not a bet on a rip: when the mood across risk assets sours, this is the desk that rotates into the haven and sits on it.",
+    "Risk-off. Not a bet on a bottom and not a bet on a rip: when the mood across risk assets sours, this is the play that rotates into the haven and sits on it.",
   tape: {
     cash: CASH,
     positions: FLAT,
