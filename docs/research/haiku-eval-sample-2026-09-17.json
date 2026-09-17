@@ -1,0 +1,162 @@
+{
+  "seed": 3264,
+  "corpusSize": 67,
+  "tierCounts": {
+    "medium": 25,
+    "critical": 3,
+    "low": 27,
+    "high": 12
+  },
+  "sample": [
+    {
+      "id": "mrvl-2026-08-27-print",
+      "impact": "critical",
+      "path": "docs/research/events/mrvl-2026-08-27-print.md"
+    },
+    {
+      "id": "nvda-2026-08-26-print",
+      "impact": "critical",
+      "path": "docs/research/events/nvda-2026-08-26-print.md"
+    },
+    {
+      "id": "avgo-2026-09-02-print",
+      "impact": "critical",
+      "path": "docs/research/events/avgo-2026-09-02-print.md"
+    },
+    {
+      "id": "pce-2026-08-26",
+      "impact": "high",
+      "path": "docs/research/events/pce-2026-08-26.md"
+    },
+    {
+      "id": "fomc-2026-09-16",
+      "impact": "high",
+      "path": "docs/research/events/fomc-2026-09-16.md"
+    },
+    {
+      "id": "jobs-2026-09-04",
+      "impact": "high",
+      "path": "docs/research/events/jobs-2026-09-04.md"
+    },
+    {
+      "id": "treasury-10y-note-2026-09-09",
+      "impact": "high",
+      "path": "docs/research/events/treasury-10y-note-2026-09-09.md"
+    },
+    {
+      "id": "cpi-2026-09-11",
+      "impact": "high",
+      "path": "docs/research/events/cpi-2026-09-11.md"
+    },
+    {
+      "id": "jackson-hole-2026-08-28",
+      "impact": "high",
+      "path": "docs/research/events/jackson-hole-2026-08-28.md"
+    },
+    {
+      "id": "treasury-20y-bond-2026-08-19",
+      "impact": "high",
+      "path": "docs/research/events/treasury-20y-bond-2026-08-19.md"
+    },
+    {
+      "id": "ism-services-2026-09-03",
+      "impact": "high",
+      "path": "docs/research/events/ism-services-2026-09-03.md"
+    },
+    {
+      "id": "treasury-30y-tips-2026-08-20",
+      "impact": "high",
+      "path": "docs/research/events/treasury-30y-tips-2026-08-20.md"
+    },
+    {
+      "id": "ism-manufacturing-2026-09-01",
+      "impact": "high",
+      "path": "docs/research/events/ism-manufacturing-2026-09-01.md"
+    },
+    {
+      "id": "umich-sentiment-prelim-2026-09-11",
+      "impact": "medium",
+      "path": "docs/research/events/umich-sentiment-prelim-2026-09-11.md"
+    },
+    {
+      "id": "treasury-buyback-increase-2026-09-09",
+      "impact": "medium",
+      "path": "docs/research/events/treasury-buyback-increase-2026-09-09.md"
+    },
+    {
+      "id": "gdp-q2-2026-second-2026-08-26",
+      "impact": "medium",
+      "path": "docs/research/events/gdp-q2-2026-second-2026-08-26.md"
+    },
+    {
+      "id": "jolts-2026-09-01",
+      "impact": "medium",
+      "path": "docs/research/events/jolts-2026-09-01.md"
+    },
+    {
+      "id": "consumer-confidence-2026-08-25",
+      "impact": "medium",
+      "path": "docs/research/events/consumer-confidence-2026-08-25.md"
+    },
+    {
+      "id": "fed-waller-outlook-2026-09-03",
+      "impact": "medium",
+      "path": "docs/research/events/fed-waller-outlook-2026-09-03.md"
+    },
+    {
+      "id": "beige-book-2026-09-02",
+      "impact": "medium",
+      "path": "docs/research/events/beige-book-2026-09-02.md"
+    },
+    {
+      "id": "treasury-buyback-cash-mgmt-2026-09-09",
+      "impact": "medium",
+      "path": "docs/research/events/treasury-buyback-cash-mgmt-2026-09-09.md"
+    },
+    {
+      "id": "opec-plus-meeting-2026-09-06",
+      "impact": "medium",
+      "path": "docs/research/events/opec-plus-meeting-2026-09-06.md"
+    },
+    {
+      "id": "qss-q2-2026-09-09",
+      "impact": "low",
+      "path": "docs/research/events/qss-q2-2026-09-09.md"
+    },
+    {
+      "id": "hammack-remarks-2026-09-03",
+      "impact": "low",
+      "path": "docs/research/events/hammack-remarks-2026-09-03.md"
+    },
+    {
+      "id": "nahb-hmi-2026-09-16",
+      "impact": "low",
+      "path": "docs/research/events/nahb-hmi-2026-09-16.md"
+    },
+    {
+      "id": "treasury-buyback-tips-10y30y-2026-09-15",
+      "impact": "low",
+      "path": "docs/research/events/treasury-buyback-tips-10y30y-2026-09-15.md"
+    },
+    {
+      "id": "import-export-prices-2026-09-16",
+      "impact": "low",
+      "path": "docs/research/events/import-export-prices-2026-09-16.md"
+    },
+    {
+      "id": "google-adtech-opinion-unseal-2026-09-16",
+      "impact": "low",
+      "path": "docs/research/events/google-adtech-opinion-unseal-2026-09-16.md"
+    },
+    {
+      "id": "iea-omr-2026-09-11",
+      "impact": "low",
+      "path": "docs/research/events/iea-omr-2026-09-11.md"
+    },
+    {
+      "id": "sp-rebalance-proforma-2026-09-04",
+      "impact": "low",
+      "path": "docs/research/events/sp-rebalance-proforma-2026-09-04.md"
+    }
+  ]
+}
