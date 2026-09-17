@@ -441,12 +441,17 @@ jobs:
       # would dump the whole conversation transcript, the thing the security note is about) — just the
       # terminal result envelope (is_error, duration_ms, num_turns, total_cost_usd, modelUsage, and any
       # error text it carries), which is diagnostic, not transcript.
+      #
+      # `cat` USED TO BE A LIE HERE (#3215, 2026-09-17). The file is the action's
+      # `JSON.stringify(messages)` — every stream-json message of the session, ~9000 lines — so
+      # `cat` printed the whole conversation, the exact thing the paragraph above says this is not.
+      # scripts/session-cost.mjs --dump prints the terminal result message alone; that script is
+      # now the one place that knows this file's shape, for both this step and the meter below.
       - if: always() && steps.build.outcome == 'failure'
         name: Surface the swallowed Claude result on failure
         run: |
           echo "::group::Claude execution result (the action hides this by default)"
-          cat /home/runner/work/_temp/claude-execution-output.json 2>/dev/null || \
-            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
+          node scripts/session-cost.mjs --dump
           echo "::endgroup::"
 
       # THE COST METER (#2946). The step above prints the result envelope ONLY on failure, so the
@@ -456,24 +461,19 @@ jobs:
       #
       # One line per session, on every outcome. The ::notice:: makes it greppable in the run log;
       # the step summary row aggregates all matrix legs into a single per-tick table, which is the
-      # view that answers "what did this push cost" without opening a job. Cheap enough to be
-      # unconditional — it is a jq read of a file the CLI already wrote.
+      # view that answers "what did this push cost" without opening a job.
+      #
+      # THE INLINE jq IS GONE (#3215, run 35212702833). It read the file as an object — it is an
+      # ARRAY of stream-json messages — so `jq -r '.total_cost_usd'` exited 5, `bash -e` failed all
+      # six matrix legs of a run whose sessions had every one of them SUCCEEDED, and (the expensive
+      # half) no `::notice::cost` line was ever printed, so the spend circuit breaker that greps
+      # for it totalled $0 and could never trip. The decision moved into a specced script, per this
+      # file's own header rule for workflow bash; the shim is env in, exit 0 out, always.
       - if: always()
         name: Record this session's cost
-        run: |
-          F=/home/runner/work/_temp/claude-execution-output.json
-          ID='${{ matrix.event.id }}'
-          if [ ! -f "$F" ]; then
-            echo "::notice::cost — event=$ID no execution-output.json (died before Claude Code ran)"
-            echo "- \`$ID\` — no result envelope (died before Claude Code ran)" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          COST=$(jq -r '.total_cost_usd // "?"' "$F")
-          TURNS=$(jq -r '.num_turns // "?"' "$F")
-          MS=$(jq -r '.duration_ms // "?"' "$F")
-          ERR=$(jq -r '.is_error // "?"' "$F")
-          echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
-          echo "- \`$ID\` — **\$$COST** · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EVENT_ID: ${{ matrix.event.id }}
+        run: node scripts/session-cost.mjs
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
