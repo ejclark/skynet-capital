@@ -93,6 +93,18 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   higher tier wouldn't change the outcome contradicts this doc; `scripts/config-audit.mjs` checks
   agents against the floor table, and the same rubric applies to `docs/grind/*.instructions.md`
   front matter and workflow-script defaults even where no gate reads them yet.
+- **A distrust-of-the-lane model ceiling is a different signal from conserve-mode — narrower, and
+  it doesn't wait for a throughput justification.** Eric, 2026-09-17, on the research dispatch lane
+  after the spend circuit breaker's own threshold proved too loose to trust ("lean on the side of
+  caution to remove opus from this type of autonomous action that can fan out indefinitely, a
+  recipe to burn all tokens available"): this is not "we need to conserve tokens" (the trigger
+  above), it's "this specific unbounded-fanout lane cannot be trusted with the top tier until it has
+  a real ceiling." Scope: any autonomous lane that can generate its own next unit of work with no
+  per-run or per-window dollar ceiling that's actually been validated against real spend — currently
+  `.github/workflows/moneypenny-events.yml`'s research dispatch job (`--model claude-sonnet-5`, was
+  `claude-opus-5`, see the job's own comment and #2946). This is a stopgap tied to that lane's
+  unvalidated ceiling, not a revision to the floor table above — once the batching/tiering redesign
+  and a validated spend ceiling land, revisit whether Opus can return.
 
 ## The floor table (task class → model + effort FLOOR)
 

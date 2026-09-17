@@ -401,16 +401,25 @@ jobs:
           allowed_bots: "github-actions"
           # WebSearch/WebFetch on top of the build lane's list: a pulse check without the adjacency
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
-          # --model pins the lane deliberately instead of riding the action default — same
-          # route-by-who-pays rule as build-feedback (flat-rate lane, research-to-brief floor is
-          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only, scoped to ONE
+          # --model pins the lane deliberately instead of riding the action default.
+          # SONNET, NOT OPUS (Eric, 2026-09-17, #2946): this lane can fan out indefinitely — every
+          # merge to main is a tick, and the adjacency sweep in event-research.md can manufacture
+          # its own next generation of due events — so an unconditional Opus pin here is a lane
+          # that can burn an entire weekly quota in a day (measured: it did, ~24% in 24h). 99.2% of
+          # completed docs conclude "stand aside" (CLAUDE.md: a refusal is still P&L), so the
+          # judgment bar most sessions actually clear doesn't need Opus. Eric's explicit call,
+          # made without waiting on the S5 Haiku/Sonnet adequacy eval: the downside of an
+          # occasional under-powered research doc (cheap to catch, cheap to re-run) is not
+          # symmetric with the downside of unbounded Opus fan-out (the whole week's quota, gone).
+          # Revisit once S5's eval and the batching/tiering redesign (#2946) land — this pin is a
+          # stopgap, not a permanent floor. --max-turns is a runaway backstop only, scoped to ONE
           # event's work (a `never-assessed` initial write-up — TEMPLATE + stance + kill switches
           # + first ledger row — is the heaviest single-event case, typically 20-30 turns). The 60
           # set here 2026-08-28 turned out too tight within a day — two runs finished normal work
           # at turns 63 and 65-67, over cap (issue #904); 90 gives real headroom over the worst
           # observed overrun. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 150
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5 --max-turns 150
           # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
           # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
           # any other due event even though `event-scan.mjs --due` will still list every one of
