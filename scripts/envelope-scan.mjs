@@ -7,22 +7,19 @@
 // it rides the existing `verify` job — no workflow file touched, so this lands as an ordinary PR.
 //   node scripts/envelope-scan.mjs             # enforce for the current branch (exit 1 on breach)
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
-//   node scripts/envelope-scan.mjs --check <paths...> [--base origin/main]   # protected? (+diff-aware)
+//   node scripts/envelope-scan.mjs --check <paths...>   # protected?
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
-// Helpers live in envelope-behavior.mjs (#852, #1355) and envelope-widening.mjs (#716/#858) to stay
-// under the line budget; the public ones are re-exported below so importers keep working.
+//
+// A diffAware/behavior-verified exemption path (#852/#716/#858, `envelope-widening.mjs` +
+// `envelope-behavior.mjs`) once let a protected diff clear the hold by proving pure-insertion,
+// safe structural widening, or a passing invariant suite. #928 (2026-08-30) superseded that
+// premise: rather than prove a broad protected file safe per-diff, it extracted each real
+// sensitive capability into its own narrow file with no non-sensitive shape left to exempt —
+// "the solution is to remove the shit, not spray febreze to mask the smell." No protected entry
+// has used diffAware since; the mechanism was removed rather than kept as unexercised machinery.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import {
-  behaviorVerifiedFacts,
-  exemptionReason,
-  normalizeCheckPath,
-  suiteRunnerArgv,
-} from "./envelope-behavior.mjs";
-import { classifyStructuralWidening, MUTATING_CALL_PATTERNS } from "./envelope-widening.mjs";
-
-export { behaviorVerifiedFacts, classifyStructuralWidening, suiteRunnerArgv };
+import { join, relative, resolve, sep } from "node:path";
 
 const ROOT = process.cwd();
 const MANIFEST = join(ROOT, "envelope.json");
@@ -34,7 +31,7 @@ const argOf = (flag) => {
 const git = (...args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
 
 // Manifest load is lazy (readManifest(), called from main()), so this file can be `import`ed for
-// its pure functions (classifyDiff, breachOf, ...) by specs without running CLI side effects.
+// its pure functions (breachOf, ...) by specs without running CLI side effects.
 function readManifest() {
   // Fail CLOSED and loudly on a missing manifest: an unreadable envelope must never degrade to "no
   // protected paths", which is exactly how a gate silently disarms itself (docs/LESSONS.md).
@@ -49,7 +46,7 @@ function readManifest() {
 
 // Module-level so breachOf's default param and --list/--check keep working without threading the
 // manifest through every call; populated by main() before use. A spec importing this module for its
-// pure functions (classifyDiff, breachOf with an explicit protectedRules arg) never touches these.
+// pure functions (breachOf with an explicit protectedRules arg) never touches these.
 let manifest = {};
 let rules = [];
 
@@ -96,67 +93,29 @@ export function addedRuntimeDeps(basePkgJson, headPkgJson) {
   return head.filter((d) => !base.includes(d));
 }
 
-// A diffAware protected file is exempt ONLY when both hold (see $diffAwareComment in envelope.json):
-// (1) pure insertion — no existing line removed/changed; (2) no newly added line adds a new
-// mutating broker call (MUTATING_CALL_PATTERNS, above) — a new order-mutating capability stays gated.
-
-/** Pure — the specs drive this directly. `diffText` is `git diff`'s unified-diff output for one
- *  file (any base..head form); returns null (not "false") when there is no diff at all, since "no
- *  change" and "an unsafe change" must never look the same to a caller deciding whether to hold. */
-export function classifyDiff(diffText) {
-  if (diffText === null || diffText === undefined) return null;
-  const lines = diffText.split("\n");
-  const removed = lines.filter((l) => l.startsWith("-") && !l.startsWith("---"));
-  const added = lines.filter((l) => l.startsWith("+") && !l.startsWith("+++"));
-  if (removed.length === 0 && added.length === 0) return null; // no actual change to this path
-  const pureInsertion = removed.length === 0;
-  const addsNewMutatingCall = added.some((l) => MUTATING_CALL_PATTERNS.some((p) => p.test(l)));
-  return {
-    pureInsertion,
-    addsNewMutatingCall,
-    additiveSafe: pureInsertion && !addsNewMutatingCall,
-  };
-}
-
-/** `git diff <base>..HEAD -- <path>` — null (not "") on any git failure, so a broken diff reads as
- *  "unknown", never as "no change" (classifyDiff already treats "" specially; a git error is worse
- *  than that and must fail toward "still gated", not toward "additive"). */
-function diffFor(path, base) {
-  try {
-    return git("diff", `${base}..HEAD`, "--", path);
-  } catch {
-    return null;
-  }
-}
-
-// exemptionReason (imported above, #852) adds a third additiveSafe:true path — a passing invariant
-// suite untouched by the diff — alongside pure insertion and safe structural widening below.
+// #1355 — the --check boundary normalizes its argument before matching. `./envelope.json`, an
+// absolute path, and a trailing slash all answered `protected: false` for the protected file
+// itself; every lane prompt and grind's automatic step 0 trust that answer instead of prose.
+// Normalized here, at the CLI boundary only: breachOf/globToRegExp are untouched, and the
+// enforcement path never needed it (runLaneScan's paths come from `git diff --name-only`, already
+// repo-root-relative). A path outside the repo is returned as typed — it matches nothing either
+// way, and rewriting it would hide that in the output.
+export const normalizeCheckPath = (given, root = process.cwd()) => {
+  const rel = relative(root, resolve(root, given)).split(sep).join("/");
+  return rel === "" || rel === ".." || rel.startsWith("../") ? given : rel;
+};
 
 // --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session
 // asks this BEFORE editing, learning the answer from the gate rather than guessing at a prose list.
-// --check --base <ref>: additionally answers whether a real diff against that ref EXEMPTS a
-// diffAware rule — `blocking` is what a caller should act on; `protected` stays the raw membership
-// answer (protected == blocking when a rule has no diffAware, so old callers keep today's behavior).
 function runCheck() {
-  const checkBase = argOf("--base");
   const paths = process.argv
     .slice(process.argv.indexOf("--check") + 1)
-    .filter((a, i, arr) => !a.startsWith("--") && arr[i - 1] !== "--base")
+    .filter((a) => !a.startsWith("--"))
     .map((p) => normalizeCheckPath(p));
   const out = paths.map((path) => {
     const rule = breachOf(path);
     if (!rule) return { path, protected: false, blocking: false };
-    let entry = { path, protected: true, pattern: rule.pattern, why: rule.why, blocking: true };
-    if (checkBase && rule.diffAware) {
-      const diff = classifyDiff(diffFor(path, checkBase));
-      // diff === null: no actual change to this path (or an unreadable diff) — never exempt on
-      // "couldn't tell", only on a diff we positively classified as safe. Cheapest check first;
-      // exemptionReason only reaches behaviorVerified (a process spawn) when the first two miss.
-      const reason = exemptionReason(path, checkBase, rule, diff);
-      entry = { ...entry, additiveSafe: reason !== undefined, ...(reason ? { reason } : {}) };
-      entry.blocking = !entry.additiveSafe;
-    }
-    return entry;
+    return { path, protected: true, pattern: rule.pattern, why: rule.why, blocking: true };
   });
   console.log(JSON.stringify(out, null, 2));
   process.exit(0);
@@ -165,9 +124,7 @@ function runCheck() {
 function runList() {
   console.log("🛡 Autonomous-lane envelope — protected paths (envelope.json)\n");
   for (const r of rules) {
-    const mark = r.diffAware ? " [diffAware]" : "";
-    const suite = r.invariantSuite ? ` [suite: ${r.invariantSuite}]` : "";
-    console.log(`  ${r.pattern.padEnd(42)} ${r.why}${mark}${suite}`);
+    console.log(`  ${r.pattern.padEnd(42)} ${r.why}`);
   }
   console.log(
     `\n  new runtime dependencies: ${manifest.allowNewRuntimeDeps ? "allowed" : "PROTECTED (devDependencies stay open)"}`,
@@ -210,17 +167,10 @@ function runtimeDepBreaches(changed, mergeBase) {
   }));
 }
 
-function reportAndExit(lane, branch, changed, breaches, exempted) {
+function reportAndExit(lane, branch, changed, breaches) {
   console.log(
     `🛡 Envelope scan — lane '${lane}' branch '${branch}', ${changed.length} changed file(s)`,
   );
-  if (exempted.length) {
-    console.log(
-      `\nℹ diffAware exemption (pure insertion, a safe structural widening — e.g. a union\n` +
-        `  gaining a member — or a passing invariant suite untouched by the diff) on:\n` +
-        exempted.map((e) => `  ${e.path} — ${e.reason}`).join("\n"),
-    );
-  }
   if (!breaches.length) {
     console.log("\n✓ nothing in the protected envelope was touched.");
     process.exit(0);
@@ -256,23 +206,13 @@ function runLaneScan(branch, lane) {
   }
 
   const breaches = [];
-  const exempted = [];
   for (const path of changed) {
     const rule = breachOf(path);
-    if (!rule) continue;
-    if (rule.diffAware) {
-      const diff = classifyDiff(diffFor(path, mergeBase));
-      const reason = exemptionReason(path, mergeBase, rule, diff);
-      if (reason) {
-        exempted.push({ path, reason });
-        continue;
-      }
-    }
-    breaches.push({ path, why: rule.why, pattern: rule.pattern });
+    if (rule) breaches.push({ path, why: rule.why, pattern: rule.pattern });
   }
   breaches.push(...runtimeDepBreaches(changed, mergeBase));
 
-  reportAndExit(lane, branch, changed, breaches, exempted);
+  reportAndExit(lane, branch, changed, breaches);
 }
 
 function main() {
@@ -295,6 +235,6 @@ function main() {
 }
 
 // Only run the CLI when this file is executed directly (node scripts/envelope-scan.mjs ...), never
-// when imported as an ES module (tests/arch/envelope.spec.ts imports classifyDiff directly) —
-// matches the established pattern in digest-scan.mjs, moneypenny/repair.mjs, comms-scan.mjs, etc.
+// when imported as an ES module (tests/arch/envelope.spec.ts imports breachOf directly) — matches
+// the established pattern in digest-scan.mjs, moneypenny/repair.mjs, comms-scan.mjs, etc.
 if (import.meta.url === `file://${process.argv[1]}`) main();
