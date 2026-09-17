@@ -441,13 +441,15 @@ jobs:
       # would dump the whole conversation transcript, the thing the security note is about) — just the
       # terminal result envelope (is_error, duration_ms, num_turns, total_cost_usd, modelUsage, and any
       # error text it carries), which is diagnostic, not transcript.
+      #
+      # …EXCEPT IT WAS THE TRANSCRIPT (#3229, 2026-09-17). That claim was written against the shape
+      # docs/LESSONS.md quotes — a single result object. The file is actually the whole stream-json
+      # conversation as a JSON array, so `cat` had been dumping full session transcripts into the
+      # logs of a public repo since this step landed. `--envelope` prints what the paragraph above
+      # promises and nothing else, on every input shape.
       - if: always() && steps.build.outcome == 'failure'
         name: Surface the swallowed Claude result on failure
-        run: |
-          echo "::group::Claude execution result (the action hides this by default)"
-          cat /home/runner/work/_temp/claude-execution-output.json 2>/dev/null || \
-            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
-          echo "::endgroup::"
+        run: node scripts/moneypenny/session-cost.mjs --envelope
 
       # THE COST METER (#2946). The step above prints the result envelope ONLY on failure, so the
       # expensive path — a session that ran to completion — was the unmeasured one. That is why a
@@ -456,24 +458,23 @@ jobs:
       #
       # One line per session, on every outcome. The ::notice:: makes it greppable in the run log;
       # the step summary row aggregates all matrix legs into a single per-tick table, which is the
-      # view that answers "what did this push cost" without opening a job. Cheap enough to be
-      # unconditional — it is a jq read of a file the CLI already wrote.
+      # view that answers "what did this push cost" without opening a job.
+      #
+      # IT SHIPPED AS FOUR `jq -r '.total_cost_usd'` READS AND FAILED ALL 12 LEGS IT EVER RAN ON
+      # (#3229, 2026-09-17). Same wrong shape as the step above: the file is a stream-json ARRAY, so
+      # every read exited 5 ("Cannot index array with string") and, because this step is
+      # `if: always()`, a METERING read marked six finished research sessions as failed jobs. The
+      # quiet half: the spend circuit breaker greps this very line to total the rolling window, so
+      # while the meter was dead every window summed to $0.00 and the dollar cap could not trip.
+      # The decision moved to a specced script (workflow-lint skips `run:` block scalars wholesale
+      # — bash in a workflow is unspecced by construction, the standing rule since 2026-08-22), and
+      # that script is total: it exits 0 on every input, because a meter observes a job rather than
+      # gating it. EVENT_ID rides in env, not `${{ }}` interpolation into shell.
       - if: always()
         name: Record this session's cost
-        run: |
-          F=/home/runner/work/_temp/claude-execution-output.json
-          ID='${{ matrix.event.id }}'
-          if [ ! -f "$F" ]; then
-            echo "::notice::cost — event=$ID no execution-output.json (died before Claude Code ran)"
-            echo "- \`$ID\` — no result envelope (died before Claude Code ran)" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          COST=$(jq -r '.total_cost_usd // "?"' "$F")
-          TURNS=$(jq -r '.num_turns // "?"' "$F")
-          MS=$(jq -r '.duration_ms // "?"' "$F")
-          ERR=$(jq -r '.is_error // "?"' "$F")
-          echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
-          echo "- \`$ID\` — **\$$COST** · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EVENT_ID: ${{ matrix.event.id }}
+        run: node scripts/moneypenny/session-cost.mjs
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
