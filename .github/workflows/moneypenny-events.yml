@@ -468,10 +468,20 @@ jobs:
             echo "- \`$ID\` — no result envelope (died before Claude Code ran)" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          COST=$(jq -r '.total_cost_usd // "?"' "$F")
-          TURNS=$(jq -r '.num_turns // "?"' "$F")
-          MS=$(jq -r '.duration_ms // "?"' "$F")
-          ERR=$(jq -r '.is_error // "?"' "$F")
+          # RESULT_FILTER: the action's execution-output.json is the Agent SDK's full streamed
+          # message array, not a single object — the terminal envelope (total_cost_usd, num_turns,
+          # duration_ms, is_error) lives on the last `type: "result"` element. Discovered 2026-09-17:
+          # `.total_cost_usd` on the array itself failed every real session with `jq: Cannot index
+          # array with string`, so this step had NEVER successfully recorded a cost line on success
+          # since #2979 landed — the exact blind spot #2979 was meant to close. The `if type=="array"`
+          # guard also tolerates a future format reverting to a bare object without crashing the step
+          # again; each read falls back to "?" on any jq error rather than failing the step (`|| echo
+          # "?"`) — a missing number here should degrade the notice, never abort the workflow.
+          RESULT_FILTER='if type=="array" then ([.[] | select(.type=="result")] | last // {}) else . end'
+          COST=$(jq -r "$RESULT_FILTER | .total_cost_usd // \"?\"" "$F" 2>/dev/null || echo "?")
+          TURNS=$(jq -r "$RESULT_FILTER | .num_turns // \"?\"" "$F" 2>/dev/null || echo "?")
+          MS=$(jq -r "$RESULT_FILTER | .duration_ms // \"?\"" "$F" 2>/dev/null || echo "?")
+          ERR=$(jq -r "$RESULT_FILTER | .is_error // \"?\"" "$F" 2>/dev/null || echo "?")
           echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
           echo "- \`$ID\` — **\$$COST** · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
 
