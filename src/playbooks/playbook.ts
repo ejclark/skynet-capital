@@ -24,6 +24,17 @@
  * byte-for-byte unchanged. `PlaybookEvent` is deliberately minimal (symbol + a detection
  * timestamp) so playbook.ts never has to import a specific signal source's module — an
  * event-driven play's own file narrows/consumes it however that source's richer type needs to.
+ *
+ * PLAYBOOK ANATOMY (#3194, step 2 — additive-only): three optional fields staged for the
+ * graduated exit-safety and isolation work. None of them are read by any runtime path yet —
+ * `desiredState`/`playbookIntents` above are unchanged — so a playbook that omits all three
+ * behaves byte-for-byte as it does today. `horizon` names how long a play's edge is expected to
+ * hold (short-horizon plays should tolerate less drawdown before exiting; long-horizon plays
+ * tolerate more) and `exitSafety` is the one common dial shape every playbook will eventually
+ * fill in rather than inventing its own — both stay inert until the step-4 opt-in wiring reads
+ * them. `derivesFrom` is the sole declared exception to decision isolation (a playbook whose
+ * logic is explicitly built on another's) — also unread until an isolation audit exists to
+ * check it (step 3).
  */
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
@@ -31,6 +42,26 @@ import type { MarketContext, OrderIntent, PlaybookMode, Portfolio } from "../dom
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
+
+/**
+ * How long a playbook's edge is expected to hold. Drives the graduated exit-safety dial
+ * (#3194): short-horizon plays trip their exit stage on a tighter bar, long-horizon plays on a
+ * looser one — same mechanism, different thresholds, never a bespoke exit path per playbook.
+ * Unread by any runtime path as of #3194 step 2.
+ */
+export type PlaybookHorizon = "short" | "medium" | "long";
+
+/**
+ * The one exit-safety schema every playbook fills in, rather than inventing its own shape
+ * (#3194). `drawdownTripPct` is the peak-to-trough drawdown, as a fraction of the play's own
+ * equity contribution, that trips the exit stage; `mode` lets the play's own account owner
+ * downgrade enforcement to a notification without disabling the detector. Unread by any runtime
+ * path as of #3194 step 2 — wiring lands in step 4, opt-in per playbook.
+ */
+export interface ExitSafetyDial {
+  readonly drawdownTripPct: number;
+  readonly mode: "enforce" | "alert-only";
+}
 
 /**
  * The event-driven counterpart to a calendar entry: some external source (today, a news hit;
@@ -65,6 +96,16 @@ export interface Playbook {
     calendar: readonly EarningsPrint[],
     events?: readonly PlaybookEvent[],
   ): DesiredState;
+  /** Optional — see the Playbook Anatomy module doc above. Absent means "no horizon declared,"
+   *  which behaves identically to today (no exit-safety wiring reads this yet). */
+  readonly horizon?: PlaybookHorizon;
+  /** Optional — see the Playbook Anatomy module doc above. Absent means no exit-safety dial is
+   *  configured; a playbook with no dial cannot opt into step 4's auto-exit wiring. */
+  readonly exitSafety?: ExitSafetyDial;
+  /** Optional — the sole declared exception to decision isolation (#3194): the id of the
+   *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
+   *  for every playbook today). Unverified by any audit until step 3. */
+  readonly derivesFrom?: string;
 }
 
 /** A playbook enabled in a specific mode — the unit the runner iterates. */
