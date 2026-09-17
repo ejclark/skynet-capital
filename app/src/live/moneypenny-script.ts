@@ -29,7 +29,7 @@ const ASK = "any immediate questions or support items? just ask.";
 const STEER_SETUP =
   "i see your alpaca paper account isn't connected yet — that's the first step of onboarding. want a hand setting it up?";
 const STEER_TRADE_OPEN =
-  "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — we confirm with alpaca before any fill.";
+  "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — it confirms with alpaca before any fill.";
 const STEER_TRADE_CLOSED =
   "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
 
