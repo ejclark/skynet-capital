@@ -112,7 +112,7 @@ function OutpostPage(): ReactElement {
       rail={
         <>
           <p className="rail-label">Trading</p>
-          <Link to="/trade">The ticket</Link>
+          <Link to="/trade">Trade</Link>
           <span className="rail-current" aria-current="page">
             Trading Outpost
           </span>

@@ -19,14 +19,14 @@ export function MemberRow({ member }: { readonly member: ShelfMember }): ReactEl
         </span>
         {member.desk ? (
           <Link to="/u/$id" params={{ id: member.desk.id }} className="cx-go">
-            {member.desk.name}'s desk →
+            {member.desk.name}'s account →
           </Link>
         ) : member.href ? (
           <a className="cx-go" href={member.href}>
             the study behind it →
           </a>
         ) : member.kind === "persona" ? (
-          <span className="cx-absent">no desk is running this today</span>
+          <span className="cx-absent">no account is running this today</span>
         ) : null}
       </div>
       <p className="cx-thesis">{member.thesis}</p>

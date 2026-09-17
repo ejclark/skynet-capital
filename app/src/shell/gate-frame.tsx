@@ -26,8 +26,8 @@ export function GateHead({
 export function DisarmNote(): ReactElement {
   return (
     <p className="gate-note">
-      Editing the ticket re-arms this gate, and the desk re-checks the live account at submit —
-      approval never outlives the thing it approved.
+      Editing the order re-arms this gate, which re-checks the live account at submit — approval
+      never outlives the thing it approved.
     </p>
   );
 }

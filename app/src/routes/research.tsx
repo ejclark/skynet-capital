@@ -290,13 +290,13 @@ function ResearchPage(): ReactElement {
   if (research.isPending)
     return (
       <PageFrame>
-        <p className="note">Opening the shelf…</p>
+        <p className="note">Opening Research…</p>
       </PageFrame>
     );
   if (research.isError)
     return (
       <PageFrame>
-        <p className="note">The research shelf is unreachable.</p>
+        <p className="note">Research is unreachable.</p>
       </PageFrame>
     );
 
@@ -362,7 +362,7 @@ function ResearchPage(): ReactElement {
       <header className="page-header">
         <h1>Research</h1>
         <p>
-          The living shelf: pick a lens and a span on the horizon, a name, or type a filter —
+          The living board: pick a lens and a span on the horizon, a name, or type a filter —
           everything below follows. Documents open on their own pages.
         </p>
       </header>

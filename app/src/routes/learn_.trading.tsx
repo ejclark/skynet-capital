@@ -41,15 +41,15 @@ function TradingLadderPage(): ReactElement {
         <div className="join-eyebrow">Milestone M·02 · Trading progression</div>
         <h1>One fill unlocks the next rung</h1>
         <p>
-          Progress is proven by <b>fills, never checkboxes</b> — the desk watches your real paper
-          trades. Level 100 is open from the start; every course above unlocks the one below it, so
-          you always know what you're working toward.
+          Progress is proven by <b>fills, never checkboxes</b> — your account watches your real
+          paper trades. Level 100 is open from the start; every course above unlocks the one below
+          it, so you always know what you're working toward.
         </p>
       </header>
       {!data.linked ? (
         <p className="note">
-          Milestones light up from orders you fill on your own desk — this session isn't linked to
-          an account yet, so the ladder shows from the start.
+          Milestones light up from orders you fill yourself — this session isn't linked to an
+          account yet, so the ladder shows from the start.
         </p>
       ) : null}
       {data.gate ? <LadderGateCard note={data.gate.note} /> : null}

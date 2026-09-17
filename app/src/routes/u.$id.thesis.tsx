@@ -15,13 +15,13 @@ function ThesisPage(): ReactElement {
   if (desk.isPending)
     return (
       <PageFrame>
-        <p className="note">Reading the desk…</p>
+        <p className="note">Reading the account…</p>
       </PageFrame>
     );
   if (desk.isError)
     return (
       <PageFrame>
-        <p className="note">This desk is unreachable.</p>
+        <p className="note">This account is unreachable.</p>
       </PageFrame>
     );
 
@@ -33,7 +33,7 @@ function ThesisPage(): ReactElement {
         <p>The standing call, the track record, and an honest health read.</p>
       </header>
       {d.kind !== "bot" ? (
-        <p className="note">{d.name} is a human desk — a thesis is a bot's standing call.</p>
+        <p className="note">{d.name} is a human account — a thesis is a bot's standing call.</p>
       ) : (
         <ThesisDrawer id={d.id} />
       )}

@@ -32,7 +32,7 @@ export function MilestoneRow({
       </span>
       {!milestone.earned && milestone.ticket ? (
         <a className="ms-go" href={milestone.ticket}>
-          open the ticket →
+          open Trade →
         </a>
       ) : null}
       <span className="ms-pts num">+{milestone.points}</span>

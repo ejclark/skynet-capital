@@ -98,8 +98,7 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
 
 function GateStatus({ state }: { readonly state: GateState }): ReactElement | null {
   if (state.step === "draft") return null;
-  if (state.step === "reviewing")
-    return <GateHead tone="checks">Reviewing against the desk…</GateHead>;
+  if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
   if (state.step === "reviewed" || state.step === "submitting")
     return (
       <>
@@ -127,7 +126,7 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
     );
   return (
     <>
-      <GateHead tone="refused">The desk refused at submit</GateHead>
+      <GateHead tone="refused">The gate refused at submit</GateHead>
       <div className="gate-body">
         {state.result.refusals.map((refusal) => (
           <p key={refusal} className="gate-row gate-refusal">

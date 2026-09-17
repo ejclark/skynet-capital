@@ -24,14 +24,14 @@ export interface IntroContext {
 }
 
 const WHO =
-  "Moneypenny · hi, I'm Moneypenny — your assistant on the desk. ask me questions any time, report a bug and it gets fixed, suggest an enhancement or a new feature and it gets built.";
+  "Moneypenny · hi, I'm Moneypenny — your assistant here. ask me questions any time, report a bug and it gets fixed, suggest an enhancement or a new feature and it gets built.";
 const ASK = "any immediate questions or support items? just ask.";
 const STEER_SETUP =
   "i see your alpaca paper account isn't connected yet — that's the first step of onboarding. want a hand setting it up?";
 const STEER_TRADE_OPEN =
-  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — the desk confirms with alpaca before any fill.";
+  "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — we confirm with alpaca before any fill.";
 const STEER_TRADE_CLOSED =
-  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
+  "your account is connected — the last step is your first trade. open Trade and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
 
 export const SETUP_PATH = [
   "Moneypenny · the short path: create a free account at alpaca.markets → switch it to Paper Trading → increase the paper balance to $1,000,000 → generate api keys → paste the key and secret on the onboarding page. the step-by-step cards live there, with links.",
@@ -48,7 +48,7 @@ export const FB_OPEN =
 export const FB_QUESTION =
   "Moneypenny · got it. one question — where in the app does this bite you, and what would a good outcome look like?";
 export const NUDGE =
-  "Moneypenny · i can help you get set up, explain the desk, answer questions, or file your feedback. tell me what's on your mind — or tap a suggestion below.";
+  "Moneypenny · i can help you get set up, explain how it works, answer questions, or file your feedback. tell me what's on your mind — or tap a suggestion below.";
 export const FEEDBACK_OFF =
   "Moneypenny · feedback isn't switched on in this deployment yet — ask Eric to set the feedback token. your note wasn't sent.";
 
@@ -78,12 +78,12 @@ export function chipsFor(state: {
       { label: "Walk me through my first trade", msg: "Walk me through my first trade" },
       FILE_CHIP,
     ];
-  return [{ label: "How am I doing?", msg: "How am I doing on the desk?" }, FILE_CHIP];
+  return [{ label: "How am I doing?", msg: "How am I doing on my account?" }, FILE_CHIP];
 }
 
 export const HI_AGAIN = "Moneypenny · hi again.";
 export const CHAT_DOWN =
-  "Moneypenny · i couldn't reach the desk just now — say that again in a moment and i'll pick it up.";
+  "Moneypenny · i couldn't reach your account just now — say that again in a moment and i'll pick it up.";
 export const DRAFT_DROPPED = "Moneypenny · dropped — nothing was filed.";
 
 /** A failed live answer, in the failure's own words when it has any (the throttle's, the
@@ -188,4 +188,4 @@ export const OPS_LINE = "sauron·ops · triaged · on the build queue. watch the
 /** The desk's own word the moment a member has said anything to her — the ladder gate's whole
  *  bar (Eric's 2026-09-03 ruling): a message opens trading, no filing required. */
 export const MESSAGE_OPS_LINE =
-  "sauron·ops · logged: trading milestone M·02 is now unlocked on your desk. buy your first stock (rung 101) to get moving.";
+  "sauron·ops · logged: trading milestone M·02 is now unlocked on your account. buy your first stock (rung 101) to get moving.";

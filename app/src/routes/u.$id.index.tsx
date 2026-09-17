@@ -90,13 +90,13 @@ function DeskPage(): ReactElement {
   if (desk.isPending)
     return (
       <PageFrame>
-        <p className="note">Reading the desk…</p>
+        <p className="note">Reading the account…</p>
       </PageFrame>
     );
   if (desk.isError)
     return (
       <PageFrame>
-        <p className="note">This desk is unreachable — {String(desk.error)}</p>
+        <p className="note">This account is unreachable — {String(desk.error)}</p>
       </PageFrame>
     );
   const { desk: d, generatedAt, landmark } = desk.data;
@@ -121,7 +121,7 @@ function DeskPage(): ReactElement {
         <LandmarkHero name={d.name} power={landmark.power} health={landmark.health} />
       ) : null}
       {d.error ? (
-        <p className="note-stop">Account unreachable — this desk can't read positions right now.</p>
+        <p className="note-stop">Account unreachable — positions can't be read right now.</p>
       ) : (
         <>
           <DeskTilesGrid tiles={d.tiles} />
@@ -137,7 +137,7 @@ function DeskPage(): ReactElement {
           <span>
             <strong>New trade</strong>
             <span className="trade-link-sub">
-              Open the trade ticket — the gate reviews before anything is sent
+              Open Trade — the gate reviews before anything is sent
             </span>
           </span>
           <span className="trade-link-arrow" aria-hidden="true">

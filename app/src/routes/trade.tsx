@@ -251,14 +251,14 @@ function TradePage(): ReactElement {
     <>
       <p className="rail-label">Trading</p>
       <span className="rail-current" aria-current="page">
-        The ticket
+        Trade
       </span>
       <hr />
       <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
       <hr />
       {activeDesk ? (
         <Link to="/u/$id" params={{ id: activeDesk }}>
-          ← Back to the desk
+          ← Back to account
         </Link>
       ) : (
         <Link to="/leaderboard" search={{ by: "equity" }}>
@@ -272,8 +272,8 @@ function TradePage(): ReactElement {
       <header className="page-header">
         <h1>Trade</h1>
         <p>
-          Paper account · the gate reviews every ticket before anything is sent, and the desk
-          re-checks the live account at submit.
+          Paper account · the gate reviews every order before anything is sent, and re-checks the
+          live account at submit.
         </p>
       </header>
       {settings.isLoading ? null : accounts.length === 0 ? (

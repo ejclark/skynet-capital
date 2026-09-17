@@ -64,7 +64,7 @@ function OpsPanel({
           <span className="ops-row-detail">
             {live
               ? `This page is current — ${stream}.`
-              : "This page is catching up with the desk; numbers may be a beat behind."}
+              : "This page is catching up; numbers may be a beat behind."}
           </span>
         </li>
         {view?.available

@@ -280,7 +280,7 @@ function PlaybookStorePage(): ReactElement {
         </p>
       ) : (
         <p className="note">
-          Viewing the catalog — subscribing is only available on your own desk.
+          Viewing the catalog — subscribing is only available on your own account.
         </p>
       )}
       <div className="pb-deck">

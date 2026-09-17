@@ -270,7 +270,7 @@ function CockpitBody({
       />
     );
   }
-  if (desks.isPending) return <p className="note">Reading the desk…</p>;
+  if (desks.isPending) return <p className="note">Reading accounts…</p>;
   if (desks.isError) return <p className="note">This account is unreachable.</p>;
   if (!desks.data) return <p className="note">No data.</p>;
   if (section === "positions") return <PositionsSection desks={desks.data} />;

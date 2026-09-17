@@ -99,7 +99,7 @@ export function ThesisDrawer({ id }: { readonly id: string }): ReactElement {
     return (
       <p className="note">
         {thesis.data.kind === "human"
-          ? "A human desk has no persona thesis to show."
+          ? "A human account has no persona thesis to show."
           : "No thesis data is wired in this deployment."}
       </p>
     );
