@@ -42,7 +42,14 @@
  * preset, several bundled dials, which also brands down for a playbook's AUTHOR what to weight
  * at each point on the spectrum (aggressive optimizes for letting a winner run; conservative
  * optimizes for capital preservation) instead of leaving size and exit risk to drift
- * independently. Still inert until the step-4 opt-in wiring reads it.
+ * independently.
+ *
+ * STEP 4 — THE MECHANISM IS NOW LIVE, OPT-IN PER PLAYBOOK/MODE. `exitSafetyIntents` (below) reads
+ * `exitSafety` and can, for the FIRST time in this rollout, autonomously close a position — but
+ * only for a playbook+mode pair that actually declares a dial. `S1_NVDA`, `G1_GOOG`, and
+ * `TACO_DJT` declare none as of this step, so this PR changes zero live behavior; opting one in
+ * is deliberately left to its own follow-up PR, gated by the characterization specs proving every
+ * OTHER playbook stays untouched (#3194's step-1 safety net, still doing its job).
  */
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
@@ -110,8 +117,8 @@ export interface Playbook {
    *  which behaves identically to today (no exit-safety wiring reads this yet). */
   readonly horizon?: PlaybookHorizon;
   /** Optional — see the Playbook Anatomy module doc above. Keyed by `PlaybookMode`, matching
-   *  `size` above: absent means no exit-safety dial is configured for that mode, and a playbook
-   *  with no dial for a mode cannot opt that mode into step 4's auto-exit wiring. */
+   *  `size` above: absent means no exit-safety dial is configured for that mode, and a mode with
+   *  no dial can never trip `exitSafetyIntents` below — this is opt-in, one mode at a time. */
   readonly exitSafety?: Readonly<Record<PlaybookMode, ExitSafetyDial>>;
   /** Optional — the sole declared exception to decision isolation (#3194): the id of the
    *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
@@ -123,6 +130,94 @@ export interface Playbook {
 export interface EnabledPlaybook {
   readonly playbook: Playbook;
   readonly mode: PlaybookMode;
+}
+
+/** One exit-safety dial crossing its trip line — reported whether or not it was enforced, so an
+ *  "alert-only" trip is still visible to a caller that wants to notify without acting. */
+export interface ExitSafetyTrip {
+  readonly playbookId: string;
+  readonly mode: PlaybookMode;
+  readonly symbol: string;
+  readonly drawdownPct: number;
+  readonly drawdownTripPct: number;
+  readonly enforcement: "enforce" | "alert-only";
+}
+
+/**
+ * Drawdown from the position's own cost basis — NOT a true peak-to-trough (this engine keeps no
+ * price-history state per position, only the account-wide equity samples `equityDrawdown`
+ * consumes for the observatory). For a position that has only ever lost ground since entry,
+ * `avgPrice` already IS its peak, so this is the honest, state-free proxy: how far the current
+ * price has fallen below what the play paid. A position that ran up first and gave some back
+ * before this check ever ran would read a smaller number than a true peak-to-trough would —
+ * documented here rather than silently assumed.
+ */
+function positionDrawdownPct(avgPrice: number, currentPrice: number): number {
+  if (avgPrice <= 0) {
+    return 0;
+  }
+  return Math.max(0, (avgPrice - currentPrice) / avgPrice);
+}
+
+/**
+ * Graduated exit-safety (#3194 step 4): for every enabled playbook+mode that declares an
+ * `exitSafety` dial, checks whether its held position's drawdown from cost basis has crossed
+ * `drawdownTripPct`. `enforcement: "enforce"` trips return a scoped, full-quantity sell intent —
+ * the position's own safety net firing, independent of the playbook's own thesis for the cycle;
+ * `enforcement: "alert-only"` trips return no intent, but the trip is still reported in `trips`
+ * so a caller can notify without acting. A playbook/mode with no `exitSafety` entry can never
+ * appear in either list — this is opt-in, and every playbook today declares none.
+ *
+ * Priced conservatively: drawdown is measured against the quote's `bid` (what a sell would
+ * actually realize), never `last` or `ask`.
+ */
+export function exitSafetyIntents(
+  enabled: readonly EnabledPlaybook[],
+  context: MarketContext,
+  portfolio: Portfolio,
+): { readonly intents: readonly OrderIntent[]; readonly trips: readonly ExitSafetyTrip[] } {
+  const intents: OrderIntent[] = [];
+  const trips: ExitSafetyTrip[] = [];
+  for (const { playbook, mode } of enabled) {
+    const dial = playbook.exitSafety?.[mode];
+    if (!dial) {
+      continue;
+    }
+    const held = heldQuantity(portfolio, playbook.symbol);
+    const position = portfolio.positions.find((p) => p.symbol === playbook.symbol);
+    const quote = context.quotes[playbook.symbol];
+    if (held <= 0 || !position || !quote) {
+      continue;
+    }
+    const drawdownPct = positionDrawdownPct(position.avgPrice, quote.bid);
+    if (drawdownPct < dial.drawdownTripPct) {
+      continue;
+    }
+    trips.push({
+      playbookId: playbook.id,
+      mode,
+      symbol: playbook.symbol,
+      drawdownPct,
+      drawdownTripPct: dial.drawdownTripPct,
+      enforcement: dial.enforcement,
+    });
+    if (dial.enforcement === "enforce") {
+      intents.push({
+        symbol: playbook.symbol,
+        side: "sell",
+        quantity: held,
+        type: "market",
+        reason:
+          `${playbook.id} exit-safety trip (${mode}): drawdown ` +
+          `${(drawdownPct * 100).toFixed(1)}% ≥ ${(dial.drawdownTripPct * 100).toFixed(1)}% cap`,
+        playbookId: playbook.id,
+        playbookMode: mode,
+        // A safety trip IS the time-critical case, same as force-flatten's own urgent claim.
+        urgent: true,
+      });
+    }
+  }
+  return { intents, trips };
 }
 
 /** Shared helper for date-keyed windows: days to the symbol's next print, entry-eligible only if confirmed. */
@@ -144,6 +239,10 @@ export function printWindow(
  * First-cut ownership rule (documented, deliberate): a symbol managed by an enabled playbook is
  * managed ONLY by that playbook — the decorator (`withPlaybooks`) suppresses the base persona's
  * intents on playbook symbols so two decision-makers never fight over one position.
+ *
+ * Exit-safety trips (#3194 step 4) run FIRST and take priority: a tripped, enforced symbol gets
+ * its scoped flatten intent and is skipped by the desired-state logic below for this cycle — the
+ * safety net overrides the playbook's own thesis rather than competing with it for the same sell.
  */
 export function playbookIntents(
   enabled: readonly EnabledPlaybook[],
@@ -152,8 +251,13 @@ export function playbookIntents(
   calendar: readonly EarningsPrint[],
   events: readonly PlaybookEvent[] = [],
 ): OrderIntent[] {
-  const intents: OrderIntent[] = [];
+  const { intents: safetyIntents } = exitSafetyIntents(enabled, context, portfolio);
+  const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
+  const intents: OrderIntent[] = [...safetyIntents];
   for (const { playbook, mode } of enabled) {
+    if (trippedSymbols.has(playbook.symbol)) {
+      continue;
+    }
     const state = playbook.desiredState(context.asOf, calendar, events);
     const held = heldQuantity(portfolio, playbook.symbol);
     const quote = context.quotes[playbook.symbol];
