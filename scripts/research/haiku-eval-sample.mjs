@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 // Sampling harness for the Haiku/Sonnet adequacy eval — S5 in #2946's plan, slice 1 of #3264.
 //
-// Ground truth is the 66 completed research docs (docs/research/events/*.md) that already carry
-// a `## Outcome` section — a close-out scored the doc's Opus-era stance against what actually
+// Ground truth is the completed research docs (docs/research/events/*.md) that already carry a
+// `## Outcome` section — a close-out scored the doc's Opus-era stance against what actually
 // happened. Stratified by impact tier rather than a flat random sample because the pollution risk
 // Eric named ("bad research polluting data") bites hardest on high/critical events — those get
 // weighted up, not sampled down to match their smaller share of the corpus.
 //
-// This script only selects the sample; it does not run any model. Deterministic (seeded), so the
-// same seed reproduces the same list — the comparison table published on #3264 must be re-checkable,
-// not a one-off screenshot.
-import { readFileSync, readdirSync } from "node:fs";
+// This script only selects the sample; it does not run any model. The RNG is deterministic
+// (seeded), but the CORPUS is not — the event-research lane is live and keeps closing out new
+// events, so re-running this script later draws from a larger/different pool and produces a
+// different sample even at the same seed. The actual eval must run against the frozen list
+// committed alongside this script (docs/research/haiku-eval-sample-2026-09-17.json), not a fresh
+// re-run — otherwise the comparison table published on #3264 is not re-checkable against what the
+// eval actually scored.
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const EVENTS_DIR = join(process.cwd(), "docs/research/events");
@@ -24,7 +28,7 @@ function mulberry32(seed) {
     a |= 0;
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
@@ -59,7 +63,10 @@ function groundTruthEvents() {
 function main() {
   const events = groundTruthEvents();
   const byTier = {};
-  for (const e of events) (byTier[e.impact] ??= []).push(e);
+  for (const e of events) {
+    byTier[e.impact] ??= [];
+    byTier[e.impact].push(e);
+  }
 
   const rng = mulberry32(SEED);
   const sample = [];
