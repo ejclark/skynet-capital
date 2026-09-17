@@ -1,8 +1,8 @@
 # Retail Sales — advance monthly (Aug 2026 data) — retail-sales-2026-09-16
 
 **Kind:** macro-print · **Date:** 2026-09-16 (confirmed, CENSUS: census.gov/retail/release_schedule.html — 08:30 ET, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-09-16
-<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"high:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","treasury-20y-bond-2026-09-15"],"screenStreak":1} -->
+**Last assessed:** 2026-09-17
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"high:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-retail-sales-2026-09-18","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -557,9 +557,135 @@ intended. Nothing here licenses a position: the date is `confirmed`, the decisio
 | 2026-09-13 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 15.8 (-2.0pt since last), band unchanged (high:0+), 40 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-14 |
 | 2026-09-15 | D-1 | **The limit this doc has declared at nine consecutive pulses is closed, and the correction it prompted moves the band for the first time in five.** *(Why a session ran: two screens since the 09-10 pulse, so the staleness ceiling forces a real look regardless of readings — the intended design, and it caught both findings below.)* **(1) The August street consensus published, on the last day of its own window, and it is ABOVE this doc's arithmetic.** Since D-28 the honest-limits section has read "no August street consensus exists"; financecalendar put the window at **9/9–9/15** and D-7/D-6 found it empty on two aggregators. The week-ahead sheets now carry **headline +0.8% m/m, ex-autos +0.5%, ex-autos-and-gas +0.4%, core/control +0.4%**, with **Goldman Sachs at headline +0.6%, ex-autos +0.6%, ex-autos-and-gas +0.5%, core +0.6%**, against a July prior printed as **−0.6% / −0.3% / −0.2% / −0.4%** (zerohedge week-ahead, read today; the GS **core +0.6% vs consensus +0.4%** pair independently corroborated by a Yahoo Finance week-ahead preview, so the load-bearing number is two-sourced). **The standing kill switch — "a published August street consensus landing materially below ~+0.3% m/m" — resolved WITHOUT FIRING, by a factor of nearly three**, and the street landed on the same side of the argument as this doc rather than opposite it. Two notes against the record: the street's **−0.4%** core prior matches the press figure this doc carried at D-12 rather than the **−0.48%** it computed from Table 1 at D-8, so the ~0.1pp gap both rows recorded is still unresolved and the street uses the rounder number; and the naming is ambiguous in the source, which lists "ex-autos & gas +0.4%" and "core +0.4%" as separate lines while giving GS different values for each (+0.5% / +0.6%) — both are recorded rather than merged, because the Census control group strips food services too and the sheet does not say which measure it means. **Registers `FT-retail-sales-2026-09-16-5`:** the headline prints **below +0.8%** while still clearing **+0.3%** — the first prediction in this file the street would score wrong, since a ~+0.72pp band at zero demand is what dollars-up/units-flat predicts and consensus adds ~a tenth of demand on top. **(2) The gas leg's seasonal netting had the wrong SIGN, and correcting it raises the band to ~+0.72pp.** D-8 recorded a "methodology correction against this doc's own favour": net out the **median +0.26%** of EIA's raw Jul→Aug moves for 2021–25 (+0.70 · −12.81 · +6.76 · −2.73 · +0.26) on the theory the adjustment absorbs a typical seasonal *rise*, and carry ~**+0.23pp**. BLS publishes the gasoline index both adjusted and unadjusted, so the factor is observable rather than inferable; fetched from **api.bls.gov** today (HTTP 200, series `CUSR0000SETB01` / `CUUR0000SETB01`): **SA 332.215 → 345.169 = +3.899%**, **NSA 350.846 → 359.738 = +2.534%**. The adjustment therefore **ADDS ~1.33pp** — August gasoline normally *falls* ~1.3% seasonally — where this doc subtracted. The D-8 sample was not wrong, only summarized wrongly: its **mean is −1.564%**, within ~0.25pp of BLS's fitted factor, while the **median +0.26%** sits on the other side of zero from both. At the flat gallons measured at D-6, the gas leg is **3.90% × 7.84% ≈ +0.31pp** and the headline band **~+0.72pp**, up from ~+0.65pp. **The control group is untouched at +0.76pp**, because gasoline is stripped from it — so this widens the gap between the two measures rather than lifting both, and it is the first time in five pulses the band has moved at all. Three limits kept in view: BLS's factor is fitted to gasoline *price* and Census's to gas-station *dollars* (direction and rough magnitude, not an identity); **EIA's raw +3.20% and BLS's NSA +2.534% disagree by 0.67pp on the same month** — different sampling, recorded and not reconciled; and applying BLS's factor to EIA's raw would give ~+4.5%, so **+0.31pp is the conservative end**. **FT-…-4's +2.0% bar stands as registered** (append-only) but now asks for ~half the leg's implied ~+3.9% instead of two thirds of ~+2.9% — noted at the switch so a +2.1% print reads as the weak pass it would be. **(3) Macro — the fork resolved hawkish and this print now arrives after the decision, not before it.** CPI **09-11** printed **core +0.3% m/m / 2.4% y/y** and **headline +0.4% / 3.4%**, against a book priced **65%** on core +0.2%; the sibling [`cpi-2026-09-11`](cpi-2026-09-11.md) close-out scores it and notes hike-25 went **64.3% → 86.5%** on Polymarket in two sessions. As of **09-14**: **91.4%** futures-derived (centralbank.watch, "Last updated: September 14, 2026", fed funds 3.63%, cut **0.0%**, and ~**56bp** of tightening priced across the next three meetings) and **84.1%** CME FedWatch. CPI's own **gasoline +3.9% SA** — "over one third of the monthly all items increase" — is a **third agency reading the same August energy month**, after EIA (retail +3.2%) and PPI (wholesale energy +4.2%, diesel +24.1%), and it is the same 3.9% figure finding (2) rests on. **Discarded as stale/undated:** a search summary attributed **Kalshi 57%** and **Polymarket 49%** with no current timestamp, flatly contradicted by two 09-14-stamped sources above and traceable to Yahoo articles headlined "surpass 50%" and "surge over 60%" from earlier in the cycle — not carried. Eighth aggregator/staleness catch in this doc. **(4) Rates, vol, tape.** Treasury's own daily CMT curve, fetched direct: **09-14 → 2Y 4.65 · 10Y 4.97 · 30Y 5.34**, against **09-10 → 4.56 · 4.95 · 5.37**. The **front end** carries the move (**+9bp** on the 2Y) while the long end is flat-to-lower — the shape of a hike being paid for, not a term-premium event. The 10Y **touched 5.012% intraday on 09-14**, its highest since October 2023, before closing 4.97. **VIX 17.10** at the 09-14 close (Cboe's own `VIX_History.csv`, fetched direct) against **15.84** at the 09-13 screen and **17.84** on 09-10 — **+1.26** since the last probe-ref, inside the 3-point threshold; the intervening path 17.84 → 15.84 → 17.10 is the round trip through CPI. Equities 09-14: S&P **7,619.98** (−0.48%), Nasdaq **26,186.41** (−0.56%), Dow **52,421.20** (−0.29%), the decline led by CAT −4.23%, GS −3.99% and **NVDA −3.26%** on an AI-capability-slowdown call — a tracked-name move with no channel to this print, recorded so it is not later read as consumer news. **Redbook cooled: 8.3% y/y in early September** (released 09-09) from the **9.6%** this doc has carried since D-8 — the first newer weekly reading confirmable, and it is **September** data that does not touch the August arithmetic, but it retires the 9.6% figure rather than letting it stand unrefreshed. **(5) Peers / dual-exposed names.** No consumer prints. **AAPL**'s iPhone 18 line reaches retail ~**9/18**, after this print — still a December-quarter ASP story. **AMZN** is finding (6). **(6) Corridor: unchanged at 40 ids, strong set unchanged at 4** (`cpi-2026-09-11`, `fomc-2026-09-16`, `opex-2026-09-18`, `treasury-20y-bond-2026-09-15`) — the first pulse in this doc's life where the corridor did not grow. **Blocked source recorded in this row's probe-ref:** vantagemarkets.com's week-ahead (403). **New dated adjacency found → proposed in this PR, and it carries a finding of its own.** The load-bearing distortion in this entire document is an Amazon scheduling decision — the summer Prime Day moving July→June, worth the **+0.41pp / +0.76pp** nonstore unwind that is two thirds of the base case — and **Amazon's schedule has never been on this calendar**. Four Census retail prints are tracked and the quarterly e-commerce report was added at D-7; the event that *moves* the series was invisible. `amzn-prime-big-deal-days-2026-10-06` proposed `status: estimate` (`EST:`), read from **aboutamazon.com's own newsroom** fetched today: "48 hours of Prime member-exclusive deals across more than 35 categories" starting **October 6**, drops at "midnight, 8 a.m., and 1 p.m. PDT", 22 countries including the US; secondaries dated today (nbcnews, today.com, 9to5toys, gsmarena) put the window at 12:01 a.m. PT **Oct 6** to 11:59 p.m. **Oct 7**. Filed `estimate` on the same two counts as `costco-q4-fy2026-2026-09-24` and `retail-ecommerce-q3-2026-11-19`: one primary page read against the two the `advance-services-q3-2026-11-19` precedent requires, and this lane's standing bar on self-confirming an in-sweep discovery. **The finding: the FALL event does not distort.** Prime Big Deal Days ran **2025-10-07/08** (aboutamazon.com's own 2025 post, read today) and runs **2026-10-06/07** — one day apart, both squarely inside October in both years — so unlike the summer event there is **no cross-month base effect**, and [`retail-sales-2026-11-17`](retail-sales-2026-11-17.md) inherits the clean nonstore comparison this doc has never had. The Prime artefact that has dominated 28 days of this ledger is a **summer-only phenomenon**, not a standing feature of the series. Filed `kind: sector`, `low` impact, `symbols: ["AMZN"]`, and **not** added to `src/domain/earnings-calendar.ts`, a file this lane may not edit. **Considered and declined, so their absence reads as a decision:** Amazon's Q3 earnings date was not on any primary read this session and is not filed on a pattern; NRF's holiday forecast has no pinned 2026 date; Redbook is a standing weekly with no discrete date; and the Census retail complex is already tracked end to end. | See Stance sharpening (2026-09-15) above — the nine-pulse consensus limit is closed and its kill switch resolved without firing (street +0.8% headline / +0.4% core vs this doc's ~+0.72pp band); the gas leg's D-8 seasonal netting is shown to have the wrong sign against BLS's own SA/NSA gasoline pair (+3.90% vs +2.534%), raising the leg to ~+0.31pp and the headline band to ~+0.72pp with the control group unchanged at +0.76pp; CPI 09-11 printed core +0.3% and the decision is priced at 84–91% hike. Guard unchanged and now trivially so. Registers **FT-…-5**. | 2026-09-16 (high, 0–7d band: every 1d — the print itself) |
 | 2026-09-16 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 17.2 (+0.1pt since last), band unchanged (high:0+), 43 adjacent event(s) tracked, new in corridor since last pulse: `house-vote-ratepayer-protection-act-2026-09-17`, `japan-cpi-2026-09-18`, `jpx-market-closure-2026-09-21` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-17 |
+| 2026-09-17 | D+1 (close-out) | **Close-out — scored from the Census primary re-fetched direct (PDF, `marts_current.pdf`), Treasury's daily par-yield CSV, and federalreserve.gov's statement, caches busted first.** August advance retail & food services printed **+1.2% m/m SA** ($773.9B; July revised **−0.6% → −0.5%**) against a street consensus of **+0.8%**. Control group (headline − autos − building materials − gasoline − food services, same construction as every prior row) computed **+1.36%** ($416,300M → $421,968M) against a **+0.4%** street core; nonstore **+2.6%** ($137,772M → $141,339M, fully restoring and then some the $3,148M June gap this doc modeled at +0.41pp); gasoline stations **+3.1%** ($60,455M → $62,303M). **All four mechanical-band tests passed and the one directional bet against the street failed:** the headline printed *above* +0.8%, not below it — the named kill condition for **FT-…-5** — meaning the "dollars-up/units-flat, zero demand" band (~0.72pp) undersold demand by roughly half a point, more than the street itself did. Same-day: FOMC raised 25bp to 3.75–4.00% (12-0, federalreserve.gov primary), as priced; Treasury curve 09-14→09-16 **1Yr +8bp · 2Yr +9bp · 5Yr +6bp · 10Yr +4bp · 30Yr +1bp** (short-end-led, a policy-path repricing); VIX **17.10 → 17.20**, flat. Equities (press-sourced, not this doc's instrument): S&P −0.45%, Dow −1.21%, Nasdaq −0.01% — Dow underperformed Nasdaq despite the "duration hurts most" framing, flagged honestly rather than claimed as confirmation. Full detail in `## Outcome` below. | — (closed; the registered guard stands as written — no rate-duration entries into the 9/16 session, none taken) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-17, D+1 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode
+carries no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design; cache bust run
+regardless, per the lane's standing instruction — nothing was in it). "Re-run instrument data" here
+means: the release itself re-fetched direct from `census.gov/retail/marts/www/marts_current.pdf`
+today (HTTP 200, all three tables), Treasury's daily par-yield-curve CSV direct, and the Fed's own
+statement text at `federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm`. Press
+(CNBC/Yahoo Finance/Whatfinger/Brisk Markets/The Motley Fool) used only for reaction narration and
+the street-consensus cross-check, each claim dated — and one aggregator (gokhshtein.com, headline
+"0.7% vs 0.3% consensus", a 2Y yield of 5.12%, "odds pushed into 2025") was **discarded**: every
+figure in it conflicts with the Census primary and the Treasury CSV, and "into 2025" is impossible
+for a document dated 2026-09-16. The exact staleness trap this doc has warned about since D-28.
+
+### What printed — verified at the Census primary, cross-checked against two independent press reports that agree
+
+| Line (SA m/m) | Aug 2026 | Jul 2026 (revised) | Street consensus | Read |
+|---|---|---|---|---|
+| **Headline** | **+1.2%** ($773,947M) | −0.5% (was −0.6%) | +0.8% (GS +0.6%) | **beat the street by 0.4pp** |
+| Ex-autos | +1.4% | −0.2% | +0.5% (GS +0.6%) | beat |
+| Ex-autos-and-gas | +1.2% | −0.3% | +0.4% core (GS +0.6%) | beat |
+| **Control group** (computed) | **+1.36%** ($421,968M) | $416,300M (base) | +0.4% | **beat by ~1pp** |
+| Nonstore retailers | +2.6% ($141,339M) | −1.7% | — (this doc's own +1.5% bar) | cleared with room |
+| Gasoline stations | +3.1% ($62,303M) | −0.2% | — (this doc's own +2.0% bar) | cleared |
+
+Census's own text, verbatim, so no later reading can drift: *"advance estimates of U.S. retail and
+food services sales for August 2026 … were $773.9 billion, up 1.2 percent (±0.4 percent) from the
+previous month."* The control-group figure is this doc's own construction (headline − motor
+vehicle & parts − building materials & garden equipment − gasoline stations − food services &
+drinking places), the same arithmetic FT-…-1 registered and the same one that self-checked against
+the report's own subtotals in July; Census does not publish a "control group" line.
+
+**The unrounded headline is +1.24pp, not +1.20pp** ((773,947−764,462)/764,462), which matters here
+only as a sanity check, not a rounding-cusp story the way CPI's 0.29 was — the print cleared every
+threshold in this doc by a wide enough margin that the second decimal changes no verdict.
+
+### Forward tests, scored
+
+| Test | Bar | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (control group) | ≥ 0.0% m/m | **+1.36%** | **PASSED** |
+| FT-…-2 (headline mechanical floor) | ≥ +0.3% m/m | **+1.2%** | **PASSED** |
+| FT-…-3 (nonstore unwind) | ≥ +1.5% m/m | **+2.6%** | **PASSED** |
+| FT-…-4 (gasoline, BLS-corrected leg) | ≥ +2.0% m/m | **+3.1%** | **PASSED** |
+| FT-…-5 (headline **below** street's +0.8%, above +0.3%) | < +0.8% AND ≥ +0.3% | **+1.2%** | **KILLED** — printed *at or above* +0.8%, the named kill condition, verbatim |
+
+**Four mechanical legs held; the one bet against the street's own number is the one this doc lost —
+and it lost in the direction that indicts the framing, not just the number.** FT-1 through FT-4 test
+whether the "dollars-up/units-flat" arithmetic (nonstore reverting, gasoline repricing, demand flat
+to negative) was internally consistent; it was, comfortably, on every leg. FT-5 was this doc's one
+genuinely distinguishing claim — the single row (2026-09-15, D-1) where it disagreed with the street
+rather than merely refining its own math — and it is the row that was wrong. The mechanical band this
+doc carried into the print (~+0.72pp, corrected only the day before from the D-8 gas-leg sign error)
+assumed **zero** organic demand. The actual print exceeded that band by roughly **+0.5pp** —
+$773,947M is 1.24% above July, against a band that predicted ~0.72% from pure mix/price effects
+alone. That +0.5pp is real demand, and it is larger than the ~0.1pp of demand the street's own +0.8%
+forecast embedded. **The corrected D-15 gas-leg sign fix (this doc's own methodology repair, made one
+day before the print) was right in direction and still not enough**: it moved the band from ~0.65pp
+to ~0.72pp, and the print still cleared the repaired band by two-thirds of a point. Nonstore alone
+(+2.6% vs the +1.5% bar built to require "most, not all, of the unwind") accounts for a chunk of
+that — $141,339M is **above** June's pre-Prime-Day level ($140,047M) that this doc treated as the
+generous end of the restoration, not the base case.
+
+### Same-day context — FOMC, rates, vol
+
+**The Fed hiked 25bp to 3.75–4.00%, unanimously, exactly as priced** (federalreserve.gov primary,
+fetched direct today): *"The Committee decided to raise the target range for the federal funds rate
+by 1/4 percentage point to 3-3/4 to 4 percent"* (12–0). The Fed's own SEP showed a median dot for
+at least one more hike in 2026 (press-relayed, not this doc's primary read — the FOMC's own ledger,
+`fomc-2026-09-16.md`, owns that close-out and is not touched here). Retail sales landing hot 5.5
+hours before a hike that was already ~9-in-10 priced changed nothing about *whether* the Fed moved —
+the "This week" horizon call (decision already made, no new entries) holds regardless of which way
+the morning print broke, and it broke the hawkish way.
+
+| Tenor | 09-14 | 09-15 | 09-16 | Δ 09-14→09-16 |
+|---|---|---|---|---|
+| 1 Yr | 4.37 | 4.39 | 4.45 | **+8bp** |
+| 2 Yr | 4.65 | 4.67 | 4.74 | **+9bp** |
+| 5 Yr | 4.80 | 4.83 | 4.86 | +6bp |
+| 10 Yr | 4.97 | 5.00 | 5.01 | +4bp |
+| 30 Yr | 5.34 | 5.36 | 5.35 | +1bp |
+
+(Treasury's daily par-yield-curve CSV, fetched direct today.) **Short-end-led, front-loaded into the
+09-16 print-and-decision session** — the same "policy-path repricing" shape the sibling `cpi-2026-09-11`
+close-out found on its own print. VIX **17.10 (09-14) → 17.20 (09-16)**, essentially flat — no vol
+regime shift despite a hot print stacked on a delivered hike, consistent with both outcomes having
+been priced well before the session (hike odds were already 91.4%/84.1% at D-1).
+
+**Equities, press-sourced (Yahoo Finance / The Motley Fool, dated 2026-09-16) — not this doc's own
+instrument, and the one place the sensitivity ranking gets a partial, honest miss.** S&P 500 **−0.45%**
+to 7,551; Dow **−1.21%** to 51,462; Nasdaq **−0.01%** to 25,978 (essentially flat). The D-28 ranking
+named CRWV and the high-multiple semis as most exposed to a hawkish combination on the duration
+channel, with mega-caps comparatively insulated — at the **index** level that predicts Nasdaq
+underperforming Dow, and it printed the other way round. No single-name data is available in
+macro-print mode (`symbols: []`, no instrument re-run) to say whether CRWV/semis specifically wore
+it as ranked; the index-level tape is recorded as a confound, the same honest treatment the CPI
+close-out gave its own mega-cap leg, not smoothed into a claim this doc cannot support.
+
+### Horizon calls, scored
+
+| Horizon | Call | Verdict |
+|---|---|---|
+| Today (D-1) | Stand aside — the nine-pulse consensus limit closed, for the doc | **Right, and free.** The named falsifier (headline below +0.3%) never had a chance to fire — it printed **four times** that floor. No capital was ever at risk on this row |
+| This week | The decision is made — no rate-duration entries into 9/16 | **SUPPORTED, and it held.** Falsifier (hike odds retreating below ~40% before 14:00 ET) never fired; the Fed hiked exactly as priced. The guard cost nothing and there was real duration pressure to avoid: the curve moved 4–9bp higher same-day |
+| This month | A firm print on both measures, **and below the street's +0.8%** | **Half right, and the half that discriminates is the half that lost.** "Firm on both measures" — true, by a wide margin (headline +1.2%, control +1.36%). "Below the street's +0.8%" — **false**, the print beat the street. FT-…-1's own negative-control-group kill never had a chance (control printed **positive** by 1.36pp); FT-…-5's kill fired instead |
+| This quarter | Watch — [`retail-sales-2026-10-15`](retail-sales-2026-10-15.md) inherits a bigger Brent move and the volume offset this print lacked | **Not scored here — forward-looking, carries to the successor ledger.** This close-out's finding sharpens it: if August's demand overshoot (the +0.5pp above the zero-demand band) persists rather than mean-reverting, September's print starts from a base that already beat consensus once |
+
+### What the guard cost, and what it bought
+
+Zero capital was deployed across the file's 29-day life; realized P&L is **zero**, the correct
+number for a stand-aside guard. The counterfactual it declined: any position sized around "soft
+retail, dovish relief" would have been wrong on the print **and** wrong on the decision, twice in
+one session; any position sized around "hot retail, duration pressure" would have been right on the
+print's *direction* but the guard's own falsifier for "This week" never gave it a reason to size one
+in — the decision was already paid for at D-1. The one place this file's own reasoning was wrong,
+not the market's, is FT-…-5: it read the street's +0.8% as pricing too much demand on top of a
+mechanical band; the print says the street, if anything, priced too little. **The rule this banks:**
+a mechanical "zero demand" band built from primaries is a floor, not a ceiling — this file spent five
+rows convinced its arithmetic was the generous read and the street was the aggressive one, and the
+tape put the street on the conservative side instead.
+
+**This document is now closed.** No trade was taken, none is authorized, and the guard registered
+into the print — stand aside, zero capital, no new rate-duration or AAPL/AMZN consumer-adjacent
+exposure sized around the release — stands as the final word on it.
