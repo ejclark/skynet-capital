@@ -36,6 +36,10 @@ public/tower.html
 # issue body as though it were design input.
 .DS_Store
 
+# Playwright MCP's own scratch output (page snapshots, console logs) — a debugging aid the tool
+# writes wherever it's invoked from, never project output.
+.playwright-mcp/
+
 # generated design-system bundle (scripts/design-cards.mjs) — regenerable, never committed
 .tmp-design-cards/
 .ds-sync/
