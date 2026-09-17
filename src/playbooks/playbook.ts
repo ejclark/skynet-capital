@@ -30,11 +30,19 @@
  * `desiredState`/`playbookIntents` above are unchanged — so a playbook that omits all three
  * behaves byte-for-byte as it does today. `horizon` names how long a play's edge is expected to
  * hold (short-horizon plays should tolerate less drawdown before exiting; long-horizon plays
- * tolerate more) and `exitSafety` is the one common dial shape every playbook will eventually
- * fill in rather than inventing its own — both stay inert until the step-4 opt-in wiring reads
- * them. `derivesFrom` is the sole declared exception to decision isolation (a playbook whose
- * logic is explicitly built on another's) — also unread until an isolation audit exists to
+ * tolerate more). `derivesFrom` is the sole declared exception to decision isolation (a playbook
+ * whose logic is explicitly built on another's) — unread until an isolation audit exists to
  * check it (step 3).
+ *
+ * `exitSafety` (Eric, 2026-09-17): `PlaybookMode` is already a PRESET, not just a sizing knob —
+ * `size` keys conservative/standard/aggressive to a bigger or smaller bet, and every other
+ * risk-shaping dial a playbook exposes should ride that same axis rather than invent a second
+ * one. So `exitSafety` is keyed by `PlaybookMode` exactly like `size`: "aggressive" pairs its
+ * bigger size with a looser stop, "conservative" pairs its smaller size with a tighter one — one
+ * preset, several bundled dials, which also brands down for a playbook's AUTHOR what to weight
+ * at each point on the spectrum (aggressive optimizes for letting a winner run; conservative
+ * optimizes for capital preservation) instead of leaving size and exit risk to drift
+ * independently. Still inert until the step-4 opt-in wiring reads it.
  */
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
@@ -52,15 +60,17 @@ type DesiredState = "long" | "flat" | "no-window";
 export type PlaybookHorizon = "short" | "medium" | "long";
 
 /**
- * The one exit-safety schema every playbook fills in, rather than inventing its own shape
- * (#3194). `drawdownTripPct` is the peak-to-trough drawdown, as a fraction of the play's own
- * equity contribution, that trips the exit stage; `mode` lets the play's own account owner
- * downgrade enforcement to a notification without disabling the detector. Unread by any runtime
+ * The one exit-safety schema every playbook fills in per `PlaybookMode`, rather than inventing
+ * its own shape (#3194). `drawdownTripPct` is the peak-to-trough drawdown, as a fraction of the
+ * play's own equity contribution, that trips the exit stage for THAT mode — a playbook's
+ * "aggressive" entry usually pairs a bigger `size` with a looser (higher) `drawdownTripPct`, and
+ * "conservative" the reverse. `enforcement` lets the play's own account owner downgrade THAT
+ * mode's enforcement to a notification without disabling the detector. Unread by any runtime
  * path as of #3194 step 2 — wiring lands in step 4, opt-in per playbook.
  */
 export interface ExitSafetyDial {
   readonly drawdownTripPct: number;
-  readonly mode: "enforce" | "alert-only";
+  readonly enforcement: "enforce" | "alert-only";
 }
 
 /**
@@ -99,9 +109,10 @@ export interface Playbook {
   /** Optional — see the Playbook Anatomy module doc above. Absent means "no horizon declared,"
    *  which behaves identically to today (no exit-safety wiring reads this yet). */
   readonly horizon?: PlaybookHorizon;
-  /** Optional — see the Playbook Anatomy module doc above. Absent means no exit-safety dial is
-   *  configured; a playbook with no dial cannot opt into step 4's auto-exit wiring. */
-  readonly exitSafety?: ExitSafetyDial;
+  /** Optional — see the Playbook Anatomy module doc above. Keyed by `PlaybookMode`, matching
+   *  `size` above: absent means no exit-safety dial is configured for that mode, and a playbook
+   *  with no dial for a mode cannot opt that mode into step 4's auto-exit wiring. */
+  readonly exitSafety?: Readonly<Record<PlaybookMode, ExitSafetyDial>>;
   /** Optional — the sole declared exception to decision isolation (#3194): the id of the
    *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
    *  for every playbook today). Unverified by any audit until step 3. */
