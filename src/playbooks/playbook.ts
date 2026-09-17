@@ -117,9 +117,11 @@ export interface Playbook {
    *  which behaves identically to today (no exit-safety wiring reads this yet). */
   readonly horizon?: PlaybookHorizon;
   /** Optional — see the Playbook Anatomy module doc above. Keyed by `PlaybookMode`, matching
-   *  `size` above: absent means no exit-safety dial is configured for that mode, and a mode with
-   *  no dial can never trip `exitSafetyIntents` below — this is opt-in, one mode at a time. */
-  readonly exitSafety?: Readonly<Record<PlaybookMode, ExitSafetyDial>>;
+   *  `size` above, but PARTIAL on purpose (unlike `size`, which every playbook must fully
+   *  declare): absent means no exit-safety dial is configured for that mode, and a mode with no
+   *  dial can never trip `exitSafetyIntents` below — this is opt-in, one mode at a time, not a
+   *  playbook-wide switch. */
+  readonly exitSafety?: Readonly<Partial<Record<PlaybookMode, ExitSafetyDial>>>;
   /** Optional — the sole declared exception to decision isolation (#3194): the id of the
    *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
    *  for every playbook today). Unverified by any audit until step 3. */
