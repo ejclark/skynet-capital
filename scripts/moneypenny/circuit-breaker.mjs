@@ -56,9 +56,17 @@ export function loadBreakerConfig(file = CONFIG_FILE) {
 
 /** Real `gh` calls by default; every function below takes `exec` so specs can inject a fake one
  *  and never touch the network. Matches `child_process.execFileSync`'s signature — `(cmd, args,
- *  opts) => string` — so a fake is a drop-in, not a reinterpretation. */
+ *  opts) => string` — so a fake is a drop-in, not a reinterpretation.
+ *
+ *  maxBuffer is explicit at 64MB, not Node's 1MB default: `recentResearchSpend` calls `gh run
+ *  view --log` on real event-research runs, and one run's combined matrix-leg log routinely
+ *  exceeds 1MB (2026-09-17 — a real tick hit `spawnSync gh ENOBUFS` reading a run log the day
+ *  dispatch resumed, which correctly fail-closed per doctrine but then blocked every subsequent
+ *  tick for the rest of that run's rolling window). Fail-closed on an unreadable log is right;
+ *  fail-closed on a log that's merely large is a bug this raises the ceiling on, not a doctrine
+ *  change. */
 function defaultExec(cmd, args, opts) {
-  return execFileSync(cmd, args, { encoding: "utf8", ...opts });
+  return execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, ...opts });
 }
 
 /** Is the breaker CURRENTLY tripped? Reads a GitHub issue label, never a committed file (#915).
