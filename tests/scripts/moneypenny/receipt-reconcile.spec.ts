@@ -203,8 +203,16 @@ describe("the reads that feed it", () => {
   // manufactures the very duplicates the cleanup then has to close.
   it("gatherDeps pages the open-issue read instead of taking one 100-item page", () => {
     const src = readFileSync("scripts/moneypenny/index.mjs", "utf8");
-    expect(src).toMatch(/ghRestPaged\("issues\?state=open"\)/);
+    expect(src).toMatch(/MAX_TITLE_PAGES/);
     expect(src).not.toMatch(/ghRest\("issues\?state=open&per_page=100"\)/);
+  });
+
+  // One read, two consumers. A second paged pass over the same endpoint to pick up issue numbers
+  // would double the router's open-issue cost for one extra scalar per row.
+  it("feeds the dedupe and the reconcile pass from the same paged read", () => {
+    const src = readFileSync("scripts/moneypenny/index.mjs", "utf8");
+    expect(src).toMatch(/const openIssues = needsScan \? openIssueList\(\) : \[\];/);
+    expect(src).toMatch(/openEventReceipts: openIssues/);
   });
 
   // The stall audit and the reconcile must agree on what "outstanding" means, or a receipt gets

@@ -53,7 +53,7 @@ import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, ghRestPaged, sh, withRetry } from "./gh.mjs";
+import { ghRest, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -329,6 +329,48 @@ export function sweepShipped(readIssues, deps) {
   }
 }
 
+/** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967).
+ *
+ *  `routeSweep` dedupes its receipt issues against `openIssueTitles` — an exact-title match is the
+ *  ONLY thing standing between "one receipt per never-assessed event" and a fresh duplicate every
+ *  push. That list was a single un-paged `per_page=100` read, and this repo carries 403 open issues
+ *  (343 of them `event-research` receipts). So the dedupe could only see the newest 100: every
+ *  never-assessed event whose receipt had aged past that window got a SECOND receipt filed, then a
+ *  third. Measured on the day this landed: 50 duplicated receipt titles, `jobs-2027-04-02` among
+ *  them (#2859 on 09-09, #2967 on 09-15 — both stall-flagged, same event, same body).
+ *
+ *  Silent by construction, and self-feeding: each duplicate is one more open issue pushing the
+ *  window further past the receipts it was supposed to be checking.
+ *
+ *  Paged on the CORE bucket, per gh.mjs's own header — `MAX_TITLE_PAGES` bounds it so a repo that
+ *  somehow reaches thousands of open issues degrades to a partial dedupe rather than an unbounded
+ *  read. Same loop shape as latency-scan.mjs's `listLabeledIssues`, deliberately: one house
+ *  pattern for "page a REST list", not two.
+ *
+ *  NOT ALSO FIXED HERE, captured instead: `shippedSweep`'s `gh issue list --limit 100` is capped
+ *  the same way, so the close-shipped last mile reaches only 100 of 343 receipts. That one is
+ *  GraphQL, and its own comment records the day it exhausted the bucket outright (2026-08-26) —
+ *  paging it multiplies the single most expensive call in this router by ~3.4x. A rate-limit
+ *  trade-off is a judgment call, not a mechanical fix, so it is routed rather than guessed at.
+ *
+ *  Returns whole issues rather than bare titles (2026-09-18, #2969's repair lane): the dedupe reads
+ *  the title, `reconcileReceipts` needs the NUMBER to close one, and both want the same list on the
+ *  same push — so a second paged read would be the same call twice for one extra scalar. Paging
+ *  this one only stops NEW duplicates; closing the ones already filed is the other half, and it
+ *  cannot run off a list it can't see. */
+const MAX_TITLE_PAGES = 20;
+
+function openIssueList() {
+  const issues = [];
+  for (let page = 1; page <= MAX_TITLE_PAGES; page++) {
+    const batch = ghRest(`issues?state=open&per_page=100&page=${page}`);
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    issues.push(...batch.filter((i) => !i.pull_request));
+    if (batch.length < 100) break;
+  }
+  return issues;
+}
+
 function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
     let out;
@@ -397,13 +439,9 @@ function gatherDeps(ctx) {
     );
   };
   // REST, not `gh issue list --json title` (2026-08-26): a second GraphQL query, on every push, to
-  // read scalars REST hands over on the core bucket. PAGED since 2026-09-18 — the single
-  // `per_page=100` page this used to read covered 100 of 403 open issues, so the dedupe below
-  // stopped seeing most of the sweep's own receipts and reopened them; 108 of 343 open receipts
-  // were duplicates that loop had produced. One read serves both the dedupe and the reconcile pass.
-  const openIssues = needsScan
-    ? ghRestPaged("issues?state=open").filter((i) => !i.pull_request)
-    : [];
+  // read scalars REST hands over on the core bucket. One paged read serves both consumers — see
+  // `openIssueList`.
+  const openIssues = needsScan ? openIssueList() : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
     shippedEvents: needsScan ? shippedSweep("event-research") : [],

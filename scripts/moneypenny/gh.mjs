@@ -84,39 +84,3 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
   ]);
   return JSON.parse(out || "null");
 }
-
-/** Hard stop on the page walk. 100 pages × 100 items is far past anything this repo will hold, so
- *  hitting it means a caller is paginating something unbounded — which should be loud, not a
- *  silent infinite loop inside a workflow job. */
-const MAX_PAGES = 100;
-
-/**
- * THE SAME REST READ, BUT ALL OF IT.
- *
- * `ghRest` returns one page. Every list caller wrote `per_page=100` and treated the result as the
- * whole set, which was true right up until it wasn't: by 2026-09-18 this repo had 403 open issues,
- * so `gatherDeps`'s receipt-dedupe set covered a quarter of them and the sweep reopened receipts it
- * already had — which grew the open count, which shrank the visible fraction, which produced more
- * duplicates. 108 of the 343 open `[event-research]` receipts were that loop's output.
- *
- * Paginating is cheap here and only here: REST is the plentiful core bucket (5,000/hr), so five
- * pages costs five of it. Do NOT reach for this on a GraphQL path — `gh issue list --json` is
- * scored by COST, and walking pages of nested closing-PR references is exactly the draw that
- * exhausted the GraphQL ceiling on 2026-08-26 and stopped the whole lane.
- *
- * A truncation-safe walk, not a `Link`-header parse: stop on a short page, which is what "no next
- * page" means for every list endpoint this calls.
- */
-export function ghRestPaged(path, opts = {}) {
-  const perPage = 100;
-  const sep = path.includes("?") ? "&" : "?";
-  const all = [];
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const batch = ghRest(`${path}${sep}per_page=${perPage}&page=${page}`, opts);
-    if (!Array.isArray(batch))
-      throw new Error(`ghRestPaged: ${path} page ${page} returned a non-array — refusing to guess`);
-    all.push(...batch);
-    if (batch.length < perPage) return all;
-  }
-  throw new Error(`ghRestPaged: ${path} exceeded ${MAX_PAGES} pages — refusing an unbounded walk`);
-}
