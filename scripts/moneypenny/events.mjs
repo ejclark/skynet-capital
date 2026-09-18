@@ -87,9 +87,129 @@ export function routeSweep(deps) {
     const title = `[event-research] ${e.id}`;
     if (queued.has(title)) continue;
     queued.add(title);
-    intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
+    intents.push({
+      kind: "open-issue",
+      label: LABELS.event,
+      title,
+      body: eventIssueBody(e),
+    });
   }
-  return [...intents, ...routeShipped(deps)];
+  return [...intents, ...routeReceipts(deps), ...routeShipped(deps)];
+}
+
+/** How many receipts one push may close. Not a spend gate like the dispatch cap — a rate one: each
+ *  close is two `gh` mutations, and a 343-issue backlog in a single tick is the shape of the
+ *  2026-08-26 bucket exhaustion. Hard-coded rather than a budget file because nothing about it is
+ *  a policy choice Eric would ever want to tune. */
+const CLOSES_PER_TICK = 40;
+
+/** The event id a receipt issue tracks — `[event-research] <id>` is the title the sweep writes
+ *  above, and the only contract between an issue and the ledger file it is a receipt for. */
+export const receiptEventId = (title) => {
+  const hit = /^\[event-research\]\s+(\S+)\s*$/.exec(String(title ?? ""));
+  return hit ? hit[1] : undefined;
+};
+
+/**
+ * RECONCILE THE RECEIPTS against ground truth on disk — the close half the dispatch lane never had.
+ *
+ * A receipt issue is opened when an event is `never-assessed` and due, and the ONLY thing that
+ * ever closed one was `close-shipped`: a merged PR carrying `Closes #N`. Two holes followed from
+ * that, and by 2026-09-18 they had left 343 open `event-research` issues covering 234 distinct
+ * events (#2970):
+ *
+ *   1. SHIPPED BUT NEVER CLOSED. 199 of those 234 ids already had `docs/research/events/<id>.md`
+ *      on main. `close-shipped` reads `closedByPullRequestsReferences` through the scarce GraphQL
+ *      bucket, capped at 100 issues, so it could not see the older two thirds at all — and the
+ *      research PR only ever carries the link if the session happened to know the issue number.
+ *      The LEDGER FILE is the better oracle: it is the deliverable the issue asks for, it is on
+ *      disk in the very checkout this runs from, and reading it costs nothing.
+ *
+ *   2. OBSOLETE, AND NOTHING COULD EVER CLAIM IT. The research horizon (#2946/#2971, landed
+ *      2026-09-15) made `--due` skip anything past `horizon.maxDaysOut`. Every receipt already
+ *      open for an event that fell outside it was orphaned the same day — no ledger, never due
+ *      again, so no matrix leg will ever pick it up and no merged PR will ever close it. #2970's
+ *      own event, `jobs-2027-11-05`, is D-413: it does not re-enter the horizon until 2027-09-06.
+ *      Closing is SAFE rather than lossy precisely because the pipeline is level-based: when the
+ *      event comes back inside the horizon it is `never-assessed` and due again, and the loop
+ *      above files a fresh receipt. The same branch covers an event dropped or re-dated out of
+ *      the calendar, and a close-out that aged past `closeOutWithinDays`.
+ *
+ * Pure, and deliberately conservative: an id that is still in `--due` is left ALONE whatever else
+ * is true of it — deferral behind the dispatch cap must never read as obsolescence, which is why
+ * events.mjs caps AFTER `--due` rather than inside it. An unparseable title is left alone too.
+ *
+ * THROTTLED, OLDEST FIRST. Each close costs two `gh` mutations (comment, then close) on the same
+ * scarce bucket the 2026-08-26 outage exhausted, and the backlog this lands against is 343 issues
+ * — 686 mutations on one push. `CLOSES_PER_TICK` drains it over a handful of pushes instead, which
+ * costs nothing because the sweep is level-based: whatever it does not close this tick is still
+ * open, still reconcilable, and first in line next time. Ascending issue number so the drain order
+ * is deterministic and starts with the oldest receipts, the ones that have been lying the longest.
+ *
+ * @param deps.openEventReceipts  `[{ number, title, hasLedger }]` — every open `event-research`
+ *                                issue, with the disk check joined in by `gatherDeps` so this
+ *                                stays fixture-drivable.
+ * @param deps.dueEventIds        ids `event-scan --due` currently returns.
+ * @param deps.closesPerTick      the throttle, injectable so specs can pin it.
+ */
+export function routeReceipts(deps = {}) {
+  const { openEventReceipts = [], dueEventIds = [], closesPerTick = CLOSES_PER_TICK } = deps;
+  const due = new Set(dueEventIds);
+  const intents = [];
+  const oldestFirst = [...openEventReceipts].sort((a, b) => (a?.number ?? 0) - (b?.number ?? 0));
+  for (const receipt of oldestFirst) {
+    const id = receiptEventId(receipt?.title);
+    if (!id) continue;
+    const researched = Boolean(receipt.hasLedger);
+    if (!researched && due.has(id)) continue;
+    intents.push({
+      kind: researched ? "close-researched" : "close-obsolete",
+      issueNumber: receipt.number,
+      title: receipt.title,
+      eventId: id,
+      body: researched ? researchedBody(id) : obsoleteBody(id),
+    });
+  }
+  if (intents.length <= closesPerTick) return intents;
+  console.error(
+    `::notice::receipt reconciliation — closing ${closesPerTick} of ${intents.length} resolvable ` +
+      `event-research receipts this tick (two gh mutations each); the rest ride the next push.`,
+  );
+  return intents.slice(0, closesPerTick);
+}
+
+function researchedBody(id) {
+  return [
+    `✅ **Researched** — \`docs/research/events/${id}.md\` is on \`main\`, which is the deliverable this receipt asked for.`,
+    "",
+    "Closing on the ledger rather than on a `Closes #` link: that link only fires when the research",
+    "session happened to know this issue's number, and the sweep that checked for it could only see",
+    "the newest 100 open issues. The file on disk is the thing that actually proves the work landed.",
+    "",
+    "Pulse checks from here are the push-driven sweep's job — they need no open receipt.",
+    "",
+    "— Moneypenny",
+    "",
+    FOOTER,
+  ].join("\n");
+}
+
+function obsoleteBody(id) {
+  return [
+    `🌅 **Out of scope, not dropped** — \`${id}\` is no longer due for research, and no ledger was ever produced.`,
+    "",
+    "The usual cause is the research horizon (#2946/#2971): `event-scan --due` skips anything further",
+    "out than `assessment-cadence.json`'s `horizon.maxDaysOut`, so this receipt was left with nothing",
+    "able to claim it — no matrix leg will dispatch it and no PR will ever close it. An event dropped",
+    "or re-dated off the calendar, or a close-out aged past `closeOutWithinDays`, lands here too.",
+    "",
+    "Nothing is lost by closing: the pipeline is level-based. The day this event comes back inside the",
+    "horizon it reads as `never-assessed` and due again, and the sweep files a fresh receipt for it.",
+    "",
+    "— Moneypenny",
+    "",
+    FOOTER,
+  ].join("\n");
 }
 
 /**

@@ -51,9 +51,9 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
-import { dueForResearch, routeSweep } from "./events.mjs";
+import { dueForResearch, receiptEventId, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -396,20 +396,44 @@ function gatherDeps(ctx) {
       },
     );
   };
+  // Every open issue, PAGINATED (#2970). The single `per_page=100` read this replaces was the
+  // dedupe key space for new receipts and the "is it already queued?" oracle — at 403 open issues
+  // it saw the newest quarter and the sweep re-filed receipts it already had open, up to 7 copies
+  // of one event. Titles only, on the core bucket: no per-item follow-up, so extra pages are ~free.
+  const openIssues = needsScan ? ghRestAll("issues?state=open").filter((i) => !i.pull_request) : [];
+  const dueEvents = needsScan
+    ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
+    : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
-    shippedEvents: needsScan ? shippedSweep("event-research") : [],
-    dueEvents: needsScan
-      ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
-      : [],
-    // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
-    // every push, to read one scalar field REST hands over on the core bucket.
-    openIssueTitles: needsScan
-      ? ghRest("issues?state=open&per_page=100")
-          .filter((i) => !i.pull_request)
-          .map((i) => i.title)
-      : [],
+    // `event-research` NO LONGER RIDES THE GRAPHQL SWEEP (#2970). Its close signal is now the
+    // ledger file on disk (`routeReceipts`), which is both a better oracle — it is the deliverable
+    // the receipt asks for, not a `Closes #` link a session had to remember to write — and free,
+    // where this sweep spent a capped-at-100 GraphQL query plus a per-issue re-check across what
+    // had grown to 343 open receipts. `routeShipped` keeps the parameter so its fixtures still
+    // drive it; nothing populates it.
+    shippedEvents: [],
+    dueEvents,
+    openIssueTitles: openIssues.map((i) => i.title),
+    // The close half, joined here (impure) so `routeReceipts` stays pure and fixture-drivable:
+    // which open receipts already have their ledger on `main`. `existsSync` against this very
+    // checkout — the workflow runs on the pushed commit, so the file is there the moment the
+    // research PR merges.
+    openEventReceipts: openIssues
+      .filter((i) => (i.labels ?? []).some((l) => (l.name ?? l) === LABELS.event.name))
+      .map((i) => ({
+        number: i.number,
+        title: i.title,
+        hasLedger: ledgerExists(receiptEventId(i.title)),
+      })),
+    dueEventIds: dueEvents.map((e) => e.id),
   };
+}
+
+/** Is this event's ledger on disk? The one impure half of the receipt reconciliation (#2970).
+ *  Same cwd-relative path `audit.mjs` already checks — the workflow runs from the repo root. */
+function ledgerExists(id) {
+  return Boolean(id) && existsSync(`docs/research/events/${id}.md`);
 }
 
 function execute(intents) {
@@ -501,6 +525,34 @@ function commentAndFlagStall(i) {
   sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
   ensureLabel(LABELS.stall);
   sh("gh", ["issue", "edit", String(i.issueNumber), "--add-label", LABELS.stall.name]);
+}
+
+/**
+ * Close one event-research receipt (#2970), for the same reason `commentAndFlagStall` exists:
+ * inlining both arms in `executeOne` put its cognitive complexity back over budget.
+ *
+ * THE REASON CODE IS THE POINT. `completed` for a receipt whose ledger landed, `not planned` for
+ * one the research horizon put out of scope before anything could claim it — GitHub records
+ * nothing else about which of the two happened, and conflating them would make the closed queue
+ * overstate how much research actually shipped.
+ */
+function closeReceipt(i) {
+  const researched = i.kind === "close-researched";
+  sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+  sh("gh", [
+    "issue",
+    "close",
+    String(i.issueNumber),
+    "--reason",
+    researched ? "completed" : "not planned",
+  ]);
+  const why = researched
+    ? `ledger on main for ${i.eventId}`
+    : `${i.eventId} no longer due, no ledger`;
+  console.log(`::notice::closed #${i.issueNumber} — ${why}`);
+  return researched
+    ? `✅ closed #${i.issueNumber} — \`${i.title}\` has its ledger on \`main\``
+    : `🌅 closed #${i.issueNumber} — \`${i.title}\` left the research horizon unresearched`;
 }
 
 /**
@@ -613,6 +665,7 @@ function executeOne(i) {
     console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
     return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
   }
+  if (i.kind === "close-researched" || i.kind === "close-obsolete") return closeReceipt(i);
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
     console.log(

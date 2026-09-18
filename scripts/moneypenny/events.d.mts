@@ -28,3 +28,34 @@ export function dueForResearch<T extends DueEvent>(
   openPrHeads?: readonly string[],
   cap?: number,
 ): T[];
+
+/** One open `[event-research] <id>` issue, with the disk check for its ledger already joined in. */
+export interface EventReceipt {
+  readonly number: number;
+  readonly title: string;
+  readonly hasLedger: boolean;
+}
+
+/** An intent to close a receipt issue: `close-researched` (the ledger landed) or `close-obsolete`
+ *  (the event left the research horizon and nothing can ever claim it). */
+export interface CloseReceiptIntent {
+  readonly kind: "close-researched" | "close-obsolete";
+  readonly issueNumber: number;
+  readonly title: string;
+  readonly eventId: string;
+  readonly body: string;
+}
+
+/** The event id a `[event-research] <id>` title tracks, or `undefined` if the title is not one. */
+export function receiptEventId(title: unknown): string | undefined;
+
+/**
+ * Reconcile open receipt issues against ground truth (#2970): close the ones whose ledger is on
+ * disk, close the ones no longer in `--due` that never produced one, and leave every still-due
+ * receipt alone — deferral behind the dispatch cap must never read as obsolescence.
+ */
+export function routeReceipts(deps?: {
+  openEventReceipts?: readonly EventReceipt[];
+  dueEventIds?: readonly string[];
+  closesPerTick?: number;
+}): CloseReceiptIntent[];

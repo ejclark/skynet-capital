@@ -1,0 +1,37 @@
+{
+  "eventName": "push",
+  "actor": "ejclark",
+  "event": {},
+  "deps": {
+    "dueEvents": [],
+    "openIssueTitles": [],
+    "dueEventIds": ["pce-2026-09-30"],
+    "openEventReceipts": [
+      {
+        "number": 3093,
+        "title": "[event-research] japan-cpi-2026-09-18",
+        "hasLedger": true
+      },
+      {
+        "number": 2970,
+        "title": "[event-research] jobs-2027-11-05",
+        "hasLedger": false
+      },
+      {
+        "number": 2824,
+        "title": "[event-research] jobs-2027-11-05",
+        "hasLedger": false
+      },
+      {
+        "number": 3200,
+        "title": "[event-research] pce-2026-09-30",
+        "hasLedger": false
+      },
+      {
+        "number": 1234,
+        "title": "the login canvas flickers on resize",
+        "hasLedger": false
+      }
+    ]
+  }
+}

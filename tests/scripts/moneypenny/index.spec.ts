@@ -46,6 +46,18 @@ describe("moneypenny routing", () => {
     expect(dryRun("push-already-queued.json")).toHaveLength(0);
   });
 
+  it("the same push closes the receipts that shipped and the ones the horizon orphaned (#2970)", () => {
+    // The close half only reaches production through `route`, so the wiring gets a fixture too —
+    // `routeReceipts`' own edges live in receipts.spec.ts.
+    const intents = dryRun("sweep-receipts.json") as Intent[];
+
+    expect(intents.map((i) => [i.kind, i.issueNumber])).toEqual([
+      ["close-obsolete", 2824],
+      ["close-obsolete", 2970],
+      ["close-researched", 3093],
+    ]);
+  });
+
   it("an issue-label event has no router lane — the feedback claim is a workflow step, never a route", () => {
     // Labels reach the workflow (the feedback lane's claim step reads them there); route() itself
     // must stay silent so a label can never trigger sweep-side work by accident.

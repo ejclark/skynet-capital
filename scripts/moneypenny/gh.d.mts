@@ -12,3 +12,9 @@ export function withRetry<T>(
   },
 ): T;
 export function ghRest(path: string, opts?: { token?: string }): unknown;
+/** Every page of a REST list read, or a throw — never a silently truncated list (#2970).
+ *  `fetchPage` is the injectable page reader the specs drive instead of the network. */
+export function ghRestAll(
+  path: string,
+  opts?: { token?: string; fetchPage?: (path: string) => unknown },
+): unknown[];

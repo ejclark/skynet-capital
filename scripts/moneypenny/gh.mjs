@@ -84,3 +84,51 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
   ]);
   return JSON.parse(out || "null");
 }
+
+/** A page size big enough that the common case is one call, and the pagination cap that keeps a
+ *  runaway loop from spending the core bucket. 20 pages = 2,000 items; this repo's largest list
+ *  (open issues) sat at 403 on 2026-09-18. */
+const PAGE_SIZE = 100;
+const MAX_PAGES = 20;
+
+/**
+ * A GitHub REST read that returns EVERY page, not the first 100.
+ *
+ * WHY THIS EXISTS (2026-09-18, issue #2970). `gatherDeps` read `issues?state=open&per_page=100`
+ * and treated the result as "every open issue" — the set `routeSweep` dedupes new event receipts
+ * against, and the set the shipped sweep checks. This repo had 403 open issues, so ~75% of the
+ * dedupe key space was invisible: the sweep re-filed receipts it already had open (7 copies of
+ * `[event-research] fomc-blackout-start-2027-07-17`, 6 of `opex-2028-01-21`, 3 of
+ * `jobs-2027-11-05`) and never noticed the older ones whose work had shipped (199 of 234 distinct
+ * event ids had their ledger on disk with the receipt still open). A truncated list read as a
+ * complete one — the same "an unreadable dependency must never look like an empty one" class
+ * `gatherDeps` is fail-closed about, one step subtler because the list was not empty, just short.
+ *
+ * LOUD, NEVER TRUNCATED. Hitting `MAX_PAGES` throws rather than returning what it has: a silent
+ * cap is the very bug this replaces. Callers must be list reads whose per-item cost is zero —
+ * this is the plentiful core bucket, but a per-item GraphQL follow-up across every page is not
+ * (see `prIsMerged`'s note on the 2026-08-26 exhaustion).
+ *
+ * `fetchPage` is injected so the paging arithmetic — the part that was actually wrong — has specs
+ * that need no network, the same shape `resolveShipped` uses for its own impure lookups.
+ */
+export function ghRestAll(path, { fetchPage, ...opts } = {}) {
+  const read = fetchPage ?? ((p) => ghRest(p, opts));
+  const [route, query = ""] = String(path).split("?");
+  const params = new URLSearchParams(query);
+  params.set("per_page", String(PAGE_SIZE));
+  const items = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    params.set("page", String(page));
+    const batch = read(`${route}?${params}`);
+    if (!Array.isArray(batch))
+      throw new Error(`ghRestAll: ${route} did not return an array on page ${page}.`);
+    items.push(...batch);
+    if (batch.length < PAGE_SIZE) return items;
+  }
+  throw new Error(
+    `ghRestAll: ${route} still had pages after ${MAX_PAGES} (${items.length} items). Refusing to ` +
+      "return a truncated list — a short list that reads as a complete one is the bug this exists " +
+      "to prevent (#2970).",
+  );
+}
