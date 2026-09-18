@@ -71,6 +71,29 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **A positional nowcast "ladder" derived from a post-hoc subdivision of one archive, falsified on
+  its first out-of-sample instance (FT-housing-starts-2026-09-17-1)** — added 2026-09-18 from the
+  [housing-starts-2026-09-17 close-out](events/housing-starts-2026-09-17.md). Leg 2 of that
+  document's initial research (2026-09-06) subdivided the `housing-starts-2026-10-20` sibling's
+  in-quarter/post-quarter GDPNow-contribution split into three positions per nowcast quarter (R1/R2/R3
+  at 0.1020/0.0726/0.0250pp, n=48/47/48, monotone, p=0.038 and p<0.0001) and placed the 2026-09-17
+  vintage on the louder **R2** rung, predicting \|Δ residential\| ≥ 0.0250pp (the R3 rung's own
+  median — registered against the quiet rung, not a flattering one). The actual 2026-09-17 08:30
+  vintage moved residential by **0.01737pp** — below the floor, an R2 vintage landing in the R3 band.
+  **Why this is a clean kill and not bad luck: the test was written to be falsifiable at exactly this
+  bar, and the base rate it was scored against (77.1% of R2-solo vintages clear 0.0250pp) already
+  said roughly 1 in 4 would not — this was that one, on the very first live instance.** The two
+  controls that motivated the ladder (pooled non-starts and construction-spending vintages both
+  "hump" instead of declining monotonically) remain correctly measured; what breaks is the claim that
+  *this specific print* would land on the louder rung. **One detail that must travel with the kill:**
+  the parent stance — *stand aside, `symbols: []`, no instrument* — was never contingent on the
+  ladder and does not change; a killed nowcast-positioning test costs nothing because nothing was
+  risked on it. **What is still open:** `housing-starts-2026-10-20`'s own `FT-…-10-20-1` (scoring
+  2026-10-23) is the corridor's next live test of whether this is one miss or a pattern — the
+  archive it depends on (`GDPTrackingModelDataAndForecasts.xlsx`'s `ContribArchives` sheet) has not
+  extended past 2026-07-28 as of this kill, so that scoring session may hit the same staleness this
+  one worked around via the workbook's live `Contributions` sheet instead.
+
 - **An execution base rate built entirely under one cap, left unrevised once a later forward test
   in the same document found the mechanism was cover rather than cap identity
   (FT-treasury-buyback-7y10y-2026-09-17-2)** — added 2026-09-18 from the
