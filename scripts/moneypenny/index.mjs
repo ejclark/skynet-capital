@@ -51,9 +51,9 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
-import { dueForResearch, routeSweep } from "./events.mjs";
+import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -329,7 +329,8 @@ export function sweepShipped(readIssues, deps) {
   }
 }
 
-/** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967).
+/** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967) — and, since
+ *  #2968's reconcile, the receipt reconcile's eyes too. One read, both consumers.
  *
  *  `routeSweep` dedupes its receipt issues against `openIssueTitles` — an exact-title match is the
  *  ONLY thing standing between "one receipt per never-assessed event" and a fresh duplicate every
@@ -342,28 +343,24 @@ export function sweepShipped(readIssues, deps) {
  *  Silent by construction, and self-feeding: each duplicate is one more open issue pushing the
  *  window further past the receipts it was supposed to be checking.
  *
- *  Paged on the CORE bucket, per gh.mjs's own header — `MAX_TITLE_PAGES` bounds it so a repo that
- *  somehow reaches thousands of open issues degrades to a partial dedupe rather than an unbounded
- *  read. Same loop shape as latency-scan.mjs's `listLabeledIssues`, deliberately: one house
- *  pattern for "page a REST list", not two.
+ *  Paged on the CORE bucket, per gh.mjs's own header. The loop itself now lives in `ghRestAll`
+ *  rather than here (#2968, merged into #3269's fix): the receipt reconcile needs the same list
+ *  with `number` attached, and paging it twice would double the router's cheapest-but-not-free
+ *  read for no gain. One house pattern for "page a REST list", still — just hoisted to where the
+ *  other `gh` plumbing lives, beside `ghRest` itself.
+ *
+ *  ONE AMENDMENT TO #3269's CALL: the 20-page ceiling is now a hard error, not a silent partial.
+ *  Degrading protected against an unbounded read, which is right — but a partial dedupe is the
+ *  exact failure this function exists to end, and at 2,000 open issues we want a red run, not a
+ *  quieter version of the same bug. The reconcile below drains the queue to a handful, so the
+ *  ceiling should never be approached again; if it ever is, that is news.
  *
  *  NOT ALSO FIXED HERE, captured instead: `shippedSweep`'s `gh issue list --limit 100` is capped
- *  the same way, so the close-shipped last mile reaches only 100 of 343 receipts. That one is
- *  GraphQL, and its own comment records the day it exhausted the bucket outright (2026-08-26) —
- *  paging it multiplies the single most expensive call in this router by ~3.4x. A rate-limit
- *  trade-off is a judgment call, not a mechanical fix, so it is routed rather than guessed at. */
-const MAX_TITLE_PAGES = 20;
-
-function openTitles() {
-  const titles = [];
-  for (let page = 1; page <= MAX_TITLE_PAGES; page++) {
-    const batch = ghRest(`issues?state=open&per_page=100&page=${page}`);
-    if (!Array.isArray(batch) || batch.length === 0) break;
-    titles.push(...batch.filter((i) => !i.pull_request).map((i) => i.title));
-    if (batch.length < 100) break;
-  }
-  return titles;
-}
+ *  the same way. #2968's reconcile makes that moot for `event-research` — receipts now close
+ *  against the LEDGER on disk, which is both free and the correct oracle — so the sweep is no
+ *  longer run for that label at all. `feedback` keeps it, and keeps the cap: that one is GraphQL,
+ *  and its own comment records the day it exhausted the bucket outright (2026-08-26). */
+const openIssues = () => ghRestAll("issues?state=open").filter((i) => !i.pull_request);
 
 function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
@@ -432,16 +429,53 @@ function gatherDeps(ctx) {
       },
     );
   };
+  // REST, not `gh issue list --json title` (2026-08-26): a second GraphQL query, on every push, to
+  // read scalars REST hands over on the core bucket. Paged — see `openTitles` above for what the
+  // single-page version cost. Read ONCE here and shared, rather than paged a second time for the
+  // reconcile's sake.
+  const open = needsScan ? openIssues() : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
-    shippedEvents: needsScan ? shippedSweep("event-research") : [],
+    // `event-research` deliberately does NOT get the reference sweep any more (#2968). Its receipts
+    // are now closed by `routeReceipts` against the LEDGER on disk, which is both the correct oracle
+    // for this label and free — where this call spent the scarce GraphQL bucket to ask a question
+    // that had silently answered "nothing shipped" for 144 finished receipts.
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
-    // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
-    // every push, to read one scalar field REST hands over on the core bucket.
-    openIssueTitles: needsScan ? openTitles() : [],
+    openIssueTitles: open.map((i) => i.title),
+    openEventReceipts: needsScan ? readReceipts(open) : [],
   };
+}
+
+/**
+ * Join each open `[event-research]` receipt to the one fact that decides its fate: does its ledger
+ * exist on disk? Impure (it reads the checkout), so `routeReceipts` stays pure over plain data.
+ *
+ * FAIL CLOSED ON A MISSING LEDGER DIRECTORY. `existsSync` on a file under a directory that is not
+ * there returns false for every id, which would read as "none of these were ever researched" and
+ * close nothing — harmless — but the inverse assumption is one edit away from closing the entire
+ * queue on a checkout that never had `docs/`. Refusing outright is the same doctrine as
+ * `event-scan.mjs`'s "an unreadable input is an error, never an empty result".
+ */
+function readReceipts(openIssues) {
+  const dir = "docs/research/events";
+  if (!existsSync(dir))
+    throw new Error(
+      `moneypenny: ${dir} is missing from this checkout — refusing to judge receipts against a ` +
+        "ledger directory that is not there.",
+    );
+  const receipts = [];
+  for (const i of openIssues) {
+    const id = String(i.title ?? "").match(RECEIPT_TITLE_RE)?.[1];
+    if (!id) continue;
+    receipts.push({
+      number: i.number,
+      title: i.title,
+      hasLedger: existsSync(`${dir}/${id}.md`),
+    });
+  }
+  return receipts;
 }
 
 function execute(intents) {
@@ -644,6 +678,21 @@ function executeOne(i) {
     sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
     console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
     return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
+  if (i.kind === "close-receipt") {
+    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
+    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
+    sh("gh", [
+      "issue",
+      "close",
+      String(i.issueNumber),
+      "--reason",
+      i.closeReason,
+      "--comment",
+      i.body,
+    ]);
+    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
+    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
   }
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
