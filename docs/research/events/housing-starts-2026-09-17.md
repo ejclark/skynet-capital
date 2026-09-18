@@ -1,8 +1,8 @@
 # New Residential Construction (Building Permits, Housing Starts, Completions — August 2026 data) — housing-starts-2026-09-17
 
 **Kind:** macro-print · **Date:** 2026-09-17 (**confirmed**, `CENSUS:` four independent census.gov primaries — `economic-indicators/calendar-listview.html` row `A202609170830`/`A202608`, `construction/soc/schedule.html`'s row "August 2026 | September 17, 2026 | September 24, 2026", `construction/xls/historic_release_dates.xls`'s reference-2026-08 row, and release **CB26-127**'s own "Next Release: September 17, 2026"; all fetched direct 2026-09-06, promoted this session from the `EST:` proposal) · **Impact:** low
-**Last assessed:** 2026-09-13
-<!-- probe-ref: {"symbols":{},"vix":15.84,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":1} -->
+**Last assessed:** 2026-09-18
+<!-- probe-ref: {"symbols":{},"vix":15.44,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -503,6 +503,7 @@ entry, and there is no instrument to enter.
 |---|---|---|---|---|
 | 2026-09-06 | D-11 | **Initial research on an id that existed only as one proposal, and on an edition TWO siblings wrote off — the 12-17 lane as "not distinguishable", the 10-20 lane as "dirty". Both conclusions survive only partly, and the nowcast finding runs OPPOSITE to 10-20's: this print sits on a LOUDER rung than the number the corridor carries.** Canonical `src/domain/market-events/housing-starts-2026-09-17.json` written this session after reading the sole proposal (`from-construction-spending-2026-10-01`), now shadowed. **Leg 1 — the date, SUPPORTED and PROMOTED on FOUR census.gov primaries** (one more than any promotion this corridor has made): `economic-indicators/calendar-listview.html` (HTTP 200, 91,396 bytes, 179 rows) row "New Residential Construction … \| September 17, 2026 \| 8:30 AM \| August 2026", `A202609170830`/`A202608`; `construction/soc/schedule.html` (59,625 bytes) row "August 2026 \| September 17, 2026 \| September 24, 2026"; `construction/xls/historic_release_dates.xls` (55,808 bytes, 514 reference months 1984-01→2026-11) reference 2026-08 → NRC 2026-09-17; and **the standing release itself**, CB26-127 (`newresconst.pdf`, 322,067 bytes), whose front page reads "Next Release: September 17, 2026". `estimate`→**`confirmed`**, `EST:`→**`CENSUS:`** on the `durable-goods-2026-11-25` / `m3-full-report-2026-12-03` / `housing-starts-2026-10-20` precedent; corroborated by the Atlanta Fed `PostedUpdates` 2026-09-17 08:30 row reading "Housing starts" alone. It is the **12th** workday (the modal landing, 362 of 505) and **the only Census release that day**; 09-16 carries two. **Leg 2 — the nowcast, the sibling's STEP is a three-rung LADDER and this print is the middle rung.** The 10-20 lane offered a mechanism it explicitly refused to claim — "a post-quarter starts vintage delivers the quarter's third month into a nowcast that has already absorbed the first two … this session did not test that explanation". That mechanism predicts a gradient, and the archive has the structure to test it: starts vintages occupy exactly **three** positions per nowcast quarter and nothing else — **R1** (`dq` −45..−19, release months 02/05/08/11) n=**48** at **0.1020pp**, **R2** (`dq` −15..−5, months 03/06/09/12) n=**47** at **0.0726pp**, **R3** (`dq` +9..+57, months 01/04/07/10) n=**48** at **0.0250pp** — **monotone**, with p(R1 vs R2)=**0.0377** and p(R2 vs R3)**<0.0001** on 20,000-iteration permutations, and a within-in-quarter Spearman of **−0.272** (n=95). **Two controls both fail to reproduce the shape, which is the finding:** all non-starts vintages hump (0.0056 n=850 / 0.0105 n=247 / 0.0049 n=582, p(R1vR2)=**0.011**) and construction spending on its own three positions humps too (0.0369 n=36 / 0.0776 n=45 / 0.0632 n=43, p=**0.013** then p=0.247) — only starts declines throughout, and starts beats every other release at **every** rung. **`PostedUpdates` (16,944 bytes, 82 dated rows) places 2026-09-17 08:30 as a SOLO R2 vintage at `dq`=−13** — the LAST in-quarter starts vintage of 2026:Q3 — so the number to carry is **0.0726pp** pooled or **0.0650pp** on the tightest cut (R2+solo, n=35), **ABOVE** the corridor's unconditional 0.0609pp and ~**2.9×** the 10-20 figure; the sibling's "in-quarter 0.0869pp" is itself a blend of two rungs separated at p=0.038. Attribution is high but not perfect — R2-solo puts residential largest **33/35 = 94.3%** vs R3-solo's 35/35 and a **20.7%** base rate; the two misses are 2017-09-19 (shared with import/export prices) and **2021-09-21, solo and still led by PCE**. The **12** September starts vintages (2014-2025, every one an R2 at `dq` −9..−13) read a quieter **0.0448pp** with residential largest 10/12 but are **not distinguishable** from other R2 months (**p=0.139**), so the pooled figure is the honest one. **And this is the ladder's FIRST out-of-sample instance, scoring 2026-09-18 — 33 days before `FT-housing-starts-2026-10-20-1`.** Everything inherited reproduces exactly: 1,871 vintages 2014-05-01→2026-07-28 = **1,822** same-quarter deltas, starts n=**143** at **0.0609 vs 0.0058pp**, solo 96/100, base rate 20.7%, in/post 0.0869/0.0250 at 3.48×, pooled control 1.42× (p=0.057), construction spending flat (p=0.867). **Leg 3 — the tape, the edge REFUTED (reproduced) and "dirty" REFUTED as a description, though the exclusion stands for a better reason.** Base study reproduces the siblings to the digit from Census's own 514 dates: full-history ITB **0.575% vs 0.447%** (n=239, **p=0.0015**), XHB 0.544/0.441 (p=0.0055), SPY p=0.63, QQQ p=0.93; eras ITB **2006-09 1.104/0.766 (p=0.031)**, **2010-15 0.615/0.400 (p=0.0027)**, **2016-20 0.381/0.340 (p=0.50)**, **2021-26 0.543/0.486 (p=0.45)**, XHB the same shape — dead since 2015, n=124. **NEW SOURCE: 167 scheduled FOMC decision days 2006-2026 reconstructed from federalreserve.gov's own fifteen historical calendars plus `fomccalendars.htm`** (164,831 bytes). Each of this date's three supposed confounds, measured on release days: **session after an FOMC decision n=10, ITB 0.539% vs 0.576%, p=0.875**; **opex eve n=42, 0.565% vs 0.575%, p=0.936** (XHB p=0.184) — so the 12-17 lane's December-opex-eve finding does NOT generalise to opex eve as a class, tested directly rather than by the 10-20 lane's post-opex proxy; **September release days n=20, 0.346% vs 0.576%, p=0.205** and XHB 0.303/0.554 p=0.092 — *quieter*, with the within-September control agreeing (ITB p=0.326, XHB p=0.180). The day-after-FOMC widening IS real across all sessions (ITB 0.577 vs 0.451, XHB 0.610/0.440, SPY 0.390/0.274, QQQ 0.520/0.383, n≈163); it simply is not there in the ten-observation intersection. **What disqualifies 09-17 is CALIBRATION, not width:** the exact 2026 configuration (after-FOMC AND opex-eve) has occurred **7 times** — 2014-09-18 (0.00%), 2017-03-16 (0.34%), 2020-09-17 (1.66%), 2020-12-17 (1.40%), 2021-12-16 (0.52%), 2022-03-17 (0.09%), 2022-06-16 (2.80%), median 0.52% — clearing the corridor's **1.579%** bar **2 of 7 (28.6%)**, while the after-FOMC release set clears it **3 of 10 (30%)** against the **10%** a p90 implies (binomial **p≈0.07**), and the **2021-26** era that set the bar contributes **n=3**. So this morning's gap is uninformative in BOTH directions, is not a kill-switch observation, and **10-20 remains the clean instance** — the sibling's placement is right, its reason is not. Registered as `-3` with those base rates stated in advance. **Leg 4 — the CONTENT, the first leg in this corridor about what the print will SAY, and its own control drains it of meaning.** CB26-127 read from its own decompressed text: permits **1,443,000 (+5.0%** from revised June 1,374,000, +3.1% y/y), starts **1,239,000, −12.4% (±9.5%)** m/m and −13.5% (±11.0%) y/y, completions 1,212,000 (−9.1% (±10.2%)\* from revised June 1,333,000); Census's own footnote — "\* The 90 percent confidence interval includes zero" — applies to **3 of the 6** headline changes. FRED `HOUST` \|m/m\| over 10y (n=120) median **4.95%**, p75 9.85%, p90 **14.41%**, so July's −12.44% sits near the **85th percentile**. **Conditional base rate: after a m/m drop ≤ −10%, post-2010 starts are positive 15 of 17 (88.2%), median +8.35% — implying ≈1,342K — and 56 of 73 (76.7%) full-history, against 105/199 = 52.8% unconditional.** **The symmetric control kills the economic reading:** after a ≥+10% rise, post-2010 is negative **26 of 30 (86.7%)**, median **−8.56%**, and the lag-1 autocorrelation of m/m is **−0.406** (n=199) — mechanical reversion in a sample survey whose own interval is ±9.5%, reliable and economically empty. Registered as `-4` on exactly those terms, against the July figure **as published 2026-08-18** because FRED's series is the revised vintage. `PERMIT` is the quieter twin (median 3.20%, p90 8.24%) at −0.9%/−2.6%/+4.3% the last three months; `MORTGAGE30US` **6.71%** (2026-09-03). The 1,443-vs-FRED-1,433 permits discrepancy is reproduced and, as with the 10-20 lane, NOT fetched and NOT claimed — operationally, August's permits number printed 09-17 is revised **09-24**. **Leg 5 — the cliff, NOT a risk here:** 505 of 514 released the following month, **all 9** slips lapse-driven, deferral-and-merge not deletion (4 `Suspended` rows today, none this series); `government-funding-deadline-2026-09-30` is **AVERTED** (PL 119-103 through **2026-12-11**), putting this print **85 days** ahead of the successor cliff. **Adjacency sweep — peers:** n/a, `symbols: []`; ITB **93.91** / XHB **103.25** read as a class and as Leg 3's subject. **Macro:** unlike 10-20's empty corridor, this print is buried in the densest week tracked — CPI 09-11, buyback blackout 09-12, 20y bond 09-15, then **09-16** carrying retail sales + import/export prices 08:30, NAHB HMI + MTIS 10:00, the VIX expiration and the **FOMC decision + presser 14:00/14:30**, then BOJ + opex 09-18. That 09-16 close is the denominator of this print's overnight gap, which is the whole of Leg 3. **Volatility:** VIX **14.53**, SPY 770.19, QQQ 718.96 (2026-09-04 closes) — baseline, and all five reproduce the sibling ledgers exactly. **ONE dated event PROPOSED:** `proposals/nahb-hmi-2026-09-16.from-housing-starts-2026-09-17.json` — the **September 2026 NAHB/Wells Fargo HMI**, 10:00 ET **2026-09-16**, from NAHB's own 2026 schedule ("Sept. 2026 \| September 16, 2026", nahb.org HTTP 200, 46,943 bytes). The corridor tracks the Oct/Nov/Dec editions and has **nothing** for September, the only one inside eleven days; the `nahb-hmi-2026-11-17` ledger measured that **71 of 78** HMI days (91.0%) are the trading day immediately before New Residential Construction, and this is that pair for the August reference month. Filed `estimate` per the no-self-confirm limit; its expected outcome is a null, since that lane already measured the sentiment channel dead (ITB open→close 0.9559 vs 0.9627, p=0.96; paired sign test p=1.00). **Nothing else proposed, on the record:** the 17th-workday twin 09-24 is `new-home-sales-2026-09-24`, 09-25 is `durable-goods-2026-09-25`, 09-30 is `advance-economic-indicators-2026-09-30`, 10-01 is `construction-spending-2026-10-01`, and 10-20/11-18/12-17 all have ledgers. **Three differences from sibling numbers, recorded not silently differed:** (1) the **1.579%** kill-switch bar is a percentile CONVENTION — this session's 2021-26 ITB release-day p50/p75/max (0.543/0.834/2.801, n=65) match exactly while p90 reads **1.397%** floor-index and **1.579%** nearest-rank (index 58 of 65; tail …1.351, 1.397, **1.579**, 1.613…), and this session **adopts 1.579%**; (2) **existing-home sales** — the 10-20 ledger reports n=140/0.0376pp with an in/post split of 0.0308 vs 0.0543, while matching the only spelling that occurs (`Existing-home sales`) gives **n=124**, median **0.0343pp**, in **0.0391** (n=79) vs post **0.0308** (n=45), **p=0.178**, a reversed split, nothing downstream depending on it; (3) the **FOMC set is reconstructed**, 167 against 168 expected less the cancelled March-2020 meeting, with 2012-07-31→08-01 added by hand after the parse found 166 — it touches no release day. **No blocked sources**; every fetch returned HTTP 200 at the byte counts recorded, and the Yahoo path that hard-429'd the `nahb-hmi-2026-11-17` and `existing-home-sales-2026-11-12` lanes served this runner normally. **Four forward tests registered:** `-1` (\|Δ residential\| **at or above** 0.0250pp — the ladder's first out-of-sample instance), `-2` (residential is the largest move), `-3` (ITB's gap below 1.579%, registered as explicitly uninformative), `-4` (the August headline prints above 1,239,000). | **Initial stance set: stand aside on every horizon; date promoted to `confirmed` on four Census primaries, the corridor's positional nowcast finding SHARPENED from a two-state step into a three-rung monotone ladder (0.1020 → 0.0726 → 0.0250pp, p=0.038 and p<0.0001, with both natural controls humping instead) that places this print on a rung LOUDER than the 0.0609pp the corridor carries and makes it the ladder's first out-of-sample test 33 days early, the "dirty" label REFUTED as a description (after-FOMC p=0.875, opex eve p=0.936, September p=0.205 and quieter) while the exclusion it justified is UPHELD on calibration instead (2 of 7 and 3 of 10 exceedances, n=3 in-era) so that this morning's ITB gap is not a kill-switch observation, and a content leg added that neither sibling attempted — an 88.2% post-2010 rebound base rate that its own symmetric control (26 of 30 the other way, lag-1 −0.406) shows to be mechanical rather than economic.** | 2026-09-13 (low, 0+ band: every 7d) |
 | 2026-09-13 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 15.8 (+1.3pt since last), band unchanged (low:0+), 39 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-09-17`, `bowman-stress-testing-2026-09-18`, `bund-30y-auction-2026-09-16`, `eia-weekly-petroleum-status-2026-09-16`, `empire-state-mfg-2026-09-15`, `eurostat-hicp-final-2026-09-17` +16 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-20 |
+| 2026-09-18 | D+1 | **Close-out.** Scanner marked `event-passed-unscored` at D+1; all four registered forward tests' score-by is **2026-09-18** (today), inside `closeOutWithinDays`, so nothing is held per #2988. Cache bust run (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) touched nothing — `symbols: []`, neither instrument ever had a target; the leg-2/leg-3 sources (GDPNow, ITB/SPY bars) live outside that cache and were re-fetched direct. **Leg 1 (Census PDF, `newresconst.pdf`, HTTP 200, fetched via WebFetch+`pdftotext`, `last-modified` 2026-09-17T12:30:09Z):** release **CB26-147**, August 2026 data — starts **1,275,000** SAAR, permits **1,394,000**, completions **1,128,000**; July revised **1,239,000 → 1,309,000** (a **+5.6%** upward revision, the largest this corridor has observed on this series); "Next Release: October 20, 2026" matches the `housing-starts-2026-10-20` sibling id exactly. **`FT-…-4` PASSES:** 1,275,000 exceeds the July-as-published 1,239,000 anchor the test pre-registered against (not the revised 1,309,000). **Leg 2 (Atlanta Fed, re-fetched direct — current URLs differ from Method's, recorded below):** the archived `ContribArchives` sheet the ladder was BUILT from is still frozen at **2026-07-28**, forecasting 2026:Q2 — unchanged since initial research and now a real staleness finding, not a snapshot artifact (flagged to `IDEAS.md`). The LIVE `Contributions`/`ChangeInContributions` sheets in the same workbook ARE current through **2026-09-17** and give a solo **"Housing starts"** vintage: residential contribution **09-16 → 09-17: −0.16112pp → −0.17849pp, |Δ| = 0.01737pp**, cross-validated against `ChangeInContributions`'s own pre-computed row to 10 significant figures. **`FT-…-1` KILLED:** 0.01737pp is below the 0.0250pp floor (the R3 rung's own median) — an R2 vintage landed in the R3 band on the ladder's first out-of-sample instance, falsifying Leg 2's central claim; **banked to [`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.** **`FT-…-2` scores PASS on the best available data, with a granularity caveat stated plainly:** the live sheet only carries the 6-category split (PCE/BFI/Resid/Invent/NetExp/Govt, not the archived 8-way with Equipment/IP/Structures separated), but Residential's 0.01737pp move is **~6.6×** the next-largest aggregate (BFI combined, 0.00265pp; PCE 0.00298pp, Invent 0.00017pp, NetExp 0.00021pp, Govt 0.00021pp) on a day whose sole data release was housing starts — a release that is not a bridge-equation input for equipment, IP or structures, so BFI's own three subcomponents are not plausibly hiding a larger, offsetting move inside a combined total this small. **Leg 3 (Yahoo daily bars via `scripts/research/market-data.mjs`, fresh fetch):** ITB open 09-17 **89.63** vs close 09-16 **88.12** → overnight gap **1.7136%**, ABOVE the corridor's 1.579% bar. **`FT-…-3` fails on its literal text** ("gap is below 1.579%") but **does not fire the 12-17 lane's actual kill switch**, exactly as the row was written to test: that escalation requires the breach to land on a morning where the broader market shows nothing either (SPY gap below its ~0.30% 2021-26 median) — SPY's own 09-17 gap is **1.2068%** (763.15 open vs 754.05 close), four times that median, so the 09-16 FOMC stack remains the live confound and the breach stays uninformative about housing specifically, as pre-registered. **No new dated event proposed** — close-out mode, no adjacency sweep. `probe-ref` refreshed: VIX **15.44** (2026-09-17 close, matching the `eurostat-hicp-final-2026-09-17` and `treasury-buyback-7y10y-2026-09-17` close-outs' independent reads of the same bar), `adjacentIds`/`adjacentStrongIds` reused verbatim from the same-dated `treasury-buyback-7y10y-2026-09-17` close-out (identical ±5-day window, self swapped in), `screenStreak: 0`. **`## Outcome` written below — this document goes quiet.** | **Leg 2's central ladder claim (three-rung monotone decline) is FALSIFIED on its first out-of-sample instance — `FT-…-1` killed, banked to the sweep kill list. The parent stance (stand aside, no instrument) was never contingent on it and does not change: nothing here licensed a trade, so nothing here costs one.** | — (closed; `## Outcome` below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -513,3 +514,139 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-09-18 (D+1).** `symbols: []`, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) had no target of
+its own — this event never ran `earnings-cycle`/`intraday-edges`. Every number below is a fresh
+fetch this session, not a carry-forward from the D-11 row: the Census release PDF, the Atlanta Fed
+GDPNow workbook, and ITB/SPY daily bars via `scripts/research/market-data.mjs` (a fresh cache, since
+`bars()` shares the busted `earnings-cycle` directory).
+
+### Leg 1 — the content, re-read from the actual August release
+
+Fetched `census.gov/construction/nrc/pdf/newresconst.pdf` (HTTP 200, `last-modified`
+2026-09-17T12:30:09Z — the freshly updated file) via WebFetch, then extracted text locally with
+`pdftotext -layout` (poppler-utils, installed this session). Release **CB26-147**, August 2026 data:
+
+| Series | August 2026 SAAR | vs. revised July | vs. Aug 2025 |
+|---|---|---|---|
+| Building permits | **1,394,000** | −2.7% (from a revised 1,433,000) | +3.5% |
+| Housing starts | **1,275,000** | −2.6% (±12.0%)\* (from a revised **1,309,000**) | −1.2% (±10.8%)\* |
+| Housing completions | **1,128,000** | −11.9% (±9.7%) (from a revised 1,280,000) | −27.1% (±8.9%) |
+
+"Next Release: October 20, 2026" — matches the `housing-starts-2026-10-20` sibling id exactly.
+
+**The July figure was revised sharply: 1,239,000 (as published 2026-08-18) → 1,309,000 (+5.6%),**
+the largest revision to a recent print this corridor has recorded on this series. `FT-…-4`'s
+prediction was pre-registered against the **as-published** July figure specifically, to keep the
+test scoreable against FRED's revising vintage — and that choice pays off cleanly here: **1,275,000
+exceeds 1,239,000, so `FT-…-4` PASSES**, even though it would also have passed (barely) against the
+revised anchor.
+
+### Leg 2 — the nowcast, re-fetched direct (URLs corrected from Method's, recorded below)
+
+The Atlanta Fed moved both workbooks' media path since initial research; the URLs Method cited
+(`atlantafed.org/-/media/documents/cqer/...`) now 404. Current path, confirmed via the live
+`/research-and-data/data/gdpnow` page:
+`atlantafed.org/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/gdpnow/<file>.xlsx`.
+`GDPNowcastDataReleaseDates.xlsx` re-fetched at **16,944 bytes — byte-identical to Method's
+count**; `GDPTrackingModelDataAndForecasts.xlsx` at 10,883,697 bytes (vs. Method's 10,875,424 —
+the archive grew, elsewhere).
+
+**`ContribArchives` — the sheet the entire ladder (Leg 2 of initial research) was built from — is
+still frozen at 2026-07-28, forecasting 2026:Q2.** Unchanged since the D-11 session, seven weeks
+later: this is now a real staleness finding about the data source, not a one-time snapshot gap (see
+Honest limits, and the `IDEAS.md` flag filed alongside this PR). **The same workbook's `Contributions`
+and `ChangeInContributions` sheets — the live, non-archived view — ARE current through 2026-09-17**
+and carry a solo `Data Releases: "Housing starts"` row for that date:
+
+| Date | PCE | BFI (nonres fixed inv.) | Residential | Invent. | Net exports | Govt |
+|---|---|---|---|---|---|---|
+| 2026-09-16 (level) | 2.82785 | 1.38876 | **−0.16112** | 2.02531 | −1.37851 | 0.40050 |
+| 2026-09-17 (level) | 2.82487 | 1.38612 | **−0.17849** | 2.02514 | −1.37830 | 0.40028 |
+| **Δ (09-17 vs 09-16)** | −0.00298 | −0.00265 | **−0.01737** | −0.00017 | +0.00021 | −0.00021 |
+
+The Δ row is cross-checked against `ChangeInContributions`'s own pre-computed diff for the same
+date, agreeing to 10 significant figures (−0.017370247696506275). Total GDP nowcast moved
+5.1028% → 5.0796% (−0.0232pp), of which residential is ~75%.
+
+**`FT-housing-starts-2026-09-17-1` — KILLED.** \|Δ residential\| = **0.01737pp**, below the
+0.0250pp floor (the R3 rung's own median) that the test's kill switch names explicitly. An R2
+vintage landed in the R3 band on the ladder's first out-of-sample instance. Per
+`docs/research/forward-tests.md`'s rule ("a scored kill moves the hypothesis to the sweep doc's
+kill list"), this is banked to
+[`multi-symbol-sweep.md`'s kill list](../multi-symbol-sweep.md#kill-list--recorded-so-they-are-never-re-proposed).
+
+**`FT-housing-starts-2026-09-17-2` — PASSES, on the best available data, with a stated
+granularity caveat.** The live sheet only carries the 6-category split (Equipment, Intellectual
+Property Products and Structures are combined into one "BFI" figure, not separated as they are in
+the archived 8-way breakdown `-2`'s hypothesis was written against). Residential's 0.01737pp move
+is **~6.6×** the next-largest aggregate move (BFI combined, 0.00265pp), on a day whose sole
+release was housing starts — a release that is not a bridge-equation input for nonresidential
+equipment, IP or structures, so BFI's near-zero combined move is not plausibly concealing a larger,
+offsetting move inside its three subcomponents. Scored PASS on that basis, not on a direct 8-way
+read.
+
+### Leg 3 — the tape, re-fetched fresh (Yahoo, via `market-data.mjs`)
+
+| Symbol | 2026-09-16 close | 2026-09-17 open | Overnight gap |
+|---|---|---|---|
+| ITB | 88.12 | 89.63 | **1.7136%** |
+| SPY | 754.05 | 763.15 | **1.2068%** |
+
+**`FT-housing-starts-2026-09-17-3` — fails its literal text (the gap is not below 1.579%) but does
+NOT fire the 12-17 lane's actual kill switch**, exactly as this row was pre-registered to test. The
+row's own escalation condition requires the breach to land on a morning where the broader market
+also shows nothing (SPY's gap below its ~0.30% 2021-26 release-day median). SPY's actual gap here
+is **1.2068%** — roughly four times that median — so the 09-16 FOMC stack (decision + presser, on
+a session that also carried retail sales, import/export prices, the NAHB HMI, MTIS and the VIX
+expiration) remains the live, unexcluded confound. The breach is recorded as an observation, not a
+falsification of Leg 3's post-2015 null: uninformative in both directions, exactly as registered.
+
+### Forward tests — final scorecard
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| `FT-…-1` | \|Δ residential\| ≥ 0.0250pp | **0.01737pp** | **KILLED** |
+| `FT-…-2` | Residential is the largest of the component moves | **~6.6× the next-largest aggregate** | **PASS** |
+| `FT-…-3` | ITB's overnight gap < 1.579% | **1.7136%** | **Fails literal text; kill switch not triggered** (SPY gap 1.2068% ≫ its ~0.30% median) |
+| `FT-…-4` | August headline > 1,239,000 (July as published) | **1,275,000** | **PASS** |
+
+### What held, and what broke
+
+- **The parent stance — stand aside, no instrument, no trade — was never contingent on the ladder
+  and does not change.** `symbols: []` and no housing-keyed playbook existed at any point in this
+  event's life; a killed forward test costs nothing because nothing was risked on it.
+- **Leg 2's headline finding — the three-rung monotone ladder — broke on its very first
+  out-of-sample test**, the fastest of any forward test this corridor has registered (12 days from
+  registration to score). The two controls that "fail to reproduce the shape" (pooled non-starts,
+  construction spending) remain correctly measured; what breaks is the claim that *this* print
+  would land on the louder R2 rung rather than behave like the quieter R3 rung.
+  `housing-starts-10-20`'s own `FT-…-10-20-1` (scoring 2026-10-23) is now the corridor's live test
+  of whether this is one miss or a pattern — read this outcome before scoring that one.
+- **Leg 3's calibration argument held up on live fire.** The row predicted, in advance, that a
+  breach here would be uninformative because of the FOMC-stack confound — and the breach that
+  happened is accompanied by exactly the broad-market move (SPY +1.21%) that confound predicts,
+  not the quiet-SPY / loud-ITB signature that would have made it a genuine housing tell.
+- **Leg 4's content-side reversion call held, and the July revision it flagged as a live risk
+  (Leg 4's "operationally... revised 09-24" note, about permits) turned out to apply to starts too,
+  one release early:** July starts revised +5.6%, the largest this corridor has recorded.
+
+### Honest limits on this close-out
+
+- **`ContribArchives`'s staleness (frozen at 2026-07-28, seven weeks and counting) is itself a
+  finding, not just a limit.** The 10-20 sibling's own `FT-…-10-20-1` depends on the same archive
+  scoring by 2026-10-23; if it has not resumed updating by then, that test will hit the same
+  data gap this one worked around via the live `Contributions` sheet. Flagged to `IDEAS.md` this
+  PR so the next session that touches this corridor sees it before re-discovering it.
+- **`FT-…-2` is scored on a coarser split than it was written against** (6-category live sheet vs.
+  the archived 8-way breakdown) — reasoned to PASS on the economics of which release feeds which
+  bridge equation, not on a direct measurement of Equipment/IP/Structures individually. Recorded as
+  a caveat rather than smoothed over.
+- **Leg 3's kill-switch-escalation condition (SPY below ~0.30%) is this doc's own construction**,
+  not an independently re-derived threshold this session recomputed from scratch; it is applied
+  here exactly as registered.
+
+**The stance holds unchanged: stand aside.** This document goes quiet.

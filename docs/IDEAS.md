@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- The Atlanta Fed's `GDPTrackingModelDataAndForecasts.xlsx` `ContribArchives` sheet — the per-vintage
+  archive the whole housing-starts nowcast "ladder" finding was built from — has not extended past
+  2026-07-28 as of 2026-09-18, seven weeks stale, while the same workbook's live `Contributions`/
+  `ChangeInContributions` sheets keep updating daily. `housing-starts-10-20`'s own
+  `FT-housing-starts-10-20-1` scores by 2026-10-23 against this same archive; if it's still stale
+  then, that close-out will need the same live-sheet workaround this one used (6-category split
+  only, no separate Equipment/IP/Structures). Also worth checking whether the media path move
+  (`/-/media/documents/...` → `/-/media/Project/Atlanta/FRBA/Documents/...`, discovered this
+  session) broke an automated re-fetch somewhere upstream. _(src: Claude · while:
+  housing-starts-2026-09-17 close-out)_
 - `quote-header` and the option chain fetch the underlying price independently; consolidate once
   the chain route is reshaped (Phase 0 tasks #11-13). _(src: Claude · while: quote-header review,
   #2017)_
