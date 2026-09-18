@@ -2366,3 +2366,38 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   request; (b) an audit of `CLAUDE.md`/`orient.md` for every other prose-only judgment rule with no
   gate behind it, ranked by consequence if skipped — the interrogate-before-comply step is the most
   consequential candidate.
+
+### A blind-replay eval design leaked hindsight through the search tool, not the corpus file it guarded against
+
+- **SHA:** n/a   **DATE:** 2026-09-18   **STATUS:** closed
+- **SIGNAL:** Caught by the eval itself, not by a human or a gate — one of four pilot replay agents
+  (#3264 slice 1, the Haiku/Sonnet adequacy eval named in #2946's plan) self-disclosed mid-report
+  that its WebSearch results surfaced the real outcome of the historical event it was supposed to be
+  blind-assessing. A second, parallel replay of a different event showed the same hindsight-shaped
+  framing without volunteering it.
+- **ROOT CAUSE:** the replay protocol correctly forbade reading this repo's own corpus file for the
+  sampled event (the one place the banked verdict literally lives), but every sampled event is, by
+  construction, in the past relative to today — the eval can only draw ground truth from events
+  already closed out. Live WebSearch does not respect that boundary: a query about a historical
+  macro print routinely surfaces the actual print result and its aftermath, information no real
+  initial assessment (dispatched *before* the event) could ever have had. The design guarded the one
+  leak path that was obvious (our own file) and missed the one that was structural (the open web
+  itself knowing what happened). Effect: every stance-match score the pilot produced is inflated —
+  it measured "reasonable judgment with hindsight-adjacent search results available," an easier task
+  than the one #2946's S5 spec actually asked for.
+- **PREVENTION:** two layers.
+  1. **Gate (partial)** — `docs/grind/haiku-eval-replay.instructions.md` now requires a
+     `CONTAMINATION_NOTE` field on every replay report: the agent must say plainly whether search
+     surfaced outcome-adjacent information, even when uncertain, rather than leaving disclosure to
+     chance. This is the mechanism that would have caught the second (non-disclosing) replay's leak
+     immediately instead of it passing as a clean result. Does not fix the underlying leak — only
+     makes it visible every time, which is what let this incident close in one pilot instead of
+     silently inflating the full 30-event batch.
+  2. **Doctrine line (this file's own instructions.md)** — the chore file's "Known open problem"
+     section blocks scaling to the full batch until a real fix lands: either constrain WebSearch to
+     a pre-event date cutoff, or switch from historical replay to prospective testing against newly
+     dispatched live events (no hindsight to leak by construction). Neither chosen yet — tracked on
+     #3264, not resolved here.
+- **SIDE QUESTS:** none — the general lesson (a tool's own knowledge boundary can leak past a
+  content-access restriction that looks complete) is banked here for any future eval design in this
+  repo that tries to test a model blind to an outcome using a search tool that already knows it.
