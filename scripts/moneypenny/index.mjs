@@ -51,9 +51,9 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
-import { dueForResearch, routeSweep } from "./events.mjs";
+import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -396,20 +396,53 @@ function gatherDeps(ctx) {
       },
     );
   };
+  // REST, not `gh issue list --json title` (2026-08-26): a second GraphQL query, on every push, to
+  // read scalars REST hands over on the core bucket. PAGINATED since #2968 — the single-page read
+  // this replaced went blind past 100 open issues and re-opened receipts it could no longer see
+  // (see `ghRestAll`). One read, two consumers: the title dedupe and the receipt reconcile.
+  const openIssues = needsScan ? ghRestAll("issues?state=open").filter((i) => !i.pull_request) : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
-    shippedEvents: needsScan ? shippedSweep("event-research") : [],
+    // `event-research` deliberately does NOT get the reference sweep any more (#2968). Its receipts
+    // are now closed by `routeReceipts` against the LEDGER on disk, which is both the correct oracle
+    // for this label and free — where this call spent the scarce GraphQL bucket to ask a question
+    // that had silently answered "nothing shipped" for 144 finished receipts.
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
-    // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
-    // every push, to read one scalar field REST hands over on the core bucket.
-    openIssueTitles: needsScan
-      ? ghRest("issues?state=open&per_page=100")
-          .filter((i) => !i.pull_request)
-          .map((i) => i.title)
-      : [],
+    openIssueTitles: openIssues.map((i) => i.title),
+    openEventReceipts: needsScan ? readReceipts(openIssues) : [],
   };
+}
+
+/**
+ * Join each open `[event-research]` receipt to the one fact that decides its fate: does its ledger
+ * exist on disk? Impure (it reads the checkout), so `routeReceipts` stays pure over plain data.
+ *
+ * FAIL CLOSED ON A MISSING LEDGER DIRECTORY. `existsSync` on a file under a directory that is not
+ * there returns false for every id, which would read as "none of these were ever researched" and
+ * close nothing — harmless — but the inverse assumption is one edit away from closing the entire
+ * queue on a checkout that never had `docs/`. Refusing outright is the same doctrine as
+ * `event-scan.mjs`'s "an unreadable input is an error, never an empty result".
+ */
+function readReceipts(openIssues) {
+  const dir = "docs/research/events";
+  if (!existsSync(dir))
+    throw new Error(
+      `moneypenny: ${dir} is missing from this checkout — refusing to judge receipts against a ` +
+        "ledger directory that is not there.",
+    );
+  const receipts = [];
+  for (const i of openIssues) {
+    const id = String(i.title ?? "").match(RECEIPT_TITLE_RE)?.[1];
+    if (!id) continue;
+    receipts.push({
+      number: i.number,
+      title: i.title,
+      hasLedger: existsSync(`${dir}/${id}.md`),
+    });
+  }
+  return receipts;
 }
 
 function execute(intents) {
@@ -612,6 +645,21 @@ function executeOne(i) {
     sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
     console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
     return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
+  if (i.kind === "close-receipt") {
+    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
+    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
+    sh("gh", [
+      "issue",
+      "close",
+      String(i.issueNumber),
+      "--reason",
+      i.closeReason,
+      "--comment",
+      i.body,
+    ]);
+    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
+    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
   }
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);

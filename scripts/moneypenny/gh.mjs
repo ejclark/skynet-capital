@@ -84,3 +84,34 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
   ]);
   return JSON.parse(out || "null");
 }
+
+/**
+ * Every page of a REST list, not just the first — the truncation half of #2968.
+ *
+ * `ghRest("issues?state=open&per_page=100")` is a FIRST PAGE, and nothing said so. The open-issue
+ * read it fed is what `routeSweep` dedupes receipt issues against, so once the open-issue count
+ * passed 100 the dedupe went partially blind: it stopped seeing the older half of the queue and
+ * re-opened receipts that were already open. `[event-research] fomc-blackout-start-2027-07-17` has
+ * six open copies (#2604/#2648/#2700/#2751/#2818) and
+ * `[event-research] opex-2028-01-21` five — every one of them filed on 2026-09-09, the day the
+ * calendar self-feed pushed the open queue past that page boundary. The dedupe was never wrong; it
+ * was answering about a list it could not see the end of.
+ *
+ * LOUD ON THE CEILING, never a silent stop. Running out of pages mid-list is the same class of bug
+ * as the one this fixes, so `maxPages` throws rather than returning what it happened to collect —
+ * `gatherDeps`'s fail-closed doctrine, applied to pagination.
+ */
+export function ghRestAll(path, { perPage = 100, maxPages = 20, ...opts } = {}) {
+  const sep = path.includes("?") ? "&" : "?";
+  const all = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = ghRest(`${path}${sep}per_page=${perPage}&page=${page}`, opts);
+    if (!Array.isArray(batch)) throw new Error(`ghRestAll: ${path} did not return a list.`);
+    all.push(...batch);
+    if (batch.length < perPage) return all;
+  }
+  throw new Error(
+    `ghRestAll: ${path} still had more after ${maxPages} pages (${all.length} rows). Refusing to ` +
+      "return a truncated list — that silent half-answer is the bug this function exists to kill.",
+  );
+}
