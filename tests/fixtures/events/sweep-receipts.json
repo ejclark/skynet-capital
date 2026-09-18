@@ -1,0 +1,19 @@
+{
+  "eventName": "push",
+  "actor": "ejclark",
+  "event": {},
+  "deps": {
+    "dueEvents": [{ "id": "cpi-2026-09-11", "reason": "interval-elapsed" }],
+    "openIssueTitles": [
+      "[event-research] cpi-2026-09-11",
+      "[event-research] ism-services-2027-05-05",
+      "[event-research] fomc-2026-12-09"
+    ],
+    "openEventReceipts": [
+      { "number": 2968, "title": "[event-research] ism-services-2027-05-05", "hasLedger": false },
+      { "number": 2900, "title": "[event-research] cpi-2026-09-11", "hasLedger": false },
+      { "number": 1473, "title": "[event-research] fomc-2026-12-09", "hasLedger": true },
+      { "number": 2001, "title": "some other open issue", "hasLedger": false }
+    ]
+  }
+}

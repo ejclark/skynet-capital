@@ -1,8 +1,8 @@
 # UN Security Council vote — renewal of the Iran sanctions panel-of-experts mandate — unsc-iran-panel-mandate-vote-2026-09-17
 
 **Kind:** geopolitical · **Date:** 2026-09-17 (estimate, NEWS: Reuters/spokesman.com 2026-09-01, diplomats; UN primary confirms the ITEM on September's programme but names no date) · **Impact:** medium
-**Last assessed:** 2026-09-17
-<!-- probe-ref: {"symbols":{},"vix":17.71,"daysBand":"medium:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
+**Last assessed:** 2026-09-18
+<!-- probe-ref: {"symbols":{},"vix":15.44,"daysBand":"medium:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-2y-note-2026-09-22","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -215,6 +215,7 @@ registered 2026-09-10 off the 11–2–2 procedural record) —
 | 2026-09-13 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 15.8 (-2.0pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked, new in corridor since last pulse: `bowman-stress-testing-2026-09-18`, `eia-weekly-petroleum-status-2026-09-16`, `uk-retail-sales-2026-09-18` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-15 |
 | 2026-09-15 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 17.6 (+1.8pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-17 |
 | 2026-09-17 | D-0 | **Full pulse check on the vote's own date — the corridor's headline event resolved (FOMC), the vote itself did not (no primary confirms one occurred).** Corridor grew from 39 to 45 tracked ids (added: `house-vote-ratepayer-protection-act-2026-09-17`, `japan-cpi-2026-09-18`, `jpx-market-closure-2026-09-21`, `jpx-market-closure-2026-09-22`, `kb-home-q3-fy2026-2026-09-22`, `lennar-q3-fy2026-2026-09-16`; none removed — closed-out neighbors stay in the window by date, per this event's own convention). **Adjacency sweep:** (1) peers n/a, `symbols: []`; (2) **macro — the FOMC surprised hawkish.** The sibling [`fomc-2026-09-16`](fomc-2026-09-16.md) closed out today: hiked 25bp to **3.75–4.00%**, unanimous **12–0**, SEP median **4.1%** (vs June's 3.8%), and a real selloff — S&P **7,551.81 (−0.45%)**, Dow **51,461.90 (−631pts, −1.21%)**. This is the corridor's dated risk this ledger's own D-7 row named as the actual transmission channel (diesel/CPI), and it landed hawkish, reinforcing rather than easing the macro backdrop into the vote; (3) **VIX 17.71** (09-16 close, Cboe direct via the FOMC close-out — this session's own `cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv` fetch returned a stale/malformed 1997-era response and is logged blocked rather than substituted silently), +0.11pt from D-2's 17.6 — below the 3pt regime threshold on its own, band unchanged `medium:0+`; (4) **geopolitical — a primary UN session read direct, and it corroborates without confirming.** `press.un.org/en/2026/sc16448.doc.htm` (10 September 2026, 10218th Meeting, fetched direct): the Council adopted its provisional agenda **11 in favour, 2 against (Russian Federation, China), 2 abstentions (Somalia, Pakistan)** — the fourth session to reproduce this exact 11–2–2 pattern, reinforcing `FT-…-4`'s mechanism (veto, not procedure, kills the renewal). New: **the United States authored the draft resolution** to extend the Panel's mandate, with France's delegate on record supporting it — the first primary naming of the draft's sponsor. No date was given for the substantive vote; Denmark's delegate is quoted only that the mandate "is due to expire later this month." Separately, `securitycouncilreport.org`'s September Iran forecast (re-read today) still names no vote date and still frames renewal as something like-minded members "may... pursue," which "China and Russia would most likely block" — the **upgrade flag stays unfired**, no `What's in Blue` or Journal entry for a draft in blue was found; (5) **event-specific tape — the supply side escalated, the transit count is contested.** Saudi Arabia's own OPEC submission (Bloomberg/Al-Monitor, secondary) puts August crude output at **6.238 mb/d**, down 1.9mb/d m/m — the lowest since 1990, below April's prior wartime low — with exports **~3.1 mb/d**, the lowest since at least 2013, as the East-West pipeline outage persists. Hormuz transit counts conflict by tracker and session: Windward's Daily Intelligence logs **6** (09-15) then **12** (09-16) vessels; IMF PortWatch logs **8** (09-13); press reports cite as few as **3** on a later Wednesday; a live aggregator (straits.live) calls the strait "effectively closed" on war-risk premiums running ~40× normal despite AIS-tracked vessels still crossing in the single-to-low-double digits — none of these is this ledger's own confirmed series, and a 2–4x spread across trackers on overlapping dates is recorded as escalation, not adjudicated as a number. Brent ran to **~$107.5/bbl (09-15)**, a four-month high, on the same drivers already logged. No new dated adjacent event clears the horizon leash — the Saudi pipeline repair-window close (`saudi-east-west-pipeline-repair-window-close-2026-10-15`) is already tracked. | **No change — stand aside.** Nothing here moves the mechanism (a veto still lifts nothing) or opens a price channel (`symbols: []`); the FOMC's hawkish print and the Saudi output collapse both widen caution in the corridor generally without being separable Iran-vote signals. Kill switches: VIX (17.71, not fired) and Hormuz transits (contested, not cleanly fired) both updated in the Stance section above with today's date. | close-out (event date reached; next dispatch is `event-passed-unscored`, held for `FT-unsc-iran-panel-mandate-vote-2026-09-17-1/-2/-3/-4`'s score-by dates per EVENT-RESEARCH.md's close-out-hold rule) |
+| 2026-09-18 | D+1 (close-out) | **Close-out — the vote occurred exactly on the estimated date, and resolved by veto exactly as leg 4/`FT-…-4` predicted.** Cache busted first (`earnings-cycle`/`intraday-edges` untouched, `symbols: []` throughout, geopolitical kind — no ticker instrument was ever targeted). Re-fetched sources direct: `press.un.org`'s index and a guessed document path both errored (404/site error) — no primary UN meeting record obtained this session, logged blocked rather than silently substituted; `usun.usmission.gov`'s own "Explanation of Vote" page 403'd on direct fetch. Falling back to cross-corroborated press, each checked against at least one other: **The National** (fetched direct), **Al Jazeera** (fetched direct), Washington Times and easternherald (via search). All four agree: on **2026-09-17**, the US-drafted resolution extending the Panel of Experts mandate one year (to September 2027) got **11 in favour, 2 against — Russia and China, both vetoing — 2 abstentions (Pakistan, Somalia)**, reproducing the 11–2–2 pattern from the three procedural votes this ledger already had on record, this time on the substantive text itself. Russia's Nebenzia repeated the snapback-illegality objection (the exact P5 legal-existence mechanism leg 4 named, not a vote shortfall — 11 clears the 9-vote bar with 2 to spare). Al Jazeera independently states the Panel's experts "were never appointed" post-snapback — a fresh, non-UN-webpage corroboration of leg 3/`FT-…-2`'s dark-since-2015 read. No primary source found (or expected — `CONFIRMED_PREFIX` still has no UN slot) to upgrade the event's own `estimate` status. **Market context, not attribution:** VIX **17.71 (09-16) → 15.44 (09-17 close**, Yahoo direct, cross-confirmed by two sibling close-outs' own fetches of the same figure today — this session's own Yahoo-chart and stooq CSV fetches returned corrupted/empty data and are logged blocked, not substituted); CL=F **105.83 (09-15) → 102.43 (09-16) → 101.16 (09-18**, per `gastech-2026-09-14`'s close-out re-pull, no 09-17 futures print returned); WTI spot read **~$102.13 on 09-17, −0.29%**, attributed by wire coverage to an API **+7.1mb** inventory build, not the vote. No spike on the vote itself — consistent with leg 5/`FT-…-3`'s "no separable channel" read and with the veto being the fully-priced base case this ledger named from D-13. **Forward tests:** all four (`FT-…-1/-2/-3/-4`) carry a registered score-by of **2026-09-30**, past this event's `closeOutWithinDays: 6` ceiling (**2026-09-23**) — the structural conflict `docs/process/EVENT-RESEARCH.md`'s close-out-hold rule names, not a timing one. Scored below in `## Outcome` as `_open_`, permanently unscoreable via this lane's automation, even where (as with `FT-…-4`) the real-world outcome is already fully known — scoring ahead of the stated window is falsification under the append-only rule regardless of how settled the fact is. No new dated adjacent event found; no proposal filed. | — (closed; stand-aside stance stands as written — no position was ever proposed, `symbols: []`, and the veto/no-market-reaction outcome is exactly what the stance priced, not a retroactive justification) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay, and a stance *change* earns its sentence in the Stance section with
@@ -223,3 +224,89 @@ geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated ad
 gets proposed to `market-events.ts` as an `estimate` in the same PR. Close-out fills `## Outcome`
 below from re-run instrument data (cache busted first), never from memory — after which this doc
 goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-18, D+1 — inside the `closeOutWithinDays: 6` deadline, ceiling 2026-09-23).**
+Geopolitical kind, `symbols: []` throughout, so no `earnings-cycle`/`intraday-edges` instrument ever
+had a target; the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) ran first regardless, per this lane's cache-discipline rule.
+"Re-run instrument data" for this event means re-fetching every cited source direct, not reading
+this ledger's own memory of the 09-17 row.
+
+**The vote happened, on the estimated date, and resolved exactly the way leg 4 said it would.** No
+primary UN document was obtainable this session — `press.un.org`'s index (`/en/2026`) 404'd and a
+guessed document path errored, `usun.usmission.gov`'s own "Explanation of Vote" page 403'd on direct
+fetch — both logged `blocked`, never silently substituted. Falling back to cross-corroborated press
+(each outlet checked against at least one other before use): **The National** and **Al Jazeera**
+(both fetched direct), corroborated by Washington Times and easternherald (via search). All agree:
+on **2026-09-17**, the US-authored draft resolution extending the Panel of Experts mandate one more
+year (to September 2027) received **11 votes in favour, 2 against — Russia and China, both
+vetoing — 2 abstentions (Pakistan, Somalia)**. That is the same **11–2–2** split this ledger already
+had on record from three prior *procedural* votes (09-10 row), now reproduced on the *substantive*
+text itself — eleven clears the nine-vote bar with two votes to spare, so the draft did not fail for
+want of votes; it failed on a Russian and Chinese veto. Russia's Ambassador Nebenzia repeated the
+snapback-illegality objection on the record — the exact P5 legal-existence mechanism leg 4 named,
+not a procedural block and not a vote shortfall. Al Jazeera separately reports the Panel's experts
+"were never appointed" post-snapback — an independent, non-UN-webpage corroboration of leg 3's
+dark-since-2015 read, though it is not itself the registered kill condition for `FT-…-2` (a post-2015
+Panel report surfacing), which did not fire. No primary source was found or expected to upgrade the
+event's own `estimate` status — `CONFIRMED_PREFIX` still carries no UN/diplomatic slot, so this
+event was never eligible to become `confirmed` on this lane's own schema, regardless of source
+quality.
+
+**No tradable reaction, and the readings available support that reading without settling it
+precisely.** VIX ran **17.71 (09-16 close) → 15.44 (09-17 close)** — a decline, not a spike (Yahoo
+direct, cross-confirmed by two sibling close-outs' own same-day fetches of the identical 09-17
+figure: `boe-decision-2026-09-17` and `gastech-2026-09-14`). CL=F ran **105.83 (09-15) → 102.43
+(09-16) → 101.16 (09-18** per `gastech-2026-09-14`'s own close-out re-pull; no 09-17 futures print
+returned to either session). A secondary WTI spot read (tradingeconomics, via search) puts the
+09-17 session at **~$102.13, −0.29%**, attributed by wire coverage to an EIA/API **+7.1mb**
+inventory build, not the Council vote. This session's own direct attempts to re-pull VIX/Brent/XLE/
+ITA (Yahoo chart API, stooq CSV) returned corrupted or empty output and are logged `blocked` rather
+than silently substituted with fabricated numbers — the readings above are borrowed, dated and
+sourced from sibling sessions' own direct fetches on the same calendar day, not invented to fill the
+gap. Within that limit, nothing here contradicts leg 5's "no separable channel" finding or `FT-…-3`'s
+market null: the vote was the fully-priced base case this ledger named from D-13, and the tape did
+not move on the day it resolved.
+
+**Forward tests scored:**
+
+| Test | Prediction | Real-world finding this session | Verdict |
+|---|---|---|---|
+| `FT-unsc-iran-panel-mandate-vote-2026-09-17-1` (the mandate lapses) | No resolution renewing the Panel's mandate is adopted on or before 2026-09-26 | The one drafted renewal (the US text) failed by veto; no alternative renewal mechanism (a presidential note, a consensus decision) has been reported. Trending toward the predicted outcome, not yet at its own 09-26 deadline | **`_open_`, not scored — score-by 2026-09-30 sits past this event's `closeOutWithinDays: 6` ceiling (2026-09-23), the structural conflict the close-out-hold rule names, not a timing one** |
+| `FT-unsc-iran-panel-mandate-vote-2026-09-17-2` (the Panel never functioned) | No 1737-regime Panel report dated after S/2015/401 appears on the UN record by 2026-09-26 | Al Jazeera independently states the experts "were never appointed" post-snapback, corroborating without being the registered kill condition; no new report surfaced | **`_open_`, not scored — same score-by/ceiling conflict as `FT-…-1`** |
+| `FT-unsc-iran-panel-mandate-vote-2026-09-17-3` (the market null) | XLE move ≤2.80% and no separable Brent move in the 09-16→09-18 window | VIX fell, CL=F drifted down on an inventory build, no vote-attributed spike reported anywhere in the press corpus searched — directionally consistent with a pass, but XLE/Brent were not cleanly re-measured against the registered distribution this session (source fetches blocked; borrowed readings used for context only) | **`_open_`, not scored — same score-by/ceiling conflict, and the measurement itself is incomplete** |
+| `FT-unsc-iran-panel-mandate-vote-2026-09-17-4` (veto is the mechanism) | A tabled draft fails by veto while clearing 9 affirmative votes | **Resolved exactly as predicted**: 11 in favour (2 clear of the 9-vote bar), defeated only by a Russia+China veto — the cleanest and most fully-known outcome of the four | **`_open_`, not scored — same score-by/ceiling conflict; the real-world fact is fully known, but scoring ahead of the automation's own stated window is falsification under the append-only rule regardless** |
+
+**Reading the split honestly.** All four forward tests carry the same registered **score-by:
+2026-09-30**, which sits past this event's own `closeOutWithinDays: 6` ceiling (2026-09-23) —
+exactly the "structural conflict, not a timing one" `docs/process/EVENT-RESEARCH.md`'s close-out-
+hold rule anticipates, and the reason the scanner dispatched this close-out immediately rather than
+holding. The one difference from the precedent case (`boe-decision-2026-09-17`'s `FT-3`, also
+permanently unscoreable on the same structural conflict) is that here the underlying fact
+(`FT-…-4`) is already fully and unambiguously known — the vote happened and was vetoed — yet the
+append-only rule still forbids writing a verdict into the fragment before its own stated window
+closes. That is the mechanism working as designed, not a gap: the automation's score-by date is a
+mechanical field this lane must honor literally, not a suggestion to override on strong evidence.
+
+**The call itself, scored against the tape.** The stand-aside was the entire position: `symbols: []`,
+no position, hedge or size ever proposed. That call cost nothing and earned nothing by design — the
+value here was analytical. The vote's *manner* (veto, not procedure, not a vote shortfall) is exactly
+the one dated, checkable read this ledger claimed the event would carry, and it landed precisely as
+leg 4 predicted at D-7, three days before the vote occurred. The stance holds unchanged: read the
+manner, hold no position, and treat Hormuz transit counts — not this vote — as the variable that
+actually prices the theatre. No kill switch fired: no post-2015 Panel report surfaced, the renewal
+was not adopted, no crude move over 5% within 5 sessions was found separable from strikes/transit
+counts/OPEC+/the FOMC, VIX closed well under the ≥20 trigger, and Hormuz transit counts remain
+contested rather than cleanly below the ~5/day line.
+
+**Honest limits, closing.** No primary UN document was read this session (both `press.un.org` paths
+and `usun.usmission.gov` blocked); the vote record rests on four mutually corroborating press
+outlets rather than the Council's own text. VIX/Brent/XLE/ITA readings for context are borrowed from
+two sibling sessions' same-day direct fetches, not this session's own — this session's own attempts
+failed cleanly and are logged rather than papered over. All four forward tests remain open and will
+never be scored by this lane's automation (their score-by postdates the point at which this document
+goes quiet) — a future session reading this file manually, after 2026-09-30, could still write the
+verdicts in by hand if the sibling `unsc-iran-panel-mandate-expiry-2026-09-26` ledger or a fresh
+primary read settles them, but no automation will prompt that.

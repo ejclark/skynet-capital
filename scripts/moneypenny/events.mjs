@@ -89,7 +89,111 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return [...intents, ...routeShipped(deps)];
+  return [...intents, ...routeReceipts(deps), ...routeShipped(deps)];
+}
+
+/** `[event-research] <event-id>` — the receipt title this lane writes and reads back. */
+export const RECEIPT_TITLE_RE = /^\[event-research\] (.+)$/;
+
+/* HOW MANY RECEIPTS ONE TICK MAY CLOSE. A different axis from the dispatch ceiling next door:
+ * that one bounds SPEND (opus sessions), this one bounds WRITE RATE. The reconcile below found 199
+ * open receipts on its first real run, 55 dormant and 144 already researched — closing them in one
+ * push is ~199 mutating `gh` calls in a few seconds, which is what GitHub's secondary rate limits
+ * exist to refuse. Draining 20 a tick clears that backlog over a normal day of pushes and then
+ * costs nothing, because the steady state is a handful. Deliberately a constant and not a budget
+ * file: this is a rate GitHub sets, not a policy Eric tunes. */
+const RECONCILE_CAP = 20;
+
+/**
+ * THE OTHER HALF OF THE LOOP — closing a receipt whose work will never arrive.
+ *
+ * `routeSweep` opens one receipt issue per never-assessed event. Until now the ONLY thing that
+ * could close one was `close-shipped`, which needs a merged PR linked to the issue. That leaves two
+ * whole classes permanently open, and on 2026-09-18 both were: 199 open `[event-research]` issues,
+ * 0 of them actually live.
+ *
+ * (1) DORMANT — 55 issues. #2971 bounded the calendar with a research horizon on 2026-09-15 at
+ * 14:16Z; #2968's receipt for `ism-services-2027-05-05` (D-229) had been filed at 13:56Z, twenty
+ * minutes earlier. From the next push on, the event was `beyond-horizon`, so `--due` stopped
+ * listing it, so `moneypenny-events.yml`'s matrix never dispatched a leg, so no ledger was ever
+ * written, so nothing could close it — a stall the stall audit correctly flagged and no lane could
+ * resolve, because there was no failure to repair. The horizon is not the only door out of `--due`
+ * (an event dropped from the calendar, or one that passed unresearched and aged out of
+ * `closeOutWithinDays`, leave the same way) — they all land here.
+ *
+ * (2) RESEARCHED — 144 issues whose ledger is on `main` but whose PR carried no `Closes #` link, so
+ * the reference oracle had nothing to read. THE LEDGER IS THE RIGHT ORACLE FOR THIS LABEL and
+ * always was: `docs/research/events/<id>.md` existing IS the definition of done here, it is what
+ * `gatherAuditDeps` already reads to decide a receipt is unclaimed, and unlike a PR link it cannot
+ * be forgotten by a session. Reading it also costs nothing, where the reference sweep costs the
+ * scarce GraphQL bucket.
+ *
+ * WHAT IT DELIBERATELY WILL NOT CLOSE: a receipt with no ledger whose event is still in `--due`.
+ * That one is genuinely outstanding — including when it is merely DEFERRED behind the dispatch
+ * ceiling, which is exactly why that cap lives in `dueForResearch` and not in `--due` (see this
+ * file's header). The stall audit owns that case; this pass must never race it.
+ *
+ * Pure: the caller resolves `hasLedger` per receipt in `gatherDeps`, so every branch is
+ * fixture-drivable with no disk.
+ *
+ * @param deps { openEventReceipts: [{ number, title, hasLedger }], dueEvents, reconcileCap? }
+ */
+export function routeReceipts(deps = {}) {
+  const { openEventReceipts = [], dueEvents = [], reconcileCap = RECONCILE_CAP } = deps;
+  const due = new Set(dueEvents.map((e) => e.id));
+  const stale = [];
+  for (const r of openEventReceipts) {
+    const id = String(r.title ?? "").match(RECEIPT_TITLE_RE)?.[1];
+    if (!id) continue;
+    if (!r.hasLedger && due.has(id)) continue;
+    stale.push({ ...r, id, why: r.hasLedger ? "researched" : "dormant" });
+  }
+  // Oldest first: a receipt that has been open longest is the one whose silence has cost the most,
+  // and REST hands these back newest-first, which would drain in exactly the wrong order.
+  stale.sort((a, b) => a.number - b.number);
+  const batch = stale.slice(0, reconcileCap);
+  if (stale.length > batch.length) {
+    // stderr only — stdout is the matrix JSON, same rule as the dispatch ceiling's notice.
+    console.error(
+      `::notice::receipt reconcile — closing ${batch.length} of ${stale.length} terminal ` +
+        `[event-research] receipt(s) this tick (cap ${reconcileCap}); the rest drain on later ` +
+        "pushes, oldest first.",
+    );
+  }
+  return batch.map((r) => ({
+    kind: "close-receipt",
+    issueNumber: r.number,
+    title: r.title,
+    why: r.why,
+    closeReason: r.why === "researched" ? "completed" : "not planned",
+    body: receiptCloseBody(r),
+  }));
+}
+
+function receiptCloseBody(r) {
+  const preamble =
+    r.why === "researched"
+      ? [
+          `📄 **Researched** — \`docs/research/events/${r.id}.md\` is on \`main\`, so this receipt is done.`,
+          "",
+          "Closed against the LEDGER rather than a `Closes #` link: a research PR does not always",
+          "carry one, and the reference oracle that used to be the only way out left 144 finished",
+          "receipts open. The ledger cannot be forgotten by a session; the link can.",
+        ]
+      : [
+          `🌙 **Dormant** — \`${r.id}\` is no longer in \`node scripts/event-scan.mjs --due\` and has no`,
+          "ledger, so no lane will ever pick this receipt up. Usually that means the event is now",
+          "beyond the research horizon (`assessment-cadence.json`, #2946/#2971) — it is still on the",
+          "calendar and still tracked, it just stops buying sessions until it comes inside. It can",
+          "also mean the event left the calendar, or passed unresearched and aged out of its",
+          "close-out window.",
+          "",
+          `Nothing is lost: **a fresh receipt opens automatically** the next push after \`${r.id}\``,
+          "is due again. Run `node scripts/event-scan.mjs | grep " +
+            r.id +
+            "` for its current verdict.",
+        ];
+  return [...preamble, "", FOOTER].join("\n");
 }
 
 /**
