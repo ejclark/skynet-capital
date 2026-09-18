@@ -14,7 +14,7 @@ import type { DraftAccountContext } from "../trading/draft-order-account.js";
 import { validateDraftAccount } from "../trading/draft-order-account.js";
 import { draftPreview } from "../trading/draft-order-preview.js";
 import type { Session } from "./auth/session.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
+import { requesterFor, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -222,7 +222,15 @@ export async function serveDraftOrderApi(
     return true;
   }
 
-  const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  // Compared against the session's full owned set, not just its single default account, so a
+  // session owning more than one account (a human account plus a `/claim`-linked bot, say) can
+  // draft on any of them, not only whichever one a bare default would land on.
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const requesterId = requesterFor(
+    request.participantId,
+    ownedIds,
+    config.hub.getState().participants,
+  );
   const isSelf = requesterId !== undefined && requesterId === request.participantId;
   if (!isSelf) {
     // Same rule the single-leg desk states outright: "You can only trade your own account." A

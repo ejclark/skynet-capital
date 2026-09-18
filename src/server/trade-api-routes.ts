@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
+import { requesterFor, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -146,8 +146,16 @@ export async function serveTradeApi(
   const body = await readTradeBody(req, res);
   if (!body) return true;
 
-  // Identity: the session and nowhere else — exactly `/trade`'s resolution.
-  const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  // Identity: the session and nowhere else — exactly `/trade`'s resolution. Compared against the
+  // full owned set, not just the session's single default account, so a session owning more than
+  // one account (e.g. a human account plus a `/claim`-linked bot) can trade any of them, not only
+  // whichever one a bare default would land on.
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const requesterId = requesterFor(
+    body.participantId,
+    ownedIds,
+    config.hub.getState().participants,
+  );
   const refusal = await resolveStockRefusal(body.action, requesterId, config, session);
 
   if (path === "/api/trade/review") {

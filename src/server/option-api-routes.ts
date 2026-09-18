@@ -13,7 +13,7 @@ import {
 } from "../trading/option-ticket.js";
 import type { Session } from "./auth/session.js";
 import { serveBars } from "./bars-route.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
+import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveChain } from "./option-chain-route.js";
@@ -317,10 +317,19 @@ export async function serveOptionApi(
     sendJson(res, 400, { error: "malformed option order body" });
     return true;
   }
+  // An order names a specific desk, so compare against the session's full owned set rather than
+  // the single default above — a session owning more than one account (a human account plus a
+  // `/claim`-linked bot, say) must be able to trade any of them, not only the default one.
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const orderRequesterId = requesterFor(
+    request.participantId,
+    ownedIds,
+    config.hub.getState().participants,
+  );
   const progression =
-    requesterId && config.progression
+    orderRequesterId && config.progression
       ? await config.progression.view(
-          requesterId,
+          orderRequesterId,
           session ? opaqueMemberId(session.email) : undefined,
         )
       : undefined;
@@ -330,9 +339,9 @@ export async function serveOptionApi(
       sendJson(res, 404, { error: "no such desk" });
       return true;
     }
-    await reviewOption(res, request, snapshot, config, requesterId, progression);
+    await reviewOption(res, request, snapshot, config, orderRequesterId, progression);
     return true;
   }
-  await submitOption(res, request, config, requesterId, progression);
+  await submitOption(res, request, config, orderRequesterId, progression);
   return true;
 }
