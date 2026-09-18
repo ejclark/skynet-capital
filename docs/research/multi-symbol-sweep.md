@@ -277,6 +277,31 @@ robust, alpha fragile — is the finding.
   **timing** claim only, and the instruction to prefer accredited PAYE RTI over the LFS unemployment
   rate stands untouched.
 
+- **A single-print earnings-gap-sign bet conditioned on a fundamental regime classification, on a
+  session sharing its close with FOMC and its next open with a macro print
+  (FT-lennar-q3-fy2026-2026-09-16-1)** — added 2026-09-18 from the
+  [lennar-q3-fy2026-2026-09-16 close-out](events/lennar-q3-fy2026-2026-09-16.md). It predicted that if
+  Lennar's Q3 release left its margin-compression regime intact (gross margin ≤16.0% or incentives
+  ≥12.9%), the 2026-09-17 open gap would be **negative** — the direction LEN's own modern-era record
+  (3-up-in-14, p=0.029) implied for a name still compressing. Gross margin printed **15.8%** (regime
+  intact by that clause) and the gap printed **+3.37%** — positive, the single largest modern-era move
+  on record for this name in either direction, and the kill condition named verbatim in the test's own
+  text. **The regime classification was not wrong on its own terms and it still lost, because the gap's
+  actual driver was mostly upstream of it:** LEN's earnings landed after FOMC's same-day close and
+  before `housing-starts-2026-09-17`'s 08:30 print, and every peer plus the broad tape gapped the same
+  direction the same morning (DHI +2.34%, PHM +1.60%, TOL +2.53%, ITB +1.71%, QQQ +1.59%, SPY +1.21%)
+  — a sector/market-wide move LEN's own gap (+3.37%) merely exceeded rather than caused alone. **Do not
+  condition a single-name gap-sign bet on that name's fundamentals alone when the release shares its
+  reaction window with a confirmed high-impact macro corridor** — a fundamentals-only regime read has
+  no term for the beta the session is soaked in, and this calendar already tracks exactly which
+  sessions carry that risk (the adjacency sweep's own corridor table). Score the fundamentals against a
+  peer- or index-adjusted gap next time, not the raw one. **One detail that must travel with the kill:**
+  the sibling test on the same print (`FT-lennar-q3-fy2026-2026-09-16-2`, overnight repricing dominates
+  the reaction day) **passed** — the *shape* of LEN's reaction (front-loaded into the gap, not the
+  session) held even though the *sign* prediction did not, so this kill is about conditioning a
+  direction call on fundamentals inside a confounded window, not about the overnight-vs-intraday
+  finding itself.
+
 - **NVDA earnings-gap hold (anti-S2)** — added 2026-08-15 ([`nvda-aug-2026-print.md`](nvda-aug-2026-print.md)):
   win 9/14 vs the 60% ordinary-overnight base (p=0.486 — indistinguishable from any overnight);
   the +5.35% mean is carried entirely by four 2023-24 gaps (ex-top-4 +1.72%) against a pooled
