@@ -49,3 +49,8 @@ ds-bundle/
 .design-sync/node_modules
 app/.ds-styles.css
 app/dist/
+
+# Playwright run output — regenerable; the baseline snapshots under e2e/**/*-snapshots/ are not.
+test-results/
+playwright-report/
+blob-report/
