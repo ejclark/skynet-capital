@@ -2,11 +2,16 @@
 // batching/model-tier redesign, landed alone rather than folded into that larger work).
 //
 // The count-based caps (research-dispatch-budget.json, the held research-daily-budget.json) bound
-// how many SESSIONS dispatch. Neither bounds DOLLARS — a cap of "6 sessions" says nothing if one
-// of those six sessions runs away and burns 10x a normal session's cost. This is keyed to actual
-// measured `total_cost_usd` from the cost meter (#2979) instead, and it fails HARD rather than
-// slow: once tripped, dispatch is zero on every tick until a human clears it — never a lower rate,
-// and never a rolling window that quietly reopens once the expensive burst ages out on its own.
+// how many SESSIONS dispatch. Neither bounds relative USAGE — a cap of "6 sessions" says nothing
+// if one of those six sessions runs away and burns 10x a normal session's share. This is keyed to
+// `total_cost_usd` from the cost meter (#2979) instead, and it fails HARD rather than slow: once
+// tripped, dispatch is zero on every tick until a human clears it — never a lower rate, and never
+// a rolling window that quietly reopens once the expensive burst ages out on its own.
+//
+// 2026-09-18: this repo runs on a Claude Max 20 flat-fee subscription, not metered API billing —
+// `total_cost_usd` is the CLI's imputed API-equivalent cost, never a literal charge (no dollars
+// actually change hands per session; see research-circuit-breaker.json's `$why`). Treat every
+// dollar figure below as a relative token-usage proxy for sizing the threshold, not real spend.
 //
 // WHY THIS CANNOT LIVE AS A PURE LOCAL DEFAULT, unlike the count-based caps. Those are computed
 // from `git log` — local, fast, side-effect-free, safe to leave as a shared function's default
@@ -192,10 +197,11 @@ export function tripBreaker({
     "comment",
     String(trackingIssue),
     "--body",
-    `🔴 **Research circuit breaker tripped** — measured spend in the trailing ${windowHours}h is ` +
-      `$${spentUsd.toFixed(2)}, over the $${maxSpendUsd} threshold (research-circuit-breaker.json). ` +
-      "Dispatch is halted on every tick until this is cleared, regardless of what the rolling " +
-      `window recomputes to later. To resume: remove the \`${trippedLabel}\` label from this issue.`,
+    `🔴 **Research circuit breaker tripped** — imputed usage in the trailing ${windowHours}h is ` +
+      `$${spentUsd.toFixed(2)} (Claude Max 20 API-equivalent, not a literal charge), over the ` +
+      `$${maxSpendUsd} threshold (research-circuit-breaker.json). Dispatch is halted on every tick ` +
+      "until this is cleared, regardless of what the rolling window recomputes to later. To resume: " +
+      `remove the \`${trippedLabel}\` label from this issue.`,
   ]);
 }
 
