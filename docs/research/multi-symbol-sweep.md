@@ -71,6 +71,37 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **An execution base rate built entirely under one cap, left unrevised once a later forward test
+  in the same document found the mechanism was cover rather than cap identity
+  (FT-treasury-buyback-7y10y-2026-09-17-2)** — added 2026-09-18 from the
+  [treasury-buyback-7y10y-2026-09-17 close-out](events/treasury-buyback-7y10y-2026-09-17.md). Leg 2
+  of that document's initial research (2026-09-08) built its headline finding — "the least-used
+  instrument in the entire program" — on nine operations run entirely under the bucket's **old $2B**
+  cap: zero full fills, mean accepted $414M, median $210M. `FT-…-2`, registered the same day,
+  extrapolated that regularity forward against the **new, doubled $4B** cap sb0607 had just set,
+  correctly re-deriving the percentage bound (30% of $4B = $1.2B) but predicting accepted par would
+  still land under **$1.066B** (the old-cap era's all-time high). The operation accepted **$2.385B —
+  59.6% of cap, 2.24× the prior maximum** — clearing both legs of the kill line by roughly 2x. **The
+  base rate was not wrong; it was never re-priced against a mechanism the same document already
+  had.** Two days after leg 2, at D-7 (2026-09-10), this document registered `FT-…-3`: fill against
+  cap is a step function of **cover** (offered ÷ cap), not of bucket identity, across all 100 nominal
+  liquidity-support operations ever run. Once the cap doubled, this bucket's historical dealer-offer
+  volume (this operation offered $9.74B — its second-highest ever) produces a **lower** cover against
+  the larger denominator, and lower cover was already known, by 09-10, to sit in a much-higher-fill
+  band above 1.5x. **Why this is a clean kill and not bad luck: the same document's own later test
+  supplies the correct joint prediction.** Priced against `FT-…-2`'s history-only frame, $2.385B is
+  an outlier; priced against `FT-…-3`'s cover mechanism (2.435x cover, the 1.5–3x band's own 58.8%
+  historical mean fill), the realized 59.6% fill is close to exactly what the mechanism predicts.
+  **Do not leave a bucket-level execution bound standing once a later test in the same document
+  identifies the real driving variable — re-price the earlier bound jointly, or restate it
+  conditionally** (here: *"under $1.2B if cover stays below 1.5x; a materially larger take if the
+  doubled cap runs at this bucket's historical offer volumes"* would have described 09-17 exactly).
+  **One detail that must travel with the kill:** the parent stance — *read it, do not trade it* —
+  was **correct and cost nothing**, and the eligible-list derivation (legs 4–5) and the cap-parity
+  correction (leg 3) both held. A killed execution test broke the doc's headline framing
+  ("least-used instrument"), not the stance, and not the cover mechanism it also carries — which
+  passed its own first live test in this bucket, in direction, on the same print.
+
 - **A base rate read off one regime, when the sibling forward test in the same document predicts
   crossing into the other (FT-treasury-buyback-tips-10y30y-2026-09-15-1)** — added 2026-09-16 from
   the [treasury-buyback-tips-10y30y-2026-09-15 close-out](events/treasury-buyback-tips-10y30y-2026-09-15.md).

@@ -1,23 +1,24 @@
 # Treasury liquidity-support buyback operation (7-10Y nominal, $4B cap, 1:40pm ET) — treasury-buyback-7y10y-2026-09-17
 
 **Kind:** rates · **Date:** 2026-09-17 (estimate, EST: treasury.gov Tentative Schedule of Treasury Buyback Operations — the **REVISED** schedule published 2026-09-09, masthead "For Publication September 9, 2026", PDF fetched direct and its text layer independently decompressed 2026-09-10, HTTP 200, 89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`, `xmp:CreateDate` 2026-09-09T09:44:39-04:00 from `BuybackCalendar-August-2026-Updated_20260909.docx`; this row is **verbatim unchanged** from the superseded 08-05 edition — announce 9/16/2026 · operation 9/17/2026 1:40 pm – 2:00 pm · settle 9/18/2026 · Liquidity Support · Nominal Coupons 7Y to 10Y · 09/18/2033 – 09/17/2036 · min $0 · max $4 billion — while six long-end rows in the same document were rewritten. Still `estimate`: the document says "Tentative" on its own masthead and the confirming primary is the 09-16 operation announcement — checked 2026-09-10) · **Impact:** medium
-**Last assessed:** 2026-09-17
-<!-- probe-ref: {"symbols":{},"vix":17.71,"daysBand":"medium:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
+**Last assessed:** 2026-09-18
+<!-- probe-ref: {"symbols":{},"vix":15.44,"daysBand":"medium:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
-**TL;DR.** A **read, not a trade** — and the read is that this operation is the **least-used
-instrument in the entire Treasury buyback program**, which corrects the reason it was filed. The
-tentative schedule (**estimate**) puts a routine 7-10Y nominal liquidity-support buyback at
-**1:40–2:00pm ET on 2026-09-17**, cap **$4B**. It was proposed as the "$4B parity benchmark"
-showing that sb0607 merely lifts the long end to the size the rest of the curve already carried.
-That is true about **caps** and false about **purchases**: across all nine operations this bucket
-has ever run it has filled its cap **zero times**, accepting a mean of **$414M** and a median of
-**$210M** — while the 10Y-20Y bucket buys its entire $2B cap **21 times out of 21**. On accepted
-par, the long end at its *old* cap already purchases four times what this bucket purchases at
-$4B. Second correction: despite the label, **no 7-Year note has ever been eligible** — every list
-is ten 10-Year notes, and the count is derivable rather than awaited. Trade nothing; 09-17 sits one
-day after the FOMC with four other dated events on it.
+**TL;DR.** **Closed — and the operation broke the framing this doc was built to test.** It ran and
+printed the largest 7-10Y buyback in the program's history by a wide margin: **$9.74B offered ·
+$2.385B accepted · 59.6% of the $4B cap · 6 of 10 issues** (Treasury `BBR_20260917174000.xml` +
+`buybacks_operations`, both re-pulled direct 2026-09-18, HTTP 200). That is **2.24x** the bucket's
+prior all-time high ($1.066B, 2025-06-17) and clears both stated kill switches — the **$1.2B** /
+30%-of-cap line `FT-…-2` set, and leg 2's own regularity ("any single 7-10Y operation clears $2B
+accepted"). The 09-16 eligible list matched the derivation exactly: **ten 10-Year notes, 2033-11-15
+→ 2036-02-15, no 7-Year note** (`FT-…-1` **PASSES**), and the announced maximum stayed a hard
+**$4B** — not the long end's "= or > " floor wording. `FT-…-3`'s cover mechanism reads correctly in
+*direction* but scores **untested**: cover printed **2.435x**, above the <1.5x band the test bet
+on, and the realized 59.6% fill sits almost exactly on the 1.5–3x band's own **58.8%** historical
+mean — the house-wide mechanism held, the specific low-cover bet just never got a chance to fire.
+Status flips **estimate → confirmed** (`TSY:`) on the three treasurydirect.gov primaries.
 
 **Updated 9/10 (D-7) — the replacement schedule landed, it rewrote six rows, and it did not touch
 this one.** Treasury published the revised buyback calendar on **2026-09-09 at 09:44 ET** (masthead
@@ -41,33 +42,32 @@ still nothing to trade.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (9/10, D-7) | Stand aside | High | Seven days out, parameters still **estimate**, and the instrument's own history says it buys a few hundred million dollars of off-the-run 10-Year notes — there is nothing here to trade at any distance. | The **09-16 announcement** carrying a maximum other than **$4 billion**, or the "= or > " wording spreading to this bucket — either would mean the 09-09 revision's decision to leave the belly alone was not the decision it appeared to be |
-| This week | Watch **cover**, not the headline, on 09-17 — and read the 09-16 list at 11:00am ET | Medium | The cover→fill step function is now the mechanism (0 full fills in 11 at cover <1.5x, 60 of 64 at ≥3x), so cover is the number that predicts the result and it is published in the same release. | The **2026-09-17** operation filling **≥ 50% of its announced maximum on cover below 1.5x** — never once in 100 operations; the mechanism would be wrong, not merely noisy |
-| This month | Read the 09-16 list and the 09-17 accepted number, trade neither | Medium | Two checkable numbers: the 11:00am ET preliminary list (predicted: ten 10-Year notes, 2033-11-15 → 2036-02-15, re-derived 9/10 from the auction universe itself) and **par accepted vs the $4B cap** (predicted: under $1.07B, the bucket's all-time high). | The **2026-09-17** operation accepting **≥ $1.2B**, or the 09-16 list containing a 7-Year note or a count other than 10 |
-| This quarter | Stand aside on belly buybacks as a rates driver | High | Three operations in 2026 bought **$835M combined**, and the long end bought **$5.187B in a single afternoon on 09-10**. It is plumbing, not a lever. | Treasury extending the **"= or > $4 billion"** floor wording to the 7-10Y row, or adding belly sectors/frequency at the **2026-11-04** refunding, or any single 7-10Y operation clearing $2B |
+| Today (9/17-18, D+1) | Closed — no position, nothing to trade | High | The operation printed and is scored above from the re-pulled primary; this horizon is retrospective only. | Nothing — closed. The retrospective falsifier (a tape move attributable to the 1:40–2:00pm window) is unmeasurable by construction, same as every prior operation in this corridor: the belly sold off into the FOMC the day before and eased 7-8bp the day of, neither move separable from this print |
+| This week | Read the **09-24 20-30Y** operation as the next test of whether a doubled cap keeps landing covers in the 1.5–3x band | Medium | This operation's cover (2.435x) sat where the house-wide mechanism (`FT-…-3`, all 100 nominal ops) predicts ~58.8% fill, and it printed 59.6% — the mechanism transferred to the belly even though the specific low-cover bet didn't get to fire | The [20-30Y operation](../../src/domain/market-events/treasury-buyback-20y30y-2026-09-24.json) filling under 40% or over 80% of its own doubled cap at a comparably-mid cover reading — would say this print's cover→fill match was coincidence |
+| This month | Retire "least-used instrument" as this bucket's framing; stand aside on belly buybacks as a rates driver regardless | High | $2.385B in one operation is **2.9x** the bucket's entire 2026 purchases before this print ($835M) — the nine-operation regularity leg 2 built the doc around (0 full fills, mean $414M) just broke on the tenth. The *stance* survives the framing break: nothing here was ever tradeable at this size relative to the week's $61B+ in coupon issuance | A second 7-10Y operation clearing $2B accepted would say 09-17 was the new normal rather than a doubled-cap's first-use outlier; a reversion to sub-$500M accepts would say the opposite |
+| This quarter | Watch cap-driven cover shifts across the whole nominal complex, not just the long end | Medium | Doubling a cap while dealer offers hold near-record levels ($9.74B, this bucket's 2nd-highest offer ever) mechanically pushes cover into a higher-fill band — sb0607's real effect may be arriving through **cover**, not through Treasury "wanting" more of the belly specifically | Treasury extending the "= or > $4 billion" floor wording to this row, or adding belly sectors/frequency at the **2026-11-04** refunding — either would mean the effect is policy rather than mechanical |
 
-**Signals & conditions** — the buy/sell/hold triggers:
+**Signals & conditions** — what fired at close, and what it means:
 
-- **09-16, 11:00am ET** — preliminary eligible list posts. Ten CUSIPs, 2033-11-15 → 2036-02-15, no
-  7-Year note, is the base case (`FT-…-1`). Any other shape breaks the derivation, not just the count.
-- **09-16 announced maximum** — expect a hard **$4B**, which the 09-09 revised schedule reaffirmed
-  verbatim while converting six long-end rows to "= or > $4 billion". A $4B print is *not* evidence
-  sb0607 took effect here; the "= or > " wording appearing on this row would be.
-- **09-17 cover (offered ÷ maximum)** — the number that predicts the result, published with it.
-  Below 1.5x is the base case (6 of 9 prior operations; bucket mean 1.32x) and no operation in 100
-  has filled its cap from there (`FT-…-3`).
-- **09-17 accepted vs cap** — under ~$1.07B is the whole nine-operation history (`FT-…-2`). A fill
-  above that is the first evidence the belly's price gap has closed and belongs in the corridor's
-  stance docs as one sentence.
-- **09-17 accepted = $0** — has happened once (2024-07-24, $3.71B offered, nothing taken). Not an
-  error and not a signal; it is what a strict relative-value price test does.
-- **Never** — no position keyed to this operation, and no attribution of that afternoon's tape to
-  it. Four other dated events share 09-17 and the FOMC decision is 23½ hours earlier.
-- **Watch (dated)** — ~~10-20Y operation **9/10**~~ (done: $6B max, $5.187B accepted) · CPI **9/11**
-  · 20Y bond + TIPS 10-30Y buyback **9/15** · FOMC **9/16** · **$19B 10Y TIPS reopening 1:00pm**,
-  coupon announcement, housing starts, Philly Fed, BoE, this operation **9/17** · opex + BoJ
-  **9/18** · 20-30Y operation **9/24**, the first test of the "= or > $4 billion" wording ·
-  refunding **11/4**.
+- **09-16, 11:00am ET — FIRED as derived.** `BBPA_20260917174000.xml`: ten CUSIPs, 2033-11-15 →
+  2036-02-15, no 7-Year note, `nbr_issues_eligible` 10 — `FT-…-1` **PASSES** on every count.
+- **09-16 announced maximum — hard $4B, as expected.** `maxParAmountRedeemed: 4000000000` in both
+  the preliminary and final XML, no "= or > " floor wording. That kill switch did not fire.
+- **09-17 cover — 2.435x** (offered $9.74B ÷ max $4B), above the <1.5x band `FT-…-3` bet on. The
+  test scores **untested by this print** (its first leg missed), not a kill of the mechanism — the
+  1.5–3x band's own historical mean (58.8%) is what the realized 59.6% fill actually matches.
+- **09-17 accepted vs cap — $2.385B, 59.6% of $4B.** Blows through `FT-…-2`'s $1.2B / 30% kill line
+  by roughly 2x and leg 2's own $2B kill line by $385M. **KILLED**, not a near miss.
+- **09-17 accepted = $0** — did not happen this time (it has once, 2024-07-24). Not scored either
+  way; recorded for the record only.
+- **Never** — no position was keyed to this operation, and none of the day's tape (FOMC 23½ hours
+  earlier, the 1:00pm 10Y TIPS auction, the coupon announcement, housing starts) is attributed to it.
+- **Watch (dated)** — ~~10-20Y operation **9/10**~~ (done: $6B max, $5.187B accepted) · ~~CPI
+  **9/11**~~ · ~~20Y bond + TIPS 10-30Y buyback **9/15**~~ · ~~FOMC **9/16**~~ · ~~$19B 10Y TIPS
+  reopening, coupon announcement, housing starts, Philly Fed, BoE, **this operation 9/17**~~ (done,
+  above) · opex + BoJ **9/18** · **20-30Y operation 9/24**, the first live test of the "= or > $4
+  billion" wording and, per this close-out, a second read on cap-driven cover shifts · refunding
+  **11/4**.
 
 ## Initial research
 
@@ -253,6 +253,23 @@ committee statement, sanctions actions, a commemorative coin — **sb0607 remain
 release**, unchanged since before this doc's initial research. No new dated adjacent event proposed
 this pulse. Call unchanged: still a read, not a trade; the operation's own numbers land at close-out.
 
+**Added 2026-09-18 (D+1) — close-out, and two of five kill switches fired.** The operation ran and
+its results are primary, re-pulled from `treasurydirect.gov`'s `BBPA_20260917174000.xml` (preliminary,
+`announcementDTM` 2026-09-16T11:00-04:00), `BBA_20260917174000.xml` (final, unchanged) and
+`BBR_20260917174000.xml` (results), corroborated by `api.fiscaldata.treasury.gov` `buybacks_operations`
+and `buybacks_security_details`: **$9,740,000,000 offered · $2,385,000,000 accepted · 4,000,000,000 max
+(hard, no floor wording) · cover 2.435x · fill 59.6% · 6 of 10 issues accepted**. Full detail in
+`## Outcome` below. **Fired:** "any single 7-10Y operation clears $2B accepted" (leg 2's nine-operation
+regularity — 0 full fills, mean $414M, median $210M — breaks on the tenth) and the `FT-…-2` kill line
+(par accepted ≥ $1.2B / ≥ 30% of cap; realized $2.385B / 59.6% clears both by roughly 2x). **Did not
+fire:** the eligible-list kill (leg 4/5 hold exactly), the "= or > $4 billion" wording kill (maximum
+stayed a hard $4B), and the cover-based kill's stated conjunction (cover printed 2.435x, not below
+1.5x, so `FT-…-3`'s specific bet never got to fire — scored a miss on the prediction, not a kill of
+the mechanism, per that test's own pre-written rule). **Status flipped `estimate` → `confirmed`**
+(`TSY:`) on the three primaries above — the operation is a matter of published record and the
+taxonomy gap the `EST:` label carried (a tentative schedule, an unconfirmed announcement) no longer
+applies.
+
 **Two corrections this doc owns.** (1) **Cap parity is not purchase parity.** The proposal note and
 the `treasury-buyback-increase-2026-09-09` ledger's "it is parity, not escalation" read both compare
 caps. On accepted par the long end at $2B already bought 4x this bucket at $4B, so sb0607 plausibly
@@ -294,6 +311,7 @@ count is derivable from the maturity window and the first-coupon rule rather tha
 | 2026-09-13 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 15.8 (-2.0pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked, new in corridor since last pulse: `bowman-stress-testing-2026-09-18`, `eia-weekly-petroleum-status-2026-09-16`, `uk-retail-sales-2026-09-18` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-15 |
 | 2026-09-15 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 17.6 (+1.8pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-17 |
 | 2026-09-17 | D-0 | **The 09-16 preliminary announcement posted, and it confirms the derivation exactly.** `buybacks_operations` + `buybacks_security_details` (primary, `api.fiscaldata.treasury.gov`, plain curl HTTP 200, fetched ~07:40 ET today, well before the 1:40pm operation): eligible list is **ten 10-Year notes, 2033-11-15 → 2036-02-15** (91282CJJ1 → 91282CPZ8), `nbr_issues_eligible` **10**, `max_nbr_offers` **9**, **no 7-Year note** — matches `FT-…-1`'s prediction on every count. Announced maximum is a **hard `$4,000,000,000`**, not the long end's "= or > " floor wording — that kill switch did not fire. `total_par_amt_offered`/`accepted` still `null` at fetch time (operation not yet run); `FT-…-2` and `FT-…-3` stay open for the close-out. Status stays `estimate` — following the `treasury-buyback-tips-10y30y-2026-09-15` sibling's precedent, the confirmed flip and the forward-test scoring both wait for the close-out, when announcement and results can be read together. **Adjacency — macro surprise:** FOMC hiked 25bp to 3.75–4.00% (unanimous, 09-16) with a **hawkish SEP** (2026 median **4.1%**, up from 3.8% in June; sibling `fomc-2026-09-16.md`, primary federalreserve.gov). **Rates (Treasury par CSV, 09-16 close):** 2Y 4.74 · 5Y 4.86 · **7Y 4.94** (+10bp since 09-10) · **10Y 5.01** (+6bp, fresh 2026 high) · 20Y 5.39 · 30Y 5.35 — the belly continues selling off. **Volatility:** VIX **17.71** (Cboe daily close, 09-16), +0.11 vs the 09-15 screen's 17.6, under the 3-point bar; a pre-open indicative read this morning shows a crush toward 15.9 (post-FOMC vol unwind), not yet a settled close. **Corridor:** 45 adjacent events within ±5 days (was 39), but the four confirmed high/critical names are unchanged (`fomc-2026-09-16`, `retail-sales-2026-09-16`, `treasury-20y-bond-2026-09-15`, `opex-2026-09-18`) — nothing crossed the material-screen's bar. **Press sweep:** Treasury's newest releases (sb0622→sb0631, re-read 09-17) carry no buyback release and no new dated event (TIC data, a Bessent committee statement, sanctions actions, a commemorative coin) — **sb0607 remains the last buyback release**. No new dated adjacent event proposed this pulse. | No change to the call (still a read, not a trade) | 2026-09-18 (`event-passed-unscored`; `FT-…-2`/`FT-…-3` score by 09-18, so the close-out should land the same day per EVENT-RESEARCH.md's close-out-waits-for-its-own-predictions rule) |
+| 2026-09-18 | D+1 | **Close-out — the cap did not bind but the take dwarfed every prior operation.** All three announcement/results primaries re-fetched direct (`treasurydirect.gov/instit/annceresult/press/preanre/2026/BBPA_20260917174000.xml`, `BBA_…xml`, `BBR_…xml`, HTTP 200), corroborated by `api.fiscaldata.treasury.gov` `buybacks_operations` + `buybacks_security_details`: **$9,740,000,000 offered · $2,385,000,000 accepted · $4,000,000,000 max (hard) · cover 2.435x · fill 59.6% · 6 of 10 issues** (91282CKQ3 alone took $1.650B, 69% of the total, at 96.714). Eligible list matched the derivation exactly: ten 10-Year notes 2033-11-15→2036-02-15, no 7-Year note — `FT-…-1` **PASSES**. `FT-…-2` (accepted < $1.066B / < 30% of cap) **KILLED**: $2.385B is 2.24x the bucket's prior all-time high and 59.6% is roughly double the 30% bound. Leg 2's own kill switch ("any single operation clears $2B accepted") **fired** too — the nine-operation "least-used instrument" regularity this doc was built around breaks on the tenth. `FT-…-3` (cover < 1.5x and fill < 50%) scores **untested**: cover printed 2.435x, missing the test's first leg, though the realized 59.6% fill sits almost exactly on the 1.5–3x band's own 58.8% historical mean — the house-wide cover mechanism reads correctly in direction. **Rates (Treasury par CSV):** 7Y **4.86%** (09-17, −8bp vs 09-16's post-FOMC 4.94) · 10Y **4.94%** (−7bp vs 5.01) — a belly relief pullback the day of the operation, not attributable to it. **Volatility:** VIX **15.44** (Cboe daily close 09-17), −2.27 vs the 09-16 close, under the 3-point bar — a post-FOMC vol unwind, not a regime shift. **Adjacency:** close-out mode, no sweep; nothing proposed. **`<id>.json`: `status` flipped `estimate` → `confirmed`, source `EST:` → `TSY:`** on the three primaries above. Full detail in `## Outcome`. | **Stance held and was correct — no position, nothing lost.** The framing broke ("least-used instrument"), the stance (read it, do not trade it) did not | — (closed; `## Outcome` below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -304,3 +322,142 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-09-18 (D+1).** A `rates` event with `symbols: []`, so no `earnings-cycle`/
+`intraday-edges` run applies (rates mode never used that cache); every number below is re-fetched
+from its primary this session, not carried from the D-0 row. Sources, all HTTP 200 on a plain curl:
+`treasurydirect.gov/instit/annceresult/press/preanre/2026/` for `BBPA_20260917174000.xml` (preliminary,
+`announcementDTM` 2026-09-16T11:00-04:00), `BBA_20260917174000.xml` (final, 2026-09-17T11:00-04:00,
+unchanged) and `BBR_20260917174000.xml` (results); `api.fiscaldata.treasury.gov` `buybacks_operations`
+and `buybacks_security_details` (per-CUSIP, this operation); `home.treasury.gov` daily par yield-curve
+CSV; Cboe `VIX_History.csv`. No fetch failed; `probe-ref.blocked` is empty.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$4,000,000,000** (hard — no "= or > " floor wording reached this row) |
+| Total par offered | **$9,740,000,000** |
+| Total par accepted | **$2,385,000,000** |
+| Cover (offered ÷ max) | **2.435×** |
+| Fill (accepted ÷ max) | **59.6%** |
+| Hit rate (accepted ÷ offered) | **24.5%** |
+| Issues | **6 accepted of 10 eligible** |
+| Eligible maturity range | **2033-11-15 → 2036-02-15**, ten 10-Year notes, zero 7-Year notes |
+| Window / settlement | 1:40–2:00pm ET **2026-09-17**, settled **2026-09-18** |
+
+Announcement chain, all three primaries read this session: preliminary **2026-09-16 11:00 ET** (ten
+eligible CUSIPs, cap $4B), final **2026-09-17 11:00 ET** (cap and eligible set unchanged), results
+published against the 1:40–2:00pm window. Nothing moved, resized or cancelled, so all three forward
+tests scored rather than voiding.
+
+**Accepted lines, per CUSIP** (`buybacks_security_details`, this session):
+
+| CUSIP | Maturity | Coupon | Par accepted | Price |
+|---|---|---|---|---|
+| 91282CJJ1 | 2033-11-15 | 4.500% | $252,000,000 | 97.711 |
+| 91282CJZ5 | 2034-02-15 | 4.000% | $257,000,000 | 94.508 |
+| 91282CKQ3 | 2034-05-15 | 4.375% | **$1,650,000,000** | 96.714 |
+| 91282CLF6 | 2034-08-15 | 3.875% | $60,000,000 | 93.314 |
+| 91282CPJ4 | 2035-11-15 | 4.000% | $150,000,000 | 93.156 |
+| 91282CPZ8 | 2036-02-15 | 4.125% | $16,000,000 | 93.957 |
+| 91282CLW9 / 91282CMM0 / 91282CNC1 / 91282CNT4 | 2034-11-15 – 2035-08-15 | — | $0 each | — |
+
+**91282CKQ3 alone took 69% of the entire operation** — not the front of the bucket and not the
+deep-discount tail, a mid-window note. The four zero-accept lines sit in a contiguous band
+(2034-11-15 through 2035-08-15), between the two clusters that did trade; there is no published
+account of why that specific band went untaken and none is inferred here.
+
+### Forward tests — one pass, one clean kill, one untested
+
+- **FT-treasury-buyback-7y10y-2026-09-17-1** — *the eligible list is fully derivable from the
+  maturity window plus the first-coupon exclusion, and contains no 7-Year note.* **PASS, exactly.**
+  Ten CUSIPs, 2033-11-15 through 2036-02-15 inclusive, zero 7-Year notes, matching the prediction on
+  every count including which two notes at the top of the window (2036-05-15, 2036-08-15) were
+  excluded. Now confirmed on a fourth observation (three from initial research, this the fourth) —
+  the model is 4 for 4.
+- **FT-treasury-buyback-7y10y-2026-09-17-2** — *the $4B cap is decorative; accepted par lands under
+  $1.066B and under 30% of the maximum.* **KILLED: $2,385,000,000**, 59.6% of cap — **2.24×** the
+  bucket's own all-time high (set 2025-06-17) and roughly **double** the kill line on both the
+  dollar and percentage legs. Not a near miss: the prediction's premise (this bucket behaves like the
+  nine operations before it) did not survive contact with a doubled cap and near-record dealer
+  offers in the same window.
+- **FT-treasury-buyback-7y10y-2026-09-17-3** — *the under-fill is a cover phenomenon: cover < 1.5x
+  implies a fill under 50%.* **Scores a miss on the prediction, explicitly not a kill of the
+  mechanism** — the test's own pre-written rule for exactly this case. Cover printed **2.435×**,
+  above the <1.5x band the prediction required, so the conditional was never tested by this print.
+  What the print *does* show: the realized **59.6%** fill sits almost exactly on the 1.5–3x band's
+  own historical mean of **58.8%** (n=25, from the house-wide 100-operation sample) — the mechanism
+  that cover, not bucket identity, predicts fill reads correctly in direction on its first
+  out-of-sample test in this specific bucket, even though the low-cover leg of the prediction did
+  not get a chance to fire.
+
+### The mechanism finding — a cap change the base rate never re-priced
+
+Leg 2 of the initial research built this document's headline finding on nine operations run entirely
+under the **old $2B cap**: zero full fills, mean accepted $414M, median $210M, mean fill 10.3%.
+`FT-…-2` extrapolated that regularity forward against the **new** $4B cap, correctly re-deriving the
+percentage bound (30% of $4B = $1.2B) but not re-pricing the dollar bound jointly with the cover
+mechanism this same document discovered two days later (`FT-…-3`, registered 2026-09-10): fill is a
+function of **cover** (offered ÷ cap), not of the bucket's own history of small accepts. Once the cap
+doubled, the same or greater dealer offer volume this bucket has shown before ($9.74B is this
+bucket's **second-highest offer ever**, behind only 2025-10-16's $10.44B) produces a **lower** cover
+against the larger denominator — and lower cover was already known, by 09-10, to sit in a
+much-higher-fill band once it clears 1.5x. **The tell, generalized (parallel to the
+[treasury-buyback-tips-10y30y-2026-09-15 kill list entry](../multi-symbol-sweep.md)):** when a
+document registers a mechanism-level forward test (here, `FT-…-3`'s cover→fill relationship) after an
+earlier bucket-level bound (`FT-…-2`) is already live, the earlier bound should be re-priced against
+the new mechanism before it scores — not left to stand on the sub-sample it was built from. Had
+`FT-…-2` been restated conditionally at D-7 — *"under $1.2B if cover stays below 1.5x; a
+materially larger take if the doubled cap runs at this bucket's historical offer volumes"* — it would
+have described 09-17 correctly instead of scoring a clean kill. Banked to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.
+
+### What held, and what broke
+
+- **The stance was correct and cost nothing.** *Read it, do not trade it.* No position, no size, no
+  rate-sensitive exposure keyed to this operation. $2.385B is still a rounding error against the
+  week's $61B+ of 10- and 30-year issuance (leg 8), so the scale argument that forecloses trading this
+  survives the framing break intact — a killed execution test does not license a position.
+- **"Least-used instrument in the program" — the doc's own headline finding — broke.** Leg 2's
+  nine-operation regularity (0 full fills, mean $414M) is now a ten-operation record with one $2.385B
+  print in it. The eligible-list derivation (legs 4-5) and the "cap parity is not purchase parity"
+  correction (leg 3) both held — this operation's accepted par is still well under the 10Y-20Y
+  bucket's per-operation mean even at its new size — but the *magnitude* claim built on the small-take
+  history no longer describes this bucket without qualification.
+- **The cover mechanism transferred, in direction, to a bucket it was never tested on.** `FT-…-3` was
+  built entirely from the 10Y-20Y and 20Y-30Y buckets' operations plus this bucket's own history under
+  the old cap; this is its first live test in the 7Y-10Y bucket specifically, and the cover→fill
+  relationship held (2.435x cover, 59.6% fill vs. the 1.5–3x band's 58.8% mean) even though the
+  specific low-cover prediction wasn't the one that fired.
+- **No 7-Year note, fourth observation running.** The maturity-window-plus-first-coupon model is now
+  4 for 4 across every operation this bucket has run since this doc started tracking it, including
+  the one where the announced window's stated upper bound (2036-08-15 in the XML) ran past the actual
+  last eligible CUSIP (2036-02-15) — exactly the shape the model predicts and the tentative schedule's
+  loose wording does not.
+
+### Honest limits on this close-out
+
+- **Why 91282CKQ3 took 69% of the operation, and why the four mid-window lines took nothing, has no
+  published account.** Treasury does not publish offer-level prices or a stated allocation rule beyond
+  "relative value," so a concentration this lopsided is recorded, not explained.
+- **Attribution on 09-17 remains impossible by construction**, exactly as the initial research said.
+  The FOMC decision landed 23½ hours earlier, a $19B 10-Year TIPS reopening priced 40 minutes before
+  this operation, and the coupon announcement and housing starts shared the same morning. Both scored
+  forward tests used the operation's own published numbers and never a yield move, which is why they
+  were scoreable at all.
+- **n=10 for the bucket, n=1 for a print this size.** One operation at 2.24x the prior maximum is a
+  genuine break in the record, not yet a new base rate — the next 7-10Y operation (not yet on the
+  tracked schedule as of this close-out) is what tells whether 09-17 was the doubled-cap's new normal
+  or a first-use outlier.
+- **The concentration/allocation question and the "why did cover run this high" question are both
+  open** — this close-out records what happened and scores what was pre-registered; it does not
+  attempt to explain dealer behavior beyond the cover mechanism already on the books.
+
+**`<id>.json` amended.** `status` flipped **`estimate` → `confirmed`** and the source prefix
+**`EST:` → `TSY:`**, on the three treasurydirect.gov announcement/results primaries read this
+session. The operation is a matter of published record; the taxonomy gap the original `EST:` label
+recorded (a tentative schedule is tentative, and the confirming primary was the 09-16 announcement)
+no longer applies to an executed, results-published operation.
