@@ -174,8 +174,10 @@ jobs:
       # is still open — concurrency serializes runs, and each new run sees the last one's PRs.
       # THE SPEND CIRCUIT BREAKER (#2946, Eric 2026-09-16) — checked FIRST, ahead of everything
       # below. The count-based caps (event-scan.mjs's horizon, dueForResearch's per-tick ceiling)
-      # bound session COUNT; this bounds DOLLARS, keyed to real total_cost_usd from the cost meter
-      # above. Fails HARD, not slow: once tripped (a GitHub issue label — never a committed file,
+      # bound session COUNT; this bounds relative USAGE, keyed to total_cost_usd from the cost meter
+      # above — the CLI's imputed API-equivalent cost under Max 20's flat fee, a usage proxy rather
+      # than a literal charge (research-circuit-breaker.json's `$why`). Fails HARD, not slow: once
+      # tripped (a GitHub issue label — never a committed file,
       # #915), every tick dispatches nothing until a human removes the label, regardless of what
       # the rolling window recomputes to later. scripts/moneypenny/circuit-breaker.mjs owns the
       # mechanism and its own tests; this is only the one real call site.
@@ -458,6 +460,10 @@ jobs:
       # the step summary row aggregates all matrix legs into a single per-tick table, which is the
       # view that answers "what did this push cost" without opening a job. Cheap enough to be
       # unconditional — it is a jq read of a file the CLI already wrote.
+      #
+      # This repo runs Claude Max 20 (flat monthly fee, no per-token billing) — `usd`/`$` below is
+      # the CLI's imputed API-equivalent cost, a relative usage proxy for sizing the circuit breaker
+      # (research-circuit-breaker.json's `$why`), never a literal charge against this account.
       - if: always()
         name: Record this session's cost
         run: |
@@ -483,7 +489,7 @@ jobs:
           MS=$(jq -r "$RESULT_FILTER | .duration_ms // \"?\"" "$F" 2>/dev/null || echo "?")
           ERR=$(jq -r "$RESULT_FILTER | .is_error // \"?\"" "$F" 2>/dev/null || echo "?")
           echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
-          echo "- \`$ID\` — **\$$COST** · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`$ID\` — **\$$COST** (imputed, Max 20 flat-fee — not a literal charge) · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
