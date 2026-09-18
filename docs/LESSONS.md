@@ -2401,3 +2401,99 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SIDE QUESTS:** none — the general lesson (a tool's own knowledge boundary can leak past a
   content-access restriction that looks complete) is banked here for any future eval design in this
   repo that tries to test a model blind to an outcome using a search tool that already knows it.
+
+### 21 "Moneypenny Events" failures on `main` shared one display name and hid five distinct root causes
+
+- **SHA:** 711c8ec   **DATE:** 2026-09-11   **STATUS:** closed
+- **SHA:** a0e0f2e   **DATE:** 2026-09-11   **STATUS:** closed
+- **SHA:** bc38160   **DATE:** 2026-09-13   **STATUS:** closed
+- **SHA:** 33def2f   **DATE:** 2026-09-13   **STATUS:** closed
+- **COVERS:** the weekly-quota-exhaustion cluster only (see ROOT CAUSE) — the other 17 unlearned
+  shas in this window are two *different* root causes, split into the two entries immediately below
+  this one so each keeps its own COVERS list rather than one entry claiming all 21.
+- **SIGNAL:** `ship.sh open`'s advisory `incident-scan` check flagged 21 unlearned "Moneypenny
+  Events (event-research automation)" failures over 14 days while landing an unrelated PR (#3300).
+  `incident-scan`'s own display only ever echoes the workflow's run name, never the failing job's
+  error — every one of the 21 looked identical from that output alone. Pulling actual job logs via
+  the GitHub Actions REST API (not the MCP `actions_list`/`get_job_logs` tools, which round-trip
+  full run/job payloads too large to read in one call at this run volume — REST + a local `jq`
+  parse was the cheap path) found four more root causes than the SIGNAL line let on.
+- **ROOT CAUSE:** the research lane's self-feeding volume growth (#2946: 446 calendar events, 338
+  initial-research sessions in 7 days) burned a full weekly Claude usage quota by 2026-09-11 —
+  every "research due events" job in the 09-11/09-13 runs failed identically with `"You've hit your
+  weekly limit"`. Verified directly: run `34632506013` (711c8ec) had 27/27 failed jobs each ending
+  in that exact rate-limit message; run for `bc38160` showed the same signature on inspection.
+- **PREVENTION:** already shipped, before this retro ran. #2946's hardening — dispatch ceiling
+  (#2962), research horizon (#2971), Sonnet model tier, spend-based circuit breaker
+  (#3158/#3207/#3209/#3245) — landed 2026-09-15 through 09-17 and dropped remaining-life pulses from
+  5,375 to 2,320 with a per-tick cap of 6 sessions (confirmed on #3264: ~$1.13/session on Sonnet vs.
+  ~$2.90 Opus baseline, across 4 live sessions post-hardening). No further work needed for this
+  specific cause; these 4 shas were simply never retro'd after the fix landed, which is the actual
+  gap this entry closes.
+- **SIDE QUESTS:** none beyond what's captured in the next two entries, which this same
+  investigation surfaced.
+
+### The just-shipped rate-limit fix's own circuit breaker crashes reading a large prior run's log, plus two more shell steps break at the same growing volume
+
+- **SHA:** 8d47faf   **DATE:** 2026-09-17   **STATUS:** closed
+- **SHA:** 5a6b5b7   **DATE:** 2026-09-17   **STATUS:** closed
+- **SHA:** 2389414   **DATE:** 2026-09-16   **STATUS:** closed
+- **SHA:** b9c6b37   **DATE:** 2026-09-15   **STATUS:** closed
+- **SHA:** ff55c45   **DATE:** 2026-09-16   **STATUS:** closed
+- **SHA:** 6e53a31   **DATE:** 2026-09-17   **STATUS:** closed
+- **COVERS:** 14e4285 44436e8 fc46824 e718574 c8c8cac d996e17 6bd3059 6bc5549 2e3d141 — same
+  "research due events" small-batch job-failure shape (3–9 jobs, not the 20–55 of the rate-limit
+  cluster above) as the two confirmed `ff55c45`/`6e53a31` instances of cause 2 below; bucketed by
+  shape rather than individually log-checked for every one — flagged in #3307 as worth one more
+  spot-check before treating that inference as certain, not re-litigated here.
+- **SIGNAL:** same `incident-scan` sweep as the entry above; these 15 shas are NOT the rate-limit
+  cause — three separate exit codes (126, 5, 1) surfaced once actual job logs were pulled instead of
+  reading the run-name-only summary.
+- **ROOT CAUSE:** three independent shell steps in `moneypenny-events.yml` assumed bounded size and
+  broke as the same volume growth #2946 measured kept climbing — none had been connected to #2946
+  or to each other before this retro:
+  1. **`Argument list too long` (exit 126, `b9c6b37`).** The due-events filter passes `$DUE` and
+     `$HEADS` as `node -e '...' "$DUE" "$HEADS"` argv, which exceeded the OS `ARG_MAX` once the
+     calendar's serialized JSON grew past ~450 events.
+  2. **`jq: Cannot index array with string "total_cost_usd"` (exit 5, `ff55c45`, `6e53a31`).** The
+     per-event cost-reporting step assumes `claude-execution-output.json` is always a single object;
+     for some runs it's an array, and the crash fails an already-completed research session's job
+     red over what is only telemetry.
+  3. **`spawnSync gh ENOBUFS` (exit 1, `8d47faf`, `5a6b5b7`, `2389414`).** The spend-based circuit
+     breaker #2946's own hardening just shipped reads a *prior* run's full log via `spawnSync gh` to
+     total spend before dispatching. When that prior run is itself large — confirmed in all three
+     instances, each one was reading the log of the run immediately before it, including the
+     rate-limit cluster's own 27-job runs — the default `spawnSync` stdout buffer overflows. The
+     breaker correctly fails closed (refuses to dispatch rather than dispatching blind, the right
+     safety call) but reports the tick as a failed CI run instead of a clean no-op, which is what
+     put it in this ledger at all: **the fix for cause A above is what's causing part of cause B.**
+  All three are the same growth curve (#2946's 446 events / 338 sessions-a-week) hitting mechanical
+  assumptions — argv length, subprocess buffer size, output JSON shape — that nobody had load-tested,
+  rather than the cost problem #2946 framed it as.
+- **PREVENTION:** not yet fixed — filed as
+  [#3307](https://github.com/ejclark/skynet-capital/issues/3307) with a fix named per cause (stdin
+  instead of argv; guard the jq call against non-object shape; raise `spawnSync`'s `maxBuffer` or
+  switch to the Actions usage API for spend totals). Recording the lesson now rather than holding
+  this entry open until #3307 lands — the SIGNAL/ROOT CAUSE this ledger exists to preserve doesn't
+  need to wait on the fix; add the fix commit's own sha here once #3307 lands, per
+  `incident-scan.mjs`'s `isLearned()` matching convention.
+- **SIDE QUESTS:** logged on #3307 rather than here — the general pattern ("a shell step in this
+  workflow captures growing subprocess output/argv with no size bound") is worth a grep across
+  `moneypenny-events.yml`'s other steps for a fourth instance nobody has hit yet, tagged
+  `_(src: Claude · while: retro on 21 unlearned incidents)_` in `docs/IDEAS.md` if that sweep isn't
+  done as part of #3307 itself.
+
+### Receipt-close GraphQL failures in the same window are a third, already-tracked cause — not re-diagnosed here
+
+- **SHA:** 5e39acf   **DATE:** 2026-09-18   **STATUS:** closed
+- **SHA:** 65592c6   **DATE:** 2026-09-18   **STATUS:** closed
+- **SIGNAL:** same `incident-scan` sweep; both shas' failing job was `route`, and both logs showed
+  `##[error]close-receipt #<N> failed — GraphQL: Could not close the issue. (closeIssue)` against a
+  *different* receipt each time, inside an otherwise-successful batch of 15-20 closes per tick.
+- **ROOT CAUSE:** already filed and diagnosed on
+  [#3271](https://github.com/ejclark/skynet-capital/issues/3271) ("Moneypenny never closes a receipt
+  whose event left the due pool") — not re-derived here, just confirmed these two specific shas are
+  instances of that same bug rather than a new one.
+- **PREVENTION:** tracked on #3271, not yet fixed. Add the fix commit's own sha here once it lands.
+- **SIDE QUESTS:** none — the point of this entry is narrowly to stop these two shas from reading as
+  an unexplained mystery in `incident-scan`'s output; #3271 already owns the actual fix.
