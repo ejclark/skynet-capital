@@ -22,12 +22,13 @@ file in place as later batches surface more findings — the pilot already force
 
 ## Goal
 
-Given one sampled event id (from the frozen list in `docs/research/haiku-eval-sample-<date>.json`,
-never a fresh script re-run — see that script's own header for why), independently produce an
-initial research stance for it, as if this were a `never-assessed` dispatch, **without** seeing the
-existing analysis already banked for that event. The result gets compared against that banked
-verdict by the calling session, not by this chore — this chore only produces one side of the
-comparison.
+**Prospective use only (2026-09-18) — see the resolved contamination finding below.** Given one
+*newly-dispatched, live* due event (never a historical id from the frozen
+`docs/research/haiku-eval-sample-<date>.json` sample — that path is retired for this purpose),
+independently produce an initial research stance for it at the specified model tier, in parallel
+with the real dispatch's own assessment, **without** seeing that real assessment. The result gets
+compared against the real dispatch's banked verdict by the calling session once both exist, not by
+this chore — this chore only produces one side of the comparison.
 
 ## Steps
 
@@ -78,15 +79,14 @@ with hindsight-adjacent search results available," not "would this model reach t
 call with only what was knowable at the time" — an easier task than the one #2946's S5 spec
 actually wants measured, which inflates every stance-match score built from this chore's output.
 
-**Do not treat a clean run of this chore across a full batch as resolving that gap.** Two fixes are
-still open, tracked on #3264, neither chosen yet:
-- constrain WebSearch to a date cutoff before the event date, if the tool supports it — keeps this
-  chore's design, cheaper to adopt if it works;
-- switch to prospective testing (run this chore against newly-dispatched *live* due events going
-  forward, never a historical sample) — slower, but no hindsight to leak by construction.
-
-Whichever is chosen, update this file's steps to match — that is the "iteratively refine" this file
-exists for.
+**Resolved 2026-09-18 (#3264): prospective testing only, historical replay retired for this
+purpose.** The date-cutoff fix is not buildable — `WebSearch` takes only `query` and domain
+allow/block lists, no date-range or as-of parameter, so nothing constrains it to pre-event results.
+**This chore no longer runs against the frozen historical sample.** The valid design is to run it
+against newly-dispatched *live* due events going forward (no hindsight exists yet to leak, by
+construction) — one data point per real dispatch, accrued over time rather than 30 at once. Do not
+resurrect the 30-item historical batch under this chore's steps; it would reproduce the same leak
+measured in the 2026-09-18 pilot (docs/LESSONS.md) no matter how many events are added.
 
 ## Guardrails
 
