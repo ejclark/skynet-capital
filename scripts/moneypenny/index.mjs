@@ -329,6 +329,42 @@ export function sweepShipped(readIssues, deps) {
   }
 }
 
+/** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967).
+ *
+ *  `routeSweep` dedupes its receipt issues against `openIssueTitles` — an exact-title match is the
+ *  ONLY thing standing between "one receipt per never-assessed event" and a fresh duplicate every
+ *  push. That list was a single un-paged `per_page=100` read, and this repo carries 403 open issues
+ *  (343 of them `event-research` receipts). So the dedupe could only see the newest 100: every
+ *  never-assessed event whose receipt had aged past that window got a SECOND receipt filed, then a
+ *  third. Measured on the day this landed: 50 duplicated receipt titles, `jobs-2027-04-02` among
+ *  them (#2859 on 09-09, #2967 on 09-15 — both stall-flagged, same event, same body).
+ *
+ *  Silent by construction, and self-feeding: each duplicate is one more open issue pushing the
+ *  window further past the receipts it was supposed to be checking.
+ *
+ *  Paged on the CORE bucket, per gh.mjs's own header — `MAX_TITLE_PAGES` bounds it so a repo that
+ *  somehow reaches thousands of open issues degrades to a partial dedupe rather than an unbounded
+ *  read. Same loop shape as latency-scan.mjs's `listLabeledIssues`, deliberately: one house
+ *  pattern for "page a REST list", not two.
+ *
+ *  NOT ALSO FIXED HERE, captured instead: `shippedSweep`'s `gh issue list --limit 100` is capped
+ *  the same way, so the close-shipped last mile reaches only 100 of 343 receipts. That one is
+ *  GraphQL, and its own comment records the day it exhausted the bucket outright (2026-08-26) —
+ *  paging it multiplies the single most expensive call in this router by ~3.4x. A rate-limit
+ *  trade-off is a judgment call, not a mechanical fix, so it is routed rather than guessed at. */
+const MAX_TITLE_PAGES = 20;
+
+function openTitles() {
+  const titles = [];
+  for (let page = 1; page <= MAX_TITLE_PAGES; page++) {
+    const batch = ghRest(`issues?state=open&per_page=100&page=${page}`);
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    titles.push(...batch.filter((i) => !i.pull_request).map((i) => i.title));
+    if (batch.length < 100) break;
+  }
+  return titles;
+}
+
 function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
     let out;
@@ -404,11 +440,7 @@ function gatherDeps(ctx) {
       : [],
     // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
     // every push, to read one scalar field REST hands over on the core bucket.
-    openIssueTitles: needsScan
-      ? ghRest("issues?state=open&per_page=100")
-          .filter((i) => !i.pull_request)
-          .map((i) => i.title)
-      : [],
+    openIssueTitles: needsScan ? openTitles() : [],
   };
 }
 
