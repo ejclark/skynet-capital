@@ -89,8 +89,109 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return [...intents, ...routeShipped(deps)];
+  const shipped = routeShipped(deps);
+  const closing = new Set(shipped.map((s) => s.issueNumber));
+  return [...intents, ...shipped, ...reconcileReceipts({ ...deps, alreadyClosing: closing })];
 }
+
+/** How many receipts one tick may close. See `reconcileReceipts` — the backlog this drains was
+ *  298 issues deep when it was written, and closing all of them in one route job is ~600 REST
+ *  calls and minutes of wall clock for a job that also has to dispatch research. The pass is
+ *  level-based, so a cap defers work it can never drop: the next push takes the next batch. */
+export const RECONCILE_CAP = 40;
+
+/**
+ * RECEIPTS ARE LEVEL-BASED TOO — the half of the loop nobody wrote.
+ *
+ * `routeSweep` opens one receipt per never-assessed event. Exactly two things ever closed one: a
+ * merged PR that GitHub linked (`routeShipped`), and a human. Neither fires for the three ways a
+ * receipt goes stale on its own, and by 2026-09-18 all three had, at once — 343 of the repo's 403
+ * open issues were `[event-research]` receipts, of which **236 named an event whose ledger was
+ * already on `main`**, 62 named an event the research horizon had put out of scope, and 108 were
+ * duplicate receipts for an event that already had one:
+ *
+ *  1. **Researched.** The ledger merged but `closedByPullRequestsReferences` carried no link —
+ *     the exact fragility `shipped.mjs` documents, and for duplicates it is not even fragility:
+ *     a PR's `Closes #` names ONE issue, so the other receipts for that id can never close.
+ *  2. **Not due.** #2971's research horizon (`assessment-cadence.json`) put events past
+ *     `maxDaysOut` out of scope AFTER their receipts were open. Nothing reconciled — the receipt
+ *     asks for research the lane is now deliberately not buying, and since it has no ledger the
+ *     stall audit flags it and dispatches a repair session that can do nothing but say so. #2969
+ *     is that case exactly: opened 2026-09-15 13:56, horizon merged 14:16, D-259 ever since.
+ *  3. **Duplicate.** `gatherDeps` read the dedupe set from ONE unpaginated REST page, so once the
+ *     repo passed 100 open issues the sweep stopped seeing most of its own receipts and reopened
+ *     them — which raised the open count, which shrank the visible fraction further. A runaway.
+ *     (Paginating that read is the other half of this fix; this pass cleans up what it produced.)
+ *
+ * The rule is one line: **one open receipt per event the sweep would open one for today, and none
+ * for anything else.** `--due` is the oracle, uncapped and read fresh, so an event merely deferred
+ * by the dispatch ceiling still counts as outstanding and keeps its receipt (the distinction
+ * `dueForResearch`'s header insists on). `hasLedger` only picks the closing WORDING — it never
+ * decides, so a ledger file that exists without a parseable `Last assessed:` header leaves the
+ * event never-assessed, keeps its receipt, and cannot flap.
+ *
+ * Pure, so the specs drive every branch; the oldest receipt for an id is the survivor.
+ */
+export function reconcileReceipts(deps = {}) {
+  const {
+    openEventReceipts = [],
+    dueEvents = [],
+    hasLedger = () => false,
+    alreadyClosing = new Set(),
+    cap = RECONCILE_CAP,
+  } = deps;
+  const outstanding = new Set(
+    dueEvents.filter((e) => e.reason === "never-assessed").map((e) => e.id),
+  );
+  const intents = [];
+  const kept = new Set();
+  for (const r of [...openEventReceipts].sort((a, b) => a.number - b.number)) {
+    const id = String(r.title ?? "").match(/^\[event-research\] (.+)$/)?.[1];
+    if (!id) continue;
+    if (outstanding.has(id) && !kept.has(id)) {
+      kept.add(id);
+      continue;
+    }
+    if (alreadyClosing.has(r.number)) continue;
+    const reason = outstanding.has(id) ? "duplicate" : hasLedger(id) ? "researched" : "not-due";
+    intents.push({
+      kind: "close-receipt",
+      issueNumber: r.number,
+      title: r.title,
+      id,
+      reason,
+      body: `${RECEIPT_CLOSE_BODY[reason](id)}\n\n${FOOTER}`,
+    });
+  }
+  if (intents.length > cap) {
+    console.error(
+      `::notice::receipt reconcile — ${cap} of ${intents.length} stale event receipt(s) closed ` +
+        `this tick (cap ${cap}); the rest ride the next push, same order.`,
+    );
+  }
+  return intents.slice(0, cap);
+}
+
+const RECEIPT_CLOSE_BODY = {
+  researched: (id) =>
+    `✅ **Already researched** — \`docs/research/events/${id}.md\` is on \`main\`, which is the ` +
+    "whole of what this receipt asked for. Closing it here rather than waiting on GitHub's own " +
+    "`Closes #` link, which does not fire reliably for PRs a bot both opens and merges and cannot " +
+    "fire at all for a second receipt naming the same event.\n\nPulse checks continue on the " +
+    "cadence in `assessment-cadence.json` — they do not need an issue.",
+  "not-due": (id) =>
+    `📅 **Not currently due** — \`${id}\` is on the calendar but outside the research horizon ` +
+    "(`assessment-cadence.json` → `horizon`, issue #2946/#2971), so no session is being bought " +
+    "for it and none will be until it comes inside. Nothing is lost: the sweep opens a **fresh " +
+    "receipt** the moment it is due again.\n\nLeaving this open would be a standing request for " +
+    "work the lane is deliberately not doing — and, with no ledger on disk, it reads to the stall " +
+    "audit as a dead build forever.",
+  duplicate: (id) =>
+    `🧹 **Duplicate receipt** — another open issue already tracks \`${id}\`, and that one is the ` +
+    "live request. This copy exists because the sweep's dedupe read only the first page of open " +
+    "issues and stopped seeing its own receipts once the repo passed 100 of them.\n\nNo work is " +
+    "dropped: the surviving receipt carries it.",
+};
 
 /**
  * Which due events actually get researched this run. The reason the event lane can ride EVERY push

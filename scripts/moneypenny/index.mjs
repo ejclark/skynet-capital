@@ -53,7 +53,7 @@ import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestPaged, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -396,19 +396,27 @@ function gatherDeps(ctx) {
       },
     );
   };
+  // REST, not `gh issue list --json title` (2026-08-26): a second GraphQL query, on every push, to
+  // read scalars REST hands over on the core bucket. PAGED since 2026-09-18 — the single
+  // `per_page=100` page this used to read covered 100 of 403 open issues, so the dedupe below
+  // stopped seeing most of the sweep's own receipts and reopened them; 108 of 343 open receipts
+  // were duplicates that loop had produced. One read serves both the dedupe and the reconcile pass.
+  const openIssues = needsScan
+    ? ghRestPaged("issues?state=open").filter((i) => !i.pull_request)
+    : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
     shippedEvents: needsScan ? shippedSweep("event-research") : [],
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
-    // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
-    // every push, to read one scalar field REST hands over on the core bucket.
-    openIssueTitles: needsScan
-      ? ghRest("issues?state=open&per_page=100")
-          .filter((i) => !i.pull_request)
-          .map((i) => i.title)
-      : [],
+    openIssueTitles: openIssues.map((i) => i.title),
+    openEventReceipts: openIssues
+      .filter((i) => /^\[event-research\] /.test(i.title ?? ""))
+      .map((i) => ({ number: i.number, title: i.title })),
+    // Free and local — the repo is checked out. `reconcileReceipts` uses it only to word the
+    // closing comment, never to decide, so a ledger with an unparseable header cannot flap.
+    hasLedger: (id) => existsSync(`docs/research/events/${id}.md`),
   };
 }
 
@@ -612,6 +620,12 @@ function executeOne(i) {
     sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
     console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
     return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
+  if (i.kind === "close-receipt") {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
+    console.log(`::notice::closed #${i.issueNumber} — receipt ${i.reason} (${i.id})`);
+    return `🧾 closed #${i.issueNumber} — \`${i.title}\` (${i.reason})`;
   }
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);

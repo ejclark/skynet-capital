@@ -170,10 +170,19 @@ export function gatherAuditDeps(nowMs) {
     .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.stall.name))
     .map((i) => i.number);
 
+  // A STALL IS "STILL WANTED, NOTHING PRODUCED" — both halves, since 2026-09-18. "No ledger on
+  // disk" alone flags every receipt the sweep has stopped asking for, and after #2971's research
+  // horizon that was 62 of them: an event past `maxDaysOut` is deliberately not being researched,
+  // so its receipt has no ledger, forever, by design. Each one drew a `stall-flagged` label and a
+  // dispatched repair session whose only possible finding was "this is not a stall" (#2969 burned
+  // exactly that). `--due` is the same uncapped oracle `reconcileReceipts` closes against, so the
+  // two agree by construction: whatever the sweep would still open a receipt for is the only thing
+  // that can be stalled, and everything else gets closed rather than flagged.
+  const outstanding = outstandingEventIds();
   const unclaimedIssues = [];
   for (const i of issues) {
     const id = i.title.match(/^\[event-research\] (.+)$/)?.[1];
-    if (id && !existsSync(`docs/research/events/${id}.md`)) {
+    if (id && outstanding.has(id) && !existsSync(`docs/research/events/${id}.md`)) {
       unclaimedIssues.push({ title: i.title, number: i.number, quietDays: daysSince(i.updatedAt) });
     }
   }
@@ -248,6 +257,30 @@ export function gatherAuditDeps(nowMs) {
     alreadyFlagged,
     alreadyFlaggedPRs,
   };
+}
+
+/**
+ * Which event ids the sweep would still open a receipt for today — `never-assessed` in the
+ * UNCAPPED `--due`, never the dispatch-ceiling's truncation of it, so an event merely waiting its
+ * turn still counts as outstanding (`dueForResearch`'s header is emphatic about that distinction).
+ *
+ * Loud on failure, same doctrine as the rest of this file: a broken scan must not read as "nothing
+ * is outstanding", which would silently disable the stall audit's only lane.
+ */
+function outstandingEventIds() {
+  let out;
+  try {
+    out = sh("node", ["scripts/event-scan.mjs", "--due"]);
+  } catch (err) {
+    throw new Error(`event-scan --due failed: ${String(err.stderr || err.message).trim()}`);
+  }
+  let rows;
+  try {
+    rows = JSON.parse(out || "[]");
+  } catch {
+    throw new Error(`event-scan --due returned unparseable JSON:\n${String(out).slice(0, 400)}`);
+  }
+  return new Set(rows.filter((e) => e.reason === "never-assessed").map((e) => e.id));
 }
 
 /**

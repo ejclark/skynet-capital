@@ -28,3 +28,41 @@ export function dueForResearch<T extends DueEvent>(
   openPrHeads?: readonly string[],
   cap?: number,
 ): T[];
+
+/** An open `[event-research] <id>` issue, as `gatherDeps` hands it over. */
+export interface EventReceipt {
+  readonly number: number;
+  readonly title: string;
+}
+
+/** Why a receipt was closed — the three ways one goes stale with nothing to close it. */
+export type ReceiptCloseReason = "researched" | "not-due" | "duplicate";
+
+export interface CloseReceiptIntent {
+  readonly kind: "close-receipt";
+  readonly issueNumber: number;
+  readonly title: string;
+  readonly id: string;
+  readonly reason: ReceiptCloseReason;
+  readonly body: string;
+}
+
+/** How many stale receipts one tick may close before deferring the rest to the next push. */
+export const RECONCILE_CAP: number;
+
+/**
+ * One open receipt per event the sweep would open one for today, and none for anything else.
+ * Pure. `dueEvents` is the UNCAPPED `--due`, so a cap-deferred event keeps its receipt; `hasLedger`
+ * only words the closing comment and never decides, so a ledger with an unparseable header cannot
+ * make a receipt flap open and closed.
+ */
+export function reconcileReceipts(deps?: {
+  readonly openEventReceipts?: readonly EventReceipt[];
+  readonly dueEvents?: readonly DueEvent[];
+  readonly hasLedger?: (id: string) => boolean;
+  readonly alreadyClosing?: ReadonlySet<number>;
+  readonly cap?: number;
+}): CloseReceiptIntent[];
+
+/** The push sweep: open a receipt per never-assessed event, close what shipped, reconcile the rest. */
+export function routeSweep(deps?: Record<string, unknown>): Record<string, unknown>[];
