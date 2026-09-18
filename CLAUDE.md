@@ -447,6 +447,10 @@ common routes:
   go signal, exactly as `ready` is for a plan.
 - Report-outs and digests → `/secretary` · caught drift → `/retro` · rising token burn →
   [`docs/process/TOKEN-EFFICIENCY.md`](docs/process/TOKEN-EFFICIENCY.md).
+- **A recurring domain needs bounded experimentation** (thin slice → pressure test → find the
+  weakness → capture/enhance → back-test) → the anatomy in
+  [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md) — a defined structure every
+  custom-catered instance conforms to, not a one-off process re-derived per domain.
 
 **Merge posture** (Eric, 2026-08-20: with Claude authoring ~100% of PRs, a standing pre-merge taste
 gate makes him the constraint on everything — severely softened). Structural, feature, and visual PRs

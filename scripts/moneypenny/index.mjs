@@ -329,6 +329,39 @@ export function sweepShipped(readIssues, deps) {
   }
 }
 
+/** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967) — and, since
+ *  #2968's reconcile, the receipt reconcile's eyes too. One read, both consumers.
+ *
+ *  `routeSweep` dedupes its receipt issues against `openIssueTitles` — an exact-title match is the
+ *  ONLY thing standing between "one receipt per never-assessed event" and a fresh duplicate every
+ *  push. That list was a single un-paged `per_page=100` read, and this repo carries 403 open issues
+ *  (343 of them `event-research` receipts). So the dedupe could only see the newest 100: every
+ *  never-assessed event whose receipt had aged past that window got a SECOND receipt filed, then a
+ *  third. Measured on the day this landed: 50 duplicated receipt titles, `jobs-2027-04-02` among
+ *  them (#2859 on 09-09, #2967 on 09-15 — both stall-flagged, same event, same body).
+ *
+ *  Silent by construction, and self-feeding: each duplicate is one more open issue pushing the
+ *  window further past the receipts it was supposed to be checking.
+ *
+ *  Paged on the CORE bucket, per gh.mjs's own header. The loop itself now lives in `ghRestAll`
+ *  rather than here (#2968, merged into #3269's fix): the receipt reconcile needs the same list
+ *  with `number` attached, and paging it twice would double the router's cheapest-but-not-free
+ *  read for no gain. One house pattern for "page a REST list", still — just hoisted to where the
+ *  other `gh` plumbing lives, beside `ghRest` itself.
+ *
+ *  ONE AMENDMENT TO #3269's CALL: the 20-page ceiling is now a hard error, not a silent partial.
+ *  Degrading protected against an unbounded read, which is right — but a partial dedupe is the
+ *  exact failure this function exists to end, and at 2,000 open issues we want a red run, not a
+ *  quieter version of the same bug. The reconcile below drains the queue to a handful, so the
+ *  ceiling should never be approached again; if it ever is, that is news.
+ *
+ *  NOT ALSO FIXED HERE, captured instead: `shippedSweep`'s `gh issue list --limit 100` is capped
+ *  the same way. #2968's reconcile makes that moot for `event-research` — receipts now close
+ *  against the LEDGER on disk, which is both free and the correct oracle — so the sweep is no
+ *  longer run for that label at all. `feedback` keeps it, and keeps the cap: that one is GraphQL,
+ *  and its own comment records the day it exhausted the bucket outright (2026-08-26). */
+const openIssues = () => ghRestAll("issues?state=open").filter((i) => !i.pull_request);
+
 function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
     let out;
@@ -397,10 +430,10 @@ function gatherDeps(ctx) {
     );
   };
   // REST, not `gh issue list --json title` (2026-08-26): a second GraphQL query, on every push, to
-  // read scalars REST hands over on the core bucket. PAGINATED since #2968 — the single-page read
-  // this replaced went blind past 100 open issues and re-opened receipts it could no longer see
-  // (see `ghRestAll`). One read, two consumers: the title dedupe and the receipt reconcile.
-  const openIssues = needsScan ? ghRestAll("issues?state=open").filter((i) => !i.pull_request) : [];
+  // read scalars REST hands over on the core bucket. Paged — see `openTitles` above for what the
+  // single-page version cost. Read ONCE here and shared, rather than paged a second time for the
+  // reconcile's sake.
+  const open = needsScan ? openIssues() : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
     // `event-research` deliberately does NOT get the reference sweep any more (#2968). Its receipts
@@ -410,8 +443,8 @@ function gatherDeps(ctx) {
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
-    openIssueTitles: openIssues.map((i) => i.title),
-    openEventReceipts: needsScan ? readReceipts(openIssues) : [],
+    openIssueTitles: open.map((i) => i.title),
+    openEventReceipts: needsScan ? readReceipts(open) : [],
   };
 }
 
