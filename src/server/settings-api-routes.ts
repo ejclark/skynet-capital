@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { sessionNameCandidates } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
-import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
+import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
@@ -82,22 +82,6 @@ function parseRemoveBody(raw: string): RemoveBody | undefined {
   const id = boundedString(body.id, 100);
   const confirmName = boundedString(body.confirmName, 80);
   return id && confirmName ? { id, confirmName } : undefined;
-}
-
-/**
- * The requester the service compares the target against — the `/account` route's exact rule:
- * the target itself when the session owns it, else the session's first human account, else its
- * first account at all. The service then enforces requester === target for human edits; feeding
- * it a non-owned target with an owned requester yields the same honest refusal the form gets.
- */
-function requesterFor(
-  targetId: string,
-  ownedIds: readonly string[],
-  config: DashboardServerConfig,
-): string | undefined {
-  if (ownedIds.includes(targetId)) return targetId;
-  const board = config.hub.getState().participants;
-  return ownedIds.find((id) => board.find((p) => p.id === id)?.kind === "human") ?? ownedIds[0];
 }
 
 function serveSettingsIndex(
@@ -235,7 +219,7 @@ export async function serveSettingsApi(
       sendJson(res, 400, { error: "malformed profile body" });
       return true;
     }
-    const requesterId = requesterFor(body.id, ownedIds, config);
+    const requesterId = requesterFor(body.id, ownedIds, config.hub.getState().participants);
     sendJson(
       res,
       200,
@@ -255,7 +239,7 @@ export async function serveSettingsApi(
     sendJson(res, 400, { error: "malformed remove body" });
     return true;
   }
-  const requesterId = requesterFor(body.id, ownedIds, config);
+  const requesterId = requesterFor(body.id, ownedIds, config.hub.getState().participants);
   sendJson(
     res,
     200,

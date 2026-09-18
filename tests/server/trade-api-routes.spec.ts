@@ -108,6 +108,36 @@ describe("serveTradeApi", () => {
     expect(preview.refusals.join(" ")).toContain("your own account");
   });
 
+  // The exact shape reported live: a session owning BOTH a stamped human account and a
+  // `/claim`-linked bot must be able to trade the bot too, not only whichever account
+  // `resolveOwnerId`'s single default happens to pick.
+  it("trades a second owned account, not just the session's single default", async () => {
+    const sauron = { ...snapshot, id: "sauron", displayName: "Sauron", kind: "bot" as const };
+    const seen: unknown[] = [];
+    const config = configWith({
+      hub: {
+        getState: () => ({ generatedAt: "t", participants: [snapshot, sauron], collisions: [] }),
+      },
+      // Simulates the old bug's single default — always "human-eric" regardless of the target.
+      resolveOwnerId: () => "human-eric",
+      resolveOwnerIds: () => ["human-eric", "sauron"],
+      submitTrade: (request: unknown, requesterId: unknown) => {
+        seen.push(request, requesterId);
+        return Promise.resolve({ ok: true, orderId: "o1", status: "accepted", symbol: "AAPL" });
+      },
+    } as never);
+    const { res, out } = fakeRes();
+    await serveTradeApi(
+      post({ ...ticket, participantId: "sauron" }),
+      res,
+      "/api/trade/submit",
+      config,
+      session,
+    );
+    expect(JSON.parse(out.body ?? "{}").ok).toBe(true);
+    expect(seen[1]).toBe("sauron");
+  });
+
   it("passes submit to the execution seam with the SESSION identity, not the body's claim", async () => {
     const seen: unknown[] = [];
     const config = configWith({
