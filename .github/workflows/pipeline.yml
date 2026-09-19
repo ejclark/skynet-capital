@@ -14,6 +14,13 @@ name: Pipeline
 #   - draft PRs don't run — but see the `types:` note below; "doesn't run yet" must not decay into
 #     "never runs".
 #   - main pushes skip verify (deploy only) → no duplicate test run per merge.
+#
+# `e2e` is the one exception to "mutually exclusive": it ALSO runs on push to main (#3333), on top
+# of its normal pull_request run. Two PRs can each pass `e2e` independently on their own branch and
+# still combine into a visual/behavioral regression once both land on main — this catches that.
+# It is a detection net, not a merge gate (push events aren't subject to required-status-checks),
+# and it does not re-run `verify`'s docs-only classifier: on push it always runs, full cost, since a
+# merge to main is far less frequent than a PR sync.
 on:
   pull_request:
     branches: [ main ]
@@ -194,15 +201,27 @@ jobs:
           exit $status
 
   e2e:
-    name: e2e
+    # Display name is "integration tests", not "e2e" (Eric, 2026-09-19): "e2e" implied testing a
+    # live/deployed system to a reader, when this job never does, on either trigger.
+    # `playwright.config.ts`'s webServer BUILDS the checked-out commit fresh
+    # (`npm run build --prefix app`) and boots it as its own throwaway localhost:8787 server against
+    # static `fixtures/offline/**` data — on a PR that's the branch's own candidate code, on push
+    # it's the just-merged commit, but it is never the running Fly.dev deployment. The only check in
+    # this file that hits the real deployed app is `deploy`'s `smoke.sh`, post-deploy, separately.
+    # (The job id below stays `e2e` — it matches the `e2e/**` directory and `npm run test:e2e*`
+    # scripts everywhere else in the repo; only the display name changes.)
+    name: integration tests
     # Real-Chromium visual/behavioral regression pass (CLAUDE.md, 2026-09-18: "Playwright gives our
     # CI process a visual sense"), separate from verify's unit/DOM-level rstest suite. Blocking from
     # day one (Eric's call) — a failing spec or a hero-screenshot diff fails this check same as any
-    # other. Needs verify's `code` output so a docs-only PR doesn't pay for a Chromium boot too.
+    # other. On a PR, needs verify's `code` output so a docs-only PR doesn't pay for a Chromium boot
+    # too; on push to main (#3333) there's no `verify` run to classify against, so it always runs —
+    # see the top-of-file note on why `e2e` alone runs on both triggers.
     needs: verify
     if: >-
-      ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
-          needs.verify.outputs.code == 'true' }}
+      ${{ (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+           needs.verify.outputs.code == 'true') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
