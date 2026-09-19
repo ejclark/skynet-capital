@@ -1,8 +1,8 @@
 # Apple's window to appeal the EU General Court's DMA gatekeeper-designation ruling to the CJEU closes — apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18
 
 **Kind:** geopolitical · **Date:** 2026-09-18 (estimate, NEWS: computed from the CJEU's own procedural rule applied to a ruling date whose *notification* date is not itself published) · **Impact:** low
-**Last assessed:** 2026-09-17
-<!-- probe-ref: {"symbols":{"AAPL":332.41},"vix":15.86,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","eia-weekly-petroleum-status-2026-09-16","eia-weekly-petroleum-status-2026-09-23","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15","opex-2026-09-18"],"screenStreak":0,"blocked":[{"url":"https://courthousenews.com/apple-loses-eu-court-fight-over-big-tech-gatekeeper-rules/","status":"403","at":"2026-09-17"}]} -->
+**Last assessed:** 2026-09-19
+<!-- probe-ref: {"symbols":{"AAPL":336.13},"vix":14.81,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","eia-weekly-petroleum-status-2026-09-16","eia-weekly-petroleum-status-2026-09-23","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15","opex-2026-09-18"],"screenStreak":0,"blocked":[{"url":"https://courthousenews.com/apple-loses-eu-court-fight-over-big-tech-gatekeeper-rules/","status":"403","at":"2026-09-17"}]} -->
 
 ## At a glance
 
@@ -106,6 +106,73 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-19, D+1, after a completed 09-18 regular session).** Instrument cache busted
+first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) — this
+`geopolitical`/litigation-procedure kind carries no `earnings-cycle`/`intraday-edges` target, same as
+initial research found, so the bust touched nothing. "Re-run instrument data" here means a fresh,
+uncached Yahoo daily-bar pull for **AAPL, QQQ and `^VIX`** (`scripts/research/market-data.mjs`'s
+`bars()`), not a read of this document's own prior rows.
+
+**Whether Apple filed is still not publicly known — and this close-out cannot wait for that to
+change.** A targeted search this session (2026-09-19) found no report of a filed appeal, a declined
+appeal, or any Apple statement on the CJEU deadline — the same finding as D-1, one day later. A
+direct check of the Court of Justice's own case-list search (infocuria.curia.europa.eu) returned no
+readable case-list content for T-1079/23 / T-1080/23 / T-214/24 (a JS-rendered page, not a fetchable
+docket) rather than a negative result — recorded as an inconclusive probe, not a blocked source, since
+no HTTP failure occurred. **The honest state is: unresolved, not "no."** This ledger goes quiet after
+this section regardless (`event-passed-unscored` close-out silences `event-scan.mjs` on this event
+permanently), so no future session will come back to check whether Apple actually filed unless
+[apple-eu-dma-terms-2026-10-01](apple-eu-dma-terms-2026-10-01.md)'s own sweep happens to surface it —
+the same limitation the [google-adtech-opinion-unseal-2026-09-16](google-adtech-opinion-unseal-2026-09-16.md)
+close-out logged for its own unresolved branch.
+
+**Price — the call held, and did not need the fact above to hold.** AAPL closed 2026-09-18 at
+**$336.13**, down **−0.258%** from the 09-17 close of $337.00; QQQ **+0.632%** the same session
+($716.92 → $721.45); **excess −0.890pp**. VIX **15.44 → 14.81** (−4.08%), continuing down, not up —
+no regime signal. This sits nowhere near the registered ±2% band, whether or not a filing/non-filing
+report ever surfaces, and it lands on a session that was quarterly triple-witching
+(`opex-2026-09-18`) inside the FOMC/retail-sales/20Y-auction corridor the initial research named —
+exactly the "unattributable by construction" case the stance argued in advance. **The call never
+needed to attribute anything, because no position was keyed to the date.**
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"The 'no reaction' read dies... exceeds ±2%"** — **did not fire.** −0.890pp is well inside the
+  band, on the fallback date (09-18 itself) the registration text names when no filing/non-filing is
+  reported by score-by.
+- **"The 'low impact, procedural-only' read dies if a filed appeal is later reported to suspend or
+  stay a DMA compliance obligation"** — **not resolvable**; no filing has been reported at all.
+- **"The 'separate matter' read dies if a later filing or ruling bears on the €500M anti-steering
+  appeal (T-438/25) or the DMA.100203/100204 interoperability proceedings"** — **did not fire**;
+  nothing new found linking them this session.
+- **"The date itself turns out wrong if a primary source naming the actual notification date
+  surfaces and differs materially from 07-08 + 2mo10d"** — **not resolved**; no notification date was
+  found this session either, so the honest limit from initial research stands permanently now that
+  the ledger goes quiet.
+
+**Forward test — unscoreable at this close-out, not scored.**
+[`FT-apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18-1`](../forward-tests/apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18.md)
+scores by **2026-09-25**, past this event's own 6-day `closeOutWithinDays` ceiling (2026-09-24) — the
+structural conflict `event-scan.mjs --due` named under `forwardTestsBeyondWindow`, which is why this
+close-out dispatched today rather than holding. Scoring it now, with its own window still open and no
+filing/non-filing reported at all, would be scoring a prediction before its stated condition is even
+reached, which the append-only rule in `docs/process/EVENT-RESEARCH.md` calls falsification. Left
+`_open_` in the forward-tests fragment. **This does mean FT-1 will not get a dedicated scoring session
+of its own** — writing this `## Outcome` section silences the scanner on this event permanently, and
+the scanner's forward-test hold is decided once per event on the *latest* pending score-by, per
+[`google-adtech-opinion-unseal-2026-09-16`](google-adtech-opinion-unseal-2026-09-16.md)'s own
+close-out, which logged the identical mechanical limit rather than working around it in a
+single-event-scoped session.
+
+**Verdict vs. the stance.** **Stand aside held, at every horizon, and cost nothing to hold.** No
+entry, exit or position was ever keyed to this date; the ruling this deadline flows from had already
+proven itself a non-event (+0.60% excess on the loss day), and the deadline's own session confirmed
+the weaker prediction — a −0.89pp excess on a triple-witching, FOMC-adjacent session is exactly the
+noise this ledger forecast. The one open thread — whether Apple actually filed — carries forward only
+as an unscored forward test and an unresolved notification-date question, both logged here rather than
+chased past this event's own close-out window.
+
 Sources: [Court of Justice of the European Union — Press Release No 96/26 (8 July 2026)](https://curia.europa.eu/site/upload/docs/application/pdf/2026-07/cp260096en.pdf),
 [MacObserver — Apple's EU Gatekeeper Status: The July Ruling and This Month's Appeal Deadline (2026-09-13)](https://www.macobserver.com/news/apple-eu-gatekeeper-status-july-ruling-appeal-deadline/),
 [Euronews — Apple loses challenge over EU app store rules (2026-07-08)](https://www.euronews.com/my-europe/2026/07/08/apple-loses-challenge-over-eu-app-store-rules),
@@ -113,4 +180,5 @@ Sources: [Court of Justice of the European Union — Press Release No 96/26 (8 J
 [Concurrences — Designation: the General Court... (No. 9-2026)](https://www.concurrences.com/en/review/numeros/no-9-2026/case-comments/digital-markets-act/designation-principle-of-proportionality-inadmissibility-core-platform-services),
 [digitalpolicyalert.org — Apple lawsuit against EU Commission (T-1079/23 and T-1080/23)](https://digitalpolicyalert.org/change/7762-apple-lawsuit-against-eu-commission-regarding-designation-as-gatekeeper-under-the-digital-markets-act-t-107923-and-t-108023),
 [FSFE — DMA: Litigation against Apple](https://fsfe.org/activities/apple-litigation/apple-litigation.en.html).
-Prices, benchmark returns and VIX pulled 2026-09-17 from the Yahoo daily-close chart endpoint.
+Prices, benchmark returns and VIX pulled 2026-09-17 from the Yahoo daily-close chart endpoint; the
+close-out's 09-18 session prices re-pulled uncached from the same endpoint on 2026-09-19.
