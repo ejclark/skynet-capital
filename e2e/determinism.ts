@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /**
  * The determinism harness every screenshot spec runs through — call it BEFORE `page.goto`.
@@ -94,4 +94,18 @@ export const FROZEN_DIFF_RATIO = 0.002;
 export async function resizeToContentHeight(page: Page, width = 1280): Promise<void> {
   const height = await page.evaluate(() => document.body.scrollHeight);
   await page.setViewportSize({ width, height });
+}
+
+/**
+ * The common tail of a route's whole-frame screenshot spec: wait for in-flight queries to settle
+ * (avoids the fog-of-war-style race found on /research, where a second query's resolution changes
+ * what's rendered), resize to content height (see resizeToContentHeight), then assert the shot.
+ * Call `freezePage(page)` before `page.goto`, and wait for the page's own content marker to be
+ * visible, before calling this — it only owns the settle → resize → screenshot tail every route
+ * spec shares.
+ */
+export async function captureWholeFrame(page: Page, name: string): Promise<void> {
+  await page.waitForLoadState("networkidle");
+  await resizeToContentHeight(page);
+  await expect(page).toHaveScreenshot(name, { maxDiffPixelRatio: FROZEN_DIFF_RATIO });
 }
