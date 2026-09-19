@@ -79,9 +79,57 @@ async function mergeDirect(number) {
   });
 }
 
+async function listOpenPrs() {
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/pulls?state=open&base=main&per_page=100`,
+    { headers: headers() },
+  );
+  if (!res.ok) throw new Error(`list open PRs failed (HTTP ${res.status})`);
+  return res.json();
+}
+
+/**
+ * Pure. True when an existing open PR already carries an unmerged screen commit.
+ *
+ * This is the root cause behind a 19-PR conflict backlog found 2026-09-19: a screened event's doc
+ * header (`**Last assessed:**` + the `probe-ref` comment) is REWRITTEN in place, not appended, and
+ * every merge to `main` re-triggers this workflow (issue #724's own design). So a screen PR that
+ * takes even a few minutes to clear CI races the very next push's screen — if that push re-screens
+ * the same still-due event before the first PR merges, both PRs edit the same header line, and
+ * whichever merges second is a guaranteed same-logic conflict, not a false positive. Refusing to
+ * open a second screen PR while one is already open makes that race structurally impossible instead
+ * of merely rare.
+ *
+ * @param {readonly {head?: {ref?: string}}[]} openPrs
+ */
+export function hasOpenScreenPr(openPrs) {
+  return openPrs.some(
+    (pr) => typeof pr?.head?.ref === "string" && pr.head.ref.startsWith("moneypenny/screen-"),
+  );
+}
+
 async function main() {
   reexecWithProxy();
-  const [branch, screenedCount] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+
+  // Advisory pre-flight the caller runs BEFORE creating a new screen branch — see hasOpenScreenPr's
+  // doc comment for why. Prints exactly "open" or "closed" and always exits 0: a failed check must
+  // never block a screen from shipping, only skip the redundant-PR guard for this run.
+  if (args[0] === "--check-open") {
+    if (!(token && repo)) {
+      console.log("closed");
+      return;
+    }
+    try {
+      console.log(hasOpenScreenPr(await listOpenPrs()) ? "open" : "closed");
+    } catch (err) {
+      console.error(`::warning::open-screen-pr --check-open: list failed (${err.message}).`);
+      console.log("closed");
+    }
+    return;
+  }
+
+  const [branch, screenedCount] = args;
   if (!branch) {
     console.error("open-screen-pr: usage: open-screen-pr.mjs <branch> <screenedCount>");
     process.exit(0);

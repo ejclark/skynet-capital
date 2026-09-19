@@ -1,4 +1,7 @@
-import { classifyAutoMergeResult } from "../../../scripts/moneypenny/open-screen-pr.mjs";
+import {
+  classifyAutoMergeResult,
+  hasOpenScreenPr,
+} from "../../../scripts/moneypenny/open-screen-pr.mjs";
 
 // The pure part of open-screen-pr.mjs (issue #915's PR-instead-of-direct-push fix) — mirrors
 // scripts/ship.sh's own two-failure-shape handling for `enablePullRequestAutoMerge` (2026-08-26: a
@@ -33,5 +36,29 @@ describe("open-screen-pr: classifyAutoMergeResult", () => {
   it("is case-insensitive on the clean-status phrasing", () => {
     const body = JSON.stringify({ errors: [{ message: "already IN CLEAN status" }] });
     expect(classifyAutoMergeResult(body)).toBe("already-clean");
+  });
+});
+
+// The race behind a 19-PR conflict backlog found 2026-09-19: two open screen PRs both rewrite the
+// same event doc's header line in place, so whichever merges second is a guaranteed conflict. This
+// pure predicate is the guard a screen run checks before opening a competing PR.
+describe("open-screen-pr: hasOpenScreenPr", () => {
+  it("is false with no open PRs", () => {
+    expect(hasOpenScreenPr([])).toBe(false);
+  });
+
+  it("is false when open PRs exist but none are screen branches", () => {
+    expect(hasOpenScreenPr([{ head: { ref: "feature/foo" } }, { head: { ref: "fix/bar" } }])).toBe(
+      false,
+    );
+  });
+
+  it("is true when a screen branch is already open", () => {
+    expect(hasOpenScreenPr([{ head: { ref: "moneypenny/screen-123-1" } }])).toBe(true);
+  });
+
+  it("tolerates malformed or missing head data", () => {
+    // @ts-expect-error — exercising defensive handling of a shape the real API shouldn't send
+    expect(hasOpenScreenPr([{}, { head: {} }, null])).toBe(false);
   });
 });
