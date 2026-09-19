@@ -61,16 +61,23 @@ every pair of open research PRs, and 2026-09-04's bare `FT-25` collision came fr
 live tip — docs/LESSONS.md). The legacy bare-number `FT-N` rows live in
 `docs/research/forward-tests/legacy.md`, frozen except for scoring.
 
-**Refresh the probe-ref block on every ledger you touch.** Every ledger header carries a
-`<!-- probe-ref: {...} -->` line right after `**Last assessed:**` (docs/process/EVENT-RESEARCH.md
-→ "Deterministic screening") — the deterministic screen's reference state for this event. Whenever
-you update `**Last assessed:**`, replace that line too with today's real readings: the current
-price for each symbol in the event's table row, the current VIX, the cadence band
-(`<impact>:<minDaysOut>+`, from `assessment-cadence.json`), the ids of other tracked events within 5
-days of this one's date, and `"screenStreak": 0` (a full session always resets the streak — it is
-never itself a screen). This is what lets the event's *next* pulse be screened instead of
-automatically material; skipping it doesn't break anything today, it just spends one more session
-than necessary next time.
+**Append a fresh probe-ref block on every ledger you touch — never rewrite the existing one.**
+Every ledger carries a `**Last assessed:**` line with a `<!-- probe-ref: {...} -->` line right
+after it (docs/process/EVENT-RESEARCH.md → "Deterministic screening") — the deterministic screen's
+reference state for this event. Whenever you update `**Last assessed:**`, add a NEW pair at the
+true end of the file (after the ledger table and its trailing "Rules." line) rather than editing
+the existing header in place: today's date, then a fresh `<!-- probe-ref: {...} -->` line with
+today's real readings — the current price for each symbol in the event's table row, the current
+VIX, the cadence band (`<impact>:<minDaysOut>+`, from `assessment-cadence.json`), the ids of other
+tracked events within 5 days of this one's date, and `"screenStreak": 0` (a full session always
+resets the streak — it is never itself a screen). The reader always takes the LAST such pair in the
+file, so this is what lets the event's *next* pulse be screened instead of automatically material —
+same as before. What changed (2026-09-19, docs/LESSONS.md): editing the header line in place is
+exactly the #1449 bug above wearing a different hat — two sessions touching the same event's ledger
+in the same window would rewrite the identical line and collide, instead of merging as the disjoint
+additions an append produces. Skipping the append entirely still doesn't break anything today, it
+just spends one more session than necessary next time; editing the OLD line in place is what to
+stop doing.
 
 Ship ONE PR for your assigned event, on a branch named EXACTLY `research/<event-id>` off `origin/main` — the
 branch name is the dedupe key that stops the next push-triggered run re-researching an event whose
