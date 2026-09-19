@@ -11,7 +11,7 @@ import { SHARED_CONFIG } from "./e2e/playwright.shared";
 // flow standing in front of every spec.
 export default defineConfig({
   ...SHARED_CONFIG,
-  testIgnore: ["**/login.spec.ts"],
+  testIgnore: ["**/login.spec.ts", "**/ct/**"],
   use: {
     ...SHARED_CONFIG.use,
     baseURL: "http://localhost:8787",

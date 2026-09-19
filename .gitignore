@@ -54,3 +54,4 @@ app/dist/
 test-results/
 playwright-report/
 blob-report/
+app/playwright/.cache/
