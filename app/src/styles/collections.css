@@ -9,11 +9,15 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--elev-base);
   padding: var(--panel-p);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition:
     transform var(--dur-quick) var(--ease-spatial),
     box-shadow var(--dur-quick) var(--ease-spatial);

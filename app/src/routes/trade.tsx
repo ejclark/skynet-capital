@@ -242,11 +242,11 @@ function TradePage(): ReactElement {
     | string
     | undefined;
   // #784 naming pass: no second rail item here yet. The Trading Outpost link that used to sit
-  // below "The ticket" pointed at content #885 superseded and renamed to the Playbook Store,
-  // which now lives on the per-desk rail (`desk-rail.tsx`), not here — keeping the old link would
-  // have sent people to a page marked for retirement under a name that no longer exists. Growing
-  // this rail to "critical mass" with real items (Portfolio, a Backtesting/Strategy Lab
-  // placeholder) is #784's own slice 7, not bundled into the naming pass.
+  // below "The ticket" was removed on the belief its content was superseded by the Playbook
+  // Store — #3333's slice-8 audit found that claim false (different features entirely) and
+  // ported the Outpost's actual catalog into Research's "Plays" section instead. Growing this
+  // rail to "critical mass" with real items (Portfolio, a Backtesting/Strategy Lab placeholder)
+  // is #784's own slice 7, not bundled into the naming pass.
   const rail = (
     <>
       <p className="rail-label">Trading</p>

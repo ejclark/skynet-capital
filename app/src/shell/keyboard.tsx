@@ -9,13 +9,15 @@ import { useEffect, useRef, useState } from "react";
  * the `g` prefix expires after a second, and every shortcut is discoverable — `?` IS the docs.
  */
 
-/** In-shell chord targets (router navigation). */
-const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
+/** In-shell chord targets (router navigation). An optional 4th element carries search params —
+ *  `c` for Collections needs one now that Collections is a `/research` section, not its own
+ *  route (#3333 slice 9). */
+const SHELL_CHORDS: readonly (readonly [string, string, string, Record<string, string>?])[] = [
   ["p", "/learn", "Profile"],
   ["a", "/", "Accounts"],
   ["t", "/trade", "Trade ticket"],
   ["w", "/activity", "Activity"],
-  ["c", "/collections", "Collections"],
+  ["c", "/research", "Collections", { section: "collections" }],
   ["r", "/research", "Research"],
 ];
 
@@ -52,10 +54,13 @@ function ShortcutRow({ keys, label }: { readonly keys: string; readonly label: s
 }
 
 /** The `g <letter>` jump, resolved against both chord tables. True when the chord landed. */
-function jumpTo(key: string, navigate: (opts: { to: string }) => unknown): boolean {
+function jumpTo(
+  key: string,
+  navigate: (opts: { to: string; search?: Record<string, string> }) => unknown,
+): boolean {
   const shell = SHELL_CHORDS.find(([k]) => k === key);
   if (shell) {
-    void navigate({ to: shell[1] });
+    void navigate({ to: shell[1], ...(shell[3] ? { search: shell[3] } : {}) });
     return true;
   }
   return false;
