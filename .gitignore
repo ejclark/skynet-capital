@@ -50,7 +50,13 @@ ds-bundle/
 app/.ds-styles.css
 app/dist/
 
-# Playwright run output — regenerable; the baseline snapshots under e2e/**/*-snapshots/ are not.
+# Playwright run output — regenerable; the baseline snapshots under e2e/**/*-snapshots/ and
+# app/ct/**/*-snapshots/ are not.
 test-results/
 playwright-report/
 blob-report/
+
+# The component-test harness's Vite build cache (app/playwright-ct.config.ts). Playwright CT writes
+# its bundled components next to the harness entry point, so without this the build output lands in
+# the working tree — and biome reads this file (vcs.useIgnoreFile), so it would lint the bundle too.
+app/playwright/.cache/

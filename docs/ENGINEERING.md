@@ -58,16 +58,29 @@ was earned by a measurement, cited where it was taken (#3325, 2026-09-19):
    below-the-fold layout and anything escaping its container are invisible to it. Scope narrower
    for *sensitivity* (one surface needing a tighter tolerance than the page can carry), never to
    dodge nondeterminism — that is rule 1's job.
-3. **"Whole frame" means the viewport unless the page genuinely scrolls.** `fullPage: true` is
-   not automatically wider. It resizes the layout viewport to capture, which clears canvas
-   bitmaps; on a fixed-viewport composition like `/login` that returned a baseline with the entire
-   cinematic stage WIPED and ~40% dead space, 1.39MB for strictly less information than the 1.1MB
-   viewport shot. Use `fullPage: true` on real scrolling document pages; use the viewport on
-   fixed compositions, and say which you chose and why.
+3. **"Whole frame" means the viewport, resized to the content — never `fullPage: true`.** That flag
+   is not automatically wider, and it is no longer a safe default anywhere. It resizes the layout
+   viewport to capture, which clears canvas bitmaps: on a fixed-viewport composition like `/login`
+   it returned a baseline with the entire cinematic stage WIPED and ~40% dead space, 1.39MB for
+   strictly less information than the 1.1MB viewport shot. On `/research` — a genuine scrolling
+   document, the case it was supposed to be for — its own resize-and-stitch cycle introduced a 1px
+   height jitter that never settled, while the page's `scrollHeight` polled rock-stable. Call
+   `captureWholeFrame()` (or `resizeToContentHeight()`) from `e2e/determinism.ts` instead: measure
+   the content height once, resize to it, take a plain viewport shot.
+4. **A surface fed by live data gets BEHAVIOURAL e2e coverage only — its pixels belong to the
+   component harness.** `src/observatory/history-sampler.ts` ticks even against offline fixtures,
+   so `/leaderboard`'s and `/accounts`' figures cannot be baselined at route level at any tolerance.
+   Those components get mounted alone instead, with literal props, by the Playwright Component
+   Testing suite — `app/playwright-ct.config.ts`, specs under `app/ct/**`, run with
+   `npm run test:ct` and re-baselined with `npm run test:ct:update`. It boots no server, so the same
+   numbers render the same way every run; `app/playwright/index.tsx` is the provider wrapper, and
+   stamping its `theme` option is how one spec asserts both palettes. Don't reach for it for a
+   whole-route question — a component test cannot see a layout escaping its container.
 
-Baselines are committed PNGs, so they carry repo weight — one per surface, not one per component.
-Re-baseline with `npm run test:e2e:update`, and never as a reflex: a diff is a finding until
-something explains it.
+Baselines are committed PNGs, so they carry repo weight. One per route at the e2e layer; at the CT
+layer, one per *state worth defending* — the losing day, the locked rung, the light palette — not
+one per prop permutation. Never re-baseline as a reflex: a diff is a finding until something
+explains it.
 
 ### Requirements in EARS (the upstream half of BDD)
 

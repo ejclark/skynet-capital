@@ -19,5 +19,14 @@
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo-app",
     "types": ["@rstest/core/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "tests", "rsbuild.config.ts", "rstest.config.ts", "rstest.setup.ts"]
+  "include": [
+    "src",
+    "tests",
+    "ct",
+    "playwright",
+    "rsbuild.config.ts",
+    "rstest.config.ts",
+    "rstest.setup.ts",
+    "playwright-ct.config.ts"
+  ]
 }

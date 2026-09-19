@@ -79,7 +79,7 @@ export const FROZEN_DIFF_RATIO = 0.002;
  * viewport instead of using `fullPage: true`.
  *
  * WHY (measured 2026-09-19, #3325 follow-up): `/research` — a genuine scrolling document, exactly
- * the case docs/ENGINEERING.md says to use `fullPage: true` for — still failed Playwright's own
+ * the case docs/ENGINEERING.md then said to use `fullPage: true` for — still failed Playwright's own
  * "two consecutive stable screenshots" check, oscillating between 5949px and 5950px tall forever.
  * `document.body.scrollHeight` polled directly was rock-stable at 5949px across 4.5s (15 samples);
  * the jitter only appeared once an actual `fullPage` screenshot was taken. Root cause: `fullPage`

@@ -9,7 +9,9 @@
     "build": "rsbuild build",
     "preview": "rsbuild preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "rstest run"
+    "test": "rstest run",
+    "test:ct": "playwright test -c playwright-ct.config.ts",
+    "test:ct:update": "playwright test -c playwright-ct.config.ts --update-snapshots"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
@@ -20,6 +22,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/experimental-ct-react": "^1.62.1",
     "@rsbuild/core": "^2.2.1",
     "@rsbuild/plugin-react": "^2.1.0",
     "@rstest/core": "^0.11.9",

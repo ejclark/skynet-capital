@@ -85,6 +85,8 @@
     "test:e2e:auth": "playwright test -c playwright.auth.config.ts",
     "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth",
     "test:e2e:update": "playwright test --update-snapshots",
+    "test:ct": "npm run test:ct --prefix app",
+    "test:ct:update": "npm run test:ct:update --prefix app",
     "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots"
   },
   "devDependencies": {
