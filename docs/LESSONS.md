@@ -2497,3 +2497,64 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **PREVENTION:** tracked on #3271, not yet fixed. Add the fix commit's own sha here once it lands.
 - **SIDE QUESTS:** none — the point of this entry is narrowly to stop these two shas from reading as
   an unexplained mystery in `incident-scan`'s output; #3271 already owns the actual fix.
+
+### A "free-standing state, replace in place" design choice for one ledger field produced a 19-PR conflict backlog — the first fix only rate-limited it
+
+- **SHA:** n/a (a 19-PR backlog, not a single failing run)   **DATE:** 2026-09-19   **STATUS:** closed
+- **SIGNAL:** Eric: "there is a lot of research related prs that have conflicts. the conflicts
+  feels like the same structural/systemic problem that we've called out that remains unaddressed."
+  19 of 23 open PRs carried `conflict-flagged` + `needs-eric` — 17 the bot's "deterministic screen"
+  commits, 2 duplicate independent fixes of an already-merged cost-meter bug.
+- **ROOT CAUSE:** two layers, mechanical and behavioral. Mechanical — every screened event's ledger doc carries a
+  `**Last assessed:**` + `<!-- probe-ref: {...} -->` pair, deliberately designed (the open-question
+  comment above `PRICE_MOVE_THRESHOLD` in `event-material-decide.mjs`) as "free-standing state...
+  REPLACED in place on every pulse... unlike the assessment ledger table, which stays strictly
+  append-only." That argument weighed the sidecar-sync cost of a separate JSON file and never
+  weighed the git cost of the in-place choice: every merge to `main` re-triggers the research
+  workflow (issue #724's design), so two screens racing the same still-due event both rewrote the
+  identical line — a genuine same-logic conflict, not a false positive, which is why the
+  conflict-repair lane correctly refused to auto-resolve any of them.
+
+  Behavioral — the deeper layer, from Eric's follow-up pushback. The first fix shipped
+  ([#3328](https://github.com/ejclark/skynet-capital/pull/3328)/[#3329](https://github.com/ejclark/skynet-capital/pull/3329))
+  added a pre-flight guard that skips opening a second screen PR while one is already open. Eric,
+  immediately: "3329 looks like it simply avoids the problem" — and, on being shown the append-only
+  redesign, connected it explicitly to the standing "recurring blessing-ask is a scaling failure"
+  doctrine in `CLAUDE.md`: "It's alarming this type of low level failure occurred given I recently
+  added instructions aimed at ensuring our ability to scale." The guard was a correct, cheap,
+  legitimate throughput optimization — but it rate-limits the collision rather than making it
+  impossible, which is exactly the "propose the one-time fix, don't keep asking" failure mode that
+  doctrine names: a mutex around a mutable-state race still leaves the race in the architecture for
+  the next volume spike to find.
+- **PREVENTION:** `applyScreen` (`scripts/event-material-decide.mjs`) now APPENDS a fresh
+  `**Last assessed:**` + probe-ref pair at the true end of the file on every screen, instead of
+  rewriting the existing one — the same append-only convention the ledger table already used.
+  `parseLedgerHeader` and `event-scan.mjs`'s `loadLedgers` both take the LAST such pair in the file
+  (`matchAll(...).at(-1)`), so an unscreened doc still resolves off its original header and a
+  screened one resolves off its newest trailing block. `research-lint.mjs`'s blocked-source check
+  gets the same last-occurrence fix. `.github/prompts/event-research.md` (a full research session's
+  own instructions) is updated to append rather than rewrite too, closing the same hole on that
+  path. Two concurrent screens for the same event are now a pair of disjoint git additions — the
+  case the conflict-repair lane already auto-resolves — rather than a same-logic conflict, which
+  makes the collision structurally impossible rather than merely rate-limited. The #3328/#3329
+  guard stays in place as a minor throughput optimization (skips a redundant duplicate PR/API call)
+  but is no longer load-bearing for correctness.
+- **SIDE QUESTS:** none logged — the fix was scoped and landed in the same pass once the deeper
+  root cause was named.
+
+### A fourth `gh run view --log` timeout is the same already-tracked circuit-breaker fragility as #3307's cause 3 — not re-diagnosed here
+
+- **SHA:** b4dbb23   **DATE:** 2026-09-19   **STATUS:** closed
+- **SIGNAL:** `route` job failed on run 35415921799 (push): `dial tcp 140.82.114.22:443: i/o
+  timeout` fetching a prior run's log via `gh run view --log`, so `circuit breaker machinery
+  failed... refusing to dispatch with an incomplete spend total.`
+- **ROOT CAUSE:** same fragility as #3307's cause 3 (`docs/LESSONS.md`, "The just-shipped
+  rate-limit fix's own circuit breaker crashes reading a large prior run's log") — the breaker's
+  fetch of a prior run's full log has no bound on failure mode; that entry saw a buffer overflow,
+  this one a network timeout, both from the same unhardened call. The breaker's fail-closed response
+  is correct (it refused to dispatch blind rather than guessing); the unlearned-incident flag is the
+  job reading red over it, not a new defect.
+- **PREVENTION:** tracked on #3307, not yet fixed — not re-filed. Add this sha to #3307's own fix
+  commit once it lands, same as the other confirmed instances there.
+- **SIDE QUESTS:** none — narrowly confirming this sha is another instance of #3307, not deriving a
+  new cause.

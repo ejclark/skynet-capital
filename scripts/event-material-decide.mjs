@@ -42,12 +42,18 @@
 // digest-scan.mjs's COMMIT_THRESHOLD/HEARTBEAT_DAYS.
 //
 // REFERENCE-LEVEL STORAGE (open question 2): a machine-readable `<!-- probe-ref: {...} -->` block
-// embedded in the ledger header, right after `**Last assessed:**` — NOT a sidecar JSON file. Chosen
+// embedded in the ledger, right after a `**Last assessed:**` line — NOT a sidecar JSON file. Chosen
 // because the ledger is already this system's one source of truth per event (event-scan.mjs reads
-// nothing else), and a sidecar would need to stay in sync with a file it has no other tie to. The
-// probe-ref block is free-standing state (current readings + streak), not an assessment row, so it
-// is REPLACED in place on every pulse (screen or material) rather than appended — unlike the
-// assessment ledger table, which stays strictly append-only.
+// nothing else), and a sidecar would need to stay in sync with a file it has no other tie to.
+//
+// APPEND-ONLY, LIKE THE LEDGER TABLE (revised 2026-09-19, docs/LESSONS.md). This originally read
+// "REPLACED in place on every pulse... unlike the assessment ledger table, which stays strictly
+// append-only" — a deliberate choice that never weighed its git cost. Every merge to `main`
+// re-triggers the research workflow, so two screens racing the same still-due event both rewrote
+// the identical line, a guaranteed same-logic conflict that produced a 19-PR stuck backlog before
+// this fix. `applyScreen` now APPENDS a fresh `**Last assessed:**` + probe-ref pair at the true end
+// of the file on every pulse, same convention as the table; `parseLedgerHeader` takes the LAST such
+// pair in the file, so reading "current state" still means one lookup, just at the other end.
 export const PRICE_MOVE_THRESHOLD = 0.05;
 export const VIX_MOVE_THRESHOLD = 3;
 export const ADJACENCY_WINDOW_DAYS = 5;
@@ -256,11 +262,23 @@ function insertLedgerRow(text, row) {
 }
 
 /**
- * Write a screen's outcome into the ledger's raw markdown: bump `**Last assessed:**`, replace the
- * probe-ref block with fresh readings, and append ONE table row — worded as a mechanical check,
- * never as an assessment (the honesty invariant: "screened", never "no change" or a verdict). Only
- * ever called on a "screen" verdict; a "material" verdict writes nothing here — the full session
- * appends its own row, same as today.
+ * Write a screen's outcome into the ledger's raw markdown: append a fresh `**Last assessed:**` +
+ * probe-ref pair at the true end of the file, and append ONE table row — worded as a mechanical
+ * check, never as an assessment (the honesty invariant: "screened", never "no change" or a
+ * verdict). Only ever called on a "screen" verdict; a "material" verdict writes nothing here — the
+ * full session appends its own row, same as today.
+ *
+ * APPEND, NOT REWRITE (2026-09-19, docs/LESSONS.md). This used to `.replace()` the existing
+ * `**Last assessed:**`/probe-ref line in place — free-standing state, the design comment above
+ * PRICE_MOVE_THRESHOLD argued, so it made sense for it to be "current state" rather than an
+ * append-only row. That argument never weighed the git cost: every merge to `main` re-triggers the
+ * research workflow, so two screens for the same still-due event, both in flight at once, each
+ * rewrote the SAME line — a guaranteed same-logic conflict, not a false positive, and it produced a
+ * 19-PR stuck backlog before this fix. Tacking a fresh pair onto the true end of the file instead
+ * makes two concurrent screens a pair of disjoint additions, which git merges cleanly on its own —
+ * the conflict becomes structurally impossible instead of merely rate-limited. parseLedgerHeader
+ * (below) and event-scan.mjs's loadLedgers both read the LAST such pair in the file, so a doc that
+ * has never been screened since creation still resolves correctly off its original header.
  */
 export function applyScreen(ledgerText, state, decision) {
   if (decision.verdict !== "screen") {
@@ -270,25 +288,26 @@ export function applyScreen(ledgerText, state, decision) {
   if (!/^\*\*Last assessed:\*\*\s*\S+/m.test(ledgerText)) {
     throw new Error("event-material-scan: ledger is missing the '**Last assessed:**' line");
   }
-  let text = ledgerText.replace(/^\*\*Last assessed:\*\*\s*\S+/m, `**Last assessed:** ${today}`);
-  const probeRefLine = `<!-- probe-ref: ${JSON.stringify(decision.readings)} -->`;
-  text = /^<!-- probe-ref:.*-->$/m.test(text)
-    ? text.replace(/^<!-- probe-ref:.*-->$/m, probeRefLine)
-    : text.replace(/^(\*\*Last assessed:\*\*.*)$/m, `$1\n${probeRefLine}`);
   const row =
     `| ${today} | D-${decision.daysOut} | **Deterministic screen (no Claude session).** ` +
     `${describeReadings(state, decision)} | — (screen; no assessment made) | ` +
     `${addDays(today, decision.intervalDays)} |`;
-  return insertLedgerRow(text, row);
+  const text = insertLedgerRow(ledgerText, row);
+  const probeRefLine = `<!-- probe-ref: ${JSON.stringify(decision.readings)} -->`;
+  return `${text.trimEnd()}\n\n**Last assessed:** ${today}\n${probeRefLine}\n`;
 }
 
 /** `**Last assessed:**` + an optional `<!-- probe-ref: {...} -->` line right after it — the ledger
- *  contract event-material-scan.mjs reads on the live path (docs/process/EVENT-RESEARCH.md). A
- *  malformed probe-ref block parses as absent (falls back to `no-reference-baseline`, never a
- *  crash) — a hand-edited ledger must degrade safely, not break the pulse pipeline. */
+ *  contract event-material-scan.mjs reads on the live path (docs/process/EVENT-RESEARCH.md). Takes
+ *  the LAST occurrence of each in the file, not the first: since applyScreen (above) only ever
+ *  APPENDS a fresh pair rather than rewriting the original header, the most recent state is
+ *  whichever one appears latest in the file — the original header for an unscreened doc, or the
+ *  newest trailing block for one that has been. A malformed probe-ref block parses as absent (falls
+ *  back to `no-reference-baseline`, never a crash) — a hand-edited ledger must degrade safely, not
+ *  break the pulse pipeline. */
 export function parseLedgerHeader(text) {
-  const lastAssessed = text.match(/^\*\*Last assessed:\*\*\s*(\S+)/m)?.[1] ?? null;
-  const raw = text.match(/^<!-- probe-ref:\s*(\{.*\})\s*-->$/m)?.[1];
+  const lastAssessed = [...text.matchAll(/^\*\*Last assessed:\*\*\s*(\S+)/gm)].at(-1)?.[1] ?? null;
+  const raw = [...text.matchAll(/^<!-- probe-ref:\s*(\{.*\})\s*-->$/gm)].at(-1)?.[1];
   let probeRef = null;
   if (raw) {
     try {

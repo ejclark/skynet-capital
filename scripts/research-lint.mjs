@@ -154,7 +154,11 @@ function checkRows(data, at, problems, notes) {
  * this gate's to enforce — there is no reliable way to check a prose prefix mechanically.
  */
 function checkBlockedSources(md, notes) {
-  const match = /<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/.exec(md);
+  // LAST occurrence, not first: event-material-decide.mjs's applyScreen appends a fresh probe-ref
+  // block on every screen (2026-09-19, docs/LESSONS.md) rather than rewriting the original header
+  // in place, so the current state is whichever block appears latest in the file.
+  const matches = [...md.matchAll(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/g)];
+  const match = matches.at(-1);
   if (!match) return;
   let ref;
   try {
