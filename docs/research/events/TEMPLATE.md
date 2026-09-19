@@ -17,11 +17,15 @@
      initial
      research (it is what lets the event's very next `interval-elapsed` pulse be screenable instead
      of automatically material) — never hand-invent numbers, pull today's actual price/VIX the same
-     way the adjacency sweep already does. Every later pulse (screened or full-session) REPLACES
-     this line in place with fresh readings; it is free-standing current state, not an append-only
-     row like the ledger table below. A screen writes it mechanically; a full session should refresh
-     it too when appending its own row, so the streak resets and the baseline stays current. See
-     docs/process/EVENT-RESEARCH.md's "Deterministic screening" section for the full contract.
+     way the adjacency sweep already does. Every later pulse (screened or full-session) APPENDS a
+     fresh `**Last assessed:**` + probe-ref pair at the TRUE END of the file — never edits this
+     header line in place (2026-09-19, docs/LESSONS.md: two pulses racing the same event both
+     rewriting this line was a guaranteed git conflict; appending makes it a pair of disjoint
+     additions instead). The reader always takes the LAST such pair in the file, so "current state"
+     is still one lookup — just resolved at the other end. A screen writes its pair mechanically; a
+     full session should append its own too when adding its row, so the streak resets and the
+     baseline stays current. See docs/process/EVENT-RESEARCH.md's "Deterministic screening" section
+     for the full contract.
 
      `blocked` (issue #1711) records every failed fetch of a cited source this event's research has
      hit — egress block, 403, 5xx, whatever the tool reported — as
