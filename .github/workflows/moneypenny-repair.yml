@@ -155,6 +155,17 @@ jobs:
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
         uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        env:
+          # `github_token:` below is what the ACTION itself uses for its own API calls; it does not
+          # reach a `git push` the spawned session runs via its own Bash tool, which instead
+          # inherits this job's ambient GITHUB_TOKEN — read-only per this job's own `contents:
+          # read` (#3334, 2026-09-19: every conflict-repair run hit `403 — Permission denied`
+          # pushing with a real, write-capable App token sitting unused in `steps.app-token`). A
+          # step-level `env:` is set by the runner itself before the action's process ever starts,
+          # so this unconditionally overrides that ambient token for anything this step's Bash tool
+          # spawns — the prompt files that push (moneypenny-conflict-repair.md) point `git`'s
+          # remote at it explicitly rather than relying on any implicit credential helper.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           # Without this the lane can DETECT but never REPAIR. A run of this lane is woken by
           # `workflow_run` and inherits the failed run's actor, so a failure that a bot triggered
@@ -183,6 +194,10 @@ jobs:
       # both on the same dispatch), so exactly one of the three steps here ever runs per invocation.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != ''
         uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        env:
+          # See the sibling step above (#3334) — this is the path that actually pushes conflict
+          # resolutions, and the one confirmed broken without it.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -204,6 +219,10 @@ jobs:
       # `needs.triage.outputs.issue` one.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number != ''
         uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        env:
+          # See the first step in this job (#3334) — applied defensively here too, since this path
+          # can end in a real research write-up, not just a script fix.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

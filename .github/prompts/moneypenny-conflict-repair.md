@@ -36,10 +36,17 @@ HOW TO WORK IT:
 3. If EVERY conflict resolves as disjoint, verify: `npm run typecheck`, `npm run lint`, `npm test`
    — by exit status, never tailed output. If anything fails, treat it as a resolution you got wrong,
    not a pre-existing issue to route around; if you cannot make it pass, that is state (b) too.
-4. Commit the merge (`git commit`, default merge message is fine) and `git push origin
-   HEAD:<pr-branch>` — a merge commit only. **NEVER** `git rebase`, `--amend`, or any `--force`
-   push: this may not be your branch, and rewriting someone else's history is never in scope here,
-   regardless of how it would simplify the diff.
+4. Commit the merge (`git commit`, default merge message is fine). **Before pushing, point the
+   remote at your own App token — the ambient credential `actions/checkout` set up is read-only**
+   (this job's own `contents: read` permission; #3334, 2026-09-19: a plain `git push` here always
+   failed with `403 — Permission denied to github-actions[bot]`, even though a real write-capable
+   token was minted). Run:
+   ```
+   git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+   ```
+   then `git push origin HEAD:<pr-branch>` — a merge commit only. **NEVER** `git rebase`,
+   `--amend`, or any `--force` push: this may not be your branch, and rewriting someone else's
+   history is never in scope here, regardless of how it would simplify the diff.
 5. Comment on the PR naming what you resolved and how (which files, disjoint-addition judgment)
    so the PR's author can see what changed without re-reading the whole merge commit.
 
