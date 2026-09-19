@@ -83,15 +83,18 @@
     "shoot:thesis": "tsx scripts/shoot/thesis.mjs",
     "test:e2e": "playwright test",
     "test:e2e:auth": "playwright test -c playwright.auth.config.ts",
-    "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth",
+    "test:e2e:ct": "playwright test -c app/playwright-ct.config.ts",
+    "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth && npm run test:e2e:ct",
     "test:e2e:update": "playwright test --update-snapshots",
-    "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots"
+    "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots",
+    "test:e2e:ct:update": "playwright test -c app/playwright-ct.config.ts --update-snapshots"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",
     "@biomejs/biome": "2.5.10",
     "@commitlint/cli": "21.2.2",
     "@commitlint/config-conventional": "21.2.2",
+    "@playwright/experimental-ct-react": "1.62.1",
     "@playwright/test": "1.62.1",
     "@rstest/core": "0.11.9",
     "@semantic-release/changelog": "7.0.0",
