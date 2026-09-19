@@ -1,8 +1,8 @@
 # UK retail sales, Great Britain — August 2026 (ONS, 07:00 London): the base steps down, so the headline accelerates in the month the till called the weakest since October 2024 — uk-retail-sales-2026-09-18
 
 **Kind:** macro-print · **Date:** 2026-09-18 (estimate, EST: — ons.gov.uk/releases/retailsalesgreatbritainaugust2026, re-fetched direct 2026-09-15, "18 September 2026 at 7:00am" / "This release is not yet published"; the label is a taxonomy gap plus this lane's no-self-confirm limit, not a doubt about the date) · **Impact:** low
-**Last assessed:** 2026-09-15
-<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","empire-state-mfg-2026-09-15","jgb-20y-auction-2026-09-15","sp-global-investment-manager-index-2026-09-15","treasury-20y-bond-2026-09-15","treasury-buyback-tips-10y30y-2026-09-15","uk-labour-market-2026-09-15","bund-30y-auction-2026-09-16","eia-weekly-petroleum-status-2026-09-16","fomc-2026-09-16","google-adtech-opinion-unseal-2026-09-16","import-export-prices-2026-09-16","nahb-hmi-2026-09-16","retail-sales-2026-09-16","tic-monthly-2026-09-16","uk-cpi-2026-09-16","vix-expiration-2026-09-16","boe-decision-2026-09-17","eurostat-hicp-final-2026-09-17","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","treasury-10y-tips-2026-09-17","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","unsc-iran-panel-mandate-vote-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","industrial-production-2026-09-18","japan-cpi-2026-09-18","opex-2026-09-18","missouri-uocava-ballot-mailing-2026-09-19","jpx-market-closure-2026-09-21","russell-quarterly-ipo-review-effective-2026-09-21","sp-quarterly-rebalance-effective-2026-09-21","jpx-market-closure-2026-09-22","missouri-map-tro-expiry-2026-09-22","treasury-2y-note-2026-09-22","uk-public-sector-finances-2026-09-22","unga-81-general-debate-2026-09-22","jpx-market-closure-2026-09-23","meta-connect-2026-09-23","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23"],"adjacentStrongIds":["treasury-20y-bond-2026-09-15","fomc-2026-09-16","retail-sales-2026-09-16","opex-2026-09-18"],"screenStreak":0,"blocked":[{"url":"https://brc.org.uk/news/corporate-affairs/brc-kpmg-retail-sales-monitor-august-2026/","status":"404","at":"2026-09-15"}]} -->
+**Last assessed:** 2026-09-19
+<!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"low:0+","adjacentIds":["house-vote-ratepayer-protection-act-2026-09-17","tic-monthly-2026-09-16","pending-home-sales-2026-09-17","treasury-10y-tips-2026-09-17","apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","industrial-production-2026-09-18","japan-cpi-2026-09-18","opex-2026-09-18","missouri-uocava-ballot-mailing-2026-09-19","jpx-market-closure-2026-09-21","russell-quarterly-ipo-review-effective-2026-09-21","sp-quarterly-rebalance-effective-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","missouri-map-tro-expiry-2026-09-22","treasury-2y-note-2026-09-22","uk-public-sector-finances-2026-09-22","unga-81-general-debate-2026-09-22","eia-weekly-petroleum-status-2026-09-23","jpx-market-closure-2026-09-23","meta-connect-2026-09-23","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0,"blocked":[{"url":"https://brc.org.uk/news/corporate-affairs/brc-kpmg-retail-sales-monitor-august-2026/","status":"404","at":"2026-09-15"}]} -->
 
 ## At a glance
 
@@ -388,6 +388,7 @@ observation, and Leg 5's contribution is the confound rather than a second test 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-15 | 3 | **Initial research; canonical `src/domain/market-events/uk-retail-sales-2026-09-18.json` written from TWO proposals (`from-uk-retail-sales-2026-10-23`, `from-uk-retail-sales-2026-12-18`, both 2026-09-10, both read in full first).** Date re-verified direct — ONS release page: *"18 September 2026 at 7:00am"*, *"not yet published"*, **accredited official statistics** (OSR-reviewed); July bulletin's *"Next release: 18 September 2026"* corroborates. **THE CENTRAL FINDING — THE BASE STEPS DOWN, SO THE HEADLINE ACCELERATES.** From `J5EK` (volume, SA, 2022=100, vintage 2026-08-20, fetched today; method validated by recomputing the published 3m/3m to Jul-26 as **1.14%** vs the bulletin's **1.1%**): **Jul 2025 = 102.1 → Aug 2025 = 101.6**, a **−0.49%** base step, so a **flat** month adds **+0.49pp** to the annual rate. **Carry = 103.8 / 101.6 − 1 = +2.17pp**, fixed; one clear remains at **mean +0.12%, sd 1.08pp** (n=30 since Jan 2024, range −1.86% to +2.43%) → **base case y/y +1.2% to +3.4%, centred ~+2.3%** vs **+1.6%** in July. Thresholds: **+1.7% needs m/m ≥ −0.46% (19/30 cleared, 63%)**, July's own +1.6% needs −0.55% (21/30), +2.0% needs −0.16% (18/30) — **FT-…-1 registered at MEDIUM, not high, because the threshold probability is 63% even though the band centre clears it easily.** **EXACT MIRROR OF THE SIBLING:** the 10-23 ledger's FT-1 predicts **below +1.7%** off the hardest base of 2025; this one predicts **at or above +1.7%** off a base that fell — same series, same threshold, consecutive bulletins, opposite directions, one mechanism. **THE THREE INSTRUMENTS DO NOT CONFLICT, THEY MEASURE DIFFERENT THINGS:** BRC-KPMG August **+0.7%** total, food +2.6%, non-food **−0.8%**, weakest vs a 12-month average of 1.6% (**trade-press secondary today — the BRC primary URL 404'd, recorded in `blocked`; the figures match the sibling's 09-10 primary read exactly**); GfK/NIQ August headline **−14**, *"its highest level for two years"*, major purchases **−7**, best since **Dec 2021** (NIQ primary, published 08-21, fieldwork 30 Jul–12 Aug, n=2,000); and the ONS number is a ratio to a base that fell. **A CONSENSUS EXISTS THIS TIME, UNLIKE THE SIBLING:** TradingEconomics (**secondary aggregator, labelled**) shows **+2.0%** — inside the band, above July, same side of the arithmetic — and its "previous 3.8%" reproduces this document's own `J5EK` computation of June (+3.78%), a small check that it reads the right series. **REVISIONS — THREE MEASURED, 0.1 TO 0.6pp, BOTH DIRECTIONS:** the July bulletin states June *"revised down from a 1.0% rise"* to **0.7%** and May up from 1.2% to **1.3%**; the sibling measured Sep-2025 m/m from **+0.5%** to **+1.08%**. The 10-23 kill switch trips at a **0.5-index-point** July revision, above two of the three — genuinely open, so **FT-…-2** predicts it does not trip. `J5EK` has **not** been revised between the sibling's 09-10 read and today. **QUARTERLY FLOOR:** 3m/3m (Jun–Aug 26 vs Mar–May 26, base 103.033) turns negative only at an August index of **101.00**, a **−2.70%** month — **30/30** observations cleared that (**FT-…-3**). **THE REHEARSAL IS DIRTY — A NOTE TO THE 12-18 LANE, NOT A SECOND TEST.** `opex-2026-09-18` is a confirmed high quad-witching and `FT-uk-retail-sales-2026-12-18-2` already owns `^GSPC`'s gap into this exact open (kill at 0.60%); **this lane registers nothing on it**, and instead records that **FOMC 09-16 (confirmed high), BoE 09-17 and BoJ 09-18 all sit inside that window**, where the sibling's five historical instances were November-edition releases. The test is therefore asymmetric: a small gap still supports no-trace, a large one is the least attributable observation in the sample and should score as noise, not a kill. Adjacency: **peers** — none, `symbols: []`. **Macro** — UK labour market **published this morning** (unemployment **4.9%**, regular pay **+3.5%** nominal / **+0.8%** real, vacancies **702,000** and falling — real pay thin but positive, consistent with a volume series grinding sideways); FOMC 09-16, US retail sales 09-16 (**the name collision — US Census advance, tiered high, two days earlier**), UK CPI 09-16, BoE 09-17, BoJ 09-18, UK PSF 09-22, this series' September print 10-23. **Volatility** — **VIX 17.49** (Yahoo `^VIX`, 2026-09-15, possibly intraday) vs **17.84** on 09-10: a **0.35-point** move, nowhere near the 3-point regime threshold; FTSE 10,658.13, GBP/USD 1.3478, `^GSPC` 7,583.96. **Geopolitical** — none touching a GB consumer-volume print. **Event tape** — consensus +2.0% (secondary); the survey and the till disagree for the same month and their September editions publish within five weeks. **50 adjacency ids** within 5 days, **4 confirmed high** (`treasury-20y-bond-09-15`, `fomc-09-16`, `retail-sales-09-16`, `opex-09-18`) — every attribution channel into the 09-18 session is occupied by something larger. **One dated adjacency PROPOSED** (`estimate`, own-owner file, from a publisher page fetched today): **`uk-consumer-confidence-2026-09-25`** — the GfK/NIQ UK barometer, dated by NIQ's own schedule note (*"September 25th, October 23rd, November 20th and December 18th"*); it earns a slot because this calendar tracks US consumer sentiment **18 times over** and no UK consumer sentiment read at all, and because it is the survey half of the disagreement above. **REFUSED TO FILE:** the BRC September monitor — BRC's page states only *"at least two weeks ahead of official statistics"*, no dated schedule; same refusal the 10-23 lane made. **Honest weaknesses:** the BRC primary 404'd today (secondary used, downgraded in place, recorded in `blocked`); the consensus is an aggregator, not a surveyed panel; the clear is modelled as a random walk; **n=2** on prior August clears so no seasonal residual is claimed; `J5EK` carries the July vintage; the quad-witching confound is reasoned off the calendar, not decomposed. | — (stance set: stand aside at every horizon, no position, no play; four commitments — the base steps down so the headline accelerates to **+1.2% to +3.4%, centred ~+2.3%**, an acceleration is **not** a consumer turn and must be reported *"against a base that fell"*, the July index revision is expected **under 0.5 index points** so the sibling's carry survives, and the 3m/3m floor holds **positive**) | 2026-09-22 (low band, <15d out ⇒ 7d interval; in practice the 2026-09-18 close-out arrives first) |
+| 2026-09-19 | D+1 | **Close-out.** Macro-print mode, `symbols: []` — no `earnings-cycle`/`intraday-edges` instrument; cache-bust command run per standing instruction regardless (nothing was in it). "Re-run instrument data" here means re-fetching the ONS bulletin and the live `J5EK` series directly, both fetched today, neither recalled from initial research. **What printed:** GB retail sales volume **+2.4% y/y** in August 2026, **+0.5% m/m** ("following a fall of 0.5% in July 2026"), **+0.9%** three-months-on-three-months to August vs the three months to May (ons.gov.uk bulletin, fetched 2026-09-19). Response rate **56.7%**, "2.8 percentage points below the 12-month average" — the low-response pattern continues rather than reverses. Attribution in the bulletin's own words: food stores, non-store/online retailers ("recovered strongly") and alcohol/beverage retailers — no mention anywhere of the base-year arithmetic. **The kill-switch test, re-fetched from `J5EK` (live vintage, 2026-09-19) against the 2026-08-20 vintage this ledger's arithmetic used:** every month from Jan-2025 through Jul-2026 revised down, from **−0.4** index points in early 2026 growing to **−0.7** by July 2026 (103.8 → 103.1) — a broad re-benchmarking of the whole back series, not an isolated late-return correction to July alone; Aug-2025 (the annual base) also moved **−0.4** (101.6 → 101.2). **Forward tests scored:** `FT-…-1` (y/y ≥ +1.7%) **PASSED** at +2.4%; `FT-…-2` (July index revision < 0.5 points) **KILLED** at 0.7 points; `FT-…-3` (3m/3m > 0.0%) **PASSED** at +0.9%. Full reasoning in `## Outcome`. VIX **14.81** (Yahoo, close 2026-09-18, "At close: September 18 at 3:15:01 PM CDT") vs **17.49** on 2026-09-15 — a **2.68-point** move, directionally a post-FOMC/BoE/BoJ vol collapse, short of the 3-point regime threshold. No tracked name's move has been attributed to this print in any coverage found — the no-channel premise (`symbols: []`) held throughout, never traded. No new adjacency proposal — the adjacency sweep is not mandatory at close-out and nothing dated and new surfaced incidentally. **`## Outcome` written below — this document goes quiet.** | FT-1 and FT-3 passed, FT-2 killed; the headline call (direction, band, +1.7% threshold) is vindicated, the carry-stability hedge built around it is not (see `## Outcome`) | — (closed; scanner goes quiet on this event) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -397,3 +398,100 @@ every row; a dated adjacent event found gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-19, D+1 — inside `closeOutWithinDays: 6`).** Macro-print mode carries no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design; the cache-bust command was
+run regardless, per the lane's standing instruction — nothing was in it). "Re-run instrument data"
+here means the ONS's own August 2026 bulletin and the live `J5EK` time series, both re-fetched
+direct on 2026-09-19 — none of it recalled from initial research.
+
+### What printed
+
+ONS bulletin (`ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/august2026`,
+fetched 2026-09-19): GB retail sales volume **rose 2.4% y/y** in August 2026, **+0.5% m/m** ("following
+a fall of 0.5% in July 2026"), and **+0.9%** three-months-on-three-months to August 2026 versus the
+three months to May. Response rate **56.7%**, "2.8 percentage points below the 12-month average" —
+continuing, not reversing, the low-response pattern initial research flagged as the revision mechanism.
+Attribution in the bulletin's own words: food stores performed well, non-store/online retailers
+"recovered strongly," and alcohol/beverage retailers "performed well across all three months" — the
+base-year arithmetic this ledger's whole thesis rests on is not mentioned anywhere in the bulletin's own
+framing.
+
+### The index, re-fetched, and the revision the kill switch was built to catch
+
+`J5EK` (retail sales volume, SA, 2022=100), re-fetched direct 2026-09-19 against the 2026-08-20 vintage
+initial research used:
+
+| Month | Vintage this ledger used (2026-08-20) | Vintage now (2026-09-19) | Move |
+|---|---|---|---|
+| 2025 Aug (annual base) | 101.6 | 101.2 | −0.4 |
+| 2025 Jul | 102.1 | 102.0 | −0.1 |
+| 2026 Jan | 103.5 | 103.1 | −0.4 |
+| 2026 Feb | 102.7 | 102.3 | −0.4 |
+| 2026 Mar | 103.2 | 102.8 | −0.4 |
+| 2026 Apr | 102.3 | 101.9 | −0.4 |
+| 2026 May | 103.6 | 103.1 | −0.5 |
+| 2026 Jun | 104.3 | 103.7 | −0.6 |
+| **2026 Jul** | **103.8** | **103.1** | **−0.7** |
+| 2026 Aug | — | 103.6 | new |
+
+Every month from January 2025 through July 2026 moved down, growing from **−0.4** points in early 2026
+to **−0.7** by July — a broad re-benchmarking of the whole recent back series rather than an isolated
+correction to July alone. Leg 4 named the right mechanism (a 56.9%-response survey keeps collecting late
+returns) but framed it as a per-month risk; what actually happened reads more like a systematic
+seasonal-adjustment re-run touching the entire window at once. The number the kill switch tests is
+unaffected by that distinction: July 2026's index level moved **0.7 points**, over the 0.5-point bar.
+
+Recomputed on the vintage the bulletin now stands on, the carry (Jul-26/Aug-25) is **+1.88pp**
+(103.1/101.2), not the **+2.17pp** (103.8/101.6) this ledger's arithmetic was built on — both base and
+numerator moved down by a similar amount. The one-month clear that closed the rest of the gap came in at
+**+0.485%** (103.6/103.1), on the strong side of the historical mean (+0.12% ± 1.08pp, n=30) rather than
+on the "almost any flat month clears it" framing Leg 2 leaned on. Two different routes both land on an
+accelerating headline; the route the print actually took relied more on August's clear than on the July
+carry the ledger's own hedge was built to protect.
+
+### Forward tests, scored
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-uk-retail-sales-2026-09-18-1 (y/y ≥ +1.7%, medium confidence) | ≥ +1.7% | **+2.4%** | **PASSED** |
+| FT-uk-retail-sales-2026-09-18-2 (July 2026 index revision < 0.5 points) | < 0.5 pts | **0.7 pts** (103.8 → 103.1) | **KILLED** |
+| FT-uk-retail-sales-2026-09-18-3 (3m/3m > 0.0%) | > 0.0% | **+0.9%** | **PASSED** |
+
+**The central finding survives; the hedge built around it does not.** The base-step-down mechanism
+(Leg 2) called the headline direction, the band, and even the specific threshold correctly — 2.4% sits
+inside the +1.2%/+3.4% band and above the +1.7% test threshold that only 63% of historical months would
+have cleared, registered at medium rather than high confidence for exactly that reason. But it clears
+that threshold on a base that itself moved, and FT-2 was registered precisely to catch whether the carry
+this ledger leaned on would survive contact with a real revision — "genuinely open, not a formality," at
+odds implied by the same 63%-adjacent read. It did not survive: the minority case came in, on the
+same live test this ledger flagged as open, the week after `empire-state-mfg-2026-09-15`'s own FT-1/FT-2
+landed on their minority case too.
+
+**Consequence for the siblings.** Both **[10-23](uk-retail-sales-2026-10-23.md)** and
+**[12-18](uk-retail-sales-2026-12-18.md)** inherit a July 2026 carry from this print's vintage that has
+already moved once by more than either ledger's own kill-switch bar — a note for whichever session next
+touches either ledger's arithmetic; per #1717 this lane does not edit another event's fragment.
+
+**The headline-risk rule held.** The bulletin's own framing attributes August's rise to food, online and
+alcohol retailers — never to the base-year arithmetic this ledger's whole thesis rests on. Any recap that
+repeats "growth accelerated" without the qualifier this ledger prescribed is repeating the print's own
+framing, unchallenged.
+
+**Never traded.** `low` impact, `symbols: []`, `estimate` date throughout — no position was opened,
+closed, or sized off this print at any point in this document's life, consistent with the stand-aside
+stance at every horizon. No tracked name's session move has been attributed to this print in any coverage
+found this session.
+
+### Honest accounting
+
+Two of three zero-capital forward tests passed (the y/y threshold, comfortably; the 3m/3m floor, by a
+wide margin) and the one built specifically to test whether this ledger's own carry arithmetic would
+survive a same-print revision did not. Read plainly: the headline call — direction, band, and the named
+mechanism — was right, and the one honesty check built around that mechanism caught something real: the
+carry moved by more than its own kill-switch bar, in the very session the headline it fed into resolved
+correctly for an adjacent reason (the monthly clear, not carry stability). Nothing here is re-litigated
+or smoothed; the append-only ledger row above carries the same numbers this section does. `## Outcome`
+now exists — per `event-scan.mjs`'s `hasOutcome` check, this document goes quiet permanently.
