@@ -17,5 +17,15 @@ export default defineConfig({
     trace: "on-first-retry",
     ctPort: 3100,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      // Pinned browser path (see repo environment notes): the sandbox pre-installs one chromium
+      // build, which can trail the version-specific headless_shell Playwright resolves by default.
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { executablePath: "/opt/pw-browsers/chromium" },
+      },
+    },
+  ],
 });
