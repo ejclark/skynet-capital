@@ -74,7 +74,7 @@
         "**/commitlint.config.js",
         "**/rstest.config.ts",
         "**/app/rsbuild.config.ts",
-        "**/playwright.config.ts"
+        "**/playwright*.config.ts"
       ],
       "linter": {
         "rules": {
