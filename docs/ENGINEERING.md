@@ -46,6 +46,13 @@ compiler is the first line of defense, so we keep it maximally paranoid.
 Playwright screenshots (`e2e/**`) are the suite's visual sense. Three rules, in order — each one
 was earned by a measurement, cited where it was taken (#3325, 2026-09-19):
 
+**"e2e" here never means "against the live/deployed app"** (#3333, 2026-09-19 — the name alone
+reads that way and misled a reader). `playwright.config.ts`'s `webServer` builds the checked-out
+commit fresh and boots it as a throwaway local server against static `fixtures/offline/**` data,
+on both its CI triggers (pull request and push to `main`). It is always testing a candidate build,
+never the running Fly.dev deployment — `scripts/smoke.sh` in the `deploy` job is the only check
+that touches the real deployed app, and it runs separately, post-deploy.
+
 1. **Determinism is a precondition, not a tolerance setting.** Every screenshot spec calls
    `freezePage()` from `e2e/determinism.ts` before `page.goto` — seeded `Math.random`, pinned
    clock, reduced motion. A render that does not reproduce cannot be adjudicated by a diff, by a
