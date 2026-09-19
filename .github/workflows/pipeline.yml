@@ -68,6 +68,9 @@ jobs:
     # this is the actual cap regardless of what other jobs below need.
     permissions:
       contents: read
+    outputs:
+      # Reused by e2e below so a docs-only PR doesn't pay for a Chromium install/boot too.
+      code: ${{ steps.changes.outputs.code }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -190,6 +193,63 @@ jobs:
           done
           exit $status
 
+  e2e:
+    name: e2e
+    # Real-Chromium visual/behavioral regression pass (CLAUDE.md, 2026-09-18: "Playwright gives our
+    # CI process a visual sense"), separate from verify's unit/DOM-level rstest suite. Blocking from
+    # day one (Eric's call) — a failing spec or a hero-screenshot diff fails this check same as any
+    # other. Needs verify's `code` output so a docs-only PR doesn't pay for a Chromium boot too.
+    needs: verify
+    if: >-
+      ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+          needs.verify.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node (version from mise.toml)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit
+          npm ci --prefix app --no-audit
+
+      # Cached by Playwright's own version-keyed path — a hit skips the ~200MB download entirely.
+      - name: Restore Playwright browser cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app/ and run the e2e suite
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
   arm-auto-merge:
     name: arm auto-merge
     # Mirrors .github/prompts/interactive.md's own merge policy (hold only for a protected path, an
@@ -200,9 +260,10 @@ jobs:
     # instead (already provisioned: vars.APP_CLIENT_ID, same as claude.yml/moneypenny-events.yml/moneypenny-repair.yml).
     # A session (or Eric) that wants a specific PR held despite being green applies the `hold-merge`
     # label — that's the one signal this job can't derive from the diff itself.
-    needs: verify
+    needs: [verify, e2e]
     if: >-
       ${{ github.event_name == 'pull_request' && needs.verify.result == 'success' &&
+          (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
           github.event.pull_request.draft == false &&
           contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
