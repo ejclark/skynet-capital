@@ -73,3 +73,25 @@ export async function freezePage(page: Page): Promise<void> {
  * the test stops complaining — the drift that makes a visual suite decorative.
  */
 export const FROZEN_DIFF_RATIO = 0.002;
+
+/**
+ * Resize the viewport to the page's actual content height, then screenshot the (now full-content)
+ * viewport instead of using `fullPage: true`.
+ *
+ * WHY (measured 2026-09-19, #3325 follow-up): `/research` — a genuine scrolling document, exactly
+ * the case docs/ENGINEERING.md says to use `fullPage: true` for — still failed Playwright's own
+ * "two consecutive stable screenshots" check, oscillating between 5949px and 5950px tall forever.
+ * `document.body.scrollHeight` polled directly was rock-stable at 5949px across 4.5s (15 samples);
+ * the jitter only appeared once an actual `fullPage` screenshot was taken. Root cause: `fullPage`
+ * capture resizes/scrolls the page in segments to stitch the image, and that resize cycle itself
+ * is what introduced the 1px difference — not the app. Manually resizing the viewport to the
+ * measured content height ONCE, then taking a plain (non-fullPage) screenshot, reproduced
+ * byte-identical across 8 consecutive captures. Use this instead of `fullPage: true` for any
+ * route-level whole-frame shot; `fullPage: true` itself is now suspect for any page whose layout
+ * reacts to viewport size (a `min-height: 100vh` shell wrapper, `.shell`/`.shell-app` in this
+ * app's case) rather than a safe default for "a real scrolling document."
+ */
+export async function resizeToContentHeight(page: Page, width = 1280): Promise<void> {
+  const height = await page.evaluate(() => document.body.scrollHeight);
+  await page.setViewportSize({ width, height });
+}

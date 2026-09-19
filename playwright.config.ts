@@ -1,34 +1,27 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
+import { SHARED_CONFIG } from "./e2e/playwright.shared";
 
 // Visual/behavioral regression suite — a real Chromium clicking through the app, distinct from
 // rstest's DOM-level specs under tests/**. Boots the offline dashboard server (fixture data, no
 // network/keys) so CI never depends on live Alpaca credentials. See docs/ENGINEERING.md.
+//
+// Covers every route EXCEPT /login (playwright.auth.config.ts owns that one): booting with no
+// OAuth env vars configured leaves the dashboard fully OPEN (dashboard-auth-gate never wires up
+// a login requirement), which is what makes exhaustive route coverage tractable without a login
+// flow standing in front of every spec.
 export default defineConfig({
-  testDir: "./e2e",
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [["html", { open: "never" }], ["github"]] : "list",
+  ...SHARED_CONFIG,
+  testIgnore: ["**/login.spec.ts"],
   use: {
+    ...SHARED_CONFIG.use,
     baseURL: "http://localhost:8787",
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    // Builds the React shell (app/dist) so /app/ resolves, then boots the offline dashboard with
-    // fake OAuth creds — same non-secret pattern scripts/shoot/login.mjs already uses — so the
-    // real /login route (only wired up when a provider is configured) is reachable.
+    // Builds the React shell (app/dist) so /app/ resolves, then boots the offline dashboard fully
+    // open (no OAuth env vars) so every real route is reachable with no auth flow.
     command: "npm run build --prefix app && npm run serve:dashboard:offline",
     url: "http://localhost:8787",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
-    env: {
-      SKYNET_SESSION_SECRET: "e2e-dev-secret",
-      SKYNET_GOOGLE_CLIENT_ID: "e2e-fake-client",
-      SKYNET_GOOGLE_CLIENT_SECRET: "e2e-fake-secret",
-      SKYNET_GITHUB_CLIENT_ID: "e2e-fake-client",
-      SKYNET_GITHUB_CLIENT_SECRET: "e2e-fake-secret",
-    },
   },
 });

@@ -82,7 +82,10 @@
     "shoot:council": "tsx scripts/shoot/council.mjs",
     "shoot:thesis": "tsx scripts/shoot/thesis.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:update": "playwright test --update-snapshots"
+    "test:e2e:auth": "playwright test -c playwright.auth.config.ts",
+    "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth",
+    "test:e2e:update": "playwright test --update-snapshots",
+    "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",
