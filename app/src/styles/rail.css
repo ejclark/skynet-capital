@@ -39,13 +39,25 @@
 
 .rail a[aria-current="page"],
 .rail-current {
-  display: block;
+  /* NOT display:block — `.rail .rail-item` already sets display:flex (the glyph+label row with
+     its 8px gap), and `[aria-current="page"]`'s higher specificity here was silently overriding
+     it, collapsing that gap and narrowing the item the instant it became current. That reflowed
+     every sibling after it in the mobile rail's horizontal row: the actual mechanism behind the
+     reported "icons shift left then right on each click" (scrollbar-gutter and the span/Link
+     remount, both fixed earlier, were real but secondary contributors — this was the main one). */
   padding: 7px 12px;
   border-radius: 6px;
   font-size: 13.5px;
   background: var(--surface);
   color: var(--accent);
-  font-weight: 600;
+  /* font-weight 500, same as .rail a — a real weight change (600) measurably widens the label,
+     which in the mobile rail's horizontal row reflows every sibling after it on each navigation
+     (the reported "icons shift left then right"). text-shadow fakes the bolder read without
+     touching glyph metrics; the pill background + shadow already carry the "current" signal on
+     their own (CLAUDE.md → Accessibility: never color alone — this rail never relied on weight
+     alone either). */
+  font-weight: 500;
+  text-shadow: 0 0 0.35px currentColor;
   box-shadow: var(--elev-base);
 }
 
