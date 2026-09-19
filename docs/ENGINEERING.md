@@ -41,6 +41,34 @@ compiler is the first line of defense, so we keep it maximally paranoid.
   doctrine).
 - Spec structure mirrors behavior: `describe("when <situation>") → it("<expected behavior>")`.
 
+### Visual regression — the widest HONEST frame, never the widest frame
+
+Playwright screenshots (`e2e/**`) are the suite's visual sense. Three rules, in order — each one
+was earned by a measurement, cited where it was taken (#3325, 2026-09-19):
+
+1. **Determinism is a precondition, not a tolerance setting.** Every screenshot spec calls
+   `freezePage()` from `e2e/determinism.ts` before `page.goto` — seeded `Math.random`, pinned
+   clock, reduced motion. A render that does not reproduce cannot be adjudicated by a diff, by a
+   human *or* by an AI reviewer; the tolerance is not the fix. The tell that this rule is being
+   broken is a screenshot scoped small "because it's flaky", or a `maxDiffPixelRatio` that keeps
+   creeping up. `/login` had both: clipping to one text element kept the corruption under a 0.02
+   tolerance until it drifted to 0.07–0.08 and would have failed the next code-touching PR.
+2. **Default to the whole frame; scoping narrower needs a stated reason in the spec's own
+   comment.** A clipped shot only ever catches regressions inside its clip — the footer, the
+   below-the-fold layout and anything escaping its container are invisible to it. Scope narrower
+   for *sensitivity* (one surface needing a tighter tolerance than the page can carry), never to
+   dodge nondeterminism — that is rule 1's job.
+3. **"Whole frame" means the viewport unless the page genuinely scrolls.** `fullPage: true` is
+   not automatically wider. It resizes the layout viewport to capture, which clears canvas
+   bitmaps; on a fixed-viewport composition like `/login` that returned a baseline with the entire
+   cinematic stage WIPED and ~40% dead space, 1.39MB for strictly less information than the 1.1MB
+   viewport shot. Use `fullPage: true` on real scrolling document pages; use the viewport on
+   fixed compositions, and say which you chose and why.
+
+Baselines are committed PNGs, so they carry repo weight — one per surface, not one per component.
+Re-baseline with `npm run test:e2e:update`, and never as a reflex: a diff is a finding until
+something explains it.
+
 ### Requirements in EARS (the upstream half of BDD)
 
 Before the failing spec, state the **requirement** in **EARS** (Easy Approach to Requirements
