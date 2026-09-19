@@ -154,7 +154,13 @@ function assertHorizon(cadence) {
 }
 
 /** The ledger's machine contract: docs/research/events/<id>.md with a `**Last assessed:**` line
- *  and (once closed out) an `## Outcome` section. */
+ *  and (once closed out) an `## Outcome` section. Takes the LAST `**Last assessed:**` occurrence,
+ *  not the first — event-material-decide.mjs's applyScreen APPENDS a fresh one on every screen
+ *  (2026-09-19, docs/LESSONS.md) rather than rewriting the original header in place, precisely so
+ *  two screens racing the same event merge as disjoint additions instead of conflicting on one
+ *  line. Mirrors parseLedgerHeader's own "last occurrence wins" read in event-material-decide.mjs;
+ *  kept as a local regex here rather than a cross-module import since event-scan.mjs's own read
+ *  path has never otherwise depended on that file. */
 function loadLedgers() {
   const ledgers = new Map();
   if (!existsSync(LEDGER_DIR)) return ledgers;
@@ -163,7 +169,7 @@ function loadLedgers() {
     const text = readFileSync(join(LEDGER_DIR, f), "utf8");
     ledgers.set(basename(f, ".md"), {
       file: `docs/research/events/${f}`,
-      lastAssessed: text.match(/^\*\*Last assessed:\*\*\s*(\S+)/m)?.[1] ?? null,
+      lastAssessed: [...text.matchAll(/^\*\*Last assessed:\*\*\s*(\S+)/gm)].at(-1)?.[1] ?? null,
       hasOutcome: /^##\s+Outcome\b/m.test(text),
     });
   }
