@@ -4,3 +4,6 @@
 
 /** Classify a raw `enablePullRequestAutoMerge` GraphQL response body (as text). */
 export function classifyAutoMergeResult(rawBody: string): "armed" | "already-clean" | "error";
+
+/** True when an existing open PR already carries an unmerged screen commit. */
+export function hasOpenScreenPr(openPrs: readonly { head?: { ref?: string } }[]): boolean;
