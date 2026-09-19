@@ -275,6 +275,18 @@ jobs:
           if [ "$SCREENED_COUNT" -eq 0 ]; then
             exit 0
           fi
+          # A 19-PR conflict backlog (2026-09-19) traced to this exact race: an event doc's header
+          # (`**Last assessed:**` + the `probe-ref` comment) is rewritten in place, not appended, and
+          # every merge to `main` re-triggers this workflow (issue #724's own design) — so a screen
+          # PR that takes a few minutes to clear CI races the next push's screen. If that push
+          # re-screens the same still-due event first, both PRs edit the same header line, a
+          # guaranteed same-logic conflict. Refuse to open a second screen PR while one is already
+          # open; the events it would have covered stay `due` and get screened cleanly next tick.
+          # See scripts/moneypenny/open-screen-pr.mjs's hasOpenScreenPr() for the full argument.
+          if [ "$(node scripts/moneypenny/open-screen-pr.mjs --check-open)" = "open" ]; then
+            echo "::notice::deterministic screen: an unmerged screen PR is already open — skipping this tick's PR to avoid a header-line race."
+            exit 0
+          fi
           BRANCH="moneypenny/screen-${{ github.run_id }}-${{ github.run_attempt }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
