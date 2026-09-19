@@ -1,8 +1,8 @@
 # Industrial Production and Capacity Utilization (G.17, August 2026 data) — industrial-production-2026-09-18
 
 **Kind:** macro-print · **Date:** 2026-09-18 (**confirmed**, two independent Federal Reserve primaries fetched direct 2026-09-06 — the Board's announcements feed `federalreserve.gov/feeds/g17.html`, verbatim "In 2026, the G.17 release on Industrial Production and Capacity Utilization will be published at 9:15 a.m. on … September 18, October 16, November 17, and December 16", and the Board's own release-date table `releases/g17/release_dates.htm`, row "September 2026 | 18-September-2026". Promoted from the `estimate` the `nahb-hmi-2026-10-19` sweep filed, which deferred promotion to this id's own research) · **Impact:** low
-**Last assessed:** 2026-09-13
-<!-- probe-ref: {"symbols":{},"vix":15.84,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","import-export-prices-2026-09-16","jgb-20y-auction-2026-09-15","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":1} -->
+**Last assessed:** 2026-09-19
+<!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","eia-weekly-petroleum-status-2026-09-16","eia-weekly-petroleum-status-2026-09-23","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -447,6 +447,7 @@ instrument to enter.
 |---|---|---|---|---|
 | 2026-09-06 | D-12 | **Initial research on an id that existed only as a proposal, and on the one 2026 edition where the siblings' hard question answers itself.** Canonical `src/domain/market-events/industrial-production-2026-09-18.json` written this session after reading the single proposal (`from-nahb-hmi-2026-10-19`), now shadowed. **Leg 1 — date PROMOTED `estimate` → `confirmed`** on two Board primaries fetched direct today: `feeds/g17.html` (200, 614,006 bytes) verbatim *"In 2026, the G.17 release … will be published at 9:15 a.m. on … September 18, October 16, November 17, and December 16"*, and `releases/g17/release_dates.htm` (200, 117,098 bytes, footer "Last Update: August 18, 2026") row "September 2026 \| 18-September-2026", in a maintained table that still carries "October 2025 NA" / "November 2025 NA" from the lapse and now runs to December 2027. PL 119-103 funds through 12-11, three months past this print. **Leg 2 — this edition has no 08:30 co-release and two much larger same-day occupants:** BoJ MPM decision overnight (`boj-decision-2026-09-18`, hike to 1.25% ~80–84% priced) and **quarterly triple witching** (`opex-2026-09-18`, `high`, ~$6.2T rolling off, two settlement windows). Reference month **August 2026 = month 2 of Q3**. **Leg 3 — the nowcast channel is ABSENT, not small.** The Atlanta Fed's `PostedUpdates` schedules **no GDPNow vintage on 09-18** (nearest 09-17 housing starts, 09-25 M3-1), and only **5 of the Board's 12** 2026 G.17 dates get one — against **140 of the 142** G.17 dates inside the `ContribArchives` span (1,871 vintages 2014-05-01 → 2026-07-28, 1,822 same-quarter deltas) that carried a same-day vintage, **98.6%**. The only two historical misses, **2019-02-15** and **2025-12-23**, are both funding-lapse artifacts — so this would be **the first no-vintage G.17 date produced by ordinary scheduling**. The sheet's own header says off-schedule releases are absorbed when they coincide with a scheduled one, i.e. the August data reaches the model later, not never; with n=2 (both lapse-distorted) the deferred-absorption question is **untestable today** and is recorded as a limit. Sibling apparatus reproduces: G.17 vintages \|ΔGDP\| **0.1832pp**, retail-free **0.0989pp**, non-G.17 **0.0866pp**. **Leg 4 — the overnight gap is pre-owned, and this is the row's second finding.** SPY 2014-05-01 → 2026-09-04, baseline **n=3,106** (gap 0.2822%, range 0.8741%), 20,000-iteration permutation tests: quarterly triple witching **gap 0.4870% p=0.0012** / range 0.8033% p=0.4669; September witchings **0.5265% p=0.0323**; all G.17 days 0.3625% p=0.0115; with retail 0.4285% p=0.0050; **G.17 standing alone 0.3088% p=0.5440**; **September G.17 off a witching 0.0869% p=0.0812** (*narrower* than ordinary); **G.17 on a quarterly witching 0.5339% p=0.0539** — the witching's number, not the report's. Exactly **two** September precedents exist and 09-18 is the third: **2017-09-15** (SPY gap 0.560%, range 0.289%) and **2023-09-15** (gap 0.715%, range 1.028%), both gapping in the expiration class. The session **pins** rather than widens, which is `opex-2026-09-18`'s dealer-gamma mechanic measured independently; the session *after* a witching is also unelevated (range 0.8132%, p=0.5259) at that horizon. Percentiles for the falsifiers: baseline range p50 0.873 / p75 **1.325** / p90 **2.065**; gap p50 **0.282** / p75 0.542 / p90 0.926; quarterly-opex gap p90 **1.050**. **Leg 5 — the reference month is a measured NULL and is reported as one.** August m/m ex-COVID (2015+, excl. 2020-21): median **−0.1252%** vs +0.0200%, **up 3 of 9** against a 49.6% base, permutation **p=0.5378**. The November sibling's October tilt reproduces today (−0.3396% vs +0.0341%, **p=0.0768**); September is flat (p=0.8635). **No seasonal forward test registered** — at p=0.54 that would be manufacturing a prediction. **Primary content** (2026-08-18, July data): IP and manufacturing **each +0.2%** after +0.3%; mining +0.2%, utilities +0.5%; **103.0% of the 2017 average, +1.1% y/y**; capacity utilization **76.3%** total (mfg 76.0%, 2.2pp under its 1972–2025 average; mining 86.1%; utilities 70.0%). FRED sharpens it: TCU **76.29%**, **3.13pp** below the long-run mean, **20.1st percentile** of 715 months since 1967; `IPMAN` **99.31 — 0.69% BELOW its own 2017 average nine years on**. **THE ANNUAL REVISION, with two dated constraints the siblings did not measure.** The 2026-05-15 notice ("autumn of 2026", base year **2022**, 2023 Census manufacturing benchmark, capacity through Q4-2025) is still **undated** on both the feed and **today's current release page**. (a) **0 of 12** annual revisions in the archive were ever published on a monthly G.17 date — all standalone, all between two monthlies (2013-03-22, 2014-03-28, 2015-07-21, 2016-04-01, 2017-03-31, 2018-03-23, 2019-03-27, 2021-05-28, 2022-06-28, 2023-03-28, 2024-06-28, 2025-11-24). (b) The Board's pattern is a vague notice then a dated one, and the **shortest dated lead on record is 11 days** (2023-03-17 → 03-28; then 2025's 12 d, 2021's 14 d, then 36–43 d) against the **12** days left today. **Adjacency sweep — peers:** n/a, `symbols: []`. **Macro:** CPI/MTS/UMich 09-11, blackout ~09-12, 20Y auction 09-15, a four-event 09-16 (FOMC + retail sales + import/export prices + VIX expiration), housing starts + 10Y TIPS + coupon announcement + UNSC Iran vote 09-17, **BoJ + this print + triple witching 09-18**, UNGA 09-22, Trump–Xi 09-24, durable goods 09-25. **Volatility:** VIX **14.53**, SPY **770.19**, QQQ **718.96** (2026-09-04 closes) — baseline, nothing to diff yet; the expiration ledger notes VIX ~4pts under its seasonal median with two stabilizers leaving one window. **Geopolitical:** funding clear (PL 119-103 → 12-11); the Board's DDP "Build Your Package" removal lands the week of 11-09, after this print. **Event tape:** no August consensus sourceable at D-12; every content statement here is a base rate. **No dated event proposed** — everything the sweep surfaced is already tracked. **Three declined on the record:** the **10-16** edition (standalone, no scheduled vintage, no expiration on its date — the ordinary case both siblings declined, and already a proposal from the same sweep), the **2027-01-15** edition (the November sibling's grounds stand), and the **2026 annual revision**, which has no date to track. **No fetch failed** — `probe-ref.blocked` is empty; the one path note is that the Atlanta Fed workbooks live at `/-/media/Project/Atlanta/FRBA/…` and 404 at the `/-/media/documents/cqer/…` path older ledgers cite. **Four forward tests registered:** `-1` (the 09-18 gap prints at or above the 0.282% baseline median, i.e. in the witching class — the attribution claim), `-2` (SPY 09-18 range below the 1.325% p75 — the pin), `-3` (the annual revision does not publish on or before 09-18 — 0-of-12 and the 11-day floor), `-4` (no GDPNow vintage is posted dated 09-18 — the publisher's own schedule, scored 09-25). | **Initial stance set: stand aside. Two siblings argued statistically that a G.17 is quieter than the morning it prints on; this edition settles it structurally — there is no co-release to be quieter than, no nowcast vintage on the day at all (140 of 142 archive dates had one), and the overnight gap belongs to a triple witching (0.4870%, p=0.0012) and a live BoJ decision, not to a 09:15 release that alone gaps 0.3088% at p=0.5440. The attribution is pre-registered so no future session can retrofit it. The reference month is a null (p=0.5378), and the annual revision is dated-evidence clear of this print (0 of 12 ever on a monthly date; 11-day minimum lead vs 12 remaining).** | 2026-09-13 (low, 0+ band: every 7d) |
 | 2026-09-13 | D-5 | **Deterministic screen (no Claude session).** Readings — VIX 15.8 (+1.3pt since last), band unchanged (low:0+), 45 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-09-17`, `bowman-stress-testing-2026-09-18`, `bund-30y-auction-2026-09-16`, `eia-weekly-petroleum-status-2026-09-16`, `empire-state-mfg-2026-09-15`, `eurostat-hicp-final-2026-09-17` +19 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-20 |
+| 2026-09-19 | D+1 (close-out) | **Close-out — scored from a fresh SPY/QQQ/VIX daily-bars pull (Yahoo) and `federalreserve.gov/feeds/g17.html` re-fetched direct, HTTP 200.** August 2026 G.17 printed on schedule: IP **unchanged** m/m (mfg **−0.3%**, mining +0.1%, utilities +1.8%), **103.1%** of 2017 average (**+1.4%** y/y), capacity utilization **unchanged at 76.3%**. The same feed entry set carries a new **dated** annual-revision notice — **2026-11-24**, base year 2022, now naming Census manufacturing benchmarks for **2023 and 2024** — landing the same calendar day as this print (67-day notice-to-publication lead, longer than the 2018–2025 archive), clear of this print and new information for the November/December sibling ledgers. **FT-…-1 (attribution) KILLED:** the 09-18 overnight gap measured **0.169%**, below the 0.282% kill line and between the two classes the row was built to discriminate — read as the live BoJ decision (~80–84% priced, same overnight window) partially offsetting the witching pull the forecast alone priced. **FT-…-2 (pin) PASSED:** session range **0.529%**, well inside the 1.325% ceiling. **FT-…-3 (revision precedence) PASSED:** a dated notice appeared same-day but no revised values were published — the kill condition never fired. **FT-…-4** not yet due (scores 2026-09-25); left `_open_`, not scored here. VIX **14.81** at the 09-18 close, down from 15.84 at the last screen — an orderly decline through the print, no regime shift. Full detail in `## Outcome` below. | — (closed; stand-aside held, zero capital, no position sized around this release, this witching, or this BoJ decision) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -457,3 +458,103 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-19, D+1 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode
+carries no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design; the cache-bust
+command ran regardless, per the lane's standing instruction — nothing was in it). "Re-run instrument
+data" here means a fresh Yahoo daily-bars pull for SPY/QQQ/VIX, and a direct re-fetch of
+`federalreserve.gov/feeds/g17.html` — never the figures this doc's own initial-research session
+already wrote down.
+
+### What printed — the release itself, `federalreserve.gov/feeds/g17.html`, re-fetched today, HTTP 200
+
+The Board's own text, verbatim: *"Industrial production (IP) was unchanged in August after
+increasing 0.2 percent in July. Manufacturing output decreased 0.3 percent in August. The index for
+mining ticked up 0.1 percent, and the index for utilities increased 1.8 percent. At 103.1 percent of
+its 2017 average, total IP in August was 1.4 percent above its year-earlier level. Capacity
+utilization was unchanged at 76.3 percent, a rate that is 3.1 percentage points below its long-run
+(1972–2025) average."* Published on schedule at the dated slot — no `NA`, no delay, the kill switch
+for a cancellation never had anything to fire on.
+
+**The annual revision got a date today, and it lands clear of this print.** The same 2026-09-18 feed
+entry set carries a second, separate item: *"G.17 Annual Revision Planned to be Released on
+November 24, 2026 … The base year for the revised indexes will be 2022. New annual benchmark data
+for manufacturing from the U.S. Census Bureau for 2023 and 2024 will be incorporated…"* — one more
+Census benchmark year than the 2026-05-15 notice named (2023 alone). This is the dated notice Leg 5
+said had not yet appeared; it arrived the same calendar day as this release, which is itself an
+observation worth banking (notice-to-publication lead is now **67 days**, longer than every lead in
+the 2018–2025 archive, 11–43 days) — but it is a notice about a *future* publication, not the
+revision itself, so it does not fall inside FT-…-3's kill condition ("including the case where it is
+folded into the 09-18 release itself" — it was not; the August data above is unrevised, 2017-base).
+**This is new, dated information for the sibling ledgers that inherit it**
+([`industrial-production-2026-11-17`](industrial-production-2026-11-17.md), whose window now closes
+one week before the revision, and
+[`industrial-production-2026-12-16`](industrial-production-2026-12-16.md), whose print now sits
+eight days after it) — noted here, not edited there; those are their own lanes' files to update on
+their own next pulse.
+
+### Forward tests, scored
+
+| Test | Bar | Measured | Verdict |
+|---|---|---|---|
+| FT-…-1 (overnight gap owned by the witching, not the print) | \|gap\| ≥ 0.282% (baseline median) | SPY 09-17 close **762.60** → 09-18 open **761.31**: \|gap\| **0.169%** | **KILLED** — printed *below* the named 0.282% kill line, and below even the retail-co-release class; closer to (though still above) the 0.0869% September-G.17-off-a-witching class the attribution argued this date would NOT belong to |
+| FT-…-2 (the session pins rather than widens) | range < 1.325% of close (p75) | SPY 09-18 high **762.00**, low **757.97**, close **761.69**: range **0.529%** | **PASSED** — well inside the p75 line, in the same pinned territory as the witching-class median (0.803%) this doc registered against |
+| FT-…-3 (no annual revision published on/before 09-18) | revision not published by 09-18 | A **dated notice** for a **2026-11-24** publication appeared same-day; no revised index values were published | **PASSED** — narrowly, and on the letter of the test: a notice naming a future date is not "the revision," and 11-24 sits three months clear of this print |
+| FT-…-4 (no GDPNow vintage dated 09-18) | scores by 2026-09-25 | not yet due | **_open_** — this close-out is dispatched before the score-by date (`event-scan.mjs --due` lists it under `forwardTestsBeyondWindow`, clamped by `closeOutWithinDays: 6`); scoring it now from a same-day peek would be exactly the falsification the append-only rule exists to prevent. Left `_open_` in the fragment for the next session that reads it after 2026-09-25 |
+
+**Two of three scoreable legs held; the one that broke is the one this doc built its whole
+attribution argument on.** FT-2 and FT-3 are both mechanical and both landed inside their stated
+bars with room — the session pinned at 0.529% against a 1.325% ceiling, and the revision notice,
+even arriving same-day, named a date three months out. **FT-1 is the miss, and it is informative
+rather than embarrassing:** the doc predicted the overnight gap would print in the triple-witching
+class (≥0.282%, the two September precedents 0.560%/0.715%) rather than the quiet solo-G.17 class
+(0.0869%) — and the actual print, 0.169%, landed **between** the two classes it was built to
+discriminate, closer to neither. That is not evidence the attribution logic was wrong in kind — a
+live, ~80–84%-priced BoJ decision resolving in the same overnight window (see
+[`boj-decision-2026-09-18`](boj-decision-2026-09-18.md), not yet closed out as of this write) is
+exactly the kind of second, offsetting force the initial research named as the live variable, and a
+two-sided outcome that lands in between two named classes is a plausible signature of two forces
+partially cancelling rather than one dominating. **The rule this banks:** a pre-registered attribution
+built from two clean historical classes (n=48 witchings, n=80 solo G.17s) still has to reckon with
+whatever else shares the same window — this date carried three occupants, and the forecast implicitly
+priced only the loudest two against each other.
+
+### Same-day context — re-run today, not this doc's own instrument
+
+VIX **17.10 (09-14 close) → 15.44 (09-17) → 14.81 (09-18)** — a continued, orderly decline through
+the print and the witching, not a regime break; nothing here crosses the doc's own kill-switch
+thresholds (gap 1.050% quarterly-opex p90, range 2.065% baseline p90 — both cleared by a wide margin
+in the calm direction). QQQ **704.72 (09-16) → 716.92 (09-17) → 721.45 (09-18)** ran up through the
+window, a move this ledger's `symbols: []` scope has no instrument to attribute and does not
+attempt to.
+
+### Horizon calls, scored
+
+| Horizon | Call | Verdict |
+|---|---|---|
+| Today (D-12) | Stand aside — no instrument, no macro-keyed playbook | **Right, and free.** No trade was licensed and none would have had anywhere to attach; `symbols: []` held all the way to the print |
+| This week | Stand aside on this event; the week's risk is priced elsewhere | **Right.** CPI, FOMC and retail sales already carried the corridor's decisions well before 09-18; this print added nothing this doc needed to react to |
+| This month | Attribute the 09-18 open to the expiration and the BoJ, not to this print | **Half right.** The pin half (FT-…-2) held cleanly; the attribution half (FT-…-1) did not clear its own bar — the actual gap sat between the two classes the call was built to separate, which reads as partial cancellation between the witching and the BoJ rather than a clean win for either named class |
+| This quarter | Watch one announcement and nothing else: the annual revision's date | **Resolved, in this doc's favor.** The date arrived — 2026-11-24, three months clear of this print, with a notice-to-publication lead (67 days) longer than the archive had ever recorded — closing the fork this doc registered as `-3` without touching this print's own, still-2017-base numbers |
+
+### What the guard cost, and what it bought
+
+Zero capital was deployed across the file's 12-day life; realized P&L is **zero**, correct for a
+stand-aside guard on an event with no symbols and no house playbook. The counterfactual it declined
+was never live — there was no macro-keyed instrument at any horizon for a position to attach to,
+regardless of which way the gap or the revision date broke. **What the doc got wrong is narrower than
+a trading loss: one of four pre-registered, zero-capital predictions about the tape's own mechanics
+missed its stated bar**, and the honest reading is that the attribution logic (two named classes,
+one crowds out the other) needed a third term — a live, large, same-window central-bank decision —
+that this doc named as a live variable but did not fold into the forecast's own arithmetic. **The rule
+this banks:** when a date carries more than two named occupants, a pre-registered forecast that only
+discriminates between two of them should say so, and predict the ambiguous middle rather than a
+clean side, or it will look wrong in exactly the boring way this one did.
+
+**This document is now closed for its own event.** No trade was taken, none is authorized, and the
+stand-aside — zero capital, no position sized around this release, this witching, or this BoJ
+decision — stands as the final word on it. `FT-…-4` stays `_open_` in
+[`forward-tests/industrial-production-2026-09-18.md`](../forward-tests/industrial-production-2026-09-18.md)
+until its own 2026-09-25 score-by date; nothing else in this file will be touched again.
