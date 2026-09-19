@@ -53,22 +53,24 @@ export function ProfileRail({ current }: { readonly current: ProfileChapter }): 
     <>
       <p className="rail-label">Profile</p>
       {ITEMS.map((item) => {
-        const cls = `rail-item${item.sub ? " rail-sub" : ""}`;
-        const body = (
-          <>
+        const isCurrent = item.id === current;
+        // Always the same element (a Link, never a Link-or-span ternary): with the same `key`
+        // but a different tag, React can't reuse the DOM node across navigations and destroys +
+        // recreates it instead — in the mobile rail's horizontal row that remount reflows every
+        // sibling after it, reading as the icons shifting left then back right on each click.
+        // `__root.tsx`'s own topnav avoids exactly this by staying one `<Link>` throughout.
+        const cls = `rail-item${item.sub ? " rail-sub" : ""}${isCurrent ? " rail-current" : ""}`;
+        return (
+          <Link
+            key={item.id}
+            to={item.to}
+            className={cls}
+            aria-current={isCurrent ? "page" : undefined}
+          >
             <span className="rail-glyph" aria-hidden="true">
               {item.glyph}
             </span>
             {item.label}
-          </>
-        );
-        return item.id === current ? (
-          <span key={item.id} className={`rail-current ${cls}`} aria-current="page">
-            {body}
-          </span>
-        ) : (
-          <Link key={item.id} to={item.to} className={cls}>
-            {body}
           </Link>
         );
       })}
