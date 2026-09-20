@@ -48,7 +48,14 @@
  *               `BEA:` bea.gov release schedule (GDP, PCE) · `CENSUS:` census.gov schedule
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
  *               `CB:` conference-board.org consumer-confidence schedule · `UMICH:` sca.isr.umich.edu ·
- *               `FHFA:` fhfa.gov HPI release-date table + the published report's own notes
+ *               `FHFA:` fhfa.gov HPI release-date table + the published report's own notes ·
+ *               `FRB:` a regional Reserve Bank's own published release table, research calendar or
+ *               speaking schedule (dallasfed.org, newyorkfed.org, philadelphiafed.org,
+ *               clevelandfed.org and the other eight District domains). Distinct from `FED:`,
+ *               which means the Board's own federalreserve.gov calendar and nothing else — before
+ *               this slot existed a District page had no honest confirmed prefix, so twenty
+ *               primary-verified survey dates were pinned at `estimate` and one was promoted by
+ *               stretching `FED:` over clevelandfed.org (#3117).
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *

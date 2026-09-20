@@ -12,7 +12,29 @@ export const KINDS = [
   "geopolitical",
 ];
 export const TIERS = ["critical", "high", "medium", "low"];
-export const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB|UMICH|FHFA):/;
+/** The trusted-source prefixes, spelled once. The error message below is built from this list so it
+ *  cannot go stale the way the hand-written `(IR/CAL/BLS/FED/PJM/SEC)` string did — it had not been
+ *  updated since `TSY:` landed, eight prefixes ago (#3117). The taxonomy that explains what each one
+ *  MEANS lives in src/domain/market-events-data.ts; tests/domain/market-events.spec.ts mirrors the
+ *  pattern deliberately, so a one-sided edit here fails CI. */
+export const CONFIRMED_PREFIXES = [
+  "IR",
+  "CAL",
+  "BLS",
+  "FED",
+  "PJM",
+  "SEC",
+  "TSY",
+  "OCC",
+  "BEA",
+  "CENSUS",
+  "ISM",
+  "CB",
+  "UMICH",
+  "FHFA",
+  "FRB",
+];
+export const CONFIRMED_PREFIX = new RegExp(`^(${CONFIRMED_PREFIXES.join("|")}):`);
 export const ESTIMATE_PREFIX = /^(EST|NEWS):/;
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -78,7 +100,7 @@ function validateStatus(e, where, problems) {
   if (e.status === "confirmed") {
     if (!CONFIRMED_PREFIX.test(e.source ?? ""))
       problems.push(
-        `${where}: confirmed but source lacks a trusted prefix (IR/CAL/BLS/FED/PJM/SEC)`,
+        `${where}: confirmed but source lacks a trusted prefix (${CONFIRMED_PREFIXES.join("/")})`,
       );
   } else if (e.status === "estimate") {
     if (e.kind !== "earnings" && !ESTIMATE_PREFIX.test(e.source ?? ""))
