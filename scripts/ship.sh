@@ -57,7 +57,7 @@ api() {
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     -H "User-Agent: skynet-ship" \
-    ${3:+-d "$3"} "$API/repos/$(repo)$2"
+    ${3:+-H "Content-Type: application/json" -d "$3"} "$API/repos/$(repo)$2"
 }
 http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
