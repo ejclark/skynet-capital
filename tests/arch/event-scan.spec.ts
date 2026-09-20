@@ -2,6 +2,9 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+// @ts-expect-error — a .mjs gate script with no type declarations; the spec reads the real list so
+// the assertion below can never pin a stale tail (see the ECF:/NYSE: test).
+import { CONFIRMED_PREFIXES } from "../../scripts/event-scan-validation.mjs";
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
 import { earningsAsEvents, MARKET_EVENTS } from "../../src/domain/market-events.js";
 import { loadMarketEvents } from "../../src/domain/market-events-data.js";
@@ -308,25 +311,31 @@ describe("event-scan contract", () => {
     ).not.toThrow();
   });
 
-  // THE DOCKET SLOT (#3058). Thirteen of thirteen court- and regulatory-sourced entries sat at
-  // `estimate` with the court's own signed, checksummed order in hand, because the trusted-prefix
-  // table had no slot for a federal court's filed document. `ECF:` is that slot; the error message
-  // is read back off the regex so the two can never disagree again.
-  it("--validate accepts ECF: as a trusted prefix, and names the real list when one is missing", () => {
-    expect(() =>
-      validateFixture({
-        "docket.json": {
-          ...entry("docket", "2026-10-02"),
-          source: "ECF: storage.courtlistener.com/recap/… HTTP 200, 97,430 bytes, md5 ce42291a…",
-        },
-      }),
-    ).not.toThrow();
+  // THE DOCKET SLOT (#3058) AND THE PUBLISHER SLOTS (#2552). Thirteen court-sourced entries, then
+  // forty-two market-closure entries, each sat at `estimate` holding a first-hand read of the
+  // primary, because the trusted-prefix table had no slot to land on. `ECF:` and `NYSE:`/`SIFMA:`/
+  // `JPX:` are those slots. The expected error is BUILT from CONFIRMED_PREFIXES rather than typed
+  // out: #3058 wrote this assertion with the tail `…/FHFA/FRB/ECF` hardcoded, and #2552's three
+  // prefixes broke it two days later — the exact staleness the message was derived to prevent.
+  it("--validate accepts a filed-document and an exchange-calendar prefix, and names the real list when one is missing", () => {
+    for (const source of [
+      "ECF: storage.courtlistener.com/recap/… HTTP 200, 97,430 bytes, md5 ce42291a…",
+      "NYSE: nyse.com/markets/hours-calendars HTTP 200, 109,133 bytes",
+      "SIFMA: sifma.org/resources/general/holiday-schedule HTTP 200, 299,089 bytes",
+      "JPX: jpx.co.jp/english/corporate/about-jpx/calendar/ HTTP 200, 33,103 bytes",
+    ]) {
+      expect(() =>
+        validateFixture({ "docket.json": { ...entry("docket", "2026-10-02"), source } }),
+      ).not.toThrow();
+    }
 
     expect(() =>
       validateFixture({
         "docket.json": { ...entry("docket", "2026-10-02"), source: "PACER: a login-gated docket" },
       }),
-    ).toThrow(/confirmed but source lacks a trusted prefix \(.*\/FHFA\/FRB\/ECF\)/);
+    ).toThrow(
+      `confirmed but source lacks a trusted prefix (${(CONFIRMED_PREFIXES as string[]).join("/")})`,
+    );
   });
 
   // A DERIVED earnings print is established by earnings-calendar.ts and has no file in the events
