@@ -1,31 +1,6 @@
-/* the position fill timeline — rendered inline in a blotter row's accordion (#2321); a right-rail
-   drawer used to hold this list (Eric's live-review complaint: too far removed from its row). */
-.sym-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  display: block;
-}
-.sym-link:hover {
-  color: var(--accent);
-}
-.row-timeline td {
-  background: var(--surface-2);
-  padding: 12px;
-}
-.tl {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 14px;
-  border-left: 2px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* one order-fill row (`EventLine`, timeline-drawer.tsx) — rendered by the Activity tab's blotter
+   and `recent-orders-strip.tsx`'s "your recent orders" panel. The blotter row's own inline
+   fill-timeline accordion was retired here (#3186 slice 2): it duplicated the Activity tab. */
 .tl-event {
   display: flex;
   gap: 8px;
@@ -73,10 +48,4 @@
   font-family: var(--mono);
   font-weight: 700;
   cursor: help;
-}
-.tl-legend {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
 }
