@@ -486,7 +486,12 @@ function execute(intents) {
   } catch (err) {
     console.log(`::warning::could not upsert labels: ${String(err.message).slice(0, 200)}`);
   }
-  const { receipt, failed } = runIntents(intents, executeOne);
+  // One dispatch for every stall this run flagged, fired after the per-issue comments and labels
+  // have landed (#3280) — the sessions are the expensive part, and same-run siblings share a cause.
+  const stallRepairs = [];
+  const { receipt, failed } = runIntents(intents, (i) => executeOne(i, stallRepairs));
+  const dispatched = dispatchEventStallRepair(stallRepairs);
+  if (dispatched) receipt.push(dispatched);
   // A write we could not make IS a real fault — isolating the blast radius must not turn a failed
   // run green. The receipt now says which intent failed and why, instead of the run just stopping.
   if (failed) process.exitCode = 1;
@@ -601,34 +606,81 @@ function commentAndFlagConflict(i) {
 }
 
 /**
- * The event-research twin of `commentAndFlagConflict`'s repair dispatch. `flag-stall` (unlike
- * `flag-silent-feedback`/`flag-plan-stall`, which need a human's or Eric's judgment, not a code
- * fix) is exclusively about `[event-research]` receipt issues (gatherAuditDeps only builds
- * `unclaimedIssues` from that title pattern) — a stalled one usually means the same matrix-leg
- * session has been failing silently, push after push, since only a merged PR ever touches the
- * issue. Dispatched after the comment/label lands, same "never turn a transient `gh` failure into
- * a comment storm" doctrine as the conflict twin.
+ * The decision half of the event-research repair dispatch: every `flag-stall` in ONE audit run
+ * becomes ONE `gh workflow run` carrying the whole list, not one run per issue.
+ *
+ * WHY BATCHED (#3280). It used to fire per issue, and the measurement says that is exactly the
+ * wrong key: all 62 stall dispatches in the lane's history arrived in three bursts, each burst from
+ * a single push-driven audit run (35 on 2026-09-11, 23 on 2026-09-13, 4 on 2026-09-18) with zero
+ * cross-run duplicates. Receipts filed together cross `staleAfterDays` together, so same-run
+ * siblings share a root cause with a very high prior — on 09-18 three Opus sessions diagnosed the
+ * identical bug in parallel and produced two near-identical PRs plus one wasted session (#3269,
+ * #3270, #3275), which then conflicted and drew two more repair runs. The bigger the bug, the more
+ * duplicate sessions: backwards. The audit run is the cheapest class proxy that exists *before* a
+ * session has diagnosed anything (`repair.mjs`'s `signature()` cannot help — a CI failure arrives
+ * with its class, a stalled receipt arrives with nothing but an event id).
+ *
+ * It degrades to the old behaviour by construction: one intent ⇒ one number ⇒ one dispatch.
+ * `issue_number` is already `type: string` on moneypenny-repair.yml, so the list is a value change,
+ * not a schema change.
+ *
+ * Pure — the `gh` call lives in `dispatchEventStallRepair`, so a spec drives this with no network.
+ *
+ * @returns {{ args: string[], label: string } | null} the `gh` argv plus how a human reads the
+ *   batch, or null when there is nothing to dispatch.
  */
-function dispatchEventStallRepair(issueNumber) {
-  if (!issueNumber) return;
-  try {
-    sh("gh", [
+export function stallRepairDispatch(issueNumbers) {
+  const numbers = [...new Set((issueNumbers ?? []).filter(Boolean).map(Number))];
+  if (numbers.length === 0) return null;
+  return {
+    args: [
       "workflow",
       "run",
       "moneypenny-repair.yml",
       "--ref",
       "main",
       "-f",
-      `issue_number=${issueNumber}`,
-    ]);
+      `issue_number=${numbers.join(",")}`,
+    ],
+    label: numbers.map((n) => `#${n}`).join(", "),
+  };
+}
+
+/**
+ * The doing half. `flag-stall` (unlike `flag-silent-feedback`/`flag-plan-stall`, which need a
+ * human's or Eric's judgment, not a code fix) is exclusively about `[event-research]` receipt
+ * issues (gatherAuditDeps only builds `unclaimedIssues` from that title pattern) — a stalled one
+ * usually means the same matrix-leg session has been failing silently, push after push, since only
+ * a merged PR ever touches the issue.
+ *
+ * Dispatched once, after every comment/label in the run has landed, same "never turn a transient
+ * `gh` failure into a comment storm" doctrine as the conflict twin — and the warning names the
+ * whole list, because a batched failure loses N pings instead of one.
+ *
+ * @returns {string | null} a receipt line naming the batch, so the run summary stays honest about
+ *   there being one session rather than one per issue.
+ */
+function dispatchEventStallRepair(issueNumbers) {
+  const plan = stallRepairDispatch(issueNumbers);
+  if (!plan) return null;
+  try {
+    sh("gh", plan.args);
+    return `🔧 stall repair dispatched once for ${plan.label} — one session, one diagnosis`;
   } catch (err) {
     console.log(
-      `::warning::could not dispatch stall repair for #${issueNumber}: ${String(err.message).slice(0, 200)}`,
+      `::warning::could not dispatch stall repair for ${plan.label}: ${String(err.message).slice(0, 200)}`,
     );
+    return `❌ stall repair dispatch failed for ${plan.label} — ${String(err.message).slice(0, 200)}`;
   }
 }
 
-function executeOne(i) {
+/**
+ * @param i the intent to carry out.
+ * @param stallRepairs collector for `flag-stall` issue numbers — the dispatch is fired once per
+ *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
+ *   so an issue whose memory could not be written is not dispatched either, exactly as before.
+ */
+function executeOne(i, stallRepairs = []) {
   if (i.kind === "noop") {
     console.log(`· nothing to do (${i.reason})`);
     return `noop — ${i.reason}`;
@@ -669,9 +721,9 @@ function executeOne(i) {
   }
   if (i.kind === "flag-stall") {
     commentAndFlagStall(i);
-    dispatchEventStallRepair(i.issueNumber);
+    if (i.issueNumber) stallRepairs.push(i.issueNumber);
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
-    return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber}, repair dispatched)` : ""}`;
+    return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber}, repair batched)` : ""}`;
   }
   if (i.kind === "close-shipped") {
     sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
