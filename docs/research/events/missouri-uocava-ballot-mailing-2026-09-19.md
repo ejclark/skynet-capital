@@ -288,3 +288,133 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
 (`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-20, D+1 — inside the `closeOutWithinDays: 6` ceiling).** Geopolitical mode
+runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design, unchanged since
+initial research), so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) has no instrument
+output to refresh; "re-run data" here means the index-level readings below were re-fetched fresh
+this session (Yahoo, via `scripts/research/market-data.mjs`'s own cache, also busted first), not
+recalled from the last pulse's row. Nothing is scored from memory of the tape.
+
+**The headline verdict: both halves of the initial research's central correction happened, on the
+record, on the same day — the deadline was met, and the dispute did not go moot.** Overseas and
+military ballots were transmitted starting **Friday 2026-09-18** — the last business day before the
+statutory Saturday **2026-09-19** — under the **2022 congressional map**, per KCUR (NPR Missouri,
+fetched direct 2026-09-20, published 2026-09-19 10:13 CDT): "Missourians living overseas began
+receiving their ballots Friday despite continuing uncertainty over which congressional candidates
+should be listed on them," with the outlet's own gloss on the statute — "the last business day
+before the 45th day before the election" — matching this ledger's own read of 52 U.S.C. §
+20302(a)(8) and explaining why the operative action fell on 09-18 rather than the Saturday date
+itself. Corroborated by a second outlet the same day, Democracy Docket (fetched direct 2026-09-20):
+"Missouri issues overseas ballots as appeals court mulls changing state's congressional map yet
+again" — the headline states the finding this ledger exists to make. **And in the same piece:
+the Eighth Circuit had not ruled as of 09-19** — KCUR, verbatim: "The 8th Circuit did not rule
+Friday. Any decision it does reach is certain to be appealed to the U.S. Supreme Court." Boone
+County Clerk Brianna Lennon, on why the mailed ballots are now irreversible regardless of how the
+appeal comes out: "You cannot pull a voted ballot back out of a tabulator and redo it. You have
+voted your ballot; you are done." **The dispute is exactly as un-terminal as legs 3–6 predicted:**
+ballots are out, under a settled map, while the underlying appellate question remains open and
+headed for a second trip to the Supreme Court if the Eighth Circuit rules against the 2022 map.
+
+**Which map, and when it was actually decided — carried from the sibling ledger, not re-derived.**
+The map question was settled **2026-09-10**, not on this event's own date: SCOTUS Order List 609
+U.S., **26A326**, *People Not Politicians v. Onder*, stayed Judge Clark's federal TRO that had
+briefly compelled the 2025 map, restoring the 2022 map for 11-03 (read primary by the
+[midterm-elections-2026-11-03](midterm-elections-2026-11-03.md) ledger, 2026-09-15 row). No new
+order dated 2026-09-19 itself did any settling — the UOCAVA deadline landed nine days after the
+map question was already closed, which is precisely why no waiver request was needed and why
+leg 4's "denial is the base rate" finding was never tested: Missouri never had to ask.
+
+### `FT-missouri-uocava-ballot-mailing-2026-09-19-1` — NEUTRAL, per its own pre-registered rule
+
+The prediction was procedural: no court order, DOJ action, or FVAP/DoD determination **dated
+2026-09-19 itself** fixes which map governs 11-03. None did — the Eighth Circuit had not ruled by
+09-19 (KCUR, above) and no FVAP/DoD action was reported. But the kill switch's own scoring rule,
+written at registration, anticipated exactly this shape of outcome: "**Scores neutral, not pass, if
+the map question is settled BEFORE 09-19** … the prediction is about what the *date* does, and an
+earlier resolution leaves it untested rather than confirmed." The map settled **09-10**, eight days
+before this test's own date. **Recorded NEUTRAL, not PASS** — the honest reading its own rule
+requires, not the more flattering one.
+
+### `FT-missouri-uocava-ballot-mailing-2026-09-19-2` — not scoreable at this close-out, and tracking against
+
+Its score-by date is **2026-10-15**, past this event's `closeOutWithinDays` ceiling of **2026-09-25**
+(`node scripts/event-scan.mjs --due` named it in `forwardTestsBeyondWindow`), so this close-out
+dispatched with it structurally unscoreable — recorded **on purpose**, per
+[`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md). Its Outcome cell stays open in the fragment.
+What this session's findings say about it, recorded because the data was in hand and not because it
+settles anything: **the antecedent has not fired.** No UOCAVA hardship waiver was sought or granted
+for Missouri, because none was needed — the map question resolved through the ordinary emergency
+docket (26A326, 09-10) before the ballot-printing stage, not through a § 20302(g) hardship
+accommodation. That is a *different* route to a clean transmission than the mechanism this test
+predicts for — a legal-contest collision *did* occur (the litigation was live through 09-10, five
+weeks after the 2025 map passed and one week-plus before the 09-19 date), but it resolved early
+enough that the UOCAVA machinery this test is about was never invoked. A scorer reaching this after
+2026-10-15 should check whether any FVAP/DoD accommodation surfaced in the interim; absent one, the
+test remains **unresolved** under its own rule ("scores unresolved, not pass, if no UOCAVA
+accommodation for Missouri becomes public by 2026-10-15") rather than defaulting to a pass.
+
+### Market channel — re-measured, still nil
+
+Fresh Yahoo pulls this session (`^GSPC`, `^VIX`, `^VVIX`, `RSP`, `^TNX`), busted cache, through the
+last trading session before the Saturday event date:
+
+| Reading | 2026-09-04 (registration) | 2026-09-18 (last close before 09-19) | Change |
+|---|---|---|---|
+| S&P 500 | 7718.60 | **7650.50** | −0.88% |
+| VIX | 14.53 | **14.81** | +0.28 pt |
+| VVIX | 84.42 | **87.38** | +2.96 |
+| RSP (equal weight) | 219.00 | **212.29** | −3.06% |
+| 10Y (^TNX) | 4.784% | **4.998%** | +21.4 bp |
+
+No index-level move attributable to this event: the corridor's named drivers (FOMC 09-16, VIX
+expiration 09-16, September opex 09-18) fully explain the period's vol and rate drift, exactly as
+leg 9 anticipated, and 09-19 itself traded no session at all. **Kill switch 5 (a >1% move on a
+session whose named driver is a redistricting ruling) does not fire.**
+
+### Kill switches, scored
+
+1. **A dated-09-19 order/action/determination resolves the map** — did not fire; nothing dated
+   09-19 resolved anything (the resolution predates it, 09-10). Scores the FT-1 kill switch's own
+   NEUTRAL branch, not this ledger's more dramatic "terminal date" alternative.
+2. **A UOCAVA accommodation moves the transmission date rather than the return window** — did not
+   fire; no accommodation was observed at all (see FT-2 above).
+3. **DoD/FVAP grants Missouri a hardship waiver** — did not fire; none was sought.
+4. **SCOTUS disposes 26A___ treating 09-19 as jurisdictional/non-waivable** — did not fire; the
+   Court's actual disposition (26A326, 09-10) turned on which TRO to stay, not on the UOCAVA date's
+   character.
+5. **>1% index move on a session named for a redistricting ruling** — did not fire (table above).
+6. **The dispute is mooted by another route** (Prop A pulled, HB 1 repealed, settlement,
+   application withdrawn) — did not fire; the Eighth Circuit appeal is, per KCUR, still live and
+   "certain to be appealed to the U.S. Supreme Court" regardless of outcome.
+
+**None of the six kill switches fired.** The stance (stand aside, no position at any horizon, no
+market channel) closes exactly as set.
+
+### Honest limits at close-out
+
+**Both new citations are press reporting, read through this session's fetch layer, not primary
+government filings** — a step down from the statute and the Ohio MOA the initial research read
+directly, but a step up from a search summary: full page content was retrieved and quoted, not
+inferred from a snippet. **Two attempted primaries 403'd again**, the same Cloudflare wall the
+initial research and the 09-08 sibling both hit: `missouriindependent.com` (the outlet KCUR's own
+piece draws from) and `electionlawblog.org`. `fox2now.com`, a third corroborating outlet found in
+search, also 403'd. **No SCOTUS docket re-check this session** — the 09-10 settlement (26A326) is
+carried from the midterm ledger's own primary read of Order List 609 U.S., not re-verified against
+`supremecourt.gov` here; this close-out's contribution is the ballot-transmission and
+Eighth-Circuit-status facts, not the map ruling itself. **The Eighth Circuit's eventual ruling has
+no date and stays unproposed**, as the 09-08 sibling ledger already noted — this close-out runs no
+adjacency sweep and proposes nothing. **FVAP's waiver register remains unreadable** (JS app,
+`fvap.gov/eo/waivers`), so FT-2's "no accommodation observed" is an absence-of-evidence read on
+press coverage, not a checked register.
+
+**What carries forward.** To
+[midterm-elections-2026-11-03](midterm-elections-2026-11-03.md): the seat-math input this event
+tracked is unchanged from the 09-10 settlement already recorded there (2022 map, `FT-…-1` PASS) —
+this close-out adds no new information to that question, only confirms the ballot mechanics
+executed on schedule under the settled map. **This document goes quiet now** — `## Outcome` exists,
+so the scanner will not dispatch this event again; `FT-…-2` remains open in its own fragment for a
+human or a future sweep to check against its 2026-10-15 score-by.
