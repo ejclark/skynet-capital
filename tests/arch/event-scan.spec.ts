@@ -326,7 +326,7 @@ describe("event-scan contract", () => {
       validateFixture({
         "docket.json": { ...entry("docket", "2026-10-02"), source: "PACER: a login-gated docket" },
       }),
-    ).toThrow(/confirmed but source lacks a trusted prefix \(.*\/FHFA\/ECF\)/);
+    ).toThrow(/confirmed but source lacks a trusted prefix \(.*\/FHFA\/FRB\/ECF\)/);
   });
 
   // A DERIVED earnings print is established by earnings-calendar.ts and has no file in the events

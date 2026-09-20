@@ -64,6 +64,13 @@
  *               by oversight: no regulatory primary has ever been fetched from a research runner
  *               (ferc.gov 403, puc.texas.gov TLS failure), and a slot with no promotable member is
  *               one nobody can test. The first one read direct reopens it as its own PR.
+ *               `FRB:` a regional Reserve Bank's own published release table, research calendar or
+ *               speaking schedule (dallasfed.org, newyorkfed.org, philadelphiafed.org,
+ *               clevelandfed.org and the other eight District domains). Distinct from `FED:`,
+ *               which means the Board's own federalreserve.gov calendar and nothing else — before
+ *               this slot existed a District page had no honest confirmed prefix, so twenty
+ *               primary-verified survey dates were pinned at `estimate` and one was promoted by
+ *               stretching `FED:` over clevelandfed.org (#3117).
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
