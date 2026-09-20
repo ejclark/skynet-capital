@@ -308,6 +308,27 @@ describe("event-scan contract", () => {
     ).not.toThrow();
   });
 
+  // THE DOCKET SLOT (#3058). Thirteen of thirteen court- and regulatory-sourced entries sat at
+  // `estimate` with the court's own signed, checksummed order in hand, because the trusted-prefix
+  // table had no slot for a federal court's filed document. `ECF:` is that slot; the error message
+  // is read back off the regex so the two can never disagree again.
+  it("--validate accepts ECF: as a trusted prefix, and names the real list when one is missing", () => {
+    expect(() =>
+      validateFixture({
+        "docket.json": {
+          ...entry("docket", "2026-10-02"),
+          source: "ECF: storage.courtlistener.com/recap/… HTTP 200, 97,430 bytes, md5 ce42291a…",
+        },
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      validateFixture({
+        "docket.json": { ...entry("docket", "2026-10-02"), source: "PACER: a login-gated docket" },
+      }),
+    ).toThrow(/confirmed but source lacks a trusted prefix \(.*\/FHFA\/FRB\/ECF\)/);
+  });
+
   // A DERIVED earnings print is established by earnings-calendar.ts and has no file in the events
   // directory, so a naive "proposer must be a canonical FILE" depth cap rejects anything a print
   // proposes — and the rejection is unfixable, because writing `<print-id>.json` by hand is itself

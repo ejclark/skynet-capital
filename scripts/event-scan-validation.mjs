@@ -36,6 +36,7 @@ export const CONFIRMED_PREFIXES = [
   "UMICH",
   "FHFA",
   "FRB",
+  "ECF",
   "NYSE",
   "SIFMA",
   "JPX",
