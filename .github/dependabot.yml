@@ -1,6 +1,14 @@
 # Mechanized dependency-staleness detection (audit P4). Dependabot opens grouped update PRs weekly;
 # the dep-warden reviews them (read changelogs, run the suite, merge patch/minor on green, escalate
 # majors). This is the eye; dep-warden is the drill. Config file, not a workflow — no approval gate.
+#
+# The Playwright family gets its own group, carved out of the wildcard `dev-dependencies` group with
+# `exclude-patterns` (#3315, 2026-09-20): `@playwright/test`/`playwright-core` must move in lockstep
+# with `@playwright/experimental-ct-react`, an unversioned-with-them CT harness dependency that can
+# lag behind a stable release for weeks. Bundled into the wildcard group, a version fork between
+# them blocked all 12 unrelated packages in the same PR behind one unmergeable pair. Isolating this
+# one lockstep-fragile family means an unrelated bump (Biome, knip, fast-check, …) never again waits
+# on a Playwright-specific toolchain decision.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -9,8 +17,12 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      playwright:
+        patterns: ["@playwright/*", "playwright-core"]
+        update-types: ["minor", "patch"]
       dev-dependencies:
         patterns: ["*"]
+        exclude-patterns: ["@playwright/*", "playwright-core"]
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore"
