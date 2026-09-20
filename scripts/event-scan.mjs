@@ -100,19 +100,21 @@ function extractArray(file, marker) {
  *  the file → id pairing for the validator: "file name == id" is the one rule the loader cannot
  *  express by shape. Unreadable dir or malformed JSON throws — loud, never empty. */
 /** Canonical files, then proposals (`proposals/<id>.from-<proposer>.json`, issue #1717) for ids no
- *  canonical file names — first by file name wins, the same rule as loadMarketEvents. `files`
- *  carries every file read (shadowed proposals included) for the validator. */
+ *  canonical file names — first by file name wins, the same rule as loadMarketEvents. Entries their
+ *  own lane retired with `supersededBy` (#3101) come back separately in `superseded`: they are not
+ *  the calendar any more, but `--validate` still holds them to the contract. `files` carries every
+ *  file read (shadowed proposals included) for the validator. */
 function loadCurated() {
   try {
-    const { events, files } = readCalendarDir(EVENTS_DIR);
-    return { events: events.sort(compareEventOrder), files };
+    const { events, superseded, files } = readCalendarDir(EVENTS_DIR);
+    return { events: events.sort(compareEventOrder), superseded, files };
   } catch (err) {
     throw new Error(`event-scan: ${err.message}`);
   }
 }
 
 function loadEvents() {
-  const { events: curated, files } = loadCurated();
+  const { events: curated, superseded, files } = loadCurated();
   const prints = extractArray(
     CALENDAR_FILE,
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [",
@@ -127,7 +129,7 @@ function loadEvents() {
     impact: "critical",
     symbols: [p.symbol],
   }));
-  return { curated, derived, all: [...curated, ...derived], files };
+  return { curated, derived, all: [...curated, ...derived], superseded, files };
 }
 
 function loadCadence() {
@@ -343,7 +345,7 @@ function main() {
     return;
   }
   if (has("validate")) {
-    runValidate(tables, cadence, ledgers);
+    runValidate(tables, cadence, ledgers, FORWARD_TESTS_DIR);
     return;
   }
 

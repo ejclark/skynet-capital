@@ -61,13 +61,17 @@ const ID = /^(FT-\S+)/;
 const isUnscored = (text) =>
   text === "" || text === "—" || text === "-" || /^open/i.test(text.replace(/^[—\-\s*_(]+/, ""));
 
-/** Every unscored row in one event's fragment whose score-by is still in the future, as
- *  `{ id, scoreBy }`. Empty when the fragment does not exist, carries no rows, or every row is
- *  scored or already past its date — all of which mean "nothing to wait for". */
-export function pendingForwardTests(eventId, today, dir) {
+/** Every unscored row in one event's fragment, as `{ id, scoreBy }`, regardless of whether its
+ *  score-by has arrived. Empty when the fragment does not exist or carries no unscored rows.
+ *
+ *  Two callers want two different windows onto the same parse, so the parse lives here once:
+ *  `pendingForwardTests` below filters this to rows not yet scoreable (the close-out hold, #2988),
+ *  and `--validate` uses it whole to refuse a `supersededBy` that would strand a live prediction
+ *  (#3101) — a superseded id never reaches close-out, so nothing downstream would ever score it. */
+export function unscoredForwardTests(eventId, dir) {
   const file = join(dir, `${eventId}.md`);
   if (!existsSync(file)) return [];
-  const pending = [];
+  const unscored = [];
   for (const line of readFileSync(file, "utf8").split("\n")) {
     if (!FT_ROW.test(line)) continue;
     const row = cells(line);
@@ -78,12 +82,18 @@ export function pendingForwardTests(eventId, today, dir) {
         break;
       }
     if (at === -1) continue; // no readable score-by — skip the row rather than guess
-    const scoreBy = row[at].match(LEADING_DATE)[1];
     const outcome = row.slice(at + 1).join(" ");
-    if (scoreBy <= today || !isUnscored(outcome.trim())) continue;
-    pending.push({ id: row[0].match(ID)?.[1] ?? row[0], scoreBy });
+    if (!isUnscored(outcome.trim())) continue;
+    unscored.push({ id: row[0].match(ID)?.[1] ?? row[0], scoreBy: row[at].match(LEADING_DATE)[1] });
   }
-  return pending;
+  return unscored;
+}
+
+/** Every unscored row in one event's fragment whose score-by is still in the future, as
+ *  `{ id, scoreBy }`. Empty when the fragment does not exist, carries no rows, or every row is
+ *  scored or already past its date — all of which mean "nothing to wait for". */
+export function pendingForwardTests(eventId, today, dir) {
+  return unscoredForwardTests(eventId, dir).filter((r) => r.scoreBy > today);
 }
 
 /** The close-out verdict for a passed, un-outcomed event: whether to hold, and what for.

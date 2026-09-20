@@ -119,15 +119,27 @@ function parseMarketEvent(raw: unknown, file: string, expectedId: string): Marke
   if (!(Array.isArray(e.symbols) && e.symbols.every((s) => typeof s === "string")))
     fail("symbols must be an array of strings");
   if (e.notes !== undefined && typeof e.notes !== "string") fail("notes must be a string");
+  if (e.supersededBy !== undefined && !isString(e.supersededBy))
+    fail("supersededBy must be a non-empty event id");
   return raw as MarketEvent;
 }
+
+/** A re-slug its own lane has retired (issue #3101) — it keeps its file, its ledger and its
+ *  forward-test fragment, and stops being part of the calendar. Applied AFTER the id dedupe below,
+ *  never before: a superseded canonical file still shadows its proposals, so retiring an id can
+ *  never resurrect it through a proposal nobody has looked at since. */
+const isSuperseded = (e: MarketEvent): boolean => e.supersededBy !== undefined;
 
 const readJson = (file: string): unknown => JSON.parse(readFileSync(file, "utf8"));
 
 /**
  * Read every `<id>.json` under `dir`, then every `proposals/<id>.from-<proposer>.json` for ids no
- * canonical file names (first by file name wins), and return the calendar in `(date, id)` order.
+ * canonical file names (first by file name wins), drop every entry its own lane has retired with
+ * `supersededBy` (#3101), and return the calendar in `(date, id)` order.
  * Exported so specs can point it at a fixture directory; the default is the real one.
+ *
+ * scripts/market-events-read.mjs implements this same rule for the dependency-free scanners; the
+ * drift gate in tests/arch/event-scan.spec.ts fails CI the day the two reads disagree.
  */
 export function loadMarketEvents(
   dir: string = join(process.cwd(), MARKET_EVENTS_DIR),
@@ -153,9 +165,9 @@ export function loadMarketEvents(
       if (!byId.has(event.id)) byId.set(event.id, event);
     }
   }
-  return [...byId.values()].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
-  );
+  return [...byId.values()]
+    .filter((e) => !isSuperseded(e))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
 
 export const MARKET_EVENTS: readonly MarketEvent[] = loadMarketEvents();

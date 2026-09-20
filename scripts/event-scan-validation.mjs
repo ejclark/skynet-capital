@@ -2,6 +2,9 @@
 // distinct concern (enforcing the shape of the tables + ledgers) from extraction and cadence math.
 // See event-scan.mjs for the machine contract this enforces (docs/process/EVENT-RESEARCH.md).
 
+import { titleOverlapWarnings } from "./event-title-overlap.mjs";
+import { unscoredForwardTests } from "./forward-test-pending.mjs";
+
 export const KINDS = [
   "earnings",
   "macro-print",
@@ -215,6 +218,67 @@ function validateFileNames(files, knownIds, derivedIds, problems, warnings) {
   }
 }
 
+/** RETIRING A RE-SLUG (#3101). `supersededBy` is the one field that makes an event stop loading,
+ *  so it is the one field a typo can use to delete an event from the calendar silently. Every rule
+ *  below exists to make that impossible to do by accident:
+ *
+ *  - the target is a CANONICAL `<id>.json`, never a proposal and never an unknown id — a proposal
+ *    can be shadowed or pruned, so pointing at one could retire a real event in favour of nothing;
+ *  - SAME DATE — two ids for one release share its date by construction, and requiring it turns a
+ *    mistyped slug into a red build instead of a vanished event;
+ *  - NO CHAINS — the survivor may not itself be superseded, so the loader never has to resolve a
+ *    path and "which id survived" stays readable in one file;
+ *  - the retiring entry is `estimate` — the survivor owns the confirming flip (both BEA copies
+ *    already say exactly this in their own `source` lines);
+ *  - its forward tests are already SCORED. This is the sharp one: a superseded id never reaches
+ *    close-out, and `pendingForwardTests` reads the fragment of the id being closed out, so a live
+ *    prediction registered against a retired id would simply never be scored by anyone. The lane
+ *    retiring the id scores its own rows first — a test killed BY the fix is a kill, and the
+ *    fragment has to say which kind it was. */
+function validateSupersessions(superseded, canonicalIds, byId, forwardTestsDir, problems) {
+  for (const e of superseded ?? []) {
+    const where = `event "${e.id ?? "?"}"`;
+    const target = e.supersededBy;
+    if (typeof target !== "string" || !SLUG_RE.test(target)) {
+      problems.push(`${where}: supersededBy must be a lowercase event-id slug`);
+      continue;
+    }
+    if (target === e.id) {
+      problems.push(`${where}: supersededBy cannot point at itself`);
+      continue;
+    }
+    if (!canonicalIds.has(target)) {
+      problems.push(
+        `${where}: supersededBy "${target}" is not a canonical src/domain/market-events/${target}.json` +
+          " — a survivor must be an event someone actually researched, never a proposal",
+      );
+      continue;
+    }
+    const survivor = byId.get(target);
+    if (survivor?.date !== e.date)
+      problems.push(
+        `${where}: supersededBy "${target}" is dated ${survivor?.date} — a re-slug names the SAME ` +
+          `release, so it must share this entry's date (${e.date})`,
+      );
+    if (survivor?.supersededBy !== undefined)
+      problems.push(
+        `${where}: supersededBy "${target}" is itself superseded — point at the surviving id ` +
+          `("${survivor.supersededBy}"), never at a chain`,
+      );
+    if (e.status !== "estimate")
+      problems.push(
+        `${where}: a superseded entry is always status "estimate" — the survivor owns the confirming flip`,
+      );
+    const unscored = unscoredForwardTests(e.id, forwardTestsDir);
+    if (unscored.length)
+      problems.push(
+        `${where}: ${unscored.length} unscored forward test(s) (${unscored.map((t) => t.id).join(", ")}) — ` +
+          "a superseded id never reaches close-out, so score them in " +
+          `docs/research/forward-tests/${e.id}.md first (killed BY this fix is a kill, and the row must say so)`,
+      );
+  }
+}
+
 function validateLedgers(ledgers, ids, problems, warnings) {
   for (const [id, ledger] of ledgers) {
     if (!(ledger.lastAssessed && DATE_RE.test(ledger.lastAssessed)))
@@ -224,13 +288,17 @@ function validateLedgers(ledgers, ids, problems, warnings) {
   }
 }
 
-function validate({ curated, derived, all, files }, cadence, ledgers) {
+function validate({ curated, derived, all, superseded, files }, cadence, ledgers, forwardTestsDir) {
   const problems = [];
   const warnings = [];
   const ids = new Set();
   const derivedIds = new Set((derived ?? []).map((e) => e.id));
   validateCadence(cadence, problems);
   for (const e of all) validateEvent(e, ids, problems);
+  // Retired entries are validated exactly like live ones — they keep their file, so a bad date or
+  // an unknown kind in one is still drift — and their ids join `ids` so their ledgers, which are
+  // the whole point of mark-don't-delete, do not read as orphans.
+  for (const e of superseded ?? []) validateEvent(e, ids, problems);
   const knownIds = new Set([...ids, ...ledgers.keys()]);
   validateFileNames(files, knownIds, derivedIds, problems, warnings);
   for (const e of curated)
@@ -238,12 +306,21 @@ function validate({ curated, derived, all, files }, cadence, ledgers) {
       problems.push(
         `event "${e.id}": earnings are derived from earnings-calendar.ts — never hand-entered here`,
       );
+  const canonicalIds = new Set(
+    (files ?? []).filter((f) => !f.file.startsWith("proposals/")).map((f) => f.event?.id),
+  );
+  const byId = new Map([...(superseded ?? []), ...all].map((e) => [e.id, e]));
+  validateSupersessions(superseded, canonicalIds, byId, forwardTestsDir, problems);
+  // Advisory only (event-title-overlap.mjs explains why): a same-date near-title-match is a
+  // heuristic over prose, and the enforced half is `supersededBy`. Live events only — adopting
+  // the field drains the warning it produced.
+  warnings.push(...titleOverlapWarnings(curated));
   validateLedgers(ledgers, ids, problems, warnings);
   return { problems, warnings };
 }
 
-export function runValidate(tables, cadence, ledgers) {
-  const { problems, warnings } = validate(tables, cadence, ledgers);
+export function runValidate(tables, cadence, ledgers, forwardTestsDir) {
+  const { problems, warnings } = validate(tables, cadence, ledgers, forwardTestsDir);
   for (const w of warnings) console.error(`⚠ ${w}`);
   for (const p of problems) console.error(`✗ ${p}`);
   if (problems.length) {
@@ -253,7 +330,9 @@ export function runValidate(tables, cadence, ledgers) {
     );
     process.exit(1);
   }
+  const retired = tables.superseded?.length ?? 0;
   console.log(
-    `✓ ${tables.all.length} event(s) and ${ledgers.size} ledger(s) satisfy the contract.`,
+    `✓ ${tables.all.length} event(s)${retired ? ` (+ ${retired} superseded, not loaded)` : ""} and ` +
+      `${ledgers.size} ledger(s) satisfy the contract.`,
   );
 }
