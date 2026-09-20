@@ -20,6 +20,7 @@ import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { AccountsPositionsSection } from "../shell/accounts-positions-section";
 import { ActivityTable } from "../shell/activity-table";
 import { ConsiderationsRail } from "../shell/considerations-rail";
+import { DecisionsSection } from "../shell/decisions-section";
 import { PageFrame } from "../shell/frame";
 import { HeroChart } from "../shell/hero-chart";
 import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
@@ -44,13 +45,28 @@ import { type PageSection, resolveSection } from "../shell/sections";
  * `fetchDesk` / `PositionsTable` as before, and the desk fetch is skipped on Summary.
  */
 
-type AccountsSection = "summary" | "positions" | "activity";
+type AccountsSection = "summary" | "positions" | "activity" | "decisions";
 
-const SECTIONS: readonly PageSection<AccountsSection>[] = [
+const BASE_SECTIONS: readonly PageSection<AccountsSection>[] = [
   { id: "summary", label: "Summary" },
   { id: "positions", label: "Positions" },
   { id: "activity", label: "Activity" },
 ];
+
+/** The full candidate list `validateSearch` accepts from a URL — the *rendered* set narrows this
+ *  per account (`sectionsFor` below); an unknown or now-inapplicable value falls back via
+ *  `resolveSection`, never strands the reader. */
+const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
+  ...BASE_SECTIONS,
+  { id: "decisions", label: "Decisions" },
+];
+
+/** Decisions is the autonomous-trading audit trail — it only makes sense for one bot account at a
+ *  time, never the "All accounts" aggregate or a human account (Eric: "tied to autonomous
+ *  trading... currently only bot accounts"). */
+function sectionsFor(kind: "human" | "bot" | undefined): readonly PageSection<AccountsSection>[] {
+  return kind === "bot" ? ALL_SECTIONS : BASE_SECTIONS;
+}
 
 function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
   return Promise.all(ids.map((id) => fetchDesk(id)));
@@ -191,13 +207,17 @@ function AccountsPage(): ReactElement {
   const selected =
     asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? asked : first.id;
   const deskIds = selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected as string];
-  const section = resolveSection(SECTIONS, askedSection);
+  const selectedKind =
+    selected === ALL_ACCOUNTS ? undefined : accounts.find((a) => a.id === selected)?.kind;
+  const sections = sectionsFor(selectedKind);
+  const section = resolveSection(sections, askedSection);
 
   return (
     <AccountsBody
       accountId={selected as string}
       deskIds={deskIds}
       section={section}
+      sections={sections}
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
@@ -240,11 +260,13 @@ function CockpitBody({
     // Summary reads net worth from `/api/accounts/networth`, not the desk — but the considerations
     // rail (#3186 slice 3) lives on Summary and needs the desk's own `considerations`, so the desk
     // fetch stays enabled there too, for a single account (the "All accounts" roster view has no
-    // rail, same scope decision as the hero chart, so it skips the fetch same as before).
-    enabled: section !== "summary" || !allAccountsSelected,
+    // rail, same scope decision as the hero chart, so it skips the fetch same as before). Decisions
+    // reads its own audit-trail endpoint, not the desk, so it skips this fetch entirely.
+    enabled: section === "summary" ? !allAccountsSelected : section !== "decisions",
   });
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
 
+  if (section === "decisions") return <DecisionsSection deskId={accountId} />;
   if (section === "summary") {
     const { stats, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
     const considerations = desks.data?.[0]?.desk.considerations ?? [];
@@ -274,6 +296,7 @@ function AccountsBody({
   deskIds,
   accountId,
   section,
+  sections,
   accounts,
   query,
   onFilterChange,
@@ -283,6 +306,7 @@ function AccountsBody({
   readonly deskIds: readonly string[];
   readonly accountId: string;
   readonly section: AccountsSection;
+  readonly sections: readonly PageSection<AccountsSection>[];
   readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
@@ -311,7 +335,7 @@ function AccountsBody({
             </p>
           )}
           <SectionSwitch
-            sections={SECTIONS}
+            sections={sections}
             current={section}
             onSelect={onSelectSection}
             variant="horizontal"
@@ -332,7 +356,7 @@ function AccountsBody({
 export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
-    ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
+    ...(typeof search.section === "string" && ALL_SECTIONS.some((s) => s.id === search.section)
       ? { section: search.section as AccountsSection }
       : {}),
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
