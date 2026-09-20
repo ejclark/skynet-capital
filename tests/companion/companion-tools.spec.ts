@@ -212,3 +212,66 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
     expect(real).not.toContain("place_order");
   });
 });
+
+// #1867 slice 1 — advisory dedup on a drafted filing. Slice 2 (rendering these in the rail UI) is
+// a separate PR; this only pins the tool result's shape and its always-advisory-never-blocking
+// contract.
+describe("draft_feedback — advisory dedup against open feedback issues (#1867 slice 1)", () => {
+  const draftInput = {
+    kind: "bug" as const,
+    title: "Options chain never loads on mobile",
+    details: "Spinner never resolves when I open a ticket on my phone.",
+  };
+
+  it("attaches up to 3 similar open issues when the search finds matches", async () => {
+    const deps = depsFor({
+      findSimilarFeedback: () =>
+        Promise.resolve([
+          { number: 101, title: "Chain spinner hangs on mobile" },
+          { number: 202, title: "Options chain stuck loading" },
+        ]),
+    });
+
+    const result = await runCompanionTool("draft_feedback", deps, undefined, draftInput);
+
+    expect(result).toMatchObject({
+      ok: true,
+      result: {
+        similar: [
+          { number: 101, title: "Chain spinner hangs on mobile" },
+          { number: 202, title: "Options chain stuck loading" },
+        ],
+      },
+    });
+  });
+
+  it("renders exactly as today (no `similar` key at all) when nothing matches", async () => {
+    const deps = depsFor({ findSimilarFeedback: () => Promise.resolve([]) });
+
+    const result = await runCompanionTool("draft_feedback", deps, undefined, draftInput);
+
+    expect(result.ok).toBe(true);
+    expect((result as { ok: true; result: unknown }).result).not.toHaveProperty("similar");
+  });
+
+  it("renders exactly as today with no search wired at all (the default deployment)", async () => {
+    const result = await runCompanionTool("draft_feedback", depsFor(), undefined, draftInput);
+
+    expect(result.ok).toBe(true);
+    expect((result as { ok: true; result: unknown }).result).not.toHaveProperty("similar");
+  });
+
+  it("is advisory only — a search that throws never blocks the draft from being captured", async () => {
+    const drafts: unknown[] = [];
+    const deps = depsFor({
+      onDraft: (d) => drafts.push(d),
+      findSimilarFeedback: () => Promise.reject(new Error("GitHub is down")),
+    });
+
+    const result = await runCompanionTool("draft_feedback", deps, undefined, draftInput);
+
+    expect(result.ok).toBe(true);
+    expect((result as { ok: true; result: unknown }).result).not.toHaveProperty("similar");
+    expect(drafts).toHaveLength(1);
+  });
+});
