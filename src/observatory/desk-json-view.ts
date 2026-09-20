@@ -197,7 +197,11 @@ export function deskView(
       return {
         symbol: position.symbol,
         display,
-        detail: option ? `${Math.abs(position.quantity)} ct` : "common shares",
+        // Stock positions get no detail line — "common shares" was a static label that never
+        // varied by position and told the reader nothing the Qty column doesn't already show.
+        // Options keep their contract count: it's the one place `isOption` positions read as
+        // options rather than a plain symbol before you reach the Qty column.
+        detail: option ? `${Math.abs(position.quantity)} ct` : "",
         isOption: option,
         quantity: position.quantity.toLocaleString("en-US"),
         costPerShare: formatPrice(position.avgPrice),

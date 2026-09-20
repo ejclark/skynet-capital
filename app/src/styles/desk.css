@@ -164,29 +164,60 @@ table.blotter {
   font-size: 10.5px;
   color: var(--muted);
 }
-/* Lot-breakdown accordion (#3186 slice 1) — its own trigger, independent of the mobile-only
-   fold-col chevron above, since it's real information at every viewport width, not a
-   responsive-disclosure duplicate. */
+/* Lot-breakdown accordion (#3186 slice 1, restyled #3186 slice 2) — its own trigger, independent
+   of the mobile-only fold-col chevron above, since it's real information at every viewport width,
+   not a responsive-disclosure duplicate. Shares the fold-col chevron's icon-rotates-on-expand
+   language (never a plain underlined link) so both disclosure controls on a row read as the same
+   pattern; sized for a real tap target (Eric's live-review note: the old 10.5px text link failed
+   a basic legibility/target-size bar). */
 .sym-lots {
-  border: none;
-  background: none;
-  padding: 0;
-  margin-left: 4px;
-  font-size: 10.5px;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 3px 8px;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text);
   cursor: pointer;
 }
 .sym-lots:hover {
-  text-decoration: underline;
+  border-color: var(--accent);
+  color: var(--accent);
 }
+.sym-lots svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.sym-lots[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+/* A single accent bar on the row's leading edge, not a border on every `td` — that drew a
+   vertical divider between EVERY column (Eric's live-review note: "distracting"). */
 .row-lot td {
   background: var(--surface-2);
+}
+.row-lot td:first-child {
   border-left: 3px solid var(--accent);
 }
 .lot-actions {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+}
+/* `.btn`'s `width: 100%` (gate.css) and `.mc-btn`'s `width: auto` (admin.css) are equal
+   specificity, so which one wins is source order, not intent — and during the table's own
+   column-width pass a percentage width is resolved as auto/min-content, which for wrapping text
+   collapses to its longest UNBROKEN WORD, not the full label. Two buttons collapsed that way
+   overlapped each other's text outright (Eric's live-review screenshot: "Close lot" and "Roll"
+   rendering on top of one another). The extra specificity here, not `!important`, is what beats
+   `.btn`'s rule reliably regardless of stylesheet order. */
+.lot-actions .btn {
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .expand-btn {
   border: 1px solid var(--border);
@@ -264,7 +295,13 @@ table.blotter {
 
 /* close action column + inline close panel (#738 — close from the portfolio) */
 .act-col {
-  width: 1%;
+  /* `width: 1%` is the usual "shrink to content" trick for a table-layout: auto column, but it
+     stops working once a cell holds a flex row of un-shrinkable buttons (the lot row's "Close
+     lot" + "Roll"): the browser treats 1% as a hard preference and squeezes the column below its
+     content's real width instead, and the buttons render outside the cell rather than growing it.
+     A `min-width` sized for the widest cell in this column (two buttons) sidesteps the algorithm
+     entirely — the parent row's single "Close all" button just has more room to its left. */
+  min-width: 160px;
   white-space: nowrap;
   text-align: right;
 }
