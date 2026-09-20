@@ -39,7 +39,7 @@ describe("PositionsTable", () => {
     render(withClient(<PositionsTable positions={[position()]} deskId="sauron" totalCount={1} />));
 
     expect(screen.getByText("Mark")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "SPY" })).toBeInTheDocument();
+    expect(screen.getByText("SPY")).toBeInTheDocument();
   });
 
   it("shows the zero-positions note when there are none open at all", () => {

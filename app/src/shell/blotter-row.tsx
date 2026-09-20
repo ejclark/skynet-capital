@@ -1,20 +1,20 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
-import { type DeskPosition, fetchDeskActivity, type PositionLot, type Tone } from "../live/desk";
+import type { DeskPosition, PositionLot, Tone } from "../live/desk";
 import { type OptionPreview, reviewOption, submitOption } from "../live/options";
 import { reviewTicket, submitTicket, type TicketPreview, type TicketResult } from "../live/ticket";
-import { EventLine } from "./timeline-drawer";
 
 /**
  * One blotter row (#738 phase 2c, extracted 3b) — responsive disclosure per the round-1 verdict:
  * detail columns visible on wide viewports (`col-detail`), folded behind the chevron only when
- * the viewport hides them. The symbol is the door to the position's fill timeline, which opens
- * INLINE as its own accordion row (#2321) — never a right-rail drawer, which read as too far
- * removed from the row that triggered it. Its open state (`timelineOpen`) is deliberately separate
- * from the detail fold's `open`: the fold is hidden at ≥1100px (`desk.css`'s responsive-disclosure
- * rule), so sharing one boolean would make the timeline undiscoverable on desktop.
+ * the viewport hides them. The symbol's fill-timeline accordion (raw order-fill history,
+ * BUY/SELL included) was retired here (#3186 slice 2): it duplicated `ActivityTable`'s Activity
+ * tab, unaligned to this table's columns, and a position only ever shows what's still on the
+ * ledger — a sold lot isn't a position. "N lots" is the one detail affordance left on a row: the
+ * still-open lots that make up the position, at transaction-level granularity, sharing
+ * `PositionCells` with the parent row so the columns always match the header.
  * @category trading
  */
 
@@ -88,19 +88,9 @@ export function BlotterRow({
   readonly deskId: string;
 }): ReactElement {
   const [open, setOpen] = useState(false);
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [lotsOpen, setLotsOpen] = useState(false);
   const [closeLotId, setCloseLotId] = useState<string | undefined>(undefined);
-  // The queryKey is shared across every row on this desk, so React Query fetches the ledger once
-  // no matter how many symbols get expanded — `enabled` only gates when the FIRST row asks for it.
-  const activity = useQuery({
-    queryKey: ["desk-activity", deskId],
-    queryFn: () => fetchDeskActivity(deskId),
-    staleTime: 30_000,
-    enabled: timelineOpen,
-  });
-  const events = activity.data?.activity.filter((e) => e.symbol === position.symbol) ?? [];
 
   return (
     <>
@@ -119,14 +109,7 @@ export function BlotterRow({
           </button>
         </td>
         <td>
-          <button
-            type="button"
-            className="sym sym-link"
-            aria-expanded={timelineOpen}
-            onClick={() => setTimelineOpen(!timelineOpen)}
-          >
-            {position.display}
-          </button>
+          <span className="sym">{position.display}</span>
           <span className="sym-sub">{position.detail}</span>
           {position.lots && position.lots.length > 0 ? (
             <button
@@ -168,7 +151,7 @@ export function BlotterRow({
             <tr className="row-lot" key={lot.lotId}>
               <td className="fold-col" aria-hidden="true" />
               <td>
-                <span className="sym-sub">Lot · {lot.openedAt}</span>
+                <span className="sym-sub">{lot.openedAt}</span>
               </td>
               <PositionCells
                 quantity={lot.quantity}
@@ -242,38 +225,6 @@ export function BlotterRow({
                 <dd className={`tone-${position.totalTone}`}>{position.returnPct}</dd>
               </div>
             </dl>
-          </td>
-        </tr>
-      ) : null}
-      {timelineOpen ? (
-        <tr className="row-timeline">
-          <td colSpan={11}>
-            {activity.isPending ? <p className="note">Reading the ledger…</p> : null}
-            {activity.isError ? <p className="note">The ledger is unreachable.</p> : null}
-            {activity.data && !activity.data.available ? (
-              <p className="note">No durable activity ledger is wired in this deployment.</p>
-            ) : null}
-            {activity.data?.available && events.length === 0 ? (
-              <p className="note">
-                No recorded orders for {position.display} in the ledger's window.
-              </p>
-            ) : null}
-            {events.length > 0 ? (
-              <ul className="tl">
-                {events.map((event) => (
-                  <EventLine key={`${event.orderId}-${event.at}`} event={event} />
-                ))}
-              </ul>
-            ) : null}
-            {events.some((e) => e.origin === "alpaca-direct") ? (
-              <p className="tl-legend">
-                <span className="tl-direct" aria-hidden="true">
-                  *
-                </span>{" "}
-                Placed directly in Alpaca — this order skipped the app's ticket, so none of the
-                desk's pre-trade checks saw it.
-              </p>
-            ) : null}
           </td>
         </tr>
       ) : null}
