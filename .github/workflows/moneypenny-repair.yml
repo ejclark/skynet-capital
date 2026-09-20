@@ -154,7 +154,7 @@ jobs:
             carries the evidence but nothing will repair it.
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
-        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@2261fcfc88e7de1b55f179edd588805e12de71f2  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         env:
           # `github_token:` below is what the ACTION itself uses for its own API calls; it does not
           # reach a `git push` the spawned session runs via its own Bash tool, which instead
@@ -193,7 +193,7 @@ jobs:
       # with the other workflow_dispatch step by construction (`pr_number` vs `issue_number`, never
       # both on the same dispatch), so exactly one of the three steps here ever runs per invocation.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != ''
-        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@2261fcfc88e7de1b55f179edd588805e12de71f2  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         env:
           # See the sibling step above (#3334) — this is the path that actually pushes conflict
           # resolutions, and the one confirmed broken without it.
@@ -218,7 +218,7 @@ jobs:
       # stays mutually exclusive with the step above by construction, same as that step is with the
       # `needs.triage.outputs.issue` one.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number != ''
-        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@2261fcfc88e7de1b55f179edd588805e12de71f2  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         env:
           # See the first step in this job (#3334) — applied defensively here too, since this path
           # can end in a real research write-up, not just a script fix.
