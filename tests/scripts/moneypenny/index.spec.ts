@@ -516,3 +516,61 @@ describe("intent isolation", () => {
     ]);
   });
 });
+
+// THE DEFECT THIS FIXES (#3280): the stall dispatch fired once per flagged issue, so one bug that
+// stalled N receipts bought N parallel Opus sessions diagnosing it. On 2026-09-18 that was three
+// sessions, two near-identical PRs (#3269, #3270) and one wasted entirely (#3275) — and all 62
+// stall dispatches in the lane's history came from just three audit runs, zero cross-run
+// duplicates. The audit run is the dedupe key the data points at.
+const stallDispatch = (numbers: unknown): { args: string[]; label: string } | null =>
+  JSON.parse(
+    execFileSync(
+      "node",
+      [
+        "-e",
+        `import("./scripts/moneypenny/index.mjs").then((m) => {
+           console.log(JSON.stringify(m.stallRepairDispatch(JSON.parse(process.argv[1]))));
+         });`,
+        JSON.stringify(numbers),
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    ),
+  );
+
+describe("stall repair dispatch", () => {
+  it("fires ONE workflow run carrying every issue the audit flagged", () => {
+    const plan = stallDispatch([2967, 2968, 2969, 2970]);
+
+    // One argv, not four: the comma list is the whole point — `issue_number` is already
+    // `type: string` on moneypenny-repair.yml, so this is a value change, not a schema change.
+    expect(plan?.args).toEqual([
+      "workflow",
+      "run",
+      "moneypenny-repair.yml",
+      "--ref",
+      "main",
+      "-f",
+      "issue_number=2967,2968,2969,2970",
+    ]);
+    // The receipt has to name every issue in the batch, or a stall handled by a sibling's session
+    // looks like a stall nobody touched.
+    expect(plan?.label).toBe("#2967, #2968, #2969, #2970");
+  });
+
+  it("degrades to exactly today's single dispatch when one issue stalled", () => {
+    expect(stallDispatch([475])?.args.at(-1)).toBe("issue_number=475");
+    expect(stallDispatch([475])?.label).toBe("#475");
+  });
+
+  it("dispatches nothing when no stall was flagged", () => {
+    expect(stallDispatch([])).toBeNull();
+    expect(stallDispatch(null)).toBeNull();
+    // A `flag-stall` with no issue number (the audit can emit one) must not become a bare
+    // `issue_number=` dispatch that wakes a session with nothing to work.
+    expect(stallDispatch([undefined, 0])).toBeNull();
+  });
+
+  it("collapses a repeated issue number instead of listing it twice", () => {
+    expect(stallDispatch([2967, 2967, 2968])?.args.at(-1)).toBe("issue_number=2967,2968");
+  });
+});
