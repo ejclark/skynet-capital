@@ -5,6 +5,7 @@ import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
+import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 
@@ -180,6 +181,10 @@ export interface CompanionDeskDeps {
     participantId: string,
     outlook: Outlook,
   ) => Promise<Recommendation | undefined>;
+  /** Advisory dedup (#1867 slice 1): search currently-open `feedback`-labeled issues for ones a
+   *  fresh draft looks like it duplicates. Optional, like every other capability here — without it
+   *  `draft_feedback` behaves exactly as before (no `similar` field at all), never a blocker. */
+  readonly findSimilarFeedback?: FindSimilarFeedback;
 }
 
 export type CompanionToolResult =
@@ -291,7 +296,8 @@ async function structuresResult(
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
  * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
- * then refuse honestly, and only `draft_feedback` — which reads nothing — still answers.
+ * then refuse honestly, and only `draft_feedback` — which reads no member data, only the public
+ * open-issue queue for its advisory dedup check — still answers.
  */
 export async function runCompanionTool(
   name: string,
@@ -305,11 +311,17 @@ export async function runCompanionTool(
       const draft = parseFeedbackDraft(input);
       if (!draft) return { ok: false, error: "a draft needs a kind, a title and details" };
       deps.onDraft?.(draft);
+      // Advisory only (#1867 slice 1) — a search failure or empty match list never blocks or
+      // reshapes the draft; `send` still always files it unmodified. `similar` is left OFF the
+      // result entirely when nothing clears the threshold, rather than an empty array, so a
+      // deployment without the rail wired for it (slice 2) sees exactly today's shape.
+      const similar = (await deps.findSimilarFeedback?.(draft).catch(() => [])) ?? [];
       return {
         ok: true,
         result: {
           captured: true,
           next: "The rail now holds this draft. Ask the member exactly one clarifying question if something material is missing; otherwise tell them to reply 'send'. Their reply files it — nothing is sent yet.",
+          ...(similar.length > 0 ? { similar } : {}),
         },
       };
     }

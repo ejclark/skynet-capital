@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- A fresh `git worktree` created for a background build agent starts with an empty `node_modules`
+  (root and `app/`), which breaks the `.husky/pre-commit` hook's relative `./node_modules/.bin/biome`
+  call and fails `npm run verify` on unrelated things (missing `app`'s `@testing-library/jest-dom`
+  types, a spec needing a `tsx` binary). Two independent overnight `/work-issues` builds hit this
+  same friction on 2026-09-20 (one symlinked `node_modules/.bin` to the main checkout as a local
+  workaround, the other ran a full `npm ci` in both directories) — worth a real fix, likely either
+  `docs/DELEGATION.md`'s worktree-setup step running `npm ci` automatically, or a documented
+  one-liner every build-dispatch prompt should include. _(src: Claude · while: 2026-09-20 overnight
+  `/work-issues` pass — #3183 and #1867 builds)_
+
 - The Atlanta Fed's `GDPTrackingModelDataAndForecasts.xlsx` `ContribArchives` sheet — the per-vintage
   archive the whole housing-starts nowcast "ladder" finding was built from — has not extended past
   2026-07-28 as of 2026-09-18, seven weeks stale, while the same workbook's live `Contributions`/

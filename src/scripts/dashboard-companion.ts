@@ -18,6 +18,7 @@ import type { BotControlsStore } from "../server/bot-controls-store.js";
 import { createCompanionMessageLogStore } from "../server/companion-message-log.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
+import { resolveSimilarFeedback } from "../server/feedback-similar.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import { logKeyFor } from "../server/owner-link-store.js";
@@ -70,10 +71,12 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     store: createProgressionStore(env, (m) => console.error(m)),
   });
   const optionsClientFor = deps.optionsClientFor;
+  const findSimilarFeedback = resolveSimilarFeedback(env);
   const tools: CompanionDeskDeps = {
     snapshotFor: (id) => deps.hub.getState().participants.find((p) => p.id === id),
     readTradeActivity: deps.readFills,
     progression,
+    ...(findSimilarFeedback ? { findSimilarFeedback } : {}),
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {
