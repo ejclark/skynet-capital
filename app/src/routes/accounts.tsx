@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type ConsiderationChip,
   type DeskActivityEvent,
@@ -16,12 +17,12 @@ import {
 } from "../live/networth";
 import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
+import { AccountsPositionsSection } from "../shell/accounts-positions-section";
 import { ActivityTable } from "../shell/activity-table";
 import { ConsiderationsRail } from "../shell/considerations-rail";
 import { PageFrame } from "../shell/frame";
 import { HeroChart } from "../shell/hero-chart";
 import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
-import { PositionsTable } from "../shell/positions-table";
 import { ProfileRail } from "../shell/profile-rail";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
@@ -119,39 +120,6 @@ function SummaryDetail({
   );
 }
 
-function PositionsSection({ desks }: { readonly desks: readonly DeskSnapshot[] }): ReactElement {
-  if (desks.length === 1) {
-    const only = desks[0];
-    if (!only) return <p className="note">No account selected.</p>;
-    return (
-      <PositionsTable
-        positions={only.desk.positions}
-        deskId={only.desk.id}
-        totalCount={only.desk.positions.length}
-      />
-    );
-  }
-  return (
-    <>
-      {desks.map((d) => (
-        <section key={d.desk.id} className="accounts-group">
-          <h2 className="accounts-group-head">
-            {d.desk.name}{" "}
-            <span className={`chip chip-${d.desk.kind}`}>
-              {d.desk.kind === "bot" ? "BOT" : "HUMAN"}
-            </span>
-          </h2>
-          <PositionsTable
-            positions={d.desk.positions}
-            deskId={d.desk.id}
-            totalCount={d.desk.positions.length}
-          />
-        </section>
-      ))}
-    </>
-  );
-}
-
 function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): ReactElement {
   const activity = useQuery({
     queryKey: ["accounts-activity", deskIds.join(",")],
@@ -176,8 +144,24 @@ const asId = (raw: unknown): string | undefined =>
 
 function AccountsPage(): ReactElement {
   const navigate = Route.useNavigate();
-  const { account: asked, section: askedSection } = Route.useSearch();
+  const { account: asked, section: askedSection, q } = Route.useSearch();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+
+  // URL-stateful positions filter — the same immediate-locally/debounced-replace discipline
+  // `research.tsx` uses, ported from the retired `/u/:id` positions view.
+  const [query, setQuery] = useState(q ?? "");
+  const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(urlTimer.current), []);
+  const onFilterChange = (next: string) => {
+    setQuery(next);
+    clearTimeout(urlTimer.current);
+    urlTimer.current = setTimeout(() => {
+      void navigate({
+        search: (prev) => ({ ...prev, q: next.trim() === "" ? undefined : next }),
+        replace: true,
+      });
+    }, 300);
+  };
 
   if (settings.isPending)
     return (
@@ -215,6 +199,8 @@ function AccountsPage(): ReactElement {
       deskIds={deskIds}
       section={section}
       accounts={accounts}
+      query={query}
+      onFilterChange={onFilterChange}
       onSelectAccount={(id) =>
         void navigate({
           search: (prev) => ({ ...prev, account: id === first.id ? undefined : id }),
@@ -238,10 +224,14 @@ function CockpitBody({
   section,
   deskIds,
   accountId,
+  query,
+  onFilterChange,
 }: {
   readonly section: AccountsSection;
   readonly deskIds: readonly string[];
   readonly accountId: string;
+  readonly query: string;
+  readonly onFilterChange: (next: string) => void;
 }): ReactElement {
   const allAccountsSelected = accountId === ALL_ACCOUNTS;
   const desks = useQuery({
@@ -273,7 +263,10 @@ function CockpitBody({
   if (desks.isPending) return <p className="note">Reading accounts…</p>;
   if (desks.isError) return <p className="note">This account is unreachable.</p>;
   if (!desks.data) return <p className="note">No data.</p>;
-  if (section === "positions") return <PositionsSection desks={desks.data} />;
+  if (section === "positions")
+    return (
+      <AccountsPositionsSection desks={desks.data} query={query} onFilterChange={onFilterChange} />
+    );
   return <ActivitySection deskIds={deskIds} />;
 }
 
@@ -282,6 +275,8 @@ function AccountsBody({
   accountId,
   section,
   accounts,
+  query,
+  onFilterChange,
   onSelectAccount,
   onSelectSection,
 }: {
@@ -289,6 +284,8 @@ function AccountsBody({
   readonly accountId: string;
   readonly section: AccountsSection;
   readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
+  readonly query: string;
+  readonly onFilterChange: (next: string) => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
@@ -320,7 +317,13 @@ function AccountsBody({
             variant="horizontal"
           />
         </div>
-        <CockpitBody section={section} deskIds={deskIds} accountId={accountId} />
+        <CockpitBody
+          section={section}
+          deskIds={deskIds}
+          accountId={accountId}
+          query={query}
+          onFilterChange={onFilterChange}
+        />
       </div>
     </PageFrame>
   );
@@ -331,6 +334,9 @@ export const Route = createFileRoute("/accounts")({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
     ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
       ? { section: search.section as AccountsSection }
+      : {}),
+    ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
+      ? { q: search.q }
       : {}),
   }),
   component: AccountsPage,
