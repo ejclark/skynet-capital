@@ -12,7 +12,8 @@ export const KINDS = [
   "geopolitical",
 ];
 export const TIERS = ["critical", "high", "medium", "low"];
-export const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB|UMICH|FHFA):/;
+export const CONFIRMED_PREFIX =
+  /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB|UMICH|FHFA|ECF):/;
 export const ESTIMATE_PREFIX = /^(EST|NEWS):/;
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -73,12 +74,17 @@ export function horizonProblems(horizon) {
   return problems;
 }
 
+/** The trusted prefixes as prose, read back off the regex rather than hand-listed beside it — the
+ *  hand-written copy had drifted to six of the fourteen names (issue #3058), so a lane that hit the
+ *  error was told its court order needed a prefix from a list that had not been true in months. */
+const confirmedPrefixList = CONFIRMED_PREFIX.source.slice(2, -2).replaceAll("|", "/");
+
 // The date policy made lintable: confirmed needs a trusted prefix, estimates an honest one.
 function validateStatus(e, where, problems) {
   if (e.status === "confirmed") {
     if (!CONFIRMED_PREFIX.test(e.source ?? ""))
       problems.push(
-        `${where}: confirmed but source lacks a trusted prefix (IR/CAL/BLS/FED/PJM/SEC)`,
+        `${where}: confirmed but source lacks a trusted prefix (${confirmedPrefixList})`,
       );
   } else if (e.status === "estimate") {
     if (e.kind !== "earnings" && !ESTIMATE_PREFIX.test(e.source ?? ""))
