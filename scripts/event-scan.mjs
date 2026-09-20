@@ -18,6 +18,10 @@
 //                                             # are exempt — they expire permanently.
 //   node scripts/event-scan.mjs --validate    # enforce the contract (exit 1 on violation)
 //   node scripts/event-scan.mjs --dump        # extracted tables as JSON (the drift gate's input)
+//   ... --on-date=YYYY-MM-DD                  # every entry already on that date, retired ones
+//                                             # included. Run this BEFORE proposing an event
+//                                             # (#3361): a date lookup has no false-negative rate;
+//                                             # a title-similarity scan (#3360) does.
 //   ... --today=YYYY-MM-DD                    # deterministic date override for tests
 //   ... --events-file= --calendar-file= --cadence-file= --ledger-dir=   # fixture overrides (tests)
 //
@@ -331,6 +335,64 @@ function printReport(rows) {
   );
 }
 
+/** THE DATE LOOKUP (#3361) — what a lane reads BEFORE it proposes an event.
+ *
+ *  WHY A LISTING AND NOT A SEARCH. The measured failure was one mis-specified search string: a
+ *  D-14 sweep looked for "U.S. IIP", which is not a substring of BEA's own "International
+ *  Transactions and Investment Position", and filed a third copy of a release the calendar already
+ *  carried twice. A lookup keyed on the DATE is keyed on data the proposing lane already holds —
+ *  it is proposing FOR that date — so its recall does not depend on the lane's own vocabulary at
+ *  all. #3360's same-date title-overlap warning is the post-hoc half and is a heuristic tuned on
+ *  seven positives; reading nine titles is a decision procedure with no false-negative rate.
+ *
+ *  SAME-DATE ONLY, AND THAT IS A MEASUREMENT, NOT A DEFAULT (#3361's open question — whether to
+ *  also list D±1, since an off-by-one re-slug evades a same-date check exactly as it evades
+ *  #3360's same-date scan). Re-scoring titleOverlapWarnings at #3360's 0.45 over each date's D+1
+ *  cohort across the 720 committed live events returns 14 cross-date pairs and NOT ONE is a
+ *  re-slug: nine are Treasury auctions (a different tenor every day of a settlement week), the
+ *  rest cpi×ppi, dallas-fed-mfg×dallas-fed-tssos, iea-omr×opec-momr. A neighbour cohort would put
+ *  three near-identical adjacent rows in front of every auction proposal, scoring 0/14 against the
+ *  one failure it exists to catch. FALSIFIER: the first confirmed same-release re-slug whose two
+ *  entries carry different dates — one such pair and the D±1 cohort earns its place.
+ *
+ *  RETIRED ENTRIES PRINT, THEY DO NOT VANISH. `supersededBy` (#3360) stops an entry loading as the
+ *  calendar, but a lane about to re-file that release is the one caller who most needs to see the
+ *  slug was already tried and which id won — omit it and the next sweep re-proposes the very id a
+ *  lane just retired. Ahead of `assertHorizon` for the same reason `--dump` is: a listing of what
+ *  exists must not be able to fail on the cadence file's research horizon, which it never reads. */
+function printOnDate(tables, date) {
+  const rows = [...tables.all, ...tables.superseded]
+    .filter((e) => e?.date === date)
+    .sort(compareEventOrder);
+
+  // Loud-failure doctrine, applied to the caller rather than the file: an unreadable calendar has
+  // already thrown by now, so silence here would be the ONE output a lane could misread as "the
+  // check ran and found nothing" when it meant "the check never ran". Say it in words.
+  if (!rows.length) {
+    console.log(`No calendar entry on ${date} — nothing on that date to collide with.`);
+    console.log("(A real answer, not an empty read: an unreadable calendar throws instead.)");
+    return;
+  }
+
+  const idWidth = Math.max(...rows.map((e) => String(e.id).length));
+  for (const e of rows) {
+    const retired = e.supersededBy !== undefined;
+    console.log(
+      `${retired ? "✗" : "·"} ${String(e.id).padEnd(idWidth)}  ` +
+        `${String(e.status).padEnd(9)}  ${String(e.impact).padEnd(8)}  ${e.title}` +
+        (retired ? `  [RETIRED — superseded by ${e.supersededBy}]` : ""),
+    );
+  }
+
+  const retired = rows.filter((e) => e.supersededBy !== undefined).length;
+  console.log(
+    `\n${rows.length} entr${rows.length === 1 ? "y" : "ies"} on ${date}` +
+      (retired ? ` (${retired} retired)` : "") +
+      ". If one of them is the release you are about to propose, it is already on the calendar —" +
+      "\nfile nothing (see docs/process/EVENT-RESEARCH.md).",
+  );
+}
+
 function main() {
   const today = arg("today") ?? new Date().toISOString().slice(0, 10);
   if (!DATE_RE.test(today)) throw new Error("event-scan: --today must be YYYY-MM-DD.");
@@ -346,6 +408,15 @@ function main() {
   }
   if (has("validate")) {
     runValidate(tables, cadence, ledgers, FORWARD_TESTS_DIR);
+    return;
+  }
+  // `has` as well as `arg` on purpose: a bare `--on-date 2026-09-16` (space, not `=`) would
+  // otherwise fall through and print the whole report, which a lane would read as "nothing on that
+  // date is flagged". A malformed value throws exactly as `--today` does.
+  const onDate = arg("on-date");
+  if (onDate !== undefined || has("on-date")) {
+    if (!DATE_RE.test(onDate ?? "")) throw new Error("event-scan: --on-date must be YYYY-MM-DD.");
+    printOnDate(tables, onDate);
     return;
   }
 

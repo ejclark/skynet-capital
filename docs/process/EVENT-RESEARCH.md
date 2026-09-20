@@ -52,6 +52,9 @@ fragment stay on disk as the record. Mark, don't delete — the shape every cale
 - **`--validate` now warns on same-date title overlap ≥ 45%** (advisory, never red — ISM and S&P
   Global publish near-identical titles on the same day and are genuinely different publishers). A
   warning is a prompt to read two titles, not a verdict; `supersededBy` is the part that binds.
+- **Both of those run after the duplicate exists. `--on-date` runs before it does** (#3361) — see
+  "Read the date before you propose" in the adjacency sweep below. Retiring a re-slug costs a pulse
+  and a forward-test reckoning; not filing it costs one command.
 
 ## The three assessment modes (keyed to the scanner's `reason` field)
 
@@ -97,6 +100,18 @@ Stance section with the row as its receipt.
    or their supply chains.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
+
+**Read the date before you propose: `node scripts/event-scan.mjs --on-date=YYYY-MM-DD`** (issue
+#3361). It prints every entry already on that date — canonical, standing proposal, derived print,
+and retired re-slugs marked `✗ … [RETIRED — superseded by <id>]` so you can see a slug that was
+already tried. If your discovery is one of them, file nothing. **Run this instead of searching the
+calendar for your own words for the release**: the failure this exists to prevent was one sweep
+searching for "U.S. IIP" and filing a third copy of BEA's *"International Transactions and
+Investment Position"* — not a substring, so the search found nothing that was plainly there. A date
+you already hold has no false-negative rate; a search string you invented does. Reading nine titles
+costs seconds. (Same-date only, deliberately: D±1 scores 14 near-title pairs over the committed
+calendar and none is a re-slug — nine are Treasury auctions running a different tenor each day. The
+falsifier is the first confirmed same-release re-slug whose entries carry different dates.)
 
 Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new file
 `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` **in the same PR**, always
