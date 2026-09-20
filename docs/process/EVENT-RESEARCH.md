@@ -29,7 +29,7 @@ lane at the same anchor line — 22 of 47 PRs touching it were flagged conflicte
 to merge (#1324), and three merge-side fixes could not reach GitHub's server-side merge. An
 adjacent event you *propose* is a proposer-owned file (see the adjacency sweep below, #1717).
 
-## The three assessment modes (keyed to the scanner's `reason` field)
+## The four assessment modes (keyed to the scanner's `reason` field)
 
 ### `never-assessed` → initial research
 
@@ -103,7 +103,10 @@ actually happened vs the stance, scored **from re-run instrument data, never fro
 tape**. Score any forward tests this event carried — its own fragment
 [`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
-`forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event forever.
+`forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event — with
+exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
+as `forward-test-due` (#2884, the mode below). The assessment is closed for good; the *register*
+is not.
 
 **A close-out waits for its own predictions** (issue #2988, 2026-09-15). The scanner marks a passed
 event `event-passed-unscored` from D+1 and a close-out is never screened — but scoring a prediction
@@ -127,7 +130,49 @@ outcome record permanently while a wrong dispatch only costs a session. Legacy `
 `docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
 with `<n>` counting up inside that file only. Never a row in `forward-tests.md` itself (the index
 carries no rows and `npm test` fails one), never another event's file. The full recipe is the
-index's "How to register".
+index's "How to register". **Register the score-by date the hypothesis actually needs** — a rates
+or next-print test is honestly weeks out, and a date past this event's close-out window is no
+longer a dead end (see the next mode). Never shorten a score-by to fit the window; that is
+falsification pressure, and it is the reason #2884 is not a registration gate.
+
+### `forward-test-due` → score one registered prediction, after the close-out (#2884)
+
+**Closing is not resolving.** The close-out above writes `## Outcome` and the scanner goes quiet —
+but a forward test is deliberately allowed to key on data that does not exist yet, and about a
+quarter of honest registrations score *past* `closeOutWithinDays`. Those rows used to have no
+second net at all (`scripts/forward-test-id-scan.mjs` reads ids, never the `Score by` column), so
+they sat `_open_` forever while being cited in stance notes as predictions that would settle.
+Measured 2026-09-20: **21 events · 31 rows** permanently orphaned that way, 6 of them already
+decided by the tape and unrecorded, and the number only ever went up. The separation is the one
+every forecasting platform already makes — Good Judgment Open resolves on when events occurred,
+Manifold's close halts trading while "nothing is finalised" until resolution, Registered Reports
+score at Stage 2 after the data exist.
+
+So `scripts/event-scan.mjs` re-dispatches **the same owning lane** — never a second writer to a
+file this doc says has exactly one — when a closed-out event's fragment still carries an unscored
+row whose `scoreBy` has arrived. `--due` names the rows in `forwardTestsDue`; your assigned event
+id is all the matrix forwards, so **re-read your own fragment** and act on every row that is
+unscored and past its date.
+
+**Your job in this mode is narrow.** Score those rows from re-run instrument data, never from
+memory of the tape, exactly as a close-out does. Do **not** re-open the assessment, do not rewrite
+`## Outcome`, do not edit any registered prediction — append-only still holds, and the Outcome
+cell is the only cell you fill. A short note appended under `## Outcome` recording what was scored
+and when is welcome; a second verdict on the event is not.
+
+**The terminal-verdict rule — the reason this cannot loop.** A row you were dispatched for leaves
+your session carrying one of exactly four things, and **never `_open_`**:
+
+| Verdict | When |
+| --- | --- |
+| `**pass**` / `**kill**` | The data exists and the hypothesis settled. A scored kill also moves to the sweep doc's kill list. |
+| `**VOID** — the reason` | The row can no longer be judged as registered (the setup never occurred, the anchor was wrong at registration). |
+| `**unscoreable** — where the data will be` | The source is gone, paywalled, or was never published. Name where a human would look; that pointer *is* the record. |
+
+The scanner treats *any* non-open cell as scored, so all four end the re-dispatch by construction.
+Leaving the row `_open_` sends the same session back on the next tick — which is the intended
+pressure, not a bug. If a row genuinely needs a later date than it was registered with, write
+`unscoreable — settles <date>, <source>` rather than editing the `Score by` cell.
 
 ## Deterministic screening (issue #724) — not every due pulse spends a session
 

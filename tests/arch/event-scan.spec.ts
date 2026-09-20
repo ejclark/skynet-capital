@@ -59,7 +59,12 @@ function dueFixture(
   events: Record<string, object>,
   ledgers: Record<string, string> = {},
   fragments: Record<string, string> = {},
-): { id: string; reason: string; forwardTestsBeyondWindow?: { id: string; scoreBy: string }[] }[] {
+): {
+  id: string;
+  reason: string;
+  forwardTestsBeyondWindow?: { id: string; scoreBy: string }[];
+  forwardTestsDue?: { id: string; scoreBy: string }[];
+}[] {
   const dir = mkdtempSync(join(tmpdir(), "event-scan-due-"));
   try {
     for (const sub of ["events/proposals", "ledgers", "forward-tests"])
@@ -178,7 +183,9 @@ describe("event-scan close-out hold", () => {
 
   it("leaves an already-closed-out event and an upcoming event untouched", () => {
     const frag = { alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-18", "_open_"]]) };
-    // A ledger with `## Outcome` is silent forever — the hold must not resurrect it.
+    // A closed-out ledger is silent while its rows are merely PENDING — the hold has nothing to
+    // hold and the re-dispatch below has nothing to score. (#2884 makes this "silent unless a
+    // registered row is past its score-by"; 09-18 is still three days out.)
     expect(
       dueFixture(
         "2026-09-15",
@@ -193,6 +200,93 @@ describe("event-scan close-out hold", () => {
         (e) => e.reason,
       ),
     ).toEqual(["interval-elapsed"]);
+  });
+});
+
+// THE SCORE-BY RE-DISPATCH (#2884). Closing out an event used to silence it FOREVER — correct for
+// the ledger, wrong for the register, because a forward test is meant to key on data that does not
+// exist yet and a quarter of honest registrations score past the 6-day close-out ceiling. Nothing
+// else reads the `Score by` column (`forward-test-id-scan.mjs` checks ids only), so those rows had
+// no second net at all: measured 2026-09-20 on `main`, 21 events × 31 rows sat `_open_` on a
+// closed-out ledger, 6 already decided by the tape and unrecorded, and the stock only went up.
+// The fix re-dispatches the OWNING lane (one writer per file, per EVENT-RESEARCH.md) rather than
+// gating registration, which would have bought dishonestly short score-by dates and fixed none of
+// the stock. It terminates because any verdict at all — including `unscoreable — <where>` — makes
+// the row scored to the parser.
+describe("event-scan forward-test re-dispatch", () => {
+  const passed = { ...entry("alpha", "2026-09-14"), impact: "low" };
+  const closedOut = { alpha: `${openLedger("2026-09-15")}\n## Outcome\n\nscored.\n` };
+  const row = (scoreBy: string, outcome: string) =>
+    fragment([["FT-alpha-2026-09-14-1", scoreBy, outcome]]);
+
+  it("re-opens a closed-out event once its own unscored row reaches its score-by", () => {
+    // 2026-09-25 is D+11 — past `closeOutWithinDays: 6`, so this is the orphan shape exactly: the
+    // close-out has been written and gone, and the row's data only landed afterwards.
+    const frag = { alpha: row("2026-09-25", "_open_") };
+    expect(dueFixture("2026-09-24", { alpha: passed }, closedOut, frag)).toEqual([]);
+    expect(dueFixture("2026-09-25", { alpha: passed }, closedOut, frag)).toEqual([
+      expect.objectContaining({
+        id: "alpha",
+        reason: "forward-test-due",
+        forwardTestsDue: [{ id: "FT-alpha-2026-09-14-1", scoreBy: "2026-09-25" }],
+      }),
+    ]);
+    // Still due a month later: nothing expires it but a verdict, which is the point — the stock of
+    // orphans is exactly what "silent forever" was quietly accumulating.
+    expect(
+      dueFixture("2026-10-25", { alpha: passed }, closedOut, frag).map((e) => e.reason),
+    ).toEqual(["forward-test-due"]);
+  });
+
+  it("stays silent on a scored row, an unreadable one, or a ledger still owed its close-out", () => {
+    const quiet: Record<string, string> = {
+      "a scored verdict ends it": row("2026-09-25", "**pass** — scored 2026-09-26"),
+      // The terminal-verdict rule's escape hatch. If this did NOT count as scored, a row whose
+      // data source is gone would re-dispatch a session every tick, forever — the #2485 shape.
+      "`unscoreable` is a verdict too, so the loop terminates": row(
+        "2026-09-25",
+        "**`unscoreable`** — the 2Y series was retired; no source",
+      ),
+      "no readable score-by is skipped, never guessed at": fragment([
+        ["FT-alpha-2026-09-14-1", "when it settles", "_open_"],
+      ]),
+    };
+    for (const [why, frag] of Object.entries(quiet))
+      expect([
+        why,
+        dueFixture("2026-10-01", { alpha: passed }, closedOut, { alpha: frag }),
+      ]).toEqual([why, []]);
+    // No fragment at all — a closed-out event with nothing registered never comes back.
+    expect(dueFixture("2026-10-01", { alpha: passed }, closedOut)).toEqual([]);
+  });
+
+  it("never pre-empts an owed close-out — the ledger comes first, the re-dispatch after", () => {
+    // Same due row, but `## Outcome` has not been written yet and D+1 is inside the window. The
+    // event must dispatch as `event-passed-unscored`, not as a forward-test re-run: the close-out
+    // is the one class that expires permanently, and it will score this row itself.
+    expect(
+      dueFixture(
+        "2026-09-15",
+        { alpha: passed },
+        { alpha: openLedger("2026-09-15") },
+        {
+          alpha: row("2026-09-15", "_open_"),
+        },
+      ).map((e) => e.reason),
+    ).toEqual(["event-passed-unscored"]);
+    // Aged out of the close-out window with no `## Outcome` and no re-dispatch: unchanged
+    // behaviour, and deliberately out of #2884's scope — a missing outcome record is a different
+    // defect from an unscored row.
+    expect(
+      dueFixture(
+        "2026-10-01",
+        { alpha: passed },
+        { alpha: openLedger("2026-09-15") },
+        {
+          alpha: row("2026-09-25", "_open_"),
+        },
+      ),
+    ).toEqual([]);
   });
 });
 

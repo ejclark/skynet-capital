@@ -15,7 +15,10 @@
 //                                             # Bounded by assessment-cadence.json's `horizon`
 //                                             # (#2946): nothing past maxDaysOut, and past
 //                                             # allImpactsWithinDays only critical/high. Close-outs
-//                                             # are exempt — they expire permanently.
+//                                             # are exempt — they expire permanently. A closed-out
+//                                             # event comes BACK as `forward-test-due` when one of
+//                                             # its registered forward tests reaches its score-by
+//                                             # (#2884) — closing is not resolving.
 //   node scripts/event-scan.mjs --validate    # enforce the contract (exit 1 on violation)
 //   node scripts/event-scan.mjs --dump        # extracted tables as JSON (the drift gate's input)
 //   ... --today=YYYY-MM-DD                    # deterministic date override for tests
@@ -37,7 +40,7 @@ import {
   horizonProblems,
   runValidate,
 } from "./event-scan-validation.mjs";
-import { closeOutHold } from "./forward-test-pending.mjs";
+import { closeOutHold, dueForwardTests } from "./forward-test-pending.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
 
 const ROOT = process.cwd();
@@ -219,39 +222,73 @@ function withinHorizon(event, days, cadence) {
   return days <= horizon.allImpactsWithinDays || EARLY_STANCE_IMPACTS.has(event.impact);
 }
 
+/** The verdict for an event that has already HAPPENED — split out of `assessmentDue` because the
+ *  passed side now has two independent reasons to spend a session and they must stay in this
+ *  order: the close-out first (it expires permanently), the forward-test re-dispatch after (it
+ *  never does). Called only when `days < 0`, and deliberately ahead of the horizon check — see
+ *  withinHorizon's note on permanent ageing-out. `none` is passed in so both sides share one
+ *  not-due shape. */
+function passedEventDue(event, ledger, today, cadence, days, none) {
+  if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays) {
+    // THE FORWARD-TEST HOLD (#2988) — a close-out that cannot score its own predictions yet is
+    // a dispatch that can only re-read state and leave. See forward-test-pending.mjs for the
+    // measurement (3 sessions in 38 minutes on gastech-2026-09-14) and the parsing rules.
+    const { hold, until, beyondWindow } = closeOutHold(
+      event.id,
+      event.date,
+      today,
+      cadence.closeOutWithinDays,
+      FORWARD_TESTS_DIR,
+    );
+    if (hold) return { ...none, reason: HELD, nextDueDate: until };
+    // Structural, not timing: the test scores after this event's close-out ceiling, so waiting
+    // would age the outcome record out entirely. Dispatch now and NAME it, so the session
+    // records those rows unscoreable at close-out on purpose rather than by omission. `reason`
+    // itself is deliberately unchanged — moneypenny/events.mjs sorts on the exact string.
+    return {
+      due: true,
+      reason: "event-passed-unscored",
+      intervalDays: null,
+      nextDueDate: today,
+      ...(beyondWindow.length ? { forwardTestsBeyondWindow: beyondWindow } : {}),
+    };
+  }
+
+  // THE SCORE-BY RE-DISPATCH (#2884). Closing out an event used to silence it forever, which is
+  // fine for the ledger and wrong for the register: a forward test is deliberately allowed to key
+  // on data that does not exist yet, and a quarter of honest registrations score past the 6-day
+  // close-out ceiling. Those rows had NO second net — `forward-test-id-scan.mjs` never reads the
+  // `Score by` column and no other lane fills an Outcome cell — so they sat `_open_` forever,
+  // cited in stance notes as predictions that would settle and silently never settling. Measured
+  // 2026-09-20: 21 events × 31 rows already permanently orphaned, 6 of them decided by the tape
+  // and unrecorded, up from 6 events five days earlier.
+  //
+  // So the owning lane is sent BACK when one of its own rows comes due, rather than a gate
+  // refusing the registration up front (which would only pressure lanes into short, dishonest
+  // score-by dates and would fix none of the stock). Deliberately AFTER the close-out branch: an
+  // event still owed its `## Outcome` gets that first, and this only ever fires on a ledger that
+  // has already closed out. `nextDueDate` is today because the row is due now, not on a cadence —
+  // this is a one-shot pulse that stops the moment the row carries any verdict, which
+  // docs/process/EVENT-RESEARCH.md's terminal-verdict rule is what guarantees.
+  if (ledger?.hasOutcome) {
+    const due = dueForwardTests(event.id, today, FORWARD_TESTS_DIR);
+    if (due.length)
+      return {
+        due: true,
+        reason: "forward-test-due",
+        intervalDays: null,
+        nextDueDate: today,
+        forwardTestsDue: due,
+      };
+  }
+  return none;
+}
+
 function assessmentDue(event, ledger, today, cadence) {
   const days = daysBetween(today, event.date);
   const none = { due: false, reason: null, intervalDays: null, nextDueDate: null };
 
-  if (days < 0) {
-    // Passed. One closing outcome assessment inside the close-out window, then silence forever.
-    // Ahead of the horizon check on purpose — see withinHorizon's note on permanent ageing-out.
-    if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays) {
-      // THE FORWARD-TEST HOLD (#2988) — a close-out that cannot score its own predictions yet is
-      // a dispatch that can only re-read state and leave. See forward-test-pending.mjs for the
-      // measurement (3 sessions in 38 minutes on gastech-2026-09-14) and the parsing rules.
-      const { hold, until, beyondWindow } = closeOutHold(
-        event.id,
-        event.date,
-        today,
-        cadence.closeOutWithinDays,
-        FORWARD_TESTS_DIR,
-      );
-      if (hold) return { ...none, reason: HELD, nextDueDate: until };
-      // Structural, not timing: the test scores after this event's close-out ceiling, so waiting
-      // would age the outcome record out entirely. Dispatch now and NAME it, so the session
-      // records those rows unscoreable at close-out on purpose rather than by omission. `reason`
-      // itself is deliberately unchanged — moneypenny/events.mjs sorts on the exact string.
-      return {
-        due: true,
-        reason: "event-passed-unscored",
-        intervalDays: null,
-        nextDueDate: today,
-        ...(beyondWindow.length ? { forwardTestsBeyondWindow: beyondWindow } : {}),
-      };
-    }
-    return none;
-  }
+  if (days < 0) return passedEventDue(event, ledger, today, cadence, days, none);
 
   // `beyond-horizon` rather than a bare `none`, so the human report says WHY an event is quiet
   // instead of printing an empty cadence note. `due` stays false, so it never reaches --due.
@@ -300,6 +337,12 @@ function printDue(rows) {
       ...(verdict.forwardTestsBeyondWindow
         ? { forwardTestsBeyondWindow: verdict.forwardTestsBeyondWindow }
         : {}),
+      // Present only on a `forward-test-due` re-dispatch (#2884): the rows whose score-by has
+      // arrived on an event that already closed out. Unlike the field above this one DOES reach a
+      // human meaningfully on its own, but the session finds the same rows by re-reading its own
+      // fragment — the mode in EVENT-RESEARCH.md tells it to, and `reason` is all the matrix
+      // forwards.
+      ...(verdict.forwardTestsDue ? { forwardTestsDue: verdict.forwardTestsDue } : {}),
     }));
   process.stdout.write(`${JSON.stringify(due, null, 2)}\n`);
 }
