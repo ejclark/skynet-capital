@@ -4,7 +4,9 @@ You are a repair session dispatched by `.github/workflows/moneypenny-repair.yml`
 `workflow_dispatch` path, via `issue_number`) because the event router's push-driven audit
 (`scripts/moneypenny/audit.mjs`'s `flag-stall` intent) found an `[event-research]` receipt issue
 that has sat 2+ days with no `docs/research/events/<id>.md` produced — no ledger, no claimed
-build. The issue number is in your invocation.
+build. The issue number is in your invocation. The invocation may carry several issue numbers
+(comma-joined) when one audit run flagged multiple receipts together (#3280) — diagnose the shared
+cause once, then leave a terminal state on **each** listed issue.
 
 This file sits beside [`moneypenny-ci-repair.md`](moneypenny-ci-repair.md) and
 [`moneypenny-conflict-repair.md`](moneypenny-conflict-repair.md) — same dispatch job, same
