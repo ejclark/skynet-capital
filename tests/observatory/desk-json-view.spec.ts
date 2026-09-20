@@ -40,6 +40,16 @@ describe("deskView", () => {
     expect(view.positions[1]?.display).not.toBe("NVDA261218C00130000");
   });
 
+  it("carries no detail line for a stock position — the qty column already says it", () => {
+    const view = deskView(snapshot());
+    expect(view.positions[0]).toMatchObject({ symbol: "AAPL", detail: "" });
+  });
+
+  it("carries the contract count as detail for an option position", () => {
+    const view = deskView(snapshot());
+    expect(view.positions[1]).toMatchObject({ detail: "6 ct" });
+  });
+
   it("carries the raw P/L for client-side filtering, signed formatting for display", () => {
     const view = deskView(snapshot());
     const aapl = view.positions[0];

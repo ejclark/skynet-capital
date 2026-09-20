@@ -83,6 +83,11 @@ describe("BlotterRow", () => {
     expect(screen.queryByRole("button", { name: /lots for SPY/ })).not.toBeInTheDocument();
   });
 
+  it("renders no detail line when the position carries none — nothing to say beats a static label", () => {
+    render(inTable(<BlotterRow position={position({ detail: "" })} deskId="sauron" />));
+    expect(screen.queryByText("199 sh")).not.toBeInTheDocument();
+  });
+
   describe("lot breakdown (#3186 slice 1)", () => {
     const lots = position({
       lots: [

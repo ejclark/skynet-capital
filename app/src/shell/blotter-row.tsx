@@ -110,7 +110,7 @@ export function BlotterRow({
         </td>
         <td>
           <span className="sym">{position.display}</span>
-          <span className="sym-sub">{position.detail}</span>
+          {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
           {position.lots && position.lots.length > 0 ? (
             <button
               type="button"
@@ -119,7 +119,16 @@ export function BlotterRow({
               aria-label={`${position.lots.length} lots for ${position.display}`}
               onClick={() => setLotsOpen(!lotsOpen)}
             >
-              · {position.lots.length} lots
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M6 4l4 4-4 4" />
+              </svg>
+              {position.lots.length} lots
             </button>
           ) : null}
         </td>
