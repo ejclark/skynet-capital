@@ -36,6 +36,9 @@ export const CONFIRMED_PREFIXES = [
   "UMICH",
   "FHFA",
   "FRB",
+  "NYSE",
+  "SIFMA",
+  "JPX",
 ];
 export const CONFIRMED_PREFIX = new RegExp(`^(${CONFIRMED_PREFIXES.join("|")}):`);
 export const ESTIMATE_PREFIX = /^(EST|NEWS):/;

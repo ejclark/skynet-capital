@@ -5,15 +5,23 @@
  * credential. The bots' clock stays Alpaca's (`autonomous-market-clock.ts`): this table informs a
  * calendar, it never gates an order — the desk's own gate asks the exchange before any fill.
  *
- * SOURCE: `NEWS:` the NYSE Group press release of 2024-11-08, "NYSE Group Announces 2025, 2026 and
- * 2027 Holiday and Early Closings Calendar", as summarised by a web search on 2026-09-06 — NOT read
- * at the primary. nyse.com, sifma.org and nasdaqtrader.com were all blocked by the session's
- * network egress proxy (EGRESS_BLOCKED), so this table carries the secondary's prefix until a
- * session that can reach ir.theice.com or nyse.com re-reads it and flips the prefix to `NYSE:`
- * (the blind spot is filed as its own bottleneck issue). The dates agree with the exchange's
- * observed-date rule — a holiday on Saturday closes the preceding Friday, on Sunday the following
- * Monday — and 2027-12-24 is a FULL closure (Christmas observed), so 2027 has no Christmas Eve
- * early close. Extend by year with a dated source line; never infer a date.
+ * SOURCE: `NYSE:` nyse.com/markets/hours-calendars, the exchange's own Holidays & Trading Hours
+ * table, read at the primary 2026-09-20 (HTTP 200 after its 302, 109,133 bytes) — header verbatim
+ * "All NYSE markets observe U.S. holidays as listed below for 2026, 2027, and 2028". Every one of
+ * the 23 rows below was re-derived from that grid cell by cell, including the three early closes,
+ * which are footnotes rather than table rows: Thursday, December 24, 2026 and the day after
+ * Thanksgiving in each year. Superseded prefix, kept for the audit trail: the table was first
+ * entered as `NEWS:` off a web-search summary of NYSE Group's 2024-11-08 press release, because
+ * nyse.com, sifma.org and nasdaqtrader.com were all EGRESS_BLOCKED for the 2026-09-06 session that
+ * wrote it; that session asked for exactly this re-read, and it found no date wrong. The dates
+ * agree with the exchange's observed-date rule — a holiday on Saturday closes the preceding
+ * Friday, on Sunday the following Monday — and 2027-12-24 is a FULL closure (Christmas observed),
+ * so 2027 has no Christmas Eve early close.
+ *
+ * HORIZON: the exchange now publishes three years, not two — its 2028 column is live and read but
+ * deliberately NOT entered here, because #2552's scope was the source-prefix taxonomy and the
+ * event calendar's own 2028 closures already carry those dates as `confirmed` entries. Extend by
+ * year with a dated source line; never infer a date.
  */
 
 export interface MarketClosure {
