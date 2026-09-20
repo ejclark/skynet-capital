@@ -49,6 +49,21 @@
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
  *               `CB:` conference-board.org consumer-confidence schedule · `UMICH:` sca.isr.umich.edu ·
  *               `FHFA:` fhfa.gov HPI release-date table + the published report's own notes ·
+ *               `ECF:` a federal court's own FILED DOCUMENT, fetched itself — the signed order or
+ *               scheduling order as bytes (a RECAP mirror of PACER at
+ *               storage.courtlistener.com/recap/…, a court's own site, or a govinfo court PDF),
+ *               with URL, HTTP status and size/checksum recorded in `source`, and the governing
+ *               clause quoted verbatim. Defined by WHAT WAS FETCHED, not by domain: a docket
+ *               LISTING, a Justia/CourtListener HTML page, or press quoting an order is `NEWS:` —
+ *               the mirror can lag the docket, so the document is what it guarantees. A date the
+ *               order fixes in its own words ("within 30 days of the date of this Order") is
+ *               `ECF:` with the one arithmetic step written out; a date projected from a cadence
+ *               rule stays `EST:`. Issue #3058: 13 of 13 docket-sourced entries sat at `estimate`
+ *               with the court's checksummed signed order in hand, because no slot existed.
+ *               Regulatory proceedings (FERC, state PSC/PUC) have no slot yet — deliberately, not
+ *               by oversight: no regulatory primary has ever been fetched from a research runner
+ *               (ferc.gov 403, puc.texas.gov TLS failure), and a slot with no promotable member is
+ *               one nobody can test. The first one read direct reopens it as its own PR.
  *               `FRB:` a regional Reserve Bank's own published release table, research calendar or
  *               speaking schedule (dallasfed.org, newyorkfed.org, philadelphiafed.org,
  *               clevelandfed.org and the other eight District domains). Distinct from `FED:`,
