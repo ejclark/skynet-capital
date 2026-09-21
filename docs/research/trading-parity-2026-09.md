@@ -703,7 +703,7 @@ plan, not a constraint on the designs.
 | Read an options chain | exists — straddle: calls · strike · puts; OI / Vol / Δ Γ Θ Vega scroll out | `app/src/shell/straddle-view.tsx` |
 | See *all* expirations | partial — ≤20, from one unpaginated 1000-contract page; LEAPS unreachable on busy names | `src/alpaca/alpaca-options-client.ts:177-186` (`limit = 20`) |
 | Greeks on every strike | partial — vendor-only; silently absent when the snapshot call fails, the strike has no snapshot, or a greek isn't finite; no per-row reason reaches the client | `alpaca-options-client.ts` `mergeQuotes` / `greeksOf` |
-| `$0.00` bid shown honestly | missing — a zero bid is dropped (`num()` requires `> 0`), the row loses its mid | `alpaca-options-client.ts:101-104` |
+| `$0.00` bid shown honestly | missing — a zero bid is dropped (`num()` requires `> 0`), the row loses its mid | `alpaca-options-client.ts:106-109` |
 | Implied volatility / probability on the chain | missing on the desk (IV is solved only in the research recommender) | `src/options/pricing.ts`, `src/adapters/alpaca-recommend-chain.ts` |
 | Tap a chain cell to fill the ticket | exists — row = strike + mid-seeded limit; call/put cell also switches side when the rung is unlocked | `app/src/shell/option-gate.tsx:189-213` |
 | Type a strike by hand | exists — number input with a `<datalist>` of chain strikes | `app/src/shell/option-fields.tsx:108-150` |
@@ -713,7 +713,7 @@ plan, not a constraint on the designs.
 | Payoff diagram | missing | — |
 | Review then confirm, disarm on edit | exists, both tickets; the server re-checks the live account at submit | `trade-gate.tsx:35-41,190-195`, `option-preview.tsx:15-21` |
 | Build a vertical / multi-leg spread | partial — legs via `<select>`s, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx` |
-| **Submit** a multi-leg spread | missing — server returns `executed:false`; the UI headline still says "Confirmed" | `src/server/draft-order-route.ts:281-285`, `draft-order-builder.tsx:162` |
+| **Submit** a multi-leg spread | missing — server returns `executed:false`; the UI headline still says "Confirmed" | `src/server/draft-order-route.ts:263`, `draft-order-builder.tsx:162` |
 | Strategy templates (vertical, condor…) | missing — copy says "a vertical spread is two, an iron condor is four" | `draft-order-builder.tsx:213` |
 | **See open / pending orders** | missing in the shell — #674's panel (PR #696) targets the legacy observatory and is dead code | `src/observatory/open-orders-view.ts` (only its spec imports it) |
 | **Cancel an order** | missing — `cancelOrder` exists with zero callers; no route | `src/alpaca/alpaca-trading-client.ts:182` |
@@ -829,7 +829,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Cancel an order | Cancel/Replace flow, swipe gestures [R13][R34] | Attempt to Cancel → Verified Canceled [F18] | Right-click cancel, batch cancel [T-TTA] | **missing**; `cancelOrder` has zero callers (`alpaca-trading-client.ts:182`) | build (P1) | cancel route behind `verifyOwnAccount` + an audit line |
 | Modify / replace an order | Replace (limit/stop, same type); drag pill [R13][R63] | Change order = cancel-and-replace [F20] | Cancel/replace reopens the ticket; drag on the ladder [T-TTA][T-ATE] | **missing** everywhere | build (P1b) | Alpaca `PATCH /v2/orders/{id}` issues a new id — ledger must map replaced ids (`activity-store.ts`) |
 | Pending state in the domain | pending · partially filled · queued [R13] | open · pending · partially filled [F19] | 20-state vocabulary [T-OS] | `OrderStatus = filled \| rejected` (`src/domain/types.ts`); adapter treats accepted as filled | build (P1) | widen the union; unwind `AlpacaBrokerAdapter`'s optimism |
-| Submit a multi-leg spread | Multi-leg since 2018; ≤4 legs on Legend [R69][R63] | ≤4 legs net basis [F29][F38] | Spread menu; Analyze → send [T-VS] | **partial** — previews, then `executed:false` (`draft-order-route.ts:281-285`) | build (P3) — and the trust defect below first | `mleg` order class; options level 3 on the paper account; ladder/collateral gates for spreads |
+| Submit a multi-leg spread | Multi-leg since 2018; ≤4 legs on Legend [R69][R63] | ≤4 legs net basis [F29][F38] | Spread menu; Analyze → send [T-VS] | **partial** — previews, then `executed:false` (`draft-order-route.ts:263`) | build (P3) — and the trust defect below first | `mleg` order class; options level 3 on the paper account; ladder/collateral gates for spreads |
 | Close on a limit | Sell ticket = full ticket [R10] | Sell from the row prefills a limit at bid [F38] | Closing order via Order Entry [T-PS] | **missing** — closes are market-only (`blotter-row.tsx:321-327`, `option-ticket.ts:243`) | build (P1) | pass `orderType` through the close path |
 
 ### Tier 2 — erodes trust
@@ -838,7 +838,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 |---|---|---|---|---|---|---|
 | "Confirmed" shown for an order never sent | — | — | — | `draft-order-builder.tsx:162` headline on `executed:false` | fix (P0, one line) | none |
 | Time in force shown | GFD / GTC visible [R1][R6] | Sheet with 5 options + learn link [F1] | TIF dropdown [T-OET] | **missing** — hard-coded server-side (`alpaca-trading-client.ts:221`) | build (P1) | expose Day / GTC on the ticket; pass through |
-| Greeks / bid absent with no reason | Every metric labelled "theoretical" [R36] | — | — | "—" with no provenance; `$0.00` bid dropped (`alpaca-options-client.ts:101-104`) | fix (P2) | per-row coverage reason; `num()` accepts zero |
+| Greeks / bid absent with no reason | Every metric labelled "theoretical" [R36] | — | — | "—" with no provenance; `$0.00` bid dropped (`alpaca-options-client.ts:106-109`) | fix (P2) | per-row coverage reason; `num()` accepts zero |
 | Order status on a phone | Pending list is phone-first [R13] | Activity › Orders [F42] | mobile Account History [T-APPSTORE] | Status column `col-detail`, hidden < 1100px (`activity-table.tsx:33`) | fix (P0) | none |
 | As-of stamp | NBBO on trade-entry screens [R16] | "As of 10:04:20 AM ET" [F-frames 9] | — | quote header makes no freshness claim (`quote-header.tsx:16-19`) | build (P0) | the quote response already carries a timestamp |
 | Honest cancel/status vocabulary | pending · partially filled · queued | Attempt to cancel · Verified canceled | Working · Replacing · TLTC · U R OUT | none surfaced | build (P1) | map Alpaca statuses; never invent one |
@@ -899,6 +899,74 @@ Five per reference, plus the two that bind the whole study.
 - **paperMoney** — practice as the same UI one switch away, with a reset control and a stated fiction (tos).
 - **Trigger variable** — what a reward mechanic actually rewards; safe iff it is not trade count (the ledger's hinge, from Tierney and the Massachusetts order).
 - **Transfer** — whether a habit learned on paper survives contact with real capital: builds · neutral · must-unlearn ⇒ skip.
+
+---
+
+## 6. Scenario navigator — the study as a queryable model
+
+Eric, 2026-09-21: "I'd expect the research to be able to answer questions / navigate a multiple of
+combination/permutations of mock scenarios." A flat inventory answers *does X exist*; a designer
+drawing a frame needs *what happens when* — per reference, per our code — for any combination. So
+the study is compiled into a dimension model (`docs/design/scenario-navigator/scenarios.json`) and a
+page that composes an answer for any permutation (`docs/design/scenario-navigator/index.html`;
+published as the private artifact *Trading Scenario Navigator*). Every fact in the model cites a row
+of §1–§4 or reads `not-shown`; nothing is invented, and a combination the study cannot answer says so.
+
+### The dimensions
+
+| Dimension | Values | Notes |
+|---|---|---|
+| instrument | stock · call · put · vertical spread · iron condor | 5 |
+| action | buy / open long · sell to open (cash-secured put, covered call) · sell / close · buy to close · roll · exercise · assignment | 7; stock × roll / exercise / assignment are not real scenarios |
+| order type | market · limit · stop · stop-limit · trailing stop · bracket / OCO | 6 |
+| time in force | day · GTC · IOC / FOK · extended session (AM / PM / 24 h) | 4 |
+| lifecycle stage | draft · review · submitted / accepted · working · partially filled · filled · modify / replace · cancel · rejected · expired · assigned / exercised | 11 |
+| device | phone · desktop | 2 |
+| ladder | rung unlocked · rung locked | ours; references map to approval levels |
+
+7 dimensions → **36,960 permutations, 33,408 real scenarios**. Each dimension value carries a fact per
+reference (Robinhood · Fidelity · thinkorswim) and for Skynet today (with a `file:line` and a status);
+**65 override rules** replace the default where a combination breaks it (Robinhood: trailing stops on
+stocks only, market on options single-leg 9:35–4 only, replace only for limit/stop of the same type,
+no brackets; Fidelity: options trailing stops in $ only, no on-the-close for options, extended hours
+limit-only with no GTC; thinkorswim: market is DAY only, MOC/LOC before 3:45, Walk Limit options only,
+overnight TIFs ≤ 6 months, spreads need margin; Skynet: TIF forced market→day and limit/stop→GTC,
+closes market-only, no replace, no pending state, multi-leg `executed:false`, zero-DTE gated by 501,
+the sell side never locked, ≤ 20 expirations, `$0.00` bids dropped, no extended hours, no fractional).
+
+### Coverage — what the research can answer today
+
+| Reference | Scenarios answered with no `not-shown` line | Where it is thin |
+|---|---|---|
+| Robinhood | 25,056 / 33,408 (75.0%) | IOC / FOK on stocks and options; "buy to close" wording; partial-fill vocabulary; a condor in the Strategy Builder; the short-selling ticket (announced only) |
+| Fidelity | 16,608 (49.7%) | how an assignment surfaces; Rejected / Expired labels; how an exercised position renders; brackets on mobile and for options; which five TIFs the mobile sheet lists; the phone roll ticket (claimed, not framed) |
+| thinkorswim | 13,792 (41.3%) | mobile working orders / cancel / replace / partial fills (no text manual); mobile roll; options in the extended session; IOC / FOK; the exact spread menu; an in-platform exercise menu |
+| Skynet today | 33,408 (100%) — the audit read code | worst status per scenario: **missing 98.4%** · partial 1.4% · skip-by-design 0.2%; the stage and TIF dimensions dominate (working, cancel, modify, partial, expired, extended, IOC are all missing) |
+
+The thin cells are the research follow-ups; Eric's redacted frames of Robinhood or thinkorswim would
+upgrade the largest ones (mobile order management, brackets, assignment surfacing) from `doc-inferred`
+or `not-shown` to `frame` in one pass.
+
+### Worked scenarios (five of the ten hard cases the page was verified against)
+
+| Scenario | Robinhood | Fidelity | thinkorswim | Skynet today | Rendered in |
+|---|---|---|---|---|---|
+| Phone · rung locked · **working limit order to roll an iron condor**, GTC | Level 3 needed, cash accounts can't; roll not offered on cash accounts [R31][R33][R41] | GTC 180 d; Tier 2 for spreads; mobile "can roll" but the phone roll ticket was not framed [F1][F12][F7] | Spreads permission red with an apply link; margin account; mobile order management and roll **not shown** [T-ACCT][T-SR] | no such stage — submit is dead (`executed:false`) under a "Confirmed" headline; 401 gates the builder (missing) | composes from lo-fi journeys 5 + 10 |
+| Desktop · **modify a working trailing stop** to buy a stock, extended session | not replaceable (only limit/stop, same type); stops don't execute outside RTH [R13][R6] | not allowed — extended hours are limit only; replace is quantity-only after hours [F20][F47] | trailing by $ / % / tick; EXT / AM / PM TIFs; cancel/replace reopens the ticket [T-OET][T-TSL][T-OT] | trailing stop not modelled; no extended hours; no replace (missing) | journey 7 |
+| Phone · **assigned on a short put** | exercise from the position with a "reasons not to exercise" review; auto-exercise ≥ $0.01; closed bucket "assigned" [R42][R49] | by phone before 4:15 PM; how the assigned position renders **not shown** [F26] | DNE is a support request; Trade Price = strike, Cost = strike ± premium [T-EXA][T-FAQG] | OPASN ingested server-side, nothing renders it (missing; `option-lifecycle.ts`) | journey 10 |
+| Phone · **submit a market order to buy a call, GTC** | market on a single-leg option only 9:35–4, blocked on low OI [R45] | Market in the sheet; GTC 180 d | not allowed — market is DAY only [T-OET] | cannot be chosen — market is always sent as day and the TIF never shown; accepted is treated as filled (missing / partial) | **not rendered** — the submitted stage with a market order falls between journeys 4 and 5 (a journey-map gap, noted on #3407) |
+| Phone · rung unlocked · **cancel a working IOC limit to sell a stock short** | IOC / FOK **not shown**; short selling announced 2025-09-10, ticket undocumented [R1][R68] | short / cover is a desktop dropdown, margin only; phone **not shown** [F38] | mobile order management, shorting rules and IOC / FOK all **not shown** | TIF forced; "this desk never shorts" (skip by design; `progression.ts:14`) | journey 6 |
+
+### What the model changed in the study
+
+- Two cited lines had drifted on this branch and are corrected above: `draft-order-route.ts:263`
+  (`executed: false`) and `alpaca-options-client.ts:106-109` (`num()` requires `> 0`).
+- Three facts the brief hinted at are **not** in §1 and were left out of the model on the never-invent
+  rule (Fidelity "GTC not for shorts" and "a dollar-limit is valid one day"; Robinhood "fractional
+  orders cancel-only"); if they belong they get a §1 row first.
+- The Skynet headline status (`missing` for 98.4% of scenarios) is honest but blunt: the per-line
+  statuses in the card are the useful read, and the number is what the parity plan's P1 (stage and
+  TIF) is for.
 
 ---
 
