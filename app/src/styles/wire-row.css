@@ -5,9 +5,10 @@
  * tokens rather than redefining them. Real names always (consent doctrine, see `wire-row.tsx`'s
  * header comment) — there's no anonymizing treatment to style here.
  */
+/* No max-width: these panels live inside `.gate-panel`, which is capped at `--col-read`, so a
+   `--col-wide` here was inert (#3407 P0, study §3.2 item 9) — the panel is as wide as its ticket. */
 .wr-panel {
-  margin: 12px 0 0;
-  max-width: var(--col-wide);
+  margin: var(--space-3) 0 0;
 }
 .wr-h {
   margin: 0 0 6px;
