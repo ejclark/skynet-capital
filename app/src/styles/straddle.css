@@ -139,6 +139,14 @@
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   color: var(--accent);
 }
+/* A strike the multi-leg draft already carries a leg on (#3407 P3 slice 2) — an outline plus
+   weight on the strike, never a hue alone (a standing reader is red/green colourblind), and
+   distinct from `.straddle-selected` (the single-leg ticket's one strike). */
+.straddle-marked .straddle-strike {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 6px;
+}
 /* A call/put price cell's own pick button (#2017 Phase 0 task 4e) — distinct from `.straddle-pick`
    (the strike button), which carries active/selected styling that doesn't apply here: a call/put
    pick has no "selected" state of its own, only a hover affordance. */

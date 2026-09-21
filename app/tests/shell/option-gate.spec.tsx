@@ -282,7 +282,7 @@ describe("OptionGate — chain cell picking", () => {
 
     // Both bid and ask cells for a strike/side share the same aria-label — click the bid cell.
     // findAllByRole throws (rather than returning []) when nothing matches, so index 0 is safe.
-    const callCells = await screen.findAllByRole("button", { name: "Pick the 180 call" });
+    const callCells = await screen.findAllByRole("button", { name: /^Pick the 180 call/ });
     fireEvent.click(callCells[0] as HTMLElement);
 
     expect(presets).toEqual([]);
@@ -300,7 +300,7 @@ describe("OptionGate — chain cell picking", () => {
       }),
     );
 
-    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    const putCells = await screen.findAllByRole("button", { name: /^Pick the 180 put/ });
     fireEvent.click(putCells[0] as HTMLElement);
 
     expect(committedStrikes).toEqual(["180"]);
@@ -318,7 +318,7 @@ describe("OptionGate — chain cell picking", () => {
       }),
     );
 
-    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    const putCells = await screen.findAllByRole("button", { name: /^Pick the 180 put/ });
     fireEvent.click(putCells[0] as HTMLElement);
 
     // Safety-critical: a chain click must never open a rung the member hasn't earned. Locked
@@ -340,7 +340,7 @@ describe("OptionGate — chain cell picking", () => {
       }),
     );
 
-    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    const putCells = await screen.findAllByRole("button", { name: /^Pick the 180 put/ });
     fireEvent.click(putCells[0] as HTMLElement);
 
     // A lookup miss must never read as "unlocked, go ahead" — the old fail-open bug (a missing
@@ -367,7 +367,7 @@ describe("OptionGate — locked-pick note", () => {
     // absent, the handler degrades to same-rung behavior for every click (no lock lookup happens).
     render(renderChainPickGate({ plays: playsWithLockedTarget, onPreset: () => undefined }));
 
-    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    const putCells = await screen.findAllByRole("button", { name: /^Pick the 180 put/ });
     fireEvent.click(putCells[0] as HTMLElement);
 
     await waitFor(() =>
@@ -380,7 +380,7 @@ describe("OptionGate — locked-pick note", () => {
   it("clears the note on a subsequent unrelated edit", async () => {
     render(renderChainPickGate({ plays: playsWithLockedTarget, onPreset: () => undefined }));
 
-    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    const putCells = await screen.findAllByRole("button", { name: /^Pick the 180 put/ });
     fireEvent.click(putCells[0] as HTMLElement);
     await waitFor(() =>
       expect(

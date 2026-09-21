@@ -520,6 +520,7 @@ const draftSent = {
   note: "Order 7c1e2b9a-mleg accepted — one net limit, filled together or not at all. Working orders picks it up on the next read.",
 };
 const draftScript = [
+  { draft: { phase: "drafting", legs: spreadLegs.slice(0, 1), refusals: [], nextLegId: 2 } },
   spreadDraft("drafting"),
   spreadDraft("validated", { verdict: spreadVerdict }),
   spreadDraft("reviewed", { verdict: spreadVerdict }),
@@ -746,14 +747,23 @@ await shoot("trade-spread-open-phone");
 // own echo: "Confirmed", the order id and status, and the note that hands off to Working
 // orders. Before this slice the same click read "Reviewed — not sent" — the P0 honesty fix —
 // because no execution path existed. PHONE FIRST.
-// The stub answers the whole two-leg draft on the first add, so the typed leg only has to be
-// addable: commit the symbol, wait for the chain to turn the strike into a <select>, pick one.
+// THE CHAIN IS THE LEG PICKER (#3407 P3 slice 2): commit the symbol, wait for the straddle,
+// tap the 180 call's Bid (a sell leg, the stub answers one leg) — that frame is the picker with
+// its marked strike — then the 182.5 call's Ask (the stub answers the whole two-leg draft).
 await page.getByLabel("Underlying").fill("NVDA");
 await page.getByLabel("Underlying").press("Enter");
-const strikePick = page.getByRole("combobox", { name: "Strike", exact: true });
-await strikePick.waitFor();
-await strikePick.selectOption({ index: 1 });
-await page.getByRole("button", { name: "Add leg" }).click();
+await page.getByRole("button", { name: "Pick the 180 call bid" }).click();
+await page.getByText("Sell 2 NVDA $180C").waitFor();
+await page.getByText("Tap a").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootChainPicker = shooter(page, resolve("docs/shots/chain-picker"));
+await shootChainPicker("chain-picker-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Tap a").scrollIntoViewIfNeeded();
+await shootChainPicker("chain-picker-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("button", { name: "Pick the 182.5 call ask" }).click();
+await page.getByText("Buy 2 NVDA $200C").waitFor();
 await page.getByRole("button", { name: "Validate against account" }).click();
 await page.getByRole("button", { name: "Review order" }).click();
 await page.getByText("Reviewed — ready to confirm").waitFor();
