@@ -138,11 +138,18 @@ function parseCloseBody(
   const contracts = body.contracts;
   if (contracts !== undefined && !(typeof contracts === "number" && Number.isFinite(contracts)))
     return undefined;
+  // A limit close (#3407 P1 slice 3): only the two named types pass; anything else is dropped
+  // and the preview then says "market", never coerced. The price is validated by the rules.
+  const orderType =
+    body.orderType === "limit" || body.orderType === "market" ? body.orderType : undefined;
+  const limitPrice = posFinite(body.limitPrice);
   return {
     kind: "close",
     participantId,
     occSymbol: occSymbol.trim().toUpperCase(),
     ...(contracts !== undefined ? { contracts } : {}),
+    ...(orderType ? { orderType } : {}),
+    ...(limitPrice !== undefined ? { limitPrice } : {}),
   };
 }
 
@@ -216,7 +223,10 @@ async function reviewOption(
     // cash/position figures already sit on every desk's positions tab behind the invite gate.
     const closeContext = isSelf ? base : { ...base, positions: [] };
     sendJson(res, 200, {
-      preview: previewOptionClose(request.occSymbol, closeContext, request.contracts),
+      preview: previewOptionClose(request.occSymbol, closeContext, request.contracts, {
+        ...(request.orderType ? { orderType: request.orderType } : {}),
+        ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+      }),
     });
     return;
   }

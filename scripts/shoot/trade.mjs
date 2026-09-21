@@ -386,13 +386,43 @@ const workingOrders = {
   ],
 };
 let currentOrders = noOrders;
+// Limit close (#3407 P1 slice 3): one held long put so the option positions card renders with
+// its Market / Limit choice. Every other scene keeps the empty desk.
+const deskWithOption = {
+  ...desk,
+  desk: {
+    ...desk.desk,
+    positions: [
+      {
+        symbol: "MSFT260918P00420000",
+        display: "MSFT $420 put · Sep 18",
+        detail: "2 contracts",
+        isOption: true,
+        quantity: "2",
+        costPerShare: "$10.70",
+        price: "$12.00",
+        costBasis: "$2,140.00",
+        value: "$2,400.00",
+        dayPl: "+$60.00",
+        dayPct: "+2.5%",
+        dayTone: "pos",
+        totalPl: "+$260.00",
+        totalPlRaw: 260,
+        returnPct: "+12.1%",
+        totalTone: "pos",
+        weightPct: 3,
+      },
+    ],
+  },
+};
+let currentDesk = desk;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
   stubs: {
     "/api/trade/plays": () => currentPlays,
     "/api/settings": settings,
-    "/api/desk/*": desk,
+    "/api/desk/*": () => currentDesk,
     // Exact key beats the `/api/desk/*` prefix above (`lib.mjs`'s `stubBody`) — every fixture in
     // this script logs in as the same "human-eric" account (`settings.accounts[0].id`).
     "/api/desk/human-eric/activity": recentOrdersActivity,
@@ -670,5 +700,22 @@ await page.getByRole("button", { name: "Confirm cancel" }).waitFor();
 await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
 await shootWorkingOrders("working-orders-cancel-armed-phone");
 currentOrders = noOrders;
+
+// Limit close (#3407 P1 slice 3) — the option positions card under the ticket with Limit
+// pressed and a premium typed, then the reviewed confirm line naming the limit. Phone first.
+currentPlays = plays;
+currentDesk = deskWithOption;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByRole("heading", { name: "Option positions" }).waitFor();
+await page.getByRole("button", { name: "Limit" }).click();
+await page.getByLabel("Limit price per share").fill("13.50");
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+const shootLimitClose = shooter(page, resolve("docs/shots/limit-close"));
+await shootLimitClose("limit-close-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+await shootLimitClose("limit-close-desktop");
+currentDesk = desk;
 
 await close();

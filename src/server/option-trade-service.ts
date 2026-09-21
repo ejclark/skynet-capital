@@ -44,6 +44,9 @@ export type DeskOptionRequest =
       readonly participantId: string;
       readonly occSymbol: string;
       readonly contracts?: number;
+      /** Market when absent (today's behavior); a limit close carries its premium (#3407 P1). */
+      readonly orderType?: "limit" | "market";
+      readonly limitPrice?: number;
     };
 
 type DeskOptionResult = DeskSubmitResult;
@@ -134,7 +137,10 @@ async function reviewClose(
   client: AlpacaTradingClient,
 ): Promise<{ preview: OptionTicketPreview } | { refusals: string[] }> {
   const context = await liveContext(client, {});
-  const preview = previewOptionClose(request.occSymbol, context, request.contracts);
+  const preview = previewOptionClose(request.occSymbol, context, request.contracts, {
+    ...(request.orderType ? { orderType: request.orderType } : {}),
+    ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+  });
   return preview.ok ? { preview } : { refusals: preview.refusals };
 }
 

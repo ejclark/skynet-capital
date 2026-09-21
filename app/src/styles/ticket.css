@@ -288,3 +288,22 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+/* The close row's Market / Limit choice (#3407 P1 slice 3): the shell's toggle-group plus a
+   narrow premium field that only appears on Limit; wraps under the name at phone width. */
+.tkt-close-how {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* a fieldset for the a11y semantics; its own chrome is reset so it reads as the toggle pill */
+.tkt-close-type {
+  margin: 0;
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.tkt-close-price input {
+  width: 96px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
