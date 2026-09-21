@@ -17,6 +17,7 @@ import { GateAction, type OptionGateState, OptionGateStatus } from "./option-pre
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
+import { TimeInForceField } from "./tif-field";
 import { WireRow } from "./wire-row";
 
 /**
@@ -117,6 +118,8 @@ export function OptionGate({
   const [contracts, setContracts] = useState("1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
+  /** Day unless picked (#3407 P1 slice 4) — the server previews the default it will send. */
+  const [timeInForce, setTimeInForce] = useState<"day" | "gtc" | undefined>();
   const [state, setState] = useState<OptionGateState>({ step: "draft" });
   /** A locked-target chain-cell click fills strike but can't switch rungs (safety-critical, see the
    *  header comment) — this is the visible explanation the house rule requires ("Locked = visible,
@@ -230,6 +233,7 @@ export function OptionGate({
     expiration: chainData?.expiration ?? expiration,
     orderType,
     ...(orderType === "limit" && limitPrice !== "" ? { limitPrice: Number(limitPrice) } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   });
 
   const review = async () => {
@@ -368,6 +372,7 @@ export function OptionGate({
       ) : null}
       {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
+      <TimeInForceField fallback="day" value={timeInForce} onChange={edit(setTimeInForce)} />
 
       {/* Self, then others (#2017 Phase 1 slice 13 review fix): the drawer-narrative order Eric's
           plan comment sketched — "here's what you've done, here's what others are doing, now

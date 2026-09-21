@@ -112,6 +112,13 @@ describe("serveOptionApi review", () => {
     expect(text).not.toContain("Training wheels");
   });
 
+  it("passes day / gtc through on an open and drops anything else (#3407 P1 slice 4)", async () => {
+    const gtc = await review({ ...openPut(), timeInForce: "gtc" }, config());
+    expect(gtc.parsed.preview.timeInForce).toBe("gtc");
+    const odd = await review({ ...openPut(), timeInForce: "ioc" }, config());
+    expect(odd.parsed.preview.timeInForce).toBe("day");
+  });
+
   it("carries a limit close's type and price into the preview, dropping any other type (#3407)", async () => {
     const cfg = config({
       hub: {

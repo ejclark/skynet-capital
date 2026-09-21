@@ -344,6 +344,18 @@ describe("AlpacaOptionsClient", () => {
     });
     expect(log[1]?.body).not.toHaveProperty("limit_price");
     expect(log[1]?.body).toMatchObject({ time_in_force: "day" });
+
+    // A member's own GTC passes through verbatim (#3407 P1 slice 4); the default stays day.
+    await client.placeOptionOrder({
+      occSymbol: "MSFT260918P00420000",
+      contracts: 1,
+      side: "sell",
+      type: "limit",
+      limitPrice: 10.7,
+      positionIntent: "sell_to_open",
+      timeInForce: "gtc",
+    });
+    expect(log[2]?.body).toMatchObject({ time_in_force: "gtc" });
   });
 
   it("underlying price fails soft with no data transport and on error", async () => {

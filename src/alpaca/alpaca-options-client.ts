@@ -101,6 +101,8 @@ export interface PlaceOptionOrderParams {
   /** Premium per share; required by Alpaca for limit orders. */
   readonly limitPrice?: number;
   readonly positionIntent: "buy_to_open" | "sell_to_open" | "buy_to_close" | "sell_to_close";
+  /** Alpaca accepts `day` or `gtc` for options; omit and the standing `day` is sent (#3407). */
+  readonly timeInForce?: "day" | "gtc";
 }
 
 const num = (value: unknown): number | undefined => {
@@ -367,7 +369,7 @@ export class AlpacaOptionsClient {
       side: params.side,
       type: params.type,
       ...(params.type === "limit" ? { limit_price: params.limitPrice } : {}),
-      time_in_force: "day",
+      time_in_force: params.timeInForce ?? "day",
       position_intent: params.positionIntent,
     });
     return ensureOk<AlpacaOrder>(response);

@@ -6,6 +6,7 @@ import {
   type OptionPlayCode,
   type OptionTicketContext,
   type OptionTicketPreview,
+  type OptionTimeInForce,
   previewOptionClose,
   previewOptionOrder,
 } from "../trading/option-ticket.js";
@@ -38,6 +39,7 @@ export type DeskOptionRequest =
       readonly expiration: string;
       readonly orderType: "limit" | "market";
       readonly limitPrice?: number;
+      readonly timeInForce?: OptionTimeInForce;
     }
   | {
       readonly kind: "close";
@@ -47,6 +49,7 @@ export type DeskOptionRequest =
       /** Market when absent (today's behavior); a limit close carries its premium (#3407 P1). */
       readonly orderType?: "limit" | "market";
       readonly limitPrice?: number;
+      readonly timeInForce?: OptionTimeInForce;
     };
 
 type DeskOptionResult = DeskSubmitResult;
@@ -140,6 +143,7 @@ async function reviewClose(
   const preview = previewOptionClose(request.occSymbol, context, request.contracts, {
     ...(request.orderType ? { orderType: request.orderType } : {}),
     ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+    ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
   });
   return preview.ok ? { preview } : { refusals: preview.refusals };
 }
@@ -172,6 +176,7 @@ export function createOptionTradeService(deps: OptionTradeServiceDeps): SubmitOp
           type: preview.orderType,
           ...(preview.orderType === "limit" ? { limitPrice: preview.limitPrice } : {}),
           positionIntent: preview.positionIntent,
+          timeInForce: preview.timeInForce,
         }),
       access.participant,
       deps,
