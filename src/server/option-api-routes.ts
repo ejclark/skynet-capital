@@ -6,6 +6,9 @@ import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { impliedVolatility } from "../options/pricing.js";
+import { daysToExpiryFrom } from "../options/single-leg-odds.js";
+import type { OptionPreviewGreeks } from "../trading/option-economics.js";
 import {
   type OptionPlayCode,
   previewOptionClose,
@@ -39,7 +42,14 @@ async function reviewEstimates(
   expiration: string,
   type: "call" | "put",
   strike: number,
-): Promise<{ premium?: number; spot?: number }> {
+  now: Date,
+): Promise<{
+  premium?: number;
+  spot?: number;
+  greeks?: OptionPreviewGreeks;
+  impliedVol?: number;
+  daysToExpiry?: number;
+}> {
   if (!client) return {};
   try {
     const [chain, spot] = await Promise.all([
@@ -48,13 +58,35 @@ async function reviewEstimates(
     ]);
     const row = chain.find((r: OptionChainRow) => r.strike === strike);
     const premium = row ? rowPremium(row) : undefined;
+    // The order screen's greeks, IV and odds (#3407 P2 slice 2): greeks echoed from the row the
+    // feed quoted; IV solved from the mid the member is about to trade at; days from the clock.
+    const greeks = row ? quotedGreeks(row) : undefined;
+    const daysToExpiry = daysToExpiryFrom(expiration, now);
+    const impliedVol =
+      premium !== undefined && spot !== undefined && daysToExpiry !== undefined
+        ? impliedVolatility({ spot, strike, daysToExpiry, type, marketPrice: premium })
+        : undefined;
     return {
       ...(premium !== undefined ? { premium } : {}),
       ...(spot !== undefined ? { spot } : {}),
+      ...(greeks ? { greeks } : {}),
+      ...(impliedVol !== undefined ? { impliedVol } : {}),
+      ...(daysToExpiry !== undefined ? { daysToExpiry } : {}),
     };
   } catch {
     return {};
   }
+}
+
+/** The four greeks a row carries, or nothing when the feed quoted none of them. */
+function quotedGreeks(row: OptionChainRow): OptionPreviewGreeks | undefined {
+  const greeks: OptionPreviewGreeks = {
+    ...(row.delta !== undefined ? { delta: row.delta } : {}),
+    ...(row.gamma !== undefined ? { gamma: row.gamma } : {}),
+    ...(row.theta !== undefined ? { theta: row.theta } : {}),
+    ...(row.vega !== undefined ? { vega: row.vega } : {}),
+  };
+  return Object.keys(greeks).length > 0 ? greeks : undefined;
 }
 
 /**
@@ -259,12 +291,16 @@ async function reviewOption(
     request.expiration,
     play?.optionType ?? "call",
     request.strike,
+    config.now?.() ?? new Date(),
   );
   sendJson(res, 200, {
     preview: previewOptionOrder(request, {
       ...base,
       ...(estimates.premium !== undefined ? { premium: estimates.premium } : {}),
       ...(estimates.spot !== undefined ? { underlyingPrice: estimates.spot } : {}),
+      ...(estimates.greeks ? { greeks: estimates.greeks } : {}),
+      ...(estimates.impliedVol !== undefined ? { impliedVol: estimates.impliedVol } : {}),
+      ...(estimates.daysToExpiry !== undefined ? { daysToExpiry: estimates.daysToExpiry } : {}),
     }),
   });
 }

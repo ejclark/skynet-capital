@@ -54,6 +54,21 @@ export interface OptionTicketContext {
    *  execution-time re-check (`option-trade-service.ts`'s `liveContext`), which reads the live
    *  account on every submit — same treatment as cash and held-shares affordability. */
   readonly optionsTradingLevel?: number;
+  /** The contract's quoted greeks, when the feed had them (#3407 P2 slice 2) — echoed, never
+   *  computed here. */
+  readonly greeks?: OptionPreviewGreeks;
+  /** Annualized IV solved from the contract's mid, when a no-arbitrage solution exists. */
+  readonly impliedVol?: number;
+  /** Calendar days to the contract's expiry, for the odds. */
+  readonly daysToExpiry?: number;
+}
+
+/** The four greeks the order screen shows; each present only when the feed quoted it. */
+export interface OptionPreviewGreeks {
+  readonly delta?: number;
+  readonly gamma?: number;
+  readonly theta?: number;
+  readonly vega?: number;
 }
 
 /**
@@ -94,6 +109,14 @@ export interface OptionTicketPreview {
   readonly maxProfit?: number | "uncapped";
   readonly maxLoss?: number;
   readonly breakeven?: number;
+  /** The contract's quoted greeks, when the feed had them (#3407 P2 slice 2). */
+  readonly greeks?: OptionPreviewGreeks;
+  /** Annualized IV from the mid, as a decimal. */
+  readonly impliedVol?: number;
+  /** P(finishes profitable at expiry), 0..1 — never shown without `expectedValue` beside it. */
+  readonly chanceOfProfit?: number;
+  /** Expected P/L at expiry for the whole order, dollars (can be negative). */
+  readonly expectedValue?: number;
   readonly refusals: string[];
   readonly warnings: string[];
 }

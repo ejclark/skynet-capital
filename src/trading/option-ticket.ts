@@ -1,4 +1,5 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
+import { singleLegOdds } from "../options/single-leg-odds.js";
 import {
   DEFAULT_OPTION_TIF,
   OPTION_PLAY_LEVEL,
@@ -180,9 +181,41 @@ export function previewOptionOrder(
     ...(refusals.length === 0
       ? payoff(request.code, request.strike, estPremium, context.underlyingPrice, scale)
       : {}),
+    ...(context.greeks ? { greeks: context.greeks } : {}),
+    ...(context.impliedVol !== undefined ? { impliedVol: context.impliedVol } : {}),
+    ...(refusals.length === 0 ? oddsFor(request, context, estPremium, scale) : {}),
     refusals,
     warnings,
   };
+}
+
+/** Chance of profit and expected value for the order (#3407 P2 slice 2) — only when every input
+ *  is a real number; a missing IV or spot means no odds, never a guessed one. */
+function oddsFor(
+  request: OptionTicketRequest,
+  context: OptionTicketContext,
+  premium: number | undefined,
+  scale: number,
+): Pick<OptionTicketPreview, "chanceOfProfit" | "expectedValue"> {
+  if (
+    premium === undefined ||
+    context.underlyingPrice === undefined ||
+    context.impliedVol === undefined ||
+    context.daysToExpiry === undefined
+  ) {
+    return {};
+  }
+  const odds = singleLegOdds({
+    code: request.code,
+    strike: request.strike,
+    premium,
+    spot: context.underlyingPrice,
+    daysToExpiry: context.daysToExpiry,
+    volatility: context.impliedVol,
+  });
+  return odds
+    ? { chanceOfProfit: odds.chanceOfProfit, expectedValue: odds.expectedValuePerShare * scale }
+    : {};
 }
 
 /**

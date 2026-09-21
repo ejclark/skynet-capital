@@ -89,6 +89,35 @@ describe("serveOptionApi review", () => {
     expect(parsed.preview.breakeven).toBe(38);
   });
 
+  it("puts the feed's greeks, the IV from the mid and the odds on the review (#3407 P2 slice 2)", async () => {
+    const cfg = config({
+      now: () => new Date("2026-08-19T14:00:00Z"),
+      optionsClientFor: () => ({
+        getChain: () =>
+          Promise.resolve([
+            {
+              occSymbol: "NVDA260918P00040000",
+              strike: 40,
+              bid: 1.9,
+              ask: 2.1,
+              delta: -0.35,
+              gamma: 0.04,
+              theta: -0.03,
+              vega: 0.05,
+            },
+          ]),
+        getUnderlyingPrice: () => Promise.resolve(42),
+      }),
+    });
+    const { parsed } = await review(openPut(), cfg);
+    expect(parsed.preview.ok).toBe(true);
+    expect(parsed.preview.greeks).toEqual({ delta: -0.35, gamma: 0.04, theta: -0.03, vega: 0.05 });
+    expect(parsed.preview.impliedVol).toBeGreaterThan(0.05);
+    expect(parsed.preview.chanceOfProfit).toBeGreaterThan(0);
+    expect(parsed.preview.chanceOfProfit).toBeLessThan(1);
+    expect(typeof parsed.preview.expectedValue).toBe("number");
+  });
+
   it("prepends the ladder refusal for a locked play and never asks the broker", async () => {
     const cfg = config({
       ...wheelsOn,

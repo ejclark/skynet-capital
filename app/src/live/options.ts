@@ -106,6 +106,17 @@ export interface OptionPreview {
   readonly maxProfit?: number | "uncapped";
   readonly maxLoss?: number;
   readonly breakeven?: number;
+  /** The order screen's decision inputs (#3407 P2 slice 2) — each absent when the feed or the
+   *  solver had no honest number, never zero. */
+  readonly greeks?: {
+    readonly delta?: number;
+    readonly gamma?: number;
+    readonly theta?: number;
+    readonly vega?: number;
+  };
+  readonly impliedVol?: number;
+  readonly chanceOfProfit?: number;
+  readonly expectedValue?: number;
   readonly refusals: readonly string[];
   readonly warnings: readonly string[];
 }

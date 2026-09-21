@@ -142,6 +142,43 @@ describe("previewOptionOrder — the discipline rules", () => {
   });
 });
 
+describe("odds and greeks on the order screen (#3407 P2 slice 2)", () => {
+  it("carries the feed's greeks and the solved IV through, and the odds when every input is real", () => {
+    const preview = previewOptionOrder(
+      csp,
+      context({
+        underlyingPrice: 428.6,
+        greeks: { delta: -0.42, theta: -0.19 },
+        impliedVol: 0.31,
+        daysToExpiry: 30,
+      }),
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.greeks).toEqual({ delta: -0.42, theta: -0.19 });
+    expect(preview.impliedVol).toBe(0.31);
+    expect(preview.chanceOfProfit).toBeGreaterThan(0.5);
+    expect(preview.chanceOfProfit).toBeLessThan(1);
+    expect(typeof preview.expectedValue).toBe("number");
+  });
+
+  it("prints no odds without an IV, a spot or a clock — never a guessed number", () => {
+    const noIv = previewOptionOrder(csp, context({ underlyingPrice: 428.6, daysToExpiry: 30 }));
+    expect(noIv.chanceOfProfit).toBeUndefined();
+    expect(noIv.expectedValue).toBeUndefined();
+    const noSpot = previewOptionOrder(csp, context({ impliedVol: 0.3, daysToExpiry: 30 }));
+    expect(noSpot.chanceOfProfit).toBeUndefined();
+  });
+
+  it("prints no odds on a refused order", () => {
+    const refused = previewOptionOrder(
+      csp,
+      context({ cash: 1, underlyingPrice: 428.6, impliedVol: 0.3, daysToExpiry: 30 }),
+    );
+    expect(refused.ok).toBe(false);
+    expect(refused.chanceOfProfit).toBeUndefined();
+  });
+});
+
 describe("time in force on option orders (#3407 P1 slice 4)", () => {
   it("always states the TIF it will send — day unless the member picked gtc", () => {
     expect(previewOptionOrder(csp, context()).timeInForce).toBe("day");
