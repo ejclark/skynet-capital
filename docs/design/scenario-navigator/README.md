@@ -23,3 +23,5 @@ from this folder. Every `src` must resolve to a row in the study — nothing her
 **The rule.** A combination the study cannot answer must say so: write the cell as `not-shown` with
 `prov: "not-shown"` and name where the study looked. The Coverage panel counts these; each one is a
 research follow-up, never a guess. Journeys are derived from #3407's flow (the issue lists no ten).
+
+Published: https://claude.ai/artifact/96z65tUsjuyhrQgpDbLofZ (private; republish from `index.html` with the document wrapper stripped).

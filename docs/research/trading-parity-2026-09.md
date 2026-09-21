@@ -909,7 +909,8 @@ combination/permutations of mock scenarios." A flat inventory answers *does X ex
 drawing a frame needs *what happens when* — per reference, per our code — for any combination. So
 the study is compiled into a dimension model (`docs/design/scenario-navigator/scenarios.json`) and a
 page that composes an answer for any permutation (`docs/design/scenario-navigator/index.html`;
-published as the private artifact *Trading Scenario Navigator*). Every fact in the model cites a row
+published as the private artifact *Trading Scenario Navigator*,
+https://claude.ai/artifact/96z65tUsjuyhrQgpDbLofZ). Every fact in the model cites a row
 of §1–§4 or reads `not-shown`; nothing is invented, and a combination the study cannot answer says so.
 
 ### The dimensions
@@ -976,7 +977,8 @@ Frames: the *Fidelity Ticket Study* (private artifact, 15 redacted phone frames,
 the repo. This document is the inventory of record (no separate inventory artifact — a page that can be
 lost adds nothing a repo file lacks; the tiger pass, 2026-09-21). The lo-fi shapes are committed as
 `docs/design/lofi/trading-journeys.html` and published from it as the private artifact **Trading Journeys
-— Lo-fi**, whose URL is indexed on the plan issue.
+— Lo-fi**, whose URL is indexed on the plan issue. The scenario navigator (§6) is the private artifact
+*Trading Scenario Navigator*, https://claude.ai/artifact/96z65tUsjuyhrQgpDbLofZ (v1, 2026-09-21).
 
 ### Robinhood `[R#]` (help center, newsroom; secondary marked)
 R1 order-types · R2 limit-order · R3 market-order-update · R4 stop-limit-order · R5 trailing-stop-order · R6 extendedhours-trading · R7 24hour-market · R9 buying-a-stock · R10 selling-a-stock · R11 tax-lots · R12 average-cost · R13 cancel-a-pending-order · R14 why-hasnt-my-order-been-filled · R15 viewing-stock-detail-pages · R16 using-market-data · R17 using-charts · R18 using-advanced-charts · R19 viewing-indicators · R20 level-ii-market-data · R21 watchlist-and-cards · R22 lists · R23 stock-screeners · R24 price-alerts · R25 options-alerts · R26 notifications-and-messages · R27 updating-your-notification-settings · R28 cortex-digests-methodology · R29 where-can-i-access-first-trade-recommendations · R30 options-investing · R31 options-knowledge-center · R33 advanced-options-strategies · R34 placing-an-options-trade · R35 options-chain · R36 options-chain-metrics · R37 about-the-options-strategy-builder · R38 simulated-returns · R39 options-analyzer · R40 profit-loss-chart · R41 options-rolling · R42 expiration-exercise-and-assignment · R43 options-trading-hours · R44 options-trading-faq · R45 market-order-options · R46 newsroom/options-stop-limit-orders-are-here · R47 index-options · R48 options collateral (articles/360001227606) · R49 investing-tools · R50 pattern-day-trading · R51 day-trading · R52 pattern-day-trade-protection · R53 why-am-i-prompted-to-update-my-investment-profile · R54 newsroom/an-update-on-robinhoods-options-offering · R56 newsroom/a-new-way-to-celebrate-with-robinhood · R57 auto-send · R58 get-started-with-robinhood-legend · R59 widgets-in-robinhood-legend · R60 layouts-on-legend · R61 chart-indicators-on-legend · R62 widget-linking-on-legend · R63 trading-with-robinhood-legend · R64 legend-behaviors-and-settings · R65 auras-on-legend · R66 newsroom/the-legend-awakens · R67 newsroom/introducing-robinhood-legend-charts-on-mobile · R68 newsroom/hood-summit-2025-news · R69 newsroom/introducing-multi-leg-options-strategies · R70 futures-orders · R71 stockbrokers.com/review/robinhood (secondary) · R72 goodux.appcues.com robinhood-haptic (secondary) · R73 CNBC 2021-03-31 confetti (secondary) · R74 recurring-investments (snippet) · R75 applevis swipe-submit (secondary) · R77 ios-widgets (snippet). All `robinhood.com/us/en/support/articles/<slug>` or `robinhood.com/us/en/newsroom/<slug>` unless a domain is shown.
