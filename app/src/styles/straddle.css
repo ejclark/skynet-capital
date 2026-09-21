@@ -186,3 +186,10 @@
     padding: 8px 6px;
   }
 }
+/* Quote provenance under the chain (#3407 P2) — one sentence in the note register. */
+.straddle-coverage {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  max-width: 70ch;
+}

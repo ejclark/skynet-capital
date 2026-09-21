@@ -1,3 +1,4 @@
+import type { JsonResponse } from "../http/fetch-json.js";
 import { type AlpacaOrder, ensureOk } from "./alpaca-trading-client.js";
 import type { AlpacaTradingTransport } from "./trading-transport.js";
 
@@ -30,6 +31,9 @@ export interface OptionChainRow {
   readonly volume?: number;
   readonly bid?: number;
   readonly ask?: number;
+  /** Present exactly when the data host returned a snapshot for this contract — the per-row
+   *  provenance the chain shows instead of a silent "—" (#3407 P2). */
+  readonly quoteSource?: "indicative";
   // The greeks the data host quoted for this contract, each carried ONLY when it arrived as a
   // finite number. A greek the feed omitted stays absent, so the desk reads it as ABSENT rather
   // than as a confident 0.00 — "no decay", "no convexity" — that nobody actually measured.
@@ -110,6 +114,26 @@ const num = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+/** A quoted price that may honestly be zero — a bid of $0.00 means nobody is bidding, which is
+ *  a real fact about a worthless contract, not a missing one (#3407 P2; the study found the zero
+ *  bid dropped and the row losing its mid). Junk (`null`, `""`, `[]`) stays absent. */
+const price0 = (value: unknown): number | undefined => {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+/** The most contract pages one expirations read may walk (10,000 contracts each) — enough for
+ *  the busiest listings (SPY ≈ 60 expirations × ~150 strikes) with one page to spare, and a hard
+ *  stop against a runaway walk. */
+export const EXPIRATION_PAGE_BUDGET = 3;
+/** One retry on a 429, after this pause — the broker's own rate limit is 200 req/min. */
+const RATE_LIMIT_PAUSE_MS = 1_100;
+
+export type Sleep = (ms: number) => Promise<void>;
+const defaultSleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /** The greeks the snapshot payload carries, in the order a chain reads them. */
 const GREEK_KEYS = ["delta", "gamma", "theta", "vega", "rho"] as const;
 type GreekKey = (typeof GREEK_KEYS)[number];
@@ -167,24 +191,51 @@ const barField = (value: unknown): number | undefined => greek(value);
 export class AlpacaOptionsClient {
   private readonly trading: AlpacaTradingTransport;
   private readonly data?: AlpacaTradingTransport;
+  private readonly sleep: Sleep;
 
-  constructor(trading: AlpacaTradingTransport, data?: AlpacaTradingTransport) {
+  constructor(
+    trading: AlpacaTradingTransport,
+    data?: AlpacaTradingTransport,
+    options: { readonly sleep?: Sleep } = {},
+  ) {
     this.trading = trading;
     if (data) this.data = data;
+    this.sleep = options.sleep ?? defaultSleep;
+  }
+
+  /** One trading-API read with the house's only rate-limit posture: a 429 earns exactly one
+   *  retry after a pause; a second 429 is returned as-is and `ensureOk` turns it into the typed
+   *  error the caller already handles. Never loops. */
+  private async getWithBackoff(path: string): Promise<JsonResponse> {
+    const first = await this.trading.get(path);
+    if (first.status !== 429) return first;
+    await this.sleep(RATE_LIMIT_PAUSE_MS);
+    return this.trading.get(path);
   }
 
   /**
-   * Upcoming expiration dates for an underlying, soonest first. One page of call contracts is
-   * enough to enumerate the near expirations the ticket offers; a symbol with more listings
-   * than one page simply shows its nearest months, which is what a learner wants anyway.
+   * Every upcoming expiration for an underlying, soonest first (#3407 P2: the study found the
+   * old single 1,000-contract page capped busy names at their nearest months and put LEAPS out
+   * of reach). Walks `page_token` up to `EXPIRATION_PAGE_BUDGET` pages of 10,000 contracts —
+   * the endpoint's own maximum — and stops early the moment a page has no `next_page_token`.
+   * `limit` remains a ceiling on the dates returned, for callers that want only the nearest.
    */
-  async getExpirations(underlying: string, onOrAfter: string, limit = 20): Promise<string[]> {
-    const path = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=call&status=active&expiration_date_gte=${onOrAfter}&limit=1000`;
-    const body = ensureOk<{ option_contracts?: AlpacaOptionContract[] }>(
-      await this.trading.get(path),
-    );
-    const dates = [...new Set((body.option_contracts ?? []).map((c) => c.expiration_date))];
-    return dates.sort().slice(0, limit);
+  async getExpirations(underlying: string, onOrAfter: string, limit?: number): Promise<string[]> {
+    const base = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=call&status=active&expiration_date_gte=${onOrAfter}&limit=10000`;
+    const dates = new Set<string>();
+    let pageToken: string | undefined;
+    for (let page = 0; page < EXPIRATION_PAGE_BUDGET; page += 1) {
+      const path = pageToken ? `${base}&page_token=${encodeURIComponent(pageToken)}` : base;
+      const body = ensureOk<{
+        option_contracts?: AlpacaOptionContract[];
+        next_page_token?: string | null;
+      }>(await this.getWithBackoff(path));
+      for (const c of body.option_contracts ?? []) dates.add(c.expiration_date);
+      if (!body.next_page_token) break;
+      pageToken = body.next_page_token;
+    }
+    const sorted = [...dates].sort();
+    return limit === undefined ? sorted : sorted.slice(0, limit);
   }
 
   /** The chain for one underlying/expiration/side, strikes ascending, quotes merged fail-soft. */
@@ -195,7 +246,7 @@ export class AlpacaOptionsClient {
   ): Promise<OptionChainRow[]> {
     const path = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=${type}&status=active&expiration_date=${expiration}&limit=500`;
     const body = ensureOk<{ option_contracts?: AlpacaOptionContract[] }>(
-      await this.trading.get(path),
+      await this.getWithBackoff(path),
     );
     const rows: OptionChainRow[] = (body.option_contracts ?? [])
       .filter((c) => c.tradable !== false && num(c.strike_price) !== undefined)
@@ -404,8 +455,9 @@ export class AlpacaOptionsClient {
         if (!snap) return row;
         return {
           ...row,
-          ...(num(snap.latestQuote?.bp) !== undefined
-            ? { bid: num(snap.latestQuote?.bp) as number }
+          quoteSource: "indicative",
+          ...(price0(snap.latestQuote?.bp) !== undefined
+            ? { bid: price0(snap.latestQuote?.bp) as number }
             : {}),
           ...(num(snap.latestQuote?.ap) !== undefined
             ? { ask: num(snap.latestQuote?.ap) as number }

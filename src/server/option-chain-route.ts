@@ -62,12 +62,21 @@ export async function serveChain(
       client.getChain(symbol, expiration, type),
       client.getUnderlyingPrice(symbol),
     ]);
+    // Quote coverage (#3407 P2): how many strikes the data host actually quoted, so the chain
+    // can say "greeks from the indicative feed · 38 of 41 strikes" instead of a silent "—".
+    const quoted = chain.filter((row) => row.quoteSource !== undefined).length;
     sendJson(res, 200, {
       symbol,
       optionType: type,
       expirations,
       expiration,
       ...(spot !== undefined ? { spot } : {}),
+      quotes: {
+        source: quoted > 0 ? "indicative" : "unavailable",
+        quoted,
+        total: chain.length,
+        asOf: new Date().toISOString(),
+      },
       rows: chain.map((row) => {
         const premium = rowPremium(row);
         return {

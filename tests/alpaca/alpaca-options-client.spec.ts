@@ -1,4 +1,8 @@
-import { AlpacaOptionsClient, rowPremium } from "../../src/alpaca/alpaca-options-client.js";
+import {
+  AlpacaOptionsClient,
+  EXPIRATION_PAGE_BUDGET,
+  rowPremium,
+} from "../../src/alpaca/alpaca-options-client.js";
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 
@@ -71,7 +75,7 @@ describe("AlpacaOptionsClient", () => {
     expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates);
   });
 
-  it("truncates at the new 20-expiration ceiling when a symbol lists more (#2017 4c)", async () => {
+  it("returns every expiration by default and honours an explicit ceiling (#3407 P2)", async () => {
     const dates = weeklyDates(25);
     const client = new AlpacaOptionsClient(
       fakeTransport({
@@ -80,7 +84,83 @@ describe("AlpacaOptionsClient", () => {
         },
       }),
     );
-    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates.slice(0, 20));
+    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates);
+    expect(await client.getExpirations("MSFT", "2026-08-19", 20)).toEqual(dates.slice(0, 20));
+  });
+
+  it("walks page_token across pages, asking for the endpoint's 10,000 maximum, and stops on a null token", async () => {
+    const log: Array<{ path: string }> = [];
+    const pages: Record<string, unknown> = {
+      "page_token=p2": {
+        option_contracts: [contract("C", "2027-01-15", "100")],
+        next_page_token: null,
+      },
+      "/v2/options/contracts?": {
+        option_contracts: [contract("A", "2026-10-16", "100"), contract("B", "2026-09-18", "100")],
+        next_page_token: "p2",
+      },
+    };
+    const client = new AlpacaOptionsClient(fakeTransport(pages, log));
+    expect(await client.getExpirations("SPY", "2026-08-19")).toEqual([
+      "2026-09-18",
+      "2026-10-16",
+      "2027-01-15",
+    ]);
+    expect(log).toHaveLength(2);
+    expect(log[0]?.path).toContain("limit=10000");
+    expect(log[1]?.path).toContain("page_token=p2");
+  });
+
+  it("stops at the page budget even when the broker keeps handing back tokens", async () => {
+    const log: Array<{ path: string }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport(
+        {
+          "/v2/options/contracts?": {
+            option_contracts: [contract("A", "2026-10-16", "100")],
+            next_page_token: "again",
+          },
+        },
+        log,
+      ),
+    );
+    await client.getExpirations("SPY", "2026-08-19");
+    expect(log).toHaveLength(EXPIRATION_PAGE_BUDGET);
+  });
+
+  it("retries a 429 exactly once after a pause, then surfaces the second one", async () => {
+    let calls = 0;
+    const slept: number[] = [];
+    const rateLimited: AlpacaTradingTransport = {
+      get: () => {
+        calls += 1;
+        return Promise.resolve(
+          calls === 1
+            ? { status: 429, body: { message: "too many requests" } }
+            : { status: 200, body: { option_contracts: [contract("A", "2026-10-16", "100")] } },
+        );
+      },
+      post: () => Promise.resolve({ status: 404, body: null }),
+      delete: () => Promise.resolve({ status: 404, body: null }),
+    };
+    const client = new AlpacaOptionsClient(rateLimited, undefined, {
+      sleep: (ms) => {
+        slept.push(ms);
+        return Promise.resolve();
+      },
+    });
+    expect(await client.getExpirations("SPY", "2026-08-19")).toEqual(["2026-10-16"]);
+    expect(calls).toBe(2);
+    expect(slept).toHaveLength(1);
+
+    const alwaysLimited: AlpacaTradingTransport = {
+      ...rateLimited,
+      get: () => Promise.resolve({ status: 429, body: { message: "too many requests" } }),
+    };
+    const stuck = new AlpacaOptionsClient(alwaysLimited, undefined, {
+      sleep: () => Promise.resolve(),
+    });
+    await expect(stuck.getExpirations("SPY", "2026-08-19")).rejects.toMatchObject({ status: 429 });
   });
 
   it("returns the chain strikes ascending, dropping untradable and unpriced-strike rows", async () => {
@@ -101,6 +181,33 @@ describe("AlpacaOptionsClient", () => {
     const chain = await client.getChain("MSFT", "2026-09-18", "put");
     expect(chain.map((r) => r.strike)).toEqual([420, 430]);
     expect(chain[0]).toMatchObject({ closePrice: 10.7, openInterest: 812 });
+  });
+
+  it("keeps a $0.00 bid as a real quote — the mid survives — and still drops junk (#3407 P2)", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("MSFT260918P00300000", "2026-09-18", "300"),
+            contract("MSFT260918P00310000", "2026-09-18", "310"),
+          ],
+        },
+      }),
+      fakeTransport({
+        "/v1beta1/options/snapshots/MSFT": {
+          snapshots: {
+            MSFT260918P00300000: { latestQuote: { bp: 0, ap: 0.02 } },
+            MSFT260918P00310000: { latestQuote: { bp: null, ap: "" } },
+          },
+        },
+      }),
+    );
+    const chain = await client.getChain("MSFT", "2026-09-18", "put");
+    expect(chain[0]).toMatchObject({ bid: 0, ask: 0.02, quoteSource: "indicative" });
+    expect(rowPremium(chain[0] as never)).toBeCloseTo(0.01);
+    expect(chain[1]?.bid).toBeUndefined();
+    expect(chain[1]?.ask).toBeUndefined();
+    expect(chain[1]?.quoteSource).toBe("indicative"); // a snapshot arrived, even if it quoted nothing
   });
 
   it("merges indicative quotes from the data host, and fails SOFT when it errors", async () => {
@@ -124,7 +231,12 @@ describe("AlpacaOptionsClient", () => {
       }),
     );
     const chain = await withQuotes.getChain("MSFT", "2026-09-18", "put");
-    expect(chain[0]).toMatchObject({ bid: 10.5, ask: 10.9, delta: -0.42 });
+    expect(chain[0]).toMatchObject({
+      bid: 10.5,
+      ask: 10.9,
+      delta: -0.42,
+      quoteSource: "indicative",
+    });
     expect(rowPremium(chain[0] as never)).toBeCloseTo(10.7); // the mid
 
     const dataDown = new AlpacaOptionsClient(

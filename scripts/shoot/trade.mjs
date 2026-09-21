@@ -732,4 +732,19 @@ await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootOptionsTif = shooter(page, resolve("docs/shots/options-tif"));
 await shootOptionsTif("options-tif-phone");
 
+// Quote coverage under the chain (#3407 P2 slice 1) — the one-line provenance that turns a "—"
+// cell into "the feed didn't quote this strike": indicative feed, 4 of 5 strikes, an as-of.
+currentPlays = throughLongs;
+currentChain = {
+  ...currentChain,
+  quotes: { source: "indicative", quoted: 4, total: 5, asOf: "2026-09-21T14:05:00Z" },
+};
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByText(/strikes quoted/).waitFor();
+await page.getByText(/strikes quoted/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootChainCoverage = shooter(page, resolve("docs/shots/chain-coverage"));
+await shootChainCoverage("chain-coverage-phone");
+
 await close();

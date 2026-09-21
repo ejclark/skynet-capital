@@ -44,6 +44,7 @@ export function ChainStraddle({
       selectedStrike={strike === "" ? undefined : Number(strike)}
       onPickStrike={(value) => onPickStrike(String(value))}
       onPickSide={onPickSide}
+      quotes={chainData.quotes}
     />
   );
 }
