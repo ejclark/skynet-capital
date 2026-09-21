@@ -134,6 +134,12 @@ table.blotter {
   font-size: 12.5px;
   min-width: 520px;
 }
+/* Positions only (positions-table.tsx) — see that file's header comment for why: locks every
+   column's width from its `<colgroup>` so opening/closing the lots accordion can never resize a
+   column out from under the rest of the row. */
+.blotter-fixed {
+  table-layout: fixed;
+}
 .blotter th {
   text-align: left;
   padding: 8px 12px;
@@ -164,35 +170,40 @@ table.blotter {
   font-size: 10.5px;
   color: var(--muted);
 }
-/* Lot-breakdown accordion (#3186 slice 1, restyled #3186 slice 2) — its own trigger, independent
-   of the mobile-only fold-col chevron above, since it's real information at every viewport width,
-   not a responsive-disclosure duplicate. Shares the fold-col chevron's icon-rotates-on-expand
-   language (never a plain underlined link) so both disclosure controls on a row read as the same
-   pattern; sized for a real tap target (Eric's live-review note: the old 10.5px text link failed
-   a basic legibility/target-size bar). */
-.sym-lots {
-  display: inline-flex;
+/* Lot-breakdown accordion (#3186 slice 1, restyled #3186 slice 2, slice 3) — the whole symbol
+   header is the trigger, not a separate labeled link (live-review: a small "N lots" text read as
+   unexpected custom behavior, and "lots" as unexplained jargon). Click anywhere on the symbol;
+   the chevron shows state, sharing the fold-col chevron's icon-rotates-on-expand language so both
+   disclosure controls on a row read as the same pattern. */
+.sym-header {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 6px;
-  padding: 3px 8px;
-  margin-left: 6px;
-  font-size: 12px;
-  color: var(--text);
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
 }
-.sym-lots:hover {
-  border-color: var(--accent);
+.sym-header:hover .sym {
   color: var(--accent);
 }
-.sym-lots svg {
+.sym-header svg {
   color: var(--muted);
   flex-shrink: 0;
+  transition: transform 0.15s;
 }
-.sym-lots[aria-expanded="true"] svg {
+.sym-header[aria-expanded="true"] svg {
   transform: rotate(90deg);
+}
+.sym-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 /* A single accent bar on the row's leading edge, not a border on every `td` — that drew a
    vertical divider between EVERY column (Eric's live-review note: "distracting"). */

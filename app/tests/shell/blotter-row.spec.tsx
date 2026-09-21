@@ -127,6 +127,11 @@ describe("BlotterRow", () => {
       expect(screen.queryByText("$49,005")).not.toBeInTheDocument();
     });
 
+    it("renders no visible 'lots' label — the whole symbol header is the trigger", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      expect(screen.queryByText(/lots/i)).not.toBeInTheDocument();
+    });
+
     it("reveals lot rows sharing the parent's exact columns when the trigger is clicked", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
 
@@ -167,12 +172,43 @@ describe("BlotterRow", () => {
       expect(closeLotButtons[1]).toHaveAttribute("aria-expanded", "false");
     });
 
-    it("renders Roll disabled with the reason, never a silent no-op button", () => {
+    it("renders no Roll button on a stock's lots — rolling only exists for options", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
       fireEvent.click(screen.getByRole("button", { name: /2 lots for SPY/ }));
 
+      expect(screen.queryByRole("button", { name: /Roll/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("lot breakdown on an option position", () => {
+    const optionLots = position({
+      symbol: "NVDA261218C00130000",
+      display: "NVDA Dec 18 130 Call",
+      isOption: true,
+      lots: [
+        {
+          lotId: "NVDA-0-a",
+          openedAt: "2026-08-28 14:00 UTC",
+          quantity: "2",
+          costPerShare: "$5.00",
+          price: "$7.42",
+          costBasis: "$1,000",
+          value: "$1,484",
+          dayPl: "+$34",
+          dayTone: "pos",
+          totalPl: "+$484",
+          returnPct: "+48.40%",
+          totalTone: "pos",
+        },
+      ],
+    });
+
+    it("renders Roll disabled with the reason, never a silent no-op button", () => {
+      render(inTable(<BlotterRow position={optionLots} deskId="sauron" />));
+      fireEvent.click(screen.getByRole("button", { name: /1 lots for NVDA Dec 18 130 Call/ }));
+
       const rollButtons = screen.getAllByRole("button", { name: /Roll —/ });
-      expect(rollButtons).toHaveLength(2);
+      expect(rollButtons).toHaveLength(1);
       for (const button of rollButtons) expect(button).toBeDisabled();
     });
   });
