@@ -146,6 +146,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Omit and every row classifies `unknown` — no marker, exactly today's rendering.
    */
   readonly readOrderAudit?: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
+  /** Appends one audit line — the cancel route's write to the same trail the desk seam writes
+   *  on submit (#3407 P1). Omit and a cancel still reaches the broker, unrecorded here. */
+  readonly recordOrderAudit?: (entry: OrderAuditRecord) => Promise<void>;
   /**
    * Per-participant progression derived from the fill + audit ledgers — drives the Milestones
    * page and (with training wheels on) the desk's trade-type gate. Omit and `/learn` renders

@@ -128,6 +128,28 @@ describe("AlpacaTradingClient", () => {
     });
   });
 
+  describe("placeOrder — time in force (#3407 P1)", () => {
+    it("passes the member's own choice through verbatim", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders": { status: 200, body: { id: "o", symbol: "EEM", status: "accepted" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.placeOrder({ symbol: "EEM", qty: 1, side: "buy", time_in_force: "gtc" });
+      await client.placeOrder({
+        symbol: "EEM",
+        qty: 1,
+        side: "buy",
+        type: "limit",
+        limit_price: 40,
+        time_in_force: "day",
+      });
+
+      expect(transport.posts[0]?.body).toMatchObject({ time_in_force: "gtc" });
+      expect(transport.posts[1]?.body).toMatchObject({ time_in_force: "day" });
+    });
+  });
+
   describe("listOrders", () => {
     it("defaults to status=all, matching today's behavior", async () => {
       const transport = new FakeTradingTransport({ "/v2/orders": { status: 200, body: [] } });

@@ -715,8 +715,8 @@ plan, not a constraint on the designs.
 | Build a vertical / multi-leg spread | partial — legs via `<select>`s, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx` |
 | **Submit** a multi-leg spread | missing — server returns `executed:false`; the UI headline still says "Confirmed" | `src/server/draft-order-route.ts:263`, `draft-order-builder.tsx:162` |
 | Strategy templates (vertical, condor…) | missing — copy says "a vertical spread is two, an iron condor is four" | `draft-order-builder.tsx:213` |
-| **See open / pending orders** | missing in the shell — #674's panel (PR #696) targets the legacy observatory and is dead code | `src/observatory/open-orders-view.ts` (only its spec imports it) |
-| **Cancel an order** | missing — `cancelOrder` exists with zero callers; no route | `src/alpaca/alpaca-trading-client.ts:182` |
+| **See open / pending orders** | API built (P1 slice 1) — `GET /api/trade/orders` → working + recent lists; no shell surface yet (the #674 fork decides where) | `src/server/trade-orders-routes.ts`, `src/server/desk-orders-view.ts`, `app/src/live/orders.ts` |
+| **Cancel an order** | API built (P1 slice 1) — `POST /api/trade/cancel` with an audit line; no shell button yet | `src/server/trade-orders-routes.ts` |
 | **Modify / replace an order** | missing everywhere — no client method, no domain state, no route | — |
 | Pending state in the domain | missing — `OrderStatus` is `filled \| rejected`; the adapter treats *accepted* as filled | `src/domain/types.ts`, `src/adapters/alpaca-broker-adapter.ts` |
 | Order history / fills | exists — durable JSONL ledger, keyset-paginated; broker window 15 | `app/src/shell/activity-table.tsx`, `recent-orders-strip.tsx`, `src/observatory/activity-store.ts` |
@@ -769,13 +769,13 @@ plan, not a constraint on the designs.
 
 | Capability | Support | Where |
 |---|---|---|
-| Equity market / limit / stop | full (TIF forced) | `src/trading/order-ticket.ts` → `src/server/trade-service.ts` → `src/alpaca/alpaca-trading-client.ts` |
+| Equity market / limit / stop | full — TIF (day / gtc) chosen by the member, previewed and echoed back (P1 slice 1) | `src/trading/order-ticket.ts` → `src/server/trade-service.ts` → `src/alpaca/alpaca-trading-client.ts` |
 | Stop-limit, trailing, bracket / OCO / OTO, notional, fractional, short, extended hours | none | not modelled at any layer |
 | Single-leg option open (4 plays) and close | full | `src/trading/option-ticket.ts`, `src/server/option-trade-service.ts` |
 | Multi-leg (`mleg`) | model + review only; submit deliberately dead | `src/trading/draft-order.ts`, `src/server/draft-order-route.ts:264` |
 | Roll | none (stated reason) | `ROLL_UNAVAILABLE_REASON`, `order-ticket.ts` |
-| Open-orders list | client method exists (`listOrders({status:"open"})`), no route, no caller | `alpaca-trading-client.ts` |
-| Cancel | client method, zero callers, no route | `alpaca-trading-client.ts:182` |
+| Open-orders list | route + view (P1 slice 1), no shell surface | `src/server/trade-orders-routes.ts`, `desk-orders-view.ts` |
+| Cancel | route + audit line (P1 slice 1), no shell surface | `src/server/trade-orders-routes.ts` |
 | Replace | none | — |
 | Pending statuses in the ledger | journaled (`new` / `canceled` / `rejected` lines) but never surfaced as open | `src/alpaca/trade-updates-stream-events.ts:88`, `src/observatory/activity-store.ts` |
 | Option chain (bid / ask / OI / vol / greeks) | full for ≤20 nearest expirations; no cache; every review and submit re-fetches; no 429 handling | `alpaca-options-client.ts`, `src/server/option-chain-route.ts` |
@@ -825,8 +825,8 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 
 | Feature | Robinhood | Fidelity | thinkorswim | Skynet today (file) | Call | Prerequisite |
 |---|---|---|---|---|---|---|
-| See open / pending orders | Pending list + watchlist badge [R13][R21] | Orders page, statuses [F18][F19] | Working Orders with counts [T-TTA] | **missing** on the shell; dead renderer `src/observatory/open-orders-view.ts` | build (P1) | `GET /api/trade/orders` over `listOrders({status:"open"})` (`alpaca-trading-client.ts:159`) |
-| Cancel an order | Cancel/Replace flow, swipe gestures [R13][R34] | Attempt to Cancel → Verified Canceled [F18] | Right-click cancel, batch cancel [T-TTA] | **missing**; `cancelOrder` has zero callers (`alpaca-trading-client.ts:182`) | build (P1) | cancel route behind `verifyOwnAccount` + an audit line |
+| See open / pending orders | Pending list + watchlist badge [R13][R21] | Orders page, statuses [F18][F19] | Working Orders with counts [T-TTA] | **partial** — API landed (P1 slice 1, `src/server/trade-orders-routes.ts`); shell surface waits on the #674 fork | build (P1) | done: `GET /api/trade/orders` over `listOrders` |
+| Cancel an order | Cancel/Replace flow, swipe gestures [R13][R34] | Attempt to Cancel → Verified Canceled [F18] | Right-click cancel, batch cancel [T-TTA] | **partial** — `POST /api/trade/cancel` landed with an audit line (P1 slice 1); no shell button yet | build (P1) | done: own-account client + `intent: "cancel"` audit line |
 | Modify / replace an order | Replace (limit/stop, same type); drag pill [R13][R63] | Change order = cancel-and-replace [F20] | Cancel/replace reopens the ticket; drag on the ladder [T-TTA][T-ATE] | **missing** everywhere | build (P1b) | Alpaca `PATCH /v2/orders/{id}` issues a new id — ledger must map replaced ids (`activity-store.ts`) |
 | Pending state in the domain | pending · partially filled · queued [R13] | open · pending · partially filled [F19] | 20-state vocabulary [T-OS] | `OrderStatus = filled \| rejected` (`src/domain/types.ts`); adapter treats accepted as filled | build (P1) | widen the union; unwind `AlpacaBrokerAdapter`'s optimism |
 | Submit a multi-leg spread | Multi-leg since 2018; ≤4 legs on Legend [R69][R63] | ≤4 legs net basis [F29][F38] | Spread menu; Analyze → send [T-VS] | **partial** — previews, then `executed:false` (`draft-order-route.ts:263`) | build (P3) — and the trust defect below first | `mleg` order class; options level 3 on the paper account; ladder/collateral gates for spreads |
@@ -837,7 +837,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Feature | Robinhood | Fidelity | thinkorswim | Skynet today | Call | Prerequisite |
 |---|---|---|---|---|---|---|
 | "Confirmed" shown for an order never sent | — | — | — | `draft-order-builder.tsx:162` headline on `executed:false` | fix (P0, one line) | none |
-| Time in force shown | GFD / GTC visible [R1][R6] | Sheet with 5 options + learn link [F1] | TIF dropdown [T-OET] | **missing** — hard-coded server-side (`alpaca-trading-client.ts:221`) | build (P1) | expose Day / GTC on the ticket; pass through |
+| Time in force shown | GFD / GTC visible [R1][R6] | Sheet with 5 options + learn link [F1] | TIF dropdown [T-OET] | **partial** — preview and submit carry `timeInForce` end to end (P1 slice 1, `order-ticket.ts`); the ticket control is a layout slice | build (P1) | done: Day / GTC accepted, previewed, echoed |
 | Greeks / bid absent with no reason | Every metric labelled "theoretical" [R36] | — | — | "—" with no provenance; `$0.00` bid dropped (`alpaca-options-client.ts:106-109`) | fix (P2) | per-row coverage reason; `num()` accepts zero |
 | Order status on a phone | Pending list is phone-first [R13] | Activity › Orders [F42] | mobile Account History [T-APPSTORE] | Status column `col-detail`, hidden < 1100px (`activity-table.tsx:33`) | fix (P0) | none |
 | As-of stamp | NBBO on trade-entry screens [R16] | "As of 10:04:20 AM ET" [F-frames 9] | — | quote header makes no freshness claim (`quote-header.tsx:16-19`) | build (P0) | the quote response already carries a timestamp |

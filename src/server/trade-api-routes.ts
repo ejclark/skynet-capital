@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
-import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
+import {
+  previewOrder,
+  type TicketOrderType,
+  type TicketTimeInForce,
+} from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
 import { requesterFor, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -35,6 +39,7 @@ interface TradeApiBody {
   readonly orderType?: TicketOrderType;
   readonly limitPrice?: number;
   readonly stopPrice?: number;
+  readonly timeInForce?: TicketTimeInForce;
 }
 
 const TRADE_BODY_CAP_BYTES = 8_192;
@@ -75,6 +80,10 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
       : undefined;
   const limitPrice = parsePositivePrice(body.limitPrice);
   const stopPrice = parsePositivePrice(body.stopPrice);
+  // Anything but the two named values is dropped, never coerced — the preview then shows the
+  // default it will send, so a stray value can't silently become a different order.
+  const timeInForce =
+    body.timeInForce === "day" || body.timeInForce === "gtc" ? body.timeInForce : undefined;
   return {
     participantId,
     symbol,
@@ -83,6 +92,7 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
     ...(orderType ? { orderType } : {}),
     ...(limitPrice !== undefined ? { limitPrice } : {}),
     ...(stopPrice !== undefined ? { stopPrice } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   };
 }
 

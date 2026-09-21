@@ -150,6 +150,15 @@ describe("resolveDeskTrading", () => {
     });
   });
 
+  it("passes the member's own time in force through instead of the default (#3407 P1)", async () => {
+    const { desk, orders } = makeService({});
+    await desk.submit(
+      { participantId: "ann", symbol: "NVDA", quantity: 5, action: "buy", timeInForce: "gtc" },
+      "ann",
+    );
+    expect(orders[0]?.body).toMatchObject({ type: "market", time_in_force: "gtc" });
+  });
+
   it("refuses selling more than held — this desk never opens a short", async () => {
     const { desk, orders } = makeService({
       positions: [{ symbol: "NVDA", qty: "2", avg_entry_price: "100", market_value: "200" }],
