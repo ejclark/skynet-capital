@@ -764,10 +764,12 @@ plan, not a constraint on the designs.
 7. **"Confirmed" for an order that was never sent** — *fixed, P0:* the headline is the server's
    `executed` word; a submit the deployment refused reads "Reviewed — not sent" (multi-leg,
    `draft-order-builder.tsx` `gateStatus`).
-8. **Two positions blotters** — `/app/accounts?section=overview` and `/app/u/$id` render the same table
-   with duplicated chip/filter definitions.
-9. **The wide tokens are inert on the ticket's children** — `RecentOrdersStrip` and `WireRow` render
-   inside `.gate-panel` (capped at `--col-read`) while carrying `--col-wide`.
+8. **Two positions blotters** — *fixed, P0:* one `positions-blotter.tsx` (tabs, filter bar, table,
+   the New-trade card) rendered by both routes. As found: `/app/accounts?section=overview` and
+   `/app/u/$id` each carried their own chip/filter definitions.
+9. **The wide tokens are inert on the ticket's children** — *fixed, P0:* `.wr-panel` no longer carries
+   a max-width. As found: `RecentOrdersStrip` and `WireRow` rendered inside `.gate-panel` (capped at
+   `--col-read`) while carrying `--col-wide`.
 10. **Quantity inputs carry `min` but no `max`** except the close panel.
 11. **Spread legs get dropdowns where single legs get a chain** — `draft-leg-form.tsx:117-162` fetches
     its own chain and never reuses `StraddleView`.

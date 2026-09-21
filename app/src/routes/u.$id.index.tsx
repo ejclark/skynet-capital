@@ -1,66 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useEffect, useId, useRef, useState } from "react";
-import { fetchDesk, matchesFilter, parseDeskQuery, toggleQualifier } from "../live/desk";
+import { useEffect, useRef, useState } from "react";
+import { fetchDesk } from "../live/desk";
 import { DeskRail } from "../shell/desk-rail";
 import { DeskTilesGrid } from "../shell/desk-tiles-grid";
 import { PageFrame } from "../shell/frame";
 import { LandmarkHero } from "../shell/landmark-hero";
-import { PositionsTable } from "../shell/positions-table";
-import { ViewTabs } from "../shell/view-tabs";
+import { NewTradeCard, PositionsBlotter } from "../shell/positions-blotter";
 
 /**
  * THE DESK (#738 phase 2c) — `/u/:id` in the shell: identity header, tabs, tiles, and the blotter
  * behind saved-view tabs (#738 phase 3b, the Projects pattern) and an Issues-style filter bar
- * (chips ⇄ query text, one model). Tabs the shell doesn't own
+ * (chips ⇄ query text, one model) — the blotter itself is `positions-blotter.tsx`, shared with the
+ * accounts page (#3407 P0: it used to be pasted here). Tabs the shell doesn't own
  * yet link across to the server-rendered desk, honestly. Responsive disclosure per the round-1
  * verdict: detail columns visible on wide viewports, folded behind chevrons only when narrow.
  */
-
-const CHIPS = [
-  ["is:option", "Options only"],
-  ["pl:>0", "In profit"],
-  ["pl:<0", "Under water"],
-] as const;
-
-function FilterBar({
-  query,
-  onChange,
-}: {
-  readonly query: string;
-  readonly onChange: (next: string) => void;
-}): ReactElement {
-  const inputId = useId();
-  return (
-    <div className="filter-bar">
-      <div className="filter-query">
-        <label className="visually-hidden" htmlFor={inputId}>
-          Filter positions
-        </label>
-        <input
-          id={inputId}
-          type="text"
-          value={query}
-          spellCheck={false}
-          placeholder="filter — try NVDA, is:option, pl:>0"
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </div>
-      {CHIPS.map(([qualifier, label]) => (
-        <button
-          key={qualifier}
-          type="button"
-          className="filter-chip"
-          aria-pressed={query.toLowerCase().split(/\s+/).includes(qualifier)}
-          onClick={() => onChange(toggleQualifier(query, qualifier))}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function DeskPage(): ReactElement {
   const { id } = Route.useParams();
@@ -100,8 +56,6 @@ function DeskPage(): ReactElement {
       </PageFrame>
     );
   const { desk: d, generatedAt, landmark } = desk.data;
-  const filter = parseDeskQuery(query);
-  const shown = d.positions.filter((p) => matchesFilter(p, filter));
 
   const rail = <DeskRail id={d.id} name={d.name} kind={d.kind} current="active" />;
 
@@ -125,26 +79,15 @@ function DeskPage(): ReactElement {
       ) : (
         <>
           <DeskTilesGrid tiles={d.tiles} />
-
-          <ViewTabs deskId={d.id} query={query} onPick={setFilter} />
-          <FilterBar query={query} onChange={setFilter} />
-
-          <PositionsTable positions={shown} deskId={d.id} totalCount={d.positions.length} />
+          <PositionsBlotter
+            deskId={d.id}
+            positions={d.positions}
+            query={query}
+            onFilterChange={setFilter}
+          />
         </>
       )}
-      {d.error ? null : (
-        <Link to="/trade" search={{ desk: d.id }} className="trade-link-card">
-          <span>
-            <strong>New trade</strong>
-            <span className="trade-link-sub">
-              Open Trade — the gate reviews before anything is sent
-            </span>
-          </span>
-          <span className="trade-link-arrow" aria-hidden="true">
-            →
-          </span>
-        </Link>
-      )}
+      {d.error ? null : <NewTradeCard deskId={d.id} />}
       <footer className="obs-foot num">
         as of {generatedAt} · click a symbol for its fill timeline
       </footer>
