@@ -7,6 +7,7 @@
  */
 
 import { postJson } from "./post";
+import type { TicketTimeInForce } from "./ticket";
 
 export type DraftPhase = "empty" | "drafting" | "validated" | "reviewed" | "submitted";
 
@@ -60,13 +61,18 @@ type DraftAction =
   | { readonly kind: "reprice-leg"; readonly id: string; readonly limitPrice?: number }
   | { readonly kind: "validate" }
   | { readonly kind: "review" }
-  | { readonly kind: "submit" };
+  | { readonly kind: "submit"; readonly timeInForce?: TicketTimeInForce };
 
 export interface DraftResponse {
   readonly draft: DraftOrder;
   readonly preview: DraftPreview;
+  /** The server's own word on whether the submit reached the broker — never inferred from phase. */
   readonly executed?: boolean;
   readonly note?: string;
+  /** The broker's echo on an executed submit (#3407 P3 slice 1). */
+  readonly orderId?: string;
+  readonly status?: string;
+  readonly timeInForce?: string;
 }
 
 function applyDraftAction(
@@ -96,5 +102,12 @@ export const validateDraft = (participantId: string, draft: DraftOrder) =>
 export const reviewDraft = (participantId: string, draft: DraftOrder) =>
   applyDraftAction(participantId, draft, { kind: "review" });
 
-export const submitDraftOrder = (participantId: string, draft: DraftOrder) =>
-  applyDraftAction(participantId, draft, { kind: "submit" });
+export const submitDraftOrder = (
+  participantId: string,
+  draft: DraftOrder,
+  timeInForce?: TicketTimeInForce,
+) =>
+  applyDraftAction(participantId, draft, {
+    kind: "submit",
+    ...(timeInForce ? { timeInForce } : {}),
+  });

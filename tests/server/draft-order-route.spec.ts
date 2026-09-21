@@ -175,6 +175,112 @@ describe("serveDraftOrderApi", () => {
     expect(parsed.note).toContain("wired up");
   });
 
+  describe("with the execution seam wired (#3407 P3 slice 1)", () => {
+    const reviewed = {
+      phase: "reviewed",
+      legs: [
+        { ...CALL_LEG, id: "leg-1" },
+        { ...HIGHER_CALL_LEG, id: "leg-2" },
+      ],
+      verdict: { ok: true, refusals: [], warnings: [] },
+      refusals: [],
+      nextLegId: 3,
+    };
+
+    it("hands the REVIEWED draft to the seam as the requester and reports the broker's echo", async () => {
+      const seen: unknown[] = [];
+      const cfg = config({
+        submitDraftOrder: (request: unknown, requesterId: unknown) => {
+          seen.push({ request, requesterId });
+          return Promise.resolve({
+            ok: true,
+            orderId: "mleg-1",
+            status: "accepted",
+            symbol: "NVDA260918C00180000,NVDA260918C00200000",
+            timeInForce: "gtc",
+          });
+        },
+      });
+      const { parsed } = await call(
+        {
+          participantId: "human-ann",
+          draft: reviewed,
+          action: { kind: "submit", timeInForce: "gtc" },
+        },
+        cfg,
+      );
+      expect(seen).toEqual([
+        {
+          request: { participantId: "human-ann", draft: reviewed, timeInForce: "gtc" },
+          requesterId: "human-ann",
+        },
+      ]);
+      expect(parsed.draft.phase).toBe("submitted");
+      expect(parsed).toMatchObject({
+        executed: true,
+        orderId: "mleg-1",
+        status: "accepted",
+        timeInForce: "gtc",
+      });
+      expect(parsed.note).toContain("mleg-1");
+    });
+
+    it("keeps a refused submit on the review screen, refusals on it, executed false", async () => {
+      const cfg = config({
+        submitDraftOrder: () =>
+          Promise.resolve({ ok: false, refusals: ["The broker rejected the order: no level 3"] }),
+      });
+      const { parsed } = await call(
+        { participantId: "human-ann", draft: reviewed, action: { kind: "submit" } },
+        cfg,
+      );
+      expect(parsed.draft.phase).toBe("reviewed");
+      expect(parsed.draft.refusals).toEqual(["The broker rejected the order: no level 3"]);
+      expect(parsed.executed).toBe(false);
+      expect(parsed).not.toHaveProperty("orderId");
+    });
+
+    it("never reaches the seam from a draft the state machine refused to submit", async () => {
+      let calls = 0;
+      const cfg = config({
+        submitDraftOrder: () => {
+          calls += 1;
+          return Promise.resolve({ ok: true, orderId: "x", status: "accepted", symbol: "" });
+        },
+      });
+      const { parsed } = await call(
+        {
+          participantId: "human-ann",
+          draft: { ...reviewed, phase: "validated" },
+          action: { kind: "submit" },
+        },
+        cfg,
+      );
+      expect(calls).toBe(0);
+      expect(parsed.draft.phase).not.toBe("submitted");
+      expect(parsed).not.toHaveProperty("executed");
+    });
+
+    it("drops a time in force it doesn't know rather than forwarding it", async () => {
+      const seen: unknown[] = [];
+      const cfg = config({
+        submitDraftOrder: (request: unknown) => {
+          seen.push(request);
+          return Promise.resolve({ ok: true, orderId: "x", status: "accepted", symbol: "" });
+        },
+      });
+      await call(
+        {
+          participantId: "human-ann",
+          draft: reviewed,
+          action: { kind: "submit", timeInForce: "fok" },
+        },
+        cfg,
+      );
+      expect(seen[0]).not.toHaveProperty("timeInForce");
+    });
+  });
+
   it("refuses a desk the session doesn't own, before touching any account data", async () => {
     const { parsed } = await call(
       {

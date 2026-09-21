@@ -713,7 +713,7 @@ plan, not a constraint on the designs.
 | Payoff diagram | missing | — |
 | Review then confirm, disarm on edit | exists, both tickets; the server re-checks the live account at submit | `trade-gate.tsx:35-41,190-195`, `option-preview.tsx:15-21` |
 | Build a vertical / multi-leg spread | partial — legs via `<select>`s, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx` |
-| **Submit** a multi-leg spread | missing — server returns `executed:false`; the UI headline still says "Confirmed" | `src/server/draft-order-route.ts:263`, `draft-order-builder.tsx:162` |
+| **Submit** a multi-leg spread | **built** (P3 slice 1) — one `mleg` order through `draft-trade-service.ts`; the headline is the broker's echo; the wiring into the protected gate is its own held PR | `src/server/draft-trade-service.ts`, `src/server/draft-order-route.ts` |
 | Strategy templates (vertical, condor…) | missing — copy says "a vertical spread is two, an iron condor is four" | `draft-order-builder.tsx:213` |
 | **See open / pending orders** | API built (P1 slice 1) — `GET /api/trade/orders` → working + recent lists; no shell surface yet (the #674 fork decides where) | `src/server/trade-orders-routes.ts`, `src/server/desk-orders-view.ts`, `app/src/live/orders.ts` |
 | **Cancel an order** | API built (P1 slice 1) — `POST /api/trade/cancel` with an audit line; no shell button yet | `src/server/trade-orders-routes.ts` |
@@ -784,7 +784,7 @@ plan, not a constraint on the designs.
 | Equity market / limit / stop | full — TIF (day / gtc) chosen by the member, previewed and echoed back (P1 slice 1) | `src/trading/order-ticket.ts` → `src/server/trade-service.ts` → `src/alpaca/alpaca-trading-client.ts` |
 | Stop-limit, trailing, bracket / OCO / OTO, notional, fractional, short, extended hours | none | not modelled at any layer |
 | Single-leg option open (4 plays) and close | full | `src/trading/option-ticket.ts`, `src/server/option-trade-service.ts` |
-| Multi-leg (`mleg`) | model + review only; submit deliberately dead | `src/trading/draft-order.ts`, `src/server/draft-order-route.ts:264` |
+| Multi-leg (`mleg`) | model + review + **execution seam** (P3 slice 1); live until the gate wiring PR merges | `src/trading/draft-order.ts`, `src/server/draft-trade-service.ts` |
 | Roll | none (stated reason) | `ROLL_UNAVAILABLE_REASON`, `order-ticket.ts` |
 | Open-orders list | route + view (P1 slice 1), no shell surface | `src/server/trade-orders-routes.ts`, `desk-orders-view.ts` |
 | Cancel | route + audit line (P1 slice 1), no shell surface | `src/server/trade-orders-routes.ts` |
@@ -841,7 +841,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Cancel an order | Cancel/Replace flow, swipe gestures [R13][R34] | Attempt to Cancel → Verified Canceled [F18] | Right-click cancel, batch cancel [T-TTA] | **partial** — `POST /api/trade/cancel` landed with an audit line (P1 slice 1); no shell button yet | build (P1) | done: own-account client + `intent: "cancel"` audit line |
 | Modify / replace an order | Replace (limit/stop, same type); drag pill [R13][R63] | Change order = cancel-and-replace [F20] | Cancel/replace reopens the ticket; drag on the ladder [T-TTA][T-ATE] | **missing** everywhere | build (P1b) | Alpaca `PATCH /v2/orders/{id}` issues a new id — ledger must map replaced ids (`activity-store.ts`) |
 | Pending state in the domain | pending · partially filled · queued [R13] | open · pending · partially filled [F19] | 20-state vocabulary [T-OS] | `OrderStatus = filled \| rejected` (`src/domain/types.ts`); adapter treats accepted as filled | build (P1) | widen the union; unwind `AlpacaBrokerAdapter`'s optimism |
-| Submit a multi-leg spread | Multi-leg since 2018; ≤4 legs on Legend [R69][R63] | ≤4 legs net basis [F29][F38] | Spread menu; Analyze → send [T-VS] | **partial** — previews, then `executed:false` (`draft-order-route.ts:263`) | build (P3) — and the trust defect below first | `mleg` order class; options level 3 on the paper account; ladder/collateral gates for spreads |
+| Submit a multi-leg spread | Multi-leg since 2018; ≤4 legs on Legend [R69][R63] | ≤4 legs net basis [F29][F38] | Spread menu; Analyze → send [T-VS] | **have** (P3 slice 1) — `mleg`, one net limit in Alpaca's sign, live re-check, level-3 gate, Day/GTC (`draft-trade-service.ts`) | done — gate wiring on a held PR | — |
 | Close on a limit | Sell ticket = full ticket [R10] | Sell from the row prefills a limit at bid [F38] | Closing order via Order Entry [T-PS] | **missing** — closes are market-only (`blotter-row.tsx:321-327`, `option-ticket.ts:243`) | build (P1) | pass `orderType` through the close path |
 
 ### Tier 2 — erodes trust
@@ -878,7 +878,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Strategy templates / builder | Strategy Builder [R37] | strategy dropdown, Strategy Builder [F25][F34] | spread menu, Spread Hacker [T-VS][T-SCAN] | **built-unwired** — `rankStructures` + `outlook.ts` (#587, #2170) | build (P3) | presentation over the ranked list |
 | All expirations / LEAPS | scroll right [R34] | weekly/monthly/quarterly/all filters [F25] | weekly/quarterly toggles [T-SETUP] | **built** (P2 slice 1) — paginated with a 3-page budget and one 429 retry (`getExpirations`) | fix (P2) | done; weekly / monthly filters are a layout slice |
 | IV on the chain | IV metric [R36] | IV column [F-frames 13] | Impl Vol, SD strikes [T-AP] | missing on the desk | build (P2) | solve from mid via `pricing.ts` |
-| Roll | Roll position [R41] | Roll ticket [F9] | right-click roll; Strategy Roller [T-PS][T-SR] | disabled with reason (`order-ticket.ts:291-299`) | build (P3) | `mleg` execution |
+| Roll | Roll position [R41] | Roll ticket [F9] | right-click roll; Strategy Roller [T-PS][T-SR] | disabled with reason (`order-ticket.ts:291-299`) | build (P3 slice 2) | `mleg` execution — landed (P3 slice 1) |
 | Exercise / assignment UI | Exercise button; resolution flow [R42] | phone only [F26] | support request [T-EXA] | missing (ingested server-side) | build (P3) | render `option-lifecycle.ts` events |
 | Option positions with strike / expiry / greeks | netted greeks [R36] | Option Summary + net greeks [F15][F38] | Position Statement greeks + ITM badge [T-PS] | **built** (P2 slice 3) — `GET /api/trade/option-positions`; the card shows DTE · ITM/OTM · greeks and the netted book with coverage | build (P2) | done; beta-weighting to SPY is the next rung |
 | Live fills / quotes | push on fill; sub-second on Legend [R27][R66] | streaming under the ticket [F9] | real-time everywhere | polled 15–60 s; SSE = leaderboard only | build (P4) | per-desk SSE from the hub; verify one `trade_updates` stream per account |

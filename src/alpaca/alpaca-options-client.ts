@@ -109,6 +109,28 @@ export interface PlaceOptionOrderParams {
   readonly timeInForce?: "day" | "gtc";
 }
 
+/** One leg of a multi-leg (`mleg`) order — the structure's smallest unit, so a 2:1 ratio spread
+ *  carries `ratioQty` 2 and 1, and `quantity` on the order says how many of the whole. */
+export interface MultiLegOrderLeg {
+  readonly occSymbol: string;
+  readonly ratioQty: number;
+  readonly side: "buy" | "sell";
+  readonly positionIntent: PlaceOptionOrderParams["positionIntent"];
+}
+
+export interface PlaceMultiLegOrderParams {
+  readonly legs: readonly MultiLegOrderLeg[];
+  /** How many of the whole structure. */
+  readonly quantity: number;
+  /** Net premium per share for ONE unit of the structure, in Alpaca's own sign convention:
+   *  positive is a debit (you pay), negative is a credit (you receive). Stated only in the
+   *  Python SDK reference (`LimitOrderRequest.limit_price`), never on the docs pages — which is
+   *  how a credit spread gets sent as a debit by accident. Kept explicit here so no caller has
+   *  to remember. */
+  readonly netLimitPrice: number;
+  readonly timeInForce?: "day" | "gtc";
+}
+
 const num = (value: unknown): number | undefined => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
@@ -438,6 +460,29 @@ export class AlpacaOptionsClient {
       ...(params.type === "limit" ? { limit_price: params.limitPrice } : {}),
       time_in_force: params.timeInForce ?? "day",
       position_intent: params.positionIntent,
+    });
+    return ensureOk<AlpacaOrder>(response);
+  }
+
+  /**
+   * A spread as ONE order (#3407 P3 slice 1): Alpaca's `mleg` order class — every leg on the
+   * same underlying, one net limit, filled together or not at all. Always a limit (a market
+   * spread hands the net to the market maker), always day unless the member picked GTC. The
+   * broker echoes the parent order; its `legs` carry the per-leg fills.
+   */
+  async placeMultiLegOrder(params: PlaceMultiLegOrderParams): Promise<AlpacaOrder> {
+    const response = await this.trading.post("/v2/orders", {
+      order_class: "mleg",
+      qty: params.quantity,
+      type: "limit",
+      limit_price: params.netLimitPrice,
+      time_in_force: params.timeInForce ?? "day",
+      legs: params.legs.map((leg) => ({
+        symbol: leg.occSymbol,
+        ratio_qty: leg.ratioQty,
+        side: leg.side,
+        position_intent: leg.positionIntent,
+      })),
     });
     return ensureOk<AlpacaOrder>(response);
   }
