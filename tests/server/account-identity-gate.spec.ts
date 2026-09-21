@@ -1,5 +1,5 @@
 import type { Participant } from "../../src/participants/participant.js";
-import { verifyOwnAccount } from "../../src/server/account-identity-gate.js";
+import { resolveDeskTrading, verifyOwnAccount } from "../../src/server/account-identity-gate.js";
 
 /**
  * `verifyOwnAccount` — the structural gate both desks share (moved from `desk-gate.ts`'s
@@ -42,5 +42,37 @@ describe("verifyOwnAccount — the structural gate both desks share", () => {
     expect("participant" in access && access.participant.id).toBe("ann");
     expect("client" in access).toBe(true);
     expect("optionsClient" in access).toBe(true);
+  });
+});
+
+describe("resolveDeskTrading — every desk hangs off the one bound closure", () => {
+  const deps = {
+    findParticipant: (id: string) => (id === "ann" ? ann : undefined),
+    clientFactory: () => ({}) as never,
+    optionsClientFactory: () => ({}) as never,
+    authConfigured: true,
+  };
+
+  it("exposes the multi-leg seam beside the two single-leg ones (#3407 P3)", () => {
+    const desk = resolveDeskTrading(deps);
+    expect(typeof desk.submit).toBe("function");
+    expect(typeof desk.submitOption).toBe("function");
+    expect(typeof desk.submitDraft).toBe("function");
+  });
+
+  it("refuses a stranger on the multi-leg seam before any client is built", async () => {
+    const desk = resolveDeskTrading(deps);
+    const reviewed = { phase: "reviewed" as const, legs: [], refusals: [], nextLegId: 1 };
+    const result = await desk.submitDraft({ participantId: "ann", draft: reviewed }, "joe");
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) expect(result.refusals[0]).toContain("your own account");
+  });
+
+  it("is switched off with the authenticator, on every seam alike", async () => {
+    const desk = resolveDeskTrading({ ...deps, authConfigured: false });
+    expect(desk.enabled).toBe(false);
+    const reviewed = { phase: "reviewed" as const, legs: [], refusals: [], nextLegId: 1 };
+    const result = await desk.submitDraft({ participantId: "ann", draft: reviewed }, "ann");
+    expect(result).toMatchObject({ ok: false });
   });
 });
