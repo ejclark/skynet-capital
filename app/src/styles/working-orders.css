@@ -1,0 +1,76 @@
+/* Working orders (#3407 P1 slice 2) — the list under the ticket. Same small-text register and
+ * `.wr-*` frame as the who-else-traded row; own file so the addition doesn't push `ticket.css`
+ * or `wire-row.css` over the line cap. State is a word + glyph on every row (a standing reader is
+ * red/green colourblind); the settled list reads subdued by weight, never by hue alone. */
+.wo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.wo-row:last-child {
+  border-bottom: 0;
+}
+.wo-main {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.wo-sym {
+  font-weight: 700;
+}
+.wo-side {
+  font-weight: 600;
+}
+.wo-type {
+  color: var(--muted);
+}
+.wo-state {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.wo-recent .wo-row {
+  opacity: 0.7;
+}
+.wo-recent .wo-state {
+  font-weight: 500;
+}
+.wo-sub {
+  margin: 12px 0 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wo-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+/* `.btn` is width:100% by default (gate.css); a row action is its own width. */
+.wo-btn {
+  width: auto;
+  padding: 4px 10px;
+  font-size: 11.5px;
+}
+.wo-confirm {
+  border-color: var(--neg);
+  color: var(--neg);
+}
+.wo-notice {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.wo-notice:empty {
+  margin: 0;
+}
+.tif-field {
+  margin: 0 0 10px;
+}

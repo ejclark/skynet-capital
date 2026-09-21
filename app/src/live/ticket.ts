@@ -81,6 +81,10 @@ export interface TicketFields {
   /** Raw input text, still unparsed — the server is the arbiter of whether a price is usable. */
   readonly limitPrice: string;
   readonly stopPrice: string;
+  /** The member's own pick; undefined until they touch the control, and then the ticket shows
+   *  `defaultTimeInForce` pressed and sends nothing — the server previews the default it will
+   *  use, so what is shown is always what is sent (#3407 P1). */
+  readonly timeInForce?: TicketTimeInForce;
 }
 
 export const ORDER_TYPE_LABELS: Record<TicketOrderType, string> = {
@@ -88,6 +92,27 @@ export const ORDER_TYPE_LABELS: Record<TicketOrderType, string> = {
   limit: "Limit",
   stop: "Stop-Market",
 };
+
+export const TIF_LABELS: Record<TicketTimeInForce, string> = { day: "Day", gtc: "GTC" };
+
+/** Mirrors the server's own fallback (`order-ticket.ts` → `defaultTimeInForce`): a market order
+ *  is for today; a held order outlives the session it was placed in. */
+export function defaultTimeInForce(orderType: TicketOrderType): TicketTimeInForce {
+  return orderType === "market" ? "day" : "gtc";
+}
+
+/** "Day" / "GTC" for the server's echo; an unrecognized value renders as itself, never a guess. */
+export function tifLabel(tif: string | undefined): string | undefined {
+  if (tif === undefined) return undefined;
+  return TIF_LABELS[tif as TicketTimeInForce] ?? tif.toUpperCase();
+}
+
+/** One sentence on what the pick means, stated before the order is placed. */
+export function tifNote(tif: TicketTimeInForce): string {
+  return tif === "day"
+    ? "Day: anything unfilled is cancelled when today's session closes."
+    : "GTC: stays working across sessions until it fills or you cancel it.";
+}
 
 /** The server echoes the type back as a plain string; anything unrecognized renders as itself
  *  rather than as a guess, so a class this build doesn't know about can never be mislabeled. */
@@ -135,5 +160,6 @@ export function buildDraft(participantId: string, fields: TicketFields): TicketD
     action: fields.action,
     ...(fields.orderType !== "market" ? { orderType: fields.orderType } : {}),
     ...(field !== undefined && price !== undefined ? { [field]: price } : {}),
+    ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
   };
 }

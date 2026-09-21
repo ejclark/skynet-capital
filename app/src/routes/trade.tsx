@@ -20,6 +20,7 @@ import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { TicketNav } from "../shell/ticket-nav";
 import { TradeGate } from "../shell/trade-gate";
+import { WorkingOrders } from "../shell/working-orders";
 
 /**
  * THE TRADE TICKET (#738, live-review round; options since phase 10b) — the dedicated trading
@@ -179,6 +180,9 @@ function DeskTicket({
           onSymbolCommit={onSymbolCommit}
         />
       )}
+      {/* Working orders (#3407 P1 slice 2) sit right under whichever ticket is up — the #674
+          placement, pending the lo-fi pick on where they finally live. */}
+      <WorkingOrders deskId={desk} />
       {deskData.data ? (
         <OptionPositionsCard deskId={desk} positions={deskData.data.desk.positions} />
       ) : null}
