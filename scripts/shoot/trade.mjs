@@ -471,6 +471,61 @@ const optionPositions = {
   book: { delta: -124, gamma: 3.6, theta: -42, vega: 68, covered: 1, total: 1, uncovered: [] },
 };
 const currentOptionPositions = optionPositions;
+// A 2-lot NVDA 180/200 call credit spread walked add → validate → review → confirm, exactly the
+// states `draft-order.ts` produces; the confirm answer is the route's own shape with the
+// broker's echo (`executed: true`, order id, status, the working-orders note).
+const spreadLegs = [
+  {
+    id: "leg-1",
+    underlying: "NVDA",
+    optionType: "call",
+    strike: 180,
+    expiration: "2026-09-18",
+    action: "sell",
+    contracts: 2,
+    limitPrice: 4.2,
+  },
+  {
+    id: "leg-2",
+    underlying: "NVDA",
+    optionType: "call",
+    strike: 200,
+    expiration: "2026-09-18",
+    action: "buy",
+    contracts: 2,
+    limitPrice: 1.1,
+  },
+];
+const spreadPreview = {
+  legCount: 2,
+  pricedFully: true,
+  netPremium: 620,
+  maxGain: 620,
+  maxLoss: 3380,
+  unlimitedLoss: false,
+  breakevens: [183.1],
+  undefinedRiskLegIds: [],
+};
+const spreadVerdict = { ok: true, refusals: [], warnings: [] };
+const spreadDraft = (phase, extra = {}) => ({
+  draft: { phase, legs: spreadLegs, refusals: [], nextLegId: 3, ...extra },
+  preview: spreadPreview,
+});
+const draftSent = {
+  ...spreadDraft("submitted", { verdict: spreadVerdict }),
+  executed: true,
+  orderId: "7c1e2b9a-mleg",
+  status: "accepted",
+  timeInForce: "gtc",
+  note: "Order 7c1e2b9a-mleg accepted — one net limit, filled together or not at all. Working orders picks it up on the next read.",
+};
+const draftScript = [
+  spreadDraft("drafting"),
+  spreadDraft("validated", { verdict: spreadVerdict }),
+  spreadDraft("reviewed", { verdict: spreadVerdict }),
+  draftSent,
+];
+
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
@@ -496,6 +551,9 @@ const { page, origin, shoot, close } = await openShell({
     // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
     "/api/trade/option-positions": () => currentOptionPositions,
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
+    // The multi-leg builder's lifecycle (#3407 P3 slice 1) — one scripted answer per action, in
+    // the order the scene clicks them; the last answer repeats so a stray re-read stays put.
+    "/api/trade/draft": () => draftScript.shift() ?? draftSent,
   },
 });
 
@@ -682,6 +740,35 @@ currentPlays = throughLongs;
 await page.goto(`${origin}/app/trade?play=401`);
 await page.getByText("Multi-leg builder").waitFor();
 await shoot("trade-spread-open-phone");
+
+// A spread SENT (#3407 P3 slice 1) — the builder walked to its review screen, Day / GTC beside
+// Confirm (GTC pressed so the frame proves the pick), then the confirm answered by the broker's
+// own echo: "Confirmed", the order id and status, and the note that hands off to Working
+// orders. Before this slice the same click read "Reviewed — not sent" — the P0 honesty fix —
+// because no execution path existed. PHONE FIRST.
+// The stub answers the whole two-leg draft on the first add, so the typed leg only has to be
+// addable: commit the symbol, wait for the chain to turn the strike into a <select>, pick one.
+await page.getByLabel("Underlying").fill("NVDA");
+await page.getByLabel("Underlying").press("Enter");
+const strikePick = page.getByRole("combobox", { name: "Strike", exact: true });
+await strikePick.waitFor();
+await strikePick.selectOption({ index: 1 });
+await page.getByRole("button", { name: "Add leg" }).click();
+await page.getByRole("button", { name: "Validate against account" }).click();
+await page.getByRole("button", { name: "Review order" }).click();
+await page.getByText("Reviewed — ready to confirm").waitFor();
+await page.getByRole("button", { name: "GTC" }).click();
+await page.getByRole("button", { name: /Confirm order/ }).scrollIntoViewIfNeeded();
+const shootSpreadSent = shooter(page, resolve("docs/shots/spread-sent"));
+await shootSpreadSent("spread-confirm-phone");
+await page.getByRole("button", { name: /Confirm order/ }).click();
+await page.getByText("Confirmed").waitFor();
+await page.getByText("Confirmed").scrollIntoViewIfNeeded();
+await shootSpreadSent("spread-sent-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Confirmed").scrollIntoViewIfNeeded();
+await shootSpreadSent("spread-sent-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
 
 // The earnings badge + ⚡ print marks (#2017 Phase 1 slice 11) — MU's confirmed print is
 // 2026-09-30 (`src/domain/earnings-calendar.ts`). The harness's real wall clock is nowhere near

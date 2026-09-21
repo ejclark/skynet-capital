@@ -14,6 +14,7 @@ import type { CommunityProgressionService } from "./community-progression-servic
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
+import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -170,6 +171,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly submitTrade?: SubmitDeskTrade;
   /** The options execution seam (`option-trade-service.ts`), behind the same switch. */
   readonly submitOptionTrade?: SubmitOptionTrade;
+  /** The multi-leg execution seam (`draft-trade-service.ts`, #3407 P3). Absent = a reviewed
+   *  draft is honestly "not sent" — the route says so in those words. */
+  readonly submitDraftOrder?: SubmitDraftOrder;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
   /** Stock order data (Open Orders panel, order cancel) via a participant's own credentials. */

@@ -504,6 +504,73 @@ describe("AlpacaOptionsClient", () => {
     expect(log[2]?.body).toMatchObject({ time_in_force: "gtc" });
   });
 
+  it("places a spread as ONE mleg order — net limit in Alpaca's sign, legs in ratio, day by default (#3407 P3)", async () => {
+    const log: Array<{ path: string; body?: unknown }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport({ "/v2/orders": { id: "mleg-1", symbol: "", status: "accepted" } }, log),
+    );
+    await client.placeMultiLegOrder({
+      quantity: 2,
+      netLimitPrice: -3.1,
+      legs: [
+        {
+          occSymbol: "NVDA260918C00180000",
+          ratioQty: 1,
+          side: "sell",
+          positionIntent: "sell_to_open",
+        },
+        {
+          occSymbol: "NVDA260918C00200000",
+          ratioQty: 1,
+          side: "buy",
+          positionIntent: "buy_to_open",
+        },
+      ],
+    });
+    expect(log[0]?.path).toBe("/v2/orders");
+    expect(log[0]?.body).toEqual({
+      order_class: "mleg",
+      qty: 2,
+      type: "limit",
+      limit_price: -3.1,
+      time_in_force: "day",
+      legs: [
+        {
+          symbol: "NVDA260918C00180000",
+          ratio_qty: 1,
+          side: "sell",
+          position_intent: "sell_to_open",
+        },
+        {
+          symbol: "NVDA260918C00200000",
+          ratio_qty: 1,
+          side: "buy",
+          position_intent: "buy_to_open",
+        },
+      ],
+    });
+    await client.placeMultiLegOrder({
+      quantity: 1,
+      netLimitPrice: 2,
+      timeInForce: "gtc",
+      legs: [
+        {
+          occSymbol: "NVDA260918C00200000",
+          ratioQty: 1,
+          side: "buy",
+          positionIntent: "buy_to_open",
+        },
+        {
+          occSymbol: "NVDA260918C00180000",
+          ratioQty: 2,
+          side: "sell",
+          positionIntent: "sell_to_open",
+        },
+      ],
+    });
+    expect(log[1]?.body).toMatchObject({ time_in_force: "gtc", limit_price: 2 });
+  });
+
   it("underlying price fails soft with no data transport and on error", async () => {
     const bare = new AlpacaOptionsClient(fakeTransport({}));
     expect(await bare.getUnderlyingPrice("MSFT")).toBeUndefined();

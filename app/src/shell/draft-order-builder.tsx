@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import {
@@ -12,9 +13,10 @@ import {
   submitDraftOrder,
   validateDraft,
 } from "../live/draft-order";
-import { money } from "../live/ticket";
+import { money, type TicketTimeInForce, tifLabel } from "../live/ticket";
 import { DraftLegForm } from "./draft-leg-form";
 import { DisarmNote, GateHead } from "./gate-frame";
+import { TimeInForceField } from "./tif-field";
 
 /**
  * THE MULTI-LEG BUILDER (#582, slices 3-4) — an "add leg" action off the same chain the single-
@@ -188,7 +190,9 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
   const [preview, setPreview] = useState<DraftPreview | undefined>(undefined);
   const [note, setNote] = useState<string | undefined>(undefined);
   const [executed, setExecuted] = useState<boolean | undefined>(undefined);
+  const [timeInForce, setTimeInForce] = useState<TicketTimeInForce | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
 
   const apply = async (
     run: () => Promise<{
@@ -205,6 +209,11 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
       setPreview(res.preview);
       if (res.note !== undefined) setNote(res.note);
       if (res.executed !== undefined) setExecuted(res.executed);
+      // A sent spread is a working order until it fills — the list under the ticket re-reads
+      // now rather than on its next poll (#3407 P3 slice 1).
+      if (res.executed === true) {
+        void queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
+      }
     } finally {
       setBusy(false);
     }
@@ -214,12 +223,13 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
   const remove = (id: string) => void apply(() => removeDraftLeg(deskId, draft, id));
   const validate = () => void apply(() => validateDraft(deskId, draft));
   const review = () => void apply(() => reviewDraft(deskId, draft));
-  const confirm = () => void apply(() => submitDraftOrder(deskId, draft));
+  const confirm = () => void apply(() => submitDraftOrder(deskId, draft, timeInForce));
   const startOver = () => {
     setDraft(emptyDraft());
     setPreview(undefined);
     setNote(undefined);
     setExecuted(undefined);
+    setTimeInForce(undefined);
   };
 
   const editable = draft.phase !== "reviewed" && draft.phase !== "submitted";
@@ -265,9 +275,12 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
         </button>
       ) : null}
       {draft.phase === "reviewed" ? (
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={confirm}>
-          Confirm order
-        </button>
+        <>
+          <TimeInForceField fallback="day" value={timeInForce} onChange={setTimeInForce} />
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={confirm}>
+            Confirm order · {tifLabel(timeInForce ?? "day")}
+          </button>
+        </>
       ) : null}
       {draft.phase === "submitted" ? (
         <button type="button" className="btn" onClick={startOver}>
