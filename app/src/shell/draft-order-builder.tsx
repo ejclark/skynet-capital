@@ -3,18 +3,20 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import {
   addDraftLeg,
-  type DraftLeg,
   type DraftOrder,
   type DraftPreview,
   emptyDraft,
   type NewLeg,
   removeDraftLeg,
+  repriceDraftLeg,
   reviewDraft,
   submitDraftOrder,
   validateDraft,
 } from "../live/draft-order";
 import { money, type TicketTimeInForce, tifLabel } from "../live/ticket";
 import { DraftLegForm } from "./draft-leg-form";
+import { LegRow } from "./draft-leg-row";
+
 import { DisarmNote, GateHead } from "./gate-frame";
 import { TimeInForceField } from "./tif-field";
 
@@ -31,35 +33,24 @@ import { TimeInForceField } from "./tif-field";
  *  the house's static-fixture screenshot convention (`scripts/shoot/`, docs/PICTURES.md) applied to
  *  a client React component instead of a server-rendered view. That script isn't written yet; the
  *  harness it would sit on is, so it is now a copy of `scripts/shoot/feedback.mjs` away. */
-export function legLabel(leg: DraftLeg): string {
-  const side = leg.action === "sell" ? "Sell" : "Buy";
-  const type = leg.optionType === "call" ? "C" : "P";
-  return `${side} ${leg.contracts} ${leg.underlying} $${leg.strike}${type} ${leg.expiration}`;
-}
-
-/** One leg of a multi-leg draft: its plain-language label plus the control that removes it.
- *
- *  @category trading
- */
-export function LegRow({
-  leg,
-  busy,
-  onRemove,
+/** The running net while the order is still being built (#3407 P3 slice 4; Fidelity's net
+ *  Bid/Mid/Ask row): the same server number the review will show, one line, so repricing a leg
+ *  is judged by its effect before the review screen. Silent once reviewed (the grid has it). */
+function RunningNet({
+  draft,
+  preview,
 }: {
-  readonly leg: DraftLeg;
-  readonly busy: boolean;
-  readonly onRemove: () => void;
-}): ReactElement {
+  readonly draft: DraftOrder;
+  readonly preview: DraftPreview | undefined;
+}): ReactElement | null {
+  if (!preview || preview.netPremium === undefined || draft.legs.length < 2) return null;
+  if (draft.phase === "reviewed" || draft.phase === "submitted") return null;
+  const flow = preview.netPremium >= 0 ? "credit" : "debit";
   return (
-    <li className="draft-leg-row">
-      <span className="draft-leg-label">{legLabel(leg)}</span>
-      <span className="draft-leg-price num">
-        {leg.limitPrice !== undefined ? `${money(leg.limitPrice)}/sh` : "at market"}
-      </span>
-      <button type="button" className="draft-leg-remove" disabled={busy} onClick={onRemove}>
-        Remove
-      </button>
-    </li>
+    <p className="draft-net num">
+      Running net {flow} {money(Math.abs(preview.netPremium))}
+      {preview.pricedFully ? "" : " — an unpriced leg counts as $0 until it's priced"}
+    </p>
   );
 }
 
@@ -221,6 +212,8 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
 
   const addLeg = (leg: NewLeg) => void apply(() => addDraftLeg(deskId, draft, leg));
   const remove = (id: string) => void apply(() => removeDraftLeg(deskId, draft, id));
+  const reprice = (id: string, limitPrice: number | undefined) =>
+    void apply(() => repriceDraftLeg(deskId, draft, id, limitPrice));
   const validate = () => void apply(() => validateDraft(deskId, draft));
   const review = () => void apply(() => reviewDraft(deskId, draft));
   const confirm = () => void apply(() => submitDraftOrder(deskId, draft, timeInForce));
@@ -252,12 +245,14 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
               leg={leg}
               busy={busy || !editable}
               onRemove={() => remove(leg.id)}
+              onReprice={(price) => reprice(leg.id, price)}
             />
           ))}
         </ul>
       ) : (
         <p className="tkt-note">No legs yet — add at least two to build a spread.</p>
       )}
+      <RunningNet draft={draft} preview={preview} />
 
       <div className="gate" aria-live="polite">
         <GateHead tone={tone}>{headline}</GateHead>
