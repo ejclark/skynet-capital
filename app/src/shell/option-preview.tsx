@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import type { OptionPreview } from "../live/options";
 import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
-import { DisarmNote, GateHead } from "./gate-frame";
+import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 
 /**
  * The options gate's review rendering (#738 phase 10b) — the server's `OptionTicketPreview`
@@ -144,7 +144,13 @@ export function GateAction({
   const busy = state.step === "reviewing" || state.step === "submitting";
   if (state.step === "reviewed" && state.preview.ok) {
     return (
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={onSubmit}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={busy}
+        onMouseDown={keepFocus}
+        onClick={onSubmit}
+      >
         Submit order
         {state.preview.estNotional ? ` — ${money(state.preview.estNotional)}` : ""}
       </button>
@@ -162,6 +168,7 @@ export function GateAction({
       type="button"
       className="btn btn-primary"
       disabled={busy || !drafted}
+      onMouseDown={keepFocus}
       onClick={onReview}
     >
       {state.step === "reviewing" ? "Reviewing…" : "Review order"}

@@ -22,6 +22,20 @@ export function GateHead({
   );
 }
 
+/**
+ * Keep focus where it is when a gate button is pressed (#3407 P0, found while shooting P2 slice
+ * 2): the strike and symbol fields commit to the URL on blur, and that `navigate()` re-renders
+ * the ticket under the pointer — the mousedown blurred the field, the click landed on a node that
+ * no longer existed, and the member's FIRST press of Review did nothing. Preventing the default
+ * on mousedown stops the focus change, so the click fires; the gate's own review handler then
+ * commits the field's value explicitly, so the URL still ends up right. Keyboard activation is
+ * untouched (Enter / Space never go through mousedown).
+ * @category gates
+ */
+export function keepFocus(event: { preventDefault: () => void }): void {
+  event.preventDefault();
+}
+
 /** @category gates */
 export function DisarmNote(): ReactElement {
   return (
