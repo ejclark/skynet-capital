@@ -154,11 +154,21 @@
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   border-radius: 4px;
 }
-.straddle-call-itm td:first-child {
+/* The in-the-money rail (#1481) rides the STRIKE cell's edges — calls' rail on its left, puts'
+   on its right — the one column that is always in view: at 390px the view opens pre-scrolled
+   past calls' stats and the outermost cells (where the rail used to paint) sat off-screen, so
+   the header comment promised a rail nobody saw (#3407 P0, study §3.2 item 4). A 3px bar is a
+   shape, not a hue alone; the strike text stays in its own colour. */
+.straddle-call-itm td:nth-child(9) {
   box-shadow: inset 3px 0 0 var(--accent);
 }
-.straddle-put-itm td:last-child {
+.straddle-put-itm td:nth-child(9) {
   box-shadow: inset -3px 0 0 var(--accent);
+}
+.straddle-call-itm.straddle-put-itm td:nth-child(9) {
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    inset -3px 0 0 var(--accent);
 }
 .straddle-divider td {
   padding: 6px 2px;

@@ -857,4 +857,16 @@ await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootHonest = shooter(page, resolve("docs/shots/p0-honest"));
 await shootHonest("limit-note-phone");
 
+// The in-the-money rail on the strike cell (#3407 P0): visible at 390px without scrolling —
+// calls in the money above the divider carry the bar on the strike's left edge, puts below it on
+// the right.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByText(/^Chain ·/).waitFor();
+await page.getByText(/^Chain ·/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootRail = shooter(page, resolve("docs/shots/itm-rail"));
+await shootRail("itm-rail-phone");
+
 await close();

@@ -94,7 +94,11 @@ export function StraddleView({
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const all = mergeStraddle(calls, puts);
-  const { rows, hidden } = showAll ? { rows: all, hidden: 0 } : windowRows(all, spot);
+  const windowed = windowRows(all, spot);
+  const { rows, hidden } = showAll ? { rows: all, hidden: 0 } : windowed;
+  // "Show all" is reversible (#3407 P0): a member who expanded to find a far strike can fold the
+  // chain back around the money — or, with no spot, around the middle, and the button says which.
+  const foldLabel = windowed.centred === "spot" ? "around the price" : "around the middle";
   const divider = dividerIndex(rows, spot);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Open centred on the base five (Calls Bid/Ask, Strike, Puts Bid/Ask) — see the header comment's
@@ -198,6 +202,11 @@ export function StraddleView({
       {hidden > 0 ? (
         <button type="button" className="straddle-more" onClick={() => setShowAll(true)}>
           Show all {all.length} strikes
+          {windowed.centred === "middle" ? " · no live price, windowed around the middle" : ""}
+        </button>
+      ) : showAll && windowed.hidden > 0 ? (
+        <button type="button" className="straddle-more" onClick={() => setShowAll(false)}>
+          Show {windowed.rows.length} strikes {foldLabel}
         </button>
       ) : null}
       {quotes ? <p className="straddle-coverage">{coverageLine(quotes)}</p> : null}
