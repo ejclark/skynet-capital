@@ -18,3 +18,5 @@ account data, so the teardown ban on frames does not apply.
 | File | Decision it serves | Study |
 |---|---|---|
 | `trading-journeys.html` | the home of trading (#3407): Arcade · Outlook · Workbench · Register × ten journeys | `docs/research/trading-parity-2026-09.md` |
+
+Published: https://claude.ai/artifact/H8zbzDxvn2Nw4HW1nPt1C3 (private; republish from `trading-journeys.html` with the document wrapper stripped).

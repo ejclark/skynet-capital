@@ -19,7 +19,7 @@
       "built-unwired": "code exists, no surface",
       "skip-by-design": "declined on purpose, reason recorded"
     },
-    "journeysNote": "Issue #3407 names the four shapes and an eight-node journey flow (Type a symbol → Quote and chain → Tap a cell → Review → Working order → Cancel or modify → Fill → Close, roll, exercise) and says the shapes 'walk nine journeys' without listing them; the ten below split 'Cancel or modify' and 'Close, roll, exercise' so each journey has one verb. The lo-fi HTML (docs/design/lofi/trading-journeys.html) is not committed yet — 'rendered in' means 'the journey the shapes are commissioned to render', not a frame that exists."
+    "journeysNote": "Issue #3407 names the four shapes and an eight-node journey flow (Type a symbol → Quote and chain → Tap a cell → Review → Working order → Cancel or modify → Fill → Close, roll, exercise) and says the shapes 'walk nine journeys' without listing them; the ten below split 'Cancel or modify' and 'Close, roll, exercise' so each journey has one verb. The lo-fi HTML (docs/design/lofi/trading-journeys.html) is not committed yet — 'rendered in' means 'the journey the shapes are commissioned to render', not a frame that exists. Updated 2026-09-21 after the red pass: step 9 renders review → submitted (market and limit as an A/B) → working → filled; step 6 renders working, partially filled, rejected and (Register) expired rows. Assignment is rendered by no journey — an honest gap."
   },
   "references": {
     "rh": {
@@ -79,17 +79,28 @@
           "facts": {
             "rh": {
               "what": "Detail page → Trade → Buy / Sell (just Buy if not owned); dollars by default, Shares via the selector; order types market, limit, stop, stop-limit, trailing stop.",
-              "src": ["R9", "R10", "R1"],
+              "src": [
+                "R9",
+                "R10",
+                "R1"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "One-column ticket at rest: quote → Buy/Sell segmented control → amount (Shares | Dollars) → order type → time in force, label above field; the mobile sheet lists 8 order types.",
-              "src": ["frames 1-5", "F46", "F1"],
+              "src": [
+                "frames 1-5",
+                "F46",
+                "F1"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Order Entry opens at the bottom of the screen on BUY / SELL or a bid/ask; defaults 100 shares; fields Side · Qty · Symbol · Price (lock follows the mark) · Order · TIF · Order Rules.",
-              "src": ["T-OET", "T-FAQN"],
+              "src": [
+                "T-OET",
+                "T-FAQN"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -110,17 +121,29 @@
           "facts": {
             "rh": {
               "what": "Options flow starts from the name → Trade → Trade options; Level 2 covers long calls and covered calls; the default chain row shows premium, % change, breakeven and chance of profit; select the Bid column to sell, the Ask to buy.",
-              "src": ["R34", "R31", "R35"],
+              "src": [
+                "R34",
+                "R31",
+                "R35"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Straddle view (calls left, strike centred, orange ITM rail); tap Bid = Sell to Open, Ask = Buy to Open at that price; the options ticket is one leg card with Bid · Mid · Ask chips and a live ×100 estimate.",
-              "src": ["frames 11-14", "frames 16-18", "F2"],
+              "src": [
+                "frames 11-14",
+                "frames 16-18",
+                "F2"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Chain with collapsible expiration headers, calls left, puts right, ITM rows shaded; click ask to buy / bid to sell into Order Entry (default 10 contracts); right-click a strike → Analyze.",
-              "src": ["T-AP", "T-FAQN", "T-VS"],
+              "src": [
+                "T-AP",
+                "T-FAQN",
+                "T-VS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -142,22 +165,36 @@
           "facts": {
             "rh": {
               "what": "Same options flow as a call; Level 2 covers long puts and cash-secured puts; collateral for a written put is shown on the underlying's detail page and held from pending.",
-              "src": ["R34", "R31", "R48"],
+              "src": [
+                "R34",
+                "R31",
+                "R48"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Puts sit on the right of the straddle view; tap Bid = Sell to Open (cash-covered put, Tier 1), Ask = Buy to Open; same leg-card ticket.",
-              "src": ["frames 11-14", "F2", "F12"],
+              "src": [
+                "frames 11-14",
+                "F2",
+                "F12"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Puts on the right of the chain; same click-to-trade grammar; options approval grid shows Long / Covered Calls / Spreads / Full.",
-              "src": ["T-AP", "T-ACCT"],
+              "src": [
+                "T-AP",
+                "T-ACCT"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Single-leg put (302 long, 201 cash-secured with collateral = strike × 100) at limit or market; same chain and depth caveats as a call.",
-              "src": ["src/trading/option-ticket.ts:174", "app/src/shell/option-gate.tsx"],
+              "src": [
+                "src/trading/option-ticket.ts:174",
+                "app/src/shell/option-gate.tsx"
+              ],
               "prov": "vendor-quote",
               "status": "have"
             }
@@ -169,17 +206,31 @@
           "facts": {
             "rh": {
               "what": "Single-order multi-leg since 2018; Level 3 required; the Strategy Builder lists verticals with a P/L thumbnail and one strategy price → quantity + limit → review; Legend adds legs by bid/ask clicks, ≤4.",
-              "src": ["R69", "R33", "R37", "R63"],
+              "src": [
+                "R69",
+                "R33",
+                "R37",
+                "R63"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Multi-leg ticket up to 4 legs on a net basis, Strategy dropdown Spread; the desktop multi-select builder shows breakeven, max profit/loss and probability of profit as legs are picked; Tier 2 approval.",
-              "src": ["F29", "F38", "F12"],
+              "src": [
+                "F29",
+                "F38",
+                "F12"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Right-click a strike → spread menu (Vertical); Analyze → Risk Profile; 'spread trading must be done in a margin account'; paperMoney 'may not reflect all intraday margin features'.",
-              "src": ["T-VS", "T-AP", "T-ACCT", "T-FAQG"],
+              "src": [
+                "T-VS",
+                "T-AP",
+                "T-ACCT",
+                "T-FAQG"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -200,17 +251,29 @@
           "facts": {
             "rh": {
               "what": "Level 3 adds condors; Legend builds up to 4 legs by bid/ask clicks. The Strategy Builder's documented categories are single-leg, verticals, straddles/strangles and calendars — a condor card is not shown.",
-              "src": ["R31", "R63", "R37"],
+              "src": [
+                "R31",
+                "R63",
+                "R37"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Iron Condor is a strategy template on the desktop chain; ≤4 legs on a net basis with at-expiration profit, loss and breakeven. Mobile condor entry: not shown.",
-              "src": ["F25", "F32", "F29"],
+              "src": [
+                "F25",
+                "F32",
+                "F29"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Spread Hacker scans condors; a condor position 'can close as verticals, strangle, combo or legs' by dragging over legs (medium confidence — search-indexed); margin account required.",
-              "src": ["T-SCAN", "T-PS", "T-ACCT"],
+              "src": [
+                "T-SCAN",
+                "T-PS",
+                "T-ACCT"
+              ],
               "prov": "doc-inferred"
             },
             "sky": {
@@ -235,22 +298,38 @@
           "facts": {
             "rh": {
               "what": "Buy from the detail page; options: the Ask column opens a buy; Legend default settings equities limit-or-market qty 1 GFD, options limit 1 contract GFD.",
-              "src": ["R9", "R35", "R64"],
+              "src": [
+                "R9",
+                "R35",
+                "R64"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Buy in the segmented control; on the chain the Ask opens Buy to Open with the price prefilled from the ask.",
-              "src": ["frames 2", "frames 14", "frames 17", "F2"],
+              "src": [
+                "frames 2",
+                "frames 14",
+                "frames 17",
+                "F2"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Click an ask to add a buy; BUY button opens Order Entry; 'Buy custom … with OCO Bracket' preloads a bracket.",
-              "src": ["T-AP", "T-OET", "T-ATE"],
+              "src": [
+                "T-AP",
+                "T-OET",
+                "T-ATE"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Stock buy = rung 101; long call / put = 301 / 302 with positionIntent buy_to_open; the ticket previews cost, max loss and breakeven.",
-              "src": ["src/domain/trade-types.ts:24", "app/src/shell/option-preview.tsx:32-52"],
+              "src": [
+                "src/domain/trade-types.ts:24",
+                "app/src/shell/option-preview.tsx:32-52"
+              ],
               "prov": "vendor-quote",
               "status": "have"
             }
@@ -262,22 +341,38 @@
           "facts": {
             "rh": {
               "what": "Level 2 includes covered calls and cash-secured puts; the Bid column opens a sell; collateral is shown on the underlying's page and held from pending.",
-              "src": ["R31", "R35", "R48"],
+              "src": [
+                "R31",
+                "R35",
+                "R48"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Bid = Sell to Open on the chain; Tier 1 covers covered calls and cash-covered puts; the options ticket shows Type: Margin and three buying powers.",
-              "src": ["frames 14", "frames 20", "F2", "F12"],
+              "src": [
+                "frames 14",
+                "frames 20",
+                "F2",
+                "F12"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Click a bid to add a sell; approval grid Covered Calls / Long / Spreads / Full; Strategy Roller automates covered-call rolls later.",
-              "src": ["T-AP", "T-ACCT", "T-SR"],
+              "src": [
+                "T-AP",
+                "T-ACCT",
+                "T-SR"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "201 cash-secured put (collateral = strike × 100) and 202 covered call, gated by options level and collateral; the desk never shorts stock.",
-              "src": ["src/trading/option-ticket.ts:174", "src/domain/progression.ts:14"],
+              "src": [
+                "src/trading/option-ticket.ts:174",
+                "src/domain/progression.ts:14"
+              ],
               "prov": "vendor-quote",
               "status": "have"
             }
@@ -289,17 +384,29 @@
           "facts": {
             "rh": {
               "what": "Sell flow with the order type at top right; swipe left on a position to sell/close; tax-lot picker on the sell ticket; dollar sells max 95% of the position.",
-              "src": ["R10", "R34", "R11", "R3"],
+              "src": [
+                "R10",
+                "R34",
+                "R11",
+                "R3"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Sell to Close from the position; Option Summary Bid/Ask prefills the closing ticket; on a stock row 'click in the Amount field' to sell all.",
-              "src": ["F52", "F38"],
+              "src": [
+                "F52",
+                "F38"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Right-click a position → closing order into Order Entry; partial close of a complex by dragging over legs; Big Buttons Flatten.",
-              "src": ["T-PS", "T-EXIT", "T-ATO"],
+              "src": [
+                "T-PS",
+                "T-EXIT",
+                "T-ATO"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -320,22 +427,34 @@
           "facts": {
             "rh": {
               "what": "Close from the position (swipe left = sell/close); the options hub buckets covered calls and CSPs; a 'buy to close' label is not documented in the rows read.",
-              "src": ["R34", "R49"],
+              "src": [
+                "R34",
+                "R49"
+              ],
               "prov": "doc-inferred"
             },
             "fid": {
               "what": "'Buy to Close' is on every options ticket; the Option Summary Bid/Ask prefills the closing ticket.",
-              "src": ["F2", "F9", "F52"],
+              "src": [
+                "F2",
+                "F9",
+                "F52"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Closing order from the Position Statement via Order Entry; three named exit strategies.",
-              "src": ["T-PS", "T-EXIT"],
+              "src": [
+                "T-PS",
+                "T-EXIT"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "The close ticket sets side buy / buy_to_close for a written contract; market-only.",
-              "src": ["src/trading/option-ticket.ts:236-243"],
+              "src": [
+                "src/trading/option-ticket.ts:236-243"
+              ],
               "prov": "vendor-quote",
               "status": "partial"
             }
@@ -347,17 +466,27 @@
           "facts": {
             "rh": {
               "what": "Trade → Roll position (not for cash accounts); the Options Analyzer can launch Open / Close / Roll.",
-              "src": ["R41", "R39"],
+              "src": [
+                "R41",
+                "R39"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Roll ticket closes an existing option and opens a new one 'using the same trade ticket', 1:1; 1-click roll for singles and 2-leg spreads; mobile has the 'ability to roll options'.",
-              "src": ["F9", "F7", "F38"],
+              "src": [
+                "F9",
+                "F7",
+                "F38"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Right-click a position and drag over the legs to close / analyze / roll (medium confidence); the Strategy Roller automates covered-call rolls by strike offset or delta with a limit at mid.",
-              "src": ["T-PS", "T-SR"],
+              "src": [
+                "T-PS",
+                "T-SR"
+              ],
               "prov": "doc-inferred"
             },
             "sky": {
@@ -377,22 +506,34 @@
           "facts": {
             "rh": {
               "what": "Exercise from the position with a pre-exercise 'reasons not to exercise' review; auto-exercise ≥ $0.01 ITM; DNE cutoff 5 PM; last-30-minute sale of at-risk contracts.",
-              "src": ["R41", "R42", "R43"],
+              "src": [
+                "R41",
+                "R42",
+                "R43"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Auto-exercise ≥ $0.01 ITM; manual exercise and do-not-exercise by phone before 4:15 PM; no online exercise shown.",
-              "src": ["F26", "F12"],
+              "src": [
+                "F26",
+                "F12"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Auto-exercise ≥ $0.01 ITM; DNE is a support request; an in-platform Exercise menu is not shown.",
-              "src": ["T-EXA"],
+              "src": [
+                "T-EXA"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "No exercise UI; OPEXC events are ingested server-side only (exercise converts a long option into stock at the strike).",
-              "src": ["src/trading/option-lifecycle.ts:6-7", "src/trading/option-lifecycle.ts:34"],
+              "src": [
+                "src/trading/option-lifecycle.ts:6-7",
+                "src/trading/option-lifecycle.ts:34"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -404,22 +545,35 @@
           "facts": {
             "rh": {
               "what": "In-app + email notification and a 'resolution flow' for early assignment; an early-assignment-risk alert on dividends.",
-              "src": ["R42", "R54", "R25"],
+              "src": [
+                "R42",
+                "R54",
+                "R25"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Not shown — the rows read cover auto-exercise and phone exercise; how an assignment is surfaced was not documented.",
-              "src": ["F26", "F12"],
+              "src": [
+                "F26",
+                "F12"
+              ],
               "prov": "not-shown"
             },
             "tos": {
               "what": "After exercise/assignment the Position Statement shows Trade Price = strike and Cost = strike ± premium.",
-              "src": ["T-FAQG", "T-EXA"],
+              "src": [
+                "T-FAQG",
+                "T-EXA"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "No assignment UI; OPASN (a written contract assigned) and the paired OPTRD share trade are ingested server-side only.",
-              "src": ["src/trading/option-lifecycle.ts:6-7", "src/trading/option-lifecycle.ts:25"],
+              "src": [
+                "src/trading/option-lifecycle.ts:6-7",
+                "src/trading/option-lifecycle.ts:25"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -436,22 +590,35 @@
           "facts": {
             "rh": {
               "what": "Default in regular hours; outside RTH a market order is queued for the open with 5% extra buying power reserved.",
-              "src": ["R2", "R3", "R6"],
+              "src": [
+                "R2",
+                "R3",
+                "R6"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Market is in the 8-type mobile sheet; dollar orders are market or limit only.",
-              "src": ["frames 5", "F46", "F29"],
+              "src": [
+                "frames 5",
+                "F46",
+                "F29"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Market (DAY only); MOC / LOC must be entered before 3:45.",
-              "src": ["T-OET", "T-OT"],
+              "src": [
+                "T-OET",
+                "T-OT"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Market works; time in force is forced to day server-side and never shown.",
-              "src": ["src/alpaca/alpaca-trading-client.ts:221"],
+              "src": [
+                "src/alpaca/alpaca-trading-client.ts:221"
+              ],
               "prov": "vendor-quote",
               "status": "have"
             }
@@ -463,17 +630,27 @@
           "facts": {
             "rh": {
               "what": "Limit; the session selector (Market / Extended / 24 Hour) applies to limit orders; only limit and stop orders can be replaced.",
-              "src": ["R2", "R6", "R13"],
+              "src": [
+                "R2",
+                "R6",
+                "R13"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Limit price and Conditions appear only when Limit is chosen; a limit 'cannot be more than 30% away from last trade price'; desktop can follow the bid/ask until Preview.",
-              "src": ["frames 7", "F3", "F29"],
+              "src": [
+                "frames 7",
+                "F3",
+                "F29"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Limit; price follows the mark until locked, +/− steps.",
-              "src": ["T-OET"],
+              "src": [
+                "T-OET"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -494,22 +671,37 @@
           "facts": {
             "rh": {
               "what": "Stop; does not execute outside regular hours (queues for the open); replaceable, same type only.",
-              "src": ["R1", "R6", "R13"],
+              "src": [
+                "R1",
+                "R6",
+                "R13"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Stop Loss in the sheet; for options, stops trigger off the bid (buy) / ask (sell).",
-              "src": ["frames 5", "F46", "F2"],
+              "src": [
+                "frames 5",
+                "F46",
+                "F2"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Stop with a trigger basis (trade / mark / bid); stop pages carry 'no guarantee'.",
-              "src": ["T-OET", "T-OT", "T-ATE"],
+              "src": [
+                "T-OET",
+                "T-OT",
+                "T-ATE"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Stop works on the stock ticket with time in force forced to gtc.",
-              "src": ["app/src/live/ticket.ts:12", "src/alpaca/alpaca-trading-client.ts:221"],
+              "src": [
+                "app/src/live/ticket.ts:12",
+                "src/alpaca/alpaca-trading-client.ts:221"
+              ],
               "prov": "vendor-quote",
               "status": "have"
             }
@@ -521,22 +713,33 @@
           "facts": {
             "rh": {
               "what": "Stop price + limit price; buy stop above / sell stop below the market.",
-              "src": ["R4"],
+              "src": [
+                "R4"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Stop Limit in the stock sheet (8 types on mobile).",
-              "src": ["F46", "frames 5"],
+              "src": [
+                "F46",
+                "frames 5"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Stop-limit with a trigger basis (trade / mark / bid).",
-              "src": ["T-OET", "T-OT"],
+              "src": [
+                "T-OET",
+                "T-OT"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Not modelled — TicketOrderType is market | limit | stop.",
-              "src": ["app/src/live/ticket.ts:12", "§3.3"],
+              "src": [
+                "app/src/live/ticket.ts:12",
+                "§3.3"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -548,22 +751,34 @@
           "facts": {
             "rh": {
               "what": "Trail in %; buys reserve 5–10% extra buying power; does not execute outside regular hours.",
-              "src": ["R5", "R6"],
+              "src": [
+                "R5",
+                "R6"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Trailing Stop Loss ($ / %) and Trailing Stop Limit ($ / %); trailing orders carry a 'not held' statement.",
-              "src": ["F46", "F1", "F13"],
+              "src": [
+                "F46",
+                "F1",
+                "F13"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Trailing stop and trailing stop-limit ($ / % / tick, linked to LAST / BID / ASK / MARK).",
-              "src": ["T-OET", "T-TSL"],
+              "src": [
+                "T-OET",
+                "T-TSL"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Not modelled at any layer.",
-              "src": ["§3.3"],
+              "src": [
+                "§3.3"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -575,22 +790,36 @@
           "facts": {
             "rh": {
               "what": "No bracket / OCO and no MOO / MOC.",
-              "src": ["R1", "R71"],
+              "src": [
+                "R1",
+                "R71"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Contingent, OTO, OCO, OTOCO on desktop / web; Trader+ Action menu 'Sell bracket (OCO)' and 'Buy with sell bracket (OTOCO)'; Trade Armor draws brackets.",
-              "src": ["F4", "F13", "F38"],
+              "src": [
+                "F4",
+                "F13",
+                "F38"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "OCO, 1st Triggers OCO / 2 OCO / 3 OCO, Blast All, Pair; Big Buttons templates Single / OCO / Trigger with 1–3 brackets.",
-              "src": ["T-OT", "T-ATE", "T-ATO"],
+              "src": [
+                "T-OT",
+                "T-ATE",
+                "T-ATO"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "None — no order_class on the wire; call-sheet row 30 keeps OTOCO as 'later, the one advanced order that is the plan'.",
-              "src": ["§3.3", "§4 T4 bracket row"],
+              "src": [
+                "§3.3",
+                "§4 T4 bracket row"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -607,22 +836,35 @@
           "facts": {
             "rh": {
               "what": "Market = good-for-day; other types choose GFD or GTC.",
-              "src": ["R1", "R6"],
+              "src": [
+                "R1",
+                "R6"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Day is the default (custom expiry to the half hour); the mobile sheet lists 5 TIFs with a 'Learn about…' link; Trader+ adds Day+ (regular + extended).",
-              "src": ["frames 6", "F1", "F46", "F38"],
+              "src": [
+                "frames 6",
+                "F1",
+                "F46",
+                "F38"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "DAY in the TIF dropdown; market orders are DAY only.",
-              "src": ["T-OET", "T-OT"],
+              "src": [
+                "T-OET",
+                "T-OT"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Forced: a market order is sent as day; the member never sees or chooses it.",
-              "src": ["src/alpaca/alpaca-trading-client.ts:221"],
+              "src": [
+                "src/alpaca/alpaca-trading-client.ts:221"
+              ],
               "prov": "vendor-quote",
               "status": "partial"
             }
@@ -634,22 +876,36 @@
           "facts": {
             "rh": {
               "what": "GTC up to 90 days for stocks and options.",
-              "src": ["R1", "R6", "R34"],
+              "src": [
+                "R1",
+                "R6",
+                "R34"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "GTC 180 days; not available in extended hours; ATP alerts on GTC orders nearing expiration.",
-              "src": ["F1", "F20", "F19"],
+              "src": [
+                "F1",
+                "F20",
+                "F19"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "GTC, GTC_EXT and GTC_EXTO (overnight, ≤6 months); batch cancel by DAY / GTC.",
-              "src": ["T-OET", "T-OT", "T-TTA"],
+              "src": [
+                "T-OET",
+                "T-OT",
+                "T-TTA"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Forced: limit and stop orders are sent as gtc; never shown, and no GTC expiry is ever surfaced.",
-              "src": ["src/alpaca/alpaca-trading-client.ts:221"],
+              "src": [
+                "src/alpaca/alpaca-trading-client.ts:221"
+              ],
               "prov": "vendor-quote",
               "status": "partial"
             }
@@ -661,22 +917,34 @@
           "facts": {
             "rh": {
               "what": "Not shown — the order-types page lists GFD and GTC only.",
-              "src": ["R1", "R6"],
+              "src": [
+                "R1",
+                "R6"
+              ],
               "prov": "not-shown"
             },
             "fid": {
               "what": "FOK and IOC for stocks and options; IOC for extended hours in the Directed Trade ticket.",
-              "src": ["F1", "F2", "F50"],
+              "src": [
+                "F1",
+                "F2",
+                "F50"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Not shown — the TIF row lists DAY, GTC, EXT, GTC_EXT, AM, PM, EXTO, GTC_EXTO.",
-              "src": ["T-OET", "T-OT"],
+              "src": [
+                "T-OET",
+                "T-OT"
+              ],
               "prov": "not-shown"
             },
             "sky": {
               "what": "Not modelled.",
-              "src": ["§3.3"],
+              "src": [
+                "§3.3"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -688,22 +956,35 @@
           "facts": {
             "rh": {
               "what": "Session selector Market / Extended / 24 Hour Market (8 PM–8 PM ET): whole-share limit orders only, GFD expires 8 PM, GTC up to 90 days; extended-hours limit preset 2% above (buy) / below (sell) the last trade, shown at review.",
-              "src": ["R6", "R7", "R2"],
+              "src": [
+                "R6",
+                "R7",
+                "R2"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "7:00–9:28 and 4:00–8:00 ET; limit only; no GTC; a change order in extended hours can alter quantity only.",
-              "src": ["F20", "F47"],
+              "src": [
+                "F20",
+                "F47"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "EXT, GTC_EXT, AM (7:00–9:25), PM (4:05–8:00), EXTO / GTC_EXTO overnight on eligible symbols, ≤6 months.",
-              "src": ["T-OET", "T-OT"],
+              "src": [
+                "T-OET",
+                "T-OT"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Missing — no extended_hours flag anywhere; call-sheet row 25 skips the 24-hour label until the backend can honour a fill.",
-              "src": ["§3.1 extended hours row", "§3.3"],
+              "src": [
+                "§3.1 extended hours row",
+                "§3.3"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -720,17 +1001,28 @@
           "facts": {
             "rh": {
               "what": "Detail page → Trade; dollars by default; order type top right; session-aware default (market in RTH, limit preset outside); the Strategy Builder for options.",
-              "src": ["R9", "R10", "R2", "R37"],
+              "src": [
+                "R9",
+                "R10",
+                "R2",
+                "R37"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "One-column ticket with contextual fields, pickers as bottom sheets ending in one learn link, an estimated-value sticky footer above Preview; the options footer turns $6.40 into $640.65.",
-              "src": ["frames 1-8", "frames 18"],
+              "src": [
+                "frames 1-8",
+                "frames 18"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Order Entry with the template swapping per order type; Order Rules gear; Saved Orders tab; per-asset defaults.",
-              "src": ["T-OET", "T-SETUP"],
+              "src": [
+                "T-OET",
+                "T-SETUP"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -752,17 +1044,28 @@
           "facts": {
             "rh": {
               "what": "'Review your order… or select Edit'; the preset limit is visible in extended hours; an order sentence is not documented; disclosures (fees, 'elevated volatility', stop and queued-order notes) sit on the confirmation.",
-              "src": ["R9", "R2", "R57"],
+              "src": [
+                "R9",
+                "R2",
+                "R57"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Review as a sentence ('Buy to open 1 $230 NVDA call · Sep 16, 2026'), a plain-language warning banner above, Last / Bid / Ask rows, as-of, Place order; edit or cancel before submitting.",
-              "src": ["frames 19", "F20"],
+              "src": [
+                "frames 19",
+                "F20"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Confirm and Send → Order Confirmation Dialog: edit, delete, send or save; warnings, cost disclosures and BP Effect live here; Autosend skips it with an explicit risk note.",
-              "src": ["T-OET", "T-SETUP", "T-PS"],
+              "src": [
+                "T-OET",
+                "T-SETUP",
+                "T-PS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -784,22 +1087,35 @@
           "facts": {
             "rh": {
               "what": "Swipe up to submit; the flow ends 'Done or View order'; milestone-only 'dynamic visual experiences', never per-order confetti.",
-              "src": ["R9", "R13", "R56"],
+              "src": [
+                "R9",
+                "R13",
+                "R56"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Confirmation with an order number and details; trade confirmations next business day.",
-              "src": ["F20", "F21", "F46"],
+              "src": [
+                "F20",
+                "F21",
+                "F46"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Statuses Submitting · Queued · Accepted · Pending, with Wait trg / cond / stop for conditional orders.",
-              "src": ["T-OS"],
+              "src": [
+                "T-OS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "The adapter treats a successfully-accepted order as filled and polls filled_avg_price; the domain has no accepted state (OrderStatus = filled | rejected).",
-              "src": ["src/adapters/alpaca-broker-adapter.ts:35-38", "src/domain/types.ts:167"],
+              "src": [
+                "src/adapters/alpaca-broker-adapter.ts:35-38",
+                "src/domain/types.ts:167"
+              ],
               "prov": "vendor-quote",
               "status": "partial"
             }
@@ -812,17 +1128,29 @@
           "facts": {
             "rh": {
               "what": "Pending orders live under Account → Menu → History → Pending; a +/− badge marks watchlist rows with pending orders; Legend Recent Orders widget.",
-              "src": ["R13", "R21", "R59"],
+              "src": [
+                "R13",
+                "R21",
+                "R59"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Orders page (status 'open'); mobile Portfolio › Activity › Orders; open orders and average cost drawn on the chart.",
-              "src": ["F18", "F42", "F38"],
+              "src": [
+                "F18",
+                "F42",
+                "F38"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Today's Trade Activity › Working Orders with a count; status Working; draggable order bubbles on the Active Trader ladder.",
-              "src": ["T-TTA", "T-OS", "T-ATL"],
+              "src": [
+                "T-TTA",
+                "T-OS",
+                "T-ATL"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -844,17 +1172,27 @@
           "facts": {
             "rh": {
               "what": "Status 'partially filled' in the vocabulary pending · partially filled · queued · filled (medium confidence).",
-              "src": ["R13", "R14", "R44"],
+              "src": [
+                "R13",
+                "R14",
+                "R44"
+              ],
               "prov": "doc-inferred"
             },
             "fid": {
               "what": "ATP filters Partially Filled; a subgrid shows executions when an order fills over lots.",
-              "src": ["F19", "F43", "F42"],
+              "src": [
+                "F19",
+                "F43",
+                "F42"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Multi-fill orders collapse into one row with an expand arrow and 'show average fill prices'.",
-              "src": ["T-TTA"],
+              "src": [
+                "T-TTA"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -876,17 +1214,28 @@
           "facts": {
             "rh": {
               "what": "'Order status' push category; per-holding notification threads; the options hub buckets open vs closed positions.",
-              "src": ["R27", "R26", "R49"],
+              "src": [
+                "R27",
+                "R26",
+                "R49"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Expand a row for executions, lots and a '$' price-improvement icon; notifications for all orders and cancellations.",
-              "src": ["F19", "F5", "F20"],
+              "src": [
+                "F19",
+                "F5",
+                "F20"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Filled Orders section with a count; 'Working orders filling' push / email.",
-              "src": ["T-TTA", "T-SETUP"],
+              "src": [
+                "T-TTA",
+                "T-SETUP"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -908,22 +1257,37 @@
           "facts": {
             "rh": {
               "what": "Select the order → Replace → edit → Review → swipe up → Done / View order; only stop and limit orders, same type; blackout 9:25–9:30; drag the pill on the chart / ladder to cancel-and-replace.",
-              "src": ["R13", "R18", "R63"],
+              "src": [
+                "R13",
+                "R18",
+                "R63"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Change order = Attempt to Cancel and Replace: quantity, type, price, TIF, conditions; Trader+ R button; drag a Trade Armor flag.",
-              "src": ["F20", "F18", "F38"],
+              "src": [
+                "F20",
+                "F18",
+                "F38"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Right-click → 'Cancel/replace order…' reopens Order Entry; drag on the ladder re-confirms unless Auto send; statuses Replacing · Replaced.",
-              "src": ["T-TTA", "T-ATE", "T-OS"],
+              "src": [
+                "T-TTA",
+                "T-ATE",
+                "T-OS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "Missing everywhere — no client method, no domain state, no route; Alpaca's PATCH issues a new order id, so the ledger must map replaced ids first.",
-              "src": ["§3.1 modify row", "§4 T1 modify row"],
+              "src": [
+                "§3.1 modify row",
+                "§4 T1 modify row"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -936,17 +1300,30 @@
           "facts": {
             "rh": {
               "what": "Select the order → Cancel; on a pending position swipe right = cancel; Legend hover → Cancel; X on the mobile chart.",
-              "src": ["R13", "R34", "R59", "R18"],
+              "src": [
+                "R13",
+                "R34",
+                "R59",
+                "R18"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Attempt to Cancel → Verified Canceled ('does not necessarily mean the order has been cancelled'); Trader+ one-click C with no confirm; multi-select cancel.",
-              "src": ["F18", "F20", "F38"],
+              "src": [
+                "F18",
+                "F20",
+                "F38"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Right-click → Cancel; batch cancel all / DAY / GTC / buying / selling / one underlying; ladder ×; statuses Canceling · Canceled · TLTC ('too late to cancel').",
-              "src": ["T-TTA", "T-ATO", "T-OS"],
+              "src": [
+                "T-TTA",
+                "T-ATO",
+                "T-OS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -967,17 +1344,26 @@
           "facts": {
             "rh": {
               "what": "Options market orders are blocked on timing, unavailable pricing, low OI or halts; buying-power deficit messaging shows the deficit and how to resolve it.",
-              "src": ["R45", "R54"],
+              "src": [
+                "R45",
+                "R54"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Not shown — the statuses read are open, filled, canceled, pending, Verified Canceled, Partially Filled; a Rejected label was not found.",
-              "src": ["F18", "F19", "F43"],
+              "src": [
+                "F18",
+                "F19",
+                "F43"
+              ],
               "prov": "not-shown"
             },
             "tos": {
               "what": "Statuses Rejected · Not sent · U R OUT in the exhaustive vocabulary.",
-              "src": ["T-OS"],
+              "src": [
+                "T-OS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -999,22 +1385,35 @@
           "facts": {
             "rh": {
               "what": "GTC expires after 90 days; the options hub has an 'expired OTM' bucket; expiration reminders at 1 month / 1 week / today.",
-              "src": ["R1", "R49", "R25"],
+              "src": [
+                "R1",
+                "R49",
+                "R25"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Not shown as a label — GTC lasts 180 days and ATP alerts on GTC orders nearing expiration, but an Expired status was not found.",
-              "src": ["F1", "F19", "F18"],
+              "src": [
+                "F1",
+                "F19",
+                "F18"
+              ],
               "prov": "not-shown"
             },
             "tos": {
               "what": "Status Expired in the vocabulary.",
-              "src": ["T-OS"],
+              "src": [
+                "T-OS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "No expired order state (OrderStatus = filled | rejected); an option expiring worthless (OPEXP) is ingested server-side as a $0 close.",
-              "src": ["src/domain/types.ts:167", "src/trading/option-lifecycle.ts:22"],
+              "src": [
+                "src/domain/types.ts:167",
+                "src/trading/option-lifecycle.ts:22"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -1027,22 +1426,32 @@
           "facts": {
             "rh": {
               "what": "Closed positions bucketed as closed / expired OTM / exercised / assigned; assignment notifications and a resolution flow.",
-              "src": ["R49", "R42"],
+              "src": [
+                "R49",
+                "R42"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Not shown — auto-exercise ≥ $0.01 ITM is policy, but how an exercised or assigned position renders was not documented.",
-              "src": ["F26", "F12"],
+              "src": [
+                "F26",
+                "F12"
+              ],
               "prov": "not-shown"
             },
             "tos": {
               "what": "Position Statement: Trade Price = strike, Cost = strike ± premium after exercise / assignment.",
-              "src": ["T-FAQG"],
+              "src": [
+                "T-FAQG"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
               "what": "OPEXP / OPASN / OPEXC / OPTRD are ingested server-side and priced honestly (exercise is not a full loss), but nothing renders them.",
-              "src": ["src/trading/option-lifecycle.ts:6-36"],
+              "src": [
+                "src/trading/option-lifecycle.ts:6-36"
+              ],
               "prov": "vendor-quote",
               "status": "missing"
             }
@@ -1060,17 +1469,29 @@
           "facts": {
             "rh": {
               "what": "Mobile-first: swipe up to submit, position gestures (right = open / cancel, left = close / replace), Pending under History, the advanced chart drags an order to modify.",
-              "src": ["R9", "R34", "R13", "R18"],
+              "src": [
+                "R9",
+                "R34",
+                "R13",
+                "R18"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "The in-house frames: one-column ticket, straddle view, sheet pickers, review sentence; Activity › Orders; Trader+ Mobile mode for 'fewer steps to trade'.",
-              "src": ["frames 1-20", "F42", "F6"],
+              "src": [
+                "frames 1-20",
+                "F42",
+                "F6"
+              ],
               "prov": "frame"
             },
             "tos": {
               "what": "Mobile ticket: tap ask → editor → Review (underlying quote, option quote, details) → Send; 'Quick Trade'; Account History since Sep 2025 — search-indexed, no text manual.",
-              "src": ["T-APPSTORE", "T-MOB"],
+              "src": [
+                "T-APPSTORE",
+                "T-MOB"
+              ],
               "prov": "doc-inferred"
             },
             "sky": {
@@ -1090,17 +1511,33 @@
           "facts": {
             "rh": {
               "what": "Legend: up to 9 layouts, linked widgets, ladder, drag order pills, hotkeys (Shift+B/S), Auto-send, default order settings.",
-              "src": ["R59", "R60", "R62", "R63", "R64"],
+              "src": [
+                "R59",
+                "R60",
+                "R62",
+                "R63",
+                "R64"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Trader+ / ATP: Orders tool with C / R buttons, Trade Armor, multi-leg ticket, workspaces with 8 link groups, Create Duplicate / Opposite.",
-              "src": ["F38", "F19", "F10"],
+              "src": [
+                "F38",
+                "F19",
+                "F10"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Desktop is the reference: Order Entry, Active Trader, Analyze, Today's Trade Activity, Position Statement, Order Rules.",
-              "src": ["T-OET", "T-ATO", "T-AN", "T-TTA", "T-PS"],
+              "src": [
+                "T-OET",
+                "T-ATO",
+                "T-AN",
+                "T-TTA",
+                "T-PS"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -1126,17 +1563,27 @@
           "facts": {
             "rh": {
               "what": "Approval levels stand in for rungs: Level 2 = long calls / puts, covered calls, CSPs; Level 3 = spreads, straddles, condors; granted by a self-declared questionnaire.",
-              "src": ["R30", "R31", "R33"],
+              "src": [
+                "R30",
+                "R31",
+                "R33"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Approval tier on file per trade (Tier 1 singles and covered; Tier 2 spreads ≤4 legs; Tier 3 uncovered); strategies shown 'depend on the account's option approval level'.",
-              "src": ["F2", "F12"],
+              "src": [
+                "F2",
+                "F12"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "Account Features grid: Full / Covered Calls / Long / Spreads / None with green / red indicators.",
-              "src": ["T-ACCT", "T-SA"],
+              "src": [
+                "T-ACCT",
+                "T-SA"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -1157,17 +1604,27 @@
           "facts": {
             "rh": {
               "what": "Cash accounts cannot get Level 3; a Level 3 onboarding teaches spreads before upgrading; 0DTE needs a warned opt-in; roll is not offered on cash accounts.",
-              "src": ["R33", "R54", "R41"],
+              "src": [
+                "R33",
+                "R54",
+                "R41"
+              ],
               "prov": "vendor-quote"
             },
             "fid": {
               "what": "Strategies beyond the tier on file are not offered; apply for a higher level — the rows read do not show the locked state's rendering.",
-              "src": ["F2", "F12"],
+              "src": [
+                "F2",
+                "F12"
+              ],
               "prov": "vendor-quote"
             },
             "tos": {
               "what": "The grid shows the missing permission red with a link to apply; a decision comes within three business days.",
-              "src": ["T-ACCT", "T-APPLY"],
+              "src": [
+                "T-ACCT",
+                "T-APPLY"
+              ],
               "prov": "vendor-quote"
             },
             "sky": {
@@ -1188,15 +1645,25 @@
   "invalid": [
     {
       "when": {
-        "instrument": ["stock"],
-        "action": ["roll", "exercise", "assignment"]
+        "instrument": [
+          "stock"
+        ],
+        "action": [
+          "roll",
+          "exercise",
+          "assignment"
+        ]
       },
       "why": "a stock has no expiry, exercise or assignment"
     },
     {
       "when": {
-        "instrument": ["stock"],
-        "stage": ["assigned-exercised"]
+        "instrument": [
+          "stock"
+        ],
+        "stage": [
+          "assigned-exercised"
+        ]
       },
       "why": "a stock has no expiry, exercise or assignment"
     }
@@ -1205,636 +1672,1054 @@
     {
       "id": "rh-opt-trailing",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["trailing-stop"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "trailing-stop"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Trailing stops are stock-only: options order types are limit (default), market (single-leg, 9:35–4) and stop-limit via the gear.",
-      "src": ["R45", "R46", "R5"],
+      "src": [
+        "R45",
+        "R46",
+        "R5"
+      ],
       "prov": "vendor-quote",
       "because": "Robinhood's options order types do not include a trailing stop"
     },
     {
       "id": "rh-opt-stop",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["stop"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "stop"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "A plain stop is not listed for options — limit, market (single-leg) and stop-limit are.",
-      "src": ["R45", "R46"],
+      "src": [
+        "R45",
+        "R46"
+      ],
       "prov": "vendor-quote",
       "because": "Robinhood's options order types are limit, market, stop-limit"
     },
     {
       "id": "rh-opt-market-single",
       "when": {
-        "instrument": ["call", "put"],
-        "orderType": ["market"]
+        "instrument": [
+          "call",
+          "put"
+        ],
+        "orderType": [
+          "market"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Market on a single-leg option only between 9:35 and 4; blocked on unavailable pricing, low open interest or a halt; a buying-power buffer is held.",
-      "src": ["R45", "R64"],
+      "src": [
+        "R45",
+        "R64"
+      ],
       "prov": "vendor-quote",
       "because": "market orders on options are single-leg and time-windowed"
     },
     {
       "id": "rh-opt-market-multi",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "orderType": ["market"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "market"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Not offered — market orders on options are single-leg only; a multi-leg is priced as one strategy price at a limit.",
-      "src": ["R45", "R37"],
+      "src": [
+        "R45",
+        "R37"
+      ],
       "prov": "vendor-quote",
       "because": "market is single-leg only"
     },
     {
       "id": "rh-opt-extended",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "No extended session for options — they trade 9:30–4 ET; 0DTE opens until 3:30 PM, after which Robinhood 'will attempt to close out any expiring, at-risk positions'.",
-      "src": ["R34", "R43"],
+      "src": [
+        "R34",
+        "R43"
+      ],
       "prov": "vendor-quote",
       "because": "options hours are 9:30–4 ET"
     },
     {
       "id": "rh-opt-ioc",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "tif": ["ioc-fok"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "tif": [
+          "ioc-fok"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Not shown — options TIF documented as GTC 90 days / GFD only.",
-      "src": ["R34", "R1"],
+      "src": [
+        "R34",
+        "R1"
+      ],
       "prov": "not-shown",
       "because": "no IOC / FOK in the options rows"
     },
     {
       "id": "rh-replace-type",
       "when": {
-        "stage": ["modify"],
-        "orderType": ["market", "stop-limit", "trailing-stop", "bracket-oco"]
+        "stage": [
+          "modify"
+        ],
+        "orderType": [
+          "market",
+          "stop-limit",
+          "trailing-stop",
+          "bracket-oco"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Not replaceable — only stop and limit orders can be replaced, and only to the same type; anything else is cancel and re-enter.",
-      "src": ["R13"],
+      "src": [
+        "R13"
+      ],
       "prov": "vendor-quote",
       "because": "replace is limited to limit / stop of the same type"
     },
     {
       "id": "rh-stock-market-ext",
       "when": {
-        "instrument": ["stock"],
-        "orderType": ["market"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "stock"
+        ],
+        "orderType": [
+          "market"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "A market order outside regular hours is queued for the open with 5% extra buying power reserved; the extended-hours default becomes a limit preset 2% above / below the last trade, shown at review.",
-      "src": ["R3", "R6", "R2"],
+      "src": [
+        "R3",
+        "R6",
+        "R2"
+      ],
       "prov": "vendor-quote",
       "because": "market does not execute in the extended session"
     },
     {
       "id": "rh-stock-stop-ext",
       "when": {
-        "instrument": ["stock"],
-        "orderType": ["stop", "stop-limit", "trailing-stop"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "stock"
+        ],
+        "orderType": [
+          "stop",
+          "stop-limit",
+          "trailing-stop"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Stop and trailing-stop orders do not execute outside regular hours; they queue for the regular open.",
-      "src": ["R6"],
+      "src": [
+        "R6"
+      ],
       "prov": "vendor-quote",
       "because": "stops are regular-session only"
     },
     {
       "id": "rh-stock-limit-ext",
       "when": {
-        "instrument": ["stock"],
-        "orderType": ["limit"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "stock"
+        ],
+        "orderType": [
+          "limit"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "The limit ticket's session selector offers Market / Extended / 24 Hour Market (8 PM–8 PM ET): whole shares only, no fractional overnight, GFD expires 8 PM, GTC up to 90 days; the preset is 2% above (buy) / below (sell) the last trade.",
-      "src": ["R6", "R7", "R2", "R3"],
+      "src": [
+        "R6",
+        "R7",
+        "R2",
+        "R3"
+      ],
       "prov": "vendor-quote",
       "because": "the extended session is a limit-order feature"
     },
     {
       "id": "rh-stock-ioc",
       "when": {
-        "instrument": ["stock"],
-        "tif": ["ioc-fok"]
+        "instrument": [
+          "stock"
+        ],
+        "tif": [
+          "ioc-fok"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Not shown — GFD and GTC are the only TIFs on the order-types page.",
-      "src": ["R1"],
+      "src": [
+        "R1"
+      ],
       "prov": "not-shown",
       "because": "no IOC / FOK documented"
     },
     {
       "id": "rh-spread-locked",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Spreads need Level 3; cash accounts cannot get it; a Level 3 onboarding teaches spreads before the upgrade.",
-      "src": ["R31", "R33", "R54"],
+      "src": [
+        "R31",
+        "R33",
+        "R54"
+      ],
       "prov": "vendor-quote",
       "because": "the locked rung maps to Level 3"
     },
     {
       "id": "rh-stock-ladder",
       "when": {
-        "instrument": ["stock"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "stock"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Nothing corresponds to a locked stock rung — no approval level for stocks, and pattern-day-trade rules were abolished 2026-06-04 (the legacy PDT Protection counted and warned on the 2nd / 3rd / 4th day trade).",
-      "src": ["R50", "R51", "R52"],
+      "src": [
+        "R50",
+        "R51",
+        "R52"
+      ],
       "prov": "vendor-quote",
       "because": "stock trading is ungated at Robinhood"
     },
     {
       "id": "rh-roll-locked",
       "when": {
-        "action": ["roll"],
-        "ladder": ["rung-locked"]
+        "action": [
+          "roll"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "rh",
       "mode": "append",
       "what": "Roll is not offered on cash accounts.",
-      "src": ["R41"],
+      "src": [
+        "R41"
+      ],
       "prov": "vendor-quote",
       "because": "roll is a margin-account feature"
     },
     {
       "id": "rh-stock-sto",
       "when": {
-        "instrument": ["stock"],
-        "action": ["sell-to-open"]
+        "instrument": [
+          "stock"
+        ],
+        "action": [
+          "sell-to-open"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "Short selling was announced at HOOD Summit 2025-09-10; the ticket mechanics are not documented in the rows read.",
-      "src": ["R68"],
+      "src": [
+        "R68"
+      ],
       "prov": "doc-inferred",
       "because": "a stock sell-to-open is a short"
     },
     {
       "id": "rh-spread-close",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "action": ["sell-close", "buy-to-close"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "action": [
+          "sell-close",
+          "buy-to-close"
+        ]
       },
       "ref": "rh",
       "mode": "replace",
       "what": "The Options Analyzer launches Open / Close / Roll on a combined position; the options hub buckets spreads.",
-      "src": ["R39", "R49"],
+      "src": [
+        "R39",
+        "R49"
+      ],
       "prov": "vendor-quote",
       "because": "a spread closes as one position"
     },
     {
       "id": "fid-opt-trailing",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["trailing-stop"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "trailing-stop"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Options trailing stops are dollar-based only (Trailing Stop Loss $), never %; trailing orders carry a 'not held' statement.",
-      "src": ["F2", "F1", "F13"],
+      "src": [
+        "F2",
+        "F1",
+        "F13"
+      ],
       "prov": "vendor-quote",
       "because": "options trailing stops are $ only"
     },
     {
       "id": "fid-opt-stoplimit",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["stop-limit"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "stop-limit"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not listed — options order types are Market, Limit, Stop Loss and Trailing Stop ($); stop-limit is a stock type.",
-      "src": ["F2"],
+      "src": [
+        "F2"
+      ],
       "prov": "vendor-quote",
       "because": "stop-limit is not among the options order types"
     },
     {
       "id": "fid-opt-bracket",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["bracket-oco"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "bracket-oco"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not shown for options — conditional / OTOCO orders are documented on the stock side; the options rows list Market, Limit, Stop Loss, Trailing Stop.",
-      "src": ["F2", "F4"],
+      "src": [
+        "F2",
+        "F4"
+      ],
       "prov": "not-shown",
       "because": "no options bracket documented"
     },
     {
       "id": "fid-opt-extended",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not among the options TIFs (Day, GTC, FOK, IOC) — no On the Open / Close and no extended session documented for options.",
-      "src": ["F2", "F1"],
+      "src": [
+        "F2",
+        "F1"
+      ],
       "prov": "vendor-quote",
       "because": "options TIF is Day / GTC / FOK / IOC"
     },
     {
       "id": "fid-ext-nonlimit",
       "when": {
-        "instrument": ["stock"],
-        "orderType": ["market", "stop", "stop-limit", "trailing-stop", "bracket-oco"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "stock"
+        ],
+        "orderType": [
+          "market",
+          "stop",
+          "stop-limit",
+          "trailing-stop",
+          "bracket-oco"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not allowed — extended hours (7:00–9:28, 4:00–8:00 ET) are limit only.",
-      "src": ["F20", "F47"],
+      "src": [
+        "F20",
+        "F47"
+      ],
       "prov": "vendor-quote",
       "because": "extended hours are limit-only"
     },
     {
       "id": "fid-ext-gtc",
       "when": {
-        "tif": ["gtc"],
-        "stage": ["working", "modify"]
+        "tif": [
+          "gtc"
+        ],
+        "stage": [
+          "working",
+          "modify"
+        ]
       },
       "ref": "fid",
       "mode": "append",
       "what": "A GTC order lasts 180 days and ATP alerts as it nears expiration.",
-      "src": ["F1", "F19"],
+      "src": [
+        "F1",
+        "F19"
+      ],
       "prov": "vendor-quote",
       "because": "GTC expiry is a working-order concern"
     },
     {
       "id": "fid-ext-modify",
       "when": {
-        "tif": ["extended-session"],
-        "stage": ["modify"]
+        "tif": [
+          "extended-session"
+        ],
+        "stage": [
+          "modify"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "In extended hours a change order can alter quantity only.",
-      "src": ["F20"],
+      "src": [
+        "F20"
+      ],
       "prov": "vendor-quote",
       "because": "extended-hours replace is quantity-only"
     },
     {
       "id": "fid-bracket-phone",
       "when": {
-        "instrument": ["stock"],
-        "orderType": ["bracket-oco"],
-        "device": ["phone"]
+        "instrument": [
+          "stock"
+        ],
+        "orderType": [
+          "bracket-oco"
+        ],
+        "device": [
+          "phone"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not shown on mobile — conditional / OTOCO orders are documented on desktop and web only.",
-      "src": ["F4", "F13", "F38"],
+      "src": [
+        "F4",
+        "F13",
+        "F38"
+      ],
       "prov": "not-shown",
       "because": "mobile brackets not documented"
     },
     {
       "id": "fid-spread-phone",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "device": ["phone"],
-        "stage": ["draft", "review"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "device": [
+          "phone"
+        ],
+        "stage": [
+          "draft",
+          "review"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "The mobile options ticket is one leg card (Action, Quantity, Expiration, Strike, Call | Put) plus 'Add leg'; the multi-select builder and strategy templates are desktop.",
-      "src": ["frames 16-17", "F38", "F25"],
+      "src": [
+        "frames 16-17",
+        "F38",
+        "F25"
+      ],
       "prov": "frame",
       "because": "multi-leg on the phone is leg cards, not a builder"
     },
     {
       "id": "fid-spread-locked",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Spreads (≤4 legs) need Tier 2; below it the strategy is not offered.",
-      "src": ["F12", "F2"],
+      "src": [
+        "F12",
+        "F2"
+      ],
       "prov": "vendor-quote",
       "because": "the locked rung maps to Tier 2"
     },
     {
       "id": "fid-stock-locked",
       "when": {
-        "instrument": ["stock"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "stock"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not shown — no gate on stock trading is documented; the only stock-side friction read is a day-trade counter on web Balances (secondary, unreachable).",
-      "src": ["F57"],
+      "src": [
+        "F57"
+      ],
       "prov": "not-shown",
       "because": "stock trading is ungated in the rows read"
     },
     {
       "id": "fid-stock-sto",
       "when": {
-        "instrument": ["stock"],
-        "action": ["sell-to-open"]
+        "instrument": [
+          "stock"
+        ],
+        "action": [
+          "sell-to-open"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Short / cover live in a desktop dropdown, margin accounts only; not on the mobile segmented control.",
-      "src": ["frames 2", "F38"],
+      "src": [
+        "frames 2",
+        "F38"
+      ],
       "prov": "frame",
       "because": "a stock sell-to-open is a short"
     },
     {
       "id": "fid-stock-sto-phone",
       "when": {
-        "instrument": ["stock"],
-        "action": ["sell-to-open"],
-        "device": ["phone"]
+        "instrument": [
+          "stock"
+        ],
+        "action": [
+          "sell-to-open"
+        ],
+        "device": [
+          "phone"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Not shown — the mobile control is Buy / Sell only; short / cover is a desktop dropdown.",
-      "src": ["frames 2", "F38"],
+      "src": [
+        "frames 2",
+        "F38"
+      ],
       "prov": "not-shown",
       "because": "shorting is desktop-only in the rows read"
     },
     {
       "id": "fid-roll-phone",
       "when": {
-        "action": ["roll"],
-        "device": ["phone"]
+        "action": [
+          "roll"
+        ],
+        "device": [
+          "phone"
+        ]
       },
       "ref": "fid",
       "mode": "replace",
       "what": "Mobile has the 'ability to roll options' (vendor page); the phone roll ticket itself was not in the frames.",
-      "src": ["F7"],
+      "src": [
+        "F7"
+      ],
       "prov": "vendor-quote",
       "because": "the roll ticket rows are desktop"
     },
     {
       "id": "fid-exercise-any",
       "when": {
-        "action": ["exercise"],
-        "device": ["phone", "desktop"]
+        "action": [
+          "exercise"
+        ],
+        "device": [
+          "phone",
+          "desktop"
+        ]
       },
       "ref": "fid",
       "mode": "append",
       "what": "No online exercise on either device — by phone before 4:15 PM.",
-      "src": ["F26"],
+      "src": [
+        "F26"
+      ],
       "prov": "vendor-quote",
       "because": "exercise is a phone call at Fidelity"
     },
     {
       "id": "fid-stock-ioc",
       "when": {
-        "instrument": ["stock"],
-        "tif": ["ioc-fok"],
-        "device": ["phone"]
+        "instrument": [
+          "stock"
+        ],
+        "tif": [
+          "ioc-fok"
+        ],
+        "device": [
+          "phone"
+        ]
       },
       "ref": "fid",
       "mode": "append",
       "what": "The mobile sheet lists 5 TIFs; which five was not read off the frame.",
-      "src": ["frames 6"],
+      "src": [
+        "frames 6"
+      ],
       "prov": "frame",
       "because": "the phone TIF sheet is shorter than the desktop list"
     },
     {
       "id": "tos-market-tif",
       "when": {
-        "orderType": ["market"],
-        "tif": ["gtc", "ioc-fok", "extended-session"]
+        "orderType": [
+          "market"
+        ],
+        "tif": [
+          "gtc",
+          "ioc-fok",
+          "extended-session"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not allowed — Market is DAY only.",
-      "src": ["T-OET", "T-OT"],
+      "src": [
+        "T-OET",
+        "T-OT"
+      ],
       "prov": "vendor-quote",
       "because": "market = DAY only"
     },
     {
       "id": "tos-opt-extended",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "tif": ["extended-session"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "tif": [
+          "extended-session"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not shown — EXT / EXTO TIFs are documented on the equity Order Entry; extended-session options were not found.",
-      "src": ["T-OT"],
+      "src": [
+        "T-OT"
+      ],
       "prov": "not-shown",
       "because": "options in extended hours not documented"
     },
     {
       "id": "tos-walk-limit",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["limit"],
-        "device": ["desktop"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "limit"
+        ],
+        "device": [
+          "desktop"
+        ]
       },
       "ref": "tos",
       "mode": "append",
       "what": "Walk Limit (options only): a limit that steps from a start to an end price every 2–60 s.",
-      "src": ["T-WL", "T-WLA"],
+      "src": [
+        "T-WL",
+        "T-WLA"
+      ],
       "prov": "vendor-quote",
       "because": "Walk Limit is an options-only desktop order"
     },
     {
       "id": "tos-spread-locked",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "The Spreads permission shows red in Account Features with a link to apply; spreads also need a margin account.",
-      "src": ["T-ACCT", "T-SA", "T-AP"],
+      "src": [
+        "T-ACCT",
+        "T-SA",
+        "T-AP"
+      ],
       "prov": "vendor-quote",
       "because": "the locked rung maps to the Spreads permission"
     },
     {
       "id": "tos-stock-locked",
       "when": {
-        "instrument": ["stock"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "stock"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "No stock gate; the day-trading guardrail is margin + $25,000 equity with Day Trade Buying Power shown.",
-      "src": ["T-TOS", "T-FAQG"],
+      "src": [
+        "T-TOS",
+        "T-FAQG"
+      ],
       "prov": "vendor-quote",
       "because": "stock trading is ungated; only day-trading is"
     },
     {
       "id": "tos-phone-orders",
       "when": {
-        "device": ["phone"],
-        "stage": ["working", "modify", "cancel", "partially-filled"]
+        "device": [
+          "phone"
+        ],
+        "stage": [
+          "working",
+          "modify",
+          "cancel",
+          "partially-filled"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not shown — mobile has Account History (Sep 2025, search-indexed); cancel / replace and the working-orders list on the phone were not found in any Schwab text.",
-      "src": ["T-APPSTORE", "T-MOB"],
+      "src": [
+        "T-APPSTORE",
+        "T-MOB"
+      ],
       "prov": "not-shown",
       "because": "mobile order management has no text manual"
     },
     {
       "id": "tos-phone-advanced",
       "when": {
-        "device": ["phone"],
-        "orderType": ["stop-limit", "trailing-stop", "bracket-oco"]
+        "device": [
+          "phone"
+        ],
+        "orderType": [
+          "stop-limit",
+          "trailing-stop",
+          "bracket-oco"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Mobile offers 'advanced order creation with conditions' (App Store copy, medium confidence); which types is not documented.",
-      "src": ["T-APPSTORE"],
+      "src": [
+        "T-APPSTORE"
+      ],
       "prov": "doc-inferred",
       "because": "mobile advanced orders are inferred from store copy"
     },
     {
       "id": "tos-phone-roll",
       "when": {
-        "device": ["phone"],
-        "action": ["roll"]
+        "device": [
+          "phone"
+        ],
+        "action": [
+          "roll"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not shown — roll and the Strategy Roller are desktop-only in the record.",
-      "src": ["T-SR", "T-MOB"],
+      "src": [
+        "T-SR",
+        "T-MOB"
+      ],
       "prov": "not-shown",
       "because": "roll is desktop-only in the record"
     },
     {
       "id": "tos-phone-review",
       "when": {
-        "device": ["phone"],
-        "stage": ["review"]
+        "device": [
+          "phone"
+        ],
+        "stage": [
+          "review"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Mobile Review shows the underlying quote, the option quote and details, then Send (search-indexed).",
-      "src": ["T-POT", "T-APPSTORE"],
+      "src": [
+        "T-POT",
+        "T-APPSTORE"
+      ],
       "prov": "doc-inferred",
       "because": "the desktop confirmation dialog is not the phone's"
     },
     {
       "id": "tos-phone-chain",
       "when": {
-        "device": ["phone"],
-        "instrument": ["call", "put", "vertical-spread"],
-        "stage": ["draft"]
+        "device": [
+          "phone"
+        ],
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread"
+        ],
+        "stage": [
+          "draft"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Mobile chain: choose spread (Single / Vertical), number of strikes, exchange; gear → Columns Editor (greeks, theoretical pricing); tap ask to buy (search-indexed).",
-      "src": ["T-MOB", "T-APPSTORE"],
+      "src": [
+        "T-MOB",
+        "T-APPSTORE"
+      ],
       "prov": "doc-inferred",
       "because": "the phone chain is search-indexed, not manualed"
     },
     {
       "id": "tos-phone-condor",
       "when": {
-        "device": ["phone"],
-        "instrument": ["iron-condor"],
-        "stage": ["draft", "review"]
+        "device": [
+          "phone"
+        ],
+        "instrument": [
+          "iron-condor"
+        ],
+        "stage": [
+          "draft",
+          "review"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not shown — the mobile Spread box documents Single / Vertical only.",
-      "src": ["T-MOB"],
+      "src": [
+        "T-MOB"
+      ],
       "prov": "not-shown",
       "because": "condor entry on the phone not documented"
     },
     {
       "id": "tos-phone-exercise",
       "when": {
-        "device": ["phone", "desktop"],
-        "action": ["exercise"]
+        "device": [
+          "phone",
+          "desktop"
+        ],
+        "action": [
+          "exercise"
+        ]
       },
       "ref": "tos",
       "mode": "append",
       "what": "No in-platform Exercise menu on any device; DNE is a support request.",
-      "src": ["T-EXA"],
+      "src": [
+        "T-EXA"
+      ],
       "prov": "vendor-quote",
       "because": "exercise is a support action"
     },
     {
       "id": "tos-stock-sto",
       "when": {
-        "instrument": ["stock"],
-        "action": ["sell-to-open"]
+        "instrument": [
+          "stock"
+        ],
+        "action": [
+          "sell-to-open"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not shown — Order Entry has a Side field, but shorting rules were not in the rows read.",
-      "src": ["T-OET"],
+      "src": [
+        "T-OET"
+      ],
       "prov": "not-shown",
       "because": "a stock sell-to-open is a short"
     },
     {
       "id": "tos-stock-ioc",
       "when": {
-        "instrument": ["stock"],
-        "tif": ["ioc-fok"]
+        "instrument": [
+          "stock"
+        ],
+        "tif": [
+          "ioc-fok"
+        ]
       },
       "ref": "tos",
       "mode": "replace",
       "what": "Not shown — the TIF list is DAY, GTC, EXT, GTC_EXT, AM, PM, EXTO, GTC_EXTO.",
-      "src": ["T-OT"],
+      "src": [
+        "T-OT"
+      ],
       "prov": "not-shown",
       "because": "no IOC / FOK documented"
     },
     {
       "id": "tos-ladder-drag",
       "when": {
-        "device": ["desktop"],
-        "stage": ["modify"],
-        "orderType": ["limit", "stop"]
+        "device": [
+          "desktop"
+        ],
+        "stage": [
+          "modify"
+        ],
+        "orderType": [
+          "limit",
+          "stop"
+        ]
       },
       "ref": "tos",
       "mode": "append",
       "what": "On the Active Trader ladder a working order is a bubble you drag to a new price; × cancels; the drag re-confirms unless Auto send.",
-      "src": ["T-ATL", "T-ATE"],
+      "src": [
+        "T-ATL",
+        "T-ATE"
+      ],
       "prov": "vendor-quote",
       "because": "the ladder is desktop and price-typed"
     },
     {
       "id": "sky-opt-stop",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "orderType": ["stop"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "orderType": [
+          "stop"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "Not on the options ticket — the options order type is limit | market.",
-      "src": ["app/src/shell/option-gate.tsx:118", "src/alpaca/alpaca-options-client.ts:100"],
+      "src": [
+        "app/src/shell/option-gate.tsx:118",
+        "src/alpaca/alpaca-options-client.ts:100"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "the options ticket is limit | market only"
@@ -1842,13 +2727,25 @@
     {
       "id": "sky-close-nonmarket",
       "when": {
-        "action": ["sell-close", "buy-to-close"],
-        "orderType": ["limit", "stop", "stop-limit", "trailing-stop", "bracket-oco"]
+        "action": [
+          "sell-close",
+          "buy-to-close"
+        ],
+        "orderType": [
+          "limit",
+          "stop",
+          "stop-limit",
+          "trailing-stop",
+          "bracket-oco"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "A close cannot carry a price — the stock close passes no orderType and the option close hard-codes market; 'close on a limit' is P1.",
-      "src": ["app/src/shell/blotter-row.tsx:321-327", "src/trading/option-ticket.ts:243"],
+      "src": [
+        "app/src/shell/blotter-row.tsx:321-327",
+        "src/trading/option-ticket.ts:243"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "closes are market-only"
@@ -1856,13 +2753,20 @@
     {
       "id": "sky-market-gtc",
       "when": {
-        "orderType": ["market"],
-        "tif": ["gtc", "ioc-fok"]
+        "orderType": [
+          "market"
+        ],
+        "tif": [
+          "gtc",
+          "ioc-fok"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "Cannot be chosen — a market order is always sent as day; TIF is never shown.",
-      "src": ["src/alpaca/alpaca-trading-client.ts:221"],
+      "src": [
+        "src/alpaca/alpaca-trading-client.ts:221"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "TIF is forced market → day"
@@ -1870,13 +2774,20 @@
     {
       "id": "sky-held-day",
       "when": {
-        "orderType": ["limit", "stop"],
-        "tif": ["day"]
+        "orderType": [
+          "limit",
+          "stop"
+        ],
+        "tif": [
+          "day"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "Cannot be chosen — a limit or stop is always sent as gtc so a stop-loss 'outlives the trading day'; a day limit does not exist here.",
-      "src": ["src/alpaca/alpaca-trading-client.ts:221"],
+      "src": [
+        "src/alpaca/alpaca-trading-client.ts:221"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "TIF is forced limit / stop → gtc"
@@ -1884,13 +2795,20 @@
     {
       "id": "sky-held-ioc",
       "when": {
-        "orderType": ["limit", "stop"],
-        "tif": ["ioc-fok"]
+        "orderType": [
+          "limit",
+          "stop"
+        ],
+        "tif": [
+          "ioc-fok"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "Cannot be chosen — only day (market) and gtc (limit / stop) are ever sent.",
-      "src": ["src/alpaca/alpaca-trading-client.ts:221"],
+      "src": [
+        "src/alpaca/alpaca-trading-client.ts:221"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "TIF is forced"
@@ -1898,7 +2816,10 @@
     {
       "id": "sky-multileg-life",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
         "stage": [
           "submitted",
           "working",
@@ -1912,7 +2833,10 @@
       "ref": "sky",
       "mode": "replace",
       "what": "No such stage — the multi-leg submit is deliberately dead (executed:false), so no spread ever reaches the broker; the UI still headlines 'Confirmed'.",
-      "src": ["src/server/draft-order-route.ts:263", "app/src/shell/draft-order-builder.tsx:162"],
+      "src": [
+        "src/server/draft-order-route.ts:263",
+        "app/src/shell/draft-order-builder.tsx:162"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "multi-leg never leaves the review"
@@ -1920,8 +2844,13 @@
     {
       "id": "sky-multileg-review",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "stage": ["review"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "stage": [
+          "review"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
@@ -1938,13 +2867,21 @@
     {
       "id": "sky-multileg-locked",
       "when": {
-        "instrument": ["vertical-spread", "iron-condor"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "Multi-leg is rung 401 — a fog instance: the door is visible, named and disabled; the builder exists but its submit is dead either way.",
-      "src": ["src/domain/trade-types.ts:105", "src/server/draft-order-route.ts:263"],
+      "src": [
+        "src/domain/trade-types.ts:105",
+        "src/server/draft-order-route.ts:263"
+      ],
       "prov": "vendor-quote",
       "status": "partial",
       "because": "401 gates the builder, executed:false gates the send"
@@ -1952,13 +2889,21 @@
     {
       "id": "sky-close-locked",
       "when": {
-        "action": ["sell-close", "buy-to-close"],
-        "ladder": ["rung-locked"]
+        "action": [
+          "sell-close",
+          "buy-to-close"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "A sell / close is never locked (#1461) — the close panel works regardless of rung; #1461's ladder-lock fix closed the hole where 102 opened before 101.",
-      "src": ["app/src/shell/trade-gate.tsx:156-160", "§3.4 #1461 row"],
+      "src": [
+        "app/src/shell/trade-gate.tsx:156-160",
+        "§3.4 #1461 row"
+      ],
       "prov": "vendor-quote",
       "status": "have",
       "because": "the ladder gates opens, never closes"
@@ -1966,13 +2911,20 @@
     {
       "id": "sky-stock-sto",
       "when": {
-        "instrument": ["stock"],
-        "action": ["sell-to-open"]
+        "instrument": [
+          "stock"
+        ],
+        "action": [
+          "sell-to-open"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "No shorting — 'this desk never shorts, so buy = 101, sell = 102'; short is not modelled at any layer.",
-      "src": ["src/domain/progression.ts:14", "§3.3"],
+      "src": [
+        "src/domain/progression.ts:14",
+        "§3.3"
+      ],
       "prov": "vendor-quote",
       "status": "skip-by-design",
       "because": "a stock sell-to-open is a short"
@@ -1980,9 +2932,17 @@
     {
       "id": "sky-opt-locked-open",
       "when": {
-        "instrument": ["call", "put"],
-        "action": ["buy-open-long", "sell-to-open"],
-        "ladder": ["rung-locked"]
+        "instrument": [
+          "call",
+          "put"
+        ],
+        "action": [
+          "buy-open-long",
+          "sell-to-open"
+        ],
+        "ladder": [
+          "rung-locked"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
@@ -1999,13 +2959,21 @@
     {
       "id": "sky-phone-filled",
       "when": {
-        "device": ["phone"],
-        "stage": ["filled", "rejected"]
+        "device": [
+          "phone"
+        ],
+        "stage": [
+          "filled",
+          "rejected"
+        ]
       },
       "ref": "sky",
       "mode": "append",
       "what": "On a phone the Status column is hidden (col-detail below 1100px), so the fill / rejection state is invisible in the table.",
-      "src": ["app/src/shell/activity-table.tsx:33", "app/src/styles/desk.css:294-299"],
+      "src": [
+        "app/src/shell/activity-table.tsx:33",
+        "app/src/styles/desk.css:294-299"
+      ],
       "prov": "vendor-quote",
       "status": "partial",
       "because": "status is a desktop-only column today"
@@ -2013,14 +2981,23 @@
     {
       "id": "sky-phone-chain",
       "when": {
-        "device": ["phone"],
-        "instrument": ["call", "put"],
-        "stage": ["draft"]
+        "device": [
+          "phone"
+        ],
+        "instrument": [
+          "call",
+          "put"
+        ],
+        "stage": [
+          "draft"
+        ]
       },
       "ref": "sky",
       "mode": "append",
       "what": "The chain opens pre-scrolled 264px so five columns fit 390px; the ITM rail paints on the outermost cells and is off-screen by default.",
-      "src": ["app/src/shell/straddle-view.tsx:26,104-108"],
+      "src": [
+        "app/src/shell/straddle-view.tsx:26,104-108"
+      ],
       "prov": "vendor-quote",
       "status": "partial",
       "because": "the 390 chain hides its own rail"
@@ -2028,14 +3005,24 @@
     {
       "id": "sky-opt-limit-draft",
       "when": {
-        "instrument": ["call", "put"],
-        "orderType": ["limit"],
-        "stage": ["draft"]
+        "instrument": [
+          "call",
+          "put"
+        ],
+        "orderType": [
+          "limit"
+        ],
+        "stage": [
+          "draft"
+        ]
       },
       "ref": "sky",
       "mode": "append",
       "what": "The default options ticket is limit with an empty price and Review enabled — the server refuses it; a chain tap seeds mid.",
-      "src": ["app/src/shell/option-gate.tsx:118-119", "app/src/shell/option-gate.tsx:257"],
+      "src": [
+        "app/src/shell/option-gate.tsx:118-119",
+        "app/src/shell/option-gate.tsx:257"
+      ],
       "prov": "vendor-quote",
       "status": "partial",
       "because": "the default ticket fails its own review"
@@ -2043,13 +3030,21 @@
     {
       "id": "sky-opt-review",
       "when": {
-        "instrument": ["call", "put"],
-        "stage": ["review"]
+        "instrument": [
+          "call",
+          "put"
+        ],
+        "stage": [
+          "review"
+        ]
       },
       "ref": "sky",
       "mode": "append",
       "what": "The preview shows max profit / loss and breakeven but no greeks or chance of profit; a missing greek renders '—' with no reason.",
-      "src": ["app/src/shell/option-preview.tsx:32-52", "app/src/live/options.ts:76-98"],
+      "src": [
+        "app/src/shell/option-preview.tsx:32-52",
+        "app/src/live/options.ts:76-98"
+      ],
       "prov": "vendor-quote",
       "status": "partial",
       "because": "greeks never reach the ticket"
@@ -2057,13 +3052,22 @@
     {
       "id": "sky-rejected-lifecycle",
       "when": {
-        "stage": ["rejected"],
-        "action": ["roll", "exercise", "assignment"]
+        "stage": [
+          "rejected"
+        ],
+        "action": [
+          "roll",
+          "exercise",
+          "assignment"
+        ]
       },
       "ref": "sky",
       "mode": "replace",
       "what": "Roll is refused up front with ROLL_UNAVAILABLE_REASON; exercise and assignment have no ticket to reject.",
-      "src": ["src/trading/order-ticket.ts:291-299", "src/trading/option-lifecycle.ts:6-7"],
+      "src": [
+        "src/trading/order-ticket.ts:291-299",
+        "src/trading/option-lifecycle.ts:6-7"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "no lifecycle ticket exists"
@@ -2071,13 +3075,22 @@
     {
       "id": "sky-expired-option",
       "when": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "stage": ["expired"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "stage": [
+          "expired"
+        ]
       },
       "ref": "sky",
       "mode": "append",
       "what": "An option expiring worthless (OPEXP) is ingested as a $0 close for 301 / 302; a written contract's expiry ends the obligation with the premium kept — nothing renders it.",
-      "src": ["src/trading/option-lifecycle.ts:22-32"],
+      "src": [
+        "src/trading/option-lifecycle.ts:22-32"
+      ],
       "prov": "vendor-quote",
       "status": "missing",
       "because": "option expiry is server-side only"
@@ -2085,12 +3098,19 @@
     {
       "id": "all-lifecycle-notype",
       "when": {
-        "action": ["exercise", "assignment"]
+        "action": [
+          "exercise",
+          "assignment"
+        ]
       },
       "ref": "all",
       "mode": "append",
       "what": "Order type and time in force do not apply — exercise and assignment are not priced orders; the references document them as policy (auto-exercise ≥ $0.01 ITM) and notification, not as a ticket.",
-      "src": ["R42", "F26", "T-EXA"],
+      "src": [
+        "R42",
+        "F26",
+        "T-EXA"
+      ],
       "prov": "vendor-quote",
       "because": "exercise / assignment carry no price or TIF"
     }
@@ -2100,117 +3120,296 @@
       "n": 1,
       "name": "Type a symbol",
       "values": {
-        "stage": ["draft"]
+        "stage": [
+          "draft"
+        ]
       }
     },
     {
       "n": 2,
       "name": "Quote and chain",
       "values": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "stage": ["draft"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "stage": [
+          "draft"
+        ]
       }
     },
     {
       "n": 3,
       "name": "Tap a cell: leg preset",
       "values": {
-        "instrument": ["call", "put", "vertical-spread", "iron-condor"],
-        "action": ["buy-open-long", "sell-to-open"],
-        "stage": ["draft"]
+        "instrument": [
+          "call",
+          "put",
+          "vertical-spread",
+          "iron-condor"
+        ],
+        "action": [
+          "buy-open-long",
+          "sell-to-open"
+        ],
+        "stage": [
+          "draft"
+        ]
       }
     },
     {
       "n": 4,
       "name": "Review: sentence, cost, warnings",
       "values": {
-        "stage": ["review", "rejected"]
+        "stage": [
+          "review",
+          "rejected"
+        ]
       }
     },
     {
       "n": 5,
       "name": "Working order",
       "values": {
-        "stage": ["submitted", "working", "partially-filled"],
-        "orderType": ["limit", "stop", "stop-limit", "trailing-stop", "bracket-oco"]
+        "stage": [
+          "submitted",
+          "working",
+          "partially-filled"
+        ],
+        "orderType": [
+          "limit",
+          "stop",
+          "stop-limit",
+          "trailing-stop",
+          "bracket-oco"
+        ]
       }
     },
     {
       "n": 6,
       "name": "Cancel",
       "values": {
-        "stage": ["cancel"]
+        "stage": [
+          "cancel",
+          "expired",
+          "partially-filled",
+          "rejected",
+          "working"
+        ]
       }
     },
     {
       "n": 7,
       "name": "Modify",
       "values": {
-        "stage": ["modify"],
-        "orderType": ["limit", "stop", "stop-limit", "trailing-stop", "bracket-oco"]
+        "stage": [
+          "modify"
+        ],
+        "orderType": [
+          "limit",
+          "stop",
+          "stop-limit",
+          "trailing-stop",
+          "bracket-oco"
+        ]
       }
     },
     {
       "n": 8,
       "name": "Fill: position with greeks",
       "values": {
-        "stage": ["filled"]
+        "stage": [
+          "filled"
+        ]
       }
     },
     {
       "n": 9,
       "name": "Close",
       "values": {
-        "action": ["sell-close", "buy-to-close"],
-        "stage": ["draft", "review"]
+        "action": [
+          "sell-close",
+          "buy-to-close"
+        ],
+        "stage": [
+          "draft",
+          "filled",
+          "review",
+          "submitted",
+          "working"
+        ]
       }
     },
     {
       "n": 10,
       "name": "Roll, exercise, assignment",
       "values": {
-        "action": ["roll", "exercise", "assignment"]
+        "action": [
+          "roll",
+          "exercise",
+          "assignment"
+        ]
       }
     }
   ],
   "calls": {
-    "instrument:stock": [13, 14, 15],
-    "instrument:call": [6, 7, 9, 10, 16],
-    "instrument:put": [6, 7, 9, 10, 16],
-    "instrument:vertical-spread": [8, 9, 11],
-    "instrument:iron-condor": [8, 9, 11],
-    "action:buy-open-long": [3, 4, 5, 14],
-    "action:sell-to-open": [17, 26],
-    "action:sell-close": [10, 12],
-    "action:buy-to-close": [10, 12],
-    "action:roll": [11],
-    "action:exercise": [17, 19],
-    "action:assignment": [10, 19],
-    "orderType:market": [14],
-    "orderType:limit": [14, 29],
-    "orderType:stop": [20, 29],
-    "orderType:stop-limit": [30],
-    "orderType:trailing-stop": [30],
-    "orderType:bracket-oco": [30],
-    "tif:day": [13],
-    "tif:gtc": [13],
-    "tif:ioc-fok": [13, 30],
-    "tif:extended-session": [13, 25],
-    "stage:draft": [5, 6, 16],
-    "stage:review": [3, 4, 7],
-    "stage:submitted": [18, 19, 23],
-    "stage:working": [1, 2],
-    "stage:partially-filled": [2],
-    "stage:filled": [10, 18, 19],
-    "stage:modify": [1, 29],
-    "stage:cancel": [1, 2],
-    "stage:rejected": [3, 17],
-    "stage:expired": [2, 17],
-    "stage:assigned-exercised": [10, 19],
-    "device:phone": [6, 28],
-    "device:desktop": [28, 29],
-    "ladder:rung-unlocked": [17, 26],
-    "ladder:rung-locked": [17, 26]
+    "instrument:stock": [
+      13,
+      14,
+      15
+    ],
+    "instrument:call": [
+      6,
+      7,
+      9,
+      10,
+      16
+    ],
+    "instrument:put": [
+      6,
+      7,
+      9,
+      10,
+      16
+    ],
+    "instrument:vertical-spread": [
+      8,
+      9,
+      11
+    ],
+    "instrument:iron-condor": [
+      8,
+      9,
+      11
+    ],
+    "action:buy-open-long": [
+      3,
+      4,
+      5,
+      14
+    ],
+    "action:sell-to-open": [
+      17,
+      26
+    ],
+    "action:sell-close": [
+      10,
+      12
+    ],
+    "action:buy-to-close": [
+      10,
+      12
+    ],
+    "action:roll": [
+      11
+    ],
+    "action:exercise": [
+      17,
+      19
+    ],
+    "action:assignment": [
+      10,
+      19
+    ],
+    "orderType:market": [
+      14
+    ],
+    "orderType:limit": [
+      14,
+      29
+    ],
+    "orderType:stop": [
+      20,
+      29
+    ],
+    "orderType:stop-limit": [
+      30
+    ],
+    "orderType:trailing-stop": [
+      30
+    ],
+    "orderType:bracket-oco": [
+      30
+    ],
+    "tif:day": [
+      13
+    ],
+    "tif:gtc": [
+      13
+    ],
+    "tif:ioc-fok": [
+      13,
+      30
+    ],
+    "tif:extended-session": [
+      13,
+      25
+    ],
+    "stage:draft": [
+      5,
+      6,
+      16
+    ],
+    "stage:review": [
+      3,
+      4,
+      7
+    ],
+    "stage:submitted": [
+      18,
+      19,
+      23
+    ],
+    "stage:working": [
+      1,
+      2
+    ],
+    "stage:partially-filled": [
+      2
+    ],
+    "stage:filled": [
+      10,
+      18,
+      19
+    ],
+    "stage:modify": [
+      1,
+      29
+    ],
+    "stage:cancel": [
+      1,
+      2
+    ],
+    "stage:rejected": [
+      3,
+      17
+    ],
+    "stage:expired": [
+      2,
+      17
+    ],
+    "stage:assigned-exercised": [
+      10,
+      19
+    ],
+    "device:phone": [
+      6,
+      28
+    ],
+    "device:desktop": [
+      28,
+      29
+    ],
+    "ladder:rung-unlocked": [
+      17,
+      26
+    ],
+    "ladder:rung-locked": [
+      17,
+      26
+    ]
   },
   "callSheet": {
     "1": "Working-orders view on the trade surface, with cancel and replace — borrow, high",

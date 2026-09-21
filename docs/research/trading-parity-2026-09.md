@@ -952,10 +952,10 @@ or `not-shown` to `frame` in one pass.
 
 | Scenario | Robinhood | Fidelity | thinkorswim | Skynet today | Rendered in |
 |---|---|---|---|---|---|
-| Phone · rung locked · **working limit order to roll an iron condor**, GTC | Level 3 needed, cash accounts can't; roll not offered on cash accounts [R31][R33][R41] | GTC 180 d; Tier 2 for spreads; mobile "can roll" but the phone roll ticket was not framed [F1][F12][F7] | Spreads permission red with an apply link; margin account; mobile order management and roll **not shown** [T-ACCT][T-SR] | no such stage — submit is dead (`executed:false`) under a "Confirmed" headline; 401 gates the builder (missing) | composes from lo-fi journeys 5 + 10 |
+| Phone · rung locked · **working limit order to roll an iron condor**, GTC | Level 3 needed, cash accounts can't; roll not offered on cash accounts [R31][R33][R41] | GTC 180 d; Tier 2 for spreads; mobile "can roll" but the phone roll ticket was not framed [F1][F12][F7] | Spreads permission red with an apply link; margin account; mobile order management and roll **not shown** [T-ACCT][T-SR] | no such stage — submit is dead (`executed:false`) under a "Confirmed" headline; 401 gates the builder (missing) | not a rendered flow — roll is a disabled, explained door on Register 6 and 10 ("after P3"); the working-spread row exists on Register 10 |
 | Desktop · **modify a working trailing stop** to buy a stock, extended session | not replaceable (only limit/stop, same type); stops don't execute outside RTH [R13][R6] | not allowed — extended hours are limit only; replace is quantity-only after hours [F20][F47] | trailing by $ / % / tick; EXT / AM / PM TIFs; cancel/replace reopens the ticket [T-OET][T-TSL][T-OT] | trailing stop not modelled; no extended hours; no replace (missing) | journey 7 |
-| Phone · **assigned on a short put** | exercise from the position with a "reasons not to exercise" review; auto-exercise ≥ $0.01; closed bucket "assigned" [R42][R49] | by phone before 4:15 PM; how the assigned position renders **not shown** [F26] | DNE is a support request; Trade Price = strike, Cost = strike ± premium [T-EXA][T-FAQG] | OPASN ingested server-side, nothing renders it (missing; `option-lifecycle.ts`) | journey 10 |
-| Phone · **submit a market order to buy a call, GTC** | market on a single-leg option only 9:35–4, blocked on low OI [R45] | Market in the sheet; GTC 180 d | not allowed — market is DAY only [T-OET] | cannot be chosen — market is always sent as day and the TIF never shown; accepted is treated as filled (missing / partial) | **not rendered** — the submitted stage with a market order falls between journeys 4 and 5 (a journey-map gap, noted on #3407) |
+| Phone · **assigned on a short put** | exercise from the position with a "reasons not to exercise" review; auto-exercise ≥ $0.01; closed bucket "assigned" [R42][R49] | by phone before 4:15 PM; how the assigned position renders **not shown** [F26] | DNE is a support request; Trade Price = strike, Cost = strike ± premium [T-EXA][T-FAQG] | OPASN ingested server-side, nothing renders it (missing; `option-lifecycle.ts`) | **not rendered by any journey** — an honest gap in the lo-fi; a "closed by assignment" row is the candidate |
+| Phone · **submit a market order to buy a call, GTC** | market on a single-leg option only 9:35–4, blocked on low OI [R45] | Market in the sheet; GTC 180 d | not allowed — market is DAY only [T-OET] | cannot be chosen — market is always sent as day and the TIF never shown; accepted is treated as filled (missing / partial) | journey 9, branch B — after the red pass, step 9 is the #3299 A/B itself (limit review vs market review → accepted → filled) |
 | Phone · rung unlocked · **cancel a working IOC limit to sell a stock short** | IOC / FOK **not shown**; short selling announced 2025-09-10, ticket undocumented [R1][R68] | short / cover is a desktop dropdown, margin only; phone **not shown** [F38] | mobile order management, shorting rules and IOC / FOK all **not shown** | TIF forced; "this desk never shorts" (skip by design; `progression.ts:14`) | journey 6 |
 
 ### What the model changed in the study
@@ -965,6 +965,7 @@ or `not-shown` to `frame` in one pass.
 - Three facts the brief hinted at are **not** in §1 and were left out of the model on the never-invent
   rule (Fidelity "GTC not for shorts" and "a dollar-limit is valid one day"; Robinhood "fractional
   orders cancel-only"); if they belong they get a §1 row first.
+- After the red pass on the shapes (2026-09-21): partially filled, rejected and expired rows render on journey 6; the market-order submit renders on journey 9's B branch; roll is a disabled door; assignment renders nowhere yet.
 - The Skynet headline status (`missing` for 98.4% of scenarios) is honest but blunt: the per-line
   statuses in the card are the useful read, and the number is what the parity plan's P1 (stage and
   TIF) is for.
@@ -977,7 +978,7 @@ Frames: the *Fidelity Ticket Study* (private artifact, 15 redacted phone frames,
 the repo. This document is the inventory of record (no separate inventory artifact — a page that can be
 lost adds nothing a repo file lacks; the tiger pass, 2026-09-21). The lo-fi shapes are committed as
 `docs/design/lofi/trading-journeys.html` and published from it as the private artifact **Trading Journeys
-— Lo-fi**, whose URL is indexed on the plan issue. The scenario navigator (§6) is the private artifact
+— Lo-fi**, https://claude.ai/artifact/H8zbzDxvn2Nw4HW1nPt1C3 (v1 after the red/tiger pass, 2026-09-21). The scenario navigator (§6) is the private artifact
 *Trading Scenario Navigator*, https://claude.ai/artifact/96z65tUsjuyhrQgpDbLofZ (v1, 2026-09-21).
 
 ### Robinhood `[R#]` (help center, newsroom; secondary marked)
