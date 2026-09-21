@@ -783,10 +783,11 @@ await shootChainCoverage("chain-coverage-phone");
 // chance of profit never without expected value beside it, the four greeks as one line.
 currentPlays = throughLongs;
 await page.setViewportSize({ width: 390, height: 844 });
-// The strike rides the URL (`?strike=`) so no blur commit re-renders the ticket between the fill
-// and the click — typing it then clicking straight away lost the click to that re-render here.
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
+// Typed strike, then Review clicked straight away — the regression proof for the lost first
+// click (`keepFocus`, gate-frame.tsx): before the fix this click landed on nothing.
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
 await page.getByText(/^Chain ·/).waitFor();
+await page.getByLabel("Strike", { exact: true }).fill("175");
 await page.getByRole("button", { name: "Review order" }).click();
 await page.getByText("Chance of profit").waitFor();
 await page.getByText("Chance of profit").scrollIntoViewIfNeeded();

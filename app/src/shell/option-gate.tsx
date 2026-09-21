@@ -237,6 +237,10 @@ export function OptionGate({
   });
 
   const review = async () => {
+    // The Review button keeps focus on the field under the pointer (`keepFocus`), so a
+    // hand-typed strike's blur commit never fires from that click — commit it here instead, the
+    // same `?strike=` write the blur would have made.
+    if (strike !== "" && strike !== initialStrike) onStrikeCommit?.(strike);
     setState({ step: "reviewing" });
     try {
       const { preview } = await reviewOption(draft());

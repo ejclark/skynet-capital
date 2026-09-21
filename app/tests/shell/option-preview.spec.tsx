@@ -1,6 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { OptionPreview } from "../../src/live/options";
-import { OptionPreviewBody, percent, signedMoney } from "../../src/shell/option-preview";
+import {
+  GateAction,
+  OptionPreviewBody,
+  percent,
+  signedMoney,
+} from "../../src/shell/option-preview";
 
 /**
  * The option review body (#3407 P2 slice 2): chance of profit renders only beside expected
@@ -63,5 +68,29 @@ describe("OptionPreviewBody — odds and greeks", () => {
     expect(percent(0)).toBe("0%");
     expect(signedMoney(18.4)).toBe("+$18.40");
     expect(signedMoney(-5)).toBe("-$5.00");
+  });
+});
+
+const noop = (): void => undefined;
+
+describe("GateAction — the Review press keeps focus where it is (#3407 P0)", () => {
+  it("prevents the mousedown default so a blur-commit can't steal the click", () => {
+    let reviewed = 0;
+    render(
+      <GateAction
+        state={{ step: "draft" }}
+        drafted={true}
+        onReview={() => {
+          reviewed += 1;
+        }}
+        onSubmit={noop}
+        onReset={noop}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Review order" });
+    const prevented = !fireEvent.mouseDown(button);
+    expect(prevented).toBe(true);
+    fireEvent.click(button);
+    expect(reviewed).toBe(1);
   });
 });

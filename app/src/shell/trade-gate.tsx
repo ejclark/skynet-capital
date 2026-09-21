@@ -18,7 +18,7 @@ import {
   type TicketResult,
   tifLabel,
 } from "../live/ticket";
-import { DisarmNote, GateHead } from "./gate-frame";
+import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
@@ -208,6 +208,13 @@ export function TradeGate({
   const priceField = priceFieldFor(fields.orderType);
 
   const review = async () => {
+    // The Review button keeps focus (`keepFocus`), so a symbol typed and never blurred commits
+    // here — the quote header and `?symbol=` land exactly as the blur would have left them.
+    const typed = fields.symbol.trim().toUpperCase();
+    if (typed !== "" && typed !== quoteSym) {
+      setQuoteSym(typed);
+      onSymbolCommit?.(typed);
+    }
     setState({ step: "reviewing" });
     try {
       const { preview } = await reviewTicket(draft());
@@ -333,6 +340,7 @@ export function TradeGate({
           type="button"
           className="btn btn-primary"
           disabled={busy}
+          onMouseDown={keepFocus}
           onClick={() => submit(state.preview)}
         >
           Submit order{state.preview.estNotional ? ` — ${money(state.preview.estNotional)}` : ""}
@@ -346,6 +354,7 @@ export function TradeGate({
           type="button"
           className="btn btn-primary"
           disabled={busy || fields.symbol.trim() === "" || fields.quantity === ""}
+          onMouseDown={keepFocus}
           onClick={review}
         >
           {state.step === "reviewing" ? "Reviewing…" : "Review order"}
