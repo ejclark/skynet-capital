@@ -1,7 +1,7 @@
 # 10-Year TIPS auction (reopening) — treasury-10y-tips-2026-09-17
 
 **Kind:** rates · **Date:** 2026-09-17 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-09-17
+**Last assessed:** 2026-09-21 (close-out — the scanner goes quiet on this event from here)
 <!-- probe-ref: {"symbols":{},"vix":15.93,"daysBand":"medium:0+","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","eia-weekly-petroleum-status-2026-09-16","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","japan-cpi-2026-09-18","jgb-20y-auction-2026-09-15","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","lennar-q3-fy2026-2026-09-16","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","sp-global-investment-manager-index-2026-09-15","sp-quarterly-rebalance-effective-2026-09-21","tic-monthly-2026-09-16","treasury-20y-bond-2026-09-15","treasury-2y-note-2026-09-22","treasury-buyback-7y10y-2026-09-17","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":1} -->
 
 ## At a glance
@@ -219,3 +219,88 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-21, D+4 — inside the `closeOutWithinDays: 6` deadline).** Rates mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, as at initial research; the
+cache was busted anyway per the lane's standing instruction, though nothing here reads it).
+"Re-run instrument data" means re-fetching every cited source direct rather than reading this
+doc's own memory of the tape: `api.fiscaldata.treasury.gov` `auctions_query` for CUSIP 91282CRE3
+(primary, full record), `home.treasury.gov`'s daily par and real yield curve CSVs for 09-08 through
+09-18 (primary), Cboe's own VIX daily series (primary), a Yahoo daily-close probe on CRWV (reference
+only — `symbols: []`), and tipswatch.com's own auction write-up (the same TIPS-specialist source
+this doc has used throughout, now scoring its own D-2 prediction).
+
+**The headline verdict: the auction was the genuinely weak print this doc's original reflex named
+at D-29, not the "attractive... strong" one tipswatch called at D-2 — and the FOMC, not the
+auction, is what moved the real yield, exactly as the `This week` call said it would.** CUSIP
+91282CRE3 stopped at a real yield of **2.653%**, the highest for this term since October 2008 (per
+tipswatch's own headline) — but against a when-issued of **2.634%** (tipswatch) that is a **+1.9bp
+tail**, not a stop-through, and it printed on a **bid-to-cover of 2.24** (fiscaldata
+`bid_to_cover_ratio`), tipswatch's own words "the lowest for this term in a year" and "demand...a
+bit weak." Indirect participation was **58.7%** ($11.165B / a $19.021B public offering —
+comp+noncomp+retail: `indirect_bidder_accepted` 11,164,960,000 ÷ (`comp_accepted` 18,883,984,000 +
+`noncomp_accepted` 116,022,000 + `treas_retail_accepted` 20,751,000)), well under the recent-five
+mean of 67.2% this doc benchmarked at D-8; direct bidders absorbed an outsized **28.5%**
+($5.419B); primary dealers took **12.1%** of the public offering ($2.300B) or **10.52%** of
+`total_accepted` (2,300,024,000 ÷ 21,860,454,000, `total_accepted` including the $2.860B SOMA
+rollover exchange — `soma_included` reads "No," confirming the D-2 row's read that this is the
+passive maturing-holdings reinvestment, not a discretionary Fed add-on). Read plainly: this was a
+weak-cover, tail auction dressed in a record headline yield — the level nobody could avoid setting
+a record on (D-8's framing) obscured demand that came in soft on the metric that actually carries
+information.
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"Breakeven jump alongside the auction"** — **did not fire.** 10-year breakeven ran
+  **2.37% (09-08) → 2.33% (09-16/17/18)**, a **−4bp** move, not a rise. The distinctive kill switch
+  this doc carried since D-29 never triggered across the whole event window.
+- **"Weak-demand stop" (real yield tailing above when-issued, bid-to-cover below ~2.30)** —
+  **fired.** Tail +1.9bp above the 2.634% when-issued (tipswatch), cover 2.24 — both conditions
+  cleared, for the first time in this doc's life the "high real yield signals weak demand" reflex
+  its own D-8/D-15 pulses had talked themselves out of turned out to be the correct read.
+- **"The Sep-16 FOMC (hawkish surprise / hike) lifting real yields into the auction"** — **fired.**
+  Per the [FOMC sibling's own close-out](fomc-2026-09-16.md): the Fed hiked 25bp to 3.75–4.00%,
+  unanimously, its first hike in three years — the meeting and the stop were a linked pair exactly
+  as this doc's D-29 leg 4 argued, and the real 10-year (2.43% 09-08 → 2.68% 09-16, the last close
+  before the auction) absorbed it directly.
+- **"A >5% single-session move in CRWV or another high-duration name around auction day"** —
+  **already fired at D-2** (CRWV −6.1% 09-10, −6.8% 09-14) and stayed directionally consistent
+  through the print: CRWV closed 83.35 (09-16) → **79.88 (09-17, auction day, −4.16%)** → 81.36
+  (09-18), a fourth straight down session inside the real-yield surge that falls just short of a
+  fresh 5% trigger on its own. No new independent trigger; the reaction-function read this switch
+  exists to confirm was already live.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-treasury-10y-tips-2026-09-17-1` (breakeven carries ≥50% of the nominal move, 09-08→09-18 close) | `\|Δbreakeven\|` ≥ 50% of `\|Δnominal\|` across 09-08 close → 09-18 close | home.treasury.gov daily curves (fetched direct): 10Y nominal **4.80% → 5.01%** (+21bp), real **2.43% → 2.68%** (+25bp), breakeven **2.37% → 2.33%** (**−4bp**). `\|Δbreakeven\|` is 4bp against a 10.5bp bar (50% of 21bp) — **19% of the nominal move**, and the real leg alone (25bp) exceeds the full nominal move, i.e. it fully absorbed the breakeven's own -4bp on top of it | **KILLED** — the real leg cleared >50% (kill condition), so the D-8 inversion this test was built to check was a one-week, holiday-shortened artifact; the doc's original real-rate/term-premium framing reasserts unamended |
+| `FT-treasury-10y-tips-2026-09-17-2` (a record real yield buys its own demand — cover ≥2.36 AND dealer takedown ≤10.6%) | Both legs must clear: `bid_to_cover_ratio` ≥2.36 and primary-dealer takedown (`primary_dealer_accepted` ÷ `total_accepted`) ≤10.6% | fiscaldata `auctions_query` (fetched direct): `bid_to_cover_ratio` **2.24** (fails, <2.36); dealer takedown **10.52%** (2,300,024,000 ÷ 21,860,454,000 — passes, ≤10.6%) | **KILLED** — the conjunction needs both legs and the cover leg missed; tipswatch's own D-2 "attractive... strong" call is contradicted by tipswatch's own D+0 write-up ("demand...a bit weak," cover "the lowest for this term in a year") |
+
+**Reading the split honestly.** Both forward tests killed is not a coincidence — they were testing
+two versions of the same optimistic read (the D-8/D-2 pulses' drift toward "this record yield is
+buying strong demand" and "the inflation leg is starting to carry the move"), and the print
+falsified both in the same direction: real yields did the work, demand was soft, and the headline
+number that looked record-setting was actually a tail on weak cover. The doc's own original D-29
+instinct — a 17-year-high real yield signals weak demand, not strong — was the one that held up,
+after two intervening pulses talked themselves toward the opposite read on thinner evidence (a 2bp
+breakeven wobble at D-8, a single outside forecast at D-2). The honest lesson for future TIPS
+reopenings in this doc's chain: benchmark cover and dealer takedown against the recent-five mean
+from day one, and treat a record headline yield as informationless by construction once the series
+maximum has already been cleared, rather than re-deriving that each time.
+
+**Verdict vs. the stance.** The stand-aside cost nothing and would have been wrong to abandon: no
+symbols, no directional bet, existing high-duration exposure (CRWV → NVDA/AVGO/MRVL) sized for both
+tails per the original stance — and both tails were live simultaneously (a record yield that also
+tailed on weak cover). The `This week` horizon call ("the FOMC, not the auction, sets the real
+yield this stop prices at") **HELD** cleanly: the Fed hiked and the real 10-year absorbed it before
+the auction ever opened. The `This month` horizon call (demand internals over the level, betting
+with tipswatch's "strong" read) is **FALSIFIED** on the same fact that kills `FT-...-2`. The
+`This quarter` horizon call (real-rate framing intact) is directionally reinforced by this window
+(real +25bp against a −4bp breakeven is the cleanest real-rate read this doc has recorded) but its
+own falsifier is dated to the 2026-11-19 reopening of this same CUSIP, past `closeOutWithinDays: 6`
+— left unscored here, a switch for [`treasury-10y-tips-2026-11-19`](treasury-10y-tips-2026-11-19.md)
+or whichever rates ledger is live that week to carry, the same treatment the 20Y-bond sibling gave
+its own out-of-window quarter call. No new dated adjacency found this pass. Scanner goes quiet on
+this event.
