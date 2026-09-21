@@ -1,5 +1,9 @@
+import type { DecisionFunnel } from "../../src/autonomous/decision-db.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
-import { decisionCyclesView as decisionCyclesPage } from "../../src/observatory/decision-json-view.js";
+import {
+  decisionCyclesView as decisionCyclesPage,
+  funnelView,
+} from "../../src/observatory/decision-json-view.js";
 
 /** PR 5 (issue #2287) made `decisionCyclesView` return a paginated `{cycles, nextCursor}` page
  *  rather than a bare array — this thin wrapper keeps every existing test's `view[0]`/`view.length`
@@ -215,5 +219,51 @@ describe("decisionCyclesView — pagination (PR 5, issue #2287)", () => {
 
     const next = decisionCyclesPage(records, { limit: 2, before: first.nextCursor });
     expect(next.cycles.map((c) => new Date(c.at).getTime())).toEqual([3, 2]);
+  });
+});
+
+const funnel = (over: Partial<DecisionFunnel> = {}): DecisionFunnel => ({
+  cycles: 10,
+  rawIntents: 8,
+  survivedGuards: 5,
+  placed: 4,
+  filled: 3,
+  closed: 2,
+  refusalsByReason: {},
+  ...over,
+});
+
+describe("funnelView", () => {
+  it("carries the counts through unchanged", () => {
+    expect(funnelView(funnel())).toMatchObject({
+      cycles: 10,
+      rawIntents: 8,
+      survivedGuards: 5,
+      placed: 4,
+      filled: 3,
+      closed: 2,
+    });
+  });
+
+  it("labels each refusal reason with the same human copy the cycle feed uses", () => {
+    const view = funnelView(funnel({ refusalsByReason: { "s2-print": 3 } }));
+    expect(view.refusals).toEqual([
+      { reason: "s2-print", label: "blocked by S2 (flat through the print)", count: 3 },
+    ]);
+  });
+
+  it("sorts refusals by count descending — the binding constraint first", () => {
+    const view = funnelView(
+      funnel({ refusalsByReason: { "insufficient-cash": 1, "s2-print": 5, "ladder-block": 3 } }),
+    );
+    expect(view.refusals.map((r) => r.reason)).toEqual([
+      "s2-print",
+      "ladder-block",
+      "insufficient-cash",
+    ]);
+  });
+
+  it("returns an empty refusals list when nothing was ever refused", () => {
+    expect(funnelView(funnel()).refusals).toEqual([]);
   });
 });

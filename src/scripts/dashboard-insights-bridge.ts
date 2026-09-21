@@ -9,7 +9,7 @@
  */
 import { join } from "node:path";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
-import { type DecisionDb, openDecisionDb } from "../autonomous/decision-db.js";
+import { type DecisionDb, type DecisionFunnel, openDecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -56,6 +56,8 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
+  readonly funnelFor?: (personaId: string) => DecisionFunnel;
 }
 
 export interface CredentialsBridgeDeps {
@@ -122,6 +124,7 @@ export function startInsightsBridge(
       ? {
           readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
         }
       : {}),
   };

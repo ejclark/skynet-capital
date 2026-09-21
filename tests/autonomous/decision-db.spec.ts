@@ -469,4 +469,98 @@ describe("DecisionDb", () => {
       expect(db.listRetrospectives("beta-scout")).toEqual([]);
     });
   });
+
+  describe("funnelFor (#2287 PR 7b)", () => {
+    it("walks a mixed cycle into cycles/raw/survived/placed/filled/closed plus refusals", () => {
+      const refused = intent({ symbol: "TSLA", side: "buy", quantity: 5 });
+      const placedRejected = intent({ symbol: "MSFT", side: "sell", quantity: 8 });
+      const observedOnly = intent({ symbol: "AMD", side: "buy", quantity: 3 });
+      const buy = intent({ symbol: "NVDA", side: "buy", quantity: 20 });
+      const sell = intent({ symbol: "NVDA", side: "sell", quantity: 20 });
+
+      db.record({
+        at: 1,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [refused, placedRejected, observedOnly, buy],
+        guardedIntents: [placedRejected, observedOnly, buy],
+        outcomes: [
+          {
+            intent: placedRejected,
+            action: "placed",
+            result: { intent: placedRejected, status: "rejected", orderId: "r-1" },
+          },
+          { intent: observedOnly, action: "observed" },
+          {
+            intent: buy,
+            action: "placed",
+            result: {
+              intent: buy,
+              status: "filled",
+              orderId: "o-1",
+              filledQuantity: 20,
+              filledPrice: 100,
+            },
+          },
+        ],
+        refusals: [{ intent: refused, reason: "insufficient-cash" }],
+      });
+      db.record({
+        at: 2,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [sell],
+        guardedIntents: [sell],
+        outcomes: [
+          {
+            intent: sell,
+            action: "placed",
+            result: {
+              intent: sell,
+              status: "filled",
+              orderId: "o-2",
+              filledQuantity: 20,
+              filledPrice: 120,
+            },
+          },
+        ],
+      });
+
+      const funnel = db.funnelFor("sauron");
+      expect(funnel).toMatchObject({
+        cycles: 2,
+        rawIntents: 5,
+        survivedGuards: 4, // everything but the one refused intent
+        placed: 3, // placedRejected + buy + sell
+        filled: 2, // buy + sell
+        closed: 1, // one round trip closed by the retrospective writer
+      });
+      expect(funnel.refusalsByReason).toEqual({ "insufficient-cash": 1 });
+    });
+
+    it("returns an honest all-zero funnel for a persona with no history at all", () => {
+      expect(db.funnelFor("ghost")).toEqual({
+        cycles: 0,
+        rawIntents: 0,
+        survivedGuards: 0,
+        placed: 0,
+        filled: 0,
+        closed: 0,
+        refusalsByReason: {},
+      });
+    });
+
+    it("scopes the funnel to the requested persona only", () => {
+      db.record({
+        at: 1,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [intent()],
+        guardedIntents: [intent()],
+        outcomes: [{ intent: intent(), action: "observed" }],
+      });
+      expect(db.funnelFor("sauron").cycles).toBe(1);
+      expect(db.funnelFor("beta-scout").cycles).toBe(0);
+    });
+  });
 });
