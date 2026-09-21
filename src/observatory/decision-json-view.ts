@@ -1,8 +1,9 @@
-import type { DecisionFunnel } from "../autonomous/decision-db.js";
+import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderForecast } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
+import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-ci.js";
 import { formatPrice } from "./desk-data.js";
 
 /**
@@ -210,4 +211,13 @@ export function funnelView(funnel: DecisionFunnel): DecisionFunnelView {
     closed: funnel.closed,
     refusals,
   };
+}
+
+/** Shapes measure #5 (#2287 PR 7c) for the `/decisions` JSON view: expectancy — mean R-multiple
+ *  (returnPct proxy) with a block-bootstrap CI over whole trading days. Reads whatever the store
+ *  has recorded; the CI is honestly `null` (never fabricated) below the minimum day count. */
+export function expectancyView(retrospectives: readonly RetrospectiveRecord[]): ExpectancyCI {
+  return expectancyBootstrapCI(
+    retrospectives.map((r) => ({ closedAt: new Date(r.at).toISOString(), returnPct: r.returnPct })),
+  );
 }

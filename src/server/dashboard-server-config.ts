@@ -1,6 +1,6 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import type { DecisionFunnel } from "../autonomous/decision-db.js";
+import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -128,6 +128,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * unset posture as `findByOrderId`.
    */
   readonly funnelFor?: (participantId: string) => DecisionFunnel;
+  /**
+   * Every closed position the retrospective writer has recorded (measure #5, PR 7c, issue #2287)
+   * — feeds the expectancy-with-a-CI computation on the `/decisions` panel. Omit to leave that
+   * section absent, same dark-when-unset posture as `funnelFor`.
+   */
+  readonly listRetrospectives?: (participantId: string) => readonly RetrospectiveRecord[];
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
