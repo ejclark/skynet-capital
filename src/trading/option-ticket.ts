@@ -205,30 +205,51 @@ function validateClose(
   }
 }
 
+export interface CloseOrderChoice {
+  /** Market (today's default) or limit — a limit close names the premium per share it will
+   *  accept (#3407 P1 slice 3; closes were market-only before). */
+  readonly orderType?: "limit" | "market";
+  readonly limitPrice?: number;
+}
+
 export function previewOptionClose(
   occSymbol: string,
   context: OptionTicketContext,
   contracts?: number,
+  order: CloseOrderChoice = {},
 ): OptionTicketPreview {
   const parts = parseOccSymbol(occSymbol);
   const held = context.positions.find((p) => p.symbol === occSymbol.trim().toUpperCase());
   const heldContracts = held ? Math.abs(held.quantity) : 0;
   const closing = contracts ?? heldContracts;
   const isShort = (held?.quantity ?? 0) < 0;
+  const orderType = order.orderType ?? "market";
   const refusals: string[] = [];
   const warnings: string[] = [];
 
   gateNotes(context, refusals, warnings);
   if (!parts) refusals.push("That isn't an option contract symbol.");
   validateClose(heldContracts, closing, refusals, warnings);
+  if (orderType === "limit" && !(order.limitPrice && order.limitPrice > 0)) {
+    refusals.push("A limit close needs a limit price — the premium per share you'll accept.");
+  }
+  if (orderType === "market" && heldContracts > 0) {
+    warnings.push(
+      "A market close fills at whatever the spread says — a limit at the mark is the disciplined habit.",
+    );
+  }
 
-  // Mark per share: the position's market value over |contracts| × 100.
+  // Mark per share: the position's market value over |contracts| × 100. A limit close estimates
+  // off the limit itself — that is the number the member will actually accept.
   const mark =
     heldContracts > 0
       ? Math.abs((held as TicketHolding).marketValue) / (heldContracts * SHARES_PER_CONTRACT)
       : undefined;
+  const estPremium = orderType === "limit" && order.limitPrice ? order.limitPrice : mark;
   const estNotional =
-    mark !== undefined && closing > 0 ? mark * closing * SHARES_PER_CONTRACT : undefined;
+    estPremium !== undefined && closing > 0
+      ? estPremium * closing * SHARES_PER_CONTRACT
+      : undefined;
 
   return {
     code: "close",
@@ -240,9 +261,12 @@ export function previewOptionClose(
     side: isShort ? "buy" : "sell",
     positionIntent: isShort ? "buy_to_close" : "sell_to_close",
     contracts: closing,
-    orderType: "market",
+    orderType,
+    ...(orderType === "limit" && order.limitPrice !== undefined
+      ? { limitPrice: order.limitPrice }
+      : {}),
     ok: refusals.length === 0,
-    ...(mark !== undefined ? { estPremium: mark } : {}),
+    ...(estPremium !== undefined ? { estPremium } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),
     refusals,
     warnings,

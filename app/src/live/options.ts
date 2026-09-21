@@ -114,6 +114,9 @@ export type OptionDraft =
       readonly participantId: string;
       readonly occSymbol: string;
       readonly contracts?: number;
+      /** Market when absent; a limit close names the premium per share (#3407 P1 slice 3). */
+      readonly orderType?: "limit" | "market";
+      readonly limitPrice?: number;
     };
 
 async function getJson<T>(url: string): Promise<T> {

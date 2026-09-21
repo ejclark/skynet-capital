@@ -173,6 +173,35 @@ describe("previewOptionClose — direction from the held sign", () => {
     expect(preview.positionIntent).toBe("buy_to_close");
   });
 
+  it("closes at a limit when asked — the estimate follows the limit, not the mark (#3407)", () => {
+    const preview = previewOptionClose(
+      "MSFT260918P00420000",
+      context({ positions: [longPut] }),
+      undefined,
+      { orderType: "limit", limitPrice: 13.5 },
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.orderType).toBe("limit");
+    expect(preview.limitPrice).toBe(13.5);
+    expect(preview.estPremium).toBe(13.5);
+    expect(preview.estNotional).toBeCloseTo(2_700); // 13.5 × 2 contracts × 100
+    expect(preview.warnings.join(" ")).not.toContain("market close");
+  });
+
+  it("refuses a limit close with no price, and warns that a market close is the undisciplined habit", () => {
+    const noPrice = previewOptionClose(
+      "MSFT260918P00420000",
+      context({ positions: [longPut] }),
+      undefined,
+      { orderType: "limit" },
+    );
+    expect(noPrice.ok).toBe(false);
+    expect(noPrice.refusals.join(" ")).toContain("limit close needs a limit price");
+    const market = previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] }));
+    expect(market.orderType).toBe("market");
+    expect(market.warnings.join(" ")).toContain("market close fills at whatever the spread says");
+  });
+
   it("refuses closing more than is held, or a contract not held at all", () => {
     const over = previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] }), 3);
     expect(over.ok).toBe(false);

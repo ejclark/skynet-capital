@@ -193,6 +193,38 @@ describe("option trade service — the gate", () => {
     });
   });
 
+  it("sends a limit close as a limit with its premium (#3407 P1 slice 3)", async () => {
+    const { submit, orders } = makeService({
+      positions: [
+        {
+          symbol: "MSFT260918P00420000",
+          qty: "2",
+          avg_entry_price: "10.70",
+          market_value: "2400",
+        },
+      ],
+    });
+    const result = await submit(
+      {
+        kind: "close",
+        participantId: "ann",
+        occSymbol: "MSFT260918P00420000",
+        orderType: "limit",
+        limitPrice: 13.5,
+      },
+      "ann",
+    );
+    expect(result.ok).toBe(true);
+    expect(orders[0]?.body).toMatchObject({
+      symbol: "MSFT260918P00420000",
+      qty: 2,
+      side: "sell",
+      type: "limit",
+      limit_price: 13.5,
+      position_intent: "sell_to_close",
+    });
+  });
+
   it("tags an OPEN's audit line with its play code (tag-at-entry)", async () => {
     const { submit, audited } = makeService({});
     await submit(openRequest, "ann");

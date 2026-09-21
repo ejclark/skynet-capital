@@ -112,6 +112,44 @@ describe("serveOptionApi review", () => {
     expect(text).not.toContain("Training wheels");
   });
 
+  it("carries a limit close's type and price into the preview, dropping any other type (#3407)", async () => {
+    const cfg = config({
+      hub: {
+        getState: () => ({
+          participants: [
+            {
+              id: "human-ann",
+              cash: 1_000,
+              positions: [{ symbol: "NVDA260918P00100000", quantity: 2, marketValue: 600 }],
+            },
+          ],
+        }),
+      },
+    });
+    const { parsed } = await review(
+      {
+        kind: "close",
+        participantId: "human-ann",
+        occSymbol: "NVDA260918P00100000",
+        orderType: "limit",
+        limitPrice: 3.25,
+      },
+      cfg,
+    );
+    expect(parsed.preview.orderType).toBe("limit");
+    expect(parsed.preview.limitPrice).toBe(3.25);
+    const odd = await review(
+      {
+        kind: "close",
+        participantId: "human-ann",
+        occSymbol: "NVDA260918P00100000",
+        orderType: "trailing_stop",
+      },
+      cfg,
+    );
+    expect(odd.parsed.preview.orderType).toBe("market");
+  });
+
   it("previews a close off your own desk against an empty book — holds never echo", async () => {
     const cfg = config({
       hub: {
