@@ -319,6 +319,73 @@ let currentQuote = quote;
 let currentWire = emptyWire;
 // The base twenty bars for every chart shot but the studies scene, which swaps in `studyBars`.
 let currentBars = bars;
+// Working orders (#3407 P1 slice 2): the list a Limit was missing. Every scene but the one that
+// proves it starts with nothing working — the honest empty line is itself part of every ticket
+// frame now. The proving scene swaps in one GTC limit, one partial fill and two settled rows.
+const noOrders = { available: true, asOf: "2026-09-21T14:00:00Z", working: [], recent: [] };
+const workingOrders = {
+  available: true,
+  asOf: "2026-09-21T14:00:00Z",
+  working: [
+    {
+      id: "wo-1",
+      symbol: "NVDA",
+      side: "buy",
+      orderType: "limit",
+      quantity: 5,
+      filledQuantity: 0,
+      limitPrice: 176.5,
+      timeInForce: "gtc",
+      submittedAt: "2026-09-21T13:58:00Z",
+      state: "working",
+      cancelable: true,
+    },
+    {
+      id: "wo-2",
+      symbol: "AAPL",
+      side: "sell",
+      orderType: "limit",
+      quantity: 10,
+      filledQuantity: 4,
+      limitPrice: 231.1,
+      timeInForce: "day",
+      submittedAt: "2026-09-21T13:41:00Z",
+      state: "partial",
+      cancelable: true,
+    },
+  ],
+  recent: [
+    {
+      id: "wo-3",
+      symbol: "MU",
+      side: "buy",
+      orderType: "market",
+      quantity: 20,
+      filledQuantity: 20,
+      avgFillPrice: 118.4,
+      timeInForce: "day",
+      submittedAt: "2026-09-21T13:20:00Z",
+      settledAt: "2026-09-21T13:20:01Z",
+      state: "filled",
+      cancelable: false,
+    },
+    {
+      id: "wo-4",
+      symbol: "NVDA",
+      side: "buy",
+      orderType: "stop",
+      quantity: 5,
+      filledQuantity: 0,
+      stopPrice: 190,
+      timeInForce: "gtc",
+      submittedAt: "2026-09-21T12:02:00Z",
+      settledAt: "2026-09-21T13:05:00Z",
+      state: "cancelled",
+      cancelable: false,
+    },
+  ],
+};
+let currentOrders = noOrders;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
@@ -336,6 +403,9 @@ const { page, origin, shoot, close } = await openShell({
     "/api/wire": () => currentWire,
     // Matched by pathname alone too, so one key covers any `?q=`.
     "/api/symbols/search": () => symbolSearch,
+    // Working orders (#3407 P1 slice 2) — pathname-matched, so one key covers `?participantId=`.
+    "/api/trade/orders": () => currentOrders,
+    "/api/trade/cancel": { ok: true, orderId: "wo-1" },
   },
 });
 
@@ -577,5 +647,28 @@ await page.getByLabel("Symbol").fill("GATO");
 await page.getByText("GATO - Gatos Silver").waitFor();
 const shootSymbolTier2 = shooter(page, resolve("docs/shots/symbol-tier2"));
 await shootSymbolTier2("symbol-tier2-phone");
+
+// Working orders (#3407 P1 slice 2) — one GTC limit and one partial fill under the ticket, two
+// settled rows below them; the Day / GTC control on the ticket above. PHONE FIRST: 390px proves
+// the row wraps its type line under the symbol instead of clipping; desktop proves it widened.
+currentPlays = plays;
+currentOrders = workingOrders;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByText("Working orders").waitFor();
+await page.getByText("Settled today").waitFor();
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+const shootWorkingOrders = shooter(page, resolve("docs/shots/working-orders"));
+await shootWorkingOrders("working-orders-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await shootWorkingOrders("working-orders-desktop");
+// The two-tap cancel, armed: the row's Cancel became its own Confirm / Keep pair.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("button", { name: "Cancel" }).first().click();
+await page.getByRole("button", { name: "Confirm cancel" }).waitFor();
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await shootWorkingOrders("working-orders-cancel-armed-phone");
+currentOrders = noOrders;
 
 await close();

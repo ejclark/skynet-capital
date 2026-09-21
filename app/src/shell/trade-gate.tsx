@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import type { PlayInfo } from "../live/options";
@@ -14,12 +15,14 @@ import {
   type TicketOrderType,
   type TicketPreview,
   type TicketResult,
+  tifLabel,
 } from "../live/ticket";
 import { DisarmNote, GateHead } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
+import { TimeInForceField } from "./tif-field";
 
 /**
  * THE PRE-TRADE GATE (#738 phase 2e) — the merge-box state machine on a real ticket.
@@ -47,10 +50,14 @@ function OrderLine({ preview }: { readonly preview: TicketPreview }): ReactEleme
     preview.stopPrice !== undefined ? `stop ${money(preview.stopPrice)}` : "",
     preview.limitPrice !== undefined ? `limit ${money(preview.limitPrice)}` : "",
   ].filter(Boolean);
+  // The time in force the server says it will send — never hidden, even when the member left it
+  // on the default (#3407 P1: it used to be hard-coded and shown nowhere).
+  const tif = tifLabel(preview.timeInForce);
   return (
     <p className="gate-row">
       {orderTypeLabel(preview.orderType)}
       {prices.length ? ` · ${prices.join(" · ")}` : ""}
+      {tif ? ` · ${tif}` : ""}
     </p>
   );
 }
@@ -115,11 +122,13 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   if (state.result.ok)
     return (
       <>
-        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}`}</GateHead>
+        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}${
+          tifLabel(state.result.timeInForce) ? ` · ${tifLabel(state.result.timeInForce)}` : ""
+        }`}</GateHead>
         <div className="gate-body">
           <p className="gate-note">
-            SIM account — simulated fill, real discipline. The blotter and timeline pick it up on
-            the next read.
+            SIM account — simulated fill, real discipline. Working orders below update now; the
+            blotter and timeline pick the fill up on the next read.
           </p>
         </div>
       </>
@@ -174,6 +183,7 @@ export function TradeGate({
     stopPrice: "",
   });
   const [state, setState] = useState<GateState>({ step: "draft" });
+  const queryClient = useQueryClient();
   /** The quote header's own committed symbol (#2017 Phase 0.9) — fetches on COMMIT only, never a
    *  keystroke, mirroring the chain fetch's `chainSym` on the options ticket. */
   const [quoteSym, setQuoteSym] = useState(initialSymbol ?? "");
@@ -209,7 +219,11 @@ export function TradeGate({
   const submit = async (preview: TicketPreview) => {
     setState({ step: "submitting", preview });
     try {
-      setState({ step: "done", result: await submitTicket(draft()) });
+      const result = await submitTicket(draft());
+      setState({ step: "done", result });
+      // The working-orders section (#3407 P1 slice 2) reads the broker; a sent order should show
+      // up there on the same screen, not on the next visit.
+      if (result.ok) await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
@@ -297,6 +311,11 @@ export function TradeGate({
           </div>
         ) : null}
       </div>
+      <TimeInForceField
+        orderType={fields.orderType}
+        value={fields.timeInForce}
+        onChange={edit("timeInForce")}
+      />
       <p className="gate-note">{orderTypeNote(fields.orderType)}</p>
 
       {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —
