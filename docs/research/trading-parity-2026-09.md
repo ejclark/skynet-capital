@@ -727,7 +727,7 @@ plan, not a constraint on the designs.
 | Close on a limit | missing — stock close passes no `orderType`; option close hard-codes market | `blotter-row.tsx:321-327`, `src/trading/option-ticket.ts:243` |
 | Roll an option | missing — honestly disabled with a reason | `blotter-row.tsx:195-205`, `order-ticket.ts:291-299` |
 | Exercise / assignment / expiry UI | missing — ingested server-side only | `src/trading/option-lifecycle.ts` |
-| Option positions with strike / expiry / greeks | missing — OCC symbol humanized only; `aggregateGreeks` built, unwired | `app/src/shell/option-positions.tsx`, `src/options/greeks-aggregator.ts` |
+| Option positions with strike / expiry / greeks | built (P2 slice 3) — DTE, ITM/OTM word, per-position greeks, book greeks with coverage; `aggregateGreeks` wired | `src/server/option-positions-view.ts`, `option-positions-route.ts`, `app/src/shell/option-positions.tsx` |
 | Buying power / margin / day-trade count | missing — cash-account model; `AlpacaAccount` reads cash, equity, options level only | `src/alpaca/alpaca-trading-client.ts` |
 | Watchlist | missing | — |
 | Price / fill alerts, push notifications | missing | — |
@@ -780,7 +780,7 @@ plan, not a constraint on the designs.
 | Pending statuses in the ledger | journaled (`new` / `canceled` / `rejected` lines) but never surfaced as open | `src/alpaca/trade-updates-stream-events.ts:88`, `src/observatory/activity-store.ts` |
 | Option chain (bid / ask / OI / vol / greeks) | full for every listed expiration (P2 slice 1); one 429 retry per read; no cache — every review and submit still re-fetches | `alpaca-options-client.ts`, `src/server/option-chain-route.ts` |
 | IV, probability | research path only | `src/options/pricing.ts`, `src/adapters/alpaca-recommend-chain.ts` |
-| Portfolio greeks | built, unwired | `src/options/greeks-aggregator.ts` |
+| Portfolio greeks | wired for the option book on the positions card (P2 slice 3); beta-weighting still unused | `src/options/greeks-aggregator.ts`, `src/server/option-positions-view.ts` |
 | Real-time quotes / fills to the browser | none — polling; the hub already has both event streams server-side | `src/server/observatory-hub.ts`, `board-patch-routes.ts` |
 | Account detail (buying power, margin, PDT) | none | `AlpacaAccount` subset |
 | Options-level, collateral, ladder and zero-DTE gates | full | `option-economics.ts`, `src/domain/progression.ts`, both API routes |
@@ -868,7 +868,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | IV on the chain | IV metric [R36] | IV column [F-frames 13] | Impl Vol, SD strikes [T-AP] | missing on the desk | build (P2) | solve from mid via `pricing.ts` |
 | Roll | Roll position [R41] | Roll ticket [F9] | right-click roll; Strategy Roller [T-PS][T-SR] | disabled with reason (`order-ticket.ts:291-299`) | build (P3) | `mleg` execution |
 | Exercise / assignment UI | Exercise button; resolution flow [R42] | phone only [F26] | support request [T-EXA] | missing (ingested server-side) | build (P3) | render `option-lifecycle.ts` events |
-| Option positions with strike / expiry / greeks | netted greeks [R36] | Option Summary + net greeks [F15][F38] | Position Statement greeks + ITM badge [T-PS] | missing; `aggregateGreeks` unwired | build (P2) | parse OCC symbol; wire the aggregator |
+| Option positions with strike / expiry / greeks | netted greeks [R36] | Option Summary + net greeks [F15][F38] | Position Statement greeks + ITM badge [T-PS] | **built** (P2 slice 3) — `GET /api/trade/option-positions`; the card shows DTE · ITM/OTM · greeks and the netted book with coverage | build (P2) | done; beta-weighting to SPY is the next rung |
 | Live fills / quotes | push on fill; sub-second on Legend [R27][R66] | streaming under the ticket [F9] | real-time everywhere | polled 15–60 s; SSE = leaderboard only | build (P4) | per-desk SSE from the hub; verify one `trade_updates` stream per account |
 | Buying power / account detail | Account Summary [R59] | three buying powers [F-frames 20] | BP Effect, Account Info [T-AI] | missing (cash only) | **skip by design** for now — paper, one number (PATTERNS) | — |
 | Dollar-based orders | dollars by default [R9] | Shares \| Dollars [F-frames 3] | — | refused (`validateQuantity`) | adapt (P2) — whole-share resolution | notional support or rounding |

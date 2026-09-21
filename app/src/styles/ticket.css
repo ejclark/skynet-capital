@@ -307,3 +307,33 @@
   padding: 5px 8px;
   font-size: 12px;
 }
+/* Position Statement vocabulary on the option positions card (#3407 P2 slice 3): DTE and an
+   ITM/OTM word chip under the name, the holding's greeks in the num register; ITM carries a
+   border weight, never hue alone. */
+.tkt-pos-stat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.tkt-pos-chip {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tkt-pos-itm {
+  border-width: 2px;
+  color: var(--text);
+  font-weight: 700;
+}
+.tkt-pos-greeks {
+  white-space: nowrap;
+}
+.tkt-book {
+  margin: 10px 0 0;
+}

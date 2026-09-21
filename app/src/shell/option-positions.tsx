@@ -1,8 +1,16 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import type { DeskPosition } from "../live/desk";
-import { type OptionDraft, type OptionPreview, reviewOption, submitOption } from "../live/options";
+import {
+  fetchOptionPositions,
+  type OptionBookGreeks,
+  type OptionDraft,
+  type OptionPositionRow,
+  type OptionPreview,
+  reviewOption,
+  submitOption,
+} from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
 
 /**
@@ -16,7 +24,56 @@ import { money, type TicketResult, tifLabel } from "../live/ticket";
  * choice and, on Limit, the premium per share it will accept. Market stays the default the row
  * always had; the rules warn that a limit at the mark is the disciplined habit. Any edit disarms
  * a standing review — the same doctrine as every gate: approval never outlives what it approved.
+ *
+ * POSITION STATEMENT VOCABULARY (#3407 P2 slice 3; parity study row 10): each row now carries the
+ * contract's days to expiry, an in-the-money WORD (never a hue), and its live greeks scaled to the
+ * holding, from `/api/trade/option-positions`; the card's foot nets the book and says how much of
+ * it the number speaks for. A contract the feed didn't quote shows "greeks —" and is named in the
+ * book line — absent, never zero (`greeks-aggregator.ts`).
  */
+
+/** "Δ −31 · Γ 2.1 · Θ −6.0 · V 14" — the holding's exposure, or "—" per greek the feed lacked. */
+function greeksText(greeks: NonNullable<OptionPositionRow["positionGreeks"]>): string {
+  const cell = (label: string, value: number | undefined, digits: number): string =>
+    `${label} ${value === undefined ? "—" : value.toFixed(digits)}`;
+  return `${cell("Δ", greeks.delta, 0)} · ${cell("Γ", greeks.gamma, 1)} · ${cell("Θ", greeks.theta, 1)} · ${cell("V", greeks.vega, 1)}`;
+}
+
+function StatementLine({ row }: { readonly row: OptionPositionRow }): ReactElement {
+  const days = Math.ceil(row.daysToExpiry);
+  return (
+    <span className="tkt-pos-stat">
+      <span className="tkt-pos-chip">{days === 0 ? "expires today" : `${days} DTE`}</span>
+      {row.inTheMoney !== undefined ? (
+        <span className={`tkt-pos-chip${row.inTheMoney ? " tkt-pos-itm" : ""}`}>
+          {row.inTheMoney ? "ITM" : "OTM"}
+        </span>
+      ) : null}
+      <span className="num tkt-pos-greeks">
+        {row.positionGreeks ? greeksText(row.positionGreeks) : "greeks —"}
+      </span>
+    </span>
+  );
+}
+
+function BookLine({
+  book,
+  representative,
+}: {
+  readonly book: OptionBookGreeks;
+  readonly representative: boolean;
+}): ReactElement {
+  const figures = `Δ ${book.delta.toFixed(0)} · Γ ${book.gamma.toFixed(1)} · Θ ${book.theta.toFixed(1)} · V ${book.vega.toFixed(1)}`;
+  return (
+    <p className="tkt-note tkt-book">
+      {representative
+        ? `Book greeks: ${figures} — all ${book.total} contracts quoted.`
+        : book.covered === 0
+          ? `Book greeks unavailable — the feed quoted none of ${book.total} contracts.`
+          : `Book greeks over ${book.covered} of ${book.total} contracts: ${figures} — not quoted: ${book.uncovered.join(", ")}.`}
+    </p>
+  );
+}
 
 type RowState =
   | { readonly step: "idle" }
@@ -29,10 +86,13 @@ type RowState =
 function CloseRow({
   deskId,
   position,
+  statement,
   onFilled,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
+  /** The row's Position Statement line, once `/api/trade/option-positions` has answered. */
+  readonly statement?: OptionPositionRow;
   readonly onFilled: () => void;
 }): ReactElement {
   const [state, setState] = useState<RowState>({ step: "idle" });
@@ -76,6 +136,7 @@ function CloseRow({
     <div className="tkt-close-row">
       <span className="tkt-close-main">
         {position.display} <small className="num">{position.symbol}</small>
+        {statement ? <StatementLine row={statement} /> : null}
       </span>
       <span className="num">{position.quantity}</span>
       <span className="num">{position.value}</span>
@@ -170,8 +231,20 @@ export function OptionPositionsCard({
 }): ReactElement | null {
   const queryClient = useQueryClient();
   const held = positions.filter((p) => p.isOption);
+  const statement = useQuery({
+    queryKey: ["option-positions", deskId],
+    queryFn: () => fetchOptionPositions(deskId),
+    enabled: deskId !== "" && held.length > 0,
+    staleTime: 30_000,
+  });
   if (held.length === 0) return null;
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
+  const rowsBySymbol = new Map(
+    (statement.data?.available ? statement.data.rows : []).map((row) => [row.symbol, row]),
+  );
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
+    void queryClient.invalidateQueries({ queryKey: ["option-positions", deskId] });
+  };
   return (
     <section className="panel gate-panel" aria-label="Option positions">
       <h2 className="panel-title">Option positions</h2>
@@ -181,9 +254,18 @@ export function OptionPositionsCard({
       </p>
       <div className="tkt-close-rows">
         {held.map((position) => (
-          <CloseRow key={position.symbol} deskId={deskId} position={position} onFilled={refresh} />
+          <CloseRow
+            key={position.symbol}
+            deskId={deskId}
+            position={position}
+            statement={rowsBySymbol.get(position.symbol)}
+            onFilled={refresh}
+          />
         ))}
       </div>
+      {statement.data?.available ? (
+        <BookLine book={statement.data.book} representative={statement.data.representative} />
+      ) : null}
     </section>
   );
 }

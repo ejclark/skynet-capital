@@ -445,6 +445,32 @@ const deskWithOption = {
   },
 };
 let currentDesk = desk;
+const optionPositions = {
+  available: true,
+  asOf: "2026-09-21T14:00:00Z",
+  representative: true,
+  rows: [
+    {
+      symbol: "MSFT260918P00420000",
+      display: "MSFT $420 put · Sep 18",
+      underlying: "MSFT",
+      type: "put",
+      strike: 420,
+      expiration: "2026-09-18",
+      daysToExpiry: 17.25,
+      contracts: 2,
+      inTheMoney: true,
+      spot: 410.2,
+      greeks: { delta: -0.62, gamma: 0.018, theta: -0.21, vega: 0.34 },
+      positionGreeks: { delta: -124, gamma: 3.6, theta: -42, vega: 68 },
+      impliedVol: 0.29,
+      bid: 11.9,
+      ask: 12.1,
+    },
+  ],
+  book: { delta: -124, gamma: 3.6, theta: -42, vega: 68, covered: 1, total: 1, uncovered: [] },
+};
+const currentOptionPositions = optionPositions;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
@@ -467,6 +493,8 @@ const { page, origin, shoot, close } = await openShell({
     // The reviewed option order (#3407 P2 slice 2): greeks, IV, chance of profit beside expected
     // value — every number the server's own rules would print, as one stub.
     "/api/trade/option/review": () => currentOptionReview,
+    // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
+    "/api/trade/option-positions": () => currentOptionPositions,
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
   },
 });
@@ -745,6 +773,10 @@ await page.getByLabel("Limit price per share").fill("13.50");
 await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
 const shootLimitClose = shooter(page, resolve("docs/shots/limit-close"));
 await shootLimitClose("limit-close-phone");
+// The same card with its Position Statement line and book foot (#3407 P2 slice 3).
+await page.getByText(/DTE/).waitFor();
+const shootOptionPositions = shooter(page, resolve("docs/shots/option-positions"));
+await shootOptionPositions("option-positions-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
 await shootLimitClose("limit-close-desktop");

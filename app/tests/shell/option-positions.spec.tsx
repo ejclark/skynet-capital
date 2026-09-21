@@ -12,7 +12,9 @@ import { OptionPositionsCard } from "../../src/shell/option-positions";
 
 const reviewed: OptionDraft[] = [];
 let nextPreview: Partial<OptionPreview> = {};
+let nextStatement: unknown = { available: false, reason: "unlinked", rows: [] };
 rstest.mock("../../src/live/options", () => ({
+  fetchOptionPositions: () => Promise.resolve(nextStatement),
   reviewOption: (draft: OptionDraft) => {
     reviewed.push(draft);
     return Promise.resolve({
@@ -102,5 +104,71 @@ describe("OptionPositionsCard — close order type", () => {
     fireEvent.click(screen.getByRole("button", { name: "Limit" }));
     expect(screen.queryByRole("button", { name: /Confirm/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close…" })).toBeInTheDocument();
+  });
+});
+
+describe("OptionPositionsCard — Position Statement vocabulary (#3407 P2 slice 3)", () => {
+  it("shows days, the in-the-money word, the holding's greeks and the book line once the statement answers", async () => {
+    nextStatement = {
+      available: true,
+      asOf: "t",
+      representative: true,
+      rows: [
+        {
+          symbol: held.symbol,
+          display: held.display,
+          underlying: "MSFT",
+          type: "put",
+          strike: 420,
+          expiration: "2026-09-18",
+          daysToExpiry: 17.25,
+          contracts: 2,
+          inTheMoney: true,
+          spot: 410,
+          greeks: { delta: -0.42 },
+          positionGreeks: { delta: -84, theta: -38 },
+        },
+      ],
+      book: { delta: -84, gamma: 0, theta: -38, vega: 0, covered: 1, total: 1, uncovered: [] },
+    };
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    await waitFor(() => expect(screen.getByText("18 DTE")).toBeInTheDocument());
+    expect(screen.getByText("ITM")).toBeInTheDocument();
+    expect(screen.getByText(/Δ -84 · Γ — · Θ -38\.0 · V —/)).toBeInTheDocument();
+    expect(screen.getByText(/Book greeks: Δ -84/)).toBeInTheDocument();
+    expect(screen.getByText(/all 1 contracts quoted/)).toBeInTheDocument();
+  });
+
+  it("names the contracts the feed didn't quote instead of netting a zero", async () => {
+    nextStatement = {
+      available: true,
+      asOf: "t",
+      representative: false,
+      rows: [
+        {
+          symbol: held.symbol,
+          display: held.display,
+          underlying: "MSFT",
+          type: "put",
+          strike: 420,
+          expiration: "2026-09-18",
+          daysToExpiry: 3,
+          contracts: 2,
+        },
+      ],
+      book: {
+        delta: 0,
+        gamma: 0,
+        theta: 0,
+        vega: 0,
+        covered: 0,
+        total: 1,
+        uncovered: [held.symbol],
+      },
+    };
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    await waitFor(() => expect(screen.getByText("greeks —")).toBeInTheDocument());
+    expect(screen.getByText(/Book greeks unavailable/)).toBeInTheDocument();
+    expect(screen.queryByText("ITM")).not.toBeInTheDocument();
   });
 });
