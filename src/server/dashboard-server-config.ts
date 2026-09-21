@@ -1,5 +1,6 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { DecisionFunnel } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -120,6 +121,13 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /**
+   * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
+   * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on
+   * whether the bot is even firing. Omit to leave the panel with no funnel section, same dark-when-
+   * unset posture as `findByOrderId`.
+   */
+  readonly funnelFor?: (participantId: string) => DecisionFunnel;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they

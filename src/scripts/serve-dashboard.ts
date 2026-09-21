@@ -285,6 +285,9 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
+    // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
+    ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,

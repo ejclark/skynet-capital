@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
 import { outpostCatalog } from "../discovery/play-cards.js";
-import { decisionCyclesView } from "../observatory/decision-json-view.js";
+import { decisionCyclesView, funnelView } from "../observatory/decision-json-view.js";
 import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
@@ -76,6 +76,9 @@ export async function serveDeskJson(
       return;
     }
     const records = await config.readDecisions?.(id);
+    // The funnel is a full-history aggregate, independent of the page the cycle feed is on — it
+    // never lies about "how many refusals total" just because the viewer scrolled back one page.
+    const funnel = config.funnelFor?.(id);
     res.end(
       JSON.stringify(
         records
@@ -83,6 +86,7 @@ export async function serveDeskJson(
               available: true,
               kind: "bot",
               ...decisionCyclesView(records, { limit, before: beforeAt }),
+              ...(funnel ? { funnel: funnelView(funnel) } : {}),
             }
           : { available: false, kind: "bot", cycles: [] },
       ),

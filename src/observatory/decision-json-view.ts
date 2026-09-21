@@ -1,3 +1,4 @@
+import type { DecisionFunnel } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderForecast } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
@@ -32,8 +33,9 @@ interface CycleOutcomeView {
 }
 
 /** Human-readable label per `GuardRefusalReason` — the exact finding a doctrine call sheet quotes
- *  ("Sauron wanted NVDA at −0.82 panic; S2 blocked it") reads from this, not the raw enum value. */
-const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
+ *  ("Sauron wanted NVDA at −0.82 panic; S2 blocked it") reads from this, not the raw enum value.
+ *  Exported so `funnelView` (PR 7b) reuses the same labels rather than re-deriving them. */
+export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "ladder-block": "blocked by the risk ladder",
   "s2-print": "blocked by S2 (flat through the print)",
   "e1-open": "deferred by E1 (waiting out the open)",
@@ -173,4 +175,39 @@ export function decisionCyclesView(
     };
   });
   return { cycles, ...(nextCursor !== undefined ? { nextCursor } : {}) };
+}
+
+/** One refusal reason, human-labeled, with its own count — the funnel's ledger half. */
+export interface FunnelRefusalView {
+  readonly reason: GuardRefusalReason;
+  readonly label: string;
+  readonly count: number;
+}
+
+export interface DecisionFunnelView {
+  readonly cycles: number;
+  readonly rawIntents: number;
+  readonly survivedGuards: number;
+  readonly placed: number;
+  readonly filled: number;
+  readonly closed: number;
+  /** Sorted by count, descending — the biggest binding constraint first. */
+  readonly refusals: readonly FunnelRefusalView[];
+}
+
+/** Shapes a `DecisionFunnel` (measure #2, #2287 PR 7b) for the `/decisions` JSON view — the
+ *  operations read on an autonomous system: is it even firing, and what's the binding constraint. */
+export function funnelView(funnel: DecisionFunnel): DecisionFunnelView {
+  const refusals = (Object.entries(funnel.refusalsByReason) as [GuardRefusalReason, number][])
+    .map(([reason, count]) => ({ reason, label: REFUSAL_LABEL[reason], count }))
+    .sort((a, b) => b.count - a.count);
+  return {
+    cycles: funnel.cycles,
+    rawIntents: funnel.rawIntents,
+    survivedGuards: funnel.survivedGuards,
+    placed: funnel.placed,
+    filled: funnel.filled,
+    closed: funnel.closed,
+    refusals,
+  };
 }

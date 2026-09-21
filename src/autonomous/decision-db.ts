@@ -1,8 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
 import type { OrderIntent, Side } from "../domain/types.js";
+import type { GuardRefusalReason } from "../engine/guards.js";
 import { decisionFrom, intentRowToStored, paramsForRawIntent } from "./decision-db-rows.js";
+import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import type { DecisionRecord } from "./decision-record.js";
 import { type FilledIntentRow, pendingRetrospectives } from "./decision-retrospectives.js";
+
+export type { DecisionFunnel } from "./decision-funnel.js";
 
 /**
  * The queryable decision store — the replacement for `JsonlAuditStore`'s whole-file-read-per-call
@@ -51,6 +55,11 @@ export interface DecisionDb {
    *  `[1, MAX_PAGE]` — there is no separate `recordRetrospective()`: every write happens
    *  automatically inside `record()`/`recordBatch()` when a filled intent closes a lot. */
   listRetrospectives(personaId: string, opts?: { limit?: number }): RetrospectiveRecord[];
+  /** The decision funnel (PR 7b) — cycles → raw → survived guards → placed → filled → closed,
+   *  plus refusals by reason. A single SQL aggregation over the FULL history, never bounded by
+   *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
+   *  totals would be a worse lie than a slow query. */
+  funnelFor(personaId: string): DecisionFunnel;
   close(): void;
 }
 
@@ -219,6 +228,16 @@ export function openDecisionDb(path: string): DecisionDb {
     SELECT at, persona_id, symbol, entry_intent_id, exit_reason, realized, return_pct,
            sentiment_delta, momentum_delta
     FROM retrospectives WHERE persona_id = ? ORDER BY at DESC, id DESC LIMIT ?
+  `);
+  const selectCycleCount = db.prepare("SELECT COUNT(*) AS n FROM decisions WHERE persona_id = ?");
+  const selectClosedCount = db.prepare(
+    "SELECT COUNT(*) AS n FROM retrospectives WHERE persona_id = ?",
+  );
+  const selectFunnelIntents = db.prepare(`
+    SELECT intents.guard_reason AS guard_reason, intents.action AS action,
+           intents.result_status AS result_status
+    FROM intents JOIN decisions ON decisions.id = intents.decision_id
+    WHERE decisions.persona_id = ?
   `);
 
   /**
@@ -413,6 +432,25 @@ export function openDecisionDb(path: string): DecisionDb {
         sentimentDelta: r.sentiment_delta,
         momentumDelta: r.momentum_delta,
       }));
+    },
+
+    funnelFor(personaId): DecisionFunnel {
+      const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
+      const closed = (selectClosedCount.get(personaId) as { n: number }).n;
+      const rows = selectFunnelIntents.all(personaId) as {
+        guard_reason: string | null;
+        action: string | null;
+        result_status: string | null;
+      }[];
+      return computeFunnel(
+        cycles,
+        closed,
+        rows.map((r) => ({
+          guardReason: r.guard_reason as GuardRefusalReason | null,
+          action: r.action,
+          resultStatus: r.result_status,
+        })),
+      );
     },
 
     findByOrderId(orderId) {
