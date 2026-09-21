@@ -751,11 +751,12 @@ plan, not a constraint on the designs.
    documented in `docs/BRAND.md` → *Spacing & type scale*, used across the ticket's CSS.
    As found: `docs/BRAND.md` documented colour tokens and two font stacks; spacing,
    radii and sizes live ad hoc per CSS file — which is why sections read jagged against each other.
-4. **The chain's in-the-money rail is off-screen by default.** The rail paints on the outermost cells,
-   but the table opens pre-scrolled 264px in so the base five columns fit 390px
-   (`straddle-view.tsx:26,104-108`); the header comment still promises the rail.
-5. **A chain with no spot renders every strike** — no ±8 window, no divider, no "Show all"
-   (`app/src/live/straddle.ts:55`); "Show all N strikes" is one-way once expanded.
+4. **The chain's in-the-money rail is off-screen by default** — *fixed, P0:* the rail rides the strike
+   cell's edges, the one column always in view. As found: it painted on the outermost cells while the
+   table opened pre-scrolled 264px in (`straddle-view.tsx:26,104-108`).
+5. **A chain with no spot renders every strike** — *fixed, P0:* windowed around the middle of the
+   chain with the button saying so; "Show all" folds back. As found: no ±8 window, no divider, no
+   "Show all" (`app/src/live/straddle.ts:55`), and "Show all N strikes" was one-way.
 6. **The default options ticket fails its own review** — *fixed, P0:* Review is withheld and explained
    while a limit has no premium, and a strike that arrives before the chain seeds its premium from the
    mid once the chain resolves. As found: `orderType` defaulted to `limit` with an empty price, Review

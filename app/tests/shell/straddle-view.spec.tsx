@@ -286,3 +286,34 @@ describe("StraddleView — quote coverage line (#3407 P2)", () => {
     expect(container.querySelector(".straddle-coverage")).toBeNull();
   });
 });
+
+describe("StraddleView — the window folds back and the rail rides the strike cell (#3407 P0)", () => {
+  const wide = Array.from({ length: 20 }, (_, i) => row(150 + i * 5, 1 + i * 0.1, 1.2 + i * 0.1));
+
+  it("offers Show all, then Show fewer around the price, and back", () => {
+    render(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={200} calls={wide} puts={wide} />,
+    );
+    const more = screen.getByRole("button", { name: /Show all 20 strikes/ });
+    fireEvent.click(more);
+    const fewer = screen.getByRole("button", { name: /Show 16 strikes around the price/ });
+    fireEvent.click(fewer);
+    expect(screen.getByRole("button", { name: /Show all 20 strikes/ })).toBeInTheDocument();
+  });
+
+  it("with no spot, windows around the middle and says so on the button", () => {
+    render(<StraddleView symbol="NVDA" expiration="2026-10-16" calls={wide} puts={wide} />);
+    expect(
+      screen.getByRole("button", { name: /no live price, windowed around the middle/ }),
+    ).toBeInTheDocument();
+    expect(document.querySelectorAll(".straddle-row")).toHaveLength(16);
+  });
+
+  it("marks in-the-money rows on the row class the rail CSS keys off", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={181} calls={calls} puts={puts} />,
+    );
+    expect(container.querySelector(".straddle-call-itm")).not.toBeNull(); // 180 call under 181
+    expect(container.querySelector(".straddle-put-itm")).toBeNull();
+  });
+});
