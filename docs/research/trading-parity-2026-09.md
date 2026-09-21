@@ -712,7 +712,7 @@ plan, not a constraint on the designs.
 | Max profit / max loss / breakeven | exists (single leg and spread preview) | `app/src/shell/option-preview.tsx:32-52`, `draft-order-builder.tsx:78-102` |
 | Payoff diagram | missing | — |
 | Review then confirm, disarm on edit | exists, both tickets; the server re-checks the live account at submit | `trade-gate.tsx:35-41,190-195`, `option-preview.tsx:15-21` |
-| Build a vertical / multi-leg spread | partial — legs via `<select>`s, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx` |
+| Build a vertical / multi-leg spread | **built** (P3 slices 2, 4) — legs off the chain, each leg's premium editable in its row, a running net while drafting, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx`, `draft-leg-row.tsx` |
 | **Submit** a multi-leg spread | **built** (P3 slice 1) — one `mleg` order through `draft-trade-service.ts`; the headline is the broker's echo; the wiring into the protected gate is its own held PR | `src/server/draft-trade-service.ts`, `src/server/draft-order-route.ts` |
 | Strategy templates (vertical, condor…) | missing — copy says "a vertical spread is two, an iron condor is four" | `draft-order-builder.tsx:213` |
 | **See open / pending orders** | API built (P1 slice 1) — `GET /api/trade/orders` → working + recent lists; no shell surface yet (the #674 fork decides where) | `src/server/trade-orders-routes.ts`, `src/server/desk-orders-view.ts`, `app/src/live/orders.ts` |

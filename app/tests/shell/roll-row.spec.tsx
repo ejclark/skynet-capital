@@ -196,6 +196,18 @@ describe("RollRow", () => {
     expect(filled).toBe(0);
   });
 
+  it("lets typed prices override the crossing quote on either leg", async () => {
+    mount(<RollRow deskId="human-eric" position={heldShort} onFilled={() => undefined} />);
+    await waitFor(() => expect(screen.getByLabelText("Strike")).not.toBeDisabled());
+    expect((screen.getByLabelText("Close @") as HTMLInputElement).placeholder).toBe("12.20");
+    fireEvent.change(screen.getByLabelText("Close @"), { target: { value: "12" } });
+    fireEvent.change(screen.getByLabelText("Open @"), { target: { value: "12.05" } });
+    fireEvent.click(screen.getByRole("button", { name: "Review roll…" }));
+    await screen.findByRole("button", { name: /Confirm roll/ });
+    expect(calls[0]?.leg).toMatchObject({ action: "buy", limitPrice: 12 });
+    expect(calls[1]?.leg).toMatchObject({ action: "sell", limitPrice: 12.05 });
+  });
+
   it("renders nothing for a symbol that isn't an option contract", () => {
     const { container } = mount(
       <RollRow
