@@ -738,13 +738,18 @@ plan, not a constraint on the designs.
 
 ### 3.2 Friction observed in the code (the photographed defects, with causes)
 
-1. **Short inputs stretched full width.** `.tkt-fields { grid-template-columns: repeat(3, 1fr) }`
+1. **Short inputs stretched full width** — *fixed, P0 (#3407):* `.gate-fields` is now
+   `repeat(auto-fill, minmax(150px, 1fr))` with the symbol spanning two; the `.tkt-fields` override is gone.
+   As found: `.tkt-fields { grid-template-columns: repeat(3, 1fr) }`
    (`app/src/styles/ticket.css`) overrides `.gate-fields`' `2fr 1fr 1fr`, so Strike (4 chars),
    Contracts (1 char) and Order each get a third of an 1180px panel; Symbol gets the same third with an
    in-flow autocomplete listbox wrapping inside it.
-2. **Ragged estimate grid.** `.gate-est` is `repeat(4, auto)` (`gate.css:106`); the options preview emits
+2. **Ragged estimate grid** — *fixed, P0:* `.gate-est` is a two-column definition list at every width.
+   As found: `.gate-est` was `repeat(4, auto)` (`gate.css:106`); the options preview emits
    up to seven items (`option-preview.tsx:32-52`) → a 4 + 3 layout with no intermediate breakpoint.
-3. **No spacing or type scale.** `docs/BRAND.md` documents colour tokens and two font stacks; spacing,
+3. **No spacing or type scale** — *fixed, P0:* `--space-1..5` and `--text-xs..lg` in `theme.css`,
+   documented in `docs/BRAND.md` → *Spacing & type scale*, used across the ticket's CSS.
+   As found: `docs/BRAND.md` documented colour tokens and two font stacks; spacing,
    radii and sizes live ad hoc per CSS file — which is why sections read jagged against each other.
 4. **The chain's in-the-money rail is off-screen by default.** The rail paints on the outermost cells,
    but the table opens pre-scrolled 264px in so the base five columns fit 390px
@@ -839,7 +844,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | "Confirmed" shown for an order never sent | — | — | — | `draft-order-builder.tsx:162` headline on `executed:false` | fix (P0, one line) | none |
 | Time in force shown | GFD / GTC visible [R1][R6] | Sheet with 5 options + learn link [F1] | TIF dropdown [T-OET] | **partial** — preview and submit carry `timeInForce` end to end (P1 slice 1, `order-ticket.ts`); the ticket control is a layout slice | build (P1) | done: Day / GTC accepted, previewed, echoed |
 | Greeks / bid absent with no reason | Every metric labelled "theoretical" [R36] | — | — | **partial** — coverage line under the chain (source · n of m quoted · as-of) and `$0.00` bids kept (P2 slice 1) | fix (P2) | done at chain level; a per-greek reason stays open |
-| Order status on a phone | Pending list is phone-first [R13] | Activity › Orders [F42] | mobile Account History [T-APPSTORE] | Status column `col-detail`, hidden < 1100px (`activity-table.tsx:33`) | fix (P0) | none |
+| Order status on a phone | Pending list is phone-first [R13] | Activity › Orders [F42] | mobile Account History [T-APPSTORE] | **fixed** (P0) — Status is a core column at every width; only P/L and Return fold | fix (P0) | done |
 | As-of stamp | NBBO on trade-entry screens [R16] | "As of 10:04:20 AM ET" [F-frames 9] | — | quote header makes no freshness claim (`quote-header.tsx:16-19`) | build (P0) | the quote response already carries a timestamp |
 | Honest cancel/status vocabulary | pending · partially filled · queued | Attempt to cancel · Verified canceled | Working · Replacing · TLTC · U R OUT | none surfaced | build (P1) | map Alpaca statuses; never invent one |
 
@@ -847,8 +852,8 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 
 | Defect | Reference that solves it | Skynet today | Call |
 |---|---|---|---|
-| Short inputs stretched full width | Fidelity one-column ticket at 390, label above field [F-frames]; tos ticket fields sized to content [T-OET] | `.tkt-fields { repeat(3, 1fr) }` (`ticket.css`) | fix (P0) with a spacing/type scale in `docs/BRAND.md` |
-| Ragged estimate grid (7 items in 4 columns) | Fidelity's sticky footer carries one number; tos confirmation lists rows [T-OET] | `.gate-est { repeat(4, auto) }` (`gate.css:106`) | fix (P0): a two-column definition list, the estimate in the footer |
+| Short inputs stretched full width | Fidelity one-column ticket at 390, label above field [F-frames]; tos ticket fields sized to content [T-OET] | **fixed** (P0) — content-sized tracks, symbol spans two; spacing/type scale in `docs/BRAND.md` | fix (P0) | done |
+| Ragged estimate grid (7 items in 4 columns) | Fidelity's sticky footer carries one number; tos confirmation lists rows [T-OET] | **fixed** (P0) — a two-column definition list at every width | fix (P0) | the estimate in the footer is a layout-slice call |
 | Jagged sections, no rhythm | All three use one panel grammar per page (Legend widgets, Trader+ workspaces, tos gadgets) | no spacing scale; per-file CSS | fix (P0): tokens for space, radius, size |
 | Chain's ITM rail off-screen by default | Fidelity's orange ITM rail sits beside the strike [F-frames 11]; tos shades ITM rows [T-AP] | rail painted on the outermost cells (`straddle-view.tsx:26,104-108`) | fix (P2): shade the row or move the rail to the strike cell |
 | No-spot symbol renders every strike | RH windows the chain and scrolls [R34]; tos strikes selector 4 / 8 / SD [T-AP] | `windowRows` bails without a divider (`straddle.ts:55`) | fix (P2): window around the last known mark; a strike-count control |

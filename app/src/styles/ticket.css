@@ -18,7 +18,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -73,7 +73,7 @@
   background: var(--bg);
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .rung-earned .rung-node {
@@ -96,7 +96,7 @@
   border-color: var(--accent);
 }
 .rung-code {
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.06em;
   color: var(--muted);
 }
@@ -105,14 +105,14 @@
 }
 .rung-name {
   display: none;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   line-height: 1.2;
   padding: 0 4px;
 }
 .ladder-strip-status {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--muted);
 }
 .ladder-strip-status b {
@@ -145,7 +145,7 @@
 }
 .ticket-nav-label {
   padding: 0;
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -156,14 +156,14 @@
   cursor: not-allowed;
 }
 .seg-why {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
   letter-spacing: 0.02em;
 }
 .ticket-nav-gate {
   flex-basis: 100%;
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 /* The quote header (#2017 Phase 0.9) — last price + day change, above the fields so it's the
@@ -175,7 +175,7 @@
   align-items: baseline;
   gap: 6px;
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 /* An empty region before a quote loads (or for an uncommitted symbol): keep it mounted for
    aria-live, draw no chrome — same idiom as `.gate:empty` in gate.css. */
@@ -189,28 +189,28 @@
   color: var(--muted, inherit);
 }
 .quote-note {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0 0 12px;
   max-width: 70ch;
 }
 
-.tkt-fields {
-  grid-template-columns: repeat(3, 1fr);
-}
+/* `.tkt-fields` used to force three equal columns here, which is what stretched a 4-character
+   strike across a third of the panel (#3407 P0); the options ticket now inherits
+   `.gate-fields`' content-sized tracks. The class stays as a hook. */
 .tkt-note {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0 0 12px;
   max-width: 70ch;
 }
 .tkt-occ {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
   letter-spacing: 0.04em;
 }
 .tkt-locked {
-  font-size: 12.5px;
+  font-size: var(--text-md);
   line-height: 1.5;
   margin: 0 0 12px;
 }
@@ -224,7 +224,7 @@
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
+  font-size: var(--text-md);
   flex-wrap: wrap;
 }
 .tkt-close-row:last-child {
@@ -237,10 +237,10 @@
 .tkt-close-main small {
   display: block;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
 }
 .tkt-close-note {
-  font-size: 11.5px;
+  font-size: var(--text-sm);
 }
 /* The close line's refusal already carries a literal cross; its success needed the matching tick,
    or "filled" and "refused" differed by hue alone (docs/BRAND.md -> Accessibility). */
@@ -268,7 +268,7 @@
 .exp-tab {
   flex: 0 0 auto;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text);
   background: var(--surface-2);
@@ -305,7 +305,7 @@
 .tkt-close-price input {
   width: 96px;
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 /* Position Statement vocabulary on the option positions card (#3407 P2 slice 3): DTE and an
    ITM/OTM word chip under the name, the holding's greeks in the num register; ITM carries a
@@ -316,7 +316,7 @@
   align-items: center;
   gap: 4px 8px;
   margin-top: 4px;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .tkt-pos-chip {

@@ -45,6 +45,30 @@ Two established stacks, no webfont fetches (CSP-safe by construction):
 - **`--mono`** (`ui-monospace, "JetBrains Mono"…`) — data, labels, eyebrows, terminal voice, tickers,
   equity readouts. The mono is the "trading terminal" register.
 
+## Spacing & type scale
+
+Two short ladders, defined once in `app/src/styles/theme.css` and used by every trading surface
+(#3407 P0 — the parity study found sections reading jagged because spacing, radii and sizes
+lived ad hoc per CSS file). A value off the ladder is a defect, not a choice.
+
+| Token | Value | Use |
+|---|---|---|
+| `--space-1` | 4px | inside a chip; between a label and its field |
+| `--space-2` | 8px | between fields; a row's vertical padding |
+| `--space-3` | 12px | between blocks inside a panel |
+| `--space-4` | 16px | panel padding (`--panel-p`); between panels |
+| `--space-5` | 24px | between sections |
+| `--text-xs` | 10.5px | eyebrows, chips, provenance lines |
+| `--text-sm` | 11.5px | notes, sub-lines, field labels |
+| `--text-md` | 12.5px | rows, body in a panel |
+| `--text-base` | 13px | inputs, buttons |
+| `--text-lg` | 13.5px | panel titles |
+
+Layout rules that fall out of it: a field is never wider than its content class needs
+(`.gate-fields` is `repeat(auto-fill, minmax(150px, 1fr))` with the symbol spanning two — a
+4-character strike never gets a third of the panel); an estimate reads as a two-column
+definition list at every width, never a ragged 4 + 3.
+
 ## Voice & tone
 
 - **Confident, specific, honest.** Real tickers, strategy-accurate underlyings, honest labels
