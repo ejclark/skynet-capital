@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Journeys — Lo-fi</title>
+<meta name="description" content="Four greybox shapes (Arcade · Outlook · Workbench · Register) × ten trading journeys × two viewports, for the trading-parity plan #3407. Real values, no colour, no motion.">
+<style>
+  /* ---------- greybox tokens: greys only, 1px borders, no brand tokens, no motion ---------- */
+  :root {
+    color-scheme: light dark;
+    --ink: #111; --ink2: #3b3b3b; --ink3: #6a6a6a;
+    --line: #9c9c9c; --line2: #d2d2d2;
+    --paper: #fff; --grey: #f4f4f4; --grey2: #e6e6e6; --grey3: #d0d0d0;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #ebebeb; --ink2: #c9c9c9; --ink3: #9b9b9b;
+      --line: #6f6f6f; --line2: #3c3c3c;
+      --paper: #171717; --grey: #202020; --grey2: #2b2b2b; --grey3: #3b3b3b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ebebeb; --ink2: #c9c9c9; --ink3: #9b9b9b;
+    --line: #6f6f6f; --line2: #3c3c3c;
+    --paper: #171717; --grey: #202020; --grey2: #2b2b2b; --grey3: #3b3b3b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 14px/1.45 var(--sans); overflow-x: hidden; }
+  .page { max-width: 1720px; margin: 0 auto; padding: 24px 16px 64px; }
+  .eyebrow { font: 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); margin: 0 0 8px; }
+  h1 { font-size: 24px; line-height: 1.15; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 24px 0 8px; }
+  .lede { color: var(--ink2); max-width: 72ch; margin: 0 0 12px; }
+  .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+
+  /* ---------- switchers (sticky) ---------- */
+  .switchers { position: sticky; top: 0; z-index: 3; background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+  .group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .group-label { font: 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-right: 4px; min-width: 60px; }
+  .sw { font: inherit; font-size: 12.5px; padding: 5px 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; border-radius: 3px; }
+  .sw[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+  .sw:focus-visible, .frame button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .sw.step { min-width: 30px; text-align: center; padding: 5px 7px; font-family: var(--mono); }
+  .sw.arrow { font-family: var(--mono); }
+  .step-name { flex-basis: 100%; font-size: 12.5px; color: var(--ink2); margin: 0; }
+  .step-name b { font-weight: 700; color: var(--ink); }
+  .howto { max-width: 88ch; color: var(--ink2); margin: 12px 0 16px; font-size: 13px; }
+
+  /* ---------- stage: frame + annotation ---------- */
+  .stage { display: grid; gap: 16px; align-items: start; grid-template-columns: minmax(0, 1fr); }
+  .stage[data-vp="1280"] { grid-template-columns: minmax(0, 1fr) 320px; }
+  @media (max-width: 1100px) { .stage[data-vp="1280"] { grid-template-columns: minmax(0, 1fr); } }
+  .stage[data-vp="390"] .annot { max-width: 720px; }
+  .frame-wrap { overflow-x: auto; min-width: 0; }
+  .frame-cap { font: 11px/1.4 var(--mono); color: var(--ink3); margin: 0 0 6px; }
+  .frame-cap b { color: var(--ink); font-weight: 700; }
+  .frame { width: var(--fw); min-height: var(--fh); position: relative; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font-size: 12.5px; line-height: 1.35; }
+  .frame::after { content: "fold · " attr(data-fold); position: absolute; left: 0; right: 0; top: calc(var(--fh) - 1px); border-top: 1px dashed var(--line); font: 9px/1 var(--mono); color: var(--ink3); padding: 2px 4px; pointer-events: none; }
+  .fbar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--ink); background: var(--grey); font: 11px/1 var(--mono); }
+  .fbar .brand { font-weight: 700; }
+  .fbar .nav { flex: 1; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fbar .nav u { color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .fbody { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .cols { display: grid; gap: 12px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .ftitle { font-size: 15px; font-weight: 700; margin: 0; }
+  .fsub { color: var(--ink3); margin: 0; font-size: 11.5px; }
+
+  /* ---------- greybox primitives ---------- */
+  .blk { position: relative; border: 1px solid var(--line); padding: 8px 8px 8px; background: var(--paper); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .blk.soft { border-color: var(--line2); }
+  .tag { position: absolute; top: -1px; right: -1px; font: 9px/1 var(--mono); letter-spacing: .04em; color: var(--ink3); background: var(--grey); border: 1px solid var(--line); border-top: 0; border-right: 0; padding: 2px 5px; }
+  .tag.new { border-style: dashed; font-style: italic; }
+  .bt { font-size: 12.5px; font-weight: 700; margin: 0; padding-right: 96px; }
+  .sub { color: var(--ink3); font-size: 11px; margin: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+  .seg b, .seg span { font-weight: 400; padding: 4px 9px; font-size: 12px; white-space: nowrap; }
+  .seg b + b, .seg b + span, .seg span + b, .seg span + span { border-left: 1px solid var(--line); }
+  .seg .on { background: var(--grey2); font-weight: 700; }
+  .seg .on::before { content: "✓ "; }
+  .seg .off { color: var(--ink3); text-decoration: line-through; text-decoration-style: dotted; }
+  .lbl { font: 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); display: block; margin-bottom: 3px; }
+  .field { display: inline-flex; flex-direction: column; min-width: 0; }
+  .in { border: 1px solid var(--line); background: var(--grey); padding: 5px 8px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .in.ph { color: var(--ink3); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { border: 1px solid var(--line); padding: 2px 7px; font-size: 11px; border-radius: 999px; white-space: nowrap; }
+  .chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+  .chip.dis { color: var(--ink3); border-style: dashed; }
+  .btn { display: inline-block; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 7px 12px; font-size: 12.5px; font-weight: 700; text-align: center; }
+  .btn.ghost { background: var(--paper); color: var(--ink); }
+  .btn.wide { display: block; }
+  .btn.dis { background: var(--paper); color: var(--ink3); border: 1px dashed var(--line); }
+  .btn.dis::before { content: "⊘ "; }
+  .why { font-size: 11px; color: var(--ink2); margin: 0; }
+  .why::before { content: "↳ "; color: var(--ink3); }
+  .hatch { background: repeating-linear-gradient(135deg, var(--grey2) 0 6px, var(--paper) 6px 12px); border: 1px solid var(--line); display: grid; place-items: center; font: 10px var(--mono); color: var(--ink2); text-align: center; padding: 6px; }
+  .st { display: inline-block; font-family: var(--mono); font-size: 11px; border: 1px solid var(--ink); padding: 1px 6px; }
+  .tw { overflow-x: auto; min-width: 0; }
+  .st.working::before { content: "◔ "; }
+  .st.attempting::before { content: "⟳ "; }
+  .st.canceled::before { content: "✕ "; }
+  .st.replaced::before { content: "↻ "; }
+  .st.filled::before { content: "✓ "; }
+  .st.filled { background: var(--ink); color: var(--paper); }
+  .st.muted { border-style: dashed; color: var(--ink3); }
+  .warn { border: 1px solid var(--ink); border-left-width: 4px; padding: 5px 8px; font-size: 11.5px; margin: 0; }
+  .warn::before { content: "⚠ "; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; font-size: 12px; margin: 0; }
+  .kv dt { color: var(--ink3); }
+  .kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .kv dd.abs { color: var(--ink3); text-decoration: underline dotted; cursor: help; }
+  .est { border-top: 1px solid var(--line); padding-top: 6px; font-family: var(--mono); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .est b { font-weight: 700; }
+  .asof { font: 10px/1 var(--mono); color: var(--ink3); margin: 0; }
+  .sentence { font-size: 14px; font-weight: 700; margin: 0; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .tbl th { text-align: left; font: 9.5px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); padding: 3px 5px; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .tbl td { padding: 4px 5px; border-bottom: 1px solid var(--line2); vertical-align: top; }
+  .tbl td.num, .tbl th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .tbl tr.sel td { font-weight: 700; background: var(--grey); }
+  .tbl tr.sub td { color: var(--ink2); padding-left: 18px; font-size: 11px; background: var(--grey); }
+  .tbl tr.sub td:first-child::before { content: "└ "; color: var(--ink3); }
+  .tbl .act { white-space: normal; }
+  .tbl .act span { display: inline-block; border: 1px solid var(--line); padding: 0 5px; font-size: 10.5px; margin: 0 2px 2px 0; border-radius: 2px; }
+  .tbl td > .sub { display: block; }
+  .tbl .act span.dis { border-style: dashed; color: var(--ink3); text-decoration: line-through; }
+  .tbl .caret::before { content: "▸ "; color: var(--ink3); }
+  .tbl .caret.open::before { content: "▾ "; }
+  .abs { color: var(--ink3); text-decoration: underline dotted; cursor: help; }
+  .itm { position: relative; }
+  .itm-l { border-left: 3px solid var(--ink) !important; }
+  .itm-r { border-right: 3px solid var(--ink) !important; }
+  .foot { font: 10px/1.4 var(--mono); color: var(--ink3); margin: 0; }
+
+  /* chain */
+  .chain { width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
+  .chain th { font: 9.5px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--ink3); font-weight: 400; padding: 3px 2px; border-bottom: 1px solid var(--line); text-align: right; }
+  .chain td { padding: 4px 3px; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--line2); }
+  .chain .k, .chain th.k { text-align: center; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); font-weight: 700; background: var(--grey); }
+  .chain .pick { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700; background: var(--grey2); }
+  .chain tr.sel td.k { text-decoration: underline; text-decoration-thickness: 2px; }
+  .chain .div td { text-align: center; font-family: var(--sans); font-size: 11px; background: var(--grey2); font-weight: 700; padding: 3px; }
+  .chain .side { text-align: center; font: 9.5px var(--mono); color: var(--ink3); text-transform: uppercase; border-bottom: 0; }
+  .scrollhint { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--ink3); margin: 0; }
+
+  /* sheet (phone) and drawer (desktop) */
+  .dim { opacity: .42; }
+  .sheet { border: 1px solid var(--ink); border-top-width: 3px; padding: 6px 8px 10px; display: flex; flex-direction: column; gap: 8px; position: relative; background: var(--paper); }
+  .sheet::before { content: ""; display: block; width: 36px; height: 4px; background: var(--line); margin: 0 auto 2px; border-radius: 2px; }
+  .sheet-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .sheet-h b { font-size: 13px; }
+  .sheet-h span { font: 10px var(--mono); color: var(--ink3); }
+  .drawer { border-left: 3px solid var(--ink); }
+  .dock { border: 1px solid var(--ink); }
+  .stepper { display: flex; gap: 4px; align-items: center; font: 10px/1 var(--mono); color: var(--ink3); flex-wrap: wrap; }
+  .stepper i { font-style: normal; border: 1px solid var(--line); padding: 2px 6px; border-radius: 999px; }
+  .stepper i.cur { border-color: var(--ink); color: var(--ink); font-weight: 700; }
+  .stepper i.done::before { content: "✓ "; }
+  .sec { border-top: 1px dashed var(--line2); padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+  .sec:first-child { border-top: 0; padding-top: 0; }
+  .sec > .lbl { margin-bottom: 0; }
+
+  /* ladder */
+  .ladder { border: 1px solid var(--line); font: 11px var(--mono); }
+  .lrow { display: grid; grid-template-columns: 1fr 64px 1fr; border-bottom: 1px solid var(--line2); }
+  .lrow > span { padding: 2px 6px; text-align: center; }
+  .lrow .p { border-left: 1px solid var(--line2); border-right: 1px solid var(--line2); }
+  .lrow.mkt .p { background: var(--ink); color: var(--paper); font-weight: 700; }
+  .lrow .bub { justify-self: start; border: 1px solid var(--ink); border-radius: 999px; padding: 0 6px; background: var(--grey); text-align: left; }
+  .lrow .bub.sell { justify-self: end; }
+  .lrow .bub::before { content: "↕ "; }
+  .lrow .ghost { justify-self: end; border: 1px dashed var(--line); border-radius: 999px; padding: 0 6px; color: var(--ink3); }
+
+  /* timeline (cancel / modify) */
+  .tl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; padding: 0; list-style: none; }
+  .tl li { border: 1px solid var(--line); padding: 4px 8px; font-size: 11.5px; }
+  .tl li b { display: block; font-family: var(--mono); }
+  .tl li.now { border-color: var(--ink); border-width: 2px; }
+  .tl li + li::before { content: "→ "; color: var(--ink3); margin-left: -12px; }
+  .seq { display: flex; flex-direction: column; gap: 8px; }
+  .seq.wide { flex-direction: row; align-items: flex-start; }
+  .seq > .panel { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .seq.wide > .panel { flex: 1 1 0; }
+  .then { font: 10px/1 var(--mono); color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; flex: 0 0 auto; align-self: center; }
+
+  /* celebration & locked */
+  .cel { border: 3px double var(--ink); padding: 8px 10px; }
+  .cel b { display: block; font-size: 13px; }
+  .cel p { margin: 2px 0 0; font-size: 11.5px; color: var(--ink2); }
+  .locked { border: 1px dashed var(--line); padding: 6px 8px; color: var(--ink2); font-size: 11.5px; }
+  .locked b::before { content: "🔒 "; }
+
+  /* A/B on the frame */
+  .ab { border: 1px dashed var(--ink); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; background: var(--paper); }
+  .ab-h { font-size: 11.5px; margin: 0; }
+  .ab-h .flag { border: 1px solid var(--ink); padding: 0 5px; font: 10px var(--mono); }
+  .ab-h .flag::before { content: "⚑ "; }
+  .ab-v { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .abv { border: 1px solid var(--line2); padding: 5px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .abv .abl { font: 10px/1 var(--mono); }
+  .abv .abl b { border: 1px solid var(--ink); padding: 1px 5px; margin-right: 4px; }
+  .abv .abc { font-size: 10.5px; color: var(--ink2); margin: 0; }
+  .mini { border: 1px solid var(--line); padding: 4px; display: flex; flex-direction: column; gap: 3px; background: var(--grey); }
+  .mr { font: 8.5px/1 var(--mono); color: var(--ink2); border: 1px solid var(--line); background: var(--paper); padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mr.bar { padding: 1px 4px; }
+  .mr.box { padding: 8px 4px; }
+  .mr.tall { padding: 16px 4px; }
+  .mr.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .mr.dash { border-style: dashed; color: var(--ink3); }
+  .mr2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+
+  /* annotation panel */
+  .annot { border: 1px solid var(--line); padding: 10px 12px; font-size: 12.5px; background: var(--grey); position: sticky; top: 112px; }
+  .stage[data-vp="390"] .annot { position: static; }
+  .annot h3 { margin: 0 0 4px; font-size: 13.5px; }
+  .annot h4 { margin: 10px 0 3px; font: 10.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+  .annot ul { margin: 0; padding-left: 16px; }
+  .annot li { margin: 2px 0; }
+  .annot .rowno { font-family: var(--mono); }
+  .annot .flag { border: 1px solid var(--ink); padding: 0 5px; font: 10px var(--mono); white-space: nowrap; }
+  .annot .flag::before { content: "⚑ "; }
+  .annot p { margin: 2px 0; }
+
+  /* tail sections */
+  ol.decide, ol.journeys { margin: 0; padding-left: 20px; max-width: 88ch; }
+  ol.decide li, ol.journeys li { margin: 4px 0; }
+  ol.decide b { font-weight: 700; }
+  .fine { font-size: 12px; color: var(--ink3); max-width: 88ch; }
+  @media (max-width: 640px) { .ab-v { grid-template-columns: 1fr; } .group-label { min-width: 0; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">Trading parity · #3407 · lo-fi shapes · docs/PATTERNS.md § surface decisions</p>
+    <h1>Trading Journeys — Lo-fi</h1>
+    <p class="lede">Four greybox shapes for the home of trading, each walking the same ten journeys at 390 (primary) and 1280 (adds room). Greys and 1px lines only; the values are real — NVDA at $221.39, the 2026-10-16 chain, a GOOGL position with three lots, one working order. Pick a shape, step through, react.</p>
+  </header>
+
+  <div class="switchers" id="switchers">
+    <div class="group" role="group" aria-label="Shape" data-group="shape">
+      <span class="group-label">Shape</span>
+      <button class="sw" type="button" data-shape="arcade" aria-pressed="false">Arcade</button>
+      <button class="sw" type="button" data-shape="outlook" aria-pressed="false">Outlook</button>
+      <button class="sw" type="button" data-shape="workbench" aria-pressed="false">Workbench</button>
+      <button class="sw" type="button" data-shape="register" aria-pressed="false">Register</button>
+    </div>
+    <div class="group" role="group" aria-label="Journey step" data-group="step" id="stepgroup">
+      <span class="group-label">Journey</span>
+      <button class="sw arrow" type="button" data-nav="-1" aria-label="Previous step">◀</button>
+      <!-- 1..10 filled by script -->
+      <button class="sw arrow" type="button" data-nav="1" aria-label="Next step">▶</button>
+    </div>
+    <div class="group" role="group" aria-label="Viewport" data-group="vp">
+      <span class="group-label">Viewport</span>
+      <button class="sw" type="button" data-vp="390" aria-pressed="false">390 · primary</button>
+      <button class="sw" type="button" data-vp="1280" aria-pressed="false">1280 · adds room</button>
+    </div>
+    <p class="step-name" id="stepname"></p>
+  </div>
+
+  <p class="howto"><b>How to read this.</b> One frame at a time: the shape sets what the <em>home</em> of trading is, the journey step is one screen inside it, the viewport is the frame width. Everything is a grey box with real numbers so density defects show; nothing is styled. Each block carries the name of the shell component that would render it (<code>StraddleView</code>, <code>MilestoneStrip</code>…) or <em>new</em> where none exists. The panel beside (1280) or below (390) the frame lists which study rows the frame borrows (<code>docs/research/trading-parity-2026-09.md</code> § The call — only rows graded <em>frame</em> or <em>vendor-quote</em>) and where the shape reverses a call you made in your own words — those are drawn as an A/B <em>on the frame</em>, flagged with the date, never silently replaced. Every ticket frame also carries the #3299 A/B for the default order type. A link to any frame is its URL hash, e.g. <code>#arcade/4/390</code>.</p>
+
+  <section class="stage" id="stage" data-vp="390">
+    <div>
+      <p class="frame-cap" id="framecap"></p>
+      <div class="frame-wrap" id="framewrap"><div class="frame" id="frame" data-fold="844"></div></div>
+    </div>
+    <aside class="annot" id="annot" aria-live="polite"></aside>
+  </section>
+
+  <h2>What each shape asks you to decide</h2>
+  <ol class="decide">
+    <li><b>Arcade</b> — is the symbol the stage (quote · chart · your position · your working orders for it), with Trade a paged sheet whose commit is gated on a stop and a target? If yes, working orders scope to the symbol (reverses #674) and the milestone rail leaves the ticket (reverses #1461).</li>
+    <li><b>Outlook</b> — does a trade start from a belief ("NVDA up modestly by 2026-10-16") that the builder turns into named structures with max loss on screen, the chain opening only on the chosen leg? If yes, the chain stops being the entry instrument (reverses #1481).</li>
+    <li><b>Workbench</b> — are chart and chain the workspace, the ticket docked beside them at 1280 and a sheet at 390, and working orders bubbles on a price ladder you drag to replace? If yes, the rail leaves the docked ticket (reverses #1461) and replace ships as a drag with its direction-vs-plan logged.</li>
+    <li><b>Register</b> — are orders and positions the home, every action (new · close · cancel · modify · roll · create opposite) starting from a row, the ticket a drawer? If yes, "open orders live on the Trade page" becomes "orders <em>are</em> the page" (reverses #674), the chain opens second (reverses #1481), and Accounts' positions blotter either goes or becomes this.</li>
+  </ol>
+
+  <h2>The ten journeys</h2>
+  <ol class="journeys" id="journeys"></ol>
+  <p class="fine">Convention: <code>docs/PATTERNS.md</code> → <em>Lo-fi shapes</em>. Study: <code>docs/research/trading-parity-2026-09.md</code>. Plan: #3407. Values marked ‡ are derived from Δ on this snapshot; a value shown as — is absent and its reason sits in the hover title and in the footnote beneath (hover does not exist on a phone).</p>
+</div>
+
+<script>
+/* =====================================================================================
+   Trading Journeys — Lo-fi.  State {shape, step, vp} → render().  No framework, no motion.
+   Skeleton: the same render()-and-state-buttons shape as "The Rail Over the Form" (#1461).
+   ===================================================================================== */
+
+/* ---------- DATA: real values (the brief for #3407) ---------- */
+const NVDA = { sym: 'NVDA', name: 'NVIDIA Corp', last: '221.39', chg: '+1.99', pct: '+0.91%', bid: '221.37', ask: '221.39', mid: '221.38', asOf: '10:04:20 AM ET', exp: '2026-10-16', dte: 25 };
+const GOOGL = { sym: 'GOOGL', name: 'Alphabet Inc', last: '351.33', qty: 86, avg: '345.57', mark: '351.33', value: '30,214.38', plOpen: '+495.36', plPct: '+1.67%', days: 40,
+  lots: [ { n: 1, qty: 39, opened: '2026-08-12', px: '341.20' }, { n: 2, qty: 39, opened: '2026-08-28', px: '348.10' }, { n: 3, qty: 8, opened: '2026-09-10', px: '354.52' } ] };
+// strike · call bid/ask · put bid/ask · call Δ · put Δ · put OI  (Δ null = no snapshot for this strike)
+const CHAIN = [
+  { k: '215',   cb: '7.10', ca: '7.27', pb: '0.20', pa: '0.22', cd: null,   pd: '-0.08', poi: '3,545' },
+  { k: '217.5', cb: '4.78', ca: '5.12', pb: '0.38', pa: '0.44', cd: null,   pd: '-0.15', poi: '2,365' },
+  { k: '220',   cb: '2.86', ca: '3.13', pb: '0.94', pa: '0.99', cd: '0.78', pd: '-0.30', poi: '954' },
+  { k: '222.5', cb: '1.43', ca: '1.57', pb: '1.82', pa: '1.99', cd: '0.51', pd: '-0.49', poi: '285' },
+  { k: '225',   cb: '0.62', ca: '0.69', pb: '2.75', pa: '4.00', cd: '0.27', pd: '-0.69', poi: '1,104' },
+  { k: '227.5', cb: '0.27', ca: '0.28', pb: '5.50', pa: '7.39', cd: '0.13', pd: '-0.71', poi: '177' },
+  { k: '230',   cb: '0.12', ca: '0.13', pb: '7.31', pa: '9.21', cd: '0.06', pd: '-0.81', poi: '32' },
+];
+const EXPS = [ ['Sep 25', 'W', 4], ['Oct 2', 'W', 11], ['Oct 9', 'W', 18], ['Oct 16', '', 25], ['Oct 23', 'W', 32], ['Nov 20', '', 60] ];
+const ORD_GOOGL = { id: 'a1f3', side: 'SELL', qty: 39, sym: 'GOOGL', type: 'LMT', px: '355.00', tif: 'GTC', placed: '2026-09-18 09:41', status: 'working' };
+const ORD_NVDA  = { id: '9b2e', side: 'BUY', qty: 10, sym: 'NVDA', type: 'LMT', px: '221.38', tif: 'Day', placed: '2026-09-21 10:04:31', status: 'working' };
+const NO_SNAPSHOT = 'no snapshot for this strike';
+
+const STEPS = [
+  'Buy stock at market', 'Buy stock at a limit', 'Sell one lot at a limit', 'Sell a cash-secured put via the chain',
+  'Buy a call', 'See working orders', 'Cancel an order', 'Modify an order', 'Review → confirm → status update', 'Build and submit a 222.5/217.5 put vertical',
+];
+const SHAPES = { arcade: 'Arcade', outlook: 'Outlook', workbench: 'Workbench', register: 'Register' };
+
+/* Study rows a shape may borrow (docs/research/trading-parity-2026-09.md § The call — frame / vendor-quote only). */
+const ROWS = {
+  1:  ['Working-orders view on the trade surface, with cancel and replace', 'vendor-quote'],
+  2:  ['Honest cancel semantics — attempt to cancel → verified canceled', 'vendor-quote'],
+  3:  ['Confirm step is where the warnings live; no skip for humans on paper', 'vendor-quote'],
+  4:  ['Review as a sentence + three context rows + a plain-language warning above', 'frame'],
+  5:  ['Quote header + as-of stamp above the form', 'frame / vendor-quote'],
+  6:  ['Straddle chain, strike as the spine, greeks scroll out, tap bid = sell / ask = buy', 'frame / vendor-quote'],
+  7:  ['Breakeven + chance of profit with expected value on the order screen', 'vendor-quote'],
+  8:  ['Outlook → strategy grammar with max loss unavoidable on screen', 'vendor-quote'],
+  9:  ['Simulate with the trade\'s own gesture — the payoff panel', 'vendor-quote'],
+  10: ['Position Statement vocabulary — P/L Open · P/L Day · Days · ITM badge', 'vendor-quote'],
+  11: ['Roll as one ticket from the position row', 'vendor-quote'],
+  12: ['Create Opposite / Create Duplicate on an order or position row', 'vendor-quote'],
+  13: ['Time in force as a shown control — Day + GTC only', 'frame / vendor-quote'],
+  14: ['Session-aware default order type, the preset shown at review', 'vendor-quote'],
+  16: ['Contextual fields; pickers as bottom sheets with one learn link', 'frame'],
+  17: ['Counted, named interstitial before an irreversible threshold', 'vendor-quote'],
+  18: ['Celebration on plan adherence, never on trade count; the receipt explains', 'vendor-quote'],
+  19: ['Order-status notice carrying the plan line', 'vendor-quote'],
+  20: ['Plan-derived alerts (my stop / my target), never default-on % moves', 'vendor-quote'],
+  27: ['paperMoney: practice is the same UI; the fiction is stated', 'vendor-quote'],
+  28: ['A symbol picked in one tool drives the rest; the ticket beside the chart on desktop', 'vendor-quote'],
+  29: ['Drag an order on the ladder to replace; direction-vs-plan annotated', 'vendor-quote'],
+};
+/* Calls Eric made in his own words — a shape that contradicts one renders an A/B on the frame. */
+const CALLS = {
+  1461: { id: '#1461', date: '2026-09-05', quote: 'milestones gate, never drive · the trade form needs to stand on its own' },
+  1481: { id: '#1481', date: '2026-09-05', quote: 'the chain is the entry instrument' },
+  674:  { id: '#674',  date: '2026-08-27', quote: 'open orders live on the Trade page' },
+};
+
+/* ---------- PRIMITIVES ---------- */
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const tag = n => `<span class="tag${n === 'new' ? ' new' : ''}">${n}</span>`;
+const blk = (name, inner, cls = '') => `<div class="blk ${cls}">${tag(name)}${inner}</div>`;
+const seg = (opts, on, off = []) => `<span class="seg">${opts.map(o => `<b class="${o === on ? 'on' : off.includes(o) ? 'off' : ''}">${o}</b>`).join('')}</span>`;
+const field = (label, val, ph = false, w = '') => `<span class="field" style="${w ? 'width:' + w : ''}"><span class="lbl">${label}</span><span class="in${ph ? ' ph' : ''}">${val}</span></span>`;
+const btn = (label, cls = '') => `<span class="btn ${cls}">${label}</span>`;
+const st = (s, word) => `<span class="st ${s}">${word || s}</span>`;
+const warn = t => `<p class="warn">${t}</p>`;
+const kv = pairs => `<dl class="kv">${pairs.map(([k, v, reason]) => `<dt>${k}</dt><dd${reason ? ` class="abs" title="${esc(reason)}"` : ''}>${v}</dd>`).join('')}</dl>`;
+const asof = () => `<p class="asof">as of ${NVDA.asOf} · SIM · paper</p>`;
+const chips = (items, on) => `<span class="chips">${items.map(i => `<span class="chip${i === on ? ' on' : ''}">${i}</span>`).join('')}</span>`;
+
+/* ---------- COMPONENTS (labelled with the shell component that renders them, or "new") ---------- */
+function topbar(current, home) {
+  const words = ['Trade', 'Research', 'Accounts'].map(w => w === current ? `<u>${w}</u>` : w).join(' · ');
+  return `<div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">${words}${home ? ' · ' + home : ''}</span><span>Eric · paper</span></div>`;
+}
+function symbolField(sym = 'NVDA') {
+  return blk('SymbolField', `<span class="row"><span class="field" style="width:120px"><span class="lbl">Symbol</span><span class="in">${sym}</span></span><span class="sub">recent: GOOGL · NVDA · AAPL</span></span>`);
+}
+function quoteHeader(q = NVDA, wide = false) {
+  return blk('QuoteHeader', `<p class="bt">${q.sym} <span class="sub">${q.name}</span></p>
+    <span class="row"><span class="num" style="font-size:18px;font-weight:700">$${q.last}</span><span class="num">▲ ${q.chg} (${q.pct})</span><span class="num sub">bid ${q.bid} · ask ${q.ask}${wide ? ' · size 300 × 200 · NBBO' : ''}</span></span>
+    <p class="asof">as of ${q.asOf} · SIM · paper</p>`);
+}
+function milestoneStrip(rung = '101', compact = false) {
+  const rungs = ['101', '102', '201', '202', '301', '302', '401', '501'];
+  const earned = ['101', '102', '201', '202', '301', '302'];
+  const rail = rungs.map(r => `<span class="chip${r === rung ? ' on' : earned.includes(r) ? '' : ' dis'}">${earned.includes(r) || r === rung ? r : r + ' 🔒'}</span>`).join('');
+  return blk('MilestoneStrip', `<span class="lbl">Milestone · trading ladder · 6 / 8 earned</span><span class="chips">${rail}</span>${compact ? '' : `<p class="sub">Next up · <b>401 vertical spread</b> — opens after 302 fills. A rung presets the form; it never drives it.</p>`}`);
+}
+function ticketNav(inst, side, type) {
+  return blk('TicketNav', `<span class="row"><span class="field"><span class="lbl">Instrument</span>${seg(['Stock', 'Option', 'Spread'], inst)}</span>
+    <span class="field"><span class="lbl">Side</span>${seg(inst === 'Stock' ? ['Buy', 'Sell'] : ['Sell to open', 'Buy to open'], side)}</span>
+    ${inst === 'Option' ? `<span class="field"><span class="lbl">Type</span>${seg(['Put', 'Call'], type)}</span>` : ''}</span>`);
+}
+function chartPh(h = 96, note = 'chart · 1D · line') {
+  return blk('new', `<span class="chips">${['1D', '1W', '1M', '3M', '1Y'].map((r, i) => `<span class="chip${i === 0 ? ' on' : ''}">${r}</span>`).join('')}</span><div class="hatch" style="height:${h}px">${note}</div>`);
+}
+/* The chain — StraddleView. 390: the base five (bid · ask · STRIKE · bid · ask); 1280: Δ and put OI as the outer columns (adds room, never a new concept). */
+function chain({ vp, picks = [], hint = 'Tap a bid to sell · an ask to buy', both = true } = {}) {
+  const wide = vp === 1280;
+  const pick = (k, side, px) => picks.some(p => p.k === k && p.side === side && p.px === px) ? ' pick' : '';
+  const selRow = k => picks.some(p => p.k === k) ? ' sel' : '';
+  const abs = v => v == null ? `<span class="abs" title="${NO_SNAPSHOT}">—</span>` : v;
+  const rows = CHAIN.map(r => {
+    const callItm = parseFloat(r.k) < 221.39, putItm = parseFloat(r.k) > 221.39;
+    const cl = callItm ? ' itm-l' : '', pr = putItm ? ' itm-r' : '';
+    let cells = '';
+    if (wide) cells += `<td class="${cl}">${abs(r.cd)}</td>`;
+    cells += `<td class="${wide ? '' : cl}${pick(r.k, 'call', 'bid')}">${r.cb}</td><td class="${pick(r.k, 'call', 'ask')}">${r.ca}</td>`;
+    cells += `<td class="k">${r.k}</td>`;
+    cells += `<td class="${pick(r.k, 'put', 'bid')}">${r.pb}</td><td class="${wide ? '' : pr}${pick(r.k, 'put', 'ask')}">${r.pa}</td>`;
+    if (wide) cells += `<td>${r.pd}</td><td class="${pr}">${r.poi}</td>`;
+    const row = `<tr class="${selRow(r.k)}">${cells}</tr>`;
+    return r.k === '222.5' ? `<tr class="div"><td colspan="${wide ? 8 : 5}">▲ Current price 221.39 · +1.99 (+0.91%) · ITM rail ▌ on the in-the-money side</td></tr>${row}` : row;
+  }).join('');
+  const head = wide
+    ? `<tr><th colspan="3" class="side">Calls</th><th class="k side">Strike</th><th colspan="4" class="side">Puts</th></tr><tr><th>Δ</th><th>Bid</th><th>Ask</th><th class="k">10/16</th><th>Bid</th><th>Ask</th><th>Δ</th><th>OI</th></tr>`
+    : `<tr><th colspan="2" class="side">Calls</th><th class="k side">Strike</th><th colspan="2" class="side">Puts</th></tr><tr><th>Bid</th><th>Ask</th><th class="k">10/16</th><th>Bid</th><th>Ask</th></tr>`;
+  const exps = `<span class="chips">${EXPS.map(([d, w, n]) => `<span class="chip${d === 'Oct 16' ? ' on' : ''}">${d}${w ? ' (W)' : ''} · ${n}d</span>`).join('')}</span><p class="sub">Expires in ${NVDA.dte} days · 2026-10-16 · monthly</p>`;
+  return blk('StraddleView', `${exps}${wide ? '' : `<p class="scrollhint"><span>◂ Δ · OI · Vol</span><span>scroll out from the strike</span><span>Δ · OI · Vol ▸</span></p>`}
+    <table class="chain"><thead>${head}</thead><tbody>${rows}</tbody></table>
+    <p class="foot">— = ${NO_SNAPSHOT} (also on hover) · ${hint}</p>`);
+}
+/* PositionsTable / BlotterRow — the GOOGL position with three lots; P/L Day absent with its reason. */
+function positions({ lotsOpen = false, selLot = 0, actions = false, extra = '' } = {}) {
+  const act = a => actions ? `<td class="act">${a.map(x => `<span${x.startsWith('~') ? ' class="dis"' : ''}>${x.replace('~', '')}</span>`).join('')}</td>` : '';
+  const lots = lotsOpen ? GOOGL.lots.map(l => `<tr class="sub${selLot === l.n ? ' sel' : ''}"><td>lot ${l.n} · opened ${l.opened}</td><td class="num">${l.qty}</td><td class="num">${l.px}</td><td class="num">${GOOGL.mark}</td><td class="num">+${((parseFloat(GOOGL.mark) - parseFloat(l.px)) * l.qty).toFixed(2)}</td>${actions ? `<td class="act"><span>Close lot</span></td>` : ''}</tr>`).join('') : '';
+  return blk('PositionsTable', `<p class="bt">Positions</p><div class="tw"><table class="tbl"><thead><tr><th>Symbol</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">Mark</th><th class="num">P/L open</th>${actions ? '<th>Actions</th>' : ''}</tr></thead>
+    <tbody><tr><td class="caret${lotsOpen ? ' open' : ''}">GOOGL <span class="sub">3 lots · ${GOOGL.days} days</span></td><td class="num">${GOOGL.qty}</td><td class="num">${GOOGL.avg}</td><td class="num">${GOOGL.mark}</td><td class="num">${GOOGL.plOpen} <span class="sub">${GOOGL.plPct}</span> · <span class="abs" title="prior close not on this snapshot">day —</span></td>${act(['Close', 'Create opposite', 'Duplicate', '~Roll'])}</tr>${lots}${extra}</tbody></table></div>
+    <p class="foot">BlotterRow · lots open inline (accordion) · P/L day — = prior close not on this snapshot${actions ? ' · Roll ⊘ stock has nothing to roll; option rows open it after P3 (mleg)' : ''}</p>`);
+}
+/* Working orders — new (dead renderer today: src/observatory/open-orders-view.ts). Honest states, TIF and price always shown. */
+function ordersTable({ orders, title = 'Working orders', actions = true, groups = false, scope = '' } = {}) {
+  const row = o => `<tr class="${o.sel ? 'sel' : ''}"><td>${o.side} ${o.qty} ${o.sym}${o.leg ? `<br><span class="sub">${o.leg}</span>` : ''}</td><td class="num">${o.type} ${o.px}</td><td class="num">${o.tif}</td><td>${st(o.status, o.word)}<br><span class="sub num">${o.id} · ${o.placed}</span></td>${actions ? `<td class="act">${(o.acts || ['Cancel', 'Modify', 'Create opposite']).map(a => `<span${a.startsWith('~') ? ' class="dis"' : ''}>${a.replace('~', '')}</span>`).join('')}</td>` : ''}</tr>`;
+  const working = orders.filter(o => ['working', 'attempting'].includes(o.status));
+  const done = orders.filter(o => !['working', 'attempting'].includes(o.status));
+  const grp = (name, list) => `<tr><th colspan="5">${name} (${list.length})</th></tr>${list.map(row).join('') || `<tr><td colspan="5" class="sub">none</td></tr>`}`;
+  const body = groups ? grp('Working', working) + grp('Filled today', done.filter(o => o.status === 'filled')) + grp('Canceled · replaced', done.filter(o => o.status !== 'filled')) : orders.map(row).join('');
+  return blk('new', `<p class="bt">${title}${scope ? ` · <span class="sub">${scope}</span>` : ''}</p><div class="tw"><table class="tbl"><thead><tr><th>Order</th><th class="num">Type · price</th><th class="num">TIF</th><th>Status</th>${actions ? '<th>Actions</th>' : ''}</tr></thead><tbody>${body}</tbody></table></div>
+    <p class="foot">states are the broker's, never invented: accepted · partially filled · pending cancel · canceled · replaced</p>`);
+}
+function wireRow(sym = 'NVDA') { return blk('WireRow', `<p class="sub">Also trading ${sym} · Tony sold the 10/16 220 put (09-19) · Sauron bought 20 sh (09-21)</p>`); }
+function recentOrdersStrip(sym = 'NVDA') { return blk('RecentOrdersStrip', `<p class="sub">You · ${sym} · last 3: BUY 5 @ 219.80 (09-14) ✓ · BUY 5 @ 218.10 (09-11) ✓ · SELL 10 @ 214.55 (09-02) ✓</p>`); }
+function sectionSwitch(items, on) { return blk('SectionSwitch', `<span class="chips">${items.map(i => `<span class="chip${i === on ? ' on' : ''}">${i}</span>`).join('')}</span>`); }
+function lockedPanel(name, why) { return blk('LockedPanel', `<div class="locked"><b>${name}</b> — ${why}</div>`); }
+function celebration(what, why) { return blk('new', `<div class="cel"><b>✦ ${what}</b><p>${why}</p></div>`); }
+function payoffPh(note) { return blk('new', `<span class="lbl">Payoff · expiration curve + today curve · price slices</span><div class="hatch" style="height:72px">${note}</div>`); }
+
+/* Stock ticket fields — TicketNav owns the nav; fields sized to content (the .tkt-fields defect, P0). */
+function stockFields({ side = 'Buy', qty = 10, type = 'Market', limit = NVDA.mid, tif = 'Day', sym = 'NVDA', maxNote = '' } = {}) {
+  const px = type === 'Limit' ? `${field('Limit price', limit, false, '110px')}<span class="field"><span class="lbl">anchor</span>${chips(['bid 221.37', 'mid 221.38', 'ask 221.39'], 'mid 221.38')}</span>` : '';
+  return `<span class="row">${field('Shares', qty, false, '84px')}${maxNote ? `<span class="sub">${maxNote}</span>` : ''}</span>
+    <span class="row"><span class="field"><span class="lbl">Order type</span>${seg(['Market', 'Limit', 'Stop'], type)}</span>${px}</span>
+    <span class="row"><span class="field"><span class="lbl">Time in force</span>${seg(['Day', 'GTC'], tif)}</span><span class="sub">Day by default · GTC ≤ 90 days · nothing else until asked</span></span>`;
+}
+function stockEst({ side = 'Buy', qty = 10, type = 'Market', limit = NVDA.mid } = {}) {
+  const px = type === 'Market' ? parseFloat(NVDA.last) : parseFloat(limit);
+  const amt = (px * qty).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  return `<div class="est"><span>Est. ${side === 'Buy' ? 'cost' : 'proceeds'} <b>$${amt}</b>${type === 'Market' ? ' <span class="sub">≈ at 221.39 last</span>' : ''}</span><span class="sub">$0 commission · paper</span></div>`;
+}
+/* Option ticket fields + OptionPreview rows. */
+function optionFields({ contracts = 1, type = 'Limit', px, anchor = 'bid', tif = 'Day' }) {
+  return `<span class="row">${field('Contracts', contracts, false, '84px')}<span class="field"><span class="lbl">Order type</span>${seg(['Limit', 'Market'], type)}</span>${field('Limit', px, false, '90px')}<span class="field"><span class="lbl">anchor</span>${chips(['bid', 'mid', 'ask'], anchor)}</span></span>
+    <span class="row"><span class="field"><span class="lbl">Time in force</span>${seg(['Day', 'GTC'], tif)}</span></span>`;
+}
+const PREVIEWS = {
+  csp: { sentence: 'Sell to open 1 NVDA 2026-10-16 220 put · limit $0.94', rows: [['Premium collected', '$0.94 × 100 = $94'], ['Cash set aside', '$22,000'], ['Max profit', '$94'], ['Max loss', '$21,906 · NVDA at $0'], ['Breakeven', '$219.06'], ['Δ · OI', '−0.30 · 954'], ['P(assigned) ≈', '30% ‡ from Δ'], ['Chance of profit · EV', '—', 'needs the IV solve (P2); never 0.00']], rung: '201' },
+  call: { sentence: 'Buy to open 1 NVDA 2026-10-16 222.5 call · limit $1.50', rows: [['Debit', '$1.50 × 100 = $150'], ['Max loss', '$150 · the debit'], ['Max profit', 'unlimited above $224.00'], ['Breakeven', '$224.00'], ['Δ · OI', '0.51 · —', 'no snapshot for call OI on this strike'], ['P(ITM) ≈', '51% ‡ from Δ'], ['Chance of profit · EV', '—', 'needs the IV solve (P2); never 0.00']], rung: '302' },
+  vert: { sentence: 'Sell 1 NVDA 2026-10-16 222.5/217.5 put vertical · net credit $1.44', rows: [['Net credit (limit)', '$1.44 · natural $1.38 · mid $1.50'], ['Max profit', '$144'], ['Max loss', '$356 · (5.00 − 1.44) × 100'], ['Collateral set aside', '$500 · the width'], ['Breakeven', '$221.06'], ['Net Δ', '+0.34 · (−0.15) − (−0.49)'], ['P(max profit) ≈', '51% ‡ from Δ'], ['Chance of profit · EV', '—', 'needs the IV solve (P2); never 0.00']], rung: '401' },
+};
+function optionPreview(key) { const p = PREVIEWS[key]; return blk('OptionPreview', `<p class="sentence">${p.sentence}</p>${kv(p.rows)}<p class="foot">‡ derived from Δ on this snapshot · an absent value reads as absent, with its reason</p>`); }
+
+/* Review — the sentence, the cost, TIF, the preset line, every warning verbatim (rows 3, 4, 13, 14). */
+function review({ sentence, cost, tif, preset, warns = [], plan, cta = 'Send order', extra = '' }) {
+  return blk('new', `<span class="lbl">Review</span>${warns.map(warn).join('')}<p class="sentence">${sentence}</p>
+    ${kv([['Est. ' + (cost[0]), cost[1]], ['Time in force', tif], ['Commission', '$0 · paper'], ...(plan ? [['Plan', plan]] : []), ...(preset ? [['Preset', preset]] : [])])}
+    ${asof()}${extra}<span class="row">${btn('Edit', 'ghost')}${btn(cta)}</span><p class="foot">no skip for humans on paper — the review is the lesson</p>`);
+}
+function statusCard({ status, word, line, note, extra = '' }) { return blk('new', `<span class="lbl">Order status</span><p class="sentence">${st(status, word)} ${line}</p><p class="sub">${note}</p>${extra}`); }
+function cancelTimeline(now = 3) {
+  const items = [['Working', 'SELL 39 GOOGL LMT 355.00 GTC'], ['Attempting to cancel', 'sent 10:04:22 · the broker has the request · it may still fill'], ['Canceled', 'broker confirmed 10:04:23 · verified']];
+  return blk('new', `<span class="lbl">Cancel · honest states</span><ol class="tl">${items.map((it, i) => `<li class="${i + 1 === now ? 'now' : ''}">${st(['working', 'attempting', 'canceled'][i], it[0])}<b>${it[1]}</b></li>`).join('')}</ol><p class="foot">never "canceled" before the broker says so · a fill that lands first shows as ✓ filled, not an error</p>`);
+}
+function cancelConfirm() { return `<p class="sentence">Cancel SELL 39 GOOGL LMT $355.00 GTC?</p><p class="sub">Fidelity's words fit: a cancel is an attempt until the broker verifies it.</p><span class="row">${btn('Keep it', 'ghost')}${btn('Attempt to cancel')}</span>`; }
+function modifyResult() {
+  return ordersTable({ orders: [ { ...ORD_GOOGL, status: 'replaced', word: 'replaced → c7e2', acts: ['~Cancel', '~Modify'] }, { ...ORD_GOOGL, id: 'c7e2', px: '352.50', placed: '2026-09-21 10:04:40', status: 'working', sel: true } ], title: 'Working orders', scope: 'after replace' });
+}
+function modifySheet(extra = '') {
+  return `<p class="sentence">Modify SELL 39 GOOGL · limit $355.00 → $352.50 · GTC</p>${kv([['Mechanism', 'cancel + replace · new id · lineage kept'], ['Direction', 'toward the market · chasing'], ['Your plan target', '$355.00 · set 2026-09-18']])}${warn('Moving a limit toward the market is a chase, not a plan change; moving a stop is the disciplined act. This one is logged as a chase.')}${extra}<span class="row">${btn('Keep $355.00', 'ghost')}${btn('Replace')}</span>`;
+}
+
+/* A/B panels. abRev = a call Eric made in his own words that the shape reverses; abType = #3299's default order type. */
+function mini(rows) { return `<div class="mini">${rows.map(r => Array.isArray(r) ? `<div class="mr2">${r.map(x => `<div class="mr ${x.k || ''}">${x.t}</div>`).join('')}</div>` : `<div class="mr ${r.k || ''}">${r.t}</div>`).join('')}</div>`; }
+function abv(letter, cap, rows, who) { return `<div class="abv"><span class="abl"><b>${letter}</b>${who}</span>${mini(rows)}<p class="abc">${cap}</p></div>`; }
+function abRev(n, a, b) { const c = CALLS[n]; return `<div class="ab" role="group" aria-label="A/B reversal ${c.id}"><p class="ab-h"><b>A/B</b> · ${c.id} “${c.quote}” · <span class="flag">reverses your call of ${c.date}</span></p><div class="ab-v">${abv('A', a.cap, a.rows, 'this shape')}${abv('B', b.cap, b.rows, 'your call')}</div></div>`; }
+function abType() {
+  return `<div class="ab" role="group" aria-label="A/B default order type"><p class="ab-h"><b>A/B</b> · default order type · <span class="flag">#3299 · your call</span></p><div class="ab-v">
+    ${abv('A', 'Limit at mid $221.38 — market is the opt-out; the preset is shown again at review (row 14).', [{ t: '[ Market ] [✓ Limit ] [ Stop ]' }, { t: 'Limit 221.38 · mid', k: 'on' }, { t: 'review: "preset: limit at mid (RTH)"' }], 'limit at mid')}
+    ${abv('B', 'Market — limit is the opt-in; the estimate says "≈ at 221.39 last" so the fill is understood as unknown.', [{ t: '[✓ Market ] [ Limit ] [ Stop ]' }, { t: 'est ≈ $2,214 at 221.39 last', k: 'on' }, { t: 'review: "market · may fill away from last"' }], 'market first')}
+  </div></div>`;
+}
+const AB = {
+  rail: () => abRev(1461,
+    { cap: 'The sheet stands alone: a one-line rung chip in its header; the rail lives on the stage/home, not in the ticket.', rows: [{ t: 'Sheet · rung 101 chip', k: 'on' }, { t: 'Side · Amount · Type', k: 'box' }, { t: 'Plan · Review', k: 'box' }] },
+    { cap: 'MilestoneStrip (eyebrow · rail · status) above the form, presetting it; the form keeps its own nav.', rows: [{ t: 'MilestoneStrip 101 … 501', k: 'bar' }, { t: 'TicketNav', k: 'bar' }, { t: 'fields', k: 'box' }] }),
+  scope: () => abRev(674,
+    { cap: 'Working orders scoped to the symbol on its stage; all others one tap away under Accounts › Orders (count shown).', rows: [{ t: 'GOOGL stage', k: 'bar' }, { t: 'Working orders · GOOGL (1)', k: 'on' }, { t: '+2 on other symbols →', k: 'dash' }] },
+    { cap: 'One working-orders panel on the Trade page, every symbol, cancel and replace on each row.', rows: [{ t: 'Trade', k: 'bar' }, { t: 'Working orders · all (3)', k: 'on' }, { t: 'ticket', k: 'box' }] }),
+  home: () => abRev(674,
+    { cap: 'Orders and positions ARE the page; a trade starts from a row; the ticket is a drawer.', rows: [{ t: 'Orders (working 1 · filled 0)', k: 'on' }, { t: 'Positions · GOOGL', k: 'box' }, { t: 'drawer →', k: 'dash' }] },
+    { cap: 'The Trade page keeps the ticket first; working orders are a section beneath it.', rows: [{ t: 'ticket', k: 'box' }, { t: 'Working orders', k: 'on' }, { t: 'positions on Accounts', k: 'dash' }] }),
+  belief: () => abRev(1481,
+    { cap: 'Belief chips → named structures with max loss on screen → the chain opens on the chosen leg.', rows: [{ t: 'NVDA up modestly by 10/16', k: 'on' }, [{ t: 'long call · max loss $150' }, { t: 'CSP 220 · $94' }], { t: 'StraddleView opens on the leg', k: 'dash' }] },
+    { cap: 'The chain is the door: tap a bid or an ask, the ticket opens on that contract; structures are suggested beside the tap.', rows: [{ t: 'StraddleView', k: 'on' }, { t: 'tap 220 put bid 0.94', k: 'bar' }, { t: 'ticket · CSP', k: 'box' }] }),
+  rowfirst: () => abRev(1481,
+    { cap: 'Every action starts from a row: "+ New order" → the drawer chooses instrument · side · type, then the chain opens inside it.', rows: [{ t: '+ New order (row)', k: 'on' }, { t: 'drawer: Option · Sell to open · Put', k: 'bar' }, { t: 'chain inside the drawer', k: 'dash' }] },
+    { cap: 'The chain is the door on the Trade page; the drawer opens from a tapped cell.', rows: [{ t: 'StraddleView', k: 'on' }, { t: 'tap → drawer', k: 'bar' }, { t: 'ticket', k: 'box' }] }),
+};
+
+/* sheet (390) / dock (1280) wrappers */
+function sheet(stage, title, inner, meta = '') { return `<div class="dim">${stage}</div><div class="sheet">${tag('new')}<div class="sheet-h"><b>${title}</b><span>${meta}</span></div>${inner}</div>`; }
+function dock(title, inner, meta = '', cls = 'dock') { return `<div class="blk ${cls}">${tag('new')}<div class="sheet-h"><b>${title}</b><span>${meta}</span></div>${inner}</div>`; }
+/* A sequence (review → status → fill; confirm → timeline) needs the wide column, the stage the narrow one. */
+const cols = (a, b, tpl = '1fr 420px') => `<div class="cols" style="grid-template-columns:${b.startsWith('<div class="seq') ? '400px 1fr' : tpl}"><div class="col">${a}</div><div class="col">${b}</div></div>`;
+const seq = (vp, panels) => `<div class="seq${vp === 1280 ? ' wide' : ''}">${panels.map((p, i) => (i ? `<span class="then">then ${vp === 1280 ? '→' : '↓'}</span>` : '') + `<div class="panel">${p}</div>`).join('')}</div>`;
+
+/* =====================================================================================
+   ARCADE — the symbol is the stage.  Borrows study rows 5 (quote header + as-of), 28 (the symbol
+   drives the rest), 1 + 2 (working orders, honest cancel — scoped to the symbol: reverses #674),
+   3 + 4 (review as a sentence where the warnings live), 13 + 14 + 16 (TIF shown, session-aware
+   default, contextual fields / sheets), 17 (a counted door before the commit), 18 + 19 + 20
+   (celebration on plan adherence, the fill notice carries the plan line, alerts from stop/target),
+   6 + 7 (the chain and PoP on the order screen for the option steps), 10 (position vocabulary).
+   Reverses #1461 (the rail leaves the sheet) and #674 (orders scoped to the symbol).
+   ===================================================================================== */
+function renderArcade(step, vp) {
+  const wide = vp === 1280;
+  const sym = [3, 6, 7, 8].includes(step) ? 'GOOGL' : 'NVDA';
+  const q = sym === 'GOOGL' ? { ...NVDA, sym: 'GOOGL', name: GOOGL.name, last: '351.33', chg: '+0.87', pct: '+0.25%', bid: '351.30', ask: '351.36', mid: '351.33' } : NVDA;
+  const stageOrders = sym === 'GOOGL' ? [ORD_GOOGL] : (step >= 9 ? [ORD_NVDA] : []);
+  const stageBlocks = (opts = {}) => [
+    symbolField(sym), quoteHeader(q, wide), opts.chain ? chain({ vp, picks: opts.picks }) : chartPh(wide ? 140 : 80, `${sym} · chart placeholder · orders and your avg drawn as pills`),
+    sym === 'GOOGL' ? positions({ lotsOpen: opts.lots, selLot: opts.selLot, actions: !!opts.lots }) : blk('PositionsTable', `<p class="bt">Your position · ${sym}</p><p class="sub">none yet · GOOGL 86 sh is on its own stage</p>`),
+    ordersTable({ orders: stageOrders, title: `Working orders · ${sym}`, scope: stageOrders.length ? `+2 on other symbols → Accounts › Orders` : 'none · +2 on other symbols → Accounts › Orders', actions: true }),
+    wireRow(sym),
+  ].join('');
+  const stepper = cur => `<span class="stepper">${['Side', 'Amount', 'Type', 'Plan', 'Review'].map((s, i) => `<i class="${i + 1 === cur ? 'cur' : i + 1 < cur ? 'done' : ''}">${i + 1} ${s}</i>`).join('')}</span>`;
+  const rungChip = r => `<span class="chip on">rung ${r} · earned</span>`;
+  const planSec = (filled, exit = false) => `<div class="sec"><span class="lbl">4 · Plan${exit ? ' · not required on an exit' : ' · required before Review'}</span>${exit ? `<p class="sub">Exits are never gated; a sell leaves a position and the ladder never locks the door out.</p>` : `<span class="row">${field('Stop', filled ? '214.00' : 'price', !filled, '96px')}${field('Target', filled ? '232.00' : 'price', !filled, '96px')}${field('Why (one line)', filled ? 'earnings run-up; risk 3%' : 'optional', !filled, '160px')}</span><p class="sub">Alerts are set from these two numbers (row 20) — never from a default % move.</p>`}</div>`;
+  const doorSec = filled => filled ? '' : `<div class="sec">${btn('Review order', 'dis wide')}<p class="why">set a stop and a target to review — the door is named, counted (your 1st NVDA order), and opens the moment both are filled</p></div>`;
+  const stockSheet = ({ cur, side, qty, type, limit, tif, planFilled, exit = false, maxNote = '', title = 'Trade · NVDA' }) => {
+    const secs = [
+      `<div class="sec"><span class="lbl">1 · Side</span>${seg(['Buy', 'Sell'], side)}</div>`,
+      `<div class="sec"><span class="lbl">2 · Amount</span><span class="row">${field('Shares', qty, false, '84px')}${chips(['Shares', 'Dollars'], 'Shares')}${maxNote ? `<span class="sub">${maxNote}</span>` : ''}</span></div>`,
+      `<div class="sec"><span class="lbl">3 · Type</span>${stockFields({ side, qty, type, limit, tif })}${stockEst({ side, qty, type, limit })}</div>`,
+      planSec(planFilled, exit),
+      `<div class="sec"><span class="lbl">5 · Review</span>${planFilled || exit ? btn('Review order', 'wide') : ''}</div>${doorSec(planFilled || exit)}`,
+    ];
+    const body = `${stepper(cur)}${wide ? secs.join('') : secs[cur - 1] + (cur < 5 ? `<span class="row">${btn('Next ▸', 'ghost')}</span>` : '')}`;
+    const head = `${rungChip(side === 'Buy' ? '101' : '102')}`;
+    return wide ? dock(title, head + body, 'docked · all five steps visible') : sheet(stageBlocks({ lots: exit, selLot: exit ? 1 : 0 }), title, head + body, `step ${cur} of 5 · sheet`);
+  };
+  const optSheet = ({ key, cur, picks, px, anchor, planFilled }) => {
+    const secs = [
+      `<div class="sec"><span class="lbl">1 · Side · preset from the cell you tapped</span>${ticketNav('Option', key === 'csp' ? 'Sell to open' : 'Buy to open', key === 'csp' ? 'Put' : 'Call')}</div>`,
+      `<div class="sec"><span class="lbl">2 · Amount</span>${field('Contracts', 1, false, '84px')} <span class="sub">× 100 shares each</span></div>`,
+      `<div class="sec"><span class="lbl">3 · Type</span>${optionFields({ px, anchor, tif: 'Day' })}${optionPreview(key)}</div>`,
+      planSec(planFilled),
+      `<div class="sec"><span class="lbl">5 · Review</span>${planFilled ? btn('Review order', 'wide') : ''}</div>${doorSec(planFilled)}`,
+    ];
+    const body = `${stepper(cur)}${wide ? secs.join('') : secs[cur - 1] + (cur < 5 ? `<span class="row">${btn('Next ▸', 'ghost')}</span>` : '')}`;
+    const head = rungChip(PREVIEWS[key].rung);
+    return wide ? dock('Trade · NVDA option', head + body, 'docked beside the chain') : sheet(stageBlocks({ chain: true, picks }), 'Trade · NVDA option', head + body, `step ${cur} of 5 · sheet`);
+  };
+  const frame = (left, right, tpl) => wide ? cols(left, right, tpl || '1fr 440px') : right;
+  let body = '', borrows = [], reversals = [], ticket = false, what = '', room = '';
+  switch (step) {
+    case 1: body = frame(stageBlocks(), stockSheet({ cur: 3, side: 'Buy', qty: 10, type: 'Market', tif: 'Day', planFilled: false }) + abType() + AB.rail()); borrows = [5, 28, 13, 14, 16, 17, 20]; reversals = [1461]; ticket = true; what = 'The NVDA stage behind a paged Trade sheet on its Type step: Market picked, est. ≈ $2,214; Review is a named, counted door until stop and target are filled.'; room = 'the sheet docks beside the stage and shows all five steps at once; the stage keeps chart, position and working orders in one column.'; break;
+    case 2: body = frame(stageBlocks(), stockSheet({ cur: 3, side: 'Buy', qty: 10, type: 'Limit', limit: NVDA.mid, tif: 'Day', planFilled: true }) + abType() + AB.rail()); borrows = [5, 28, 13, 14, 16, 20]; reversals = [1461]; ticket = true; what = 'Same sheet, Limit at mid $221.38 with bid · mid · ask anchors, TIF shown; plan filled so Review is live.'; room = 'as step 1; the limit anchors sit on one line beside the price instead of beneath it.'; break;
+    case 3: body = frame(stageBlocks({ lots: true, selLot: 1 }), stockSheet({ cur: 3, side: 'Sell', qty: 39, type: 'Limit', limit: '355.00', tif: 'GTC', planFilled: false, exit: true, maxNote: 'lot 1 · max 39 · cost 341.20', title: 'Close lot 1 · GOOGL' }) + abType() + AB.rail()); borrows = [5, 10, 13, 14, 16]; reversals = [1461]; ticket = true; what = 'The GOOGL stage with lot 1 opened inline; "Close lot" presets Sell 39 · Limit $355.00 · GTC (est. proceeds $13,845.00). An exit skips the plan gate.'; room = 'lots stay open beside the docked sheet; the est. gain per lot (+$538.20) is visible without a tap.'; break;
+    case 4: body = frame(stageBlocks({ chain: true, picks: [{ k: '220', side: 'put', px: 'bid' }] }), optSheet({ key: 'csp', cur: 3, picks: [{ k: '220', side: 'put', px: 'bid' }], px: '0.94', anchor: 'bid', planFilled: false }) + abType() + AB.rail()); borrows = [5, 6, 7, 13, 16, 17, 20]; reversals = [1461]; ticket = true; what = 'The chain sits on the stage; tapping the 220 put bid (0.94) stages Sell to open · limit $0.94 · collects $94 · $22,000 set aside. Δ −0.30, OI 954; chance of profit is absent with its reason.'; room = 'the chain shows Δ and put OI as outer columns and the sheet docks beside it — nothing new, just room.'; break;
+    case 5: body = frame(stageBlocks({ chain: true, picks: [{ k: '222.5', side: 'call', px: 'ask' }] }), optSheet({ key: 'call', cur: 3, picks: [{ k: '222.5', side: 'call', px: 'ask' }], px: '1.50', anchor: 'mid', planFilled: true }) + abType() + AB.rail()); borrows = [5, 6, 7, 13, 14, 16, 20]; reversals = [1461]; ticket = true; what = 'Tapping the 222.5 call ask (1.57) stages Buy to open; the default limit is the mid $1.50 (A/B), debit $150, breakeven $224.00, Δ 0.51.'; room = 'as step 4.'; break;
+    case 6: body = frame(stageBlocks(), blk('new', `<p class="bt">Other symbols · 2 working orders</p><p class="sub">BUY 5 AAPL LMT 228.00 Day ${st('working')} · SELL 1 NVDA 10/16 220 P LMT 0.94 Day ${st('working')}</p><p class="foot">one tap → Accounts › Orders · the stage keeps only this symbol's</p>`) + AB.scope()); if (!wide) body = stageBlocks() + AB.scope(); borrows = [1, 2, 13, 28]; reversals = [674]; what = 'The GOOGL stage shows its one working order with TIF, price, status and the three actions; orders on other symbols are counted and one tap away.'; room = 'the order block sits beside the chart; the count of other-symbol orders is a link, not a list.'; break;
+    case 7: body = frame(stageBlocks(), seq(vp, [sheetless(wide, stageBlocks(), 'Cancel · GOOGL', cancelConfirm()), cancelTimeline(3)]) + AB.scope()); borrows = [1, 2, 3]; reversals = [674]; what = 'Cancel from the symbol stage: a confirm sheet, then the honest sequence working → attempting to cancel → canceled, each with its timestamp.'; room = 'confirm and timeline side by side.'; break;
+    case 8: body = frame(stageBlocks(), seq(vp, [sheetless(wide, stageBlocks(), 'Modify · GOOGL', modifySheet()), modifyResult()]) + AB.scope()); borrows = [1, 2, 4, 13]; reversals = [674]; what = 'Modify preloads the order; $355.00 → $352.50 is named as a chase against the plan target; after Replace the old order reads ↻ replaced → c7e2 and the new one ◔ working.'; room = 'the replace sheet and the resulting list side by side.'; break;
+    case 9: body = frame(stageBlocks(), seq(vp, [
+        sheetless(wide, stageBlocks(), 'Review · NVDA', review({ sentence: 'Buy 10 NVDA at a $221.38 limit · Day', cost: ['cost', '$2,213.80'], tif: 'Day', preset: 'limit at mid — this session is RTH; market is one tap back', plan: 'stop 214.00 · target 232.00', warns: ['A limit at the mid may not fill; the market is 221.37 / 221.39 as of 10:04:20 AM ET.'] })),
+        statusCard({ status: 'working', word: 'working', line: 'BUY 10 NVDA LMT 221.38 · Day', note: 'id 9b2e · sent 10:04:31 · not filled yet · alerts armed from your plan: stop 214.00 · target 232.00' }),
+        celebration('Filled 10 @ 221.38 · 10:06:02 · plan followed', 'Stop and target were set before entry — that is the behaviour the ladder rewards, not the order itself. Rung 101 stays earned; the fill notice carries your plan line.'),
+      ])); borrows = [3, 4, 13, 14, 18, 19, 20]; reversals = []; what = 'Review as a sentence with cost, TIF, the preset line and the warning verbatim; Send; then ◔ working; then a fill whose celebration explains itself and cites the plan, never the trade count.'; room = 'the three states sit in a row instead of a scroll.'; break;
+    case 10: { const picks = [{ k: '222.5', side: 'put', px: 'bid' }, { k: '217.5', side: 'put', px: 'ask' }];
+      const inner = `${rungChip('401')}${draftBuilder()}${optionPreview('vert')}${planSec(true)}${btn('Review order', 'wide')}`;
+      body = frame(stageBlocks({ chain: true, picks }), (wide ? dock('Trade · NVDA spread', inner, 'docked beside the chain') : sheet(stageBlocks({ chain: true, picks }), 'Trade · NVDA spread', inner, 'sheet')) + abType() + AB.rail()); } borrows = [5, 6, 7, 3, 4, 13]; reversals = [1461]; ticket = true; what = 'Two taps on the chain (222.5 put bid = sell, 217.5 put ask = buy) become one DraftOrderBuilder ticket: net credit $1.44, max loss $356 unavoidable, collateral $500, net Δ +0.34.'; room = 'chain and builder side by side; both legs stay highlighted on the chain.'; break;
+  }
+  return { body: topbar('Trade', `${sym} · stage`) + `<div class="fbody">${body}</div>`, borrows, reversals, ticket, what, room };
+}
+/* On 1280 a step's "sheet" is a docked panel, on 390 it is a sheet over the dimmed stage. */
+function sheetless(wide, stage, title, inner) { return wide ? dock(title, inner) : sheet(stage, title, inner, 'sheet'); }
+function draftBuilder(legs) {
+  legs = legs || [ { a: 'Sell to open', q: 1, c: 'NVDA 10/16 222.5 P', px: '1.82 bid', d: '−0.49' }, { a: 'Buy to open', q: 1, c: 'NVDA 10/16 217.5 P', px: '0.44 ask', d: '−0.15' } ];
+  return blk('DraftOrderBuilder', `<p class="bt">Legs · put vertical · 1:1</p><div class="tw"><table class="tbl"><thead><tr><th>Action</th><th class="num">Qty</th><th>Contract</th><th class="num">Price</th><th class="num">Δ</th></tr></thead><tbody>${legs.map(l => `<tr><td>${l.a}</td><td class="num">${l.q}</td><td class="num">${l.c}</td><td class="num">${l.px}</td><td class="num">${l.d}</td></tr>`).join('')}</tbody></table></div><span class="row">${chips(['+ Add leg', 'Roll', 'Flip'], '')}<span class="field"><span class="lbl">Net price</span>${chips(['natural 1.38', 'limit 1.44', 'mid 1.50'], 'limit 1.44')}</span></span>`);
+}
+
+/* =====================================================================================
+   OUTLOOK — a belief is the start.  Borrows study rows 8 (outlook → structure with max loss
+   unavoidable), 16 (one learn link in every picker), 9 (a payoff thumbnail with the trade's own
+   gesture), 6 (the chain opens on the chosen leg), 7 (PoP with EV on the order screen), 4 + 3
+   (review sentence, warnings live at confirm), 13 + 14 (TIF, session default), 5 (quote header),
+   1 + 2 (working orders under the quote, honest cancel), 10 (positions), 18 + 20 (celebration on
+   plan adherence, alerts from the belief's target).  Keeps the MilestoneStrip (a locked structure
+   is visible · disabled · explained).  Reverses #1481 on every option step.
+   ===================================================================================== */
+function renderOutlook(step, vp) {
+  const wide = vp === 1280;
+  const sym = [3, 6, 7, 8].includes(step) ? 'GOOGL' : 'NVDA';
+  const q = sym === 'GOOGL' ? { ...NVDA, sym: 'GOOGL', name: GOOGL.name, last: '351.33', chg: '+0.87', pct: '+0.25%', bid: '351.30', ask: '351.36' } : NVDA;
+  const beliefs = sym === 'GOOGL' ? ['GOOGL has run its course', 'GOOGL keeps going', 'GOOGL dips then recovers'] : ['NVDA up a lot', 'NVDA up modestly', 'NVDA flat', 'NVDA down modestly', 'NVDA down a lot'];
+  const belief = (on, by = '2026-10-16') => blk('new', `<p class="bt">Start from a belief</p><span class="chips">${beliefs.map(b => `<span class="chip${b === on ? ' on' : ''}">${b}</span>`).join('')}</span><span class="row"><span class="field"><span class="lbl">by</span>${chips(['Sep 25', 'Oct 16', 'Nov 20', 'a date…'], by === '2026-10-16' ? 'Oct 16' : 'a date…')}</span><span class="sub">learn about beliefs and horizons ↗</span></span>`);
+  const card = (name, rows, rung, sel, locked) => `<div class="blk${sel ? '' : ' soft'}" style="${sel ? 'outline:2px solid var(--ink);outline-offset:-2px' : ''}"><span class="lbl">${rung}</span><p class="bt">${name}</p><div class="hatch" style="height:34px">payoff thumbnail</div>${kv(rows)}${locked ? `<div class="locked"><b>rung ${rung}</b> — ${locked}</div>` : sel ? btn('Open on the chain', 'wide') : btn('Choose', 'ghost wide')}</div>`;
+  const cardsFor = sel => {
+    const list = sym === 'GOOGL'
+      ? [card('Sell lot 1 · 39 sh at a limit', [['Max loss', 'none · an exit'], ['Est. gain', '+$538.20 vs cost 341.20'], ['Price', 'limit $355.00 · GTC']], '102', sel === 'lot'), card('Sell a covered call · 350 C', [['Max loss', 'the shares below $340.95'], ['Collects', '≈ $4.05 × 100'], ['Caps', 'upside at $350']], '202', false)]
+      : [card('Buy 10 shares', [['Max loss', '$2,214 · the whole stake'], ['Max profit', 'unlimited'], ['Cost', '≈ $2,214 at market']], '101', sel === 'stock'),
+         card('Buy the 222.5 call', [['Max loss', '$150 · the debit'], ['Max profit', 'unlimited above $224.00'], ['Cost', '$150 at mid']], '302', sel === 'call'),
+         card('Sell the 220 put · cash-secured', [['Max loss', '$21,906 · NVDA at $0'], ['Max profit', '$94'], ['Sets aside', '$22,000']], '201', sel === 'csp'),
+         card('Sell the 222.5/217.5 put vertical', [['Max loss', '$356'], ['Max profit', '$144'], ['Collateral', '$500']], '401', sel === 'vert', sel === 'vert' ? '' : 'opens after 302 fills · visible, disabled, explained'),
+         card('Buy the 222.5/227.5 call vertical', [['Max loss', '$129'], ['Max profit', '$371']], '401', false, 'opens after 302 fills')];
+    return blk('new', `<p class="bt">Structures for “${sym === 'GOOGL' ? 'GOOGL has run its course' : 'NVDA up modestly by 2026-10-16'}” · ranked by rankStructures</p><div style="display:grid;gap:8px;grid-template-columns:${wide ? 'repeat(3,1fr)' : '1fr'}">${list.join('')}</div><p class="foot">max loss is on every card, before any price — a structure never leaves the builder without it (row 8)</p>`);
+  };
+  const stageBlocks = (sel, extra = '') => [symbolField(sym), quoteHeader(q, wide), ordersTable({ orders: sym === 'GOOGL' ? [ORD_GOOGL] : step >= 9 ? [ORD_NVDA] : [], title: 'Working orders', scope: 'Trade page · all symbols', actions: true }), belief(sym === 'GOOGL' ? 'GOOGL has run its course' : 'NVDA up modestly'), cardsFor(sel), extra].join('');
+  const ticket = (inner, title, meta) => wide ? dock(title, milestoneStrip(inner.rung, true) + inner.html, meta) : sheet(stageBlocks(inner.sel), title, milestoneStrip(inner.rung, true) + inner.html, meta);
+  const frame = (left, right) => wide ? cols(left, right, '1fr 420px') : right;
+  let body = '', borrows = [], reversals = [], tk = false, what = '', room = '';
+  const stockT = (type, limit) => ({ rung: '101', sel: 'stock', html: `${ticketNav('Stock', 'Buy')}${stockFields({ type, limit })}${stockEst({ type, limit })}<p class="sub">Belief: NVDA up modestly by 2026-10-16 — this order expresses it; the target field is prefilled from the belief.</p><span class="row">${field('Stop', '214.00', false, '90px')}${field('Target · from belief', '232.00', false, '120px')}</span>${btn('Review order', 'wide')}` });
+  switch (step) {
+    case 1: body = frame(stageBlocks('stock'), ticket(stockT('Market'), 'Buy 10 shares · NVDA', 'from the structure card') + abType()); borrows = [8, 5, 16, 13, 14, 20, 1]; tk = true; what = 'Belief chips first; the builder proposes structures — "Buy 10 shares" is one of them, max loss $2,214 stated — then a stock ticket at market with the target prefilled from the belief.'; room = 'cards in a three-across grid; the ticket docks at right with the rail kept above it.'; break;
+    case 2: body = frame(stageBlocks('stock'), ticket(stockT('Limit', NVDA.mid), 'Buy 10 shares · NVDA', 'from the structure card') + abType()); borrows = [8, 5, 16, 13, 14, 20, 1]; tk = true; what = 'Same path, limit at mid $221.38 (A/B).'; room = 'as step 1.'; break;
+    case 3: body = frame(stageBlocks('lot'), ticket({ rung: '102', sel: 'lot', html: `${ticketNav('Stock', 'Sell')}${positions({ lotsOpen: true, selLot: 1 })}${stockFields({ side: 'Sell', qty: 39, type: 'Limit', limit: '355.00', tif: 'GTC', maxNote: 'lot 1 · max 39' })}${stockEst({ side: 'Sell', qty: 39, type: 'Limit', limit: '355.00' })}${btn('Review order', 'wide')}` }, 'Sell lot 1 · GOOGL', 'an exit is a structure too') + abType()); borrows = [8, 10, 13, 14, 16]; tk = true; what = 'On a held symbol the beliefs are exit beliefs; "GOOGL has run its course" proposes selling lot 1 at a limit — the lots open inside the ticket.'; room = 'as step 1.'; break;
+    case 4: body = frame(stageBlocks('csp', chain({ vp, picks: [{ k: '220', side: 'put', px: 'bid' }], hint: 'opened on the chosen leg · other strikes one tap away' })), ticket({ rung: '201', sel: 'csp', html: `${optionFields({ px: '0.94', anchor: 'bid' })}${optionPreview('csp')}${payoffPh('short put · breakeven 219.06 · today vs expiry')}${btn('Review order', 'wide')}` }, 'Sell the 220 put · NVDA', 'chain opened on the leg') + abType() + AB.belief()); borrows = [8, 6, 7, 9, 13, 16]; reversals = [1481]; tk = true; what = 'The card "Sell the 220 put" opens the chain ON that leg (bid 0.94 highlighted); the ticket carries premium $94, cash set aside $22,000, breakeven and a payoff thumbnail.'; room = 'the chain shows Δ and put OI; the ticket docks beside it.'; break;
+    case 5: body = frame(stageBlocks('call', chain({ vp, picks: [{ k: '222.5', side: 'call', px: 'ask' }], hint: 'opened on the chosen leg' })), ticket({ rung: '302', sel: 'call', html: `${optionFields({ px: '1.50', anchor: 'mid' })}${optionPreview('call')}${payoffPh('long call · breakeven 224.00')}${btn('Review order', 'wide')}` }, 'Buy the 222.5 call · NVDA', 'chain opened on the leg') + abType() + AB.belief()); borrows = [8, 6, 7, 9, 13, 14, 16]; reversals = [1481]; tk = true; what = '"Buy the 222.5 call" opens the chain on the call ask (1.57); limit at mid $1.50 is the default (A/B); max loss $150 was on the card before the price.'; room = 'as step 4.'; break;
+    case 6: body = frame([symbolField(sym), quoteHeader(q, wide), belief('GOOGL has run its course')].join(''), ordersTable({ orders: [ORD_GOOGL], title: 'Working orders', scope: 'Trade page · all symbols', actions: true })); if (!wide) body = [symbolField(sym), quoteHeader(q, wide), ordersTable({ orders: [ORD_GOOGL], title: 'Working orders', scope: 'Trade page · all symbols', actions: true }), belief('GOOGL has run its course')].join(''); borrows = [1, 2, 13, 5]; what = 'Working orders live under the quote on the Trade page (as #674 said), every symbol, with TIF, price, honest status and row actions.'; room = 'orders beside the belief row instead of above it.'; break;
+    case 7: body = frame(stageBlocks(null), seq(vp, [sheetless(wide, stageBlocks(null), 'Cancel · GOOGL', cancelConfirm()), cancelTimeline(3)])); borrows = [1, 2, 3]; what = 'Cancel from the row: confirm, then working → attempting to cancel → canceled with timestamps.'; room = 'confirm and timeline side by side.'; break;
+    case 8: body = frame(stageBlocks(null), seq(vp, [sheetless(wide, stageBlocks(null), 'Modify · GOOGL', modifySheet(`<p class="sub">The belief was "GOOGL has run its course" at $355 — lowering the limit keeps the belief and admits the price.</p>`)), modifyResult()])); borrows = [1, 2, 4, 13]; what = 'Modify keeps the belief and names the price move as a chase; the result shows lineage (a1f3 ↻ replaced → c7e2 ◔ working).'; room = 'sheet and result side by side.'; break;
+    case 9: body = frame(stageBlocks('stock'), seq(vp, [
+        sheetless(wide, stageBlocks('stock'), 'Review · NVDA', review({ sentence: 'Buy 10 NVDA at a $221.38 limit · Day', cost: ['cost', '$2,213.80'], tif: 'Day', preset: 'limit at mid — RTH session', plan: 'belief: NVDA up modestly by 10/16 · stop 214.00 · target 232.00', warns: ['A limit at the mid may not fill; the market is 221.37 / 221.39 as of 10:04:20 AM ET.'] })),
+        statusCard({ status: 'working', word: 'working', line: 'BUY 10 NVDA LMT 221.38 · Day', note: 'id 9b2e · sent 10:04:31 · alerts armed at 214.00 and 232.00 from your belief' }),
+        celebration('Filled 10 @ 221.38 · a belief with a stop and a target', 'The structure had its max loss on the card and the plan was written before the order — that is what the ladder rewards. The fill notice repeats the belief so the exit is already framed.'),
+      ])); borrows = [3, 4, 13, 14, 18, 19, 20]; what = 'Review carries the belief as the plan line; then working; then a fill whose celebration cites the belief and the plan, not the trade.'; room = 'three states in a row.'; break;
+    case 10: body = frame(stageBlocks('vert', chain({ vp, picks: [{ k: '222.5', side: 'put', px: 'bid' }, { k: '217.5', side: 'put', px: 'ask' }], hint: 'both legs opened from the card' })), ticket({ rung: '401', sel: 'vert', html: `${draftBuilder()}${optionPreview('vert')}${payoffPh('put credit spread · max loss 356 · max profit 144')}${btn('Review order', 'wide')}` }, 'Sell the 222.5/217.5 put vertical', 'chain opened on both legs') + abType() + AB.belief()); borrows = [8, 6, 7, 9, 3, 4, 13]; reversals = [1481]; tk = true; what = 'The vertical card (rung 401, earned here) opens the chain on both legs; the builder prices at $1.44 between natural and mid, max loss $356 unavoidable.'; room = 'chain and builder side by side.'; break;
+  }
+  return { body: topbar('Trade', 'belief → structure') + `<div class="fbody">${body}</div>`, borrows, reversals, ticket: tk, what, room };
+}
+
+/* =====================================================================================
+   WORKBENCH — chain + chart are the workspace.  Borrows study rows 28 (a symbol picked in one
+   tool drives the rest; the ticket beside the chart on desktop), 29 (drag an order on the ladder
+   to replace; direction-vs-plan annotated), 6 (the chain as the leg picker), 9 (the payoff panel
+   from the same gesture), 1 + 2 (working orders as ladder bubbles + a list; honest cancel), 3 + 4
+   (Confirm-and-Send is where the warnings live; the sentence), 5 (quote header), 7 (PoP on the
+   ticket), 10 (position pill on the chart / P/L vocabulary), 12 (create opposite from a bubble),
+   13 + 14 (TIF, session default), 18 (celebration on plan adherence).  Reverses #1461 (the rail
+   leaves the docked ticket).  Phone = SectionSwitch (Chart · Chain · Orders) + the ticket as a sheet.
+   ===================================================================================== */
+function renderWorkbench(step, vp) {
+  const wide = vp === 1280;
+  const sym = [3, 6, 7, 8].includes(step) ? 'GOOGL' : 'NVDA';
+  const q = sym === 'GOOGL' ? { ...NVDA, sym: 'GOOGL', name: GOOGL.name, last: '351.33', chg: '+0.87', pct: '+0.25%', bid: '351.30', ask: '351.36' } : NVDA;
+  const ladder = (opts = {}) => {
+    const rows = sym === 'GOOGL'
+      ? [['356.00'], ['355.00', opts.replaced ? null : { s: 'sell', t: opts.attempt ? '⟳ SELL 39 · attempting' : opts.canceled ? null : 'SELL 39 LMT · GTC' }], ['354.00'], ['353.00'], ['352.50', opts.replaced ? { s: 'sell', t: 'SELL 39 LMT · c7e2' } : opts.drag ? { g: '↓ drop here → 352.50' } : null], ['352.00'], ['351.33', 'mkt'], ['351.00'], ['350.00'], ['345.57', { g: 'you · 86 sh avg' }]]
+      : [['224.00'], ['223.00'], ['222.50'], ['222.00'], ['221.39', 'mkt'], ['221.38', opts.limit ? { s: 'buy', t: 'BUY 10 LMT · Day' } : null], ['221.00'], ['220.00'], ['219.00']];
+    return blk('new', `<p class="bt">Price ladder · ${sym}</p><div class="ladder"><div class="lrow"><span class="lbl">buys</span><span class="p lbl">price</span><span class="lbl">sells</span></div>${rows.map(([p, o]) => `<div class="lrow${o === 'mkt' ? ' mkt' : ''}"><span>${o && o.s === 'buy' ? `<span class="bub">${o.t}</span>` : ''}</span><span class="p">${p}</span><span>${o && o.s === 'sell' && o.t ? `<span class="bub sell">${o.t}</span>` : o && o.g ? `<span class="ghost">${o.g}</span>` : ''}</span></div>`).join('')}</div><p class="foot">↕ drag a bubble to replace (re-confirms, never auto-sends) · ✕ on a bubble = attempt to cancel · tap a price = stage a limit there</p>`);
+  };
+  const chartB = () => blk('new', `<span class="chips">${['1D', '1W', '1M'].map((r, i) => `<span class="chip${i === 0 ? ' on' : ''}">${r}</span>`).join('')}</span><div class="hatch" style="height:${wide ? 150 : 90}px">${sym} chart · working orders drawn as pills · ${sym === 'GOOGL' ? 'your avg 345.57 · SELL 39 @ 355 flag' : 'no position · + on the axis stages a limit'}</div>`);
+  const workspace = (opts = {}) => wide
+    ? [symbolField(sym), quoteHeader(q, true), chartB(), sym === 'GOOGL' ? positions({ lotsOpen: opts.lots, selLot: opts.selLot }) : chain({ vp, picks: opts.picks })].join('')
+    : [symbolField(sym), quoteHeader(q), sectionSwitch(['Chart', 'Chain', 'Orders'], opts.section || 'Chain'), opts.section === 'Chart' ? chartB() : opts.section === 'Orders' ? ladder(opts) : sym === 'GOOGL' ? positions({ lotsOpen: opts.lots, selLot: opts.selLot }) : chain({ vp, picks: opts.picks })].join('');
+  const rung = r => `<span class="chip on">rung ${r} · earned</span>`;
+  const ticketT = (title, inner, meta, stageOpts = {}) => wide ? dock(title, inner, meta) : sheet(workspace(stageOpts), title, inner, meta);
+  const right = (t, lo = {}) => wide ? t + ladder(lo) + recentOrdersStrip(sym) : t;
+  const frame = (left, r) => wide ? cols(left, r, '1fr 400px') : r;
+  let body = '', borrows = [], reversals = [], tk = false, what = '', room = '';
+  const stockT = (o) => `${rung(o.side === 'Sell' ? '102' : '101')}${ticketNav('Stock', o.side)}${o.pos || ''}${stockFields(o)}${stockEst(o)}<span class="row">${field('Stop', '214.00', false, '90px')}${field('Target', '232.00', false, '90px')}</span>${btn('Confirm and send', 'wide')}`;
+  switch (step) {
+    case 1: body = frame(workspace({ section: 'Chart' }), right(ticketT('Ticket · NVDA', stockT({ side: 'Buy', qty: 10, type: 'Market' }), 'docked beside the chart', { section: 'Chart' })) + abType() + AB.rail()); borrows = [28, 5, 13, 14, 20]; reversals = [1461]; tk = true; what = 'Chart on the left, ticket docked at right (a sheet over the Chart section on the phone); Market picked, est. ≈ $2,214, TIF shown, stop and target on the ticket.'; room = 'chart, chain, ticket, ladder and the recent-orders strip all on one screen; on the phone they are sections and a sheet.'; break;
+    case 2: body = frame(workspace({ section: 'Chart' }), right(ticketT('Ticket · NVDA', stockT({ side: 'Buy', qty: 10, type: 'Limit', limit: NVDA.mid }), 'limit staged from the ladder', { section: 'Orders', limit: true }), { limit: true }) + abType() + AB.rail()); borrows = [28, 29, 5, 13, 14]; reversals = [1461]; tk = true; what = 'Tapping 221.38 on the ladder (or + on the chart axis) stages a limit there; the ticket shows Limit $221.38 with the anchors.'; room = 'the ladder sits under the ticket so the staged price and the field are one glance apart.'; break;
+    case 3: body = frame(workspace({ lots: true, selLot: 1 }), right(ticketT('Close lot 1 · GOOGL', stockT({ side: 'Sell', qty: 39, type: 'Limit', limit: '355.00', tif: 'GTC', maxNote: 'lot 1 · max 39 · cost 341.20', pos: wide ? '' : positions({ lotsOpen: true, selLot: 1 }) }), 'preset from the lot row', { lots: true, selLot: 1 })) + abType() + AB.rail()); borrows = [28, 10, 13, 14]; reversals = [1461]; tk = true; what = 'The GOOGL workspace shows the position with lots; "Close lot 1" presets Sell 39 · Limit $355.00 · GTC; the chart carries the avg-cost pill.'; room = 'position table in the workspace, ticket docked, ladder shows where 355 sits above the market.'; break;
+    case 4: body = frame(workspace({ picks: [{ k: '220', side: 'put', px: 'bid' }] }), right(ticketT('Ticket · NVDA option', `${rung('201')}${ticketNav('Option', 'Sell to open', 'Put')}${optionFields({ px: '0.94', anchor: 'bid' })}${optionPreview('csp')}${payoffPh('short 220 put · expiry + today curves · slices at 215 · 219.06 · 225')}${btn('Confirm and send', 'wide')}`, 'from the 220 put bid', { picks: [{ k: '220', side: 'put', px: 'bid' }] })) + abType() + AB.rail()); borrows = [6, 9, 7, 13, 16, 28]; reversals = [1461]; tk = true; what = 'The chain is the workspace; the 220 put bid (0.94) fills the docked ticket; the payoff panel opens from the same gesture (row 9).'; room = 'outer chain columns visible; payoff panel beside the chain rather than a sheet.'; break;
+    case 5: body = frame(workspace({ picks: [{ k: '222.5', side: 'call', px: 'ask' }] }), right(ticketT('Ticket · NVDA option', `${rung('302')}${ticketNav('Option', 'Buy to open', 'Call')}${optionFields({ px: '1.50', anchor: 'mid' })}${optionPreview('call')}${payoffPh('long 222.5 call · breakeven 224.00')}${btn('Confirm and send', 'wide')}`, 'from the 222.5 call ask', { picks: [{ k: '222.5', side: 'call', px: 'ask' }] })) + abType() + AB.rail()); borrows = [6, 9, 7, 13, 14, 16, 28]; reversals = [1461]; tk = true; what = 'The 222.5 call ask (1.57) fills the ticket; the default limit is the mid $1.50 (A/B); breakeven $224.00, max loss $150.'; room = 'as step 4.'; break;
+    case 6: body = frame(workspace({ section: 'Orders' }), (wide ? ladder() : '') + ordersTable({ orders: [ORD_GOOGL], title: 'Working orders', scope: 'ladder bubbles + this list are one model', actions: true }) + blk('new', `<span class="lbl">Direction vs plan</span><p class="sub">SELL 39 @ 355.00 is your plan target (set 09-18). Dragging it down chases; dragging a stop is disciplined. Each drag is logged with its direction.</p>`)); if (!wide) body = workspace({ section: 'Orders' }) + ordersTable({ orders: [ORD_GOOGL], title: 'Working orders', scope: 'same model as the ladder', actions: true }); borrows = [1, 2, 29, 12, 13]; what = 'Working orders as a bubble on the price ladder (SELL 39 LMT · GTC above the market at 351.33) and as a list — one model, two views; the direction-vs-plan note sits beside them.'; room = 'ladder and list side by side with the chart; on the phone the ladder is the Orders section.'; break;
+    case 7: body = frame(workspace({ section: 'Orders', attempt: true }), seq(vp, [(wide ? ladder({ attempt: true }) : '') + blk('new', `<span class="lbl">✕ on the bubble</span>${cancelConfirm()}`), cancelTimeline(3)])); borrows = [1, 2, 3, 29]; what = 'The bubble\'s ✕ asks first, then the bubble itself reads ⟳ attempting until the broker confirms, then leaves the ladder.'; room = 'ladder state and the timeline side by side.'; break;
+    case 8: body = frame(workspace({ section: 'Orders', drag: true }), seq(vp, [(wide ? ladder({ drag: true }) : '') + blk('new', `<span class="lbl">Drag 355.00 → 352.50 · re-confirms</span>${modifySheet()}`), (wide ? ladder({ replaced: true }) : '') + modifyResult()])); borrows = [1, 2, 4, 29, 13]; what = 'Dragging the bubble to 352.50 opens the confirm with the direction named (a chase against the 355 target); after Replace the ladder shows the new bubble and the list shows lineage.'; room = 'before and after ladders side by side.'; break;
+    case 9: body = frame(workspace({ section: 'Chart', limit: true }), seq(vp, [
+        blk('new', `<span class="lbl">Confirm and send · edit · send · save</span>${warn('A limit at the mid may not fill; the market is 221.37 / 221.39 as of 10:04:20 AM ET.')}<p class="sentence">Buy 10 NVDA at a $221.38 limit · Day</p>${kv([['Est. cost', '$2,213.80'], ['Time in force', 'Day'], ['Preset', 'limit at mid · RTH'], ['Plan', 'stop 214.00 · target 232.00'], ['Commission', '$0 · paper']])}${asof()}<span class="row">${btn('Edit', 'ghost')}${btn('Save', 'ghost')}${btn('Send')}</span><p class="foot">no auto-send for humans on paper — the dialog is where the warnings live</p>`),
+        (wide ? ladder({ limit: true }) : '') + statusCard({ status: 'working', word: 'working', line: 'BUY 10 NVDA LMT 221.38 · Day', note: 'id 9b2e · 10:04:31 · drawn on the ladder and the chart · alerts at 214.00 / 232.00' }),
+        celebration('Filled 10 @ 221.38 · plan followed', 'Stop and target were on the ticket before Send; the fill pill on the chart now carries them. The reward is the discipline, not the fill.'),
+      ])); borrows = [3, 4, 13, 14, 18, 19, 20]; what = 'thinkorswim\'s Confirm-and-Send frame: edit · save · send with every warning; then the order as a ladder bubble and a status card; then a fill whose celebration explains itself.'; room = 'the three states in a row, the ladder beside the status.'; break;
+    case 10: body = frame(workspace({ picks: [{ k: '222.5', side: 'put', px: 'bid' }, { k: '217.5', side: 'put', px: 'ask' }] }), right(ticketT('Ticket · NVDA spread', `${rung('401')}${ticketNav('Spread', 'Sell to open')}${draftBuilder()}${optionPreview('vert')}${payoffPh('put credit spread · max loss 356 · max profit 144 · slices 217.5 · 221.06 · 222.5')}${btn('Confirm and send', 'wide')}`, 'multi-select on the chain', { picks: [{ k: '222.5', side: 'put', px: 'bid' }, { k: '217.5', side: 'put', px: 'ask' }] })) + abType() + AB.rail()); borrows = [6, 9, 7, 3, 4, 13, 28]; reversals = [1461]; tk = true; what = 'Two taps on the chain (222.5 put bid, 217.5 put ask) are the legs; the docked builder prices the vertical at $1.44, max loss $356 on screen, payoff beside it.'; room = 'chain and builder side by side, both legs highlighted.'; break;
+  }
+  return { body: topbar('Trade', `${sym} · workspace`) + `<div class="fbody">${body}</div>`, borrows, reversals, ticket: tk, what, room };
+}
+
+/* =====================================================================================
+   REGISTER — orders and positions are the home.  Borrows study rows 1 + 2 (working orders with
+   cancel and replace, honest states, grouped with counts as thinkorswim's Today's Trade Activity),
+   10 (Position Statement vocabulary), 11 (roll as one ticket from the row — disabled with its
+   reason until P3), 12 (create opposite / duplicate from a row), 3 + 4 (review sentence, warnings
+   at confirm), 5 (quote header inside the drawer), 6 + 7 (the chain inside the drawer, PoP on the
+   ticket), 13 + 14 (TIF, session default), 18 (celebration on plan adherence).  Keeps the
+   MilestoneStrip in the drawer head.  Reverses #674 (orders are the home, not a panel on Trade)
+   and #1481 (the chain opens second, after the row).  The ticket is a drawer (right at 1280, a
+   sheet at 390).
+   ===================================================================================== */
+function renderRegister(step, vp) {
+  const wide = vp === 1280;
+  const newRow = `<tr class="sel"><td colspan="5">＋ New order — starts every trade from this row (Stock · Option · Spread)</td></tr>`;
+  const orders = (list, opts = {}) => ordersTable({ orders: list, title: 'Orders', groups: true, actions: true, scope: opts.scope || 'the home' }).replace('<tbody>', '<tbody>' + (opts.noNew ? '' : newRow));
+  const home = (opts = {}) => [orders(opts.orders || [ORD_GOOGL], opts), positions({ lotsOpen: opts.lots, selLot: opts.selLot, actions: true, extra: opts.posExtra || '' })].join('');
+  const drawer = (title, inner, meta, homeOpts = {}) => wide ? dock(title, milestoneStrip(homeOpts.rung || '101', true) + inner, meta, 'dock drawer') : sheet(home(homeOpts), title, milestoneStrip(homeOpts.rung || '101', true) + inner, meta);
+  const frame = (left, r) => wide ? cols(left, r, '1fr 420px') : r;
+  const stockD = o => `${symbolField(o.sym || 'NVDA')}${quoteHeader(o.q || NVDA, wide)}${ticketNav('Stock', o.side || 'Buy')}${stockFields(o)}${stockEst(o)}<span class="row">${field('Stop', o.side === 'Sell' ? '—' : '214.00', o.side === 'Sell', '90px')}${field('Target', o.side === 'Sell' ? '—' : '232.00', o.side === 'Sell', '90px')}</span>${btn('Review order', 'wide')}`;
+  let body = '', borrows = [], reversals = [], tk = false, what = '', room = '';
+  switch (step) {
+    case 1: body = frame(home(), drawer('New order · stock', stockD({ type: 'Market' }), 'drawer from the + New row') + abType()); borrows = [1, 10, 5, 13, 14]; tk = true; what = 'The register (orders grouped with counts, positions with lots and actions) is the home; "+ New order" opens the drawer: symbol, quote, Buy 10 at market.'; room = 'the drawer sits at right over a stable register; on the phone it is a sheet.'; break;
+    case 2: body = frame(home(), drawer('New order · stock', stockD({ type: 'Limit', limit: NVDA.mid }), 'drawer') + abType()); borrows = [1, 10, 5, 13, 14]; tk = true; what = 'Same drawer, limit at mid $221.38 (A/B).'; room = 'as step 1.'; break;
+    case 3: body = frame(home({ lots: true, selLot: 1 }), drawer('Close lot 1 · GOOGL', stockD({ sym: 'GOOGL', q: { ...NVDA, sym: 'GOOGL', name: GOOGL.name, last: '351.33', chg: '+0.87', pct: '+0.25%', bid: '351.30', ask: '351.36' }, side: 'Sell', qty: 39, type: 'Limit', limit: '355.00', tif: 'GTC', maxNote: 'lot 1 · max 39 · cost 341.20' }), 'from the lot row', { lots: true, selLot: 1, rung: '102' }) + abType()); borrows = [10, 12, 13, 14, 1]; tk = true; what = 'GOOGL\'s row opens its lots inline; "Close lot" on lot 1 opens the drawer preset to Sell 39 · Limit $355.00 · GTC. Exits carry no plan fields.'; room = 'lots stay open in the register beside the drawer.'; break;
+    case 4: body = frame(home(), drawer('New order · option', `${symbolField()}${quoteHeader(NVDA, wide)}${ticketNav('Option', 'Sell to open', 'Put')}${chain({ vp, picks: [{ k: '220', side: 'put', px: 'bid' }], hint: 'inside the drawer · opens after side and type' })}${optionFields({ px: '0.94', anchor: 'bid' })}${optionPreview('csp')}${btn('Review order', 'wide')}`, 'chain opens inside the drawer', { rung: '201' }) + abType() + AB.rowfirst()); borrows = [1, 6, 7, 13, 16]; reversals = [1481]; tk = true; what = 'From "+ New": Option · Sell to open · Put, THEN the chain opens inside the drawer; the 220 put bid fills the ticket ($94 collected, $22,000 set aside).'; room = 'the drawer is wide enough for the chain\'s outer columns.'; break;
+    case 5: body = frame(home(), drawer('New order · option', `${symbolField()}${quoteHeader(NVDA, wide)}${ticketNav('Option', 'Buy to open', 'Call')}${chain({ vp, picks: [{ k: '222.5', side: 'call', px: 'ask' }], hint: 'inside the drawer' })}${optionFields({ px: '1.50', anchor: 'mid' })}${optionPreview('call')}${btn('Review order', 'wide')}`, 'chain inside the drawer', { rung: '302' }) + abType() + AB.rowfirst()); borrows = [1, 6, 7, 13, 14, 16]; reversals = [1481]; tk = true; what = 'Buy to open · Call, then the chain; the 222.5 call ask fills the ticket at the mid $1.50 (A/B).'; room = 'as step 4.'; break;
+    case 6: body = home() + AB.home(); if (wide) body = cols(home(), AB.home() + blk('new', `<span class="lbl">Counts</span>${kv([['Working', '1'], ['Filled today', '0'], ['Canceled · replaced', '0'], ['Positions', '1 · GOOGL 86 sh']])}`), '1fr 420px'); borrows = [1, 2, 10, 12, 13]; reversals = [674]; what = 'The home itself: Orders grouped Working (1) · Filled today (0) · Canceled (0), each row with Cancel · Modify · Create opposite; Positions beneath with Close · Create opposite · Duplicate · Roll (disabled, explained).'; room = 'counts and the A/B at right; the register keeps its full width.'; break;
+    case 7: body = frame(home({ orders: [{ ...ORD_GOOGL, status: 'attempting', word: 'attempting to cancel', acts: ['~Cancel', '~Modify'] }] }), seq(vp, [blk('new', `<span class="lbl">Cancel · inline on the row</span>${cancelConfirm()}`), cancelTimeline(3), orders([{ ...ORD_GOOGL, status: 'canceled', word: 'canceled · verified 10:04:23', acts: ['Duplicate', 'Create opposite'] }], { scope: 'after · moved to Canceled (1)', noNew: true })]) + AB.home()); if (!wide) body = home({ orders: [{ ...ORD_GOOGL, status: 'attempting', word: 'attempting to cancel', acts: ['~Cancel', '~Modify'] }] }) + cancelTimeline(3) + AB.home(); borrows = [1, 2, 3, 12]; reversals = [674]; what = 'Cancel is a row action: the row reads ⟳ attempting to cancel (actions disabled) until the broker verifies, then moves to the Canceled group with Duplicate as its action.'; room = 'confirm, timeline and the after-state in a row.'; break;
+    case 8: body = frame(home(), seq(vp, [drawer('Modify · a1f3', modifySheet(), 'drawer preloaded from the row'), modifyResult()]) + AB.home()); borrows = [1, 2, 4, 13]; reversals = [674]; what = 'Modify is a row action that preloads the drawer; after Replace the register shows a1f3 ↻ replaced → c7e2 and c7e2 ◔ working.'; room = 'drawer and result side by side.'; break;
+    case 9: body = frame(home({ orders: [ORD_GOOGL] }), seq(vp, [
+        drawer('Review', review({ sentence: 'Buy 10 NVDA at a $221.38 limit · Day', cost: ['cost', '$2,213.80'], tif: 'Day', preset: 'limit at mid · RTH', plan: 'stop 214.00 · target 232.00', warns: ['A limit at the mid may not fill; the market is 221.37 / 221.39 as of 10:04:20 AM ET.'] }), 'drawer'),
+        orders([ORD_NVDA, ORD_GOOGL], { scope: 'a new Working row appears', noNew: true }),
+        celebration('Filled 10 @ 221.38 · plan followed', 'The NVDA row moves from Working to Filled today and a position row appears with its stop and target. The reward is that they were written first.'),
+      ])); borrows = [3, 4, 13, 14, 18, 19, 1]; what = 'Review in the drawer; Send adds a ◔ working row to the register; the fill moves it to Filled today and adds a position — the celebration explains the plan, not the trade.'; room = 'three states in a row.'; break;
+    case 10: body = frame(home(), drawer('New order · spread', `${symbolField()}${quoteHeader(NVDA, wide)}${ticketNav('Spread', 'Sell to open')}${chain({ vp, picks: [{ k: '222.5', side: 'put', px: 'bid' }, { k: '217.5', side: 'put', px: 'ask' }], hint: 'multi-select inside the drawer' })}${draftBuilder()}${optionPreview('vert')}${btn('Review order', 'wide')}`, 'chain inside the drawer', { rung: '401' }) + abType() + AB.rowfirst() + (wide ? '' : '') + blk('new', `<span class="lbl">After submit · the order as one row with two leg sub-rows</span>${ordersTable({ orders: [{ id: 'e41d', side: 'SELL', qty: 1, sym: 'NVDA 10/16 222.5/217.5 P vertical', leg: '└ sell 222.5 P · buy 217.5 P · mleg', type: 'LMT net cr', px: '1.44', tif: 'Day', placed: '2026-09-21 10:05:10', status: 'working', acts: ['Cancel', 'Modify', '~Roll'] }], title: 'Orders', actions: true })}<p class="foot">Roll ⊘ opens after P3 (mleg execution) — visible, disabled, explained</p>`)); borrows = [1, 6, 7, 3, 4, 11, 13]; reversals = [1481]; tk = true; what = 'Spread from "+ New": the chain inside the drawer takes two taps; the builder prices at $1.44, max loss $356; after submit the register shows one row with two leg sub-rows and Roll disabled with its reason.'; room = 'the drawer carries the chain with outer columns; the after-state sits beneath the A/B.'; break;
+  }
+  return { body: topbar('Trade', 'the register') + `<div class="fbody">${body}</div>`, borrows, reversals, ticket: tk, what, room };
+}
+
+/* ---------- PAGE: state, render, annotation, hash, keyboard ---------- */
+const RENDER = { arcade: renderArcade, outlook: renderOutlook, workbench: renderWorkbench, register: renderRegister };
+const state = { shape: 'arcade', step: 1, vp: 390 };
+
+function annotHtml(r) {
+  const borrows = [...new Set(r.borrows)].map(n => `<li><span class="rowno">study row ${n}</span> · ${ROWS[n][0]} <span class="sub">(${ROWS[n][1]})</span></li>`).join('');
+  const rev = r.reversals.map(n => `<li>${CALLS[n].id} “${CALLS[n].quote}” — <span class="flag">reverses your call of ${CALLS[n].date}</span> · A/B on the frame</li>`).join('');
+  return `<h3>${SHAPES[state.shape]} · ${state.step} of 10 — ${STEPS[state.step - 1]}</h3><p>${r.what}</p>
+    <h4>Borrows</h4><ul>${borrows}</ul>
+    <h4>Reverses</h4>${rev ? `<ul>${rev}</ul>` : '<p class="sub">nothing Eric-authored on this frame</p>'}
+    ${r.ticket ? `<h4>Default order type</h4><p><span class="flag">#3299 · your call</span> — A: limit at mid $221.38 (market as opt-out) · B: market (limit as opt-in). A/B on the frame.</p>` : ''}
+    <h4>${state.vp === 390 ? '390 is primary' : '1280 adds room'}</h4><p>${state.vp === 390 ? 'What survives this frame is the curated set; the 1280 frame adds room for the same things, never a new concept.' : r.room}</p>`;
+}
+function render() {
+  const r = RENDER[state.shape](state.step, state.vp);
+  const frame = document.getElementById('frame');
+  const wide = state.vp === 1280;
+  frame.style.setProperty('--fw', wide ? '1280px' : '390px');
+  frame.style.setProperty('--fh', wide ? '800px' : '844px');
+  frame.dataset.fold = wide ? '800' : '844';
+  frame.innerHTML = r.body;
+  document.getElementById('stage').dataset.vp = String(state.vp);
+  document.getElementById('annot').innerHTML = annotHtml(r);
+  document.getElementById('stepname').innerHTML = `<b>${state.step} · ${STEPS[state.step - 1]}</b> — ${SHAPES[state.shape]} at ${state.vp}${wide ? '' : ' (primary)'}`;
+  document.querySelectorAll('[data-shape]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shape === state.shape)));
+  document.querySelectorAll('[data-step]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.step) === state.step)));
+  document.querySelectorAll('[data-vp]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(Number(b.dataset.vp) === state.vp)); });
+  const hash = `#${state.shape}/${state.step}/${state.vp}`;
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+  fit();
+}
+/* Scale the frame down to fit the wrap (CSS zoom keeps layout math honest); the caption says the scale. */
+function fit() {
+  const wrap = document.getElementById('framewrap'), frame = document.getElementById('frame');
+  const fw = state.vp === 1280 ? 1280 : 390;
+  const z = Math.min(1, Math.max(0.25, (wrap.clientWidth - 2) / fw));
+  frame.style.zoom = String(z);
+  document.getElementById('framecap').innerHTML = `<b>${SHAPES[state.shape]}</b> · ${fw} × ${state.vp === 1280 ? 800 : 844}${z < 1 ? ` · shown at ${Math.round(z * 100)}%` : ''} · greybox · <span class="mono">#${state.shape}/${state.step}/${state.vp}</span>`;
+}
+function readHash() {
+  const m = /^#(arcade|outlook|workbench|register)\/(\d{1,2})\/(390|1280)$/.exec(location.hash);
+  if (!m) return false;
+  state.shape = m[1]; state.step = Math.min(10, Math.max(1, Number(m[2]))); state.vp = Number(m[3]);
+  return true;
+}
+
+// build the ten step buttons
+(() => {
+  const g = document.getElementById('stepgroup');
+  const next = g.querySelector('[data-nav="1"]');
+  STEPS.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'sw step'; b.dataset.step = String(i + 1); b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', `Step ${i + 1}: ${s}`); b.title = s; b.textContent = String(i + 1); g.insertBefore(b, next); });
+  document.getElementById('journeys').innerHTML = STEPS.map((s, i) => `<li><a href="#${state.shape}/${i + 1}/390">${s}</a></li>`).join('');
+})();
+
+document.getElementById('switchers').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.shape) state.shape = b.dataset.shape;
+  else if (b.dataset.step) state.step = Number(b.dataset.step);
+  else if (b.dataset.vp) state.vp = Number(b.dataset.vp);
+  else if (b.dataset.nav) state.step = ((state.step - 1 + Number(b.dataset.nav) + 10) % 10) + 1;
+  render();
+});
+// keyboard: ← → inside a group moves the selection (roving); buttons are natively Enter/Space operable
+document.getElementById('switchers').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const g = e.target.closest('[data-group]'); if (!g) return;
+  const d = e.key === 'ArrowRight' ? 1 : -1;
+  if (g.dataset.group === 'shape') { const k = Object.keys(SHAPES); state.shape = k[(k.indexOf(state.shape) + d + 4) % 4]; }
+  else if (g.dataset.group === 'step') state.step = ((state.step - 1 + d + 10) % 10) + 1;
+  else state.vp = state.vp === 390 ? 1280 : 390;
+  render();
+  const cur = g.querySelector('[aria-pressed="true"]'); if (cur) cur.focus();
+  e.preventDefault();
+});
+window.addEventListener('hashchange', () => { if (readHash()) render(); });
+window.addEventListener('resize', fit);
+document.getElementById('journeys').addEventListener('click', e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); location.hash = a.getAttribute('href').replace(/^#\w+/, '#' + state.shape); });
+readHash();
+render();
+</script>
+</body>
+</html>
