@@ -307,6 +307,34 @@
   padding: 5px 8px;
   font-size: var(--text-md);
 }
+/* Roll as one ticket (#3407 P3 slice 3): a second line under a held contract's row — the
+   target expiration and strike, Day / GTC, the two legs spelled out, then Review → Confirm.
+   Spans the close row's grid so it reads as the row's own drawer, not a sibling contract. */
+.tkt-roll-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: -4px 0 8px 10px;
+  padding: 8px 0 8px 12px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+.tkt-roll-fields {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.tkt-roll-fields .field select {
+  padding: 5px 8px;
+  font-size: var(--text-md);
+}
+.tkt-roll-line {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
 /* Position Statement vocabulary on the option positions card (#3407 P2 slice 3): DTE and an
    ITM/OTM word chip under the name, the holding's greeks in the num register; ITM carries a
    border weight, never hue alone. */

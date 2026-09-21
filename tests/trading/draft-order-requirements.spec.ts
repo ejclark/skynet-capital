@@ -72,6 +72,21 @@ describe("draftRequirements", () => {
     expect(cash).toBe((200 - 180) * 100 + (150 - 130) * 100);
   });
 
+  it("demands nothing for a sell that closes a contract the account holds long (a roll's first leg)", () => {
+    const sellToClose = addLeg(emptyDraft(), SHORT_CALL);
+    const bare = draftRequirements(sellToClose);
+    expect(bare.sharesByUnderlying.get("NVDA")).toBe(100);
+    const closing = draftRequirements(sellToClose, new Map([["NVDA260918C00180000", 1]]));
+    expect(closing.cash).toBe(0);
+    expect(closing.sharesByUnderlying.size).toBe(0);
+    // Holding fewer than the leg sells is still a new short for the whole leg.
+    const partial = draftRequirements(
+      addLeg(emptyDraft(), { ...SHORT_CALL, contracts: 2 }),
+      new Map([["NVDA260918C00180000", 1]]),
+    );
+    expect(partial.sharesByUnderlying.get("NVDA")).toBe(200);
+  });
+
   it("has nothing to demand from an empty draft", () => {
     const { cash, sharesByUnderlying } = draftRequirements(emptyDraft());
 

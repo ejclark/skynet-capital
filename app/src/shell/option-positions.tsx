@@ -12,6 +12,7 @@ import {
   submitOption,
 } from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
+import { RollRow } from "./roll-row";
 
 /**
  * CLOSING FROM THE TICKET (#738 phase 10b) — the capability the legacy blotter's Close posts
@@ -98,6 +99,8 @@ function CloseRow({
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
+  // Roll as one ticket (#3407 P3 slice 3) — a second row under this one, opened on demand.
+  const [rolling, setRolling] = useState(false);
   const priceId = useId();
   const parsedLimit = Number(limitPrice.trim());
   const draft: OptionDraft = {
@@ -133,88 +136,103 @@ function CloseRow({
   };
 
   return (
-    <div className="tkt-close-row">
-      <span className="tkt-close-main">
-        {position.display} <small className="num">{position.symbol}</small>
-        {statement ? <StatementLine row={statement} /> : null}
-      </span>
-      <span className="num">{position.quantity}</span>
-      <span className="num">{position.value}</span>
-      <span className="tkt-close-how">
-        <fieldset className="toggle-group tkt-close-type" aria-label="Close order type">
-          {(["market", "limit"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              aria-pressed={orderType === type}
-              disabled={state.step === "submitting" || state.step === "done"}
-              onClick={() => {
-                setOrderType(type);
-                disarm();
-              }}
-            >
-              {type === "market" ? "Market" : "Limit"}
-            </button>
-          ))}
-        </fieldset>
-        {orderType === "limit" ? (
-          <span className="field tkt-close-price">
-            <label htmlFor={priceId} className="visually-hidden">
-              Limit price per share
-            </label>
-            <input
-              id={priceId}
-              type="number"
-              min={0}
-              step={0.01}
-              inputMode="decimal"
-              value={limitPrice}
-              placeholder={`≈ ${position.price}`}
-              disabled={state.step === "submitting" || state.step === "done"}
-              onChange={(e) => {
-                setLimitPrice(e.target.value);
-                disarm();
-              }}
-            />
-          </span>
-        ) : null}
-      </span>
-      {state.step === "idle" || state.step === "error" ? (
-        <button type="button" className="btn mc-btn" onClick={() => void review()}>
-          Close…
-        </button>
-      ) : null}
-      {state.step === "reviewing" ? <span className="tkt-close-note">reviewing…</span> : null}
-      {state.step === "reviewed" ? (
-        state.preview.ok ? (
-          <button type="button" className="btn btn-primary mc-btn" onClick={() => void confirm()}>
-            Confirm — close {state.preview.contracts}
-            {state.preview.orderType === "limit" && state.preview.limitPrice !== undefined
-              ? ` · limit ${money(state.preview.limitPrice)}`
-              : " · market"}
-            {tifLabel(state.preview.timeInForce) ? ` · ${tifLabel(state.preview.timeInForce)}` : ""}
-            {state.preview.estNotional !== undefined
-              ? ` · est ${money(state.preview.estNotional)}`
-              : ""}
+    <>
+      <div className="tkt-close-row">
+        <span className="tkt-close-main">
+          {position.display} <small className="num">{position.symbol}</small>
+          {statement ? <StatementLine row={statement} /> : null}
+        </span>
+
+        <span className="num">{position.quantity}</span>
+        <span className="num">{position.value}</span>
+        <span className="tkt-close-how">
+          <fieldset className="toggle-group tkt-close-type" aria-label="Close order type">
+            {(["market", "limit"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                aria-pressed={orderType === type}
+                disabled={state.step === "submitting" || state.step === "done"}
+                onClick={() => {
+                  setOrderType(type);
+                  disarm();
+                }}
+              >
+                {type === "market" ? "Market" : "Limit"}
+              </button>
+            ))}
+          </fieldset>
+          {orderType === "limit" ? (
+            <span className="field tkt-close-price">
+              <label htmlFor={priceId} className="visually-hidden">
+                Limit price per share
+              </label>
+              <input
+                id={priceId}
+                type="number"
+                min={0}
+                step={0.01}
+                inputMode="decimal"
+                value={limitPrice}
+                placeholder={`≈ ${position.price}`}
+                disabled={state.step === "submitting" || state.step === "done"}
+                onChange={(e) => {
+                  setLimitPrice(e.target.value);
+                  disarm();
+                }}
+              />
+            </span>
+          ) : null}
+        </span>
+        {state.step === "idle" || state.step === "error" ? (
+          <button type="button" className="btn mc-btn" onClick={() => void review()}>
+            Close…
           </button>
-        ) : (
-          <span className="tkt-close-note gate-refusal">✕ {state.preview.refusals[0]}</span>
-        )
-      ) : null}
-      {state.step === "submitting" ? <span className="tkt-close-note">closing…</span> : null}
-      {state.step === "done" ? (
-        state.result.ok ? (
-          <span className="tkt-close-note gate-ok">
-            order {state.result.orderId} {state.result.status}
-          </span>
-        ) : (
-          <span className="tkt-close-note gate-refusal">✕ {state.result.refusals[0]}</span>
-        )
-      ) : null}
-      {state.step === "error" ? (
-        <span className="tkt-close-note gate-refusal">{state.message}</span>
-      ) : null}
-    </div>
+        ) : null}
+        {state.step === "reviewing" ? <span className="tkt-close-note">reviewing…</span> : null}
+        {state.step === "reviewed" ? (
+          state.preview.ok ? (
+            <button type="button" className="btn btn-primary mc-btn" onClick={() => void confirm()}>
+              Confirm — close {state.preview.contracts}
+              {state.preview.orderType === "limit" && state.preview.limitPrice !== undefined
+                ? ` · limit ${money(state.preview.limitPrice)}`
+                : " · market"}
+              {tifLabel(state.preview.timeInForce)
+                ? ` · ${tifLabel(state.preview.timeInForce)}`
+                : ""}
+              {state.preview.estNotional !== undefined
+                ? ` · est ${money(state.preview.estNotional)}`
+                : ""}
+            </button>
+          ) : (
+            <span className="tkt-close-note gate-refusal">✕ {state.preview.refusals[0]}</span>
+          )
+        ) : null}
+        {state.step === "submitting" ? <span className="tkt-close-note">closing…</span> : null}
+        {state.step === "done" ? (
+          state.result.ok ? (
+            <span className="tkt-close-note gate-ok">
+              order {state.result.orderId} {state.result.status}
+            </span>
+          ) : (
+            <span className="tkt-close-note gate-refusal">✕ {state.result.refusals[0]}</span>
+          )
+        ) : null}
+        {state.step === "error" ? (
+          <span className="tkt-close-note gate-refusal">{state.message}</span>
+        ) : null}
+        <button
+          type="button"
+          className="btn mc-btn"
+          aria-expanded={rolling}
+          disabled={state.step === "submitting" || state.step === "done"}
+          onClick={() => setRolling((open) => !open)}
+        >
+          Roll…
+        </button>
+      </div>
+      {rolling ? <RollRow deskId={deskId} position={position} onFilled={onFilled} /> : null}
+    </>
   );
 }
 

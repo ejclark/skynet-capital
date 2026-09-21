@@ -1,6 +1,7 @@
 import type { DraftOrder, DraftVerdict } from "./draft-order.js";
 import { draftRequirements } from "./draft-order-requirements.js";
 import { heldShares } from "./option-economics.js";
+import { parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 
 /**
@@ -22,7 +23,7 @@ export function validateDraftAccount(
   context: DraftAccountContext,
 ): DraftVerdict {
   const refusals: string[] = [];
-  const { cash, sharesByUnderlying } = draftRequirements(draft);
+  const { cash, sharesByUnderlying } = draftRequirements(draft, heldContracts(context));
 
   if (cash > context.cash) {
     refusals.push(
@@ -39,4 +40,14 @@ export function validateDraftAccount(
   }
 
   return { ok: refusals.length === 0, refusals, warnings: [] };
+}
+
+/** OCC symbol → long contracts held, so a sell that closes one is not read as a new short. */
+function heldContracts(context: DraftAccountContext): ReadonlyMap<string, number> {
+  const held = new Map<string, number>();
+  for (const position of context.positions) {
+    if (position.quantity <= 0 || !parseOccSymbol(position.symbol)) continue;
+    held.set(position.symbol.toUpperCase(), position.quantity);
+  }
+  return held;
 }

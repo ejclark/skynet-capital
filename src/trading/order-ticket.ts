@@ -312,4 +312,4 @@ export function previewClose(
  * that quietly does something else would not be.
  */
 export const ROLL_UNAVAILABLE_REASON =
-  "Rolling closes one options contract and opens another as a single atomic order. That combined order isn't built yet — close the position here, then open the new strike/expiry from the Trade ticket.";
+  "Rolling closes one options contract and opens another as a single atomic order. Roll from the Trade page's Option positions card — this blotter only closes.";
