@@ -140,6 +140,22 @@ type GreekKey = (typeof GREEK_KEYS)[number];
 /** The `greeks` block of a snapshot, before any of it is trusted. */
 type RawGreeks = Partial<Record<GreekKey, unknown>>;
 
+/** One raw snapshot from the data host, before any field is trusted. */
+interface RawSnapshot {
+  readonly latestQuote?: { bp?: unknown; ap?: unknown };
+  readonly greeks?: RawGreeks;
+  readonly impliedVolatility?: unknown;
+  readonly dailyBar?: { v?: unknown };
+}
+
+/** A held contract's snapshot, every field present only when the feed quoted it. */
+export interface ContractSnapshot {
+  readonly bid?: number;
+  readonly ask?: number;
+  readonly greeks?: Partial<Record<GreekKey, number>>;
+  readonly impliedVol?: number;
+}
+
 /**
  * Parse one greek. Unlike `num`, zero and negatives are legitimate here (a deep-OTM gamma, a put's
  * delta, any long option's theta), so finiteness is the only gate. Everything that is not a number
@@ -424,6 +440,46 @@ export class AlpacaOptionsClient {
       position_intent: params.positionIntent,
     });
     return ensureOk<AlpacaOrder>(response);
+  }
+
+  /**
+   * One snapshot per held contract (#3407 P2 slice 3) — bid/ask, greeks and the feed's own
+   * implied vol, keyed by OCC symbol, through the multi-symbol snapshots endpoint (one call for
+   * the whole book). Fail-soft: no data transport, a non-2xx or a throw all yield an empty map,
+   * and the view names every contract it could not cover. Symbols are chunked to stay under the
+   * endpoint's URL limits.
+   */
+  async getContractSnapshots(
+    occSymbols: readonly string[],
+  ): Promise<Map<string, ContractSnapshot>> {
+    const out = new Map<string, ContractSnapshot>();
+    if (!this.data || occSymbols.length === 0) return out;
+    const CHUNK = 100;
+    for (let i = 0; i < occSymbols.length; i += CHUNK) {
+      const chunk = occSymbols.slice(i, i + CHUNK);
+      try {
+        const response = await this.data.get(
+          `/v1beta1/options/snapshots?symbols=${encodeURIComponent(chunk.join(","))}&feed=indicative`,
+        );
+        if (response.status < 200 || response.status >= 300) continue;
+        const body = response.body as { snapshots?: Record<string, RawSnapshot> } | null;
+        for (const [symbol, snap] of Object.entries(body?.snapshots ?? {})) {
+          const greeks = greeksOf(snap.greeks);
+          const bid = price0(snap.latestQuote?.bp);
+          const ask = num(snap.latestQuote?.ap);
+          const impliedVol = num(snap.impliedVolatility);
+          out.set(symbol, {
+            ...(bid !== undefined ? { bid } : {}),
+            ...(ask !== undefined ? { ask } : {}),
+            ...(Object.keys(greeks).length > 0 ? { greeks } : {}),
+            ...(impliedVol !== undefined ? { impliedVol } : {}),
+          });
+        }
+      } catch {
+        // fail-soft: this chunk stays uncovered
+      }
+    }
+    return out;
   }
 
   /** Indicative bid/ask/greeks from the data host, merged onto the chain. Fail-soft. */

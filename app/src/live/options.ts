@@ -164,6 +164,49 @@ export const fetchChain = (
     }`,
   );
 
+/** One held contract with the Position Statement vocabulary (#3407 P2 slice 3) — mirrors the
+ *  server's `OptionPositionRow`; every optional field absent means the feed didn't quote it. */
+export interface OptionPositionRow {
+  readonly symbol: string;
+  readonly display: string;
+  readonly underlying: string;
+  readonly type: "call" | "put";
+  readonly strike: number;
+  readonly expiration: string;
+  readonly daysToExpiry: number;
+  readonly contracts: number;
+  readonly inTheMoney?: boolean;
+  readonly spot?: number;
+  readonly greeks?: { delta?: number; gamma?: number; theta?: number; vega?: number };
+  readonly positionGreeks?: { delta?: number; gamma?: number; theta?: number; vega?: number };
+  readonly impliedVol?: number;
+  readonly bid?: number;
+  readonly ask?: number;
+}
+
+export interface OptionBookGreeks {
+  readonly delta: number;
+  readonly gamma: number;
+  readonly theta: number;
+  readonly vega: number;
+  readonly covered: number;
+  readonly total: number;
+  readonly uncovered: readonly string[];
+}
+
+export type OptionPositions =
+  | {
+      readonly available: true;
+      readonly asOf: string;
+      readonly rows: readonly OptionPositionRow[];
+      readonly book: OptionBookGreeks;
+      readonly representative: boolean;
+    }
+  | { readonly available: false; readonly reason: "unlinked"; readonly rows: readonly [] };
+
+export const fetchOptionPositions = (participantId: string): Promise<OptionPositions> =>
+  getJson(`/api/trade/option-positions?participantId=${encodeURIComponent(participantId)}`);
+
 export const reviewOption = (draft: OptionDraft): Promise<{ preview: OptionPreview }> =>
   postJson("/api/trade/option/review", draft);
 

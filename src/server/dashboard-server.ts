@@ -28,6 +28,7 @@ import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
+import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
@@ -128,6 +129,7 @@ async function serveWriteApis(
 ): Promise<boolean> {
   if (await serveTradeApi(req, res, path, config, session)) return true;
   if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
+  if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;

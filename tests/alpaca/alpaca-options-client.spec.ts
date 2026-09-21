@@ -210,6 +210,40 @@ describe("AlpacaOptionsClient", () => {
     expect(chain[1]?.quoteSource).toBe("indicative"); // a snapshot arrived, even if it quoted nothing
   });
 
+  it("reads one snapshot per held contract in a single multi-symbol call, fail-soft (#3407 P2)", async () => {
+    const log: Array<{ path: string }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport({}),
+      fakeTransport(
+        {
+          "/v1beta1/options/snapshots?symbols=": {
+            snapshots: {
+              MSFT260918P00420000: {
+                latestQuote: { bp: 0, ap: 0.05 },
+                greeks: { delta: -0.42, theta: -0.19 },
+                impliedVolatility: 0.31,
+              },
+              AAPL261218C00150000: { latestQuote: { bp: null, ap: "" } },
+            },
+          },
+        },
+        log,
+      ),
+    );
+    const snaps = await client.getContractSnapshots(["MSFT260918P00420000", "AAPL261218C00150000"]);
+    expect(log[0]?.path).toContain("symbols=MSFT260918P00420000%2CAAPL261218C00150000");
+    expect(snaps.get("MSFT260918P00420000")).toEqual({
+      bid: 0,
+      ask: 0.05,
+      greeks: { delta: -0.42, theta: -0.19 },
+      impliedVol: 0.31,
+    });
+    expect(snaps.get("AAPL261218C00150000")).toEqual({});
+    expect(
+      (await new AlpacaOptionsClient(fakeTransport({})).getContractSnapshots(["X"])).size,
+    ).toBe(0);
+  });
+
   it("merges indicative quotes from the data host, and fails SOFT when it errors", async () => {
     const withQuotes = new AlpacaOptionsClient(
       fakeTransport({
