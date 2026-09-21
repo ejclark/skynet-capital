@@ -519,6 +519,52 @@ const draftSent = {
   timeInForce: "gtc",
   note: "Order 7c1e2b9a-mleg accepted — one net limit, filled together or not at all. Working orders picks it up on the next read.",
 };
+// The roll (#3407 P3 slice 3): the MSFT $420 put rolled out to Oct 16 — two legs, one draft,
+// answered through the same route in the same order the roll row calls it.
+const rollLegs = [
+  {
+    id: "leg-1",
+    underlying: "MSFT",
+    optionType: "put",
+    strike: 420,
+    expiration: "2026-09-18",
+    action: "sell",
+    contracts: 2,
+    limitPrice: 12,
+  },
+  {
+    id: "leg-2",
+    underlying: "MSFT",
+    optionType: "put",
+    strike: 420,
+    expiration: "2026-10-16",
+    action: "buy",
+    contracts: 2,
+    limitPrice: 14.1,
+  },
+];
+const rollPreview = {
+  legCount: 2,
+  pricedFully: true,
+  netPremium: -420,
+  maxGain: "uncapped",
+  maxLoss: 420,
+  unlimitedLoss: false,
+  breakevens: [],
+  undefinedRiskLegIds: [],
+};
+const rollDraft = (phase, legs = rollLegs, extra = {}) => ({
+  draft: { phase, legs, refusals: [], nextLegId: legs.length + 1, ...extra },
+  preview: rollPreview,
+});
+const rollScript = [
+  rollDraft("drafting", rollLegs.slice(0, 1)),
+  rollDraft("drafting"),
+  rollDraft("validated", rollLegs, { verdict: { ok: true, refusals: [], warnings: [] } }),
+  rollDraft("reviewed", rollLegs, { verdict: { ok: true, refusals: [], warnings: [] } }),
+];
+let currentDraftScript;
+let currentDraftFallback;
 const draftScript = [
   { draft: { phase: "drafting", legs: spreadLegs.slice(0, 1), refusals: [], nextLegId: 2 } },
   spreadDraft("drafting"),
@@ -526,6 +572,8 @@ const draftScript = [
   spreadDraft("reviewed", { verdict: spreadVerdict }),
   draftSent,
 ];
+currentDraftScript = draftScript;
+currentDraftFallback = draftSent;
 
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
@@ -554,7 +602,7 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
     // The multi-leg builder's lifecycle (#3407 P3 slice 1) — one scripted answer per action, in
     // the order the scene clicks them; the last answer repeats so a stray re-read stays put.
-    "/api/trade/draft": () => draftScript.shift() ?? draftSent,
+    "/api/trade/draft": () => currentDraftScript.shift() ?? currentDraftFallback,
   },
 });
 
@@ -877,6 +925,30 @@ await shootOptionPositions("option-positions-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
 await shootLimitClose("limit-close-desktop");
+
+// Roll as one ticket (#3407 P3 slice 3) — the same held put, Roll… opened: target expiration
+// and strike from the chain, the two legs spelled out, then the reviewed Confirm naming the net
+// and the max loss. The chain stub answers every expiration with the same NVDA rows, so the
+// strike list is the fixture's; the scripted draft is what the review reads. PHONE FIRST.
+currentDraftScript = rollScript;
+currentDraftFallback = rollDraft("reviewed", rollLegs, {
+  verdict: { ok: true, refusals: [], warnings: [] },
+});
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByRole("heading", { name: "Option positions" }).waitFor();
+await page.getByRole("button", { name: "Roll…" }).click();
+await page.getByLabel("Roll to").waitFor();
+await page.getByRole("button", { name: "Review roll…" }).click();
+await page.getByRole("button", { name: /Confirm roll/ }).waitFor();
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+const shootRoll = shooter(page, resolve("docs/shots/roll"));
+await shootRoll("roll-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+await shootRoll("roll-desktop");
+currentDraftScript = [];
+currentDraftFallback = draftSent;
 currentDesk = desk;
 
 // Day / GTC on the options ticket (#3407 P1 slice 4) — the same control the stock ticket got,

@@ -264,8 +264,8 @@ describe("markPrice", () => {
 });
 
 describe("rolling", () => {
-  it("states plainly that the atomic close-and-reopen order isn't built yet", () => {
+  it("states plainly where the atomic close-and-reopen order lives (#3407 P3 slice 3)", () => {
     expect(ROLL_UNAVAILABLE_REASON).toContain("single atomic order");
-    expect(ROLL_UNAVAILABLE_REASON).toContain("isn't built yet");
+    expect(ROLL_UNAVAILABLE_REASON).toContain("Option positions card");
   });
 });
