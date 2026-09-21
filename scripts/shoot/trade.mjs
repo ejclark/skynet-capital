@@ -864,7 +864,8 @@ currentPlays = throughLongs;
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
 await page.getByText(/^Chain ·/).waitFor();
-await page.getByText(/^Chain ·/).scrollIntoViewIfNeeded();
+// Bring the divider row (and the in-the-money rows around it) into the frame, not the page top.
+await page.getByText(/^Current price ·/).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootRail = shooter(page, resolve("docs/shots/itm-rail"));
 await shootRail("itm-rail-phone");
