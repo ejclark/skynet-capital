@@ -1038,10 +1038,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## In progress
 
-- The options chain as the entry instrument (#1481) — slice 1 (the base straddle view) shipped
-  in #1512; slice 2 (scroll-out columns both ways, greeks passed through, tap on bid / ask presets
-  side + price) is the remainder and closes it.
-  _(src: Eric · while: reading the Fidelity options chain frames, 2026-09-05)_
+- The trading-experience parity study (`docs/research/trading-parity-2026-09.md`) — Robinhood ·
+  Fidelity · thinkorswim inventoried, Robinhood's engagement mechanics interrogated, the audit
+  cross-examined, four lo-fi shapes commissioned; the parity plan issue carries the slices.
+  _(src: Eric · while: reviewing the /trade screenshots, 2026-09-21)_
 
 ---
 
@@ -1052,7 +1052,9 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   it, locked segments visible-but-disabled with their reason (#1520). Mockup:
   [Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723).
 - The straddle view of the options chain — strike centre, calls left, puts right, the
-  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512
+  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512; slice 2 (scroll-out
+  columns both ways, greeks passed through, tap on a cell presets strike + price) — #2017 Phase 1
+  (PR #2117). #3299 flagged the "In progress" entry as stale on 2026-09-18.
 - `/teardown` — a reference design → patterns, mechanics, a borrow / adapt / skip call sheet;
   `scripts/teardown/redact.mjs` paints over account lines first — PR #1499
 

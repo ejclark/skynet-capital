@@ -142,7 +142,8 @@
       "!**/coverage",
       "!**/spikes",
       "!.claude/workflows",
-      "!.design-sync/config.json"
+      "!.design-sync/config.json",
+      "!docs/design/**"
     ]
   }
 }
