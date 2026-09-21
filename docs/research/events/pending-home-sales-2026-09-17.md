@@ -294,3 +294,69 @@ Neither is expected before the print.
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to the
 next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row
 as its receipt.
+
+## Outcome
+
+**Close-out (2026-09-21, D+4 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode carries
+no `earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design; caches busted regardless per
+the lane's standing instruction — nothing was in either). "Re-run instrument data" here means: NAR's own
+newsroom release re-fetched direct today (nar.realtor/newsroom/nar-pending-home-sales-report-shows-0-point-3-percent-increase-in-august,
+dateline September 17, 2026; corroborated by GlobeNewswire, Inman, Bloomberg and HousingWire, all dated
+2026-09-17), SEC EDGAR's LEN submissions re-fetched direct for the Item 2.02 filing date, and Yahoo daily
+OHLC for ITB re-fetched direct 2026-09-01 → 2026-09-18.
+
+### What printed
+
+NAR: August PHSI **+0.3% m/m, −4.7% y/y**, index level **71.2** — a rebound off July's −2.3% m/m low,
+still down sharply year over year. Chief Economist Yun's release commentary discusses August mortgage
+rates only ("Buyers steadily entered into contracts in August even though mortgage rates increased");
+it names no post-09-16 policy development.
+
+### Forward tests, scored
+
+| Test | Bar | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (forward schedule governs) | NAR publishes Aug PHSI on 2026-09-17, not 09-10 | Published **2026-09-17** (NAR newsroom dateline; GlobeNewswire/Inman/Bloomberg/HousingWire agree) | **PASSED** |
+| FT-…-2 (LEN files ahead of the print) | LEN Item 2.02 8-K on or before 09-15 | Filed **2026-09-16** (accession 0001628280-26-062287, Items 2.02 & 9.01) | **KILLED** — filed on the named kill date |
+| FT-…-3 (ordinary session, ITB range < 2.504% p75) | ITB 09-17 session range < 2.504% | **2.410%** (O 89.63 / H 90.51 / L 88.35) | **PASSED** |
+
+**Two of three held; the one that failed is a diagnostic near-miss, not a wrong tradeable call.**
+FT-1 settles the date question this ledger's `confirmed` label rested on: the forward schedule governed,
+the statistics page's "September 10" note stayed an uncorrected series-mislabel through the print.
+FT-3 confirms the correction this session's own Leg 3 made over the inherited December read: September
+opex eve stayed ordinary, adding a sixth session to the exact-shape cohort (Sept witching eve + FOMC+1)
+now **6/6** under the 2.504% p75 baseline. FT-2 is the one leg that missed: LEN's Q1/Q2 FY2026 reporting
+lag had compressed to +12d/+11d (from FY2025's +20d/+17d/+19d), projecting a filing around 09-11/12; the
+actual filing landed **+16d** from the 2026-08-31 quarter end, on 09-16 — a partial reversion toward
+LEN's own six-year Q3 range (09-14…09-21) that the two-quarter extrapolation underweighted. Practically,
+this means LEN's own earnings landed the session *before* the PHSI print, on the same day as the FOMC
+decision — exactly the compounded-attribution risk Leg 2 flagged as possible if the timing didn't
+cleanly straddle. It didn't, and the tape absorbed it anyway: ITB's actual 09-17 range (2.410%) stayed
+comfortably under the "ordinary session" threshold despite the stacked inputs.
+
+### Horizon calls, scored
+
+| Horizon | Call | Verdict |
+|---|---|---|
+| Today (D-9) | Stand aside | **Right, and free.** No instrument attaches; zero capital was ever at risk on this row |
+| This week | Stand aside; September opex eve stays ordinary, the December widening does not transfer | **Right.** ITB printed 2.410%, under the 2.504% p75 threshold — the sixth exact-shape session to do so |
+| This month | Do not read the August number as a verdict on the 09-16 decision | **Right.** NAR's release text discusses only August mortgage rates; it names no post-09-16 development, and the kill switch never fired |
+| This quarter | Do not reinstate a witching-corridor rule off this print | **Not re-tested here** — Leg 4's era-artifact finding stands untouched; nothing in this print's outcome bears on `fomc-expiration-proximity.mjs`'s own result |
+
+### What the guard cost, and what it bought
+
+Zero capital was deployed across the file's 13-day life; realized P&L is zero, the correct number for a
+stand-aside guard on an event carrying no instrument (`symbols: []`, no housing-keyed house playbook).
+The document's two distinguishing calls — the date-provenance promotion and the "ordinary session, not
+the December widening" correction — both held on live fire. The one miss, FT-2, cost nothing (LEN was
+never held, tracked or licensed for entry by any outcome here) and sharpens the record instead: a
+two-quarter lag-compression trend is real signal but an imperfect extrapolator on its own — a third data
+point would have caught the partial reversion toward LEN's historical range that the two-point trend
+alone missed.
+
+**This document is now closed.** No trade was taken, none is authorized. The date-provenance and
+ordinary-session calls held; the LEN-timing diagnostic missed its bar by one day and is recorded as
+such — the stand-aside guard stands as the final word on this event.
+
+**Last assessed:** 2026-09-21
+<!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-09-17","eurostat-hicp-final-2026-09-17","housing-starts-2026-09-17","philly-fed-mfg-2026-09-17","treasury-10y-tips-2026-09-17","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","unsc-iran-panel-mandate-vote-2026-09-17"],"adjacentStrongIds":[],"screenStreak":0} -->
