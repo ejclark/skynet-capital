@@ -85,6 +85,8 @@ export interface OptionPreview {
   readonly expiration?: string;
   readonly orderType: "limit" | "market";
   readonly limitPrice?: number;
+  /** What will be sent — the server always says (#3407 P1 slice 4). */
+  readonly timeInForce: "day" | "gtc";
   readonly ok: boolean;
   readonly estPremium?: number;
   readonly estNotional?: number;
@@ -108,6 +110,7 @@ export type OptionDraft =
       readonly expiration: string;
       readonly orderType: "limit" | "market";
       readonly limitPrice?: number;
+      readonly timeInForce?: "day" | "gtc";
     }
   | {
       readonly kind: "close";
@@ -117,6 +120,7 @@ export type OptionDraft =
       /** Market when absent; a limit close names the premium per share (#3407 P1 slice 3). */
       readonly orderType?: "limit" | "market";
       readonly limitPrice?: number;
+      readonly timeInForce?: "day" | "gtc";
     };
 
 async function getJson<T>(url: string): Promise<T> {

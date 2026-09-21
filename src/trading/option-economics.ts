@@ -23,7 +23,18 @@ export interface OptionTicketRequest {
   readonly orderType: "limit" | "market";
   /** Premium per share the trader will accept — required for limit orders. */
   readonly limitPrice?: number;
+  /** Day or good-till-cancelled (both accepted by Alpaca for options). Omit and the preview
+   *  says the default it will send: day — an option order that outlives the session it was
+   *  placed in is a deliberate choice, never a silent one (#3407 P1 slice 4). */
+  readonly timeInForce?: OptionTimeInForce;
 }
+
+export type OptionTimeInForce = "day" | "gtc";
+
+/** The standing default for an option order the member didn't stamp: today only. Unlike the
+ *  share ticket (a held stop must survive overnight to protect anything), an option premium
+ *  moves with every session's implied vol, so a resting limit is opted into, not assumed. */
+export const DEFAULT_OPTION_TIF: OptionTimeInForce = "day";
 
 export interface OptionTicketContext {
   readonly cash: number;
@@ -69,6 +80,8 @@ export interface OptionTicketPreview {
   readonly expiration?: string;
   readonly orderType: "limit" | "market";
   readonly limitPrice?: number;
+  /** What the broker will be told — always stated, never hidden (#3407 P1). */
+  readonly timeInForce: OptionTimeInForce;
   readonly ok: boolean;
   /** Premium $/share the estimates below use (the limit when set, else the indicative). */
   readonly estPremium?: number;

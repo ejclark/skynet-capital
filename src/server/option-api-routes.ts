@@ -115,6 +115,7 @@ function parseOpenBody(
   if (typeof strike !== "number" || !Number.isFinite(strike)) return undefined;
   if (orderType !== "limit" && orderType !== "market") return undefined;
   const limitPrice = posFinite(body.limitPrice);
+  const timeInForce = parseTif(body.timeInForce);
   return {
     kind: "open",
     participantId,
@@ -125,7 +126,13 @@ function parseOpenBody(
     expiration,
     orderType,
     ...(limitPrice !== undefined ? { limitPrice } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   };
+}
+
+/** Day or GTC pass; anything else is dropped so the preview states the default it will send. */
+function parseTif(raw: unknown): "day" | "gtc" | undefined {
+  return raw === "day" || raw === "gtc" ? raw : undefined;
 }
 
 /** Strict shape gate for a CLOSE — direction and size resolve server-side from the live holding. */
@@ -143,6 +150,7 @@ function parseCloseBody(
   const orderType =
     body.orderType === "limit" || body.orderType === "market" ? body.orderType : undefined;
   const limitPrice = posFinite(body.limitPrice);
+  const timeInForce = parseTif(body.timeInForce);
   return {
     kind: "close",
     participantId,
@@ -150,6 +158,7 @@ function parseCloseBody(
     ...(contracts !== undefined ? { contracts } : {}),
     ...(orderType ? { orderType } : {}),
     ...(limitPrice !== undefined ? { limitPrice } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   };
 }
 
@@ -226,6 +235,7 @@ async function reviewOption(
       preview: previewOptionClose(request.occSymbol, closeContext, request.contracts, {
         ...(request.orderType ? { orderType: request.orderType } : {}),
         ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+        ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
       }),
     });
     return;

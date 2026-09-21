@@ -142,6 +142,30 @@ describe("previewOptionOrder — the discipline rules", () => {
   });
 });
 
+describe("time in force on option orders (#3407 P1 slice 4)", () => {
+  it("always states the TIF it will send — day unless the member picked gtc", () => {
+    expect(previewOptionOrder(csp, context()).timeInForce).toBe("day");
+    expect(previewOptionOrder({ ...csp, timeInForce: "gtc" }, context()).timeInForce).toBe("gtc");
+  });
+
+  it("carries the pick on a close too, defaulting to day", () => {
+    const longPut = {
+      symbol: "MSFT260918P00420000",
+      quantity: 2,
+      avgPrice: 1_070,
+      marketValue: 2_400,
+    };
+    expect(
+      previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] })).timeInForce,
+    ).toBe("day");
+    expect(
+      previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] }), undefined, {
+        timeInForce: "gtc",
+      }).timeInForce,
+    ).toBe("gtc");
+  });
+});
+
 describe("previewOptionClose — direction from the held sign", () => {
   const longPut = {
     symbol: "MSFT260918P00420000",

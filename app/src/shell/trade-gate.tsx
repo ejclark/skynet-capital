@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import type { PlayInfo } from "../live/options";
 import {
   buildDraft,
+  defaultTimeInForce,
   money,
   ORDER_TYPE_LABELS,
   orderTypeLabel,
@@ -312,7 +313,7 @@ export function TradeGate({
         ) : null}
       </div>
       <TimeInForceField
-        orderType={fields.orderType}
+        fallback={defaultTimeInForce(fields.orderType)}
         value={fields.timeInForce}
         onChange={edit("timeInForce")}
       />

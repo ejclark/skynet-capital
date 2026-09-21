@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import type { OptionPreview } from "../live/options";
 import type { TicketResult } from "../live/ticket";
-import { money } from "../live/ticket";
+import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { DisarmNote, GateHead } from "./gate-frame";
 
 /**
@@ -55,9 +55,17 @@ function PayoffGrid({ preview }: { readonly preview: OptionPreview }): ReactElem
  *  @category trading
  */
 export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview }): ReactElement {
+  // The order class, its limit and the time in force the server says it will send — the same
+  // line the share ticket echoes (#3407 P1); a member never learns the TIF after the fact.
+  const tif = tifLabel(preview.timeInForce);
   return (
     <div className="gate-body">
       {preview.occSymbol ? <p className="gate-row num tkt-occ">{preview.occSymbol}</p> : null}
+      <p className="gate-row">
+        {orderTypeLabel(preview.orderType)}
+        {preview.limitPrice !== undefined ? ` · limit ${money(preview.limitPrice)}` : ""}
+        {tif ? ` · ${tif}` : ""}
+      </p>
       {preview.refusals.map((refusal) => (
         <p key={refusal} className="gate-row gate-refusal">
           ✕ {refusal}
@@ -145,7 +153,9 @@ export function OptionGateStatus({
   if (state.result.ok)
     return (
       <>
-        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}`}</GateHead>
+        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}${
+          tifLabel(state.result.timeInForce) ? ` · ${tifLabel(state.result.timeInForce)}` : ""
+        }`}</GateHead>
         <div className="gate-body">
           <p className="gate-note">
             SIM account — simulated fill, real discipline. The blotter and timeline pick it up on

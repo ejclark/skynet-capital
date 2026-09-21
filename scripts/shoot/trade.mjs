@@ -718,4 +718,18 @@ await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNe
 await shootLimitClose("limit-close-desktop");
 currentDesk = desk;
 
+// Day / GTC on the options ticket (#3407 P1 slice 4) — the same control the stock ticket got,
+// under the chain on a 201 ticket; GTC pressed so the frame proves the pick, not the default.
+currentPlays = throughLongs;
+currentDesk = desk;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByText(/^Chain ·/).waitFor();
+await page.getByRole("button", { name: "GTC" }).click();
+await page.getByText("Time in force").scrollIntoViewIfNeeded();
+// The straddle is wider than the phone; scrollIntoView can drag the page sideways — pin it back.
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootOptionsTif = shooter(page, resolve("docs/shots/options-tif"));
+await shootOptionsTif("options-tif-phone");
+
 await close();

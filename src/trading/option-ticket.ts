@@ -1,10 +1,12 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import {
+  DEFAULT_OPTION_TIF,
   OPTION_PLAY_LEVEL,
   type OptionPlayCode,
   type OptionTicketContext,
   type OptionTicketPreview,
   type OptionTicketRequest,
+  type OptionTimeInForce,
   payoff,
   SHARES_PER_CONTRACT,
   validateAffordability,
@@ -23,6 +25,7 @@ export type {
   OptionTicketContext,
   OptionTicketPreview,
   OptionTicketRequest,
+  OptionTimeInForce,
 } from "./option-economics.js";
 
 /**
@@ -168,6 +171,7 @@ export function previewOptionOrder(
     expiration: request.expiration,
     orderType: request.orderType,
     ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+    timeInForce: request.timeInForce ?? DEFAULT_OPTION_TIF,
     ok: refusals.length === 0,
     ...(estPremium !== undefined ? { estPremium } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),
@@ -210,6 +214,8 @@ export interface CloseOrderChoice {
    *  accept (#3407 P1 slice 3; closes were market-only before). */
   readonly orderType?: "limit" | "market";
   readonly limitPrice?: number;
+  /** Day unless the member says GTC (#3407 P1 slice 4). */
+  readonly timeInForce?: OptionTimeInForce;
 }
 
 export function previewOptionClose(
@@ -265,6 +271,7 @@ export function previewOptionClose(
     ...(orderType === "limit" && order.limitPrice !== undefined
       ? { limitPrice: order.limitPrice }
       : {}),
+    timeInForce: order.timeInForce ?? DEFAULT_OPTION_TIF,
     ok: refusals.length === 0,
     ...(estPremium !== undefined ? { estPremium } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),

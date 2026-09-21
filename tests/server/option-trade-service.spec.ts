@@ -193,6 +193,14 @@ describe("option trade service — the gate", () => {
     });
   });
 
+  it("passes a GTC pick through to the broker on an open, and stays day when unset (#3407)", async () => {
+    const { submit, orders } = makeService({});
+    await submit({ ...openRequest, timeInForce: "gtc" }, "ann");
+    await submit(openRequest, "ann");
+    expect(orders[0]?.body).toMatchObject({ time_in_force: "gtc" });
+    expect(orders[1]?.body).toMatchObject({ time_in_force: "day" });
+  });
+
   it("sends a limit close as a limit with its premium (#3407 P1 slice 3)", async () => {
     const { submit, orders } = makeService({
       positions: [

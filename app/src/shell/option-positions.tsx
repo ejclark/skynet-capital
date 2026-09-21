@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import type { DeskPosition } from "../live/desk";
 import { type OptionDraft, type OptionPreview, reviewOption, submitOption } from "../live/options";
-import { money, type TicketResult } from "../live/ticket";
+import { money, type TicketResult, tifLabel } from "../live/ticket";
 
 /**
  * CLOSING FROM THE TICKET (#738 phase 10b) — the capability the legacy blotter's Close posts
@@ -131,6 +131,7 @@ function CloseRow({
             {state.preview.orderType === "limit" && state.preview.limitPrice !== undefined
               ? ` · limit ${money(state.preview.limitPrice)}`
               : " · market"}
+            {tifLabel(state.preview.timeInForce) ? ` · ${tifLabel(state.preview.timeInForce)}` : ""}
             {state.preview.estNotional !== undefined
               ? ` · est ${money(state.preview.estNotional)}`
               : ""}
