@@ -99,6 +99,33 @@ describe("serveChain", () => {
     }
   });
 
+  it("reports quote coverage — how many strikes the feed quoted, or unavailable (#3407 P2)", async () => {
+    const quoted = {
+      getExpirations: () => Promise.resolve(["2026-10-16"]),
+      getChain: () =>
+        Promise.resolve([
+          { occSymbol: "A", strike: 100, bid: 2, ask: 3, quoteSource: "indicative" },
+          { occSymbol: "B", strike: 105 },
+        ]),
+      getUnderlyingPrice: () => Promise.resolve(105),
+    };
+    const first = fakeRes();
+    await serveChain(first.res, "/x?symbol=NVDA&type=put", config(quoted), "human-ann");
+    const body = JSON.parse(first.out.body ?? "{}");
+    expect(body.quotes).toMatchObject({ source: "indicative", quoted: 1, total: 2 });
+    expect(typeof body.quotes.asOf).toBe("string");
+    expect(body.rows[0]).not.toHaveProperty("quoteSource"); // provenance rides `quotes`, not each row
+
+    const bare = { ...quoted, getChain: () => Promise.resolve([{ occSymbol: "A", strike: 100 }]) };
+    const second = fakeRes();
+    await serveChain(second.res, "/x?symbol=NVDA&type=put", config(bare), "human-ann");
+    expect(JSON.parse(second.out.body ?? "{}").quotes).toMatchObject({
+      source: "unavailable",
+      quoted: 0,
+      total: 1,
+    });
+  });
+
   it("falls back to the first expiration when the requested one isn't listed", async () => {
     const client = {
       getExpirations: () => Promise.resolve(["2026-09-18"]),

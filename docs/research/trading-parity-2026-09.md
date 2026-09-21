@@ -701,9 +701,9 @@ plan, not a constraint on the designs.
 | Extended hours / 24-hour session | missing | no `extended_hours` anywhere |
 | Dollar-based (notional) or fractional orders | missing — refused ("Whole shares only") | `src/trading/order-ticket.ts` `validateQuantity` |
 | Read an options chain | exists — straddle: calls · strike · puts; OI / Vol / Δ Γ Θ Vega scroll out | `app/src/shell/straddle-view.tsx` |
-| See *all* expirations | partial — ≤20, from one unpaginated 1000-contract page; LEAPS unreachable on busy names | `src/alpaca/alpaca-options-client.ts:177-186` (`limit = 20`) |
-| Greeks on every strike | partial — vendor-only; silently absent when the snapshot call fails, the strike has no snapshot, or a greek isn't finite; no per-row reason reaches the client | `alpaca-options-client.ts` `mergeQuotes` / `greeksOf` |
-| `$0.00` bid shown honestly | missing — a zero bid is dropped (`num()` requires `> 0`), the row loses its mid | `alpaca-options-client.ts:106-109` |
+| See *all* expirations | built (P2 slice 1) — `page_token` walked up to 3 × 10,000 contracts with one 429 retry; LEAPS reachable | `src/alpaca/alpaca-options-client.ts` (`getExpirations`, `EXPIRATION_PAGE_BUDGET`) |
+| Greeks on every strike | partial — vendor-only; the chain now says how many strikes the feed quoted and an as-of (P2 slice 1); a per-greek reason is still absent | `alpaca-options-client.ts` (`quoteSource`), `option-chain-route.ts` (`quotes`), `straddle-view.tsx` (`coverageLine`) |
+| `$0.00` bid shown honestly | built (P2 slice 1) — a zero bid is a real quote; the mid survives | `alpaca-options-client.ts` (`price0`) |
 | Implied volatility / probability on the chain | missing on the desk (IV is solved only in the research recommender) | `src/options/pricing.ts`, `src/adapters/alpaca-recommend-chain.ts` |
 | Tap a chain cell to fill the ticket | exists — row = strike + mid-seeded limit; call/put cell also switches side when the rung is unlocked | `app/src/shell/option-gate.tsx:189-213` |
 | Type a strike by hand | exists — number input with a `<datalist>` of chain strikes | `app/src/shell/option-fields.tsx:108-150` |
@@ -778,7 +778,7 @@ plan, not a constraint on the designs.
 | Cancel | route + audit line (P1 slice 1), no shell surface | `src/server/trade-orders-routes.ts` |
 | Replace | none | — |
 | Pending statuses in the ledger | journaled (`new` / `canceled` / `rejected` lines) but never surfaced as open | `src/alpaca/trade-updates-stream-events.ts:88`, `src/observatory/activity-store.ts` |
-| Option chain (bid / ask / OI / vol / greeks) | full for ≤20 nearest expirations; no cache; every review and submit re-fetches; no 429 handling | `alpaca-options-client.ts`, `src/server/option-chain-route.ts` |
+| Option chain (bid / ask / OI / vol / greeks) | full for every listed expiration (P2 slice 1); one 429 retry per read; no cache — every review and submit still re-fetches | `alpaca-options-client.ts`, `src/server/option-chain-route.ts` |
 | IV, probability | research path only | `src/options/pricing.ts`, `src/adapters/alpaca-recommend-chain.ts` |
 | Portfolio greeks | built, unwired | `src/options/greeks-aggregator.ts` |
 | Real-time quotes / fills to the browser | none — polling; the hub already has both event streams server-side | `src/server/observatory-hub.ts`, `board-patch-routes.ts` |
@@ -838,7 +838,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 |---|---|---|---|---|---|---|
 | "Confirmed" shown for an order never sent | — | — | — | `draft-order-builder.tsx:162` headline on `executed:false` | fix (P0, one line) | none |
 | Time in force shown | GFD / GTC visible [R1][R6] | Sheet with 5 options + learn link [F1] | TIF dropdown [T-OET] | **partial** — preview and submit carry `timeInForce` end to end (P1 slice 1, `order-ticket.ts`); the ticket control is a layout slice | build (P1) | done: Day / GTC accepted, previewed, echoed |
-| Greeks / bid absent with no reason | Every metric labelled "theoretical" [R36] | — | — | "—" with no provenance; `$0.00` bid dropped (`alpaca-options-client.ts:106-109`) | fix (P2) | per-row coverage reason; `num()` accepts zero |
+| Greeks / bid absent with no reason | Every metric labelled "theoretical" [R36] | — | — | **partial** — coverage line under the chain (source · n of m quoted · as-of) and `$0.00` bids kept (P2 slice 1) | fix (P2) | done at chain level; a per-greek reason stays open |
 | Order status on a phone | Pending list is phone-first [R13] | Activity › Orders [F42] | mobile Account History [T-APPSTORE] | Status column `col-detail`, hidden < 1100px (`activity-table.tsx:33`) | fix (P0) | none |
 | As-of stamp | NBBO on trade-entry screens [R16] | "As of 10:04:20 AM ET" [F-frames 9] | — | quote header makes no freshness claim (`quote-header.tsx:16-19`) | build (P0) | the quote response already carries a timestamp |
 | Honest cancel/status vocabulary | pending · partially filled · queued | Attempt to cancel · Verified canceled | Working · Replacing · TLTC · U R OUT | none surfaced | build (P1) | map Alpaca statuses; never invent one |
@@ -864,7 +864,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Greeks / probability on the order screen | tap-a-strike shows greeks + chance of profit [R36] | multi-select shows PoP, max P/L [F38] | Probability ITM/OTM columns [T-DP] | missing on the ticket/preview (`live/options.ts:76-98`) | build (P2) | greeks already in `OptionChainRow`; PoP from IV (`src/options/pricing.ts`) |
 | Payoff diagram | Simulated Returns, P/L chart [R38][R40] | P/L calculator [F39] | Risk Profile [T-AN] | **built-unwired** — `src/options/payoff-surface.ts` | build (P2) | presentation only |
 | Strategy templates / builder | Strategy Builder [R37] | strategy dropdown, Strategy Builder [F25][F34] | spread menu, Spread Hacker [T-VS][T-SCAN] | **built-unwired** — `rankStructures` + `outlook.ts` (#587, #2170) | build (P3) | presentation over the ranked list |
-| All expirations / LEAPS | scroll right [R34] | weekly/monthly/quarterly/all filters [F25] | weekly/quarterly toggles [T-SETUP] | ≤20 from one page (`getExpirations`) | fix (P2) | paginate `/v2/options/contracts`; a call budget + 429 backoff |
+| All expirations / LEAPS | scroll right [R34] | weekly/monthly/quarterly/all filters [F25] | weekly/quarterly toggles [T-SETUP] | **built** (P2 slice 1) — paginated with a 3-page budget and one 429 retry (`getExpirations`) | fix (P2) | done; weekly / monthly filters are a layout slice |
 | IV on the chain | IV metric [R36] | IV column [F-frames 13] | Impl Vol, SD strikes [T-AP] | missing on the desk | build (P2) | solve from mid via `pricing.ts` |
 | Roll | Roll position [R41] | Roll ticket [F9] | right-click roll; Strategy Roller [T-PS][T-SR] | disabled with reason (`order-ticket.ts:291-299`) | build (P3) | `mleg` execution |
 | Exercise / assignment UI | Exercise button; resolution flow [R42] | phone only [F26] | support request [T-EXA] | missing (ingested server-side) | build (P3) | render `option-lifecycle.ts` events |

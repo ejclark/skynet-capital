@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { ChainRow } from "../live/options";
+import type { ChainQuoteCoverage, ChainRow } from "../live/options";
 import {
   daysToExpiry,
   dividerIndex,
@@ -75,6 +75,7 @@ export function StraddleView({
   onPickStrike,
   onPickSide,
   now = new Date(),
+  quotes,
 }: {
   readonly symbol: string;
   readonly expiration: string;
@@ -87,6 +88,9 @@ export function StraddleView({
    *  clicked. Optional: omitted, cells render as plain, non-interactive text (unchanged). */
   readonly onPickSide?: (strike: number, side: "call" | "put") => void;
   readonly now?: Date;
+  /** Quote provenance for the side the ticket is on (#3407 P2) — rendered as one honest line
+   *  under the table so a "—" cell reads as "not quoted", never as "zero". */
+  readonly quotes?: ChainQuoteCoverage;
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const all = mergeStraddle(calls, puts);
@@ -196,8 +200,25 @@ export function StraddleView({
           Show all {all.length} strikes
         </button>
       ) : null}
+      {quotes ? <p className="straddle-coverage">{coverageLine(quotes)}</p> : null}
     </section>
   );
+}
+
+/** The provenance sentence: source, coverage and the as-of clock — words, never a hue. */
+export function coverageLine(quotes: ChainQuoteCoverage): string {
+  const at = new Date(quotes.asOf);
+  const stamp = Number.isNaN(at.getTime())
+    ? ""
+    : ` · as of ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  if (quotes.source === "unavailable") {
+    return `Quotes unavailable right now — strikes from the contract list, premiums from last close; "—" means not quoted${stamp}.`;
+  }
+  const coverage =
+    quotes.quoted === quotes.total
+      ? `all ${quotes.total} strikes`
+      : `${quotes.quoted} of ${quotes.total} strikes`;
+  return `Bid / ask and greeks from the indicative feed · ${coverage} quoted; "—" means the feed had none${stamp}.`;
 }
 
 function DividerRow({ spot }: { readonly spot: number }): ReactElement {

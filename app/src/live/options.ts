@@ -55,12 +55,23 @@ export interface ChainRow {
   readonly vega?: number;
 }
 
+/** Where the bid/ask/greeks came from and how much of the chain they cover (#3407 P2) — the
+ *  one line that turns a "—" cell from a mystery into "the feed didn't quote this strike". */
+export interface ChainQuoteCoverage {
+  readonly source: "indicative" | "unavailable";
+  readonly quoted: number;
+  readonly total: number;
+  readonly asOf: string;
+}
+
 export interface ChainData {
   readonly symbol: string;
   readonly optionType: "call" | "put";
   readonly expirations: readonly string[];
   readonly expiration: string;
   readonly spot?: number;
+  /** Absent only from a server that predates the field. */
+  readonly quotes?: ChainQuoteCoverage;
   readonly rows: readonly ChainRow[];
 }
 

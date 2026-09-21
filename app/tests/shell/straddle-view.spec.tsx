@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ChainRow } from "../../src/live/options";
-import { StraddleView } from "../../src/shell/straddle-view";
+import { coverageLine, StraddleView } from "../../src/shell/straddle-view";
 
 /**
  * `StraddleView`'s call/put cell picking (#2017 Phase 0 task 4e, `onPickSide`) — a call or put
@@ -252,5 +252,37 @@ describe("StraddleView — scroll-out stat columns", () => {
       <StraddleView symbol="NVDA" expiration="2026-10-16" spot={180} calls={calls} puts={puts} />,
     );
     expect(scroll.scrollLeft).toBe(264);
+  });
+});
+
+describe("StraddleView — quote coverage line (#3407 P2)", () => {
+  it("says how many strikes the feed quoted, in words, under the table", () => {
+    render(
+      <StraddleView
+        symbol="NVDA"
+        expiration="2026-10-16"
+        spot={181}
+        calls={calls}
+        puts={puts}
+        quotes={{ source: "indicative", quoted: 38, total: 41, asOf: "2026-09-21T14:05:00Z" }}
+      />,
+    );
+    expect(screen.getByText(/38 of 41 strikes quoted/)).toBeInTheDocument();
+  });
+
+  it("says quotes are unavailable rather than showing silent dashes", () => {
+    expect(coverageLine({ source: "unavailable", quoted: 0, total: 12, asOf: "x" })).toContain(
+      "Quotes unavailable right now",
+    );
+    expect(coverageLine({ source: "indicative", quoted: 12, total: 12, asOf: "x" })).toContain(
+      "all 12 strikes quoted",
+    );
+  });
+
+  it("renders no coverage line when the server didn't send one", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={181} calls={calls} puts={puts} />,
+    );
+    expect(container.querySelector(".straddle-coverage")).toBeNull();
   });
 });
