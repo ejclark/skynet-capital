@@ -97,6 +97,20 @@ function renderGate(initialSymbol?: string): ReactElement {
   );
 }
 
+function renderGateWithStrike(initialSymbol: string, initialStrike: string): ReactElement {
+  const client = new QueryClient();
+  return (
+    <QueryClientProvider client={client}>
+      <OptionGate
+        deskId="desk-1"
+        play={unlockedCallPlay}
+        initialSymbol={initialSymbol}
+        initialStrike={initialStrike}
+      />
+    </QueryClientProvider>
+  );
+}
+
 beforeEach(() => {
   chainNeverResolves = false;
   chainResult = { chainNote: "unset", reason: "failed" };
@@ -143,6 +157,22 @@ describe("OptionGate — progressive disclosure", () => {
     await waitFor(() => expect(fieldsPresent()).toBe(true));
     expect(screen.queryByText(/Looking up options/)).not.toBeInTheDocument();
     expect(screen.queryByText(/No listed options/)).not.toBeInTheDocument();
+  });
+
+  it("withholds Review on a limit with no premium and says why (#3407 P0)", async () => {
+    chainResult = fullChain;
+    render(renderGateWithStrike("NVDA", "190")); // 190 is not on the chain — nothing to seed from
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(screen.getByRole("button", { name: "Review order" })).toBeDisabled();
+    expect(screen.getByText(/needs a premium per share/)).toBeInTheDocument();
+  });
+
+  it("seeds the limit from the chain's mid for a strike that arrived before the chain, enabling Review", async () => {
+    chainResult = fullChain;
+    render(renderGateWithStrike("NVDA", "180")); // on the chain at premium 5
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(5));
+    expect(screen.getByRole("button", { name: "Review order" })).toBeEnabled();
+    expect(screen.queryByText(/needs a premium per share/)).not.toBeInTheDocument();
   });
 
   it("degraded (failed): renders both the note and the fields", async () => {
