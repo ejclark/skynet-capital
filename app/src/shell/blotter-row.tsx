@@ -12,9 +12,12 @@ import { reviewTicket, submitTicket, type TicketPreview, type TicketResult } fro
  * the viewport hides them. The symbol's fill-timeline accordion (raw order-fill history,
  * BUY/SELL included) was retired here (#3186 slice 2): it duplicated `ActivityTable`'s Activity
  * tab, unaligned to this table's columns, and a position only ever shows what's still on the
- * ledger — a sold lot isn't a position. "N lots" is the one detail affordance left on a row: the
- * still-open lots that make up the position, at transaction-level granularity, sharing
- * `PositionCells` with the parent row so the columns always match the header.
+ * ledger — a sold lot isn't a position. The lots breakdown is the one detail affordance left on a
+ * row: the still-open lots that make up the position, at transaction-level granularity, sharing
+ * `PositionCells` with the parent row so the columns always match the header. Its trigger is the
+ * whole symbol header, not a separate labeled link (#3186 slice 3, live-review: a small "N lots"
+ * text link read as unexpected custom behavior and "lots" as jargon) — click anywhere on the
+ * symbol to expand, a chevron shows state, same language as the fold-col chevron.
  * @category trading
  */
 
@@ -109,12 +112,10 @@ export function BlotterRow({
           </button>
         </td>
         <td>
-          <span className="sym">{position.display}</span>
-          {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
           {position.lots && position.lots.length > 0 ? (
             <button
               type="button"
-              className="sym-lots"
+              className="sym-header"
               aria-expanded={lotsOpen}
               aria-label={`${position.lots.length} lots for ${position.display}`}
               onClick={() => setLotsOpen(!lotsOpen)}
@@ -128,9 +129,17 @@ export function BlotterRow({
               >
                 <path d="M6 4l4 4-4 4" />
               </svg>
-              {position.lots.length} lots
+              <span className="sym-header-text">
+                <span className="sym">{position.display}</span>
+                {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
+              </span>
             </button>
-          ) : null}
+          ) : (
+            <>
+              <span className="sym">{position.display}</span>
+              {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
+            </>
+          )}
         </td>
         <PositionCells
           quantity={position.quantity}
@@ -183,15 +192,17 @@ export function BlotterRow({
                 >
                   Close lot
                 </button>
-                <button
-                  type="button"
-                  className="btn mc-btn"
-                  disabled
-                  title={ROLL_UNAVAILABLE_REASON}
-                  aria-label={`Roll — ${ROLL_UNAVAILABLE_REASON}`}
-                >
-                  Roll
-                </button>
+                {position.isOption ? (
+                  <button
+                    type="button"
+                    className="btn mc-btn"
+                    disabled
+                    title={ROLL_UNAVAILABLE_REASON}
+                    aria-label={`Roll — ${ROLL_UNAVAILABLE_REASON}`}
+                  >
+                    Roll
+                  </button>
+                ) : null}
               </td>
             </tr>
           ))
