@@ -47,7 +47,48 @@ function PayoffGrid({ preview }: { readonly preview: OptionPreview }): ReactElem
       />
       <Est label="Max loss" value={money(preview.maxLoss)} />
       <Est label="Breakeven" value={money(preview.breakeven)} />
+      {/* Chance of profit never renders without expected value beside it (#3407 P2; the study's
+          ledger #20): 72%-to-win-$1 next to 28%-to-lose-$5 is the legible pair, POP alone is the
+          casino's number. Both absent when the solver had no honest input. */}
+      {preview.chanceOfProfit !== undefined && preview.expectedValue !== undefined ? (
+        <>
+          <Est label="Chance of profit" value={percent(preview.chanceOfProfit)} />
+          <Est label="Expected value" value={signedMoney(preview.expectedValue)} />
+        </>
+      ) : null}
+      {preview.impliedVol !== undefined ? (
+        <Est label="Implied vol" value={percent(preview.impliedVol)} />
+      ) : null}
     </dl>
+  );
+}
+
+/** "72%" — one decimal only when it changes the read (a 0.4% chance is not 0%). */
+export function percent(fraction: number): string {
+  const pct = fraction * 100;
+  return `${pct >= 10 || pct === 0 ? Math.round(pct) : pct.toFixed(1)}%`;
+}
+
+/** A signed dollar figure — the sign is a word-level cue, never a hue (a standing reader is
+ *  red/green colourblind), so the plus is written out. */
+export function signedMoney(value: number): string {
+  return value > 0 ? `+${money(value)}` : money(value);
+}
+
+/** The contract's quoted greeks in the desk's own units, "—" where the feed had none. */
+function GreeksLine({
+  greeks,
+}: {
+  readonly greeks: NonNullable<OptionPreview["greeks"]>;
+}): ReactElement {
+  const cell = (label: string, value: number | undefined, digits: number): string =>
+    `${label} ${value === undefined ? "—" : value.toFixed(digits)}`;
+  return (
+    <p className="gate-row num tkt-greeks">
+      {cell("Δ", greeks.delta, 2)} · {cell("Γ", greeks.gamma, 3)} · {cell("Θ", greeks.theta, 2)}
+      {" · "}
+      {cell("V", greeks.vega, 2)}
+    </p>
   );
 }
 /** The single-leg ticket's body: cost, max loss, breakeven, and the disarm note.
@@ -77,6 +118,7 @@ export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview
         </p>
       ))}
       {preview.ok ? <PayoffGrid preview={preview} /> : null}
+      {preview.ok && preview.greeks ? <GreeksLine greeks={preview.greeks} /> : null}
       <DisarmNote />
     </div>
   );

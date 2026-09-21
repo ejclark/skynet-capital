@@ -386,6 +386,35 @@ const workingOrders = {
   ],
 };
 let currentOrders = noOrders;
+const currentOptionReview = {
+  preview: {
+    code: "201",
+    underlying: "NVDA",
+    occSymbol: "NVDA261016P00175000",
+    optionType: "put",
+    side: "sell",
+    positionIntent: "sell_to_open",
+    contracts: 1,
+    strike: 175,
+    expiration: "2026-10-16",
+    orderType: "limit",
+    limitPrice: 1.5,
+    timeInForce: "day",
+    ok: true,
+    estPremium: 1.5,
+    estNotional: 150,
+    collateral: 17_500,
+    maxProfit: 150,
+    maxLoss: 17_350,
+    breakeven: 173.5,
+    greeks: { delta: -0.31, gamma: 0.021, theta: -0.06, vega: 0.14 },
+    impliedVol: 0.42,
+    chanceOfProfit: 0.72,
+    expectedValue: 18.4,
+    refusals: [],
+    warnings: [],
+  },
+};
 // Limit close (#3407 P1 slice 3): one held long put so the option positions card renders with
 // its Market / Limit choice. Every other scene keeps the empty desk.
 const deskWithOption = {
@@ -435,6 +464,9 @@ const { page, origin, shoot, close } = await openShell({
     "/api/symbols/search": () => symbolSearch,
     // Working orders (#3407 P1 slice 2) — pathname-matched, so one key covers `?participantId=`.
     "/api/trade/orders": () => currentOrders,
+    // The reviewed option order (#3407 P2 slice 2): greeks, IV, chance of profit beside expected
+    // value — every number the server's own rules would print, as one stub.
+    "/api/trade/option/review": () => currentOptionReview,
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
   },
 });
@@ -746,5 +778,20 @@ await page.getByText(/strikes quoted/).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootChainCoverage = shooter(page, resolve("docs/shots/chain-coverage"));
 await shootChainCoverage("chain-coverage-phone");
+
+// Greeks, IV and the odds on the option order screen (#3407 P2 slice 2) — a reviewed 201 ticket:
+// chance of profit never without expected value beside it, the four greeks as one line.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+// The strike rides the URL (`?strike=`) so no blur commit re-renders the ticket between the fill
+// and the click — typing it then clicking straight away lost the click to that re-render here.
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
+await page.getByText(/^Chain ·/).waitFor();
+await page.getByRole("button", { name: "Review order" }).click();
+await page.getByText("Chance of profit").waitFor();
+await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootOrderOdds = shooter(page, resolve("docs/shots/order-odds"));
+await shootOrderOdds("order-odds-phone");
 
 await close();
