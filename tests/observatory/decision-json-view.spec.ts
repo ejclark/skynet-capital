@@ -1,7 +1,8 @@
-import type { DecisionFunnel } from "../../src/autonomous/decision-db.js";
+import type { DecisionFunnel, RetrospectiveRecord } from "../../src/autonomous/decision-db.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import {
   decisionCyclesView as decisionCyclesPage,
+  expectancyView,
   funnelView,
 } from "../../src/observatory/decision-json-view.js";
 
@@ -265,5 +266,30 @@ describe("funnelView", () => {
 
   it("returns an empty refusals list when nothing was ever refused", () => {
     expect(funnelView(funnel()).refusals).toEqual([]);
+  });
+});
+
+const retro = (over: Partial<RetrospectiveRecord> = {}): RetrospectiveRecord => ({
+  at: 1_726_000_000_000,
+  personaId: "sauron",
+  symbol: "NVDA",
+  entryIntentId: 1,
+  exitReason: "target hit",
+  realized: 100,
+  returnPct: 10,
+  sentimentDelta: null,
+  momentumDelta: null,
+  ...over,
+});
+
+describe("expectancyView", () => {
+  it("returns an honest all-null result with no retrospectives at all", () => {
+    expect(expectancyView([])).toMatchObject({ pointEstimate: null, ci: null, sampleCount: 0 });
+  });
+
+  it("converts each retrospective's epoch-ms `at` into the ISO close time the bootstrap keys on", () => {
+    const view = expectancyView([retro({ at: 1_726_000_000_000, returnPct: 5 })]);
+    expect(view.pointEstimate).toBe(5);
+    expect(view.sampleCount).toBe(1);
   });
 });
