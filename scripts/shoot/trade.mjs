@@ -827,4 +827,23 @@ await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootOrderOdds = shooter(page, resolve("docs/shots/order-odds"));
 await shootOrderOdds("order-odds-phone");
 
+// P0 template hygiene (#3407): content-sized fields (a 4-character strike no longer a third of
+// the panel) and the two-column estimate. Phone first, then the desktop frame that proves the
+// fields expanded instead of stretching.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
+await page.getByText(/^Chain ·/).waitFor();
+await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootTemplate = shooter(page, resolve("docs/shots/p0-template"));
+await shootTemplate("ticket-fields-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
+await shootTemplate("ticket-fields-desktop");
+await page.getByRole("button", { name: "Review order" }).click();
+await page.getByText("Chance of profit").waitFor();
+await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
+await shootTemplate("estimate-desktop");
+
 await close();

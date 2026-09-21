@@ -8,8 +8,11 @@ import type { DeskActivityEvent } from "../live/desk";
  * (sells that close longs, buys that close shorts) — opening fills show `—`, the honest
  * "nothing realized yet" rather than a misleading $0.
  *
- * `col-detail` on P/L, Return, and Status follows the blotter's responsive disclosure: the
- * core columns (Date, Symbol, Side, Qty, Price) survive at phone width, detail scrolls out.
+ * `col-detail` on P/L and Return follows the blotter's responsive disclosure: the core columns
+ * (Date, Symbol, Side, Qty, Price, Status) survive at phone width, the P/L pair scrolls out.
+ * Status joined the core set in #3407 P0 — a member on a phone could not see whether an order was
+ * working, filled or cancelled, the one column the parity study's audit found every reference
+ * desk keeps phone-first.
  * @category trading
  */
 export function ActivityTable({
@@ -30,7 +33,7 @@ export function ActivityTable({
               <th className="num">Price</th>
               <th className="num col-detail">P/L</th>
               <th className="num col-detail">Return</th>
-              <th className="col-detail">Status</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -73,7 +76,7 @@ function ActivityRow({ event }: { readonly event: DeskActivityEvent }): ReactEle
         {event.realizedPl ?? "—"}
       </td>
       <td className="num col-detail">{event.returnPct ?? "—"}</td>
-      <td className="col-detail">
+      <td>
         <span className="tl-status">{event.status}</span>
         {event.backfilled ? <span className="tl-backfill">backfilled</span> : null}
         {event.origin === "alpaca-direct" ? (
