@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   fetchChain,
   type OptionDraft,
@@ -215,6 +215,19 @@ export function OptionGate({
     onPreset(target);
   };
 
+  /** A strike that arrived before the chain (`?strike=` on mount, or typed ahead of the fetch)
+   *  never went through `pickStrike`'s seeding, so the limit stayed empty and the ticket refused
+   *  itself (#3407 P0). Seed once the chain resolves, only while the field is still empty — a
+   *  member's own premium is never overwritten. */
+  const seedRow = chainData?.rows.find((r) => String(r.strike) === strike);
+  const seedPremium = seedRow?.premium;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: orderType/limitPrice read at fire time on purpose — seeding is one-shot per resolved strike
+  useEffect(() => {
+    if (seedPremium !== undefined && orderType === "limit" && limitPrice === "") {
+      setLimitPrice(String(seedPremium));
+    }
+  }, [seedPremium, strike]);
+
   /** The currently-selected CONTRACT's real OCC symbol (task 3a) — sourced from the matched chain
    *  row, never hand-assembled: `buildOccSymbol` exists server-side/in `option-symbols.ts` for
    *  constructing one from partial state, which is more machinery than this slice needs. Empty
@@ -262,7 +275,15 @@ export function OptionGate({
 
   if (play.locked) return <LockedPanel play={play} />;
 
-  const drafted = symbol.trim() !== "" && strike !== "" && contracts !== "";
+  // A limit order with no premium cannot pass its own review (#3407 P0 — the study found the
+  // default ticket refused itself: `limit` with an empty price and Review enabled). Withhold
+  // Review until the price is there and say why, instead of letting the server say it.
+  const limitMissing = orderType === "limit" && limitPrice.trim() === "";
+  const drafted = symbol.trim() !== "" && strike !== "" && contracts !== "" && !limitMissing;
+  const limitNote =
+    limitMissing && symbol.trim() !== "" && strike !== ""
+      ? "A limit order needs a premium per share — pick a strike from the chain to seed it from the mid, or type one."
+      : undefined;
   return (
     <section className="panel gate-panel" aria-label={play.name}>
       <h2 className="panel-title">{play.name}</h2>
@@ -377,6 +398,7 @@ export function OptionGate({
       {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
       <TimeInForceField fallback="day" value={timeInForce} onChange={edit(setTimeInForce)} />
+      {limitNote ? <p className="tkt-note">{limitNote}</p> : null}
 
       {/* Self, then others (#2017 Phase 1 slice 13 review fix): the drawer-narrative order Eric's
           plan comment sketched — "here's what you've done, here's what others are doing, now

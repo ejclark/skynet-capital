@@ -846,4 +846,15 @@ await page.getByText("Chance of profit").waitFor();
 await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
 await shootTemplate("estimate-desktop");
 
+// An honest empty limit (#3407 P0): a strike the chain doesn't list gets no seeded premium, so
+// Review stays disabled and the note says what is missing — the ticket no longer refuses itself.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=190`);
+await page.getByText(/needs a premium per share/).waitFor();
+await page.getByText(/needs a premium per share/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootHonest = shooter(page, resolve("docs/shots/p0-honest"));
+await shootHonest("limit-note-phone");
+
 await close();

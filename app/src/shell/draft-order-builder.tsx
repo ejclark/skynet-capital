@@ -157,9 +157,19 @@ export function ReviewBody({
   );
 }
 
-/** The gate's status line — a small, pure mapping from phase/refusals to tone + headline. */
-export function gateStatus(draft: DraftOrder): { tone: string; headline: string } {
-  if (draft.phase === "submitted") return { tone: "filled", headline: "Confirmed" };
+/** The gate's status line — a small, pure mapping from phase/refusals to tone + headline.
+ *  `executed` is the server's own word on whether the submit reached the broker (#3407 P0; the
+ *  study's audit found "Confirmed" over an order the deployment had refused to send): only a
+ *  true value earns the filled tone; anything else is "reviewed, not sent", in those words. */
+export function gateStatus(
+  draft: DraftOrder,
+  executed?: boolean,
+): { tone: string; headline: string } {
+  if (draft.phase === "submitted") {
+    return executed === true
+      ? { tone: "filled", headline: "Confirmed" }
+      : { tone: "checks", headline: "Reviewed — not sent" };
+  }
   if (draft.phase === "reviewed") return { tone: "ready", headline: "Reviewed — ready to confirm" };
   if (draft.refusals.length > 0) {
     return { tone: "refused", headline: draft.refusals[0] ?? "Refused" };
@@ -177,10 +187,16 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
   const [draft, setDraft] = useState<DraftOrder>(emptyDraft());
   const [preview, setPreview] = useState<DraftPreview | undefined>(undefined);
   const [note, setNote] = useState<string | undefined>(undefined);
+  const [executed, setExecuted] = useState<boolean | undefined>(undefined);
   const [busy, setBusy] = useState(false);
 
   const apply = async (
-    run: () => Promise<{ draft: DraftOrder; preview: DraftPreview; note?: string }>,
+    run: () => Promise<{
+      draft: DraftOrder;
+      preview: DraftPreview;
+      note?: string;
+      executed?: boolean;
+    }>,
   ) => {
     setBusy(true);
     try {
@@ -188,6 +204,7 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
       setDraft(res.draft);
       setPreview(res.preview);
       if (res.note !== undefined) setNote(res.note);
+      if (res.executed !== undefined) setExecuted(res.executed);
     } finally {
       setBusy(false);
     }
@@ -202,10 +219,11 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
     setDraft(emptyDraft());
     setPreview(undefined);
     setNote(undefined);
+    setExecuted(undefined);
   };
 
   const editable = draft.phase !== "reviewed" && draft.phase !== "submitted";
-  const { tone, headline } = gateStatus(draft);
+  const { tone, headline } = gateStatus(draft, executed);
 
   return (
     <section className="panel gate-panel" aria-label="Multi-leg order builder">

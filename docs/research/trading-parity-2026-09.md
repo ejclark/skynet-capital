@@ -756,9 +756,13 @@ plan, not a constraint on the designs.
    (`straddle-view.tsx:26,104-108`); the header comment still promises the rail.
 5. **A chain with no spot renders every strike** — no ±8 window, no divider, no "Show all"
    (`app/src/live/straddle.ts:55`); "Show all N strikes" is one-way once expanded.
-6. **The default options ticket fails its own review** — `orderType` defaults to `limit` with an empty
-   price, Review is enabled, the server refuses (`option-gate.tsx:118-119,257`).
-7. **"Confirmed" for an order that was never sent** (multi-leg, `draft-order-builder.tsx:162`).
+6. **The default options ticket fails its own review** — *fixed, P0:* Review is withheld and explained
+   while a limit has no premium, and a strike that arrives before the chain seeds its premium from the
+   mid once the chain resolves. As found: `orderType` defaulted to `limit` with an empty price, Review
+   was enabled, the server refused (`option-gate.tsx:118-119,257`).
+7. **"Confirmed" for an order that was never sent** — *fixed, P0:* the headline is the server's
+   `executed` word; a submit the deployment refused reads "Reviewed — not sent" (multi-leg,
+   `draft-order-builder.tsx` `gateStatus`).
 8. **Two positions blotters** — `/app/accounts?section=overview` and `/app/u/$id` render the same table
    with duplicated chip/filter definitions.
 9. **The wide tokens are inert on the ticket's children** — `RecentOrdersStrip` and `WireRow` render
