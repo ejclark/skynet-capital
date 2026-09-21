@@ -293,7 +293,7 @@
     <p class="step-name" id="stepname"></p>
   </div>
 
-  <p class="howto"><b>How to read this.</b> One frame at a time: the shape sets what the <em>home</em> of trading is, the journey step is one screen inside it, the viewport is the frame width. Everything is a grey box with real numbers so density defects show; nothing is styled. Each block carries the name of the shell component that would render it (<code>StraddleView</code>, <code>MilestoneStrip</code>…) or <em>new</em> where none exists. The panel beside (1280) or below (390) the frame lists which study rows the frame borrows (<code>docs/research/trading-parity-2026-09.md</code> § The call — only rows graded <em>frame</em> or <em>vendor-quote</em>) and where the shape reverses a call you made in your own words — those are drawn as an A/B <em>on the frame</em>, flagged with the date, never silently replaced. Every ticket frame also carries the #3299 A/B for the default order type; step 9 <em>is</em> that A/B, walked end to end. <b>The decision surface is steps 1 · 4 · 6 · 10</b> — eight frames per viewport; steps 7–9 are shared capability slices, identical across shapes by design. <b>Compare all four</b> (the Mode switch) puts the same step and viewport side by side, one cell per shape; the Shape row then picks which one opens in Single. A good first read: <a href="#arcade/1/1280">#arcade/1/1280</a> beside <a href="#workbench/1/1280">#workbench/1/1280</a> in two windows. The line under each frame's topbar is a caption naming the shape's home — none of the four adds a fourth navigation word to the bar. A link to any frame is its URL hash, e.g. <code>#arcade/4/390</code>.</p>
+  <p class="howto"><b>How to read this.</b> One frame at a time: the shape sets what the <em>home</em> of trading is, the journey step is one screen inside it, the viewport is the frame width. Everything is a grey box with real numbers so density defects show; nothing is styled. Each block carries the name of the shell component that would render it (<code>StraddleView</code>, <code>MilestoneStrip</code>…) or <em>new</em> where none exists. The panel beside (1280) or below (390) the frame lists which study rows the frame borrows (<code>docs/research/trading-parity-2026-09.md</code> § The call — only rows graded <em>frame</em> or <em>vendor-quote</em>) and where the shape reverses a call you made in your own words — those are drawn as an A/B <em>on the frame</em>, flagged with the date, never silently replaced. Every ticket frame also carries the #3299 A/B for the default order type; step 9 <em>is</em> that A/B, walked end to end. <b>The decision surface is steps 1 · 4 · 6 · 10</b> — eight frames per viewport; steps 7–9 are shared capability slices, identical across shapes by design. <b>Compare all four</b> (the Mode switch) puts the same step and viewport side by side, one cell per shape; the Shape row then picks which one opens in Single. A good first read: <a href="#arcade/1/1280">#arcade/1/1280</a> beside <a href="#workbench/1/1280">#workbench/1/1280</a> in two windows. The line under each frame's topbar is a caption naming the shape's home — none of the four adds a fourth navigation word to the bar. A link to any frame is its URL hash, e.g. <code>#arcade/4/390</code>. <b>Settled so far (2026-09-21, #3407 decision log):</b> the chain-as-workspace is the home of <em>options</em> trading (Workbench; Arcade's chain-on-the-stage is the same mechanic); Outlook is an auxiliary entry into it, not a home; the ticket shows one class chip, never the ladder. <b>Still open:</b> the home of stock trading, where working orders live (#674), the default order type (#3299), Register's blotter fork.</p>
 
   <section class="stage" id="stage" data-vp="390">
     <div>
@@ -426,11 +426,13 @@ function quoteHeader(q = NVDA) { // A10 — no size/NBBO line at any width
 }
 // Fixture: 6 of 8 earned; 401 is OPEN (next up, unearned — a filled vertical earns it); 501 is the locked one.
 function milestoneStrip(rung = '101', compact = false) {
-  const rungs = ['101', '102', '201', '202', '301', '302', '401', '501'];
+  // Eric, 2026-09-21 (decision log on #3407): the ticket shows the class of the trade, not the ladder.
+  // The rail was a preset on click and never a gate on the form, so the chip is the most a ticket
+  // carries; the full ladder lives on /learn/trading. A locked rung keeps its LockedPanel.
+  const names = { '101': 'buy stock', '102': 'sell stock', '201': 'cash-secured put', '202': 'covered call', '301': 'long put', '302': 'long call', '401': 'vertical spread', '501': 'zero-DTE' };
   const earned = ['101', '102', '201', '202', '301', '302'];
-  const open = [...earned, '401'];
-  const rail = rungs.map(r => `<span class="chip${r === rung ? ' on' : open.includes(r) ? '' : ' dis'}">${open.includes(r) ? r : r + ' 🔒'}</span>`).join('');
-  return blk('MilestoneStrip', `<span class="lbl">Milestone · trading ladder · 6 / 8 earned</span><span class="chips">${rail}</span>${compact ? '' : `<p class="sub">Next up · <b>401 vertical spread</b> — open now; a filled vertical earns it · then 501 (zero-DTE) opens after 401 fills. A rung presets the form; it never drives it.</p>`}`);
+  const state = earned.includes(rung) ? 'earned' : rung === '401' ? 'open · a fill earns it' : 'locked';
+  return blk('MilestoneStrip · class chip', `<span class="chips"><span class="chip on">${rung} · ${names[rung] || ''}</span><span class="chip">${state}</span><span class="sub">ladder on Learn ›</span></span>`);
 }
 function ticketNav(inst, side, type) {
   return blk('TicketNav', `<span class="row"><span class="field"><span class="lbl">Instrument</span>${seg(['Stock', 'Option', 'Spread'], inst)}</span>
@@ -568,8 +570,8 @@ function abType() {
 }
 const AB = {
   rail: () => abRev(1461,
-    { cap: 'The sheet stands alone: a one-line rung chip in its header; the rail lives on the stage/home, not in the ticket.', rows: [{ t: 'Sheet · rung 101 chip', k: 'on' }, { t: 'Side · Amount · Type', k: 'box' }, { t: 'Plan · Review', k: 'box' }] },
-    { cap: 'MilestoneStrip (eyebrow · rail · status) above the form, presetting it; the form keeps its own nav.', rows: [{ t: 'MilestoneStrip 101 … 501', k: 'bar' }, { t: 'TicketNav', k: 'bar' }, { t: 'fields', k: 'box' }] }),
+    { cap: 'SETTLED 2026-09-21 — Eric: "listing the entire milestone feels excessive unless it is an input that drives form behavior… listing the class number of the trade seems like the most we\'d want to show." The ticket carries one class chip; the ladder lives on Learn.', rows: [{ t: 'Ticket · 201 · cash-secured put · earned', k: 'on' }, { t: 'Side · Amount · Type', k: 'box' }, { t: 'Plan · Review', k: 'box' }] },
+    { cap: 'The shape as first drawn: MilestoneStrip (eyebrow · rail · status) above every form. Kept for the record; not the pick.', rows: [{ t: 'MilestoneStrip 101 … 501', k: 'bar' }, { t: 'TicketNav', k: 'bar' }, { t: 'fields', k: 'box' }] }),
   scope: () => abRev(674,
     { cap: 'Working orders scoped to the symbol on its stage; all others one tap away under Accounts › Orders (count shown).', rows: [{ t: 'GOOGL stage', k: 'bar' }, { t: 'Working orders · GOOGL (1)', k: 'on' }, { t: '+2 on other symbols →', k: 'dash' }] },
     { cap: 'One working-orders panel on the Trade page, every symbol, cancel and replace on each row.', rows: [{ t: 'Trade', k: 'bar' }, { t: 'Working orders · all (3)', k: 'on' }, { t: 'ticket', k: 'box' }] }),
