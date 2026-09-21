@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { type ChainData, fetchChain } from "../live/options";
-import { StraddleView } from "./straddle-view";
+import { type PickSide, StraddleView } from "./straddle-view";
 
 /**
  * The options ticket's chain, both sides (#1481 slice 1). The ticket already holds one side of
@@ -15,6 +15,7 @@ export function ChainStraddle({
   optionType,
   chainData,
   strike,
+  markedStrikes,
   onPickStrike,
   onPickSide,
 }: {
@@ -26,7 +27,9 @@ export function ChainStraddle({
   readonly onPickStrike: (strike: string) => void;
   /** A call/put price cell pick (#2017 Phase 0 task 4e) — threaded straight through to
    *  `StraddleView`, same as `onPickStrike`. */
-  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
+  readonly onPickSide?: PickSide;
+  /** Strikes the multi-leg draft already carries (#3407 P3 slice 2) — threaded through. */
+  readonly markedStrikes?: readonly number[];
 }): ReactElement {
   const otherType = optionType === "call" ? "put" : "call";
   const other = useQuery({
@@ -42,6 +45,7 @@ export function ChainStraddle({
       calls={optionType === "call" ? chainData.rows : otherRows}
       puts={optionType === "put" ? chainData.rows : otherRows}
       selectedStrike={strike === "" ? undefined : Number(strike)}
+      markedStrikes={markedStrikes}
       onPickStrike={(value) => onPickStrike(String(value))}
       onPickSide={onPickSide}
       quotes={chainData.quotes}

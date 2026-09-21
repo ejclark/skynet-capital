@@ -34,11 +34,10 @@ describe("StraddleView — chain cell picking", () => {
       />,
     );
 
-    // Both bid and ask cells for a strike/side share the same aria-label — click the bid cell.
-    // getAllByRole throws (rather than returning []) when nothing matches, so index 0 is safe.
-    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 call" })[0] as HTMLElement);
+    // Each price cell names itself (#3407 P3 slice 2): the bid and the ask are different taps.
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 call bid" }));
 
-    expect(onPickSide).toHaveBeenCalledWith(180, "call");
+    expect(onPickSide).toHaveBeenCalledWith(180, "call", { price: "bid", value: 4.8 });
   });
 
   it('calls onPickSide with the strike and "put" when a put cell is clicked', () => {
@@ -54,9 +53,27 @@ describe("StraddleView — chain cell picking", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 put" })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 put ask" }));
 
-    expect(onPickSide).toHaveBeenCalledWith(180, "put");
+    expect(onPickSide).toHaveBeenCalledWith(180, "put", { price: "ask", value: 3.4 });
+  });
+
+  it("reports an unquoted cell without a value and outlines marked strikes", () => {
+    const onPickSide = rstest.fn();
+    const { container } = render(
+      <StraddleView
+        symbol="NVDA"
+        expiration="2026-09-18"
+        spot={180}
+        calls={[{ strike: 180, occSymbol: "NVDA180" }]}
+        puts={puts}
+        markedStrikes={[180]}
+        onPickSide={onPickSide}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 call ask" }));
+    expect(onPickSide).toHaveBeenCalledWith(180, "call", { price: "ask" });
+    expect(container.querySelector(".straddle-marked")).not.toBeNull();
   });
 
   it("renders call/put cells with no button when onPickSide is not provided", () => {
@@ -86,9 +103,9 @@ describe("StraddleView — chain cell picking", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 call" })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 call bid" }));
 
-    expect(onPickSide).toHaveBeenCalledWith(180, "call");
+    expect(onPickSide).toHaveBeenCalledWith(180, "call", { price: "bid", value: 4.8 });
     expect(onPickStrike).not.toHaveBeenCalled();
   });
 });

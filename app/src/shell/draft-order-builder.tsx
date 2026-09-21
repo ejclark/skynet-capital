@@ -242,7 +242,7 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
         Add legs from the chain below — a vertical spread is two, an iron condor is four.
       </p>
 
-      {editable ? <DraftLegForm busy={busy} onAdd={addLeg} /> : null}
+      {editable ? <DraftLegForm busy={busy} legs={draft.legs} onAdd={addLeg} /> : null}
 
       {draft.legs.length > 0 ? (
         <ul className="draft-leg-list">

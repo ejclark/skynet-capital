@@ -865,7 +865,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Chain's ITM rail off-screen by default | Fidelity's orange ITM rail sits beside the strike [F-frames 11]; tos shades ITM rows [T-AP] | rail painted on the outermost cells (`straddle-view.tsx:26,104-108`) | fix (P2): shade the row or move the rail to the strike cell |
 | No-spot symbol renders every strike | RH windows the chain and scrolls [R34]; tos strikes selector 4 / 8 / SD [T-AP] | `windowRows` bails without a divider (`straddle.ts:55`) | fix (P2): window around the last known mark; a strike-count control |
 | Two positions blotters | one Positions surface per reference | `/app/accounts?section=overview` and `/app/u/$id` duplicate | fix (P0): one component, one route |
-| Spread legs via dropdowns; single legs via the chain | tos Analyze reuses the chain layout for simulated legs [T-AN]; Fidelity multi-select on the chain [F38] | `draft-leg-form.tsx:117-162` fetches its own chain | build (P3): the chain is the leg picker, `StraddleView` reused |
+| Spread legs via dropdowns; single legs via the chain | tos Analyze reuses the chain layout for simulated legs [T-AN]; Fidelity multi-select on the chain [F38] | **built** (P3 slice 2) — the builder renders the same straddle view; Bid = sell, Ask = buy, the tapped price is the limit, held strikes outlined (`draft-leg-form.tsx`) | done |
 
 ### Tier 4 — parity nice-to-have
 
