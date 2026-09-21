@@ -136,6 +136,26 @@ describe("previewOrder — limit and stop orders", () => {
     expect(preview.stopPrice).toBeUndefined();
   });
 
+  it("always says the time in force it will send — day for market, gtc for a held order (#3407)", () => {
+    expect(
+      previewOrder({ symbol: "AAPL", quantity: 1, action: "buy" }, context()).timeInForce,
+    ).toBe("day");
+    expect(
+      previewOrder(
+        { symbol: "AAPL", quantity: 1, action: "buy", orderType: "limit", limitPrice: 118 },
+        context(),
+      ).timeInForce,
+    ).toBe("gtc");
+  });
+
+  it("carries the member's own time in force over the default", () => {
+    const preview = previewOrder(
+      { symbol: "AAPL", quantity: 1, action: "buy", timeInForce: "gtc" },
+      context(),
+    );
+    expect(preview.timeInForce).toBe("gtc");
+  });
+
   it("accepts a limit order at a reasonable price with no warning", () => {
     const preview = previewOrder(
       { symbol: "AAPL", quantity: 1, action: "buy", orderType: "limit", limitPrice: 118 },

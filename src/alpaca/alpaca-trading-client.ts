@@ -60,6 +60,8 @@ export interface AlpacaOrder {
   readonly type?: string;
   readonly limit_price?: string | null;
   readonly stop_price?: string | null;
+  /** "day" | "gtc" | "ioc" | … — echoed back by the broker; the desk shows it verbatim (#3407). */
+  readonly time_in_force?: string;
   readonly filled_qty?: string;
   readonly filled_avg_price?: string | null;
   readonly submitted_at?: string;
@@ -77,6 +79,9 @@ export interface PlaceOrderParams {
   readonly limit_price?: number;
   /** Required when `type` is "stop". */
   readonly stop_price?: number;
+  /** Day or good-till-cancelled. Omit and the client keeps its standing default: market → day,
+   *  held (limit/stop) → gtc. The desk passes the member's own choice through (#3407 P1). */
+  readonly time_in_force?: "day" | "gtc";
 }
 
 /** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
@@ -218,7 +223,7 @@ export class AlpacaTradingClient {
       // A held (limit/stop) order must outlive the trading day it was placed on — a stop-loss
       // that silently expired overnight wouldn't be protecting anything. Market orders keep the
       // existing "day" behavior unchanged.
-      time_in_force: type === "market" ? "day" : "gtc",
+      time_in_force: params.time_in_force ?? (type === "market" ? "day" : "gtc"),
       ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
       ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
     });

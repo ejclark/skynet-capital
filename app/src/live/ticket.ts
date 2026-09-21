@@ -11,6 +11,9 @@ import { postJson } from "./post";
  *  client can send, which is the whole reason it is spelled out here rather than left as string. */
 export type TicketOrderType = "market" | "limit" | "stop";
 
+/** Mirrors the server's `TicketTimeInForce` — Day or GTC, the two the desk shows (#3407 P1). */
+export type TicketTimeInForce = "day" | "gtc";
+
 export interface TicketDraft {
   readonly participantId: string;
   readonly symbol: string;
@@ -19,6 +22,7 @@ export interface TicketDraft {
   readonly orderType?: TicketOrderType;
   readonly limitPrice?: number;
   readonly stopPrice?: number;
+  readonly timeInForce?: TicketTimeInForce;
 }
 
 export interface TicketPreview {
@@ -29,6 +33,8 @@ export interface TicketPreview {
   readonly orderType: string;
   readonly limitPrice?: number;
   readonly stopPrice?: number;
+  /** What will be sent — the server always says, even when the draft left it blank. */
+  readonly timeInForce: TicketTimeInForce;
   readonly estPrice?: number;
   readonly estNotional?: number;
   readonly estCashAfter?: number;
@@ -43,6 +49,7 @@ export type TicketResult =
       readonly orderId: string;
       readonly status: string;
       readonly symbol: string;
+      readonly timeInForce?: string;
     }
   | { readonly ok: false; readonly refusals: readonly string[] };
 

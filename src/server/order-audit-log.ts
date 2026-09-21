@@ -24,7 +24,9 @@ export interface OrderAuditRecord {
   readonly at: string;
   /** The play the member confirmed — absent on a close (a close is an exit, not a play). */
   readonly code?: TradeTypeCode;
-  readonly intent?: "open" | "close";
+  /** "cancel" marks the line a member's cancel writes (#3407 P1) — same trail, so "who cancelled
+   *  this" reads next to "who placed it"; milestone derivation only ever joins on `"open"`. */
+  readonly intent?: "open" | "close" | "cancel";
   /** The wire symbol the broker echoed — OCC for options, ticker for shares. */
   readonly symbol?: string;
   readonly side?: "buy" | "sell";

@@ -260,6 +260,7 @@ async function main(): Promise<void> {
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
+    recordOrderAudit: (entry) => orderAudit.record(entry),
     // `/wire`'s cross-participant feed: the same stores, called with no id.
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
