@@ -296,3 +296,18 @@ credible report) is locatable on those dates, per each test's own kill-switch/vo
 Sources: Yahoo Finance daily bars (GOOG, QQQ, `^VIX`, re-pulled uncached 2026-09-17); this ledger's
 own initial research (2026-09-08) for the measured ladder and the corridor list; the sibling
 [`fomc-2026-09-16`](fomc-2026-09-16.md) ledger for the decision-day context.
+
+### Forward test scored (2026-09-22, `forward-test-due` re-dispatch)
+
+`FT-google-adtech-opinion-unseal-2026-09-16-1` reached its 2026-09-21 score-by. **KILLED** —
+neither party filed a redaction motion; the full Memorandum Opinion unsealed automatically,
+unredacted, exactly on 2026-09-16, per three independent outlets (ppc.land, AdExchanger, and a
+third corroborating report) fetched 2026-09-22. That is the opposite branch of the one this test
+predicted (that at least one party would move for redactions, keeping a redacted version for later
+publication). The docket itself stayed unreachable this session too (CourtListener 403, the same
+block logged at initial research), so the scoring rests on secondary reporting, cross-corroborated
+rather than single-sourced. `FT-google-adtech-opinion-unseal-2026-09-16-2` (content test,
+score-by 2026-10-09) remains `_open_` and unscored — not due yet. Full scoring detail:
+[`forward-tests/google-adtech-opinion-unseal-2026-09-16.md`](../forward-tests/google-adtech-opinion-unseal-2026-09-16.md);
+kill-list entry: [`multi-symbol-sweep.md`](../multi-symbol-sweep.md#kill-list--recorded-so-they-are-never-re-proposed).
+This is a scoring note only — the close-out above is not reopened or amended.
