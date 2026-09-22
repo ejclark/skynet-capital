@@ -18,7 +18,16 @@
 //
 //   ≥ 0.40  9 flagged — 7 true, 2 false (empire-state × philly-fed at 0.41, presidents-day ×
 //                        washingtons-birthday at 0.43, the second arguably an eighth duplicate)
-//   ≥ 0.45  7 flagged — 7 true, 0 false   ← chosen
+//   ≥ 0.45  7 flagged — 7 true, 0 false   (the original choice — but one of the "true" 7 was
+//                        actually the eighth: presidents-day/washingtons-birthday scored 0.43 and
+//                        was excluded by this threshold, which is why #1609/#1969 stayed open
+//                        after this file first shipped)
+//   ≥ 0.42  7 flagged — 7 true, 0 false   ← chosen (2026-09-22, issues #1609/#1969/#2318). Re-measured
+//                        on the live calendar (673 ids, superseded entries excluded): 0.42 is the
+//                        exact gap between empire-state/philly-fed (0.41, two distinct regional Fed
+//                        surveys — stays excluded) and presidents-day/washingtons-birthday (0.43, one
+//                        NYSE holiday row under two names — now caught). Same seven true positives as
+//                        0.45, plus the eighth this threshold was missing.
 //   ≥ 0.60  4 flagged — 4 true, 0 false   (loses the SIFMA and cr-expiry pairs)
 //
 // Jaccard rather than a superset-tolerant metric on purpose: the overlap coefficient flags 63
@@ -26,11 +35,11 @@
 // of a longer one far more often than it is a duplicate of it (RapidFuzz documents exactly this
 // for `token_set_ratio`). 720 records restricted to same-date is a 30-line scan, not a dependency.
 //
-// HONEST LIMIT: a threshold tuned on seven positives is tuned on seven positives, and the hardest
-// case we ever measured — a title carrying a 12-token editorial tail, which dragged a near-identical
-// pair to 0.190 — was rewritten out of the corpus before this was written, so recall against a
-// fresh tail is unproven. The falsifier is the next same-release re-slug a lane confirms that this
-// scored under 0.45 on the titles as first written.
+// HONEST LIMIT: a threshold tuned on seven (now eight) positives is tuned on that corpus, and the
+// hardest case we ever measured — a title carrying a 12-token editorial tail, which dragged a
+// near-identical pair to 0.190 — was rewritten out of the corpus before this was written, so recall
+// against a fresh tail is unproven. The falsifier is the next same-release re-slug a lane confirms
+// that this scored under 0.42 on the titles as first written.
 
 /** Words that carry no identity for a market event: the edition markers every title repeats.
  *  "may" is absent because the length filter below already drops it. */
@@ -81,7 +90,7 @@ function jaccard(a, b) {
   return union === 0 ? 0 : shared / union;
 }
 
-const OVERLAP_THRESHOLD = 0.45;
+const OVERLAP_THRESHOLD = 0.42;
 
 /**
  * One warning line per same-date pair of events whose titles overlap at or above `threshold`,
