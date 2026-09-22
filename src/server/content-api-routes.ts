@@ -17,9 +17,24 @@ import { serveDeskJson } from "./desk-json-routes.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
+import { playbookPerformance } from "./playbook-performance.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
+
+/** Per-playbook trade performance (#2287, #885) — every closed trip any participant's fills
+ *  attributed to a playbook, pooled and scored with the same win-rate/expectancy/streaks family
+ *  the account-level view already uses. No weighting/benchmark layer yet, by design. Split out of
+ *  `serveContentApi` to keep that dispatcher's own branching complexity under the fitness gate. */
+async function outpostPerformanceView(config: DashboardServerConfig): Promise<unknown> {
+  const state = config.hub.getState();
+  return {
+    playbooks: await playbookPerformance(state.participants, {
+      readTradeActivity: config.readTradeActivity,
+      readDecisions: config.readDecisions,
+    }),
+  };
+}
 
 /** The shell's content JSON family: the wire, the research shelf, the
  *  journey, the discovery shelves, and fleet ops status — read-only twins of their server-rendered
@@ -72,6 +87,9 @@ export async function serveContentApi(
     // The Outpost's card catalog — derived from the registry on every call, so a
     // new exported play is browsable the moment it lands with nothing here to update.
     return json(outpostCatalog());
+  }
+  if (path === "/api/outpost/performance") {
+    return json(await outpostPerformanceView(config));
   }
   if (path === "/api/ops-status") {
     // GROUP-VISIBLE (#1296, Eric: fleet health "should be public for the group"). Every request

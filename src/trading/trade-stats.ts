@@ -146,6 +146,34 @@ export function statsBySymbol(trips: readonly RoundTrip[]): SymbolStats[] {
     .sort((a, b) => b.netRealized - a.netRealized);
 }
 
+/** Per-playbook breakdown — the full `TradeStats` family, so "which plays actually work" gets the
+ *  same win-rate/profit-factor/expectancy/streaks answer the account-level view already has,
+ *  computed across EVERY trade that named the playbook (any participant, human or bot). */
+export interface PlaybookStats extends TradeStats {
+  readonly playbookId: string;
+}
+
+/**
+ * Groups closed round trips by `RoundTrip.playbookId` (#885 attribution) and runs the full
+ * `tradeStats` family per group. Trips with no `playbookId` (a manual desk trade, or a bot fill
+ * with no playbook attached) are excluded — this measures playbooks, not "everything else," and a
+ * playbook with zero attributed trips simply doesn't appear rather than showing an empty row.
+ * Deliberately no weighting/benchmark layer yet — a plain aggregate is the first slice; those are
+ * additive refinements for later, not a blocker on shipping the base capture.
+ */
+export function statsByPlaybook(trips: readonly RoundTrip[]): PlaybookStats[] {
+  const groups = new Map<string, RoundTrip[]>();
+  for (const trip of trips) {
+    if (!trip.playbookId) continue;
+    const list = groups.get(trip.playbookId);
+    if (list) list.push(trip);
+    else groups.set(trip.playbookId, [trip]);
+  }
+  return [...groups.entries()]
+    .map(([playbookId, group]) => ({ playbookId, ...tradeStats(group) }))
+    .sort((a, b) => b.netRealized - a.netRealized);
+}
+
 /** One calendar day of realized P/L — the input to the history view's day strip. */
 export interface DayResult {
   /** YYYY-MM-DD, in the given IANA timezone (a day that splits a session is a wrong number). */
