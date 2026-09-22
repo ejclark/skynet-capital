@@ -298,6 +298,27 @@ describe("OptionGate — chain cell picking", () => {
     await waitFor(() => expect(screen.getByLabelText("Strike")).toHaveValue(180));
   });
 
+  it("a chain-cell pick flashes the Strike field (Eric, 2026-09-22)", async () => {
+    render(renderChainPickGate({ plays: playsWithUnlockedTarget }));
+
+    const callCells = await screen.findAllByRole("button", { name: /^Pick the 180 call/ });
+    fireEvent.click(callCells[0] as HTMLElement);
+
+    const strikeInput = screen.getByLabelText("Strike");
+    await waitFor(() => expect(strikeInput).toHaveValue(180));
+    expect(strikeInput.className).toContain("strike-flash");
+  });
+
+  it("a hand-typed strike never flashes the field it's typed into", async () => {
+    render(renderChainPickGate({ plays: playsWithUnlockedTarget }));
+
+    const strikeInput = await screen.findByLabelText("Strike");
+    fireEvent.change(strikeInput, { target: { value: "182.5" } });
+
+    expect(strikeInput).toHaveValue(182.5);
+    expect(strikeInput.className).not.toContain("strike-flash");
+  });
+
   it("different, unlocked rung: commits the strike then presets the target rung", async () => {
     const presets: string[] = [];
     const committedStrikes: string[] = [];

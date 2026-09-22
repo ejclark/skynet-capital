@@ -157,6 +157,7 @@ export function StrikeField({
   value,
   onEdit,
   onCommit,
+  flashKey,
 }: {
   readonly id: string;
   readonly chainData: ChainData | undefined;
@@ -165,9 +166,27 @@ export function StrikeField({
   /** Fires on blur with the field's current value — omit for a caller that doesn't track
    *  `?strike=` (unchanged behavior). */
   readonly onCommit?: (value: string) => void;
+  /** Bumped by the caller on every CHAIN-originated pick (never a keystroke) — a distinct value
+   *  each time re-triggers the destination flash (Eric, 2026-09-22: "what standard design choices
+   *  ... organically communicate this without text"). Omit for a caller with no chain to pick
+   *  from (`draft-leg-form.tsx`, `roll-row.tsx` don't render this field at all). */
+  readonly flashKey?: number;
 }): ReactElement {
   const hasSuggestions = chainData !== undefined && chainData.rows.length > 0;
   const listId = `${id}-strikes`;
+  const [flashing, setFlashing] = useState(false);
+  const firstFlash = useRef(true);
+  useEffect(() => {
+    if (firstFlash.current) {
+      // The mount render (`?strike=` seeded from the URL) is not a pick — never flash on load.
+      firstFlash.current = false;
+      return;
+    }
+    if (!flashKey) return;
+    setFlashing(true);
+    const t = setTimeout(() => setFlashing(false), 320);
+    return () => clearTimeout(t);
+  }, [flashKey]);
   return (
     <>
       <input
@@ -179,6 +198,7 @@ export function StrikeField({
         value={value}
         placeholder="40"
         list={hasSuggestions ? listId : undefined}
+        className={flashing ? "strike-flash" : undefined}
         onChange={(e) => onEdit(e.target.value)}
         onBlur={() => {
           if (value !== "") onCommit?.(value);

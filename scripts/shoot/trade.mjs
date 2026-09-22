@@ -986,6 +986,21 @@ const shootHeldBadge = shooter(page, resolve("docs/shots/held-badge"));
 await shootHeldBadge("held-badge-phone");
 currentDesk = desk;
 
+// A chain-cell pick's feedback pair (Eric, 2026-09-22): the picked strike's whole row gets a
+// persistent accent-bordered box (never a background tint alone — a standing reader is red/green
+// colourblind), and the Strike field it fills flashes for a beat so a click far up the table and
+// the field it changes read as one event. Desktop only: the row and the field both need to be in
+// frame together, which only fits at desktop width.
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByRole("button", { name: /Pick the 180 strike/ }).click();
+await page.waitForTimeout(60);
+const shootStrikePick = shooter(page, resolve("docs/shots/strike-pick"));
+await shootStrikePick("strike-pick-flash-desktop");
+await page.waitForTimeout(500);
+await shootStrikePick("strike-pick-settled-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+
 // The recent-orders strip (#2017 Phase 1 slice 13, task 3a) — the viewer's OWN order history for
 // the EXACT contract in front of them. A strike has to actually resolve to a chain row before
 // `RecentOrdersStrip` renders anything (it takes the matched row's real `occSymbol`, never a
