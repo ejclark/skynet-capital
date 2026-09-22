@@ -30,6 +30,7 @@ export const deskQueryKeys = (deskId: string) =>
     ["desk-orders", deskId],
     ["desk", deskId],
     ["option-positions", deskId],
+    ["desk-alerts", deskId],
   ] as const;
 
 export function invalidateDesk(queryClient: QueryClient, deskId: string): void {

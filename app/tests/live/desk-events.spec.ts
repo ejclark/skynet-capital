@@ -63,7 +63,8 @@ describe("connectDeskEvents", () => {
         payload: {},
       }),
     );
-    expect(invalidated).toHaveLength(6);
+    // hello and order each invalidate every desk key once.
+    expect(invalidated).toHaveLength(deskQueryKeys("human-eric").length * 2);
     expect(seen).toEqual([
       {
         id: "e1",

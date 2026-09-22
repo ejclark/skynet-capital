@@ -20,6 +20,7 @@ import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { serveDeskAlertsApi } from "./desk-alerts-route.js";
 import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
@@ -132,6 +133,7 @@ async function serveWriteApis(
   if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
   if (serveDeskEventsApi(req, res, path, config, session)) return true;
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
+  if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;

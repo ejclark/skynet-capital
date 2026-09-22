@@ -488,6 +488,47 @@ const optionPositions = {
   book: { delta: -124, gamma: 3.6, theta: -42, vega: 68, covered: 1, total: 1, uncovered: [] },
 };
 const currentOptionPositions = optionPositions;
+// The alerts the held positions imply (#3407 P4 slice 1) — the same MSFT put a month-rung
+// reminder, plus a written NVDA call in the money three days out: assignment risk, critical.
+const noAlerts = { available: true, asOf: "2026-09-21T14:00:00Z", alerts: [], dismissable: true };
+const positionWatchAlerts = {
+  available: true,
+  asOf: "2026-09-21T14:00:00Z",
+  dismissable: true,
+  alerts: [
+    {
+      id: "a1",
+      at: 1758463200000,
+      source: "position-watch",
+      priority: "critical",
+      symbol: "NVDA",
+      title: "NVDA $180 call · Sep 25 is in the money — assignment risk",
+      body: "A short contract in the money this close to expiry can be assigned any night. Close or roll it, or be ready for the shares.",
+      fingerprint: "fp-1",
+    },
+    {
+      id: "a2",
+      at: 1758463200000,
+      source: "position-watch",
+      priority: "warning",
+      symbol: "NVDA",
+      title: "NVDA $180 call · Sep 25 expires in 4 days",
+      body: "A written contract at expiry settles by assignment or expires worthless — decide before the close.",
+      fingerprint: "fp-2",
+    },
+    {
+      id: "a3",
+      at: 1758463200000,
+      source: "position-watch",
+      priority: "info",
+      symbol: "MSFT",
+      title: "MSFT $420 put · Sep 18 expires in 18 days",
+      body: "A held contract at expiry is exercised if in the money, otherwise expires worthless.",
+      fingerprint: "fp-3",
+    },
+  ],
+};
+let currentAlerts = noAlerts;
 // A 2-lot NVDA 180/200 call credit spread walked add → validate → review → confirm, exactly the
 // states `draft-order.ts` produces; the confirm answer is the route's own shape with the
 // broker's echo (`executed: true`, order id, status, the working-orders note).
@@ -636,6 +677,8 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/option/review": () => currentOptionReview,
     // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
     "/api/trade/option-positions": () => currentOptionPositions,
+    "/api/trade/alerts": () => currentAlerts,
+    "/api/trade/alerts/dismiss": { ok: true },
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
     "/api/trade/replace": {
       ok: true,
@@ -1045,6 +1088,24 @@ await shootOptionPositions("option-positions-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
 await shootLimitClose("limit-close-desktop");
+
+// The alerts strip (#3407 P4 slice 1): what the held positions are saying — a critical
+// assignment-risk row, a week-out expiry warning, a month-out FYI; the badge word and glyph carry
+// the priority, the left accent steps with it. PHONE FIRST.
+currentAlerts = positionWatchAlerts;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByText(/assignment risk/).waitFor();
+await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -80));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootAlerts = shooter(page, resolve("docs/shots/desk-alerts"));
+await shootAlerts("desk-alerts-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -120));
+await shootAlerts("desk-alerts-desktop");
+currentAlerts = noAlerts;
 
 // Roll as one ticket (#3407 P3 slice 3) — the same held put, Roll… opened: target expiration
 // and strike from the chain, the two legs spelled out, then the reviewed Confirm naming the net
