@@ -242,6 +242,8 @@ const studyBars = {
 const chain = {
   symbol: "NVDA",
   optionType: "put",
+  // The header reads its quote off the chain (#3299 slice 1) — same book as `quote` above.
+  quote,
   // 13 sequential Friday-ish weeklies-plus-monthlies (#2017 Phase 0 task 4c) — enough to prove the
   // expiration tab strip actually needs a horizontal swipe at 390px, not just render the 2-3 dates
   // that would have fit in the old <select> just as well.
@@ -1148,6 +1150,7 @@ currentChain = {
   expirations: ["2026-09-29", "2026-09-30", "2026-10-16"],
   expiration: "2026-09-30",
   spot: 118.4,
+  quote: currentQuote,
   rows: [110, 115, 118, 120, 125].map((strike, i) => ({
     strike,
     occSymbol: `MU260930P${String(strike * 1000).padStart(8, "0")}`,

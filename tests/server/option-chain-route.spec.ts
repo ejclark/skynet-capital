@@ -52,6 +52,7 @@ describe("serveChain", () => {
       getChain: () =>
         Promise.resolve([{ occSymbol: "NVDA261016P00100000", strike: 100, bid: 2, ask: 3 }]),
       getUnderlyingPrice: () => Promise.resolve(105),
+      getUnderlyingQuote: () => Promise.resolve(undefined),
     };
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=NVDA&type=put&exp=2026-10-16", config(client), "human-ann");
@@ -59,6 +60,36 @@ describe("serveChain", () => {
     expect(body.expiration).toBe("2026-10-16");
     expect(body.spot).toBe(105);
     expect(body.rows[0].premium).toBe(2.5); // the bid/ask mid, computed server-side
+  });
+
+  it("carries the quote header's view off the same snapshot, spot = last, no second price read (#3299 slice 1)", async () => {
+    let priceReads = 0;
+    const client = {
+      getExpirations: () => Promise.resolve(["2026-10-16"]),
+      getChain: () =>
+        Promise.resolve([{ occSymbol: "NVDA261016P00100000", strike: 100, bid: 2, ask: 3 }]),
+      getUnderlyingPrice: () => {
+        priceReads += 1;
+        return Promise.resolve(105);
+      },
+      getUnderlyingQuote: () =>
+        Promise.resolve({ last: 181.32, prevClose: 179.18, bid: 181.28, ask: 181.32 }),
+    };
+    const { res, out } = fakeRes();
+    await serveChain(res, "/x?symbol=NVDA&type=put", config(client), "human-ann");
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.spot).toBe(181.32);
+    expect(body.quote).toEqual({
+      symbol: "NVDA",
+      last: 181.32,
+      change: 2.14,
+      changePct: 1.19,
+      tone: "pos",
+      bid: 181.28,
+      ask: 181.32,
+      mid: 181.3,
+    });
+    expect(priceReads).toBe(0);
   });
 
   it("carries volume/delta/gamma/theta/vega when the chain client supplies them, and omits them (never null/0) when it doesn't (#2017 Phase 1 slice 14)", async () => {
@@ -81,6 +112,7 @@ describe("serveChain", () => {
           { occSymbol: "NVDA261016P00105000", strike: 105, bid: 1, ask: 1.5 }, // none supplied
         ]),
       getUnderlyingPrice: () => Promise.resolve(105),
+      getUnderlyingQuote: () => Promise.resolve(undefined),
     };
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=NVDA&type=put&exp=2026-10-16", config(client), "human-ann");
@@ -108,6 +140,7 @@ describe("serveChain", () => {
           { occSymbol: "B", strike: 105 },
         ]),
       getUnderlyingPrice: () => Promise.resolve(105),
+      getUnderlyingQuote: () => Promise.resolve(undefined),
     };
     const first = fakeRes();
     await serveChain(first.res, "/x?symbol=NVDA&type=put", config(quoted), "human-ann");
@@ -131,6 +164,7 @@ describe("serveChain", () => {
       getExpirations: () => Promise.resolve(["2026-09-18"]),
       getChain: () => Promise.resolve([]),
       getUnderlyingPrice: () => Promise.resolve(105),
+      getUnderlyingQuote: () => Promise.resolve(undefined),
     };
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=NVDA&type=put&exp=2026-12-18", config(client), "human-ann");
@@ -142,6 +176,7 @@ describe("serveChain", () => {
       getExpirations: () => Promise.resolve([]),
       getChain: () => Promise.resolve([]),
       getUnderlyingPrice: () => Promise.resolve(105),
+      getUnderlyingQuote: () => Promise.resolve(undefined),
     };
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=ZZZZ&type=call", config(client), "human-ann");

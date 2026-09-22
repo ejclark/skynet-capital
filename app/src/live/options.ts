@@ -7,6 +7,7 @@
 
 import type { PayoffCurve } from "./draft-order";
 import { postJson } from "./post";
+import type { Quote } from "./quote";
 import type { TicketResult } from "./ticket";
 
 export type OptionPlayCode = "201" | "202" | "301" | "302";
@@ -71,6 +72,10 @@ export interface ChainData {
   readonly expirations: readonly string[];
   readonly expiration: string;
   readonly spot?: number;
+  /** The quote header's view, off the same snapshot as `spot` (#3299 slice 1) — the options
+   *  ticket reads it from here instead of a second `/api/trade/quote` round trip. Absent when the
+   *  snapshot had no prior close, or from a server that predates the field. */
+  readonly quote?: Quote;
   /** Absent only from a server that predates the field. */
   readonly quotes?: ChainQuoteCoverage;
   readonly rows: readonly ChainRow[];
