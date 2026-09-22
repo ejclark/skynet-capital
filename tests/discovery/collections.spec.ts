@@ -54,10 +54,10 @@ describe("findCollection", () => {
 
 describe("unshelved", () => {
   it(
-    "is empty for personas; TACO-DJT is the one honest playbook exception — event-driven, so " +
-      "the calendar-window shelf probe can never find it a window to shelve",
+    "is empty for personas; TACO-DJT and HC-SAURON are the honest playbook exceptions — " +
+      "event-driven/tactical, so the calendar-window shelf probe can never find either a window to shelve",
     () => {
-      expect(unshelved(collections).map((m) => m.id)).toEqual(["TACO-DJT"]);
+      expect(unshelved(collections).map((m) => m.id)).toEqual(["HC-SAURON", "TACO-DJT"]);
     },
   );
 

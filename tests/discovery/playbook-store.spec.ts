@@ -3,7 +3,12 @@ import { playbookStoreCatalog } from "../../src/discovery/playbook-store.js";
 describe("playbookStoreCatalog", () => {
   it("returns one entry per house playbook, keyed by id and symbol", () => {
     const entries = playbookStoreCatalog();
-    expect(entries.map((e) => e.id).sort()).toEqual(["G1-GOOG", "S1-NVDA", "TACO-DJT"]);
+    expect(entries.map((e) => e.id).sort()).toEqual([
+      "G1-GOOG",
+      "HC-SAURON",
+      "S1-NVDA",
+      "TACO-DJT",
+    ]);
     for (const entry of entries) {
       expect(entry.symbol.length).toBeGreaterThan(0);
     }

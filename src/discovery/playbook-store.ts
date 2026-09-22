@@ -67,6 +67,17 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "Converges to flat once the hold window elapses with no live signal — the same discipline as a missed print exit.",
     hold: "No qualifying story detected: correctly dark, same as a date-keyed play with no upcoming print.",
   },
+  "HC-SAURON": {
+    description:
+      "Research-volume mode across a ten-name tech universe — the goal is trade COUNT for a confidence-rating dataset, not P/L. Small, frequent tranches probe every sentiment extreme and every momentum run, never one big bet.",
+    enter:
+      "Small tranches on panic (mean-reversion) or an ordinary momentum run (no extreme required) — loosened thresholds trade far more often than the standard read of the same signals.",
+    exitTakeProfit:
+      "Takes half off into exhausted euphoria, letting the rest ride for the next signal — never one all-or-nothing exit.",
+    exitCutLosses:
+      "A universal momentum stop closes the WHOLE position the moment the thesis breaks, regardless of which tranche opened it.",
+    hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
+  },
 };
 
 function entryOf(playbook: Playbook): PlaybookStoreEntry {
