@@ -382,6 +382,63 @@ describe("OptionGate — chain cell picking", () => {
 });
 
 /**
+ * The chain accordion (Eric, 2026-09-22 — "is it possible to have that table be expandable in the
+ * same form after stock symbol is selected... an intuitive path... to collapse the table"): open
+ * with nothing picked, collapsed to a one-line summary the instant a strike is picked, reopenable
+ * via "Change". Replaces the old `hideChain` docked-pane split (`option-gate.tsx`'s header comment).
+ */
+describe("OptionGate — the chain accordion (Eric, 2026-09-22)", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  it("opens once the chain resolves, collapses to a summary the instant a strike is picked, reopens on Change", async () => {
+    render(renderGate("NVDA"));
+
+    // Open: the real chain table is on screen, nothing picked yet — bid and ask cells for the
+    // strike share an aria-label, so this is an AllBy query (see "chain cell picking" above).
+    const callCells = await screen.findAllByRole("button", { name: /^Pick the 180 call/ });
+    expect(screen.queryByText("Change")).not.toBeInTheDocument();
+
+    fireEvent.click(callCells[0] as HTMLElement);
+
+    // Collapsed: the table is gone, replaced by a one-line summary naming the pick.
+    await waitFor(() =>
+      expect(screen.queryAllByRole("button", { name: /^Pick the 180 call/ })).toHaveLength(0),
+    );
+    const summary = document.querySelector(".tkt-chain-summary");
+    expect(summary?.textContent).toContain("180");
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+
+    // Reopened: the table is back.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(
+      (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("starts collapsed when a strike arrives already committed (a rung switch, or a shared link)", async () => {
+    render(renderGateWithStrike("NVDA", "180")); // 180 is a real row on fullChain — seedable
+
+    await waitFor(() => expect(document.querySelector(".tkt-chain-summary")).toBeInTheDocument());
+    expect(screen.queryAllByRole("button", { name: /^Pick the 180 call/ })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+  });
+
+  it("reopens on a fresh symbol commit even while collapsed", async () => {
+    render(renderGateWithStrike("NVDA", "180"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "AMD" } });
+    fireEvent.blur(screen.getByLabelText("Symbol"));
+
+    expect(
+      (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+/**
  * The locked-pick note (review fix) — the house rule ("Locked = visible, disabled, explained…
  * never hidden, never silently dead", `ticket-nav.tsx`) applies to a chain-cell click too: a
  * locked-target pick used to be a silent no-op beyond filling strike. It now surfaces a `.tkt-note`
@@ -461,5 +518,78 @@ describe("OptionGate — held position badge (Eric, 2026-09-22)", () => {
 
     await waitFor(() => expect(fieldsPresent()).toBe(true));
     expect(document.querySelector(".straddle-held-badge:not(.straddle-held-empty)")).toBeNull();
+  });
+});
+
+/**
+ * `chartSlot` (Eric, 2026-09-22: "the options table needs access to all available screen width…
+ * the bottom part of the trade form… requires little room — appropriate place to have two columns
+ * with the right column being the candlestick chart"): passed only by the docked bench
+ * (`trade.tsx`'s `ticketOwnsChart`) — this component just has to place it correctly.
+ */
+describe("OptionGate — chartSlot (Eric, 2026-09-22)", () => {
+  function renderGateWithChart(chartSlot: ReactElement): ReactElement {
+    const client = new QueryClient();
+    return (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={unlockedCallPlay}
+          initialSymbol="NVDA"
+          chartSlot={chartSlot}
+        />
+      </QueryClientProvider>
+    );
+  }
+
+  it("renders chartSlot beside the order-detail block, not beside the symbol/chain", async () => {
+    chainResult = fullChain;
+    render(renderGateWithChart(<div data-testid="fixture-chart">chart fixture</div>));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    const chart = screen.getByTestId("fixture-chart");
+    const split = chart.closest(".tkt-review-split");
+    expect(split).not.toBeNull();
+    // The Strike field (order-detail) shares the split with the chart; the Symbol field
+    // (top-of-ticket) does not — proving the split starts at Strike, not at the very top.
+    expect(split?.contains(screen.getByLabelText("Strike"))).toBe(true);
+    expect(split?.contains(screen.getByLabelText("Symbol"))).toBe(false);
+  });
+
+  it("renders the order-detail block plainly, with no split wrapper, when chartSlot is absent", async () => {
+    chainResult = fullChain;
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(document.querySelector(".tkt-review-split")).toBeNull();
+  });
+
+  it("survives chartSlot toggling on (a window resized across the bench width) without losing field state", async () => {
+    // Regression: an earlier version picked between a bare Fragment and a nested <div><div> for
+    // the order-detail block depending on chartSlot's presence — a real tree-shape change React
+    // remounts across, silently dropping everything inside (caught via the trade.mjs shoot script
+    // crashing on a resize, not a review pass). One `QueryClient`, one `rerender` on the SAME
+    // component instance — exactly the DOM-level effect of `trade.tsx`'s `docked` flipping.
+    chainResult = fullChain;
+    const client = new QueryClient();
+    const withChart = (chartSlot: ReactElement | undefined) => (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={unlockedCallPlay}
+          initialSymbol="NVDA"
+          chartSlot={chartSlot}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(withChart(undefined));
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+
+    fireEvent.change(screen.getByLabelText("Contracts (100 shares)"), { target: { value: "7" } });
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
+
+    rerender(withChart(<div data-testid="fixture-chart">chart fixture</div>));
+    await waitFor(() => expect(screen.getByTestId("fixture-chart")).toBeInTheDocument());
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
   });
 });
