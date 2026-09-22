@@ -121,6 +121,15 @@ const settings = {
     { id: "human-eric", name: "Eric", kind: "human", hostConfigured: false, profile: null },
   ],
 };
+// A second account so the Account field actually renders (`AccountField` withholds itself for a
+// one-account session) — needed only by the page-order scene below (Eric, 2026-09-22).
+const settingsTwoAccounts = {
+  ...settings,
+  accounts: [
+    ...settings.accounts,
+    { id: "bot-sauron", name: "Sauron", kind: "bot", hostConfigured: false, profile: null },
+  ],
+};
 const desk = {
   generatedAt: "2026-09-05T00:00:00Z",
   desk: {
@@ -268,6 +277,7 @@ const chain = {
 };
 
 let currentPlays = freshPlays;
+let currentSettings = settings;
 // Mutable so the earnings-badge scenario below can swap in an MU chain/quote without disturbing
 // every earlier shot's fixed NVDA fixtures (mirrors `currentPlays`'s own pattern).
 let currentChain = chain;
@@ -608,7 +618,7 @@ const { page, origin, shoot, close } = await openShell({
   viewport: { width: 390, height: 844 },
   stubs: {
     "/api/trade/plays": () => currentPlays,
-    "/api/settings": settings,
+    "/api/settings": () => currentSettings,
     "/api/desk/*": () => currentDesk,
     // Exact key beats the `/api/desk/*` prefix above (`lib.mjs`'s `stubBody`) — every fixture in
     // this script logs in as the same "human-eric" account (`settings.accounts[0].id`).
@@ -654,6 +664,19 @@ await shoot("trade-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
+
+// Page order (Eric, 2026-09-22): the milestone ladder sits above the Account field, and every
+// ticket panel now matches the ladder's own width — `AccountField` only renders for a session
+// with more than one account, so this scene swaps in a second one just to prove the order.
+currentSettings = settingsTwoAccounts;
+await page.goto(`${origin}/app/trade?play=102`);
+await page.getByLabel("Account").waitFor();
+const shootPageOrder = shooter(page, resolve("docs/shots/page-order"));
+await shootPageOrder("ladder-above-account-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+await shootPageOrder("ladder-above-account-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+currentSettings = settings;
 
 // The chart section (#2017 Phase 1 chart build-out, the mount slice) — `?section=chart` swaps
 // the ticket for daily candles + a volume band on the committed `?symbol=`, the legend above
