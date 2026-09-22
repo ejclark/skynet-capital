@@ -468,3 +468,12 @@ the gate, which re-pointed the whole week's attention at CPI 09-11; and a monito
 diagnosed with a named fix, found only because the close-out re-read the primary instead of the doc.
 The last is the one worth carrying forward — **this document's most useful output is the discovery
 that it had been reading the wrong page.**
+
+### Forward test scored (2026-09-22, `forward-test-due` re-dispatch)
+
+`FT-fomc-blackout-start-2026-09-05-1` reached its 2026-09-18 score-by with the corridor's eight
+sessions (09-08 → 09-17) now on the tape. **KILLED** — SPX realized close-to-close annualized
+volatility over that window came in at ~10.4–11.1%, well under the 14.53 anchor. Full scoring
+detail and reasoning: [`forward-tests/fomc-blackout-start-2026-09-05.md`](../forward-tests/fomc-blackout-start-2026-09-05.md);
+kill-list entry: [`multi-symbol-sweep.md`](../multi-symbol-sweep.md#kill-list--recorded-so-they-are-never-re-proposed).
+This is a scoring note only — the close-out above is not reopened or amended.
