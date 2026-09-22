@@ -449,6 +449,22 @@ robust, alpha fragile — is the finding.
   agency's own monthly read; the next OPEC-adjacent ledger should not re-cite the bypass finding as
   evidence the chokepoint's bite is easing without checking the shut-in series again.
 
+- **A redaction-branch prediction on a sealed opinion, when neither party actually moved to redact
+  (FT-google-adtech-opinion-unseal-2026-09-16-1)** — added 2026-09-22 from the
+  [google-adtech-opinion-unseal-2026-09-16 close-out](events/google-adtech-opinion-unseal-2026-09-16.md),
+  scored under the `forward-test-due` mode. The registered test predicted at least one party would
+  move for redactions to Judge Brinkema's sealed remedies opinion before the 2026-09-16 deadline,
+  reasoning that the ordered remedies quote bid-level mechanics and pricing terms both sides
+  designated confidential at trial, and that Google specifically gains from delay while appealing
+  liability. Three independent outlets fetched 2026-09-22 (ppc.land, AdExchanger, and a third
+  corroborating report) instead report that **neither party filed a redaction motion**, and the
+  full opinion unsealed automatically, unredacted, exactly on schedule. **One detail that must
+  travel with the kill:** the parent ledger's structural claim — that the reasoning publishes
+  either way, so the fork is completeness/timing rather than existence — survives; what breaks is
+  the *likely branch* called on top of it, that a confidentiality incentive strong enough to act on
+  existed. A future litigation-adjacent ledger should not assume a party with a redaction incentive
+  will act on it without checking the docket first.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
