@@ -1,4 +1,8 @@
-import { audit, readyPlanCandidate } from "../../../scripts/moneypenny/audit.mjs";
+import {
+  audit,
+  CONFLICT_REPAIR_CAP,
+  readyPlanCandidate,
+} from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
 // `plan`-labeled issue that never got claimed or built looks IDENTICAL to "nothing needed" from
@@ -93,6 +97,60 @@ describe("audit() — the plan-stall threshold and memory", () => {
       alreadyFlagged: [469],
     });
     expect(intents).toHaveLength(0);
+  });
+
+  // #1403 — a repaired PR that goes CONFLICTING again (main moves every ~7min here) used to sit
+  // stuck forever: `conflict-flagged` was a lifetime memory, keyed on PR number alone. The dedupe
+  // key is now (PR, head sha), read back from the `<!-- moneypenny:conflict … -->` marker the last
+  // flag comment embedded.
+  it("re-dispatches a conflicted PR whose head moved since its last flag — repaired, then re-dirtied", () => {
+    const intents = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1284, headRefOid: "newsha2" }],
+      alreadyFlaggedPRs: [{ number: 1284, sha: "oldsha1", attempt: 1 }],
+    });
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-conflict");
+    expect(intents[0]?.prNumber).toBe(1284);
+    expect(intents[0]?.attempt).toBe(2);
+    expect(intents[0]?.body).toContain("<!-- moneypenny:conflict sha=newsha2 attempt=2 -->");
+  });
+
+  it("does not re-flag a conflicted PR whose head has not moved since its last flag — same conflict, not a new one", () => {
+    // Also covers the #1286 shape: a repair session that fails to push leaves the head unchanged,
+    // so this must not turn a transient dispatch failure into a comment storm.
+    const intents = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1286, headRefOid: "samesha" }],
+      alreadyFlaggedPRs: [{ number: 1286, sha: "samesha", attempt: 1 }],
+    });
+    expect(intents).toHaveLength(0);
+  });
+
+  it("never re-flags when the last flag's head is unreadable (a pre-rollout comment) — unknown, not a green light", () => {
+    const intents = audit({
+      conflictedPRs: [{ title: "feat: x", number: 881, headRefOid: "newsha" }],
+      alreadyFlaggedPRs: [{ number: 881, sha: null, attempt: 1 }],
+    });
+    expect(intents).toHaveLength(0);
+  });
+
+  it(`stops dispatching and escalates to needs-eric once the repair cap (${CONFLICT_REPAIR_CAP}) is spent`, () => {
+    const intents = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1373, headRefOid: "sha-n" }],
+      alreadyFlaggedPRs: [{ number: 1373, sha: "sha-n-minus-1", attempt: CONFLICT_REPAIR_CAP }],
+    });
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-conflict-cap");
+    expect(intents[0]?.prNumber).toBe(1373);
+    expect(intents[0]?.body).toContain("needs-eric");
+  });
+
+  it("still flags a brand-new conflict once, exactly as before", () => {
+    const intents = audit({
+      conflictedPRs: [{ title: "feat: y", number: 1400, headRefOid: "sha-a" }],
+    });
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-conflict");
+    expect(intents[0]?.attempt).toBe(1);
   });
 
   it("runs alongside the other two audit lanes without cross-talk", () => {

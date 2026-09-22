@@ -577,11 +577,15 @@ function commentAndFlagStall(i) {
 /**
  * The PR-side twin of `commentAndFlagStall` (#909) — a PR is a different object than an issue as
  * far as `gh` is concerned (`gh issue comment`/`gh issue edit` 404 on a PR number), so this uses
- * `gh pr comment`/`gh pr edit` rather than sharing the helper above. Also dispatches the moneypenny-repair.yml lane's
- * `workflow_dispatch` conflict-repair entry point (its own `conflict-repair.md` envelope judges
- * whether the conflict is actually safe to auto-resolve) — `conflict-flagged` is the one memory
- * that prevents a re-dispatch on the next push, applied here regardless of whether the dispatch
- * call itself succeeds, so a transient `gh workflow run` failure never turns into a comment storm.
+ * `gh pr comment`/`gh pr edit` rather than sharing the helper above. Also dispatches the
+ * moneypenny-repair.yml lane's `workflow_dispatch` conflict-repair entry point (its own
+ * `conflict-repair.md` envelope judges whether the conflict is actually safe to auto-resolve).
+ *
+ * `conflict-flagged` is applied here regardless of whether the dispatch call itself succeeds, so a
+ * transient `gh workflow run` failure never turns into a comment storm — but (#1403) it is no
+ * longer a lifetime memory: `audit()`'s dedupe key is (PR, head sha), read back from the
+ * `<!-- moneypenny:conflict … -->` marker `i.body` already carries, so a PR repaired once and then
+ * re-dirtied by `main` moving under it gets re-dispatched instead of sitting stuck forever.
  */
 function commentAndFlagConflict(i) {
   if (!i.prNumber) return;
@@ -603,6 +607,19 @@ function commentAndFlagConflict(i) {
       `::warning::could not dispatch conflict repair for #${i.prNumber}: ${String(err.message).slice(0, 200)}`,
     );
   }
+}
+
+/**
+ * #1403's ceiling: once a conflicted PR has been re-dispatched `CONFLICT_REPAIR_CAP` times and is
+ * STILL conflicting, this stops dispatching repair sessions and hands it to Eric instead — the
+ * carve-out that keeps the sha-based re-dispatch above from looping Opus sessions forever on a PR
+ * that genuinely cannot merge cleanly. No repair dispatch here, deliberately.
+ */
+function commentAndFlagConflictCap(i) {
+  if (!i.prNumber) return;
+  sh("gh", ["pr", "comment", String(i.prNumber), "--body", i.body]);
+  ensureLabel(LABELS.needsEric);
+  sh("gh", ["pr", "edit", String(i.prNumber), "--add-label", LABELS.needsEric.name]);
 }
 
 /**
@@ -762,8 +779,13 @@ function executeOne(i, stallRepairs = []) {
   }
   if (i.kind === "flag-conflict") {
     commentAndFlagConflict(i);
-    console.log(`::warning::merge conflict — #${i.prNumber} \`${i.title}\``);
-    return `⚠️ conflict flagged — \`${i.title}\` (commented on #${i.prNumber})`;
+    console.log(`::warning::merge conflict — #${i.prNumber} \`${i.title}\` (attempt ${i.attempt})`);
+    return `⚠️ conflict flagged — \`${i.title}\` (commented on #${i.prNumber}, attempt ${i.attempt})`;
+  }
+  if (i.kind === "flag-conflict-cap") {
+    commentAndFlagConflictCap(i);
+    console.log(`::warning::conflict repair cap reached — #${i.prNumber} \`${i.title}\``);
+    return `🛑 conflict repair cap reached — \`${i.title}\` escalated to needs-eric (#${i.prNumber})`;
   }
   return `❓ unknown intent kind ${i.kind}`;
 }

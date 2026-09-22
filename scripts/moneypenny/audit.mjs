@@ -8,6 +8,18 @@ import { FOOTER, LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
 
 /**
+ * #1403 — how many times a conflicted PR gets re-dispatched before this lane stops trying and
+ * escalates to `needs-eric` instead. Without a ceiling, a PR that can never merge cleanly (a real
+ * logic conflict, not just `main` moving) would draw an Opus repair session every time it re-dirties,
+ * forever. Exported so the spec can assert the ceiling without hard-coding the number twice.
+ */
+export const CONFLICT_REPAIR_CAP = 3;
+
+/** The hidden memory `commentAndFlagConflict` embeds in every conflict comment it posts — the sha
+ *  and attempt number a re-dispatch decision was made at (see `audit()`'s conflict loop below). */
+export const CONFLICT_MARKER = /<!-- moneypenny:conflict sha=(\S+) attempt=(\d+) -->/;
+
+/**
  * Did this issue get an ANSWER? A linked PR (open or merged) is an answer; a closed issue is an
  * answer; a terminal label is an answer. Comments are not — the lane comments before it works.
  * Pure so the fixtures can drive every branch.
@@ -44,9 +56,16 @@ export function audit(deps = {}) {
   // re-flagged. One ping per stall, however many pushes go by.
   const flagged = new Set(deps.alreadyFlagged ?? []);
   // `conflict-flagged` is its own label on a different object (PRs, not issues) — a separate
-  // memory set rather than overloading `flagged`, which `gatherAuditDeps` only ever populates from
-  // issue labels.
-  const flaggedPRs = new Set(deps.alreadyFlaggedPRs ?? []);
+  // memory map rather than overloading `flagged`, which `gatherAuditDeps` only ever populates from
+  // issue labels. Keyed by PR number; each entry carries the sha/attempt the last flag comment was
+  // made at (#1403) so a re-conflict at a NEW head can be told apart from the same unchanged one.
+  // A bare number (the pre-#1403 shape, and still what a hand-written fixture may pass) means
+  // "flagged, sha unknown" — never re-fires, same as before this change.
+  const flaggedPRs = new Map(
+    (deps.alreadyFlaggedPRs ?? []).map((f) =>
+      typeof f === "number" ? [f, { sha: null, attempt: 1 }] : [f.number, f],
+    ),
+  );
   const intents = [];
   for (const i of unclaimedIssues) {
     if (i.quietDays < staleAfterDays) continue;
@@ -92,20 +111,59 @@ export function audit(deps = {}) {
       body: `⏳ **Plan never claimed** — a ready-flip comment landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
-  // #909 — the one class nothing was watching: a PR that went `CONFLICTING` against `main` on some
-  // push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly what makes this
-  // detectable — `conflictedPRs` arrives pre-filtered to open, unflagged, actually-conflicting PRs
-  // by `gatherAuditDeps`; this loop only applies the one-ping memory. `executeOne`'s
-  // `commentAndFlagConflict` dispatches moneypenny-repair.yml's conflict-repair session right after this intent
-  // runs — that session judges disjoint-vs-same-logic and either pushes a resolved merge commit or
-  // escalates to `needs-eric`; this comment is the receipt that a repair was dispatched, not an ask.
+  // #909 / #1403 — the one class nothing else was watching: a PR that went `CONFLICTING` against
+  // `main` on some push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly
+  // what makes this detectable — `conflictedPRs` arrives pre-filtered to open, actually-conflicting
+  // PRs by `gatherAuditDeps`, each carrying the PR's CURRENT head sha (`headRefOid`).
+  //
+  // The dedupe key is per (PR, head sha), not per PR for life (#1403): `main` here takes a merge
+  // every few minutes, so a PR repaired once can easily go `CONFLICTING` again before it lands —
+  // `conflict-flagged` used to be a lifetime memory and that second conflict then sat forever with
+  // no further dispatch. `flaggedPRs` carries the sha/attempt the LAST flag comment was made at
+  // (read back from the PR's own comments by `gatherAuditDeps`'s `lastConflictMarker` — no storage
+  // beyond GitHub itself):
+  //   - same sha as last time → skip. Either nothing has pushed since (still mid-repair), or the
+  //     repair session failed without pushing (e.g. a missing `contents: write` grant, #1286) —
+  //     re-flagging an unchanged head is a comment storm for zero new information.
+  //   - a different sha → the head moved (a repair pushed, or a fresh commit landed) and it is
+  //     conflicting again: re-dispatch, up to `CONFLICT_REPAIR_CAP` attempts.
+  //   - the cap is spent → stop dispatching repairs and escalate to `needs-eric` instead, so a
+  //     genuinely un-mergeable PR lands on his desk rather than looping Opus sessions forever.
+  // `executeOne`'s `commentAndFlagConflict` dispatches moneypenny-repair.yml's conflict-repair
+  // session right after a `flag-conflict` intent runs — that session judges disjoint-vs-same-logic
+  // and either pushes a resolved merge commit or escalates to `needs-eric` itself; this comment is
+  // the receipt that a repair was dispatched, not an ask.
   for (const c of conflictedPRs) {
-    if (flaggedPRs.has(c.number)) continue;
+    const prior = flaggedPRs.get(c.number);
+    if (!prior) {
+      intents.push({
+        kind: "flag-conflict",
+        prNumber: c.number,
+        title: c.title,
+        attempt: 1,
+        body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid ?? "unknown"} attempt=1 -->\n\n${FOOTER}`,
+      });
+      continue;
+    }
+    // Same head as the last flag, or no readable head at all: unknown or unchanged, never re-fire.
+    if (!c.headRefOid || prior.sha == null || prior.sha === c.headRefOid) continue;
+    if (prior.attempt >= CONFLICT_REPAIR_CAP) {
+      intents.push({
+        kind: "flag-conflict-cap",
+        prNumber: c.number,
+        title: c.title,
+        attempt: prior.attempt,
+        body: `🛑 **Merge conflict — repair cap reached** — this PR has been repaired ${prior.attempt} time(s) and has gone \`CONFLICTING\` against \`main\` again. Something about it is not resolving safely on its own, so this stops dispatching repair sessions and hands it to \`needs-eric\` instead of looping.\n\n${FOOTER}`,
+      });
+      continue;
+    }
+    const attempt = prior.attempt + 1;
     intents.push({
       kind: "flag-conflict",
       prNumber: c.number,
       title: c.title,
-      body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n${FOOTER}`,
+      attempt,
+      body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
     });
   }
   return intents;
@@ -156,6 +214,31 @@ export function gatherAuditDeps(nowMs) {
   };
   const daysSince = (iso) => Math.floor((nowMs - Date.parse(iso)) / 86_400_000);
   const hoursSince = (iso) => Math.floor((nowMs - Date.parse(iso)) / 3_600_000);
+  /**
+   * #1403 — the per-(PR, head sha) memory `audit()` needs to tell "still stuck on the same
+   * conflict" from "repaired, then went dirty again": read back the sha/attempt the LAST
+   * `flag-conflict` comment on this PR was posted at, from the `<!-- moneypenny:conflict … -->`
+   * marker `commentAndFlagConflict` embeds in every one of those comments. Comments list
+   * oldest-first, so the last match is the most recent flag. No storage beyond GitHub itself.
+   * `{ sha: null, attempt: 1 }` — never re-fires, same as the pre-#1403 lifetime-memory behaviour —
+   * covers both "nothing parsed" (a pre-rollout comment predates the marker) and is the safe
+   * default rather than risking a comment storm on a state this cannot verify.
+   */
+  function lastConflictMarker(prNumber) {
+    const view = json(`gh pr view (comments, #${prNumber})`, [
+      "pr",
+      "view",
+      String(prNumber),
+      "--json",
+      "comments",
+    ]);
+    const comments = view.comments ?? [];
+    for (let idx = comments.length - 1; idx >= 0; idx -= 1) {
+      const match = CONFLICT_MARKER.exec(comments[idx]?.body ?? "");
+      if (match) return { sha: match[1], attempt: Number(match[2]) };
+    }
+    return { sha: null, attempt: 1 };
+  }
   const issues = json("gh issue list", [
     "issue",
     "list",
@@ -232,6 +315,8 @@ export function gatherAuditDeps(nowMs) {
   // async-computed field: `CONFLICTING` is the only value this cares about — `UNKNOWN` means
   // GitHub hasn't finished computing it yet and is deliberately left alone rather than treated as
   // a false positive; the next push re-checks it, same level-based design as everything else here.
+  // `headRefOid` (added #1403) is the PR's current head sha — `audit()`'s dedupe key alongside the
+  // PR number, so a repaired-then-re-dirtied PR is told apart from one still stuck at the same head.
   const prs = json("gh pr list", [
     "pr",
     "list",
@@ -240,14 +325,22 @@ export function gatherAuditDeps(nowMs) {
     "--limit",
     "100",
     "--json",
-    "number,title,mergeable,labels",
+    "number,title,mergeable,labels,headRefOid",
   ]);
+  const stillConflicting = new Set(
+    prs.filter((p) => p.mergeable === "CONFLICTING").map((p) => p.number),
+  );
+  // #1403 — the marker lookup only matters for a PR that is BOTH already flagged and conflicting
+  // again right now; a flagged PR that is currently clean needs no lookup (nothing to decide), and
+  // a never-flagged one has no prior marker to read. Keeps this to the small set the bottleneck
+  // was actually measured on (4 PRs, 2026-09-05), not one extra `gh pr view` per open PR.
   const alreadyFlaggedPRs = prs
     .filter((p) => (p.labels ?? []).some((l) => l.name === LABELS.conflictFlagged.name))
-    .map((p) => p.number);
+    .filter((p) => stillConflicting.has(p.number))
+    .map((p) => ({ number: p.number, ...lastConflictMarker(p.number) }));
   const conflictedPRs = prs
     .filter((p) => p.mergeable === "CONFLICTING")
-    .map((p) => ({ title: p.title, number: p.number }));
+    .map((p) => ({ title: p.title, number: p.number, headRefOid: p.headRefOid }));
 
   return {
     unclaimedIssues,
