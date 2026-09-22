@@ -526,6 +526,16 @@ const positionWatchAlerts = {
       body: "A held contract at expiry is exercised if in the money, otherwise expires worthless.",
       fingerprint: "fp-3",
     },
+    // What an order did while the member was away (slice 2): the ledger's own numbers.
+    {
+      id: "a4",
+      at: 1758462000000,
+      source: "order-watch",
+      priority: "info",
+      symbol: "MU",
+      title: "Order wo-3 filled — 20 MU @ $118.40",
+      fingerprint: "fp-4",
+    },
   ],
 };
 let currentAlerts = noAlerts;

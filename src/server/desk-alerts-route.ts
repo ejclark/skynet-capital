@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { type Alert, alertFingerprint, sortAlerts } from "../alerts/alert.js";
+import { orderAlerts } from "../alerts/order-watch.js";
 import { positionAlerts } from "../alerts/position-watch.js";
+import { forVisibility } from "../observatory/activity-event.js";
 import type { Session } from "./auth/session.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -16,8 +18,10 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
  *   POST /api/trade/alerts/dismiss { participantId, fingerprint }
  *                                           → `{ ok:true }` once recorded, else a refusal.
  *
- * The producer is pure and re-derived per read over the same option-positions view the card
- * shows (`option-positions-route.ts`), so there is no second feed and no state to drift: a
+ * Two pure producers, re-derived per read: `position-watch.ts` over the same option-positions
+ * view the card shows, and `order-watch.ts` over the account's own activity ledger (slice 2 —
+ * fills, cancels, rejections, replaces as rows instead of vanished toasts). No second feed, no
+ * state to drift: a
  * dismissal is the ONE durable fact, keyed by `alertFingerprint` (source · priority · symbol ·
  * dedupeKey) so a re-derived alert with a fresh id stays dismissed and an escalated one re-shows.
  * Identity is the session's, exactly as the positions route checks it. Without a dismissals
@@ -27,6 +31,8 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
 export const DESK_ALERTS_PATH = "/api/trade/alerts";
 export const DESK_ALERTS_DISMISS_PATH = "/api/trade/alerts/dismiss";
 const DISMISS_BODY_CAP_BYTES = 2_048;
+/** The tiers an owner may read of their own ledger — the desk stream's rule, kept here. */
+const OWNER_TIERS = forVisibility(["public", "owner-only"]);
 
 /** The wire shape of one alert — the substrate's own fields, nothing added. */
 export type DeskAlert = Alert & { readonly fingerprint: string };
@@ -48,18 +54,25 @@ async function serveList(
     return;
   }
   const positions = await loadOptionPositions(id, config);
-  if (positions.kind !== "ok") {
-    sendJson(res, positions.kind === "missing" ? 404 : 200, {
-      available: false,
-      reason: positions.kind === "missing" ? "no such account" : "unlinked",
-      alerts: [],
-      dismissable: false,
-    });
+  if (positions.kind === "missing") {
+    sendJson(res, 404, { error: "no such account" });
+    return;
+  }
+  // Two producers, one list: the positions' standing conditions and the orders' recent
+  // lifecycle (#3407 P4 slice 2). An account with neither source wired says so in words.
+  const log = config.activityLog;
+  if (positions.kind === "unlinked" && !log) {
+    sendJson(res, 200, { available: false, reason: "unlinked", alerts: [], dismissable: false });
     return;
   }
   const now = config.now?.() ?? new Date();
+  const rows = positions.kind === "ok" ? positions.view.rows : [];
+  const events = log ? (await log.list(id)).filter(OWNER_TIERS) : [];
   const dismissed = new Set(await config.alertDismissals?.loadDismissed(id));
-  const alerts: DeskAlert[] = sortAlerts(positionAlerts(positions.view.rows, now.getTime()))
+  const alerts: DeskAlert[] = sortAlerts([
+    ...positionAlerts(rows, now.getTime()),
+    ...orderAlerts(events, now.getTime()),
+  ])
     .map((alert) => ({ ...alert, fingerprint: alertFingerprint(alert) }))
     .filter((alert) => !dismissed.has(alert.fingerprint));
   sendJson(res, 200, {
