@@ -94,20 +94,26 @@
   padding: 4px 2px;
   border-bottom: 1px solid var(--border);
 }
+/* Calls / Strike / Puts (Eric, 2026-09-22: "these headers deserve elevated emphasis") — the
+   group header row, one step up from the Bid/Ask/OI/... sub-header (`.straddle-sub th`) it sits
+   above, so the eye reads section before column. */
 .straddle-side {
-  font-size: 10.5px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 .straddle-sub th {
   font-size: 10px;
   padding-top: 2px;
 }
 .straddle-strike-h {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 .straddle-table td {
   text-align: center;
