@@ -16,6 +16,7 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_FEEDBACK_LOG_DIR: "data/feedback-log",
   SKYNET_COMPANION_MESSAGE_LOG_DIR: "data/companion-message-log",
   SKYNET_ORDER_AUDIT_DIR: "data/order-audit",
+  SKYNET_ALERT_DISMISSALS_DIR: "data/alert-dismissals",
   SKYNET_HISTORY_DIR: "data/history",
   SKYNET_INSIGHTS_DIR: "data/insights",
   SKYNET_PROGRESSION_FILE: "data/progression.json",
