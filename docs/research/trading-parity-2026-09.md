@@ -693,6 +693,7 @@ plan, not a constraint on the designs.
 | Pick an account to trade | exists (hidden with one account) | `app/src/routes/trade.tsx` `AccountField` |
 | Search a symbol with autocomplete | exists — 2 tiers, debounced, in-flow listbox | `app/src/shell/symbol-field.tsx` |
 | See a quote before ordering | exists — last / Δ / Δ%, 15 s stale, no as-of stamp | `app/src/shell/quote-header.tsx` |
+| A chain-pane pick names the whole contract | **built** (Workbench slice 4a) — `?exp=` is route state: a strike tapped on the Oct 16 chain reaches the ticket *as* the Oct 16 strike; the ticket's own expiration field writes it back so the two tools never name different contracts (fixes a latent slice-2 gap) | `app/src/live/expiration.ts`, `app/src/routes/trade.tsx` |
 | The account's book as its own pane | **built** (Workbench slice 3) — Working orders, Alerts and Option positions are one section, `?section=orders`, one rail tap from the ticket; #674 holds (same page, its own pane) | `app/src/shell/orders-section.tsx` |
 | The chain as its own pane | **built** (Workbench slice 2) — `?section=chain` gives the straddle the stage; a tap presets the ticket through the URL under the ticket's fail-safe rung rule; docks beside the ticket at the bench width in slice 4 | `app/src/shell/chain-section.tsx`, `app/src/routes/trade.tsx` |
 | See a chart while ticketing | partial — the chart is a *section* that replaces the ticket | `trade.tsx` `?section=chart`, `app/src/shell/chart-section.tsx` |

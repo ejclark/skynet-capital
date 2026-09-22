@@ -26,6 +26,8 @@ import { QuoteHeader } from "./quote-header";
 export interface ChainPick {
   readonly strike: string;
   readonly side: "call" | "put";
+  /** The expiration the tapped row belongs to — the contract is not named without it. */
+  readonly expiration: string;
 }
 
 /** The rung a chain tap presets from the current play — the ticket's own resolution rule: keep
@@ -53,6 +55,8 @@ export function ChainSection({
   play,
   strike,
   plays,
+  initialExpiration,
+  onExpirationChange,
   onPick,
 }: {
   /** The committed `?symbol=`; "" until the ticket has one. */
@@ -61,10 +65,14 @@ export function ChainSection({
   /** The committed `?strike=`, marked on the chain when present. */
   readonly strike: string;
   readonly plays: readonly PlayInfo[] | undefined;
+  /** `?exp=` — the expiration the ticket (or a shared link) is on; "" lets the server pick. */
+  readonly initialExpiration?: string;
+  /** A browse to another expiry writes it back to `?exp=`, so the ticket follows (slice 4a). */
+  readonly onExpirationChange?: (expiration: string) => void;
   readonly onPick: (pick: ChainPick) => void;
 }): ReactElement {
   const expId = useId();
-  const [expiration, setExpiration] = useState("");
+  const [expiration, setExpiration] = useState(initialExpiration ?? "");
   const nav = navForPlay(play);
   const optionType = nav.instrument === "option" ? nav.optionType : "call";
   const chain = useQuery({
@@ -90,7 +98,10 @@ export function ChainSection({
         id={expId}
         chainData={answer}
         value={expiration}
-        onEdit={setExpiration}
+        onEdit={(value) => {
+          setExpiration(value);
+          onExpirationChange?.(value);
+        }}
         zeroDteLocked={Boolean(zeroDte?.locked)}
         zeroDteReason={
           zeroDte?.opensAfter
@@ -110,8 +121,12 @@ export function ChainSection({
         strike={strike}
         expirationField={expirationField}
         pending={chain.isFetching}
-        onPickStrike={(value) => onPick({ strike: value, side: optionType })}
-        onPickSide={(value, side) => onPick({ strike: String(value), side })}
+        onPickStrike={(value) =>
+          onPick({ strike: value, side: optionType, expiration: answer.expiration })
+        }
+        onPickSide={(value, side) =>
+          onPick({ strike: String(value), side, expiration: answer.expiration })
+        }
       />
       <p className="note">
         Tap a bid to sell it or an ask to buy it — the ticket opens preset with that contract.

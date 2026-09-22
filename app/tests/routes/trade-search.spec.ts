@@ -70,3 +70,19 @@ describe("/trade validateSearch — strike", () => {
     expect(parse({})).not.toHaveProperty("strike");
   });
 });
+
+describe("/trade validateSearch — exp (#3407, Workbench slice 4a)", () => {
+  const validateSearch = Route.options.validateSearch as (search: Record<string, unknown>) => {
+    exp?: string;
+  };
+  const parse = (search: Record<string, unknown>) => validateSearch(search);
+
+  it("keeps an ISO expiration and drops anything else", () => {
+    expect(parse({ exp: "2026-10-16" })).toMatchObject({ exp: "2026-10-16" });
+    expect(parse({ exp: " 2026-10-16 " })).toMatchObject({ exp: "2026-10-16" });
+    expect(parse({ exp: "10/16/2026" })).not.toHaveProperty("exp");
+    expect(parse({ exp: "2026-13-01" })).not.toHaveProperty("exp");
+    expect(parse({ exp: 20261016 })).not.toHaveProperty("exp");
+    expect(parse({})).not.toHaveProperty("exp");
+  });
+});

@@ -21,8 +21,12 @@ const chainResult: ChainAnswer = {
     { strike: 180, occSymbol: "NVDA261016P00180000", premium: 4.2, bid: 4.1, ask: 4.3 },
   ],
 };
+const chainCalls: unknown[][] = [];
 rstest.mock("../../src/live/options", () => ({
-  fetchChain: () => Promise.resolve(chainResult),
+  fetchChain: (...args: unknown[]) => {
+    chainCalls.push(args);
+    return Promise.resolve(chainResult);
+  },
   fetchQuote: () => Promise.resolve({ quoteNote: "Fixture quote note." }),
 }));
 rstest.mock("../../src/live/quote", () => ({
@@ -68,7 +72,30 @@ describe("ChainSection", () => {
       expect(screen.getByRole("region", { name: "NVDA options chain" })).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Pick the 180 put bid" }));
-    expect(picks).toEqual([{ strike: "180", side: "put" }]);
+    // The expiration travels with the strike (slice 4a) — the contract is not named without it.
+    expect(picks).toEqual([{ strike: "180", side: "put", expiration: "2026-10-16" }]);
+  });
+
+  it("starts on the expiration the URL names and reports a browse to another one (slice 4a)", async () => {
+    chainCalls.length = 0;
+    const changes: string[] = [];
+    render(
+      withClient(
+        <ChainSection
+          symbol="NVDA"
+          play="201"
+          strike=""
+          plays={plays}
+          initialExpiration="2026-11-20"
+          onExpirationChange={(e) => changes.push(e)}
+          onPick={() => undefined}
+        />,
+      ),
+    );
+    const oct = await screen.findByRole("button", { name: /Oct 16/ });
+    expect(chainCalls[0]).toEqual(["NVDA", "put", "2026-11-20"]);
+    fireEvent.click(oct);
+    expect(changes).toEqual(["2026-10-16"]);
   });
 });
 

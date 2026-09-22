@@ -86,6 +86,8 @@ export function OptionGate({
   initialSymbol,
   onSymbolCommit,
   initialStrike,
+  initialExpiration,
+  onExpirationCommit,
   onStrikeCommit,
   plays,
   onPreset,
@@ -105,6 +107,11 @@ export function OptionGate({
   /** `?strike=` (task 4e) — seeds the strike field on mount, so a chain-click rung switch (which
    *  remounts this component) doesn't lose the strike that was just picked. */
   readonly initialStrike?: string;
+  /** `?exp=` (#3407, Workbench slice 4a) — the expiration a chain-pane tap or a shared link
+   *  named; "" lets the server pick. Committed back through `onExpirationCommit` when the member
+   *  changes it here, so the chain pane follows. */
+  readonly initialExpiration?: string;
+  readonly onExpirationCommit?: (expiration: string) => void;
   /** Fires on every strike change that STICKS (review fix — not just a rung-switching chain pick),
    *  so the route can keep `?strike=` honest: a same-rung or rung-switching chain-cell click calls
    *  it immediately, a hand-typed strike calls it on blur (see `StrikeField`'s `onCommit`). A
@@ -123,7 +130,7 @@ export function OptionGate({
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
-  const [expiration, setExpiration] = useState("");
+  const [expiration, setExpiration] = useState(initialExpiration ?? "");
   const [strike, setStrike] = useState(initialStrike ?? "");
   /** Bumped on every chain-originated strike pick — flashes the Strike field below (see
    *  `pickStrikeAndCommit`). A counter, not a boolean, so two picks in a row each re-trigger the
@@ -367,7 +374,10 @@ export function OptionGate({
         id={expId}
         chainData={chainData}
         value={expiration}
-        onEdit={edit(setExpiration)}
+        onEdit={(value) => {
+          edit(setExpiration)(value);
+          onExpirationCommit?.(value);
+        }}
         zeroDteLocked={Boolean(zeroDte?.locked)}
         zeroDteReason={
           zeroDte?.opensAfter
