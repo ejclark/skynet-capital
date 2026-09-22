@@ -19,7 +19,7 @@ const calendar: readonly EarningsPrint[] = [];
 
 const play = (overrides?: Partial<Playbook>): Playbook => ({
   id: "TEST-NVDA",
-  symbol: "NVDA",
+  symbols: ["NVDA"],
   thesis: "test play",
   evidence: "test",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
@@ -110,6 +110,24 @@ describe("exitSafetyIntents", () => {
     const { intents, trips } = exitSafetyIntents(enabled(p), context, portfolio);
     expect(intents).toEqual([]);
     expect(trips).toEqual([]);
+  });
+
+  it("trips one symbol of a basket independently, leaving a healthy sibling untouched", () => {
+    const p = play({
+      symbols: ["NVDA", "AMD"],
+      exitSafety: { standard: { drawdownTripPct: 0.1, enforcement: "enforce" } },
+    });
+    const context = aContext({ NVDA: { last: 85 }, AMD: { last: 98 } }); // NVDA -15%, AMD -2%
+    const portfolio = aPortfolio({
+      positions: [
+        aPosition({ symbol: "NVDA", quantity: 40, avgPrice: 100 }),
+        aPosition({ symbol: "AMD", quantity: 10, avgPrice: 100 }),
+      ],
+    });
+
+    const { intents, trips } = exitSafetyIntents(enabled(p), context, portfolio);
+    expect(intents).toEqual([expect.objectContaining({ symbol: "NVDA", side: "sell" })]);
+    expect(trips.map((t) => t.symbol)).toEqual(["NVDA"]);
   });
 });
 

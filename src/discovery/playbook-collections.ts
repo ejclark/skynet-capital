@@ -15,7 +15,7 @@ function playbookMember(playbook: Playbook, evidence: string): CollectionMember 
   return {
     kind: "playbook",
     id: playbook.id,
-    name: `${playbook.id} · ${playbook.symbol}`,
+    name: `${playbook.id} · ${playbook.symbols.join("/")}`,
     thesis: playbook.thesis,
     evidence,
     ...(href ? { href } : {}),

@@ -121,7 +121,7 @@ describe("playbookRoster", () => {
     expect(playbookRoster()).toEqual([
       { id: "S1-NVDA", symbol: "NVDA" },
       { id: "G1-GOOG", symbol: "GOOG" },
-      { id: "TACO-DJT", symbol: TACO_DJT.symbol },
+      { id: "TACO-DJT", symbol: TACO_DJT.symbols[0] },
     ]);
   });
 });

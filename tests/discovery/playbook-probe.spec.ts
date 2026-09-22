@@ -12,7 +12,7 @@ import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 
 const stub = (over: Partial<Playbook> = {}): Playbook => ({
   id: "X1-TEST",
-  symbol: "TEST",
+  symbols: ["TEST"],
   thesis: "a stub",
   evidence: "none",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },

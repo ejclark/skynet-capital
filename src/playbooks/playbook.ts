@@ -96,8 +96,13 @@ export interface PlaybookEvent {
 export interface Playbook {
   /** e.g. "S1-NVDA" — the id that flows through the attribution seam into every record. */
   readonly id: string;
-  /** One symbol per playbook — effectiveness must be measurable alone. */
-  readonly symbol: string;
+  /** The symbols this playbook trades as one basket (Eric, 2026-09-22: "playbooks should be
+   *  capable of supporting multiple symbols as configuration"). `desiredState` applies uniformly
+   *  to every symbol here — one shared entry/exit window, not an independent state machine per
+   *  symbol — so a single-symbol playbook (the common case today) is just a one-element array.
+   *  Per-symbol retrospectives (`decision-db.ts`) still measure each symbol's own closed trades;
+   *  a basket's aggregate effectiveness is the sum of those, joined by this playbook's id. */
+  readonly symbols: readonly string[];
   readonly thesis: string;
   /** Citation into docs/research/ — the record of why this play exists. */
   readonly evidence: string;
@@ -185,38 +190,40 @@ export function exitSafetyIntents(
     if (!dial) {
       continue;
     }
-    const held = heldQuantity(portfolio, playbook.symbol);
-    const position = portfolio.positions.find((p) => p.symbol === playbook.symbol);
-    const quote = context.quotes[playbook.symbol];
-    if (held <= 0 || !position || !quote) {
-      continue;
-    }
-    const drawdownPct = positionDrawdownPct(position.avgPrice, quote.bid);
-    if (drawdownPct < dial.drawdownTripPct) {
-      continue;
-    }
-    trips.push({
-      playbookId: playbook.id,
-      mode,
-      symbol: playbook.symbol,
-      drawdownPct,
-      drawdownTripPct: dial.drawdownTripPct,
-      enforcement: dial.enforcement,
-    });
-    if (dial.enforcement === "enforce") {
-      intents.push({
-        symbol: playbook.symbol,
-        side: "sell",
-        quantity: held,
-        type: "market",
-        reason:
-          `${playbook.id} exit-safety trip (${mode}): drawdown ` +
-          `${(drawdownPct * 100).toFixed(1)}% ≥ ${(dial.drawdownTripPct * 100).toFixed(1)}% cap`,
+    for (const symbol of playbook.symbols) {
+      const held = heldQuantity(portfolio, symbol);
+      const position = portfolio.positions.find((p) => p.symbol === symbol);
+      const quote = context.quotes[symbol];
+      if (held <= 0 || !position || !quote) {
+        continue;
+      }
+      const drawdownPct = positionDrawdownPct(position.avgPrice, quote.bid);
+      if (drawdownPct < dial.drawdownTripPct) {
+        continue;
+      }
+      trips.push({
         playbookId: playbook.id,
-        playbookMode: mode,
-        // A safety trip IS the time-critical case, same as force-flatten's own urgent claim.
-        urgent: true,
+        mode,
+        symbol,
+        drawdownPct,
+        drawdownTripPct: dial.drawdownTripPct,
+        enforcement: dial.enforcement,
       });
+      if (dial.enforcement === "enforce") {
+        intents.push({
+          symbol,
+          side: "sell",
+          quantity: held,
+          type: "market",
+          reason:
+            `${playbook.id} exit-safety trip (${mode}): drawdown ` +
+            `${(drawdownPct * 100).toFixed(1)}% ≥ ${(dial.drawdownTripPct * 100).toFixed(1)}% cap`,
+          playbookId: playbook.id,
+          playbookMode: mode,
+          // A safety trip IS the time-critical case, same as force-flatten's own urgent claim.
+          urgent: true,
+        });
+      }
     }
   }
   return { intents, trips };
@@ -257,37 +264,41 @@ export function playbookIntents(
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
   for (const { playbook, mode } of enabled) {
-    if (trippedSymbols.has(playbook.symbol)) {
-      continue;
-    }
+    // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
+    // field doc: desiredState is not an independent state machine per symbol.
     const state = playbook.desiredState(context.asOf, calendar, events);
-    const held = heldQuantity(portfolio, playbook.symbol);
-    const quote = context.quotes[playbook.symbol];
+    for (const symbol of playbook.symbols) {
+      if (trippedSymbols.has(symbol)) {
+        continue;
+      }
+      const held = heldQuantity(portfolio, symbol);
+      const quote = context.quotes[symbol];
 
-    if (state === "long" && held === 0 && quote && quote.ask > 0) {
-      const equity = portfolio.cash + held * quote.ask; // playbook symbols enter from flat
-      const quantity = Math.floor((playbook.size[mode] * equity) / quote.ask);
-      if (quantity > 0) {
+      if (state === "long" && held === 0 && quote && quote.ask > 0) {
+        const equity = portfolio.cash + held * quote.ask; // playbook symbols enter from flat
+        const quantity = Math.floor((playbook.size[mode] * equity) / quote.ask);
+        if (quantity > 0) {
+          intents.push({
+            symbol,
+            side: "buy",
+            quantity,
+            type: "market",
+            reason: `${playbook.id} window open (${mode}): ${playbook.thesis}`,
+            playbookId: playbook.id,
+            playbookMode: mode,
+          });
+        }
+      } else if (state === "flat" && held > 0) {
         intents.push({
-          symbol: playbook.symbol,
-          side: "buy",
-          quantity,
+          symbol,
+          side: "sell",
+          quantity: held,
           type: "market",
-          reason: `${playbook.id} window open (${mode}): ${playbook.thesis}`,
+          reason: `${playbook.id} window closed (${mode}): exiting per the play's own rule`,
           playbookId: playbook.id,
           playbookMode: mode,
         });
       }
-    } else if (state === "flat" && held > 0) {
-      intents.push({
-        symbol: playbook.symbol,
-        side: "sell",
-        quantity: held,
-        type: "market",
-        reason: `${playbook.id} window closed (${mode}): exiting per the play's own rule`,
-        playbookId: playbook.id,
-        playbookMode: mode,
-      });
     }
   }
   return intents;

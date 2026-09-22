@@ -128,7 +128,9 @@ function cardOf(playbook: Playbook): PlayCard {
   const href = evidenceHref(playbook);
   return {
     id: playbook.id,
-    symbol: playbook.symbol,
+    // The card shows one symbol; a basket's first symbol stands in (see registry.ts's
+    // playbookRoster doc for the same call).
+    symbol: playbook.symbols[0] ?? "",
     author: HOUSE_AUTHOR,
     thesis: playbook.thesis,
     trigger: probe.longDays.length > 0 ? "earnings-window" : "event-driven",

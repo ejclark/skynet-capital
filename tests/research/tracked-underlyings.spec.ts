@@ -38,8 +38,8 @@ describe("trackedUnderlyings", () => {
     for (const symbol of UPCOMING_PRINTS.map((p) => p.symbol)) {
       expect(tracked).toContain(symbol);
     }
-    expect(tracked).toContain(S1_NVDA.symbol);
-    expect(tracked).toContain(G1_GOOG.symbol);
+    expect(tracked).toContain(S1_NVDA.symbols[0]);
+    expect(tracked).toContain(G1_GOOG.symbols[0]);
   });
 
   it("tracks a defensible starting set, not every tradable underlying", () => {

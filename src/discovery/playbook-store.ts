@@ -77,7 +77,9 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
     exitCutLosses: "Not yet documented for this playbook.",
     hold: "Not yet documented for this playbook.",
   };
-  return { id: playbook.id, symbol: playbook.symbol, metrics: [], ...copy };
+  // The catalog card shows one symbol; a basket's first symbol stands in (see registry.ts's
+  // playbookRoster doc for the same call) — no playbook trades more than one yet.
+  return { id: playbook.id, symbol: playbook.symbols[0] ?? "", metrics: [], ...copy };
 }
 
 /** The whole Playbook Store catalog, derived fresh on each call — a new registered playbook is

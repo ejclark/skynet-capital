@@ -24,7 +24,7 @@ export function withPlaybooks(
   if (enabled.length === 0) {
     return base;
   }
-  const managed = new Set(enabled.map((e) => e.playbook.symbol));
+  const managed = new Set(enabled.flatMap((e) => e.playbook.symbols));
   return {
     id: base.id,
     name: base.name,
