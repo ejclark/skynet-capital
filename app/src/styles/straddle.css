@@ -70,7 +70,8 @@
    widths worked at 5 columns; they don't scale to 17 that need to OVERFLOW rather than compress,
    so every column gets a fixed pixel width via `<colgroup>` (`straddle-view.tsx`) — not per-`<th>`
    widths, since `table-layout: fixed` only reads the table's FIRST row, which here is the
-   colSpan=8 group-header row, not the sub-header row the individual columns live on. */
+   Greeks/Calls/Strike/Puts/Greeks group-header row (mixed colSpan cells), not the sub-header row
+   the individual columns live on. */
 .straddle-table {
   width: 100%;
   min-width: 760px;
@@ -93,6 +94,32 @@
   text-align: center;
   padding: 4px 2px;
   border-bottom: 1px solid var(--border);
+}
+/* The five header groups' leading edge (Eric, 2026-09-22: "should there be dividers between the
+   headers now that some sections are more compact?" — Greeks | Calls | Strike | Puts | Greeks).
+   `box-shadow` rather than `border-left`: it doesn't collapse/merge with the table's own
+   `border-collapse` borders, so it never fights the ITM rail's own box-shadow on the strike
+   column at the exact same edge in body rows (`.straddle-call-itm`/`.straddle-put-itm` below). */
+.straddle-group-start {
+  box-shadow: inset 1px 0 0 var(--border);
+}
+/* Bid/Ask (Eric, 2026-09-22: "the BID | ASK columns deserve a different background shading...
+   The BID/ASK cells are inputs, unlike the greeks"): the same `--surface-2` panel `.straddle-
+   strike` already uses, so Strike/Bid/Ask read as one "you can act here" surface, distinct from
+   the flat, unstyled Greeks/OI/Vol columns either side of them — a real background step, not a
+   hue, so it reads the same for a colourblind member. */
+.straddle-bidask {
+  background: var(--surface-2);
+}
+/* The same two group boundaries carried down through the body rows (columns 7 and 12 — calls'
+   Bid and the second block's OI; `StatCell`/`SideCell` are position-agnostic components, so this
+   is nth-child rather than a class threaded through every call site). Skips the Strike boundary
+   (9/10) on purpose — the strike cell's own `--surface-2` background plus the conditional ITM
+   rail already mark that edge; a third static divider there would compete with the rail rather
+   than reinforce it. */
+.straddle-table tbody td:nth-child(7),
+.straddle-table tbody td:nth-child(12) {
+  box-shadow: inset 1px 0 0 var(--border);
 }
 /* Calls / Strike / Puts (Eric, 2026-09-22: "these headers deserve elevated emphasis") — the
    group header row, one step up from the Bid/Ask/OI/... sub-header (`.straddle-sub th`) it sits

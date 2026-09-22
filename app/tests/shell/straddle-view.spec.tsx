@@ -186,16 +186,41 @@ describe("StraddleView — scroll-out stat columns", () => {
     expect(screen.queryByText("0.00")).not.toBeInTheDocument();
   });
 
-  it("expands the header group colSpan to 8 per side and the divider row's colSpan to 17", () => {
+  it("the Calls/Puts header spans only Bid/Ask (Eric, 2026-09-22), and the divider row still spans all 17", () => {
     const { container } = render(
       <StraddleView symbol="NVDA" expiration="2026-09-18" spot={180} calls={[fullRow]} puts={[]} />,
     );
     const callsHeader = container.querySelector(".straddle-side-calls");
     const putsHeader = container.querySelector(".straddle-side-puts");
-    expect(callsHeader?.getAttribute("colspan")).toBe("8");
-    expect(putsHeader?.getAttribute("colspan")).toBe("8");
+    // Narrowed from 8 (the whole side) to 2 (just Bid/Ask) so the label sits directly over the
+    // columns it names — the outer 6 stat/greek columns get their own "Greeks" colSpan={6} cell
+    // instead (Eric's own term for that group, from his follow-up the same day).
+    expect(callsHeader?.getAttribute("colspan")).toBe("2");
+    expect(putsHeader?.getAttribute("colspan")).toBe("2");
     const divider = container.querySelector(".straddle-divider td");
     expect(divider?.getAttribute("colspan")).toBe("17");
+  });
+
+  it("labels both outer stat groups Greeks and marks the group boundaries (Eric, 2026-09-22)", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-09-18" spot={180} calls={[fullRow]} puts={[]} />,
+    );
+    const greekHeaders = container.querySelectorAll(
+      ".straddle-side:not(.straddle-side-calls):not(.straddle-side-puts)",
+    );
+    expect(greekHeaders).toHaveLength(2);
+    for (const th of greekHeaders) {
+      expect(th.textContent).toBe("Greeks");
+      expect(th.getAttribute("colspan")).toBe("6");
+    }
+    // Five groups, four boundaries: Greeks|Calls, Calls|Strike, Strike|Puts, Puts|Greeks — the
+    // table's own left edge needs none. Body rows carry the Greeks/Bid-Ask boundary down too
+    // (column 7 and 12), skipping the Strike edge on purpose (its own background plus the
+    // conditional ITM rail already mark it).
+    const topRowStarts = container.querySelectorAll("thead tr:first-child .straddle-group-start");
+    expect(topRowStarts).toHaveLength(4);
+    const bodyStarts = container.querySelectorAll("tbody td.straddle-bidask");
+    expect(bodyStarts.length).toBeGreaterThan(0);
   });
 
   it("orders calls' stats on the outer edge and Bid/Ask adjacent to Strike, mirrored on puts", () => {
