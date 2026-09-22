@@ -1,8 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addDraftLeg,
+  type DraftLeg,
   type DraftOrder,
   type DraftPreview,
   emptyDraft,
@@ -177,7 +178,25 @@ export function gateStatus(
  *
  *  @category trading
  */
-export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): ReactElement {
+export function DraftOrderBuilder({
+  deskId,
+  incomingLeg,
+  onIncomingLegHandled,
+  onLegsChange,
+}: {
+  readonly deskId: string;
+  /** A leg picked from the bench's standalone Chain section pane while this ticket is on screen
+   *  (#3407 — "the chain pane adds legs on the Spread rung"; `trade.tsx`'s `chainPickLeg`). `key`
+   *  changes on every distinct pick — a re-render with the same value is never re-applied, which
+   *  matters on a remount too: the parent only clears its own pending pick via
+   *  `onIncomingLegHandled`, so without the key guard a stale pick still sitting in the parent
+   *  would replay onto a freshly emptied draft the moment this component remounts. */
+  readonly incomingLeg?: { readonly leg: NewLeg; readonly key: number };
+  readonly onIncomingLegHandled?: () => void;
+  /** Fires with the draft's current legs after every server response — lets the chain pane mark
+   *  strikes the draft already carries (same convention as `DraftLegForm`'s own inline chain). */
+  readonly onLegsChange?: (legs: readonly DraftLeg[]) => void;
+}): ReactElement {
   const [draft, setDraft] = useState<DraftOrder>(emptyDraft());
   const [preview, setPreview] = useState<DraftPreview | undefined>(undefined);
   const [note, setNote] = useState<string | undefined>(undefined);
@@ -201,6 +220,7 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
       setPreview(res.preview);
       if (res.note !== undefined) setNote(res.note);
       if (res.executed !== undefined) setExecuted(res.executed);
+      onLegsChange?.(res.draft.legs);
       // A sent spread is a working order until it fills — the list under the ticket re-reads
       // now rather than on its next poll (#3407 P3 slice 1).
       if (res.executed === true) {
@@ -212,6 +232,19 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
   };
 
   const addLeg = (leg: NewLeg) => void apply(() => addDraftLeg(deskId, draft, leg));
+
+  // Applies the chain pane's leg pick exactly once per distinct `key`, whichever draft is
+  // current at the moment the pick arrives — `deskId`/`draft`/`apply`/`onIncomingLegHandled` are
+  // read at their latest closure value on purpose, so this must NOT re-fire when any of THOSE
+  // change, only when a genuinely new pick arrives.
+  const appliedLegKey = useRef<number | undefined>(undefined);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above — incomingLeg alone is the trigger
+  useEffect(() => {
+    if (!incomingLeg || incomingLeg.key === appliedLegKey.current) return;
+    appliedLegKey.current = incomingLeg.key;
+    void apply(() => addDraftLeg(deskId, draft, incomingLeg.leg));
+    onIncomingLegHandled?.();
+  }, [incomingLeg]);
   const remove = (id: string) => void apply(() => removeDraftLeg(deskId, draft, id));
   const reprice = (id: string, limitPrice: number | undefined) =>
     void apply(() => repriceDraftLeg(deskId, draft, id, limitPrice));

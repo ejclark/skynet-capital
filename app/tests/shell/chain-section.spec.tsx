@@ -2,7 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { ChainAnswer } from "../../src/live/options";
-import { type ChainPick, ChainSection, chainPickTarget } from "../../src/shell/chain-section";
+import {
+  type ChainPick,
+  ChainSection,
+  chainPickLeg,
+  chainPickTarget,
+} from "../../src/shell/chain-section";
 
 /**
  * The chain as its own section (#3407, Workbench slice 2): reads the committed symbol, shows the
@@ -73,7 +78,23 @@ describe("ChainSection", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Pick the 180 put bid" }));
     // The expiration travels with the strike (slice 4a) — the contract is not named without it.
-    expect(picks).toEqual([{ strike: "180", side: "put", expiration: "2026-10-16" }]);
+    // `cell` (#3407) is what a bid/ask pick is — a strike-only pick never carries one.
+    expect(picks).toEqual([
+      { strike: "180", side: "put", expiration: "2026-10-16", cell: { price: "bid", value: 4.1 } },
+    ]);
+  });
+
+  it("reads spread-aware copy on the Spread rung (#3407)", async () => {
+    render(
+      withClient(
+        <ChainSection symbol="NVDA" play="401" strike="" plays={plays} onPick={() => undefined} />,
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "NVDA options chain" })).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/it's added as a leg to your spread/)).toBeInTheDocument();
+    expect(screen.queryByText(/the ticket opens preset/)).not.toBeInTheDocument();
   });
 
   it("starts on the expiration the URL names and reports a browse to another one (slice 4a)", async () => {
@@ -110,5 +131,65 @@ describe("chainPickTarget — the ticket's own fail-safe rule", () => {
     expect(chainPickTarget("201", "put", plays)).toEqual({ play: undefined, locked: false });
     expect(chainPickTarget("301", "put", plays)).toEqual({ play: undefined, locked: false });
     expect(chainPickTarget("101", "call", undefined)).toEqual({ play: undefined, locked: true });
+  });
+});
+
+describe("chainPickLeg — turning a chain pick into a Spread leg (#3407)", () => {
+  const bidPick: ChainPick = {
+    strike: "180",
+    side: "put",
+    expiration: "2026-10-16",
+    cell: { price: "bid", value: 4.1 },
+  };
+  const askPick: ChainPick = {
+    strike: "170",
+    side: "put",
+    expiration: "2026-10-16",
+    cell: { price: "ask", value: 1.6 },
+  };
+  const barePick: ChainPick = { strike: "180", side: "put", expiration: "2026-10-16" };
+
+  it("turns a bid into a sell leg and an ask into a buy leg, priced at the tapped cell", () => {
+    expect(chainPickLeg("401", "NVDA", bidPick)).toEqual({
+      underlying: "NVDA",
+      optionType: "put",
+      strike: 180,
+      expiration: "2026-10-16",
+      action: "sell",
+      contracts: 1,
+      limitPrice: 4.1,
+    });
+    expect(chainPickLeg("401", "NVDA", askPick)).toEqual({
+      underlying: "NVDA",
+      optionType: "put",
+      strike: 170,
+      expiration: "2026-10-16",
+      action: "buy",
+      contracts: 1,
+      limitPrice: 1.6,
+    });
+  });
+
+  it("is not a leg pick off the Spread rung, for a bare strike tap, or with no committed symbol", () => {
+    expect(chainPickLeg("201", "NVDA", bidPick)).toBeUndefined();
+    expect(chainPickLeg("401", "NVDA", barePick)).toBeUndefined();
+    expect(chainPickLeg("401", "", bidPick)).toBeUndefined();
+  });
+
+  it("omits limitPrice for a quoted '—' cell instead of pricing the leg at 0", () => {
+    const noQuote: ChainPick = {
+      strike: "180",
+      side: "put",
+      expiration: "2026-10-16",
+      cell: { price: "bid" },
+    };
+    expect(chainPickLeg("401", "NVDA", noQuote)).toEqual({
+      underlying: "NVDA",
+      optionType: "put",
+      strike: 180,
+      expiration: "2026-10-16",
+      action: "sell",
+      contracts: 1,
+    });
   });
 });
