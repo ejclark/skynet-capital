@@ -71,7 +71,7 @@ describe("considerationsFor", () => {
       symbol: "NVDA",
       notional: "—",
       reason: "Long into the print.",
-      action: { href: "/app/outpost?symbol=NVDA" },
+      action: { href: "/app/research?section=plays&symbol=NVDA" },
     });
   });
 

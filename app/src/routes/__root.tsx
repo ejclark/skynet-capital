@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { createRootRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useMoneypenny } from "../live/moneypenny";
+import { fetchOnboarding } from "../live/onboarding";
 import { KeyboardChords } from "../shell/keyboard";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
 import { StatusPill } from "../shell/status-pill";
@@ -81,13 +83,21 @@ export function isProfilePath(pathname: string): boolean {
 /**
  * THE PROFILE TAB (#1119, the canvas's top bar: Leaderboard · Profile · Trade · Activity ·
  * Research). Profile is a family of routes, not one, so its active state is computed from the
- * location rather than a single route match; it opens on the milestones table of contents.
+ * location rather than a single route match. It opens on the milestones table of contents while
+ * onboarding is still open — the natural next step for a new member — and on Accounts once
+ * onboarding is complete (Eric, 2026-09-22: a member who's done onboarding wants their book, not
+ * the milestones ToC, and was clicking through Milestones → Accounts every time). Reuses the
+ * `["onboarding"]` query the onboarding route itself already runs, so this never fires an extra
+ * fetch of its own — it just reads whatever's already in cache (or fetches once, cheaply, on
+ * first load).
  */
 function ProfileTab(): ReactElement {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onboarding = useQuery({ queryKey: ["onboarding"], queryFn: fetchOnboarding });
+  const to: "/accounts" | "/learn" = onboarding.data?.complete ? "/accounts" : "/learn";
   return (
     <Link
-      to="/learn"
+      to={to}
       className="topnav-link"
       aria-current={isProfilePath(pathname) ? "page" : undefined}
     >

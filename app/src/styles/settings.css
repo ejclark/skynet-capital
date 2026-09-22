@@ -175,6 +175,27 @@
   white-space: nowrap;
 }
 
+/* The default-account star (shell/default-account.ts) — the glyph (★/☆) and label both change,
+ * never color alone, per the standing red/green-colorblind rule (CLAUDE.md → Accessibility). */
+.set-switch-default {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  height: 34px;
+  margin-bottom: 1px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  white-space: nowrap;
+}
+.set-switch-default.is-default {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .set-pref-label {
   display: block;
   font-size: 11.5px;

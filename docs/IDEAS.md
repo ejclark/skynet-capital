@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- The Barad-dûr 3D landmark (`shell/landmark-hero.tsx`, on a bot's Accounts > Overview) takes up a
+  lot of vertical real estate above the fold and disrupts the page's flow — Eric likes the piece
+  and wants to keep it, but wants it relocated to something smaller/collapsed (a corner thumbnail,
+  a toggle-to-expand panel) rather than removed. Explicitly not the current priority: "it is an
+  idea that has merit to chase down but requires time and dedication to finish." Worth an IA pass
+  (candidate for `art-director`/`telestrator` once picked up) rather than a quick resize — the
+  piece's own dials and camera framing are tuned for the current footprint. _(src: Eric · while:
+  2026-09-22 account-page feedback batch, alongside the default-account/booked-P&L/dead-link fixes)_
+
 - `scripts/shoot/straddle.mjs` has been broken on `origin/main` (confirmed pre-existing, not caused
   by this change) since at least the #3407-era ticket-field rename: it fills `ticket.getByLabel(
   "Underlying")`, but `OptionGate`'s own symbol field has been labeled "Symbol" since `SymbolField`

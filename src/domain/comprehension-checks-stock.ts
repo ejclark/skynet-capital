@@ -34,19 +34,23 @@ export const STOCK_CHECKS: readonly ComprehensionCheck[] = [
       ),
       q(
         "unrealized",
-        "You bought at $50 and it's $40 now. What has happened to your money?",
+        "You still hold those 100 shares, bought at $50, and it's $40 now. What has happened to your money?",
         [
           "You're down $10 a share on paper; nothing is booked until you sell",
           "You have lost $1,000 permanently",
           "Nothing — losses only count at year end",
         ],
         0,
-        "An unrealized loss is real information but not a result. The number becomes a result when you close the position.",
+        "An unrealized loss is real information but not a result. The number becomes a result when you close the position — true for shares specifically because they never expire on their own; an option in the same spot could expire worthless with no sell required.",
       ),
       q(
         "worst",
         "What is the worst case on 100 shares bought at $50?",
-        ["Unlimited", "$5,000, if the shares go to zero", "You could owe more than you paid"],
+        [
+          "Unlimited",
+          "$5,000 — a 100% loss of capital, if the shares go to zero",
+          "You could owe more than you paid",
+        ],
         1,
         "Long stock is unleveraged: your downside is bounded by what you paid, and a share price cannot go below zero.",
       ),

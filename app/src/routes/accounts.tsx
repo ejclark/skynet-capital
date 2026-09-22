@@ -19,6 +19,7 @@ import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
 import { DecisionsSection } from "../shell/decisions-section";
+import { useDefaultAccount } from "../shell/default-account";
 import { PageFrame } from "../shell/frame";
 import { NetWorthCondensed } from "../shell/networth-summary";
 import { ProfileRail } from "../shell/profile-rail";
@@ -128,6 +129,7 @@ function AccountsPage(): ReactElement {
   const navigate = Route.useNavigate();
   const { account: asked, section: askedSection, q } = Route.useSearch();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const defaultAccount = useDefaultAccount();
 
   // URL-stateful positions filter — the same immediate-locally/debounced-replace discipline
   // `research.tsx` uses, ported from the retired `/u/:id` positions view.
@@ -170,8 +172,15 @@ function AccountsPage(): ReactElement {
       </PageFrame>
     );
 
+  // The default account (shell/default-account.ts) is a viewer-chosen FALLBACK, never trusted
+  // once it no longer names an owned account — a removed account can't strand the page.
+  const storedDefaultId = defaultAccount.id;
+  const fallbackId =
+    storedDefaultId !== undefined && accounts.some((a) => a.id === storedDefaultId)
+      ? storedDefaultId
+      : first.id;
   const selected =
-    asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? asked : first.id;
+    asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? asked : fallbackId;
   const deskIds = selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected as string];
   const selectedKind =
     selected === ALL_ACCOUNTS ? undefined : accounts.find((a) => a.id === selected)?.kind;
@@ -187,9 +196,15 @@ function AccountsPage(): ReactElement {
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
+      isDefault={storedDefaultId === selected}
+      onToggleDefault={() =>
+        storedDefaultId === selected
+          ? defaultAccount.clearDefault()
+          : defaultAccount.setDefault(selected as string)
+      }
       onSelectAccount={(id) =>
         void navigate({
-          search: (prev) => ({ ...prev, account: id === first.id ? undefined : id }),
+          search: (prev) => ({ ...prev, account: id === fallbackId ? undefined : id }),
           replace: true,
         })
       }
@@ -262,6 +277,8 @@ function AccountsBody({
   accounts,
   query,
   onFilterChange,
+  isDefault,
+  onToggleDefault,
   onSelectAccount,
   onSelectSection,
 }: {
@@ -272,6 +289,8 @@ function AccountsBody({
   readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly isDefault: boolean;
+  readonly onToggleDefault: () => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
@@ -288,6 +307,8 @@ function AccountsBody({
             selectedId={accountId}
             onSelect={onSelectAccount}
             allowAll
+            isDefault={isDefault}
+            onToggleDefault={onToggleDefault}
           />
           {stats ? (
             <NetWorthCondensed stats={stats} caption={caption} />

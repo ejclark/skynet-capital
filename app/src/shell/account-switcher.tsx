@@ -18,11 +18,17 @@ export function AccountSwitcher({
   selectedId,
   onSelect,
   allowAll,
+  isDefault,
+  onToggleDefault,
 }: {
   readonly accounts: readonly OwnedAccount[];
   readonly selectedId: string;
   readonly onSelect: (id: string) => void;
   readonly allowAll?: boolean;
+  /** True when `selectedId` is the stored default the Cockpit opens on. Omit the whole affordance
+   *  (never render a disabled star) on a page that doesn't carry a default, e.g. Settings. */
+  readonly isDefault?: boolean;
+  readonly onToggleDefault?: () => void;
 }): ReactElement {
   const selectId = useId();
   return (
@@ -38,6 +44,22 @@ export function AccountSwitcher({
           ))}
         </select>
       </div>
+      {onToggleDefault && selectedId !== ALL_ACCOUNTS ? (
+        <button
+          type="button"
+          className={`set-switch-default${isDefault ? " is-default" : ""}`}
+          aria-pressed={isDefault}
+          onClick={onToggleDefault}
+          title={
+            isDefault
+              ? "This account opens by default — click to clear"
+              : "Open on this account by default"
+          }
+        >
+          <span aria-hidden="true">{isDefault ? "★" : "☆"}</span>
+          {isDefault ? "Default" : "Set as default"}
+        </button>
+      ) : null}
       <a className="set-switch-add" href="/app/onboarding">
         + Add an account
       </a>

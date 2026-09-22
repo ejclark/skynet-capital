@@ -86,6 +86,7 @@ const eric = {
   cash: 50_000,
   equity: 101_000,
   positions: [{ symbol: "NVDA", quantity: 1, avgPrice: 100, marketValue: 110 }],
+  realizedPl: 1_500,
 };
 const sauron = {
   id: "sauron",
@@ -216,5 +217,30 @@ describe("serveNetWorthJson", () => {
     expect(ghost.value).toBe("—");
     // The total reflects only the on-board account.
     expect(totalOf(body).value).toBe("$101,000");
+  });
+
+  it("threads a snapshot's realizedPl through to the row as booked P/L", async () => {
+    const { res, out } = fakeRes();
+    await serveNetWorthJson(res, configWith({ resolveOwnerIds: () => ["human-eric"] }), session);
+    const body = answered(out);
+    const ericRow = must(
+      (body.accounts as { id: string; bookedPl: string; bookedKnown: boolean }[]).find(
+        (a) => a.id === "human-eric",
+      ),
+      "eric row",
+    );
+    expect(ericRow.bookedPl).toBe("+$1,500");
+    expect(ericRow.bookedKnown).toBe(true);
+    // Eric is the only owned account here, so the total mirrors his booked P/L exactly.
+    expect((body.total as { bookedPl: string }).bookedPl).toBe("+$1,500");
+  });
+
+  it("keeps the book-level booked P/L honestly unknown when one owned account hasn't reported one", async () => {
+    const { res, out } = fakeRes();
+    await serveNetWorthJson(res, configWith(), session);
+    const body = answered(out);
+    // Sauron's snapshot (fixture above) carries no realizedPl — the total can't honestly sum.
+    expect((body.total as { bookedKnown: boolean }).bookedKnown).toBe(false);
+    expect((body.total as { bookedPl: string }).bookedPl).toBe("—");
   });
 });
