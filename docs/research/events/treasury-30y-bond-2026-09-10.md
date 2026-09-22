@@ -1002,3 +1002,13 @@ generalizes beyond a single CUSIP — which is precisely what FT-2 was registere
 precisely what the close-out clock would not wait for.
 
 This doc goes quiet after this entry per the close-out rule.
+
+### Forward-test scoring, post-close-out (2026-09-22, `forward-test-due`)
+
+**FT-treasury-30y-bond-2026-09-10-2 scored `kill`** — the row's own text and the fetch are in
+[`forward-tests/treasury-30y-bond-2026-09-10.md`](../forward-tests/treasury-30y-bond-2026-09-10.md),
+never restated here. In one line: the 2026-09-15 20Y reopening (CUSIP 912810UX4) cleared bid-to-cover
+2.57 but tailed +2.0bp — the price-elastic reading measured on this bond's own 09-10 auction did not
+travel to the next long-duration reopening. This section does not reopen the assessment or the
+`## Outcome` verdict above; it exists only so a reader of this file sees the row was resolved without
+opening the fragment. FT-1 (score-by 2026-09-25) is still `_open_` and not yet due.
