@@ -1,5 +1,8 @@
 /* the pre-trade gate (#738 phase 2e) — the merge-box state machine on a ticket. Tokens only. */
 
+/* `--col-wide`, matching `.ladder-strip` above it on the trade page (Eric, 2026-09-22: "consistent
+   section widths is much more visually appealing") — was `--col-read`, a reading-width cap that
+   fit prose, not a form whose neighbor on the page is already the wider column. */
 .gate-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -7,7 +10,7 @@
   box-shadow: var(--elev-base);
   padding: var(--panel-p);
   margin-top: 16px;
-  max-width: var(--col-read);
+  max-width: var(--col-wide);
 }
 .panel-title {
   font-size: var(--text-lg);

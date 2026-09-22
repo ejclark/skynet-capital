@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId } from "react";
 import { fetchDesk } from "../live/desk";
-import { fetchPlays, type PlayInfo } from "../live/options";
+import { fetchPlays, type PlayInfo, type PlaysIndex } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
@@ -39,6 +39,13 @@ import { WorkingOrders } from "../shell/working-orders";
  * The options list is `/api/settings`'s `accounts`, which only ever names accounts the session
  * owns (`ownsAccount`'s doc comment) — the same server-side identity the desk gate re-checks at
  * submit, so nothing here can offer, let alone place, a ticket against someone else's desk.
+ *
+ * PAGE ORDER (Eric, 2026-09-22): the milestone ladder renders ABOVE the account picker — the
+ * ladder orients ("what can I even do"), the account picker is closer to the form it actually
+ * feeds. `TradePage` fetches `["plays"]` a second time (same key `DeskTicket` queries below,
+ * react-query shares the cache) purely so `MilestoneStrip` can render at that outer level instead
+ * of nested inside `DeskTicket`. Every ticket panel (`.gate-panel`) matches the ladder's own
+ * `--col-wide` cap now too (`gate.css`) — "consistent section widths" was the same ask.
  *
  * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds two SHAPES
  * of data for one symbol — the ticket and its daily chart — so the rail carries the section
@@ -79,6 +86,40 @@ function AccountField({
         ))}
       </select>
     </div>
+  );
+}
+
+/** The ladder above the account picker, above the ticket (Eric, 2026-09-22) — split out of
+ *  `TradePage` so that function stays under the house's complexity budget. */
+function LadderAndAccount({
+  plays,
+  activeDesk,
+  code,
+  accounts,
+  onDeskChange,
+}: {
+  readonly plays: PlaysIndex | undefined;
+  readonly activeDesk: string;
+  readonly code: string;
+  readonly accounts: readonly OwnedAccount[];
+  readonly onDeskChange: (id: string) => void;
+}): ReactElement {
+  return (
+    <>
+      {plays ? (
+        <MilestoneStrip
+          deskId={activeDesk}
+          current={code}
+          plays={plays.plays}
+          wheels={plays.wheels}
+          gate={plays.gate}
+          nextUp={plays.nextUp}
+        />
+      ) : null}
+      {accounts.length > 1 ? (
+        <AccountField accounts={accounts} deskId={activeDesk} onChange={onDeskChange} />
+      ) : null}
+    </>
   );
 }
 
@@ -131,22 +172,12 @@ function DeskTicket({
   return (
     <>
       {plays.data ? (
-        <>
-          <MilestoneStrip
-            deskId={desk}
-            current={code}
-            plays={plays.data.plays}
-            wheels={plays.data.wheels}
-            gate={plays.data.gate}
-            nextUp={plays.data.nextUp}
-          />
-          <TicketNav
-            plays={plays.data.plays}
-            code={code}
-            gate={plays.data.gate}
-            onPreset={onPreset}
-          />
-        </>
+        <TicketNav
+          plays={plays.data.plays}
+          code={code}
+          gate={plays.data.gate}
+          onPreset={onPreset}
+        />
       ) : null}
       {gated ? (
         <LadderGateCard note={gate.note} />
@@ -240,6 +271,11 @@ function TradePage(): ReactElement {
   };
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const accounts = settings.data?.accounts ?? [];
+  // Same `["plays"]` key `DeskTicket` queries below — react-query shares the one cached fetch, no
+  // second round trip. Fetched here too so `MilestoneStrip` can render above `AccountField` (Eric,
+  // 2026-09-22: the ladder belongs above the account picker, the account closer to the form it
+  // feeds — "consistent section widths" is the same pass, in `gate.css`).
+  const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   // A bookmarked or shared `?desk=` only sticks if it's still an account the session owns —
   // otherwise fall back to the first owned account, same as having no `?desk=` at all.
   const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
@@ -284,13 +320,13 @@ function TradePage(): ReactElement {
         <p className="note">No accounts are linked to your session yet.</p>
       ) : activeDesk ? (
         <>
-          {accounts.length > 1 ? (
-            <AccountField
-              accounts={accounts}
-              deskId={activeDesk}
-              onChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
-            />
-          ) : null}
+          <LadderAndAccount
+            plays={plays.data}
+            activeDesk={activeDesk}
+            code={play ?? "101"}
+            accounts={accounts}
+            onDeskChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
+          />
           {section === "chart" ? (
             <ChartSection symbol={symbol ?? ""} />
           ) : (
