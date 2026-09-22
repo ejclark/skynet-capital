@@ -53,6 +53,18 @@ describe("deskOrderRow — the broker's status alphabet as six honest words", ()
     expect(deskOrderRow(order({ status: "filled", type: "limit" }))?.replaceable).toBe(false);
   });
 
+  it("names an option order by its contract and counts it in contracts; a ticker stays a ticker", () => {
+    const option = deskOrderRow(
+      order({ symbol: "NVDA260925C00180000", type: "limit", status: "accepted" }),
+    );
+    expect(option).toMatchObject({ unit: "contracts" });
+    expect(option?.display).toMatch(/^NVDA \$180 CALL/);
+    expect(deskOrderRow(order({ symbol: "NVDA" }))).toMatchObject({
+      display: "NVDA",
+      unit: "shares",
+    });
+  });
+
   it("carries the broker's id lineage both ways", () => {
     const old = deskOrderRow(order({ status: "replaced", replaced_by: "o-9" }));
     expect(old).toMatchObject({ state: "replaced", replacedBy: "o-9" });
