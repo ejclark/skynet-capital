@@ -1,14 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { normalizeExpiration } from "../live/expiration";
 import { fetchPlays, type PlayInfo } from "../live/options";
-import type { PlayCode } from "../live/plays";
+import { navForPlay, type PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
-import { type ChainPick, ChainSection, chainPickTarget } from "../shell/chain-section";
+import {
+  type ChainPick,
+  ChainSection,
+  chainPickLeg,
+  chainPickTarget,
+} from "../shell/chain-section";
 import { ChartSection } from "../shell/chart-section";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
@@ -127,6 +133,9 @@ function DeskTicket({
   accounts,
   onDeskChange,
   chartSlot,
+  incomingLeg,
+  onIncomingLegHandled,
+  onLegsChange,
 }: {
   readonly desk: string;
   readonly code: string;
@@ -159,6 +168,11 @@ function DeskTicket({
   /** Forwarded to `OptionGate` alone (see its own doc comment) — a stock or spread ticket keeps
    *  today's behavior (chart as its own bench pane) unchanged. */
   readonly chartSlot?: ReactElement;
+  /** Forwarded to `DraftOrderBuilder` alone (multi-leg) — a leg picked from the standalone Chain
+   *  section pane while the Spread ticket is on screen (#3407). */
+  readonly incomingLeg?: { readonly leg: NewLeg; readonly key: number };
+  readonly onIncomingLegHandled?: () => void;
+  readonly onLegsChange?: (legs: readonly DraftLeg[]) => void;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
@@ -190,7 +204,12 @@ function DeskTicket({
         info.locked ? (
           <LockedPanel play={info} />
         ) : (
-          <DraftOrderBuilder deskId={desk} />
+          <DraftOrderBuilder
+            deskId={desk}
+            incomingLeg={incomingLeg}
+            onIncomingLegHandled={onIncomingLegHandled}
+            onLegsChange={onLegsChange}
+          />
         )
       ) : info && info.kind === "option" ? (
         <OptionGate
@@ -240,6 +259,14 @@ interface StageProps {
   readonly onStrikeCommit: (strike: string) => void;
   readonly accounts: readonly OwnedAccount[];
   readonly onDeskChange: (id: string) => void;
+  /** A leg picked from the Chain pane while the Spread ticket is on screen (#3407) — threaded to
+   *  `DraftOrderBuilder` alone; see `DeskTicket`'s own doc comment. */
+  readonly incomingLeg?: { readonly leg: NewLeg; readonly key: number };
+  readonly onIncomingLegHandled: () => void;
+  /** Strikes the Spread draft already carries — outlined on the Chain pane; see
+   *  `ChainSection`'s own doc comment. Undefined off the Spread rung. */
+  readonly markedStrikes?: readonly number[];
+  readonly onLegsChange: (legs: readonly DraftLeg[]) => void;
 }
 
 /** Whether the ticket at `props.play` is an option rung — the one case `chartSlot` applies to
@@ -273,6 +300,7 @@ function Pane({
         initialExpiration={expiration}
         onExpirationChange={props.onExpirationCommit}
         onPick={props.onChainPick}
+        markedStrikes={props.markedStrikes}
       />
     );
   }
@@ -286,6 +314,9 @@ function Pane({
       initialStrike={strike || undefined}
       onStrikeCommit={props.onStrikeCommit}
       initialExpiration={expiration || undefined}
+      incomingLeg={props.incomingLeg}
+      onIncomingLegHandled={props.onIncomingLegHandled}
+      onLegsChange={props.onLegsChange}
       onExpirationCommit={props.onExpirationCommit}
       accounts={props.accounts}
       onDeskChange={props.onDeskChange}
@@ -444,11 +475,37 @@ function TradePage(): ReactElement {
   // Same `["plays"]` key `DeskTicket` queries below — react-query shares the one cached fetch, no
   // second round trip. Fetched here so a chain-section tap can resolve its target rung.
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
-  /** A tap on the chain section presets the ticket through the URL (Workbench slice 2): the
-   *  strike always travels; the rung only when the target is unlocked (`chainPickTarget`, the
-   *  ticket's own fail-safe rule); and the section switches back to the ticket so the member
-   *  lands on the preset form, not on the chain they just left. */
+  // A leg picked from the Chain pane while building a Spread (#3407 — "the chain pane adds legs
+  // on the Spread rung"): `key` is a plain counter, not `Date.now()`, so two picks in the same
+  // millisecond still get distinct keys. `draftLegs` mirrors the draft's own legs (reported by
+  // `DraftOrderBuilder`'s `onLegsChange`) so the chain pane can mark strikes already in the order.
+  const [incomingLeg, setIncomingLeg] = useState<{ leg: NewLeg; key: number } | undefined>(
+    undefined,
+  );
+  const legPickCounter = useRef(0);
+  const [draftLegs, setDraftLegs] = useState<readonly DraftLeg[]>([]);
+  const isSpread = navForPlay(play ?? "101").instrument === "spread";
+  // Leaving the Spread rung empties the marks — a stale outline from an abandoned draft would
+  // otherwise survive a switch to an unrelated ticket (`DraftOrderBuilder` itself remounts fresh
+  // the next time 401 is reached, losing the legs these marks describe).
+  useEffect(() => {
+    if (!isSpread) setDraftLegs([]);
+  }, [isSpread]);
+  /** A tap on the chain section either adds a leg (building a Spread) or presets the ticket
+   *  through the URL (every other rung, Workbench slice 2): the strike always travels, the rung
+   *  only when the target is unlocked (`chainPickTarget`, the ticket's own fail-safe rule), and
+   *  the section switches back to the ticket so the member lands on the preset form, not on the
+   *  chain they just left. A leg pick stays ON the chain pane instead (`chainPickLeg`) — the same
+   *  "tap several, then go review" flow `DraftLegForm`'s own inline chain already gives a Spread
+   *  built from its own picker; a bare strike tap on the Spread rung (no bid/ask, so no clear
+   *  buy/sell) is a no-op rather than a guess. */
   const onChainPick = (pick: ChainPick) => {
+    const leg = chainPickLeg(play ?? "101", symbol ?? "", pick);
+    if (leg) {
+      setIncomingLeg({ leg, key: ++legPickCounter.current });
+      return;
+    }
+    if (isSpread) return;
     const target = chainPickTarget(play ?? "101", pick.side, plays.data?.plays);
     void navigate({
       resetScroll: false,
@@ -484,6 +541,13 @@ function TradePage(): ReactElement {
   const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
     | string
     | undefined;
+  // Same underlying, and same expiration when the pane's committed to one (`?exp=` is "" until a
+  // browse writes it) — mirrors `DraftLegForm`'s own marking filter for its inline chain.
+  const markedStrikes = isSpread
+    ? draftLegs
+        .filter((leg) => leg.underlying === (symbol ?? "") && (!exp || leg.expiration === exp))
+        .map((leg) => leg.strike)
+    : undefined;
   const stageProps: StageProps = {
     section,
     symbol: symbol ?? "",
@@ -501,6 +565,10 @@ function TradePage(): ReactElement {
     accounts,
     onDeskChange: (id) =>
       void navigate({ resetScroll: false, search: (prev) => ({ ...prev, desk: id }) }),
+    incomingLeg,
+    onIncomingLegHandled: () => setIncomingLeg(undefined),
+    markedStrikes,
+    onLegsChange: setDraftLegs,
   };
   // #784 naming pass: the Trading Outpost link that used to sit below "The ticket" was removed
   // on the belief its content was superseded by the Playbook Store — #3333's slice-8 audit found

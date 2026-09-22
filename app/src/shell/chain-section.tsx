@@ -1,11 +1,13 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
+import type { NewLeg } from "../live/draft-order";
 import { fetchChain, type PlayInfo } from "../live/options";
 import { navForPlay, type PlayCode, playForNav } from "../live/plays";
 import { ChainStraddle } from "./chain-straddle";
 import { ExpirationField } from "./option-fields";
 import { QuoteHeader } from "./quote-header";
+import type { PickedCell } from "./straddle-view";
 
 /**
  * THE CHAIN SECTION (#3407, Workbench slice 2) — the options chain as its own pane on `/trade`,
@@ -28,6 +30,11 @@ export interface ChainPick {
   readonly side: "call" | "put";
   /** The expiration the tapped row belongs to — the contract is not named without it. */
   readonly expiration: string;
+  /** Which price cell was tapped, and its value — present only for a bid/ask pick (`onPickSide`
+   *  below), never a bare strike-cell pick (`onPickStrike`). This is what `chainPickLeg` needs to
+   *  turn a pick into a leg: a bid/ask carries an unambiguous buy/sell and a limit; a strike alone
+   *  doesn't. */
+  readonly cell?: PickedCell;
 }
 
 /** The rung a chain tap presets from the current play — the ticket's own resolution rule: keep
@@ -50,6 +57,29 @@ export function chainPickTarget(
   return locked ? { play: undefined, locked: true } : { play: target, locked: false };
 }
 
+/** Whether a chain pick should become a LEG on the Spread builder instead of a rung preset
+ *  (#3407 — "the chain pane adds legs on the Spread rung," banked as `next-slice` once Workbench
+ *  slice 2 shipped this pane browse-only). `chainPickTarget`'s rung-preset math doesn't apply to a
+ *  spread — a multi-leg ticket has no single "side" to flip to — so this is its own rule: only a
+ *  bid/ask pick (never a bare strike tap, which carries no buy/sell) turns into a leg, priced at
+ *  the tapped cell, on the ticket's own committed underlying (the standalone Chain section never
+ *  has a second symbol to ask for — it reads the same `?symbol=` the ticket does). `undefined`
+ *  means "not a leg pick" — the caller falls back to its own handling (a rung preset, or nothing,
+ *  for a bare strike tap on the Spread rung — see `trade.tsx`'s `onChainPick`). */
+export function chainPickLeg(play: string, symbol: string, pick: ChainPick): NewLeg | undefined {
+  if (navForPlay(play).instrument !== "spread") return undefined;
+  if (!pick.cell || symbol === "") return undefined;
+  return {
+    underlying: symbol,
+    optionType: pick.side,
+    strike: Number(pick.strike),
+    expiration: pick.expiration,
+    action: pick.cell.price === "bid" ? "sell" : "buy",
+    contracts: 1,
+    ...(pick.cell.value !== undefined ? { limitPrice: pick.cell.value } : {}),
+  };
+}
+
 export function ChainSection({
   symbol,
   play,
@@ -58,6 +88,7 @@ export function ChainSection({
   initialExpiration,
   onExpirationChange,
   onPick,
+  markedStrikes,
 }: {
   /** The committed `?symbol=`; "" until the ticket has one. */
   readonly symbol: string;
@@ -70,6 +101,10 @@ export function ChainSection({
   /** A browse to another expiry writes it back to `?exp=`, so the ticket follows (slice 4a). */
   readonly onExpirationChange?: (expiration: string) => void;
   readonly onPick: (pick: ChainPick) => void;
+  /** Strikes the Spread draft already carries a leg on (same convention as `DraftLegForm`'s own
+   *  inline chain) — outlined here too, so a member who tapped a leg from THIS pane can see it
+   *  stuck before switching to the ticket to review. Undefined off the Spread rung. */
+  readonly markedStrikes?: readonly number[];
 }): ReactElement {
   const expId = useId();
   const [expiration, setExpiration] = useState(initialExpiration ?? "");
@@ -129,17 +164,20 @@ export function ChainSection({
         optionType={optionType}
         chainData={answer}
         strike={strike}
+        markedStrikes={markedStrikes}
         expirationField={expirationField}
         pending={chain.isFetching}
         onPickStrike={(value) =>
           onPick({ strike: value, side: optionType, expiration: answer.expiration })
         }
-        onPickSide={(value, side) =>
-          onPick({ strike: String(value), side, expiration: answer.expiration })
+        onPickSide={(value, side, cell) =>
+          onPick({ strike: String(value), side, expiration: answer.expiration, cell })
         }
       />
       <p className="note">
-        Tap a bid to sell it or an ask to buy it — the ticket opens preset with that contract.
+        {nav.instrument === "spread"
+          ? "Tap a bid to sell that contract, an ask to buy it — it's added as a leg to your spread."
+          : "Tap a bid to sell it or an ask to buy it — the ticket opens preset with that contract."}
       </p>
     </section>
   );
