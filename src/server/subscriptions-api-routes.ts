@@ -45,6 +45,9 @@ interface SubscribeBody {
   readonly capitalAllocated: number;
   /** Symbol-targeting filter (#885) — optional, absent/empty means unrestricted. */
   readonly symbols?: readonly string[];
+  /** Owner opt-in to hold this subscription's trading dark until warmed up (#3543). Absent/false
+   *  means unchanged, always-on behavior. */
+  readonly requireWarmup?: boolean;
 }
 
 const MAX_SYMBOLS = 20;
@@ -86,8 +89,16 @@ function parseSubscribeBody(raw: string): SubscribeBody | undefined {
       ? body.capitalAllocated
       : undefined;
   const symbols = parseSymbols(body.symbols);
+  const requireWarmup = body.requireWarmup === true;
   return id && playbookId && mode && capitalAllocated !== undefined
-    ? { id, playbookId, mode, capitalAllocated, ...(symbols ? { symbols } : {}) }
+    ? {
+        id,
+        playbookId,
+        mode,
+        capitalAllocated,
+        ...(symbols ? { symbols } : {}),
+        ...(requireWarmup ? { requireWarmup: true } : {}),
+      }
     : undefined;
 }
 
@@ -176,6 +187,7 @@ async function handleSubscribe(
     capitalAllocated: body.capitalAllocated,
     enabled: true,
     ...(body.symbols ? { symbols: body.symbols } : {}),
+    ...(body.requireWarmup ? { requireWarmup: true } : {}),
   });
   sendJson(res, 200, { ok: true });
 }
