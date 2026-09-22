@@ -43,6 +43,27 @@ export interface WireReasoningDeps {
   readonly historyByParticipant?: ReadonlyMap<string, readonly EquitySample[]>;
 }
 
+/** The exact-order-id reasoning join, standalone — shared by `attachWireReasoning` (per wire row)
+ *  and the Thesis tab's marker reasoning (per trade fill, `thesis-json-view.ts`), so both surfaces
+ *  build the same honest shape from the same lookup rather than each re-deriving it. Absent when
+ *  no lookup is configured or no decision resolves for this order id — never fabricated. */
+export function reasoningForOrder(
+  orderId: string,
+  deps: WireReasoningDeps,
+): WireTradeReasoning | undefined {
+  if (!deps.findByOrderId) return undefined;
+  const found = deps.findByOrderId(orderId);
+  if (!found) return undefined;
+  const { record, intent } = found;
+  const guardDelta = guardDeltaFor(record, intent);
+  return {
+    reason: intent.reason,
+    ...(intent.strategy ? { strategy: intent.strategy } : {}),
+    ...(intent.expectation ? { expectation: intent.expectation } : {}),
+    ...(guardDelta ? { guardDelta } : {}),
+  };
+}
+
 /** Enriches every BOT row with reasoning/vitals when a decision is found; human rows and
  *  unresolved bot rows pass through unchanged (both fields simply absent — an honest omission,
  *  never a placeholder object). */
@@ -51,17 +72,9 @@ export function attachWireReasoning(
   deps: WireReasoningDeps,
 ): WireTradeWithReasoning[] {
   return rows.map((row) => {
-    if (row.kind !== "bot" || !deps.findByOrderId) return row;
-    const found = deps.findByOrderId(row.orderId);
-    if (!found) return row;
-    const { record, intent } = found;
-    const guardDelta = guardDeltaFor(record, intent);
-    const reasoning: WireTradeReasoning = {
-      reason: intent.reason,
-      ...(intent.strategy ? { strategy: intent.strategy } : {}),
-      ...(intent.expectation ? { expectation: intent.expectation } : {}),
-      ...(guardDelta ? { guardDelta } : {}),
-    };
+    if (row.kind !== "bot") return row;
+    const reasoning = reasoningForOrder(row.orderId, deps);
+    if (!reasoning) return row;
     const samples = deps.historyByParticipant?.get(row.participantId);
     return {
       ...row,

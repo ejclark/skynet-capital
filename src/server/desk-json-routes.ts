@@ -121,7 +121,7 @@ export async function serveDeskJson(
       JSON.stringify({
         available: true,
         kind: "bot",
-        thesis: thesisView(found.personaId, decisions, activity, samples),
+        thesis: thesisView(found.personaId, decisions, activity, samples, config.findByOrderId),
       }),
     );
     return;
