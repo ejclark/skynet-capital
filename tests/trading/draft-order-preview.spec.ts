@@ -76,6 +76,19 @@ describe("draftPreview", () => {
     expect(draftPreview(spread).payoff).toEqual(curve);
   });
 
+  it("adds a stock component's P&L to every sample — the covered call's shares", () => {
+    const short = addLeg(emptyDraft(), SHORT_CALL);
+    const alone = payoffCurve(short.legs);
+    const covered = payoffCurve(short.legs, { shares: 100 * SHORT_CALL.contracts, basis: 170 });
+    expect(alone && covered).toBeTruthy();
+    if (!(alone && covered)) return;
+    expect(covered.points.map((p) => p.price)).toEqual(alone.points.map((p) => p.price));
+    for (const [i, point] of covered.points.entries()) {
+      const bare = alone.points[i]?.pnl ?? Number.NaN;
+      expect(point.pnl).toBeCloseTo(bare + (point.price - 170) * 100 * SHORT_CALL.contracts);
+    }
+  });
+
   it("carries no curve for an empty draft", () => {
     expect(payoffCurve([])).toBeUndefined();
     expect(draftPreview(emptyDraft()).payoff).toBeUndefined();

@@ -48,7 +48,16 @@ export function PayoffChart({
   const best = points.reduce((a, b) => (b.pnl > a.pnl ? b : a));
   const worstEnd = points.reduce((a, b) => (b.pnl <= a.pnl ? b : a));
   const bestStart = best;
-  const summary = `At expiration: worst ${maxLoss === "unlimited" ? "unlimited" : money(-worst.pnl)} near ${money(worst.price)}, best ${money(best.pnl)} near ${money(best.price)}${
+  // The window ends 20% past the outer strikes, so a single sold put or a covered call is still
+  // falling at the edge: the worst point ON SCREEN is not the worst there is. The label then
+  // reads the server's max loss (the grid's number) and says the line keeps going.
+  const edge =
+    maxLoss !== "unlimited" && Math.abs(maxLoss - -worst.pnl) >= 0.005
+      ? ` (to −${money(maxLoss)})`
+      : "";
+  const worstLabel =
+    maxLoss === "unlimited" ? "loss unlimited ↓" : `−${money(-worst.pnl)}${edge ? " ↓" : ""}`;
+  const summary = `At expiration: worst ${maxLoss === "unlimited" ? "unlimited" : `${money(-worst.pnl)}${edge}`} near ${money(worst.price)}, best ${money(best.pnl)} near ${money(best.price)}${
     breakevens.length ? `, breakeven at ${breakevens.map((b) => money(b)).join(" and ")}` : ""
   }.`;
   return (
@@ -87,12 +96,14 @@ export function PayoffChart({
         ))}
         <path d={path} className="payoff-line" />
         <text
-          x={x(worstEnd.price)}
-          y={Math.max(PAD.top + 6, y(worst.pnl) - 4)}
-          textAnchor="end"
+          x={x(worstEnd.price) + (worstEnd === points[0] ? 3 : 0)}
+          y={Math.max(PAD.top + 6, y(worst.pnl) - (worstEnd === points[0] ? 12 : 4))}
+          // A worst point that IS the window's first sample (a line still falling at the edge)
+          // has no room to its left — the label reads rightward from it instead of clipping.
+          textAnchor={worstEnd === points[0] ? "start" : "end"}
           className="payoff-label"
         >
-          {maxLoss === "unlimited" ? "loss unlimited ↓" : `−${money(-worst.pnl)}`}
+          {worstLabel}
         </text>
         <text
           x={x(bestStart.price)}

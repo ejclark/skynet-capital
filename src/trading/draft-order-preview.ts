@@ -51,6 +51,17 @@ export interface PayoffCurve {
   readonly to: number;
 }
 
+/** Shares riding along with the legs — a covered call's 100 held shares per contract, valued
+ *  from the spot the ticket was reviewed at. Absent for pure option combos. */
+export interface StockComponent {
+  readonly shares: number;
+  readonly basis: number;
+}
+
+function stockPnlAt(stock: StockComponent | undefined, price: number): number {
+  return stock ? (price - stock.basis) * stock.shares : 0;
+}
+
 /** How many evenly spaced samples the curve carries besides the strikes themselves. */
 export const PAYOFF_SAMPLES = 40;
 
@@ -59,7 +70,10 @@ export const PAYOFF_SAMPLES = 40;
  * polyline through them is exact, and the zero crossings between consecutive points by linear
  * interpolation — exact too, since each segment is linear.
  */
-export function payoffCurve(legs: readonly DraftLeg[]): PayoffCurve | undefined {
+export function payoffCurve(
+  legs: readonly DraftLeg[],
+  stock?: StockComponent,
+): PayoffCurve | undefined {
   if (legs.length === 0) return undefined;
   const strikes = legs.map((leg) => leg.strike);
   const from = Math.max(0, Math.min(...strikes) * 0.8);
@@ -70,7 +84,7 @@ export function payoffCurve(legs: readonly DraftLeg[]): PayoffCurve | undefined 
   }
   const points = [...prices]
     .sort((a, b) => a - b)
-    .map((price) => ({ price, pnl: round2(netPnlAt(legs, price)) }));
+    .map((price) => ({ price, pnl: round2(netPnlAt(legs, price) + stockPnlAt(stock, price)) }));
   const breakevens: number[] = [];
   for (let i = 1; i < points.length; i += 1) {
     const a = points[i - 1];

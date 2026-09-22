@@ -1,3 +1,4 @@
+import type { PayoffCurve } from "./draft-order-preview.js";
 import type { OptionType } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 import { normalizeSymbol } from "./order-ticket.js";
@@ -117,6 +118,10 @@ export interface OptionTicketPreview {
   readonly chanceOfProfit?: number;
   /** Expected P/L at expiry for the whole order, dollars (can be negative). */
   readonly expectedValue?: number;
+  /** The at-expiration curve the review draws (#3407; the study's row 8) — the same arithmetic
+   *  as `maxLoss` / `breakeven` above, sampled server-side. Absent on a refused or unpriced
+   *  order, and on a covered call reviewed without a spot (no basis, no honest curve). */
+  readonly payoff?: PayoffCurve;
   readonly refusals: string[];
   readonly warnings: string[];
 }

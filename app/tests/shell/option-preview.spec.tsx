@@ -73,6 +73,35 @@ describe("OptionPreviewBody — odds and greeks", () => {
 
 const noop = (): void => undefined;
 
+describe("OptionPreviewBody — the payoff diagram (#3407)", () => {
+  const payoff = {
+    from: 140,
+    to: 210,
+    breakevens: [173.5],
+    points: [
+      { price: 140, pnl: -3_350 },
+      { price: 173.5, pnl: 0 },
+      { price: 175, pnl: 150 },
+      { price: 210, pnl: 150 },
+    ],
+  };
+
+  it("draws the server's curve under the grid, the max loss in words when the edge still falls", () => {
+    render(<OptionPreviewBody preview={{ ...preview, payoff }} />);
+    const chart = screen.getByRole("img");
+    expect(chart.getAttribute("aria-label")).toContain("worst $3,350.00 (to −$17,350.00)");
+    expect(screen.getByText("BE $173.50")).toBeInTheDocument();
+    expect(screen.getByText("−$3,350.00 ↓")).toBeInTheDocument();
+  });
+
+  it("draws nothing without a curve, or on a refused order", () => {
+    const { container, rerender } = render(<OptionPreviewBody preview={preview} />);
+    expect(container.querySelector("svg")).toBeNull();
+    rerender(<OptionPreviewBody preview={{ ...preview, payoff, ok: false, refusals: ["No."] }} />);
+    expect(container.querySelector("svg")).toBeNull();
+  });
+});
+
 describe("GateAction — the Review press keeps focus where it is (#3407 P0)", () => {
   it("prevents the mousedown default so a blur-commit can't steal the click", () => {
     let reviewed = 0;

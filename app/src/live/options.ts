@@ -5,6 +5,7 @@
  * arrives computed, and the server re-refuses a locked play regardless of what the UI shows.
  */
 
+import type { PayoffCurve } from "./draft-order";
 import { postJson } from "./post";
 import type { TicketResult } from "./ticket";
 
@@ -117,6 +118,8 @@ export interface OptionPreview {
   readonly impliedVol?: number;
   readonly chanceOfProfit?: number;
   readonly expectedValue?: number;
+  /** The server-sampled at-expiration curve (#3407) — absent on refused / unpriced orders. */
+  readonly payoff?: PayoffCurve;
   readonly refusals: readonly string[];
   readonly warnings: readonly string[];
 }

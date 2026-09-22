@@ -1,5 +1,6 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { singleLegOdds } from "../options/single-leg-odds.js";
+import { payoffCurve } from "./draft-order-preview.js";
 import {
   DEFAULT_OPTION_TIF,
   OPTION_PLAY_LEVEL,
@@ -183,10 +184,71 @@ export function previewOptionOrder(
       : {}),
     ...(context.greeks ? { greeks: context.greeks } : {}),
     ...(context.impliedVol !== undefined ? { impliedVol: context.impliedVol } : {}),
-    ...(refusals.length === 0 ? oddsFor(request, context, estPremium, scale) : {}),
+    ...decisionInputs(refusals.length === 0, request, context, estPremium, {
+      underlying,
+      optionType,
+      side,
+    }),
     refusals,
     warnings,
   };
+}
+
+/** The order screen's decision inputs — odds (P2 slice 2) and the payoff curve — only on an
+ *  order that passed every check; a refused order shows its refusals, never an analysis of a
+ *  trade that will not be sent. */
+function decisionInputs(
+  ok: boolean,
+  request: OptionTicketRequest,
+  context: OptionTicketContext,
+  premium: number | undefined,
+  leg: { underlying: string; optionType: "call" | "put"; side: "buy" | "sell" },
+): Pick<OptionTicketPreview, "chanceOfProfit" | "expectedValue" | "payoff"> {
+  if (!ok) return {};
+  const scale = request.contracts * SHARES_PER_CONTRACT;
+  return {
+    ...oddsFor(request, context, premium, scale),
+    ...curveFor(
+      request,
+      leg.underlying,
+      leg.optionType,
+      leg.side,
+      premium,
+      context.underlyingPrice,
+    ),
+  };
+}
+
+/** The at-expiration curve for the one leg (#3407; the payoff diagram the multi-leg review
+ *  already draws) — a covered call carries its 100 shares per contract at the spot, and gets no
+ *  curve at all without one, exactly as `payoff()` gives it no max loss then. */
+function curveFor(
+  request: OptionTicketRequest,
+  underlying: string,
+  optionType: "call" | "put",
+  side: "buy" | "sell",
+  premium: number | undefined,
+  spot: number | undefined,
+): Pick<OptionTicketPreview, "payoff"> {
+  if (premium === undefined) return {};
+  const scale = request.contracts * SHARES_PER_CONTRACT;
+  if (request.code === "202" && spot === undefined) return {};
+  const payoff = payoffCurve(
+    [
+      {
+        id: "leg",
+        underlying,
+        optionType,
+        strike: request.strike,
+        expiration: request.expiration,
+        action: side,
+        contracts: request.contracts,
+        limitPrice: premium,
+      },
+    ],
+    request.code === "202" && spot !== undefined ? { shares: scale, basis: spot } : undefined,
+  );
+  return payoff ? { payoff } : {};
 }
 
 /** Chance of profit and expected value for the order (#3407 P2 slice 2) — only when every input
