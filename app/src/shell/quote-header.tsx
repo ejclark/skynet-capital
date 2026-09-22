@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { fetchQuote, type QuoteAnswer, type QuoteTone } from "../live/quote";
+import type { QuoteAnswer, QuoteTone } from "../live/quote";
+import { quoteQuery } from "../live/quote-query";
 import { money } from "../live/ticket";
 
 /**
@@ -67,12 +68,7 @@ function QuoteHeaderBody({ answer }: { readonly answer: QuoteAnswer }): ReactEle
 
 /** @category trading */
 export function QuoteHeader({ symbol }: { readonly symbol: string }): ReactElement {
-  const query = useQuery({
-    queryKey: ["quote", symbol],
-    queryFn: () => fetchQuote(symbol),
-    enabled: symbol !== "",
-    staleTime: 15_000,
-  });
+  const query = useQuery(quoteQuery(symbol));
 
   const answer = symbol !== "" && !query.isLoading ? query.data : undefined;
 
