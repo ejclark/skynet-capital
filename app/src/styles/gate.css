@@ -1,6 +1,6 @@
 /* the pre-trade gate (#738 phase 2e) — the merge-box state machine on a ticket. Tokens only. */
 
-/* `--col-wide`, matching `.ladder-strip` above it on the trade page (Eric, 2026-09-22: "consistent
+/* `--col-wide`, the same cap the milestone strip used above it on the trade page (Eric, 2026-09-22: "consistent
    section widths is much more visually appealing") — was `--col-read`, a reading-width cap that
    fit prose, not a form whose neighbor on the page is already the wider column. */
 .gate-panel {
