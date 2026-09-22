@@ -3,6 +3,7 @@ import {
   addDays,
   type DayRange,
   daysOf,
+  type FiscalQuarterLabel,
   type MarketClosure,
   rangeLabel,
   sessionsIn,
@@ -146,6 +147,7 @@ export function EventHorizon({
   onLens,
   onStep,
   dayFog,
+  fiscal,
 }: {
   readonly events: readonly ResearchEvent[];
   readonly closures: readonly MarketClosure[];
@@ -161,6 +163,9 @@ export function EventHorizon({
   readonly onStep: (direction: 1 | -1) => void;
   /** The day lens's fog (docs/FOG-OF-WAR.md): the door's label and how many calls sit behind it. */
   readonly dayFog?: { readonly reason: string; readonly held: number };
+  /** The quarter lens's fiscal identity (#1736) — set only when exactly one symbol is in scope
+   *  and has a confirmed fiscal year-end; absent, the quarter lens reads (and is) the calendar. */
+  readonly fiscal?: FiscalQuarterLabel;
 }): ReactElement | null {
   const month = anchor.slice(0, 7);
   const allLens = lens === "all";
@@ -196,7 +201,7 @@ export function EventHorizon({
           ‹
         </button>
         <span className="eh-month">
-          <span className="eh-range">{rangeLabel(range, lens)}</span>
+          <span className="eh-range">{rangeLabel(range, lens, fiscal)}</span>
           <span className="eh-sessions num">
             {allLens
               ? `${String(events.length)} ${events.length === 1 ? "event" : "events"}`
