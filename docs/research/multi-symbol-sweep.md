@@ -71,6 +71,24 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **The disappearing index effect, tested at a single-name threshold set before the additions were
+  known (FT-sp-rebalance-proforma-2026-09-04-1)** — added 2026-09-22 from the
+  [sp-rebalance-proforma-2026-09-04 close-out](events/sp-rebalance-proforma-2026-09-04.md). All
+  three S&P 500 additions named in the 2026-09-04 release (effective at the 2026-09-18 close)
+  cleared the registered ≥+3% excess-vs-SPY trigger over close 2026-09-04 → close 2026-09-18: Bloom
+  Energy (BE) +6.15%, Everpure (P) +5.76%, Illumina (ILMN) +10.91%, against SPY −1.10% over the same
+  window (Yahoo daily bars, raw closes). The close-out itself had already flagged this trigger as
+  miscalibrated — an 83% base rate of at least one of the three clearing +3% on noise alone, measured
+  against their own trailing-year dispersion (BE 113.5% annualized vol) — and registered a calibrated
+  companion, `FT-sp-rebalance-proforma-2026-09-04-2` (equal-weight basket excess vs a +15.81% p90
+  threshold), which **passed** at +7.61%. **What this does and does not refute:** the raw single-name
+  ±3% inclusion trigger is dead as written — sized to Greenwood & Sammon's ~1.0% published average
+  rather than to these three names' own realized volatility, it could not help but fire regardless of
+  whether the index effect held. The calibrated companion is the test that actually speaks to the
+  disappearing-index-effect claim, and it corroborates the null. Do not re-propose a single-name flat
+  ±3% inclusion trigger without scaling it to the named symbols' own realized dispersion first — the
+  generalizable lesson the close-out banked.
+
 - **Long-end demand read as price-elastic off a single reopening, and the test written to check
   whether that travels to the next long-duration auction (FT-treasury-30y-bond-2026-09-10-2)** —
   added 2026-09-22 from the

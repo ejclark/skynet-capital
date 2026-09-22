@@ -218,3 +218,13 @@ and remains **Eric's / the calendar owner's** call, not this lane's.
 both the same session `opex-2026-09-18` already owns; the 09-11 capped file already has its own
 entry and ledger; the 09-08 share/IWF freeze is a data cut-off with no observable publication, and
 this doc declined to file it at D0 for that reason — the release changes nothing about that.
+
+### Forward tests scored (2026-09-22)
+
+`FT-sp-rebalance-proforma-2026-09-04-1` and `FT-sp-rebalance-proforma-2026-09-04-2` were both due
+2026-09-21 and are now scored in
+[`forward-tests/sp-rebalance-proforma-2026-09-04.md`](../forward-tests/sp-rebalance-proforma-2026-09-04.md):
+`-1` **kill** (all three named additions cleared its ≥+3% excess-vs-SPY trigger), `-2` **pass**
+(the basket's +7.61% excess stays under its +15.81% calibrated threshold). Scored from re-run
+Yahoo daily bars, cache busted this session, never from memory. `-1`'s kill is recorded in
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.
