@@ -111,6 +111,26 @@ describe("draftPreview", () => {
     expect(halfway).toBeLessThan(expiry);
   });
 
+  it("takes one model per leg and marks halfway at half the NEAREST expiry", () => {
+    const spread = addLeg(addLeg(emptyDraft(), SHORT_CALL), {
+      ...LONG_CALL,
+      expiration: "2026-11-20",
+    });
+    const curve = payoffCurve(spread.legs);
+    if (!curve) throw new Error("expected a curve");
+    const prices = curve.points.map((p) => p.price);
+    const models = (leg: { expiration: string }) =>
+      leg.expiration === "2026-11-20"
+        ? { volatility: 0.35, daysToExpiry: 60 }
+        : { volatility: 0.4, daysToExpiry: 20 };
+    const dated = datedCurves(spread.legs, prices, models);
+    expect(dated?.[1]?.daysForward).toBe(10);
+    // A leg the model cannot describe means no line at all, never a guessed leg.
+    expect(
+      datedCurves(spread.legs, prices, (leg) => (leg.strike === 200 ? undefined : models(leg))),
+    ).toBeUndefined();
+  });
+
   it("draws no dated line inside two days of expiry, without an IV, or for an unpriced leg", () => {
     const short = addLeg(emptyDraft(), SHORT_CALL);
     const prices = [170, 180, 190];

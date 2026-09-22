@@ -12,7 +12,7 @@ import {
 } from "../trading/draft-order.js";
 import type { DraftAccountContext } from "../trading/draft-order-account.js";
 import { validateDraftAccount } from "../trading/draft-order-account.js";
-import { draftPreview } from "../trading/draft-order-preview.js";
+import { draftPreview, withDatedCurves } from "../trading/draft-order-preview.js";
 import type { Session } from "./auth/session.js";
 import { requesterFor, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -267,7 +267,10 @@ export async function serveDraftOrderApi(
   const reviewed = parseDraft(request.draft);
   const draft = applyAction(reviewed, request.action, account, progression);
   if (request.action.kind !== "submit" || draft.phase !== "submitted") {
-    sendJson(res, 200, { draft, preview: draftPreview(draft) });
+    sendJson(res, 200, {
+      draft,
+      preview: await previewWithDated(draft, request.participantId, config),
+    });
     return true;
   }
   sendJson(
@@ -280,6 +283,34 @@ export async function serveDraftOrderApi(
     ),
   );
   return true;
+}
+
+/**
+ * The payoff preview, with today / halfway model lines when the requester's own options client
+ * can give each leg's underlying a spot (#3407 P4 — the builder's counterpart to the single-leg
+ * ticket's dated lines; each leg's IV is solved from the premium the member set). One spot read
+ * per underlying per action; a failed read means expiration only, never a guessed line.
+ */
+async function previewWithDated(
+  draft: DraftOrder,
+  participantId: string,
+  config: DashboardServerConfig,
+): Promise<ReturnType<typeof draftPreview>> {
+  const preview = draftPreview(draft);
+  const client = config.optionsClientFor?.(participantId);
+  if (!(client && preview.pricedFully) || draft.legs.length === 0) return preview;
+  const underlyings = [...new Set(draft.legs.map((leg) => leg.underlying))];
+  const spots = new Map<string, number>();
+  try {
+    for (const [u, spot] of await Promise.all(
+      underlyings.map(async (u) => [u, await client.getUnderlyingPrice(u)] as const),
+    )) {
+      if (spot !== undefined) spots.set(u, spot);
+    }
+  } catch {
+    return preview;
+  }
+  return withDatedCurves(preview, draft, spots, config.now?.() ?? new Date());
 }
 
 /**
