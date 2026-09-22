@@ -15,6 +15,7 @@ import { OptionGate } from "../../src/shell/option-gate";
 
 let chainResult: ChainAnswer = { chainNote: "unset", reason: "failed" };
 let chainNeverResolves = false;
+let deskPositions: readonly { symbol: string; isOption: boolean }[] = [];
 
 rstest.mock("../../src/live/options", () => ({
   fetchChain: () =>
@@ -30,15 +31,22 @@ rstest.mock("../../src/live/options", () => ({
 rstest.mock("../../src/live/quote", () => ({
   fetchQuote: () => Promise.resolve({ quoteNote: "test fixture — no live quote" }),
 }));
-// ...and WireRow (#2017 Phase 1 slice 12), same reason.
-rstest.mock("../../src/live/wire", () => ({
-  fetchWireForSymbol: () =>
-    Promise.resolve({ trades: [], pnl: [], feedbackEnabled: false, feedback: [] }),
-}));
 // ...and RecentOrdersStrip (#2017 Phase 1 slice 13) — fires once a chain-cell pick resolves an
-// OCC symbol in the "chain cell picking" specs below.
+// OCC symbol in the "chain cell picking" specs below — and the held-badge desk query (Eric,
+// 2026-09-22), same reason.
 rstest.mock("../../src/live/desk", () => ({
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
+  fetchDesk: () =>
+    Promise.resolve({
+      generatedAt: "2026-09-21T00:00:00Z",
+      desk: {
+        id: "desk-1",
+        name: "Desk",
+        kind: "human",
+        positions: deskPositions,
+        considerations: [],
+      },
+    }),
 }));
 
 const unlockedCallPlay: PlayInfo = {
@@ -114,6 +122,7 @@ function renderGateWithStrike(initialSymbol: string, initialStrike: string): Rea
 beforeEach(() => {
   chainNeverResolves = false;
   chainResult = { chainNote: "unset", reason: "failed" };
+  deskPositions = [];
 });
 
 describe("OptionGate — progressive disclosure", () => {
@@ -395,5 +404,41 @@ describe("OptionGate — locked-pick note", () => {
         screen.queryByText("Strike filled — the put side isn't unlocked yet."),
       ).not.toBeInTheDocument(),
     );
+  });
+});
+
+describe("OptionGate — held position badge (Eric, 2026-09-22)", () => {
+  it("marks a strike the desk already holds a matching contract on", async () => {
+    chainResult = fullChain;
+    deskPositions = [{ symbol: "NVDA260918C00180000", isOption: true }];
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    await waitFor(() =>
+      expect(
+        document.querySelector(".straddle-held-badge:not(.straddle-held-empty)"),
+      ).not.toBeNull(),
+    );
+    expect(
+      document.querySelector(".straddle-held-badge:not(.straddle-held-empty)")?.textContent,
+    ).toBe("C");
+  });
+
+  it("never marks a strike when nothing held matches this underlying/expiration", async () => {
+    chainResult = fullChain;
+    deskPositions = [{ symbol: "MSFT260918C00180000", isOption: true }]; // different underlying
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(document.querySelector(".straddle-held-badge:not(.straddle-held-empty)")).toBeNull();
+  });
+
+  it("ignores a held stock position — badges are option-only", async () => {
+    chainResult = fullChain;
+    deskPositions = [{ symbol: "NVDA", isOption: false }];
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(document.querySelector(".straddle-held-badge:not(.straddle-held-empty)")).toBeNull();
   });
 });

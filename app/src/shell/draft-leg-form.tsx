@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { type ChainData, fetchChain } from "../live/options";
+import { formatExpiration } from "../live/straddle";
 import { ChainStraddle } from "./chain-straddle";
 import { DraftLegFields } from "./draft-leg-fields";
 import type { PickedCell } from "./straddle-view";
@@ -102,7 +103,7 @@ export function DraftLegForm({
             >
               {chainData.expirations.map((exp) => (
                 <option key={exp} value={exp}>
-                  {exp}
+                  {formatExpiration(exp)}
                 </option>
               ))}
             </select>

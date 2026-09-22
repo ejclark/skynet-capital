@@ -3,6 +3,7 @@ import {
   daysToExpiry,
   dividerIndex,
   expiresIn,
+  formatExpiration,
   inTheMoney,
   mergeStraddle,
   windowRows,
@@ -115,6 +116,16 @@ describe("daysToExpiry / expiresIn", () => {
     expect(expiresIn(0)).toBe("Expires today");
     expect(expiresIn(1)).toBe("Expires in 1 day");
     expect(expiresIn(4)).toBe("Expires in 4 days");
+  });
+});
+
+describe("formatExpiration", () => {
+  it("leads with month/day, year trailing", () => {
+    expect(formatExpiration("2026-09-23")).toBe("Sep 23, 2026");
+    expect(formatExpiration("2027-01-15")).toBe("Jan 15, 2027");
+  });
+  it("passes invalid input through unchanged", () => {
+    expect(formatExpiration("not-a-date")).toBe("not-a-date");
   });
 });
 

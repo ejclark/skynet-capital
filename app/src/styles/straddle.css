@@ -139,6 +139,25 @@
   box-shadow: inset 0 0 0 2px var(--accent);
   border-radius: 6px;
 }
+/* A REAL, already-filled holding at this strike ("C"/"P"/"C/P") — the single-leg ticket only
+   (Eric, 2026-09-22), distinct from `.straddle-marked` above (a DRAFT leg, multi-leg only). The
+   letter is the signal, not the border-radius pill alone (a standing reader is red/green
+   colourblind, but this is word-first regardless). `visibility: hidden` on the empty state keeps
+   the SAME box on every row — the point is the strike column never shifts width between a row
+   that has a badge and one that doesn't. */
+.straddle-held-badge {
+  display: inline-block;
+  min-width: 16px;
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  vertical-align: super;
+  color: var(--accent);
+}
+.straddle-held-empty {
+  visibility: hidden;
+}
 /* A call/put price cell's own pick button (#2017 Phase 0 task 4e) — distinct from `.straddle-pick`
    (the strike button), which carries active/selected styling that doesn't apply here: a call/put
    pick has no "selected" state of its own, only a hover affordance. */

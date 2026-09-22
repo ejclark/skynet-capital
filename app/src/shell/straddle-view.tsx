@@ -87,6 +87,7 @@ export function StraddleView({
   now = new Date(),
   quotes,
   expirationField,
+  heldBadges,
 }: {
   readonly symbol: string;
   readonly expiration: string;
@@ -112,6 +113,10 @@ export function StraddleView({
    *  from. Omitted, nothing renders here (the multi-leg builder's plain `<select>` stays in its
    *  own field grid, untouched). */
   readonly expirationField?: ReactNode;
+  /** A held-position badge per strike ("C"/"P"/"C/P") — a REAL, already-filled holding, distinct
+   *  from `markedStrikes`'s draft-leg outline. Only the single-leg ticket passes this (Eric,
+   *  2026-09-22); omitted, no badge column space is reserved and no other caller's layout shifts. */
+  readonly heldBadges?: ReadonlyMap<number, string>;
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const all = mergeStraddle(calls, puts);
@@ -206,6 +211,8 @@ export function StraddleView({
                 divider={i === divider}
                 selected={row.strike === selectedStrike}
                 marked={markedStrikes?.includes(row.strike) ?? false}
+                held={heldBadges?.get(row.strike)}
+                showHeldSlot={heldBadges !== undefined}
                 onPick={onPickStrike}
                 onPickSide={onPickSide}
               />
@@ -263,6 +270,8 @@ function RowGroup({
   divider,
   selected,
   marked,
+  held,
+  showHeldSlot,
   onPick,
   onPickSide,
 }: {
@@ -271,6 +280,14 @@ function RowGroup({
   readonly divider: boolean;
   readonly selected: boolean;
   readonly marked: boolean;
+  /** "C" / "P" / "C/P" when the desk holds a contract at this strike (this expiration), else
+   *  undefined. */
+  readonly held?: string;
+  /** True whenever the caller passed `heldBadges` at all — reserves the badge's column space on
+   *  EVERY row (held or not) so a badge appearing on one row never shifts the strike column for
+   *  its neighbors. False for a caller that never passes `heldBadges` (no reserved space, no
+   *  layout change from before this feature). */
+  readonly showHeldSlot: boolean;
   readonly onPick?: (strike: number) => void;
   readonly onPickSide?: PickSide;
 }): ReactElement {
@@ -298,20 +315,13 @@ function RowGroup({
         <StatCell value={row.call?.vega} kind="greek" />
         <SideCell row={row} side="call" price="bid" onPickSide={onPickSide} />
         <SideCell row={row} side="call" price="ask" onPickSide={onPickSide} />
-        <td className="straddle-strike num">
-          {onPick ? (
-            <button
-              type="button"
-              className="straddle-pick"
-              aria-label={`Pick the ${row.strike} strike`}
-              aria-pressed={selected}
-            >
-              {row.strike}
-            </button>
-          ) : (
-            row.strike
-          )}
-        </td>
+        <StrikeCell
+          strike={row.strike}
+          selected={selected}
+          held={held}
+          showHeldSlot={showHeldSlot}
+          onPick={onPick}
+        />
         <SideCell row={row} side="put" price="bid" onPickSide={onPickSide} />
         <SideCell row={row} side="put" price="ask" onPickSide={onPickSide} />
         <StatCell value={row.put?.openInterest} kind="count" />
@@ -322,6 +332,62 @@ function RowGroup({
         <StatCell value={row.put?.vega} kind="greek" />
       </tr>
     </>
+  );
+}
+
+/** " — you hold a call here" / "a put here" / "a call and a put here" — folded into the strike
+ *  button's own `aria-label` (never a separate accessible name on the decorative badge span
+ *  beside it, which has no role that supports one). Empty string when nothing's held. */
+function heldAriaSuffix(held: string | undefined): string {
+  if (!held) return "";
+  const what = held === "C/P" ? "a call and a put" : held === "C" ? "a call" : "a put";
+  return ` — you hold ${what} here`;
+}
+
+/** The strike cell: a pick button (or plain text, no `onPick`) plus the held-position badge slot
+ *  (#3407, Eric 2026-09-22) — a REAL holding at this strike, distinct from `.straddle-marked`'s
+ *  draft-leg outline on the whole cell. */
+function StrikeCell({
+  strike,
+  selected,
+  held,
+  showHeldSlot,
+  onPick,
+}: {
+  readonly strike: number;
+  readonly selected: boolean;
+  /** "C" / "P" / "C/P" when the desk holds a contract at this strike (this expiration). */
+  readonly held?: string;
+  /** True whenever the caller passed `heldBadges` at all — reserves the badge's column space on
+   *  EVERY row (held or not) so a badge appearing on one row never shifts the column for its
+   *  neighbors. False for a caller that never passes `heldBadges` (no layout change from before
+   *  this feature). */
+  readonly showHeldSlot: boolean;
+  readonly onPick?: (strike: number) => void;
+}): ReactElement {
+  return (
+    <td className="straddle-strike num">
+      {onPick ? (
+        <button
+          type="button"
+          className="straddle-pick"
+          aria-label={`Pick the ${strike} strike${heldAriaSuffix(held)}`}
+          aria-pressed={selected}
+        >
+          {strike}
+        </button>
+      ) : (
+        strike
+      )}
+      {showHeldSlot ? (
+        <span
+          className={held ? "straddle-held-badge" : "straddle-held-badge straddle-held-empty"}
+          aria-hidden="true"
+        >
+          {held ?? ""}
+        </span>
+      ) : null}
+    </td>
   );
 }
 

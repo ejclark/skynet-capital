@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { nextPrint } from "../../../src/domain/earnings-calendar";
 import type { ChainData } from "../live/options";
-import { daysToExpiry } from "../live/straddle";
+import { daysToExpiry, formatExpiration } from "../live/straddle";
 
 /**
  * The options ticket's chain-driven fields (#738 phase 10b, strike per #2017 Phase 0 task 4b,
@@ -15,7 +15,9 @@ import { daysToExpiry } from "../live/straddle";
  * print mark (#2017 Phase 1 slice 11): a ⚡ on any tab whose contract lives through the symbol's
  * next earnings print, reusing `nextPrint` (`src/domain/earnings-calendar.ts`) — the same
  * comparison `expirationPrintMark` in `earnings-chain-badge.ts` makes, ported here as additive
- * decoration rather than the legacy function's HTML-string form.
+ * decoration rather than the legacy function's HTML-string form. Tab labels print through
+ * `formatExpiration` (month/day leading, year trailing, `live/straddle.ts`) — a member scans a
+ * pick list by month/day first, not ISO's year-first sort order (Eric, 2026-09-22).
  * @category trading
  */
 
@@ -82,7 +84,7 @@ export function ExpirationField({
             title={title !== "" ? title : undefined}
             onClick={() => onEdit(exp)}
           >
-            {exp}
+            {formatExpiration(exp)}
             {printMark ? <span aria-hidden="true"> ⚡</span> : null}
             {disabled ? " — locked (0DTE)" : ""}
           </button>

@@ -19,6 +19,7 @@ export function ChainStraddle({
   onPickStrike,
   onPickSide,
   expirationField,
+  heldBadges,
 }: {
   readonly chainSym: string;
   readonly optionType: "call" | "put";
@@ -33,6 +34,9 @@ export function ChainStraddle({
   readonly markedStrikes?: readonly number[];
   /** Threaded straight through to `StraddleView` — see its own doc for why it lives here now. */
   readonly expirationField?: ReactNode;
+  /** A REAL, already-filled holding at a strike ("C"/"P"/"C/P") — threaded through to
+   *  `StraddleView`; see `option-gate.tsx`'s header comment for where it's computed. */
+  readonly heldBadges?: ReadonlyMap<number, string>;
 }): ReactElement {
   const otherType = optionType === "call" ? "put" : "call";
   const other = useQuery({
@@ -53,6 +57,7 @@ export function ChainStraddle({
       onPickSide={onPickSide}
       quotes={chainData.quotes}
       expirationField={expirationField}
+      heldBadges={heldBadges}
     />
   );
 }

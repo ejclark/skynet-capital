@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ChainData } from "../../src/live/options";
+import { formatExpiration } from "../../src/live/straddle";
 import { ExpirationField, StrikeField } from "../../src/shell/option-fields";
 
 /**
@@ -134,12 +135,14 @@ describe("ExpirationField", () => {
     );
 
     const tabs = screen.getAllByRole("button");
-    expect(tabs.map((t) => t.textContent)).toEqual(chainManyExpirations.expirations);
+    expect(tabs.map((t) => t.textContent)).toEqual(
+      chainManyExpirations.expirations.map(formatExpiration),
+    );
 
-    const active = screen.getByText("2026-09-18");
+    const active = screen.getByText(formatExpiration("2026-09-18"));
     expect(active).toHaveAttribute("aria-pressed", "true");
     for (const exp of chainManyExpirations.expirations.filter((e) => e !== "2026-09-18")) {
-      expect(screen.getByText(exp)).toHaveAttribute("aria-pressed", "false");
+      expect(screen.getByText(formatExpiration(exp))).toHaveAttribute("aria-pressed", "false");
     }
   });
 
@@ -157,7 +160,7 @@ describe("ExpirationField", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("2026-10-16"));
+    fireEvent.click(screen.getByText(formatExpiration("2026-10-16")));
     expect(edited).toBe("2026-10-16");
   });
 
@@ -198,12 +201,12 @@ describe("ExpirationField", () => {
       />,
     );
 
-    const lockedTab = screen.getByText((content) => content.startsWith(today));
+    const lockedTab = screen.getByText((content) => content.startsWith(formatExpiration(today)));
     expect(lockedTab).toBeDisabled();
     expect(lockedTab).toHaveAttribute("title", "course 501 isn't earned yet");
     expect(lockedTab.textContent).toContain("locked");
 
-    const openTab = screen.getByText("2026-10-16");
+    const openTab = screen.getByText(formatExpiration("2026-10-16"));
     expect(openTab).not.toBeDisabled();
   });
 
@@ -232,7 +235,9 @@ describe("ExpirationField", () => {
         />,
       );
 
-      const heldTab = screen.getByRole("button", { name: /2026-09-30/ });
+      const heldTab = screen.getByRole("button", {
+        name: new RegExp(formatExpiration("2026-09-30")),
+      });
       expect(heldTab.querySelector('[aria-hidden="true"]')?.textContent).toContain("⚡");
       expect(heldTab.getAttribute("title")).toContain("lives through the print");
     });
@@ -248,7 +253,7 @@ describe("ExpirationField", () => {
         />,
       );
 
-      const earlyTab = screen.getByRole("button", { name: "2026-09-25" });
+      const earlyTab = screen.getByRole("button", { name: formatExpiration("2026-09-25") });
       expect(earlyTab.querySelector('[aria-hidden="true"]')).not.toBeInTheDocument();
       expect(earlyTab).not.toHaveAttribute("title");
     });
