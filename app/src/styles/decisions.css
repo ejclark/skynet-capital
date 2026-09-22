@@ -155,3 +155,20 @@
 .cycle-invalidator {
   color: var(--text);
 }
+/* The raw→guarded quantity delta — the only honest per-outcome clamp signal that exists (there is
+   no named guard rule for a clamp, only for a full refusal). */
+.cycle-guard-delta {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  padding-left: 2px;
+}
+/* The cycle's own market snapshot at this symbol — momentum/sentiment, present only when captured. */
+.cycle-context {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  padding-left: 2px;
+}
