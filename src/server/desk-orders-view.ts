@@ -1,4 +1,5 @@
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
+import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
 
 /**
  * THE WORKING-ORDERS VIEW — the broker's order record as the desk's own honest vocabulary
@@ -30,6 +31,11 @@ export type DeskOrderState =
 export interface DeskOrderRow {
   readonly id: string;
   readonly symbol: string;
+  /** The wire symbol in words — an OCC contract as "NVDA $180 CALL · Sep 25", a ticker as itself
+   *  — so a row never asks a member to read `NVDA260925C00180000` (#3407 P1 1b follow-up). */
+  readonly display: string;
+  /** What `quantity` counts: an option order is contracts, a share order is shares. */
+  readonly unit: "shares" | "contracts";
   readonly side: "buy" | "sell";
   /** "market" | "limit" | "stop" | … — the broker's echo, lowercased. */
   readonly orderType: string;
@@ -121,9 +127,12 @@ export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
   const stopPrice = num(order.stop_price);
   const avgFillPrice = num(order.filled_avg_price);
   const settledAt = settledStamp(order, state);
+  const contract = parseOccSymbol(order.symbol);
   return {
     id: order.id,
     symbol: order.symbol,
+    display: contract ? humanizeOptionSymbol(order.symbol) : order.symbol,
+    unit: contract ? "contracts" : "shares",
     side: order.side,
     orderType: (order.type ?? "market").toLowerCase(),
     quantity: num(order.qty) ?? 0,

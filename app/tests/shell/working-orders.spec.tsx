@@ -205,4 +205,33 @@ describe("WorkingOrders", () => {
     expect(screen.getAllByRole("button", { name: "Modify" })).toHaveLength(1);
     expect(screen.getByText(/Replaced · now o-9/)).toBeInTheDocument();
   });
+
+  it("shows an option order by its contract name and asks for Contracts, not Shares, in the drawer", async () => {
+    nextOrders = {
+      available: true,
+      asOf: "t",
+      working: [
+        {
+          ...working,
+          id: "o-7",
+          symbol: "NVDA260925C00180000",
+          display: "NVDA $180 CALL · Sep 25",
+          unit: "contracts",
+          quantity: 2,
+          limitPrice: 4.1,
+        },
+      ],
+      recent: [],
+    };
+    nextReplace = { ok: true, orderId: "o-8", replaces: "o-7", status: "pending_replace" };
+    render(withClient(<WorkingOrders deskId="human-eric" />));
+    await waitFor(() => expect(screen.getByText("NVDA $180 CALL · Sep 25")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Modify" }));
+    expect(screen.getByLabelText("Contracts")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Shares")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Contracts"), { target: { value: "3" } });
+    expect(screen.getByText("Will send: 3 contracts")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Contracts"), { target: { value: "1.5" } });
+    expect(screen.getByText("Contracts must be a positive whole number.")).toBeInTheDocument();
+  });
 });

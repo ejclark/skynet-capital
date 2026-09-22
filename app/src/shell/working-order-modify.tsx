@@ -26,6 +26,11 @@ function parseField(text: string): number | undefined | null {
 }
 
 /** The change a form holds against the row it started from — only what differs. */
+/** "Contracts" for an option order, "Shares" otherwise — the word the broker's quantity means. */
+export function unitWord(row: Pick<DeskOrderRow, "unit">): "Contracts" | "Shares" {
+  return row.unit === "contracts" ? "Contracts" : "Shares";
+}
+
 export function orderChange(
   row: DeskOrderRow,
   form: { quantity: string; price: string; timeInForce: TicketTimeInForce | undefined },
@@ -33,7 +38,7 @@ export function orderChange(
   const quantity = parseField(form.quantity);
   const price = parseField(form.price);
   if (quantity === null || (quantity !== undefined && !Number.isInteger(quantity))) {
-    return { change: {}, refusal: "Shares must be a positive whole number." };
+    return { change: {}, refusal: `${unitWord(row)} must be a positive whole number.` };
   }
   if (price === null) return { change: {}, refusal: "The price must be above $0." };
   const priceKey =
@@ -84,7 +89,7 @@ export function ModifyForm({
     <div className="wo-modify" data-order={row.id}>
       <div className="wo-modify-fields">
         <label htmlFor={qtyId}>
-          Shares
+          {unitWord(row)}
           <input
             id={qtyId}
             className="num"
@@ -131,7 +136,9 @@ export function ModifyForm({
       <p className="wo-modify-note">
         {shapeRefusal ??
           refusal ??
-          (unchanged ? "Change shares, the price or the time in force." : changeLine(change))}
+          (unchanged
+            ? `Change ${unitWord(row).toLowerCase()}, the price or the time in force.`
+            : changeLine(change, row))}
       </p>
       <span className="wo-actions">
         <button
@@ -150,10 +157,13 @@ export function ModifyForm({
   );
 }
 
-/** "Will send: 8 shares · limit $172.00 · GTC" — what the broker is about to be told. */
-export function changeLine(change: OrderChange): string {
+/** "Will send: 8 shares · limit $172.00 · GTC" (or "8 contracts" on an option order) — what the
+ *  broker is about to be told. */
+export function changeLine(change: OrderChange, row?: Pick<DeskOrderRow, "unit">): string {
   const parts = [
-    change.quantity !== undefined ? `${change.quantity} shares` : undefined,
+    change.quantity !== undefined
+      ? `${change.quantity} ${row ? unitWord(row).toLowerCase() : "shares"}`
+      : undefined,
     change.limitPrice !== undefined ? `limit $${change.limitPrice.toFixed(2)}` : undefined,
     change.stopPrice !== undefined ? `stop $${change.stopPrice.toFixed(2)}` : undefined,
     change.timeInForce !== undefined ? TIF_LABELS[change.timeInForce] : undefined,

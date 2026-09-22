@@ -139,7 +139,7 @@ function OrderRow({
   return (
     <li className={`wo-row wo-${row.state}`}>
       <span className="wo-main">
-        <span className="wo-sym">{row.symbol}</span>
+        <span className="wo-sym">{row.display ?? row.symbol}</span>
         <span className="wo-side">{row.side === "buy" ? "Buy" : "Sell"}</span>
         <span className="wo-qty num">{qtyLabel(row)}</span>
         <span className="wo-type">
