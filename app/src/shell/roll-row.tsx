@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
@@ -90,6 +90,10 @@ function useChain(parts: HeldContract | undefined, expiration: string): ChainDat
     queryKey: ["chain", parts?.underlying ?? "", parts?.type ?? "call", expiration],
     queryFn: () => fetchChain(parts?.underlying ?? "", parts?.type ?? "call", expiration),
     enabled: parts !== undefined && expiration !== "",
+    // The "roll to" expiration select re-keys this query on every pick (Eric, 2026-09-22) — keep
+    // the outgoing target's strikes listed while the new one loads, instead of the Strike select
+    // emptying out for a beat.
+    placeholderData: keepPreviousData,
   });
   return query.data && !("chainNote" in query.data) ? query.data : undefined;
 }

@@ -866,6 +866,46 @@ await shoot("trade-quote-options-phone");
 await page.getByRole("button", { name: "Sep 9, 2026" }).waitFor();
 await shoot("trade-exp-tabs-phone");
 
+// The scroll affordance (Eric, 2026-09-22): "the dates are scrollable... but there is no visual
+// feedback suggesting there is scrollable content", then "I like option B [chevrons], but feel
+// like more emphasis needs placed on the chevron... bigger font and/or higher contrast" on a
+// 3-way rendered comparison. A solid accent chip per edge, shown only while that edge still has
+// something to scroll to — before/after proves both: the strip opens scrolled fully left (right
+// chevron only), then scrolling it to the end drops the right chevron and raises the left one.
+const shootChevron = shooter(page, resolve("docs/shots/exp-tabs-chevron"));
+await shootChevron("exp-tabs-chevron-start-phone");
+await page.evaluate(() => {
+  const el = document.querySelector(".exp-tabs");
+  if (el) el.scrollLeft = el.scrollWidth;
+});
+await page.waitForTimeout(150);
+await shootChevron("exp-tabs-chevron-end-phone");
+
+// Switching expirations no longer collapses the table (Eric, 2026-09-22): before
+// `placeholderData: keepPreviousData` (`option-gate.tsx`, `chain-straddle.tsx`), a tab click
+// dropped `chainData` for a beat, unmounting the whole chain table down to a bare "Looking up
+// options…" line, then snapping back in at a different height. The OLD rows now stay on screen,
+// dimmed (`.straddle-pending`, `straddle.css`), while the new expiration loads — this scene
+// delays the chain fetch to make that dimmed, still-populated mid-flight frame observable at all;
+// real network latency is usually shorter than a frame, but the CSS state is the same either way.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+await page.route("**/api/trade/chain*", async (route) => {
+  await new Promise((r) => setTimeout(r, 600));
+  await route.fulfill({ json: currentChain });
+});
+await page.getByRole("button", { name: "Oct 16, 2026" }).click();
+await page.waitForTimeout(200);
+const shootPendingChain = shooter(page, resolve("docs/shots/pending-chain"));
+await shootPendingChain("pending-chain-desktop");
+await page.getByRole("button", { name: "Oct 16, 2026", exact: true }).waitFor();
+await page.waitForTimeout(600);
+// Specific pattern only — `openShell`'s own base `**/api/**` route answers everything else and
+// must survive for the rest of this script.
+await page.unroute("**/api/trade/chain*");
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.setViewportSize({ width: 390, height: 844 });
+
 // The chain table above the fields it drives (#2017 Phase 0 task 4e) — same navigation as the
 // quote-header/exp-tabs shots above (still `?play=201&symbol=NVDA`), proving the chain now renders
 // directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain. The
