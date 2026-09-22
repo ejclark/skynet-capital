@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-// Pending forward tests — "can this event's close-out actually score its own predictions yet?"
+// Forward-test timing — the two questions a fragment's `Score by` column answers for the scanner:
+//   "can this event's close-out score its own predictions yet?"  → pendingForwardTests (#2988)
+//   "is a registered row scoreable now, with nobody left to score it?" → dueForwardTests (#2884)
+// One row walk, one comparison apart. The first HOLDS a dispatch, the second CREATES one.
 //
 // WHY THIS EXISTS (#2988, measured on gastech-2026-09-14). `event-scan.mjs` marks a passed event
 // `event-passed-unscored` from D+1, and a close-out is never deterministically screened — so every
@@ -64,9 +67,10 @@ const isUnscored = (text) =>
 /** Every unscored row in one event's fragment, as `{ id, scoreBy }`, regardless of whether its
  *  score-by has arrived. Empty when the fragment does not exist or carries no unscored rows.
  *
- *  Two callers want two different windows onto the same parse, so the parse lives here once:
+ *  Three callers want three different windows onto the same parse, so the parse lives here once:
  *  `pendingForwardTests` below filters this to rows not yet scoreable (the close-out hold, #2988),
- *  and `--validate` uses it whole to refuse a `supersededBy` that would strand a live prediction
+ *  `dueForwardTests` filters it to rows scoreable now with nobody left to score them (#2884), and
+ *  `--validate` uses it whole to refuse a `supersededBy` that would strand a live prediction
  *  (#3101) — a superseded id never reaches close-out, so nothing downstream would ever score it. */
 export function unscoredForwardTests(eventId, dir) {
   const file = join(dir, `${eventId}.md`);
@@ -94,6 +98,34 @@ export function unscoredForwardTests(eventId, dir) {
  *  scored or already past its date — all of which mean "nothing to wait for". */
 export function pendingForwardTests(eventId, today, dir) {
   return unscoredForwardTests(eventId, dir).filter((r) => r.scoreBy > today);
+}
+
+/** THE INVERSE FILTER (#2884) — unscored rows whose score-by has ARRIVED: the data the row keys on
+ *  now exists and no session has written the verdict down.
+ *
+ *  WHY THIS IS A SEPARATE QUESTION from `pendingForwardTests`. The hold above answers "can this
+ *  close-out score its own predictions yet?", which only ever applies INSIDE `closeOutWithinDays`.
+ *  A quarter of honest registrations score outside that ceiling — a next-print or a rates test is
+ *  naturally weeks out — and once `## Outcome` exists the scanner goes silent on the event
+ *  forever, so those rows had no session left that could ever reach them. Measured 2026-09-20 on
+ *  `main`: 430 of 1,739 rows registered past `eventDate + 6`, and 21 events × 31 rows already
+ *  permanently orphaned (open, on a ledger that has closed out), 6 of them past their score-by —
+ *  decided by the tape, unrecorded by us. The stock only ever went up.
+ *
+ *  The fix is NOT a registration gate (that would pressure lanes into dishonestly short score-by
+ *  dates, and fixes none of the existing stock) but a re-dispatch of the SAME owning lane when a
+ *  row comes due — the separation forecasting platforms already make between a question *closing*
+ *  and a question *resolving* (Good Judgment Open resolves on when events occurred; Manifold:
+ *  closing halts trading, "nothing is finalised" until resolution; Registered Reports score at
+ *  Stage 2, after the data exist). One writer per file is preserved, which is why this is not a
+ *  standing second scoring lane.
+ *
+ *  THE LOOP GUARD lives in the data, not here: `isUnscored` treats ANY non-open cell as a verdict,
+ *  so every one of `docs/process/EVENT-RESEARCH.md`'s terminal verdicts — including
+ *  `unscoreable — <where the data will be>` — ends the re-dispatch by construction. A session that
+ *  leaves the row `_open_` will be sent back on the next tick, and that is the intended pressure. */
+export function dueForwardTests(eventId, today, dir) {
+  return unscoredForwardTests(eventId, dir).filter((r) => r.scoreBy <= today);
 }
 
 /** The close-out verdict for a passed, un-outcomed event: whether to hold, and what for.

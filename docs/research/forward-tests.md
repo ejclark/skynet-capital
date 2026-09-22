@@ -39,5 +39,18 @@ team demanded. Source: [`multi-symbol-sweep.md`](multi-symbol-sweep.md) deployme
 score-by date), never from memory of the tape. A scored `kill` moves the hypothesis to the sweep
 doc's kill list. A scored `pass` is one observation, not a promotion — promotion needs the
 pre-stated count (2–3 prints). New registrations append to the event's own fragment with their
-date; editing a registered prediction after the fact is falsification and never happens. The
-Outcome cell is the one cell a close-out fills.
+date; editing a registered prediction after the fact is falsification and never happens.
+
+**Score by whatever date the hypothesis actually needs.** It may fall well after the parent event's
+close-out window — that is what a forward test is *for*, and a row scoring months out is honest,
+not late. Nobody used to come back for those rows: once a ledger carried `## Outcome` the scanner
+went quiet forever, so 31 of them sat `_open_` on 21 closed-out events (measured 2026-09-20), six
+already decided by the tape and unrecorded. `scripts/event-scan.mjs` now re-dispatches the event's
+own lane as **`forward-test-due`** the day an unscored row reaches its `Score by` (#2884).
+
+**The terminal-verdict rule.** A session dispatched for a due row leaves it carrying a verdict —
+`pass`, `kill`, `VOID — the reason`, or `unscoreable — where the data will be` — and **never
+`_open_`**, because any verdict at all is what ends the re-dispatch. An `unscoreable` row naming
+where a human would look is a better record than an open row promising nothing. The Outcome cell
+stays the one cell any of this fills; the recipe is in
+[`EVENT-RESEARCH.md`](../process/EVENT-RESEARCH.md).

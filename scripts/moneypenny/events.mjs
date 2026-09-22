@@ -48,6 +48,12 @@ const sortKey = (e) => {
   // so the most overdue (most negative) has the least time left — earliest-deadline-first. Ranking
   // them by impact instead would let a critical with five days of slack evict a low with one.
   // Upcoming events have no expiry, so there impact leads and proximity breaks the tie.
+  //
+  // `forward-test-due` (#2884) deliberately stays in the SECOND group with everything else: the
+  // row it wants scored has already settled, so waiting a tick costs nothing and it must never be
+  // able to evict a close-out, which is the one class the cap destroys rather than delays. Its
+  // `daysUntil` is negative (the event has passed), so inside its impact tier the longest-orphaned
+  // row is served first — the same earliest-first instinct, for free.
   return e.reason === "event-passed-unscored" ? [0, days, impact] : [1, impact, days];
 };
 
