@@ -483,6 +483,26 @@ robust, alpha fragile — is the finding.
   existed. A future litigation-adjacent ledger should not assume a party with a redaction incentive
   will act on it without checking the docket first.
 
+- **A 20-Year reopening bid-to-cover floor, broken on the first auction that met the yield extreme
+  the registration itself flagged as the hard case (FT-treasury-coupon-announcement-2026-09-10-3)**
+  — added 2026-09-22 from the
+  [treasury-coupon-announcement-2026-09-10 close-out](events/treasury-coupon-announcement-2026-09-10.md),
+  scored under the `forward-test-due` mode. The ledger's D-0 row split all 20-Year auctions since
+  2025-01-01 by reopening vs new issue and found a clean, non-overlapping separation — 13
+  reopenings covering **2.63–2.86** (avg 2.728), 7 new issues covering **2.36–2.55** (avg
+  2.469), 20 of 20 — and predicted the 2026-09-15 reopening (announced $13B, unrevised) would clear
+  **≥ 2.63**. It covered **2.570**: below the reopening floor, above the new-issue ceiling, a value
+  neither window had ever produced. The registration's own disclosed worst case named the
+  mechanism before the fact — the 20Y entered this auction at a fresh 2026-high yield (par 5.39%
+  pre-auction, cleared even higher at 5.42%) on the eve of an FOMC, and no auction in either
+  sample had faced a fresh-high yield into a live policy decision. **One detail that must travel
+  with the kill:** the parent stance — *a scheduled nil, no position licensed either way,
+  `symbols: []`* — was never contingent on this cover floor and does not change; nothing was
+  risked on it. What breaks is the narrower claim that "the supply leg is settled, so what remains
+  is benign demand" — the next rates ledger reading a 20Y reopening as automatically well-covered
+  should check the pre-auction yield regime first, not assume the reopening/new-issue split holds
+  at a yield extreme.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
