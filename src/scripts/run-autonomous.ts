@@ -290,7 +290,7 @@ async function runLive(): Promise<void> {
   const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   announceScout(betaForcing, traders[0]?.personaName);
-  const managedSymbols = new Set((botRosters[0]?.enabled ?? []).map((e) => e.playbook.symbol)); // traders[0]'s account
+  const managedSymbols = new Set((botRosters[0]?.enabled ?? []).flatMap((e) => e.playbook.symbols)); // traders[0]'s account
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real

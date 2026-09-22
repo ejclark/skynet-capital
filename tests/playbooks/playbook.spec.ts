@@ -13,7 +13,7 @@ const calendar: readonly EarningsPrint[] = [
 
 const play = (overrides?: Partial<Playbook>): Playbook => ({
   id: "TEST-NVDA",
-  symbol: "NVDA",
+  symbols: ["NVDA"],
   thesis: "test play",
   evidence: "test",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
@@ -108,5 +108,48 @@ describe("playbookIntents", () => {
         calendar,
       ),
     ).toEqual([]);
+  });
+
+  describe("multi-symbol baskets", () => {
+    const basket = play({ symbols: ["NVDA", "AMD"] });
+
+    it("applies one shared desiredState to every symbol in the basket", () => {
+      const context = aContext({ NVDA: { last: 100 }, AMD: { last: 50 } }, "2026-08-16T15:00:00Z");
+      const portfolio = aPortfolio({ cash: 100_000 });
+
+      const intents = playbookIntents(enabled(basket), context, portfolio, calendar);
+
+      expect(intents.map((i) => i.symbol).sort()).toEqual(["AMD", "NVDA"]);
+      for (const intent of intents) {
+        expect(intent).toMatchObject({ side: "buy", playbookId: "TEST-NVDA" });
+      }
+    });
+
+    it("flattens only the symbols actually held, ignoring one still flat", () => {
+      const context = aContext({ NVDA: { last: 100 }, AMD: { last: 50 } }, "2026-08-24T15:00:00Z");
+      const portfolio = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 20 })] });
+      const flatBasket = play({ symbols: ["NVDA", "AMD"], desiredState: () => "flat" });
+
+      const intents = playbookIntents(enabled(flatBasket), context, portfolio, calendar);
+
+      expect(intents).toEqual([
+        expect.objectContaining({ symbol: "NVDA", side: "sell", quantity: 20 }),
+      ]);
+    });
+
+    it("sizes each symbol independently against its own held quantity and quote", () => {
+      const context = aContext({ NVDA: { last: 100 }, AMD: { last: 50 } }, "2026-08-16T15:00:00Z");
+      // Already positioned in NVDA (wants long, held > 0 -> silent) but flat in AMD (wants long,
+      // held == 0 -> enters) — proves the loop doesn't treat the basket as one scalar position.
+      const portfolio = aPortfolio({
+        cash: 100_000,
+        positions: [aPosition({ symbol: "NVDA", quantity: 20 })],
+      });
+
+      const intents = playbookIntents(enabled(basket), context, portfolio, calendar);
+
+      expect(intents).toHaveLength(1);
+      expect(intents[0]).toMatchObject({ symbol: "AMD", side: "buy" });
+    });
   });
 });

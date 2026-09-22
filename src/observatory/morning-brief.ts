@@ -171,7 +171,7 @@ export async function buildMorningBrief(
 
   const playbooks: PlaybookBriefEntry[] = roster.enabled.map(({ playbook, mode }) => ({
     id: playbook.id,
-    symbol: playbook.symbol,
+    symbol: playbook.symbols.join("/"),
     thesis: playbook.thesis,
     evidence: playbook.evidence,
     mode,

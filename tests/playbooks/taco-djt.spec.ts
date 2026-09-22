@@ -55,7 +55,7 @@ describe("TACO-DJT.desiredState", () => {
 
   it("carries a symbol, size tiers, and an evidence line naming the unvalidated timing", () => {
     expect(TACO_DJT.id).toBe("TACO-DJT");
-    expect(TACO_DJT.symbol).toBe("DJT");
+    expect(TACO_DJT.symbols).toEqual(["DJT"]);
     expect(TACO_DJT.size.standard).toBeGreaterThan(0);
     expect(TACO_DJT.size.standard).toBeLessThan(0.02); // deliberately below S1/G1's evidenced sizing
     expect(TACO_DJT.evidence).toContain("unvalidated");

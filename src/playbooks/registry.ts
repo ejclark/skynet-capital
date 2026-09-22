@@ -21,7 +21,7 @@ const POST_PRINT_FLAT_DAYS = 3;
  */
 export const S1_NVDA: Playbook = {
   id: "S1-NVDA",
-  symbol: "NVDA",
+  symbols: ["NVDA"],
   thesis: "pre-print positioning bid, exited before the dead final week",
   evidence: "docs/research/nvda-earnings-cycle.md F1-F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
@@ -50,7 +50,7 @@ export const S1_NVDA: Playbook = {
  */
 export const G1_GOOG: Playbook = {
   id: "G1-GOOG",
-  symbol: "GOOG",
+  symbols: ["GOOG"],
   thesis: "pre-print run-up held to the close of print day, flat before the release",
   evidence:
     "docs/research/multi-symbol-sweep.md G1: pooled 37/43 positive, p=0.0008 at measured base; net-of-QQQ positive all eras",
@@ -98,13 +98,14 @@ const TACO_SYMBOL = "DJT";
  * WATCHLIST, V1 — DJT ONLY. Trump Media & Technology Group is the one name whose majority
  * ownership is public SEC record; `src/news/taco-signal.ts`'s own doc explains why "Trump-
  * adjacent" is a maintained list, never inferred from article text. This is a STARTING POINT,
- * not an exhaustive list of Trump-linked tickers — widening it means registering another
- * `TACO-<SYMBOL>` playbook (one symbol per playbook, per `playbook.ts`'s own contract), not
- * editing this constant.
+ * not an exhaustive list of Trump-linked tickers. Playbooks can now trade a basket
+ * (`playbook.ts`'s `symbols`), so widening this watchlist is a call for whoever validates the
+ * next name's evidence: add it to `TACO_DJT.symbols` if it should share this play's window/sizing,
+ * or register a separate `TACO-<SYMBOL>` playbook if it deserves its own.
  */
 export const TACO_DJT: Playbook = {
   id: "TACO-DJT",
-  symbol: TACO_SYMBOL,
+  symbols: [TACO_SYMBOL],
   thesis:
     `decisive entry within ${TACO_TIMING.entryMinutes}m of a Trump-linked pump story, decisive ` +
     `exit by ${TACO_TIMING.holdMinutes}m before the "no substance" reversion`,
@@ -175,7 +176,10 @@ export function findPlaybook(id: string): Playbook | undefined {
 /** The full roster's id + symbol only — the shape the Council's play-tag selector needs (issue
  *  #2224 shape 1's slicing sketch item 3). Deliberately unfiltered by `SKYNET_PLAYBOOKS`: naming
  *  which house play your bot's stance backs is a declaration, not an enable switch, so a play
- *  still registered but not live this week is still nameable. */
+ *  still registered but not live this week is still nameable. Council's tag selector shows one
+ *  symbol per play; a basket playbook's first symbol stands in — every playbook here is still
+ *  single-symbol today, so this is byte-identical, and widening the tag itself to a full basket
+ *  is a Council-UI decision for whenever a multi-symbol playbook actually ships. */
 export function playbookRoster(): readonly { readonly id: string; readonly symbol: string }[] {
-  return ROSTER.map(({ id, symbol }) => ({ id, symbol }));
+  return ROSTER.flatMap(({ id, symbols }) => (symbols[0] ? [{ id, symbol: symbols[0] }] : []));
 }

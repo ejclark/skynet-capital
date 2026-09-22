@@ -28,7 +28,7 @@ const isPlaybook = (value: unknown): value is Playbook =>
   typeof value === "object" &&
   value !== null &&
   "id" in value &&
-  "symbol" in value &&
+  "symbols" in value &&
   typeof (value as Playbook).desiredState === "function";
 
 /** Every play the registry exports, id-sorted so the shelves and the cards read stably. */
@@ -57,7 +57,10 @@ export interface WindowProbe {
 }
 
 export function probeWindow(playbook: Playbook): WindowProbe {
-  const confirmed = calendarFor(playbook.symbol, "confirmed");
+  // desiredState() is uniform across a playbook's whole basket (playbook.ts's own doc), so probing
+  // its first symbol characterizes the window for every symbol it trades.
+  const symbol = playbook.symbols[0] ?? "";
+  const confirmed = calendarFor(symbol, "confirmed");
   const longDays: number[] = [];
   for (let days = LOOKBACK_DAYS; days >= 0; days--) {
     if (playbook.desiredState(isoDaysBefore(days, MID_SESSION), confirmed) === "long") {
@@ -74,7 +77,7 @@ export function probeWindow(playbook: Playbook): WindowProbe {
       opensAt !== undefined &&
       playbook.desiredState(
         isoDaysBefore(opensAt, MID_SESSION),
-        calendarFor(playbook.symbol, "estimate"),
+        calendarFor(symbol, "estimate"),
       ) === "long",
   };
 }

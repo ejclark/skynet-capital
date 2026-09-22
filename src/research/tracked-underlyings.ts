@@ -24,8 +24,10 @@ import { G1_GOOG, S1_NVDA } from "../playbooks/registry.js";
  * whose IV history is most worth keeping — dropping it would punch a hole in its own series.
  */
 
-/** The underlyings the house playbook roster deploys against. */
-const PLAYBOOK_SYMBOLS: readonly string[] = [S1_NVDA.symbol, G1_GOOG.symbol];
+/** The underlyings the house playbook roster deploys against — every symbol in each playbook's
+ *  basket, not just one, so a multi-symbol playbook can't silently lose IV tracking on its other
+ *  names. */
+const PLAYBOOK_SYMBOLS: readonly string[] = [...S1_NVDA.symbols, ...G1_GOOG.symbols];
 
 /**
  * The tracked set: earnings-calendar symbols ∪ playbook symbols, deduped and sorted (stable order

@@ -22,7 +22,7 @@ const base: Persona = {
 
 const nvdaPlay: Playbook = {
   id: "TEST-NVDA",
-  symbol: "NVDA",
+  symbols: ["NVDA"],
   thesis: "test",
   evidence: "test",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
@@ -53,6 +53,18 @@ describe("withPlaybooks", () => {
     expect(intents.filter((i) => i.symbol === "AAPL")).toHaveLength(1);
   });
 
+  it("suppresses reflexes on EVERY symbol in a multi-symbol playbook's basket", () => {
+    const basketPlay: Playbook = { ...nvdaPlay, id: "TEST-BASKET", symbols: ["NVDA", "AAPL"] };
+    const composed = withPlaybooks(base, [{ playbook: basketPlay, mode: "standard" }], calendar);
+
+    const intents = composed.decide(ctx, flat);
+
+    // Both reflexes suppressed — the playbook now owns both symbols, not just NVDA.
+    expect(intents.filter((i) => i.playbookId === undefined)).toEqual([]);
+    expect(intents.filter((i) => i.symbol === "AAPL")).toHaveLength(1);
+    expect(intents.find((i) => i.symbol === "AAPL")).toMatchObject({ playbookId: "TEST-BASKET" });
+  });
+
   it("keeps the base persona's identity — readiness and display see the same bot", () => {
     const composed = withPlaybooks(base, [{ playbook: nvdaPlay, mode: "standard" }], calendar);
     expect(composed.id).toBe("base");
@@ -63,7 +75,7 @@ describe("withPlaybooks", () => {
     let seenEvents: unknown;
     const eventPlay: Playbook = {
       id: "TEST-EVT",
-      symbol: "MSFT",
+      symbols: ["MSFT"],
       thesis: "test",
       evidence: "test",
       size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
