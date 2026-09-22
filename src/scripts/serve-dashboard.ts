@@ -300,6 +300,7 @@ async function main(): Promise<void> {
     submitOptionTrade: desk.submitOption,
     submitDraftOrder: desk.submitDraft,
     activityEvents: activityEventBus,
+    activityLog: activityEventBus,
     // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
     alertDismissals: createAlertDismissals(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
