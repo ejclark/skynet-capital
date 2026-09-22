@@ -44,7 +44,9 @@ async function serveSubmit(
     sendJson(res, 400, { ok: false, error: "malformed council body" });
     return;
   }
-  const result = submitThesis(text, opaqueMemberId(session.email), deps);
+  // Form-bounds only — submitThesis owns whether the id names a real play.
+  const playbookId = body ? boundedString(body.playbookId, 60) : undefined;
+  const result = submitThesis(text, opaqueMemberId(session.email), deps, playbookId);
   sendJson(res, 200, result);
 }
 

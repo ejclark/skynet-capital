@@ -270,8 +270,12 @@ async function main(): Promise<void> {
     // no separate switch, matching Mission Control's own always-on-when-wired posture.
     council: {
       load: () => council.load(),
-      submit: (week, memberId, text, at) => {
-        council.submit(week, memberId, { text, at: at.toISOString() });
+      submit: (week, memberId, text, at, playbookId) => {
+        council.submit(week, memberId, {
+          text,
+          at: at.toISOString(),
+          ...(playbookId ? { playbookId } : {}),
+        });
       },
     },
     progression: progressionService,

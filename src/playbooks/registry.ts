@@ -171,3 +171,11 @@ export function enabledPlaybooks(env: Readonly<Record<string, string | undefined
 export function findPlaybook(id: string): Playbook | undefined {
   return ROSTER.find((p) => p.id === id);
 }
+
+/** The full roster's id + symbol only — the shape the Council's play-tag selector needs (issue
+ *  #2224 shape 1's slicing sketch item 3). Deliberately unfiltered by `SKYNET_PLAYBOOKS`: naming
+ *  which house play your bot's stance backs is a declaration, not an enable switch, so a play
+ *  still registered but not live this week is still nameable. */
+export function playbookRoster(): readonly { readonly id: string; readonly symbol: string }[] {
+  return ROSTER.map(({ id, symbol }) => ({ id, symbol }));
+}

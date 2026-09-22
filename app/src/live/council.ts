@@ -9,6 +9,13 @@ export interface CouncilEntry {
   readonly id: string;
   readonly text: string;
   readonly at: string;
+  /** A house playbook id (`CouncilPlayOption.id`), when the member tagged one. */
+  readonly playbookId?: string;
+}
+
+export interface CouncilPlayOption {
+  readonly id: string;
+  readonly symbol: string;
 }
 
 export interface CouncilWeek {
@@ -17,6 +24,8 @@ export interface CouncilWeek {
   readonly entries: readonly CouncilEntry[];
   /** The viewer's own current line, when signed in and already committed this week. */
   readonly mine?: CouncilEntry;
+  /** The tag selector's own options — never hardcoded client-side. */
+  readonly plays: readonly CouncilPlayOption[];
 }
 
 export async function fetchCouncil(): Promise<CouncilWeek> {
@@ -27,10 +36,19 @@ export async function fetchCouncil(): Promise<CouncilWeek> {
     week?: string;
     entries?: readonly CouncilEntry[];
     mine?: CouncilEntry;
+    plays?: readonly CouncilPlayOption[];
   };
-  return { enabled: body.enabled, week: body.week, entries: body.entries ?? [], mine: body.mine };
+  return {
+    enabled: body.enabled,
+    week: body.week,
+    entries: body.entries ?? [],
+    mine: body.mine,
+    plays: body.plays ?? [],
+  };
 }
 
 export const submitThesis = (
   text: string,
-): Promise<{ readonly ok: boolean; readonly error?: string }> => postJson("/api/council", { text });
+  playbookId?: string,
+): Promise<{ readonly ok: boolean; readonly error?: string }> =>
+  postJson("/api/council", { text, ...(playbookId ? { playbookId } : {}) });
