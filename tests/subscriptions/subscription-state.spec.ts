@@ -114,4 +114,31 @@ describe("parseSubscriptionsState", () => {
       expect(state?.["acct-1"]?.[0]).not.toHaveProperty("requireWarmup");
     });
   });
+
+  describe("compounding opt-in (issue #3527 slice 3)", () => {
+    it("parses compoundAllocation: true", () => {
+      const state = parseSubscriptionsState({ "acct-1": [{ ...valid, compoundAllocation: true }] });
+      expect(state?.["acct-1"]?.[0]?.compoundAllocation).toBe(true);
+    });
+
+    it("leaves compoundAllocation absent when never supplied", () => {
+      const state = parseSubscriptionsState({ "acct-1": [valid] });
+      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("compoundAllocation");
+    });
+
+    it("treats compoundAllocation: false the same as absent, never stored as an explicit false", () => {
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, compoundAllocation: false }],
+      });
+      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("compoundAllocation");
+    });
+
+    it("drops only the flag (not the subscription) on a non-boolean compoundAllocation", () => {
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, compoundAllocation: "yes" }],
+      });
+      expect(state?.["acct-1"]).toHaveLength(1);
+      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("compoundAllocation");
+    });
+  });
 });

@@ -70,6 +70,14 @@ export interface RiskConfig {
    * from pre-basket behavior (a one-symbol playbook needs no entry here at all).
    */
   readonly playbookSymbols?: ReadonlyMap<string, readonly string[]>;
+  /**
+   * Sum of realized P/L across every closed retrospective for one playbook, pre-bound to this
+   * account's persona (`DecisionDb.realizedPlForPlaybook`, issue #3527 slice 3) — same DI shape
+   * as `playbookSymbols`: the wiring layer already has the persona in scope, so this file never
+   * needs to take one. Consulted only when a subscription has `compoundAllocation` enabled;
+   * absent behaves as if every playbook had realized exactly 0 (the flat-budget default).
+   */
+  readonly realizedPlForPlaybook?: (playbookId: string) => number;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -225,8 +233,16 @@ function clampBuy(
       }, 0)
     : existingValue;
 
+  // Compounding (issue #3527 slice 3, off by default): a subscription opted into
+  // `compoundAllocation` grows or shrinks its own budget by what it has already realized, rather
+  // than trading against a flat number forever.
+  const realizedPl =
+    subscription?.compoundAllocation && intent.playbookId
+      ? (config.realizedPlForPlaybook?.(intent.playbookId) ?? 0)
+      : 0;
+
   const subscriptionBudgetShares = subscription
-    ? Math.floor(Math.max(0, subscription.capitalAllocated - basketValue) / quote.ask)
+    ? Math.floor(Math.max(0, subscription.capitalAllocated + realizedPl - basketValue) / quote.ask)
     : undefined;
 
   const bounds = [intent.quantity, affordable, withinPosition];

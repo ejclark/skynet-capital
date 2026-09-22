@@ -621,6 +621,61 @@ describe("applyGuardsWithVerdicts", () => {
     expect(result.approved).toEqual([intent]);
   });
 
+  it("grows a subscription's budget by realized P/L when compoundAllocation is enabled", () => {
+    const subscription = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      compoundAllocation: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+    const context = aContext({ EEM: { last: 100 } });
+    // $6,000+ held would nearly exhaust a flat $5,000 budget (room for well under 10 shares), but
+    // +$3,000 realized widens it to $8,000 — enough room for the full 10-share intent.
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "EEM", quantity: 60 })],
+    });
+    const intent = { ...buy("EEM", 10), playbookId: "S1-NVDA", playbookMode: "standard" as const };
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 1,
+      subscriptions: [subscription],
+      realizedPlForPlaybook: (playbookId) => (playbookId === "S1-NVDA" ? 3_000 : 0),
+    });
+
+    expect(result.approved).toEqual([intent]);
+  });
+
+  it("ignores realizedPlForPlaybook when compoundAllocation is absent", () => {
+    const subscription = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+    const context = aContext({ EEM: { last: 100 } });
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "EEM", quantity: 60 })], // ~$6,000 held > $5,000 budget
+    });
+    const intent = { ...buy("EEM", 10), playbookId: "S1-NVDA", playbookMode: "standard" as const };
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 1,
+      subscriptions: [subscription],
+      realizedPlForPlaybook: () => 2_000,
+    });
+
+    expect(result.refused).toEqual([{ intent, reason: "subscription-budget" }]);
+  });
+
   it("names nothing-held for a sell against a symbol with nothing held", () => {
     const context = aContext({ EEM: { last: 100 } });
     const portfolio = aPortfolio({ cash: 0 });
