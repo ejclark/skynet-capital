@@ -12,7 +12,9 @@ import { type DecisionCycle, fetchDeskDecisions, type RefusedIntent } from "../l
  * original page did.
  */
 
-function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][number] }) {
+/** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
+ *  rendering rather than carrying a second, drifting copy. */
+export function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][number] }) {
   return (
     <li className="cycle-outcome">
       <span className={`cycle-action cycle-action-${outcome.action}`}>{outcome.action}</span>
@@ -41,7 +43,7 @@ function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][
   );
 }
 
-function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
+export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
   return (
     <li className="cycle-outcome cycle-outcome-refused">
       <span className="cycle-action cycle-action-refused">refused</span>
@@ -57,7 +59,7 @@ function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
   );
 }
 
-function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
+export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
   // Halted, rejected, and refused cycles arrive open — the reader came for the failure.
   const [open, setOpen] = useState(
     cycle.status === "halted" || cycle.status === "rejected" || cycle.status === "refused",
