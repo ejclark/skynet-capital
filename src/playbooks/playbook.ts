@@ -54,6 +54,7 @@
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, PlaybookMode, Portfolio } from "../domain/types.js";
+import { type TacticalRule, tacticalIntentForSymbol } from "./tactical-playbook.js";
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
@@ -131,6 +132,15 @@ export interface Playbook {
    *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
    *  for every playbook today). Unverified by any audit until step 3. */
   readonly derivesFrom?: string;
+  /**
+   * Optional — a second, richer decision surface (issue #3527 plan, slice 2), for a play that
+   * runs a prioritized rule chain every cycle instead of a single condition (see
+   * `tactical-playbook.ts`'s module doc). When present, `playbookIntents` evaluates this INSTEAD
+   * of calling `desiredState` for this playbook's symbols — `desiredState` still exists on the
+   * type (a tactical playbook can supply a trivial one) but goes uncalled. Absent means "no
+   * tactics declared," which behaves identically to today for every current playbook.
+   */
+  readonly tactics?: readonly TacticalRule[];
 }
 
 /** A playbook enabled in a specific mode — the unit the runner iterates. */
@@ -243,6 +253,32 @@ export function printWindow(
 }
 
 /**
+ * A tactical playbook's whole contribution for one cycle (issue #3527 plan, slice 2): its rule
+ * chain evaluated per symbol, skipping any symbol an exit-safety trip already claimed this cycle.
+ * Split out from `playbookIntents` to keep that function's branching within the complexity budget.
+ */
+function tacticalPlaybookIntents(
+  playbook: Playbook,
+  mode: PlaybookMode,
+  context: MarketContext,
+  portfolio: Portfolio,
+  trippedSymbols: ReadonlySet<string>,
+): OrderIntent[] {
+  const rules = playbook.tactics ?? [];
+  const intents: OrderIntent[] = [];
+  for (const symbol of playbook.symbols) {
+    if (trippedSymbols.has(symbol)) {
+      continue;
+    }
+    const intent = tacticalIntentForSymbol(playbook.id, mode, symbol, rules, context, portfolio);
+    if (intent) {
+      intents.push(intent);
+    }
+  }
+  return intents;
+}
+
+/**
  * Turn desired-vs-actual into intents for one cycle. Pure — the runner supplies live context.
  *
  * First-cut ownership rule (documented, deliberate): a symbol managed by an enabled playbook is
@@ -252,6 +288,11 @@ export function printWindow(
  * Exit-safety trips (#3194 step 4) run FIRST and take priority: a tripped, enforced symbol gets
  * its scoped flatten intent and is skipped by the desired-state logic below for this cycle — the
  * safety net overrides the playbook's own thesis rather than competing with it for the same sell.
+ *
+ * A TACTICAL playbook (issue #3527 plan, slice 2 — `playbook.tactics` present) runs its own
+ * prioritized rule chain per symbol instead of the shared long/flat/no-window condition below —
+ * `desiredState` goes uncalled for it. See `tactical-playbook.ts`'s module doc for why this is a
+ * second shape rather than more fields bolted onto the state machine.
  */
 export function playbookIntents(
   enabled: readonly EnabledPlaybook[],
@@ -264,6 +305,10 @@ export function playbookIntents(
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
   for (const { playbook, mode } of enabled) {
+    if (playbook.tactics) {
+      intents.push(...tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols));
+      continue;
+    }
     // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
     // field doc: desiredState is not an independent state machine per symbol.
     const state = playbook.desiredState(context.asOf, calendar, events);
