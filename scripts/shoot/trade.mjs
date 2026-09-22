@@ -898,6 +898,7 @@ await page.route("**/api/trade/chain*", async (route) => {
   await new Promise((r) => setTimeout(r, 600));
   await route.fulfill({ json: currentChain });
 });
+// Docked (slice 4b) the ticket's tabs became a read-out; the chain pane beside it owns the tabs.
 await page.getByRole("button", { name: "Oct 16, 2026" }).click();
 await page.waitForTimeout(200);
 const shootPendingChain = shooter(page, resolve("docs/shots/pending-chain"));
@@ -1183,6 +1184,23 @@ await shootChainSection("chain-section-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
 await shootChainSection("chain-section-desktop");
+
+// THE DOCKED BENCH (#3407, Workbench slice 4b): at 1280 the four sections stop being exclusive —
+// ticket left, chain over chart right, the book across the bottom, the switch gone from the rail,
+// the ticket's inline chain table yielded to the chain pane. PHONE FIRST: the 390 frame is the
+// same URL folded (the switch back, one pane), proving the desktop added room and no new concept.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?symbol=NVDA&play=201&strike=180&exp=2026-10-16`);
+await page.getByRole("button", { name: "Chain" }).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+const shootBench = shooter(page, resolve("docs/shots/bench"));
+await shootBench("bench-phone");
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.getByRole("region", { name: "Chain", exact: true }).waitFor();
+await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
+await page.getByRole("heading", { name: "Working orders" }).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+await shootBench("bench-desktop");
 
 // Working orders (#3407 P1 slice 2; the Orders section since Workbench slice 3) — one GTC limit
 // and one partial fill, two settled rows below them. PHONE FIRST: 390px proves

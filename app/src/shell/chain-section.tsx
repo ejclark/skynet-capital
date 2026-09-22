@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { fetchChain, type PlayInfo } from "../live/options";
 import { navForPlay, type PlayCode, playForNav } from "../live/plays";
 import { ChainStraddle } from "./chain-straddle";
@@ -73,6 +73,11 @@ export function ChainSection({
 }): ReactElement {
   const expId = useId();
   const [expiration, setExpiration] = useState(initialExpiration ?? "");
+  // Docked beside the ticket (slice 4b) this pane stays mounted while the ticket's own field
+  // writes `?exp=`; follow it. A browse this pane reported comes back equal — a no-op.
+  useEffect(() => {
+    if (initialExpiration !== undefined) setExpiration(initialExpiration);
+  }, [initialExpiration]);
   const nav = navForPlay(play);
   const optionType = nav.instrument === "option" ? nav.optionType : "call";
   const chain = useQuery({
