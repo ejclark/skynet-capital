@@ -63,6 +63,13 @@ export interface RiskConfig {
    * pre-subscription behavior.
    */
   readonly subscriptions?: readonly PlaybookSubscription[];
+  /**
+   * Each playbook's full symbol basket (`Playbook.symbols`), keyed by playbook id — a
+   * subscription's budget is shared across every symbol its playbook trades, not just the one an
+   * intent targets. Absent or no match falls back to the intent's own symbol only, unchanged
+   * from pre-basket behavior (a one-symbol playbook needs no entry here at all).
+   */
+  readonly playbookSymbols?: ReadonlyMap<string, readonly string[]>;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -186,9 +193,6 @@ function clampBuy(
     return { ok: false, reason: "no-quote" };
   }
 
-  // Subscription capital sub-allocation: a playbook trades exactly one symbol, so
-  // the value already held in that symbol IS what's deployed under the subscription — no
-  // separate ledger to keep in sync with fills. `existingValue` is reused unchanged.
   const subscription = intent.playbookId
     ? config.subscriptions?.find((s) => s.playbookId === intent.playbookId && s.enabled)
     : undefined;
@@ -207,8 +211,22 @@ function clampBuy(
   const affordable = Math.floor(portfolio.cash / quote.ask);
   const withinPosition = Math.floor(positionBudget / quote.ask);
 
+  // The subscription's budget is shared across its playbook's WHOLE basket, not just this
+  // intent's symbol — a basket playbook's other open positions already count against the same
+  // allocation. Falls back to `existingValue` (this symbol only) when no basket is registered,
+  // which is exactly today's behavior for a one-symbol playbook.
+  const basketSymbols = intent.playbookId
+    ? config.playbookSymbols?.get(intent.playbookId)
+    : undefined;
+  const basketValue = basketSymbols
+    ? basketSymbols.reduce((sum, symbol) => {
+        const symbolQuote = context.quotes[symbol];
+        return sum + (symbolQuote ? heldQuantity(portfolio, symbol) * symbolQuote.ask : 0);
+      }, 0)
+    : existingValue;
+
   const subscriptionBudgetShares = subscription
-    ? Math.floor(Math.max(0, subscription.capitalAllocated - existingValue) / quote.ask)
+    ? Math.floor(Math.max(0, subscription.capitalAllocated - basketValue) / quote.ask)
     : undefined;
 
   const bounds = [intent.quantity, affordable, withinPosition];

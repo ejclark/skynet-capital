@@ -566,6 +566,61 @@ describe("applyGuardsWithVerdicts", () => {
     expect(result.refused).toEqual([{ intent, reason: "subscription-budget" }]);
   });
 
+  it("sums a basket playbook's held value across ALL its symbols, not just this intent's", () => {
+    const subscription = {
+      accountId: "acct-1",
+      playbookId: "BASKET-1",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+    const context = aContext({ EEM: { last: 100 }, MSFT: { last: 100 } });
+    // Nothing held in EEM itself, but $6,000 already deployed in MSFT under the SAME playbook —
+    // the basket-wide budget is exhausted even though this symbol alone looks untouched.
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "MSFT", quantity: 60 })],
+    });
+    const intent = { ...buy("EEM", 10), playbookId: "BASKET-1", playbookMode: "standard" as const };
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 1,
+      subscriptions: [subscription],
+      playbookSymbols: new Map([["BASKET-1", ["EEM", "MSFT"]]]),
+    });
+
+    expect(result.refused).toEqual([{ intent, reason: "subscription-budget" }]);
+  });
+
+  it("falls back to the intent's own symbol when no basket is registered for its playbook", () => {
+    const subscription = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+    const context = aContext({ EEM: { last: 100 }, MSFT: { last: 100 } });
+    // $6,000 held in a DIFFERENT symbol (MSFT) than the intent's own (EEM) — with no basket
+    // registered for this playbook, that unrelated position must not count against EEM's budget.
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "MSFT", quantity: 60 })],
+    });
+    const intent = { ...buy("EEM", 10), playbookId: "S1-NVDA", playbookMode: "standard" as const };
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 1,
+      subscriptions: [subscription],
+    });
+
+    expect(result.approved).toEqual([intent]);
+  });
+
   it("names nothing-held for a sell against a symbol with nothing held", () => {
     const context = aContext({ EEM: { last: 100 } });
     const portfolio = aPortfolio({ cash: 0 });

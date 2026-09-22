@@ -258,7 +258,11 @@ async function runLive(): Promise<void> {
     buildLiveBot(bot, {
       mode,
       playbookRoster: { enabled: [...enabled], rejected: playbookRoster.rejected },
-      risk: { ...risk, subscriptions },
+      risk: {
+        ...risk,
+        subscriptions,
+        playbookSymbols: new Map(enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
+      },
       blockedReason,
       safety,
       onDecision,
