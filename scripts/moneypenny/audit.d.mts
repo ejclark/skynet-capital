@@ -27,24 +27,46 @@ export interface ReadyPlanCandidate {
   number: number;
   hoursSinceReady: number;
 }
+/** A PR the audit sees as currently `mergeable === "CONFLICTING"` (#1403). */
+export interface ConflictedPR {
+  title: string;
+  number: number;
+  headRefOid?: string;
+}
+/** The (PR, head sha) memory `commentAndFlagConflict`'s marker records for a re-dispatch decision
+ *  (#1403) — a bare `number` (the pre-#1403 shape) means "flagged, sha unknown". */
+export interface AlreadyFlaggedPR {
+  number: number;
+  sha: string | null;
+  attempt: number;
+}
 export interface AuditDeps {
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
+  conflictedPRs?: ConflictedPR[];
   alreadyFlagged?: number[];
+  alreadyFlaggedPRs?: (number | AlreadyFlaggedPR)[];
   staleAfterDays?: number;
   silentAfterHours?: number;
   planStallAfterHours?: number;
 }
 export interface AuditIntent {
   kind: string;
-  issueNumber: number;
+  issueNumber?: number;
+  prNumber?: number;
   title: string;
   body: string;
   quietDays?: number;
   hoursSinceFiled?: number;
   hoursSinceReady?: number;
+  /** Which re-dispatch this is for a `flag-conflict`/`flag-conflict-cap` intent (#1403). */
+  attempt?: number;
 }
+/** How many times a conflicted PR is re-dispatched before this escalates to `needs-eric` (#1403). */
+export const CONFLICT_REPAIR_CAP: number;
+/** The `<!-- moneypenny:conflict sha=… attempt=… -->` marker a conflict-flag comment embeds. */
+export const CONFLICT_MARKER: RegExp;
 
 /** Did this issue get an ANSWER — closed, or linked to a PR? */
 export function answered(issue?: AuditIssue): boolean;
