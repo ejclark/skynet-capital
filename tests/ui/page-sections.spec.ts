@@ -54,6 +54,13 @@ describe("page sections", () => {
     it("says a section switch is the rail's control role, not a new dimension", () => {
       expect(frame).toContain("never a new dimension");
     });
+
+    it("names the bench as a composition of sections that folds, never a fourth word (#3407)", () => {
+      expect(frame).toContain("a BENCH is several SECTIONS");
+      expect(frame).toContain("FOLDED to ordinary exclusive sections below it");
+      expect(frame).toContain("The section switch renders only when");
+      expect(frame).toContain("falsifier");
+    });
   });
 
   describe("one mechanism, not two", () => {
@@ -67,7 +74,11 @@ describe("page sections", () => {
     });
 
     it("builds no tab strip — no page introduces tab roles", () => {
-      for (const path of ["app/src/routes/activity.tsx", "app/src/shell/section-switch.tsx"]) {
+      for (const path of [
+        "app/src/routes/activity.tsx",
+        "app/src/routes/trade.tsx",
+        "app/src/shell/section-switch.tsx",
+      ]) {
         expect(read(path)).not.toMatch(/role="tab(list)?"/);
       }
     });
@@ -105,9 +116,18 @@ describe("page sections", () => {
   });
 
   describe("sections are URL-stateful", () => {
-    it("validates a section param on both pages that have sections", () => {
-      expect(read("app/src/routes/activity.tsx")).toContain("search.section");
-      expect(read("app/src/routes/settings.tsx")).toContain("search.section");
+    it("validates a section param on every page that has sections", () => {
+      for (const path of [
+        "app/src/routes/activity.tsx",
+        "app/src/routes/settings.tsx",
+        "app/src/routes/trade.tsx",
+      ]) {
+        expect(read(path)).toContain("search.section");
+      }
+    });
+
+    it("gives Trade the same switch component — the bench folds to it (#3407)", () => {
+      expect(read("app/src/routes/trade.tsx")).toContain("SectionSwitch");
     });
   });
 });
