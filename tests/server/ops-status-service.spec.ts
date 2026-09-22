@@ -3,6 +3,7 @@ import {
   activitySignal,
   bridgeSignal,
   buildOpsStatus,
+  personaGateSignal,
   resolveOpsStatusRepo,
 } from "../../src/server/ops-status-service.js";
 
@@ -60,12 +61,45 @@ describe("activitySignal", () => {
   });
 });
 
+describe("personaGateSignal", () => {
+  it("reads unknown when the bots process has reported no gate verdicts", () => {
+    const signal = personaGateSignal(undefined);
+    expect(signal.verdict).toBe("unknown");
+    expect(signal.link).toBeUndefined();
+  });
+
+  it("reads unknown for an empty array the same as no report at all", () => {
+    expect(personaGateSignal([]).verdict).toBe("unknown");
+  });
+
+  it("reads ok when every persona cleared the readiness gate", () => {
+    const signal = personaGateSignal([
+      { id: "sauron", ready: true, reason: "passed the readiness pack" },
+      { id: "banker", ready: true, reason: "passed the readiness pack" },
+    ]);
+    expect(signal.verdict).toBe("ok");
+    expect(signal.detail).toContain("2 persona(s) live");
+  });
+
+  it("reads attention and names each pinned persona with its reason", () => {
+    const signal = personaGateSignal([
+      { id: "sauron", ready: true, reason: "passed the readiness pack" },
+      { id: "banker", ready: false, reason: "failed the safety battery (1 violation(s): x)" },
+    ]);
+    expect(signal.verdict).toBe("attention");
+    expect(signal.detail).toContain("1 of 2 persona(s) pinned to observe");
+    expect(signal.detail).toContain("banker (failed the safety battery (1 violation(s): x))");
+    expect(signal.detail).not.toContain("sauron (");
+  });
+});
+
 describe("buildOpsStatus", () => {
   it("degrades the deploy signals honestly when no fetcher is wired", async () => {
     const status = await buildOpsStatus({
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
+      personaGateVerdicts: () => undefined,
       lastBotActivityAt: async () => undefined,
       repo: "x/y",
     });
@@ -95,6 +129,7 @@ describe("buildOpsStatus", () => {
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
+      personaGateVerdicts: () => undefined,
       lastBotActivityAt: async () => undefined,
       fetchDeploySignals: async () => ({ app, bots }),
       repo: "x/y",
@@ -104,16 +139,31 @@ describe("buildOpsStatus", () => {
     expect(status.signals).toContainEqual(bots);
   });
 
+  it("folds the reported persona gate verdicts into a persona-gate signal", async () => {
+    const status = await buildOpsStatus({
+      now: () => NOW,
+      bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => undefined,
+      personaGateVerdicts: () => [{ id: "sauron", ready: false, reason: "not ready yet" }],
+      lastBotActivityAt: async () => undefined,
+      repo: "x/y",
+    });
+    const gate = status.signals.find((s) => s.id === "persona-gate");
+    expect(gate?.verdict).toBe("attention");
+    expect(gate?.detail).toContain("sauron (not ready yet)");
+  });
+
   it("never throws the panel over a failing activity or deploy read", async () => {
     const status = await buildOpsStatus({
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
+      personaGateVerdicts: () => undefined,
       lastBotActivityAt: () => Promise.reject(new Error("store down")),
       fetchDeploySignals: () => Promise.reject(new Error("network down")),
       repo: "x/y",
     });
-    expect(status.signals).toHaveLength(4);
+    expect(status.signals).toHaveLength(5);
     expect(status.signals.every((s) => s.verdict === "unknown")).toBe(true);
   });
 });
@@ -134,6 +184,7 @@ describe("the bots process's reported commit reaches the deploy signals (#666)",
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => RUNNING,
+      personaGateVerdicts: () => undefined,
       lastBotActivityAt: async () => undefined,
       fetchDeploySignals: (_now, sha) => {
         seen.push(sha);
@@ -149,6 +200,7 @@ describe("the bots process's reported commit reaches the deploy signals (#666)",
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => RUNNING,
+      personaGateVerdicts: () => undefined,
       lastBotActivityAt: async () => undefined,
       repo: "x/y",
     });

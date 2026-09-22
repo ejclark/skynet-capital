@@ -9,6 +9,7 @@
  */
 import { join } from "node:path";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
+import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import {
   type DecisionDb,
   type DecisionFunnel,
@@ -53,6 +54,11 @@ export interface InsightsBridgeHandle {
    *  Re-read from every poll rather than remembered, so a redeploy onto an unstamped build stops
    *  claiming the old commit instead of quietly keeping it. */
   readonly botsRunningSha: () => string | undefined;
+  /** This boot's per-persona readiness-gate verdicts, as the bots process reported them on its
+   *  most recent poll (`controls-poll-wire.ts`); `undefined` when it reported none — an older bots
+   *  build, no live bots wired, or a malformed payload. Re-read from every poll, same posture as
+   *  `botsRunningSha`. */
+  readonly botsGate: () => readonly PersonaGateVerdict[] | undefined;
   /** The app-side decision store's own read, for `readDecisions` wiring in `serve-dashboard.ts` —
    *  `undefined` when `SKYNET_INSIGHTS_DIR` is unset, exactly mirroring `seedAppDecisionDb`. */
   readonly readDecisions?: (personaId: string) => Promise<DecisionRecord[]>;
@@ -88,6 +94,7 @@ export function startInsightsBridge(
   const decisionDb = seedAppDecisionDb(env);
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
+  let botsGate: readonly PersonaGateVerdict[] | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
     ...(decisionDb
@@ -112,6 +119,7 @@ export function startInsightsBridge(
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
+      botsGate = report.gate;
     },
     ...(credentialsDeps && botCredentialsSecret
       ? {
@@ -128,6 +136,7 @@ export function startInsightsBridge(
   return {
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
+    botsGate: () => botsGate,
     ...(decisionDb
       ? {
           readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId),

@@ -1,3 +1,4 @@
+import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import type { DeploySignalsFetcher } from "./ops-status-deploy-lag.js";
 import { degradedDeploySignals } from "./ops-status-deploy-verdict.js";
 import type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js";
@@ -13,7 +14,7 @@ export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
  * what this process can already see, with no new credential. Eric was on his phone while the bots
  * were dark with no surface that said so; this is that surface's read side.
  *
- * Four signals, each honest about what it actually proves:
+ * Five signals, each honest about what it actually proves:
  *  - `deploy-app` / `deploy-bots` — is `main` deployed? (`ops-status-deploy-lag.ts`, via the
  *    GitHub Actions API the app already reaches for feedback filing).
  *  - `bridge` — has the bots process polled Mission Control recently? The closest credential-free
@@ -22,6 +23,8 @@ export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
  *    `POLL_MS`), so its absence is real signal. That same poll also carries the process's own
  *    `GIT_SHA` (`controls-poll-wire.ts`), which is what the `deploy-bots` row above answers
  *    "on what commit?" with.
+ *  - `persona-gate` — the boot-time `[gate]` verdict per persona, riding the same poll (#666
+ *    slice 3): which bots are live vs pinned to `observe`, and why.
  *  - `activity` — when did a bot last place an order? A slower, second-order corroboration of the
  *    bridge signal — deliberately never alarms on its own (markets close; bots go quiet on
  *    weekends), only flagged `unknown` rather than `attention`.
@@ -116,6 +119,39 @@ export function activitySignal(
   };
 }
 
+/** The panel's read of the boot-time `[gate]` verdict per persona (#666 slice 3) — the same fact
+ *  `autonomous-live-wiring.ts` already logs, riding the `/controls` poll it was already making. No
+ *  `link`: a not-ready persona is a code/readiness-pack fact, not something an Actions button
+ *  fixes, so a "recovery" link here would be dishonest rather than merely unhelpful. */
+export function personaGateSignal(verdicts: readonly PersonaGateVerdict[] | undefined): OpsSignal {
+  if (!verdicts || verdicts.length === 0) {
+    return {
+      id: "persona-gate",
+      label: "Persona gate",
+      verdict: "unknown",
+      detail:
+        "No persona readiness report from the bots process yet — an older build, no live bots wired, or nothing has polled this app run.",
+    };
+  }
+  const notReady = verdicts.filter((v) => !v.ready);
+  if (notReady.length === 0) {
+    return {
+      id: "persona-gate",
+      label: "Persona gate",
+      verdict: "ok",
+      detail: `${verdicts.length} persona(s) live — no readiness gate is pinning any bot to observe.`,
+    };
+  }
+  return {
+    id: "persona-gate",
+    label: "Persona gate",
+    verdict: "attention",
+    detail: `${notReady.length} of ${verdicts.length} persona(s) pinned to observe: ${notReady
+      .map((v) => `${v.id} (${v.reason})`)
+      .join("; ")}.`,
+  };
+}
+
 export interface OpsStatusInputs {
   readonly now: () => Date;
   /** Reads the bridge poll tracker (`dashboard-insights-bridge.ts`) — undefined until the bots
@@ -124,6 +160,10 @@ export interface OpsStatusInputs {
   /** The commit the bots process reported on its last poll (`controls-poll-wire.ts`); undefined
    *  when it reported none, in which case the deploy row falls back to CI's deploy record. */
   readonly botsRunningSha: () => string | undefined;
+  /** This boot's per-persona readiness-gate verdicts, as the bots process reported them on its
+   *  last poll (`controls-poll-wire.ts`); undefined when it reported none — an older bots build, no
+   *  live bots wired, or a malformed payload, in which case the row reads `unknown`, never wrong. */
+  readonly personaGateVerdicts: () => readonly PersonaGateVerdict[] | undefined;
   /** Latest `at` among bot-owned trade-activity records; undefined when none exist. Never throws
    *  — a read failure should read as "unknown", not crash the panel. */
   readonly lastBotActivityAt: () => Promise<string | undefined>;
@@ -166,6 +206,7 @@ export async function buildOpsStatus(inputs: OpsStatusInputs): Promise<OpsStatus
       deploy.app,
       deploy.bots,
       bridgeSignal(inputs.bridgeLastPollAt(), now, link),
+      personaGateSignal(inputs.personaGateVerdicts()),
       activitySignal(activityAt, now, link),
     ],
   };

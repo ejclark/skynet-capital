@@ -223,3 +223,55 @@ describe("the bots process's running commit on the controls poll", () => {
     });
   });
 });
+
+/**
+ * The persona gate round trip (#666 slice 3): each `buildLiveBot` call reports its own persona's
+ * readiness verdict onto the same client; every subsequent poll should carry the full, current set
+ * — merged by persona id, not appended, since a later report for the same id is this boot's latest
+ * word, not a second bot.
+ */
+describe("the bots process's persona gate verdicts on the controls poll", () => {
+  it("carries every reported persona's verdict to the app that serves the panel", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      client.reportPersonaGate({ id: "sauron", ready: true, reason: "passed the readiness pack" });
+      client.reportPersonaGate({ id: "banker", ready: false, reason: "not ready yet" });
+      await client.fetchOnce();
+      expect(reports).toEqual([
+        {
+          gate: [
+            { id: "sauron", ready: true, reason: "passed the readiness pack" },
+            { id: "banker", ready: false, reason: "not ready yet" },
+          ],
+        },
+      ]);
+    });
+  });
+
+  it("merges a repeated report for the same persona rather than duplicating it", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      client.reportPersonaGate({ id: "sauron", ready: false, reason: "first boot pass" });
+      client.reportPersonaGate({ id: "sauron", ready: true, reason: "second boot pass" });
+      await client.fetchOnce();
+      expect(reports).toEqual([
+        { gate: [{ id: "sauron", ready: true, reason: "second boot pass" }] },
+      ]);
+    });
+  });
+
+  it("reports nothing when no persona has reported a verdict", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = resolveBotControls({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      await client.fetchOnce();
+      expect(reports).toEqual([{}]);
+    });
+  });
+
+  it("is a safe no-op on the disabled client", () => {
+    const client = resolveBotControls({} as NodeJS.ProcessEnv);
+    expect(() =>
+      client.reportPersonaGate({ id: "sauron", ready: true, reason: "n/a" }),
+    ).not.toThrow();
+  });
+});
