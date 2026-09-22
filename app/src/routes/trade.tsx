@@ -58,10 +58,15 @@ import { useBenchWidth } from "../shell/use-bench-width";
  *
  * THE BENCH (#3407, the Workbench pick; frame.tsx → "ONE COMPOSITION OF SECTIONS"): below the
  * bench width the sections are exclusive, as above. At the bench width (`useBenchWidth`, 1280px)
- * they DOCK — ticket left, chain over chart right, the book across the bottom — the switch leaves
- * the rail, the ticket's inline chain table yields to the chain pane, and `?section=` names the
- * pane to scroll to. The panes keep talking through the URL exactly as when folded (`?strike=`,
- * `?exp=`, `?play=`), which is what lets one code path serve both.
+ * they DOCK — ticket left, chart right, the book across the bottom — the switch leaves the rail,
+ * and `?section=` names the pane to scroll to. The panes keep talking through the URL exactly as
+ * when folded (`?strike=`, `?exp=`, `?play=`), which is what lets one code path serve both.
+ *
+ * THE CHAIN IS NOT A DOCKED PANE (Eric, 2026-09-22, reversing part of slice 4b): the ticket's own
+ * chain table is inline again at every width, and collapsible (`option-gate.tsx`'s chain
+ * accordion) — open once a symbol commits, folded to one line once a strike is picked. "Chain"
+ * stays in `SECTIONS` and reachable folded through the switch, as a standalone browsing view
+ * distinct from filling a specific ticket; it never docks (`Bench`'s `shows`).
  */
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
@@ -111,9 +116,9 @@ function DeskTicket({
   onStrikeCommit,
   initialExpiration,
   onExpirationCommit,
-  hideChain = false,
   accounts,
   onDeskChange,
+  chartSlot,
 }: {
   readonly desk: string;
   readonly code: string;
@@ -143,8 +148,9 @@ function DeskTicket({
   /** `?exp=` (slice 4a) — seeds the options ticket's expiration; changes commit back. */
   readonly initialExpiration?: string;
   readonly onExpirationCommit?: (expiration: string) => void;
-  /** Docked (slice 4b): the chain pane beside the ticket replaces the ticket's inline table. */
-  readonly hideChain?: boolean;
+  /** Forwarded to `OptionGate` alone (see its own doc comment) — a stock or spread ticket keeps
+   *  today's behavior (chart as its own bench pane) unchanged. */
+  readonly chartSlot?: ReactElement;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
@@ -190,9 +196,9 @@ function DeskTicket({
           onStrikeCommit={onStrikeCommit}
           initialExpiration={initialExpiration}
           onExpirationCommit={onExpirationCommit}
-          hideChain={hideChain}
           plays={plays.data?.plays ?? []}
           onPreset={onPreset}
+          chartSlot={chartSlot}
         />
       ) : (
         <TradeGate
@@ -226,6 +232,13 @@ interface StageProps {
   readonly onStrikeCommit: (strike: string) => void;
   readonly accounts: readonly OwnedAccount[];
   readonly onDeskChange: (id: string) => void;
+}
+
+/** Whether the ticket at `props.play` is an option rung — the one case `chartSlot` applies to
+ *  (`option-gate.tsx`'s own doc comment). Shared between `Pane` (what to render) and `Bench`
+ *  (whether the bench-level chart pane is still needed) so the two can't drift apart. */
+function isOptionTicket(props: StageProps): boolean {
+  return props.plays?.find((p) => p.code === props.play)?.kind === "option";
 }
 
 /** One of the bench's tools by id — the same element whether it is the folded stage's only pane
@@ -266,9 +279,9 @@ function Pane({
       onStrikeCommit={props.onStrikeCommit}
       initialExpiration={expiration || undefined}
       onExpirationCommit={props.onExpirationCommit}
-      hideChain={docked}
       accounts={props.accounts}
       onDeskChange={props.onDeskChange}
+      chartSlot={docked && isOptionTicket(props) ? <ChartSection symbol={symbol} /> : undefined}
     />
   );
 }
@@ -304,11 +317,19 @@ function BenchPane({
 }
 
 /** THE BENCH (Workbench slices 2–4b, `bench.css`). Folded, it shows the one pane the switch
- *  chose; docked, every pane at once — ticket left, chain over chart right, the book across the
- *  bottom — and `?section=` names the pane to scroll to instead of choosing it. ONE TREE for both:
- *  each pane keeps its slot whether or not its siblings render, so a window resized across the
- *  bench width docks and folds around a ticket mid-entry without remounting it (React keeps state
- *  by position; a separate folded component would drop a half-typed order on every crossing). */
+ *  chose; docked, ticket left, chart right, the book across the bottom — and `?section=` names
+ *  the pane to scroll to instead of choosing it. The chain no longer docks AUTOMATICALLY (Eric,
+ *  2026-09-22, reversing part of slice 4b: "is it possible to have that table be expandable in
+ *  the same form" — see `option-gate.tsx`'s chain accordion); it stays reachable at every width
+ *  through the section switch (or a shared `?section=chain` link) as a standalone browsing view
+ *  distinct from a specific ticket fill — docked, that's the one pane `shows` doesn't include by
+ *  default, only when explicitly asked (review fix: an unconditional `id !== "chain"` made the
+ *  route 404 in all but name above 1280px — a live `?section=chain` link opened wide would find
+ *  no chain at all, not even folded-single-pane; a pane can be un-auto-shown without being
+ *  unreachable). ONE TREE for both layouts: each pane keeps its slot whether or not its siblings
+ *  render, so a window resized across the bench width docks and folds around a ticket mid-entry
+ *  without remounting it (React keeps state by position; a separate folded component would drop
+ *  a half-typed order on every crossing). */
 function Bench({
   docked,
   section,
@@ -324,7 +345,8 @@ function Bench({
     if (!(docked && asked)) return;
     document.getElementById(`bench-${asked}`)?.scrollIntoView({ block: "start" });
   }, [docked, asked]);
-  const shows = (id: TradeSection) => docked || section === id;
+  const shows = (id: TradeSection) =>
+    id === "chain" ? asked === "chain" : docked || section === id;
   const pane = (id: TradeSection, className?: string) =>
     shows(id) ? (
       <BenchPane
@@ -335,14 +357,19 @@ function Bench({
         props={props}
       />
     ) : null;
+  // An option ticket, docked, carries its own chart beside the order-detail block (Eric,
+  // 2026-09-22 — `option-gate.tsx`'s `chartSlot` doc comment): the bench-level chart pane would
+  // just be the same chart twice, so it steps aside, and the ticket pane spans the full width the
+  // chain needs ("the options table needs access to all available screen width real estate").
+  // Every other ticket kind (stock, spread, locked, gated) is unaffected — chart stays its own
+  // full-height column, as before.
+  const ticketOwnsChart = docked && isOptionTicket(props);
   return (
     <div className={docked ? "bench bench-docked" : "bench"}>
-      {pane("ticket", "bench-ticket")}
-      {shows("chain") || shows("chart") ? (
-        <div className="bench-side">
-          {pane("chain")}
-          {pane("chart")}
-        </div>
+      {pane("ticket", ticketOwnsChart ? "bench-ticket bench-ticket-full" : "bench-ticket")}
+      {pane("chain", "bench-chain")}
+      {shows("chart") && !ticketOwnsChart ? (
+        <div className="bench-side">{pane("chart")}</div>
       ) : null}
       {pane("orders", "bench-orders")}
     </div>

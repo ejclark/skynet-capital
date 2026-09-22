@@ -1225,19 +1225,29 @@ await page.getByText(/Limit seeded at the mid/).waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
 await shootLimitAtMid("limit-at-mid-desktop");
 
-// THE DOCKED BENCH (#3407, Workbench slice 4b): at 1280 the four sections stop being exclusive —
-// ticket left, chain over chart right, the book across the bottom, the switch gone from the rail,
-// the ticket's inline chain table yielded to the chain pane. PHONE FIRST: the 390 frame is the
-// same URL folded (the switch back, one pane), proving the desktop added room and no new concept.
+// THE DOCKED BENCH (#3407, Workbench slice 4b; composition revised 2026-09-22): at 1280 the
+// panes stop being exclusive — ticket left, chart right, the book across the bottom, the switch
+// gone from the rail. The chain no longer docks as its own pane (Eric, 2026-09-22: "is it
+// possible to have that table be expandable in the same form") — it's the ticket's own
+// collapsible accordion instead (`option-gate.tsx`), open here since nothing is picked yet — the
+// collapsed state is `docs/shots/strike-pick/strike-pick-settled-desktop.jpg`, a real pick's
+// aftermath. PHONE FIRST: the 390 frame is the same URL folded (the switch back, one pane),
+// proving the desktop added room and no new concept. `currentPlays` back to `throughLongs` (201
+// unlocked) — the symbol-tier2 scene above left it on `freshPlays`, where 201 is locked and
+// `OptionGate` would show `LockedPanel` instead of any ticket at all.
+currentPlays = throughLongs;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?symbol=NVDA&play=201&strike=180&exp=2026-10-16`);
+await page.goto(`${origin}/app/trade?symbol=NVDA&play=201`);
 await page.getByRole("button", { name: "Chain" }).waitFor();
+await page
+  .getByRole("button", { name: /^Pick the \d/ })
+  .first()
+  .waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
 const shootBench = shooter(page, resolve("docs/shots/bench"));
 await shootBench("bench-phone");
 await page.setViewportSize({ width: 1280, height: 1400 });
-await page.getByRole("region", { name: "Chain", exact: true }).waitFor();
-await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
+await page.getByRole("region", { name: "Chart" }).waitFor();
 await page.getByRole("heading", { name: "Working orders" }).waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
 await shootBench("bench-desktop");
@@ -1410,11 +1420,14 @@ await shootOptionPayoff("option-payoff-desktop");
 
 // P0 template hygiene (#3407): content-sized fields (a 4-character strike no longer a third of
 // the panel) and the two-column estimate. Phone first, then the desktop frame that proves the
-// fields expanded instead of stretching.
+// fields expanded instead of stretching. `?strike=` arrives already committed, so the chain
+// accordion (2026-09-22) opens collapsed — the fields grid this scene is actually about doesn't
+// depend on it either way, so the readiness wait is the Strike field's own seeded value, not the
+// (now-collapsed) chain table.
 currentPlays = throughLongs;
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
-await page.locator(".straddle-scroll").waitFor();
+await page.getByLabel("Strike", { exact: true }).waitFor();
 await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootTemplate = shooter(page, resolve("docs/shots/p0-template"));
