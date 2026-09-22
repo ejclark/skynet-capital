@@ -5,6 +5,7 @@ import {
   playbookIntents,
   printWindow,
 } from "../../src/playbooks/playbook.js";
+import type { TacticalRule } from "../../src/playbooks/tactical-playbook.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
 const calendar: readonly EarningsPrint[] = [
@@ -150,6 +151,90 @@ describe("playbookIntents", () => {
 
       expect(intents).toHaveLength(1);
       expect(intents[0]).toMatchObject({ symbol: "AMD", side: "buy" });
+    });
+  });
+
+  describe("tactical playbooks (issue #3527 plan, slice 2)", () => {
+    const scalpRule: TacticalRule = {
+      kind: "momentum-scalp",
+      momentumAtOrAbove: 0.01,
+      sentimentAbove: -0.35,
+      sentimentBelow: 0.35,
+      notional: 8_000,
+      maxTrancheValue: 36_000,
+    };
+
+    it("takes priority over desiredState when tactics are declared, even if desiredState would fire", () => {
+      const context = aContext(
+        { NVDA: { last: 100, momentum: 0.02, sentiment: 0.1 } },
+        "2026-08-16T15:00:00Z",
+      );
+      // desiredState says "long" (the default `play()` fixture) — if it ran, entry sizing would
+      // be 2% of equity; the tactic's own notional-based sizing proves desiredState never ran.
+      const tactical = play({ tactics: [scalpRule] });
+
+      const [intent] = playbookIntents(
+        enabled(tactical),
+        context,
+        aPortfolio({ cash: 100_000 }),
+        calendar,
+      );
+
+      expect(intent).toMatchObject({ symbol: "NVDA", side: "buy", playbookId: "TEST-NVDA" });
+      expect((intent?.quantity ?? 0) * 100.05).toBeLessThan(9_000); // ~$8k tranche, not ~2% of $100k
+    });
+
+    it("returns nothing when no tactic in the chain fires", () => {
+      const context = aContext(
+        { NVDA: { last: 100, momentum: 0, sentiment: 0 } },
+        "2026-08-16T15:00:00Z",
+      );
+      const tactical = play({ tactics: [scalpRule] });
+
+      expect(
+        playbookIntents(enabled(tactical), context, aPortfolio({ cash: 100_000 }), calendar),
+      ).toEqual([]);
+    });
+
+    it("applies the tactic chain independently per symbol in a basket", () => {
+      const context = aContext(
+        {
+          NVDA: { last: 100, momentum: 0.02, sentiment: 0.1 },
+          AMD: { last: 50, momentum: 0, sentiment: 0 },
+        },
+        "2026-08-16T15:00:00Z",
+      );
+      const tactical = play({ symbols: ["NVDA", "AMD"], tactics: [scalpRule] });
+
+      const intents = playbookIntents(
+        enabled(tactical),
+        context,
+        aPortfolio({ cash: 100_000 }),
+        calendar,
+      );
+
+      expect(intents).toHaveLength(1);
+      expect(intents[0]).toMatchObject({ symbol: "NVDA" });
+    });
+
+    it("skips a symbol an exit-safety trip already claimed this cycle", () => {
+      const context = aContext(
+        { NVDA: { last: 90, momentum: 0.02, sentiment: 0.1 } },
+        "2026-08-16T15:00:00Z",
+      );
+      const portfolio = aPortfolio({
+        positions: [aPosition({ symbol: "NVDA", quantity: 100, avgPrice: 100 })],
+      });
+      const tactical = play({
+        tactics: [scalpRule],
+        exitSafety: { standard: { drawdownTripPct: 0.05, enforcement: "enforce" } },
+      });
+
+      const intents = playbookIntents(enabled(tactical), context, portfolio, calendar);
+
+      // Only the exit-safety trip's own sell — the scalp tactic never got a look at NVDA this cycle.
+      expect(intents).toHaveLength(1);
+      expect(intents[0]).toMatchObject({ side: "sell", quantity: 100 });
     });
   });
 });
