@@ -595,6 +595,34 @@ describe("AlpacaOptionsClient", () => {
       expect(await client.getUnderlyingQuote("MSFT")).toEqual({ last: 428.6, prevClose: 425.1 });
     });
 
+    it("carries latestQuote.bp/ap when both are positive, and drops a half or dead book (#3407 slice 6)", async () => {
+      const at = (latestQuote: unknown) =>
+        new AlpacaOptionsClient(
+          fakeTransport({}),
+          fakeTransport({
+            "/v2/stocks/MSFT/snapshot": {
+              latestTrade: { p: 428.6 },
+              prevDailyBar: { c: 425.1 },
+              latestQuote,
+            },
+          }),
+        );
+      expect(await at({ bp: 428.55, ap: 428.65 }).getUnderlyingQuote("MSFT")).toEqual({
+        last: 428.6,
+        prevClose: 425.1,
+        bid: 428.55,
+        ask: 428.65,
+      });
+      expect(await at({ bp: 0, ap: 428.65 }).getUnderlyingQuote("MSFT")).toEqual({
+        last: 428.6,
+        prevClose: 425.1,
+      });
+      expect(await at({ ap: 428.65 }).getUnderlyingQuote("MSFT")).toEqual({
+        last: 428.6,
+        prevClose: 425.1,
+      });
+    });
+
     it("is undefined when prevDailyBar is missing", async () => {
       const client = new AlpacaOptionsClient(
         fakeTransport({}),

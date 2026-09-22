@@ -139,6 +139,14 @@ const num = (value: unknown): number | undefined => {
 /** A quoted price that may honestly be zero — a bid of $0.00 means nobody is bidding, which is
  *  a real fact about a worthless contract, not a missing one (#3407 P2; the study found the zero
  *  bid dropped and the row losing its mid). Junk (`null`, `""`, `[]`) stays absent. */
+/** What `getUnderlyingQuote` answers: last + prevClose always; bid/ask only when both are live. */
+export interface UnderlyingQuote {
+  readonly last: number;
+  readonly prevClose: number;
+  readonly bid?: number;
+  readonly ask?: number;
+}
+
 const price0 = (value: unknown): number | undefined => {
   if (typeof value !== "number" && typeof value !== "string") return undefined;
   if (value === "") return undefined;
@@ -325,13 +333,12 @@ export class AlpacaOptionsClient {
   }
 
   /**
-   * The underlying's last trade + previous close, from the data host — enrichment for a quote
+   * The underlying's last trade + previous close (+ the NBBO when the session has one), from the
+   * data host — enrichment for a quote
    * header, never the order path. Fail-soft like `getUnderlyingPrice`: undefined with no data
    * transport, on a non-2xx, when either field is missing, or on any throw.
    */
-  async getUnderlyingQuote(
-    symbol: string,
-  ): Promise<{ last: number; prevClose: number } | undefined> {
+  async getUnderlyingQuote(symbol: string): Promise<UnderlyingQuote | undefined> {
     if (!this.data) return undefined;
     try {
       const response = await this.data.get(
@@ -341,11 +348,18 @@ export class AlpacaOptionsClient {
       const body = response.body as {
         latestTrade?: { p?: unknown };
         prevDailyBar?: { c?: unknown };
+        latestQuote?: { bp?: unknown; ap?: unknown };
       } | null;
       const last = num(body?.latestTrade?.p);
       const prevClose = num(body?.prevDailyBar?.c);
       if (last === undefined || prevClose === undefined) return undefined;
-      return { last, prevClose };
+      // The NBBO rides along for the ticket's limit-at-mid default (#3407 slice 6). Unlike an
+      // option's $0.00 bid (a real quote, `price0`), a stock with no bid or no ask outside the
+      // session has no market to price a limit against, so both must be positive to be carried.
+      const bid = num(body?.latestQuote?.bp);
+      const ask = num(body?.latestQuote?.ap);
+      const nbbo = bid !== undefined && ask !== undefined && bid > 0 && ask > 0 ? { bid, ask } : {};
+      return { last, prevClose, ...nbbo };
     } catch {
       return undefined;
     }

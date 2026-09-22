@@ -150,7 +150,17 @@ const desk = {
   },
 };
 
-const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" };
+// The NBBO rides with the quote (#3407 slice 6): the stock ticket seeds Limit at the mid from it.
+const quote = {
+  symbol: "NVDA",
+  last: 181.32,
+  change: 2.14,
+  changePct: 1.19,
+  tone: "pos",
+  bid: 181.28,
+  ask: 181.32,
+  mid: 181.3,
+};
 
 // The Symbol field's tier-2 live fallback (Phase 0.8b): "GATO" (Gatos Silver) is a genuine
 // curated-directory miss — not in src/domain/ticker-directory/* — so typing it proves the debounced
@@ -1147,7 +1157,16 @@ currentChain = {
     openInterest: 400 + i * 80,
   })),
 };
-currentQuote = { symbol: "MU", last: 118.4, change: 1.05, changePct: 0.89, tone: "pos" };
+currentQuote = {
+  symbol: "MU",
+  last: 118.4,
+  change: 1.05,
+  changePct: 0.89,
+  tone: "pos",
+  bid: 118.38,
+  ask: 118.42,
+  mid: 118.4,
+};
 await page.clock.setFixedTime(new Date("2026-09-28T14:00:00Z"));
 await page.goto(`${origin}/app/trade?play=201&symbol=MU`);
 await page.locator(".straddle-scroll").waitFor();
@@ -1187,6 +1206,21 @@ await shootChainSection("chain-section-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
 await shootChainSection("chain-section-desktop");
+
+// LIMIT AT MID (#3407, Workbench slice 6 — Eric: "limit at mid — it's standard behavior"): a
+// committed symbol's NBBO seeds the stock ticket — Order type Limit, the price at the mid, GTC
+// pressed as the fallback, and the note that says where the number came from. PHONE FIRST.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByText(/Limit seeded at the mid/).waitFor();
+await page.getByLabel("Limit price").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootLimitAtMid = shooter(page, resolve("docs/shots/limit-at-mid"));
+await shootLimitAtMid("limit-at-mid-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText(/Limit seeded at the mid/).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+await shootLimitAtMid("limit-at-mid-desktop");
 
 // THE DOCKED BENCH (#3407, Workbench slice 4b): at 1280 the four sections stop being exclusive —
 // ticket left, chain over chart right, the book across the bottom, the switch gone from the rail,

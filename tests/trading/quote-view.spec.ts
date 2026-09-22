@@ -48,4 +48,26 @@ describe("quoteView", () => {
     expect(view.changePct).not.toBe(0);
     expect(view.tone).toBe("neg");
   });
+
+  it("carries bid, ask and the cent-rounded mid when both sides are live (#3407 slice 6)", () => {
+    const view = quoteView("NVDA", { last: 181.32, prevClose: 179.18, bid: 181.27, ask: 181.32 });
+    expect(view).toMatchObject({ bid: 181.27, ask: 181.32, mid: 181.3 });
+    // 181.295 rounds half-up to the cent the ticket will send
+    expect(quoteView("X", { last: 1, prevClose: 1, bid: 181.28, ask: 181.31 }).mid).toBe(181.3);
+  });
+
+  it("carries no NBBO from half a book, a zero bid, or an inverted book", () => {
+    expect(quoteView("X", { last: 1, prevClose: 1, bid: 181.27 })).not.toHaveProperty("mid");
+    expect(quoteView("X", { last: 1, prevClose: 1, ask: 181.32 })).not.toHaveProperty("bid");
+    expect(quoteView("X", { last: 1, prevClose: 1, bid: 0, ask: 181.32 })).not.toHaveProperty(
+      "mid",
+    );
+    expect(quoteView("X", { last: 1, prevClose: 1, bid: 181.4, ask: 181.32 })).not.toHaveProperty(
+      "mid",
+    );
+    // the flat guard keeps the book too
+    expect(quoteView("X", { last: 1, prevClose: 0, bid: 1, ask: 1.02 })).toMatchObject({
+      mid: 1.01,
+    });
+  });
 });
