@@ -149,15 +149,15 @@ describe("/trade section switch", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps no milestone strip on the page — it lives on /learn/trading now (#3407 slice 5)", async () => {
+  it("renders the milestone strip across the top of the page (Eric, 2026-09-22: back from /learn/trading)", async () => {
     mountTrade("/trade");
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
       ).toBeInTheDocument(),
     );
-    expect(screen.queryByRole("region", { name: "Trading ladder" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Milestone · Trading ladder")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Trading ladder" })).toBeInTheDocument();
+    expect(screen.getByText("Milestone · Trading ladder")).toBeInTheDocument();
   });
 
   it("keeps the ticket section free of the book — the panels live on Orders now", async () => {

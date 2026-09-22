@@ -19,8 +19,8 @@ import { ChartSection } from "../shell/chart-section";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
-import { LadderRail } from "../shell/ladder-rail";
 import { LockedPanel } from "../shell/locked-panel";
+import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import { OrdersSection } from "../shell/orders-section";
 import { RungChip } from "../shell/rung-chip";
@@ -49,19 +49,20 @@ import { useBenchWidth } from "../shell/use-bench-width";
  * submit, so nothing here can offer, let alone place, a ticket against someone else's desk.
  *
  * PAGE ORDER (#3407, Workbench slice 5 — Eric, 2026-09-22, "B — keep"): the milestone STRIP moved to
- * `/learn/trading`; the ticket keeps a one-line `RungChip` (rung · state word · count · the door
- * to the ladder) and the `AccountField` sits directly above the ticket's own nav — both are the
- * ticket's, so they live in the ticket PANE, which is what puts them beside the chain and the
- * chart when the bench docks instead of above the whole bench. #1461's principle holds
- * (milestones gate, they never drive); only its placement was overturned. Every ticket panel
- * (`.gate-panel`) keeps the `--col-wide` cap the strip set (`gate.css`).
+ * `/learn/trading` for a few hours; the ticket kept a one-line `RungChip` (rung · state word ·
+ * count · the door to the ladder) in its place. #1461's principle held throughout (milestones
+ * gate, they never drive) — only the strip's placement was ever in question.
  *
- * THE LADDER RAIL (Eric, 2026-09-22, same day: "I also want this section restored on the trade
- * page… find a better design to more organically integrate the behavior"): the STRIP's placement
- * stays overturned — the CLICK-TO-PRESET function it carried comes back as `LadderRail`, the
- * left rail's own item list, not a second strip stacked above the bench. `RungChip` still carries
- * the narrative (full name, state word, count); the rail is the quick switch. See
- * `ladder-rail.tsx`'s own doc comment for the full reasoning.
+ * THE STRIP IS BACK, ACROSS THE TOP (Eric, 2026-09-22, later the same day, after two intermediate
+ * placements — a rail item list, then nothing checked back in: "The milestone ladder is still on
+ * the left. As mentioned before, i want to restore previous design where this milestone
+ * information is rendered across the top"): `MilestoneStrip` — the same component `/learn/trading`
+ * still renders as its own "you are here" — is back above the `Bench`, full width, exactly where
+ * #1461 first put it. The rail-item-list attempt (`LadderRail`) is gone: it satisfied the
+ * click-to-preset FUNCTION Eric asked to keep but not the PLACEMENT he'd already named, so it's
+ * removed rather than left running alongside the strip. `RungChip` stays in the ticket panel too
+ * (Workbench slice 5) — it's the compact one-liner for a member already deep in the form; the
+ * strip is the page-level "where am I on the ladder" a fresh page load answers first.
  *
  * ONE CARD (Eric, 2026-09-22, same day again: "instrument, side and type toggle controls should
  * be part of a singular trading form on the same card"): `AccountField`/`RungChip`/`TicketNav`
@@ -607,9 +608,8 @@ function TradePage(): ReactElement {
   // on the belief its content was superseded by the Playbook Store — #3333's slice-8 audit found
   // that claim false (different features entirely) and ported the Outpost's actual catalog into
   // Research's "Plays" section instead. Growing this rail to "critical mass" with real items
-  // (Portfolio, a Backtesting/Strategy Lab placeholder) is #784's own slice 7. The ladder below
-  // is that critical mass arriving early, for a different reason (Eric, 2026-09-22 — see
-  // `ladder-rail.tsx`'s own doc comment).
+  // (Portfolio, a Backtesting/Strategy Lab placeholder) is #784's own slice 7 — still open; the
+  // ladder itself no longer lives here (see the file's own "THE STRIP IS BACK" doc comment).
   const rail = (
     <>
       <p className="rail-label">Trading</p>
@@ -617,12 +617,6 @@ function TradePage(): ReactElement {
         Trade
       </span>
       <hr />
-      {plays.data ? (
-        <>
-          <LadderRail deskId={activeDesk ?? ""} plays={plays.data.plays} current={play ?? "101"} />
-          <hr />
-        </>
-      ) : null}
       {/* Docked, every pane is already on the page — the switch would be a control with nothing
           to choose (frame.tsx: "The section switch renders only when folded"). */}
       {docked ? null : (
@@ -651,6 +645,16 @@ function TradePage(): ReactElement {
           live account at submit.
         </p>
       </header>
+      {plays.data ? (
+        <MilestoneStrip
+          deskId={activeDesk ?? ""}
+          current={play ?? "101"}
+          plays={plays.data.plays}
+          wheels={plays.data.wheels}
+          gate={plays.data.gate}
+          nextUp={plays.data.nextUp}
+        />
+      ) : null}
       {settings.isLoading ? null : accounts.length === 0 ? (
         <p className="note">No accounts are linked to your session yet.</p>
       ) : activeDesk ? (
