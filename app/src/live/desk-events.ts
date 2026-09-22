@@ -1,5 +1,5 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * THE DESK'S EVENT CHANNEL (#3407 P4 slice 1) — the SSE → Query seam for one account's order
@@ -58,12 +58,29 @@ export function connectDeskEvents(
   return () => source.close();
 }
 
-/** Mount the channel for the desk a surface shows; nothing for an empty desk id. */
+/** Mount the channel for the desk a surface shows; nothing for an empty desk id. The listener
+ *  is read at fire time through a ref, so a caller's latest closure (with its latest order id)
+ *  is the one that runs — the source itself is opened once per desk. */
 export function useDeskEvents(deskId: string, onEvent?: (event: DeskOrderEvent) => void): void {
   const queryClient = useQueryClient();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: onEvent is read at fire time
+  const listener = useRef(onEvent);
+  listener.current = onEvent;
   useEffect(() => {
     if (deskId === "") return undefined;
-    return connectDeskEvents(queryClient, deskId, onEvent);
+    return connectDeskEvents(queryClient, deskId, (event) => listener.current?.(event));
   }, [queryClient, deskId]);
+}
+
+/** The latest frame the stream carried for ONE order — the ticket's own, once submitted — or
+ *  nothing (#3407 P4 slice 2). Resets when the order id changes, so a new ticket never wears the
+ *  last one's fill. */
+export function useOrderFill(
+  deskId: string,
+  orderId: string | undefined,
+): DeskOrderEvent | undefined {
+  const [fill, setFill] = useState<{ orderId: string; event: DeskOrderEvent } | undefined>();
+  useDeskEvents(deskId, (event) => {
+    if (orderId !== undefined && event.orderId === orderId) setFill({ orderId, event });
+  });
+  return fill && fill.orderId === orderId ? fill.event : undefined;
 }

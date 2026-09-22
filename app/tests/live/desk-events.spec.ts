@@ -1,5 +1,8 @@
-import { QueryClient } from "@tanstack/react-query";
-import { connectDeskEvents, deskQueryKeys } from "../../src/live/desk-events";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { createElement } from "react";
+import { connectDeskEvents, deskQueryKeys, useOrderFill } from "../../src/live/desk-events";
 
 /**
  * The desk's event channel (#3407 P4 slice 1): a hello and every `order` frame invalidate the
@@ -74,6 +77,36 @@ describe("connectDeskEvents", () => {
 
     dispose();
     expect(source?.closed).toBe(true);
+  });
+
+  it("useOrderFill keeps only the frame for the ticket's own order, and forgets it for a new order", () => {
+    const client = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    const { result, rerender } = renderHook(
+      ({ orderId }: { orderId: string | undefined }) => useOrderFill("human-eric", orderId),
+      { wrapper, initialProps: { orderId: "o-1" } },
+    );
+    const source = FakeEventSource.instances[0];
+    const frame = (orderId: string) =>
+      JSON.stringify({
+        id: orderId,
+        eventType: "order.filled",
+        orderId,
+        at: "t",
+        outcome: "success",
+        payload: {},
+      });
+    act(() => source?.emit("order", frame("o-2")));
+    expect(result.current).toBeUndefined();
+    act(() => source?.emit("order", frame("o-1")));
+    expect(result.current?.orderId).toBe("o-1");
+    rerender({ orderId: "o-3" });
+    expect(result.current).toBeUndefined();
+    // The listener reads the LATEST order id: the source was opened once, the id changed since.
+    act(() => source?.emit("order", frame("o-3")));
+    expect(result.current?.orderId).toBe("o-3");
+    expect(FakeEventSource.instances).toHaveLength(1);
   });
 
   it("is a no-op where EventSource does not exist", () => {
