@@ -303,7 +303,13 @@
    buttons on the side need to become clickable with the padding around the button reserved for
    the right/left behavior" once the native scrollbar (above) went away. `.exp-tabs` reserves that
    padding as real scroll-padding so the strip never opens mid-tap under a chevron, and the first/
-   last tab's own `scroll-margin` keeps a tap-scrolled tab from landing partly hidden behind one. */
+   last tab's own `scroll-margin` keeps a tap-scrolled tab from landing partly hidden behind one.
+   Follow-up the same day dropped the solid accent chip: "the button with padding around the
+   chevron feels adequate (no green background needed) as long as the button size/coloration meets
+   accessibility standards" — `--accent` on transparent is the same colour `.exp-tab-active` already
+   uses at rest elsewhere in this file (already AA-vetted against `--surface`/`--bg`), and 34px ×
+   full tab height stays a real tap target with no fill required to prove it's clickable; a hover/
+   focus wash is the only background, never shown until a member actually reaches for it. */
 .exp-tabs-wrap {
   position: relative;
 }
@@ -319,34 +325,29 @@
   bottom: 2px;
   display: flex;
   align-items: center;
+  justify-content: center;
   width: 34px;
   border: 0;
+  border-radius: 6px;
+  background: transparent;
   font: inherit;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1;
-  color: var(--surface);
+  color: var(--accent);
   cursor: pointer;
 }
 .exp-tabs-chevron-left {
   left: 0;
-  justify-content: flex-start;
-  padding-left: 4px;
-  border-radius: 20px 0 0 20px;
-  background: linear-gradient(to right, var(--accent) 60%, transparent);
 }
 .exp-tabs-chevron-right {
   right: 0;
-  justify-content: flex-end;
-  padding-right: 4px;
-  border-radius: 0 20px 20px 0;
-  background: linear-gradient(to left, var(--accent) 60%, transparent);
 }
 .exp-tabs-chevron:hover {
-  filter: brightness(1.1);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 .exp-tabs-chevron:active {
-  filter: brightness(0.95);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 /* The close row's Market / Limit choice (#3407 P1 slice 3): the shell's toggle-group plus a
    narrow premium field that only appears on Limit; wraps under the name at phone width. */
