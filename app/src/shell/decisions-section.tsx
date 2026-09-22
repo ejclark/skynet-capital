@@ -21,7 +21,12 @@ export function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outc
       <span className="cycle-intent num">
         {outcome.side.toUpperCase()} {outcome.quantity} {outcome.symbol}
       </span>
-      {outcome.playbook ? <span className="chip chip-bot">{outcome.playbook}</span> : null}
+      {outcome.playbook ? (
+        <span className="chip chip-bot">
+          {outcome.playbook}
+          {outcome.playbookMode ? ` · ${outcome.playbookMode}` : ""}
+        </span>
+      ) : null}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       {outcome.resultStatus && !outcome.fill ? (
@@ -37,6 +42,14 @@ export function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outc
               — proves it wrong: {outcome.forecast.invalidator}
             </span>
           ) : null}
+        </p>
+      ) : null}
+      {outcome.guardDelta ? <p className="cycle-guard-delta">{outcome.guardDelta}</p> : null}
+      {outcome.momentum !== undefined || outcome.sentiment !== undefined ? (
+        <p className="cycle-context num">
+          {outcome.momentum !== undefined ? `momentum ${outcome.momentum.toFixed(2)}` : null}
+          {outcome.momentum !== undefined && outcome.sentiment !== undefined ? " · " : null}
+          {outcome.sentiment !== undefined ? `sentiment ${outcome.sentiment.toFixed(2)}` : null}
         </p>
       ) : null}
     </li>
