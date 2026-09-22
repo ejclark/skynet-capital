@@ -356,6 +356,32 @@ robust, alpha fragile — is the finding.
   direction call on fundamentals inside a confounded window, not about the overnight-vs-intraday
   finding itself.
 
+- **A no-short-vol posture's premise converted to a realized-volatility test, killed by realized
+  vol landing well under the anchor (FT-fomc-blackout-start-2026-09-05-1)** — added 2026-09-22 from
+  the [fomc-blackout-start-2026-09-05 close-out](events/fomc-blackout-start-2026-09-05.md). The
+  parent doc never took a direction or size across the FOMC communications-blackout corridor
+  (2026-09-05 → 09-17, `symbols: []`), but on 2026-09-05 it converted its "cheap convexity into an
+  unofficiated corridor" argument into a scoreable premise: SPX realized close-to-close annualized
+  volatility over the corridor's eight trading sessions (09-08 → 09-17) would **exceed 14.53**, the
+  VIX close the day before the gate fell. Fresh `^GSPC` daily bars (Yahoo, re-fetched 2026-09-22
+  after the standing cache bust) put realized annualized vol at **~10.4–11.1%** across three
+  conventions (sample-stdev, population-stdev, zero-mean) — 3.5 to 4 points under the line, not a
+  near miss. **Why this is a clean kill and not bad luck:** the corridor's two-sidedness did show up
+  — FedWatch hike odds ran ~68% → ~50% → ~60% pre-gate and the sibling FOMC doc scored the 09-16
+  decision as a near-90/10 hike into the statement — but it showed up in **direction**, not
+  **dispersion**: four of the eight daily closes moved under ±0.5%, and the two largest (09-11
+  +0.86%, 09-17 +1.13%) partly offset instead of compounding. VIX itself did reprice up inside the
+  window (15.84 on 09-11, 17.10 on 09-14, 17.67 intraday on 09-15, per
+  [`fomc-2026-09-16.md`](events/fomc-2026-09-16.md)), so implied vol moved the direction the posture
+  expected — realized vol, the thing actually registered, did not. **One detail that must travel
+  with the kill:** the parent stance was zero-capital and never sized to this premise, so nothing
+  was risked on it directly — but it is a real miss for the mechanism ("closing the speech channel
+  matters because the corridor's prints arrive unofficiated") the doc used to justify raising "this
+  month" Medium → High on 09-05. **What is still open:** nothing — this was the doc's only
+  registered forward test, and the event's own close-out (written 2026-09-06, before the corridor
+  had traded) already stands; the reusable finding it banked — read the Fed's speech archive, not
+  only the Board calendar — is unaffected by this kill.
+
 - **NVDA earnings-gap hold (anti-S2)** — added 2026-08-15 ([`nvda-aug-2026-print.md`](nvda-aug-2026-print.md)):
   win 9/14 vs the 60% ordinary-overnight base (p=0.486 — indistinguishable from any overnight);
   the +5.35% mean is carried entirely by four 2023-24 gaps (ex-top-4 +1.72%) against a pooled
