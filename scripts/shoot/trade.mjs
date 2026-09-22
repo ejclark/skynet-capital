@@ -1063,16 +1063,17 @@ await page.goto(`${origin}/app/trade?play=301`);
 await page.getByText("Buy to open: opens after 202 fills").waitFor();
 await shoot("trade-locked-phone");
 
-// The ladder extension (#1671): Spread is a THIRD instrument, not a fourth side/type combo — the
-// eight-node rail at phone width, and a locked 401 shows the same shared panel every other locked
-// rung does, naming 302 as the rung that opens it.
+// The ladder extension (#1671), updated (Eric, 2026-09-22 — Spread came off the Instrument toggle,
+// `ticket-nav.tsx`): a locked 401 shows the same shared `LockedPanel` every other locked rung does,
+// naming 302 as the rung that opens it — no nav segment to read the reason off any more, since the
+// multi-leg ticket carries no Instrument/Side/Type of its own (`trade.tsx`'s `headerNoNav`).
 await page.goto(`${origin}/app/trade?play=401`);
-await page.getByText("Spread: opens after 302 fills").waitFor();
+await page.getByText(/opens after your first filled 302/).waitFor();
 await shoot("trade-spread-locked-phone");
 
 // Once 302 is earned, 401 OPENS for practice even though nothing can execute yet (#1671: "a rung
-// nobody can fill yet stays locked" is about the ✓, not the door) — the multi-leg builder becomes
-// the Spread instrument's own ticket body instead of a panel under every ticket.
+// nobody can fill yet stays locked" is about the ✓, not the door) — reached directly here (a real
+// member arrives via `option-gate.tsx`'s `tkt-spread-cta` instead, once Spread left the nav).
 currentPlays = throughLongs;
 await page.goto(`${origin}/app/trade?play=401`);
 await page.getByText("Multi-leg builder").waitFor();

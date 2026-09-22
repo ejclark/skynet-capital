@@ -164,6 +164,7 @@ export function TradeGate({
   play,
   initialSymbol,
   onSymbolCommit,
+  header,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
@@ -182,6 +183,9 @@ export function TradeGate({
   readonly initialSymbol?: string;
   /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
   readonly onSymbolCommit?: (symbol: string) => void;
+  /** Account/Rung/Instrument-Side-Type — one card, not two (Eric, 2026-09-22). Forwarded to the
+   *  locked branch below too, so a locked stock rung explains itself on the same card. */
+  readonly header?: ReactElement;
 }): ReactElement {
   const [fields, setFields] = useState<TicketFields>({
     symbol: initialSymbol ?? "",
@@ -280,11 +284,12 @@ export function TradeGate({
     }
   };
 
-  if (play?.locked) return <LockedPanel play={play} />;
+  if (play?.locked) return <LockedPanel header={header} play={play} />;
 
   const busy = state.step === "reviewing" || state.step === "submitting";
   return (
     <section className="panel gate-panel" aria-label="New trade">
+      {header}
       <h2 className="panel-title">New trade</h2>
       <p className="panel-sub">
         Paper account · market, limit or stop · the gate reviews before anything is sent

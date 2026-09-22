@@ -180,11 +180,22 @@ export function gateStatus(
  */
 export function DraftOrderBuilder({
   deskId,
+  header,
+  initialSymbol,
+  initialExpiration,
   incomingLeg,
   onIncomingLegHandled,
   onLegsChange,
 }: {
   readonly deskId: string;
+  /** Account/Rung — no Instrument/Side/Type here (Eric, 2026-09-22: one card, not two — and a
+   *  spread has no single side/type of its own, `ticket-nav.tsx`'s own doc comment). */
+  readonly header?: ReactElement;
+  /** Carried over from whichever single-leg rung the `tkt-spread-cta` was clicked from
+   *  (`option-gate.tsx`) — `?symbol=`/`?exp=` survive that `onPreset("401")` call for free, so the
+   *  member doesn't retype the underlying just to tap its chain for the first leg. */
+  readonly initialSymbol?: string;
+  readonly initialExpiration?: string;
   /** A leg picked from the bench's standalone Chain section pane while this ticket is on screen
    *  (#3407 — "the chain pane adds legs on the Spread rung"; `trade.tsx`'s `chainPickLeg`). `key`
    *  changes on every distinct pick — a re-render with the same value is never re-applied, which
@@ -264,12 +275,21 @@ export function DraftOrderBuilder({
 
   return (
     <section className="panel gate-panel" aria-label="Multi-leg order builder">
+      {header}
       <h2 className="panel-title">Multi-leg builder</h2>
       <p className="panel-sub">
         Add legs from the chain below — a vertical spread is two, an iron condor is four.
       </p>
 
-      {editable ? <DraftLegForm busy={busy} legs={draft.legs} onAdd={addLeg} /> : null}
+      {editable ? (
+        <DraftLegForm
+          busy={busy}
+          legs={draft.legs}
+          onAdd={addLeg}
+          initialSymbol={initialSymbol}
+          initialExpiration={initialExpiration}
+        />
+      ) : null}
 
       {draft.legs.length > 0 ? (
         <ul className="draft-leg-list">

@@ -110,6 +110,24 @@ describe("DraftLegForm — the chain as the leg picker", () => {
     expect(added).toHaveLength(0);
   });
 
+  it("seeds the underlying from initialSymbol, with the chain up already — no retyping (Eric, 2026-09-22)", async () => {
+    // The spread CTA at the end of the single-leg ticket (`option-gate.tsx`'s `tkt-spread-cta`)
+    // carries the symbol the member already committed over to this form — a fresh mount here
+    // shouldn't make them type it again to get the chain back.
+    const added: NewLeg[] = [];
+    mount(
+      <DraftLegForm
+        busy={false}
+        onAdd={(leg) => added.push(leg)}
+        initialSymbol="NVDA"
+        initialExpiration="2026-10-16"
+      />,
+    );
+    expect(screen.getByLabelText("Underlying")).toHaveValue("NVDA");
+    fireEvent.click(await screen.findByRole("button", { name: "Pick the 180 call bid" }));
+    expect(added[0]).toMatchObject({ underlying: "NVDA", strike: 180 });
+  });
+
   it("keeps the typed fields for a symbol with no chain", async () => {
     chainAnswer = { chainNote: "no chain" };
     const added: NewLeg[] = [];

@@ -27,15 +27,23 @@ export function DraftLegForm({
   busy,
   legs = [],
   onAdd,
+  initialSymbol,
+  initialExpiration,
 }: {
   readonly busy: boolean;
   /** The draft's legs so far — their strikes are marked on the chain. */
   readonly legs?: readonly DraftLeg[];
   readonly onAdd: (leg: NewLeg) => void;
+  /** Carried over from the single-leg ticket's own `tkt-spread-cta` (`option-gate.tsx`) — seeds
+   *  both the field and the chain fetch on mount, same seeding idiom `option-gate.tsx`'s own
+   *  `initialSymbol` already uses, so the chain is up and tappable immediately instead of making
+   *  the member retype the underlying they just picked. */
+  readonly initialSymbol?: string;
+  readonly initialExpiration?: string;
 }): ReactElement {
-  const [symbol, setSymbol] = useState("");
-  const [chainSym, setChainSym] = useState("");
-  const [expiration, setExpiration] = useState("");
+  const [symbol, setSymbol] = useState(initialSymbol ?? "");
+  const [chainSym, setChainSym] = useState(initialSymbol ?? "");
+  const [expiration, setExpiration] = useState(initialExpiration ?? "");
   const [contracts, setContracts] = useState("1");
 
   const symId = useId();

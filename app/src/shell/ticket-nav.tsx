@@ -8,10 +8,14 @@ import { navForPlay, type PlayCode, playForNav, type TicketNavState } from "../l
  * one presets `?play=` and the rail above follows; `?play=` arriving from the rail or a learn
  * link presets these the other way. Two views of one state.
  *
- * Spread (#1671) is a third instrument, not a fourth side/type combination: it maps to a single
- * rung (401) with no Side/Type choice of its own — the multi-leg builder's leg form carries
- * buy/sell/put/call per leg once unlocked. Zero-DTE (501) has no ticket of its own at all; it's an
- * attribute any option order can carry, gated at review/submit rather than through this nav.
+ * Spread (#1671) is NOT an instrument segment here (Eric, 2026-09-22, repeating an earlier ask:
+ * "spread is not... it's own instrument"; a milestone-gated CTA at the end of the option ticket's
+ * own form is the one door to it now — `option-gate.tsx`'s `tkt-spread-cta`). It still maps to a
+ * single rung (401) with no Side/Type choice of its own — the multi-leg builder's leg form carries
+ * buy/sell/put/call per leg once unlocked — and `plays.ts`'s nav arithmetic keeps the "spread"
+ * instrument internally for that mapping; only the toggle that used to select it is gone. Zero-DTE
+ * (501) has no ticket of its own at all; it's an attribute any option order can carry, gated at
+ * review/submit rather than through this nav.
  *
  * Locked = visible, disabled, explained (the research condition #1461 carries): a segment whose
  * rung is locked stays on the page, disabled, with the rung that opens it named underneath —
@@ -55,7 +59,6 @@ export function TicketNav({
       segments: [
         option("Stock", { ...nav, instrument: "stock" }),
         option("Option", { ...nav, instrument: "option" }),
-        option("Spread", { ...nav, instrument: "spread" }),
       ],
     },
     // Spread has no Side/Type choice at the nav level — the multi-leg builder's own leg form
