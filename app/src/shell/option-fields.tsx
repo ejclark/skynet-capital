@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useEffect, useRef, useState } from "react";
 import { nextPrint } from "../../../src/domain/earnings-calendar";
 import type { ChainData } from "../live/options";
 import { daysToExpiry, formatExpiration } from "../live/straddle";
@@ -18,6 +19,14 @@ import { daysToExpiry, formatExpiration } from "../live/straddle";
  * decoration rather than the legacy function's HTML-string form. Tab labels print through
  * `formatExpiration` (month/day leading, year trailing, `live/straddle.ts`) — a member scans a
  * pick list by month/day first, not ISO's year-first sort order (Eric, 2026-09-22).
+ *
+ * SCROLL AFFORDANCE (Eric, 2026-09-22, picking option B off a 3-way rendered comparison — edge
+ * shadow / chevrons / progress track): the strip's `overflow-x: auto` was functionally scrollable
+ * but gave no visual sign more dates existed off either edge. Chevrons fade in per edge based on
+ * live scroll position (never both when there's nothing to scroll, never the trailing edge once
+ * scrolled all the way there), sized and coloured for real emphasis per Eric's follow-up ("more
+ * emphasis... bigger font and/or higher contrast") rather than a subtle hint — a solid accent
+ * chip, not bare text on a gradient.
  * @category trading
  */
 
@@ -46,6 +55,23 @@ export function ExpirationField({
   readonly zeroDteLocked: boolean;
   readonly zeroDteReason?: string;
 }): ReactElement {
+  // Hooks run unconditionally (the no-chain branch returns a plain `<input>` below) — the scroll
+  // ref/state are simply unused in that branch.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const updateEdges = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setEdges({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft < el.scrollWidth - el.clientWidth - 2,
+    });
+  };
+  // Re-check on every fresh chain too (a new symbol/expiration list can change whether the strip
+  // overflows at all) — `chainData?.expirations.length` is the trigger, not the array identity.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: expirations.length IS the trigger
+  useEffect(updateEdges, [chainData?.expirations.length]);
+
   if (!chainData) {
     return (
       <input
@@ -60,36 +86,54 @@ export function ExpirationField({
   }
   const next = chainData.symbol ? nextPrint(chainData.symbol, new Date().toISOString()) : undefined;
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a <fieldset>'s UA border/padding/legend chrome fights this scrolling pill strip — the ARIA group pattern is the standard alternative for a custom toggle-button group.
-    <div className="exp-tabs" role="group" aria-labelledby={`${id}-label`}>
-      {chainData.expirations.map((exp) => {
-        const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
-        const active = exp === chainData.expiration;
-        // ISO dates compare lexicographically; the print lands after the close, so same-day
-        // counts as held — mirrors `expirationPrintMark`'s exact comparison.
-        const printMark = next !== undefined && next.date <= exp;
-        const printReason = printMark
-          ? `${chainData.symbol} reports on or before this expiration — this contract lives through the print`
-          : undefined;
-        const title = [disabled ? zeroDteReason : undefined, printReason]
-          .filter((part): part is string => part !== undefined)
-          .join(" · ");
-        return (
-          <button
-            key={exp}
-            type="button"
-            className={active ? "exp-tab exp-tab-active" : "exp-tab"}
-            aria-pressed={active}
-            disabled={disabled}
-            title={title !== "" ? title : undefined}
-            onClick={() => onEdit(exp)}
-          >
-            {formatExpiration(exp)}
-            {printMark ? <span aria-hidden="true"> ⚡</span> : null}
-            {disabled ? " — locked (0DTE)" : ""}
-          </button>
-        );
-      })}
+    <div className="exp-tabs-wrap">
+      {/* biome-ignore lint/a11y/useSemanticElements: a <fieldset>'s UA border/padding/legend chrome fights this scrolling pill strip — the ARIA group pattern is the standard alternative for a custom toggle-button group. */}
+      <div
+        className="exp-tabs"
+        role="group"
+        aria-labelledby={`${id}-label`}
+        ref={scrollRef}
+        onScroll={updateEdges}
+      >
+        {chainData.expirations.map((exp) => {
+          const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
+          const active = exp === chainData.expiration;
+          // ISO dates compare lexicographically; the print lands after the close, so same-day
+          // counts as held — mirrors `expirationPrintMark`'s exact comparison.
+          const printMark = next !== undefined && next.date <= exp;
+          const printReason = printMark
+            ? `${chainData.symbol} reports on or before this expiration — this contract lives through the print`
+            : undefined;
+          const title = [disabled ? zeroDteReason : undefined, printReason]
+            .filter((part): part is string => part !== undefined)
+            .join(" · ");
+          return (
+            <button
+              key={exp}
+              type="button"
+              className={active ? "exp-tab exp-tab-active" : "exp-tab"}
+              aria-pressed={active}
+              disabled={disabled}
+              title={title !== "" ? title : undefined}
+              onClick={() => onEdit(exp)}
+            >
+              {formatExpiration(exp)}
+              {printMark ? <span aria-hidden="true"> ⚡</span> : null}
+              {disabled ? " — locked (0DTE)" : ""}
+            </button>
+          );
+        })}
+      </div>
+      {edges.left ? (
+        <span className="exp-tabs-chevron exp-tabs-chevron-left" aria-hidden="true">
+          ‹
+        </span>
+      ) : null}
+      {edges.right ? (
+        <span className="exp-tabs-chevron exp-tabs-chevron-right" aria-hidden="true">
+          ›
+        </span>
+      ) : null}
     </div>
   );
 }

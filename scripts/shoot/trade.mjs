@@ -804,6 +804,21 @@ await shoot("trade-quote-options-phone");
 await page.getByRole("button", { name: "Sep 9, 2026" }).waitFor();
 await shoot("trade-exp-tabs-phone");
 
+// The scroll affordance (Eric, 2026-09-22): "the dates are scrollable... but there is no visual
+// feedback suggesting there is scrollable content", then "I like option B [chevrons], but feel
+// like more emphasis needs placed on the chevron... bigger font and/or higher contrast" on a
+// 3-way rendered comparison. A solid accent chip per edge, shown only while that edge still has
+// something to scroll to — before/after proves both: the strip opens scrolled fully left (right
+// chevron only), then scrolling it to the end drops the right chevron and raises the left one.
+const shootChevron = shooter(page, resolve("docs/shots/exp-tabs-chevron"));
+await shootChevron("exp-tabs-chevron-start-phone");
+await page.evaluate(() => {
+  const el = document.querySelector(".exp-tabs");
+  if (el) el.scrollLeft = el.scrollWidth;
+});
+await page.waitForTimeout(150);
+await shootChevron("exp-tabs-chevron-end-phone");
+
 // Switching expirations no longer collapses the table (Eric, 2026-09-22): before
 // `placeholderData: keepPreviousData` (`option-gate.tsx`, `chain-straddle.tsx`), a tab click
 // dropped `chainData` for a beat, unmounting the whole chain table down to a bare "Looking up
