@@ -4,6 +4,11 @@ import type { DecisionCyclesPage, DecisionCycleView } from "./decision-json-view
 import type { DeskActivityEvent } from "./desk-json-view.js";
 import { equityDrawdown } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-record.js";
+import {
+  reasoningForOrder,
+  type WireReasoningDeps,
+  type WireTradeReasoning,
+} from "./wire-reasoning.js";
 
 /**
  * THE THESIS DRAWER'S READ-ONLY SHELL, AS DATA (#3186 slice 4a) — `/api/desk/:id/thesis`. A bot's
@@ -42,6 +47,10 @@ export interface ThesisMarker {
   readonly label: string;
   /** The Activity row this marker cross-links to (`id="act-<orderId>"` on `activity-table.tsx`). */
   readonly activityAnchor: string;
+  /** The decision behind this fill, joined by exact order id (same lookup the `/wire` feed
+   *  already uses). Absent for a fill that predates the audit trail, or when no lookup is
+   *  configured — never fabricated. */
+  readonly reasoning?: WireTradeReasoning;
 }
 
 export interface ThesisHealth {
@@ -127,17 +136,24 @@ function healthFor(samples: readonly EquitySample[]): ThesisHealth {
 /** Buy → entry, sell → exit, oldest first, numbered — a 2-zone simplification of the issue's 5-zone
  *  taxonomy (entry/take-profit/hold/wait-event-dependent/avoid), which nothing in this repo
  *  classifies yet (see the plan). Only filled events carry a real marker. */
-function markersFrom(events: readonly DeskActivityEvent[]): ThesisMarker[] {
+function markersFrom(
+  events: readonly DeskActivityEvent[],
+  findByOrderId: WireReasoningDeps["findByOrderId"],
+): ThesisMarker[] {
   const filled = [...events]
     .filter((e) => e.filled > 0)
     .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-  return filled.map((event, index) => ({
-    n: index + 1,
-    kind: event.side === "sell" ? "exit" : "entry",
-    at: event.at,
-    label: `${event.side === "sell" ? "Sell" : "Buy"} ${event.filled} ${event.display}`,
-    activityAnchor: `act-${event.orderId}`,
-  }));
+  return filled.map((event, index) => {
+    const reasoning = reasoningForOrder(event.orderId, { findByOrderId });
+    return {
+      n: index + 1,
+      kind: event.side === "sell" ? "exit" : "entry",
+      at: event.at,
+      label: `${event.side === "sell" ? "Sell" : "Buy"} ${event.filled} ${event.display}`,
+      activityAnchor: `act-${event.orderId}`,
+      ...(reasoning ? { reasoning } : {}),
+    };
+  });
 }
 
 function equityPoints(samples: readonly EquitySample[]): ThesisEquityPoint[] {
@@ -151,6 +167,7 @@ export function thesisView(
   decisions: DecisionCyclesPage,
   activity: readonly DeskActivityEvent[],
   equitySamples: readonly EquitySample[],
+  findByOrderId?: WireReasoningDeps["findByOrderId"],
 ): ThesisView {
   const thesis = personaThesis(personaId);
   return {
@@ -159,6 +176,6 @@ export function thesisView(
     call: callFor(decisions),
     health: healthFor(equitySamples),
     equity: equityPoints(equitySamples),
-    markers: markersFrom(activity),
+    markers: markersFrom(activity, findByOrderId),
   };
 }

@@ -210,4 +210,39 @@ describe("thesisView", () => {
       { t: "2026-09-11T00:00:00Z", value: 99_000 },
     ]);
   });
+
+  it("attaches reasoning to a marker when findByOrderId resolves the fill's decision", () => {
+    const guarded = intent({ strategy: "sauron-panic-claim", expectation: "expect a bounce" });
+    const view = thesisView(
+      "sauron",
+      { cycles: [] },
+      [activityEvent({ orderId: "ord-1" })],
+      [],
+      (orderId) => (orderId === "ord-1" ? { record: record(), intent: guarded } : undefined),
+    );
+    expect(view.markers[0]?.reasoning).toEqual({
+      reason: "momentum continuation above the shelf",
+      strategy: "sauron-panic-claim",
+      expectation: "expect a bounce",
+    });
+  });
+
+  it("omits reasoning when no decision resolves for the fill's order id, or no lookup is given", () => {
+    const unresolved = thesisView(
+      "sauron",
+      { cycles: [] },
+      [activityEvent({ orderId: "ord-1" })],
+      [],
+      () => undefined,
+    );
+    expect(unresolved.markers[0]).not.toHaveProperty("reasoning");
+
+    const noLookup = thesisView(
+      "sauron",
+      { cycles: [] },
+      [activityEvent({ orderId: "ord-1" })],
+      [],
+    );
+    expect(noLookup.markers[0]).not.toHaveProperty("reasoning");
+  });
 });
