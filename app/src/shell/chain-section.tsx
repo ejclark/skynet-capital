@@ -118,7 +118,12 @@ export function ChainSection({
   );
   return (
     <section className="chain-section" aria-label={`${symbol} options chain`}>
-      <QuoteHeader symbol={symbol} />
+      <QuoteHeader
+        symbol={symbol}
+        provided={
+          chain.data && "chainNote" in chain.data ? undefined : (answer?.quote ?? "pending")
+        }
+      />
       <ChainStraddle
         chainSym={symbol}
         optionType={optionType}

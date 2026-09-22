@@ -1,6 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
 import { EXPIRATION_PATTERN, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import { quoteView } from "../trading/quote-view.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { sendJson } from "./page-shell.js";
 
@@ -58,10 +59,15 @@ export async function serveChain(
       requestedExp && expirations.includes(requestedExp)
         ? requestedExp
         : (expirations[0] as string);
-    const [chain, spot] = await Promise.all([
+    // One snapshot read serves both the chain's spot and the quote header (#3299 slice 1): the
+    // ticket used to fetch the same underlying twice — `/api/trade/quote` for the header and this
+    // route's `getUnderlyingPrice` for the divider row. The header now reads `quote` off the chain
+    // answer. `getUnderlyingPrice` stays as the fallback for a snapshot with no prior close.
+    const [chain, underlying] = await Promise.all([
       client.getChain(symbol, expiration, type),
-      client.getUnderlyingPrice(symbol),
+      client.getUnderlyingQuote(symbol),
     ]);
+    const spot = underlying?.last ?? (await client.getUnderlyingPrice(symbol));
     // Quote coverage (#3407 P2): how many strikes the data host actually quoted, so the chain
     // can say "greeks from the indicative feed · 38 of 41 strikes" instead of a silent "—".
     const quoted = chain.filter((row) => row.quoteSource !== undefined).length;
@@ -71,6 +77,7 @@ export async function serveChain(
       expirations,
       expiration,
       ...(spot !== undefined ? { spot } : {}),
+      ...(underlying ? { quote: quoteView(symbol, underlying) } : {}),
       quotes: {
         source: quoted > 0 ? "indicative" : "unavailable",
         quoted,

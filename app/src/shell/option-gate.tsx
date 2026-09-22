@@ -412,7 +412,17 @@ export function OptionGate({
       {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
           consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
           slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
-      <QuoteHeader symbol={chainSym} />
+      {/* One snapshot, two readers (#3299 slice 1): the header reads the quote off the chain answer
+          instead of a second `/api/trade/quote` round trip. A degraded chain (unlinked, no options,
+          failed) hands the header back its own fetch, so a stock with no listed options still quotes. */}
+      <QuoteHeader
+        symbol={chainSym}
+        provided={
+          !symbolCommitted || (chain.data && "chainNote" in chain.data)
+            ? undefined
+            : (chainData?.quote ?? "pending")
+        }
+      />
       <div className="gate-fields tkt-fields">
         <SymbolField
           id={symId}

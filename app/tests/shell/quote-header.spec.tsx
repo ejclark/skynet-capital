@@ -11,8 +11,12 @@ import { QuoteHeader } from "../../src/shell/quote-header";
  */
 
 let nextAnswer: QuoteAnswer = { quoteNote: "unset" };
+let fetches = 0;
 rstest.mock("../../src/live/quote", () => ({
-  fetchQuote: () => Promise.resolve(nextAnswer),
+  fetchQuote: () => {
+    fetches += 1;
+    return Promise.resolve(nextAnswer);
+  },
 }));
 
 function withClient(node: ReactElement) {
@@ -92,5 +96,26 @@ describe("QuoteHeader", () => {
     const header = container.querySelector(".quote-header");
     expect(header?.getAttribute("aria-live")).toBe("polite");
     expect(header?.querySelector(".quote-note")).not.toBeNull();
+  });
+
+  it("renders a provided answer as-is and issues no fetch of its own (#3299 slice 1)", () => {
+    fetches = 0;
+    render(
+      withClient(
+        <QuoteHeader
+          symbol="NVDA"
+          provided={{ symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" }}
+        />,
+      ),
+    );
+    expect(screen.getByText("$181.32")).toBeInTheDocument();
+    expect(fetches).toBe(0);
+  });
+
+  it("renders nothing while the providing surface is pending, and still does not fetch", () => {
+    fetches = 0;
+    const { container } = render(withClient(<QuoteHeader symbol="NVDA" provided="pending" />));
+    expect(container.querySelector(".quote-header")).toBeEmptyDOMElement();
+    expect(fetches).toBe(0);
   });
 });
