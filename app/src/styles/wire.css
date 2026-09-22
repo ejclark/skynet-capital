@@ -324,3 +324,30 @@
 .council-entries li span {
   line-height: 1.5;
 }
+.council-play-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.council-play-picker select {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11.5px;
+  font-family: var(--sans);
+}
+/* A word, not a hue, carries the tag — colorblind-safe by construction (CLAUDE.md → BRAND.md). */
+.council-play-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}

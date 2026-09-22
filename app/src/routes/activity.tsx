@@ -240,8 +240,12 @@ function CouncilSection(): ReactElement {
   const queryClient = useQueryClient();
   const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
   const [draft, setDraft] = useState<string | undefined>();
+  // "" means "no play tagged" — undefined means "hasn't touched the selector", so it still
+  // prefills from `mine` after a resubmit the same way the text draft does.
+  const [playDraft, setPlayDraft] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | undefined>();
+  const playSelectId = useId();
 
   if (council.isPending) return <p className="note">Tuning in…</p>;
   if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
@@ -251,14 +255,16 @@ function CouncilSection(): ReactElement {
   }
 
   const text = draft ?? data.mine?.text ?? "";
+  const play = playDraft ?? data.mine?.playbookId ?? "";
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setNote(undefined);
     try {
-      const result = await submitThesis(text);
+      const result = await submitThesis(text, play || undefined);
       if (result.ok) {
         setDraft(undefined);
+        setPlayDraft(undefined);
         setNote(undefined);
         await queryClient.invalidateQueries({ queryKey: ["council"] });
       } else {
@@ -295,6 +301,24 @@ function CouncilSection(): ReactElement {
           {busy ? "Saving…" : data.mine ? "Update" : "Commit"}
         </button>
       </form>
+      {data.plays.length > 0 ? (
+        <p className="council-play-picker">
+          <label htmlFor={playSelectId}>Tag your bot's play (optional)</label>
+          <select
+            id={playSelectId}
+            value={play}
+            onChange={(e) => setPlayDraft(e.target.value)}
+            disabled={busy}
+          >
+            <option value="">No play tagged</option>
+            {data.plays.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.id} · {p.symbol}
+              </option>
+            ))}
+          </select>
+        </p>
+      ) : null}
       <p className="council-count num">{COUNCIL_MAX_CHARS - text.length} left</p>
       {note ? <p className="set-err">{note}</p> : null}
       {data.entries.length === 0 ? (
@@ -304,6 +328,9 @@ function CouncilSection(): ReactElement {
           {data.entries.map((entry) => (
             <li key={entry.id}>
               <span>{entry.text}</span>
+              {entry.playbookId ? (
+                <span className="council-play-tag">{entry.playbookId}</span>
+              ) : null}
             </li>
           ))}
         </ul>
