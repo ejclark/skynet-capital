@@ -412,6 +412,23 @@ robust, alpha fragile — is the finding.
   level tested, including 2bps/side.
 - **S3 on MRVL** — absent, not inverted (corrected +0.45%/50% vs an ordinary session's +0.01%/51%).
 
+- **A pipeline-bypass claim read as disruption relief, when the next month's data showed the
+  disruption deepening instead (FT-opec-plus-meeting-2026-09-06-1)** — added 2026-09-22 from the
+  [opec-plus-meeting-2026-09-06 close-out](events/opec-plus-meeting-2026-09-06.md), scored under
+  the `forward-test-due` mode. The ledger's D-0 row found Saudi Arabia's East-West pipeline (~7
+  mb/d to Yanbu) and the UAE's ADCOP line (~1.8 mb/d to Fujairah) both bypass the Strait of Hormuz
+  entirely, and registered the hypothesis that this bypass capacity should be visibly absorbing the
+  chokepoint disruption at the margin — predicting the EIA STEO's August 2026 Middle East shut-in
+  estimate would fall below the 5.5 mb/d it had reported for July. The September STEO (published
+  on schedule 2026-09-09, primary Table 2 read in the sibling
+  [`eia-steo-2026-09-09`](events/eia-steo-2026-09-09.md) close-out) instead reported **6.7 mb/d for
+  August** — shut-ins rose, not fell, even with both bypass routes already live. **One detail that
+  must travel with the kill:** the bypass pipelines are a real capacity fact and the parent
+  stand-aside stance was never contingent on this test — nothing was risked on it. What breaks is
+  the narrower claim that bypass capacity was already showing up as disruption relief in the
+  agency's own monthly read; the next OPEC-adjacent ledger should not re-cite the bypass finding as
+  evidence the chokepoint's bite is easing without checking the shut-in series again.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar

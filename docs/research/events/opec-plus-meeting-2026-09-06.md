@@ -505,3 +505,14 @@ what everyone already expected.
    `proposals/opec-plus-meeting-2026-10-04.from-opec-plus-meeting-2026-09-06.json`, `estimate`.
 3. **Kill switches need an owner past the close-out window** (§4), and **a bypass claim is a
    capacity claim, never a safety claim** (§3).
+
+### 8. Forward test scored (2026-09-22, `forward-test-due`)
+
+**FT-opec-plus-meeting-2026-09-06-1 — killed.** The September STEO (published on schedule
+2026-09-09, primary reading recorded in the sibling
+[`eia-steo-2026-09-09`](eia-steo-2026-09-09.md) close-out) reports Middle East shut-ins at **6.7
+mb/d for August 2026** — at/above the registered 5.5 mb/d kill threshold, not below it. §3's bypass
+finding (Yanbu ~7 mb/d, ADCOP ~1.8 mb/d live capacity) is unaffected as a capacity fact, but the
+test it motivated — that bypass would be visibly absorbing the disruption at the margin — did not
+hold: shut-ins rose month-over-month instead of falling. This is a scoring note only; no Call,
+Confidence, or prior row above is edited, and this is not a second verdict on the event.
