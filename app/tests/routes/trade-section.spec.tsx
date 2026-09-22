@@ -200,3 +200,86 @@ describe("/trade section switch", () => {
     expect(router.state.location.search).toMatchObject({ section: "chart", symbol: "NVDA" });
   });
 });
+
+describe("/trade the docked bench (#3407, Workbench slice 4b)", () => {
+  /** `useBenchWidth` reads `matchMedia("(min-width: 1280px)")`; happy-dom has none, which is the
+   *  folded default every case above relies on. Dock by installing one that matches. */
+  function dock(matches: boolean) {
+    const listeners = new Set<() => void>();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: () => ({
+        matches,
+        addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+        removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+      }),
+    });
+    return () => {
+      Reflect.deleteProperty(window, "matchMedia");
+    };
+  }
+
+  it("docks every pane at the bench width and drops the switch from the rail", async () => {
+    const undock = dock(true);
+    try {
+      mountTrade("/trade?symbol=NVDA");
+      await waitFor(() =>
+        expect(
+          screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
+        ).toBeInTheDocument(),
+      );
+      // the four panes, each labelled like the switch button it stands in for
+      for (const name of ["Ticket", "Chain", "Chart", "Orders"]) {
+        expect(screen.getByRole("region", { name })).toBeInTheDocument();
+      }
+      expect(
+        await screen.findByText("Fixture bars note — the chart section is here."),
+      ).toBeInTheDocument();
+      expect(await screen.findByText("The chain for NVDA is unreachable.")).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Working orders" })).toBeInTheDocument();
+      // no switch: docked, there is nothing exclusive left to choose
+      expect(screen.queryByRole("button", { name: "Chart" })).not.toBeInTheDocument();
+      expect(screen.queryByText("On this page")).not.toBeInTheDocument();
+    } finally {
+      undock();
+    }
+  });
+
+  it("marks the pane ?section= names instead of choosing it", async () => {
+    const undock = dock(true);
+    try {
+      mountTrade("/trade?section=orders");
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Working orders" })).toBeInTheDocument(),
+      );
+      expect(screen.getByRole("region", { name: "Orders" })).toHaveAttribute(
+        "data-current",
+        "true",
+      );
+      expect(screen.getByRole("region", { name: "Ticket" })).not.toHaveAttribute("data-current");
+      // the ticket is still on the page — docked, `?section=` scrolls, it never hides
+      expect(
+        screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
+      ).toBeInTheDocument();
+    } finally {
+      undock();
+    }
+  });
+
+  it("folds below the bench width — the switch is back and the panes are exclusive", async () => {
+    const undock = dock(false);
+    try {
+      mountTrade("/trade");
+      await waitFor(() =>
+        expect(
+          screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
+        ).toBeInTheDocument(),
+      );
+      expect(screen.getByRole("button", { name: "Chart" })).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Chain" })).not.toBeInTheDocument();
+    } finally {
+      undock();
+    }
+  });
+});

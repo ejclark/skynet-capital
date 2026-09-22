@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { normalizeExpiration } from "../live/expiration";
 import { fetchPlays, type PlayInfo, type PlaysIndex } from "../live/options";
 import type { PlayCode } from "../live/plays";
@@ -21,6 +21,7 @@ import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { TicketNav } from "../shell/ticket-nav";
 import { TradeGate } from "../shell/trade-gate";
+import { useBenchWidth } from "../shell/use-bench-width";
 
 /**
  * THE TRADE TICKET (#738, live-review round; options since phase 10b) — the dedicated trading
@@ -47,13 +48,19 @@ import { TradeGate } from "../shell/trade-gate";
  * of nested inside `DeskTicket`. Every ticket panel (`.gate-panel`) matches the ladder's own
  * `--col-wide` cap now too (`gate.css`) — "consistent section widths" was the same ask.
  *
- * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds two SHAPES
- * of data for one symbol — the ticket and its daily chart — so the rail carries the section
- * switch, exclusive at every width, URL-stateful via `?section=`. "ticket" is the default and the
- * untyped state (the param is omitted when it's chosen), so a member who never touches the switch
- * sees exactly the ticket they always have. The chart reads the same `?symbol=` the ticket commits
- * — no second symbol input; with none committed, `ChartSection` says so and the Ticket section is
- * where one gets picked.
+ * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds four SHAPES
+ * of data for one symbol and one account — the ticket, its daily chart, the options chain and the
+ * account's book — so the rail carries the section switch, URL-stateful via `?section=`. "ticket"
+ * is the default and the untyped state (the param is omitted when it's chosen), so a member who
+ * never touches the switch sees exactly the ticket they always have. The chart and the chain read
+ * the same `?symbol=` the ticket commits — no second symbol input.
+ *
+ * THE BENCH (#3407, the Workbench pick; frame.tsx → "ONE COMPOSITION OF SECTIONS"): below the
+ * bench width the sections are exclusive, as above. At the bench width (`useBenchWidth`, 1280px)
+ * they DOCK — ticket left, chain over chart right, the book across the bottom — the switch leaves
+ * the rail, the ticket's inline chain table yields to the chain pane, and `?section=` names the
+ * pane to scroll to. The panes keep talking through the URL exactly as when folded (`?strike=`,
+ * `?exp=`, `?play=`), which is what lets one code path serve both.
  */
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
@@ -137,6 +144,7 @@ function DeskTicket({
   onStrikeCommit,
   initialExpiration,
   onExpirationCommit,
+  hideChain = false,
 }: {
   readonly desk: string;
   readonly code: string;
@@ -163,6 +171,8 @@ function DeskTicket({
   /** `?exp=` (slice 4a) — seeds the options ticket's expiration; changes commit back. */
   readonly initialExpiration?: string;
   readonly onExpirationCommit?: (expiration: string) => void;
+  /** Docked (slice 4b): the chain pane beside the ticket replaces the ticket's inline table. */
+  readonly hideChain?: boolean;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
@@ -204,6 +214,7 @@ function DeskTicket({
           onStrikeCommit={onStrikeCommit}
           initialExpiration={initialExpiration}
           onExpirationCommit={onExpirationCommit}
+          hideChain={hideChain}
           plays={plays.data?.plays ?? []}
           onPreset={onPreset}
         />
@@ -224,22 +235,7 @@ function DeskTicket({
   );
 }
 
-/** The pane the section switch chose — one of the bench's tools (Workbench slice 2): the ticket
- *  (default), the chart, or the chain. Split out of `TradePage` for the house complexity budget. */
-function Stage({
-  section,
-  symbol,
-  play,
-  strike,
-  expiration,
-  desk,
-  plays,
-  onChainPick,
-  onExpirationCommit,
-  onPreset,
-  onSymbolCommit,
-  onStrikeCommit,
-}: {
+interface StageProps {
   readonly section: TradeSection;
   readonly symbol: string;
   readonly play: string;
@@ -252,10 +248,23 @@ function Stage({
   readonly onPreset: (code: PlayCode) => void;
   readonly onSymbolCommit: (symbol: string) => void;
   readonly onStrikeCommit: (strike: string) => void;
+}
+
+/** One of the bench's tools by id — the same element whether it is the folded stage's only pane
+ *  or one pane of the docked bench, so both layouts run one code path. */
+function Pane({
+  id,
+  docked,
+  props,
+}: {
+  readonly id: TradeSection;
+  readonly docked: boolean;
+  readonly props: StageProps;
 }): ReactElement {
-  if (section === "chart") return <ChartSection symbol={symbol} />;
-  if (section === "orders") return <OrdersSection deskId={desk} />;
-  if (section === "chain") {
+  const { symbol, play, strike, expiration, desk, plays } = props;
+  if (id === "chart") return <ChartSection symbol={symbol} />;
+  if (id === "orders") return <OrdersSection deskId={desk} />;
+  if (id === "chain") {
     return (
       <ChainSection
         symbol={symbol}
@@ -263,8 +272,8 @@ function Stage({
         strike={strike}
         plays={plays}
         initialExpiration={expiration}
-        onExpirationChange={onExpirationCommit}
-        onPick={onChainPick}
+        onExpirationChange={props.onExpirationCommit}
+        onPick={props.onChainPick}
       />
     );
   }
@@ -272,14 +281,91 @@ function Stage({
     <DeskTicket
       desk={desk}
       code={play}
-      onPreset={onPreset}
+      onPreset={props.onPreset}
       initialSymbol={symbol || undefined}
-      onSymbolCommit={onSymbolCommit}
+      onSymbolCommit={props.onSymbolCommit}
       initialStrike={strike || undefined}
-      onStrikeCommit={onStrikeCommit}
+      onStrikeCommit={props.onStrikeCommit}
       initialExpiration={expiration || undefined}
-      onExpirationCommit={onExpirationCommit}
+      onExpirationCommit={props.onExpirationCommit}
+      hideChain={docked}
     />
+  );
+}
+
+/** One pane of the bench, docked or folded: labelled like the switch button it stands in for
+ *  only when docked (folded, the switch already names it), and marked when `?section=` names it
+ *  (the mark is a bar as well as the accent — shape, not hue alone). */
+function BenchPane({
+  id,
+  className,
+  docked,
+  current,
+  props,
+}: {
+  readonly id: TradeSection;
+  readonly className?: string;
+  readonly docked: boolean;
+  readonly current: boolean;
+  readonly props: StageProps;
+}): ReactElement {
+  const label = SECTIONS.find((s) => s.id === id)?.label ?? id;
+  return (
+    <section
+      id={`bench-${id}`}
+      className={className ? `bench-pane ${className}` : "bench-pane"}
+      data-current={current ? "true" : undefined}
+      aria-label={label}
+    >
+      {docked ? <p className="bench-pane-title">{label}</p> : null}
+      <Pane id={id} docked={docked} props={props} />
+    </section>
+  );
+}
+
+/** THE BENCH (Workbench slices 2–4b, `bench.css`). Folded, it shows the one pane the switch
+ *  chose; docked, every pane at once — ticket left, chain over chart right, the book across the
+ *  bottom — and `?section=` names the pane to scroll to instead of choosing it. ONE TREE for both:
+ *  each pane keeps its slot whether or not its siblings render, so a window resized across the
+ *  bench width docks and folds around a ticket mid-entry without remounting it (React keeps state
+ *  by position; a separate folded component would drop a half-typed order on every crossing). */
+function Bench({
+  docked,
+  section,
+  asked,
+  props,
+}: {
+  readonly docked: boolean;
+  readonly section: TradeSection;
+  readonly asked?: TradeSection;
+  readonly props: StageProps;
+}): ReactElement {
+  useEffect(() => {
+    if (!(docked && asked)) return;
+    document.getElementById(`bench-${asked}`)?.scrollIntoView({ block: "start" });
+  }, [docked, asked]);
+  const shows = (id: TradeSection) => docked || section === id;
+  const pane = (id: TradeSection, className?: string) =>
+    shows(id) ? (
+      <BenchPane
+        id={id}
+        className={className}
+        docked={docked}
+        current={docked && asked === id}
+        props={props}
+      />
+    ) : null;
+  return (
+    <div className={docked ? "bench bench-docked" : "bench"}>
+      {pane("ticket", "bench-ticket")}
+      {shows("chain") || shows("chart") ? (
+        <div className="bench-side">
+          {pane("chain")}
+          {pane("chart")}
+        </div>
+      ) : null}
+      {pane("orders", "bench-orders")}
+    </div>
   );
 }
 
@@ -287,6 +373,7 @@ function TradePage(): ReactElement {
   const { desk, play, symbol, strike, exp, section: askedSection } = Route.useSearch();
   const navigate = Route.useNavigate();
   const section = resolveSection(SECTIONS, askedSection);
+  const docked = useBenchWidth();
   const onSection = (next: TradeSection) =>
     void navigate({
       search: (prev) => ({ ...prev, section: next === "ticket" ? undefined : next }),
@@ -373,6 +460,20 @@ function TradePage(): ReactElement {
   const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
     | string
     | undefined;
+  const stageProps: StageProps = {
+    section,
+    symbol: symbol ?? "",
+    play: play ?? "101",
+    strike: strike ?? "",
+    expiration: exp ?? "",
+    desk: activeDesk ?? "",
+    plays: plays.data?.plays,
+    onChainPick,
+    onExpirationCommit: commitExpiration,
+    onPreset: (code) => void navigate({ search: (prev) => ({ ...prev, play: code }) }),
+    onSymbolCommit: commitSymbol,
+    onStrikeCommit: commitStrike,
+  };
   // #784 naming pass: no second rail item here yet. The Trading Outpost link that used to sit
   // below "The ticket" was removed on the belief its content was superseded by the Playbook
   // Store — #3333's slice-8 audit found that claim false (different features entirely) and
@@ -386,8 +487,14 @@ function TradePage(): ReactElement {
         Trade
       </span>
       <hr />
-      <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
-      <hr />
+      {/* Docked, every pane is already on the page — the switch would be a control with nothing
+          to choose (frame.tsx: "The section switch renders only when folded"). */}
+      {docked ? null : (
+        <>
+          <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
+          <hr />
+        </>
+      )}
       {activeDesk ? (
         <Link to="/u/$id" params={{ id: activeDesk }}>
           ← Back to account
@@ -419,20 +526,7 @@ function TradePage(): ReactElement {
             accounts={accounts}
             onDeskChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
           />
-          <Stage
-            section={section}
-            symbol={symbol ?? ""}
-            play={play ?? "101"}
-            strike={strike ?? ""}
-            expiration={exp ?? ""}
-            onExpirationCommit={commitExpiration}
-            desk={activeDesk}
-            plays={plays.data?.plays}
-            onChainPick={onChainPick}
-            onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
-            onSymbolCommit={commitSymbol}
-            onStrikeCommit={commitStrike}
-          />
+          <Bench docked={docked} section={section} asked={askedSection} props={stageProps} />
         </>
       ) : null}
     </PageFrame>

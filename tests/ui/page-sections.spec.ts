@@ -129,5 +129,16 @@ describe("page sections", () => {
     it("gives Trade the same switch component — the bench folds to it (#3407)", () => {
       expect(read("app/src/routes/trade.tsx")).toContain("SectionSwitch");
     });
+
+    it("docks Trade's sections at one bench width and hides the switch there (#3407 slice 4b)", () => {
+      const trade = read("app/src/routes/trade.tsx");
+      // one breakpoint, owned by the hook — never a second media query in the route
+      expect(trade).toContain("useBenchWidth");
+      expect(read("app/src/shell/use-bench-width.ts")).toContain("BENCH_MIN_WIDTH = 1280");
+      // the switch renders only when folded (frame.tsx's doctrine)
+      expect(trade).toMatch(/docked \? null : \(\s*<>\s*<SectionSwitch/);
+      // the docked grid is a stylesheet of its own, imported by the index
+      expect(read("app/src/styles/index.css")).toContain("./bench.css");
+    });
   });
 });

@@ -13,6 +13,7 @@ import {
   submitOption,
 } from "../live/options";
 import { navForPlay, type PlayCode, playForNav } from "../live/plays";
+import { formatExpiration } from "../live/straddle";
 import { ChainStraddle } from "./chain-straddle";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
@@ -89,6 +90,7 @@ export function OptionGate({
   initialExpiration,
   onExpirationCommit,
   onStrikeCommit,
+  hideChain = false,
   plays,
   onPreset,
 }: {
@@ -112,6 +114,10 @@ export function OptionGate({
    *  changes it here, so the chain pane follows. */
   readonly initialExpiration?: string;
   readonly onExpirationCommit?: (expiration: string) => void;
+  /** The docked bench (#3407, slice 4b) renders the chain as its own pane beside this ticket, so
+   *  the ticket's inline chain table would be the same table twice: hide it and keep the
+   *  expiration field in the grid. The chain QUERY still runs — it resolves the contract. */
+  readonly hideChain?: boolean;
   /** Fires on every strike change that STICKS (review fix — not just a rung-switching chain pick),
    *  so the route can keep `?strike=` honest: a same-rung or rung-switching chain-cell click calls
    *  it immediately, a hand-typed strike calls it on blur (see `StrikeField`'s `onCommit`). A
@@ -132,6 +138,15 @@ export function OptionGate({
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
   const [expiration, setExpiration] = useState(initialExpiration ?? "");
   const [strike, setStrike] = useState(initialStrike ?? "");
+  // While DOCKED (slice 4b) this ticket stays mounted when the chain pane beside it writes
+  // `?strike=` / `?exp=`, so the seeds above are not enough: follow the route while mounted. A
+  // value this ticket committed itself comes back equal and is a no-op, so no loop.
+  useEffect(() => {
+    if (initialStrike !== undefined && initialStrike !== "") setStrike(initialStrike);
+  }, [initialStrike]);
+  useEffect(() => {
+    if (initialExpiration !== undefined) setExpiration(initialExpiration);
+  }, [initialExpiration]);
   /** Bumped on every chain-originated strike pick — flashes the Strike field below (see
    *  `pickStrikeAndCommit`). A counter, not a boolean, so two picks in a row each re-trigger the
    *  flash even if the field never stopped flashing between them. */
@@ -413,12 +428,25 @@ export function OptionGate({
           }}
         />
         {showFields && !chainData ? expirationField : null}
+        {showFields && chainData && hideChain ? (
+          // Docked (slice 4b): the chain pane beside this ticket carries the expiration tabs, and
+          // its browse writes `?exp=` which this ticket follows — a second strip here would be the
+          // same control twice (frame.tsx: "one of them is noise"). The ticket shows the contract's
+          // month as a read-out instead, and says where to change it.
+          <div className="field">
+            <span className="tkt-exp-docked-label">Expiration</span>
+            <p className="tkt-exp-docked" aria-live="polite">
+              <b>{formatExpiration(chainData.expiration)}</b>
+              <span className="tkt-exp-docked-hint"> · pick another on the chain</span>
+            </p>
+          </div>
+        ) : null}
       </div>
       {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
           full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
           strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
           handles sitting here — it did before this slice moved the chain table up the page too. */}
-      {chainData ? (
+      {chainData && !hideChain ? (
         <ChainStraddle
           chainSym={chainSym}
           optionType={optionType}
