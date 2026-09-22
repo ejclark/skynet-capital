@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
@@ -148,6 +148,13 @@ export function OptionGate({
     queryKey: ["chain", chainSym, optionType, expiration],
     queryFn: () => fetchChain(chainSym, optionType, expiration || undefined),
     enabled: chainSym !== "",
+    // Keep the outgoing expiration's rows on screen while the new one loads (Eric, 2026-09-22:
+    // an expiration-tab click used to drop `chainData` for a beat, collapsing the whole chain
+    // table — Symbol field and a bare "Looking up options…" line, then a wildly different-height
+    // table snapping back in). `chain.isFetching` still flips true/false around the refetch, so a
+    // caller that wants a "this is stale" cue can use it — `isPending`/`data === undefined` no
+    // longer does, only a genuinely fresh mount does now.
+    placeholderData: keepPreviousData,
   });
   const chainData = chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
   const chainNote = chain.data && "chainNote" in chain.data ? chain.data.chainNote : undefined;
@@ -400,6 +407,7 @@ export function OptionGate({
           strike={strike}
           expirationField={expirationField}
           heldBadges={heldBadges}
+          pending={chain.isFetching}
           onPickStrike={pickStrikeAndCommit}
           onPickSide={onChainCellPick}
         />

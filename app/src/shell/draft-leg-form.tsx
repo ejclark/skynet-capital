@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
@@ -46,6 +46,10 @@ export function DraftLegForm({
     queryKey: ["chain", chainSym, "call", expiration],
     queryFn: () => fetchChain(chainSym, "call", expiration || undefined),
     enabled: chainSym !== "",
+    // Same fix as the single-leg ticket (`option-gate.tsx`, Eric, 2026-09-22): keep the outgoing
+    // expiration's rows on screen while the new one loads, instead of the table collapsing and
+    // snapping back at a different height on every expiration switch.
+    placeholderData: keepPreviousData,
   });
   const chainData: ChainData | undefined =
     chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
@@ -141,6 +145,7 @@ export function DraftLegForm({
             chainData={chainData}
             strike=""
             markedStrikes={markedStrikes}
+            pending={chain.isFetching}
             onPickStrike={() => undefined}
             onPickSide={pickCell}
           />

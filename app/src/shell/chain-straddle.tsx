@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { type ChainData, fetchChain } from "../live/options";
 import { type PickSide, StraddleView } from "./straddle-view";
@@ -20,6 +20,7 @@ export function ChainStraddle({
   onPickSide,
   expirationField,
   heldBadges,
+  pending,
 }: {
   readonly chainSym: string;
   readonly optionType: "call" | "put";
@@ -37,11 +38,19 @@ export function ChainStraddle({
   /** A REAL, already-filled holding at a strike ("C"/"P"/"C/P") — threaded through to
    *  `StraddleView`; see `option-gate.tsx`'s header comment for where it's computed. */
   readonly heldBadges?: ReadonlyMap<number, string>;
+  /** The caller's OWN chain query's `isFetching` (Eric, 2026-09-22) — ORed with this
+   *  component's own "other side" fetch below, since either one refetching on an expiration
+   *  change is "the table you're looking at is a beat stale," not just one side of it. */
+  readonly pending?: boolean;
 }): ReactElement {
   const otherType = optionType === "call" ? "put" : "call";
   const other = useQuery({
     queryKey: ["chain", chainSym, otherType, chainData.expiration],
     queryFn: () => fetchChain(chainSym, otherType, chainData.expiration),
+    // Same reason as `option-gate.tsx`'s own chain query: without this, the OTHER side's columns
+    // (Puts, on a Calls-primary ticket) go blank for a beat on every expiration switch even
+    // though this component's job is specifically to keep both sides showing real numbers.
+    placeholderData: keepPreviousData,
   });
   const otherRows = other.data && !("chainNote" in other.data) ? other.data.rows : [];
   return (
@@ -58,6 +67,7 @@ export function ChainStraddle({
       quotes={chainData.quotes}
       expirationField={expirationField}
       heldBadges={heldBadges}
+      pending={pending || other.isFetching}
     />
   );
 }

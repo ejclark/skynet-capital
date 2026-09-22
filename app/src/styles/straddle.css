@@ -55,6 +55,13 @@
 }
 .straddle-scroll {
   overflow-x: auto;
+  transition: opacity var(--dur-quick) var(--ease-spatial);
+}
+/* An expiration switch's OLD rows, held on screen while the new ones load (`keepPreviousData`,
+   `option-gate.tsx`/`chain-straddle.tsx`) — a dim, not a spinner or a skeleton, since the numbers
+   shown are real. `--dur-quick` already zeroes under `prefers-reduced-motion` (`theme.css`). */
+.straddle-pending {
+  opacity: 0.55;
 }
 /* 17 columns (#2017 Phase 1 slice 14): Strike (72px) + 2 sides × (Bid 52px + Ask 52px + 6 stat
    columns × 44px) = 72 + 2*(52+52+6*44) = 72 + 2*368 = 808px of column width before border/
