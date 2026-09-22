@@ -45,9 +45,6 @@ interface SubscribeBody {
   readonly capitalAllocated: number;
   /** Symbol-targeting filter (#885) — optional, absent/empty means unrestricted. */
   readonly symbols?: readonly string[];
-  /** Owner opt-in to hold this subscription's trading dark until warmed up (#3543). Absent/false
-   *  means unchanged, always-on behavior. */
-  readonly requireWarmup?: boolean;
   /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue #3527
    *  slice 3). Absent/false means unchanged, flat-budget behavior. */
   readonly compoundAllocation?: boolean;
@@ -92,7 +89,6 @@ function parseSubscribeBody(raw: string): SubscribeBody | undefined {
       ? body.capitalAllocated
       : undefined;
   const symbols = parseSymbols(body.symbols);
-  const requireWarmup = body.requireWarmup === true;
   const compoundAllocation = body.compoundAllocation === true;
   return id && playbookId && mode && capitalAllocated !== undefined
     ? {
@@ -101,7 +97,6 @@ function parseSubscribeBody(raw: string): SubscribeBody | undefined {
         mode,
         capitalAllocated,
         ...(symbols ? { symbols } : {}),
-        ...(requireWarmup ? { requireWarmup: true } : {}),
         ...(compoundAllocation ? { compoundAllocation: true } : {}),
       }
     : undefined;
@@ -192,7 +187,6 @@ async function handleSubscribe(
     capitalAllocated: body.capitalAllocated,
     enabled: true,
     ...(body.symbols ? { symbols: body.symbols } : {}),
-    ...(body.requireWarmup ? { requireWarmup: true } : {}),
     ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
   });
   sendJson(res, 200, { ok: true });

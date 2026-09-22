@@ -33,7 +33,6 @@ function parseSubscription(raw: unknown, accountId: string): PlaybookSubscriptio
     createdAt,
     updatedAt,
     symbols,
-    requireWarmup,
     compoundAllocation,
   } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
@@ -51,7 +50,6 @@ function parseSubscription(raw: unknown, accountId: string): PlaybookSubscriptio
     createdAt,
     updatedAt,
     ...(parsedSymbols ? { symbols: parsedSymbols } : {}),
-    ...(requireWarmup === true ? { requireWarmup: true } : {}),
     ...(compoundAllocation === true ? { compoundAllocation: true } : {}),
   };
 }

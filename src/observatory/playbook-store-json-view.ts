@@ -22,9 +22,6 @@ interface PlaybookStoreCardView extends PlaybookStoreEntry {
     readonly enabled: boolean;
     /** Symbol-targeting filter (#885) — absent means unrestricted. */
     readonly symbols?: readonly string[];
-    /** Owner opt-in to hold trading dark until warmed up (#3543) — absent means off, the
-     *  always-on default every subscription had before this field existed. */
-    readonly requireWarmup?: boolean;
   };
 }
 
@@ -45,19 +42,11 @@ export interface PlaybookStoreView {
 }
 
 /** "23% whipsaw (12 round trips)" once measured; "not yet measured (2/5 round trips)" below the
- *  sample floor — never a bare percentage from a handful of trips (#3543's honesty invariant).
- *  `heldForWarmup` (true only when the OWNER opted into `requireWarmup` on this exact
- *  subscription AND it's still unmeasured) sharpens the unmeasured copy to say so plainly —
- *  display only; nothing here actually holds an order today, see `requireWarmup`'s own doc. */
-function whipsawMetric(
-  stats: ReturnType<typeof whipsawStatsByPlaybook>[number],
-  heldForWarmup: boolean,
-): PlaybookMetric {
+ *  sample floor — never a bare percentage from a handful of trips (#3543's honesty invariant). */
+function whipsawMetric(stats: ReturnType<typeof whipsawStatsByPlaybook>[number]): PlaybookMetric {
   const value = stats.measured
     ? `${Math.round((stats.whipsawRate ?? 0) * 100)}% whipsaw (${stats.roundTrips} round trips)`
-    : heldForWarmup
-      ? `warming up — trading held (${stats.roundTrips} round trips)`
-      : `not yet measured (${stats.roundTrips} round trips)`;
+    : `not yet measured (${stats.roundTrips} round trips)`;
   return { label: "Whipsaw rate", value };
 }
 
@@ -77,10 +66,9 @@ export function playbookStoreView(
   const cards = playbookStoreCatalog().map((entry) => {
     const sub = byPlaybookId.get(entry.id);
     const whipsaw = whipsawByPlaybookId.get(entry.id);
-    const heldForWarmup = Boolean(sub?.requireWarmup);
     return {
       ...entry,
-      ...(whipsaw ? { metrics: [...entry.metrics, whipsawMetric(whipsaw, heldForWarmup)] } : {}),
+      ...(whipsaw ? { metrics: [...entry.metrics, whipsawMetric(whipsaw)] } : {}),
       ...(sub
         ? {
             subscription: {
@@ -88,7 +76,6 @@ export function playbookStoreView(
               capitalAllocated: sub.capitalAllocated,
               enabled: sub.enabled,
               ...(sub.symbols ? { symbols: sub.symbols } : {}),
-              ...(sub.requireWarmup ? { requireWarmup: true } : {}),
             },
           }
         : {}),
