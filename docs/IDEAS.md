@@ -1147,6 +1147,9 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   door, so it was deliberately left out of that diff. Worth deciding on its own: the halt file is the
   manual stop for a live autonomous trader.
   _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+  **Partially resolved, 2026-09-22:** `fly.bots.toml` now sets `SKYNET_AUDIT_DIR`/`SKYNET_BOTS_DB_PATH`,
+  and `fly.toml` sets `SKYNET_INSIGHTS_DIR` — the decision audit trail (`DecisionDb`) is wired in prod
+  (verified while shaping issue #3527). `SKYNET_HALT_FILE` was not checked and may still be open.
 
 - **Bots don't trade options — not restricted, just not built.** The desk's progression ladder
   (`domain/trade-types.ts`, `progression.ts`) is a human-only teaching gate on the manual `/trade`

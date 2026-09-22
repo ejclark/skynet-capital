@@ -56,7 +56,10 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
 - **P0.2 Audit log. ✅ shipped.** Every cycle emits a `DecisionRecord` (`src/autonomous/decision-record.ts`)
   — timestamp, persona, mode, raw intents, guarded intents, and a per-intent outcome
   (`placed` / `rejected` / `observed` / `cooldown-skipped`). `JsonlAuditStore` persists one append-only
-  JSONL per persona (set `SKYNET_AUDIT_DIR`). This is the record everything else reads.
+  JSONL per persona (set `SKYNET_AUDIT_DIR`) — this was the original P0.2 record. **Superseded, not
+  removed:** `DecisionDb` (SQLite, `src/autonomous/decision-db.ts`, armed by `SKYNET_INSIGHTS_DIR`) is
+  now the primary store everything reads via `insightsBridge`; `JsonlAuditStore` is the fallback when
+  the DB bridge is absent. Both are wired in prod as of 2026-09-22 (see issue #3527).
 - **P0.3 Kill switch + circuit breakers. ✅ shipped.** `SafetyController` (`src/autonomous/safety.ts`) is
   the halt state machine the trader consults via `blockedReason()` at the top of every cycle — halted →
   it decides and places nothing, and the halt is recorded on the `DecisionRecord`. **Kill switch:**
@@ -78,8 +81,8 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
 ### Phase 2 — Observability _(offline + board)_
 - **P2.1 Bot decision view. ✅ shipped.** A bot's `/u/:id` profile now shows an **Autonomous decisions**
   panel — recent cycles with mode (LIVE / OBSERVE / HALTED) + per-intent outcome + rationale, read from
-  the P0.2 audit trail (`readDecisions` ← `JsonlAuditStore`, wired when `SKYNET_AUDIT_DIR` is set).
-  Bots only; an honest seam when no trail is wired.
+  the audit trail (`readDecisions`, now preferring `DecisionDb` over the `JsonlAuditStore` fallback —
+  see P0.2 above). Bots only; an honest seam when no trail is wired.
 - **P2.2 Live autonomous cycles on the board.** _(next)_ Wire the audit/CycleReport stream so an
   autonomous cycle is visible as it happens (SSE), not just after a fill.
 
