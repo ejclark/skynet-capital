@@ -13,6 +13,7 @@ import { ChartSection } from "../shell/chart-section";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
+import { LadderRail } from "../shell/ladder-rail";
 import { LockedPanel } from "../shell/locked-panel";
 import { OptionGate } from "../shell/option-gate";
 import { OrdersSection } from "../shell/orders-section";
@@ -48,6 +49,13 @@ import { useBenchWidth } from "../shell/use-bench-width";
  * chart when the bench docks instead of above the whole bench. #1461's principle holds
  * (milestones gate, they never drive); only its placement was overturned. Every ticket panel
  * (`.gate-panel`) keeps the `--col-wide` cap the strip set (`gate.css`).
+ *
+ * THE LADDER RAIL (Eric, 2026-09-22, same day: "I also want this section restored on the trade
+ * page… find a better design to more organically integrate the behavior"): the STRIP's placement
+ * stays overturned — the CLICK-TO-PRESET function it carried comes back as `LadderRail`, the
+ * left rail's own item list, not a second strip stacked above the bench. `RungChip` still carries
+ * the narrative (full name, state word, count); the rail is the quick switch. See
+ * `ladder-rail.tsx`'s own doc comment for the full reasoning.
  *
  * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds four SHAPES
  * of data for one symbol and one account — the ticket, its daily chart, the options chain and the
@@ -494,12 +502,13 @@ function TradePage(): ReactElement {
     onDeskChange: (id) =>
       void navigate({ resetScroll: false, search: (prev) => ({ ...prev, desk: id }) }),
   };
-  // #784 naming pass: no second rail item here yet. The Trading Outpost link that used to sit
-  // below "The ticket" was removed on the belief its content was superseded by the Playbook
-  // Store — #3333's slice-8 audit found that claim false (different features entirely) and
-  // ported the Outpost's actual catalog into Research's "Plays" section instead. Growing this
-  // rail to "critical mass" with real items (Portfolio, a Backtesting/Strategy Lab placeholder)
-  // is #784's own slice 7, not bundled into the naming pass.
+  // #784 naming pass: the Trading Outpost link that used to sit below "The ticket" was removed
+  // on the belief its content was superseded by the Playbook Store — #3333's slice-8 audit found
+  // that claim false (different features entirely) and ported the Outpost's actual catalog into
+  // Research's "Plays" section instead. Growing this rail to "critical mass" with real items
+  // (Portfolio, a Backtesting/Strategy Lab placeholder) is #784's own slice 7. The ladder below
+  // is that critical mass arriving early, for a different reason (Eric, 2026-09-22 — see
+  // `ladder-rail.tsx`'s own doc comment).
   const rail = (
     <>
       <p className="rail-label">Trading</p>
@@ -507,6 +516,12 @@ function TradePage(): ReactElement {
         Trade
       </span>
       <hr />
+      {plays.data ? (
+        <>
+          <LadderRail deskId={activeDesk ?? ""} plays={plays.data.plays} current={play ?? "101"} />
+          <hr />
+        </>
+      ) : null}
       {/* Docked, every pane is already on the page — the switch would be a control with nothing
           to choose (frame.tsx: "The section switch renders only when folded"). */}
       {docked ? null : (
