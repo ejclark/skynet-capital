@@ -522,3 +522,19 @@ The successors that will at least *observe* the outcomes are [`treasury-20y-bond
    change), **11-12** announcement (a 20Y **new issue**, read off that table).
 
 **Nothing was traded and nothing here licenses a trade.** This doc now goes quiet.
+
+**Forward test scored 2026-09-22 (`forward-test-due`, past the 2026-09-16 score-by).**
+`FT-treasury-coupon-announcement-2026-09-10-3` **KILLED** — the 2026-09-15 20-Year reopening
+cleared at the announced $13B (unrevised) but covered **2.570**, below the registered **2.63**
+floor; re-verified this session against fiscaldata's `auctions_query` and treasurydirect.gov's
+`TA_WS/securities/auctioned` directly, both agreeing on CUSIP 912810UX4's high yield (**5.4200%**)
+and bid-to-cover. The print sits in the gap the registration's own base rate never covered — above
+the 7-new-issue window's ceiling (2.36–2.55) and below the 13-reopening window's floor (2.63–2.86)
+— so the reopening/new-issue cover separation broke on the first auction to meet a fresh-2026-high
+yield on the eve of an FOMC, exactly the worst case the registration disclosed up front. Moved to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list. `FT-…-09-10-1` (scores 2026-10-16)
+and `FT-…-09-10-2` (scores 2026-11-13) are unaffected — this kill is about auction demand, not the
+size grid, and neither predicts a size revision this session's data contradicts. Full scoring
+detail lives in the row itself,
+[`forward-tests/treasury-coupon-announcement-2026-09-10.md`](../forward-tests/treasury-coupon-announcement-2026-09-10.md).
+This is a note on the register, not a second verdict on the event — the close-out above stands.
