@@ -1,5 +1,10 @@
 import type { RoundTrip } from "../../src/trading/round-trips.js";
-import { realizedByDay, statsBySymbol, tradeStats } from "../../src/trading/trade-stats.js";
+import {
+  realizedByDay,
+  statsByPlaybook,
+  statsBySymbol,
+  tradeStats,
+} from "../../src/trading/trade-stats.js";
 
 const trip = (realized: number, over: Partial<RoundTrip> = {}): RoundTrip => ({
   symbol: "AAPL",
@@ -102,6 +107,46 @@ describe("statsBySymbol", () => {
     expect(rows.map((r) => r.symbol)).toEqual(["AAPL", "TSLA"]);
     expect(rows[0]).toMatchObject({ trades: 2, wins: 2, winRate: 100, netRealized: 60 });
     expect(rows[1]?.netRealized).toBe(-20);
+  });
+});
+
+describe("statsByPlaybook (#2287 PR 7d)", () => {
+  it("groups by playbookId and ranks by realized dollars, using the full tradeStats family", () => {
+    const rows = statsByPlaybook([
+      trip(50, { playbookId: "S1-NVDA" }),
+      trip(-20, { playbookId: "G1-GOOG" }),
+      trip(10, { playbookId: "S1-NVDA" }),
+    ]);
+    expect(rows.map((r) => r.playbookId)).toEqual(["S1-NVDA", "G1-GOOG"]);
+    expect(rows[0]).toMatchObject({ trades: 2, wins: 2, winRate: 100, netRealized: 60 });
+    // The full family rides along, not just the four SymbolStats fields.
+    expect(rows[0]).toHaveProperty("profitFactor");
+    expect(rows[0]).toHaveProperty("expectancy");
+    expect(rows[0]).toHaveProperty("longestWinStreak");
+    expect(rows[1]?.netRealized).toBe(-20);
+  });
+
+  it("excludes trips with no playbookId — a manual desk trade never scores as a playbook", () => {
+    const rows = statsByPlaybook([trip(50, { playbookId: "S1-NVDA" }), trip(30)]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.playbookId).toBe("S1-NVDA");
+    expect(rows[0]?.netRealized).toBe(50);
+  });
+
+  it("returns an empty list when nothing is attributed to a playbook at all", () => {
+    expect(statsByPlaybook([trip(50), trip(-10)])).toEqual([]);
+  });
+
+  it("pools trips from what would be different participants under one playbook line", () => {
+    // statsByPlaybook itself is participant-agnostic — the pooling across bots/humans happens
+    // upstream (playbook-performance.ts); this just proves it never re-splits by anything but
+    // playbookId once the trips are handed in already merged.
+    const rows = statsByPlaybook([
+      trip(100, { playbookId: "S1-NVDA" }),
+      trip(50, { playbookId: "S1-NVDA" }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ trades: 2, netRealized: 150 });
   });
 });
 
