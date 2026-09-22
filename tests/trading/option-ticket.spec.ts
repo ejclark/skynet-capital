@@ -179,6 +179,51 @@ describe("odds and greeks on the order screen (#3407 P2 slice 2)", () => {
   });
 });
 
+describe("the payoff curve on the order screen (#3407 — the single-leg diagram)", () => {
+  it("samples a sold put through its strike: flat at the credit above, falling below", () => {
+    const preview = previewOptionOrder(csp, context({ underlyingPrice: 428.6 }));
+    expect(preview.payoff).toBeDefined();
+    if (!preview.payoff) return;
+    expect(preview.payoff.from).toBeCloseTo(336); // 420 × 0.8
+    expect(preview.payoff.to).toBeCloseTo(504);
+    expect(preview.payoff.breakevens).toEqual([409.3]); // the grid's breakeven
+    expect(preview.payoff.points.at(-1)?.pnl).toBeCloseTo(2_140); // the whole credit
+    // Still falling at the window's edge — the chart labels that, the max loss is the grid's.
+    expect(preview.payoff.points[0]?.pnl).toBeCloseTo((10.7 - 84) * 200);
+  });
+
+  it("a covered call carries its shares: the curve tops out at strike − spot + premium", () => {
+    const request = { ...csp, code: "202" as const, contracts: 2 };
+    const held = { symbol: "MSFT", quantity: 200, avgPrice: 400, marketValue: 85_000 };
+    const covered = previewOptionOrder(
+      request,
+      context({ positions: [held], underlyingPrice: 410 }),
+    );
+    expect(covered.payoff).toBeDefined();
+    if (!covered.payoff) return;
+    // Above the strike the shares are called away: (420 − 410 + 10.70) × 200.
+    expect(covered.payoff.points.at(-1)?.pnl).toBeCloseTo(4_140);
+    expect(covered.maxProfit).toBeCloseTo(4_140);
+    expect(covered.payoff.breakevens).toEqual([399.3]); // spot − premium, the grid's number
+    // Without a spot there is no basis for the shares, so no curve — as there is no max loss.
+    const noSpot = previewOptionOrder(request, context({ positions: [held] }));
+    expect(noSpot.maxLoss).toBeUndefined();
+    expect(noSpot.payoff).toBeUndefined();
+  });
+
+  it("a long option's curve needs no spot, and a refused order carries none", () => {
+    const call = previewOptionOrder(
+      { ...csp, code: "302", contracts: 1, strike: 430, limitPrice: 8 },
+      context(),
+    );
+    expect(call.payoff?.breakevens).toEqual([438]);
+    expect(call.payoff?.points[0]?.pnl).toBeCloseTo(-800);
+    const refused = previewOptionOrder(csp, context({ cash: 10 }));
+    expect(refused.ok).toBe(false);
+    expect(refused.payoff).toBeUndefined();
+  });
+});
+
 describe("time in force on option orders (#3407 P1 slice 4)", () => {
   it("always states the TIF it will send — day unless the member picked gtc", () => {
     expect(previewOptionOrder(csp, context()).timeInForce).toBe("day");

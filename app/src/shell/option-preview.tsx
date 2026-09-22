@@ -6,6 +6,7 @@ import { daysToExpiry, expiresIn } from "../live/straddle";
 import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
+import { PayoffChart } from "./payoff-chart";
 
 /**
  * The options gate's review rendering (#738 phase 10b) — the server's `OptionTicketPreview`
@@ -125,6 +126,10 @@ export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview
         </p>
       ))}
       {preview.ok ? <PayoffGrid preview={preview} /> : null}
+      {/* The same diagram the multi-leg review draws (#3407): the grid's numbers as a shape. */}
+      {preview.ok && preview.payoff && preview.maxLoss !== undefined ? (
+        <PayoffChart curve={preview.payoff} maxLoss={preview.maxLoss} />
+      ) : null}
       {preview.ok && preview.greeks ? <GreeksLine greeks={preview.greeks} /> : null}
       <DisarmNote />
     </div>

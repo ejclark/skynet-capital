@@ -411,6 +411,24 @@ const currentOptionReview = {
     impliedVol: 0.42,
     chanceOfProfit: 0.72,
     expectedValue: 18.4,
+    // The at-expiration curve (#3407, the single-leg payoff diagram): a sold 175 put at $1.50 —
+    // flat at the $150 credit above the strike, falling below the $173.50 breakeven, still
+    // falling at the window's low edge (the chart says so; the max loss is the grid's $17,350).
+    payoff: {
+      from: 140,
+      to: 210,
+      breakevens: [173.5],
+      points: [
+        { price: 140, pnl: -3350 },
+        { price: 150, pnl: -2350 },
+        { price: 160, pnl: -1350 },
+        { price: 170, pnl: -350 },
+        { price: 173.5, pnl: 0 },
+        { price: 175, pnl: 150 },
+        { price: 190, pnl: 150 },
+        { price: 210, pnl: 150 },
+      ],
+    },
     refusals: [],
     warnings: [],
   },
@@ -1037,6 +1055,19 @@ await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootOrderOdds = shooter(page, resolve("docs/shots/order-odds"));
 await shootOrderOdds("order-odds-phone");
+
+// The payoff diagram on the single-leg ticket (#3407): the same reviewed 201 ticket, scrolled
+// to the figure under the grid — the loss side hatched, the breakeven ticked, the edge label
+// saying the loss keeps going past the window.
+await page.locator(".payoff").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -160));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootOptionPayoff = shooter(page, resolve("docs/shots/option-payoff"));
+await shootOptionPayoff("option-payoff-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.locator(".payoff").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -200));
+await shootOptionPayoff("option-payoff-desktop");
 
 // P0 template hygiene (#3407): content-sized fields (a 4-character strike no longer a third of
 // the panel) and the two-column estimate. Phone first, then the desktop frame that proves the
