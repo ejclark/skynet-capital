@@ -212,6 +212,64 @@ describe("serveSubscriptionsApi", () => {
     expect(answered(out)).toEqual({ ok: true });
   });
 
+  it("subscribe: carries requireWarmup: true through to the store (#3543)", async () => {
+    const calls: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      post({
+        id: "acct-mine",
+        playbookId: "S1-NVDA",
+        mode: "standard",
+        capitalAllocated: 1_000,
+        requireWarmup: true,
+      }),
+      res,
+      "/api/playbook-store/subscribe",
+      configWith({ subscriptions: storeWith(calls) }),
+      session,
+    );
+    expect(calls).toEqual([
+      {
+        op: "subscribe",
+        id: "acct-mine",
+        sub: {
+          playbookId: "S1-NVDA",
+          mode: "standard",
+          capitalAllocated: 1_000,
+          enabled: true,
+          requireWarmup: true,
+        },
+      },
+    ]);
+    expect(answered(out)).toEqual({ ok: true });
+  });
+
+  it("subscribe: omits requireWarmup from the store write when absent or false", async () => {
+    const calls: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      post({
+        id: "acct-mine",
+        playbookId: "S1-NVDA",
+        mode: "standard",
+        capitalAllocated: 1_000,
+        requireWarmup: false,
+      }),
+      res,
+      "/api/playbook-store/subscribe",
+      configWith({ subscriptions: storeWith(calls) }),
+      session,
+    );
+    expect(calls).toEqual([
+      {
+        op: "subscribe",
+        id: "acct-mine",
+        sub: { playbookId: "S1-NVDA", mode: "standard", capitalAllocated: 1_000, enabled: true },
+      },
+    ]);
+    expect(answered(out)).toEqual({ ok: true });
+  });
+
   it("unsubscribe: refuses an unowned account and never touches the store", async () => {
     const calls: unknown[] = [];
     const { res, out } = fakeRes();
