@@ -1075,6 +1075,7 @@ await page.getByText("Tap a").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootChainPicker = shooter(page, resolve("docs/shots/chain-picker"));
 await shootChainPicker("chain-picker-phone");
+
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByText("Tap a").scrollIntoViewIfNeeded();
 await shootChainPicker("chain-picker-desktop");
@@ -1166,13 +1167,26 @@ await page.getByText("GATO - Gatos Silver").waitFor();
 const shootSymbolTier2 = shooter(page, resolve("docs/shots/symbol-tier2"));
 await shootSymbolTier2("symbol-tier2-phone");
 
-// Working orders (#3407 P1 slice 2) — one GTC limit and one partial fill under the ticket, two
-// settled rows below them; the Day / GTC control on the ticket above. PHONE FIRST: 390px proves
+// The chain as its own section (#3407, Workbench slice 2): `?section=chain` gives the straddle the
+// whole stage, the rail's switch on Chain; a tap presets the ticket through the URL. PHONE FIRST.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?section=chain&symbol=NVDA&play=201`);
+await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
+await page.getByText(/Tap a bid to sell it/).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+const shootChainSection = shooter(page, resolve("docs/shots/chain-section"));
+await shootChainSection("chain-section-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
+await shootChainSection("chain-section-desktop");
+
+// Working orders (#3407 P1 slice 2; the Orders section since Workbench slice 3) — one GTC limit
+// and one partial fill, two settled rows below them. PHONE FIRST: 390px proves
 // the row wraps its type line under the symbol instead of clipping; desktop proves it widened.
 currentPlays = plays;
 currentOrders = workingOrders;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByText("Working orders").waitFor();
 await page.getByText("Settled today").waitFor();
 await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
@@ -1216,7 +1230,7 @@ currentOrders = noOrders;
 currentPlays = plays;
 currentDesk = deskWithOption;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByRole("heading", { name: "Option positions" }).waitFor();
 await page.getByRole("button", { name: "Limit" }).click();
 await page.getByLabel("Limit price per share").fill("13.50");
@@ -1236,7 +1250,7 @@ await shootLimitClose("limit-close-desktop");
 // the priority, the left accent steps with it. PHONE FIRST.
 currentAlerts = positionWatchAlerts;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByText(/assignment risk/).waitFor();
 await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy(0, -80));
@@ -1258,7 +1272,7 @@ currentDraftFallback = rollDraft("reviewed", rollLegs, {
   verdict: { ok: true, refusals: [], warnings: [] },
 });
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByRole("heading", { name: "Option positions" }).waitFor();
 await page.getByRole("button", { name: "Roll…" }).click();
 await page.getByLabel("Roll to").waitFor();
