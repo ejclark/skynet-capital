@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId } from "react";
 import { normalizeExpiration } from "../live/expiration";
-import { fetchPlays, type PlayInfo, type PlaysIndex } from "../live/options";
+import { fetchPlays, type PlayInfo } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
@@ -14,9 +14,9 @@ import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
 import { LockedPanel } from "../shell/locked-panel";
-import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import { OrdersSection } from "../shell/orders-section";
+import { RungChip } from "../shell/rung-chip";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { TicketNav } from "../shell/ticket-nav";
@@ -41,12 +41,13 @@ import { useBenchWidth } from "../shell/use-bench-width";
  * owns (`ownsAccount`'s doc comment) — the same server-side identity the desk gate re-checks at
  * submit, so nothing here can offer, let alone place, a ticket against someone else's desk.
  *
- * PAGE ORDER (Eric, 2026-09-22): the milestone ladder renders ABOVE the account picker — the
- * ladder orients ("what can I even do"), the account picker is closer to the form it actually
- * feeds. `TradePage` fetches `["plays"]` a second time (same key `DeskTicket` queries below,
- * react-query shares the cache) purely so `MilestoneStrip` can render at that outer level instead
- * of nested inside `DeskTicket`. Every ticket panel (`.gate-panel`) matches the ladder's own
- * `--col-wide` cap now too (`gate.css`) — "consistent section widths" was the same ask.
+ * PAGE ORDER (#3407, Workbench slice 5 — Eric, 2026-09-22, "B — keep"): the milestone STRIP moved to
+ * `/learn/trading`; the ticket keeps a one-line `RungChip` (rung · state word · count · the door
+ * to the ladder) and the `AccountField` sits directly above the ticket's own nav — both are the
+ * ticket's, so they live in the ticket PANE, which is what puts them beside the chain and the
+ * chart when the bench docks instead of above the whole bench. #1461's principle holds
+ * (milestones gate, they never drive); only its placement was overturned. Every ticket panel
+ * (`.gate-panel`) keeps the `--col-wide` cap the strip set (`gate.css`).
  *
  * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds four SHAPES
  * of data for one symbol and one account — the ticket, its daily chart, the options chain and the
@@ -100,40 +101,6 @@ function AccountField({
   );
 }
 
-/** The ladder above the account picker, above the ticket (Eric, 2026-09-22) — split out of
- *  `TradePage` so that function stays under the house's complexity budget. */
-function LadderAndAccount({
-  plays,
-  activeDesk,
-  code,
-  accounts,
-  onDeskChange,
-}: {
-  readonly plays: PlaysIndex | undefined;
-  readonly activeDesk: string;
-  readonly code: string;
-  readonly accounts: readonly OwnedAccount[];
-  readonly onDeskChange: (id: string) => void;
-}): ReactElement {
-  return (
-    <>
-      {plays ? (
-        <MilestoneStrip
-          deskId={activeDesk}
-          current={code}
-          plays={plays.plays}
-          wheels={plays.wheels}
-          gate={plays.gate}
-          nextUp={plays.nextUp}
-        />
-      ) : null}
-      {accounts.length > 1 ? (
-        <AccountField accounts={accounts} deskId={activeDesk} onChange={onDeskChange} />
-      ) : null}
-    </>
-  );
-}
-
 function DeskTicket({
   desk,
   code,
@@ -145,9 +112,14 @@ function DeskTicket({
   initialExpiration,
   onExpirationCommit,
   hideChain = false,
+  accounts,
+  onDeskChange,
 }: {
   readonly desk: string;
   readonly code: string;
+  /** The session's own accounts (`/api/settings`); the picker renders only when there is a choice. */
+  readonly accounts: readonly OwnedAccount[];
+  readonly onDeskChange: (id: string) => void;
   /** The ticket's own nav and the rail both preset `?play=` through this (#1461); a chain cell
    *  pick that switches side/type (task 4e) presets through the same handler. */
   readonly onPreset: (code: PlayCode) => void;
@@ -186,6 +158,10 @@ function DeskTicket({
   const gated = gate !== undefined && code !== "102";
   return (
     <>
+      {accounts.length > 1 ? (
+        <AccountField accounts={accounts} deskId={desk} onChange={onDeskChange} />
+      ) : null}
+      {plays.data ? <RungChip plays={plays.data.plays} code={code} /> : null}
       {plays.data ? (
         <TicketNav
           plays={plays.data.plays}
@@ -248,6 +224,8 @@ interface StageProps {
   readonly onPreset: (code: PlayCode) => void;
   readonly onSymbolCommit: (symbol: string) => void;
   readonly onStrikeCommit: (strike: string) => void;
+  readonly accounts: readonly OwnedAccount[];
+  readonly onDeskChange: (id: string) => void;
 }
 
 /** One of the bench's tools by id — the same element whether it is the folded stage's only pane
@@ -289,6 +267,8 @@ function Pane({
       initialExpiration={expiration || undefined}
       onExpirationCommit={props.onExpirationCommit}
       hideChain={docked}
+      accounts={props.accounts}
+      onDeskChange={props.onDeskChange}
     />
   );
 }
@@ -419,8 +399,7 @@ function TradePage(): ReactElement {
     });
   };
   // Same `["plays"]` key `DeskTicket` queries below — react-query shares the one cached fetch, no
-  // second round trip. Fetched here so `MilestoneStrip` can render above `AccountField` (Eric,
-  // 2026-09-22) and so a chain-section tap can resolve its target rung.
+  // second round trip. Fetched here so a chain-section tap can resolve its target rung.
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   /** A tap on the chain section presets the ticket through the URL (Workbench slice 2): the
    *  strike always travels; the rung only when the target is unlocked (`chainPickTarget`, the
@@ -473,6 +452,8 @@ function TradePage(): ReactElement {
     onPreset: (code) => void navigate({ search: (prev) => ({ ...prev, play: code }) }),
     onSymbolCommit: commitSymbol,
     onStrikeCommit: commitStrike,
+    accounts,
+    onDeskChange: (id) => void navigate({ search: (prev) => ({ ...prev, desk: id }) }),
   };
   // #784 naming pass: no second rail item here yet. The Trading Outpost link that used to sit
   // below "The ticket" was removed on the belief its content was superseded by the Playbook
@@ -518,16 +499,7 @@ function TradePage(): ReactElement {
       {settings.isLoading ? null : accounts.length === 0 ? (
         <p className="note">No accounts are linked to your session yet.</p>
       ) : activeDesk ? (
-        <>
-          <LadderAndAccount
-            plays={plays.data}
-            activeDesk={activeDesk}
-            code={play ?? "101"}
-            accounts={accounts}
-            onDeskChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
-          />
-          <Bench docked={docked} section={section} asked={askedSection} props={stageProps} />
-        </>
+        <Bench docked={docked} section={section} asked={askedSection} props={stageProps} />
       ) : null}
     </PageFrame>
   );
