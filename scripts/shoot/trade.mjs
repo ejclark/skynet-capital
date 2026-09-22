@@ -1164,13 +1164,13 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
 await shootChainSection("chain-section-desktop");
 
-// Working orders (#3407 P1 slice 2) — one GTC limit and one partial fill under the ticket, two
-// settled rows below them; the Day / GTC control on the ticket above. PHONE FIRST: 390px proves
+// Working orders (#3407 P1 slice 2; the Orders section since Workbench slice 3) — one GTC limit
+// and one partial fill, two settled rows below them. PHONE FIRST: 390px proves
 // the row wraps its type line under the symbol instead of clipping; desktop proves it widened.
 currentPlays = plays;
 currentOrders = workingOrders;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByText("Working orders").waitFor();
 await page.getByText("Settled today").waitFor();
 await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
@@ -1214,7 +1214,7 @@ currentOrders = noOrders;
 currentPlays = plays;
 currentDesk = deskWithOption;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByRole("heading", { name: "Option positions" }).waitFor();
 await page.getByRole("button", { name: "Limit" }).click();
 await page.getByLabel("Limit price per share").fill("13.50");
@@ -1234,7 +1234,7 @@ await shootLimitClose("limit-close-desktop");
 // the priority, the left accent steps with it. PHONE FIRST.
 currentAlerts = positionWatchAlerts;
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByText(/assignment risk/).waitFor();
 await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy(0, -80));
@@ -1256,7 +1256,7 @@ currentDraftFallback = rollDraft("reviewed", rollLegs, {
   verdict: { ok: true, refusals: [], warnings: [] },
 });
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
 await page.getByRole("heading", { name: "Option positions" }).waitFor();
 await page.getByRole("button", { name: "Roll…" }).click();
 await page.getByLabel("Roll to").waitFor();

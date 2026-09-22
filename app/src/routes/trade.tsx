@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId } from "react";
-import { fetchDesk } from "../live/desk";
 import { fetchPlays, type PlayInfo, type PlaysIndex } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
@@ -10,19 +9,17 @@ import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
 import { type ChainPick, ChainSection, chainPickTarget } from "../shell/chain-section";
 import { ChartSection } from "../shell/chart-section";
-import { DeskAlerts } from "../shell/desk-alerts";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
 import { LockedPanel } from "../shell/locked-panel";
 import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
-import { OptionPositionsCard } from "../shell/option-positions";
+import { OrdersSection } from "../shell/orders-section";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { TicketNav } from "../shell/ticket-nav";
 import { TradeGate } from "../shell/trade-gate";
-import { WorkingOrders } from "../shell/working-orders";
 
 /**
  * THE TRADE TICKET (#738, live-review round; options since phase 10b) — the dedicated trading
@@ -60,7 +57,7 @@ import { WorkingOrders } from "../shell/working-orders";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
-type TradeSection = "ticket" | "chart" | "chain";
+type TradeSection = "ticket" | "chart" | "chain" | "orders";
 
 // "ticket" stays first: `resolveSection` falls back to the first entry, and the ticket is the
 // untyped default. The chain joined as the bench's second tool (#3407, Workbench slice 2).
@@ -68,6 +65,7 @@ const SECTIONS: readonly PageSection<TradeSection>[] = [
   { id: "ticket", label: "Ticket" },
   { id: "chart", label: "Chart" },
   { id: "chain", label: "Chain" },
+  { id: "orders", label: "Orders" },
 ];
 
 function AccountField({
@@ -161,10 +159,6 @@ function DeskTicket({
   readonly onStrikeCommit?: (strike: string) => void;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
-  const deskData = useQuery({
-    queryKey: ["desk", desk],
-    queryFn: () => fetchDesk(desk),
-  });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
   // 501 has no ticket of its own (#1671) — it's an attribute any option order can carry, looked up
   // independently of `info` so the expiration field can disable today regardless of which rung
@@ -216,15 +210,8 @@ function DeskTicket({
           onSymbolCommit={onSymbolCommit}
         />
       )}
-      {/* Working orders (#3407 P1 slice 2) sit right under whichever ticket is up — the #674
-          placement, pending the lo-fi pick on where they finally live. */}
-      <WorkingOrders deskId={desk} />
-      {/* What the member's own option positions are saying (#3407 P4 slice 1) — beside the
-          orders they can act on, above the positions the alerts are about. */}
-      <DeskAlerts deskId={desk} />
-      {deskData.data ? (
-        <OptionPositionsCard deskId={desk} positions={deskData.data.desk.positions} />
-      ) : null}
+      {/* Working orders, Alerts and Option positions moved to the Orders section (#3407,
+          Workbench slice 3) — the account's book is its own pane, one rail tap away. */}
     </>
   );
 }
@@ -255,6 +242,7 @@ function Stage({
   readonly onStrikeCommit: (strike: string) => void;
 }): ReactElement {
   if (section === "chart") return <ChartSection symbol={symbol} />;
+  if (section === "orders") return <OrdersSection deskId={desk} />;
   if (section === "chain") {
     return (
       <ChainSection
