@@ -88,6 +88,7 @@ export function StraddleView({
   quotes,
   expirationField,
   heldBadges,
+  pending,
 }: {
   readonly symbol: string;
   readonly expiration: string;
@@ -117,6 +118,12 @@ export function StraddleView({
    *  from `markedStrikes`'s draft-leg outline. Only the single-leg ticket passes this (Eric,
    *  2026-09-22); omitted, no badge column space is reserved and no other caller's layout shifts. */
   readonly heldBadges?: ReadonlyMap<number, string>;
+  /** True while a new expiration's rows are still in flight and these are the OLD ones, held on
+   *  screen by `placeholderData: keepPreviousData` on the caller's query (Eric, 2026-09-22 — a
+   *  tab click used to drop straight to "Looking up options…" and collapse the whole table, then
+   *  snap back to a different height). A dim, not a spinner or a skeleton: the numbers shown are
+   *  real, just for the strike/expiration a member is a beat past clicking away from. */
+  readonly pending?: boolean;
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const all = mergeStraddle(calls, puts);
@@ -144,7 +151,10 @@ export function StraddleView({
     <section className="straddle" aria-label={`Options chain for ${symbol}`}>
       {expirationField}
       <EarningsBadge symbol={symbol} now={now} />
-      <div className="straddle-scroll" ref={scrollRef}>
+      <div
+        className={pending ? "straddle-scroll straddle-pending" : "straddle-scroll"}
+        ref={scrollRef}
+      >
         <table className="straddle-table">
           <colgroup>
             {/* Bid/Ask/OI/Vol/Δ/Γ/Θ/Vega × 2 sides + Strike = 17 columns total (`TOTAL_COLUMNS`).
