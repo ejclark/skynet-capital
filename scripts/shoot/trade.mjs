@@ -869,16 +869,20 @@ await shoot("trade-exp-tabs-phone");
 // The scroll affordance (Eric, 2026-09-22): "the dates are scrollable... but there is no visual
 // feedback suggesting there is scrollable content", then "I like option B [chevrons], but feel
 // like more emphasis needs placed on the chevron... bigger font and/or higher contrast" on a
-// 3-way rendered comparison. A solid accent chip per edge, shown only while that edge still has
-// something to scroll to — before/after proves both: the strip opens scrolled fully left (right
-// chevron only), then scrolling it to the end drops the right chevron and raises the left one.
+// 3-way rendered comparison, then "the scrollbar... dominates and crowds the content... the
+// buttons on the side need to become clickable" — the native scrollbar is gone (`ticket.css`) and
+// the chevrons are real buttons now, the only way left to page the strip by click. Before/after
+// proves the whole chain: the strip opens scrolled fully left (right chevron only), a real click
+// on it pages forward and reveals the left chevron.
 const shootChevron = shooter(page, resolve("docs/shots/exp-tabs-chevron"));
 await shootChevron("exp-tabs-chevron-start-phone");
-await page.evaluate(() => {
-  const el = document.querySelector(".exp-tabs");
-  if (el) el.scrollLeft = el.scrollWidth;
-});
-await page.waitForTimeout(150);
+// Page forward with real clicks (not a programmatic scrollLeft jump) until the right chevron
+// itself reports there's nothing left to scroll to — proving the button actually drives the
+// strip, however many pages that takes for this fixture's expiration count.
+while (await page.getByRole("button", { name: "Scroll to later expirations" }).isVisible()) {
+  await page.getByRole("button", { name: "Scroll to later expirations" }).click();
+  await page.waitForTimeout(500);
+}
 await shootChevron("exp-tabs-chevron-end-phone");
 
 // Switching expirations no longer collapses the table (Eric, 2026-09-22): before

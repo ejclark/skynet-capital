@@ -258,4 +258,80 @@ describe("ExpirationField", () => {
       expect(earlyTab).not.toHaveAttribute("title");
     });
   });
+
+  // The native scrollbar is hidden outright now (Eric, 2026-09-22: "the scrollbar... dominates and
+  // crowds the content") — these are real <button>s, the only way left to page the strip by click.
+  // jsdom never lays out real pixel widths, so `scrollWidth`/`clientWidth` are stubbed by hand to
+  // force the overflow state a real browser would compute from actual content.
+  describe("the scroll chevrons (Eric, 2026-09-22)", () => {
+    it("renders no chevron when the strip doesn't overflow", () => {
+      const { container } = render(
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-18"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+      expect(
+        container.querySelector(".exp-tabs-chevron-left, .exp-tabs-chevron-right"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders only the right chevron when scrolled to the start, and paging by click calls scrollBy away from 0", () => {
+      const { container } = render(
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-18"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+      const strip = container.querySelector(".exp-tabs") as HTMLDivElement;
+      Object.defineProperty(strip, "scrollWidth", { value: 1000, configurable: true });
+      Object.defineProperty(strip, "clientWidth", { value: 300, configurable: true });
+      Object.defineProperty(strip, "scrollLeft", { value: 0, configurable: true, writable: true });
+      const scrollBy = rstest.fn();
+      strip.scrollBy = scrollBy;
+      fireEvent.scroll(strip);
+
+      expect(screen.queryByRole("button", { name: "Scroll to earlier expirations" })).toBeNull();
+      const rightChevron = screen.getByRole("button", { name: "Scroll to later expirations" });
+      fireEvent.click(rightChevron);
+      expect(scrollBy).toHaveBeenCalledWith(
+        expect.objectContaining({ left: expect.any(Number), behavior: "smooth" }),
+      );
+      const call = scrollBy.mock.calls[0] as [{ left: number }] | undefined;
+      expect(call).toBeDefined();
+      expect((call as [{ left: number }])[0].left).toBeGreaterThan(0);
+    });
+
+    it("renders only the left chevron once scrolled to the end", () => {
+      const { container } = render(
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-18"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+      const strip = container.querySelector(".exp-tabs") as HTMLDivElement;
+      Object.defineProperty(strip, "scrollWidth", { value: 1000, configurable: true });
+      Object.defineProperty(strip, "clientWidth", { value: 300, configurable: true });
+      Object.defineProperty(strip, "scrollLeft", {
+        value: 700,
+        configurable: true,
+        writable: true,
+      });
+      fireEvent.scroll(strip);
+
+      expect(screen.queryByRole("button", { name: "Scroll to later expirations" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Scroll to earlier expirations" }),
+      ).toBeInTheDocument();
+    });
+  });
 });

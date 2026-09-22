@@ -26,7 +26,12 @@ import { daysToExpiry, formatExpiration } from "../live/straddle";
  * live scroll position (never both when there's nothing to scroll, never the trailing edge once
  * scrolled all the way there), sized and coloured for real emphasis per Eric's follow-up ("more
  * emphasis... bigger font and/or higher contrast") rather than a subtle hint — a solid accent
- * chip, not bare text on a gradient.
+ * chip, not bare text on a gradient. A third follow-up the same day ("the scrollbar... dominates
+ * and crowds the content") retired the native scrollbar outright (`ticket.css`) in favour of the
+ * chevrons — which made them real `<button>`s with a `scrollBy` handler rather than a decorative
+ * `aria-hidden` overlay, since a hidden scrollbar needs SOME clickable way to page the strip, not
+ * just a swipe. `.exp-tabs`' `scroll-padding-inline` reserves the chevron's own 34px so a paged
+ * scroll never opens mid-tap under one.
  * @category trading
  */
 
@@ -66,6 +71,16 @@ export function ExpirationField({
       left: el.scrollLeft > 2,
       right: el.scrollLeft < el.scrollWidth - el.clientWidth - 2,
     });
+  };
+  /** The chevrons are real buttons now (Eric, 2026-09-22 — "the buttons on the side need to
+   *  become clickable"), not just a scroll-position tell: a click pages by 70% of the visible
+   *  strip width, same "one deliberate tap, not a pixel-perfect drag" feel as a carousel's own
+   *  prev/next. `smooth` is a no-op under `prefers-reduced-motion` in every engine that implements
+   *  the media query's effect on scroll-behavior, so this needs no manual reduced-motion branch. */
+  const pageBy = (dir: -1 | 1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
   };
   // Re-check on every fresh chain too (a new symbol/expiration list can change whether the strip
   // overflows at all) — `chainData?.expirations.length` is the trigger, not the array identity.
@@ -125,14 +140,24 @@ export function ExpirationField({
         })}
       </div>
       {edges.left ? (
-        <span className="exp-tabs-chevron exp-tabs-chevron-left" aria-hidden="true">
-          ‹
-        </span>
+        <button
+          type="button"
+          className="exp-tabs-chevron exp-tabs-chevron-left"
+          aria-label="Scroll to earlier expirations"
+          onClick={() => pageBy(-1)}
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
       ) : null}
       {edges.right ? (
-        <span className="exp-tabs-chevron exp-tabs-chevron-right" aria-hidden="true">
-          ›
-        </span>
+        <button
+          type="button"
+          className="exp-tabs-chevron exp-tabs-chevron-right"
+          aria-label="Scroll to later expirations"
+          onClick={() => pageBy(1)}
+        >
+          <span aria-hidden="true">›</span>
+        </button>
       ) : null}
     </div>
   );
