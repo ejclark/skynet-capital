@@ -1484,3 +1484,18 @@ existing red/green P/L vocabulary elsewhere. Same "real step, not a tone shift" 
 already applied to the strike-pick row highlight (PR #3510) — pick a wash opacity that reads as
 clearly present without being loud.
 _(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_
+
+### "integration tests" (e2e) isn't actually a required/blocking merge check, despite its own doc comment saying it is
+`.github/workflows/pipeline.yml`'s `e2e` job has a comment reading "Blocking from day one (Eric's
+call) — a failing spec or a hero-screenshot diff fails this check same as any other." In practice,
+observed live 2026-09-22: PR #3576 merged (via auto-merge) at 23:07:37Z, ~2 seconds before its own
+"integration tests" check even reported its failure — meaning `verify` alone gates the merge and
+`e2e` is cosmetic. This is how a repo-wide e2e break (the `@playwright/test` 1.63.0 dependabot bump,
+#3370, root-caused and reverted in #3577) went unnoticed for ~11 hours across 10+ merged PRs: every
+one showed a red "integration tests" check, but nothing stopped any of them from shipping. Worth
+checking whether branch protection's required-checks list actually names `integration tests` (or
+its job id `e2e`) — if it's missing, that's a one-line settings fix; if it's present but GitHub's
+auto-merge doesn't wait for a same-workflow job that finishes after the required ones, that's a
+sequencing question (maybe `arm-auto-merge`/`deploy` should `needs: e2e` too). Did not touch repo
+settings myself — out of scope for the PR that surfaced it, and settings changes are Eric's call.
+_(src: Claude · while: root-causing PR #3576's failing e2e check)_
