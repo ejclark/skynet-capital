@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId } from "react";
+import { fiscalQuarterFor, fiscalYearEndFor } from "../../../src/domain/fiscal-calendar";
 import { CALL_CLASS_LABEL, CALL_CLASSES, callMix, classifyCall, hubEvents } from "../live/call-mix";
 import { dayLensFog } from "../live/fog";
-import { inRange, marketToday, rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
+import {
+  type FiscalQuarterLabel,
+  inRange,
+  marketToday,
+  rangeFor,
+  rangeLabel,
+  stepAnchor,
+} from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
 import {
   assessmentAge,
@@ -292,7 +300,24 @@ export function useBoardView({
     fog.fogged && parsed.lens === "day" ? { ...parsed, lens: "week" } : parsed;
   const today = marketToday();
   const anchor = filter.on ?? today;
-  const range = rangeFor(anchor, filter.lens);
+  // The quarter lens snaps to a company's own fiscal quarter (#1736) only when the scope names
+  // EXACTLY one symbol and that symbol has a confirmed fiscal year-end — every other scope (none,
+  // several, or an unconfirmed symbol) stays the honest calendar-quarter fallback.
+  const scopedSymbol = filter.symbols.length === 1 ? filter.symbols[0] : undefined;
+  const fiscalYearEnd = scopedSymbol ? fiscalYearEndFor(scopedSymbol) : undefined;
+  const range = rangeFor(anchor, filter.lens, fiscalYearEnd?.fiscalYearEndMonth);
+  const fiscal: FiscalQuarterLabel | undefined =
+    fiscalYearEnd && scopedSymbol
+      ? (() => {
+          const d = new Date(`${anchor}T00:00:00Z`);
+          const fq = fiscalQuarterFor(
+            d.getUTCFullYear(),
+            d.getUTCMonth() + 1,
+            fiscalYearEnd.fiscalYearEndMonth,
+          );
+          return { symbol: scopedSymbol, fiscalYear: fq.fiscalYear, quarter: fq.quarter };
+        })()
+      : undefined;
   // The range resolves through the served events — precise ids, never date-string guessing.
   const inRangeIds = new Set(data.events.filter((e) => inRange(e.date, range)).map((e) => e.id));
   const heldDayCalls = fog.fogged
@@ -336,8 +361,14 @@ export function useBoardView({
         onPick={(date) => setFilter(toggleOnDate(query, date))}
         onLens={(lens) => setFilter(setLens(query, lens))}
         onStep={(direction) =>
-          setFilter(setOnDate(query, stepAnchor(anchor, filter.lens, direction)))
+          setFilter(
+            setOnDate(
+              query,
+              stepAnchor(anchor, filter.lens, direction, fiscalYearEnd?.fiscalYearEndMonth),
+            ),
+          )
         }
+        {...(fiscal ? { fiscal } : {})}
         {...(fog.fogged ? { dayFog: { reason: fog.reason, held: heldDayCalls } } : {})}
       />
     ),
@@ -355,13 +386,13 @@ export function useBoardView({
           data={data}
           filter={filter}
           inRangeIds={inRangeIds}
-          rangeName={rangeLabel(range, filter.lens)}
+          rangeName={rangeLabel(range, filter.lens, fiscal)}
         />
         <div className="rx-grid">
           <DocList
             title="Event ledgers"
             docs={ledgers}
-            empty={`No ledger in ${rangeLabel(range, filter.lens)}${
+            empty={`No ledger in ${rangeLabel(range, filter.lens, fiscal)}${
               filter.terms.length > 0 ? " matches this filter." : "."
             }`}
           />
