@@ -406,3 +406,12 @@ specific, mutually consistent figures (the pause to April 2027, the 9–0 vote, 
 split) and discarded as the outlier rather than reconciled, since no primary BoE text was found that
 supports it. If a future session reads the primary minutes directly and finds this framing was
 right after all, that correction belongs in a fresh ledger entry, never an edit to this one.
+
+**Forward-test note (2026-09-22, `forward-test-due`).** `FT-boe-decision-2026-09-17-4` (the
+long-maturity skew) reached its 2026-09-21 score-by and was scored **PASS** in
+[its own fragment](../forward-tests/boe-decision-2026-09-17.md), from the Bank's own 17 September
+2026 APF Gilt Sales Market Notice re-fetched direct: all APF auctions are paused with no Q4 2026
+schedule of any maturity, and the £120bn longest-dated tranche is held to maturity rather than
+sold. `FT-boe-decision-2026-09-17-3` (the December terminal, score-by 2026-12-18) remains `_open_`
+and beyond this lane's automation per the close-out-hold rule; no other row on this event needed
+scoring.
