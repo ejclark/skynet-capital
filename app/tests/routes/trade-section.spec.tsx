@@ -36,12 +36,25 @@ rstest.mock("../../src/live/options", () => ({
       plays: [],
     }),
   fetchChain: () => Promise.reject(new Error("not used in this spec")),
+  fetchOptionPositions: () =>
+    Promise.resolve({ available: false, reason: "unlinked", rows: [], book: undefined }),
   reviewOption: () => Promise.reject(new Error("not used in this spec")),
   submitOption: () => Promise.reject(new Error("not used in this spec")),
 }));
 rstest.mock("../../src/live/desk", () => ({
   fetchDesk: () => Promise.resolve({ desk: { id: "human-eric", positions: [] } }),
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
+}));
+rstest.mock("../../src/live/orders", () => ({
+  fetchOrders: () =>
+    Promise.resolve({ available: false, reason: "unlinked", working: [], recent: [] }),
+  cancelOrder: () => Promise.reject(new Error("not used in this spec")),
+  replaceOrder: () => Promise.reject(new Error("not used in this spec")),
+}));
+rstest.mock("../../src/live/alerts", () => ({
+  fetchDeskAlerts: () =>
+    Promise.resolve({ available: false, reason: "unlinked", alerts: [], dismissable: false }),
+  dismissDeskAlert: () => Promise.reject(new Error("not used in this spec")),
 }));
 rstest.mock("../../src/live/bars", () => ({
   fetchBars: () => Promise.resolve({ barsNote: "Fixture bars note — the chart section is here." }),
@@ -76,6 +89,7 @@ describe("/trade validateSearch — section", () => {
     expect(validateSearch({ section: "chart" })).toMatchObject({ section: "chart" });
     expect(validateSearch({ section: "ticket" })).toMatchObject({ section: "ticket" });
     expect(validateSearch({ section: "chain" })).toMatchObject({ section: "chain" });
+    expect(validateSearch({ section: "orders" })).toMatchObject({ section: "orders" });
   });
 
   it("drops an unknown or non-string section, and omits it when absent", () => {
@@ -121,6 +135,28 @@ describe("/trade section switch", () => {
     await waitFor(() =>
       expect(screen.getByText(/Pick a symbol on the Ticket/)).toBeInTheDocument(),
     );
+  });
+
+  it("renders the Orders section — working orders, alerts, positions as one pane (#3407 slice 3)", async () => {
+    mountTrade("/trade?section=orders");
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Working orders" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Alerts" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Orders" })).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.queryByRole("heading", { name: /The ladder is waiting on you/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the ticket section free of the book — the panels live on Orders now", async () => {
+    mountTrade("/trade");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("heading", { name: "Working orders" })).not.toBeInTheDocument();
   });
 
   it("shows the chart section's own empty state when no symbol is committed", async () => {
