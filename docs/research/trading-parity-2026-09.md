@@ -693,6 +693,7 @@ plan, not a constraint on the designs.
 | Pick an account to trade | exists (hidden with one account) | `app/src/routes/trade.tsx` `AccountField` |
 | Search a symbol with autocomplete | exists — 2 tiers, debounced, in-flow listbox | `app/src/shell/symbol-field.tsx` |
 | See a quote before ordering | exists — last / Δ / Δ%, 15 s stale, no as-of stamp | `app/src/shell/quote-header.tsx` |
+| The chain as its own pane | **built** (Workbench slice 2) — `?section=chain` gives the straddle the stage; a tap presets the ticket through the URL under the ticket's fail-safe rung rule; docks beside the ticket at the bench width in slice 4 | `app/src/shell/chain-section.tsx`, `app/src/routes/trade.tsx` |
 | See a chart while ticketing | partial — the chart is a *section* that replaces the ticket | `trade.tsx` `?section=chart`, `app/src/shell/chart-section.tsx` |
 | Buy / sell stock at market | exists | `app/src/shell/trade-gate.tsx` |
 | Buy / sell stock at a limit or stop | exists | `app/src/live/ticket.ts:12`, `trade-gate.tsx:268-298` |

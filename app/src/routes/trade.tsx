@@ -8,6 +8,7 @@ import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
+import { type ChainPick, ChainSection, chainPickTarget } from "../shell/chain-section";
 import { ChartSection } from "../shell/chart-section";
 import { DeskAlerts } from "../shell/desk-alerts";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
@@ -59,11 +60,14 @@ import { WorkingOrders } from "../shell/working-orders";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
-type TradeSection = "ticket" | "chart";
+type TradeSection = "ticket" | "chart" | "chain";
 
+// "ticket" stays first: `resolveSection` falls back to the first entry, and the ticket is the
+// untyped default. The chain joined as the bench's second tool (#3407, Workbench slice 2).
 const SECTIONS: readonly PageSection<TradeSection>[] = [
   { id: "ticket", label: "Ticket" },
   { id: "chart", label: "Chart" },
+  { id: "chain", label: "Chain" },
 ];
 
 function AccountField({
@@ -225,6 +229,56 @@ function DeskTicket({
   );
 }
 
+/** The pane the section switch chose — one of the bench's tools (Workbench slice 2): the ticket
+ *  (default), the chart, or the chain. Split out of `TradePage` for the house complexity budget. */
+function Stage({
+  section,
+  symbol,
+  play,
+  strike,
+  desk,
+  plays,
+  onChainPick,
+  onPreset,
+  onSymbolCommit,
+  onStrikeCommit,
+}: {
+  readonly section: TradeSection;
+  readonly symbol: string;
+  readonly play: string;
+  readonly strike: string;
+  readonly desk: string;
+  readonly plays: readonly PlayInfo[] | undefined;
+  readonly onChainPick: (pick: ChainPick) => void;
+  readonly onPreset: (code: PlayCode) => void;
+  readonly onSymbolCommit: (symbol: string) => void;
+  readonly onStrikeCommit: (strike: string) => void;
+}): ReactElement {
+  if (section === "chart") return <ChartSection symbol={symbol} />;
+  if (section === "chain") {
+    return (
+      <ChainSection
+        symbol={symbol}
+        play={play}
+        strike={strike}
+        plays={plays}
+        onPick={onChainPick}
+      />
+    );
+  }
+  return (
+    <DeskTicket
+      desk={desk}
+      code={play}
+      onPreset={onPreset}
+      initialSymbol={symbol || undefined}
+      onSymbolCommit={onSymbolCommit}
+      initialStrike={strike || undefined}
+      onStrikeCommit={onStrikeCommit}
+    />
+  );
+}
+
 function TradePage(): ReactElement {
   const { desk, play, symbol, strike, section: askedSection } = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -273,13 +327,26 @@ function TradePage(): ReactElement {
       },
     });
   };
+  // Same `["plays"]` key `DeskTicket` queries below — react-query shares the one cached fetch, no
+  // second round trip. Fetched here so `MilestoneStrip` can render above `AccountField` (Eric,
+  // 2026-09-22) and so a chain-section tap can resolve its target rung.
+  const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
+  /** A tap on the chain section presets the ticket through the URL (Workbench slice 2): the
+   *  strike always travels; the rung only when the target is unlocked (`chainPickTarget`, the
+   *  ticket's own fail-safe rule); and the section switches back to the ticket so the member
+   *  lands on the preset form, not on the chain they just left. */
+  const onChainPick = (pick: ChainPick) => {
+    const target = chainPickTarget(play ?? "101", pick.side, plays.data?.plays);
+    void navigate({
+      search: (prev) => {
+        const next = { ...prev, strike: pick.strike };
+        delete next.section;
+        return target.play ? { ...next, play: target.play } : next;
+      },
+    });
+  };
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const accounts = settings.data?.accounts ?? [];
-  // Same `["plays"]` key `DeskTicket` queries below — react-query shares the one cached fetch, no
-  // second round trip. Fetched here too so `MilestoneStrip` can render above `AccountField` (Eric,
-  // 2026-09-22: the ladder belongs above the account picker, the account closer to the form it
-  // feeds — "consistent section widths" is the same pass, in `gate.css`).
-  const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   // A bookmarked or shared `?desk=` only sticks if it's still an account the session owns —
   // otherwise fall back to the first owned account, same as having no `?desk=` at all.
   const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
@@ -331,19 +398,18 @@ function TradePage(): ReactElement {
             accounts={accounts}
             onDeskChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
           />
-          {section === "chart" ? (
-            <ChartSection symbol={symbol ?? ""} />
-          ) : (
-            <DeskTicket
-              desk={activeDesk}
-              code={play ?? "101"}
-              onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
-              initialSymbol={symbol}
-              onSymbolCommit={commitSymbol}
-              initialStrike={strike}
-              onStrikeCommit={commitStrike}
-            />
-          )}
+          <Stage
+            section={section}
+            symbol={symbol ?? ""}
+            play={play ?? "101"}
+            strike={strike ?? ""}
+            desk={activeDesk}
+            plays={plays.data?.plays}
+            onChainPick={onChainPick}
+            onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
+            onSymbolCommit={commitSymbol}
+            onStrikeCommit={commitStrike}
+          />
         </>
       ) : null}
     </PageFrame>

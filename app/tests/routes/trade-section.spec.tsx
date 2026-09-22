@@ -75,6 +75,7 @@ describe("/trade validateSearch — section", () => {
   it("keeps a known section id", () => {
     expect(validateSearch({ section: "chart" })).toMatchObject({ section: "chart" });
     expect(validateSearch({ section: "ticket" })).toMatchObject({ section: "ticket" });
+    expect(validateSearch({ section: "chain" })).toMatchObject({ section: "chain" });
   });
 
   it("drops an unknown or non-string section, and omits it when absent", () => {
@@ -108,6 +109,18 @@ describe("/trade section switch", () => {
     expect(
       screen.queryByRole("heading", { name: /The ladder is waiting on you/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders ChainSection for ?section=chain — the bench's second tool (#3407 slice 2)", async () => {
+    mountTrade("/trade?section=chain&symbol=NVDA");
+    await waitFor(() =>
+      expect(screen.getByText("The chain for NVDA is unreachable.")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Chain" })).toHaveAttribute("aria-pressed", "true");
+    mountTrade("/trade?section=chain");
+    await waitFor(() =>
+      expect(screen.getByText(/Pick a symbol on the Ticket/)).toBeInTheDocument(),
+    );
   });
 
   it("shows the chart section's own empty state when no symbol is committed", async () => {
