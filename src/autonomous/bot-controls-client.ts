@@ -7,7 +7,11 @@ import {
   parseControlsState,
   suspendedReason,
 } from "./bot-controls.js";
-import { controlsPollHeaders } from "./controls-poll-wire.js";
+import {
+  controlsPollGateHeaders,
+  controlsPollHeaders,
+  type PersonaGateVerdict,
+} from "./controls-poll-wire.js";
 import { parseDecisionsCursor } from "./decision-wire.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
@@ -32,6 +36,13 @@ export interface BotControlsClient {
   stop(): void;
   /** The dynamic check for the `blockedReason` seam. Non-null = do not trade this bot. */
   suspendedReason(botId: string): string | null;
+  /**
+   * Records one persona's boot-time readiness-gate verdict (#666) — merged by id and reported on
+   * every subsequent poll, so the ops-status panel can show which personas are live vs pinned to
+   * `observe`, and why, with no Fly credential. Safe to call before `start()`; a no-op on the
+   * disabled client. `buildLiveBot` calls this once per bot as it wires each one.
+   */
+  reportPersonaGate(verdict: PersonaGateVerdict): void;
   /** True when a bridge URL is configured (used only for honest boot logging). */
   readonly enabled: boolean;
 }
@@ -43,6 +54,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   start: () => undefined,
   stop: () => undefined,
   suspendedReason: () => null,
+  reportPersonaGate: () => undefined,
   enabled: false,
 };
 
@@ -64,6 +76,9 @@ export function resolveBotControls(
   // This process's own word about which commit it is running, stamped onto every poll so the
   // owner's ops-status panel can answer "on what commit?" without a Fly credential (#666).
   const selfReport = controlsPollHeaders(env.GIT_SHA);
+  // Filled in by `reportPersonaGate` as `buildLiveBot` wires each bot; read fresh on every poll
+  // (not captured once like `selfReport`) since it only settles after boot has built the roster.
+  const gateVerdicts = new Map<string, PersonaGateVerdict>();
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -76,7 +91,13 @@ export function resolveBotControls(
         const response = await fetchJson(
           "GET",
           endpoint,
-          { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET, ...selfReport },
+          {
+            [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET,
+            ...selfReport,
+            ...controlsPollGateHeaders(
+              gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,
+            ),
+          },
           undefined,
           controller.signal,
         );
@@ -118,5 +139,8 @@ export function resolveBotControls(
       timer = undefined;
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
+    reportPersonaGate: (verdict) => {
+      gateVerdicts.set(verdict.id, verdict);
+    },
   };
 }

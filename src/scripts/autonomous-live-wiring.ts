@@ -309,6 +309,14 @@ export function buildLiveBot(
   } else {
     console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
   }
+  // The same verdict as the log line above, riding the `/controls` poll this bot's process is
+  // already making — the ops-status panel's credential-free "which personas are gated, and why"
+  // (#666 slice 3).
+  opts.controls.reportPersonaGate({
+    id: bot.persona.id,
+    ready: readiness.ready,
+    reason: readiness.reason,
+  });
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
   // client this bot trades with in place, without restarting the process (and therefore
   // without losing any bot's in-memory momentum/sentiment/cooldown state).
