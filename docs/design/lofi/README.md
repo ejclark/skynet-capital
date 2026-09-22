@@ -18,5 +18,8 @@ account data, so the teardown ban on frames does not apply.
 | File | Decision it serves | Study |
 |---|---|---|
 | `trading-journeys.html` | the home of trading (#3407): Arcade · Outlook · Workbench · Register × ten journeys | `docs/research/trading-parity-2026-09.md` |
+| `trade-chain-composition.html` | inside the (already-picked) Workbench: where the chain and chart compose with the ticket at the docked width (#3407 follow-up) — Workbench-as-shipped · Ticket Accordion · Collapsible Dock · Chain Sheet | Eric, 2026-09-22, live-reviewing the shipped Workbench |
 
 Published: https://claude.ai/artifact/H8zbzDxvn2Nw4HW1nPt1C3 (private; republish from `trading-journeys.html` with the document wrapper stripped).
+
+`trade-chain-composition.html` published: https://claude.ai/artifact/PXipgaX4vEekQaqUM94Knr (private; republish from the committed file).
