@@ -19,11 +19,21 @@ interface PlaybookStoreCopy {
   readonly hold: string;
 }
 
+/** One named, display-ready fact about a playbook's performance (#885/#3543) — a plain label +
+ *  an honest value string, so "not yet measured" reads exactly like a real rate rather than a
+ *  blank the client has to special-case. */
+export interface PlaybookMetric {
+  readonly label: string;
+  readonly value: string;
+}
+
 export interface PlaybookStoreEntry extends PlaybookStoreCopy {
   readonly id: string;
   readonly symbol: string;
-  /** Performance/eval data for the playbook — shape TBD (Eric, #885), empty for now. */
-  readonly metrics: readonly never[];
+  /** Performance/eval data for the playbook (#885: "shape TBD"; #3543 slice 2 fills it in). Empty
+   *  at the catalog level — this function has no account to measure against; an account-scoped
+   *  caller (`playbook-store-json-view.ts`) adds to it. */
+  readonly metrics: readonly PlaybookMetric[];
 }
 
 const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {

@@ -1,5 +1,6 @@
 import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.js";
+import type { RoundTrip } from "../../src/trading/round-trips.js";
 
 const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscription => ({
   accountId: "acct-1",
@@ -9,6 +10,19 @@ const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscriptio
   enabled: true,
   createdAt: "2026-08-29T00:00:00.000Z",
   updatedAt: "2026-08-29T00:00:00.000Z",
+  ...overrides,
+});
+
+const trip = (overrides: Partial<RoundTrip> = {}): RoundTrip => ({
+  symbol: "NVDA",
+  quantity: 10,
+  entryPrice: 100,
+  exitPrice: 100,
+  openedAt: "2026-09-22T14:00:00.000Z",
+  closedAt: "2026-09-22T14:05:00.000Z",
+  realized: 0,
+  returnPct: 0,
+  holdMs: 5 * 60 * 1000,
   ...overrides,
 });
 
@@ -58,5 +72,47 @@ describe("playbookStoreView", () => {
       enabled: true,
       symbols: ["EEM", "AAPL"],
     });
+  });
+
+  it("leaves every card's metrics empty when no round-trips are passed (#3543 slice 2 default)", () => {
+    const view = playbookStoreView([]);
+    for (const card of view.cards) {
+      expect(card.metrics).toEqual([]);
+    }
+  });
+
+  it("reports 'not yet measured' on a card below the whipsaw sample floor", () => {
+    const trips = [
+      trip({ playbookId: "S1-NVDA", realized: -10, holdMs: 60_000 }),
+      trip({ playbookId: "S1-NVDA", realized: -10, holdMs: 60_000 }),
+    ];
+    const view = playbookStoreView([], false, trips);
+    const nvda = view.cards.find((c) => c.id === "S1-NVDA");
+    expect(nvda?.metrics).toEqual([
+      { label: "Whipsaw rate", value: "not yet measured (2 round trips)" },
+    ]);
+  });
+
+  it("surfaces a real whipsaw rate once the sample floor is reached, on its own card only", () => {
+    const trips = Array.from({ length: 5 }, () =>
+      trip({ playbookId: "S1-NVDA", realized: -10, holdMs: 60_000 }),
+    );
+    const view = playbookStoreView([], false, trips);
+    const nvda = view.cards.find((c) => c.id === "S1-NVDA");
+    const goog = view.cards.find((c) => c.id === "G1-GOOG");
+    expect(nvda?.metrics).toEqual([
+      { label: "Whipsaw rate", value: "100% whipsaw (5 round trips)" },
+    ]);
+    expect(goog?.metrics).toEqual([]);
+  });
+
+  it("computes whipsaw metrics independently of subscription state (unsubscribed playbook still measured)", () => {
+    const trips = Array.from({ length: 5 }, () =>
+      trip({ playbookId: "TACO-DJT", realized: 10, holdMs: 60_000 }),
+    );
+    const view = playbookStoreView([sub({ playbookId: "S1-NVDA" })], false, trips);
+    const djt = view.cards.find((c) => c.id === "TACO-DJT");
+    expect(djt?.subscription).toBeUndefined();
+    expect(djt?.metrics).toEqual([{ label: "Whipsaw rate", value: "0% whipsaw (5 round trips)" }]);
   });
 });
