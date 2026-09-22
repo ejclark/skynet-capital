@@ -84,7 +84,10 @@ function opportunityChip(card: PlayCard): ConsiderationChip {
     reason: card.thesis,
     action: {
       label: "View play",
-      href: `/app/outpost?symbol=${encodeURIComponent(card.symbol)}`,
+      // `/outpost` was retired into Research's "Plays" section (#3333 slice 9); this link
+      // pre-dates that move and was left pointing at the deleted route (Eric, 2026-09-22: dead
+      // link from the considerations rail).
+      href: `/app/research?section=plays&symbol=${encodeURIComponent(card.symbol)}`,
     },
   };
 }

@@ -120,6 +120,12 @@ export function NetWorthCondensed({
             {stats.dayChange}
             <span className="desk-note">today</span>
           </span>
+          {stats.bookedKnown ? (
+            <span className={`networth-condensed-booked num tone-${stats.bookedTone}`}>
+              {stats.bookedPl}
+              <span className="desk-note">booked P/L</span>
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="networth-condensed-roi">

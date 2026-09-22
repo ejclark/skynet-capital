@@ -56,6 +56,7 @@ async function accountNetWorth(
     readonly equity: number;
     readonly cash: number;
     readonly positions: readonly unknown[];
+    readonly realizedPl?: number;
     readonly error?: string;
   },
 ): Promise<AccountNetWorthInput> {
@@ -114,6 +115,7 @@ async function accountNetWorth(
     equity: found.equity,
     cash: found.cash,
     ...(lastEquity !== undefined && Number.isFinite(lastEquity) ? { lastEquity } : {}),
+    ...(typeof found.realizedPl === "number" ? { realizedPl: found.realizedPl } : {}),
     windows,
   };
 }

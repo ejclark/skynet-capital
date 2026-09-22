@@ -147,4 +147,37 @@ describe("accountsNetWorthView", () => {
     const view = accountsNetWorthView("t", [account({ id: "a", error: "down" })]);
     expect(view.total).toBeNull();
   });
+
+  it("renders booked P/L (realized, not the mark on what's held) when the account reports it", () => {
+    const view = accountsNetWorthView("t", [account({ id: "a", realizedPl: 1_234 })]);
+    const a = must(view.accounts[0], "accounts[0]");
+    expect(a.bookedPl).toBe("+$1,234");
+    expect(a.bookedTone).toBe("pos");
+    expect(a.bookedKnown).toBe(true);
+  });
+
+  it("reads booked P/L honestly as '—' when the account hasn't reported one yet — never a false $0", () => {
+    const view = accountsNetWorthView("t", [account({ id: "a" })]);
+    const a = must(view.accounts[0], "accounts[0]");
+    expect(a.bookedPl).toBe("—");
+    expect(a.bookedTone).toBe("flat");
+    expect(a.bookedKnown).toBe(false);
+  });
+
+  it("sums booked P/L across the book only once EVERY live account knows its own", () => {
+    const bothKnown = accountsNetWorthView("t", [
+      account({ id: "a", realizedPl: 500 }),
+      account({ id: "b", realizedPl: -200 }),
+    ]);
+    expect(bothKnown.total?.bookedKnown).toBe(true);
+    expect(bothKnown.total?.bookedPl).toBe("+$300");
+    expect(bothKnown.total?.bookedTone).toBe("pos");
+
+    const oneMissing = accountsNetWorthView("t", [
+      account({ id: "a", realizedPl: 500 }),
+      account({ id: "b" }),
+    ]);
+    expect(oneMissing.total?.bookedKnown).toBe(false);
+    expect(oneMissing.total?.bookedPl).toBe("—");
+  });
 });

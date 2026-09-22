@@ -86,6 +86,16 @@
   align-items: baseline;
   gap: 4px;
 }
+/* Booked P/L (realized, not the mark on what's still held) — same tone rules as the day move,
+ * a step lighter so the day move keeps top billing in the sticky header. */
+.networth-condensed-booked {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  opacity: 0.85;
+}
 .networth-condensed-roi {
   display: flex;
   gap: 8px;

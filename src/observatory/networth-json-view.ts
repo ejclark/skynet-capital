@@ -50,6 +50,9 @@ export interface AccountNetWorthInput {
   readonly positionCount: number;
   /** Equity at the previous trading day's close — omitted when unknown, so the day move is "—". */
   readonly lastEquity?: number;
+  /** Cumulative realized P/L — see `ParticipantSnapshot.realizedPl`; omitted when not yet known
+   *  (a pure Alpaca read, never a real "zero booked"), so the stat honestly reads "—". */
+  readonly realizedPl?: number;
   /** Present when the account read failed; the row carries the honest reason and is excluded from totals. */
   readonly error?: string;
   readonly windows: Record<NetWorthWindowKey, NetWorthWindowInput>;
@@ -76,6 +79,12 @@ export interface NetWorthStatsView {
   readonly cash: string;
   readonly cashKnown: boolean;
   readonly positionCount: number;
+  /** Cumulative realized P/L — gains/losses actually BOOKED by a sell, distinct from the day move
+   *  or any window's return (both of which mix in the mark on what's still held). "—" when not
+   *  yet known, never a false "$0 booked". */
+  readonly bookedPl: string;
+  readonly bookedTone: Tone;
+  readonly bookedKnown: boolean;
   readonly windows: readonly NetWorthWindowView[];
 }
 
@@ -126,6 +135,7 @@ export function netWorthStatsView(input: {
   readonly cash?: number;
   readonly positionCount: number;
   readonly lastEquity?: number;
+  readonly realizedPl?: number;
   readonly windows: Record<NetWorthWindowKey, NetWorthWindowInput>;
 }): NetWorthStatsView {
   const valueKnown = typeof input.equity === "number";
@@ -134,6 +144,7 @@ export function netWorthStatsView(input: {
   const day = dayKnown
     ? dayChangeView(input.equity as number, input.lastEquity as number)
     : undefined;
+  const bookedKnown = typeof input.realizedPl === "number" && Number.isFinite(input.realizedPl);
   return {
     value: valueKnown ? formatCurrency(input.equity as number) : "—",
     valueKnown,
@@ -143,6 +154,9 @@ export function netWorthStatsView(input: {
     cash: cashKnown ? formatCurrency(input.cash as number) : "—",
     cashKnown,
     positionCount: input.positionCount,
+    bookedPl: bookedKnown ? formatSigned(input.realizedPl as number) : "—",
+    bookedTone: bookedKnown ? plClass(input.realizedPl as number) : "flat",
+    bookedKnown,
     windows: NET_WORTH_WINDOWS.map((w) => windowView(input.windows[w.key], w.label, w.note)),
   };
 }
@@ -153,6 +167,10 @@ function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsVie
   const totalEquity = live.reduce((sum, a) => sum + (a.equity ?? 0), 0);
   const totalCash = live.reduce((sum, a) => sum + (a.cash ?? 0), 0);
   const positionCount = live.reduce((sum, a) => sum + a.positionCount, 0);
+  // Booked P/L across the book is known only once EVERY live account knows its own — the same
+  // honesty the day move applies: a partial sum would understate what's actually been booked.
+  const bookedKnown = live.every((a) => typeof a.realizedPl === "number");
+  const totalBooked = bookedKnown ? live.reduce((sum, a) => sum + (a.realizedPl ?? 0), 0) : 0;
   // The day move is known only when EVERY live account knows its previous close — one unknown
   // account makes a partial sum misstate the book, so the honest answer is "—".
   const dayKnown = live.every((a) => typeof a.lastEquity === "number" && a.lastEquity !== 0);
@@ -193,6 +211,9 @@ function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsVie
     cash: formatCurrency(totalCash),
     cashKnown: true,
     positionCount,
+    bookedPl: bookedKnown ? formatSigned(totalBooked) : "—",
+    bookedTone: bookedKnown ? plClass(totalBooked) : "flat",
+    bookedKnown,
     windows,
   };
 }

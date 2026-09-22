@@ -27,6 +27,11 @@ export interface NetWorthStatsView {
   readonly cash: string;
   readonly cashKnown: boolean;
   readonly positionCount: number;
+  /** Cumulative realized P/L — gains/losses actually booked by a sell, distinct from the day move
+   *  or any window's return (both mix in the mark on what's still held). "—" when not yet known. */
+  readonly bookedPl: string;
+  readonly bookedTone: Tone;
+  readonly bookedKnown: boolean;
   readonly windows: readonly NetWorthWindowView[];
 }
 
