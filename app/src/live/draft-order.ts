@@ -49,6 +49,14 @@ export interface PayoffCurve {
   readonly breakevens: readonly number[];
   readonly from: number;
   readonly to: number;
+  /** Model marks before expiry (today, halfway) — absent when the server had no IV. */
+  readonly dated?: readonly DatedCurve[];
+}
+
+export interface DatedCurve {
+  readonly label: "today" | "halfway";
+  readonly daysForward: number;
+  readonly points: readonly PayoffPoint[];
 }
 
 export interface DraftPreview {

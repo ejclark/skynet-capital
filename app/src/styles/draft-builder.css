@@ -95,6 +95,18 @@
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
+.payoff-dated {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+.payoff-dated-today {
+  stroke-dasharray: 1.5 3;
+}
+.payoff-dated-halfway {
+  stroke-dasharray: 6 3;
+}
 .payoff-zero {
   stroke: var(--muted);
   stroke-width: 1;
