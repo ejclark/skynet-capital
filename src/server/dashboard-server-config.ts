@@ -179,6 +179,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The live fan-out half of the activity bus (`desk-events-route.ts`, #3407 P4) — a desk's
    *  own order lifecycle as a stream. Absent = the route says so and the shell polls. */
   readonly activityEvents?: Pick<ActivityEventBus, "subscribe">;
+  /** The same ledger, read back — the order-watch alerts derive from one account's events
+   *  (#3407 P4 slice 2). Separate from `activityEvents` so a live-only fake still type-checks. */
+  readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
   /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the

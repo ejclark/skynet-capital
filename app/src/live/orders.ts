@@ -19,6 +19,10 @@ export type DeskOrderState =
 export interface DeskOrderRow {
   readonly id: string;
   readonly symbol: string;
+  /** The symbol in words (an option contract's human name); absent on a record that predates it. */
+  readonly display?: string;
+  /** What `quantity` counts — "contracts" for an option order, "shares" otherwise. */
+  readonly unit?: "shares" | "contracts";
   readonly side: "buy" | "sell";
   readonly orderType: string;
   readonly quantity: number;

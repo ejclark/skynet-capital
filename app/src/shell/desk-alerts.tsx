@@ -101,7 +101,8 @@ export function DeskAlerts({ deskId }: { readonly deskId: string }): ReactElemen
         </p>
       ) : data.alerts.length === 0 ? (
         <p className="tkt-note">
-          Nothing to flag — expiry reminders and assignment risk on your option positions show here.
+          Nothing to flag — expiry reminders and assignment risk on your option positions, and what
+          your orders did (filled, cancelled, rejected), show here.
         </p>
       ) : (
         <ul className="wr-list al-list">

@@ -295,6 +295,8 @@ const workingOrders = {
     {
       id: "wo-1",
       symbol: "NVDA",
+      display: "NVDA",
+      unit: "shares",
       side: "buy",
       orderType: "limit",
       quantity: 5,
@@ -306,9 +308,28 @@ const workingOrders = {
       cancelable: true,
       replaceable: true,
     },
+    // An option order (P1 1b follow-up): the row names the contract, the drawer asks for Contracts.
+    {
+      id: "wo-5",
+      symbol: "NVDA260925C00180000",
+      display: "NVDA $180 CALL · Sep 25",
+      unit: "contracts",
+      side: "sell",
+      orderType: "limit",
+      quantity: 2,
+      filledQuantity: 0,
+      limitPrice: 4.1,
+      timeInForce: "day",
+      submittedAt: "2026-09-21T13:50:00Z",
+      state: "working",
+      cancelable: true,
+      replaceable: true,
+    },
     {
       id: "wo-2",
       symbol: "AAPL",
+      display: "AAPL",
+      unit: "shares",
       side: "sell",
       orderType: "limit",
       quantity: 10,
@@ -525,6 +546,16 @@ const positionWatchAlerts = {
       title: "MSFT $420 put · Sep 18 expires in 18 days",
       body: "A held contract at expiry is exercised if in the money, otherwise expires worthless.",
       fingerprint: "fp-3",
+    },
+    // What an order did while the member was away (slice 2): the ledger's own numbers.
+    {
+      id: "a4",
+      at: 1758462000000,
+      source: "order-watch",
+      priority: "info",
+      symbol: "MU",
+      title: "Order wo-3 filled — 20 MU @ $118.40",
+      fingerprint: "fp-4",
     },
   ],
 };
@@ -1107,6 +1138,15 @@ await shootModify("working-orders-modify-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
 await shootModify("working-orders-modify-desktop");
+// The option order's drawer asks for Contracts — the word the broker's quantity means.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("button", { name: "Keep as is" }).click();
+await page.getByRole("button", { name: "Modify" }).nth(1).click();
+await page.getByLabel("Contracts").waitFor();
+await page.getByText("NVDA $180 CALL · Sep 25").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -120));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+await shootModify("working-orders-option-modify-phone");
 currentOrders = noOrders;
 
 // Limit close (#3407 P1 slice 3) — the option positions card under the ticket with Limit

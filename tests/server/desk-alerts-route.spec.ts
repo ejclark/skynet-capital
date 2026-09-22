@@ -162,6 +162,67 @@ describe("GET /api/trade/alerts", () => {
     expect(out.status).toBe(400);
   });
 
+  it("merges the order ledger's recent lifecycle into the same list, owner tiers only (slice 2)", async () => {
+    const base = {
+      actor: { participantId: "human-ann" },
+      correlationId: "o-1",
+      source: "stream",
+      outcome: "success" as const,
+      payload: {
+        symbol: "NVDA",
+        side: "buy",
+        quantity: 5,
+        filledQuantity: 5,
+        price: 181.32,
+        status: "filled",
+      },
+    };
+    const log = {
+      list: () =>
+        Promise.resolve([
+          {
+            ...base,
+            id: "e1",
+            eventType: "order.filled",
+            target: { kind: "order", id: "o-1" },
+            at: "2026-09-01T13:30:00Z",
+            visibility: "public" as const,
+          },
+          {
+            ...base,
+            id: "e2",
+            eventType: "order.updated",
+            target: { kind: "order", id: "o-2" },
+            at: "2026-09-01T13:40:00Z",
+            visibility: "owner-only" as const,
+            payload: { ...base.payload, status: "rejected" },
+          },
+          {
+            ...base,
+            id: "e3",
+            eventType: "order.filled",
+            target: { kind: "order", id: "o-3" },
+            at: "2026-09-01T13:50:00Z",
+            visibility: "admin-only" as const,
+          },
+        ]),
+    };
+    const { body } = await list(
+      config({ activityLog: log, alertDismissals: new InMemoryAlertDismissals() }),
+    );
+    expect(body.alerts.map((a) => a.dedupeKey)).toEqual([
+      "assignment:NVDA260904C00180000",
+      "expiry:NVDA260904C00180000:week",
+      "rejected:o-2",
+      "expiry:MSFT260908P00420000:month",
+      "filled:o-1",
+    ]);
+    // An unlinked options client with a ledger still lists the order alerts.
+    const orders = await list(config({ activityLog: log, optionsClientFor: () => undefined }));
+    expect(orders.body.available).toBe(true);
+    expect(orders.body.alerts.map((a) => a.dedupeKey)).toEqual(["rejected:o-2", "filled:o-1"]);
+  });
+
   it("claims only its two paths", async () => {
     const { res } = fakeRes();
     expect(
