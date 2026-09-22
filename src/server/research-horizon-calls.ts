@@ -11,6 +11,7 @@ import {
   adjacentIdsOf,
   type HorizonCalls,
   horizonCallsOf,
+  sourceBlockedOf,
   tldrOf,
 } from "./research-event-calls.js";
 import { listResearch } from "./research-service.js";
@@ -21,6 +22,9 @@ export interface LedgerDigest {
   readonly tldr?: string;
   /** Event ids the ledger's probe-ref names as adjacent — the corridor graph. */
   readonly adjacent: readonly string[];
+  /** Whether the ledger's probe-ref records a blocked/downgraded source fetch (#1711) — the call
+   *  board's "source blocked" mark, computed from the field, never inferred from prose. */
+  readonly sourceBlocked: boolean;
 }
 
 const researchDir = (): string => join(process.cwd(), "docs", "research");
@@ -37,6 +41,7 @@ export function ledgerDigests(root: string = researchDir()): ReadonlyMap<string,
       horizons,
       ...(tldr ? { tldr } : {}),
       adjacent: adjacentIdsOf(md),
+      sourceBlocked: sourceBlockedOf(md),
     });
   }
   return out;

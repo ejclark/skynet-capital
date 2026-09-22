@@ -2,6 +2,7 @@ import {
   adjacentIdsOf,
   horizonCallsOf,
   horizonRowsOf,
+  sourceBlockedOf,
   tldrOf,
   todayCallOf,
 } from "../../src/server/research-event-calls.js";
@@ -115,5 +116,28 @@ describe("tldrOf / adjacentIdsOf — the digest's other two fields", () => {
     expect(adjacentIdsOf(md)).toEqual(["a-1", "b-2"]);
     expect(adjacentIdsOf("# T\n<!-- probe-ref: {not json} -->\n")).toEqual([]);
     expect(adjacentIdsOf("# T\n")).toEqual([]);
+  });
+});
+
+describe("sourceBlockedOf — #1711's blocked-source mark", () => {
+  it("is true when the probe-ref's blocked array is non-empty", () => {
+    const md =
+      '# T\n<!-- probe-ref: {"symbols":{},"blocked":[{"url":"https://nyse.com","status":"EGRESS_BLOCKED","at":"2026-09-06"}]} -->\n';
+    expect(sourceBlockedOf(md)).toBe(true);
+  });
+
+  it("is false with no probe-ref, junk JSON, or an empty/absent blocked array", () => {
+    expect(sourceBlockedOf("# T\n")).toBe(false);
+    expect(sourceBlockedOf("# T\n<!-- probe-ref: {not json} -->\n")).toBe(false);
+    expect(sourceBlockedOf('# T\n<!-- probe-ref: {"symbols":{},"blocked":[]} -->\n')).toBe(false);
+    expect(sourceBlockedOf('# T\n<!-- probe-ref: {"symbols":{}} -->\n')).toBe(false);
+  });
+
+  it("reads the LAST probe-ref block — a later pulse's clean state supersedes an earlier block", () => {
+    const md =
+      '# T\n<!-- probe-ref: {"blocked":[{"url":"x","status":"403","at":"2026-09-06"}]} -->\n' +
+      "## Assessment ledger\n" +
+      '<!-- probe-ref: {"blocked":[]} -->\n';
+    expect(sourceBlockedOf(md)).toBe(false);
   });
 });

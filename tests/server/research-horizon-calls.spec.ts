@@ -47,6 +47,21 @@ describe("ledgerDigests", () => {
     expect(boj?.adjacent).toEqual(["fomc-2026-09-16", "opex-2026-09-18"]);
   });
 
+  it("reads sourceBlocked from the probe-ref's blocked array (#1711)", () => {
+    const boj = ledgerDigests(fixtureRoot()).get("boj-decision-2026-09-18");
+    expect(boj?.sourceBlocked).toBe(false);
+
+    const blockedRoot = mkdtempSync(join(tmpdir(), "research-horizons-blocked-"));
+    mkdirSync(join(blockedRoot, "events"));
+    writeFileSync(
+      join(blockedRoot, "events", "avgo-2026-09-02-print.md"),
+      "# AVGO — ledger\n\n**Last assessed:** 2026-09-02\n" +
+        '<!-- probe-ref: {"symbols":{},"blocked":[{"url":"https://nyse.com","status":"503","at":"2026-09-02"}]} -->\n\n' +
+        "## At a glance\n\n**TL;DR.** Stand aside.\n\n| Horizon | Call |\n|---|---|\n| Today | x |\n",
+    );
+    expect(ledgerDigests(blockedRoot).get("avgo-2026-09-02-print")?.sourceBlocked).toBe(true);
+  });
+
   it("leaves out a ledger with no decision header and never lists the template", () => {
     const calls = ledgerDigests(fixtureRoot());
     expect(calls.has("quiet-2026-10-01")).toBe(false);

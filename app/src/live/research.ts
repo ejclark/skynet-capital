@@ -34,6 +34,9 @@ export interface ResearchCall {
   readonly tldr?: string;
   /** Adjacent event ids from the ledger's probe-ref — the hub count reads these. */
   readonly adjacent?: readonly string[];
+  /** Whether the ledger's probe-ref records a blocked/downgraded source (#1711) — absent when the
+   *  ledger carries none. Computed from the field server-side, never inferred here. */
+  readonly sourceBlocked?: boolean;
   /** When the ledger behind this call was last assessed — null (or absent, pre-#follow-on payload)
    *  when no matching ledger doc carries a stamp. A horizon row is only as fresh as the day it was
    *  authored, which is NOT the event date. */
