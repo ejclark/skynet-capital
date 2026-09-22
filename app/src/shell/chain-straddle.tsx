@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { type ChainData, fetchChain } from "../live/options";
 import { type PickSide, StraddleView } from "./straddle-view";
 
@@ -18,6 +18,7 @@ export function ChainStraddle({
   markedStrikes,
   onPickStrike,
   onPickSide,
+  expirationField,
 }: {
   readonly chainSym: string;
   readonly optionType: "call" | "put";
@@ -30,6 +31,8 @@ export function ChainStraddle({
   readonly onPickSide?: PickSide;
   /** Strikes the multi-leg draft already carries (#3407 P3 slice 2) — threaded through. */
   readonly markedStrikes?: readonly number[];
+  /** Threaded straight through to `StraddleView` — see its own doc for why it lives here now. */
+  readonly expirationField?: ReactNode;
 }): ReactElement {
   const otherType = optionType === "call" ? "put" : "call";
   const other = useQuery({
@@ -49,6 +52,7 @@ export function ChainStraddle({
       onPickStrike={(value) => onPickStrike(String(value))}
       onPickSide={onPickSide}
       quotes={chainData.quotes}
+      expirationField={expirationField}
     />
   );
 }

@@ -8,26 +8,18 @@
   gap: 8px;
   margin: 12px 0 14px;
 }
-.straddle-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.straddle-eyebrow {
-  color: var(--accent);
-}
-.straddle-dte {
-  color: var(--muted);
-}
+/* The expiration picker's home when a chain has loaded (`option-gate.tsx`'s `expirationField`,
+   rendered here via `StraddleView`'s own prop) — full straddle width instead of the ~150px tile
+   it's cramped into in the ticket's own fields grid, room enough for `.exp-tabs` to actually show
+   more than 1.5 dates (Eric, 2026-09-21). The "Chain · SYM · date" / "Expires today" text that
+   used to live here is gone — redundant once a member has picked the date themselves; DTE now
+   surfaces on the order review instead (`option-preview.tsx`). `.field`'s own rules (`gate.css`)
+   are enough, so there's no CSS rule of its own here.
 
-/* The earnings badge (#2017 Phase 1 slice 11) — the chain header's own print tell, right after
-   `.straddle-head`. Tone rides on a real border/background step, never colour alone (a standing
-   reader is red/green colourblind), and the class names below mirror `TONE`'s own keys in
-   `earnings-chain-badge.ts` exactly, so a display change to one is a display change to both. */
+   The earnings badge (#2017 Phase 1 slice 11) — the chain header's own print tell, right after
+   the expiration field. Tone rides on a real border/background step, never colour alone (a
+   standing reader is red/green colourblind), and the class names below mirror `TONE`'s own keys
+   in `earnings-chain-badge.ts` exactly, so a display change to one is a display change to both. */
 .ec-badge {
   display: inline-flex;
   align-items: baseline;

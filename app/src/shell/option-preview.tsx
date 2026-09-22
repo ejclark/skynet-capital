@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { DeskOrderEvent } from "../live/desk-events";
 import { fillHeadline } from "../live/fill-headline";
 import type { OptionPreview } from "../live/options";
+import { daysToExpiry, expiresIn } from "../live/straddle";
 import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
@@ -108,6 +109,10 @@ export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview
         {orderTypeLabel(preview.orderType)}
         {preview.limitPrice !== undefined ? ` · limit ${money(preview.limitPrice)}` : ""}
         {tif ? ` · ${tif}` : ""}
+        {/* DTE lands here, not on the chain (Eric, 2026-09-21): a member just picked the date
+            themselves, so a chain-header echo of it added nothing — the theta lesson belongs at
+            the moment it's actually decision-relevant, reviewing what's about to be sent. */}
+        {preview.expiration ? ` · ${expiresIn(daysToExpiry(preview.expiration, new Date()))}` : ""}
       </p>
       {preview.refusals.map((refusal) => (
         <p key={refusal} className="gate-row gate-refusal">
