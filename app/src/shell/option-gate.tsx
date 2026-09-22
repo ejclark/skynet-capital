@@ -125,6 +125,10 @@ export function OptionGate({
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
   const [expiration, setExpiration] = useState("");
   const [strike, setStrike] = useState(initialStrike ?? "");
+  /** Bumped on every chain-originated strike pick — flashes the Strike field below (see
+   *  `pickStrikeAndCommit`). A counter, not a boolean, so two picks in a row each re-trigger the
+   *  flash even if the field never stopped flashing between them. */
+  const [strikeFlash, setStrikeFlash] = useState(0);
   const [contracts, setContracts] = useState("1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
@@ -221,10 +225,13 @@ export function OptionGate({
   /** A one-shot chain pick (a table row or cell click, never a keystroke) — sets the strike and
    *  commits it to `?strike=` immediately. The manual `StrikeField` input goes through `pickStrike`
    *  directly instead (see its `onEdit` wiring below) and commits separately, on blur — see the
-   *  header comment's note on why the two commit on different cadences. */
+   *  header comment's note on why the two commit on different cadences. Also bumps `strikeFlash`
+   *  (Eric, 2026-09-22's standard-pattern ask) — a chain pick, never a keystroke, flashes the
+   *  Strike field below so the click and the field it just filled read as one event. */
   const pickStrikeAndCommit = (value: string) => {
     pickStrike(value);
     onStrikeCommit?.(value);
+    setStrikeFlash((n) => n + 1);
   };
 
   /** A call/put chain cell pick (task 4e) — the resolution rule, already decided (see the header
@@ -255,8 +262,10 @@ export function OptionGate({
     const targetLocked = plays.find((p) => p.code === target)?.locked ?? true;
     if (targetLocked) {
       // Never widen a locked rung from a chain click. Fill strike only — no onStrikeCommit, no
-      // onPreset — but explain why (visible, disabled, explained — never silently dead).
+      // onPreset — but explain why (visible, disabled, explained — never silently dead). Still a
+      // chain-originated pick, so it still flashes the field it filled.
       pickStrike(value);
+      setStrikeFlash((n) => n + 1);
       setLockedPickNote(`Strike filled — the ${side} side isn't unlocked yet.`);
       return;
     }
@@ -423,6 +432,7 @@ export function OptionGate({
               value={strike}
               onEdit={pickStrike}
               onCommit={(v) => onStrikeCommit?.(v)}
+              flashKey={strikeFlash}
             />
           </div>
           <div className="field">

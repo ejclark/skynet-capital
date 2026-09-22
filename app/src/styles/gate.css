@@ -55,6 +55,25 @@
   font-size: var(--text-base);
   font-family: var(--sans);
 }
+/* The Strike field's destination flash (Eric, 2026-09-22, "what standard design choices... to
+   organically communicate" a chain click filling this field): a one-shot accent pulse, triggered
+   by `StrikeField`'s `flashKey` prop, distinct from focus/hover — this fires from a CLICK
+   elsewhere on the page, so the member's eye needs a cue at the field itself, not just at the
+   click point. `--dur-spatial` already zeroes under `prefers-reduced-motion` (`theme.css`), so a
+   reduced-motion reader gets the border-color end state instantly instead of a pulse. */
+@keyframes strike-flash {
+  0% {
+    background: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+    border-color: var(--accent);
+  }
+  100% {
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+}
+.strike-flash {
+  animation: strike-flash var(--dur-spatial) ease-out;
+}
 .gate {
   border: 1px solid var(--border);
   border-radius: 10px;
