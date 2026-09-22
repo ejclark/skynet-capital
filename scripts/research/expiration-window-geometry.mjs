@@ -75,8 +75,10 @@ const sd = (xs) => {
   const m = mean(xs);
   return Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / (xs.length - 1));
 };
-const days = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
-const shiftDays = (d, n) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const days = (a, b) =>
+  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+const shiftDays = (d, n) =>
+  new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 // --- the NYSE closure calendar, generated rather than fetched -------------------------------
 // Fetched holiday tables cover three years; this study needs twenty-five. The rules are statute
@@ -129,12 +131,14 @@ export function closures(year) {
   ];
   // Juneteenth became an NYSE holiday in 2022, not when the statute passed.
   if (year >= 2022) out.push(["Juneteenth", observed(utc(year, 6, 19))]);
-  return out
-    // A New Year's Day falling on a Saturday is the one fixed-date holiday the NYSE does NOT pull
-    // back to the Friday — 2028 is the next such year, and it is why January 2028 has one closure.
-    .filter(([name, d]) => !(name === "New Year's Day" && utc(year, 1, 1).getUTCDay() === 6))
-    .filter(([, d]) => d.getUTCDay() !== 0 && d.getUTCDay() !== 6)
-    .map(([name, d]) => ({ name, date: iso(d) }));
+  return (
+    out
+      // A New Year's Day falling on a Saturday is the one fixed-date holiday the NYSE does NOT pull
+      // back to the Friday — 2028 is the next such year, and it is why January 2028 has one closure.
+      .filter(([name, _d]) => !(name === "New Year's Day" && utc(year, 1, 1).getUTCDay() === 6))
+      .filter(([, d]) => d.getUTCDay() !== 0 && d.getUTCDay() !== 6)
+      .map(([name, d]) => ({ name, date: iso(d) }))
+  );
 }
 
 // --- the study -------------------------------------------------------------------------------
@@ -149,7 +153,10 @@ export function observations(rows, holidays, from = FROM) {
     const returns = (lo, hi) => {
       const r = [];
       for (let k = lo + 1; k <= hi; k++)
-        r.push({ v: Math.log(rows[k].close / rows[k - 1].close), d: days(rows[k - 1].date, rows[k].date) });
+        r.push({
+          v: Math.log(rows[k].close / rows[k - 1].close),
+          d: days(rows[k - 1].date, rows[k].date),
+        });
       return r;
     };
     const pre = returns(i - 5, i);
@@ -231,7 +238,10 @@ function line(label, rows) {
 
 async function main() {
   if (process.argv.includes("--fresh"))
-    rmSync(join(process.cwd(), "node_modules", ".cache", "earnings-cycle"), { recursive: true, force: true });
+    rmSync(join(process.cwd(), "node_modules", ".cache", "earnings-cycle"), {
+      recursive: true,
+      force: true,
+    });
 
   const holidays = new Set();
   for (let y = FROM - 1; y <= new Date().getUTCFullYear() + 5; y++)
@@ -245,23 +255,37 @@ async function main() {
     const span = [rows[0].date, rows.at(-1).date];
     const wrong = [...holidays].filter((d) => d >= span[0] && d <= span[1] && sessions.has(d));
     console.log(`\n################ ${symbol} — ${rows.length} sessions ${span[0]} -> ${span[1]}`);
-    console.log(`calendar check: ${wrong.length ? `FAILED, traded on ${wrong.join(",")}` : "every generated closure is a non-session"}`);
+    console.log(
+      `calendar check: ${wrong.length ? `FAILED, traded on ${wrong.join(",")}` : "every generated closure is a non-session"}`,
+    );
 
     const obs = observations(rows, holidays);
     console.log(`\n-- the shelf's own cells (${obs.length} expirations) --`);
     line("all", obs);
-    line("ordinary monthlies", obs.filter((r) => !r.quarterly));
-    line("quarterly witchings", obs.filter((r) => r.quarterly));
+    line(
+      "ordinary monthlies",
+      obs.filter((r) => !r.quarterly),
+    );
+    line(
+      "quarterly witchings",
+      obs.filter((r) => r.quarterly),
+    );
 
     console.log("\n-- window geometry: the asymmetry --");
-    const clean = obs.filter((r) => !r.inside && !r.after && r.preSpan === 7 && r.postSpan === 7);
+    const clean = obs.filter((r) => !(r.inside || r.after) && r.preSpan === 7 && r.postSpan === 7);
     const after = obs.filter((r) => r.after);
     const inside = obs.filter((r) => r.inside);
     line("clean 7/7", clean);
     line("holiday AFTER expiry (post +3d)", after);
     line("holiday INSIDE expiry week (pre +1d)", inside);
-    line("  inside, January (MLK)", inside.filter((r) => r.month === 1));
-    line("  inside, February (Wash. Bday)", inside.filter((r) => r.month === 2));
+    line(
+      "  inside, January (MLK)",
+      inside.filter((r) => r.month === 1),
+    );
+    line(
+      "  inside, February (Wash. Bday)",
+      inside.filter((r) => r.month === 2),
+    );
     const infl = (rows) => rows.map((r) => r.raw / r.norm);
     console.log(
       `Mann-Whitney vs clean:  AFTER P=${mannWhitney(infl(after), infl(clean)).p.toFixed(4)}` +
