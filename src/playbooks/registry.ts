@@ -8,7 +8,9 @@
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
+import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
 import { type EnabledPlaybook, type Playbook, printWindow } from "./playbook.js";
+import type { TacticalRule } from "./tactical-playbook.js";
 
 /** Post-print hygiene shared by every date-keyed play: a position that somehow survived its
  *  print (missed exit, process restart) is exited on the first cycle after — never carried. */
@@ -133,7 +135,89 @@ export const TACO_DJT: Playbook = {
   },
 };
 
-const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT];
+/** The production watch list `SauronHardcorePersona.decide()` actually sees today (its own loop
+ *  is `Object.keys(context.quotes)` — whatever is live, not a fixed list). `run-autonomous.ts`'s
+ *  own `UNIVERSE` constant is what makes that dynamic list, in practice, exactly this one — a
+ *  fixed basket here is the honest static translation, not a behavior change. Declared locally
+ *  rather than imported from `scripts/` (a backwards dependency this file never takes). */
+const HC_SAURON_UNIVERSE = [
+  "AAPL",
+  "MSFT",
+  "NVDA",
+  "GOOGL",
+  "AMZN",
+  "META",
+  "AVGO",
+  "TSLA",
+  "CRWV",
+  "MRVL",
+];
+
+/** Hardcore Sauron's exact thresholds (`HARDCORE_SAURON_CONFIG`), translated into the tactic
+ *  chain's four generic kinds, in the same priority order `SauronHardcorePersona.decideSymbol`
+ *  checks them — stop, fade, claim, scalp. `tests/playbooks/tactical-playbook.spec.ts`'s parity
+ *  suite proves this exact translation matches the persona intent-for-intent. */
+const HC_SAURON_TACTICS: readonly TacticalRule[] = [
+  { kind: "momentum-stop", momentumAtOrBelow: HARDCORE_SAURON_CONFIG.stopMomentum },
+  {
+    kind: "sentiment-fade",
+    sentimentAtOrAbove: HARDCORE_SAURON_CONFIG.euphoriaSentiment,
+    momentumAtOrBelow: HARDCORE_SAURON_CONFIG.rolloverMomentumMax,
+    exitFraction: HARDCORE_SAURON_CONFIG.exitFraction,
+    dustNotional: HARDCORE_SAURON_CONFIG.dustNotional,
+  },
+  {
+    kind: "sentiment-claim",
+    sentimentAtOrBelow: HARDCORE_SAURON_CONFIG.panicSentiment,
+    momentumAtOrAbove: HARDCORE_SAURON_CONFIG.reboundMomentumMin,
+    trancheNotional: HARDCORE_SAURON_CONFIG.trancheNotional,
+    maxConviction: HARDCORE_SAURON_CONFIG.maxConviction,
+    maxTrancheValue:
+      HARDCORE_SAURON_CONFIG.trancheNotional * HARDCORE_SAURON_CONFIG.maxTranchesPerSymbol,
+  },
+  {
+    kind: "momentum-scalp",
+    momentumAtOrAbove: HARDCORE_SAURON_CONFIG.scalpEntryMomentum,
+    sentimentAbove: HARDCORE_SAURON_CONFIG.panicSentiment,
+    sentimentBelow: HARDCORE_SAURON_CONFIG.euphoriaSentiment,
+    notional: HARDCORE_SAURON_CONFIG.scalpNotional,
+    maxTrancheValue:
+      HARDCORE_SAURON_CONFIG.trancheNotional * HARDCORE_SAURON_CONFIG.maxTranchesPerSymbol,
+  },
+];
+
+/**
+ * HC-SAURON (issue #3527 plan, slice 3) — hardcore Sauron's exact behavior, re-expressed as
+ * configuration on the tactical rule chain (`tactical-playbook.ts`) instead of the bespoke
+ * `SauronHardcorePersona` class. `desiredState`/`size` are present only to satisfy `Playbook`'s
+ * shape — a tactical playbook's `tactics` field is what the engine actually reads
+ * (`playbookIntents`); those two fields go uncalled and their values carry no meaning.
+ *
+ * HONESTY GAP — READ BEFORE ENABLING, same posture as TACO-DJT's own gap above. This playbook is
+ * REGISTERED but the live hardcore roster (`SKYNET_HARDCORE_BOTS`) still arms
+ * `SauronHardcorePersona`, not this definition — naming "HC-SAURON" in `SKYNET_PLAYBOOKS` and
+ * subscribing capital to it runs a SECOND, independent instance of the same logic alongside the
+ * persona, never a replacement. The actual cutover (retiring the persona, pointing
+ * `SKYNET_HARDCORE_BOTS` at this playbook instead) is deferred to its own slice, gated on this
+ * definition's characterization tests staying green.
+ */
+export const HC_SAURON: Playbook = {
+  id: "HC-SAURON",
+  symbols: HC_SAURON_UNIVERSE,
+  thesis:
+    "Impose order on the market's chaos — hardcore research mode: the same eye, faster hands; " +
+    "small tranches probe every extreme and every run, and each order carries its thesis.",
+  evidence:
+    "src/personas/sauron-hardcore.ts (Eric, 2026-08-20) — trade volume as research data, not " +
+    "P/L; not yet a docs/research/ backtest of its own.",
+  // Unused — a tactical playbook's sizing lives entirely in `tactics`, never `playbook.size`.
+  size: { conservative: 0, standard: 0, aggressive: 0 },
+  // Unused — a tactical playbook's condition lives entirely in `tactics`, never `desiredState`.
+  desiredState: () => "no-window",
+  tactics: HC_SAURON_TACTICS,
+};
+
+const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON];
 const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
 
 /**
@@ -177,9 +261,9 @@ export function findPlaybook(id: string): Playbook | undefined {
  *  #2224 shape 1's slicing sketch item 3). Deliberately unfiltered by `SKYNET_PLAYBOOKS`: naming
  *  which house play your bot's stance backs is a declaration, not an enable switch, so a play
  *  still registered but not live this week is still nameable. Council's tag selector shows one
- *  symbol per play; a basket playbook's first symbol stands in — every playbook here is still
- *  single-symbol today, so this is byte-identical, and widening the tag itself to a full basket
- *  is a Council-UI decision for whenever a multi-symbol playbook actually ships. */
+ *  symbol per play; a basket playbook's first symbol stands in (HC-SAURON's ten-symbol universe
+ *  included) — widening the tag itself to a full basket is a Council-UI decision for whenever
+ *  showing more than one symbol per play actually matters there. */
 export function playbookRoster(): readonly { readonly id: string; readonly symbol: string }[] {
   return ROSTER.flatMap(({ id, symbols }) => (symbols[0] ? [{ id, symbol: symbols[0] }] : []));
 }

@@ -162,7 +162,14 @@ function facets(
  * filter option can never exist for a value nothing has.
  */
 export function outpostCatalog(): OutpostCatalog {
-  const cards = housePlaybooks().map(cardOf);
+  // A tactical playbook (`Playbook.tactics`, issue #3527 plan) has no date/event window at all —
+  // `cardOf`'s `trigger`/`size` fields assume one of the two shapes this catalog was built for,
+  // and forcing a fit would show a false "event-driven, 0% size" card. Held back here until the
+  // Outpost is taught the tactical shape; it still appears honestly in the Playbook Store (whose
+  // card carries no `trigger`/`size` field) and in `unshelvedPlaybooks`' honest-gap bucket.
+  const cards = housePlaybooks()
+    .filter((playbook) => !playbook.tactics)
+    .map(cardOf);
   return {
     cards,
     authors: facets(cards, (c) => [[c.author.id, c.author.name]]),

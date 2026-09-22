@@ -1,12 +1,16 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
+import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
+import { playbookIntents } from "../../src/playbooks/playbook.js";
 import {
   enabledPlaybooks,
   findPlaybook,
   G1_GOOG,
+  HC_SAURON,
   playbookRoster,
   S1_NVDA,
   TACO_DJT,
 } from "../../src/playbooks/registry.js";
+import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
 const cal = (symbol: string, date: string, status: EarningsPrint["status"]): EarningsPrint[] => [
   { symbol, date, status, source: "test" },
@@ -102,6 +106,12 @@ describe("enabledPlaybooks env parsing", () => {
     expect(rejected).toEqual([]);
     expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
   });
+
+  it("recognises HC-SAURON — registered, but still dark unless named (issue #3527 plan, slice 3)", () => {
+    const { enabled, rejected } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "HC-SAURON:standard" });
+    expect(rejected).toEqual([]);
+    expect(enabled).toEqual([{ playbook: HC_SAURON, mode: "standard" }]);
+  });
 });
 
 describe("findPlaybook", () => {
@@ -109,6 +119,7 @@ describe("findPlaybook", () => {
     expect(findPlaybook("S1-NVDA")).toBe(S1_NVDA);
     expect(findPlaybook("G1-GOOG")).toBe(G1_GOOG);
     expect(findPlaybook("TACO-DJT")).toBe(TACO_DJT);
+    expect(findPlaybook("HC-SAURON")).toBe(HC_SAURON);
   });
 
   it("returns undefined for an unknown id", () => {
@@ -122,6 +133,89 @@ describe("playbookRoster", () => {
       { id: "S1-NVDA", symbol: "NVDA" },
       { id: "G1-GOOG", symbol: "GOOG" },
       { id: "TACO-DJT", symbol: TACO_DJT.symbols[0] },
+      { id: "HC-SAURON", symbol: HC_SAURON.symbols[0] },
     ]);
+  });
+});
+
+/**
+ * HC-SAURON parity, end to end through `playbookIntents` (issue #3527 plan, slice 3) — the same
+ * scenarios `tests/playbooks/tactical-playbook.spec.ts`'s parity suite proves at the
+ * `tacticalIntentForSymbol` level, run here through the ACTUAL registered playbook and the real
+ * engine entry point, confirming the wiring (not just the tactic math) matches
+ * `SauronHardcorePersona` too.
+ */
+describe("HC-SAURON parity with SauronHardcorePersona (issue #3527 plan, slice 3)", () => {
+  const persona = new SauronHardcorePersona();
+  const enabled = [{ playbook: HC_SAURON, mode: "standard" as const }];
+
+  it("panic claim: same side and quantity", () => {
+    const context = aContext({ NVDA: { last: 100, momentum: 0.01, sentiment: -0.5 } });
+    const portfolio = aPortfolio();
+
+    const personaIntent = persona.decide(context, portfolio)[0];
+    const [playbookIntent] = playbookIntents(enabled, context, portfolio, []);
+
+    expect(playbookIntent).toMatchObject({
+      side: personaIntent?.side,
+      quantity: personaIntent?.quantity,
+    });
+  });
+
+  it("euphoria fade: same side and quantity", () => {
+    const context = aContext({ NVDA: { last: 200, momentum: -0.001, sentiment: 0.4 } });
+    const portfolio = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 200 })] });
+
+    const personaIntent = persona.decide(context, portfolio)[0];
+    const [playbookIntent] = playbookIntents(enabled, context, portfolio, []);
+
+    expect(playbookIntent).toMatchObject({
+      side: personaIntent?.side,
+      quantity: personaIntent?.quantity,
+    });
+  });
+
+  it("momentum stop: same quantity, takes priority over euphoric sentiment", () => {
+    const context = aContext({ NVDA: { last: 200, momentum: -0.01, sentiment: 0.5 } });
+    const portfolio = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 200 })] });
+
+    const personaIntent = persona.decide(context, portfolio)[0];
+    const [playbookIntent] = playbookIntents(enabled, context, portfolio, []);
+
+    expect(playbookIntent).toMatchObject({
+      side: personaIntent?.side,
+      quantity: personaIntent?.quantity,
+    });
+  });
+
+  it("momentum scalp: same side", () => {
+    const context = aContext({ NVDA: { last: 100, momentum: 0.015, sentiment: 0.1 } });
+    const portfolio = aPortfolio();
+
+    const personaIntent = persona.decide(context, portfolio)[0];
+    const [playbookIntent] = playbookIntents(enabled, context, portfolio, []);
+
+    expect(playbookIntent).toMatchObject({ side: personaIntent?.side });
+  });
+
+  it("quiet conditions: neither trades", () => {
+    const context = aContext({ NVDA: { last: 100, momentum: 0.005, sentiment: -0.2 } });
+    const portfolio = aPortfolio();
+
+    expect(persona.decide(context, portfolio)).toEqual([]);
+    expect(playbookIntents(enabled, context, portfolio, [])).toEqual([]);
+  });
+
+  it("trades independently across its whole universe, not just NVDA", () => {
+    const context = aContext({
+      NVDA: { last: 100, momentum: 0.01, sentiment: -0.5 },
+      MSFT: { last: 100, momentum: 0.005, sentiment: -0.2 }, // quiet — should stay silent
+      GOOGL: { last: 100, momentum: 0.015, sentiment: 0.1 }, // scalp
+    });
+    const portfolio = aPortfolio();
+
+    const intents = playbookIntents(enabled, context, portfolio, []);
+
+    expect(intents.map((i) => i.symbol).sort()).toEqual(["GOOGL", "NVDA"]);
   });
 });

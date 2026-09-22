@@ -2,7 +2,7 @@ import {
   playbookCollections,
   unshelvedPlaybooks,
 } from "../../src/discovery/playbook-collections.js";
-import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import { G1_GOOG, HC_SAURON, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 
 const shelves = playbookCollections();
 const shelf = (id: string) => shelves.find((c) => c.id === id);
@@ -60,11 +60,11 @@ describe("playbookCollections", () => {
 
 describe("unshelvedPlaybooks", () => {
   it(
-    "shelves every DATE-keyed play; TACO-DJT is the honest exception — it's event-driven, so " +
-      "the calendar-window probe can never find it a window to shelve",
+    "shelves every DATE-keyed play; TACO-DJT and HC-SAURON are the honest exceptions — " +
+      "event-driven/tactical, so the calendar-window probe can never find either a window to shelve",
     () => {
       const unshelved = unshelvedPlaybooks(shelves);
-      expect(unshelved.map((m) => m.id)).toEqual([TACO_DJT.id]);
+      expect(unshelved.map((m) => m.id).sort()).toEqual([HC_SAURON.id, TACO_DJT.id].sort());
       expect(unshelved[0]?.evidence).toContain("No shelf probe");
     },
   );
@@ -72,7 +72,9 @@ describe("unshelvedPlaybooks", () => {
   it("names every play as unshelved when handed no shelves — absence renders ABSENT", () => {
     const all = unshelvedPlaybooks([]);
 
-    expect(all.map((m) => m.id).sort()).toEqual([G1_GOOG.id, S1_NVDA.id, TACO_DJT.id].sort());
+    expect(all.map((m) => m.id).sort()).toEqual(
+      [G1_GOOG.id, HC_SAURON.id, S1_NVDA.id, TACO_DJT.id].sort(),
+    );
     expect(all[0]?.evidence).toContain("No shelf probe");
   });
 });
