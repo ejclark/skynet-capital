@@ -226,3 +226,26 @@ export function adjacentIdsOf(md: string): string[] {
     return [];
   }
 }
+
+/**
+ * Whether this ledger's `probe-ref` records a blocked or downgraded source fetch (#1711) —
+ * egress block, 403, 5xx, whatever the tool reported. The prefix downgrade it implies
+ * (`NYSE:` → `NEWS:`) is the author's job (EVENT-RESEARCH.md's Honesty rules), not this reader's
+ * to enforce; this only surfaces the structural fact so the shelf's call board can mark the row.
+ *
+ * LAST occurrence, not first — same reason `research-lint.mjs`'s `checkBlockedSources` reads the
+ * last block: a pulse APPENDS a fresh probe-ref pair rather than rewriting the header in place
+ * (TEMPLATE.md), so "current state" is whichever block is latest in the file. Malformed JSON or no
+ * probe-ref at all reads as not-blocked, never a throw — `adjacentIdsOf`'s doctrine.
+ */
+export function sourceBlockedOf(md: string): boolean {
+  const matches = [...md.matchAll(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/g)];
+  const raw = matches.at(-1)?.[1];
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { blocked?: unknown };
+    return Array.isArray(parsed.blocked) && parsed.blocked.length > 0;
+  } catch {
+    return false;
+  }
+}

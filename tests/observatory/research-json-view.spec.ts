@@ -63,6 +63,7 @@ describe("researchShelfJson", () => {
             },
             tldr: "Stand aside; the week's fork is CPI.",
             adjacent: ["cpi-2026-09-11"],
+            sourceBlocked: false,
           },
         ],
       ]),
@@ -78,6 +79,33 @@ describe("researchShelfJson", () => {
     expect(
       researchShelfJson({ studies: [], ledgers: [] }, [], new Map([["x", today]])).calls[0],
     ).not.toHaveProperty("horizons");
+  });
+
+  it("carries sourceBlocked only when the digest states it (#1711), never a stray false", () => {
+    const today: EventCall = { call: "Stand aside", horizon: "Today" };
+    const view = researchShelfJson(
+      { studies: [], ledgers: [] },
+      [],
+      new Map([["avgo-2026-09-02-print", today]]),
+      [],
+      new Map([
+        ["avgo-2026-09-02-print", { horizons: { today }, adjacent: [], sourceBlocked: true }],
+      ]),
+    );
+    expect(view.calls[0]?.sourceBlocked).toBe(true);
+    // A digest that says false, or a call with no digest at all, carries no key — old readers and
+    // a clean ledger both see the same absent field, never a stray `false`.
+    const clean = researchShelfJson(
+      { studies: [], ledgers: [] },
+      [],
+      new Map([["x", today]]),
+      [],
+      new Map([["x", { horizons: { today }, adjacent: [], sourceBlocked: false }]]),
+    );
+    expect(clean.calls[0]).not.toHaveProperty("sourceBlocked");
+    expect(
+      researchShelfJson({ studies: [], ledgers: [] }, [], new Map([["y", today]])).calls[0],
+    ).not.toHaveProperty("sourceBlocked");
   });
 
   it("carries the exchange closures it is handed, and an empty list when handed none", () => {

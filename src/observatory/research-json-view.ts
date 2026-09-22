@@ -39,6 +39,9 @@ interface CallView {
   readonly tldr?: string;
   /** Adjacent event ids from the ledger's probe-ref — the shell counts hubs from these. */
   readonly adjacent?: readonly string[];
+  /** Whether the ledger's probe-ref records a blocked/downgraded source (#1711) — absent (never
+   *  `false`) when the ledger carries none, so an old payload and a clean ledger read the same. */
+  readonly sourceBlocked?: boolean;
 }
 
 interface EventView {
@@ -71,12 +74,13 @@ export interface ResearchShelfJson {
 /** The digest's fields on a call row — absent entirely when the ledger has none (old shape). */
 const digestView = (
   digest: LedgerDigest | undefined,
-): Pick<CallView, "horizons" | "tldr" | "adjacent"> =>
+): Pick<CallView, "horizons" | "tldr" | "adjacent" | "sourceBlocked"> =>
   digest
     ? {
         horizons: digest.horizons,
         ...(digest.tldr ? { tldr: digest.tldr } : {}),
         adjacent: digest.adjacent,
+        ...(digest.sourceBlocked ? { sourceBlocked: true } : {}),
       }
     : {};
 

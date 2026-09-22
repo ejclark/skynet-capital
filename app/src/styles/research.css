@@ -80,6 +80,12 @@
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
+/* Blocked source (#1711): the WORD "source blocked" carries the meaning; weight + a dashed border
+ * (matching .rx-assessed's shape convention) only add emphasis, never a colour change alone. */
+.rx-blocked {
+  font-weight: 700;
+  border-style: dashed;
+}
 .rx-note {
   margin: 10px 0 0;
   font-size: 10.5px;
@@ -201,6 +207,9 @@
 }
 .rx-hubs a:hover {
   text-decoration: underline;
+}
+.rx-blocked-note {
+  font-weight: 600;
 }
 
 /* the scope sentence (#1704 direction G): the one query string as prose; slots are native selects

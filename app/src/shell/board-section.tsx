@@ -93,6 +93,9 @@ function CallBoard({
   if (data.calls.length === 0) return null;
   const mix = callMix(calls.map(({ row }) => row.call));
   const hubs = hubEvents(calls.map(({ call }) => call.adjacent ?? []));
+  // #1711: a blocked/downgraded source is never a silent fallback — the board counts it here from
+  // the field (probe-ref.blocked, via the shell payload's sourceBlocked), never from prose.
+  const blockedCount = calls.filter(({ call }) => call.sourceBlocked).length;
   return (
     <section className="rx-panel">
       <h2 className="rx-h">The call board · {LENS_LABEL[lens]}</h2>
@@ -128,6 +131,15 @@ function CallBoard({
                 ))}
               </span>
             ) : null}
+            {blockedCount > 0 ? (
+              <span
+                className="rx-blocked-note"
+                title="a cited source was blocked or downgraded — see the ledger's probe-ref"
+              >
+                {" "}
+                · <span className="num">{blockedCount}</span> source blocked
+              </span>
+            ) : null}
           </p>
           <ul className="rx-calls">
             {calls.map(({ call, row }) => {
@@ -154,6 +166,14 @@ function CallBoard({
                       >
                         assessed {call.lastAssessed}
                         {age.stale ? ` · stale (${age.days}d)` : ""}
+                      </span>
+                    ) : null}
+                    {call.sourceBlocked ? (
+                      <span
+                        className="rx-chip rx-blocked"
+                        title="a cited source was blocked or downgraded — see the ledger's probe-ref for the fallback used"
+                      >
+                        source blocked
                       </span>
                     ) : null}
                   </span>
