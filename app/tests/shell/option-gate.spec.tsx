@@ -520,3 +520,76 @@ describe("OptionGate — held position badge (Eric, 2026-09-22)", () => {
     expect(document.querySelector(".straddle-held-badge:not(.straddle-held-empty)")).toBeNull();
   });
 });
+
+/**
+ * `chartSlot` (Eric, 2026-09-22: "the options table needs access to all available screen width…
+ * the bottom part of the trade form… requires little room — appropriate place to have two columns
+ * with the right column being the candlestick chart"): passed only by the docked bench
+ * (`trade.tsx`'s `ticketOwnsChart`) — this component just has to place it correctly.
+ */
+describe("OptionGate — chartSlot (Eric, 2026-09-22)", () => {
+  function renderGateWithChart(chartSlot: ReactElement): ReactElement {
+    const client = new QueryClient();
+    return (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={unlockedCallPlay}
+          initialSymbol="NVDA"
+          chartSlot={chartSlot}
+        />
+      </QueryClientProvider>
+    );
+  }
+
+  it("renders chartSlot beside the order-detail block, not beside the symbol/chain", async () => {
+    chainResult = fullChain;
+    render(renderGateWithChart(<div data-testid="fixture-chart">chart fixture</div>));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    const chart = screen.getByTestId("fixture-chart");
+    const split = chart.closest(".tkt-review-split");
+    expect(split).not.toBeNull();
+    // The Strike field (order-detail) shares the split with the chart; the Symbol field
+    // (top-of-ticket) does not — proving the split starts at Strike, not at the very top.
+    expect(split?.contains(screen.getByLabelText("Strike"))).toBe(true);
+    expect(split?.contains(screen.getByLabelText("Symbol"))).toBe(false);
+  });
+
+  it("renders the order-detail block plainly, with no split wrapper, when chartSlot is absent", async () => {
+    chainResult = fullChain;
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(document.querySelector(".tkt-review-split")).toBeNull();
+  });
+
+  it("survives chartSlot toggling on (a window resized across the bench width) without losing field state", async () => {
+    // Regression: an earlier version picked between a bare Fragment and a nested <div><div> for
+    // the order-detail block depending on chartSlot's presence — a real tree-shape change React
+    // remounts across, silently dropping everything inside (caught via the trade.mjs shoot script
+    // crashing on a resize, not a review pass). One `QueryClient`, one `rerender` on the SAME
+    // component instance — exactly the DOM-level effect of `trade.tsx`'s `docked` flipping.
+    chainResult = fullChain;
+    const client = new QueryClient();
+    const withChart = (chartSlot: ReactElement | undefined) => (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={unlockedCallPlay}
+          initialSymbol="NVDA"
+          chartSlot={chartSlot}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(withChart(undefined));
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+
+    fireEvent.change(screen.getByLabelText("Contracts (100 shares)"), { target: { value: "7" } });
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
+
+    rerender(withChart(<div data-testid="fixture-chart">chart fixture</div>));
+    await waitFor(() => expect(screen.getByTestId("fixture-chart")).toBeInTheDocument());
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
+  });
+});

@@ -267,6 +267,24 @@
   cursor: pointer;
   text-decoration: underline;
 }
+/* The order-detail split (Eric, 2026-09-22: "the bottom part of the trade form… requires little
+   room… appropriate place to have two columns with the right column being the candlestick
+   chart"): Strike-onward stays compact in the left track, `chartSlot` (docked only —
+   `option-gate.tsx`'s own doc comment) takes the rest. The symbol field and the chain above this
+   split are NOT here — they stay full width, which is the other half of the ask (`trade.tsx`'s
+   `Bench` no longer gives chart its own full-height column). A max-width safety net in case a
+   future caller ever passes `chartSlot` below the bench width. */
+.tkt-review-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+  gap: var(--space-5) 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .tkt-review-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .tkt-occ {
   font-size: var(--text-sm);
   color: var(--muted);

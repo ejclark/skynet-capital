@@ -108,6 +108,7 @@ export function OptionGate({
   onStrikeCommit,
   plays,
   onPreset,
+  chartSlot,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -144,6 +145,16 @@ export function OptionGate({
   /** The same preset handler `TicketNav` already uses to change `?play=` — a chain cell pick calls
    *  it exactly like a nav segment does, only ever for an UNLOCKED target. */
   readonly onPreset?: (code: PlayCode) => void;
+  /** Docked only (Eric, 2026-09-22: "the options table needs access to all available screen width
+   *  real estate… the bottom part of the trade form… requires little room — appropriate place to
+   *  have two columns with the right column being the candlestick chart"): rendered beside the
+   *  order-detail block (Strike onward), not the whole ticket — that block is the one part of the
+   *  form narrow enough to share a row, and it's the step right before Review, where a member
+   *  would actually want Bollinger/RSI in view. The symbol field and the chain above it stay full
+   *  width regardless, which is the other half of the ask — see `trade.tsx`'s `Bench`. Undefined
+   *  folded (the chart stays its own reachable section there, unchanged) and for every ticket that
+   *  isn't this one (`DeskTicket` only forwards it to `OptionGate`). */
+  readonly chartSlot?: ReactElement;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
@@ -432,71 +443,10 @@ export function OptionGate({
     </div>
   );
 
-  return (
-    <section className="panel gate-panel" aria-label={play.name}>
-      <h2 className="panel-title">{play.name}</h2>
-      <p className="panel-sub">
-        Course {play.code} · {play.gloss}
-      </p>
-      {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
-          consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
-          slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
-      {/* One snapshot, two readers (#3299 slice 1): the header reads the quote off the chain answer
-          instead of a second `/api/trade/quote` round trip. A degraded chain (unlinked, no options,
-          failed) hands the header back its own fetch, so a stock with no listed options still quotes. */}
-      <QuoteHeader
-        symbol={chainSym}
-        provided={
-          !symbolCommitted || (chain.data && "chainNote" in chain.data)
-            ? undefined
-            : (chainData?.quote ?? "pending")
-        }
-      />
-      <div className="gate-fields tkt-fields">
-        <SymbolField
-          id={symId}
-          label="Symbol"
-          value={symbol}
-          placeholder="NVDA"
-          maxLength={12}
-          onChange={edit(setSymbol)}
-          onCommit={(s) => {
-            edit(setSymbol)(s);
-            setChainSym(s);
-            setChainOpen(true);
-            onSymbolCommit?.(s);
-          }}
-        />
-        {showFields && !chainData ? expirationField : null}
-      </div>
-      {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
-          full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
-          strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
-          handles sitting here — it did before this slice moved the chain table up the page too. */}
-      {chainData && chainOpen ? (
-        <ChainStraddle
-          chainSym={chainSym}
-          optionType={optionType}
-          chainData={chainData}
-          strike={strike}
-          expirationField={expirationField}
-          heldBadges={heldBadges}
-          pending={chain.isFetching}
-          onPickStrike={pickStrikeAndCommit}
-          onPickSide={onChainCellPick}
-        />
-      ) : null}
-      {chainData && !chainOpen ? (
-        <p className="tkt-chain-summary" aria-live="polite">
-          Strike <b>{strike}</b> · {formatExpiration(chainData.expiration)}
-          {limitPrice !== "" ? <> · ${limitPrice}</> : null}
-          {" · "}
-          <button type="button" className="tkt-chain-change" onClick={() => setChainOpen(true)}>
-            Change
-          </button>
-        </p>
-      ) : null}
-      {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
+  // The order-detail block (Strike onward, through Review) — the one part of the ticket narrow
+  // enough to share a row with `chartSlot` (see the prop's own doc comment).
+  const orderFields = (
+    <>
       {showFields ? (
         <div className="gate-fields tkt-fields">
           <div className="field">
@@ -573,6 +523,90 @@ export function OptionGate({
         onSubmit={() => void submit()}
         onReset={() => setState({ step: "draft" })}
       />
+    </>
+  );
+  // A stable wrapper SHAPE regardless of `chartSlot` — only classNames toggle, never the element
+  // types or their positions — so a window resized across the bench width (which flips `chartSlot`
+  // from undefined to a real element, per `trade.tsx`'s `ticketOwnsChart`) never remounts anything
+  // inside `orderFields`. Caught before it shipped: an earlier version picked between a bare
+  // Fragment and a nested `<div><div>` depending on `chartSlot`, which is a genuine tree-shape
+  // change — React tears down and rebuilds the whole subtree on that kind of swap, silently
+  // dropping a REVIEWED order's preview state (the payoff diagram, the estimate) the instant a
+  // member's window crossed 1280px mid-review. The file's own doctrine name for this invariant is
+  // in `trade.tsx`'s `Bench` doc comment ("ONE TREE for both layouts").
+  const orderDetail = (
+    <div className={chartSlot ? "tkt-review-split" : undefined}>
+      <div className={chartSlot ? "tkt-review-fields" : undefined}>{orderFields}</div>
+      {chartSlot ? <div className="tkt-review-chart">{chartSlot}</div> : null}
+    </div>
+  );
+
+  return (
+    <section className="panel gate-panel" aria-label={play.name}>
+      <h2 className="panel-title">{play.name}</h2>
+      <p className="panel-sub">
+        Course {play.code} · {play.gloss}
+      </p>
+      {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
+          consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
+          slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
+      {/* One snapshot, two readers (#3299 slice 1): the header reads the quote off the chain answer
+          instead of a second `/api/trade/quote` round trip. A degraded chain (unlinked, no options,
+          failed) hands the header back its own fetch, so a stock with no listed options still quotes. */}
+      <QuoteHeader
+        symbol={chainSym}
+        provided={
+          !symbolCommitted || (chain.data && "chainNote" in chain.data)
+            ? undefined
+            : (chainData?.quote ?? "pending")
+        }
+      />
+      <div className="gate-fields tkt-fields">
+        <SymbolField
+          id={symId}
+          label="Symbol"
+          value={symbol}
+          placeholder="NVDA"
+          maxLength={12}
+          onChange={edit(setSymbol)}
+          onCommit={(s) => {
+            edit(setSymbol)(s);
+            setChainSym(s);
+            setChainOpen(true);
+            onSymbolCommit?.(s);
+          }}
+        />
+        {showFields && !chainData ? expirationField : null}
+      </div>
+      {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
+          full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
+          strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
+          handles sitting here — it did before this slice moved the chain table up the page too. */}
+      {chainData && chainOpen ? (
+        <ChainStraddle
+          chainSym={chainSym}
+          optionType={optionType}
+          chainData={chainData}
+          strike={strike}
+          expirationField={expirationField}
+          heldBadges={heldBadges}
+          pending={chain.isFetching}
+          onPickStrike={pickStrikeAndCommit}
+          onPickSide={onChainCellPick}
+        />
+      ) : null}
+      {chainData && !chainOpen ? (
+        <p className="tkt-chain-summary" aria-live="polite">
+          Strike <b>{strike}</b> · {formatExpiration(chainData.expiration)}
+          {limitPrice !== "" ? <> · ${limitPrice}</> : null}
+          {" · "}
+          <button type="button" className="tkt-chain-change" onClick={() => setChainOpen(true)}>
+            Change
+          </button>
+        </p>
+      ) : null}
+      {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
+      {orderDetail}
     </section>
   );
 }

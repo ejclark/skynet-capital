@@ -1,13 +1,17 @@
-/* THE DOCKED BENCH (#3407, Workbench slice 4b; composition revised 2026-09-22) — /trade's
-   sections at the bench width (`use-bench-width.ts`, 1280px): the ticket holds the left column,
-   the chart the right one (the ticket's symbol drives it), and the account's book runs the full
-   width beneath. The chain no longer docks as its own pane — it is inline and collapsible inside
-   the ticket instead (`option-gate.tsx`, `.tkt-chain-summary` below); `.bench-side` now wraps the
-   chart alone, kept as its own class since a docked composition may grow a second right-column
-   pane again later. Below the bench width the same `.bench` renders ONE pane (the switch's) in a
-   single column; `.bench-docked` is the grid. The media-query fallback is a safety net for a
-   resize race. Tokens only; no pixel cap (`fluid-shell-css.spec.ts`). Held as a hypothesis: if
-   Eric reads this as a mess on the live route, the bench folds at every width (frame.tsx). */
+/* THE DOCKED BENCH (#3407, Workbench slice 4b; composition revised 2026-09-22, twice) — /trade's
+   sections at the bench width (`use-bench-width.ts`, 1280px). The chain no longer docks as its
+   own pane — it is inline and collapsible inside the ticket instead (`option-gate.tsx`,
+   `.tkt-chain-summary` below). The chart's own placement now branches on the ticket kind
+   (`trade.tsx`'s `ticketOwnsChart`): an OPTION ticket carries the chart itself, beside its
+   order-detail block (`.tkt-review-split`, `ticket.css`) — the ticket pane (`.bench-ticket-full`)
+   spans the FULL grid so the chain table gets all available width ("the options table needs
+   access to all available screen width real estate," Eric, 2026-09-22); every other ticket kind
+   (stock, spread, locked, gated) keeps the two-column split, ticket left, chart right
+   (`.bench-side`), unchanged. The account's book runs the full width beneath either way. Below
+   the bench width the same `.bench` renders ONE pane (the switch's) in a single column;
+   `.bench-docked` is the grid. The media-query fallback is a safety net for a resize race. Tokens
+   only; no pixel cap (`fluid-shell-css.spec.ts`). Held as a hypothesis: if Eric reads this as a
+   mess on the live route, the bench folds at every width (frame.tsx). */
 .bench {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -29,7 +33,8 @@
   min-width: 0;
 }
 .bench-docked > .bench-orders,
-.bench-docked > .bench-chain {
+.bench-docked > .bench-chain,
+.bench-docked > .bench-ticket-full {
   grid-column: 1 / -1;
 }
 /* `.bench-chain` only ever renders docked when `?section=chain` is explicitly asked (`trade.tsx`'s
