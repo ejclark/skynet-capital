@@ -34,8 +34,15 @@ Persona.decide()  →  TradingEngine  →  BrokerPort
 Because the engine depends only on `BrokerPort`, the exact same engine, personas, and risk
 guards run against the in-memory simulator or a live paper account with no code change.
 
-## Roadmap from here
+## Where this stands (updated 2026-09-22 — the roadmap below was stale)
 
-- **Run loop** — schedule decision cycles per bot and persist each `CycleReport`.
-- **Dashboard (Claude design)** — a centralized view of every bot's account: portfolio,
-  positions, transactions. Humans can later link their own accounts into the same view.
+Both items this section used to list as future work are shipped:
+
+- **Run loop** — `src/scripts/run-autonomous.ts` schedules decision cycles per bot and persists
+  each `CycleReport`.
+- **Dashboard** — `src/scripts/serve-dashboard.ts` and the `/u/:id` per-account views (activity,
+  decisions, pulse) are a centralized read on every bot's account.
+
+Doctrine — a persona's own coded rules, graded honestly against the code and the tape — lives in a
+top-level `docs/BOTS-<PERSONA>.md` dossier per bot (see `docs/BOTS-SAURON.md` for the first one),
+scanned by `scripts/doctrine-scan.mjs` (issue #2287, PR 8) for stale, unresolved doctrine.
