@@ -3,6 +3,7 @@ import {
   daysToExpiry,
   dividerIndex,
   expiresIn,
+  formatExpiration,
   inTheMoney,
   mergeStraddle,
   windowRows,
@@ -87,10 +88,14 @@ describe("windowRows", () => {
   });
   it("returns a chain that already fits, whole", () => {
     const small = rows.slice(0, 5);
-    expect(windowRows(small, 205, 8)).toEqual({ rows: small, hidden: 0 });
+    expect(windowRows(small, 205, 8)).toEqual({ rows: small, hidden: 0, centred: "spot" });
   });
-  it("hides nothing without a spot to centre on", () => {
-    expect(windowRows(rows, undefined, 4).hidden).toBe(0);
+  it("without a spot, windows around the middle of the chain and says so (#3407 P0)", () => {
+    const view = windowRows(rows, undefined, 4);
+    expect(view.centred).toBe("middle");
+    expect(view.rows).toHaveLength(8);
+    expect(view.hidden).toBe(rows.length - 8);
+    expect(windowRows(rows, 205, 4).centred).toBe("spot");
   });
   it("clamps at the edges instead of running off the chain", () => {
     expect(windowRows(rows, 201, 4).rows[0]?.strike).toBe(200);
@@ -111,6 +116,16 @@ describe("daysToExpiry / expiresIn", () => {
     expect(expiresIn(0)).toBe("Expires today");
     expect(expiresIn(1)).toBe("Expires in 1 day");
     expect(expiresIn(4)).toBe("Expires in 4 days");
+  });
+});
+
+describe("formatExpiration", () => {
+  it("leads with month/day, year trailing", () => {
+    expect(formatExpiration("2026-09-23")).toBe("Sep 23, 2026");
+    expect(formatExpiration("2027-01-15")).toBe("Jan 15, 2027");
+  });
+  it("passes invalid input through unchanged", () => {
+    expect(formatExpiration("not-a-date")).toBe("not-a-date");
   });
 });
 

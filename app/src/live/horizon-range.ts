@@ -6,11 +6,14 @@
  *   day     → the anchor day itself
  *   week    → Monday–Sunday of the anchor's ISO week (the calendar grid is Monday-first)
  *   month   → the anchor's calendar month
- *   quarter → the anchor's calendar quarter
+ *   quarter → the anchor's calendar quarter — or, given a `fiscalYearEndMonth` (#1736: exactly
+ *             one symbol in scope with a fiscal year-end on record), that company's own fiscal
+ *             quarter instead (`src/domain/fiscal-calendar.ts` owns the per-symbol fact).
  *
  * Stepping moves the anchor by exactly one range (a day, 7 days, a month, 3 months), so the
  * arrows in the rail advance by the duration the lens names — Eric's ask on the brief.
  */
+import { fiscalQuarterFor } from "../../../src/domain/fiscal-calendar";
 import type { Lens } from "./research";
 
 export interface DayRange {
@@ -59,8 +62,14 @@ function monthStart(iso: string, months: number): Date {
  */
 export const ALL_RANGE: DayRange = { start: "0000-01-01", end: "9999-12-31" };
 
-/** The span the lens selects around the anchor. */
-export function rangeFor(anchor: string, lens: Lens): DayRange {
+/**
+ * The span the lens selects around the anchor. `fiscalYearEndMonth` (#1736) snaps the QUARTER
+ * lens to that company's fiscal quarter instead of the calendar one — pass it only when exactly
+ * one symbol is in scope AND that symbol has a fiscal year-end on record
+ * (`src/domain/fiscal-calendar.ts`); every other lens ignores it, and an un-fiscal quarter lens is
+ * still the calendar quarter, unchanged.
+ */
+export function rangeFor(anchor: string, lens: Lens, fiscalYearEndMonth?: number): DayRange {
   switch (lens) {
     case "all":
       return ALL_RANGE;
@@ -78,6 +87,15 @@ export function rangeFor(anchor: string, lens: Lens): DayRange {
       };
     case "quarter": {
       const d = toDate(anchor);
+      if (fiscalYearEndMonth !== undefined) {
+        const fq = fiscalQuarterFor(d.getUTCFullYear(), d.getUTCMonth() + 1, fiscalYearEndMonth);
+        const pad2 = (n: number): string => String(n).padStart(2, "0");
+        const firstOf = (year: number, month: number): string =>
+          `${String(year)}-${pad2(month)}-01`;
+        const nextMonth =
+          fq.endMonth === 12 ? firstOf(fq.endYear + 1, 1) : firstOf(fq.endYear, fq.endMonth + 1);
+        return { start: firstOf(fq.startYear, fq.startMonth), end: addDays(nextMonth, -1) };
+      }
       const q0 = new Date(Date.UTC(d.getUTCFullYear(), Math.floor(d.getUTCMonth() / 3) * 3, 1));
       return { start: toIso(q0), end: addDays(toIso(monthStart(toIso(q0), 3)), -1) };
     }
@@ -85,7 +103,12 @@ export function rangeFor(anchor: string, lens: Lens): DayRange {
 }
 
 /** The anchor one range forward (+1) or back (−1) — the arrows step by the lens's duration. */
-export function stepAnchor(anchor: string, lens: Lens, direction: 1 | -1): string {
+export function stepAnchor(
+  anchor: string,
+  lens: Lens,
+  direction: 1 | -1,
+  fiscalYearEndMonth?: number,
+): string {
   switch (lens) {
     case "all": // no span to step — the arrows page the grid's own unit, the month
     case "month":
@@ -95,7 +118,11 @@ export function stepAnchor(anchor: string, lens: Lens, direction: 1 | -1): strin
     case "week":
       return addDays(anchor, 7 * direction);
     case "quarter":
-      return toIso(monthStart(rangeFor(anchor, "quarter").start, 3 * direction));
+      // A fiscal quarter is still 3 calendar months, so stepping the RANGE's own start by ±3
+      // months lands on the neighbouring quarter's start whichever calendar it is aligned to.
+      return toIso(
+        monthStart(rangeFor(anchor, "quarter", fiscalYearEndMonth).start, 3 * direction),
+      );
   }
 }
 
@@ -143,8 +170,20 @@ const short = (iso: string): string => {
   return `${MONTHS[d.getUTCMonth()] ?? ""} ${String(d.getUTCDate())}`;
 };
 
-/** The head-of-rail label for a range under a lens — "Sep 7 – Sep 13", "September 2026", "Q3 2026". */
-export function rangeLabel(range: DayRange, lens: Lens): string {
+/** The fiscal quarter's identity for the label — one symbol, one confirmed fiscal year-end. */
+export interface FiscalQuarterLabel {
+  readonly symbol: string;
+  readonly fiscalYear: number;
+  readonly quarter: 1 | 2 | 3 | 4;
+}
+
+/**
+ * The head-of-rail label for a range under a lens — "Sep 7 – Sep 13", "September 2026",
+ * "Q3 2026 · Jul–Sep · calendar". `fiscal` (#1736) names a company's OWN fiscal quarter instead:
+ * "Q3 FY27 · NVDA · Aug–Oct 2026" — pass it only alongside the same `fiscalYearEndMonth` given to
+ * `rangeFor`, so the label always matches the range it names.
+ */
+export function rangeLabel(range: DayRange, lens: Lens, fiscal?: FiscalQuarterLabel): string {
   const start = toDate(range.start);
   switch (lens) {
     case "all":
@@ -156,12 +195,19 @@ export function rangeLabel(range: DayRange, lens: Lens): string {
     case "month":
       return start.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
     case "quarter": {
-      // A CALENDAR quarter, and the label says so by naming its months: "Q3 2026 · Jul–Sep". Fiscal
-      // quarters differ per company (NVDA's Q3 FY27 is Aug–Oct 2026) and are a later dimension;
-      // until then the observable behaviour is spelled out so the lens cannot be misread (Eric,
-      // 2026-09-06: "the labeling should also clearly articulate the observable behavior").
       const end = toDate(range.end);
-      return `Q${String(Math.floor(start.getUTCMonth() / 3) + 1)} ${String(start.getUTCFullYear())} · ${MONTHS[start.getUTCMonth()] ?? ""}–${MONTHS[end.getUTCMonth()] ?? ""}`;
+      const months = `${MONTHS[start.getUTCMonth()] ?? ""}–${MONTHS[end.getUTCMonth()] ?? ""}`;
+      if (fiscal) {
+        // A company's OWN fiscal quarter — named explicitly so it is never mistaken for a
+        // calendar one (NVDA's Q3 FY27 is Aug–Oct 2026, not Jul–Sep).
+        const fy = String(fiscal.fiscalYear).slice(-2);
+        return `Q${String(fiscal.quarter)} FY${fy} · ${fiscal.symbol} · ${months} ${String(end.getUTCFullYear())}`;
+      }
+      // A CALENDAR quarter, and the label says so twice over: naming its months, and the trailing
+      // "calendar" tag (Eric, 2026-09-06: "the labeling should also clearly articulate the
+      // observable behavior… avoids confusion if noticed but not understood") — load-bearing now
+      // that the SAME lens can read a company's fiscal quarter instead (#1736).
+      return `Q${String(Math.floor(start.getUTCMonth() / 3) + 1)} ${String(start.getUTCFullYear())} · ${months} · calendar`;
     }
   }
 }

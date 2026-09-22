@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { fetchQuote, type QuoteAnswer, type QuoteTone } from "../live/quote";
+import type { QuoteAnswer, QuoteTone } from "../live/quote";
+import { quoteQuery } from "../live/quote-query";
 import { money } from "../live/ticket";
 
 /**
@@ -66,15 +67,29 @@ function QuoteHeaderBody({ answer }: { readonly answer: QuoteAnswer }): ReactEle
 }
 
 /** @category trading */
-export function QuoteHeader({ symbol }: { readonly symbol: string }): ReactElement {
-  const query = useQuery({
-    queryKey: ["quote", symbol],
-    queryFn: () => fetchQuote(symbol),
-    enabled: symbol !== "",
-    staleTime: 15_000,
-  });
+export function QuoteHeader({
+  symbol,
+  provided,
+}: {
+  readonly symbol: string;
+  /** A surface that already holds the quote hands it in (#3299 slice 1 — the options ticket and
+   *  the chain pane read it off the chain answer, one snapshot for the divider row AND this
+   *  header): an answer renders as-is, `"pending"` renders nothing while that surface loads, and
+   *  either way this header issues no fetch of its own. `undefined` means no provider on this
+   *  surface (the stock ticket), and the header fetches for itself as it always has. */
+  readonly provided?: QuoteAnswer | "pending";
+}): ReactElement {
+  const own = quoteQuery(symbol);
+  const query = useQuery({ ...own, enabled: own.enabled && provided === undefined });
 
-  const answer = symbol !== "" && !query.isLoading ? query.data : undefined;
+  const answer =
+    provided === "pending"
+      ? undefined
+      : provided !== undefined
+        ? provided
+        : symbol !== "" && !query.isLoading
+          ? query.data
+          : undefined;
 
   return (
     <div className="quote-header" aria-live="polite">

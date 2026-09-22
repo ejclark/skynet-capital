@@ -12,6 +12,10 @@ export interface Quote {
   readonly change: number;
   readonly changePct: number;
   readonly tone: QuoteTone;
+  /** The NBBO and its cent-rounded mid (#3407 slice 6) — only when the server had a live book. */
+  readonly bid?: number;
+  readonly ask?: number;
+  readonly mid?: number;
 }
 
 /** The honest degrade: no linked client, no quote right now, or a feed failure — a sentence. */

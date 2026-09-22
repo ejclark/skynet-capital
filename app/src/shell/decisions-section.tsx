@@ -12,14 +12,21 @@ import { type DecisionCycle, fetchDeskDecisions, type RefusedIntent } from "../l
  * original page did.
  */
 
-function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][number] }) {
+/** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
+ *  rendering rather than carrying a second, drifting copy. */
+export function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][number] }) {
   return (
     <li className="cycle-outcome">
       <span className={`cycle-action cycle-action-${outcome.action}`}>{outcome.action}</span>
       <span className="cycle-intent num">
         {outcome.side.toUpperCase()} {outcome.quantity} {outcome.symbol}
       </span>
-      {outcome.playbook ? <span className="chip chip-bot">{outcome.playbook}</span> : null}
+      {outcome.playbook ? (
+        <span className="chip chip-bot">
+          {outcome.playbook}
+          {outcome.playbookMode ? ` · ${outcome.playbookMode}` : ""}
+        </span>
+      ) : null}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       {outcome.resultStatus && !outcome.fill ? (
@@ -37,11 +44,19 @@ function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][
           ) : null}
         </p>
       ) : null}
+      {outcome.guardDelta ? <p className="cycle-guard-delta">{outcome.guardDelta}</p> : null}
+      {outcome.momentum !== undefined || outcome.sentiment !== undefined ? (
+        <p className="cycle-context num">
+          {outcome.momentum !== undefined ? `momentum ${outcome.momentum.toFixed(2)}` : null}
+          {outcome.momentum !== undefined && outcome.sentiment !== undefined ? " · " : null}
+          {outcome.sentiment !== undefined ? `sentiment ${outcome.sentiment.toFixed(2)}` : null}
+        </p>
+      ) : null}
     </li>
   );
 }
 
-function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
+export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
   return (
     <li className="cycle-outcome cycle-outcome-refused">
       <span className="cycle-action cycle-action-refused">refused</span>
@@ -57,7 +72,7 @@ function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
   );
 }
 
-function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
+export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
   // Halted, rejected, and refused cycles arrive open — the reader came for the failure.
   const [open, setOpen] = useState(
     cycle.status === "halted" || cycle.status === "rejected" || cycle.status === "refused",
@@ -135,7 +150,7 @@ export function DecisionsSection({ deskId }: { readonly deskId: string }): React
     return (
       <p className="note">
         No decision audit trail is wired in this deployment (the runner records one when
-        SKYNET_AUDIT_DIR is set).
+        SKYNET_INSIGHTS_DIR is set, or SKYNET_AUDIT_DIR as a legacy fallback).
       </p>
     );
   if (trail.cycles.length === 0)

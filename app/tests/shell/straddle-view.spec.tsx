@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ChainRow } from "../../src/live/options";
-import { StraddleView } from "../../src/shell/straddle-view";
+import { coverageLine, StraddleView } from "../../src/shell/straddle-view";
 
 /**
  * `StraddleView`'s call/put cell picking (#2017 Phase 0 task 4e, `onPickSide`) — a call or put
@@ -34,11 +34,10 @@ describe("StraddleView — chain cell picking", () => {
       />,
     );
 
-    // Both bid and ask cells for a strike/side share the same aria-label — click the bid cell.
-    // getAllByRole throws (rather than returning []) when nothing matches, so index 0 is safe.
-    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 call" })[0] as HTMLElement);
+    // Each price cell names itself (#3407 P3 slice 2): the bid and the ask are different taps.
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 call bid" }));
 
-    expect(onPickSide).toHaveBeenCalledWith(180, "call");
+    expect(onPickSide).toHaveBeenCalledWith(180, "call", { price: "bid", value: 4.8 });
   });
 
   it('calls onPickSide with the strike and "put" when a put cell is clicked', () => {
@@ -54,9 +53,27 @@ describe("StraddleView — chain cell picking", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 put" })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 put ask" }));
 
-    expect(onPickSide).toHaveBeenCalledWith(180, "put");
+    expect(onPickSide).toHaveBeenCalledWith(180, "put", { price: "ask", value: 3.4 });
+  });
+
+  it("reports an unquoted cell without a value and outlines marked strikes", () => {
+    const onPickSide = rstest.fn();
+    const { container } = render(
+      <StraddleView
+        symbol="NVDA"
+        expiration="2026-09-18"
+        spot={180}
+        calls={[{ strike: 180, occSymbol: "NVDA180" }]}
+        puts={puts}
+        markedStrikes={[180]}
+        onPickSide={onPickSide}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 call ask" }));
+    expect(onPickSide).toHaveBeenCalledWith(180, "call", { price: "ask" });
+    expect(container.querySelector(".straddle-marked")).not.toBeNull();
   });
 
   it("renders call/put cells with no button when onPickSide is not provided", () => {
@@ -86,9 +103,9 @@ describe("StraddleView — chain cell picking", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 call" })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Pick the 180 call bid" }));
 
-    expect(onPickSide).toHaveBeenCalledWith(180, "call");
+    expect(onPickSide).toHaveBeenCalledWith(180, "call", { price: "bid", value: 4.8 });
     expect(onPickStrike).not.toHaveBeenCalled();
   });
 });
@@ -169,16 +186,41 @@ describe("StraddleView — scroll-out stat columns", () => {
     expect(screen.queryByText("0.00")).not.toBeInTheDocument();
   });
 
-  it("expands the header group colSpan to 8 per side and the divider row's colSpan to 17", () => {
+  it("the Calls/Puts header spans only Bid/Ask (Eric, 2026-09-22), and the divider row still spans all 17", () => {
     const { container } = render(
       <StraddleView symbol="NVDA" expiration="2026-09-18" spot={180} calls={[fullRow]} puts={[]} />,
     );
     const callsHeader = container.querySelector(".straddle-side-calls");
     const putsHeader = container.querySelector(".straddle-side-puts");
-    expect(callsHeader?.getAttribute("colspan")).toBe("8");
-    expect(putsHeader?.getAttribute("colspan")).toBe("8");
+    // Narrowed from 8 (the whole side) to 2 (just Bid/Ask) so the label sits directly over the
+    // columns it names — the outer 6 stat/greek columns get their own "Greeks" colSpan={6} cell
+    // instead (Eric's own term for that group, from his follow-up the same day).
+    expect(callsHeader?.getAttribute("colspan")).toBe("2");
+    expect(putsHeader?.getAttribute("colspan")).toBe("2");
     const divider = container.querySelector(".straddle-divider td");
     expect(divider?.getAttribute("colspan")).toBe("17");
+  });
+
+  it("labels both outer stat groups Greeks and marks the group boundaries (Eric, 2026-09-22)", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-09-18" spot={180} calls={[fullRow]} puts={[]} />,
+    );
+    const greekHeaders = container.querySelectorAll(
+      ".straddle-side:not(.straddle-side-calls):not(.straddle-side-puts)",
+    );
+    expect(greekHeaders).toHaveLength(2);
+    for (const th of greekHeaders) {
+      expect(th.textContent).toBe("Greeks");
+      expect(th.getAttribute("colspan")).toBe("6");
+    }
+    // Five groups, four boundaries: Greeks|Calls, Calls|Strike, Strike|Puts, Puts|Greeks — the
+    // table's own left edge needs none. Body rows carry the Greeks/Bid-Ask boundary down too
+    // (column 7 and 12), skipping the Strike edge on purpose (its own background plus the
+    // conditional ITM rail already mark it).
+    const topRowStarts = container.querySelectorAll("thead tr:first-child .straddle-group-start");
+    expect(topRowStarts).toHaveLength(4);
+    const bodyStarts = container.querySelectorAll("tbody td.straddle-bidask");
+    expect(bodyStarts.length).toBeGreaterThan(0);
   });
 
   it("orders calls' stats on the outer edge and Bid/Ask adjacent to Strike, mirrored on puts", () => {
@@ -252,5 +294,68 @@ describe("StraddleView — scroll-out stat columns", () => {
       <StraddleView symbol="NVDA" expiration="2026-10-16" spot={180} calls={calls} puts={puts} />,
     );
     expect(scroll.scrollLeft).toBe(264);
+  });
+});
+
+describe("StraddleView — quote coverage line (#3407 P2)", () => {
+  it("says how many strikes the feed quoted, in words, under the table", () => {
+    render(
+      <StraddleView
+        symbol="NVDA"
+        expiration="2026-10-16"
+        spot={181}
+        calls={calls}
+        puts={puts}
+        quotes={{ source: "indicative", quoted: 38, total: 41, asOf: "2026-09-21T14:05:00Z" }}
+      />,
+    );
+    expect(screen.getByText(/38 of 41 strikes quoted/)).toBeInTheDocument();
+  });
+
+  it("says quotes are unavailable rather than showing silent dashes", () => {
+    expect(coverageLine({ source: "unavailable", quoted: 0, total: 12, asOf: "x" })).toContain(
+      "Quotes unavailable right now",
+    );
+    expect(coverageLine({ source: "indicative", quoted: 12, total: 12, asOf: "x" })).toContain(
+      "all 12 strikes quoted",
+    );
+  });
+
+  it("renders no coverage line when the server didn't send one", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={181} calls={calls} puts={puts} />,
+    );
+    expect(container.querySelector(".straddle-coverage")).toBeNull();
+  });
+});
+
+describe("StraddleView — the window folds back and the rail rides the strike cell (#3407 P0)", () => {
+  const wide = Array.from({ length: 20 }, (_, i) => row(150 + i * 5, 1 + i * 0.1, 1.2 + i * 0.1));
+
+  it("offers Show all, then Show fewer around the price, and back", () => {
+    render(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={200} calls={wide} puts={wide} />,
+    );
+    const more = screen.getByRole("button", { name: /Show all 20 strikes/ });
+    fireEvent.click(more);
+    const fewer = screen.getByRole("button", { name: /Show 16 strikes around the price/ });
+    fireEvent.click(fewer);
+    expect(screen.getByRole("button", { name: /Show all 20 strikes/ })).toBeInTheDocument();
+  });
+
+  it("with no spot, windows around the middle and says so on the button", () => {
+    render(<StraddleView symbol="NVDA" expiration="2026-10-16" calls={wide} puts={wide} />);
+    expect(
+      screen.getByRole("button", { name: /no live price, windowed around the middle/ }),
+    ).toBeInTheDocument();
+    expect(document.querySelectorAll(".straddle-row")).toHaveLength(16);
+  });
+
+  it("marks in-the-money rows on the row class the rail CSS keys off", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={181} calls={calls} puts={puts} />,
+    );
+    expect(container.querySelector(".straddle-call-itm")).not.toBeNull(); // 180 call under 181
+    expect(container.querySelector(".straddle-put-itm")).toBeNull();
   });
 });

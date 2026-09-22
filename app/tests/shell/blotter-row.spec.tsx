@@ -1,29 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { DeskPosition } from "../../src/live/desk";
 import { BlotterRow } from "../../src/shell/blotter-row";
-
-rstest.mock("../../src/live/desk", () => ({
-  fetchDeskActivity: () =>
-    Promise.resolve({
-      available: true,
-      activity: [
-        {
-          orderId: "o1",
-          symbol: "SPY",
-          display: "SPY",
-          side: "buy",
-          quantity: 199,
-          filled: 199,
-          price: "$500.05",
-          status: "filled",
-          at: "2026-09-01T14:00:00.000Z",
-          backfilled: false,
-          origin: "desk",
-        },
-      ],
-    }),
-}));
 
 const position = (overrides: Partial<DeskPosition> = {}): DeskPosition =>
   ({
@@ -63,7 +41,7 @@ describe("BlotterRow", () => {
   it("shows the symbol and the always-visible columns", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
 
-    expect(screen.getByRole("button", { name: "SPY" })).toBeInTheDocument();
+    expect(screen.getByText("SPY")).toBeInTheDocument();
     expect(screen.getByText("199")).toBeInTheDocument();
     expect(screen.getByText("+$985")).toBeInTheDocument();
   });
@@ -100,31 +78,14 @@ describe("BlotterRow", () => {
     expect(screen.queryByText("Cost / share")).not.toBeInTheDocument();
   });
 
-  it("expands the fill timeline inline when the symbol is clicked — never a drawer", async () => {
-    render(inTable(<BlotterRow position={position()} deskId="sauron" />));
-
-    const symbolBtn = screen.getByRole("button", { name: "SPY" });
-    expect(symbolBtn).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(symbolBtn);
-
-    expect(symbolBtn).toHaveAttribute("aria-expanded", "true");
-    await waitFor(() => expect(screen.getByText("BUY")).toBeInTheDocument());
-  });
-
-  it("collapses the timeline again on a second click of the symbol", async () => {
-    render(inTable(<BlotterRow position={position()} deskId="sauron" />));
-    const symbolBtn = screen.getByRole("button", { name: "SPY" });
-
-    fireEvent.click(symbolBtn);
-    await waitFor(() => expect(screen.getByText("BUY")).toBeInTheDocument());
-    fireEvent.click(symbolBtn);
-
-    expect(screen.queryByText("BUY")).not.toBeInTheDocument();
-  });
-
   it("shows no lots trigger when the position carries no lots", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
     expect(screen.queryByRole("button", { name: /lots for SPY/ })).not.toBeInTheDocument();
+  });
+
+  it("renders no detail line when the position carries none — nothing to say beats a static label", () => {
+    render(inTable(<BlotterRow position={position({ detail: "" })} deskId="sauron" />));
+    expect(screen.queryByText("199 sh")).not.toBeInTheDocument();
   });
 
   describe("lot breakdown (#3186 slice 1)", () => {
@@ -166,6 +127,11 @@ describe("BlotterRow", () => {
       expect(screen.queryByText("$49,005")).not.toBeInTheDocument();
     });
 
+    it("renders no visible 'lots' label — the whole symbol header is the trigger", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      expect(screen.queryByText(/lots/i)).not.toBeInTheDocument();
+    });
+
     it("reveals lot rows sharing the parent's exact columns when the trigger is clicked", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
 
@@ -174,6 +140,11 @@ describe("BlotterRow", () => {
       expect(screen.getByText("$49,005")).toBeInTheDocument();
       expect(screen.getByText("$50,495")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Close all" })).toBeInTheDocument();
+      // A lot row trades the symbol column for its opened-at date — no "Lot ·" label filler,
+      // no raw fill history (BUY/SELL): only what's still on the ledger, header-aligned.
+      expect(screen.getByText("2026-08-28 14:00 UTC")).toBeInTheDocument();
+      expect(screen.queryByText(/Lot ·/)).not.toBeInTheDocument();
+      expect(screen.queryByText("BUY")).not.toBeInTheDocument();
     });
 
     it("sums the visible lot columns back to the parent row", () => {
@@ -201,12 +172,43 @@ describe("BlotterRow", () => {
       expect(closeLotButtons[1]).toHaveAttribute("aria-expanded", "false");
     });
 
-    it("renders Roll disabled with the reason, never a silent no-op button", () => {
+    it("renders no Roll button on a stock's lots — rolling only exists for options", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
       fireEvent.click(screen.getByRole("button", { name: /2 lots for SPY/ }));
 
+      expect(screen.queryByRole("button", { name: /Roll/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("lot breakdown on an option position", () => {
+    const optionLots = position({
+      symbol: "NVDA261218C00130000",
+      display: "NVDA Dec 18 130 Call",
+      isOption: true,
+      lots: [
+        {
+          lotId: "NVDA-0-a",
+          openedAt: "2026-08-28 14:00 UTC",
+          quantity: "2",
+          costPerShare: "$5.00",
+          price: "$7.42",
+          costBasis: "$1,000",
+          value: "$1,484",
+          dayPl: "+$34",
+          dayTone: "pos",
+          totalPl: "+$484",
+          returnPct: "+48.40%",
+          totalTone: "pos",
+        },
+      ],
+    });
+
+    it("renders Roll disabled with the reason, never a silent no-op button", () => {
+      render(inTable(<BlotterRow position={optionLots} deskId="sauron" />));
+      fireEvent.click(screen.getByRole("button", { name: /1 lots for NVDA Dec 18 130 Call/ }));
+
       const rollButtons = screen.getAllByRole("button", { name: /Roll —/ });
-      expect(rollButtons).toHaveLength(2);
+      expect(rollButtons).toHaveLength(1);
       for (const button of rollButtons) expect(button).toBeDisabled();
     });
   });

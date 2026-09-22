@@ -157,9 +157,66 @@ const playbooks = {
   ],
 };
 
+// The milestone strip (#3407 slice 5) reads `/api/trade/plays` — the same eight rungs the ladder
+// below it draws as cards: 101 earned, 102 open (next up), the rest locked.
+const rung = (code, name, kind, side, optionType, state, opensAfter) => ({
+  code,
+  id: code,
+  name,
+  tldr: "",
+  kind,
+  side,
+  ...(optionType ? { optionType } : {}),
+  gloss: "",
+  locked: state === "locked",
+  earned: state === "earned",
+  ...(opensAfter ? { opensAfter } : {}),
+});
+const plays = {
+  linked: true,
+  wheels: true,
+  nextUp: "102",
+  plays: [
+    rung("101", "Buy stock", "stock", "buy", undefined, "earned"),
+    rung("102", "Sell stock", "stock", "sell", undefined, "open"),
+    rung("201", "Sell a cash-secured put", "option", "sell", "put", "locked", {
+      code: "102",
+      name: "Sell stock",
+    }),
+    rung("202", "Sell a covered call", "option", "sell", "call", "locked", {
+      code: "201",
+      name: "Sell a cash-secured put",
+    }),
+    rung("301", "Buy a long put", "option", "buy", "put", "locked", {
+      code: "202",
+      name: "Sell a covered call",
+    }),
+    rung("302", "Buy a long call", "option", "buy", "call", "locked", {
+      code: "301",
+      name: "Buy a long put",
+    }),
+    rung("401", "Vertical spread", "multi-leg", "buy", undefined, "locked", {
+      code: "302",
+      name: "Buy a long call",
+    }),
+    rung("501", "Zero-DTE", "option", "sell", "put", "locked", {
+      code: "401",
+      name: "Vertical spread",
+    }),
+  ],
+};
+
 const { page, origin, shoot, close } = await openShell({
   name: "milestones",
-  stubs: { "/api/learn": learn, "/api/onboarding": onboarding, "/api/playbooks": playbooks },
+  stubs: {
+    "/api/learn": learn,
+    "/api/onboarding": onboarding,
+    "/api/playbooks": playbooks,
+    "/api/trade/plays": plays,
+    "/api/settings": {
+      accounts: [{ id: "human-eric", name: "Eric", kind: "human", suspended: false }],
+    },
+  },
 });
 
 await page.goto(`${origin}/app/learn`);
@@ -170,5 +227,6 @@ await page.getByText("Prove the play by hand, then arm it").waitFor();
 await shoot("playbooks");
 await page.goto(`${origin}/app/learn/trading`);
 await page.getByText("One fill unlocks the next rung").waitFor();
+await page.getByText("Milestone · Trading ladder").waitFor();
 await shoot("trading-ladder");
 await close();

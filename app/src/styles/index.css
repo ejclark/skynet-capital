@@ -9,6 +9,7 @@
  */
 @import "./admin.css";
 @import "./alpaca-guide.css";
+@import "./bench.css";
 @import "./board.css";
 @import "./chart-section.css";
 @import "./cockpit.css";
@@ -50,5 +51,6 @@
 @import "./straddle.css";
 @import "./unlock.css";
 @import "./views.css";
-@import "./wire-row.css";
+@import "./working-orders.css";
+@import "./desk-alerts.css";
 @import "./wire.css";

@@ -1,7 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
-import type { OrderIntent } from "../domain/types.js";
+import type { OrderIntent, Side } from "../domain/types.js";
+import type { GuardRefusalReason } from "../engine/guards.js";
 import { decisionFrom, intentRowToStored, paramsForRawIntent } from "./decision-db-rows.js";
+import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import type { DecisionRecord } from "./decision-record.js";
+import { type FilledIntentRow, pendingRetrospectives } from "./decision-retrospectives.js";
+
+export type { DecisionFunnel } from "./decision-funnel.js";
 
 /**
  * The queryable decision store — the replacement for `JsonlAuditStore`'s whole-file-read-per-call
@@ -46,7 +51,29 @@ export interface DecisionDb {
   /** Every decision strictly AFTER `afterAt` for one persona, oldest first, bounded to
    *  `[1, MAX_PAGE]` — the bots side's own "what have I not sent yet" read. */
   listSince(personaId: string, afterAt: number, limit?: number): DecisionRecord[];
+  /** Closed-position rows written by the retrospective writer (PR 7), newest first, bounded to
+   *  `[1, MAX_PAGE]` — there is no separate `recordRetrospective()`: every write happens
+   *  automatically inside `record()`/`recordBatch()` when a filled intent closes a lot. */
+  listRetrospectives(personaId: string, opts?: { limit?: number }): RetrospectiveRecord[];
+  /** The decision funnel (PR 7b) — cycles → raw → survived guards → placed → filled → closed,
+   *  plus refusals by reason. A single SQL aggregation over the FULL history, never bounded by
+   *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
+   *  totals would be a worse lie than a slow query. */
+  funnelFor(personaId: string): DecisionFunnel;
   close(): void;
+}
+
+/** One closed position, as read back — see `decision-retrospectives.ts` for how it's computed. */
+export interface RetrospectiveRecord {
+  readonly at: number;
+  readonly personaId: string;
+  readonly symbol: string;
+  readonly entryIntentId: number;
+  readonly exitReason: string | null;
+  readonly realized: number;
+  readonly returnPct: number;
+  readonly sentimentDelta: number | null;
+  readonly momentumDelta: number | null;
 }
 
 /** Hard ceiling on any single read — matches the pagination contract's `per_page` max (PR 5) so
@@ -105,6 +132,7 @@ export function openDecisionDb(path: string): DecisionDb {
     CREATE INDEX IF NOT EXISTS intents_decision ON intents(decision_id);
     CREATE INDEX IF NOT EXISTS intents_order ON intents(order_id);
     CREATE INDEX IF NOT EXISTS intents_strategy ON intents(strategy);
+    CREATE INDEX IF NOT EXISTS intents_symbol ON intents(symbol);
 
     -- The replay tape (shared across every bot — market state has no persona). One row per
     -- (at, symbol); "INSERT OR IGNORE" below means the first cycle to observe an instant owns it.
@@ -133,6 +161,11 @@ export function openDecisionDb(path: string): DecisionDb {
       sentiment_delta REAL,
       momentum_delta REAL
     );
+    CREATE INDEX IF NOT EXISTS retrospectives_persona_at ON retrospectives(persona_id, at DESC);
+    -- No UNIQUE constraint here: this table shipped in PR 3 before this index existed, and
+    -- "CREATE TABLE IF NOT EXISTS" cannot retrofit a constraint onto an already-deployed table.
+    -- Idempotency is instead enforced in code (see recordOne below) against this index.
+    CREATE INDEX IF NOT EXISTS retrospectives_entry_at ON retrospectives(entry_intent_id, at);
   `);
 
   const insertDecision = db.prepare(
@@ -170,6 +203,94 @@ export function openDecisionDb(path: string): DecisionDb {
     WHERE intents.order_id = ?
     LIMIT 1
   `);
+  // Every filled intent this persona has ever recorded for one symbol, oldest first — the
+  // retrospective writer's own read of its FIFO tape. `intents_symbol` + `decisions_persona_at`
+  // keep this bounded to one symbol's history, never a whole-table scan.
+  const selectFilledIntentsForSymbol = db.prepare(`
+    SELECT intents.id AS intent_id, intents.order_id AS order_id, intents.side AS side,
+           intents.filled_quantity AS filled_quantity, intents.filled_price AS filled_price,
+           intents.reason AS reason, intents.momentum AS momentum, intents.sentiment AS sentiment,
+           decisions.at AS at
+    FROM intents JOIN decisions ON decisions.id = intents.decision_id
+    WHERE decisions.persona_id = ? AND intents.symbol = ? AND intents.result_status = 'filled'
+    ORDER BY decisions.at ASC, intents.id ASC
+  `);
+  const selectRetrospectiveKeys = db.prepare(
+    "SELECT entry_intent_id, at FROM retrospectives WHERE persona_id = ? AND symbol = ?",
+  );
+  const insertRetrospective = db.prepare(`
+    INSERT INTO retrospectives (
+      at, persona_id, symbol, entry_intent_id, exit_reason, realized, return_pct,
+      sentiment_delta, momentum_delta
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const selectRetrospectivesPage = db.prepare(`
+    SELECT at, persona_id, symbol, entry_intent_id, exit_reason, realized, return_pct,
+           sentiment_delta, momentum_delta
+    FROM retrospectives WHERE persona_id = ? ORDER BY at DESC, id DESC LIMIT ?
+  `);
+  const selectCycleCount = db.prepare("SELECT COUNT(*) AS n FROM decisions WHERE persona_id = ?");
+  const selectClosedCount = db.prepare(
+    "SELECT COUNT(*) AS n FROM retrospectives WHERE persona_id = ?",
+  );
+  const selectFunnelIntents = db.prepare(`
+    SELECT intents.guard_reason AS guard_reason, intents.action AS action,
+           intents.result_status AS result_status
+    FROM intents JOIN decisions ON decisions.id = intents.decision_id
+    WHERE decisions.persona_id = ?
+  `);
+
+  /**
+   * Recomputes one (persona, symbol)'s FIFO ledger from every filled intent on record and writes
+   * any newly-closed trip — the trigger IS the fill itself, called from `recordOne` right below.
+   * Deterministic recompute + `pendingRetrospectives`'s own dedup means calling this twice for the
+   * same state is always safe, so this never needs its own idempotency beyond that.
+   */
+  function updateRetrospectivesFor(personaId: string, symbol: string): void {
+    const rows = selectFilledIntentsForSymbol.all(personaId, symbol) as {
+      intent_id: number;
+      order_id: string | null;
+      side: Side;
+      filled_quantity: number | null;
+      filled_price: number | null;
+      reason: string;
+      momentum: number | null;
+      sentiment: number | null;
+      at: number;
+    }[];
+    const filled: FilledIntentRow[] = rows
+      .filter((r): r is typeof r & { order_id: string } => r.order_id !== null)
+      .map((r) => ({
+        intentId: r.intent_id,
+        orderId: r.order_id,
+        symbol,
+        side: r.side,
+        quantity: r.filled_quantity ?? 0,
+        ...(r.filled_price !== null ? { price: r.filled_price } : {}),
+        at: r.at,
+        reason: r.reason,
+        ...(r.momentum !== null ? { momentum: r.momentum } : {}),
+        ...(r.sentiment !== null ? { sentiment: r.sentiment } : {}),
+      }));
+    const existingKeys = new Set(
+      (
+        selectRetrospectiveKeys.all(personaId, symbol) as { entry_intent_id: number; at: number }[]
+      ).map((r) => `${r.entry_intent_id}:${r.at}`),
+    );
+    for (const insert of pendingRetrospectives(filled, existingKeys)) {
+      insertRetrospective.run(
+        insert.at,
+        personaId,
+        insert.symbol,
+        insert.entryIntentId,
+        insert.exitReason,
+        insert.realized,
+        insert.returnPct,
+        insert.sentimentDelta,
+        insert.momentumDelta,
+      );
+    }
+  }
 
   function intentRowsFor(decisionId: number) {
     return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map(intentRowToStored);
@@ -203,6 +324,24 @@ export function openDecisionDb(path: string): DecisionDb {
           quote.ask,
           quote.last,
         );
+      }
+    }
+
+    triggerRetrospectives(entry);
+  }
+
+  /** The retrospective writer's trigger: a decision that just recorded a fill may have closed a
+   *  position. Never allowed to break decision capture itself — a retrospective is a derived
+   *  convenience, not the audit trail — split out of `recordOne` to keep its own complexity down. */
+  function triggerRetrospectives(entry: DecisionRecord): void {
+    const filledSymbols = new Set(
+      entry.outcomes.filter((o) => o.result?.status === "filled").map((o) => o.intent.symbol),
+    );
+    for (const symbol of filledSymbols) {
+      try {
+        updateRetrospectivesFor(entry.personaId, symbol);
+      } catch {
+        // Swallowed — see comment above. The next fill for this symbol retries the full recompute.
       }
     }
   }
@@ -266,6 +405,51 @@ export function openDecisionDb(path: string): DecisionDb {
         selectDecisionsPage.all(personaId, beforeAt, limit) as unknown as Parameters<
           typeof rowsToRecords
         >[0],
+      );
+    },
+
+    listRetrospectives(personaId, opts = {}): RetrospectiveRecord[] {
+      const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE, MAX_PAGE));
+      const rows = selectRetrospectivesPage.all(personaId, limit) as {
+        at: number;
+        persona_id: string;
+        symbol: string;
+        entry_intent_id: number;
+        exit_reason: string | null;
+        realized: number;
+        return_pct: number;
+        sentiment_delta: number | null;
+        momentum_delta: number | null;
+      }[];
+      return rows.map((r) => ({
+        at: r.at,
+        personaId: r.persona_id,
+        symbol: r.symbol,
+        entryIntentId: r.entry_intent_id,
+        exitReason: r.exit_reason,
+        realized: r.realized,
+        returnPct: r.return_pct,
+        sentimentDelta: r.sentiment_delta,
+        momentumDelta: r.momentum_delta,
+      }));
+    },
+
+    funnelFor(personaId): DecisionFunnel {
+      const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
+      const closed = (selectClosedCount.get(personaId) as { n: number }).n;
+      const rows = selectFunnelIntents.all(personaId) as {
+        guard_reason: string | null;
+        action: string | null;
+        result_status: string | null;
+      }[];
+      return computeFunnel(
+        cycles,
+        closed,
+        rows.map((r) => ({
+          guardReason: r.guard_reason as GuardRefusalReason | null,
+          action: r.action,
+          resultStatus: r.result_status,
+        })),
       );
     },
 

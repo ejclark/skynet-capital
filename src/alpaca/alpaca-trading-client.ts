@@ -60,11 +60,26 @@ export interface AlpacaOrder {
   readonly type?: string;
   readonly limit_price?: string | null;
   readonly stop_price?: string | null;
+  /** "day" | "gtc" | "ioc" | … — echoed back by the broker; the desk shows it verbatim (#3407). */
+  readonly time_in_force?: string;
   readonly filled_qty?: string;
   readonly filled_avg_price?: string | null;
   readonly submitted_at?: string;
   readonly filled_at?: string | null;
   readonly canceled_at?: string | null;
+  /** Id lineage on a replace (#3407 P1 1b): the order this one superseded, and the one that
+   *  superseded this — both echoed by the broker, both absent on an order never replaced. */
+  readonly replaces?: string | null;
+  readonly replaced_by?: string | null;
+}
+
+/** What a replace may change — Alpaca allows quantity, price(s) and time in force on a working
+ *  limit or stop order; the type and side never change (a different order is a new order). */
+export interface ReplaceOrderParams {
+  readonly qty?: number;
+  readonly limit_price?: number;
+  readonly stop_price?: number;
+  readonly time_in_force?: "day" | "gtc";
 }
 
 export interface PlaceOrderParams {
@@ -77,6 +92,9 @@ export interface PlaceOrderParams {
   readonly limit_price?: number;
   /** Required when `type` is "stop". */
   readonly stop_price?: number;
+  /** Day or good-till-cancelled. Omit and the client keeps its standing default: market → day,
+   *  held (limit/stop) → gtc. The desk passes the member's own choice through (#3407 P1). */
+  readonly time_in_force?: "day" | "gtc";
 }
 
 /** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
@@ -186,6 +204,23 @@ export class AlpacaTradingClient {
     }
   }
 
+  /** Replaces a working order (Alpaca `PATCH /v2/orders/{id}`): the broker cancels the old id
+   *  and answers with the NEW order, whose `replaces` names the old one. Only the fields given
+   *  change. A filled/cancelled order, or an empty change, throws `AlpacaApiError` like any
+   *  other non-2xx; a transport without `patch` throws before touching the network. */
+  async replaceOrder(id: string, params: ReplaceOrderParams): Promise<AlpacaOrder> {
+    if (!this.transport.patch) {
+      throw new Error("this trading transport cannot replace orders (no PATCH)");
+    }
+    const body = {
+      ...(params.qty !== undefined ? { qty: params.qty } : {}),
+      ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
+      ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
+      ...(params.time_in_force !== undefined ? { time_in_force: params.time_in_force } : {}),
+    };
+    return ensureOk<AlpacaOrder>(await this.transport.patch(`/v2/orders/${id}`, body));
+  }
+
   /** Market clock — whether the market is currently open. */
   async isMarketOpen(): Promise<boolean> {
     return (await this.getClock()).isOpen;
@@ -218,7 +253,7 @@ export class AlpacaTradingClient {
       // A held (limit/stop) order must outlive the trading day it was placed on — a stop-loss
       // that silently expired overnight wouldn't be protecting anything. Market orders keep the
       // existing "day" behavior unchanged.
-      time_in_force: type === "market" ? "day" : "gtc",
+      time_in_force: params.time_in_force ?? (type === "market" ? "day" : "gtc"),
       ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
       ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
     });

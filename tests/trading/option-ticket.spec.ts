@@ -142,6 +142,127 @@ describe("previewOptionOrder — the discipline rules", () => {
   });
 });
 
+describe("odds and greeks on the order screen (#3407 P2 slice 2)", () => {
+  it("carries the feed's greeks and the solved IV through, and the odds when every input is real", () => {
+    const preview = previewOptionOrder(
+      csp,
+      context({
+        underlyingPrice: 428.6,
+        greeks: { delta: -0.42, theta: -0.19 },
+        impliedVol: 0.31,
+        daysToExpiry: 30,
+      }),
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.greeks).toEqual({ delta: -0.42, theta: -0.19 });
+    expect(preview.impliedVol).toBe(0.31);
+    expect(preview.chanceOfProfit).toBeGreaterThan(0.5);
+    expect(preview.chanceOfProfit).toBeLessThan(1);
+    expect(typeof preview.expectedValue).toBe("number");
+  });
+
+  it("prints no odds without an IV, a spot or a clock — never a guessed number", () => {
+    const noIv = previewOptionOrder(csp, context({ underlyingPrice: 428.6, daysToExpiry: 30 }));
+    expect(noIv.chanceOfProfit).toBeUndefined();
+    expect(noIv.expectedValue).toBeUndefined();
+    const noSpot = previewOptionOrder(csp, context({ impliedVol: 0.3, daysToExpiry: 30 }));
+    expect(noSpot.chanceOfProfit).toBeUndefined();
+  });
+
+  it("prints no odds on a refused order", () => {
+    const refused = previewOptionOrder(
+      csp,
+      context({ cash: 1, underlyingPrice: 428.6, impliedVol: 0.3, daysToExpiry: 30 }),
+    );
+    expect(refused.ok).toBe(false);
+    expect(refused.chanceOfProfit).toBeUndefined();
+  });
+});
+
+describe("the payoff curve on the order screen (#3407 — the single-leg diagram)", () => {
+  it("samples a sold put through its strike: flat at the credit above, falling below", () => {
+    const preview = previewOptionOrder(csp, context({ underlyingPrice: 428.6 }));
+    expect(preview.payoff).toBeDefined();
+    if (!preview.payoff) return;
+    expect(preview.payoff.from).toBeCloseTo(336); // 420 × 0.8
+    expect(preview.payoff.to).toBeCloseTo(504);
+    expect(preview.payoff.breakevens).toEqual([409.3]); // the grid's breakeven
+    expect(preview.payoff.points.at(-1)?.pnl).toBeCloseTo(2_140); // the whole credit
+    // Still falling at the window's edge — the chart labels that, the max loss is the grid's.
+    expect(preview.payoff.points[0]?.pnl).toBeCloseTo((10.7 - 84) * 200);
+  });
+
+  it("a covered call carries its shares: the curve tops out at strike − spot + premium", () => {
+    const request = { ...csp, code: "202" as const, contracts: 2 };
+    const held = { symbol: "MSFT", quantity: 200, avgPrice: 400, marketValue: 85_000 };
+    const covered = previewOptionOrder(
+      request,
+      context({ positions: [held], underlyingPrice: 410 }),
+    );
+    expect(covered.payoff).toBeDefined();
+    if (!covered.payoff) return;
+    // Above the strike the shares are called away: (420 − 410 + 10.70) × 200.
+    expect(covered.payoff.points.at(-1)?.pnl).toBeCloseTo(4_140);
+    expect(covered.maxProfit).toBeCloseTo(4_140);
+    expect(covered.payoff.breakevens).toEqual([399.3]); // spot − premium, the grid's number
+    // Without a spot there is no basis for the shares, so no curve — as there is no max loss.
+    const noSpot = previewOptionOrder(request, context({ positions: [held] }));
+    expect(noSpot.maxLoss).toBeUndefined();
+    expect(noSpot.payoff).toBeUndefined();
+  });
+
+  it("adds today and halfway lines only with the IV and the clock the odds already need", () => {
+    const withModel = previewOptionOrder(
+      csp,
+      context({ underlyingPrice: 428.6, impliedVol: 0.3, daysToExpiry: 20 }),
+    );
+    expect(withModel.payoff?.dated?.map((line) => line.label)).toEqual(["today", "halfway"]);
+    expect(withModel.payoff?.dated?.[1]?.daysForward).toBe(10);
+    expect(withModel.payoff?.dated?.[0]?.points.map((p) => p.price)).toEqual(
+      withModel.payoff?.points.map((p) => p.price),
+    );
+    const noModel = previewOptionOrder(csp, context({ underlyingPrice: 428.6 }));
+    expect(noModel.payoff).toBeDefined();
+    expect(noModel.payoff?.dated).toBeUndefined();
+  });
+
+  it("a long option's curve needs no spot, and a refused order carries none", () => {
+    const call = previewOptionOrder(
+      { ...csp, code: "302", contracts: 1, strike: 430, limitPrice: 8 },
+      context(),
+    );
+    expect(call.payoff?.breakevens).toEqual([438]);
+    expect(call.payoff?.points[0]?.pnl).toBeCloseTo(-800);
+    const refused = previewOptionOrder(csp, context({ cash: 10 }));
+    expect(refused.ok).toBe(false);
+    expect(refused.payoff).toBeUndefined();
+  });
+});
+
+describe("time in force on option orders (#3407 P1 slice 4)", () => {
+  it("always states the TIF it will send — day unless the member picked gtc", () => {
+    expect(previewOptionOrder(csp, context()).timeInForce).toBe("day");
+    expect(previewOptionOrder({ ...csp, timeInForce: "gtc" }, context()).timeInForce).toBe("gtc");
+  });
+
+  it("carries the pick on a close too, defaulting to day", () => {
+    const longPut = {
+      symbol: "MSFT260918P00420000",
+      quantity: 2,
+      avgPrice: 1_070,
+      marketValue: 2_400,
+    };
+    expect(
+      previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] })).timeInForce,
+    ).toBe("day");
+    expect(
+      previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] }), undefined, {
+        timeInForce: "gtc",
+      }).timeInForce,
+    ).toBe("gtc");
+  });
+});
+
 describe("previewOptionClose — direction from the held sign", () => {
   const longPut = {
     symbol: "MSFT260918P00420000",
@@ -171,6 +292,35 @@ describe("previewOptionClose — direction from the held sign", () => {
     expect(preview.ok).toBe(true);
     expect(preview.side).toBe("buy");
     expect(preview.positionIntent).toBe("buy_to_close");
+  });
+
+  it("closes at a limit when asked — the estimate follows the limit, not the mark (#3407)", () => {
+    const preview = previewOptionClose(
+      "MSFT260918P00420000",
+      context({ positions: [longPut] }),
+      undefined,
+      { orderType: "limit", limitPrice: 13.5 },
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.orderType).toBe("limit");
+    expect(preview.limitPrice).toBe(13.5);
+    expect(preview.estPremium).toBe(13.5);
+    expect(preview.estNotional).toBeCloseTo(2_700); // 13.5 × 2 contracts × 100
+    expect(preview.warnings.join(" ")).not.toContain("market close");
+  });
+
+  it("refuses a limit close with no price, and warns that a market close is the undisciplined habit", () => {
+    const noPrice = previewOptionClose(
+      "MSFT260918P00420000",
+      context({ positions: [longPut] }),
+      undefined,
+      { orderType: "limit" },
+    );
+    expect(noPrice.ok).toBe(false);
+    expect(noPrice.refusals.join(" ")).toContain("limit close needs a limit price");
+    const market = previewOptionClose("MSFT260918P00420000", context({ positions: [longPut] }));
+    expect(market.orderType).toBe("market");
+    expect(market.warnings.join(" ")).toContain("market close fills at whatever the spread says");
   });
 
   it("refuses closing more than is held, or a contract not held at all", () => {

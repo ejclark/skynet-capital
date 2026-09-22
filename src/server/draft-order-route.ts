@@ -12,7 +12,7 @@ import {
 } from "../trading/draft-order.js";
 import type { DraftAccountContext } from "../trading/draft-order-account.js";
 import { validateDraftAccount } from "../trading/draft-order-account.js";
-import { draftPreview } from "../trading/draft-order-preview.js";
+import { draftPreview, withDatedCurves } from "../trading/draft-order-preview.js";
 import type { Session } from "./auth/session.js";
 import { requesterFor, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -126,7 +126,7 @@ type DraftAction =
   | { readonly kind: "reprice-leg"; readonly id: unknown; readonly limitPrice: unknown }
   | { readonly kind: "validate" }
   | { readonly kind: "review" }
-  | { readonly kind: "submit" };
+  | { readonly kind: "submit"; readonly timeInForce?: "day" | "gtc" };
 
 interface DraftRequestBody {
   readonly participantId: string;
@@ -151,6 +151,16 @@ function parseRequest(raw: string): DraftRequestBody | undefined {
   if (!participantId || typeof action !== "object" || action === null) return undefined;
   const kind = (action as Record<string, unknown>).kind;
   if (typeof kind !== "string" || !ACTION_KINDS.has(kind)) return undefined;
+  if (kind === "submit") {
+    // The one field a submit carries besides the echoed draft (#3407 P3): day unless GTC.
+    const tif = (action as Record<string, unknown>).timeInForce;
+    const timeInForce = tif === "day" || tif === "gtc" ? tif : undefined;
+    return {
+      participantId,
+      draft: body.draft,
+      action: { kind, ...(timeInForce ? { timeInForce } : {}) },
+    };
+  }
   return { participantId, draft: body.draft, action: action as DraftAction };
 }
 
@@ -254,16 +264,107 @@ export async function serveDraftOrderApi(
         session ? opaqueMemberId(session.email) : undefined,
       )
     : undefined;
-  const draft = applyAction(parseDraft(request.draft), request.action, account, progression);
-  sendJson(res, 200, {
-    draft,
-    preview: draftPreview(draft),
-    ...(request.action.kind === "submit"
-      ? {
-          executed: false,
-          note: "No multi-leg execution path is wired up on this deployment yet — nothing was sent to the broker.",
-        }
-      : {}),
-  });
+  const reviewed = parseDraft(request.draft);
+  const draft = applyAction(reviewed, request.action, account, progression);
+  if (request.action.kind !== "submit" || draft.phase !== "submitted") {
+    sendJson(res, 200, {
+      draft,
+      preview: await previewWithDated(draft, request.participantId, config),
+    });
+    return true;
+  }
+  sendJson(
+    res,
+    200,
+    await executeSubmit(
+      { request: request.action, reviewed, submitted: draft },
+      requesterId,
+      config,
+    ),
+  );
   return true;
+}
+
+/**
+ * The payoff preview, with today / halfway model lines when the requester's own options client
+ * can give each leg's underlying a spot (#3407 P4 — the builder's counterpart to the single-leg
+ * ticket's dated lines; each leg's IV is solved from the premium the member set). One spot read
+ * per underlying per action; a failed read means expiration only, never a guessed line.
+ */
+async function previewWithDated(
+  draft: DraftOrder,
+  participantId: string,
+  config: DashboardServerConfig,
+): Promise<ReturnType<typeof draftPreview>> {
+  const preview = draftPreview(draft);
+  const client = config.optionsClientFor?.(participantId);
+  if (!(client && preview.pricedFully) || draft.legs.length === 0) return preview;
+  const underlyings = [...new Set(draft.legs.map((leg) => leg.underlying))];
+  const spots = new Map<string, number>();
+  try {
+    for (const [u, spot] of await Promise.all(
+      underlyings.map(async (u) => [u, await client.getUnderlyingPrice(u)] as const),
+    )) {
+      if (spot !== undefined) spots.set(u, spot);
+    }
+  } catch {
+    return preview;
+  }
+  return withDatedCurves(preview, draft, spots, config.now?.() ?? new Date());
+}
+
+/**
+ * The state machine said "submitted"; only the execution seam can say "sent" (#3407 P3 slice 1).
+ * Unwired, the answer is the honest one the P0 fix taught the headline to read. Refused by the
+ * live re-check or the broker, the draft stays on the review screen with the refusals on it —
+ * "sent" is a word the broker's own echo earns, never the phase.
+ */
+async function executeSubmit(
+  {
+    request,
+    reviewed,
+    submitted,
+  }: {
+    request: Extract<DraftAction, { kind: "submit" }>;
+    reviewed: DraftOrder;
+    submitted: DraftOrder;
+  },
+  requesterId: string | undefined,
+  config: DashboardServerConfig,
+) {
+  const preview = draftPreview(submitted);
+  if (!config.submitDraftOrder) {
+    return {
+      draft: submitted,
+      preview,
+      executed: false,
+      note: "No multi-leg execution path is wired up on this deployment yet — nothing was sent to the broker.",
+    };
+  }
+  // The requester IS the account by this point (`isSelf` above), so the seam re-verifies the
+  // same identity it would for a single-leg order — never a second id from the body.
+  const result = await config.submitDraftOrder(
+    {
+      participantId: requesterId ?? "",
+      draft: reviewed,
+      ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
+    },
+    requesterId,
+  );
+  if (!result.ok) {
+    return {
+      draft: { ...reviewed, refusals: result.refusals },
+      preview: draftPreview(reviewed),
+      executed: false,
+    };
+  }
+  return {
+    draft: submitted,
+    preview,
+    executed: true,
+    orderId: result.orderId,
+    status: result.status,
+    ...(result.timeInForce ? { timeInForce: result.timeInForce } : {}),
+    note: `Order ${result.orderId} ${result.status} — one net limit, filled together or not at all. Working orders picks it up on the next read.`,
+  };
 }

@@ -2,10 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchJourney } from "../live/learn";
+import { fetchPlays } from "../live/options";
+import { fetchSettings } from "../live/settings";
 import { CourseCard, Hud, ladderProgress } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
 import { MilestonePanel } from "../shell/milestone-panel";
+import { MilestoneStrip } from "../shell/milestone-strip";
 import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
@@ -14,6 +17,14 @@ import { ProfileRail } from "../shell/profile-rail";
  * table of contents took that route. The `learn_.` file prefix keeps this a sibling route
  * (`/learn/trading`), not a child rendered inside the table of contents. Same honesty rule as
  * ever — a milestone is earned only by a real filled order, and every earned row shows its proof.
+ *
+ * THE MILESTONE STRIP LIVES HERE (#3407, Workbench slice 5 — Eric, 2026-09-22, "B — keep"): #1461
+ * hung the eight-rung rail over the trade ticket; the Workbench pick made the ticket one pane of a
+ * bench, and the rail moved to the page that IS the ladder. Same component, same rules (a reached
+ * rung is a preset into the ticket, a locked one stays here), `current` = the server's `nextUp` —
+ * "you are here" on a page with no ticket. Fed by `/api/trade/plays` (the earned/locked truth) and
+ * the session's first account for the preset links; fail-soft — no plays, no strip, the cards below
+ * still tell the story.
  */
 function TradingLadderPage(): ReactElement {
   const journey = useQuery({
@@ -21,6 +32,9 @@ function TradingLadderPage(): ReactElement {
     queryFn: fetchJourney,
     refetchOnWindowFocus: true,
   });
+  const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const deskId = settings.data?.accounts[0]?.id ?? "";
   const rail = <ProfileRail current="ladder" />;
   if (journey.isPending)
     return (
@@ -55,6 +69,16 @@ function TradingLadderPage(): ReactElement {
         </p>
       ) : null}
       {data.gate ? <LadderGateCard note={data.gate.note} /> : null}
+      {plays.data ? (
+        <MilestoneStrip
+          deskId={deskId}
+          current={plays.data.nextUp ?? ""}
+          plays={plays.data.plays}
+          wheels={plays.data.wheels}
+          gate={plays.data.gate}
+          nextUp={plays.data.nextUp}
+        />
+      ) : null}
       <Hud journey={data} />
       <MilestonePanel title="Trading progression" done={ladder.done} total={ladder.total}>
         {data.courses.map((course) => (

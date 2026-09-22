@@ -1,7 +1,47 @@
 /* the options ticket + play picker (#738 phase 10b). Tokens only. */
 
-/* The milestone strip (#1461) — eyebrow · rail · status line. Mobile-first: the base rules are the
-   phone frame (nodes, codes, count, status); names under the nodes arrive at 600px. */
+/* The rung chip (#3407, Workbench slice 5) — the one line the ticket keeps when the milestone
+   strip moves to /learn/trading: rung · name · state word · count · the door to the ladder.
+   Wraps at 390px; one row wherever it fits. */
+.rung-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 12px 0 8px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text);
+}
+.rung-chip-eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rung-chip-name {
+  color: var(--text);
+}
+.rung-chip-state,
+.rung-chip-count {
+  color: var(--muted);
+}
+.rung-chip-earned {
+  color: var(--accent);
+}
+.rung-chip-link {
+  margin-left: auto;
+  color: var(--accent);
+  text-decoration: none;
+}
+.rung-chip-link:hover,
+.rung-chip-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* The milestone strip (#1461; on /learn/trading since #3407 slice 5) — eyebrow · rail · status
+   line. Mobile-first: the base rules are the phone frame (nodes, codes, count, status); names
+   under the nodes arrive at 600px. */
 .ladder-strip {
   display: flex;
   flex-direction: column;
@@ -18,7 +58,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -73,7 +113,7 @@
   background: var(--bg);
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .rung-earned .rung-node {
@@ -96,7 +136,7 @@
   border-color: var(--accent);
 }
 .rung-code {
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.06em;
   color: var(--muted);
 }
@@ -105,14 +145,14 @@
 }
 .rung-name {
   display: none;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   line-height: 1.2;
   padding: 0 4px;
 }
 .ladder-strip-status {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--muted);
 }
 .ladder-strip-status b {
@@ -145,7 +185,7 @@
 }
 .ticket-nav-label {
   padding: 0;
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -156,14 +196,14 @@
   cursor: not-allowed;
 }
 .seg-why {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
   letter-spacing: 0.02em;
 }
 .ticket-nav-gate {
   flex-basis: 100%;
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 /* The quote header (#2017 Phase 0.9) — last price + day change, above the fields so it's the
@@ -175,7 +215,7 @@
   align-items: baseline;
   gap: 6px;
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 /* An empty region before a quote loads (or for an uncommitted symbol): keep it mounted for
    aria-live, draw no chrome — same idiom as `.gate:empty` in gate.css. */
@@ -189,28 +229,69 @@
   color: var(--muted, inherit);
 }
 .quote-note {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0 0 12px;
   max-width: 70ch;
 }
 
-.tkt-fields {
-  grid-template-columns: repeat(3, 1fr);
-}
+/* `.tkt-fields` used to force three equal columns here, which is what stretched a 4-character
+   strike across a third of the panel (#3407 P0); the options ticket now inherits
+   `.gate-fields`' content-sized tracks. The class stays as a hook. */
 .tkt-note {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0 0 12px;
   max-width: 70ch;
 }
+/* The chain accordion's collapsed state (Eric, 2026-09-22 — `option-gate.tsx`'s header comment):
+   one line standing in for the whole table once a strike is picked. `.tkt-chain-change` is a real
+   button styled as an inline link, not a link element, since it toggles component state rather
+   than navigating. */
+.tkt-chain-summary {
+  font-size: var(--text-sm);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  padding: 8px 10px;
+  margin: 0 0 12px;
+}
+.tkt-chain-change {
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+/* The order-detail split (Eric, 2026-09-22: "the bottom part of the trade form… requires little
+   room… appropriate place to have two columns with the right column being the candlestick
+   chart"): Strike-onward stays compact in the left track, `chartSlot` (docked only —
+   `option-gate.tsx`'s own doc comment) takes the rest. The symbol field and the chain above this
+   split are NOT here — they stay full width, which is the other half of the ask (`trade.tsx`'s
+   `Bench` no longer gives chart its own full-height column). A max-width safety net in case a
+   future caller ever passes `chartSlot` below the bench width. */
+.tkt-review-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+  gap: var(--space-5) 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .tkt-review-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .tkt-occ {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--muted);
   letter-spacing: 0.04em;
 }
 .tkt-locked {
-  font-size: 12.5px;
+  font-size: var(--text-md);
   line-height: 1.5;
   margin: 0 0 12px;
 }
@@ -224,7 +305,7 @@
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
+  font-size: var(--text-md);
   flex-wrap: wrap;
 }
 .tkt-close-row:last-child {
@@ -237,10 +318,10 @@
 .tkt-close-main small {
   display: block;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
 }
 .tkt-close-note {
-  font-size: 11.5px;
+  font-size: var(--text-sm);
 }
 /* The close line's refusal already carries a literal cross; its success needed the matching tick,
    or "filled" and "refused" differed by hue alone (docs/BRAND.md -> Accessibility). */
@@ -264,11 +345,21 @@
   overflow-x: auto;
   gap: 6px;
   padding-bottom: 2px;
+  /* The native scrollbar dominated a thin strip and doubled up with the chevrons below (Eric,
+     2026-09-22: "the scrollbar... both dominates and crowds the content"). Hidden outright rather
+     than merely thinned: touch/trackpad swipe needs no visible track at all, and the chevrons
+     below are now real scroll buttons — a bigger, more reliable target than a native drag handle
+     ever was, especially for anyone who can't drag a 6px bar precisely. Native keyboard scrolling
+     (arrow keys on a focused tab) is untouched; only the visible track is gone. */
+  scrollbar-width: none;
+}
+.exp-tabs::-webkit-scrollbar {
+  display: none;
 }
 .exp-tab {
   flex: 0 0 auto;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text);
   background: var(--surface-2);
@@ -287,4 +378,132 @@
 .exp-tab:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+/* Scroll affordance (Eric, 2026-09-22): option B off a 3-way rendered comparison, "more
+   emphasis... bigger font and/or higher contrast" on the follow-up, then real buttons — "the
+   buttons on the side need to become clickable with the padding around the button reserved for
+   the right/left behavior" once the native scrollbar (above) went away. `.exp-tabs` reserves that
+   padding as real scroll-padding so the strip never opens mid-tap under a chevron, and the first/
+   last tab's own `scroll-margin` keeps a tap-scrolled tab from landing partly hidden behind one.
+   Follow-up the same day dropped the solid accent chip: "the button with padding around the
+   chevron feels adequate (no green background needed) as long as the button size/coloration meets
+   accessibility standards" — `--accent` on transparent is the same colour `.exp-tab-active` already
+   uses at rest elsewhere in this file (already AA-vetted against `--surface`/`--bg`), and 34px ×
+   full tab height stays a real tap target with no fill required to prove it's clickable; a hover/
+   focus wash is the only background, never shown until a member actually reaches for it. */
+.exp-tabs-wrap {
+  position: relative;
+}
+.exp-tabs {
+  scroll-padding-inline: 34px;
+}
+.exp-tab {
+  scroll-margin-inline: 34px;
+}
+.exp-tabs-chevron {
+  position: absolute;
+  top: 0;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  cursor: pointer;
+}
+.exp-tabs-chevron-left {
+  left: 0;
+}
+.exp-tabs-chevron-right {
+  right: 0;
+}
+.exp-tabs-chevron:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.exp-tabs-chevron:active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* The close row's Market / Limit choice (#3407 P1 slice 3): the shell's toggle-group plus a
+   narrow premium field that only appears on Limit; wraps under the name at phone width. */
+.tkt-close-how {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* a fieldset for the a11y semantics; its own chrome is reset so it reads as the toggle pill */
+.tkt-close-type {
+  margin: 0;
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.tkt-close-price input {
+  width: 96px;
+  padding: 5px 8px;
+  font-size: var(--text-md);
+}
+/* Roll as one ticket (#3407 P3 slice 3): a second line under a held contract's row — the
+   target expiration and strike, Day / GTC, the two legs spelled out, then Review → Confirm.
+   Spans the close row's grid so it reads as the row's own drawer, not a sibling contract. */
+.tkt-roll-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: -4px 0 8px 10px;
+  padding: 8px 0 8px 12px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+.tkt-roll-fields {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.tkt-roll-fields .field select {
+  padding: 5px 8px;
+  font-size: var(--text-md);
+}
+.tkt-roll-line {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+/* Position Statement vocabulary on the option positions card (#3407 P2 slice 3): DTE and an
+   ITM/OTM word chip under the name, the holding's greeks in the num register; ITM carries a
+   border weight, never hue alone. */
+.tkt-pos-stat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.tkt-pos-chip {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tkt-pos-itm {
+  border-width: 2px;
+  color: var(--text);
+  font-weight: 700;
+}
+.tkt-pos-greeks {
+  white-space: nowrap;
+}
+.tkt-book {
+  margin: 10px 0 0;
 }

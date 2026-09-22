@@ -5,7 +5,9 @@
  * arrives computed, and the server re-refuses a locked play regardless of what the UI shows.
  */
 
+import type { PayoffCurve } from "./draft-order";
 import { postJson } from "./post";
+import type { Quote } from "./quote";
 import type { TicketResult } from "./ticket";
 
 export type OptionPlayCode = "201" | "202" | "301" | "302";
@@ -55,12 +57,27 @@ export interface ChainRow {
   readonly vega?: number;
 }
 
+/** Where the bid/ask/greeks came from and how much of the chain they cover (#3407 P2) — the
+ *  one line that turns a "—" cell from a mystery into "the feed didn't quote this strike". */
+export interface ChainQuoteCoverage {
+  readonly source: "indicative" | "unavailable";
+  readonly quoted: number;
+  readonly total: number;
+  readonly asOf: string;
+}
+
 export interface ChainData {
   readonly symbol: string;
   readonly optionType: "call" | "put";
   readonly expirations: readonly string[];
   readonly expiration: string;
   readonly spot?: number;
+  /** The quote header's view, off the same snapshot as `spot` (#3299 slice 1) — the options
+   *  ticket reads it from here instead of a second `/api/trade/quote` round trip. Absent when the
+   *  snapshot had no prior close, or from a server that predates the field. */
+  readonly quote?: Quote;
+  /** Absent only from a server that predates the field. */
+  readonly quotes?: ChainQuoteCoverage;
   readonly rows: readonly ChainRow[];
 }
 
@@ -85,6 +102,8 @@ export interface OptionPreview {
   readonly expiration?: string;
   readonly orderType: "limit" | "market";
   readonly limitPrice?: number;
+  /** What will be sent — the server always says (#3407 P1 slice 4). */
+  readonly timeInForce: "day" | "gtc";
   readonly ok: boolean;
   readonly estPremium?: number;
   readonly estNotional?: number;
@@ -93,6 +112,19 @@ export interface OptionPreview {
   readonly maxProfit?: number | "uncapped";
   readonly maxLoss?: number;
   readonly breakeven?: number;
+  /** The order screen's decision inputs (#3407 P2 slice 2) — each absent when the feed or the
+   *  solver had no honest number, never zero. */
+  readonly greeks?: {
+    readonly delta?: number;
+    readonly gamma?: number;
+    readonly theta?: number;
+    readonly vega?: number;
+  };
+  readonly impliedVol?: number;
+  readonly chanceOfProfit?: number;
+  readonly expectedValue?: number;
+  /** The server-sampled at-expiration curve (#3407) — absent on refused / unpriced orders. */
+  readonly payoff?: PayoffCurve;
   readonly refusals: readonly string[];
   readonly warnings: readonly string[];
 }
@@ -108,12 +140,17 @@ export type OptionDraft =
       readonly expiration: string;
       readonly orderType: "limit" | "market";
       readonly limitPrice?: number;
+      readonly timeInForce?: "day" | "gtc";
     }
   | {
       readonly kind: "close";
       readonly participantId: string;
       readonly occSymbol: string;
       readonly contracts?: number;
+      /** Market when absent; a limit close names the premium per share (#3407 P1 slice 3). */
+      readonly orderType?: "limit" | "market";
+      readonly limitPrice?: number;
+      readonly timeInForce?: "day" | "gtc";
     };
 
 async function getJson<T>(url: string): Promise<T> {
@@ -134,6 +171,49 @@ export const fetchChain = (
       exp ? `&exp=${encodeURIComponent(exp)}` : ""
     }`,
   );
+
+/** One held contract with the Position Statement vocabulary (#3407 P2 slice 3) — mirrors the
+ *  server's `OptionPositionRow`; every optional field absent means the feed didn't quote it. */
+export interface OptionPositionRow {
+  readonly symbol: string;
+  readonly display: string;
+  readonly underlying: string;
+  readonly type: "call" | "put";
+  readonly strike: number;
+  readonly expiration: string;
+  readonly daysToExpiry: number;
+  readonly contracts: number;
+  readonly inTheMoney?: boolean;
+  readonly spot?: number;
+  readonly greeks?: { delta?: number; gamma?: number; theta?: number; vega?: number };
+  readonly positionGreeks?: { delta?: number; gamma?: number; theta?: number; vega?: number };
+  readonly impliedVol?: number;
+  readonly bid?: number;
+  readonly ask?: number;
+}
+
+export interface OptionBookGreeks {
+  readonly delta: number;
+  readonly gamma: number;
+  readonly theta: number;
+  readonly vega: number;
+  readonly covered: number;
+  readonly total: number;
+  readonly uncovered: readonly string[];
+}
+
+export type OptionPositions =
+  | {
+      readonly available: true;
+      readonly asOf: string;
+      readonly rows: readonly OptionPositionRow[];
+      readonly book: OptionBookGreeks;
+      readonly representative: boolean;
+    }
+  | { readonly available: false; readonly reason: "unlinked"; readonly rows: readonly [] };
+
+export const fetchOptionPositions = (participantId: string): Promise<OptionPositions> =>
+  getJson(`/api/trade/option-positions?participantId=${encodeURIComponent(participantId)}`);
 
 export const reviewOption = (draft: OptionDraft): Promise<{ preview: OptionPreview }> =>
   postJson("/api/trade/option/review", draft);

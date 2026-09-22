@@ -121,6 +121,15 @@ const settings = {
     { id: "human-eric", name: "Eric", kind: "human", hostConfigured: false, profile: null },
   ],
 };
+// A second account so the Account field actually renders (`AccountField` withholds itself for a
+// one-account session) — needed only by the page-order scene below (Eric, 2026-09-22).
+const settingsTwoAccounts = {
+  ...settings,
+  accounts: [
+    ...settings.accounts,
+    { id: "bot-sauron", name: "Sauron", kind: "bot", hostConfigured: false, profile: null },
+  ],
+};
 const desk = {
   generatedAt: "2026-09-05T00:00:00Z",
   desk: {
@@ -141,7 +150,17 @@ const desk = {
   },
 };
 
-const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" };
+// The NBBO rides with the quote (#3407 slice 6): the stock ticket seeds Limit at the mid from it.
+const quote = {
+  symbol: "NVDA",
+  last: 181.32,
+  change: 2.14,
+  changePct: 1.19,
+  tone: "pos",
+  bid: 181.28,
+  ask: 181.32,
+  mid: 181.3,
+};
 
 // The Symbol field's tier-2 live fallback (Phase 0.8b): "GATO" (Gatos Silver) is a genuine
 // curated-directory miss — not in src/domain/ticker-directory/* — so typing it proves the debounced
@@ -216,47 +235,6 @@ const studyBars = {
   }),
 };
 
-// The empty Wire feed used by every earlier shot that happens to land on a committed symbol
-// (`WireRow` mounts under the chain on any of them) — #2017 Phase 1 slice 12's own fixture,
-// swapped for a populated one only in that shot's own scene below.
-const emptyWire = { wire: { trades: [], pnl: [], feedbackEnabled: false, feedback: [] } };
-
-// Who-else-traded fills for NVDA (#2017 Phase 1 slice 12) — a human buy and a bot sell, newest
-// first, real names per the consent doctrine (no anonymizing to prove here).
-const nvdaWire = {
-  wire: {
-    trades: [
-      {
-        key: "sauron-1",
-        side: "sell",
-        symbol: "NVDA260918C00180000",
-        quantity: 3,
-        price: "5.10",
-        who: "Sauron",
-        whoId: "bot-sauron",
-        kind: "bot",
-        reconstructed: false,
-        when: "2:41p",
-      },
-      {
-        key: "ann-1",
-        side: "buy",
-        symbol: "NVDA",
-        quantity: 100,
-        price: "181.02",
-        who: "Ann",
-        whoId: "human-ann",
-        kind: "human",
-        reconstructed: false,
-        when: "1:58p",
-      },
-    ],
-    pnl: [],
-    feedbackEnabled: false,
-    feedback: [],
-  },
-};
-
 // One expiration's put chain around the quote's spot, the same shape `straddle.mjs` uses — needed
 // only by the options-ticket quote shot below (#2017 Phase 0.9 review, item 5): with no stub the
 // endpoint falls through to `stubBody`'s `{}` default, which `OptionGate` reads as a present-but-
@@ -264,6 +242,8 @@ const nvdaWire = {
 const chain = {
   symbol: "NVDA",
   optionType: "put",
+  // The header reads its quote off the chain (#3299 slice 1) — same book as `quote` above.
+  quote,
   // 13 sequential Friday-ish weeklies-plus-monthlies (#2017 Phase 0 task 4c) — enough to prove the
   // expiration tab strip actually needs a horizontal swipe at 390px, not just render the 2-3 dates
   // that would have fit in the old <select> just as well.
@@ -309,23 +289,452 @@ const chain = {
 };
 
 let currentPlays = freshPlays;
+let currentSettings = settings;
 // Mutable so the earnings-badge scenario below can swap in an MU chain/quote without disturbing
 // every earlier shot's fixed NVDA fixtures (mirrors `currentPlays`'s own pattern).
 let currentChain = chain;
 let currentQuote = quote;
-// `/api/wire` matches by pathname alone (the shoot harness's stub matcher strips the query
-// string before looking a stub up — `lib.mjs`'s `stubBody`), so one exact key covers every
-// `?symbol=` this script commits, same as `/api/trade/chain` above.
-let currentWire = emptyWire;
 // The base twenty bars for every chart shot but the studies scene, which swaps in `studyBars`.
 let currentBars = bars;
+// Working orders (#3407 P1 slice 2): the list a Limit was missing. Every scene but the one that
+// proves it starts with nothing working — the honest empty line is itself part of every ticket
+// frame now. The proving scene swaps in one GTC limit, one partial fill and two settled rows.
+const noOrders = { available: true, asOf: "2026-09-21T14:00:00Z", working: [], recent: [] };
+const workingOrders = {
+  available: true,
+  asOf: "2026-09-21T14:00:00Z",
+  working: [
+    {
+      id: "wo-1",
+      symbol: "NVDA",
+      display: "NVDA",
+      unit: "shares",
+      side: "buy",
+      orderType: "limit",
+      quantity: 5,
+      filledQuantity: 0,
+      limitPrice: 176.5,
+      timeInForce: "gtc",
+      submittedAt: "2026-09-21T13:58:00Z",
+      state: "working",
+      cancelable: true,
+      replaceable: true,
+    },
+    // An option order (P1 1b follow-up): the row names the contract, the drawer asks for Contracts.
+    {
+      id: "wo-5",
+      symbol: "NVDA260925C00180000",
+      display: "NVDA $180 CALL · Sep 25",
+      unit: "contracts",
+      side: "sell",
+      orderType: "limit",
+      quantity: 2,
+      filledQuantity: 0,
+      limitPrice: 4.1,
+      timeInForce: "day",
+      submittedAt: "2026-09-21T13:50:00Z",
+      state: "working",
+      cancelable: true,
+      replaceable: true,
+    },
+    {
+      id: "wo-2",
+      symbol: "AAPL",
+      display: "AAPL",
+      unit: "shares",
+      side: "sell",
+      orderType: "limit",
+      quantity: 10,
+      filledQuantity: 4,
+      limitPrice: 231.1,
+      timeInForce: "day",
+      submittedAt: "2026-09-21T13:41:00Z",
+      state: "partial",
+      cancelable: true,
+      replaceable: true,
+    },
+  ],
+  recent: [
+    {
+      id: "wo-3",
+      symbol: "MU",
+      side: "buy",
+      orderType: "market",
+      quantity: 20,
+      filledQuantity: 20,
+      avgFillPrice: 118.4,
+      timeInForce: "day",
+      submittedAt: "2026-09-21T13:20:00Z",
+      settledAt: "2026-09-21T13:20:01Z",
+      state: "filled",
+      cancelable: false,
+    },
+    {
+      id: "wo-4",
+      symbol: "NVDA",
+      side: "buy",
+      orderType: "stop",
+      quantity: 5,
+      filledQuantity: 0,
+      stopPrice: 190,
+      timeInForce: "gtc",
+      submittedAt: "2026-09-21T12:02:00Z",
+      settledAt: "2026-09-21T13:05:00Z",
+      state: "cancelled",
+      cancelable: false,
+    },
+  ],
+};
+let currentOrders = noOrders;
+const currentOptionReview = {
+  preview: {
+    code: "201",
+    underlying: "NVDA",
+    occSymbol: "NVDA261016P00175000",
+    optionType: "put",
+    side: "sell",
+    positionIntent: "sell_to_open",
+    contracts: 1,
+    strike: 175,
+    expiration: "2026-10-16",
+    orderType: "limit",
+    limitPrice: 1.5,
+    timeInForce: "day",
+    ok: true,
+    estPremium: 1.5,
+    estNotional: 150,
+    collateral: 17_500,
+    maxProfit: 150,
+    maxLoss: 17_350,
+    breakeven: 173.5,
+    greeks: { delta: -0.31, gamma: 0.021, theta: -0.06, vega: 0.14 },
+    impliedVol: 0.42,
+    chanceOfProfit: 0.72,
+    expectedValue: 18.4,
+    // The at-expiration curve (#3407, the single-leg payoff diagram): a sold 175 put at $1.50 —
+    // flat at the $150 credit above the strike, falling below the $173.50 breakeven, still
+    // falling at the window's low edge (the chart says so; the max loss is the grid's $17,350).
+    payoff: {
+      from: 140,
+      to: 210,
+      breakevens: [173.5],
+      points: [
+        { price: 140, pnl: -3350 },
+        { price: 150, pnl: -2350 },
+        { price: 160, pnl: -1350 },
+        { price: 170, pnl: -350 },
+        { price: 173.5, pnl: 0 },
+        { price: 175, pnl: 150 },
+        { price: 190, pnl: 150 },
+        { price: 210, pnl: 150 },
+      ],
+      // The T+0 and halfway lines the model draws at the reviewed IV (42%, 24 days): the put
+      // still carries time value near the strike, so both sit under the expiration credit.
+      dated: [
+        {
+          label: "today",
+          daysForward: 0,
+          points: [
+            { price: 140, pnl: -3362 },
+            { price: 150, pnl: -2420 },
+            { price: 160, pnl: -1560 },
+            { price: 170, pnl: -880 },
+            { price: 173.5, pnl: -700 },
+            { price: 175, pnl: -600 },
+            { price: 190, pnl: -90 },
+            { price: 210, pnl: 112 },
+          ],
+        },
+        {
+          label: "halfway",
+          daysForward: 12,
+          points: [
+            { price: 140, pnl: -3351 },
+            { price: 150, pnl: -2380 },
+            { price: 160, pnl: -1440 },
+            { price: 170, pnl: -680 },
+            { price: 173.5, pnl: -490 },
+            { price: 175, pnl: -380 },
+            { price: 190, pnl: 60 },
+            { price: 210, pnl: 146 },
+          ],
+        },
+      ],
+    },
+    refusals: [],
+    warnings: [],
+  },
+};
+// Limit close (#3407 P1 slice 3): one held long put so the option positions card renders with
+// its Market / Limit choice. Every other scene keeps the empty desk.
+const deskWithOption = {
+  ...desk,
+  desk: {
+    ...desk.desk,
+    positions: [
+      {
+        symbol: "MSFT260918P00420000",
+        display: "MSFT $420 put · Sep 18",
+        detail: "2 contracts",
+        isOption: true,
+        quantity: "2",
+        costPerShare: "$10.70",
+        price: "$12.00",
+        costBasis: "$2,140.00",
+        value: "$2,400.00",
+        dayPl: "+$60.00",
+        dayPct: "+2.5%",
+        dayTone: "pos",
+        totalPl: "+$260.00",
+        totalPlRaw: 260,
+        returnPct: "+12.1%",
+        totalTone: "pos",
+        weightPct: 3,
+      },
+    ],
+  },
+};
+let currentDesk = desk;
+const optionPositions = {
+  available: true,
+  asOf: "2026-09-21T14:00:00Z",
+  representative: true,
+  rows: [
+    {
+      symbol: "MSFT260918P00420000",
+      display: "MSFT $420 put · Sep 18",
+      underlying: "MSFT",
+      type: "put",
+      strike: 420,
+      expiration: "2026-09-18",
+      daysToExpiry: 17.25,
+      contracts: 2,
+      inTheMoney: true,
+      spot: 410.2,
+      greeks: { delta: -0.62, gamma: 0.018, theta: -0.21, vega: 0.34 },
+      positionGreeks: { delta: -124, gamma: 3.6, theta: -42, vega: 68 },
+      impliedVol: 0.29,
+      bid: 11.9,
+      ask: 12.1,
+    },
+  ],
+  book: { delta: -124, gamma: 3.6, theta: -42, vega: 68, covered: 1, total: 1, uncovered: [] },
+};
+const currentOptionPositions = optionPositions;
+// The alerts the held positions imply (#3407 P4 slice 1) — the same MSFT put a month-rung
+// reminder, plus a written NVDA call in the money three days out: assignment risk, critical.
+const noAlerts = { available: true, asOf: "2026-09-21T14:00:00Z", alerts: [], dismissable: true };
+const positionWatchAlerts = {
+  available: true,
+  asOf: "2026-09-21T14:00:00Z",
+  dismissable: true,
+  alerts: [
+    {
+      id: "a1",
+      at: 1758463200000,
+      source: "position-watch",
+      priority: "critical",
+      symbol: "NVDA",
+      title: "NVDA $180 call · Sep 25 is in the money — assignment risk",
+      body: "A short contract in the money this close to expiry can be assigned any night. Close or roll it, or be ready for the shares.",
+      fingerprint: "fp-1",
+    },
+    {
+      id: "a2",
+      at: 1758463200000,
+      source: "position-watch",
+      priority: "warning",
+      symbol: "NVDA",
+      title: "NVDA $180 call · Sep 25 expires in 4 days",
+      body: "A written contract at expiry settles by assignment or expires worthless — decide before the close.",
+      fingerprint: "fp-2",
+    },
+    {
+      id: "a3",
+      at: 1758463200000,
+      source: "position-watch",
+      priority: "info",
+      symbol: "MSFT",
+      title: "MSFT $420 put · Sep 18 expires in 18 days",
+      body: "A held contract at expiry is exercised if in the money, otherwise expires worthless.",
+      fingerprint: "fp-3",
+    },
+    // What an order did while the member was away (slice 2): the ledger's own numbers.
+    {
+      id: "a4",
+      at: 1758462000000,
+      source: "order-watch",
+      priority: "info",
+      symbol: "MU",
+      title: "Order wo-3 filled — 20 MU @ $118.40",
+      fingerprint: "fp-4",
+    },
+  ],
+};
+let currentAlerts = noAlerts;
+// A 2-lot NVDA 180/200 call credit spread walked add → validate → review → confirm, exactly the
+// states `draft-order.ts` produces; the confirm answer is the route's own shape with the
+// broker's echo (`executed: true`, order id, status, the working-orders note).
+const spreadLegs = [
+  {
+    id: "leg-1",
+    underlying: "NVDA",
+    optionType: "call",
+    strike: 180,
+    expiration: "2026-09-18",
+    action: "sell",
+    contracts: 2,
+    limitPrice: 4.2,
+  },
+  {
+    id: "leg-2",
+    underlying: "NVDA",
+    optionType: "call",
+    strike: 200,
+    expiration: "2026-09-18",
+    action: "buy",
+    contracts: 2,
+    limitPrice: 1.1,
+  },
+];
+const spreadPreview = {
+  legCount: 2,
+  pricedFully: true,
+  netPremium: 620,
+  maxGain: 620,
+  maxLoss: 3380,
+  unlimitedLoss: false,
+  undefinedRiskLegIds: [],
+  // The server-sampled at-expiration curve (#3407 payoff diagram): the credit below 180, the
+  // capped loss above 200, breakeven at 183.10 — the same numbers the grid above it shows.
+  payoff: {
+    from: 144,
+    to: 240,
+    breakevens: [183.1],
+    points: [
+      { price: 144, pnl: 620 },
+      { price: 180, pnl: 620 },
+      { price: 183.1, pnl: 0 },
+      { price: 200, pnl: -3380 },
+      { price: 240, pnl: -3380 },
+    ],
+    // Today and halfway model lines (#3407 P4): each leg's IV solved from its own premium, so
+    // the credit spread's T+0 line sits under the full credit near the short strike and above
+    // the capped loss near the long one.
+    dated: [
+      {
+        label: "today",
+        daysForward: 0,
+        points: [
+          { price: 144, pnl: 560 },
+          { price: 165, pnl: 380 },
+          { price: 180, pnl: -160 },
+          { price: 183.1, pnl: -340 },
+          { price: 200, pnl: -1420 },
+          { price: 220, pnl: -2560 },
+          { price: 240, pnl: -3100 },
+        ],
+      },
+      {
+        label: "halfway",
+        daysForward: 12,
+        points: [
+          { price: 144, pnl: 610 },
+          { price: 165, pnl: 520 },
+          { price: 180, pnl: 60 },
+          { price: 183.1, pnl: -260 },
+          { price: 200, pnl: -1980 },
+          { price: 220, pnl: -3080 },
+          { price: 240, pnl: -3340 },
+        ],
+      },
+    ],
+  },
+};
+const spreadVerdict = { ok: true, refusals: [], warnings: [] };
+const spreadDraft = (phase, extra = {}) => ({
+  draft: { phase, legs: spreadLegs, refusals: [], nextLegId: 3, ...extra },
+  preview: spreadPreview,
+});
+const draftSent = {
+  ...spreadDraft("submitted", { verdict: spreadVerdict }),
+  executed: true,
+  orderId: "7c1e2b9a-mleg",
+  status: "accepted",
+  timeInForce: "gtc",
+  note: "Order 7c1e2b9a-mleg accepted — one net limit, filled together or not at all. Working orders picks it up on the next read.",
+};
+// The roll (#3407 P3 slice 3): the MSFT $420 put rolled out to Oct 16 — two legs, one draft,
+// answered through the same route in the same order the roll row calls it.
+const rollLegs = [
+  {
+    id: "leg-1",
+    underlying: "MSFT",
+    optionType: "put",
+    strike: 420,
+    expiration: "2026-09-18",
+    action: "sell",
+    contracts: 2,
+    limitPrice: 12,
+  },
+  {
+    id: "leg-2",
+    underlying: "MSFT",
+    optionType: "put",
+    strike: 420,
+    expiration: "2026-10-16",
+    action: "buy",
+    contracts: 2,
+    limitPrice: 14.1,
+  },
+];
+const rollPreview = {
+  legCount: 2,
+  pricedFully: true,
+  netPremium: -420,
+  maxGain: "uncapped",
+  maxLoss: 420,
+  unlimitedLoss: false,
+  undefinedRiskLegIds: [],
+};
+const rollDraft = (phase, legs = rollLegs, extra = {}) => ({
+  draft: { phase, legs, refusals: [], nextLegId: legs.length + 1, ...extra },
+  preview: rollPreview,
+});
+const rollScript = [
+  rollDraft("drafting", rollLegs.slice(0, 1)),
+  rollDraft("drafting"),
+  rollDraft("validated", rollLegs, { verdict: { ok: true, refusals: [], warnings: [] } }),
+  rollDraft("reviewed", rollLegs, { verdict: { ok: true, refusals: [], warnings: [] } }),
+];
+let currentDraftScript;
+let currentDraftFallback;
+const draftScript = [
+  { draft: { phase: "drafting", legs: spreadLegs.slice(0, 1), refusals: [], nextLegId: 2 } },
+  // The reprice (#3407 P3 slice 4): the first leg typed over to $4.35, echoed by the server.
+  {
+    draft: {
+      phase: "drafting",
+      legs: [{ ...spreadLegs[0], limitPrice: 4.35 }],
+      refusals: [],
+      nextLegId: 2,
+    },
+  },
+  spreadDraft("drafting"),
+  spreadDraft("validated", { verdict: spreadVerdict }),
+  spreadDraft("reviewed", { verdict: spreadVerdict }),
+  draftSent,
+];
+currentDraftScript = draftScript;
+currentDraftFallback = draftSent;
+
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
   stubs: {
     "/api/trade/plays": () => currentPlays,
-    "/api/settings": settings,
-    "/api/desk/*": desk,
+    "/api/settings": () => currentSettings,
+    "/api/desk/*": () => currentDesk,
     // Exact key beats the `/api/desk/*` prefix above (`lib.mjs`'s `stubBody`) — every fixture in
     // this script logs in as the same "human-eric" account (`settings.accounts[0].id`).
     "/api/desk/human-eric/activity": recentOrdersActivity,
@@ -333,9 +742,27 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/chain": () => currentChain,
     // Matched by pathname alone (`lib.mjs`'s `stubBody`), so one key covers any `?symbol=&days=`.
     "/api/trade/bars": () => currentBars,
-    "/api/wire": () => currentWire,
     // Matched by pathname alone too, so one key covers any `?q=`.
     "/api/symbols/search": () => symbolSearch,
+    // Working orders (#3407 P1 slice 2) — pathname-matched, so one key covers `?participantId=`.
+    "/api/trade/orders": () => currentOrders,
+    // The reviewed option order (#3407 P2 slice 2): greeks, IV, chance of profit beside expected
+    // value — every number the server's own rules would print, as one stub.
+    "/api/trade/option/review": () => currentOptionReview,
+    // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
+    "/api/trade/option-positions": () => currentOptionPositions,
+    "/api/trade/alerts": () => currentAlerts,
+    "/api/trade/alerts/dismiss": { ok: true },
+    "/api/trade/cancel": { ok: true, orderId: "wo-1" },
+    "/api/trade/replace": {
+      ok: true,
+      orderId: "wo-9",
+      replaces: "wo-1",
+      status: "pending_replace",
+    },
+    // The multi-leg builder's lifecycle (#3407 P3 slice 1) — one scripted answer per action, in
+    // the order the scene clicks them; the last answer repeats so a stray re-read stays put.
+    "/api/trade/draft": () => currentDraftScript.shift() ?? currentDraftFallback,
   },
 });
 
@@ -349,11 +776,27 @@ await shoot("trade-102-locked-phone");
 
 currentPlays = plays;
 await page.goto(`${origin}/app/trade?play=102`);
-await page.getByText("Milestone · Trading ladder").waitFor();
+await page.getByRole("link", { name: "Trading ladder →" }).waitFor();
 await shoot("trade-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
+
+// Page order (#3407, Workbench slice 5): the milestone strip moved to /learn/trading; the Account
+// field and the one-line rung chip sit directly above the ticket's nav, inside the ticket pane —
+// `AccountField` only renders for a session with more than one account, so this scene swaps in a
+// second one just to prove the order. PHONE FIRST.
+currentSettings = settingsTwoAccounts;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=102`);
+await page.getByLabel("Account").waitFor();
+await page.getByRole("link", { name: "Trading ladder →" }).waitFor();
+const shootPageOrder = shooter(page, resolve("docs/shots/page-order"));
+await shootPageOrder("account-beside-ticket-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await shootPageOrder("account-beside-ticket-desktop");
+await page.setViewportSize({ width: 1280, height: 900 });
+currentSettings = settings;
 
 // The chart section (#2017 Phase 1 chart build-out, the mount slice) — `?section=chart` swaps
 // the ticket for daily candles + a volume band on the committed `?symbol=`, the legend above
@@ -432,13 +875,64 @@ await shoot("trade-quote-options-phone");
 
 // The expiration field's horizontal tab strip (#2017 Phase 0 task 4c) — 13 expirations, more than
 // fit in the old 8-row-capped <select>, prove the strip needs a real horizontal swipe at 390px.
-await page.getByRole("button", { name: "2026-09-09" }).waitFor();
+// It now renders full-width above the chain table itself (see the next scene's comment), not in
+// the ~150px tile of the top fields grid — 13 dates need the room a fixed-width tab strip has to
+// actually show more than one and a half of them (Eric, 2026-09-21).
+await page.getByRole("button", { name: "Sep 9, 2026" }).waitFor();
 await shoot("trade-exp-tabs-phone");
+
+// The scroll affordance (Eric, 2026-09-22): "the dates are scrollable... but there is no visual
+// feedback suggesting there is scrollable content", then "I like option B [chevrons], but feel
+// like more emphasis needs placed on the chevron... bigger font and/or higher contrast" on a
+// 3-way rendered comparison, then "the scrollbar... dominates and crowds the content... the
+// buttons on the side need to become clickable" — the native scrollbar is gone (`ticket.css`) and
+// the chevrons are real buttons now, the only way left to page the strip by click. Before/after
+// proves the whole chain: the strip opens scrolled fully left (right chevron only), a real click
+// on it pages forward and reveals the left chevron.
+const shootChevron = shooter(page, resolve("docs/shots/exp-tabs-chevron"));
+await shootChevron("exp-tabs-chevron-start-phone");
+// Page forward with real clicks (not a programmatic scrollLeft jump) until the right chevron
+// itself reports there's nothing left to scroll to — proving the button actually drives the
+// strip, however many pages that takes for this fixture's expiration count.
+while (await page.getByRole("button", { name: "Scroll to later expirations" }).isVisible()) {
+  await page.getByRole("button", { name: "Scroll to later expirations" }).click();
+  await page.waitForTimeout(500);
+}
+await shootChevron("exp-tabs-chevron-end-phone");
+
+// Switching expirations no longer collapses the table (Eric, 2026-09-22): before
+// `placeholderData: keepPreviousData` (`option-gate.tsx`, `chain-straddle.tsx`), a tab click
+// dropped `chainData` for a beat, unmounting the whole chain table down to a bare "Looking up
+// options…" line, then snapping back in at a different height. The OLD rows now stay on screen,
+// dimmed (`.straddle-pending`, `straddle.css`), while the new expiration loads — this scene
+// delays the chain fetch to make that dimmed, still-populated mid-flight frame observable at all;
+// real network latency is usually shorter than a frame, but the CSS state is the same either way.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+await page.route("**/api/trade/chain*", async (route) => {
+  await new Promise((r) => setTimeout(r, 600));
+  await route.fulfill({ json: currentChain });
+});
+// Docked (slice 4b) the ticket's tabs became a read-out; the chain pane beside it owns the tabs.
+await page.getByRole("button", { name: "Oct 16, 2026" }).click();
+await page.waitForTimeout(200);
+const shootPendingChain = shooter(page, resolve("docs/shots/pending-chain"));
+await shootPendingChain("pending-chain-desktop");
+await page.getByRole("button", { name: "Oct 16, 2026", exact: true }).waitFor();
+await page.waitForTimeout(600);
+// Specific pattern only — `openShell`'s own base `**/api/**` route answers everything else and
+// must survive for the rest of this script.
+await page.unroute("**/api/trade/chain*");
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.setViewportSize({ width: 390, height: 844 });
 
 // The chain table above the fields it drives (#2017 Phase 0 task 4e) — same navigation as the
 // quote-header/exp-tabs shots above (still `?play=201&symbol=NVDA`), proving the chain now renders
-// directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain.
-await page.getByText(/^Chain ·/).waitFor();
+// directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain. The
+// redundant "Chain · SYM · date" / "Expires today" eyebrow that used to sit here is gone — the
+// expiration tabs themselves now occupy that spot instead (Eric, 2026-09-21); DTE moved to the
+// order review (`docs/shots/order-odds`).
+await page.locator(".straddle-scroll").waitFor();
 await shoot("trade-chain-above-fields-phone");
 
 // The scroll-out stat columns (#2017 Phase 1 slice 14) — OI/Vol/Δ/Γ/Θ/Vega past the base
@@ -459,6 +953,22 @@ await page.evaluate(() => {
 });
 await shootChainStats("trade-chain-stats-scrolled-phone");
 
+// The chain header's five groups (Eric, 2026-09-22: "CALLS and PUTS should be centered over the
+// respective bid/ask columns. Everything to the outer sections are the GREEKS", then "should
+// there be dividers between the headers... the BID | ASK columns deserve a different background
+// shading... to distinguish" the clickable columns from the plain ones): Greeks | Calls | Strike
+// | Puts | Greeks, each with a border on its leading edge, Bid/Ask/Strike sharing one `--surface-2`
+// "you can act here" background the Greek/OI/Vol columns don't carry. Desktop only: the full
+// 17-column header needs the room to read as five groups rather than one blurred row.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.evaluate(() => {
+  const scroller = document.querySelector(".straddle-scroll");
+  if (scroller) scroller.scrollLeft = 0;
+});
+const shootHeaderGroups = shooter(page, resolve("docs/shots/chain-header-groups"));
+await shootHeaderGroups("chain-header-groups-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+
 // Review fix (2026-09-08): the chain used to sit INSIDE the .gate-fields grid as a spanning item,
 // which inherited the grid's own overflow from the (non-wrapping) expiration tab strip and clipped
 // off the phone frame. It's now an ordinary block sibling between two separate grids instead — this
@@ -468,29 +978,74 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-chain-above-fields-desktop");
 await page.setViewportSize({ width: 390, height: 844 });
 
-// The who-else-traded row (#2017 Phase 1 slice 12) — a human buy and a bot sell on NVDA, real
-// names, under the chain and above the review/submit action. Same navigation as the shots above
-// (still `?play=201&symbol=NVDA`); only the Wire fixture changes for this one scene. Its own
-// output directory, same pattern as the earnings-badge scene below (`shootEarningsBadge`).
-currentWire = nvdaWire;
+// The held-position badge (Eric, 2026-09-22) — a "P" next to the 180 strike, the chain's own row
+// for a put the desk already holds at this exact underlying + expiration; the who-else-traded row
+// that used to occupy this spot (`WireRow`, #2017 Phase 1 slice 12) is retired — it matched by
+// underlying rather than by contract, so "Also trading NVDA" mixed in stock fills on a form
+// that's explicitly for options. Its own output directory, same pattern as the earnings-badge
+// scene below (`shootEarningsBadge`).
+currentDesk = {
+  ...desk,
+  desk: {
+    ...desk.desk,
+    positions: [
+      {
+        symbol: "NVDA260909P00180000",
+        display: "NVDA $180 put · Sep 9",
+        detail: "2 contracts",
+        isOption: true,
+        quantity: "2",
+        costPerShare: "$2.40",
+        price: "$2.20",
+        costBasis: "$480.00",
+        value: "$440.00",
+        dayPl: "-$40.00",
+        dayPct: "-8.3%",
+        dayTone: "neg",
+        totalPl: "-$40.00",
+        totalPlRaw: -40,
+        returnPct: "-8.3%",
+        totalTone: "neg",
+        weightPct: 1,
+      },
+    ],
+  },
+};
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.getByText("Also trading NVDA").waitFor();
-await page.getByText("Also trading NVDA").scrollIntoViewIfNeeded();
-const shootWireRow = shooter(page, resolve("docs/shots/wire-row"));
-await shootWireRow("wire-row-phone");
+await page.locator(".straddle-held-badge:not(.straddle-held-empty)").first().waitFor();
+await page
+  .locator(".straddle-held-badge:not(.straddle-held-empty)")
+  .first()
+  .scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootHeldBadge = shooter(page, resolve("docs/shots/held-badge"));
+await shootHeldBadge("held-badge-phone");
+currentDesk = desk;
+
+// A chain-cell pick's feedback pair (Eric, 2026-09-22): the picked strike's whole row gets a
+// persistent accent-bordered box (never a background tint alone — a standing reader is red/green
+// colourblind), and the Strike field it fills flashes for a beat so a click far up the table and
+// the field it changes read as one event. Desktop only: the row and the field both need to be in
+// frame together, which only fits at desktop width.
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByRole("button", { name: /Pick the 180 strike/ }).click();
+await page.waitForTimeout(60);
+const shootStrikePick = shooter(page, resolve("docs/shots/strike-pick"));
+await shootStrikePick("strike-pick-flash-desktop");
+await page.waitForTimeout(500);
+await shootStrikePick("strike-pick-settled-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
 
 // The recent-orders strip (#2017 Phase 1 slice 13, task 3a) — the viewer's OWN order history for
-// the EXACT contract in front of them, self first then WireRow's "others" (the ordering decision
-// from the plan's review pass), both in frame together at 390px since they fit naturally here. A
-// strike has to actually resolve to a chain row before `RecentOrdersStrip` renders anything (it
-// takes the matched row's real `occSymbol`, never a hand-assembled one), so this navigation commits
-// `?strike=180` — the same row `trade-recent-orders-fixture.mjs`'s two events are keyed to.
+// the EXACT contract in front of them. A strike has to actually resolve to a chain row before
+// `RecentOrdersStrip` renders anything (it takes the matched row's real `occSymbol`, never a
+// hand-assembled one), so this navigation commits `?strike=180` — the same row
+// `trade-recent-orders-fixture.mjs`'s two events are keyed to.
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=180`);
 await page.getByText("Your recent orders").waitFor();
 await page.getByText("Your recent orders").scrollIntoViewIfNeeded();
 await shooter(page, resolve("docs/shots/recent-orders"))("recent-orders-phone");
-
-currentWire = emptyWire;
 
 // Progressive disclosure (#2017 Phase 0 task 4d): with no `?symbol=` committed yet, the five
 // chain-gated fields (Expiration/Strike/Contracts/Order/Limit) are withheld entirely — the panel
@@ -523,6 +1078,60 @@ await page.goto(`${origin}/app/trade?play=401`);
 await page.getByText("Multi-leg builder").waitFor();
 await shoot("trade-spread-open-phone");
 
+// A spread SENT (#3407 P3 slice 1) — the builder walked to its review screen, Day / GTC beside
+// Confirm (GTC pressed so the frame proves the pick), then the confirm answered by the broker's
+// own echo: "Confirmed", the order id and status, and the note that hands off to Working
+// orders. Before this slice the same click read "Reviewed — not sent" — the P0 honesty fix —
+// because no execution path existed. PHONE FIRST.
+// THE CHAIN IS THE LEG PICKER (#3407 P3 slice 2): commit the symbol, wait for the straddle,
+// tap the 180 call's Bid (a sell leg, the stub answers one leg) — that frame is the picker with
+// its marked strike — then the 182.5 call's Ask (the stub answers the whole two-leg draft).
+await page.getByLabel("Underlying").fill("NVDA");
+await page.getByLabel("Underlying").press("Enter");
+await page.getByRole("button", { name: "Pick the 180 call bid" }).click();
+// The leg's price field carries the same words in its hidden label — the row label is the target.
+await page.locator(".draft-leg-label", { hasText: "Sell 2 NVDA $180C" }).waitFor();
+await page.getByText("Tap a").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootChainPicker = shooter(page, resolve("docs/shots/chain-picker"));
+await shootChainPicker("chain-picker-phone");
+
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Tap a").scrollIntoViewIfNeeded();
+await shootChainPicker("chain-picker-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+// Price the leg from its row (#3407 P3 slice 4): type over the seeded bid, Enter commits it
+// through the server's reprice action; the running net line reads the echo.
+const legPrice = page.getByLabel(/Premium per share for Sell 2 NVDA/);
+await legPrice.fill("4.35");
+// The price lives in the field's value, not in text — wait on the server's echo instead.
+const repriceEcho = page.waitForResponse((r) => r.url().includes("/api/trade/draft"));
+await legPrice.press("Enter");
+await repriceEcho;
+// Land the leg row mid-frame with the chain's last rows above it, the page pinned to the left.
+await page.locator(".draft-leg-row").first().scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy({ top: 180, left: 0 }));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootLegReprice = shooter(page, resolve("docs/shots/leg-reprice"));
+await shootLegReprice("leg-reprice-phone");
+await page.getByRole("button", { name: "Pick the 182.5 call ask" }).click();
+await page.locator(".draft-leg-label", { hasText: "Buy 2 NVDA $200C" }).waitFor();
+await page.getByRole("button", { name: "Validate against account" }).click();
+await page.getByRole("button", { name: "Review order" }).click();
+await page.getByText("Reviewed — ready to confirm").waitFor();
+await page.getByRole("button", { name: "GTC" }).click();
+await page.getByRole("button", { name: /Confirm order/ }).scrollIntoViewIfNeeded();
+const shootSpreadSent = shooter(page, resolve("docs/shots/spread-sent"));
+await shootSpreadSent("spread-confirm-phone");
+await page.getByRole("button", { name: /Confirm order/ }).click();
+await page.getByText("Confirmed").waitFor();
+await page.getByText("Confirmed").scrollIntoViewIfNeeded();
+await shootSpreadSent("spread-sent-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Confirmed").scrollIntoViewIfNeeded();
+await shootSpreadSent("spread-sent-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+
 // The earnings badge + ⚡ print marks (#2017 Phase 1 slice 11) — MU's confirmed print is
 // 2026-09-30 (`src/domain/earnings-calendar.ts`). The harness's real wall clock is nowhere near
 // that date, and neither `EarningsBadge` nor `ExpirationField` take an injectable "now" (by
@@ -541,6 +1150,7 @@ currentChain = {
   expirations: ["2026-09-29", "2026-09-30", "2026-10-16"],
   expiration: "2026-09-30",
   spot: 118.4,
+  quote: currentQuote,
   rows: [110, 115, 118, 120, 125].map((strike, i) => ({
     strike,
     occSymbol: `MU260930P${String(strike * 1000).padStart(8, "0")}`,
@@ -550,10 +1160,19 @@ currentChain = {
     openInterest: 400 + i * 80,
   })),
 };
-currentQuote = { symbol: "MU", last: 118.4, change: 1.05, changePct: 0.89, tone: "pos" };
+currentQuote = {
+  symbol: "MU",
+  last: 118.4,
+  change: 1.05,
+  changePct: 0.89,
+  tone: "pos",
+  bid: 118.38,
+  ask: 118.42,
+  mid: 118.4,
+};
 await page.clock.setFixedTime(new Date("2026-09-28T14:00:00Z"));
 await page.goto(`${origin}/app/trade?play=201&symbol=MU`);
-await page.getByText(/^Chain ·/).waitFor();
+await page.locator(".straddle-scroll").waitFor();
 await page.getByText("⚡").first().waitFor();
 const shootEarningsBadge = shooter(page, resolve("docs/shots/earnings-badge"));
 await shootEarningsBadge("earnings-badge-phone");
@@ -577,5 +1196,289 @@ await page.getByLabel("Symbol").fill("GATO");
 await page.getByText("GATO - Gatos Silver").waitFor();
 const shootSymbolTier2 = shooter(page, resolve("docs/shots/symbol-tier2"));
 await shootSymbolTier2("symbol-tier2-phone");
+
+// The chain as its own section (#3407, Workbench slice 2): `?section=chain` gives the straddle the
+// whole stage, the rail's switch on Chain; a tap presets the ticket through the URL. PHONE FIRST.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?section=chain&symbol=NVDA&play=201`);
+await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
+await page.getByText(/Tap a bid to sell it/).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+const shootChainSection = shooter(page, resolve("docs/shots/chain-section"));
+await shootChainSection("chain-section-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
+await shootChainSection("chain-section-desktop");
+
+// LIMIT AT MID (#3407, Workbench slice 6 — Eric: "limit at mid — it's standard behavior"): a
+// committed symbol's NBBO seeds the stock ticket — Order type Limit, the price at the mid, GTC
+// pressed as the fallback, and the note that says where the number came from. PHONE FIRST.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByText(/Limit seeded at the mid/).waitFor();
+await page.getByLabel("Limit price").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootLimitAtMid = shooter(page, resolve("docs/shots/limit-at-mid"));
+await shootLimitAtMid("limit-at-mid-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText(/Limit seeded at the mid/).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+await shootLimitAtMid("limit-at-mid-desktop");
+
+// THE DOCKED BENCH (#3407, Workbench slice 4b; composition revised 2026-09-22): at 1280 the
+// panes stop being exclusive — ticket left, chart right, the book across the bottom, the switch
+// gone from the rail. The chain no longer docks as its own pane (Eric, 2026-09-22: "is it
+// possible to have that table be expandable in the same form") — it's the ticket's own
+// collapsible accordion instead (`option-gate.tsx`), open here since nothing is picked yet — the
+// collapsed state is `docs/shots/strike-pick/strike-pick-settled-desktop.jpg`, a real pick's
+// aftermath. PHONE FIRST: the 390 frame is the same URL folded (the switch back, one pane),
+// proving the desktop added room and no new concept. `currentPlays` back to `throughLongs` (201
+// unlocked) — the symbol-tier2 scene above left it on `freshPlays`, where 201 is locked and
+// `OptionGate` would show `LockedPanel` instead of any ticket at all.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?symbol=NVDA&play=201`);
+await page.getByRole("button", { name: "Chain" }).waitFor();
+await page
+  .getByRole("button", { name: /^Pick the \d/ })
+  .first()
+  .waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+const shootBench = shooter(page, resolve("docs/shots/bench"));
+await shootBench("bench-phone");
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.getByRole("region", { name: "Chart" }).waitFor();
+await page.getByRole("heading", { name: "Working orders" }).waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+await shootBench("bench-desktop");
+
+// Working orders (#3407 P1 slice 2; the Orders section since Workbench slice 3) — one GTC limit
+// and one partial fill, two settled rows below them. PHONE FIRST: 390px proves
+// the row wraps its type line under the symbol instead of clipping; desktop proves it widened.
+currentPlays = plays;
+currentOrders = workingOrders;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
+await page.getByText("Working orders").waitFor();
+await page.getByText("Settled today").waitFor();
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+const shootWorkingOrders = shooter(page, resolve("docs/shots/working-orders"));
+await shootWorkingOrders("working-orders-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await shootWorkingOrders("working-orders-desktop");
+// The two-tap cancel, armed: the row's Cancel became its own Confirm / Keep pair.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("button", { name: "Cancel" }).first().click();
+await page.getByRole("button", { name: "Confirm cancel" }).waitFor();
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await shootWorkingOrders("working-orders-cancel-armed-phone");
+// Modify (#3407 P1 1b): Keep the cancel, open the drawer on the GTC limit, raise the price —
+// the note says exactly what the broker will be told before Send change is pressed.
+await page.getByRole("button", { name: "Keep" }).click();
+await page.getByRole("button", { name: "Modify" }).first().click();
+await page.getByLabel("Limit price").fill("172");
+await page.getByText("Will send: limit $172.00").waitFor();
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootModify = shooter(page, resolve("docs/shots/working-orders-modify"));
+await shootModify("working-orders-modify-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await shootModify("working-orders-modify-desktop");
+// The option order's drawer asks for Contracts — the word the broker's quantity means.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("button", { name: "Keep as is" }).click();
+await page.getByRole("button", { name: "Modify" }).nth(1).click();
+await page.getByLabel("Contracts").waitFor();
+await page.getByText("NVDA $180 CALL · Sep 25").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -120));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+await shootModify("working-orders-option-modify-phone");
+currentOrders = noOrders;
+
+// Limit close (#3407 P1 slice 3) — the option positions card under the ticket with Limit
+// pressed and a premium typed, then the reviewed confirm line naming the limit. Phone first.
+currentPlays = plays;
+currentDesk = deskWithOption;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
+await page.getByRole("heading", { name: "Option positions" }).waitFor();
+await page.getByRole("button", { name: "Limit" }).click();
+await page.getByLabel("Limit price per share").fill("13.50");
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+const shootLimitClose = shooter(page, resolve("docs/shots/limit-close"));
+await shootLimitClose("limit-close-phone");
+// The same card with its Position Statement line and book foot (#3407 P2 slice 3).
+await page.getByText(/DTE/).waitFor();
+const shootOptionPositions = shooter(page, resolve("docs/shots/option-positions"));
+await shootOptionPositions("option-positions-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+await shootLimitClose("limit-close-desktop");
+
+// The alerts strip (#3407 P4 slice 1): what the held positions are saying — a critical
+// assignment-risk row, a week-out expiry warning, a month-out FYI; the badge word and glyph carry
+// the priority, the left accent steps with it. PHONE FIRST.
+currentAlerts = positionWatchAlerts;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
+await page.getByText(/assignment risk/).waitFor();
+await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -80));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootAlerts = shooter(page, resolve("docs/shots/desk-alerts"));
+await shootAlerts("desk-alerts-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -120));
+await shootAlerts("desk-alerts-desktop");
+currentAlerts = noAlerts;
+
+// Roll as one ticket (#3407 P3 slice 3) — the same held put, Roll… opened: target expiration
+// and strike from the chain, the two legs spelled out, then the reviewed Confirm naming the net
+// and the max loss. The chain stub answers every expiration with the same NVDA rows, so the
+// strike list is the fixture's; the scripted draft is what the review reads. PHONE FIRST.
+currentDraftScript = rollScript;
+currentDraftFallback = rollDraft("reviewed", rollLegs, {
+  verdict: { ok: true, refusals: [], warnings: [] },
+});
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
+await page.getByRole("heading", { name: "Option positions" }).waitFor();
+await page.getByRole("button", { name: "Roll…" }).click();
+await page.getByLabel("Roll to").waitFor();
+await page.getByRole("button", { name: "Review roll…" }).click();
+await page.getByRole("button", { name: /Confirm roll/ }).waitFor();
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+const shootRoll = shooter(page, resolve("docs/shots/roll"));
+await shootRoll("roll-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
+await shootRoll("roll-desktop");
+currentDraftScript = [];
+currentDraftFallback = draftSent;
+currentDesk = desk;
+
+// Day / GTC on the options ticket (#3407 P1 slice 4) — the same control the stock ticket got,
+// under the chain on a 201 ticket; GTC pressed so the frame proves the pick, not the default.
+currentPlays = throughLongs;
+currentDesk = desk;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.locator(".straddle-scroll").waitFor();
+await page.getByRole("button", { name: "GTC" }).click();
+await page.getByText("Time in force").scrollIntoViewIfNeeded();
+// The straddle is wider than the phone; scrollIntoView can drag the page sideways — pin it back.
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootOptionsTif = shooter(page, resolve("docs/shots/options-tif"));
+await shootOptionsTif("options-tif-phone");
+
+// Quote coverage under the chain (#3407 P2 slice 1) — the one-line provenance that turns a "—"
+// cell into "the feed didn't quote this strike": indicative feed, 4 of 5 strikes, an as-of.
+currentPlays = throughLongs;
+currentChain = {
+  ...currentChain,
+  quotes: { source: "indicative", quoted: 4, total: 5, asOf: "2026-09-21T14:05:00Z" },
+};
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByText(/strikes quoted/).waitFor();
+await page.getByText(/strikes quoted/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootChainCoverage = shooter(page, resolve("docs/shots/chain-coverage"));
+await shootChainCoverage("chain-coverage-phone");
+
+// Greeks, IV and the odds on the option order screen (#3407 P2 slice 2) — a reviewed 201 ticket:
+// chance of profit never without expected value beside it, the four greeks as one line.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+// Typed strike, then Review clicked straight away — the regression proof for the lost first
+// click (`keepFocus`, gate-frame.tsx): before the fix this click landed on nothing.
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.locator(".straddle-scroll").waitFor();
+await page.getByLabel("Strike", { exact: true }).fill("175");
+await page.getByRole("button", { name: "Review order" }).click();
+await page.getByText("Chance of profit").waitFor();
+await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootOrderOdds = shooter(page, resolve("docs/shots/order-odds"));
+await shootOrderOdds("order-odds-phone");
+
+// The payoff diagram on the single-leg ticket (#3407): the same reviewed 201 ticket, scrolled
+// to the figure under the grid — the loss side hatched, the breakeven ticked, the edge label
+// saying the loss keeps going past the window.
+await page.locator(".payoff").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -160));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootOptionPayoff = shooter(page, resolve("docs/shots/option-payoff"));
+await shootOptionPayoff("option-payoff-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.locator(".payoff").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -200));
+await shootOptionPayoff("option-payoff-desktop");
+
+// P0 template hygiene (#3407): content-sized fields (a 4-character strike no longer a third of
+// the panel) and the two-column estimate. Phone first, then the desktop frame that proves the
+// fields expanded instead of stretching. `?strike=` arrives already committed, so the chain
+// accordion (2026-09-22) opens collapsed — the fields grid this scene is actually about doesn't
+// depend on it either way, so the readiness wait is the Strike field's own seeded value, not the
+// (now-collapsed) chain table.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
+await page.getByLabel("Strike", { exact: true }).waitFor();
+await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootTemplate = shooter(page, resolve("docs/shots/p0-template"));
+await shootTemplate("ticket-fields-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
+await shootTemplate("ticket-fields-desktop");
+await page.getByRole("button", { name: "Review order" }).click();
+await page.getByText("Chance of profit").waitFor();
+await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
+await shootTemplate("estimate-desktop");
+
+// An honest empty limit (#3407 P0): a strike the chain doesn't list gets no seeded premium, so
+// Review stays disabled and the note says what is missing — the ticket no longer refuses itself.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=190`);
+await page.getByText(/needs a premium per share/).waitFor();
+await page.getByText(/needs a premium per share/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootHonest = shooter(page, resolve("docs/shots/p0-honest"));
+await shootHonest("limit-note-phone");
+
+// The in-the-money rail on the strike cell (#3407 P0): visible at 390px without scrolling —
+// calls in the money above the divider carry the bar on the strike's left edge, puts below it on
+// the right.
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.locator(".straddle-scroll").waitFor();
+// Bring the divider row (and the in-the-money rows around it) into the frame, not the page top.
+await page.getByText(/^Current price ·/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootRail = shooter(page, resolve("docs/shots/itm-rail"));
+await shootRail("itm-rail-phone");
+
+// THE LADDER RAIL (Eric, 2026-09-22: "I also want this section restored on the trade page… find
+// a better design to more organically integrate the behavior") — the click-to-preset function the
+// milestone strip carried, back as the rail's own item list instead of a second strip above the
+// bench. `plays` (one fill in: 101 earned, 102 open, the rest locked) shows all three states in
+// one frame. PHONE FIRST: the rail becomes the same horizontal chip row every other rail control
+// already turns into at ≤860px — no ladder-specific CSS, so this also proves that fallback works.
+currentPlays = plays;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201`);
+await page.getByText("201", { exact: true }).first().waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+const shootLadderRail = shooter(page, resolve("docs/shots/ladder-rail"));
+await shootLadderRail("ladder-rail-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Ladder", { exact: true }).waitFor();
+await shootLadderRail("ladder-rail-desktop");
 
 await close();

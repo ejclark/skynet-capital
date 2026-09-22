@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { DeskThesis } from "../../src/live/desk";
 import type { SettingsIndex } from "../../src/live/settings";
@@ -11,8 +11,10 @@ import {
 
 /**
  * `ThesisDrawer`'s degrade branches and rendered fields (#3186 slices 4a + 4b) — same doctrine as
- * `hero-chart.spec.tsx`: everything here returns BEFORE `mountThesisChart`'s `createChart` call,
- * which throws under happy-dom. The real chart mount is covered by `thesis-chart-mount.spec.ts`.
+ * `hero-chart.spec.tsx`: most cases return BEFORE `mountThesisChart`'s `createChart` call, which
+ * throws under happy-dom; the real chart mount is covered by `thesis-chart-mount.spec.ts`. The
+ * marker-reasoning cases need `equity.length > 0` to reach `MarkerList` at all, so those mock
+ * `mountThesisChart` itself to a no-op rather than touching the real canvas mount.
  */
 
 let nextThesis: DeskThesis = { available: false, kind: "bot" };
@@ -32,6 +34,10 @@ rstest.mock("../../src/live/desk", () => ({
 
 rstest.mock("../../src/live/settings", () => ({
   fetchSettings: () => Promise.resolve(nextSettings),
+}));
+
+rstest.mock("../../src/shell/thesis-chart-mount", () => ({
+  mountThesisChart: () => ({ dispose: () => undefined }),
 }));
 
 function withClient(node: ReactElement) {
@@ -183,5 +189,65 @@ describe("ThesisDrawer", () => {
     await waitFor(() =>
       expect(screen.getByText("No accounts to subscribe from.")).toBeInTheDocument(),
     );
+  });
+
+  it("shows a 'Why?' toggle on a marker with reasoning, revealing it on click", async () => {
+    nextThesis = {
+      available: true,
+      kind: "bot",
+      thesis: {
+        call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+        health: { measured: false, label: "not yet measured" },
+        equity: [{ t: "2026-09-10T00:00:00Z", value: 100_000 }],
+        markers: [
+          {
+            n: 1,
+            kind: "entry",
+            at: "2026-09-10T14:00:00Z",
+            label: "Buy 20 NVDA",
+            activityAnchor: "act-ord-1",
+            reasoning: {
+              reason: "panic fade",
+              expectation: "expect a bounce",
+              guardDelta: "persona asked for 60, risk guards sized it to 20",
+            },
+          },
+        ],
+      },
+    };
+    render(withClient(<ThesisDrawer id="bot-sauron" />));
+    await waitFor(() => expect(screen.getByText("1. Buy 20 NVDA")).toBeInTheDocument());
+    expect(screen.queryByText("panic fade", { exact: false })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Why?" }));
+    expect(screen.getByText("“panic fade”")).toBeInTheDocument();
+    expect(screen.getByText("Expected: expect a bounce")).toBeInTheDocument();
+    expect(
+      screen.getByText("persona asked for 60, risk guards sized it to 20"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a plain link with no toggle when a marker has no resolved reasoning", async () => {
+    nextThesis = {
+      available: true,
+      kind: "bot",
+      thesis: {
+        call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+        health: { measured: false, label: "not yet measured" },
+        equity: [{ t: "2026-09-10T00:00:00Z", value: 100_000 }],
+        markers: [
+          {
+            n: 1,
+            kind: "entry",
+            at: "2026-09-10T14:00:00Z",
+            label: "Buy 20 NVDA",
+            activityAnchor: "act-ord-1",
+          },
+        ],
+      },
+    };
+    render(withClient(<ThesisDrawer id="bot-sauron" />));
+    await waitFor(() => expect(screen.getByText("1. Buy 20 NVDA")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Why?" })).not.toBeInTheDocument();
   });
 });

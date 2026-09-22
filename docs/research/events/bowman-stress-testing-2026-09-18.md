@@ -298,3 +298,86 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-21
+<!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"closed","adjacentIds":["boe-decision-2026-09-17","boj-decision-2026-09-18","fomc-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","industrial-production-2026-09-18","japan-cpi-2026-09-18","meta-connect-2026-09-23","opex-2026-09-18","treasury-2y-note-2026-09-22","uk-retail-sales-2026-09-18"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-09-21, D+3 — inside the `closeOutWithinDays: 6` deadline; held until both forward
+tests' 2026-09-21 score-by date, per `scripts/forward-test-pending.mjs`).** `macro-print` with
+`symbols: []`, so `earnings-cycle.mjs`/`intraday-edges.mjs` had no target at initial research and
+still have none — the instrument cache was busted anyway per the standing rule (nothing in this
+ledger reads it). "Re-run instrument data" here means re-fetching every cited source direct: the
+Fed's own `monetary20260916a.htm` statement, both of Bowman's 09-18 speech texts
+(`bowman20260918a.htm`, `bowman20260918b.htm`) fetched direct today, and search-corroborated
+session wraps (CNBC, American Banker, ABA Banking Journal, Bloomberg, TheStreet, Yahoo Finance,
+BPI) for the vote detail, the Q&A content and the day's tape — never from memory.
+
+**The headline verdict: both kill switches this doc built around fired, and they fired together —
+the 09-16 vote settled the question the 09-18 chat was supposed to reopen.** The FOMC hiked 25bp to
+**3.75–4.00% by a 12-0 vote** (federalreserve.gov `monetary20260916a.htm`, fetched direct; no
+individual votes are named in the statement, but no dissent and no reported internal split
+appears in any wrap — American Banker's own contemporaneous framing was that the unanimous vote was
+itself "a good sign," and it explicitly contrasts September's 12-0 with July's 3-dissent meeting,
+which the Waller close-out already tracked). **The two-sidedness kill fires**: Bowman voted with a
+unanimous Committee on a settled question. **The framework kill fires in the same stroke**: she
+voted for the hike and her 09-18 remarks — two full speeches, "Stress Testing"
+([`bowman20260918a.htm`](https://www.federalreserve.gov/newsevents/speech/bowman20260918a.htm),
+delivered as *"The Final Chapter on Modernizing Bank Regulatory Stress Testing"*) and an unbilled
+second address on the SVB independent review
+([`bowman20260918b.htm`](https://www.federalreserve.gov/newsevents/speech/bowman20260918b.htm)) —
+contain **zero** words on monetary policy, rates, inflation or the labor market in either published
+text. Leg 3's central bet, that a governor whose own hiking test failed two of three legs would use
+her first public moment post-vote to address the gap, did not pay off: she said nothing about it at
+all, in either direction, consistent with the interpretation her kill-switch language itself named
+as the alternative ("her 05-29 conditions were a description rather than a constraint").
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-bowman-stress-testing-2026-09-18-1` (the containment test) | At least one on-record monetary-policy or rate-path remark, in Board text or ≥2 session wraps | Both published speech texts carry zero monetary-policy content; every session wrap found (American Banker, ABA Banking Journal, Bloomberg, Kitco, BPI Insights, Yahoo Finance) covers only the stress-test/SVB-review content — none reports a rate or policy remark | **KILLED** |
+| `FT-bowman-stress-testing-2026-09-18-2` (the Waller-repair out-of-sample test) | Conditional on FT-1 passing: monetary-policy content takes the form of a dated reaction function, not an unconditional rate-path statement | FT-1 killed — no monetary-policy content exists to classify | **VOID** (per its own void clause) |
+
+**Reading the kill honestly.** This is the doc's own containment kill and both registered forward
+tests landing on the same side, not three independent findings — `FT-1`'s KILL *is* the containment
+kill *is* half of the framework kill; the unanimous vote is what supplies the other half. The
+"Q&A widens the range" premise this lane leaned on twice (Waller 09-03, then here) is now 1-for-2:
+Waller's Q&A-adjacent interview produced a ~12pp repricing on a live, two-sided question; Bowman's
+moderated chat, on a question the Committee had already closed 48 hours earlier, produced nothing
+tradeable because there was nothing left to ask. The distinguishing variable was not the format —
+it was whether the question was still open when the microphone turned on. **Read for future
+ledgers**: a post-decision Q&A slot is only load-bearing while the vote it might comment on is still
+uncertain; once the vote lands clean, the same slot reverts to routine, exactly as this doc's own
+two-sidedness kill said it would.
+
+**The attribution-blackout call held, and the tape gives no reason to revisit it.** The 09:25–10:00
+ET window this doc prohibited trading held four concurrent events — triple-witching (**~$7T**
+expiring, the second-largest on record per Bloomberg, above this doc's own $6.2T estimate), the BoJ's
+US-hours landing (hiked 25bp to 1.25%, per [`boj-decision-2026-09-18.md`](boj-decision-2026-09-18.md)'s
+own close-out), industrial production, and Bowman's two speeches. The session closed **S&P +0.17% to
+7,650.50, Nasdaq +0.39% to 26,522.55, Dow −0.18% to 51,682.64** (TheStreet, Yahoo Finance) — no
+≥0.5% move, and no session wrap attributes any part of the day's action to Bowman. The "This week"
+call's own falsifier (a wrap crediting Bowman with a ≥0.5% move while the BoJ holds and opex passes
+uneventfully) never fired — it holds, cheaply, because there was nothing in her remarks to move
+anything with.
+
+**One kill switch stays open, and it is the one worth flagging forward.** The **supervisory-unfreeze
+kill** — a stress-test framework *finalization* or off-cycle SCB action before 2026-12-31 — has
+**not** fired: Bowman's own 09-18 text says the Board "will consider final revisions … in the coming
+weeks," and Yahoo Finance's same-day reporting confirms the two rules are proposed, not yet adopted,
+as of publication. This is a real signal that the "no 2026 capital channel" quarter call (leg 6) is
+now on a short fuse — but the actual Board vote carries no date yet, so nothing dateable can be
+proposed as an adjacent event from it. Whoever researches the eventual finalization (if it lands
+before 2026-12-31) inherits this note; this ledger closes here regardless, per the close-out rule
+that a doc goes quiet once `## Outcome` exists.
+
+**Honest limits at close.** The CNBC dove/dissent count (leg 4, MIXED, cited via search-engine
+extract because the source 403'd) is now moot rather than resolved either way — the vote it
+speculated about landed unanimous, which is consistent with either a genuine change of mind or a
+governor choosing not to dissent on a question she'd lost 11-1 or 12-0 either way; nothing in this
+close-out distinguishes those. The "London" venue claim (leg 1) is corroborated this time — both
+speech pages carry the Mansion House, London dateline, unlike the Waller "(Virtual)"/Washington
+mismatch this doc had flagged as a live risk. This document goes quiet from here —
+`scripts/event-scan.mjs` will not surface it again.

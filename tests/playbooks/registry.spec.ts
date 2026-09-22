@@ -3,6 +3,7 @@ import {
   enabledPlaybooks,
   findPlaybook,
   G1_GOOG,
+  playbookRoster,
   S1_NVDA,
   TACO_DJT,
 } from "../../src/playbooks/registry.js";
@@ -112,5 +113,15 @@ describe("findPlaybook", () => {
 
   it("returns undefined for an unknown id", () => {
     expect(findPlaybook("NOT-A-PLAYBOOK")).toBeUndefined();
+  });
+});
+
+describe("playbookRoster", () => {
+  it("lists every house play's id and symbol, unfiltered by SKYNET_PLAYBOOKS", () => {
+    expect(playbookRoster()).toEqual([
+      { id: "S1-NVDA", symbol: "NVDA" },
+      { id: "G1-GOOG", symbol: "GOOG" },
+      { id: "TACO-DJT", symbol: TACO_DJT.symbol },
+    ]);
   });
 });

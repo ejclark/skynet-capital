@@ -1,10 +1,8 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { ChainRow } from "../live/options";
+import type { ChainQuoteCoverage, ChainRow } from "../live/options";
 import {
-  daysToExpiry,
   dividerIndex,
-  expiresIn,
   inTheMoney,
   mergeStraddle,
   type StraddleRow,
@@ -59,12 +57,23 @@ const CALLS_STAT_WIDTH = 6 * 44;
  *
  * A call or put PRICE cell can be its own preset too (#2017 Phase 0 task 4e, `onPickSide`): the
  * caller decides what a call/put pick means (in `OptionGate`, it can also switch Side/Type when
- * that's safe) — this component only reports which strike and which side got clicked. Cells with
- * no quoted value are still clickable — the contract exists in the chain regardless of whether a
- * live quote came back for it. Omitting `onPickSide` renders cells exactly as before (plain,
- * non-interactive), for any caller that doesn't wire this up.
+ * that's safe) — this component only reports which strike and which side got clicked, and since
+ * #3407 P3 slice 2 WHICH price cell (bid or ask) with the value it showed, so the multi-leg
+ * builder can read Fidelity's grammar off the tap: Bid = sell that contract, Ask = buy it. Cells
+ * with no quoted value are still clickable — the contract exists in the chain regardless of
+ * whether a live quote came back for it. Omitting `onPickSide` renders cells exactly as before
+ * (plain, non-interactive), for any caller that doesn't wire this up. `markedStrikes` (same
+ * slice) outlines the strikes a draft already carries legs on, so a spread reads on the chain.
  * @category trading
  */
+/** Which price cell a side pick landed on, with the number it showed ("—" arrives as undefined). */
+export interface PickedCell {
+  readonly price: "bid" | "ask";
+  readonly value?: number;
+}
+
+export type PickSide = (strike: number, side: "call" | "put", cell: PickedCell) => void;
+
 export function StraddleView({
   symbol,
   expiration,
@@ -72,9 +81,14 @@ export function StraddleView({
   calls,
   puts,
   selectedStrike,
+  markedStrikes,
   onPickStrike,
   onPickSide,
   now = new Date(),
+  quotes,
+  expirationField,
+  heldBadges,
+  pending,
 }: {
   readonly symbol: string;
   readonly expiration: string;
@@ -82,15 +96,42 @@ export function StraddleView({
   readonly calls: readonly ChainRow[];
   readonly puts: readonly ChainRow[];
   readonly selectedStrike?: number;
+  /** Strikes a draft already carries a leg on (#3407 P3 slice 2) — outlined, never selected. */
+  readonly markedStrikes?: readonly number[];
   readonly onPickStrike?: (strike: number) => void;
   /** A call/put price cell pick (task 4e) — fires with the row's strike and which side was
-   *  clicked. Optional: omitted, cells render as plain, non-interactive text (unchanged). */
-  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
+   *  clicked, plus which price cell it was and the value it showed (P3 slice 2; callers that
+   *  only want the first two ignore the rest). Optional: omitted, cells render as plain,
+   *  non-interactive text (unchanged). */
+  readonly onPickSide?: PickSide;
   readonly now?: Date;
+  /** Quote provenance for the side the ticket is on (#3407 P2) — rendered as one honest line
+   *  under the table so a "—" cell reads as "not quoted", never as "zero". */
+  readonly quotes?: ChainQuoteCoverage;
+  /** The caller's own expiration picker (the single-leg ticket's `.exp-tabs` strip), rendered
+   *  where the "Chain · SYM · date" eyebrow used to sit — the chain's full width is where that
+   *  strip actually has room to show more than 1.5 dates, unlike the cramped ticket grid it came
+   *  from. Omitted, nothing renders here (the multi-leg builder's plain `<select>` stays in its
+   *  own field grid, untouched). */
+  readonly expirationField?: ReactNode;
+  /** A held-position badge per strike ("C"/"P"/"C/P") — a REAL, already-filled holding, distinct
+   *  from `markedStrikes`'s draft-leg outline. Only the single-leg ticket passes this (Eric,
+   *  2026-09-22); omitted, no badge column space is reserved and no other caller's layout shifts. */
+  readonly heldBadges?: ReadonlyMap<number, string>;
+  /** True while a new expiration's rows are still in flight and these are the OLD ones, held on
+   *  screen by `placeholderData: keepPreviousData` on the caller's query (Eric, 2026-09-22 — a
+   *  tab click used to drop straight to "Looking up options…" and collapse the whole table, then
+   *  snap back to a different height). A dim, not a spinner or a skeleton: the numbers shown are
+   *  real, just for the strike/expiration a member is a beat past clicking away from. */
+  readonly pending?: boolean;
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const all = mergeStraddle(calls, puts);
-  const { rows, hidden } = showAll ? { rows: all, hidden: 0 } : windowRows(all, spot);
+  const windowed = windowRows(all, spot);
+  const { rows, hidden } = showAll ? { rows: all, hidden: 0 } : windowed;
+  // "Show all" is reversible (#3407 P0): a member who expanded to find a far strike can fold the
+  // chain back around the money — or, with no spot, around the middle, and the button says which.
+  const foldLabel = windowed.centred === "spot" ? "around the price" : "around the middle";
   const divider = dividerIndex(rows, spot);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Open centred on the base five (Calls Bid/Ask, Strike, Puts Bid/Ask) — see the header comment's
@@ -108,14 +149,12 @@ export function StraddleView({
   }, [symbol, expiration]);
   return (
     <section className="straddle" aria-label={`Options chain for ${symbol}`}>
-      <div className="straddle-head">
-        <span className="straddle-eyebrow">
-          Chain · {symbol} · {expiration}
-        </span>
-        <span className="straddle-dte">{expiresIn(daysToExpiry(expiration, now))}</span>
-      </div>
+      {expirationField}
       <EarningsBadge symbol={symbol} now={now} />
-      <div className="straddle-scroll" ref={scrollRef}>
+      <div
+        className={pending ? "straddle-scroll straddle-pending" : "straddle-scroll"}
+        ref={scrollRef}
+      >
         <table className="straddle-table">
           <colgroup>
             {/* Bid/Ask/OI/Vol/Δ/Γ/Θ/Vega × 2 sides + Strike = 17 columns total (`TOTAL_COLUMNS`).
@@ -144,13 +183,25 @@ export function StraddleView({
             <col className="straddle-col-stat" />
           </colgroup>
           <thead>
+            {/* Calls/Puts label only the two Bid/Ask columns each now sits over (Eric, 2026-09-22:
+                "CALLS and PUTS should be centered over the respective bid/ask columns"), with
+                Greeks | Calls | Strike | Puts | Greeks read as five distinct groups — Eric's own
+                naming for the outer OI/Vol/greeks blocks, in his 2026-09-22 follow-up — each
+                carrying a border on its leading edge (`straddle-group-start`) so the split reads
+                without counting columns. */}
             <tr>
-              <th colSpan={8} className="straddle-side straddle-side-calls">
+              <th colSpan={6} className="straddle-side">
+                Greeks
+              </th>
+              <th colSpan={2} className="straddle-side straddle-side-calls straddle-group-start">
                 Calls
               </th>
-              <th className="straddle-strike-h">Strike</th>
-              <th colSpan={8} className="straddle-side straddle-side-puts">
+              <th className="straddle-strike-h straddle-group-start">Strike</th>
+              <th colSpan={2} className="straddle-side straddle-side-puts straddle-group-start">
                 Puts
+              </th>
+              <th colSpan={6} className="straddle-side straddle-group-start">
+                Greeks
               </th>
             </tr>
             <tr className="straddle-sub">
@@ -160,12 +211,12 @@ export function StraddleView({
               <th className="straddle-stat">Γ</th>
               <th className="straddle-stat">Θ</th>
               <th className="straddle-stat">Vega</th>
-              <th>Bid</th>
-              <th>Ask</th>
+              <th className="straddle-bidask straddle-group-start">Bid</th>
+              <th className="straddle-bidask">Ask</th>
               <th />
-              <th>Bid</th>
-              <th>Ask</th>
-              <th className="straddle-stat">OI</th>
+              <th className="straddle-bidask">Bid</th>
+              <th className="straddle-bidask">Ask</th>
+              <th className="straddle-stat straddle-group-start">OI</th>
               <th className="straddle-stat">Vol</th>
               <th className="straddle-stat">Δ</th>
               <th className="straddle-stat">Γ</th>
@@ -181,6 +232,9 @@ export function StraddleView({
                 spot={spot}
                 divider={i === divider}
                 selected={row.strike === selectedStrike}
+                marked={markedStrikes?.includes(row.strike) ?? false}
+                held={heldBadges?.get(row.strike)}
+                showHeldSlot={heldBadges !== undefined}
                 onPick={onPickStrike}
                 onPickSide={onPickSide}
               />
@@ -194,10 +248,32 @@ export function StraddleView({
       {hidden > 0 ? (
         <button type="button" className="straddle-more" onClick={() => setShowAll(true)}>
           Show all {all.length} strikes
+          {windowed.centred === "middle" ? " · no live price, windowed around the middle" : ""}
+        </button>
+      ) : showAll && windowed.hidden > 0 ? (
+        <button type="button" className="straddle-more" onClick={() => setShowAll(false)}>
+          Show {windowed.rows.length} strikes {foldLabel}
         </button>
       ) : null}
+      {quotes ? <p className="straddle-coverage">{coverageLine(quotes)}</p> : null}
     </section>
   );
+}
+
+/** The provenance sentence: source, coverage and the as-of clock — words, never a hue. */
+export function coverageLine(quotes: ChainQuoteCoverage): string {
+  const at = new Date(quotes.asOf);
+  const stamp = Number.isNaN(at.getTime())
+    ? ""
+    : ` · as of ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  if (quotes.source === "unavailable") {
+    return `Quotes unavailable right now — strikes from the contract list, premiums from last close; "—" means not quoted${stamp}.`;
+  }
+  const coverage =
+    quotes.quoted === quotes.total
+      ? `all ${quotes.total} strikes`
+      : `${quotes.quoted} of ${quotes.total} strikes`;
+  return `Bid / ask and greeks from the indicative feed · ${coverage} quoted; "—" means the feed had none${stamp}.`;
 }
 
 function DividerRow({ spot }: { readonly spot: number }): ReactElement {
@@ -215,6 +291,9 @@ function RowGroup({
   spot,
   divider,
   selected,
+  marked,
+  held,
+  showHeldSlot,
   onPick,
   onPickSide,
 }: {
@@ -222,8 +301,17 @@ function RowGroup({
   readonly spot?: number;
   readonly divider: boolean;
   readonly selected: boolean;
+  readonly marked: boolean;
+  /** "C" / "P" / "C/P" when the desk holds a contract at this strike (this expiration), else
+   *  undefined. */
+  readonly held?: string;
+  /** True whenever the caller passed `heldBadges` at all — reserves the badge's column space on
+   *  EVERY row (held or not) so a badge appearing on one row never shifts the strike column for
+   *  its neighbors. False for a caller that never passes `heldBadges` (no reserved space, no
+   *  layout change from before this feature). */
+  readonly showHeldSlot: boolean;
   readonly onPick?: (strike: number) => void;
-  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
+  readonly onPickSide?: PickSide;
 }): ReactElement {
   const callItm = inTheMoney(row.strike, spot, "call");
   const putItm = inTheMoney(row.strike, spot, "put");
@@ -232,6 +320,7 @@ function RowGroup({
     callItm ? "straddle-call-itm" : "",
     putItm ? "straddle-put-itm" : "",
     selected ? "straddle-selected" : "",
+    marked ? "straddle-marked" : "",
     onPick ? "straddle-pickable" : "",
   ]
     .filter(Boolean)
@@ -246,24 +335,17 @@ function RowGroup({
         <StatCell value={row.call?.gamma} kind="greek" />
         <StatCell value={row.call?.theta} kind="greek" />
         <StatCell value={row.call?.vega} kind="greek" />
-        <SideCell value={row.call?.bid} strike={row.strike} side="call" onPickSide={onPickSide} />
-        <SideCell value={row.call?.ask} strike={row.strike} side="call" onPickSide={onPickSide} />
-        <td className="straddle-strike num">
-          {onPick ? (
-            <button
-              type="button"
-              className="straddle-pick"
-              aria-label={`Pick the ${row.strike} strike`}
-              aria-pressed={selected}
-            >
-              {row.strike}
-            </button>
-          ) : (
-            row.strike
-          )}
-        </td>
-        <SideCell value={row.put?.bid} strike={row.strike} side="put" onPickSide={onPickSide} />
-        <SideCell value={row.put?.ask} strike={row.strike} side="put" onPickSide={onPickSide} />
+        <SideCell row={row} side="call" price="bid" onPickSide={onPickSide} />
+        <SideCell row={row} side="call" price="ask" onPickSide={onPickSide} />
+        <StrikeCell
+          strike={row.strike}
+          selected={selected}
+          held={held}
+          showHeldSlot={showHeldSlot}
+          onPick={onPick}
+        />
+        <SideCell row={row} side="put" price="bid" onPickSide={onPickSide} />
+        <SideCell row={row} side="put" price="ask" onPickSide={onPickSide} />
         <StatCell value={row.put?.openInterest} kind="count" />
         <StatCell value={row.put?.volume} kind="count" />
         <StatCell value={row.put?.delta} kind="greek" />
@@ -272,6 +354,62 @@ function RowGroup({
         <StatCell value={row.put?.vega} kind="greek" />
       </tr>
     </>
+  );
+}
+
+/** " — you hold a call here" / "a put here" / "a call and a put here" — folded into the strike
+ *  button's own `aria-label` (never a separate accessible name on the decorative badge span
+ *  beside it, which has no role that supports one). Empty string when nothing's held. */
+function heldAriaSuffix(held: string | undefined): string {
+  if (!held) return "";
+  const what = held === "C/P" ? "a call and a put" : held === "C" ? "a call" : "a put";
+  return ` — you hold ${what} here`;
+}
+
+/** The strike cell: a pick button (or plain text, no `onPick`) plus the held-position badge slot
+ *  (#3407, Eric 2026-09-22) — a REAL holding at this strike, distinct from `.straddle-marked`'s
+ *  draft-leg outline on the whole cell. */
+function StrikeCell({
+  strike,
+  selected,
+  held,
+  showHeldSlot,
+  onPick,
+}: {
+  readonly strike: number;
+  readonly selected: boolean;
+  /** "C" / "P" / "C/P" when the desk holds a contract at this strike (this expiration). */
+  readonly held?: string;
+  /** True whenever the caller passed `heldBadges` at all — reserves the badge's column space on
+   *  EVERY row (held or not) so a badge appearing on one row never shifts the column for its
+   *  neighbors. False for a caller that never passes `heldBadges` (no layout change from before
+   *  this feature). */
+  readonly showHeldSlot: boolean;
+  readonly onPick?: (strike: number) => void;
+}): ReactElement {
+  return (
+    <td className="straddle-strike num">
+      {onPick ? (
+        <button
+          type="button"
+          className="straddle-pick"
+          aria-label={`Pick the ${strike} strike${heldAriaSuffix(held)}`}
+          aria-pressed={selected}
+        >
+          {strike}
+        </button>
+      ) : (
+        strike
+      )}
+      {showHeldSlot ? (
+        <span
+          className={held ? "straddle-held-badge" : "straddle-held-badge straddle-held-empty"}
+          aria-hidden="true"
+        >
+          {held ?? ""}
+        </span>
+      ) : null}
+    </td>
   );
 }
 
@@ -300,29 +438,30 @@ function StatCell({
  *  even over a "—", since the contract exists in the chain regardless of whether a live quote
  *  came back for it. */
 function SideCell({
-  value,
-  strike,
+  row,
   side,
+  price,
   onPickSide,
 }: {
-  readonly value: number | undefined;
-  readonly strike: number;
+  readonly row: StraddleRow;
   readonly side: "call" | "put";
-  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
+  readonly price: "bid" | "ask";
+  readonly onPickSide?: PickSide;
 }): ReactElement {
+  const value = row[side]?.[price];
   const text = value === undefined ? "—" : money(value);
-  if (!onPickSide) return <td className="num">{text}</td>;
+  if (!onPickSide) return <td className="straddle-bidask num">{text}</td>;
   return (
-    <td className="num">
+    <td className="straddle-bidask num">
       <button
         type="button"
         className="straddle-cell-pick"
-        aria-label={`Pick the ${strike} ${side}`}
+        aria-label={`Pick the ${row.strike} ${side} ${price}`}
         onClick={(event) => {
           // Nested inside the row's own onClick (the strike-only pick) — stop it from also firing,
           // so a cell click fires only the more specific side pick (review fix, 2026-09-08).
           event.stopPropagation();
-          onPickSide(strike, side);
+          onPickSide(row.strike, side, { price, ...(value !== undefined ? { value } : {}) });
         }}
       >
         {text}

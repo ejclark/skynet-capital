@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ChainData } from "../../src/live/options";
+import { formatExpiration } from "../../src/live/straddle";
 import { ExpirationField, StrikeField } from "../../src/shell/option-fields";
 
 /**
@@ -134,12 +135,14 @@ describe("ExpirationField", () => {
     );
 
     const tabs = screen.getAllByRole("button");
-    expect(tabs.map((t) => t.textContent)).toEqual(chainManyExpirations.expirations);
+    expect(tabs.map((t) => t.textContent)).toEqual(
+      chainManyExpirations.expirations.map(formatExpiration),
+    );
 
-    const active = screen.getByText("2026-09-18");
+    const active = screen.getByText(formatExpiration("2026-09-18"));
     expect(active).toHaveAttribute("aria-pressed", "true");
     for (const exp of chainManyExpirations.expirations.filter((e) => e !== "2026-09-18")) {
-      expect(screen.getByText(exp)).toHaveAttribute("aria-pressed", "false");
+      expect(screen.getByText(formatExpiration(exp))).toHaveAttribute("aria-pressed", "false");
     }
   });
 
@@ -157,7 +160,7 @@ describe("ExpirationField", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("2026-10-16"));
+    fireEvent.click(screen.getByText(formatExpiration("2026-10-16")));
     expect(edited).toBe("2026-10-16");
   });
 
@@ -198,12 +201,12 @@ describe("ExpirationField", () => {
       />,
     );
 
-    const lockedTab = screen.getByText((content) => content.startsWith(today));
+    const lockedTab = screen.getByText((content) => content.startsWith(formatExpiration(today)));
     expect(lockedTab).toBeDisabled();
     expect(lockedTab).toHaveAttribute("title", "course 501 isn't earned yet");
     expect(lockedTab.textContent).toContain("locked");
 
-    const openTab = screen.getByText("2026-10-16");
+    const openTab = screen.getByText(formatExpiration("2026-10-16"));
     expect(openTab).not.toBeDisabled();
   });
 
@@ -232,7 +235,9 @@ describe("ExpirationField", () => {
         />,
       );
 
-      const heldTab = screen.getByRole("button", { name: /2026-09-30/ });
+      const heldTab = screen.getByRole("button", {
+        name: new RegExp(formatExpiration("2026-09-30")),
+      });
       expect(heldTab.querySelector('[aria-hidden="true"]')?.textContent).toContain("⚡");
       expect(heldTab.getAttribute("title")).toContain("lives through the print");
     });
@@ -248,9 +253,85 @@ describe("ExpirationField", () => {
         />,
       );
 
-      const earlyTab = screen.getByRole("button", { name: "2026-09-25" });
+      const earlyTab = screen.getByRole("button", { name: formatExpiration("2026-09-25") });
       expect(earlyTab.querySelector('[aria-hidden="true"]')).not.toBeInTheDocument();
       expect(earlyTab).not.toHaveAttribute("title");
+    });
+  });
+
+  // The native scrollbar is hidden outright now (Eric, 2026-09-22: "the scrollbar... dominates and
+  // crowds the content") — these are real <button>s, the only way left to page the strip by click.
+  // jsdom never lays out real pixel widths, so `scrollWidth`/`clientWidth` are stubbed by hand to
+  // force the overflow state a real browser would compute from actual content.
+  describe("the scroll chevrons (Eric, 2026-09-22)", () => {
+    it("renders no chevron when the strip doesn't overflow", () => {
+      const { container } = render(
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-18"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+      expect(
+        container.querySelector(".exp-tabs-chevron-left, .exp-tabs-chevron-right"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders only the right chevron when scrolled to the start, and paging by click calls scrollBy away from 0", () => {
+      const { container } = render(
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-18"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+      const strip = container.querySelector(".exp-tabs") as HTMLDivElement;
+      Object.defineProperty(strip, "scrollWidth", { value: 1000, configurable: true });
+      Object.defineProperty(strip, "clientWidth", { value: 300, configurable: true });
+      Object.defineProperty(strip, "scrollLeft", { value: 0, configurable: true, writable: true });
+      const scrollBy = rstest.fn();
+      strip.scrollBy = scrollBy;
+      fireEvent.scroll(strip);
+
+      expect(screen.queryByRole("button", { name: "Scroll to earlier expirations" })).toBeNull();
+      const rightChevron = screen.getByRole("button", { name: "Scroll to later expirations" });
+      fireEvent.click(rightChevron);
+      expect(scrollBy).toHaveBeenCalledWith(
+        expect.objectContaining({ left: expect.any(Number), behavior: "smooth" }),
+      );
+      const call = scrollBy.mock.calls[0] as [{ left: number }] | undefined;
+      expect(call).toBeDefined();
+      expect((call as [{ left: number }])[0].left).toBeGreaterThan(0);
+    });
+
+    it("renders only the left chevron once scrolled to the end", () => {
+      const { container } = render(
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-18"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+      const strip = container.querySelector(".exp-tabs") as HTMLDivElement;
+      Object.defineProperty(strip, "scrollWidth", { value: 1000, configurable: true });
+      Object.defineProperty(strip, "clientWidth", { value: 300, configurable: true });
+      Object.defineProperty(strip, "scrollLeft", {
+        value: 700,
+        configurable: true,
+        writable: true,
+      });
+      fireEvent.scroll(strip);
+
+      expect(screen.queryByRole("button", { name: "Scroll to later expirations" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Scroll to earlier expirations" }),
+      ).toBeInTheDocument();
     });
   });
 });

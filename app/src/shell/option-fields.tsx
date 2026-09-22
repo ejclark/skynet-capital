@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
+import { useEffect, useRef, useState } from "react";
 import { nextPrint } from "../../../src/domain/earnings-calendar";
 import type { ChainData } from "../live/options";
-import { daysToExpiry } from "../live/straddle";
+import { daysToExpiry, formatExpiration } from "../live/straddle";
 
 /**
  * The options ticket's chain-driven fields (#738 phase 10b, strike per #2017 Phase 0 task 4b,
@@ -15,7 +16,22 @@ import { daysToExpiry } from "../live/straddle";
  * print mark (#2017 Phase 1 slice 11): a ⚡ on any tab whose contract lives through the symbol's
  * next earnings print, reusing `nextPrint` (`src/domain/earnings-calendar.ts`) — the same
  * comparison `expirationPrintMark` in `earnings-chain-badge.ts` makes, ported here as additive
- * decoration rather than the legacy function's HTML-string form.
+ * decoration rather than the legacy function's HTML-string form. Tab labels print through
+ * `formatExpiration` (month/day leading, year trailing, `live/straddle.ts`) — a member scans a
+ * pick list by month/day first, not ISO's year-first sort order (Eric, 2026-09-22).
+ *
+ * SCROLL AFFORDANCE (Eric, 2026-09-22, picking option B off a 3-way rendered comparison — edge
+ * shadow / chevrons / progress track): the strip's `overflow-x: auto` was functionally scrollable
+ * but gave no visual sign more dates existed off either edge. Chevrons fade in per edge based on
+ * live scroll position (never both when there's nothing to scroll, never the trailing edge once
+ * scrolled all the way there), sized and coloured for real emphasis per Eric's follow-up ("more
+ * emphasis... bigger font and/or higher contrast") rather than a subtle hint — a solid accent
+ * chip, not bare text on a gradient. A third follow-up the same day ("the scrollbar... dominates
+ * and crowds the content") retired the native scrollbar outright (`ticket.css`) in favour of the
+ * chevrons — which made them real `<button>`s with a `scrollBy` handler rather than a decorative
+ * `aria-hidden` overlay, since a hidden scrollbar needs SOME clickable way to page the strip, not
+ * just a swipe. `.exp-tabs`' `scroll-padding-inline` reserves the chevron's own 34px so a paged
+ * scroll never opens mid-tap under one.
  * @category trading
  */
 
@@ -44,6 +60,33 @@ export function ExpirationField({
   readonly zeroDteLocked: boolean;
   readonly zeroDteReason?: string;
 }): ReactElement {
+  // Hooks run unconditionally (the no-chain branch returns a plain `<input>` below) — the scroll
+  // ref/state are simply unused in that branch.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const updateEdges = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setEdges({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft < el.scrollWidth - el.clientWidth - 2,
+    });
+  };
+  /** The chevrons are real buttons now (Eric, 2026-09-22 — "the buttons on the side need to
+   *  become clickable"), not just a scroll-position tell: a click pages by 70% of the visible
+   *  strip width, same "one deliberate tap, not a pixel-perfect drag" feel as a carousel's own
+   *  prev/next. `smooth` is a no-op under `prefers-reduced-motion` in every engine that implements
+   *  the media query's effect on scroll-behavior, so this needs no manual reduced-motion branch. */
+  const pageBy = (dir: -1 | 1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
+  };
+  // Re-check on every fresh chain too (a new symbol/expiration list can change whether the strip
+  // overflows at all) — `chainData?.expirations.length` is the trigger, not the array identity.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: expirations.length IS the trigger
+  useEffect(updateEdges, [chainData?.expirations.length]);
+
   if (!chainData) {
     return (
       <input
@@ -58,36 +101,64 @@ export function ExpirationField({
   }
   const next = chainData.symbol ? nextPrint(chainData.symbol, new Date().toISOString()) : undefined;
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a <fieldset>'s UA border/padding/legend chrome fights this scrolling pill strip — the ARIA group pattern is the standard alternative for a custom toggle-button group.
-    <div className="exp-tabs" role="group" aria-labelledby={`${id}-label`}>
-      {chainData.expirations.map((exp) => {
-        const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
-        const active = exp === chainData.expiration;
-        // ISO dates compare lexicographically; the print lands after the close, so same-day
-        // counts as held — mirrors `expirationPrintMark`'s exact comparison.
-        const printMark = next !== undefined && next.date <= exp;
-        const printReason = printMark
-          ? `${chainData.symbol} reports on or before this expiration — this contract lives through the print`
-          : undefined;
-        const title = [disabled ? zeroDteReason : undefined, printReason]
-          .filter((part): part is string => part !== undefined)
-          .join(" · ");
-        return (
-          <button
-            key={exp}
-            type="button"
-            className={active ? "exp-tab exp-tab-active" : "exp-tab"}
-            aria-pressed={active}
-            disabled={disabled}
-            title={title !== "" ? title : undefined}
-            onClick={() => onEdit(exp)}
-          >
-            {exp}
-            {printMark ? <span aria-hidden="true"> ⚡</span> : null}
-            {disabled ? " — locked (0DTE)" : ""}
-          </button>
-        );
-      })}
+    <div className="exp-tabs-wrap">
+      {/* biome-ignore lint/a11y/useSemanticElements: a <fieldset>'s UA border/padding/legend chrome fights this scrolling pill strip — the ARIA group pattern is the standard alternative for a custom toggle-button group. */}
+      <div
+        className="exp-tabs"
+        role="group"
+        aria-labelledby={`${id}-label`}
+        ref={scrollRef}
+        onScroll={updateEdges}
+      >
+        {chainData.expirations.map((exp) => {
+          const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
+          const active = exp === chainData.expiration;
+          // ISO dates compare lexicographically; the print lands after the close, so same-day
+          // counts as held — mirrors `expirationPrintMark`'s exact comparison.
+          const printMark = next !== undefined && next.date <= exp;
+          const printReason = printMark
+            ? `${chainData.symbol} reports on or before this expiration — this contract lives through the print`
+            : undefined;
+          const title = [disabled ? zeroDteReason : undefined, printReason]
+            .filter((part): part is string => part !== undefined)
+            .join(" · ");
+          return (
+            <button
+              key={exp}
+              type="button"
+              className={active ? "exp-tab exp-tab-active" : "exp-tab"}
+              aria-pressed={active}
+              disabled={disabled}
+              title={title !== "" ? title : undefined}
+              onClick={() => onEdit(exp)}
+            >
+              {formatExpiration(exp)}
+              {printMark ? <span aria-hidden="true"> ⚡</span> : null}
+              {disabled ? " — locked (0DTE)" : ""}
+            </button>
+          );
+        })}
+      </div>
+      {edges.left ? (
+        <button
+          type="button"
+          className="exp-tabs-chevron exp-tabs-chevron-left"
+          aria-label="Scroll to earlier expirations"
+          onClick={() => pageBy(-1)}
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+      ) : null}
+      {edges.right ? (
+        <button
+          type="button"
+          className="exp-tabs-chevron exp-tabs-chevron-right"
+          aria-label="Scroll to later expirations"
+          onClick={() => pageBy(1)}
+        >
+          <span aria-hidden="true">›</span>
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -111,6 +182,7 @@ export function StrikeField({
   value,
   onEdit,
   onCommit,
+  flashKey,
 }: {
   readonly id: string;
   readonly chainData: ChainData | undefined;
@@ -119,9 +191,27 @@ export function StrikeField({
   /** Fires on blur with the field's current value — omit for a caller that doesn't track
    *  `?strike=` (unchanged behavior). */
   readonly onCommit?: (value: string) => void;
+  /** Bumped by the caller on every CHAIN-originated pick (never a keystroke) — a distinct value
+   *  each time re-triggers the destination flash (Eric, 2026-09-22: "what standard design choices
+   *  ... organically communicate this without text"). Omit for a caller with no chain to pick
+   *  from (`draft-leg-form.tsx`, `roll-row.tsx` don't render this field at all). */
+  readonly flashKey?: number;
 }): ReactElement {
   const hasSuggestions = chainData !== undefined && chainData.rows.length > 0;
   const listId = `${id}-strikes`;
+  const [flashing, setFlashing] = useState(false);
+  const firstFlash = useRef(true);
+  useEffect(() => {
+    if (firstFlash.current) {
+      // The mount render (`?strike=` seeded from the URL) is not a pick — never flash on load.
+      firstFlash.current = false;
+      return;
+    }
+    if (!flashKey) return;
+    setFlashing(true);
+    const t = setTimeout(() => setFlashing(false), 320);
+    return () => clearTimeout(t);
+  }, [flashKey]);
   return (
     <>
       <input
@@ -133,6 +223,7 @@ export function StrikeField({
         value={value}
         placeholder="40"
         list={hasSuggestions ? listId : undefined}
+        className={flashing ? "strike-flash" : undefined}
         onChange={(e) => onEdit(e.target.value)}
         onBlur={() => {
           if (value !== "") onCommit?.(value);

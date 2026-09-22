@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addDraftLeg,
   type DraftLeg,
@@ -8,13 +9,17 @@ import {
   emptyDraft,
   type NewLeg,
   removeDraftLeg,
+  repriceDraftLeg,
   reviewDraft,
   submitDraftOrder,
   validateDraft,
 } from "../live/draft-order";
-import { money } from "../live/ticket";
+import { money, type TicketTimeInForce, tifLabel } from "../live/ticket";
 import { DraftLegForm } from "./draft-leg-form";
+import { LegRow } from "./draft-leg-row";
 import { DisarmNote, GateHead } from "./gate-frame";
+import { PayoffChart } from "./payoff-chart";
+import { TimeInForceField } from "./tif-field";
 
 /**
  * THE MULTI-LEG BUILDER (#582, slices 3-4) — an "add leg" action off the same chain the single-
@@ -29,35 +34,24 @@ import { DisarmNote, GateHead } from "./gate-frame";
  *  the house's static-fixture screenshot convention (`scripts/shoot/`, docs/PICTURES.md) applied to
  *  a client React component instead of a server-rendered view. That script isn't written yet; the
  *  harness it would sit on is, so it is now a copy of `scripts/shoot/feedback.mjs` away. */
-export function legLabel(leg: DraftLeg): string {
-  const side = leg.action === "sell" ? "Sell" : "Buy";
-  const type = leg.optionType === "call" ? "C" : "P";
-  return `${side} ${leg.contracts} ${leg.underlying} $${leg.strike}${type} ${leg.expiration}`;
-}
-
-/** One leg of a multi-leg draft: its plain-language label plus the control that removes it.
- *
- *  @category trading
- */
-export function LegRow({
-  leg,
-  busy,
-  onRemove,
+/** The running net while the order is still being built (#3407 P3 slice 4; Fidelity's net
+ *  Bid/Mid/Ask row): the same server number the review will show, one line, so repricing a leg
+ *  is judged by its effect before the review screen. Silent once reviewed (the grid has it). */
+function RunningNet({
+  draft,
+  preview,
 }: {
-  readonly leg: DraftLeg;
-  readonly busy: boolean;
-  readonly onRemove: () => void;
-}): ReactElement {
+  readonly draft: DraftOrder;
+  readonly preview: DraftPreview | undefined;
+}): ReactElement | null {
+  if (!preview || preview.netPremium === undefined || draft.legs.length < 2) return null;
+  if (draft.phase === "reviewed" || draft.phase === "submitted") return null;
+  const flow = preview.netPremium >= 0 ? "credit" : "debit";
   return (
-    <li className="draft-leg-row">
-      <span className="draft-leg-label">{legLabel(leg)}</span>
-      <span className="draft-leg-price num">
-        {leg.limitPrice !== undefined ? `${money(leg.limitPrice)}/sh` : "at market"}
-      </span>
-      <button type="button" className="draft-leg-remove" disabled={busy} onClick={onRemove}>
-        Remove
-      </button>
-    </li>
+    <p className="draft-net num">
+      Running net {flow} {money(Math.abs(preview.netPremium))}
+      {preview.pricedFully ? "" : " — an unpriced leg counts as $0 until it's priced"}
+    </p>
   );
 }
 
@@ -139,6 +133,7 @@ export function ReviewBody({
         <div className="gate-body">
           <UnlimitedLossBanner preview={preview} />
           <PayoffGrid preview={preview} />
+          {preview.payoff ? <PayoffChart curve={preview.payoff} maxLoss={preview.maxLoss} /> : null}
           {!preview.pricedFully ? (
             <p className="gate-note">
               One or more legs has no limit price — the numbers above assume $0 for that leg until
@@ -157,9 +152,19 @@ export function ReviewBody({
   );
 }
 
-/** The gate's status line — a small, pure mapping from phase/refusals to tone + headline. */
-export function gateStatus(draft: DraftOrder): { tone: string; headline: string } {
-  if (draft.phase === "submitted") return { tone: "filled", headline: "Confirmed" };
+/** The gate's status line — a small, pure mapping from phase/refusals to tone + headline.
+ *  `executed` is the server's own word on whether the submit reached the broker (#3407 P0; the
+ *  study's audit found "Confirmed" over an order the deployment had refused to send): only a
+ *  true value earns the filled tone; anything else is "reviewed, not sent", in those words. */
+export function gateStatus(
+  draft: DraftOrder,
+  executed?: boolean,
+): { tone: string; headline: string } {
+  if (draft.phase === "submitted") {
+    return executed === true
+      ? { tone: "filled", headline: "Confirmed" }
+      : { tone: "checks", headline: "Reviewed — not sent" };
+  }
   if (draft.phase === "reviewed") return { tone: "ready", headline: "Reviewed — ready to confirm" };
   if (draft.refusals.length > 0) {
     return { tone: "refused", headline: draft.refusals[0] ?? "Refused" };
@@ -173,14 +178,40 @@ export function gateStatus(draft: DraftOrder): { tone: string; headline: string 
  *
  *  @category trading
  */
-export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): ReactElement {
+export function DraftOrderBuilder({
+  deskId,
+  incomingLeg,
+  onIncomingLegHandled,
+  onLegsChange,
+}: {
+  readonly deskId: string;
+  /** A leg picked from the bench's standalone Chain section pane while this ticket is on screen
+   *  (#3407 — "the chain pane adds legs on the Spread rung"; `trade.tsx`'s `chainPickLeg`). `key`
+   *  changes on every distinct pick — a re-render with the same value is never re-applied, which
+   *  matters on a remount too: the parent only clears its own pending pick via
+   *  `onIncomingLegHandled`, so without the key guard a stale pick still sitting in the parent
+   *  would replay onto a freshly emptied draft the moment this component remounts. */
+  readonly incomingLeg?: { readonly leg: NewLeg; readonly key: number };
+  readonly onIncomingLegHandled?: () => void;
+  /** Fires with the draft's current legs after every server response — lets the chain pane mark
+   *  strikes the draft already carries (same convention as `DraftLegForm`'s own inline chain). */
+  readonly onLegsChange?: (legs: readonly DraftLeg[]) => void;
+}): ReactElement {
   const [draft, setDraft] = useState<DraftOrder>(emptyDraft());
   const [preview, setPreview] = useState<DraftPreview | undefined>(undefined);
   const [note, setNote] = useState<string | undefined>(undefined);
+  const [executed, setExecuted] = useState<boolean | undefined>(undefined);
+  const [timeInForce, setTimeInForce] = useState<TicketTimeInForce | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
 
   const apply = async (
-    run: () => Promise<{ draft: DraftOrder; preview: DraftPreview; note?: string }>,
+    run: () => Promise<{
+      draft: DraftOrder;
+      preview: DraftPreview;
+      note?: string;
+      executed?: boolean;
+    }>,
   ) => {
     setBusy(true);
     try {
@@ -188,24 +219,48 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
       setDraft(res.draft);
       setPreview(res.preview);
       if (res.note !== undefined) setNote(res.note);
+      if (res.executed !== undefined) setExecuted(res.executed);
+      onLegsChange?.(res.draft.legs);
+      // A sent spread is a working order until it fills — the list under the ticket re-reads
+      // now rather than on its next poll (#3407 P3 slice 1).
+      if (res.executed === true) {
+        void queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
+      }
     } finally {
       setBusy(false);
     }
   };
 
   const addLeg = (leg: NewLeg) => void apply(() => addDraftLeg(deskId, draft, leg));
+
+  // Applies the chain pane's leg pick exactly once per distinct `key`, whichever draft is
+  // current at the moment the pick arrives — `deskId`/`draft`/`apply`/`onIncomingLegHandled` are
+  // read at their latest closure value on purpose, so this must NOT re-fire when any of THOSE
+  // change, only when a genuinely new pick arrives.
+  const appliedLegKey = useRef<number | undefined>(undefined);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above — incomingLeg alone is the trigger
+  useEffect(() => {
+    if (!incomingLeg || incomingLeg.key === appliedLegKey.current) return;
+    appliedLegKey.current = incomingLeg.key;
+    void apply(() => addDraftLeg(deskId, draft, incomingLeg.leg));
+    onIncomingLegHandled?.();
+  }, [incomingLeg]);
   const remove = (id: string) => void apply(() => removeDraftLeg(deskId, draft, id));
+  const reprice = (id: string, limitPrice: number | undefined) =>
+    void apply(() => repriceDraftLeg(deskId, draft, id, limitPrice));
   const validate = () => void apply(() => validateDraft(deskId, draft));
   const review = () => void apply(() => reviewDraft(deskId, draft));
-  const confirm = () => void apply(() => submitDraftOrder(deskId, draft));
+  const confirm = () => void apply(() => submitDraftOrder(deskId, draft, timeInForce));
   const startOver = () => {
     setDraft(emptyDraft());
     setPreview(undefined);
     setNote(undefined);
+    setExecuted(undefined);
+    setTimeInForce(undefined);
   };
 
   const editable = draft.phase !== "reviewed" && draft.phase !== "submitted";
-  const { tone, headline } = gateStatus(draft);
+  const { tone, headline } = gateStatus(draft, executed);
 
   return (
     <section className="panel gate-panel" aria-label="Multi-leg order builder">
@@ -214,7 +269,7 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
         Add legs from the chain below — a vertical spread is two, an iron condor is four.
       </p>
 
-      {editable ? <DraftLegForm busy={busy} onAdd={addLeg} /> : null}
+      {editable ? <DraftLegForm busy={busy} legs={draft.legs} onAdd={addLeg} /> : null}
 
       {draft.legs.length > 0 ? (
         <ul className="draft-leg-list">
@@ -224,12 +279,14 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
               leg={leg}
               busy={busy || !editable}
               onRemove={() => remove(leg.id)}
+              onReprice={(price) => reprice(leg.id, price)}
             />
           ))}
         </ul>
       ) : (
         <p className="tkt-note">No legs yet — add at least two to build a spread.</p>
       )}
+      <RunningNet draft={draft} preview={preview} />
 
       <div className="gate" aria-live="polite">
         <GateHead tone={tone}>{headline}</GateHead>
@@ -247,9 +304,12 @@ export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): Reac
         </button>
       ) : null}
       {draft.phase === "reviewed" ? (
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={confirm}>
-          Confirm order
-        </button>
+        <>
+          <TimeInForceField fallback="day" value={timeInForce} onChange={setTimeInForce} />
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={confirm}>
+            Confirm order · {tifLabel(timeInForce ?? "day")}
+          </button>
+        </>
       ) : null}
       {draft.phase === "submitted" ? (
         <button type="button" className="btn" onClick={startOver}>

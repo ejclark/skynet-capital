@@ -9,7 +9,12 @@
  */
 import { join } from "node:path";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
-import { type DecisionDb, openDecisionDb } from "../autonomous/decision-db.js";
+import {
+  type DecisionDb,
+  type DecisionFunnel,
+  openDecisionDb,
+  type RetrospectiveRecord,
+} from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import type { OrderIntent } from "../domain/types.js";
@@ -56,6 +61,11 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
+  readonly funnelFor?: (personaId: string) => DecisionFunnel;
+  /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
+   *  same dark-when-unset posture. */
+  readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
 }
 
 export interface CredentialsBridgeDeps {
@@ -122,6 +132,12 @@ export function startInsightsBridge(
       ? {
           readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
+          // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
+          // position, not one per cycle, so this is generous headroom at this app's trade volume
+          // rather than the "growing feed" concern `listByPersona`'s own bound addresses.
+          listRetrospectives: (personaId: string) =>
+            decisionDb.listRetrospectives(personaId, { limit: 100 }),
         }
       : {}),
   };

@@ -202,6 +202,8 @@ export interface DecisionOutcome {
   readonly side: string;
   readonly quantity: number;
   readonly playbook?: string;
+  /** Only meaningful alongside `playbook`. */
+  readonly playbookMode?: "conservative" | "standard" | "aggressive";
   readonly strategy?: string;
   readonly reason: string;
   readonly expectation?: string;
@@ -209,6 +211,13 @@ export interface DecisionOutcome {
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
   readonly fill?: string;
+  /** The cycle's market context at this symbol, when captured — see `decision-json-view.ts`. */
+  readonly momentum?: number;
+  readonly sentiment?: number;
+  /** The raw→guarded quantity delta, when the risk guards resized this outcome's ask. */
+  readonly guardDelta?: string;
+  /** Cross-links to the matching Activity/blotter row (`id="act-<orderId>"`). */
+  readonly activityAnchor?: string;
 }
 
 /** A raw intent the guards refused in full this cycle — see `decision-json-view.ts`. */
@@ -259,12 +268,23 @@ export interface ThesisCall {
   readonly asOf?: string;
 }
 
+/** The decision behind a Thesis marker's fill — see `src/observatory/wire-reasoning.ts`. */
+export interface ThesisMarkerReasoning {
+  readonly reason: string;
+  readonly strategy?: string;
+  readonly expectation?: string;
+  readonly guardDelta?: string;
+}
+
 export interface ThesisMarker {
   readonly n: number;
   readonly kind: "entry" | "exit";
   readonly at: string;
   readonly label: string;
   readonly activityAnchor: string;
+  /** Absent for a fill that predates the audit trail, or when no lookup is configured — never
+   *  fabricated. */
+  readonly reasoning?: ThesisMarkerReasoning;
 }
 
 export interface ThesisHealth {

@@ -20,6 +20,8 @@ import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { serveDeskAlertsApi } from "./desk-alerts-route.js";
+import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
@@ -28,12 +30,14 @@ import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
+import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveSubscriptionsApi } from "./subscriptions-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
+import { serveTradeOrdersApi } from "./trade-orders-routes.js";
 
 export type { DashboardServerConfig };
 
@@ -126,6 +130,10 @@ async function serveWriteApis(
   session: Session | undefined,
 ): Promise<boolean> {
   if (await serveTradeApi(req, res, path, config, session)) return true;
+  if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
+  if (serveDeskEventsApi(req, res, path, config, session)) return true;
+  if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
+  if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;

@@ -1,16 +1,35 @@
-# Mechanized dependency-staleness detection (audit P4). Dependabot opens grouped update PRs weekly;
+# Mechanized dependency-staleness detection (audit P4). Dependabot opens one PR per package weekly;
 # the dep-warden reviews them (read changelogs, run the suite, merge patch/minor on green, escalate
 # majors). This is the eye; dep-warden is the drill. Config file, not a workflow — no approval gate.
+#
+# Per-package PRs, not one bundled dev-dependencies group (#3315/#3366, 2026-09-20 — Eric: "this
+# provides more granular feedback should failures take place"). A bundled group's failure mode is
+# real: `@playwright/test`/`playwright-core` bumping while `@playwright/experimental-ct-react` (an
+# unversioned-with-them CT harness dependency) stayed pinned blocked 11 completely unrelated
+# packages behind one unmergeable pair. Checked before removing the group entirely: none of the
+# other tracked dev dependencies (Babylon.js, Biome, `@rstest/core`, `@types/node`,
+# dependency-cruiser, fast-check, jscpd, knip, marked, tsx) are version-coupled to one another the
+# way Playwright's trio is, so full isolation is safe for all of them.
+#
+# The Playwright family keeps its own group — `@playwright/test`/`playwright-core`/
+# `@playwright/experimental-ct-react` must still move in lockstep with each other, just isolated
+# from every other package's PR.
+#
+# `open-pull-requests-limit` raised from the default 5: per-package PRs means a normal week (this
+# ecosystem currently tracks ~12 packages plus Playwright's group) can open more concurrent PRs than
+# the default allows, which would silently starve later packages from getting a PR at all until an
+# older one closes. 20 covers a full week with headroom; revisit if the tracked-package count grows
+# well past that.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 20
     groups:
-      dev-dependencies:
-        patterns: ["*"]
+      playwright:
+        patterns: ["@playwright/*", "playwright-core"]
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore"

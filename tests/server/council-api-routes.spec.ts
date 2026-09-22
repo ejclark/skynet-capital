@@ -34,13 +34,22 @@ function postReq(body: unknown, contentType = "application/json"): IncomingMessa
   return req;
 }
 
-function depsWith(weeks: Record<string, Record<string, { text: string; at: string }>> = {}) {
-  const submits: { week: string; memberId: string; text: string }[] = [];
+function depsWith(
+  weeks: Record<string, Record<string, { text: string; at: string; playbookId?: string }>> = {},
+) {
+  const submits: { week: string; memberId: string; text: string; playbookId?: string }[] = [];
   const deps: CouncilDeps = {
     load: () => ({ weeks }),
-    submit: (week, memberId, text) => {
-      submits.push({ week, memberId, text });
-      weeks[week] = { ...weeks[week], [memberId]: { text, at: "2026-09-07T12:00:00.000Z" } };
+    submit: (week, memberId, text, _at, playbookId) => {
+      submits.push({ week, memberId, text, ...(playbookId ? { playbookId } : {}) });
+      weeks[week] = {
+        ...weeks[week],
+        [memberId]: {
+          text,
+          at: "2026-09-07T12:00:00.000Z",
+          ...(playbookId ? { playbookId } : {}),
+        },
+      };
     },
     now: () => new Date("2026-09-07T12:00:00.000Z"),
   };
@@ -100,6 +109,27 @@ describe("serveCouncilApi", () => {
     expect(submits).toHaveLength(1);
     expect(submits[0]?.memberId).not.toBe("attacker-supplied");
     expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+  });
+
+  it("forwards a tagged playbookId to submitThesis", async () => {
+    const { res, out } = fakeRes();
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish", playbookId: "S1-NVDA" });
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(submits[0]?.playbookId).toBe("S1-NVDA");
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+  });
+
+  it("refuses an unknown playbookId via submitThesis's own validation", async () => {
+    const { res, out } = fakeRes();
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish", playbookId: "NOT-A-REAL-PLAY" });
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({
+      ok: false,
+      error: "Unknown play — pick one from the list.",
+    });
+    expect(submits).toEqual([]);
   });
 
   it("rejects a malformed body with 400", async () => {

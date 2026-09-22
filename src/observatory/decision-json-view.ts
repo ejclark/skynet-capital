@@ -1,8 +1,11 @@
-import type { DecisionRecord } from "../autonomous/decision-record.js";
-import type { OrderForecast } from "../domain/types.js";
+import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { DecisionRecord, IntentOutcome } from "../autonomous/decision-record.js";
+import type { OrderForecast, PlaybookMode } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
+import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-ci.js";
 import { formatPrice } from "./desk-data.js";
+import { guardDeltaFor } from "./guard-delta.js";
 
 /**
  * THE BOT'S MIND AS DATA — `/api/desk/:id/decisions`, the JSON view behind the
@@ -22,6 +25,8 @@ interface CycleOutcomeView {
   readonly side: string;
   readonly quantity: number;
   readonly playbook?: string;
+  /** Only meaningful alongside `playbook` — the mode that playbook subscription ran under. */
+  readonly playbookMode?: PlaybookMode;
   readonly strategy?: string;
   readonly reason: string;
   readonly expectation?: string;
@@ -29,11 +34,23 @@ interface CycleOutcomeView {
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
   readonly fill?: string;
+  /** The cycle's market context at this symbol, when captured — absent for a cycle recorded
+   *  before context capture existed, never fabricated. */
+  readonly momentum?: number;
+  readonly sentiment?: number;
+  /** The raw→guarded quantity delta, when the risk guards resized this outcome's ask. There is no
+   *  named guard rule for a clamp (only a full refusal gets one) — this is the honest signal that
+   *  actually exists for one. */
+  readonly guardDelta?: string;
+  /** Cross-links to the matching Activity/blotter row (`id="act-<orderId>"`), same convention the
+   *  Thesis tab's markers already use — present only once an order id exists to anchor to. */
+  readonly activityAnchor?: string;
 }
 
 /** Human-readable label per `GuardRefusalReason` — the exact finding a doctrine call sheet quotes
- *  ("Sauron wanted NVDA at −0.82 panic; S2 blocked it") reads from this, not the raw enum value. */
-const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
+ *  ("Sauron wanted NVDA at −0.82 panic; S2 blocked it") reads from this, not the raw enum value.
+ *  Exported so `funnelView` (PR 7b) reuses the same labels rather than re-deriving them. */
+export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "ladder-block": "blocked by the risk ladder",
   "s2-print": "blocked by S2 (flat through the print)",
   "e1-open": "deferred by E1 (waiting out the open)",
@@ -108,6 +125,41 @@ function cycleHeadline(record: DecisionRecord, status: CycleStatus): string {
   return parts.join(" · ");
 }
 
+/** One outcome, shaped for the view — split out of `decisionCyclesView`'s map to stay under the
+ *  file's cognitive-complexity budget (each field is one honest, independent "was this captured?"
+ *  check, not branching logic). */
+function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutcomeView {
+  const guardDelta = guardDeltaFor(record, outcome.intent);
+  return {
+    symbol: outcome.intent.symbol,
+    side: outcome.intent.side,
+    quantity: outcome.intent.quantity,
+    ...(outcome.intent.playbookId ? { playbook: outcome.intent.playbookId } : {}),
+    ...(outcome.intent.playbookId && outcome.intent.playbookMode
+      ? { playbookMode: outcome.intent.playbookMode }
+      : {}),
+    ...(outcome.intent.strategy ? { strategy: outcome.intent.strategy } : {}),
+    reason: outcome.intent.reason,
+    ...(outcome.intent.expectation ? { expectation: outcome.intent.expectation } : {}),
+    ...(outcome.intent.forecast ? { forecast: outcome.intent.forecast } : {}),
+    action: outcome.action,
+    ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
+    ...(outcome.result?.filledPrice !== undefined
+      ? {
+          fill: `${outcome.result.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(outcome.result.filledPrice)}`,
+        }
+      : {}),
+    ...(record.context?.momentum?.[outcome.intent.symbol] !== undefined
+      ? { momentum: record.context.momentum[outcome.intent.symbol] }
+      : {}),
+    ...(record.context?.newsSentiment?.[outcome.intent.symbol] !== undefined
+      ? { sentiment: record.context.newsSentiment[outcome.intent.symbol] }
+      : {}),
+    ...(guardDelta ? { guardDelta } : {}),
+    ...(outcome.result?.orderId ? { activityAnchor: `act-${outcome.result.orderId}` } : {}),
+  };
+}
+
 export interface DecisionCyclesPage {
   readonly cycles: DecisionCycleView[];
   /** Epoch ms of the oldest cycle on this page — pass back as `before` to fetch the next page.
@@ -134,23 +186,7 @@ export function decisionCyclesView(
       headline: cycleHeadline(record, status),
       rawCount: record.rawIntents.length,
       guardedCount: record.guardedIntents.length,
-      outcomes: record.outcomes.map((outcome) => ({
-        symbol: outcome.intent.symbol,
-        side: outcome.intent.side,
-        quantity: outcome.intent.quantity,
-        ...(outcome.intent.playbookId ? { playbook: outcome.intent.playbookId } : {}),
-        ...(outcome.intent.strategy ? { strategy: outcome.intent.strategy } : {}),
-        reason: outcome.intent.reason,
-        ...(outcome.intent.expectation ? { expectation: outcome.intent.expectation } : {}),
-        ...(outcome.intent.forecast ? { forecast: outcome.intent.forecast } : {}),
-        action: outcome.action,
-        ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
-        ...(outcome.result?.filledPrice !== undefined
-          ? {
-              fill: `${outcome.result.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(outcome.result.filledPrice)}`,
-            }
-          : {}),
-      })),
+      outcomes: record.outcomes.map((outcome) => outcomeView(record, outcome)),
       ...(status === "refused"
         ? {
             // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
@@ -173,4 +209,48 @@ export function decisionCyclesView(
     };
   });
   return { cycles, ...(nextCursor !== undefined ? { nextCursor } : {}) };
+}
+
+/** One refusal reason, human-labeled, with its own count — the funnel's ledger half. */
+export interface FunnelRefusalView {
+  readonly reason: GuardRefusalReason;
+  readonly label: string;
+  readonly count: number;
+}
+
+export interface DecisionFunnelView {
+  readonly cycles: number;
+  readonly rawIntents: number;
+  readonly survivedGuards: number;
+  readonly placed: number;
+  readonly filled: number;
+  readonly closed: number;
+  /** Sorted by count, descending — the biggest binding constraint first. */
+  readonly refusals: readonly FunnelRefusalView[];
+}
+
+/** Shapes a `DecisionFunnel` (measure #2, #2287 PR 7b) for the `/decisions` JSON view — the
+ *  operations read on an autonomous system: is it even firing, and what's the binding constraint. */
+export function funnelView(funnel: DecisionFunnel): DecisionFunnelView {
+  const refusals = (Object.entries(funnel.refusalsByReason) as [GuardRefusalReason, number][])
+    .map(([reason, count]) => ({ reason, label: REFUSAL_LABEL[reason], count }))
+    .sort((a, b) => b.count - a.count);
+  return {
+    cycles: funnel.cycles,
+    rawIntents: funnel.rawIntents,
+    survivedGuards: funnel.survivedGuards,
+    placed: funnel.placed,
+    filled: funnel.filled,
+    closed: funnel.closed,
+    refusals,
+  };
+}
+
+/** Shapes measure #5 (#2287 PR 7c) for the `/decisions` JSON view: expectancy — mean R-multiple
+ *  (returnPct proxy) with a block-bootstrap CI over whole trading days. Reads whatever the store
+ *  has recorded; the CI is honestly `null` (never fabricated) below the minimum day count. */
+export function expectancyView(retrospectives: readonly RetrospectiveRecord[]): ExpectancyCI {
+  return expectancyBootstrapCI(
+    retrospectives.map((r) => ({ closedAt: new Date(r.at).toISOString(), returnPct: r.returnPct })),
+  );
 }

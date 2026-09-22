@@ -1,81 +1,88 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
-import type { NewLeg } from "../live/draft-order";
+import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { type ChainData, fetchChain } from "../live/options";
-import { money } from "../live/ticket";
+import { formatExpiration } from "../live/straddle";
+import { ChainStraddle } from "./chain-straddle";
+import { DraftLegFields } from "./draft-leg-fields";
+import type { PickedCell } from "./straddle-view";
 
 /**
- * THE "ADD LEG" FORM (#582 slice 4) — split out of `DraftOrderBuilder` so that component stays
- * under the house's complexity budget. Reads the SAME chain query the six-play ticket's
- * `OptionGate` uses (`fetchChain`); picking a strike seeds the leg's limit price from the chain's
- * quoted premium exactly the way `OptionGate`'s `pickStrike` does. Emits a finished `NewLeg` to
- * the parent, which is the only thing that talks to the draft's state machine.
+ * THE "ADD LEG" FORM (#582 slice 4; #3407 P3 slice 2) — split out of `DraftOrderBuilder` so that
+ * component stays under the house's complexity budget. Emits a finished `NewLeg` to the parent,
+ * which is the only thing that talks to the draft's state machine.
+ *
+ * THE CHAIN IS THE LEG PICKER (P3 slice 2; the study's row "spread legs via dropdowns"): once a
+ * symbol resolves a chain, the same straddle view the single-leg ticket uses renders here with
+ * both sides, and a tap on a price cell IS the leg — Fidelity's grammar, borrowed whole: tap a
+ * **Bid** to sell that contract, an **Ask** to buy it; the tapped price seeds the leg's limit (a
+ * spread goes to the broker as one net limit, so every leg needs one — a "—" cell falls back to
+ * the row's mid). Strikes the draft already holds are outlined on the chain, so a vertical reads
+ * as two marked rows. The typed fields (`DraftLegFields`) remain for a symbol with no chain.
  * @category trading
  */
 
 export function DraftLegForm({
   busy,
+  legs = [],
   onAdd,
 }: {
   readonly busy: boolean;
+  /** The draft's legs so far — their strikes are marked on the chain. */
+  readonly legs?: readonly DraftLeg[];
   readonly onAdd: (leg: NewLeg) => void;
 }): ReactElement {
   const [symbol, setSymbol] = useState("");
   const [chainSym, setChainSym] = useState("");
-  const [optionType, setOptionType] = useState<"call" | "put">("call");
   const [expiration, setExpiration] = useState("");
-  const [strike, setStrike] = useState("");
-  const [action, setAction] = useState<"buy" | "sell">("sell");
   const [contracts, setContracts] = useState("1");
-  const [limitPrice, setLimitPrice] = useState("");
 
   const symId = useId();
-  const typeId = useId();
   const expId = useId();
-  const strikeId = useId();
-  const actionId = useId();
   const qtyId = useId();
-  const limitId = useId();
 
   const chain = useQuery({
-    queryKey: ["chain", chainSym, optionType, expiration],
-    queryFn: () => fetchChain(chainSym, optionType, expiration || undefined),
+    queryKey: ["chain", chainSym, "call", expiration],
+    queryFn: () => fetchChain(chainSym, "call", expiration || undefined),
     enabled: chainSym !== "",
+    // Same fix as the single-leg ticket (`option-gate.tsx`, Eric, 2026-09-22): keep the outgoing
+    // expiration's rows on screen while the new one loads, instead of the table collapsing and
+    // snapping back at a different height on every expiration switch.
+    placeholderData: keepPreviousData,
   });
   const chainData: ChainData | undefined =
     chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
 
-  const pickStrike = (value: string) => {
-    setStrike(value);
-    const row = chainData?.rows.find((r) => String(r.strike) === value);
-    setLimitPrice(row?.premium !== undefined ? String(row.premium) : "");
-  };
+  const underlying = (chainSym || symbol).trim().toUpperCase();
+  const qty = Number(contracts);
+  const sized = Number.isInteger(qty) && qty > 0;
 
-  const canAdd =
-    (chainSym || symbol).trim() !== "" &&
-    (chainData?.expiration ?? expiration) !== "" &&
-    strike !== "" &&
-    contracts !== "";
-
-  const submit = () => {
+  /** A tap on a price cell is a leg: bid sells, ask buys, the shown price is the limit. */
+  const pickCell = (strike: number, side: "call" | "put", cell: PickedCell) => {
+    if (!(chainData && sized) || busy) return;
+    const limit = cell.value ?? chainData.rows.find((r) => r.strike === strike)?.premium;
     onAdd({
-      underlying: (chainSym || symbol).trim().toUpperCase(),
-      optionType,
-      strike: Number(strike),
-      expiration: chainData?.expiration ?? expiration,
-      action,
-      contracts: Number(contracts),
-      ...(limitPrice !== "" ? { limitPrice: Number(limitPrice) } : {}),
+      underlying,
+      optionType: side,
+      strike,
+      expiration: chainData.expiration,
+      action: cell.price === "bid" ? "sell" : "buy",
+      contracts: qty,
+      ...(limit !== undefined ? { limitPrice: limit } : {}),
     });
-    setStrike("");
-    setLimitPrice("");
   };
+
+  const markedStrikes = chainData
+    ? legs
+        .filter((leg) => leg.underlying === underlying && leg.expiration === chainData.expiration)
+        .map((leg) => leg.strike)
+    : [];
 
   return (
     <>
-      <div className="gate-fields tkt-fields">
-        <div className="field">
+      <div className="gate-fields">
+        <div className="field symbol-field">
           <label htmlFor={symId}>Underlying</label>
           <input
             id={symId}
@@ -91,28 +98,6 @@ export function DraftLegForm({
           />
         </div>
         <div className="field">
-          <label htmlFor={typeId}>Type</label>
-          <select
-            id={typeId}
-            value={optionType}
-            onChange={(e) => setOptionType(e.target.value as "call" | "put")}
-          >
-            <option value="call">Call</option>
-            <option value="put">Put</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={actionId}>Side</label>
-          <select
-            id={actionId}
-            value={action}
-            onChange={(e) => setAction(e.target.value as "buy" | "sell")}
-          >
-            <option value="sell">Sell</option>
-            <option value="buy">Buy</option>
-          </select>
-        </div>
-        <div className="field">
           <label htmlFor={expId}>Expiration</label>
           {chainData ? (
             <select
@@ -122,7 +107,7 @@ export function DraftLegForm({
             >
               {chainData.expirations.map((exp) => (
                 <option key={exp} value={exp}>
-                  {exp}
+                  {formatExpiration(exp)}
                 </option>
               ))}
             </select>
@@ -132,31 +117,6 @@ export function DraftLegForm({
               type="date"
               value={expiration}
               onChange={(e) => setExpiration(e.target.value)}
-            />
-          )}
-        </div>
-        <div className="field">
-          <label htmlFor={strikeId}>Strike</label>
-          {chainData ? (
-            <select id={strikeId} value={strike} onChange={(e) => pickStrike(e.target.value)}>
-              <option value="">pick from the chain…</option>
-              {chainData.rows.map((row) => (
-                <option key={row.occSymbol} value={row.strike}>
-                  ${row.strike}
-                  {row.premium !== undefined ? ` · ${money(row.premium)}/sh` : ""}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              id={strikeId}
-              type="number"
-              min={0.5}
-              step={0.5}
-              inputMode="decimal"
-              value={strike}
-              placeholder="40"
-              onChange={(e) => pickStrike(e.target.value)}
             />
           )}
         </div>
@@ -172,23 +132,31 @@ export function DraftLegForm({
             onChange={(e) => setContracts(e.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor={limitId}>Limit /share</label>
-          <input
-            id={limitId}
-            type="number"
-            min={0.01}
-            step={0.01}
-            inputMode="decimal"
-            value={limitPrice}
-            placeholder="at market"
-            onChange={(e) => setLimitPrice(e.target.value)}
-          />
-        </div>
       </div>
-      <button type="button" className="btn" disabled={busy || !canAdd} onClick={submit}>
-        Add leg
-      </button>
+      {chainData ? (
+        <>
+          <p className="tkt-note draft-pick-note">
+            Tap a <strong>Bid</strong> to sell that contract, an <strong>Ask</strong> to buy it —
+            the tapped price is the leg's limit. Marked strikes are already in this order.
+          </p>
+          <ChainStraddle
+            chainSym={chainSym}
+            optionType="call"
+            chainData={chainData}
+            strike=""
+            markedStrikes={markedStrikes}
+            pending={chain.isFetching}
+            onPickStrike={() => undefined}
+            onPickSide={pickCell}
+          />
+        </>
+      ) : (
+        <DraftLegFields
+          busy={busy}
+          ready={underlying !== "" && expiration !== "" && sized}
+          onAdd={(fields) => onAdd({ underlying, expiration, contracts: qty, ...fields })}
+        />
+      )}
     </>
   );
 }

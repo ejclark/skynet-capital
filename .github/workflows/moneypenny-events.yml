@@ -79,6 +79,15 @@ on:
     branches: [main]
   issues:
     types: [labeled]
+  # DEPENDABOT'S OWN PR IS THE TRIGGER (#3315, 2026-09-20) — dep-warden (.claude/agents/dep-warden.md)
+  # already reads the real changelog and runs full verify before merging patch/minor bumps, a
+  # stronger gate than CI-green alone (the generic dependabot/fetch-metadata auto-merge pattern
+  # several teams have walked back after 2026's supply-chain incidents trusts CI-green only). It
+  # sat idle until a session happened to invoke it by hand. `types: [opened]` only — dep-warden's
+  # own re-run on a later push isn't this trigger's job, and dependabot force-pushes its own PRs
+  # rather than adding commits, so `opened` fires again per revision anyway.
+  pull_request:
+    types: [opened]
   workflow_dispatch:
     inputs:
       command:
@@ -116,6 +125,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ═══ THE DEP-WARDEN LANE (#3315) ═══
+  # Fires the instant Dependabot opens a PR — no `route` dependency, no claim lease (dep-warden's
+  # own merge is naturally idempotent: a PR already merged or already escalated is a no-op read).
+  dep-warden:
+    name: dep-warden review
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: gate
+        uses: ./.github/actions/oauth-token-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — dependabot PR #${{ github.event.pull_request.number }} is open but nothing will review it."
+
+      - if: steps.gate.outputs.armed == 'true'
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        with:
+          # Dependabot itself is the only bot that can ever legitimately land here (the `if:` above
+          # already restricts the trigger to its own PRs) — named explicitly rather than `*`.
+          allowed_bots: "dependabot"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The App token, no fallback tier (see the file header) — GitHub forces a bot-authored
+          # `pull_request` event's default GITHUB_TOKEN to read-only, so merging or enabling
+          # auto-merge needs the App identity regardless of this workflow's own `permissions:` block.
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: |
+            --allowedTools "Bash,Read,Grep,Glob" --model claude-sonnet-5
+          prompt: |
+            Read `.claude/agents/dep-warden.md` in this repo and follow it exactly — it is your
+            complete instruction set. Review exactly one PR: #${{ github.event.pull_request.number }}
+            in this repo. Do not touch any other open dependabot PR this run.
+
   route:
     name: route
     runs-on: ubuntu-latest

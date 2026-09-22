@@ -1,6 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import { fetchDesk } from "../live/desk";
+import { useOrderFill } from "../live/desk-events";
 import {
   fetchChain,
   type OptionDraft,
@@ -10,6 +13,7 @@ import {
   submitOption,
 } from "../live/options";
 import { navForPlay, type PlayCode, playForNav } from "../live/plays";
+import { formatExpiration } from "../live/straddle";
 import { ChainStraddle } from "./chain-straddle";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
@@ -17,7 +21,7 @@ import { GateAction, type OptionGateState, OptionGateStatus } from "./option-pre
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
-import { WireRow } from "./wire-row";
+import { TimeInForceField } from "./tif-field";
 
 /**
  * THE OPTIONS TICKET (#738 phase 10b) — the legacy `/trade` option plays in the shell, on the
@@ -65,6 +69,30 @@ import { WireRow } from "./wire-row";
  * didn't change, and the strike shown against it is provisional (the note says as much), so `?strike=`
  * stays whatever it already was. Known gap, out of scope for this pass: a rung switch doesn't
  * re-seed the limit price from the new rung's own chain — only the strike survives the remount.
+ *
+ * HELD POSITIONS ON THE CHAIN (Eric, 2026-09-22): a "C"/"P" badge next to a strike marks a
+ * contract the desk already holds at that strike, on the same underlying and expiration this
+ * chain shows — the chain table's own `markedStrikes` outline is a different concept (a DRAFT
+ * leg not yet submitted, multi-leg only); this is a REAL, filled holding, sourced from the same
+ * `["desk", deskId]` query `trade.tsx` already fetches (cache-shared, no extra round trip) and
+ * decomposed via `parseOccSymbol`. A successful submit here invalidates that query so a just-
+ * filled strike picks up its badge without a reload.
+ *
+ * THE CHAIN ACCORDION (Eric, 2026-09-22, reversing part of #3407 slice 4b — "is it possible to
+ * have that table be expandable in the same form after stock symbol is selected?"): the docked
+ * bench used to hide this ticket's own chain table (`hideChain`) in favor of a separate pane
+ * beside it — that pane is gone (`trade.tsx`'s `Bench`); this table is inline again, at every
+ * width, and now COLLAPSIBLE instead of always-open. `chainOpen` starts open when there's no
+ * strike yet (a fresh symbol, nothing picked) and closed when there already is one (a chain-cell
+ * pick, or a strike that arrived via `?strike=`) — never derived from `strike` on every render,
+ * because a hand-typed strike changes `strike` on every keystroke (`StrikeField`'s `onEdit`) and
+ * collapsing mid-type would be exactly the antagonizing behavior Eric asked to avoid. It only
+ * closes from the two real "a pick just happened" call sites (`pickStrikeAndCommit`, and the
+ * locked-target branch of `onChainCellPick` — a locked pick still fills the strike, so it still
+ * reads as a pick), and only reopens from a symbol (re)commit or the collapsed summary's own
+ * "Change" control. Collapsed, the summary line is the one honest state readout (strike ·
+ * expiration · the seeded/edited premium) rather than a second source of truth for fields already
+ * below it.
  */
 
 /** @category trading */
@@ -75,9 +103,12 @@ export function OptionGate({
   initialSymbol,
   onSymbolCommit,
   initialStrike,
+  initialExpiration,
+  onExpirationCommit,
   onStrikeCommit,
   plays,
   onPreset,
+  chartSlot,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -94,6 +125,11 @@ export function OptionGate({
   /** `?strike=` (task 4e) — seeds the strike field on mount, so a chain-click rung switch (which
    *  remounts this component) doesn't lose the strike that was just picked. */
   readonly initialStrike?: string;
+  /** `?exp=` (#3407, Workbench slice 4a) — the expiration a chain-pane tap or a shared link
+   *  named; "" lets the server pick. Committed back through `onExpirationCommit` when the member
+   *  changes it here, so the chain pane follows. */
+  readonly initialExpiration?: string;
+  readonly onExpirationCommit?: (expiration: string) => void;
   /** Fires on every strike change that STICKS (review fix — not just a rung-switching chain pick),
    *  so the route can keep `?strike=` honest: a same-rung or rung-switching chain-cell click calls
    *  it immediately, a hand-typed strike calls it on blur (see `StrikeField`'s `onCommit`). A
@@ -109,14 +145,44 @@ export function OptionGate({
   /** The same preset handler `TicketNav` already uses to change `?play=` — a chain cell pick calls
    *  it exactly like a nav segment does, only ever for an UNLOCKED target. */
   readonly onPreset?: (code: PlayCode) => void;
+  /** Docked only (Eric, 2026-09-22: "the options table needs access to all available screen width
+   *  real estate… the bottom part of the trade form… requires little room — appropriate place to
+   *  have two columns with the right column being the candlestick chart"): rendered beside the
+   *  order-detail block (Strike onward), not the whole ticket — that block is the one part of the
+   *  form narrow enough to share a row, and it's the step right before Review, where a member
+   *  would actually want Bollinger/RSI in view. The symbol field and the chain above it stay full
+   *  width regardless, which is the other half of the ask — see `trade.tsx`'s `Bench`. Undefined
+   *  folded (the chart stays its own reachable section there, unchanged) and for every ticket that
+   *  isn't this one (`DeskTicket` only forwards it to `OptionGate`). */
+  readonly chartSlot?: ReactElement;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
-  const [expiration, setExpiration] = useState("");
+  const [expiration, setExpiration] = useState(initialExpiration ?? "");
   const [strike, setStrike] = useState(initialStrike ?? "");
+  // While DOCKED (slice 4b) this ticket stays mounted when the chain pane beside it writes
+  // `?strike=` / `?exp=`, so the seeds above are not enough: follow the route while mounted. A
+  // value this ticket committed itself comes back equal and is a no-op, so no loop.
+  useEffect(() => {
+    if (initialStrike !== undefined && initialStrike !== "") setStrike(initialStrike);
+  }, [initialStrike]);
+  useEffect(() => {
+    if (initialExpiration !== undefined) setExpiration(initialExpiration);
+  }, [initialExpiration]);
+  /** Bumped on every chain-originated strike pick — flashes the Strike field below (see
+   *  `pickStrikeAndCommit`). A counter, not a boolean, so two picks in a row each re-trigger the
+   *  flash even if the field never stopped flashing between them. */
+  const [strikeFlash, setStrikeFlash] = useState(0);
+  /** The chain accordion (see the header comment) — open with nothing picked yet, closed once
+   *  something is. Set explicitly at the two "a pick happened" call sites and on a symbol
+   *  (re)commit, never derived from `strike` on every render (a hand-typed strike changes it on
+   *  every keystroke). */
+  const [chainOpen, setChainOpen] = useState(!initialStrike);
   const [contracts, setContracts] = useState("1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
+  /** Day unless picked (#3407 P1 slice 4) — the server previews the default it will send. */
+  const [timeInForce, setTimeInForce] = useState<"day" | "gtc" | undefined>();
   const [state, setState] = useState<OptionGateState>({ step: "draft" });
   /** A locked-target chain-cell click fills strike but can't switch rungs (safety-critical, see the
    *  header comment) — this is the visible explanation the house rule requires ("Locked = visible,
@@ -135,10 +201,60 @@ export function OptionGate({
     queryKey: ["chain", chainSym, optionType, expiration],
     queryFn: () => fetchChain(chainSym, optionType, expiration || undefined),
     enabled: chainSym !== "",
+    // Keep the outgoing expiration's rows on screen while the new one loads (Eric, 2026-09-22:
+    // an expiration-tab click used to drop `chainData` for a beat, collapsing the whole chain
+    // table — Symbol field and a bare "Looking up options…" line, then a wildly different-height
+    // table snapping back in). `chain.isFetching` still flips true/false around the refetch, so a
+    // caller that wants a "this is stale" cue can use it — `isPending`/`data === undefined` no
+    // longer does, only a genuinely fresh mount does now.
+    placeholderData: keepPreviousData,
   });
   const chainData = chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
   const chainNote = chain.data && "chainNote" in chain.data ? chain.data.chainNote : undefined;
   const chainReason = chain.data && "reason" in chain.data ? chain.data.reason : undefined;
+  /** One-time correction to the accordion's mount-time guess: an `initialStrike` that arrived via
+   *  `?strike=` but isn't a real row on the chain once it resolves (unseedable) is nothing usefully
+   *  picked yet — reopen so the member can pick a real one instead of hitting Change first. Runs
+   *  once, the first time the chain settles; never again, so a member's own later off-chain typed
+   *  strike (a deliberate, valid choice) doesn't get yanked back open mid-edit. */
+  const initialStrikeCheckedRef = useRef(false);
+  useEffect(() => {
+    if (initialStrikeCheckedRef.current || !chainData || !initialStrike) return;
+    initialStrikeCheckedRef.current = true;
+    if (!chainData.rows.some((r) => String(r.strike) === initialStrike)) setChainOpen(true);
+  }, [chainData, initialStrike]);
+
+  const queryClient = useQueryClient();
+  /** Same `["desk", deskId]` key `trade.tsx` already fetches with — react-query dedupes, so this
+   *  is a cache read in practice, not a second round trip (#3407, review — the held-position
+   *  badges below). */
+  const desk = useQuery({
+    queryKey: ["desk", deskId],
+    queryFn: () => fetchDesk(deskId),
+    // Gated on a committed symbol, same as the chain query above — nothing to badge before then,
+    // and this keeps a fresh, symbol-less mount from firing a fetch nobody asked for yet.
+    enabled: deskId !== "" && chainSym !== "",
+  });
+  /** Which strikes in THIS chain (same underlying, same expiration) the desk already holds a
+   *  contract on, and which side — "C", "P", or "C/P" for a strangle on the same strike. Scoped to
+   *  the resolved chain's own expiration: a held position on a different expiration never matches
+   *  a row this table can even show. Reflects only real, filled holdings (never a draft in
+   *  progress) — `submit`'s own `["desk", deskId]` invalidation below is what makes a JUST-filled
+   *  position appear here without a reload (Eric, 2026-09-22). */
+  const heldBadges = new Map<number, string>();
+  if (chainData) {
+    const underlying = (chainSym || symbol).trim().toUpperCase();
+    for (const position of desk.data?.desk.positions ?? []) {
+      if (!position.isOption) continue;
+      const parts = parseOccSymbol(position.symbol);
+      if (!parts || parts.underlying !== underlying || parts.expiration !== chainData.expiration) {
+        continue;
+      }
+      const letter = parts.type === "call" ? "C" : "P";
+      const existing = heldBadges.get(parts.strike);
+      heldBadges.set(parts.strike, existing && existing !== letter ? "C/P" : letter);
+    }
+  }
 
   /** Withhold state (#2017 Phase 0 task 4d): idle → nothing, loading → a note, stopped → a note
    *  (genuine dead end), otherwise (resolved chain, or a degraded/unrecognized answer) → fields. */
@@ -169,10 +285,14 @@ export function OptionGate({
   /** A one-shot chain pick (a table row or cell click, never a keystroke) — sets the strike and
    *  commits it to `?strike=` immediately. The manual `StrikeField` input goes through `pickStrike`
    *  directly instead (see its `onEdit` wiring below) and commits separately, on blur — see the
-   *  header comment's note on why the two commit on different cadences. */
+   *  header comment's note on why the two commit on different cadences. Also bumps `strikeFlash`
+   *  (Eric, 2026-09-22's standard-pattern ask) — a chain pick, never a keystroke, flashes the
+   *  Strike field below so the click and the field it just filled read as one event. */
   const pickStrikeAndCommit = (value: string) => {
     pickStrike(value);
     onStrikeCommit?.(value);
+    setStrikeFlash((n) => n + 1);
+    setChainOpen(false);
   };
 
   /** A call/put chain cell pick (task 4e) — the resolution rule, already decided (see the header
@@ -203,14 +323,30 @@ export function OptionGate({
     const targetLocked = plays.find((p) => p.code === target)?.locked ?? true;
     if (targetLocked) {
       // Never widen a locked rung from a chain click. Fill strike only — no onStrikeCommit, no
-      // onPreset — but explain why (visible, disabled, explained — never silently dead).
+      // onPreset — but explain why (visible, disabled, explained — never silently dead). Still a
+      // chain-originated pick, so it still flashes the field it filled.
       pickStrike(value);
+      setStrikeFlash((n) => n + 1);
+      setChainOpen(false);
       setLockedPickNote(`Strike filled — the ${side} side isn't unlocked yet.`);
       return;
     }
     onStrikeCommit?.(value);
     onPreset(target);
   };
+
+  /** A strike that arrived before the chain (`?strike=` on mount, or typed ahead of the fetch)
+   *  never went through `pickStrike`'s seeding, so the limit stayed empty and the ticket refused
+   *  itself (#3407 P0). Seed once the chain resolves, only while the field is still empty — a
+   *  member's own premium is never overwritten. */
+  const seedRow = chainData?.rows.find((r) => String(r.strike) === strike);
+  const seedPremium = seedRow?.premium;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: orderType/limitPrice read at fire time on purpose — seeding is one-shot per resolved strike
+  useEffect(() => {
+    if (seedPremium !== undefined && orderType === "limit" && limitPrice === "") {
+      setLimitPrice(String(seedPremium));
+    }
+  }, [seedPremium, strike]);
 
   /** The currently-selected CONTRACT's real OCC symbol (task 3a) — sourced from the matched chain
    *  row, never hand-assembled: `buildOccSymbol` exists server-side/in `option-symbols.ts` for
@@ -230,9 +366,14 @@ export function OptionGate({
     expiration: chainData?.expiration ?? expiration,
     orderType,
     ...(orderType === "limit" && limitPrice !== "" ? { limitPrice: Number(limitPrice) } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   });
 
   const review = async () => {
+    // The Review button keeps focus on the field under the pointer (`keepFocus`), so a
+    // hand-typed strike's blur commit never fires from that click — commit it here instead, the
+    // same `?strike=` write the blur would have made.
+    if (strike !== "" && strike !== initialStrike) onStrikeCommit?.(strike);
     setState({ step: "reviewing" });
     try {
       const { preview } = await reviewOption(draft());
@@ -242,11 +383,21 @@ export function OptionGate({
     }
   };
 
+  const fill = useOrderFill(
+    deskId,
+    state.step === "done" && state.result.ok ? state.result.orderId : undefined,
+  );
+
   const submit = async () => {
     if (state.step !== "reviewed") return;
     setState({ step: "submitting", preview: state.preview });
     try {
-      setState({ step: "done", result: await submitOption(draft()) });
+      const result = await submitOption(draft());
+      setState({ step: "done", result });
+      // A filled open changes the desk's holdings — refetch so a just-filled strike picks up its
+      // held badge without a reload (the same refresh pattern `OptionPositionsCard`'s own close
+      // flow already uses).
+      if (result.ok) void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
@@ -254,66 +405,48 @@ export function OptionGate({
 
   if (play.locked) return <LockedPanel play={play} />;
 
-  const drafted = symbol.trim() !== "" && strike !== "" && contracts !== "";
-  return (
-    <section className="panel gate-panel" aria-label={play.name}>
-      <h2 className="panel-title">{play.name}</h2>
-      <p className="panel-sub">
-        Course {play.code} · {play.gloss}
-      </p>
-      {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
-          consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
-          slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
-      <QuoteHeader symbol={chainSym} />
-      <div className="gate-fields tkt-fields">
-        <SymbolField
-          id={symId}
-          label="Symbol"
-          value={symbol}
-          placeholder="NVDA"
-          maxLength={12}
-          onChange={edit(setSymbol)}
-          onCommit={(s) => {
-            edit(setSymbol)(s);
-            setChainSym(s);
-            onSymbolCommit?.(s);
-          }}
-        />
-        {showFields ? (
-          <div className="field">
-            <label htmlFor={expId} id={`${expId}-label`}>
-              Expiration
-            </label>
-            <ExpirationField
-              id={expId}
-              chainData={chainData}
-              value={expiration}
-              onEdit={edit(setExpiration)}
-              zeroDteLocked={Boolean(zeroDte?.locked)}
-              zeroDteReason={
-                zeroDte?.opensAfter
-                  ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
-                  : undefined
-              }
-            />
-          </div>
-        ) : null}
-      </div>
-      {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
-          full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
-          strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
-          handles sitting here — it did before this slice moved the chain table up the page too. */}
-      {chainData ? (
-        <ChainStraddle
-          chainSym={chainSym}
-          optionType={optionType}
-          chainData={chainData}
-          strike={strike}
-          onPickStrike={pickStrikeAndCommit}
-          onPickSide={onChainCellPick}
-        />
-      ) : null}
-      {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
+  // A limit order with no premium cannot pass its own review (#3407 P0 — the study found the
+  // default ticket refused itself: `limit` with an empty price and Review enabled). Withhold
+  // Review until the price is there and say why, instead of letting the server say it.
+  const limitMissing = orderType === "limit" && limitPrice.trim() === "";
+  const drafted = symbol.trim() !== "" && strike !== "" && contracts !== "" && !limitMissing;
+  const limitNote =
+    limitMissing && symbol.trim() !== "" && strike !== ""
+      ? "A limit order needs a premium per share — pick a strike from the chain to seed it from the mid, or type one."
+      : undefined;
+
+  // The expiration picker used to sit in the top fields grid, where `.exp-tabs`'s pill strip only
+  // had ~150px to work with — room for a date and a half (Eric, 2026-09-21). It now renders where
+  // the chain's own "Chain · SYM · date" eyebrow used to (removed below, redundant once a member
+  // has just picked the date themselves), full-width above the table — except when there's no
+  // chain to attach it to, where it falls back to the fields grid same as before.
+  const expirationField = (
+    <div className="field">
+      <label htmlFor={expId} id={`${expId}-label`}>
+        Expiration
+      </label>
+      <ExpirationField
+        id={expId}
+        chainData={chainData}
+        value={expiration}
+        onEdit={(value) => {
+          edit(setExpiration)(value);
+          onExpirationCommit?.(value);
+        }}
+        zeroDteLocked={Boolean(zeroDte?.locked)}
+        zeroDteReason={
+          zeroDte?.opensAfter
+            ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
+            : undefined
+        }
+      />
+    </div>
+  );
+
+  // The order-detail block (Strike onward, through Review) — the one part of the ticket narrow
+  // enough to share a row with `chartSlot` (see the prop's own doc comment).
+  const orderFields = (
+    <>
       {showFields ? (
         <div className="gate-fields tkt-fields">
           <div className="field">
@@ -324,6 +457,7 @@ export function OptionGate({
               value={strike}
               onEdit={pickStrike}
               onCommit={(v) => onStrikeCommit?.(v)}
+              flashKey={strikeFlash}
             />
           </div>
           <div className="field">
@@ -368,18 +502,18 @@ export function OptionGate({
       ) : null}
       {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
+      <TimeInForceField fallback="day" value={timeInForce} onChange={edit(setTimeInForce)} />
+      {limitNote ? <p className="tkt-note">{limitNote}</p> : null}
 
-      {/* Self, then others (#2017 Phase 1 slice 13 review fix): the drawer-narrative order Eric's
-          plan comment sketched — "here's what you've done, here's what others are doing, now
-          decide" — reads back-to-front if `WireRow` (others' trades) comes first, so the viewer's
-          own recent orders lead. Both components withhold rendering until their own symbol is
-          committed/resolved, so mounting them unconditionally here is just about not cluttering
-          this JSX. */}
+      {/* The who-else-traded row that used to sit here (`WireRow`, #2017 Phase 1 slice 12) is
+          retired (Eric, 2026-09-22): it matched by underlying, not by contract, so "Also trading
+          NVDA" mixed in stock fills on a form that's explicitly for options. `RecentOrdersStrip`
+          withholds rendering until its own symbol is resolved, so mounting it unconditionally
+          here is just about not cluttering this JSX. */}
       <RecentOrdersStrip symbol={resolvedOccSymbol} deskId={deskId} />
-      <WireRow symbol={chainSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
-        <OptionGateStatus state={state} />
+        <OptionGateStatus state={state} fill={fill} />
       </div>
 
       <GateAction
@@ -389,6 +523,90 @@ export function OptionGate({
         onSubmit={() => void submit()}
         onReset={() => setState({ step: "draft" })}
       />
+    </>
+  );
+  // A stable wrapper SHAPE regardless of `chartSlot` — only classNames toggle, never the element
+  // types or their positions — so a window resized across the bench width (which flips `chartSlot`
+  // from undefined to a real element, per `trade.tsx`'s `ticketOwnsChart`) never remounts anything
+  // inside `orderFields`. Caught before it shipped: an earlier version picked between a bare
+  // Fragment and a nested `<div><div>` depending on `chartSlot`, which is a genuine tree-shape
+  // change — React tears down and rebuilds the whole subtree on that kind of swap, silently
+  // dropping a REVIEWED order's preview state (the payoff diagram, the estimate) the instant a
+  // member's window crossed 1280px mid-review. The file's own doctrine name for this invariant is
+  // in `trade.tsx`'s `Bench` doc comment ("ONE TREE for both layouts").
+  const orderDetail = (
+    <div className={chartSlot ? "tkt-review-split" : undefined}>
+      <div className={chartSlot ? "tkt-review-fields" : undefined}>{orderFields}</div>
+      {chartSlot ? <div className="tkt-review-chart">{chartSlot}</div> : null}
+    </div>
+  );
+
+  return (
+    <section className="panel gate-panel" aria-label={play.name}>
+      <h2 className="panel-title">{play.name}</h2>
+      <p className="panel-sub">
+        Course {play.code} · {play.gloss}
+      </p>
+      {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
+          consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
+          slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
+      {/* One snapshot, two readers (#3299 slice 1): the header reads the quote off the chain answer
+          instead of a second `/api/trade/quote` round trip. A degraded chain (unlinked, no options,
+          failed) hands the header back its own fetch, so a stock with no listed options still quotes. */}
+      <QuoteHeader
+        symbol={chainSym}
+        provided={
+          !symbolCommitted || (chain.data && "chainNote" in chain.data)
+            ? undefined
+            : (chainData?.quote ?? "pending")
+        }
+      />
+      <div className="gate-fields tkt-fields">
+        <SymbolField
+          id={symId}
+          label="Symbol"
+          value={symbol}
+          placeholder="NVDA"
+          maxLength={12}
+          onChange={edit(setSymbol)}
+          onCommit={(s) => {
+            edit(setSymbol)(s);
+            setChainSym(s);
+            setChainOpen(true);
+            onSymbolCommit?.(s);
+          }}
+        />
+        {showFields && !chainData ? expirationField : null}
+      </div>
+      {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
+          full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
+          strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
+          handles sitting here — it did before this slice moved the chain table up the page too. */}
+      {chainData && chainOpen ? (
+        <ChainStraddle
+          chainSym={chainSym}
+          optionType={optionType}
+          chainData={chainData}
+          strike={strike}
+          expirationField={expirationField}
+          heldBadges={heldBadges}
+          pending={chain.isFetching}
+          onPickStrike={pickStrikeAndCommit}
+          onPickSide={onChainCellPick}
+        />
+      ) : null}
+      {chainData && !chainOpen ? (
+        <p className="tkt-chain-summary" aria-live="polite">
+          Strike <b>{strike}</b> · {formatExpiration(chainData.expiration)}
+          {limitPrice !== "" ? <> · ${limitPrice}</> : null}
+          {" · "}
+          <button type="button" className="tkt-chain-change" onClick={() => setChainOpen(true)}>
+            Change
+          </button>
+        </p>
+      ) : null}
+      {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
+      {orderDetail}
     </section>
   );
 }

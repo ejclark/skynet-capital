@@ -8,26 +8,18 @@
   gap: 8px;
   margin: 12px 0 14px;
 }
-.straddle-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.straddle-eyebrow {
-  color: var(--accent);
-}
-.straddle-dte {
-  color: var(--muted);
-}
+/* The expiration picker's home when a chain has loaded (`option-gate.tsx`'s `expirationField`,
+   rendered here via `StraddleView`'s own prop) — full straddle width instead of the ~150px tile
+   it's cramped into in the ticket's own fields grid, room enough for `.exp-tabs` to actually show
+   more than 1.5 dates (Eric, 2026-09-21). The "Chain · SYM · date" / "Expires today" text that
+   used to live here is gone — redundant once a member has picked the date themselves; DTE now
+   surfaces on the order review instead (`option-preview.tsx`). `.field`'s own rules (`gate.css`)
+   are enough, so there's no CSS rule of its own here.
 
-/* The earnings badge (#2017 Phase 1 slice 11) — the chain header's own print tell, right after
-   `.straddle-head`. Tone rides on a real border/background step, never colour alone (a standing
-   reader is red/green colourblind), and the class names below mirror `TONE`'s own keys in
-   `earnings-chain-badge.ts` exactly, so a display change to one is a display change to both. */
+   The earnings badge (#2017 Phase 1 slice 11) — the chain header's own print tell, right after
+   the expiration field. Tone rides on a real border/background step, never colour alone (a
+   standing reader is red/green colourblind), and the class names below mirror `TONE`'s own keys
+   in `earnings-chain-badge.ts` exactly, so a display change to one is a display change to both. */
 .ec-badge {
   display: inline-flex;
   align-items: baseline;
@@ -63,6 +55,13 @@
 }
 .straddle-scroll {
   overflow-x: auto;
+  transition: opacity var(--dur-quick) var(--ease-spatial);
+}
+/* An expiration switch's OLD rows, held on screen while the new ones load (`keepPreviousData`,
+   `option-gate.tsx`/`chain-straddle.tsx`) — a dim, not a spinner or a skeleton, since the numbers
+   shown are real. `--dur-quick` already zeroes under `prefers-reduced-motion` (`theme.css`). */
+.straddle-pending {
+  opacity: 0.55;
 }
 /* 17 columns (#2017 Phase 1 slice 14): Strike (72px) + 2 sides × (Bid 52px + Ask 52px + 6 stat
    columns × 44px) = 72 + 2*(52+52+6*44) = 72 + 2*368 = 808px of column width before border/
@@ -71,7 +70,8 @@
    widths worked at 5 columns; they don't scale to 17 that need to OVERFLOW rather than compress,
    so every column gets a fixed pixel width via `<colgroup>` (`straddle-view.tsx`) — not per-`<th>`
    widths, since `table-layout: fixed` only reads the table's FIRST row, which here is the
-   colSpan=8 group-header row, not the sub-header row the individual columns live on. */
+   Greeks/Calls/Strike/Puts/Greeks group-header row (mixed colSpan cells), not the sub-header row
+   the individual columns live on. */
 .straddle-table {
   width: 100%;
   min-width: 760px;
@@ -95,20 +95,52 @@
   padding: 4px 2px;
   border-bottom: 1px solid var(--border);
 }
+/* The five header groups' leading edge (Eric, 2026-09-22: "should there be dividers between the
+   headers now that some sections are more compact?" — Greeks | Calls | Strike | Puts | Greeks).
+   `box-shadow` rather than `border-left`: it doesn't collapse/merge with the table's own
+   `border-collapse` borders, so it never fights the ITM rail's own box-shadow on the strike
+   column at the exact same edge in body rows (`.straddle-call-itm`/`.straddle-put-itm` below). */
+.straddle-group-start {
+  box-shadow: inset 1px 0 0 var(--border);
+}
+/* Bid/Ask (Eric, 2026-09-22: "the BID | ASK columns deserve a different background shading...
+   The BID/ASK cells are inputs, unlike the greeks"): the same `--surface-2` panel `.straddle-
+   strike` already uses, so Strike/Bid/Ask read as one "you can act here" surface, distinct from
+   the flat, unstyled Greeks/OI/Vol columns either side of them — a real background step, not a
+   hue, so it reads the same for a colourblind member. */
+.straddle-bidask {
+  background: var(--surface-2);
+}
+/* The same two group boundaries carried down through the body rows (columns 7 and 12 — calls'
+   Bid and the second block's OI; `StatCell`/`SideCell` are position-agnostic components, so this
+   is nth-child rather than a class threaded through every call site). Skips the Strike boundary
+   (9/10) on purpose — the strike cell's own `--surface-2` background plus the conditional ITM
+   rail already mark that edge; a third static divider there would compete with the rail rather
+   than reinforce it. */
+.straddle-table tbody td:nth-child(7),
+.straddle-table tbody td:nth-child(12) {
+  box-shadow: inset 1px 0 0 var(--border);
+}
+/* Calls / Strike / Puts (Eric, 2026-09-22: "these headers deserve elevated emphasis") — the
+   group header row, one step up from the Bid/Ask/OI/... sub-header (`.straddle-sub th`) it sits
+   above, so the eye reads section before column. */
 .straddle-side {
-  font-size: 10.5px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 .straddle-sub th {
   font-size: 10px;
   padding-top: 2px;
 }
 .straddle-strike-h {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 .straddle-table td {
   text-align: center;
@@ -139,6 +171,47 @@
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   color: var(--accent);
 }
+/* The picked strike's whole row (Eric, 2026-09-22 — "what standard design choices... communicate
+   this... without text"): the pick button alone read as a small, easy-to-miss change on a
+   17-column row. A light accent wash across the row is the persistent half of the pair (the
+   Strike field's `.strike-flash` above is the momentary half) — `:not(.straddle-strike)` leaves
+   the strike cell's own `--surface-2` background alone, since it already carries the stronger
+   pick-button treatment. The wash alone is a hue-only cue (a standing reader is red/green
+   colourblind — CLAUDE.md's rule, caught on self-review before this shipped): the row's own
+   border also switches to a 2px accent rule, a real weight/shape step over the table's ordinary
+   1px `--border` divider, not just a tone shift. */
+.straddle-selected td:not(.straddle-strike) {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+/* A strike the multi-leg draft already carries a leg on (#3407 P3 slice 2) — an outline plus
+   weight on the strike, never a hue alone (a standing reader is red/green colourblind), and
+   distinct from `.straddle-selected` (the single-leg ticket's one strike). */
+.straddle-marked .straddle-strike {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 6px;
+}
+/* A REAL, already-filled holding at this strike ("C"/"P"/"C/P") — the single-leg ticket only
+   (Eric, 2026-09-22), distinct from `.straddle-marked` above (a DRAFT leg, multi-leg only). The
+   letter is the signal, not the border-radius pill alone (a standing reader is red/green
+   colourblind, but this is word-first regardless). `visibility: hidden` on the empty state keeps
+   the SAME box on every row — the point is the strike column never shifts width between a row
+   that has a badge and one that doesn't. */
+.straddle-held-badge {
+  display: inline-block;
+  min-width: 16px;
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  vertical-align: super;
+  color: var(--accent);
+}
+.straddle-held-empty {
+  visibility: hidden;
+}
 /* A call/put price cell's own pick button (#2017 Phase 0 task 4e) — distinct from `.straddle-pick`
    (the strike button), which carries active/selected styling that doesn't apply here: a call/put
    pick has no "selected" state of its own, only a hover affordance. */
@@ -154,11 +227,21 @@
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   border-radius: 4px;
 }
-.straddle-call-itm td:first-child {
+/* The in-the-money rail (#1481) rides the STRIKE cell's edges — calls' rail on its left, puts'
+   on its right — the one column that is always in view: at 390px the view opens pre-scrolled
+   past calls' stats and the outermost cells (where the rail used to paint) sat off-screen, so
+   the header comment promised a rail nobody saw (#3407 P0, study §3.2 item 4). A 3px bar is a
+   shape, not a hue alone; the strike text stays in its own colour. */
+.straddle-call-itm td:nth-child(9) {
   box-shadow: inset 3px 0 0 var(--accent);
 }
-.straddle-put-itm td:last-child {
+.straddle-put-itm td:nth-child(9) {
   box-shadow: inset -3px 0 0 var(--accent);
+}
+.straddle-call-itm.straddle-put-itm td:nth-child(9) {
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    inset -3px 0 0 var(--accent);
 }
 .straddle-divider td {
   padding: 6px 2px;
@@ -185,4 +268,11 @@
   .straddle-table td {
     padding: 8px 6px;
   }
+}
+/* Quote provenance under the chain (#3407 P2) — one sentence in the note register. */
+.straddle-coverage {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  max-width: 70ch;
 }

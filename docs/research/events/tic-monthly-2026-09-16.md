@@ -266,3 +266,98 @@ every row; a dated adjacent event found gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-22, D+6 — the last day inside the `closeOutWithinDays: 6` deadline).**
+Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design),
+so the cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`)
+touched nothing this event reads; done anyway per the lane's cache-discipline rule. "Re-run
+instrument data" means re-fetching every cited primary today: Treasury's `slt_table1.txt`,
+`slt_table2.txt`, `slt_table3.txt` and `slt_table5.txt` (curl, HTTP 200 via
+`ticdata.treasury.gov` after the `home.treasury.gov/system/files/206/` path this ledger cited at
+initial research now 404s — the file host moved; `www.treasury.gov/resource-center/data-chart-center/tic/Documents/`
+302-redirects to the live host and was used instead), the July-2026 TIC press release (`sb0631`,
+WebFetch), Treasury's daily par yield curve CSV, and CBOE's `VIX_History.csv`.
+
+**The headline verdict: the valuation model held and the reading rule broke, in the same print.**
+`FT-tic-monthly-2026-09-16-1` **PASSES** — July's mark-to-market landed inside its ±1σ band.
+`FT-tic-monthly-2026-09-16-2` **FAILS**, and not narrowly: long-term net purchases printed
+**negative**, tripping kill switch 2 by name. For the first time in this ledger's life, the
+"headline falls, net purchases stay positive" pattern that held in 9 of the prior 14 falling-holdings
+months did not hold. The stand-aside stance cost nothing either way — nothing here was ever
+tradeable — but the standing structural read (Leg 5) picks up a genuine complication this month, not
+just a data point confirming it.
+
+### What printed for July 2026 — Table 3, Grand Total row, re-fetched 2026-09-22
+
+| Line | Jun-2026 | Jul-2026 | Δ |
+|---|---|---|---|
+| Total foreign UST holdings (LT+ST) | $9,298.5bn | $9,248.1bn | **−$50.4bn** |
+| LT UST holdings | $7,872.4bn | $7,783.3bn | −$89.1bn |
+| LT UST net purchases (`for_lt_treas_net`) | +$6.2bn | **−$3.56bn** | flips negative |
+| LT UST valuation change (`for_lt_treas_valchg`) | −$39.3bn | **−$101.56bn** | |
+| Foreign official total UST holdings | $3,778.1bn | $3,773.1bn | −$5.0bn |
+| Official share of total | 40.63% | **40.80%** | +0.17pp |
+
+Figures match initial research's June readings to within normal monthly revision (June holdings
+$9,298.5bn here vs $9,299.0bn cited 2026-09-08; June `for_lt_treas_net` $6.2bn here vs $6.8bn cited
+— both TIC's own routine restatement, not a correction of this document).
+
+### Scoring FT-tic-monthly-2026-09-16-1 — PASS
+
+| | Value |
+|---|---|
+| Predicted band (±1σ) | −$114.3bn to −$75.9bn (point −$95.1bn) |
+| Actual `for_lt_treas_valchg` | **−$101.56bn** |
+| Distance from point | −$6.5bn = **0.34σ** |
+| Verdict | Inside ±1σ — model holds; kill switch 1 (outside ±2σ) nowhere close |
+
+The duration-4.16, 41-month-fit mark-to-market model priced July's +31bp Δ10Y correctly to a third
+of a sigma. One out-of-sample point is one observation, not a validation — `tic-monthly-2026-10-16`
+(proposed at initial research) is where this model gets its second look.
+
+### Scoring FT-tic-monthly-2026-09-16-2 — FAIL (kill switch 2 triggered)
+
+| | Value |
+|---|---|
+| Prediction | Headline holdings fall **and** `for_lt_treas_net` prints positive |
+| Actual | Holdings fell (−$50.4bn total, −$89.1bn LT) **and** `for_lt_treas_net` printed **−$3.56bn** |
+| Verdict | Conjunction false — the kill switch's own wording fires exactly: "a genuine buyers' strike rather than a mark" |
+
+Not a rounding-error miss: the sign flipped. Reconciliation still closes honestly — LT holdings
+change (−$89.143bn) minus net purchases (−$3.560bn) minus valuation change (−$101.562bn) leaves a
+residual of **+$15.98bn**, inside the historical band this ledger already logged (mean −$1.8bn, sd
+$26.0bn, max $55.9bn) — so nothing here is a data problem, the flow itself went negative.
+
+**The complication worth carrying forward, not just the fail.** The composition behind the negative
+print reverses this ledger's own 12-month framing for exactly one month: foreign **official**
+institutions were net LT **buyers** of **+$25.5bn** in July (LT valchg −$32.2bn, LT holdings
++$1.3bn), while **private** foreigners were net LT **sellers** of **−$29.1bn** (LT valchg −$69.3bn,
+LT holdings −$90.4bn). That is the opposite of Leg 5's "official retreats, private absorbs" story,
+for this one print. It is also why the official **share** of total holdings ticked **up** to 40.80%
+— breaking the five-straight-month decline (42.27% → 41.74% → 41.77% → 41.06% → 40.63% →
+**40.80%**) — even though official holdings kept falling in dollar terms (−$5.0bn) because the total
+fell faster. **Kill switch 3 is not triggered**: official holdings at $3,773.1bn remain far below the
+$3,900bn reversal threshold, and the share move is one month, against a total not a level. Carried
+as an open question for the next print rather than asserted as a trend change.
+
+**Kill switch 4 (>10bp move, next session) — not triggered, and unattributable regardless.**
+10Y par yield: 5.01% (09-16) → 4.94% (09-17), **−7bp**; 30Y 5.35% → 5.29%, −6bp (Treasury daily par
+curve, re-fetched). Under the 10bp/3σ bar, but this session was never a clean test — the 14:00 ET
+FOMC decision owned 09-16, exactly as the initial research flagged ("the tier test cannot run on
+this date"). VIX closed 14.81 on 2026-09-18 (CBOE, latest available), down from 17.49 on the D-1
+screen.
+
+### Honest limits of this close-out
+
+- **One print, one out-of-sample point for each forward test.** Neither FT-1's pass nor FT-2's fail
+  is a validated pattern past this observation; both get their next data point at
+  `tic-monthly-2026-10-16`.
+- **The official/private role reversal is named, not modeled.** No claim is made about why officials
+  bought LT and private sold in July specifically — only that it happened and that it complicates
+  Leg 5's clean narrative for exactly one month.
+- **The tier test (does TIC move the tape) remains untested by this print**, same limit the initial
+  research already recorded — 09-16 carries an FOMC decision and always will.
+- **Nothing here licenses a trade.** `symbols: []`, no house playbook is macro-keyed, and the one
+  thing that changed is a monthly flow sign, not a measured tape effect.

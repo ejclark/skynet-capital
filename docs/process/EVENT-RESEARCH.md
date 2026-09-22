@@ -29,6 +29,33 @@ lane at the same anchor line — 22 of 47 PRs touching it were flagged conflicte
 to merge (#1324), and three merge-side fixes could not reach GitHub's server-side merge. An
 adjacent event you *propose* is a proposer-owned file (see the adjacency sweep below, #1717).
 
+**Retiring a re-slug: `"supersededBy": "<survivor-id>"`** (issue #3101). Two lanes sweeping on the
+same day can each discover one release and file it under a different slug — four duplicate pairs and
+one triplet reached the calendar that way, each copy drawing its own 30-day pulse and buying its own
+close-out. When you prove your own event is a second name for another entry, add the field **to your
+own file** and stop there: the loader drops the entry, and the file, its ledger and its forward-test
+fragment stay on disk as the record. Mark, don't delete — the shape every calendar standard uses
+(RFC 5545 `STATUS:CANCELLED`) and the only one one-file-per-owner permits.
+
+- **The survivor is the id that keeps researching.** Prefer the `confirmed` copy; between two
+  `estimate`s, the one filed first. Your entry must be `estimate` — the survivor owns the
+  confirming flip — and the survivor must be a canonical same-date `<id>.json`, never a proposal
+  and never itself superseded.
+- **Score your forward tests first.** A superseded id never reaches close-out, so an unscored row in
+  `docs/research/forward-tests/<id>.md` would be scored by nobody. `--validate` refuses the field
+  until the fragment is clean; a test killed *by* this fix is a kill, and the row says which kind.
+- **You cannot retire someone else's file.** Found a duplicate you don't own? Note it in your ledger
+  and say so on the survivor's issue — the owner's next pulse writes the field. That is one more
+  pulse, not thirty.
+- **The old `(DUPLICATE of …)` title annotation is replaced by the field.** It retired nothing, and
+  it blinded the detector: annotating one pair dropped its title-overlap score from 0.857 to 0.400.
+- **`--validate` now warns on same-date title overlap ≥ 45%** (advisory, never red — ISM and S&P
+  Global publish near-identical titles on the same day and are genuinely different publishers). A
+  warning is a prompt to read two titles, not a verdict; `supersededBy` is the part that binds.
+- **Both of those run after the duplicate exists. `--on-date` runs before it does** (#3361) — see
+  "Read the date before you propose" in the adjacency sweep below. Retiring a re-slug costs a pulse
+  and a forward-test reckoning; not filing it costs one command.
+
 ## The four assessment modes (keyed to the scanner's `reason` field)
 
 ### `never-assessed` → initial research
@@ -73,6 +100,18 @@ Stance section with the row as its receipt.
    or their supply chains.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
+
+**Read the date before you propose: `node scripts/event-scan.mjs --on-date=YYYY-MM-DD`** (issue
+#3361). It prints every entry already on that date — canonical, standing proposal, derived print,
+and retired re-slugs marked `✗ … [RETIRED — superseded by <id>]` so you can see a slug that was
+already tried. If your discovery is one of them, file nothing. **Run this instead of searching the
+calendar for your own words for the release**: the failure this exists to prevent was one sweep
+searching for "U.S. IIP" and filing a third copy of BEA's *"International Transactions and
+Investment Position"* — not a substring, so the search found nothing that was plainly there. A date
+you already hold has no false-negative rate; a search string you invented does. Reading nine titles
+costs seconds. (Same-date only, deliberately: D±1 scores 14 near-title pairs over the committed
+calendar and none is a re-slug — nine are Treasury auctions running a different tenor each day. The
+falsifier is the first confirmed same-release re-slug whose entries carry different dates.)
 
 Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new file
 `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` **in the same PR**, always

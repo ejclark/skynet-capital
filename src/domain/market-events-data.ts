@@ -41,7 +41,10 @@
  * SOURCE PREFIXES (the audit trail of HOW a date is known, extending IR:/CAL: from the earnings
  * calendar). `confirmed` requires a trusted prefix; `estimate` requires an honest one:
  *   confirmed — `IR:` company primary source · `CAL:` automated aggregator cross-ref ·
- *               `BLS:` bls.gov release schedule · `FED:` federalreserve.gov FOMC calendar ·
+ *               `BLS:` bls.gov release schedule · `FED:` federalreserve.gov's own calendars — the
+ *               FOMC calendar and K.8 (Holidays Observed by the Federal Reserve System). Same
+ *               publisher, same domain, two tables; the widening is written down here rather than
+ *               stretched silently, which is the thing the audit trail exists to prevent ·
  *               `PJM:` pjm.com auction schedule · `SEC:` an SEC filing ·
  *               `TSY:` treasury.gov / treasurydirect.gov auction schedule ·
  *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard) ·
@@ -49,13 +52,43 @@
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
  *               `CB:` conference-board.org consumer-confidence schedule · `UMICH:` sca.isr.umich.edu ·
  *               `FHFA:` fhfa.gov HPI release-date table + the published report's own notes ·
+ *               `ECF:` a federal court's own FILED DOCUMENT, fetched itself — the signed order or
+ *               scheduling order as bytes (a RECAP mirror of PACER at
+ *               storage.courtlistener.com/recap/…, a court's own site, or a govinfo court PDF),
+ *               with URL, HTTP status and size/checksum recorded in `source`, and the governing
+ *               clause quoted verbatim. Defined by WHAT WAS FETCHED, not by domain: a docket
+ *               LISTING, a Justia/CourtListener HTML page, or press quoting an order is `NEWS:` —
+ *               the mirror can lag the docket, so the document is what it guarantees. A date the
+ *               order fixes in its own words ("within 30 days of the date of this Order") is
+ *               `ECF:` with the one arithmetic step written out; a date projected from a cadence
+ *               rule stays `EST:`. Issue #3058: 13 of 13 docket-sourced entries sat at `estimate`
+ *               with the court's checksummed signed order in hand, because no slot existed.
+ *               Regulatory proceedings (FERC, state PSC/PUC) have no slot yet — deliberately, not
+ *               by oversight: no regulatory primary has ever been fetched from a research runner
+ *               (ferc.gov 403, puc.texas.gov TLS failure), and a slot with no promotable member is
+ *               one nobody can test. The first one read direct reopens it as its own PR.
  *               `FRB:` a regional Reserve Bank's own published release table, research calendar or
  *               speaking schedule (dallasfed.org, newyorkfed.org, philadelphiafed.org,
  *               clevelandfed.org and the other eight District domains). Distinct from `FED:`,
  *               which means the Board's own federalreserve.gov calendar and nothing else — before
  *               this slot existed a District page had no honest confirmed prefix, so twenty
  *               primary-verified survey dates were pinned at `estimate` and one was promoted by
- *               stretching `FED:` over clevelandfed.org (#3117).
+ *               stretching `FED:` over clevelandfed.org (#3117) ·
+ *               `NYSE:` nyse.com's own Holidays & Trading Hours table — the exchange's RULE for
+ *               full closures and 1:00 p.m. early closes, published three calendar years out ·
+ *               `SIFMA:` sifma.org's own U.S./U.K./Japan holiday schedule. Deliberately NOT folded
+ *               into `NYSE:`: SIFMA *recommends* a fixed-income schedule where an exchange
+ *               *rules* an equity session, and a `sifma-*` entry tracks that recommendation, so
+ *               SIFMA is its primary by definition — one prefix would blur the two trust claims ·
+ *               `JPX:` jpx.co.jp's own Market Holidays page (the exchange's rule for the Japanese
+ *               cash markets; the page itself notes holidays move with Japan's Act on National
+ *               Holidays, which the cadence + kill-switch machinery handles the same way it
+ *               handles a tentative FOMC date).
+ *               These three are per-publisher, matching how the list is already organised
+ *               (`CB:`/`UMICH:`/`FHFA:`/`FRB:`), not one `XCAL:`-style class slot: before they
+ *               existed, 42 closure-class entries sat at `estimate` with 41 of them recording a
+ *               first-hand primary fetch, and 37 research ledgers had each re-argued the same
+ *               missing slot one at a time (#2552).
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
@@ -119,15 +152,27 @@ function parseMarketEvent(raw: unknown, file: string, expectedId: string): Marke
   if (!(Array.isArray(e.symbols) && e.symbols.every((s) => typeof s === "string")))
     fail("symbols must be an array of strings");
   if (e.notes !== undefined && typeof e.notes !== "string") fail("notes must be a string");
+  if (e.supersededBy !== undefined && !isString(e.supersededBy))
+    fail("supersededBy must be a non-empty event id");
   return raw as MarketEvent;
 }
+
+/** A re-slug its own lane has retired (issue #3101) — it keeps its file, its ledger and its
+ *  forward-test fragment, and stops being part of the calendar. Applied AFTER the id dedupe below,
+ *  never before: a superseded canonical file still shadows its proposals, so retiring an id can
+ *  never resurrect it through a proposal nobody has looked at since. */
+const isSuperseded = (e: MarketEvent): boolean => e.supersededBy !== undefined;
 
 const readJson = (file: string): unknown => JSON.parse(readFileSync(file, "utf8"));
 
 /**
  * Read every `<id>.json` under `dir`, then every `proposals/<id>.from-<proposer>.json` for ids no
- * canonical file names (first by file name wins), and return the calendar in `(date, id)` order.
+ * canonical file names (first by file name wins), drop every entry its own lane has retired with
+ * `supersededBy` (#3101), and return the calendar in `(date, id)` order.
  * Exported so specs can point it at a fixture directory; the default is the real one.
+ *
+ * scripts/market-events-read.mjs implements this same rule for the dependency-free scanners; the
+ * drift gate in tests/arch/event-scan.spec.ts fails CI the day the two reads disagree.
  */
 export function loadMarketEvents(
   dir: string = join(process.cwd(), MARKET_EVENTS_DIR),
@@ -153,9 +198,9 @@ export function loadMarketEvents(
       if (!byId.has(event.id)) byId.set(event.id, event);
     }
   }
-  return [...byId.values()].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
-  );
+  return [...byId.values()]
+    .filter((e) => !isSuperseded(e))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
 
 export const MARKET_EVENTS: readonly MarketEvent[] = loadMarketEvents();

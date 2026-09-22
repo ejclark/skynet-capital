@@ -9,7 +9,12 @@ class FakeTradingTransport implements AlpacaTradingTransport {
   readonly gets: string[] = [];
   readonly posts: Array<{ path: string; body: unknown }> = [];
   readonly deletes: string[] = [];
+  readonly patches: Array<{ path: string; body: unknown }> = [];
   constructor(private readonly responses: Record<string, JsonResponse>) {}
+  patch(path: string, body: unknown): Promise<JsonResponse> {
+    this.patches.push({ path, body });
+    return Promise.resolve(this.respond(path));
+  }
   private respond(path: string): JsonResponse {
     const hit = Object.entries(this.responses).find(([key]) => path.startsWith(key));
     return hit?.[1] ?? { status: 404, body: null };
@@ -128,6 +133,28 @@ describe("AlpacaTradingClient", () => {
     });
   });
 
+  describe("placeOrder — time in force (#3407 P1)", () => {
+    it("passes the member's own choice through verbatim", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders": { status: 200, body: { id: "o", symbol: "EEM", status: "accepted" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.placeOrder({ symbol: "EEM", qty: 1, side: "buy", time_in_force: "gtc" });
+      await client.placeOrder({
+        symbol: "EEM",
+        qty: 1,
+        side: "buy",
+        type: "limit",
+        limit_price: 40,
+        time_in_force: "day",
+      });
+
+      expect(transport.posts[0]?.body).toMatchObject({ time_in_force: "gtc" });
+      expect(transport.posts[1]?.body).toMatchObject({ time_in_force: "day" });
+    });
+  });
+
   describe("listOrders", () => {
     it("defaults to status=all, matching today's behavior", async () => {
       const transport = new FakeTradingTransport({ "/v2/orders": { status: 200, body: [] } });
@@ -204,6 +231,48 @@ describe("AlpacaTradingClient", () => {
       const client = new AlpacaTradingClient(transport);
 
       await expect(client.cancelOrder("o1")).rejects.toBeInstanceOf(AlpacaApiError);
+    });
+  });
+
+  describe("replaceOrder (#3407 P1 1b)", () => {
+    it("PATCHes only the fields given and returns the broker's NEW order with its lineage", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/o1": {
+          status: 200,
+          body: {
+            id: "o9",
+            symbol: "NVDA",
+            qty: "8",
+            side: "buy",
+            status: "pending_replace",
+            replaces: "o1",
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+      const order = await client.replaceOrder("o1", { qty: 8, limit_price: 172 });
+      expect(order.id).toBe("o9");
+      expect(order.replaces).toBe("o1");
+      expect(transport.patches).toEqual([
+        { path: "/v2/orders/o1", body: { qty: 8, limit_price: 172 } },
+      ]);
+    });
+
+    it("throws AlpacaApiError when the broker will not replace, and before the network without PATCH", async () => {
+      const refused = new AlpacaTradingClient(
+        new FakeTradingTransport({
+          "/v2/orders/o1": { status: 422, body: { message: "order is not replaceable" } },
+        }),
+      );
+      await expect(refused.replaceOrder("o1", { qty: 2 })).rejects.toBeInstanceOf(AlpacaApiError);
+      const noPatch = {
+        get: () => Promise.reject(),
+        post: () => Promise.reject(),
+        delete: () => Promise.reject(),
+      };
+      await expect(new AlpacaTradingClient(noPatch).replaceOrder("o1", { qty: 2 })).rejects.toThrow(
+        /cannot replace/,
+      );
     });
   });
 

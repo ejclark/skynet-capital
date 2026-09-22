@@ -1,11 +1,14 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
+import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { ClaimDeps } from "./claim-form.js";
@@ -13,6 +16,7 @@ import type { CommunityProgressionService } from "./community-progression-servic
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
+import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -121,6 +125,19 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
   /**
+   * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
+   * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on
+   * whether the bot is even firing. Omit to leave the panel with no funnel section, same dark-when-
+   * unset posture as `findByOrderId`.
+   */
+  readonly funnelFor?: (participantId: string) => DecisionFunnel;
+  /**
+   * Every closed position the retrospective writer has recorded (measure #5, PR 7c, issue #2287)
+   * — feeds the expectancy-with-a-CI computation on the `/decisions` panel. Omit to leave that
+   * section absent, same dark-when-unset posture as `funnelFor`.
+   */
+  readonly listRetrospectives?: (participantId: string) => readonly RetrospectiveRecord[];
+  /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
    * stay honest about it via the backfill caveat.
@@ -132,6 +149,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Omit and every row classifies `unknown` — no marker, exactly today's rendering.
    */
   readonly readOrderAudit?: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
+  /** Appends one audit line — the cancel route's write to the same trail the desk seam writes
+   *  on submit (#3407 P1). Omit and a cancel still reaches the broker, unrecorded here. */
+  readonly recordOrderAudit?: (entry: OrderAuditRecord) => Promise<void>;
   /**
    * Per-participant progression derived from the fill + audit ledgers — drives the Milestones
    * page and (with training wheels on) the desk's trade-type gate. Omit and `/learn` renders
@@ -153,8 +173,20 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly submitTrade?: SubmitDeskTrade;
   /** The options execution seam (`option-trade-service.ts`), behind the same switch. */
   readonly submitOptionTrade?: SubmitOptionTrade;
+  /** The multi-leg execution seam (`draft-trade-service.ts`, #3407 P3). Absent = a reviewed
+   *  draft is honestly "not sent" — the route says so in those words. */
+  readonly submitDraftOrder?: SubmitDraftOrder;
+  /** The live fan-out half of the activity bus (`desk-events-route.ts`, #3407 P4) — a desk's
+   *  own order lifecycle as a stream. Absent = the route says so and the shell polls. */
+  readonly activityEvents?: Pick<ActivityEventBus, "subscribe">;
+  /** The same ledger, read back — the order-watch alerts derive from one account's events
+   *  (#3407 P4 slice 2). Separate from `activityEvents` so a live-only fake still type-checks. */
+  readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the
+   *  alerts route still lists, and says dismissals are off. */
+  readonly alertDismissals?: AlertDismissalsPort;
   /** Stock order data (Open Orders panel, order cancel) via a participant's own credentials. */
   readonly tradingClientFor?: (participantId: string) => AlpacaTradingClient | undefined;
   /**

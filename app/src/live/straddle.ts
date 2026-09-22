@@ -44,18 +44,26 @@ export function dividerIndex(
 /**
  * The phone window: `radius` strikes either side of the divider (#1481's open question, default
  * ±8). A chain that already fits is returned whole; `hidden` says how many rows a "show all" would
- * add back. With no spot there is nothing to centre on, so nothing is hidden.
+ * add back. With no spot there is no divider, so the window centres on the middle of the listed
+ * strikes instead and `centred` says so (#3407 P0; a no-spot chain used to render every strike —
+ * a 200-row wall at 390px with no "show all" and no way to find the money).
  */
 export function windowRows(
   rows: readonly StraddleRow[],
   spot: number | undefined,
   radius = 8,
-): { readonly rows: readonly StraddleRow[]; readonly hidden: number } {
+): {
+  readonly rows: readonly StraddleRow[];
+  readonly hidden: number;
+  readonly centred: "spot" | "middle";
+} {
   const split = dividerIndex(rows, spot);
-  if (split === undefined || rows.length <= radius * 2) return { rows, hidden: 0 };
-  const start = Math.max(0, Math.min(split - radius, rows.length - radius * 2));
+  const centred = split === undefined ? "middle" : "spot";
+  if (rows.length <= radius * 2) return { rows, hidden: 0, centred };
+  const centre = split ?? Math.floor(rows.length / 2);
+  const start = Math.max(0, Math.min(centre - radius, rows.length - radius * 2));
   const kept = rows.slice(start, start + radius * 2);
-  return { rows: kept, hidden: rows.length - kept.length };
+  return { rows: kept, hidden: rows.length - kept.length, centred };
 }
 
 /** Calendar days from `now`'s date to the expiration date (`YYYY-MM-DD`), never negative. */
@@ -71,6 +79,21 @@ export function daysToExpiry(expiration: string, now: Date): number {
 export function expiresIn(days: number): string {
   if (days <= 0) return "Expires today";
   return `Expires in ${days} day${days === 1 ? "" : "s"}`;
+}
+
+/** "Sep 23, 2026" — month/day lead, year trails (Eric, 2026-09-22: "users care about the month
+ *  and day in this context... the only time users care about the year is long leaps at which
+ *  point they've already scrolled to the year they want and proceed to look at the month/day").
+ *  ISO's year-first order optimizes for lexicographic sort, not how a member scans a pick list.
+ *  Invalid input passes through unchanged rather than printing a fabricated date. */
+export function formatExpiration(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!(y && m && d)) return iso;
+  const month = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  });
+  return `${month} ${d}, ${y}`;
 }
 
 /** In the money: a call below spot, a put above it. Neither without a spot. */

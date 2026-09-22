@@ -1,3 +1,6 @@
+import { type StructureLeg, structureValue } from "../options/payoff-surface.js";
+import { impliedVolatility } from "../options/pricing.js";
+import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { type DraftLeg, type DraftOrder, undefinedRiskLegs } from "./draft-order.js";
 import { SHARES_PER_CONTRACT } from "./option-economics.js";
 
@@ -30,6 +33,192 @@ export interface DraftPreview {
   readonly unlimitedLoss: boolean;
   /** Which legs are behind the unlimited-loss warning, for the review screen to point at. */
   readonly undefinedRiskLegIds: readonly string[];
+  /** The at-expiration curve the review draws (#3407; the study's row 8: max loss unavoidable
+   *  on screen) — sampled server-side so the chart is the same arithmetic as the numbers above,
+   *  never a second copy in the browser. Absent for an empty draft. */
+  readonly payoff?: PayoffCurve;
+}
+
+export interface PayoffPoint {
+  readonly price: number;
+  readonly pnl: number;
+}
+
+export interface PayoffCurve {
+  /** Evenly spaced across the window, plus every strike, ascending by price. */
+  readonly points: readonly PayoffPoint[];
+  /** Where the curve crosses $0, interpolated between samples; empty when it never does. */
+  readonly breakevens: readonly number[];
+  /** The sampled window: 20% below the lowest strike to 20% above the highest. */
+  readonly from: number;
+  readonly to: number;
+  /** Model marks BEFORE expiration (thinkorswim's T+0 line; #3407 row 9) — absent when the
+   *  legs have no IV to price them with. What-if numbers, never money that moved. */
+  readonly dated?: readonly DatedCurve[];
+}
+
+/** One pre-expiration line: the structure marked at every sampled price, `daysForward` from
+ *  now, at the IV it was reviewed at. */
+export interface DatedCurve {
+  readonly label: "today" | "halfway";
+  readonly daysForward: number;
+  readonly points: readonly PayoffPoint[];
+}
+
+/** What the model needs beyond a leg to mark it before expiry: its IV and its own clock. */
+export interface DatedModel {
+  readonly volatility: number;
+  readonly daysToExpiry: number;
+}
+
+/** One model for every leg (the single-leg ticket's own IV) or one per leg (the multi-leg
+ *  builder solves each leg's IV from the premium the member set, #3407 P4). */
+export type DatedModels = DatedModel | ((leg: DraftLeg) => DatedModel | undefined);
+
+/**
+ * The T+0 and halfway lines through the same prices as the expiration curve, each point the
+ * whole structure's model value less what opening it costs (`payoff-surface.ts`; European,
+ * constant-vol, dividend-free — the pricing core's caveats carry over). Nothing for a contract
+ * inside two days of expiry, or for a leg the model cannot describe: today and halfway would
+ * both sit on the expiration line, or lie. Halfway is half of the NEAREST expiry, so no leg is
+ * marked past its own settlement.
+ */
+export function datedCurves(
+  legs: readonly DraftLeg[],
+  prices: readonly number[],
+  models: DatedModels,
+  stock?: StockComponent,
+): readonly DatedCurve[] | undefined {
+  if (legs.length === 0 || legs.some((leg) => leg.limitPrice === undefined)) return undefined;
+  const modelFor = typeof models === "function" ? models : () => models;
+  const structure: StructureLeg[] = [];
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const leg of legs) {
+    const model = modelFor(leg);
+    if (!(model && model.daysToExpiry >= 2 && model.volatility > 0)) return undefined;
+    nearest = Math.min(nearest, model.daysToExpiry);
+    structure.push({
+      kind: leg.optionType,
+      quantity: (leg.action === "buy" ? 1 : -1) * leg.contracts,
+      strike: leg.strike,
+      daysToExpiry: model.daysToExpiry,
+      volatility: model.volatility,
+      entryPrice: leg.limitPrice ?? 0,
+    });
+  }
+  if (stock) structure.push({ kind: "stock", quantity: stock.shares, entryPrice: stock.basis });
+  const entryCost = structure.reduce(
+    (sum, leg) =>
+      sum + leg.quantity * (leg.kind === "stock" ? 1 : SHARES_PER_CONTRACT) * leg.entryPrice,
+    0,
+  );
+  const line = (label: DatedCurve["label"], daysForward: number): DatedCurve | undefined => {
+    const points: PayoffPoint[] = [];
+    for (const price of prices) {
+      const value = structureValue(structure, { spot: price, daysForward });
+      if (value === undefined) return undefined;
+      points.push({ price, pnl: round2(value - entryCost) });
+    }
+    return { label, daysForward, points };
+  };
+  const today = line("today", 0);
+  const halfway = line("halfway", round2(nearest / 2));
+  return today && halfway ? [today, halfway] : undefined;
+}
+
+/**
+ * Per-leg models for a multi-leg draft (#3407 P4): each leg's IV solved from the premium the
+ * member set against the underlying's spot, and its own days to expiry from the clock. A leg
+ * whose underlying has no spot, or whose premium the solver cannot invert, has no model — and
+ * `datedCurves` then draws nothing rather than a line with a guessed leg in it.
+ */
+export function legDatedModels(
+  spots: ReadonlyMap<string, number>,
+  now: Date,
+): (leg: DraftLeg) => DatedModel | undefined {
+  return (leg) => {
+    const spot = spots.get(leg.underlying);
+    const daysToExpiry = daysToExpiryFrom(leg.expiration, now);
+    if (spot === undefined || daysToExpiry === undefined || leg.limitPrice === undefined) {
+      return undefined;
+    }
+    const volatility = impliedVolatility({
+      spot,
+      strike: leg.strike,
+      daysToExpiry,
+      type: leg.optionType,
+      marketPrice: leg.limitPrice,
+    });
+    return volatility === undefined ? undefined : { volatility, daysToExpiry };
+  };
+}
+
+/** The preview with the dated lines attached when the model can draw them — the builder's own
+ *  review (`draft-order-route.ts`) hands in the spots it read; nothing else changes. */
+export function withDatedCurves(
+  preview: DraftPreview,
+  draft: DraftOrder,
+  spots: ReadonlyMap<string, number>,
+  now: Date,
+): DraftPreview {
+  if (!preview.payoff) return preview;
+  const dated = datedCurves(
+    draft.legs,
+    preview.payoff.points.map((p) => p.price),
+    legDatedModels(spots, now),
+  );
+  return dated ? { ...preview, payoff: { ...preview.payoff, dated } } : preview;
+}
+
+/** Shares riding along with the legs — a covered call's 100 held shares per contract, valued
+ *  from the spot the ticket was reviewed at. Absent for pure option combos. */
+export interface StockComponent {
+  readonly shares: number;
+  readonly basis: number;
+}
+
+function stockPnlAt(stock: StockComponent | undefined, price: number): number {
+  return stock ? (price - stock.basis) * stock.shares : 0;
+}
+
+/** How many evenly spaced samples the curve carries besides the strikes themselves. */
+export const PAYOFF_SAMPLES = 40;
+
+/**
+ * The curve as points: even samples across the window plus the strikes (the only kinks), so a
+ * polyline through them is exact, and the zero crossings between consecutive points by linear
+ * interpolation — exact too, since each segment is linear.
+ */
+export function payoffCurve(
+  legs: readonly DraftLeg[],
+  stock?: StockComponent,
+): PayoffCurve | undefined {
+  if (legs.length === 0) return undefined;
+  const strikes = legs.map((leg) => leg.strike);
+  const from = Math.max(0, Math.min(...strikes) * 0.8);
+  const to = Math.max(...strikes) * 1.2;
+  const prices = new Set<number>(strikes);
+  for (let i = 0; i <= PAYOFF_SAMPLES; i += 1) {
+    prices.add(round2(from + ((to - from) * i) / PAYOFF_SAMPLES));
+  }
+  const points = [...prices]
+    .sort((a, b) => a - b)
+    .map((price) => ({ price, pnl: round2(netPnlAt(legs, price) + stockPnlAt(stock, price)) }));
+  const breakevens: number[] = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (!(a && b)) continue;
+    if (a.pnl === 0 && (i === 1 || (points[i - 2]?.pnl ?? 0) !== 0)) breakevens.push(a.price);
+    if ((a.pnl < 0 && b.pnl > 0) || (a.pnl > 0 && b.pnl < 0)) {
+      breakevens.push(round2(a.price + ((b.price - a.price) * -a.pnl) / (b.pnl - a.pnl)));
+    }
+  }
+  return { points, breakevens, from: round2(from), to: round2(to) };
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 function legValueAt(leg: DraftLeg, price: number): number {
@@ -97,5 +286,6 @@ export function draftPreview(draft: DraftOrder): DraftPreview {
     maxLoss: risky.length > 0 ? "unlimited" : Math.max(0, -minPnl),
     unlimitedLoss: risky.length > 0,
     undefinedRiskLegIds: risky.map((leg) => leg.id),
+    ...(legs.length > 0 ? { payoff: payoffCurve(legs) } : {}),
   };
 }

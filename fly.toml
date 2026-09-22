@@ -33,6 +33,9 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # trading on).
   SKYNET_COMPANION_MESSAGE_LOG_DIR = "/data/companion-message-log"
   SKYNET_ORDER_AUDIT_DIR = "/data/order-audit"
+  # A member's alert dismissals (#3407 P4, jsonl-alert-dismissals.ts) — the one alert fact that
+  # must outlive a deploy: losing it re-shows every alert they already waved away.
+  SKYNET_ALERT_DISMISSALS_DIR = "/data/alert-dismissals"
   # Owner→member account links (#546, owner-link-store.ts) — who claimed an unowned board account.
   SKYNET_OWNER_LINKS_FILE = "/data/owner-links.json"
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned

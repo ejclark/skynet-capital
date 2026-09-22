@@ -1,0 +1,69 @@
+/* The alerts strip (#3407 P4 slice 1): a row per alert — badge (glyph + word), the sentence, one
+   Dismiss. Priority never rides on hue alone: the glyph and the word carry it; the left accent's
+   weight steps with it (a real step, not a tone shift). */
+.al-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 12px;
+  padding: 8px 0 8px 10px;
+  border-left: 2px solid var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.al-row:last-child {
+  border-bottom: 0;
+}
+.al-warning {
+  border-left-width: 3px;
+  border-left-color: var(--text);
+}
+.al-critical {
+  border-left-width: 5px;
+  border-left-color: var(--text);
+  border-left-style: double;
+}
+.al-badge {
+  flex: 0 0 auto;
+  /* One column for the badges, so the sentences line up down the list. */
+  min-width: 9.5em;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+.al-glyph {
+  display: inline-block;
+  min-width: 1.2em;
+  margin-right: 4px;
+  font-family: var(--mono);
+}
+.al-main {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.al-title {
+  font-weight: 600;
+}
+.al-body {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+/* `.btn` is width:100% by default (gate.css); a row action is its own width. */
+.al-btn {
+  width: auto;
+  padding: 4px 10px;
+  font-size: var(--text-sm);
+}
+.al-note {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.al-note:empty {
+  margin: 0;
+}

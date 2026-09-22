@@ -147,6 +147,50 @@ describe("serveDeskJson", () => {
     expect(answered(unwired.out)).toMatchObject({ available: false, kind: "bot" });
   });
 
+  it("forwards config.findByOrderId into /thesis so a filled marker carries its reasoning", async () => {
+    const activity = [
+      {
+        orderId: "ord-1",
+        participantId: "sauron",
+        symbol: "NVDA",
+        side: "buy" as const,
+        quantity: 10,
+        filledQuantity: 10,
+        status: "filled",
+        at: "2026-09-10T14:00:00.000Z",
+        source: "stream" as const,
+      },
+    ];
+    const guardedIntent = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 10,
+      type: "market" as const,
+      reason: "panic fade",
+    };
+    const config = configWith({
+      readTradeActivity: async () => activity,
+      findByOrderId: (orderId) =>
+        orderId === "ord-1"
+          ? {
+              record: {
+                at: 1,
+                personaId: "sauron",
+                mode: "live" as const,
+                rawIntents: [guardedIntent],
+                guardedIntents: [guardedIntent],
+                outcomes: [{ intent: guardedIntent, action: "placed" as const }],
+              },
+              intent: guardedIntent,
+            }
+          : undefined,
+    });
+    const { res, out } = fakeRes();
+    await serveDeskJson(res, "/api/desk/sauron/thesis", "/api/desk/sauron/thesis", config);
+    const body = answered(out) as { thesis: { markers: { reasoning?: { reason: string } }[] } };
+    expect(body.thesis.markers[0]?.reasoning).toMatchObject({ reason: "panic fade" });
+  });
+
   it("paginates activity via per_page/before query params (PR 5, issue #2287)", async () => {
     const records = Array.from({ length: 5 }, (_, i) => ({
       orderId: `ord-${i}`,

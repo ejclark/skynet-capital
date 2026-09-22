@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  type ConsiderationChip,
   type DeskActivityEvent,
   type DeskSnapshot,
   fetchDesk,
@@ -17,53 +16,63 @@ import {
 } from "../live/networth";
 import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
-import { AccountsPositionsSection } from "../shell/accounts-positions-section";
+import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
-import { ConsiderationsRail } from "../shell/considerations-rail";
 import { DecisionsSection } from "../shell/decisions-section";
 import { PageFrame } from "../shell/frame";
-import { HeroChart } from "../shell/hero-chart";
-import { NetWorthCondensed, NetWorthRoster } from "../shell/networth-summary";
+import { NetWorthCondensed } from "../shell/networth-summary";
 import { ProfileRail } from "../shell/profile-rail";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
+import { ThesisDrawer } from "../shell/thesis-drawer";
 
 /**
  * PROFILE > ACCOUNTS (#2321) — the Cockpit: a unified per-account view whose sticky header carries
  * the net-worth at-a-glance (total value, day move, ROI pills) and a horizontal section switch that
- * stay visible while the section detail (Positions, Activity, roster) scrolls below. One owned
- * account or "All accounts" combined, human and bot alike — Alpaca has no such distinction, so this
- * page never branches on `kind` beyond the switcher's own label.
+ * stay visible while the section detail scrolls below. One owned account or "All accounts"
+ * combined, human and bot alike — Alpaca has no such distinction, so this page never branches on
+ * `kind` beyond the switcher's own label and which bot-only sections appear.
  *
- * PROGRESSIVE DISCLOSURE: the sticky {@link NetWorthCondensed} is the always-visible summary layer;
- * the section switch reveals one section's full detail at a time (Positions blotter, Activity
- * timeline, or the Summary roster + cash/position detail). The net-worth payload is one
- * `/api/accounts/networth` fetch that carries every owned account plus the aggregate, so the
- * switcher never triggers a re-fetch. Windows' returns come straight from Alpaca's own portfolio
- * history (flow-adjusted, so a deposit never reads as a gain); the aggregate per window is
- * `Σend / Σbase − 1` across the accounts that reported one. Positions and Activity still run through
- * `fetchDesk` / `PositionsTable` as before, and the desk fetch is skipped on Summary.
+ * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
+ * blotter — Summary and Positions merged into one scroll once it was clear how little Summary
+ * carried on its own, Eric live) and **Activity** apply to every account; **Decisions** (the
+ * autonomous-trading audit trail) and **Thesis** (a persona's standing call, ported from the
+ * retired `/u/:id/thesis`) are bot-only, added by `sectionsFor` when a single bot account is
+ * selected. PROGRESSIVE DISCLOSURE: the sticky {@link NetWorthCondensed} is the always-visible
+ * summary layer; the section switch reveals one section's full detail at a time. The net-worth
+ * payload is one `/api/accounts/networth` fetch that carries every owned account plus the
+ * aggregate, so the switcher never triggers a re-fetch. Windows' returns come straight from
+ * Alpaca's own portfolio history (flow-adjusted, so a deposit never reads as a gain); the
+ * aggregate per window is `Σend / Σbase − 1` across the accounts that reported one.
  */
 
-type AccountsSection = "summary" | "positions" | "activity" | "decisions";
+type AccountsSection = "overview" | "activity" | "decisions" | "thesis";
 
+/** Overview merges what were once separate Summary and Positions tabs (Eric: "the summary page
+ *  does very little atm... summary and positions should be merged into a single section/view").
+ *  The net-worth-at-a-glance stats stay in the sticky header ({@link NetWorthCondensed}); Overview
+ *  is everything below it — the cash/considerations/chart detail Summary carried, then the
+ *  positions blotter Positions carried, in one scroll. */
 const BASE_SECTIONS: readonly PageSection<AccountsSection>[] = [
-  { id: "summary", label: "Summary" },
-  { id: "positions", label: "Positions" },
+  { id: "overview", label: "Overview" },
   { id: "activity", label: "Activity" },
 ];
 
 /** The full candidate list `validateSearch` accepts from a URL — the *rendered* set narrows this
  *  per account (`sectionsFor` below); an unknown or now-inapplicable value falls back via
- *  `resolveSection`, never strands the reader. */
+ *  `resolveSection`, never strands the reader. A stale `?section=summary` or `?section=positions`
+ *  link (from before the Overview merge) resolves the same way — as an unrecognized value that
+ *  falls back to the first section, which is Overview. */
 const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
   ...BASE_SECTIONS,
   { id: "decisions", label: "Decisions" },
+  { id: "thesis", label: "Thesis" },
 ];
 
-/** Decisions is the autonomous-trading audit trail — it only makes sense for one bot account at a
- *  time, never the "All accounts" aggregate or a human account (Eric: "tied to autonomous
- *  trading... currently only bot accounts"). */
+/** Decisions and Thesis only make sense for one bot account at a time, never the "All accounts"
+ *  aggregate or a human account — Decisions is autonomous trading's audit trail (Eric: "tied to
+ *  autonomous trading... currently only bot accounts"), and Thesis is a persona's own standing call
+ *  (the same reasoning: it's the bot's, not the portfolio's). */
 function sectionsFor(kind: "human" | "bot" | undefined): readonly PageSection<AccountsSection>[] {
   return kind === "bot" ? ALL_SECTIONS : BASE_SECTIONS;
 }
@@ -91,49 +100,6 @@ function resolveNetWorth(
     return { stats: data.total, caption: "all accounts", roster: data.accounts, allAccounts: true };
   const row = data.accounts.find((a) => a.id === accountId) ?? null;
   return { stats: row, caption: row?.name ?? "this account", roster: [], allAccounts: false };
-}
-
-/** The Summary section body — the cash/position detail and per-account roster that live below the
- *  sticky condensed hero. For a single account this is the dry-powder note; for "All accounts" the
- *  roster table reads the whole book at a glance. The hero itself (value, day move, ROI) is in the
- *  Cockpit header, not duplicated here. */
-function SummaryDetail({
-  stats,
-  allAccounts,
-  roster,
-  loading,
-  error,
-  accountId,
-  considerations,
-}: {
-  readonly stats: NetWorthStatsView | null;
-  readonly allAccounts: boolean;
-  readonly roster: readonly AccountNetWorthView[];
-  readonly loading: boolean;
-  readonly error: boolean;
-  readonly accountId: string;
-  readonly considerations: readonly ConsiderationChip[];
-}): ReactElement {
-  if (loading) return <p className="note">Reading your net worth…</p>;
-  if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
-  return (
-    <div className="networth-detail">
-      <p className="desk-note">
-        {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
-        positions
-      </p>
-      {/* One account at a time (#3186 slices 2 & 3) — the "All accounts" aggregate curve/rail is a
-          fast-follow, not bundled into these slices; the roster table covers that view instead. */}
-      {allAccounts ? (
-        <NetWorthRoster accounts={roster} />
-      ) : (
-        <>
-          <HeroChart accountId={accountId} />
-          <ConsiderationsRail chips={considerations} />
-        </>
-      )}
-    </div>
-  );
 }
 
 function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): ReactElement {
@@ -229,7 +195,7 @@ function AccountsPage(): ReactElement {
       }
       onSelectSection={(next) =>
         void navigate({
-          search: (prev) => ({ ...prev, section: next === "summary" ? undefined : next }),
+          search: (prev) => ({ ...prev, section: next === "overview" ? undefined : next }),
           replace: true,
         })
       }
@@ -253,25 +219,23 @@ function CockpitBody({
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
 }): ReactElement {
-  const allAccountsSelected = accountId === ALL_ACCOUNTS;
   const desks = useQuery({
     queryKey: ["desks", deskIds.join(",")],
     queryFn: () => fetchDesks(deskIds),
-    // Summary reads net worth from `/api/accounts/networth`, not the desk — but the considerations
-    // rail (#3186 slice 3) lives on Summary and needs the desk's own `considerations`, so the desk
-    // fetch stays enabled there too, for a single account (the "All accounts" roster view has no
-    // rail, same scope decision as the hero chart, so it skips the fetch same as before). Decisions
-    // reads its own audit-trail endpoint, not the desk, so it skips this fetch entirely.
-    enabled: section === "summary" ? !allAccountsSelected : section !== "decisions",
+    // Overview needs the desk snapshot both for the considerations rail and for the positions
+    // blotter it now carries, so it always fetches. Decisions and Thesis read their own endpoints,
+    // not the desk, so they skip this fetch entirely.
+    enabled: section === "overview" || section === "activity",
   });
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
 
   if (section === "decisions") return <DecisionsSection deskId={accountId} />;
-  if (section === "summary") {
+  if (section === "thesis") return <ThesisDrawer id={accountId} />;
+  if (section === "overview") {
     const { stats, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
     const considerations = desks.data?.[0]?.desk.considerations ?? [];
     return (
-      <SummaryDetail
+      <OverviewSection
         stats={stats}
         allAccounts={allAccounts}
         roster={roster}
@@ -279,16 +243,14 @@ function CockpitBody({
         error={networth.isError}
         accountId={accountId}
         considerations={considerations}
+        desks={desks.data}
+        desksLoading={desks.isPending}
+        desksError={desks.isError}
+        query={query}
+        onFilterChange={onFilterChange}
       />
     );
   }
-  if (desks.isPending) return <p className="note">Reading accounts…</p>;
-  if (desks.isError) return <p className="note">This account is unreachable.</p>;
-  if (!desks.data) return <p className="note">No data.</p>;
-  if (section === "positions")
-    return (
-      <AccountsPositionsSection desks={desks.data} query={query} onFilterChange={onFilterChange} />
-    );
   return <ActivitySection deskIds={deskIds} />;
 }
 

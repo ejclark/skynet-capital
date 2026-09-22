@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- `scripts/shoot/straddle.mjs` has been broken on `origin/main` (confirmed pre-existing, not caused
+  by this change) since at least the #3407-era ticket-field rename: it fills `ticket.getByLabel(
+  "Underlying")`, but `OptionGate`'s own symbol field has been labeled "Symbol" since `SymbolField`
+  shipped — `trade.mjs`'s own equivalent scenes use `getByLabel("Symbol")`/`getByRole("region", ...)
+  .getByLabel("Underlying")` correctly for the multi-leg builder, never for this single-leg ticket.
+  30s timeout on every run; `npm run shoot:trade` covers the same straddle view fine, so this is
+  dead weight until fixed or retired. _(src: Claude · while: relocating `.exp-tabs` onto the chain
+  header, 2026-09-21 — verifying `npm run shoot:straddle` still ran)_
+
 - A fresh `git worktree` created for a background build agent starts with an empty `node_modules`
   (root and `app/`), which breaks the `.husky/pre-commit` hook's relative `./node_modules/.bin/biome`
   call and fails `npm run verify` on unrelated things (missing `app`'s `@testing-library/jest-dom`
@@ -1038,10 +1047,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## In progress
 
-- The options chain as the entry instrument (#1481) — slice 1 (the base straddle view) shipped
-  in #1512; slice 2 (scroll-out columns both ways, greeks passed through, tap on bid / ask presets
-  side + price) is the remainder and closes it.
-  _(src: Eric · while: reading the Fidelity options chain frames, 2026-09-05)_
+- The trading-experience parity study (`docs/research/trading-parity-2026-09.md`) — Robinhood ·
+  Fidelity · thinkorswim inventoried, Robinhood's engagement mechanics interrogated, the audit
+  cross-examined, four lo-fi shapes commissioned; the parity plan issue carries the slices.
+  _(src: Eric · while: reviewing the /trade screenshots, 2026-09-21)_
 
 ---
 
@@ -1052,7 +1061,9 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   it, locked segments visible-but-disabled with their reason (#1520). Mockup:
   [Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723).
 - The straddle view of the options chain — strike centre, calls left, puts right, the
-  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512
+  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512; slice 2 (scroll-out
+  columns both ways, greeks passed through, tap on a cell presets strike + price) — #2017 Phase 1
+  (PR #2117). #3299 flagged the "In progress" entry as stale on 2026-09-18.
 - `/teardown` — a reference design → patterns, mechanics, a borrow / adapt / skip call sheet;
   `scripts/teardown/redact.mjs` paints over account lines first — PR #1499
 
@@ -1136,6 +1147,9 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   door, so it was deliberately left out of that diff. Worth deciding on its own: the halt file is the
   manual stop for a live autonomous trader.
   _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+  **Partially resolved, 2026-09-22:** `fly.bots.toml` now sets `SKYNET_AUDIT_DIR`/`SKYNET_BOTS_DB_PATH`,
+  and `fly.toml` sets `SKYNET_INSIGHTS_DIR` — the decision audit trail (`DecisionDb`) is wired in prod
+  (verified while shaping issue #3527). `SKYNET_HALT_FILE` was not checked and may still be open.
 
 - **Bots don't trade options — not restricted, just not built.** The desk's progression ladder
   (`domain/trade-types.ts`, `progression.ts`) is a human-only teaching gate on the manual `/trade`
@@ -1445,3 +1459,19 @@ wakes vs. genuine escalations), and the envelope "never edit envelope.json to ma
 than assuming). Not a build — a scoping pass to find which of these, if any, could get even a
 partial mechanical backstop the way the wake-reply rule just did.
 _(src: Claude · while: retro on the 2026-09-17 wake-reply lapse)_
+
+### ITM/OTM quadrant tint on the options chain — subtle, single-hue, deferred
+Eric, 2026-09-22, pushing back on an initial red/green suggestion this session declined: his
+"tint/gradient" ask meant a subtle, secondary overlay (shade/opacity), not a hard fill, and he'd
+resolve the colourblind objection by "changing color" rather than dropping the idea — his own
+colourblindness is mild and he's found colourblind-mode remaps in games often make things WORSE for
+him specifically. Converged direction, not yet built (he explicitly deferred it — "progressive
+improvements as we get there"): extend the chain's EXISTING ITM rail (`.straddle-call-itm`/
+`.straddle-put-itm` in `straddle.css`, an accent-coloured box-shadow bar on the strike cell) into a
+subtle accent-tinted background wash on the ITM side of each row — one hue (the app's own accent,
+never red/green) plus position (which side of Strike) carries the meaning, so it never asks a
+colourblind reader to discriminate two hues against each other, and it can't collide with the app's
+existing red/green P/L vocabulary elsewhere. Same "real step, not a tone shift" rule this session
+already applied to the strike-pick row highlight (PR #3510) — pick a wash opacity that reads as
+clearly present without being loud.
+_(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_

@@ -89,6 +89,35 @@ describe("serveOptionApi review", () => {
     expect(parsed.preview.breakeven).toBe(38);
   });
 
+  it("puts the feed's greeks, the IV from the mid and the odds on the review (#3407 P2 slice 2)", async () => {
+    const cfg = config({
+      now: () => new Date("2026-08-19T14:00:00Z"),
+      optionsClientFor: () => ({
+        getChain: () =>
+          Promise.resolve([
+            {
+              occSymbol: "NVDA260918P00040000",
+              strike: 40,
+              bid: 1.9,
+              ask: 2.1,
+              delta: -0.35,
+              gamma: 0.04,
+              theta: -0.03,
+              vega: 0.05,
+            },
+          ]),
+        getUnderlyingPrice: () => Promise.resolve(42),
+      }),
+    });
+    const { parsed } = await review(openPut(), cfg);
+    expect(parsed.preview.ok).toBe(true);
+    expect(parsed.preview.greeks).toEqual({ delta: -0.35, gamma: 0.04, theta: -0.03, vega: 0.05 });
+    expect(parsed.preview.impliedVol).toBeGreaterThan(0.05);
+    expect(parsed.preview.chanceOfProfit).toBeGreaterThan(0);
+    expect(parsed.preview.chanceOfProfit).toBeLessThan(1);
+    expect(typeof parsed.preview.expectedValue).toBe("number");
+  });
+
   it("prepends the ladder refusal for a locked play and never asks the broker", async () => {
     const cfg = config({
       ...wheelsOn,
@@ -110,6 +139,51 @@ describe("serveOptionApi review", () => {
     const text = parsed.preview.refusals.join(" ");
     expect(text).toContain("You don't hold this contract");
     expect(text).not.toContain("Training wheels");
+  });
+
+  it("passes day / gtc through on an open and drops anything else (#3407 P1 slice 4)", async () => {
+    const gtc = await review({ ...openPut(), timeInForce: "gtc" }, config());
+    expect(gtc.parsed.preview.timeInForce).toBe("gtc");
+    const odd = await review({ ...openPut(), timeInForce: "ioc" }, config());
+    expect(odd.parsed.preview.timeInForce).toBe("day");
+  });
+
+  it("carries a limit close's type and price into the preview, dropping any other type (#3407)", async () => {
+    const cfg = config({
+      hub: {
+        getState: () => ({
+          participants: [
+            {
+              id: "human-ann",
+              cash: 1_000,
+              positions: [{ symbol: "NVDA260918P00100000", quantity: 2, marketValue: 600 }],
+            },
+          ],
+        }),
+      },
+    });
+    const { parsed } = await review(
+      {
+        kind: "close",
+        participantId: "human-ann",
+        occSymbol: "NVDA260918P00100000",
+        orderType: "limit",
+        limitPrice: 3.25,
+      },
+      cfg,
+    );
+    expect(parsed.preview.orderType).toBe("limit");
+    expect(parsed.preview.limitPrice).toBe(3.25);
+    const odd = await review(
+      {
+        kind: "close",
+        participantId: "human-ann",
+        occSymbol: "NVDA260918P00100000",
+        orderType: "trailing_stop",
+      },
+      cfg,
+    );
+    expect(odd.parsed.preview.orderType).toBe("market");
   });
 
   it("previews a close off your own desk against an empty book — holds never echo", async () => {

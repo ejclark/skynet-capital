@@ -10,11 +10,17 @@ import {
  */
 
 function deps(overrides: Partial<CouncilDeps> = {}): CouncilDeps {
-  const weeks: Record<string, Record<string, { text: string; at: string }>> = {};
+  const weeks: Record<
+    string,
+    Record<string, { text: string; at: string; playbookId?: string }>
+  > = {};
   return {
     load: () => ({ weeks }),
-    submit: (week, memberId, text, at) => {
-      weeks[week] = { ...weeks[week], [memberId]: { text, at: at.toISOString() } };
+    submit: (week, memberId, text, at, playbookId) => {
+      weeks[week] = {
+        ...weeks[week],
+        [memberId]: { text, at: at.toISOString(), ...(playbookId ? { playbookId } : {}) },
+      };
     },
     now: () => new Date("2026-09-07T12:00:00.000Z"),
     ...overrides,
@@ -46,6 +52,20 @@ describe("submitThesis", () => {
     expect(viewFn(d, "abc123").mine).toBeUndefined();
   });
 
+  it("accepts a real house playbook id and carries it through to the view", () => {
+    const d = deps();
+    const result = submitFn("riding S1 this week", "abc123", d, "S1-NVDA");
+    expect(result).toEqual({ ok: true });
+    expect(viewFn(d, "abc123").mine?.playbookId).toBe("S1-NVDA");
+  });
+
+  it("refuses an unknown playbook id without touching the store", () => {
+    const d = deps();
+    const result = submitFn("bullish", "abc123", d, "NOT-A-REAL-PLAY");
+    expect(result).toEqual({ ok: false, error: "Unknown play — pick one from the list." });
+    expect(viewFn(d, "abc123").mine).toBeUndefined();
+  });
+
   it("a resubmit within the same week replaces the member's own line", () => {
     const d = deps();
     submitFn("first take", "abc123", d);
@@ -71,5 +91,12 @@ describe("councilWeekView", () => {
     submitFn("someone else's line", "member-1", d);
     expect(viewFn(d, undefined).mine).toBeUndefined();
     expect(viewFn(d, "member-2").mine).toBeUndefined();
+  });
+
+  it("always lists the house roster as tag options, regardless of who's spoken", () => {
+    const d = deps();
+    expect(viewFn(d, undefined).plays).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "S1-NVDA", symbol: "NVDA" })]),
+    );
   });
 });

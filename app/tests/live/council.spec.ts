@@ -39,7 +39,19 @@ describe("fetchCouncil", () => {
       week: "2026-W37",
       entries: [{ id: "a", text: "bullish", at: "x" }],
       mine: undefined,
+      plays: [],
     });
+  });
+
+  it("passes through the tag selector's play options", async () => {
+    stubGet({
+      enabled: true,
+      week: "2026-W37",
+      entries: [],
+      plays: [{ id: "S1-NVDA", symbol: "NVDA" }],
+    });
+    const week = await fetchCouncil();
+    expect(week.plays).toEqual([{ id: "S1-NVDA", symbol: "NVDA" }]);
   });
 
   it("honestly reports unwired rather than fabricating a week", async () => {
@@ -63,6 +75,15 @@ describe("submitThesis", () => {
     expect(calls[0]?.url).toBe("/api/council");
     expect(calls[0]?.init?.method).toBe("POST");
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ text: "NVDA runs" });
+  });
+
+  it("includes a tagged playbookId when given", async () => {
+    const { calls } = stubPost({ ok: true });
+    await submitThesis("NVDA runs", "S1-NVDA");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      text: "NVDA runs",
+      playbookId: "S1-NVDA",
+    });
   });
 
   it("surfaces the server's own refusal message on failure", async () => {

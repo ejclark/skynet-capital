@@ -70,6 +70,20 @@
   --stage-gap: 22px;
   --panel-p: 16px;
 
+  /* Spacing and type scales (#3407 P0; docs/BRAND.md → Spacing & type scale). Two short ladders
+     so sections stop reading jagged against each other: every gap and margin on the trading
+     surfaces is one of these five, every small-text size one of these five. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --text-xs: 10.5px;
+  --text-sm: 11.5px;
+  --text-md: 12.5px;
+  --text-base: 13px;
+  --text-lg: 13.5px;
+
   /* the fluid width scale (Eric, 2026-09-04: "the page template should be fluid and take full
      screen real estate") — the React shell's copy of the doctrine in src/observatory/fluid-layout.ts.
      The frame tracks the window up to --shell-max (2560px, the widest glass we design for) and the

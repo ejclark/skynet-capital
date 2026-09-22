@@ -62,6 +62,18 @@ describe("validateDraftAccount", () => {
     expect(verdict.ok).toBe(false);
   });
 
+  it("reads a sell of a held long contract as a close — no shares, no cash demanded", () => {
+    const rollClose = addLeg(emptyDraft(), NAKED_CALL);
+    const account = {
+      cash: 0,
+      positions: [{ symbol: "NVDA260918C00180000", quantity: 1, avgPrice: 4, marketValue: 400 }],
+    };
+    expect(validateDraftAccount(rollClose, account).ok).toBe(true);
+    // A SHORT holding of the same contract is not cover — selling more is a new short.
+    const shortHeld = { ...account, positions: [{ ...account.positions[0], quantity: -1 }] };
+    expect(validateDraftAccount(rollClose, shortHeld as never).ok).toBe(false);
+  });
+
   it("passes an empty draft — nothing demanded, nothing to check", () => {
     expect(validateDraftAccount(emptyDraft(), accountWith(0))).toEqual({
       ok: true,

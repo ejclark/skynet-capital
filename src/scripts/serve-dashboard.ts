@@ -11,6 +11,8 @@
  * over SSE as events arrive. `/add` lets people self-register their own Alpaca paper account,
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
+
+import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
@@ -260,6 +262,7 @@ async function main(): Promise<void> {
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
+    recordOrderAudit: (entry) => orderAudit.record(entry),
     // `/wire`'s cross-participant feed: the same stores, called with no id.
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
@@ -267,8 +270,12 @@ async function main(): Promise<void> {
     // no separate switch, matching Mission Control's own always-on-when-wired posture.
     council: {
       load: () => council.load(),
-      submit: (week, memberId, text, at) => {
-        council.submit(week, memberId, { text, at: at.toISOString() });
+      submit: (week, memberId, text, at, playbookId) => {
+        council.submit(week, memberId, {
+          text,
+          at: at.toISOString(),
+          ...(playbookId ? { playbookId } : {}),
+        });
       },
     },
     progression: progressionService,
@@ -285,9 +292,21 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
+    // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
+    ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
+    // Expectancy-with-a-CI (PR 7c) reads the same replicated store, same no-JSONL-fallback posture.
+    ...(insightsBridge.listRetrospectives
+      ? { listRetrospectives: insightsBridge.listRetrospectives }
+      : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
+    submitDraftOrder: desk.submitDraft,
+    activityEvents: activityEventBus,
+    activityLog: activityEventBus,
+    // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
+    alertDismissals: createAlertDismissals(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
   }).listen(PORT, () => {

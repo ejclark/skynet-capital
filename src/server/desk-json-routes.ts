@@ -1,6 +1,10 @@
 import type { ServerResponse } from "node:http";
 import { outpostCatalog } from "../discovery/play-cards.js";
-import { decisionCyclesView } from "../observatory/decision-json-view.js";
+import {
+  decisionCyclesView,
+  expectancyView,
+  funnelView,
+} from "../observatory/decision-json-view.js";
 import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
@@ -76,6 +80,10 @@ export async function serveDeskJson(
       return;
     }
     const records = await config.readDecisions?.(id);
+    // The funnel and expectancy are full-history aggregates, independent of the page the cycle
+    // feed is on — neither lies about its totals just because the viewer scrolled back one page.
+    const funnel = config.funnelFor?.(id);
+    const retrospectives = config.listRetrospectives?.(id);
     res.end(
       JSON.stringify(
         records
@@ -83,6 +91,8 @@ export async function serveDeskJson(
               available: true,
               kind: "bot",
               ...decisionCyclesView(records, { limit, before: beforeAt }),
+              ...(funnel ? { funnel: funnelView(funnel) } : {}),
+              ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
             }
           : { available: false, kind: "bot", cycles: [] },
       ),
@@ -111,7 +121,7 @@ export async function serveDeskJson(
       JSON.stringify({
         available: true,
         kind: "bot",
-        thesis: thesisView(found.personaId, decisions, activity, samples),
+        thesis: thesisView(found.personaId, decisions, activity, samples, config.findByOrderId),
       }),
     );
     return;
