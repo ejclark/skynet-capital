@@ -46,10 +46,12 @@ function SubscribeForm({
 }): ReactElement {
   const [mode, setMode] = useState<PlaybookMode>("standard");
   const [capital, setCapital] = useState("");
+  const [compoundAllocation, setCompoundAllocation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const modeId = useId();
   const capitalId = useId();
+  const compoundId = useId();
   const capitalAllocated = Number(capital);
   const valid = capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0;
 
@@ -57,7 +59,13 @@ function SubscribeForm({
     setBusy(true);
     setError(undefined);
     try {
-      const answer = await subscribeRequest({ id: deskId, playbookId, mode, capitalAllocated });
+      const answer = await subscribeRequest({
+        id: deskId,
+        playbookId,
+        mode,
+        capitalAllocated,
+        ...(compoundAllocation ? { compoundAllocation: true } : {}),
+      });
       if (answer.ok) onSubscribed();
       else setError(answer.error);
     } catch (err) {
@@ -87,6 +95,18 @@ function SubscribeForm({
           value={capital}
           onChange={(e) => setCapital(e.target.value)}
         />
+      </div>
+      <div className="field field-checkbox">
+        <input
+          id={compoundId}
+          type="checkbox"
+          checked={compoundAllocation}
+          onChange={(e) => setCompoundAllocation(e.target.checked)}
+        />
+        <label htmlFor={compoundId}>
+          Compound gains/losses into allocation — a profitable run grows this budget, a losing one
+          shrinks it. Off by default.
+        </label>
       </div>
       <button
         type="button"
@@ -177,6 +197,7 @@ function SubscriptionRow({
       <span className="pb-subscription-line">
         Subscribed at <b>{sub.mode}</b>, ${sub.capitalAllocated.toLocaleString()} delegated —
         currently <b>{sub.enabled ? "active" : "paused"}</b>.
+        {sub.compoundAllocation ? " Compounding realized gains/losses into allocation." : ""}
       </span>
       <div className="pb-subscription-actions">
         <button type="button" className="btn mc-btn" disabled={busy} onClick={() => void toggle()}>

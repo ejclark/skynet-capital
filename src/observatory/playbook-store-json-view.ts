@@ -22,6 +22,10 @@ interface PlaybookStoreCardView extends PlaybookStoreEntry {
     readonly enabled: boolean;
     /** Symbol-targeting filter (#885) — absent means unrestricted. */
     readonly symbols?: readonly string[];
+    /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
+     *  #3527 slice 3) — absent means off, the flat-budget default every subscription had before
+     *  this field existed. */
+    readonly compoundAllocation?: boolean;
   };
 }
 
@@ -76,6 +80,7 @@ export function playbookStoreView(
               capitalAllocated: sub.capitalAllocated,
               enabled: sub.enabled,
               ...(sub.symbols ? { symbols: sub.symbols } : {}),
+              ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
             },
           }
         : {}),

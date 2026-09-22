@@ -21,6 +21,9 @@ export interface PlaybookStoreCardView {
     readonly mode: PlaybookMode;
     readonly capitalAllocated: number;
     readonly enabled: boolean;
+    /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
+     *  #3527 slice 3) — absent means off, the flat-budget default. */
+    readonly compoundAllocation?: boolean;
   };
 }
 
@@ -57,6 +60,7 @@ export const subscribeRequest = (input: {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   readonly capitalAllocated: number;
+  readonly compoundAllocation?: boolean;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/subscribe", input);
 
 export const unsubscribeRequest = (input: {

@@ -115,4 +115,18 @@ describe("playbookStoreView", () => {
     expect(djt?.subscription).toBeUndefined();
     expect(djt?.metrics).toEqual([{ label: "Whipsaw rate", value: "0% whipsaw (5 round trips)" }]);
   });
+
+  describe("compounding opt-in (issue #3527 slice 3)", () => {
+    it("carries compoundAllocation: true onto the subscription, omits it when off", () => {
+      const view = playbookStoreView([sub({ playbookId: "S1-NVDA", compoundAllocation: true })]);
+      const nvda = view.cards.find((c) => c.id === "S1-NVDA");
+      const goog = view.cards.find((c) => c.id === "G1-GOOG");
+      expect(nvda?.subscription?.compoundAllocation).toBe(true);
+      expect(goog?.subscription).toBeUndefined();
+      const view2 = playbookStoreView([sub({ playbookId: "S1-NVDA" })]);
+      expect(view2.cards.find((c) => c.id === "S1-NVDA")?.subscription).not.toHaveProperty(
+        "compoundAllocation",
+      );
+    });
+  });
 });
