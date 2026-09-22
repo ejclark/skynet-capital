@@ -8,6 +8,7 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { ClaimDeps } from "./claim-form.js";
@@ -180,6 +181,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly activityEvents?: Pick<ActivityEventBus, "subscribe">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the
+   *  alerts route still lists, and says dismissals are off. */
+  readonly alertDismissals?: AlertDismissalsPort;
   /** Stock order data (Open Orders panel, order cancel) via a participant's own credentials. */
   readonly tradingClientFor?: (participantId: string) => AlpacaTradingClient | undefined;
   /**

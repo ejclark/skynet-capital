@@ -9,6 +9,7 @@ import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
 import { ChartSection } from "../shell/chart-section";
+import { DeskAlerts } from "../shell/desk-alerts";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
@@ -214,6 +215,9 @@ function DeskTicket({
       {/* Working orders (#3407 P1 slice 2) sit right under whichever ticket is up — the #674
           placement, pending the lo-fi pick on where they finally live. */}
       <WorkingOrders deskId={desk} />
+      {/* What the member's own option positions are saying (#3407 P4 slice 1) — beside the
+          orders they can act on, above the positions the alerts are about. */}
+      <DeskAlerts deskId={desk} />
       {deskData.data ? (
         <OptionPositionsCard deskId={desk} positions={deskData.data.desk.positions} />
       ) : null}

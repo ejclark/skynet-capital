@@ -11,6 +11,8 @@
  * over SSE as events arrive. `/add` lets people self-register their own Alpaca paper account,
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
+
+import { InMemoryAlertDismissals } from "../adapters/in-memory-alert-dismissals.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
@@ -298,6 +300,10 @@ async function main(): Promise<void> {
     submitOptionTrade: desk.submitOption,
     submitDraftOrder: desk.submitDraft,
     activityEvents: activityEventBus,
+    // Alert dismissals live in memory until their store is pinned on the volume — that needs a
+    // `fly.toml` line (protected class), which ships as its own held PR; until then a redeploy
+    // re-shows dismissed alerts, and the strip says so (#3407 P4 slice 1).
+    alertDismissals: new InMemoryAlertDismissals(),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
   }).listen(PORT, () => {
