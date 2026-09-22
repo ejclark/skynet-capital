@@ -53,8 +53,10 @@ const json = (out: Answer): Record<string, unknown> => JSON.parse(out.body ?? "{
 function fakeClient(over: Partial<AlpacaTradingClient> = {}): {
   client: AlpacaTradingClient;
   cancelled: string[];
+  replaced: Array<{ id: string; params: unknown }>;
 } {
   const cancelled: string[] = [];
+  const replaced: Array<{ id: string; params: unknown }> = [];
   const working: AlpacaOrder = {
     id: "o-1",
     symbol: "NVDA",
@@ -72,9 +74,13 @@ function fakeClient(over: Partial<AlpacaTradingClient> = {}): {
       cancelled.push(id);
       return Promise.resolve();
     },
+    replaceOrder: (id: string, params: unknown) => {
+      replaced.push({ id, params });
+      return Promise.resolve({ ...working, id: "o-9", status: "pending_replace", replaces: id });
+    },
     ...over,
   } as unknown as AlpacaTradingClient;
-  return { client, cancelled };
+  return { client, cancelled, replaced };
 }
 
 function configWith(over: Partial<DashboardServerConfig> = {}): DashboardServerConfig {
@@ -89,7 +95,7 @@ function configWith(over: Partial<DashboardServerConfig> = {}): DashboardServerC
 const session = { email: "eric@example.com" } as never;
 
 describe("serveTradeOrdersApi — routing", () => {
-  it("claims only its two paths", async () => {
+  it("claims only its three paths", async () => {
     const { res } = fakeRes();
     expect(
       await serveTradeOrdersApi(
@@ -289,5 +295,104 @@ describe("POST /api/trade/cancel", () => {
       session,
     );
     expect(out.status).toBe(400);
+  });
+});
+
+describe("POST /api/trade/replace (P1 1b)", () => {
+  const body = { participantId: "human-eric", orderId: "o-1", quantity: 8, limitPrice: 172 };
+
+  it("replaces through the own account's client and audits the NEW id with its lineage", async () => {
+    const { client, replaced } = fakeClient();
+    const audited: OrderAuditRecord[] = [];
+    const { res, out } = fakeRes();
+    await serveTradeOrdersApi(
+      post("/api/trade/replace", body),
+      res,
+      "/api/trade/replace",
+      configWith({
+        tradingClientFor: () => client,
+        recordOrderAudit: (entry) => Promise.resolve(void audited.push(entry)),
+      }),
+      session,
+    );
+    expect(json(out)).toEqual({
+      ok: true,
+      orderId: "o-9",
+      replaces: "o-1",
+      status: "pending_replace",
+    });
+    expect(replaced).toEqual([{ id: "o-1", params: { qty: 8, limit_price: 172 } }]);
+    expect(audited).toEqual([
+      expect.objectContaining({
+        participantId: "human-eric",
+        ownerEmail: "eric@example.com",
+        orderId: "o-9",
+        replaces: "o-1",
+        intent: "replace",
+        symbol: "NVDA",
+        side: "buy",
+      }),
+    ]);
+  });
+
+  it("refuses an account the session does not own before touching any client", async () => {
+    const { client, replaced } = fakeClient();
+    const { res, out } = fakeRes();
+    await serveTradeOrdersApi(
+      post("/api/trade/replace", { ...body, participantId: "human-someone" }),
+      res,
+      "/api/trade/replace",
+      configWith({ tradingClientFor: () => client }),
+      session,
+    );
+    expect(json(out)).toEqual({
+      ok: false,
+      refusals: ["You can only change orders on your own account."],
+    });
+    expect(replaced).toEqual([]);
+  });
+
+  it("relays only the broker's own reason when it will not replace, and writes no audit line", async () => {
+    const { client } = fakeClient({
+      replaceOrder: () =>
+        Promise.reject(new AlpacaApiError(422, { message: "order is not replaceable" })),
+    });
+    const audited: OrderAuditRecord[] = [];
+    const { res, out } = fakeRes();
+    await serveTradeOrdersApi(
+      post("/api/trade/replace", body),
+      res,
+      "/api/trade/replace",
+      configWith({
+        tradingClientFor: () => client,
+        recordOrderAudit: (entry) => Promise.resolve(void audited.push(entry)),
+      }),
+      session,
+    );
+    expect(json(out)).toEqual({
+      ok: false,
+      refusals: ["The broker couldn't change this order: order is not replaceable"],
+    });
+    expect(audited).toEqual([]);
+  });
+
+  it.each([
+    ["no change at all", { participantId: "human-eric", orderId: "o-1" }],
+    ["a string quantity", { ...body, quantity: "8" }],
+    ["a fractional quantity", { ...body, quantity: 1.5 }],
+    ["a zero price", { ...body, limitPrice: 0 }],
+    ["an unknown time in force", { ...body, timeInForce: "ioc" }],
+  ])("refuses %s with 400, never coercing it", async (_label, malformed) => {
+    const { client, replaced } = fakeClient();
+    const { res, out } = fakeRes();
+    await serveTradeOrdersApi(
+      post("/api/trade/replace", malformed),
+      res,
+      "/api/trade/replace",
+      configWith({ tradingClientFor: () => client }),
+      session,
+    );
+    expect(out.status).toBe(400);
+    expect(replaced).toEqual([]);
   });
 });

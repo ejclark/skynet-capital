@@ -339,6 +339,7 @@ const workingOrders = {
       submittedAt: "2026-09-21T13:58:00Z",
       state: "working",
       cancelable: true,
+      replaceable: true,
     },
     {
       id: "wo-2",
@@ -352,6 +353,7 @@ const workingOrders = {
       submittedAt: "2026-09-21T13:41:00Z",
       state: "partial",
       cancelable: true,
+      replaceable: true,
     },
   ],
   recent: [
@@ -671,6 +673,12 @@ const { page, origin, shoot, close } = await openShell({
     // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
     "/api/trade/option-positions": () => currentOptionPositions,
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
+    "/api/trade/replace": {
+      ok: true,
+      orderId: "wo-9",
+      replaces: "wo-1",
+      status: "pending_replace",
+    },
     // The multi-leg builder's lifecycle (#3407 P3 slice 1) — one scripted answer per action, in
     // the order the scene clicks them; the last answer repeats so a stray re-read stays put.
     "/api/trade/draft": () => currentDraftScript.shift() ?? currentDraftFallback,
@@ -996,6 +1004,19 @@ await page.getByRole("button", { name: "Cancel" }).first().click();
 await page.getByRole("button", { name: "Confirm cancel" }).waitFor();
 await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
 await shootWorkingOrders("working-orders-cancel-armed-phone");
+// Modify (#3407 P1 1b): Keep the cancel, open the drawer on the GTC limit, raise the price —
+// the note says exactly what the broker will be told before Send change is pressed.
+await page.getByRole("button", { name: "Keep" }).click();
+await page.getByRole("button", { name: "Modify" }).first().click();
+await page.getByLabel("Limit price").fill("172");
+await page.getByText("Will send: limit $172.00").waitFor();
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootModify = shooter(page, resolve("docs/shots/working-orders-modify"));
+await shootModify("working-orders-modify-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
+await shootModify("working-orders-modify-desktop");
 currentOrders = noOrders;
 
 // Limit close (#3407 P1 slice 3) — the option positions card under the ticket with Limit

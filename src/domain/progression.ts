@@ -33,7 +33,7 @@ export interface LadderFill {
 export interface LadderTag {
   readonly orderId: string;
   readonly code?: TradeTypeCode;
-  readonly intent?: "open" | "close" | "cancel";
+  readonly intent?: "open" | "close" | "cancel" | "replace";
 }
 
 /** A milestone earned by a real fill — the order id IS the evidence. */

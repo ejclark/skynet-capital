@@ -38,8 +38,27 @@ describe("deskOrderRow — the broker's status alphabet as six honest words", ()
     ["done_for_day", "cancelled", false],
     ["rejected", "rejected", false],
     ["expired", "expired", false],
+    ["replaced", "replaced", false],
+    ["pending_replace", "working", true],
   ])("%s → %s (cancelable: %s)", (status, state, cancelable) => {
     expect(deskOrderRow(order({ status }))).toMatchObject({ state, cancelable });
+  });
+
+  it("marks a working limit or stop replaceable, never a market order or a settled one (P1 1b)", () => {
+    expect(deskOrderRow(order({ status: "accepted", type: "limit" }))?.replaceable).toBe(true);
+    expect(deskOrderRow(order({ status: "partially_filled", type: "stop" }))?.replaceable).toBe(
+      true,
+    );
+    expect(deskOrderRow(order({ status: "accepted", type: "market" }))?.replaceable).toBe(false);
+    expect(deskOrderRow(order({ status: "filled", type: "limit" }))?.replaceable).toBe(false);
+  });
+
+  it("carries the broker's id lineage both ways", () => {
+    const old = deskOrderRow(order({ status: "replaced", replaced_by: "o-9" }));
+    expect(old).toMatchObject({ state: "replaced", replacedBy: "o-9" });
+    expect(old?.replaces).toBeUndefined();
+    const fresh = deskOrderRow(order({ status: "accepted", replaces: "o-1" }));
+    expect(fresh).toMatchObject({ state: "working", replaces: "o-1" });
   });
 
   it("drops a status it cannot name rather than mislabelling it", () => {

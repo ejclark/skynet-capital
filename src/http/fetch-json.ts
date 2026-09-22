@@ -7,7 +7,7 @@ export interface JsonResponse {
   readonly body: unknown;
 }
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export async function fetchJson(
   method: HttpMethod,

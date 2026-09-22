@@ -2,15 +2,25 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { useDeskEvents } from "../live/desk-events";
-import { cancelOrder, type DeskOrderRow, type DeskOrderState, fetchOrders } from "../live/orders";
+import {
+  cancelOrder,
+  type DeskOrderRow,
+  type DeskOrderState,
+  fetchOrders,
+  type OrderChange,
+  type ReplaceResult,
+  replaceOrder,
+} from "../live/orders";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
+import { ModifyForm } from "./working-order-modify";
 
 /**
  * WORKING ORDERS (#3407 P1 slice 2) — the list a Limit or Stop order was missing: directly on the
  * Trade page under the ticket, where the order was placed (#674, the member's own ask, and the
  * study's cross-exam: the market leader buries pending orders a screen away). Reads the broker
  * through `/api/trade/orders` (Alpaca is the store of record; nothing is cached here beyond the
- * query) and cancels through `/api/trade/cancel`.
+ * query), cancels through `/api/trade/cancel` and changes a limit or stop through
+ * `/api/trade/replace` (P1 1b — the broker issues a new id; the row says "changed from").
  *
  * Honesty rules, in order: an unlinked or unreachable broker says so (never an empty list that
  * reads as "nothing working"); every state is a WORD plus a glyph, never a hue alone (a standing
@@ -29,6 +39,7 @@ const STATE_GLYPH: Record<DeskOrderState, string> = {
   partial: "◐",
   filled: "●",
   cancelled: "⊘",
+  replaced: "↻",
   rejected: "✕",
   expired: "⌛",
 };
@@ -38,6 +49,7 @@ const STATE_WORD: Record<DeskOrderState, string> = {
   partial: "Partly filled",
   filled: "Filled",
   cancelled: "Cancelled",
+  replaced: "Replaced",
   rejected: "Rejected",
   expired: "Expired",
 };
@@ -54,16 +66,75 @@ function qtyLabel(row: DeskOrderRow): string {
     : String(row.quantity);
 }
 
+/** The row's actions: Cancel (two taps — the button becomes its own confirm), and Modify on a
+ *  working limit or stop, which opens the change drawer under the row (P1 1b). */
+function RowActions({
+  row,
+  onCancel,
+  pending,
+  modifying,
+  setModifying,
+}: {
+  readonly row: DeskOrderRow;
+  readonly onCancel: (id: string) => Promise<void>;
+  readonly pending: boolean;
+  readonly modifying: boolean;
+  readonly setModifying: (open: boolean) => void;
+}): ReactElement {
+  const [armed, setArmed] = useState(false);
+  if (armed) {
+    return (
+      <span className="wo-actions">
+        <button
+          type="button"
+          className="btn wo-btn wo-confirm"
+          disabled={pending}
+          onClick={() => onCancel(row.id)}
+        >
+          {pending ? "Cancelling…" : "Confirm cancel"}
+        </button>
+        <button
+          type="button"
+          className="btn wo-btn"
+          disabled={pending}
+          onClick={() => setArmed(false)}
+        >
+          Keep
+        </button>
+      </span>
+    );
+  }
+  return (
+    <span className="wo-actions">
+      {row.replaceable ? (
+        <button
+          type="button"
+          className="btn wo-btn"
+          aria-expanded={modifying}
+          onClick={() => setModifying(!modifying)}
+        >
+          Modify
+        </button>
+      ) : null}
+      <button type="button" className="btn wo-btn" onClick={() => setArmed(true)}>
+        Cancel
+      </button>
+    </span>
+  );
+}
+
 function OrderRow({
   row,
   onCancel,
+  onReplace,
   pending,
 }: {
   readonly row: DeskOrderRow;
   readonly onCancel?: (id: string) => Promise<void>;
+  readonly onReplace?: (id: string, change: OrderChange) => Promise<ReplaceResult | undefined>;
   readonly pending: boolean;
 }): ReactElement {
-  const [armed, setArmed] = useState(false);
+  const [modifying, setModifying] = useState(false);
   const tif = tifLabel(row.timeInForce);
   return (
     <li className={`wo-row wo-${row.state}`}>
@@ -81,32 +152,30 @@ function OrderRow({
         {row.state === "filled" && row.avgFillPrice !== undefined
           ? ` · ${money(row.avgFillPrice)}`
           : ""}
+        {/* The lineage in words: a changed order is that order, not a stranger. */}
+        {row.replaces ? ` · changed from ${row.replaces}` : ""}
+        {row.state === "replaced" && row.replacedBy ? ` · now ${row.replacedBy}` : ""}
       </span>
       {row.cancelable && onCancel ? (
-        armed ? (
-          <span className="wo-actions">
-            <button
-              type="button"
-              className="btn wo-btn wo-confirm"
-              disabled={pending}
-              onClick={() => onCancel(row.id)}
-            >
-              {pending ? "Cancelling…" : "Confirm cancel"}
-            </button>
-            <button
-              type="button"
-              className="btn wo-btn"
-              disabled={pending}
-              onClick={() => setArmed(false)}
-            >
-              Keep
-            </button>
-          </span>
-        ) : (
-          <button type="button" className="btn wo-btn" onClick={() => setArmed(true)}>
-            Cancel
-          </button>
-        )
+        <RowActions
+          row={row}
+          onCancel={onCancel}
+          pending={pending}
+          modifying={modifying}
+          setModifying={setModifying}
+        />
+      ) : null}
+      {modifying && onReplace ? (
+        <ModifyForm
+          row={row}
+          busy={pending}
+          onSend={async (change) => {
+            const result = await onReplace(row.id, change);
+            if (result?.ok) setModifying(false);
+            return result;
+          }}
+          onClose={() => setModifying(false)}
+        />
       ) : null}
     </li>
   );
@@ -150,6 +219,26 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
     }
   };
 
+  const onReplace = async (id: string, change: OrderChange) => {
+    setPendingId(id);
+    setNotice(undefined);
+    try {
+      const result = await replaceOrder(deskId, id, change);
+      setNotice(
+        result.ok
+          ? `Change sent — the broker replaced ${result.replaces} with ${result.orderId} (${result.status.replace(/_/g, " ")}).`
+          : result.refusals.join(" "),
+      );
+      return result;
+    } catch (error) {
+      setNotice(`Couldn't reach the gate — ${String(error)}`);
+      return undefined;
+    } finally {
+      setPendingId(undefined);
+      await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
+    }
+  };
+
   const data = query.data;
   return (
     <section className="wr-panel wo-panel" aria-label="Working orders">
@@ -173,6 +262,7 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
                   key={row.id}
                   row={row}
                   onCancel={onCancel}
+                  onReplace={onReplace}
                   pending={pendingId === row.id}
                 />
               ))}

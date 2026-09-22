@@ -12,6 +12,7 @@ export type DeskOrderState =
   | "partial"
   | "filled"
   | "cancelled"
+  | "replaced"
   | "rejected"
   | "expired";
 
@@ -30,6 +31,10 @@ export interface DeskOrderRow {
   readonly settledAt?: string;
   readonly state: DeskOrderState;
   readonly cancelable: boolean;
+  /** A working limit or stop — the kind the broker lets a member change in place (P1 1b). */
+  readonly replaceable?: boolean;
+  readonly replaces?: string;
+  readonly replacedBy?: string;
 }
 
 export type DeskOrders =
@@ -60,3 +65,27 @@ export async function fetchOrders(participantId: string): Promise<DeskOrders> {
 
 export const cancelOrder = (participantId: string, orderId: string): Promise<CancelResult> =>
   postJson("/api/trade/cancel", { participantId, orderId });
+
+/** What a modify may change — only the fields the member touched are sent. */
+export interface OrderChange {
+  readonly quantity?: number;
+  readonly limitPrice?: number;
+  readonly stopPrice?: number;
+  readonly timeInForce?: "day" | "gtc";
+}
+
+export type ReplaceResult =
+  | {
+      readonly ok: true;
+      /** The broker's NEW id — the old one is now `replaced`. */
+      readonly orderId: string;
+      readonly replaces: string;
+      readonly status: string;
+    }
+  | { readonly ok: false; readonly refusals: readonly string[] };
+
+export const replaceOrder = (
+  participantId: string,
+  orderId: string,
+  change: OrderChange,
+): Promise<ReplaceResult> => postJson("/api/trade/replace", { participantId, orderId, ...change });
