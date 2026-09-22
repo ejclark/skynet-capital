@@ -262,6 +262,19 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   same as running it by hand. It held its own daily Routine until 2026-08-19; that trigger fired
   into checkout-less sessions and never once ran the script (docs/ROUTINES.md, Retired), so the
   clock was folded into the digest's.
+- **Doctrine digest** (issue #2287, PR 8) — rides the secretary digest Routine, same shape as the
+  config-audit ride-along above: the digest's session runs `node scripts/doctrine-scan.mjs --due`
+  and folds any due dossier into the Needs-you tier. Not a code-quality gate (the defensive roster
+  above is about this codebase's own structure; this is about a persona's TRADING doctrine — its
+  stated rules, checked against the tape) — `scripts/doctrine-scan.mjs` reads `docs/BOTS-<PERSONA>.md`
+  dossiers' append-only "Adaptation ledger" tables and flags a `Next check` date that's passed with
+  no row appended to resolve it, mirroring `forward-test-pending.mjs`'s due/unscored detection for
+  the market-event research register, one persona-doctrine register instead of one per event.
+  `doctrine-budget.json` + `--candidate`/`--update` give it the same ratchet shape as the
+  code-quality eyes above, but it stays advisory (no `tests/arch/*.spec.ts` wires it in — a stale
+  doctrine ledger is Eric's judgment call to act on, never a blocked merge). Evidence-triggered and
+  human-gated, same as config-audit: the script writes nothing, opens nothing, and the digest cannot
+  escalate a finding past its notification.
 
 Dead-code, duplication, size — those stay regular defense: same eye/drill/ratchet shape every down.
 
