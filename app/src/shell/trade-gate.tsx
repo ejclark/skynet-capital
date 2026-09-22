@@ -1,9 +1,10 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { type DeskOrderEvent, useOrderFill } from "../live/desk-events";
 import { fillHeadline } from "../live/fill-headline";
 import type { PlayInfo } from "../live/options";
+import { quoteQuery } from "../live/quote-query";
 import {
   buildDraft,
   defaultTimeInForce,
@@ -195,6 +196,27 @@ export function TradeGate({
   /** The quote header's own committed symbol (#2017 Phase 0.9) — fetches on COMMIT only, never a
    *  keystroke, mirroring the chain fetch's `chainSym` on the options ticket. */
   const [quoteSym, setQuoteSym] = useState(initialSymbol ?? "");
+  /** LIMIT AT MID (#3407 slice 6 — Eric, 2026-09-22: "limit at mid — it's standard behavior").
+   *  The same quote the header shows (one query, `quoteQuery`) seeds the ticket: once a committed
+   *  symbol's NBBO arrives, the order type becomes Limit at the cent-rounded mid and TIF falls to
+   *  GTC (`defaultTimeInForce`) — an entry that waits for the price instead of paying the spread,
+   *  the habit this app exists to teach. Two guards keep it a seed and not a hand on the wheel:
+   *  it never overwrites a type or price the member has touched (`priced`), and a quote with no
+   *  live book leaves the ticket exactly as it was (Market, the honest default when there is no
+   *  mid to name). `seed` remembers what was seeded so the note below can say so — and so the
+   *  note disappears the moment the member edits the price. */
+  const quote = useQuery(quoteQuery(quoteSym));
+  const [priced, setPriced] = useState(false);
+  const [seed, setSeed] = useState<{ symbol: string; bid: number; ask: number; mid: number }>();
+  const mid = quote.data && "mid" in quote.data ? quote.data : undefined;
+  useEffect(() => {
+    if (priced || !mid || mid.mid === undefined || mid.bid === undefined || mid.ask === undefined)
+      return;
+    if (seed?.symbol === mid.symbol && seed.mid === mid.mid) return;
+    const { symbol, bid, ask } = mid;
+    setSeed({ symbol, bid, ask, mid: mid.mid });
+    setFields((f) => ({ ...f, orderType: "limit", limitPrice: mid.mid?.toFixed(2) ?? "" }));
+  }, [priced, mid, seed]);
   const symId = useId();
   const qtyId = useId();
   const sideId = useId();
@@ -213,6 +235,15 @@ export function TradeGate({
     };
 
   const priceField = priceFieldFor(fields.orderType);
+  /** A hand on the type or the price ends the seeding for this ticket (see `priced`). */
+  const price =
+    <K extends "orderType" | "limitPrice" | "stopPrice">(key: K) =>
+    (value: TicketFields[K]) => {
+      setPriced(true);
+      edit(key)(value);
+    };
+  const seeded =
+    seed !== undefined && fields.orderType === "limit" && fields.limitPrice === seed.mid.toFixed(2);
 
   const review = async () => {
     // The Review button keeps focus (`keepFocus`), so a symbol typed and never blurred commits
@@ -304,7 +335,7 @@ export function TradeGate({
           <select
             id={typeId}
             value={fields.orderType}
-            onChange={(e) => edit("orderType")(e.target.value as TicketOrderType)}
+            onChange={(e) => price("orderType")(e.target.value as TicketOrderType)}
           >
             {(Object.keys(ORDER_TYPE_LABELS) as TicketOrderType[]).map((type) => (
               <option key={type} value={type}>
@@ -326,7 +357,7 @@ export function TradeGate({
               inputMode="decimal"
               value={fields[priceField]}
               placeholder="40.00"
-              onChange={(e) => edit(priceField)(e.target.value)}
+              onChange={(e) => price(priceField)(e.target.value)}
             />
           </div>
         ) : null}
@@ -336,6 +367,12 @@ export function TradeGate({
         value={fields.timeInForce}
         onChange={edit("timeInForce")}
       />
+      {seeded && seed ? (
+        <p className="gate-note gate-note-seed">
+          Limit seeded at the mid — {money(seed.mid)}, between the {money(seed.bid)} bid and the{" "}
+          {money(seed.ask)} ask. Edit it, or switch the order type to Market.
+        </p>
+      ) : null}
       <p className="gate-note">{orderTypeNote(fields.orderType)}</p>
 
       {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —

@@ -68,4 +68,14 @@ describe("serveQuote", () => {
       tone: "pos",
     });
   });
+
+  it("carries the NBBO and its mid when the client has one (#3407 slice 6)", async () => {
+    const client = {
+      getUnderlyingQuote: () =>
+        Promise.resolve({ last: 181.32, prevClose: 179.18, bid: 181.28, ask: 181.32 }),
+    };
+    const { res, out } = fakeRes();
+    await serveQuote(res, "/x?symbol=nvda", config(client), "human-ann");
+    expect(JSON.parse(out.body ?? "{}")).toMatchObject({ bid: 181.28, ask: 181.32, mid: 181.3 });
+  });
 });
