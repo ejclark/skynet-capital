@@ -1,6 +1,6 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { singleLegOdds } from "../options/single-leg-odds.js";
-import { payoffCurve } from "./draft-order-preview.js";
+import { datedCurves, payoffCurve } from "./draft-order-preview.js";
 import {
   DEFAULT_OPTION_TIF,
   OPTION_PLAY_LEVEL,
@@ -208,14 +208,7 @@ function decisionInputs(
   const scale = request.contracts * SHARES_PER_CONTRACT;
   return {
     ...oddsFor(request, context, premium, scale),
-    ...curveFor(
-      request,
-      leg.underlying,
-      leg.optionType,
-      leg.side,
-      premium,
-      context.underlyingPrice,
-    ),
+    ...curveFor(request, leg.underlying, leg.optionType, leg.side, premium, context),
   };
 }
 
@@ -228,27 +221,40 @@ function curveFor(
   optionType: "call" | "put",
   side: "buy" | "sell",
   premium: number | undefined,
-  spot: number | undefined,
+  context: OptionTicketContext,
 ): Pick<OptionTicketPreview, "payoff"> {
   if (premium === undefined) return {};
+  const spot = context.underlyingPrice;
   const scale = request.contracts * SHARES_PER_CONTRACT;
   if (request.code === "202" && spot === undefined) return {};
-  const payoff = payoffCurve(
-    [
-      {
-        id: "leg",
-        underlying,
-        optionType,
-        strike: request.strike,
-        expiration: request.expiration,
-        action: side,
-        contracts: request.contracts,
-        limitPrice: premium,
-      },
-    ],
-    request.code === "202" && spot !== undefined ? { shares: scale, basis: spot } : undefined,
-  );
-  return payoff ? { payoff } : {};
+  const legs = [
+    {
+      id: "leg",
+      underlying,
+      optionType,
+      strike: request.strike,
+      expiration: request.expiration,
+      action: side,
+      contracts: request.contracts,
+      limitPrice: premium,
+    },
+  ];
+  const stock =
+    request.code === "202" && spot !== undefined ? { shares: scale, basis: spot } : undefined;
+  const payoff = payoffCurve(legs, stock);
+  if (!payoff) return {};
+  // The pre-expiration lines (#3407 row 9) need the IV and the clock the odds already need;
+  // without them the chart draws expiration alone, never a guessed line.
+  const dated =
+    context.impliedVol !== undefined && context.daysToExpiry !== undefined
+      ? datedCurves(
+          legs,
+          payoff.points.map((p) => p.price),
+          { volatility: context.impliedVol, daysToExpiry: context.daysToExpiry },
+          stock,
+        )
+      : undefined;
+  return { payoff: dated ? { ...payoff, dated } : payoff };
 }
 
 /** Chance of profit and expected value for the order (#3407 P2 slice 2) — only when every input

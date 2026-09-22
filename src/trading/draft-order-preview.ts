@@ -1,3 +1,4 @@
+import { type StructureLeg, structureValue } from "../options/payoff-surface.js";
 import { type DraftLeg, type DraftOrder, undefinedRiskLegs } from "./draft-order.js";
 import { SHARES_PER_CONTRACT } from "./option-economics.js";
 
@@ -49,6 +50,66 @@ export interface PayoffCurve {
   /** The sampled window: 20% below the lowest strike to 20% above the highest. */
   readonly from: number;
   readonly to: number;
+  /** Model marks BEFORE expiration (thinkorswim's T+0 line; #3407 row 9) — absent when the
+   *  legs have no IV to price them with. What-if numbers, never money that moved. */
+  readonly dated?: readonly DatedCurve[];
+}
+
+/** One pre-expiration line: the structure marked at every sampled price, `daysForward` from
+ *  now, at the IV it was reviewed at. */
+export interface DatedCurve {
+  readonly label: "today" | "halfway";
+  readonly daysForward: number;
+  readonly points: readonly PayoffPoint[];
+}
+
+/** What the model needs beyond the legs to mark them before expiry. One IV for every leg —
+ *  the single-leg ticket's own; a per-leg IV is the multi-leg builder's next slice. */
+export interface DatedModel {
+  readonly volatility: number;
+  readonly daysToExpiry: number;
+}
+
+/**
+ * The T+0 and halfway lines through the same prices as the expiration curve, each point the
+ * whole structure's model value less what opening it costs (`payoff-surface.ts`; European,
+ * constant-vol, dividend-free — the pricing core's caveats carry over). Nothing for a contract
+ * inside two days of expiry: today and halfway would both sit on the expiration line.
+ */
+export function datedCurves(
+  legs: readonly DraftLeg[],
+  prices: readonly number[],
+  model: DatedModel,
+  stock?: StockComponent,
+): readonly DatedCurve[] | undefined {
+  if (!(model.daysToExpiry >= 2 && model.volatility > 0)) return undefined;
+  if (legs.some((leg) => leg.limitPrice === undefined)) return undefined;
+  const structure: StructureLeg[] = legs.map((leg) => ({
+    kind: leg.optionType,
+    quantity: (leg.action === "buy" ? 1 : -1) * leg.contracts,
+    strike: leg.strike,
+    daysToExpiry: model.daysToExpiry,
+    volatility: model.volatility,
+    entryPrice: leg.limitPrice ?? 0,
+  }));
+  if (stock) structure.push({ kind: "stock", quantity: stock.shares, entryPrice: stock.basis });
+  const entryCost = structure.reduce(
+    (sum, leg) =>
+      sum + leg.quantity * (leg.kind === "stock" ? 1 : SHARES_PER_CONTRACT) * leg.entryPrice,
+    0,
+  );
+  const line = (label: DatedCurve["label"], daysForward: number): DatedCurve | undefined => {
+    const points: PayoffPoint[] = [];
+    for (const price of prices) {
+      const value = structureValue(structure, { spot: price, daysForward });
+      if (value === undefined) return undefined;
+      points.push({ price, pnl: round2(value - entryCost) });
+    }
+    return { label, daysForward, points };
+  };
+  const today = line("today", 0);
+  const halfway = line("halfway", round2(model.daysToExpiry / 2));
+  return today && halfway ? [today, halfway] : undefined;
 }
 
 /** Shares riding along with the legs — a covered call's 100 held shares per contract, valued

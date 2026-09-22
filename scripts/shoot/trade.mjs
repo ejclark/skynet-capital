@@ -428,6 +428,38 @@ const currentOptionReview = {
         { price: 190, pnl: 150 },
         { price: 210, pnl: 150 },
       ],
+      // The T+0 and halfway lines the model draws at the reviewed IV (42%, 24 days): the put
+      // still carries time value near the strike, so both sit under the expiration credit.
+      dated: [
+        {
+          label: "today",
+          daysForward: 0,
+          points: [
+            { price: 140, pnl: -3362 },
+            { price: 150, pnl: -2420 },
+            { price: 160, pnl: -1560 },
+            { price: 170, pnl: -880 },
+            { price: 173.5, pnl: -700 },
+            { price: 175, pnl: -600 },
+            { price: 190, pnl: -90 },
+            { price: 210, pnl: 112 },
+          ],
+        },
+        {
+          label: "halfway",
+          daysForward: 12,
+          points: [
+            { price: 140, pnl: -3351 },
+            { price: 150, pnl: -2380 },
+            { price: 160, pnl: -1440 },
+            { price: 170, pnl: -680 },
+            { price: 173.5, pnl: -490 },
+            { price: 175, pnl: -380 },
+            { price: 190, pnl: 60 },
+            { price: 210, pnl: 146 },
+          ],
+        },
+      ],
     },
     refusals: [],
     warnings: [],

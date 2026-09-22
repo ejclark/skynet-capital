@@ -211,6 +211,21 @@ describe("the payoff curve on the order screen (#3407 — the single-leg diagram
     expect(noSpot.payoff).toBeUndefined();
   });
 
+  it("adds today and halfway lines only with the IV and the clock the odds already need", () => {
+    const withModel = previewOptionOrder(
+      csp,
+      context({ underlyingPrice: 428.6, impliedVol: 0.3, daysToExpiry: 20 }),
+    );
+    expect(withModel.payoff?.dated?.map((line) => line.label)).toEqual(["today", "halfway"]);
+    expect(withModel.payoff?.dated?.[1]?.daysForward).toBe(10);
+    expect(withModel.payoff?.dated?.[0]?.points.map((p) => p.price)).toEqual(
+      withModel.payoff?.points.map((p) => p.price),
+    );
+    const noModel = previewOptionOrder(csp, context({ underlyingPrice: 428.6 }));
+    expect(noModel.payoff).toBeDefined();
+    expect(noModel.payoff?.dated).toBeUndefined();
+  });
+
   it("a long option's curve needs no spot, and a refused order carries none", () => {
     const call = previewOptionOrder(
       { ...csp, code: "302", contracts: 1, strike: 430, limitPrice: 8 },

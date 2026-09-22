@@ -1,5 +1,5 @@
 import { addLeg, emptyDraft, type NewLeg } from "../../src/trading/draft-order.js";
-import { draftPreview, payoffCurve } from "../../src/trading/draft-order-preview.js";
+import { datedCurves, draftPreview, payoffCurve } from "../../src/trading/draft-order-preview.js";
 
 /**
  * Slice 3's pure half: the payoff arithmetic behind the review screen. The interesting cases are
@@ -87,6 +87,39 @@ describe("draftPreview", () => {
       const bare = alone.points[i]?.pnl ?? Number.NaN;
       expect(point.pnl).toBeCloseTo(bare + (point.price - 170) * 100 * SHORT_CALL.contracts);
     }
+  });
+
+  it("marks the same prices before expiry: today under the expiration line for a short leg", () => {
+    const short = addLeg(emptyDraft(), SHORT_CALL);
+    const curve = payoffCurve(short.legs);
+    if (!curve) throw new Error("expected a curve");
+    const prices = curve.points.map((p) => p.price);
+    const dated = datedCurves(short.legs, prices, { volatility: 0.4, daysToExpiry: 30 });
+    expect(dated?.map((line) => line.label)).toEqual(["today", "halfway"]);
+    expect(dated?.[1]?.daysForward).toBe(15);
+    for (const line of dated ?? []) {
+      expect(line.points.map((p) => p.price)).toEqual(prices);
+    }
+    // At the strike a short call still carries time value before expiry, so its mark-to-model
+    // P&L sits below the expiration line's full credit there; halfway lies between the two.
+    const at = (line: { points: readonly { price: number; pnl: number }[] }) =>
+      line.points.find((p) => p.price === SHORT_CALL.strike)?.pnl ?? Number.NaN;
+    const expiry = at(curve);
+    const today = dated?.[0] ? at(dated[0]) : Number.NaN;
+    const halfway = dated?.[1] ? at(dated[1]) : Number.NaN;
+    expect(today).toBeLessThan(halfway);
+    expect(halfway).toBeLessThan(expiry);
+  });
+
+  it("draws no dated line inside two days of expiry, without an IV, or for an unpriced leg", () => {
+    const short = addLeg(emptyDraft(), SHORT_CALL);
+    const prices = [170, 180, 190];
+    expect(datedCurves(short.legs, prices, { volatility: 0.4, daysToExpiry: 1 })).toBeUndefined();
+    expect(datedCurves(short.legs, prices, { volatility: 0, daysToExpiry: 30 })).toBeUndefined();
+    const unpriced = addLeg(emptyDraft(), { ...SHORT_CALL, limitPrice: undefined });
+    expect(
+      datedCurves(unpriced.legs, prices, { volatility: 0.4, daysToExpiry: 30 }),
+    ).toBeUndefined();
   });
 
   it("carries no curve for an empty draft", () => {

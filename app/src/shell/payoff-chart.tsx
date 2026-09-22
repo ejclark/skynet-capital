@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useId } from "react";
-import type { PayoffCurve } from "../live/draft-order";
+import type { PayoffCurve, PayoffPoint } from "../live/draft-order";
 import { money } from "../live/ticket";
 
 /**
@@ -20,6 +20,15 @@ const WIDTH = 320;
 const HEIGHT = 120;
 const PAD = { top: 14, right: 12, bottom: 22, left: 12 };
 
+/** "dotted: today · dashed: halfway (14 days)" — the legend a line style needs to be read. */
+function legend(dated: readonly { label: string; daysForward: number }[]): string {
+  return dated
+    .map((line) =>
+      line.label === "today" ? "dotted: today" : `dashed: ${line.label} (${line.daysForward} days)`,
+    )
+    .join(" · ");
+}
+
 export function PayoffChart({
   curve,
   maxLoss,
@@ -30,7 +39,9 @@ export function PayoffChart({
   const hatchId = useId();
   const { points, breakevens, from, to } = curve;
   if (points.length < 2 || to <= from) return null;
-  const pnls = points.map((p) => p.pnl);
+  const dated = curve.dated ?? [];
+  // The scale fits every line, so a T+0 curve that dips past the expiration plateau still shows.
+  const pnls = [...points, ...dated.flatMap((line) => line.points)].map((p) => p.pnl);
   const lo = Math.min(0, ...pnls);
   const hi = Math.max(0, ...pnls);
   const span = hi - lo || 1;
@@ -38,9 +49,11 @@ export function PayoffChart({
     PAD.left + ((price - from) / (to - from)) * (WIDTH - PAD.left - PAD.right);
   const y = (pnl: number) => PAD.top + ((hi - pnl) / span) * (HEIGHT - PAD.top - PAD.bottom);
   const zero = y(0);
-  const path = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${x(p.price).toFixed(1)} ${y(p.pnl).toFixed(1)}`)
-    .join(" ");
+  const pathOf = (line: readonly PayoffPoint[]): string =>
+    line
+      .map((p, i) => `${i === 0 ? "M" : "L"}${x(p.price).toFixed(1)} ${y(p.pnl).toFixed(1)}`)
+      .join(" ");
+  const path = pathOf(points);
   const area = `${path} L${x(points[points.length - 1]?.price ?? to).toFixed(1)} ${zero.toFixed(1)} L${x(points[0]?.price ?? from).toFixed(1)} ${zero.toFixed(1)} Z`;
   // The first point reaching each extreme names it; the label sits at the END of that plateau
   // (the last point still at the extreme), off the slope that leads into it.
@@ -94,6 +107,17 @@ export function PayoffChart({
             </text>
           </g>
         ))}
+        {/* Before expiry, the same structure marked at the reviewed IV: dotted for today, dashed
+            for halfway — the line style names the date, never a hue (a standing reader is
+            red/green colourblind). Drawn under the expiration line so the hard edge stays on top. */}
+        {dated.map((line) => (
+          <path
+            key={line.label}
+            d={pathOf(line.points)}
+            className={`payoff-dated payoff-dated-${line.label}`}
+            aria-label={`${line.label}: model P&L ${line.daysForward} days forward`}
+          />
+        ))}
         <path d={path} className="payoff-line" />
         <text
           x={x(worstEnd.price) + (worstEnd === points[0] ? 3 : 0)}
@@ -114,7 +138,12 @@ export function PayoffChart({
           {`+${money(best.pnl)}`}
         </text>
       </svg>
-      <figcaption className="payoff-caption">{summary}</figcaption>
+      <figcaption className="payoff-caption">
+        {summary}
+        {dated.length
+          ? ` Solid: at expiration · ${legend(dated)} — model marks at the reviewed IV.`
+          : ""}
+      </figcaption>
     </figure>
   );
 }

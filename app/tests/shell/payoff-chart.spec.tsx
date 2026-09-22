@@ -60,6 +60,29 @@ describe("PayoffChart", () => {
     );
   });
 
+  it("draws the dated lines in distinct dash styles and names them in the caption", () => {
+    const dated = [
+      {
+        label: "today" as const,
+        daysForward: 0,
+        points: curve.points.map((p) => ({ ...p, pnl: p.pnl - 400 })),
+      },
+      {
+        label: "halfway" as const,
+        daysForward: 14,
+        points: curve.points.map((p) => ({ ...p, pnl: p.pnl - 200 })),
+      },
+    ];
+    const { container } = render(<PayoffChart curve={{ ...curve, dated }} maxLoss={1690} />);
+    expect(container.querySelector(".payoff-dated-today")).not.toBeNull();
+    expect(container.querySelector(".payoff-dated-halfway")).not.toBeNull();
+    expect(container.querySelector("figcaption")?.textContent).toContain(
+      "Solid: at expiration · dotted: today · dashed: halfway (14 days) — model marks at the reviewed IV.",
+    );
+    // The expiration labels stay the expiration line's own numbers.
+    expect(screen.getByText("−$1,690.00")).toBeInTheDocument();
+  });
+
   it("draws nothing for a curve with fewer than two points", () => {
     const { container } = render(
       <PayoffChart curve={{ ...curve, points: [{ price: 180, pnl: 0 }] }} maxLoss={0} />,
