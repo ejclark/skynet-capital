@@ -30,6 +30,62 @@ export interface DraftPreview {
   readonly unlimitedLoss: boolean;
   /** Which legs are behind the unlimited-loss warning, for the review screen to point at. */
   readonly undefinedRiskLegIds: readonly string[];
+  /** The at-expiration curve the review draws (#3407; the study's row 8: max loss unavoidable
+   *  on screen) — sampled server-side so the chart is the same arithmetic as the numbers above,
+   *  never a second copy in the browser. Absent for an empty draft. */
+  readonly payoff?: PayoffCurve;
+}
+
+export interface PayoffPoint {
+  readonly price: number;
+  readonly pnl: number;
+}
+
+export interface PayoffCurve {
+  /** Evenly spaced across the window, plus every strike, ascending by price. */
+  readonly points: readonly PayoffPoint[];
+  /** Where the curve crosses $0, interpolated between samples; empty when it never does. */
+  readonly breakevens: readonly number[];
+  /** The sampled window: 20% below the lowest strike to 20% above the highest. */
+  readonly from: number;
+  readonly to: number;
+}
+
+/** How many evenly spaced samples the curve carries besides the strikes themselves. */
+export const PAYOFF_SAMPLES = 40;
+
+/**
+ * The curve as points: even samples across the window plus the strikes (the only kinks), so a
+ * polyline through them is exact, and the zero crossings between consecutive points by linear
+ * interpolation — exact too, since each segment is linear.
+ */
+export function payoffCurve(legs: readonly DraftLeg[]): PayoffCurve | undefined {
+  if (legs.length === 0) return undefined;
+  const strikes = legs.map((leg) => leg.strike);
+  const from = Math.max(0, Math.min(...strikes) * 0.8);
+  const to = Math.max(...strikes) * 1.2;
+  const prices = new Set<number>(strikes);
+  for (let i = 0; i <= PAYOFF_SAMPLES; i += 1) {
+    prices.add(round2(from + ((to - from) * i) / PAYOFF_SAMPLES));
+  }
+  const points = [...prices]
+    .sort((a, b) => a - b)
+    .map((price) => ({ price, pnl: round2(netPnlAt(legs, price)) }));
+  const breakevens: number[] = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (!(a && b)) continue;
+    if (a.pnl === 0 && (i === 1 || (points[i - 2]?.pnl ?? 0) !== 0)) breakevens.push(a.price);
+    if ((a.pnl < 0 && b.pnl > 0) || (a.pnl > 0 && b.pnl < 0)) {
+      breakevens.push(round2(a.price + ((b.price - a.price) * -a.pnl) / (b.pnl - a.pnl)));
+    }
+  }
+  return { points, breakevens, from: round2(from), to: round2(to) };
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 function legValueAt(leg: DraftLeg, price: number): number {
@@ -97,5 +153,6 @@ export function draftPreview(draft: DraftOrder): DraftPreview {
     maxLoss: risky.length > 0 ? "unlimited" : Math.max(0, -minPnl),
     unlimitedLoss: risky.length > 0,
     undefinedRiskLegIds: risky.map((leg) => leg.id),
+    ...(legs.length > 0 ? { payoff: payoffCurve(legs) } : {}),
   };
 }
