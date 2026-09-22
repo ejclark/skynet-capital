@@ -221,12 +221,16 @@ fails to declare `name`, `description`, `effort`, or `isolation` — blocking in
 `tests/arch/grind-manifest.spec.ts`. So the tier can no longer go undeclared; what is still on the
 caller is running the preflight rather than hand-writing the args.
 
-**Not yet done — grind does not read the manifest at dispatch.** The next slice teaches `grind.js`
-to fetch each chore's manifest through one cheap subagent before the pipeline and resolve
-`explicit step field › explicit call arg › the file › the cheap default`, failing closed rather
-than falling back to cheap. Until that lands, a caller who skips the preflight and hand-writes args
-can still under-tier a run — the front matter and the gate remove the *ambiguity*, not the last of
-the manual step.
+**`grind.js` reads the manifest at dispatch (#1325's remaining half).** Before the pipeline runs,
+`grind.js` fetches each distinct `instructions`-step path's manifest through one cheap subagent
+(`node scripts/grind-manifest.mjs <path>`, effort `low`) and resolves each of effort/model/isolation
+as `explicit step field › explicit whole-run arg (args.effort/args.model/args.isolation) › the chore
+file › the cheap default`, logging the resolved tier once per chore so a run narrates its own tier.
+A manifest fetch that fails — a bad path, a chore missing front matter — **throws** rather than
+falling back to cheap; it never silently dispatches at a guessed tier. So a caller who hand-writes
+`steps` and skips the `--args` preflight is now tiered correctly anyway — the preflight remains the
+cheaper way to get the exact call (one command instead of remembering the resolution order), not
+the only way to get it right.
 
 **What front matter deliberately does NOT carry:** per-run grouping rules (per-doc, per-file,
 in waves), because `grind.js` could not enforce them anyway. Those stay prose in each chore's own
@@ -363,8 +367,11 @@ appeared). Two consequences:
   can never *change* it; file the change as its own issue and let an interactive session apply it.
   (The earlier "never hand-pick" objection recorded here was wrong: a gate's item list *is* the
   gate picking.)
-  What is still missing: `scripts/grind-manifest.mjs` reads `*.instructions.md` front matter only,
-  so a skill's calling convention is hand-written in its body until #1325's remaining half.
+  What is still missing, and out of #1325's scope: `scripts/grind-manifest.mjs` — and the dispatch
+  resolution `grind.js` now runs before the pipeline — reads `*.instructions.md` front matter only,
+  never `.claude/skills/*/SKILL.md`, so a `skill`-kind step's calling convention stays hand-written
+  prose in the skill body with no CI check and no dispatch-time enforcement. File it as its own
+  issue if a skill fanned via grind starts needing a declared tier the same way.
 
 ## When to reach for this vs. `/governor` or a purpose-built workflow
 
