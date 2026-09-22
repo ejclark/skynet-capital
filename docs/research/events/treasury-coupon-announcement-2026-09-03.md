@@ -286,3 +286,10 @@ determinism claim and scores 2026-09-11.
 rule that generated it: while `sb0590`'s "at least the next several quarters" stands, a coupon-block
 announcement is scheduled nil and the date carrying issuance information is the **2026-11-04**
 refunding. This doc now goes quiet.
+
+**Forward test scored 2026-09-22 (`forward-test-due`, past the 2026-09-11 score-by).**
+`FT-treasury-coupon-announcement-2026-09-03-1` **PASSED** — the 2026-09-10 announcement published
+the 20Y reopening at $13B and the 10Y TIPS reopening at $19B, exactly as predicted; re-verified this
+session against treasurydirect.gov's announcement XMLs directly. Full scoring detail lives in the
+row itself, [`forward-tests/treasury-coupon-announcement-2026-09-03.md`](../forward-tests/treasury-coupon-announcement-2026-09-03.md).
+This is a note on the register, not a second verdict on the event — the close-out above stands.
