@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId } from "react";
+import { normalizeExpiration } from "../live/expiration";
 import { fetchPlays, type PlayInfo, type PlaysIndex } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
@@ -134,6 +135,8 @@ function DeskTicket({
   onSymbolCommit,
   initialStrike,
   onStrikeCommit,
+  initialExpiration,
+  onExpirationCommit,
 }: {
   readonly desk: string;
   readonly code: string;
@@ -157,6 +160,9 @@ function DeskTicket({
    *  the rung didn't change, so there's nothing new for the URL to say. */
   readonly initialStrike?: string;
   readonly onStrikeCommit?: (strike: string) => void;
+  /** `?exp=` (slice 4a) — seeds the options ticket's expiration; changes commit back. */
+  readonly initialExpiration?: string;
+  readonly onExpirationCommit?: (expiration: string) => void;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
@@ -196,6 +202,8 @@ function DeskTicket({
           onSymbolCommit={onSymbolCommit}
           initialStrike={initialStrike}
           onStrikeCommit={onStrikeCommit}
+          initialExpiration={initialExpiration}
+          onExpirationCommit={onExpirationCommit}
           plays={plays.data?.plays ?? []}
           onPreset={onPreset}
         />
@@ -223,9 +231,11 @@ function Stage({
   symbol,
   play,
   strike,
+  expiration,
   desk,
   plays,
   onChainPick,
+  onExpirationCommit,
   onPreset,
   onSymbolCommit,
   onStrikeCommit,
@@ -234,9 +244,11 @@ function Stage({
   readonly symbol: string;
   readonly play: string;
   readonly strike: string;
+  readonly expiration: string;
   readonly desk: string;
   readonly plays: readonly PlayInfo[] | undefined;
   readonly onChainPick: (pick: ChainPick) => void;
+  readonly onExpirationCommit: (expiration: string) => void;
   readonly onPreset: (code: PlayCode) => void;
   readonly onSymbolCommit: (symbol: string) => void;
   readonly onStrikeCommit: (strike: string) => void;
@@ -250,6 +262,8 @@ function Stage({
         play={play}
         strike={strike}
         plays={plays}
+        initialExpiration={expiration}
+        onExpirationChange={onExpirationCommit}
         onPick={onChainPick}
       />
     );
@@ -263,12 +277,14 @@ function Stage({
       onSymbolCommit={onSymbolCommit}
       initialStrike={strike || undefined}
       onStrikeCommit={onStrikeCommit}
+      initialExpiration={expiration || undefined}
+      onExpirationCommit={onExpirationCommit}
     />
   );
 }
 
 function TradePage(): ReactElement {
-  const { desk, play, symbol, strike, section: askedSection } = Route.useSearch();
+  const { desk, play, symbol, strike, exp, section: askedSection } = Route.useSearch();
   const navigate = Route.useNavigate();
   const section = resolveSection(SECTIONS, askedSection);
   const onSection = (next: TradeSection) =>
@@ -327,9 +343,26 @@ function TradePage(): ReactElement {
     const target = chainPickTarget(play ?? "101", pick.side, plays.data?.plays);
     void navigate({
       search: (prev) => {
-        const next = { ...prev, strike: pick.strike };
+        // The expiration travels with the strike (slice 4a): a 180 tapped on the Oct 16 chain
+        // is the Oct 16 180, not whichever expiry the ticket happened to be on.
+        const next = { ...prev, strike: pick.strike, exp: pick.expiration };
         delete next.section;
         return target.play ? { ...next, play: target.play } : next;
+      },
+    });
+  };
+  /** `?exp=` follows whichever tool changed it — the chain pane's browse or the ticket's own
+   *  field — so the two never name different contracts. `replace: true`, a refinement. */
+  const commitExpiration = (next: string) => {
+    const normalized = normalizeExpiration(next);
+    if (normalized === exp) return;
+    void navigate({
+      replace: true,
+      search: (prev) => {
+        const nextSearch = { ...prev };
+        if (normalized) nextSearch.exp = normalized;
+        else delete nextSearch.exp;
+        return nextSearch;
       },
     });
   };
@@ -391,6 +424,8 @@ function TradePage(): ReactElement {
             symbol={symbol ?? ""}
             play={play ?? "101"}
             strike={strike ?? ""}
+            expiration={exp ?? ""}
+            onExpirationCommit={commitExpiration}
             desk={activeDesk}
             plays={plays.data?.plays}
             onChainPick={onChainPick}
@@ -414,6 +449,8 @@ export const Route = createFileRoute("/trade")({
     const symbol = normalizeSymbol(search.symbol);
     // `?strike=` (task 4e): same shape check pattern as symbol, mirrored one-for-one.
     const strike = normalizeStrike(search.strike);
+    // `?exp=` (#3407, Workbench slice 4a): ISO date or dropped, same posture as symbol/strike.
+    const exp = normalizeExpiration(search.exp);
     return {
       ...(typeof search.desk === "string" && search.desk.length > 0 && search.desk.length <= 100
         ? { desk: search.desk }
@@ -421,6 +458,7 @@ export const Route = createFileRoute("/trade")({
       ...(PLAY_CODES.has(play) ? { play: play as PlayInfo["code"] } : {}),
       ...(symbol !== undefined ? { symbol } : {}),
       ...(strike !== undefined ? { strike } : {}),
+      ...(exp !== undefined ? { exp } : {}),
       // `?section=` (#2017 Phase 1 chart build-out): only a known section id passes, exactly as
       // `activity.tsx` narrows its own; anything else is dropped and `resolveSection` falls back.
       ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
