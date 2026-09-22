@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import { guardDeltaFor } from "./guard-delta.js";
 import type { EquitySample } from "./history-store.js";
 import { type WireTradeVitals, wireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
@@ -31,12 +32,6 @@ export interface WireTradeWithReasoning extends WireTradeRow {
    *  trail, or the store is unwired) — never fabricated. */
   readonly reasoning?: WireTradeReasoning;
   readonly vitals?: WireTradeVitals;
-}
-
-function guardDeltaFor(record: DecisionRecord, intent: OrderIntent): string | undefined {
-  const raw = record.rawIntents.find((i) => i.symbol === intent.symbol && i.side === intent.side);
-  if (!raw || raw.quantity === intent.quantity) return undefined;
-  return `persona asked for ${raw.quantity}, risk guards sized it to ${intent.quantity}`;
 }
 
 export interface WireReasoningDeps {
