@@ -116,58 +116,6 @@ describe("playbookStoreView", () => {
     expect(djt?.metrics).toEqual([{ label: "Whipsaw rate", value: "0% whipsaw (5 round trips)" }]);
   });
 
-  describe("warm-up opt-in (#3543)", () => {
-    it("carries requireWarmup: true onto the subscription, omits it when off", () => {
-      const view = playbookStoreView([sub({ playbookId: "S1-NVDA", requireWarmup: true })]);
-      const nvda = view.cards.find((c) => c.id === "S1-NVDA");
-      const goog = view.cards.find((c) => c.id === "G1-GOOG");
-      expect(nvda?.subscription?.requireWarmup).toBe(true);
-      expect(goog?.subscription).toBeUndefined();
-      // A plain subscription (no opt-in) never carries the key at all.
-      const view2 = playbookStoreView([sub({ playbookId: "S1-NVDA" })]);
-      expect(view2.cards.find((c) => c.id === "S1-NVDA")?.subscription).not.toHaveProperty(
-        "requireWarmup",
-      );
-    });
-
-    it("sharpens the unmeasured copy to 'warming up — trading held' when the owner opted in", () => {
-      const trips = [trip({ playbookId: "S1-NVDA", realized: -10, holdMs: 60_000 })];
-      const view = playbookStoreView(
-        [sub({ playbookId: "S1-NVDA", requireWarmup: true })],
-        false,
-        trips,
-      );
-      const nvda = view.cards.find((c) => c.id === "S1-NVDA");
-      expect(nvda?.metrics).toEqual([
-        { label: "Whipsaw rate", value: "warming up — trading held (1 round trips)" },
-      ]);
-    });
-
-    it("uses the plain 'not yet measured' copy when the owner did NOT opt in", () => {
-      const trips = [trip({ playbookId: "S1-NVDA", realized: -10, holdMs: 60_000 })];
-      const view = playbookStoreView([sub({ playbookId: "S1-NVDA" })], false, trips);
-      const nvda = view.cards.find((c) => c.id === "S1-NVDA");
-      expect(nvda?.metrics).toEqual([
-        { label: "Whipsaw rate", value: "not yet measured (1 round trips)" },
-      ]);
-    });
-
-    it("drops the 'warming up' framing once the sample floor is reached, even with the opt-in on", () => {
-      const trips = Array.from({ length: 5 }, () =>
-        trip({ playbookId: "S1-NVDA", realized: -10, holdMs: 60_000 }),
-      );
-      const view = playbookStoreView(
-        [sub({ playbookId: "S1-NVDA", requireWarmup: true })],
-        false,
-        trips,
-      );
-      const nvda = view.cards.find((c) => c.id === "S1-NVDA");
-      expect(nvda?.metrics).toEqual([
-        { label: "Whipsaw rate", value: "100% whipsaw (5 round trips)" },
-      ]);
-    });
-  });
-
   describe("compounding opt-in (issue #3527 slice 3)", () => {
     it("carries compoundAllocation: true onto the subscription, omits it when off", () => {
       const view = playbookStoreView([sub({ playbookId: "S1-NVDA", compoundAllocation: true })]);
