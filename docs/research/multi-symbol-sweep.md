@@ -71,6 +71,26 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **Long-end demand read as price-elastic off a single reopening, and the test written to check
+  whether that travels to the next long-duration auction (FT-treasury-30y-bond-2026-09-10-2)** —
+  added 2026-09-22 from the
+  [treasury-30y-bond-2026-09-10 close-out](events/treasury-30y-bond-2026-09-10.md). The 09-10
+  reopening of CUSIP 912810UW6 stopped 2.7bp **through** a 5.335% when-issued at bid-to-cover 2.61,
+  indirects 79.33% — the best-demanded 30Y auction of 2026 on every published measure, against a
+  founding leg that read three prior tailed long-end auctions as demand deterioration. The test
+  chose the nearest confound-free long-duration tenor to check whether that reading generalizes:
+  the 2026-09-15 20Y reopening (CUSIP 912810UX4), size fixed at $13.0B two hours before the 09-10
+  auction's own close, so no supply surprise was available to it. It printed bid-to-cover **2.57**
+  (clears the ≥2.45 half) but a **positive tail of 2.0bp** against a ~5.400% when-issued (TreasuryDirect
+  publishes no WI; three independent secondary reports agree on 2.0bp) — the tail half of the kill
+  switch alone is enough to kill it, regardless of the cover reading. Indirect participation fell to
+  ~52%, well below the 09-10 reading and below this ledger's tracked 2026 range. **What this does and
+  does not refute:** the 09-10 auction's own strong print stands as a primary-sourced fact; what dies
+  is the claim that its price-elasticity generalizes to the next long-duration reopening five sessions
+  later. Do not re-propose "one auction's strong indirect bid signals a durable long-end demand shift"
+  without a second confirming instance at a comparably elevated yield level — n=1 killed on its first
+  out-of-sample test, same shape as the housing-starts ladder above.
+
 - **A positional nowcast "ladder" derived from a post-hoc subdivision of one archive, falsified on
   its first out-of-sample instance (FT-housing-starts-2026-09-17-1)** — added 2026-09-18 from the
   [housing-starts-2026-09-17 close-out](events/housing-starts-2026-09-17.md). Leg 2 of that
