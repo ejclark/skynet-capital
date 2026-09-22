@@ -25,7 +25,16 @@ function parseSymbols(raw: unknown): readonly string[] | undefined {
 
 function parseSubscription(raw: unknown, accountId: string): PlaybookSubscription | null {
   if (!isRecord(raw)) return null;
-  const { playbookId, mode, capitalAllocated, enabled, createdAt, updatedAt, symbols } = raw;
+  const {
+    playbookId,
+    mode,
+    capitalAllocated,
+    enabled,
+    createdAt,
+    updatedAt,
+    symbols,
+    requireWarmup,
+  } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
   if (typeof capitalAllocated !== "number" || !Number.isFinite(capitalAllocated)) return null;
@@ -41,6 +50,7 @@ function parseSubscription(raw: unknown, accountId: string): PlaybookSubscriptio
     createdAt,
     updatedAt,
     ...(parsedSymbols ? { symbols: parsedSymbols } : {}),
+    ...(requireWarmup === true ? { requireWarmup: true } : {}),
   };
 }
 
