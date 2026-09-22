@@ -606,6 +606,37 @@ const spreadPreview = {
       { price: 200, pnl: -3380 },
       { price: 240, pnl: -3380 },
     ],
+    // Today and halfway model lines (#3407 P4): each leg's IV solved from its own premium, so
+    // the credit spread's T+0 line sits under the full credit near the short strike and above
+    // the capped loss near the long one.
+    dated: [
+      {
+        label: "today",
+        daysForward: 0,
+        points: [
+          { price: 144, pnl: 560 },
+          { price: 165, pnl: 380 },
+          { price: 180, pnl: -160 },
+          { price: 183.1, pnl: -340 },
+          { price: 200, pnl: -1420 },
+          { price: 220, pnl: -2560 },
+          { price: 240, pnl: -3100 },
+        ],
+      },
+      {
+        label: "halfway",
+        daysForward: 12,
+        points: [
+          { price: 144, pnl: 610 },
+          { price: 165, pnl: 520 },
+          { price: 180, pnl: 60 },
+          { price: 183.1, pnl: -260 },
+          { price: 200, pnl: -1980 },
+          { price: 220, pnl: -3080 },
+          { price: 240, pnl: -3340 },
+        ],
+      },
+    ],
   },
 };
 const spreadVerdict = { ok: true, refusals: [], warnings: [] };

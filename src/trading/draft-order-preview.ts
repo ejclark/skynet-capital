@@ -1,4 +1,6 @@
 import { type StructureLeg, structureValue } from "../options/payoff-surface.js";
+import { impliedVolatility } from "../options/pricing.js";
+import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { type DraftLeg, type DraftOrder, undefinedRiskLegs } from "./draft-order.js";
 import { SHARES_PER_CONTRACT } from "./option-economics.js";
 
@@ -63,35 +65,47 @@ export interface DatedCurve {
   readonly points: readonly PayoffPoint[];
 }
 
-/** What the model needs beyond the legs to mark them before expiry. One IV for every leg —
- *  the single-leg ticket's own; a per-leg IV is the multi-leg builder's next slice. */
+/** What the model needs beyond a leg to mark it before expiry: its IV and its own clock. */
 export interface DatedModel {
   readonly volatility: number;
   readonly daysToExpiry: number;
 }
 
+/** One model for every leg (the single-leg ticket's own IV) or one per leg (the multi-leg
+ *  builder solves each leg's IV from the premium the member set, #3407 P4). */
+export type DatedModels = DatedModel | ((leg: DraftLeg) => DatedModel | undefined);
+
 /**
  * The T+0 and halfway lines through the same prices as the expiration curve, each point the
  * whole structure's model value less what opening it costs (`payoff-surface.ts`; European,
  * constant-vol, dividend-free — the pricing core's caveats carry over). Nothing for a contract
- * inside two days of expiry: today and halfway would both sit on the expiration line.
+ * inside two days of expiry, or for a leg the model cannot describe: today and halfway would
+ * both sit on the expiration line, or lie. Halfway is half of the NEAREST expiry, so no leg is
+ * marked past its own settlement.
  */
 export function datedCurves(
   legs: readonly DraftLeg[],
   prices: readonly number[],
-  model: DatedModel,
+  models: DatedModels,
   stock?: StockComponent,
 ): readonly DatedCurve[] | undefined {
-  if (!(model.daysToExpiry >= 2 && model.volatility > 0)) return undefined;
-  if (legs.some((leg) => leg.limitPrice === undefined)) return undefined;
-  const structure: StructureLeg[] = legs.map((leg) => ({
-    kind: leg.optionType,
-    quantity: (leg.action === "buy" ? 1 : -1) * leg.contracts,
-    strike: leg.strike,
-    daysToExpiry: model.daysToExpiry,
-    volatility: model.volatility,
-    entryPrice: leg.limitPrice ?? 0,
-  }));
+  if (legs.length === 0 || legs.some((leg) => leg.limitPrice === undefined)) return undefined;
+  const modelFor = typeof models === "function" ? models : () => models;
+  const structure: StructureLeg[] = [];
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const leg of legs) {
+    const model = modelFor(leg);
+    if (!(model && model.daysToExpiry >= 2 && model.volatility > 0)) return undefined;
+    nearest = Math.min(nearest, model.daysToExpiry);
+    structure.push({
+      kind: leg.optionType,
+      quantity: (leg.action === "buy" ? 1 : -1) * leg.contracts,
+      strike: leg.strike,
+      daysToExpiry: model.daysToExpiry,
+      volatility: model.volatility,
+      entryPrice: leg.limitPrice ?? 0,
+    });
+  }
   if (stock) structure.push({ kind: "stock", quantity: stock.shares, entryPrice: stock.basis });
   const entryCost = structure.reduce(
     (sum, leg) =>
@@ -108,8 +122,52 @@ export function datedCurves(
     return { label, daysForward, points };
   };
   const today = line("today", 0);
-  const halfway = line("halfway", round2(model.daysToExpiry / 2));
+  const halfway = line("halfway", round2(nearest / 2));
   return today && halfway ? [today, halfway] : undefined;
+}
+
+/**
+ * Per-leg models for a multi-leg draft (#3407 P4): each leg's IV solved from the premium the
+ * member set against the underlying's spot, and its own days to expiry from the clock. A leg
+ * whose underlying has no spot, or whose premium the solver cannot invert, has no model — and
+ * `datedCurves` then draws nothing rather than a line with a guessed leg in it.
+ */
+export function legDatedModels(
+  spots: ReadonlyMap<string, number>,
+  now: Date,
+): (leg: DraftLeg) => DatedModel | undefined {
+  return (leg) => {
+    const spot = spots.get(leg.underlying);
+    const daysToExpiry = daysToExpiryFrom(leg.expiration, now);
+    if (spot === undefined || daysToExpiry === undefined || leg.limitPrice === undefined) {
+      return undefined;
+    }
+    const volatility = impliedVolatility({
+      spot,
+      strike: leg.strike,
+      daysToExpiry,
+      type: leg.optionType,
+      marketPrice: leg.limitPrice,
+    });
+    return volatility === undefined ? undefined : { volatility, daysToExpiry };
+  };
+}
+
+/** The preview with the dated lines attached when the model can draw them — the builder's own
+ *  review (`draft-order-route.ts`) hands in the spots it read; nothing else changes. */
+export function withDatedCurves(
+  preview: DraftPreview,
+  draft: DraftOrder,
+  spots: ReadonlyMap<string, number>,
+  now: Date,
+): DraftPreview {
+  if (!preview.payoff) return preview;
+  const dated = datedCurves(
+    draft.legs,
+    preview.payoff.points.map((p) => p.price),
+    legDatedModels(spots, now),
+  );
+  return dated ? { ...preview, payoff: { ...preview.payoff, dated } } : preview;
 }
 
 /** Shares riding along with the legs — a covered call's 100 held shares per contract, valued
