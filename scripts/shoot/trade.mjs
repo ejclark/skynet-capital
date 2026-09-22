@@ -1245,7 +1245,10 @@ await page
   .first()
   .waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
-const shootBench = shooter(page, resolve("docs/shots/bench"));
+// quality 58, not the harness default (62): the milestone strip now on-frame (Eric, 2026-09-22,
+// restoring it above the Bench) pushed this scene's densest frame just over the ~100KB commit
+// ceiling at the default quality (docs/PICTURES.md).
+const shootBench = shooter(page, resolve("docs/shots/bench"), { quality: 58 });
 await shootBench("bench-phone");
 await page.setViewportSize({ width: 1280, height: 1400 });
 await page.getByRole("region", { name: "Chart" }).waitFor();
@@ -1465,21 +1468,20 @@ await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootRail = shooter(page, resolve("docs/shots/itm-rail"));
 await shootRail("itm-rail-phone");
 
-// THE LADDER RAIL (Eric, 2026-09-22: "I also want this section restored on the trade page… find
-// a better design to more organically integrate the behavior") — the click-to-preset function the
-// milestone strip carried, back as the rail's own item list instead of a second strip above the
-// bench. `plays` (one fill in: 101 earned, 102 open, the rest locked) shows all three states in
-// one frame. PHONE FIRST: the rail becomes the same horizontal chip row every other rail control
-// already turns into at ≤860px — no ladder-specific CSS, so this also proves that fallback works.
+// THE MILESTONE STRIP, BACK ON /trade (Eric, 2026-09-22, after two intermediate placements — a
+// rail item list, then nothing: "The milestone ladder is still on the left... i want to restore
+// previous design where this milestone information is rendered across the top") — the same
+// component `/learn/trading` renders, now also above the Bench on `/trade`. `plays` (one fill in:
+// 101 earned, 102 open, the rest locked) shows all three rung states in one frame. PHONE FIRST.
 currentPlays = plays;
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201`);
-await page.getByText("201", { exact: true }).first().waitFor();
+await page.getByText("Milestone · Trading ladder").waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
-const shootLadderRail = shooter(page, resolve("docs/shots/ladder-rail"));
-await shootLadderRail("ladder-rail-phone");
+const shootMilestoneStrip = shooter(page, resolve("docs/shots/trade-milestone-strip"));
+await shootMilestoneStrip("trade-milestone-strip-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByText("Ladder", { exact: true }).waitFor();
-await shootLadderRail("ladder-rail-desktop");
+await page.getByText("Milestone · Trading ladder").waitFor();
+await shootMilestoneStrip("trade-milestone-strip-desktop");
 
 await close();

@@ -125,12 +125,6 @@
   margin-left: 14px;
 }
 
-/* The ladder rail's rungs (`ladder-rail.tsx`, Eric 2026-09-22): a locked rung reads dimmer AND
-   routes to `/learn/trading` instead of `/trade` — two non-colour signals, opacity is a third,
-   never the only one (`docs/BRAND.md` → Accessibility). */
-.rail-rung-locked {
-  opacity: 0.65;
-}
 @media (max-width: 860px) {
   .rail a.rail-sub,
   .rail .rail-current.rail-sub {

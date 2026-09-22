@@ -39,9 +39,10 @@
   text-decoration: underline;
 }
 
-/* The milestone strip (#1461; on /learn/trading since #3407 slice 5) — eyebrow · rail · status
-   line. Mobile-first: the base rules are the phone frame (nodes, codes, count, status); names
-   under the nodes arrive at 600px. */
+/* The milestone strip (#1461; on /learn/trading since #3407 slice 5, back on /trade — above the
+   Bench — since Eric, 2026-09-22: "restore previous design where this milestone information is
+   rendered across the top") — eyebrow · rail · status line. Mobile-first: the base rules are the
+   phone frame (nodes, codes, count, status); names under the nodes arrive at 600px. */
 .ladder-strip {
   display: flex;
   flex-direction: column;
