@@ -16,6 +16,7 @@ import {
   validateDraft,
 } from "../live/draft-order";
 import { type ChainData, type ChainRow, fetchChain } from "../live/options";
+import { formatExpiration } from "../live/straddle";
 import { money, TIF_LABELS, type TicketTimeInForce, tifLabel } from "../live/ticket";
 
 /**
@@ -319,7 +320,7 @@ function RollFields({
         >
           {(heldChain?.expirations ?? []).map((exp) => (
             <option key={exp} value={exp}>
-              {exp}
+              {formatExpiration(exp)}
             </option>
           ))}
         </select>

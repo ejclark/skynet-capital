@@ -27,15 +27,16 @@ rstest.mock("../../src/live/options", () => ({
 rstest.mock("../../src/live/quote", () => ({
   fetchQuote: () => Promise.resolve({ quoteNote: "test fixture — no live quote" }),
 }));
-// The options gate also mounts `WireRow` (#2017 Phase 1 slice 12), same reason.
-rstest.mock("../../src/live/wire", () => ({
-  fetchWireForSymbol: () =>
-    Promise.resolve({ trades: [], pnl: [], feedbackEnabled: false, feedback: [] }),
-}));
 // Both gates now mount `RecentOrdersStrip` (#2017 Phase 1 slice 13), same reason — TradeGate's
-// `quoteSym` is seeded from `initialSymbol` immediately, so it fires without waiting for a commit.
+// `quoteSym` is seeded from `initialSymbol` immediately, so it fires without waiting for a commit
+// — and the options gate's held-badge desk query (Eric, 2026-09-22) fires unconditionally too.
 rstest.mock("../../src/live/desk", () => ({
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
+  fetchDesk: () =>
+    Promise.resolve({
+      generatedAt: "2026-09-21T00:00:00Z",
+      desk: { id: "desk-1", name: "Desk", kind: "human", positions: [], considerations: [] },
+    }),
 }));
 
 const unlockedOptionPlay: PlayInfo = {

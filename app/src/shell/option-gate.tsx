@@ -1,6 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import { fetchDesk } from "../live/desk";
 import { useOrderFill } from "../live/desk-events";
 import {
   fetchChain,
@@ -19,7 +21,6 @@ import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
 import { TimeInForceField } from "./tif-field";
-import { WireRow } from "./wire-row";
 
 /**
  * THE OPTIONS TICKET (#738 phase 10b) — the legacy `/trade` option plays in the shell, on the
@@ -67,6 +68,14 @@ import { WireRow } from "./wire-row";
  * didn't change, and the strike shown against it is provisional (the note says as much), so `?strike=`
  * stays whatever it already was. Known gap, out of scope for this pass: a rung switch doesn't
  * re-seed the limit price from the new rung's own chain — only the strike survives the remount.
+ *
+ * HELD POSITIONS ON THE CHAIN (Eric, 2026-09-22): a "C"/"P" badge next to a strike marks a
+ * contract the desk already holds at that strike, on the same underlying and expiration this
+ * chain shows — the chain table's own `markedStrikes` outline is a different concept (a DRAFT
+ * leg not yet submitted, multi-leg only); this is a REAL, filled holding, sourced from the same
+ * `["desk", deskId]` query `trade.tsx` already fetches (cache-shared, no extra round trip) and
+ * decomposed via `parseOccSymbol`. A successful submit here invalidates that query so a just-
+ * filled strike picks up its badge without a reload.
  */
 
 /** @category trading */
@@ -143,6 +152,38 @@ export function OptionGate({
   const chainData = chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
   const chainNote = chain.data && "chainNote" in chain.data ? chain.data.chainNote : undefined;
   const chainReason = chain.data && "reason" in chain.data ? chain.data.reason : undefined;
+
+  const queryClient = useQueryClient();
+  /** Same `["desk", deskId]` key `trade.tsx` already fetches with — react-query dedupes, so this
+   *  is a cache read in practice, not a second round trip (#3407, review — the held-position
+   *  badges below). */
+  const desk = useQuery({
+    queryKey: ["desk", deskId],
+    queryFn: () => fetchDesk(deskId),
+    // Gated on a committed symbol, same as the chain query above — nothing to badge before then,
+    // and this keeps a fresh, symbol-less mount from firing a fetch nobody asked for yet.
+    enabled: deskId !== "" && chainSym !== "",
+  });
+  /** Which strikes in THIS chain (same underlying, same expiration) the desk already holds a
+   *  contract on, and which side — "C", "P", or "C/P" for a strangle on the same strike. Scoped to
+   *  the resolved chain's own expiration: a held position on a different expiration never matches
+   *  a row this table can even show. Reflects only real, filled holdings (never a draft in
+   *  progress) — `submit`'s own `["desk", deskId]` invalidation below is what makes a JUST-filled
+   *  position appear here without a reload (Eric, 2026-09-22). */
+  const heldBadges = new Map<number, string>();
+  if (chainData) {
+    const underlying = (chainSym || symbol).trim().toUpperCase();
+    for (const position of desk.data?.desk.positions ?? []) {
+      if (!position.isOption) continue;
+      const parts = parseOccSymbol(position.symbol);
+      if (!parts || parts.underlying !== underlying || parts.expiration !== chainData.expiration) {
+        continue;
+      }
+      const letter = parts.type === "call" ? "C" : "P";
+      const existing = heldBadges.get(parts.strike);
+      heldBadges.set(parts.strike, existing && existing !== letter ? "C/P" : letter);
+    }
+  }
 
   /** Withhold state (#2017 Phase 0 task 4d): idle → nothing, loading → a note, stopped → a note
    *  (genuine dead end), otherwise (resolved chain, or a degraded/unrecognized answer) → fields. */
@@ -273,7 +314,12 @@ export function OptionGate({
     if (state.step !== "reviewed") return;
     setState({ step: "submitting", preview: state.preview });
     try {
-      setState({ step: "done", result: await submitOption(draft()) });
+      const result = await submitOption(draft());
+      setState({ step: "done", result });
+      // A filled open changes the desk's holdings — refetch so a just-filled strike picks up its
+      // held badge without a reload (the same refresh pattern `OptionPositionsCard`'s own close
+      // flow already uses).
+      if (result.ok) void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
@@ -353,6 +399,7 @@ export function OptionGate({
           chainData={chainData}
           strike={strike}
           expirationField={expirationField}
+          heldBadges={heldBadges}
           onPickStrike={pickStrikeAndCommit}
           onPickSide={onChainCellPick}
         />
@@ -415,14 +462,12 @@ export function OptionGate({
       <TimeInForceField fallback="day" value={timeInForce} onChange={edit(setTimeInForce)} />
       {limitNote ? <p className="tkt-note">{limitNote}</p> : null}
 
-      {/* Self, then others (#2017 Phase 1 slice 13 review fix): the drawer-narrative order Eric's
-          plan comment sketched — "here's what you've done, here's what others are doing, now
-          decide" — reads back-to-front if `WireRow` (others' trades) comes first, so the viewer's
-          own recent orders lead. Both components withhold rendering until their own symbol is
-          committed/resolved, so mounting them unconditionally here is just about not cluttering
-          this JSX. */}
+      {/* The who-else-traded row that used to sit here (`WireRow`, #2017 Phase 1 slice 12) is
+          retired (Eric, 2026-09-22): it matched by underlying, not by contract, so "Also trading
+          NVDA" mixed in stock fills on a form that's explicitly for options. `RecentOrdersStrip`
+          withholds rendering until its own symbol is resolved, so mounting it unconditionally
+          here is just about not cluttering this JSX. */}
       <RecentOrdersStrip symbol={resolvedOccSymbol} deskId={deskId} />
-      <WireRow symbol={chainSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
         <OptionGateStatus state={state} fill={fill} />

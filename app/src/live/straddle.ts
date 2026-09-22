@@ -81,6 +81,21 @@ export function expiresIn(days: number): string {
   return `Expires in ${days} day${days === 1 ? "" : "s"}`;
 }
 
+/** "Sep 23, 2026" — month/day lead, year trails (Eric, 2026-09-22: "users care about the month
+ *  and day in this context... the only time users care about the year is long leaps at which
+ *  point they've already scrolled to the year they want and proceed to look at the month/day").
+ *  ISO's year-first order optimizes for lexicographic sort, not how a member scans a pick list.
+ *  Invalid input passes through unchanged rather than printing a fabricated date. */
+export function formatExpiration(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!(y && m && d)) return iso;
+  const month = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  });
+  return `${month} ${d}, ${y}`;
+}
+
 /** In the money: a call below spot, a put above it. Neither without a spot. */
 export function inTheMoney(
   strike: number,

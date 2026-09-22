@@ -216,47 +216,6 @@ const studyBars = {
   }),
 };
 
-// The empty Wire feed used by every earlier shot that happens to land on a committed symbol
-// (`WireRow` mounts under the chain on any of them) — #2017 Phase 1 slice 12's own fixture,
-// swapped for a populated one only in that shot's own scene below.
-const emptyWire = { wire: { trades: [], pnl: [], feedbackEnabled: false, feedback: [] } };
-
-// Who-else-traded fills for NVDA (#2017 Phase 1 slice 12) — a human buy and a bot sell, newest
-// first, real names per the consent doctrine (no anonymizing to prove here).
-const nvdaWire = {
-  wire: {
-    trades: [
-      {
-        key: "sauron-1",
-        side: "sell",
-        symbol: "NVDA260918C00180000",
-        quantity: 3,
-        price: "5.10",
-        who: "Sauron",
-        whoId: "bot-sauron",
-        kind: "bot",
-        reconstructed: false,
-        when: "2:41p",
-      },
-      {
-        key: "ann-1",
-        side: "buy",
-        symbol: "NVDA",
-        quantity: 100,
-        price: "181.02",
-        who: "Ann",
-        whoId: "human-ann",
-        kind: "human",
-        reconstructed: false,
-        when: "1:58p",
-      },
-    ],
-    pnl: [],
-    feedbackEnabled: false,
-    feedback: [],
-  },
-};
-
 // One expiration's put chain around the quote's spot, the same shape `straddle.mjs` uses — needed
 // only by the options-ticket quote shot below (#2017 Phase 0.9 review, item 5): with no stub the
 // endpoint falls through to `stubBody`'s `{}` default, which `OptionGate` reads as a present-but-
@@ -313,10 +272,6 @@ let currentPlays = freshPlays;
 // every earlier shot's fixed NVDA fixtures (mirrors `currentPlays`'s own pattern).
 let currentChain = chain;
 let currentQuote = quote;
-// `/api/wire` matches by pathname alone (the shoot harness's stub matcher strips the query
-// string before looking a stub up — `lib.mjs`'s `stubBody`), so one exact key covers every
-// `?symbol=` this script commits, same as `/api/trade/chain` above.
-let currentWire = emptyWire;
 // The base twenty bars for every chart shot but the studies scene, which swaps in `studyBars`.
 let currentBars = bars;
 // Working orders (#3407 P1 slice 2): the list a Limit was missing. Every scene but the one that
@@ -662,7 +617,6 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/chain": () => currentChain,
     // Matched by pathname alone (`lib.mjs`'s `stubBody`), so one key covers any `?symbol=&days=`.
     "/api/trade/bars": () => currentBars,
-    "/api/wire": () => currentWire,
     // Matched by pathname alone too, so one key covers any `?q=`.
     "/api/symbols/search": () => symbolSearch,
     // Working orders (#3407 P1 slice 2) — pathname-matched, so one key covers `?participantId=`.
@@ -781,7 +735,7 @@ await shoot("trade-quote-options-phone");
 // It now renders full-width above the chain table itself (see the next scene's comment), not in
 // the ~150px tile of the top fields grid — 13 dates need the room a fixed-width tab strip has to
 // actually show more than one and a half of them (Eric, 2026-09-21).
-await page.getByRole("button", { name: "2026-09-09" }).waitFor();
+await page.getByRole("button", { name: "Sep 9, 2026" }).waitFor();
 await shoot("trade-exp-tabs-phone");
 
 // The chain table above the fields it drives (#2017 Phase 0 task 4e) — same navigation as the
@@ -820,29 +774,59 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-chain-above-fields-desktop");
 await page.setViewportSize({ width: 390, height: 844 });
 
-// The who-else-traded row (#2017 Phase 1 slice 12) — a human buy and a bot sell on NVDA, real
-// names, under the chain and above the review/submit action. Same navigation as the shots above
-// (still `?play=201&symbol=NVDA`); only the Wire fixture changes for this one scene. Its own
-// output directory, same pattern as the earnings-badge scene below (`shootEarningsBadge`).
-currentWire = nvdaWire;
+// The held-position badge (Eric, 2026-09-22) — a "P" next to the 180 strike, the chain's own row
+// for a put the desk already holds at this exact underlying + expiration; the who-else-traded row
+// that used to occupy this spot (`WireRow`, #2017 Phase 1 slice 12) is retired — it matched by
+// underlying rather than by contract, so "Also trading NVDA" mixed in stock fills on a form
+// that's explicitly for options. Its own output directory, same pattern as the earnings-badge
+// scene below (`shootEarningsBadge`).
+currentDesk = {
+  ...desk,
+  desk: {
+    ...desk.desk,
+    positions: [
+      {
+        symbol: "NVDA260909P00180000",
+        display: "NVDA $180 put · Sep 9",
+        detail: "2 contracts",
+        isOption: true,
+        quantity: "2",
+        costPerShare: "$2.40",
+        price: "$2.20",
+        costBasis: "$480.00",
+        value: "$440.00",
+        dayPl: "-$40.00",
+        dayPct: "-8.3%",
+        dayTone: "neg",
+        totalPl: "-$40.00",
+        totalPlRaw: -40,
+        returnPct: "-8.3%",
+        totalTone: "neg",
+        weightPct: 1,
+      },
+    ],
+  },
+};
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.getByText("Also trading NVDA").waitFor();
-await page.getByText("Also trading NVDA").scrollIntoViewIfNeeded();
-const shootWireRow = shooter(page, resolve("docs/shots/wire-row"));
-await shootWireRow("wire-row-phone");
+await page.locator(".straddle-held-badge:not(.straddle-held-empty)").first().waitFor();
+await page
+  .locator(".straddle-held-badge:not(.straddle-held-empty)")
+  .first()
+  .scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootHeldBadge = shooter(page, resolve("docs/shots/held-badge"));
+await shootHeldBadge("held-badge-phone");
+currentDesk = desk;
 
 // The recent-orders strip (#2017 Phase 1 slice 13, task 3a) — the viewer's OWN order history for
-// the EXACT contract in front of them, self first then WireRow's "others" (the ordering decision
-// from the plan's review pass), both in frame together at 390px since they fit naturally here. A
-// strike has to actually resolve to a chain row before `RecentOrdersStrip` renders anything (it
-// takes the matched row's real `occSymbol`, never a hand-assembled one), so this navigation commits
-// `?strike=180` — the same row `trade-recent-orders-fixture.mjs`'s two events are keyed to.
+// the EXACT contract in front of them. A strike has to actually resolve to a chain row before
+// `RecentOrdersStrip` renders anything (it takes the matched row's real `occSymbol`, never a
+// hand-assembled one), so this navigation commits `?strike=180` — the same row
+// `trade-recent-orders-fixture.mjs`'s two events are keyed to.
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=180`);
 await page.getByText("Your recent orders").waitFor();
 await page.getByText("Your recent orders").scrollIntoViewIfNeeded();
 await shooter(page, resolve("docs/shots/recent-orders"))("recent-orders-phone");
-
-currentWire = emptyWire;
 
 // Progressive disclosure (#2017 Phase 0 task 4d): with no `?symbol=` committed yet, the five
 // chain-gated fields (Expiration/Strike/Contracts/Order/Limit) are withheld entirely — the panel

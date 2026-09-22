@@ -7,16 +7,17 @@ import { EventLine } from "./timeline-drawer";
  * THE RECENT-ORDERS STRIP (#2017 Phase 1 slice 13, task 3a) — a compact, non-modal "here's what
  * you've done" intel strip on the trade ticket itself, reusing `TimelineDrawer`'s exact data path
  * (`["desk-activity", deskId]` / `fetchDeskActivity`) and its exported `EventLine` row component
- * verbatim — no re-derivation of fill-history markup, same DRY discipline the earnings badge and
- * the wire-row slice both followed. Sharing the query key means a desk that has both this strip
- * and the drawer mounted shares one cached fetch instead of duplicating the network call.
+ * verbatim — no re-derivation of fill-history markup, same DRY discipline the earnings badge
+ * followed. Sharing the query key means a desk that has both this strip and the drawer mounted
+ * shares one cached fetch instead of duplicating the network call.
  *
- * EXACT-SYMBOL MATCH, NOT UNDERLYING-AWARE: unlike `WireRow` (who-else-traded, #2017 Phase 1 slice
- * 12), which matches by underlying via `parseOccSymbol` because it answers "who else traded ANY
- * NVDA contract", this strip answers a narrower question — "what did *I* just do with the EXACT
- * instrument in front of me" — so `e.symbol === symbol` (the raw broker symbol, an OCC symbol for
- * an option) is the correct, narrower match here. Do not import the wire-row's underlying-matching
- * logic into this component; it solves a different problem.
+ * EXACT-SYMBOL MATCH, NOT UNDERLYING-AWARE: unlike the ticket's own who-else-traded row (`WireRow`,
+ * #2017 Phase 1 slice 12; retired 2026-09-22 — see `option-gate.tsx`), which matched by underlying
+ * via `parseOccSymbol` because it answered "who else traded ANY NVDA contract", this strip answers
+ * a narrower question — "what did *I* just do with the EXACT instrument in front of me" — so
+ * `e.symbol === symbol` (the raw broker symbol, an OCC symbol for an option) is the correct,
+ * narrower match here. Do not reach for underlying-matching in this component; it solves a
+ * different problem.
  *
  * 3B IS OUT OF SCOPE: joining `decisionContextFor` (src/observatory/decision-context.ts) to explain
  * *why* an order fired is explicitly gated on the filed audit-dir hosting decision
