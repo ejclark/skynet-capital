@@ -5,9 +5,15 @@
  * account's.
  */
 
-import { type PlaybookStoreEntry, playbookStoreCatalog } from "../discovery/playbook-store.js";
+import {
+  type PlaybookMetric,
+  type PlaybookStoreEntry,
+  playbookStoreCatalog,
+} from "../discovery/playbook-store.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription } from "../domain/types.js";
+import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
+import type { RoundTrip } from "../trading/round-trips.js";
 
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
   readonly subscription?: {
@@ -35,15 +41,34 @@ export interface PlaybookStoreView {
   readonly delegation: DelegationGateView;
 }
 
+/** "23% whipsaw (12 round trips)" once measured; "not yet measured (2/5 round trips)" below the
+ *  sample floor — never a bare percentage from a handful of trips (#3543's honesty invariant). */
+function whipsawMetric(stats: ReturnType<typeof whipsawStatsByPlaybook>[number]): PlaybookMetric {
+  const value = stats.measured
+    ? `${Math.round((stats.whipsawRate ?? 0) * 100)}% whipsaw (${stats.roundTrips} round trips)`
+    : `not yet measured (${stats.roundTrips} round trips)`;
+  return { label: "Whipsaw rate", value };
+}
+
 export function playbookStoreView(
   subscriptions: readonly PlaybookSubscription[] | undefined,
   delegationLocked = false,
+  /** The viewing account's OWN closed round-trips (#3543 slice 2) — never another account's,
+   *  same "no cross-account visibility" boundary #885 already settled for subscriptions. Defaults
+   *  to none: a caller not yet passing them gets the bare catalog metrics, exactly as before this
+   *  parameter existed. */
+  roundTrips: readonly RoundTrip[] = [],
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
+  const whipsawByPlaybookId = new Map(
+    whipsawStatsByPlaybook(roundTrips).map((stats) => [stats.playbookId, stats]),
+  );
   const cards = playbookStoreCatalog().map((entry) => {
     const sub = byPlaybookId.get(entry.id);
+    const whipsaw = whipsawByPlaybookId.get(entry.id);
     return {
       ...entry,
+      ...(whipsaw ? { metrics: [...entry.metrics, whipsawMetric(whipsaw)] } : {}),
       ...(sub
         ? {
             subscription: {
