@@ -1464,4 +1464,21 @@ await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootRail = shooter(page, resolve("docs/shots/itm-rail"));
 await shootRail("itm-rail-phone");
 
+// THE LADDER RAIL (Eric, 2026-09-22: "I also want this section restored on the trade page… find
+// a better design to more organically integrate the behavior") — the click-to-preset function the
+// milestone strip carried, back as the rail's own item list instead of a second strip above the
+// bench. `plays` (one fill in: 101 earned, 102 open, the rest locked) shows all three states in
+// one frame. PHONE FIRST: the rail becomes the same horizontal chip row every other rail control
+// already turns into at ≤860px — no ladder-specific CSS, so this also proves that fallback works.
+currentPlays = plays;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201`);
+await page.getByText("201", { exact: true }).first().waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+const shootLadderRail = shooter(page, resolve("docs/shots/ladder-rail"));
+await shootLadderRail("ladder-rail-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Ladder", { exact: true }).waitFor();
+await shootLadderRail("ladder-rail-desktop");
+
 await close();
