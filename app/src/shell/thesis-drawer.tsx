@@ -127,6 +127,43 @@ function CallBanner({ call }: { readonly call: ThesisData["call"] }): ReactEleme
   );
 }
 
+/** A fill without a resolved decision renders exactly as before: a plain link, no fake affordance.
+ *  One carrying `reasoning` gets a closed-by-default expand — a fill isn't a failure state that
+ *  demands to arrive open, unlike `CycleRow`'s halted/rejected cycles. */
+function MarkerRow({ marker }: { readonly marker: ThesisMarker }): ReactElement {
+  const [open, setOpen] = useState(false);
+  return (
+    <li className={`thesis-marker thesis-marker-${marker.kind}`}>
+      <div className="thesis-marker-row">
+        <a href={`#${marker.activityAnchor}`}>
+          {marker.n}. {marker.label}
+        </a>
+        {marker.reasoning ? (
+          <button
+            type="button"
+            className="thesis-marker-toggle"
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            {open ? "Hide reasoning" : "Why?"}
+          </button>
+        ) : null}
+      </div>
+      {open && marker.reasoning ? (
+        <div className="thesis-marker-detail">
+          <p className="cycle-reason">“{marker.reasoning.reason}”</p>
+          {marker.reasoning.expectation ? (
+            <p className="cycle-expectation">Expected: {marker.reasoning.expectation}</p>
+          ) : null}
+          {marker.reasoning.guardDelta ? (
+            <p className="cycle-guard-delta">{marker.reasoning.guardDelta}</p>
+          ) : null}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 function MarkerList({
   markers,
 }: {
@@ -136,11 +173,7 @@ function MarkerList({
   return (
     <ol className="thesis-markers">
       {markers.map((marker) => (
-        <li key={marker.activityAnchor} className={`thesis-marker thesis-marker-${marker.kind}`}>
-          <a href={`#${marker.activityAnchor}`}>
-            {marker.n}. {marker.label}
-          </a>
-        </li>
+        <MarkerRow key={marker.activityAnchor} marker={marker} />
       ))}
     </ol>
   );

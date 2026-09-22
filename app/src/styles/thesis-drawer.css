@@ -116,3 +116,23 @@
   border-left: 2px solid var(--neg);
   padding-left: 6px;
 }
+.thesis-marker-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.thesis-marker-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.thesis-marker-detail {
+  margin: 4px 0 2px;
+  padding-left: 2px;
+}

@@ -268,12 +268,23 @@ export interface ThesisCall {
   readonly asOf?: string;
 }
 
+/** The decision behind a Thesis marker's fill — see `src/observatory/wire-reasoning.ts`. */
+export interface ThesisMarkerReasoning {
+  readonly reason: string;
+  readonly strategy?: string;
+  readonly expectation?: string;
+  readonly guardDelta?: string;
+}
+
 export interface ThesisMarker {
   readonly n: number;
   readonly kind: "entry" | "exit";
   readonly at: string;
   readonly label: string;
   readonly activityAnchor: string;
+  /** Absent for a fill that predates the audit trail, or when no lookup is configured — never
+   *  fabricated. */
+  readonly reasoning?: ThesisMarkerReasoning;
 }
 
 export interface ThesisHealth {
