@@ -25,6 +25,10 @@ interface PlaybookStoreCardView extends PlaybookStoreEntry {
     /** Owner opt-in to hold trading dark until warmed up (#3543) — absent means off, the
      *  always-on default every subscription had before this field existed. */
     readonly requireWarmup?: boolean;
+    /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
+     *  #3527 slice 3) — absent means off, the flat-budget default every subscription had before
+     *  this field existed. */
+    readonly compoundAllocation?: boolean;
   };
 }
 
@@ -89,6 +93,7 @@ export function playbookStoreView(
               enabled: sub.enabled,
               ...(sub.symbols ? { symbols: sub.symbols } : {}),
               ...(sub.requireWarmup ? { requireWarmup: true } : {}),
+              ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
             },
           }
         : {}),
