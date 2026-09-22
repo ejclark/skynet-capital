@@ -1,5 +1,5 @@
 import { addLeg, emptyDraft, type NewLeg } from "../../src/trading/draft-order.js";
-import { draftPreview } from "../../src/trading/draft-order-preview.js";
+import { draftPreview, payoffCurve } from "../../src/trading/draft-order-preview.js";
 
 /**
  * Slice 3's pure half: the payoff arithmetic behind the review screen. The interesting cases are
@@ -55,6 +55,30 @@ describe("draftPreview", () => {
     const preview = draftPreview(unpriced);
 
     expect(preview.pricedFully).toBe(false);
+  });
+
+  it("samples the at-expiration curve through every strike and finds the breakeven exactly", () => {
+    const spread = addLeg(addLeg(emptyDraft(), SHORT_CALL), LONG_CALL);
+    const curve = payoffCurve(spread.legs);
+    expect(curve).toBeDefined();
+    if (!curve) return;
+    expect(curve.from).toBeCloseTo(144); // 180 × 0.8
+    expect(curve.to).toBeCloseTo(240); // 200 × 1.2
+    const prices = curve.points.map((p) => p.price);
+    expect(prices).toContain(180);
+    expect(prices).toContain(200);
+    expect([...prices].sort((a, b) => a - b)).toEqual(prices);
+    // Flat at the credit below the short strike, flat at the capped loss above the long one.
+    expect(curve.points[0]?.pnl).toBeCloseTo(310);
+    expect(curve.points.at(-1)?.pnl).toBeCloseTo(-1_690);
+    // 180 + 3.10 net credit is where the spread stops paying.
+    expect(curve.breakevens).toEqual([183.1]);
+    expect(draftPreview(spread).payoff).toEqual(curve);
+  });
+
+  it("carries no curve for an empty draft", () => {
+    expect(payoffCurve([])).toBeUndefined();
+    expect(draftPreview(emptyDraft()).payoff).toBeUndefined();
   });
 
   it("has nothing to price on an empty draft", () => {

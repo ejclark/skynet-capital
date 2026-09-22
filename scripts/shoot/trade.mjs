@@ -503,8 +503,21 @@ const spreadPreview = {
   maxGain: 620,
   maxLoss: 3380,
   unlimitedLoss: false,
-  breakevens: [183.1],
   undefinedRiskLegIds: [],
+  // The server-sampled at-expiration curve (#3407 payoff diagram): the credit below 180, the
+  // capped loss above 200, breakeven at 183.10 — the same numbers the grid above it shows.
+  payoff: {
+    from: 144,
+    to: 240,
+    breakevens: [183.1],
+    points: [
+      { price: 144, pnl: 620 },
+      { price: 180, pnl: 620 },
+      { price: 183.1, pnl: 0 },
+      { price: 200, pnl: -3380 },
+      { price: 240, pnl: -3380 },
+    ],
+  },
 };
 const spreadVerdict = { ok: true, refusals: [], warnings: [] };
 const spreadDraft = (phase, extra = {}) => ({
@@ -550,7 +563,6 @@ const rollPreview = {
   maxGain: "uncapped",
   maxLoss: 420,
   unlimitedLoss: false,
-  breakevens: [],
   undefinedRiskLegIds: [],
 };
 const rollDraft = (phase, legs = rollLegs, extra = {}) => ({

@@ -38,6 +38,19 @@ export interface DraftOrder {
   readonly nextLegId: number;
 }
 
+export interface PayoffPoint {
+  readonly price: number;
+  readonly pnl: number;
+}
+
+/** The server-sampled at-expiration curve (`draft-order-preview.ts`'s `payoffCurve`). */
+export interface PayoffCurve {
+  readonly points: readonly PayoffPoint[];
+  readonly breakevens: readonly number[];
+  readonly from: number;
+  readonly to: number;
+}
+
 export interface DraftPreview {
   readonly legCount: number;
   readonly pricedFully: boolean;
@@ -46,6 +59,7 @@ export interface DraftPreview {
   readonly maxLoss: number | "unlimited";
   readonly unlimitedLoss: boolean;
   readonly undefinedRiskLegIds: readonly string[];
+  readonly payoff?: PayoffCurve;
 }
 
 export const emptyDraft = (): DraftOrder => ({

@@ -16,8 +16,8 @@ import {
 import { money, type TicketTimeInForce, tifLabel } from "../live/ticket";
 import { DraftLegForm } from "./draft-leg-form";
 import { LegRow } from "./draft-leg-row";
-
 import { DisarmNote, GateHead } from "./gate-frame";
+import { PayoffChart } from "./payoff-chart";
 import { TimeInForceField } from "./tif-field";
 
 /**
@@ -132,6 +132,7 @@ export function ReviewBody({
         <div className="gate-body">
           <UnlimitedLossBanner preview={preview} />
           <PayoffGrid preview={preview} />
+          {preview.payoff ? <PayoffChart curve={preview.payoff} maxLoss={preview.maxLoss} /> : null}
           {!preview.pricedFully ? (
             <p className="gate-note">
               One or more legs has no limit price — the numbers above assume $0 for that leg until
