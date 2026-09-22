@@ -58,8 +58,11 @@ description, when asking for a change.
 | **kind** | a filter over one list | a query qualifier and a rail chip, one model; never a tab | `is:buy` / `is:bot` on Activity (`app/src/routes/activity.tsx`); `lens:` / `sym:` on Research |
 | **section** | a different *shape* of data on the same page | the rail's section switch (`app/src/shell/section-switch.tsx`), exactly one current, URL-stateful via `?section=`; pages on a phone | Settings and Activity's Booked P&L (#1749) |
 | **sub-view** | a full view of its own | a nested route plus rail sub-nav | the desk's Pulse / Decisions / Playbooks (`app/src/shell/profile-rail.tsx`) |
+| **bench** | several sections that are *one instrument's tools* and feed each other | docked together at the bench width, folded to exclusive sections below it; the section switch renders only when folded (`app/src/shell/frame.tsx`) | the Workbench on `/app/trade` — chart · chain · ticket · orders (#3407, Eric's pick 2026-09-22; slices 2–4 land it) |
 
-A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
+A bench is a composition of sections, not a fourth word: below its width it *is* sections, and the
+falsifier is written on the frame — if the docked bench reads as a mess on the live route it folds at
+every width. A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
 became `/u/:id/pulse` this way (`src/server/legacy-redirects.ts`). A tab strip as a fourth
 navigation band was rejected: at phone width the topbar and the rail already each wrap into a
 horizontal row, and a third band before content is what the mobile-first rule forbids.
@@ -109,7 +112,11 @@ re-make.
 
 | Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
 |---|---|---|---|---|
-| **Milestone strip grammar** | Eyebrow · rail · status line, teal-edged, the same three parts wherever a milestone meets a feature; names only on rungs you have reached. | `app/src/shell/milestone-strip.tsx` | #1461 | placed on `/trade` |
+| **Milestone strip grammar** | Eyebrow · rail · status line, teal-edged, the same three parts wherever a milestone meets a feature; names only on rungs you have reached. | `app/src/shell/milestone-strip.tsx` | #1461 | placed on `/trade`; moving to `/learn/trading` under the Workbench pick (#3407 slice 5 — Eric, 2026-09-22: overturn the placement, keep the principle) |
+| **Workbench** (home of trading) | Chart and chain are the workspace, the ticket docks beside them, orders sit below; one symbol drives every pane; phone = sections. thinkorswim / Legend lineage (study rows 28, 29, 6, 9). | `app/src/routes/trade.tsx` (slices 2–4) | #3407 lo-fi — Eric, 2026-09-22: "the workbench is best" | placed |
+| **Arcade** (home of trading) | The symbol is the stage — quote · chart · position · working orders for it — and Trade is a paged sheet with a plan-gated commit and a celebration that explains. Robinhood lineage. | — | #3407 lo-fi | declined-here — the stage mechanic survives inside the bench (the chain on the workspace); the celebration rides the renown ledger, `next-slice` |
+| **Outlook** (home of trading) | A belief ("NVDA up modestly by October") is the start; the builder proposes named structures with max loss on screen; the chain opens on the chosen leg. Strategy-builder lineage. | `src/options/recommend.ts` (`rankStructures`, unwired) | #3407 lo-fi | declined-here as a home — seeded as an auxiliary entry into the bench |
+| **Register** (home of trading) | Orders and positions are the home; every action starts from a row; the ticket is a drawer. Fidelity Orders / IBKR lineage. | — | #3407 lo-fi | declined-here — reverses #674; its row actions (close, modify, roll, create-opposite) already live on the bench's orders section |
 | **Feature layer owns its nav** | The form's controls (instrument · side · put/call) belong to the form, never to the ladder; change them and the rail's current node follows. | `app/src/shell/ticket-nav.tsx` | #1461 — Eric: "the trade form needs to stand on its own" | placed |
 | **Preset, never drive** | A rail node or a chain cell stages the form (instrument, side, price); it assists, the member decides; a locked preset still renders, disabled. | `app/src/shell/milestone-strip.tsx` (`?play=`) | #1461 — Eric: "a pre-configured preset that assists the user, but doesn't drive" | placed on the rail · seeded on the chain (#1481) |
 | **Locked = visible · disabled · explained** | Show a control disabled when the member can still earn it here, hide it only when it will never apply, and never leave it disabled without the reason beside it; exits (a sell) are never locked. | `app/src/shell/locked-panel.tsx` (`opensAfter`), `src/domain/progression.ts` | #1461; NN/g on disabled controls | placed |

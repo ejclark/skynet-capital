@@ -30,7 +30,17 @@ import type { ReactElement, ReactNode } from "react";
  * A section switch is the rail's CONTROL role, never a new dimension: it drives the content beside
  * it and adds no app-level destinations. Nothing is both a kind and a section — if a rail toggle
  * and a section switch would offer the same thing, one of them is noise and gets deleted.
- * `docs/PATTERNS.md` keeps the ledger these three words live in, one row per named pattern.
+ *
+ * ONE COMPOSITION OF SECTIONS, NOT A FOURTH WORD (#3407, the Workbench pick, Eric 2026-09-22):
+ *   - a BENCH is several SECTIONS that are one instrument's tools and feed each other (the chain
+ *     presets the ticket, the ticket's symbol drives the chart), DOCKED TOGETHER at the bench width
+ *     and FOLDED to ordinary exclusive sections below it. The section switch renders only when
+ *     folded; docked, every pane is on the page and `?section=` names the pane to scroll to.
+ *     This is not the "beside" split Eric rejected on 2026-09-06 ("the whole page just feels like
+ *     a hot mess"): Activity's panes were unrelated shapes with no data flow; a bench's panes share
+ *     one symbol. Held as a hypothesis — its falsifier is Eric reading the docked bench as a mess
+ *     on the live route, at which point it folds at every width and the switch comes back.
+ * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.
  * @category navigation
  */
 export function PageFrame({
