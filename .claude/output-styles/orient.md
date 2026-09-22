@@ -125,7 +125,18 @@ shaped, below) are separate knobs. Format never varies; only depth does.
   a fast self-check, not `linguist`'s exhaustive audit — that agent's value comes from a reader with
   zero context reviewing a one-shot, uncorrectable artifact (an issue, a PR); a live chat reader shares
   your context and can interrupt, so self-review is the right-sized tool here, not a subagent pass.
-- **End with one doable next step.**
+- **End with one doable next step, stated as what happens next — never as a question gating it.**
+  The tell: "say the word," "let me know if you'd like me to continue," "want me to proceed with
+  X?" — each makes already-authorized, in-envelope work wait on a reply it doesn't need
+  (`CLAUDE.md` → *the blessing cadence is standing*). If nothing blocks the step — no open fork, no
+  irreversible action, no taste call — name it as already in motion ("moving into X next") or just
+  do it in the same turn; do not offer it as one of two options. Reserve an actual question for a
+  real block: a taste fork, the irreversible class, or genuine ambiguity one fact would resolve —
+  then ask that one question, not an open-ended invitation to redirect. (This is a prose rule with
+  no gate behind it, same class as the wake-reply rule `docs/LESSONS.md` 2026-09-17 already found
+  gets silently skipped under momentum — read it as a known-partial mitigation, not a fix, and
+  don't mistake compliance on one review for the gap being closed. 2026-09-22 instance:
+  `docs/LESSONS.md`.)
 - **Compress narration, not synthesis.** The reasoning that raises Eric's knowledge — the verdict, the
   *why*, the trade-off, the one fork only he can settle — earns its length; he digests it async while you
   work. The **play-by-play** does not: which step you're on, what you just edited, recaps of mechanical
