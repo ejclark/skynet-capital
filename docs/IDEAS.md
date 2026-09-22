@@ -1456,3 +1456,19 @@ wakes vs. genuine escalations), and the envelope "never edit envelope.json to ma
 than assuming). Not a build — a scoping pass to find which of these, if any, could get even a
 partial mechanical backstop the way the wake-reply rule just did.
 _(src: Claude · while: retro on the 2026-09-17 wake-reply lapse)_
+
+### ITM/OTM quadrant tint on the options chain — subtle, single-hue, deferred
+Eric, 2026-09-22, pushing back on an initial red/green suggestion this session declined: his
+"tint/gradient" ask meant a subtle, secondary overlay (shade/opacity), not a hard fill, and he'd
+resolve the colourblind objection by "changing color" rather than dropping the idea — his own
+colourblindness is mild and he's found colourblind-mode remaps in games often make things WORSE for
+him specifically. Converged direction, not yet built (he explicitly deferred it — "progressive
+improvements as we get there"): extend the chain's EXISTING ITM rail (`.straddle-call-itm`/
+`.straddle-put-itm` in `straddle.css`, an accent-coloured box-shadow bar on the strike cell) into a
+subtle accent-tinted background wash on the ITM side of each row — one hue (the app's own accent,
+never red/green) plus position (which side of Strike) carries the meaning, so it never asks a
+colourblind reader to discriminate two hues against each other, and it can't collide with the app's
+existing red/green P/L vocabulary elsewhere. Same "real step, not a tone shift" rule this session
+already applied to the strike-pick row highlight (PR #3510) — pick a wash opacity that reads as
+clearly present without being loud.
+_(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_

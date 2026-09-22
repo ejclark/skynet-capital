@@ -933,6 +933,22 @@ await page.evaluate(() => {
 });
 await shootChainStats("trade-chain-stats-scrolled-phone");
 
+// The chain header's five groups (Eric, 2026-09-22: "CALLS and PUTS should be centered over the
+// respective bid/ask columns. Everything to the outer sections are the GREEKS", then "should
+// there be dividers between the headers... the BID | ASK columns deserve a different background
+// shading... to distinguish" the clickable columns from the plain ones): Greeks | Calls | Strike
+// | Puts | Greeks, each with a border on its leading edge, Bid/Ask/Strike sharing one `--surface-2`
+// "you can act here" background the Greek/OI/Vol columns don't carry. Desktop only: the full
+// 17-column header needs the room to read as five groups rather than one blurred row.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.evaluate(() => {
+  const scroller = document.querySelector(".straddle-scroll");
+  if (scroller) scroller.scrollLeft = 0;
+});
+const shootHeaderGroups = shooter(page, resolve("docs/shots/chain-header-groups"));
+await shootHeaderGroups("chain-header-groups-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+
 // Review fix (2026-09-08): the chain used to sit INSIDE the .gate-fields grid as a spanning item,
 // which inherited the grid's own overflow from the (non-wrapping) expiration tab strip and clipped
 // off the phone frame. It's now an ordinary block sibling between two separate grids instead — this

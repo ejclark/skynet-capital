@@ -183,13 +183,25 @@ export function StraddleView({
             <col className="straddle-col-stat" />
           </colgroup>
           <thead>
+            {/* Calls/Puts label only the two Bid/Ask columns each now sits over (Eric, 2026-09-22:
+                "CALLS and PUTS should be centered over the respective bid/ask columns"), with
+                Greeks | Calls | Strike | Puts | Greeks read as five distinct groups — Eric's own
+                naming for the outer OI/Vol/greeks blocks, in his 2026-09-22 follow-up — each
+                carrying a border on its leading edge (`straddle-group-start`) so the split reads
+                without counting columns. */}
             <tr>
-              <th colSpan={8} className="straddle-side straddle-side-calls">
+              <th colSpan={6} className="straddle-side">
+                Greeks
+              </th>
+              <th colSpan={2} className="straddle-side straddle-side-calls straddle-group-start">
                 Calls
               </th>
-              <th className="straddle-strike-h">Strike</th>
-              <th colSpan={8} className="straddle-side straddle-side-puts">
+              <th className="straddle-strike-h straddle-group-start">Strike</th>
+              <th colSpan={2} className="straddle-side straddle-side-puts straddle-group-start">
                 Puts
+              </th>
+              <th colSpan={6} className="straddle-side straddle-group-start">
+                Greeks
               </th>
             </tr>
             <tr className="straddle-sub">
@@ -199,12 +211,12 @@ export function StraddleView({
               <th className="straddle-stat">Γ</th>
               <th className="straddle-stat">Θ</th>
               <th className="straddle-stat">Vega</th>
-              <th>Bid</th>
-              <th>Ask</th>
+              <th className="straddle-bidask straddle-group-start">Bid</th>
+              <th className="straddle-bidask">Ask</th>
               <th />
-              <th>Bid</th>
-              <th>Ask</th>
-              <th className="straddle-stat">OI</th>
+              <th className="straddle-bidask">Bid</th>
+              <th className="straddle-bidask">Ask</th>
+              <th className="straddle-stat straddle-group-start">OI</th>
               <th className="straddle-stat">Vol</th>
               <th className="straddle-stat">Δ</th>
               <th className="straddle-stat">Γ</th>
@@ -438,9 +450,9 @@ function SideCell({
 }): ReactElement {
   const value = row[side]?.[price];
   const text = value === undefined ? "—" : money(value);
-  if (!onPickSide) return <td className="num">{text}</td>;
+  if (!onPickSide) return <td className="straddle-bidask num">{text}</td>;
   return (
-    <td className="num">
+    <td className="straddle-bidask num">
       <button
         type="button"
         className="straddle-cell-pick"
