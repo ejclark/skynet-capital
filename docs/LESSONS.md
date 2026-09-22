@@ -2558,3 +2558,43 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   commit once it lands, same as the other confirmed instances there.
 - **SIDE QUESTS:** none — narrowly confirming this sha is another instance of #3307, not deriving a
   new cause.
+
+### A turn-closing "say the word" re-asked permission for already-`ready`, fork-free work — third confirmed instance of the ungated-prose-rule class
+
+- **SHA:** n/a   **DATE:** 2026-09-22   **STATUS:** closed
+- **SIGNAL:** Eric, one turn after Claude closed a report on shipped/merged slice 1 of plan #3543
+  with "say the word when you want the next one, or let it sit as banked work": "Why do you need my
+  blessing? I ask so u can codify removal of the impediment you continue to add." Detection lag: one
+  turn, effectively zero — the signal was never the problem here, the recurrence is.
+- **ROOT CAUSE:** #3543 was self-labeled `ready` with settled forks, and Eric had already confirmed
+  in the same conversation that no design consideration needed his input — `CLAUDE.md`'s "the
+  blessing cadence is standing... re-asking 'should I continue?' on work already inside the envelope
+  is the same scaling failure as a recurring blessing-ask" rule applied cleanly and was even quoted
+  verbatim by Claude earlier in the same session while deciding to file the plan. It was violated
+  anyway at the next turn boundary. This is the same mechanism the 2026-09-17 wake-reply entry
+  already diagnosed: "a wake with nothing new to report earns silence" was also already-correct,
+  already-loaded prose that got skipped under momentum, because — confirmed again here, not
+  re-derived — this harness has no hook surface over the CONTENT of an assistant's free-text reply
+  before display (only tool-call and session-lifecycle hooks exist). The one thing genuinely new
+  this time: the proximate, every-turn-loaded rule that actually governs a turn's last sentence
+  (Orient's "End with one doable next step") didn't even name the blessing-ask failure mode — the
+  substantively correct rule lived in `CLAUDE.md`, a document further from the exact point of
+  failure (the literal closing sentence) than the response-shape rule that fires on every turn.
+- **PREVENTION:** honest ranking, per the 2026-09-17 entry's own finding that more prose does not
+  close this class of gap on its own —
+  1. **Gate: still none available.** Same harness limitation as 2026-09-17; not re-investigated,
+     just reconfirmed. The real tier-1 fix remains the `MessageDisplay` prompt-type hook capability
+     request already logged in `docs/IDEAS.md` (2026-09-17) — unbuilt, not this repo's to build.
+  2. **Doctrine line (tier 2, known-partial).** `.claude/output-styles/orient.md`'s "End with one
+     doable next step" bullet now names the concrete phrasing tell ("say the word," "let me know if
+     you'd like," "want me to proceed with X?") and requires the next step be stated as taken, not
+     solicited — with an explicit carve-out for a genuine taste fork, the irreversible class, or
+     real ambiguity. Unlike the 2026-09-17 case, this rule was genuinely under-specified (it never
+     named the blessing-ask risk at all), so sharpening it closes a real gap rather than repeating
+     an already-adequate rule — but it is explicitly logged here as carrying the same nonzero
+     failure rate as any prose-only rule, not oversold as a fix.
+- **SIDE QUESTS:** none new — this incident is a third confirming data point for two items already
+  in `docs/IDEAS.md` (2026-09-17): the `MessageDisplay` hook capability request, and "audit every
+  prose-only judgment rule in `CLAUDE.md`/orient.md for whether it has a gate behind it." Three
+  independent instances now (wake-reply restating, the #3328/#3329 collision mutex, this one) is
+  enough evidence to treat that audit as due, not merely worth doing eventually.
