@@ -1,10 +1,13 @@
-/* THE DOCKED BENCH (#3407, Workbench slice 4b) — /trade's sections as one composition at the bench
-   width (`use-bench-width.ts`, 1280px): the ticket holds the left column, the chain and the chart
-   stack in the right one (the chain presets the ticket; the ticket's symbol drives the chart —
-   the panes that feed each other sit side by side), and the account's book runs the full width
-   beneath. Below the bench width the same `.bench` renders ONE pane (the switch's) in a single column;
-   `.bench-docked` is the grid. The media-query fallback is a safety net for a resize race. Tokens only; no pixel cap (`fluid-shell-css.spec.ts`). Held as a hypothesis: if Eric
-   reads this as a mess on the live route, the bench folds at every width (frame.tsx). */
+/* THE DOCKED BENCH (#3407, Workbench slice 4b; composition revised 2026-09-22) — /trade's
+   sections at the bench width (`use-bench-width.ts`, 1280px): the ticket holds the left column,
+   the chart the right one (the ticket's symbol drives it), and the account's book runs the full
+   width beneath. The chain no longer docks as its own pane — it is inline and collapsible inside
+   the ticket instead (`option-gate.tsx`, `.tkt-chain-summary` below); `.bench-side` now wraps the
+   chart alone, kept as its own class since a docked composition may grow a second right-column
+   pane again later. Below the bench width the same `.bench` renders ONE pane (the switch's) in a
+   single column; `.bench-docked` is the grid. The media-query fallback is a safety net for a
+   resize race. Tokens only; no pixel cap (`fluid-shell-css.spec.ts`). Held as a hypothesis: if
+   Eric reads this as a mess on the live route, the bench folds at every width (frame.tsx). */
 .bench {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -25,9 +28,14 @@
   gap: var(--space-5);
   min-width: 0;
 }
-.bench-docked > .bench-orders {
+.bench-docked > .bench-orders,
+.bench-docked > .bench-chain {
   grid-column: 1 / -1;
 }
+/* `.bench-chain` only ever renders docked when `?section=chain` is explicitly asked (`trade.tsx`'s
+   `shows`) — the standalone browsing view stays reachable at every width even though it no longer
+   auto-docks; full-span like `.bench-orders` rather than fighting the two-column grid for a pane
+   that's the exception, not the rule, here. */
 /* The pane label — the docked stand-in for the switch's button text, so the grid reads as a map.
    The pane `?section=` names carries a leading bar as well as the accent (shape, not hue alone:
    docs/BRAND.md → Accessibility). */
@@ -52,24 +60,4 @@
   .bench-docked > .bench-orders {
     grid-column: auto;
   }
-}
-
-/* The options ticket's expiration, docked: a read-out where the tab strip was (the chain pane
-   beside it owns the tabs; `option-gate.tsx` → `hideChain`). Same label treatment as `.field label`
-   so the grid's rhythm holds. */
-.tkt-exp-docked-label {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  margin-bottom: 5px;
-  color: var(--muted);
-}
-.tkt-exp-docked {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.6;
-  color: var(--text);
-}
-.tkt-exp-docked-hint {
-  color: var(--muted);
 }

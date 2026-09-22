@@ -244,6 +244,29 @@
   margin: 0 0 12px;
   max-width: 70ch;
 }
+/* The chain accordion's collapsed state (Eric, 2026-09-22 — `option-gate.tsx`'s header comment):
+   one line standing in for the whole table once a strike is picked. `.tkt-chain-change` is a real
+   button styled as an inline link, not a link element, since it toggles component state rather
+   than navigating. */
+.tkt-chain-summary {
+  font-size: var(--text-sm);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  padding: 8px 10px;
+  margin: 0 0 12px;
+}
+.tkt-chain-change {
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
 .tkt-occ {
   font-size: var(--text-sm);
   color: var(--muted);

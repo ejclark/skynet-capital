@@ -231,7 +231,7 @@ describe("/trade the docked bench (#3407, Workbench slice 4b)", () => {
     };
   }
 
-  it("docks every pane at the bench width and drops the switch from the rail", async () => {
+  it("docks Ticket/Chart/Orders at the bench width — the chain no longer docks as its own pane (2026-09-22)", async () => {
     const undock = dock(true);
     try {
       mountTrade("/trade?symbol=NVDA");
@@ -240,14 +240,15 @@ describe("/trade the docked bench (#3407, Workbench slice 4b)", () => {
           screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
         ).toBeInTheDocument(),
       );
-      // the four panes, each labelled like the switch button it stands in for
-      for (const name of ["Ticket", "Chain", "Chart", "Orders"]) {
+      // three panes, each labelled like the switch button it stands in for
+      for (const name of ["Ticket", "Chart", "Orders"]) {
         expect(screen.getByRole("region", { name })).toBeInTheDocument();
       }
+      // the chain is the ticket's own inline accordion now, not a docked pane of its own
+      expect(screen.queryByRole("region", { name: "Chain" })).not.toBeInTheDocument();
       expect(
         await screen.findByText("Fixture bars note — the chart section is here."),
       ).toBeInTheDocument();
-      expect(await screen.findByText("The chain for NVDA is unreachable.")).toBeInTheDocument();
       expect(await screen.findByRole("heading", { name: "Working orders" })).toBeInTheDocument();
       // no switch: docked, there is nothing exclusive left to choose
       expect(screen.queryByRole("button", { name: "Chart" })).not.toBeInTheDocument();
@@ -273,6 +274,26 @@ describe("/trade the docked bench (#3407, Workbench slice 4b)", () => {
       expect(
         screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
       ).toBeInTheDocument();
+    } finally {
+      undock();
+    }
+  });
+
+  it("docks the chain too when ?section=chain is explicitly asked — a reachability fix (2026-09-22)", async () => {
+    // Review fix: an unconditional "chain never docks" made the standalone browsing view 404 in
+    // all but name above 1280px — a shared `?section=chain` link opened wide found no chain pane
+    // at all. It stays un-auto-shown, but a direct ask still reaches it.
+    const undock = dock(true);
+    try {
+      mountTrade("/trade?section=chain&symbol=NVDA");
+      await waitFor(() =>
+        expect(screen.getByRole("region", { name: "Chain" })).toBeInTheDocument(),
+      );
+      expect(screen.getByRole("region", { name: "Chain" })).toHaveAttribute("data-current", "true");
+      // the rest of the bench is still on the page — docked never hides the others
+      for (const name of ["Ticket", "Chart", "Orders"]) {
+        expect(screen.getByRole("region", { name })).toBeInTheDocument();
+      }
     } finally {
       undock();
     }

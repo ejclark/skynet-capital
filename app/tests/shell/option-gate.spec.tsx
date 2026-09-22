@@ -382,6 +382,63 @@ describe("OptionGate — chain cell picking", () => {
 });
 
 /**
+ * The chain accordion (Eric, 2026-09-22 — "is it possible to have that table be expandable in the
+ * same form after stock symbol is selected... an intuitive path... to collapse the table"): open
+ * with nothing picked, collapsed to a one-line summary the instant a strike is picked, reopenable
+ * via "Change". Replaces the old `hideChain` docked-pane split (`option-gate.tsx`'s header comment).
+ */
+describe("OptionGate — the chain accordion (Eric, 2026-09-22)", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  it("opens once the chain resolves, collapses to a summary the instant a strike is picked, reopens on Change", async () => {
+    render(renderGate("NVDA"));
+
+    // Open: the real chain table is on screen, nothing picked yet — bid and ask cells for the
+    // strike share an aria-label, so this is an AllBy query (see "chain cell picking" above).
+    const callCells = await screen.findAllByRole("button", { name: /^Pick the 180 call/ });
+    expect(screen.queryByText("Change")).not.toBeInTheDocument();
+
+    fireEvent.click(callCells[0] as HTMLElement);
+
+    // Collapsed: the table is gone, replaced by a one-line summary naming the pick.
+    await waitFor(() =>
+      expect(screen.queryAllByRole("button", { name: /^Pick the 180 call/ })).toHaveLength(0),
+    );
+    const summary = document.querySelector(".tkt-chain-summary");
+    expect(summary?.textContent).toContain("180");
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+
+    // Reopened: the table is back.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(
+      (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("starts collapsed when a strike arrives already committed (a rung switch, or a shared link)", async () => {
+    render(renderGateWithStrike("NVDA", "180")); // 180 is a real row on fullChain — seedable
+
+    await waitFor(() => expect(document.querySelector(".tkt-chain-summary")).toBeInTheDocument());
+    expect(screen.queryAllByRole("button", { name: /^Pick the 180 call/ })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+  });
+
+  it("reopens on a fresh symbol commit even while collapsed", async () => {
+    render(renderGateWithStrike("NVDA", "180"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "AMD" } });
+    fireEvent.blur(screen.getByLabelText("Symbol"));
+
+    expect(
+      (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+/**
  * The locked-pick note (review fix) — the house rule ("Locked = visible, disabled, explained…
  * never hidden, never silently dead", `ticket-nav.tsx`) applies to a chain-cell click too: a
  * locked-target pick used to be a silent no-op beyond filling strike. It now surfaces a `.tkt-note`

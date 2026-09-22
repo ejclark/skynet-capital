@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { fetchDesk } from "../live/desk";
 import { useOrderFill } from "../live/desk-events";
@@ -77,6 +77,22 @@ import { TimeInForceField } from "./tif-field";
  * `["desk", deskId]` query `trade.tsx` already fetches (cache-shared, no extra round trip) and
  * decomposed via `parseOccSymbol`. A successful submit here invalidates that query so a just-
  * filled strike picks up its badge without a reload.
+ *
+ * THE CHAIN ACCORDION (Eric, 2026-09-22, reversing part of #3407 slice 4b — "is it possible to
+ * have that table be expandable in the same form after stock symbol is selected?"): the docked
+ * bench used to hide this ticket's own chain table (`hideChain`) in favor of a separate pane
+ * beside it — that pane is gone (`trade.tsx`'s `Bench`); this table is inline again, at every
+ * width, and now COLLAPSIBLE instead of always-open. `chainOpen` starts open when there's no
+ * strike yet (a fresh symbol, nothing picked) and closed when there already is one (a chain-cell
+ * pick, or a strike that arrived via `?strike=`) — never derived from `strike` on every render,
+ * because a hand-typed strike changes `strike` on every keystroke (`StrikeField`'s `onEdit`) and
+ * collapsing mid-type would be exactly the antagonizing behavior Eric asked to avoid. It only
+ * closes from the two real "a pick just happened" call sites (`pickStrikeAndCommit`, and the
+ * locked-target branch of `onChainCellPick` — a locked pick still fills the strike, so it still
+ * reads as a pick), and only reopens from a symbol (re)commit or the collapsed summary's own
+ * "Change" control. Collapsed, the summary line is the one honest state readout (strike ·
+ * expiration · the seeded/edited premium) rather than a second source of truth for fields already
+ * below it.
  */
 
 /** @category trading */
@@ -90,7 +106,6 @@ export function OptionGate({
   initialExpiration,
   onExpirationCommit,
   onStrikeCommit,
-  hideChain = false,
   plays,
   onPreset,
 }: {
@@ -114,10 +129,6 @@ export function OptionGate({
    *  changes it here, so the chain pane follows. */
   readonly initialExpiration?: string;
   readonly onExpirationCommit?: (expiration: string) => void;
-  /** The docked bench (#3407, slice 4b) renders the chain as its own pane beside this ticket, so
-   *  the ticket's inline chain table would be the same table twice: hide it and keep the
-   *  expiration field in the grid. The chain QUERY still runs — it resolves the contract. */
-  readonly hideChain?: boolean;
   /** Fires on every strike change that STICKS (review fix — not just a rung-switching chain pick),
    *  so the route can keep `?strike=` honest: a same-rung or rung-switching chain-cell click calls
    *  it immediately, a hand-typed strike calls it on blur (see `StrikeField`'s `onCommit`). A
@@ -151,6 +162,11 @@ export function OptionGate({
    *  `pickStrikeAndCommit`). A counter, not a boolean, so two picks in a row each re-trigger the
    *  flash even if the field never stopped flashing between them. */
   const [strikeFlash, setStrikeFlash] = useState(0);
+  /** The chain accordion (see the header comment) — open with nothing picked yet, closed once
+   *  something is. Set explicitly at the two "a pick happened" call sites and on a symbol
+   *  (re)commit, never derived from `strike` on every render (a hand-typed strike changes it on
+   *  every keystroke). */
+  const [chainOpen, setChainOpen] = useState(!initialStrike);
   const [contracts, setContracts] = useState("1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
@@ -185,6 +201,17 @@ export function OptionGate({
   const chainData = chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
   const chainNote = chain.data && "chainNote" in chain.data ? chain.data.chainNote : undefined;
   const chainReason = chain.data && "reason" in chain.data ? chain.data.reason : undefined;
+  /** One-time correction to the accordion's mount-time guess: an `initialStrike` that arrived via
+   *  `?strike=` but isn't a real row on the chain once it resolves (unseedable) is nothing usefully
+   *  picked yet — reopen so the member can pick a real one instead of hitting Change first. Runs
+   *  once, the first time the chain settles; never again, so a member's own later off-chain typed
+   *  strike (a deliberate, valid choice) doesn't get yanked back open mid-edit. */
+  const initialStrikeCheckedRef = useRef(false);
+  useEffect(() => {
+    if (initialStrikeCheckedRef.current || !chainData || !initialStrike) return;
+    initialStrikeCheckedRef.current = true;
+    if (!chainData.rows.some((r) => String(r.strike) === initialStrike)) setChainOpen(true);
+  }, [chainData, initialStrike]);
 
   const queryClient = useQueryClient();
   /** Same `["desk", deskId]` key `trade.tsx` already fetches with — react-query dedupes, so this
@@ -254,6 +281,7 @@ export function OptionGate({
     pickStrike(value);
     onStrikeCommit?.(value);
     setStrikeFlash((n) => n + 1);
+    setChainOpen(false);
   };
 
   /** A call/put chain cell pick (task 4e) — the resolution rule, already decided (see the header
@@ -288,6 +316,7 @@ export function OptionGate({
       // chain-originated pick, so it still flashes the field it filled.
       pickStrike(value);
       setStrikeFlash((n) => n + 1);
+      setChainOpen(false);
       setLockedPickNote(`Strike filled — the ${side} side isn't unlocked yet.`);
       return;
     }
@@ -434,29 +463,17 @@ export function OptionGate({
           onCommit={(s) => {
             edit(setSymbol)(s);
             setChainSym(s);
+            setChainOpen(true);
             onSymbolCommit?.(s);
           }}
         />
         {showFields && !chainData ? expirationField : null}
-        {showFields && chainData && hideChain ? (
-          // Docked (slice 4b): the chain pane beside this ticket carries the expiration tabs, and
-          // its browse writes `?exp=` which this ticket follows — a second strip here would be the
-          // same control twice (frame.tsx: "one of them is noise"). The ticket shows the contract's
-          // month as a read-out instead, and says where to change it.
-          <div className="field">
-            <span className="tkt-exp-docked-label">Expiration</span>
-            <p className="tkt-exp-docked" aria-live="polite">
-              <b>{formatExpiration(chainData.expiration)}</b>
-              <span className="tkt-exp-docked-hint"> · pick another on the chain</span>
-            </p>
-          </div>
-        ) : null}
       </div>
       {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
           full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
           strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
           handles sitting here — it did before this slice moved the chain table up the page too. */}
-      {chainData && !hideChain ? (
+      {chainData && chainOpen ? (
         <ChainStraddle
           chainSym={chainSym}
           optionType={optionType}
@@ -468,6 +485,16 @@ export function OptionGate({
           onPickStrike={pickStrikeAndCommit}
           onPickSide={onChainCellPick}
         />
+      ) : null}
+      {chainData && !chainOpen ? (
+        <p className="tkt-chain-summary" aria-live="polite">
+          Strike <b>{strike}</b> · {formatExpiration(chainData.expiration)}
+          {limitPrice !== "" ? <> · ${limitPrice}</> : null}
+          {" · "}
+          <button type="button" className="tkt-chain-change" onClick={() => setChainOpen(true)}>
+            Change
+          </button>
+        </p>
       ) : null}
       {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
       {showFields ? (
