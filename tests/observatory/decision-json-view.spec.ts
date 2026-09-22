@@ -193,6 +193,90 @@ describe("decisionCyclesView", () => {
     expect(view[0]?.outcomes[0]).not.toHaveProperty("forecast");
   });
 
+  const context = (over: Record<string, unknown> = {}) => ({
+    asOf: "2026-09-22T00:00:00Z",
+    quotes: {},
+    ...over,
+  });
+
+  it("carries momentum/sentiment from the cycle's own context, per outcome symbol", () => {
+    const view = decisionCyclesView([
+      record({
+        outcomes: [{ intent: intent({ symbol: "NVDA" }), action: "observed" }],
+        context: context({ momentum: { NVDA: 0.42 }, newsSentiment: { NVDA: -0.15 } }),
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]).toMatchObject({ momentum: 0.42, sentiment: -0.15 });
+  });
+
+  it("omits momentum/sentiment when the cycle has no context, or no entry for that symbol", () => {
+    const noContext = decisionCyclesView([record()]);
+    expect(noContext[0]?.outcomes[0]).not.toHaveProperty("momentum");
+    expect(noContext[0]?.outcomes[0]).not.toHaveProperty("sentiment");
+
+    const otherSymbol = decisionCyclesView([
+      record({
+        outcomes: [{ intent: intent({ symbol: "NVDA" }), action: "observed" }],
+        context: context({ momentum: { TSLA: 0.9 } }),
+      }),
+    ]);
+    expect(otherSymbol[0]?.outcomes[0]).not.toHaveProperty("momentum");
+  });
+
+  it("carries playbookMode only alongside playbook — meaningless on its own", () => {
+    const view = decisionCyclesView([
+      record({
+        outcomes: [
+          {
+            intent: intent({ playbookId: "S2-NVDA", playbookMode: "aggressive" }),
+            action: "placed",
+          },
+        ],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]).toMatchObject({ playbook: "S2-NVDA", playbookMode: "aggressive" });
+  });
+
+  it("computes guardDelta for a clamped-but-placed outcome from the raw→guarded quantity", () => {
+    const raw = intent({ quantity: 60 });
+    const guarded = intent({ quantity: 20 });
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [raw],
+        guardedIntents: [guarded],
+        outcomes: [{ intent: guarded, action: "placed" }],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]?.guardDelta).toBe(
+      "persona asked for 60, risk guards sized it to 20",
+    );
+  });
+
+  it("omits guardDelta when the outcome wasn't clamped", () => {
+    const view = decisionCyclesView([record()]);
+    expect(view[0]?.outcomes[0]).not.toHaveProperty("guardDelta");
+  });
+
+  it("anchors a placed-and-filled outcome to its Activity row via act-<orderId>", () => {
+    const view = decisionCyclesView([
+      record({
+        outcomes: [
+          {
+            intent: intent(),
+            action: "placed",
+            result: { intent: intent(), status: "filled", orderId: "ord-42" },
+          },
+        ],
+      }),
+    ]);
+    expect(view[0]?.outcomes[0]?.activityAnchor).toBe("act-ord-42");
+  });
+
+  it("omits activityAnchor when the outcome has no order id", () => {
+    const view = decisionCyclesView([record()]);
+    expect(view[0]?.outcomes[0]).not.toHaveProperty("activityAnchor");
+  });
+
   it("sorts newest first", () => {
     const view = decisionCyclesView([record({ at: 1 }), record({ at: 2 })]);
     expect(new Date(view[0]?.at ?? 0).getTime()).toBe(2);
