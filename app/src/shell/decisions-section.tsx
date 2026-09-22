@@ -135,7 +135,7 @@ export function DecisionsSection({ deskId }: { readonly deskId: string }): React
     return (
       <p className="note">
         No decision audit trail is wired in this deployment (the runner records one when
-        SKYNET_AUDIT_DIR is set).
+        SKYNET_INSIGHTS_DIR is set, or SKYNET_AUDIT_DIR as a legacy fallback).
       </p>
     );
   if (trail.cycles.length === 0)
