@@ -366,12 +366,17 @@ function TradePage(): ReactElement {
    *  is a refinement of the same ticket, not a new page to land back on. A new symbol also drops
    *  any `?strike=` already in the URL (review fix, 2026-09-08) — a strike picked against the OLD
    *  underlying's chain is meaningless once the symbol changes; guarded on `prev.strike` actually
-   *  being present so this doesn't churn the search object on every symbol edit for nothing. */
+   *  being present so this doesn't churn the search object on every symbol edit for nothing.
+   *  `resetScroll: false` (Eric, 2026-09-22 — "clicking on a strike price, bid/ask premium price
+   *  trigger 'scroll to top' behavior which has the same effect as extreme content shift"):
+   *  TanStack Router resets scroll to the top on every navigation by default, even a same-page
+   *  search-param refinement like this one — jarring mid-scroll on a long ticket. */
   const commitSymbol = (s: string) => {
     const next = normalizeSymbol(s);
     if (next === symbol) return;
     navigate({
       replace: true,
+      resetScroll: false,
       search: (prev) => {
         const nextSearch = { ...prev };
         if (next) nextSearch.symbol = next;
@@ -384,12 +389,15 @@ function TradePage(): ReactElement {
   /** `?strike=` (task 4e) — a chain cell pick always writes a definite, already-normalized numeric
    *  value (never a manual edit), so this is simpler than `commitSymbol`: still guarded against the
    *  current search value and `replace: true` for the same reason, and still deletes the param on
-   *  an invalid/empty value for safety, even though a chain click never actually sends one. */
+   *  an invalid/empty value for safety, even though a chain click never actually sends one.
+   *  `resetScroll: false` — same content-shift fix as `commitSymbol`, and the one this bug was
+   *  actually reported against: a strike/bid/ask click used to jump the whole page to the top. */
   const commitStrike = (s: string) => {
     const next = normalizeStrike(s);
     if (next === strike) return;
     navigate({
       replace: true,
+      resetScroll: false,
       search: (prev) => {
         const nextSearch = { ...prev };
         if (next) nextSearch.strike = next;
@@ -408,6 +416,7 @@ function TradePage(): ReactElement {
   const onChainPick = (pick: ChainPick) => {
     const target = chainPickTarget(play ?? "101", pick.side, plays.data?.plays);
     void navigate({
+      resetScroll: false,
       search: (prev) => {
         // The expiration travels with the strike (slice 4a): a 180 tapped on the Oct 16 chain
         // is the Oct 16 180, not whichever expiry the ticket happened to be on.
@@ -424,6 +433,7 @@ function TradePage(): ReactElement {
     if (normalized === exp) return;
     void navigate({
       replace: true,
+      resetScroll: false,
       search: (prev) => {
         const nextSearch = { ...prev };
         if (normalized) nextSearch.exp = normalized;
@@ -449,11 +459,13 @@ function TradePage(): ReactElement {
     plays: plays.data?.plays,
     onChainPick,
     onExpirationCommit: commitExpiration,
-    onPreset: (code) => void navigate({ search: (prev) => ({ ...prev, play: code }) }),
+    onPreset: (code) =>
+      void navigate({ resetScroll: false, search: (prev) => ({ ...prev, play: code }) }),
     onSymbolCommit: commitSymbol,
     onStrikeCommit: commitStrike,
     accounts,
-    onDeskChange: (id) => void navigate({ search: (prev) => ({ ...prev, desk: id }) }),
+    onDeskChange: (id) =>
+      void navigate({ resetScroll: false, search: (prev) => ({ ...prev, desk: id }) }),
   };
   // #784 naming pass: no second rail item here yet. The Trading Outpost link that used to sit
   // below "The ticket" was removed on the belief its content was superseded by the Playbook
