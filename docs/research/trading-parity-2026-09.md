@@ -712,7 +712,7 @@ plan, not a constraint on the designs.
 | Max profit / max loss / breakeven | exists (single leg and spread preview) | `app/src/shell/option-preview.tsx:32-52`, `draft-order-builder.tsx:78-102` |
 | Payoff diagram | missing | — |
 | Review then confirm, disarm on edit | exists, both tickets; the server re-checks the live account at submit | `trade-gate.tsx:35-41,190-195`, `option-preview.tsx:15-21` |
-| Build a vertical / multi-leg spread | partial — legs via `<select>`s, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx` |
+| Build a vertical / multi-leg spread | **built** (P3 slices 2, 4) — legs off the chain, each leg's premium editable in its row, a running net while drafting, validates, previews payoff | `app/src/shell/draft-order-builder.tsx`, `draft-leg-form.tsx`, `draft-leg-row.tsx` |
 | **Submit** a multi-leg spread | **built** (P3 slice 1) — one `mleg` order through `draft-trade-service.ts`; the headline is the broker's echo; the wiring into the protected gate is its own held PR | `src/server/draft-trade-service.ts`, `src/server/draft-order-route.ts` |
 | Strategy templates (vertical, condor…) | missing — copy says "a vertical spread is two, an iron condor is four" | `draft-order-builder.tsx:213` |
 | **See open / pending orders** | API built (P1 slice 1) — `GET /api/trade/orders` → working + recent lists; no shell surface yet (the #674 fork decides where) | `src/server/trade-orders-routes.ts`, `src/server/desk-orders-view.ts`, `app/src/live/orders.ts` |
@@ -720,7 +720,7 @@ plan, not a constraint on the designs.
 | **Modify / replace an order** | missing everywhere — no client method, no domain state, no route | — |
 | Pending state in the domain | missing — `OrderStatus` is `filled \| rejected`; the adapter treats *accepted* as filled | `src/domain/types.ts`, `src/adapters/alpaca-broker-adapter.ts` |
 | Order history / fills | exists — durable JSONL ledger, keyset-paginated; broker window 15 | `app/src/shell/activity-table.tsx`, `recent-orders-strip.tsx`, `src/observatory/activity-store.ts` |
-| Live order-status updates | missing — the only SSE channel is the leaderboard; quotes poll 15 s, strips 30 s, chain never | `app/src/live/channel.ts`, `src/server/board-patch-routes.ts` |
+| Live order-status updates | **built** (P4 slice 1) — `/api/trade/events` streams the desk's own fills, submits and cancels off the activity bus; Working orders, the desk snapshot and the positions statement re-read on each frame (60 s poll as the fallback); quotes still poll 15 s, chain never | `src/server/desk-events-route.ts`, `app/src/live/desk-events.ts` |
 | Order status column on a phone | missing — `col-detail`, hidden below 1100px | `activity-table.tsx:33`, `app/src/styles/desk.css:294-299` |
 | View positions with tax lots | exists — FIFO lots, conservatively gated | `positions-table.tsx`, `blotter-row.tsx:167-209`, `src/trading/round-trips.ts` |
 | Close a position / one lot | exists — inline panel, review → confirm | `blotter-row.tsx:156-224, 286-439` |
@@ -881,7 +881,7 @@ missing. Two prior decisions were added to §3.4: #674 (open orders live on the 
 | Roll | Roll position [R41] | Roll ticket [F9] | right-click roll; Strategy Roller [T-PS][T-SR] | **built** (P3 slice 3) — one ticket from the position row, 1:1, net shown as computed (`roll-row.tsx`) | done | Strategy Roller automation stays declined |
 | Exercise / assignment UI | Exercise button; resolution flow [R42] | phone only [F26] | support request [T-EXA] | missing (ingested server-side) | build (P3) | render `option-lifecycle.ts` events |
 | Option positions with strike / expiry / greeks | netted greeks [R36] | Option Summary + net greeks [F15][F38] | Position Statement greeks + ITM badge [T-PS] | **built** (P2 slice 3) — `GET /api/trade/option-positions`; the card shows DTE · ITM/OTM · greeks and the netted book with coverage | build (P2) | done; beta-weighting to SPY is the next rung |
-| Live fills / quotes | push on fill; sub-second on Legend [R27][R66] | streaming under the ticket [F9] | real-time everywhere | polled 15–60 s; SSE = leaderboard only | build (P4) | per-desk SSE from the hub; verify one `trade_updates` stream per account |
+| Live fills / quotes | push on fill; sub-second on Legend [R27][R66] | streaming under the ticket [F9] | real-time everywhere | **fills built** (P4 slices 1–2) — per-desk SSE off the activity bus, which the `trade_updates` stream already feeds; the ticket's done head reads its own fill from the stream (`fill-headline.ts`); quotes still poll 15 s | quotes: build (P4) | a quote stream per symbol; the fill stream's `Last-Event-ID` is honoured by re-reading, not replay |
 | Buying power / account detail | Account Summary [R59] | three buying powers [F-frames 20] | BP Effect, Account Info [T-AI] | missing (cash only) | **skip by design** for now — paper, one number (PATTERNS) | — |
 | Dollar-based orders | dollars by default [R9] | Shares \| Dollars [F-frames 3] | — | refused (`validateQuantity`) | adapt (P2) — whole-share resolution | notional support or rounding |
 | Chart beside the ticket | Legend chart populates the form [R63] | Trader+ linked tools [F38] | ticket at the bottom of every tab [T-OET] | chart is a section that *replaces* the ticket | shape question — the lo-fi decides | none |

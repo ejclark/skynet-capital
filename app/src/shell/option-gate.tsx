@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
+import { useOrderFill } from "../live/desk-events";
 import {
   fetchChain,
   type OptionDraft,
@@ -263,6 +264,11 @@ export function OptionGate({
     }
   };
 
+  const fill = useOrderFill(
+    deskId,
+    state.step === "done" && state.result.ok ? state.result.orderId : undefined,
+  );
+
   const submit = async () => {
     if (state.step !== "reviewed") return;
     setState({ step: "submitting", preview: state.preview });
@@ -419,7 +425,7 @@ export function OptionGate({
       <WireRow symbol={chainSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
-        <OptionGateStatus state={state} />
+        <OptionGateStatus state={state} fill={fill} />
       </div>
 
       <GateAction

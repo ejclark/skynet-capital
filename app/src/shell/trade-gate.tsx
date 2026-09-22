@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
+import { type DeskOrderEvent, useOrderFill } from "../live/desk-events";
+import { fillHeadline } from "../live/fill-headline";
 import type { PlayInfo } from "../live/options";
 import {
   buildDraft,
@@ -104,7 +106,14 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
   );
 }
 
-function GateStatus({ state }: { readonly state: GateState }): ReactElement | null {
+function GateStatus({
+  state,
+  fill,
+}: {
+  readonly state: GateState;
+  /** The stream's frame for this ticket's order, once one arrived (#3407 P4 slice 2). */
+  readonly fill?: DeskOrderEvent;
+}): ReactElement | null {
   if (state.step === "draft") return null;
   if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
   if (state.step === "reviewed" || state.step === "submitting")
@@ -123,9 +132,7 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   if (state.result.ok)
     return (
       <>
-        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}${
-          tifLabel(state.result.timeInForce) ? ` · ${tifLabel(state.result.timeInForce)}` : ""
-        }`}</GateHead>
+        <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
           <p className="gate-note">
             SIM account — simulated fill, real discipline. Working orders below update now; the
@@ -223,6 +230,11 @@ export function TradeGate({
       setState({ step: "error", message: String(error) });
     }
   };
+
+  const fill = useOrderFill(
+    deskId,
+    state.step === "done" && state.result.ok ? state.result.orderId : undefined,
+  );
 
   const submit = async (preview: TicketPreview) => {
     setState({ step: "submitting", preview });
@@ -332,7 +344,7 @@ export function TradeGate({
       <RecentOrdersStrip symbol={quoteSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
-        <GateStatus state={state} />
+        <GateStatus state={state} fill={fill} />
       </div>
 
       {state.step === "reviewed" && state.preview.ok ? (

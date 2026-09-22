@@ -567,6 +567,15 @@ let currentDraftScript;
 let currentDraftFallback;
 const draftScript = [
   { draft: { phase: "drafting", legs: spreadLegs.slice(0, 1), refusals: [], nextLegId: 2 } },
+  // The reprice (#3407 P3 slice 4): the first leg typed over to $4.35, echoed by the server.
+  {
+    draft: {
+      phase: "drafting",
+      legs: [{ ...spreadLegs[0], limitPrice: 4.35 }],
+      refusals: [],
+      nextLegId: 2,
+    },
+  },
   spreadDraft("drafting"),
   spreadDraft("validated", { verdict: spreadVerdict }),
   spreadDraft("reviewed", { verdict: spreadVerdict }),
@@ -807,7 +816,8 @@ await shoot("trade-spread-open-phone");
 await page.getByLabel("Underlying").fill("NVDA");
 await page.getByLabel("Underlying").press("Enter");
 await page.getByRole("button", { name: "Pick the 180 call bid" }).click();
-await page.getByText("Sell 2 NVDA $180C").waitFor();
+// The leg's price field carries the same words in its hidden label — the row label is the target.
+await page.locator(".draft-leg-label", { hasText: "Sell 2 NVDA $180C" }).waitFor();
 await page.getByText("Tap a").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootChainPicker = shooter(page, resolve("docs/shots/chain-picker"));
@@ -816,8 +826,22 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByText("Tap a").scrollIntoViewIfNeeded();
 await shootChainPicker("chain-picker-desktop");
 await page.setViewportSize({ width: 390, height: 844 });
+// Price the leg from its row (#3407 P3 slice 4): type over the seeded bid, Enter commits it
+// through the server's reprice action; the running net line reads the echo.
+const legPrice = page.getByLabel(/Premium per share for Sell 2 NVDA/);
+await legPrice.fill("4.35");
+// The price lives in the field's value, not in text — wait on the server's echo instead.
+const repriceEcho = page.waitForResponse((r) => r.url().includes("/api/trade/draft"));
+await legPrice.press("Enter");
+await repriceEcho;
+// Land the leg row mid-frame with the chain's last rows above it, the page pinned to the left.
+await page.locator(".draft-leg-row").first().scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy({ top: 180, left: 0 }));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootLegReprice = shooter(page, resolve("docs/shots/leg-reprice"));
+await shootLegReprice("leg-reprice-phone");
 await page.getByRole("button", { name: "Pick the 182.5 call ask" }).click();
-await page.getByText("Buy 2 NVDA $200C").waitFor();
+await page.locator(".draft-leg-label", { hasText: "Buy 2 NVDA $200C" }).waitFor();
 await page.getByRole("button", { name: "Validate against account" }).click();
 await page.getByRole("button", { name: "Review order" }).click();
 await page.getByText("Reviewed — ready to confirm").waitFor();

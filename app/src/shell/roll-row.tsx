@@ -112,6 +112,9 @@ export function RollRow({
   const held = heldContract(position);
   const [expiration, setExpiration] = useState("");
   const [strike, setStrike] = useState("");
+  // Typed prices win over the crossing quote (#3407 P3 slice 4) — "" means the quote's.
+  const [closeText, setCloseText] = useState("");
+  const [openText, setOpenText] = useState("");
   const [timeInForce, setTimeInForce] = useState<TicketTimeInForce>("day");
   const [state, setState] = useState<RollState>({ step: "idle" });
   const heldChain = useChain(held, held?.expiration ?? "");
@@ -127,8 +130,8 @@ export function RollRow({
   const targetStrike = targetChain ? nearestListedStrike(targetChain.rows, wanted) : wanted;
   const closeRow = heldChain?.rows.find((r) => r.strike === held.strike);
   const openRow = targetChain?.rows.find((r) => r.strike === targetStrike);
-  const closePrice = closeRow?.[sides.close] ?? closeRow?.premium;
-  const openPrice = openRow?.[sides.open] ?? openRow?.premium;
+  const closePrice = typedPrice(closeText) ?? closeRow?.[sides.close] ?? closeRow?.premium;
+  const openPrice = typedPrice(openText) ?? openRow?.[sides.open] ?? openRow?.premium;
   const busy = state.step === "reviewing" || state.step === "submitting";
   const locked = busy || state.step === "done";
   const disarm = () =>
@@ -167,13 +170,30 @@ export function RollRow({
         onExpiration={(next) => {
           setExpiration(next);
           setStrike("");
+          setOpenText("");
           disarm();
         }}
         onStrike={(next) => {
           setStrike(next);
+          setOpenText("");
           disarm();
         }}
         onTimeInForce={setTimeInForce}
+      />
+      <RollPrices
+        closeText={closeText}
+        openText={openText}
+        closeQuote={closeRow?.[sides.close] ?? closeRow?.premium}
+        openQuote={openRow?.[sides.open] ?? openRow?.premium}
+        locked={locked}
+        onClose={(next) => {
+          setCloseText(next);
+          disarm();
+        }}
+        onOpen={(next) => {
+          setOpenText(next);
+          disarm();
+        }}
       />
       <span className="tkt-roll-line num">
         {legLine(held, short, targetStrike, targetExpiration, closePrice, openPrice)}
@@ -189,6 +209,62 @@ export function RollRow({
         }}
       />
     </div>
+  );
+}
+
+/** A typed premium, or nothing when the field is empty or not a price. */
+function typedPrice(text: string): number | undefined {
+  const value = Number(text.trim());
+  return text.trim() !== "" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+/** The two prices, seeded by the crossing quote as placeholders, typed over at will. */
+function RollPrices({
+  closeText,
+  openText,
+  closeQuote,
+  openQuote,
+  locked,
+  onClose,
+  onOpen,
+}: {
+  readonly closeText: string;
+  readonly openText: string;
+  readonly closeQuote: number | undefined;
+  readonly openQuote: number | undefined;
+  readonly locked: boolean;
+  readonly onClose: (next: string) => void;
+  readonly onOpen: (next: string) => void;
+}): ReactElement {
+  const closeId = useId();
+  const openId = useId();
+  const field = (
+    id: string,
+    label: string,
+    text: string,
+    quote: number | undefined,
+    onChange: (next: string) => void,
+  ) => (
+    <span className="field tkt-close-price">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        type="number"
+        min={0.01}
+        step={0.01}
+        inputMode="decimal"
+        value={text}
+        placeholder={quote !== undefined ? quote.toFixed(2) : "—"}
+        disabled={locked}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </span>
+  );
+  return (
+    <span className="tkt-roll-fields">
+      {field(closeId, "Close @", closeText, closeQuote, onClose)}
+      {field(openId, "Open @", openText, openQuote, onOpen)}
+    </span>
   );
 }
 

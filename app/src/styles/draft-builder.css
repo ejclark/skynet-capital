@@ -24,6 +24,27 @@
 }
 .draft-leg-price {
   color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The leg's premium is a field (#3407 P3 slice 4): narrow, numeric, the unit outside it. */
+.draft-leg-price input {
+  width: 84px;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.draft-leg-unit {
+  font-size: var(--text-xs);
+}
+.draft-net {
+  margin: 0 0 10px;
+  font-size: var(--text-sm);
+  color: var(--muted);
 }
 .draft-leg-remove {
   padding: 4px 9px;

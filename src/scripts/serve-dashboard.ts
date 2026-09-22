@@ -297,6 +297,7 @@ async function main(): Promise<void> {
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
     submitDraftOrder: desk.submitDraft,
+    activityEvents: activityEventBus,
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
   }).listen(PORT, () => {

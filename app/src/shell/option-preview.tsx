@@ -1,4 +1,6 @@
 import type { ReactElement } from "react";
+import type { DeskOrderEvent } from "../live/desk-events";
+import { fillHeadline } from "../live/fill-headline";
 import type { OptionPreview } from "../live/options";
 import { daysToExpiry, expiresIn } from "../live/straddle";
 import type { TicketResult } from "../live/ticket";
@@ -186,8 +188,11 @@ export function GateAction({
  */
 export function OptionGateStatus({
   state,
+  fill,
 }: {
   readonly state: OptionGateState;
+  /** The stream's frame for this ticket's order, once one arrived (#3407 P4 slice 2). */
+  readonly fill?: DeskOrderEvent;
 }): ReactElement | null {
   if (state.step === "draft") return null;
   if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
@@ -207,9 +212,7 @@ export function OptionGateStatus({
   if (state.result.ok)
     return (
       <>
-        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}${
-          tifLabel(state.result.timeInForce) ? ` · ${tifLabel(state.result.timeInForce)}` : ""
-        }`}</GateHead>
+        <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
           <p className="gate-note">
             SIM account — simulated fill, real discipline. The blotter and timeline pick it up on
