@@ -1,0 +1,11 @@
+{
+  "id": "uk-gdp-monthly-2027-01-15",
+  "kind": "macro-print",
+  "title": "UK GDP monthly estimate, November 2026 (ONS, 07:00 London / 02:00 ET) — the activity half of the February MPR's data run-in, five days before the December CPI",
+  "date": "2027-01-15",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/gdpmonthlyestimateuknovember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads verbatim 'GDP monthly estimate, UK: November 2026', 'Release date: 15 January 2027 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has no slot for the UK Office for National Statistics. Proposed by the never-assessed initial research of uk-cpi-2027-01-20, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2027-01-20 LANE, 2026-09-09, and it is the FIRST monthly-GDP entry on this calendar — every existing gdp-* id is a US BEA quarterly release, so the id is namespaced uk-gdp-monthly-* to match the uk-cpi-/uk-ppi-/uk-labour-market- convention rather than colliding with them. Why it earns a slot: the Bank of England's February 2027 Monetary Policy Report round (announcement 'Thursday 4 February', BoE upcoming-MPC-dates page, fetched 2026-09-09 under '2027 provisional dates') sees exactly one CPI print and one monthly GDP print between it and the December 2026 announcement. This is the activity half of that pair; uk-cpi-2027-01-20 is the price half, five days later. It also completes a three-release UK week — GDP 01-15, labour market 01-19 (proposals/uk-labour-market-2027-01-19.from-uk-labour-market-2026-12-15.json), CPI and PPI 01-20 — inside a four-session US week shortened by mlk-market-closure-2027-01-18. Tiered LOW: symbols: [], no UK listing and no rates- or sterling-keyed house playbook. Estimate widens caution only; it licenses no date-keyed action."
+}

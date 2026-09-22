@@ -41,6 +41,43 @@ compiler is the first line of defense, so we keep it maximally paranoid.
   doctrine).
 - Spec structure mirrors behavior: `describe("when <situation>") → it("<expected behavior>")`.
 
+### Visual regression — the widest HONEST frame, never the widest frame
+
+Playwright screenshots (`e2e/**`) are the suite's visual sense. Three rules, in order — each one
+was earned by a measurement, cited where it was taken (#3325, 2026-09-19):
+
+**The CI check is named "integration tests", not "e2e"** (#3333, 2026-09-19 — "e2e" reads as
+testing a live/deployed system, and misled a reader). The directory, npm scripts (`test:e2e*`),
+and internal job id still say `e2e` — only the CI display name changed. `playwright.config.ts`'s
+`webServer` builds the checked-out commit fresh and boots it as a throwaway local server against
+static `fixtures/offline/**` data, on both its CI triggers (pull request and push to `main`). It
+is always testing a candidate build, never the running Fly.dev deployment — `scripts/smoke.sh` in
+the `deploy` job is the only check that touches the real deployed app, and it runs separately,
+post-deploy.
+
+1. **Determinism is a precondition, not a tolerance setting.** Every screenshot spec calls
+   `freezePage()` from `e2e/determinism.ts` before `page.goto` — seeded `Math.random`, pinned
+   clock, reduced motion. A render that does not reproduce cannot be adjudicated by a diff, by a
+   human *or* by an AI reviewer; the tolerance is not the fix. The tell that this rule is being
+   broken is a screenshot scoped small "because it's flaky", or a `maxDiffPixelRatio` that keeps
+   creeping up. `/login` had both: clipping to one text element kept the corruption under a 0.02
+   tolerance until it drifted to 0.07–0.08 and would have failed the next code-touching PR.
+2. **Default to the whole frame; scoping narrower needs a stated reason in the spec's own
+   comment.** A clipped shot only ever catches regressions inside its clip — the footer, the
+   below-the-fold layout and anything escaping its container are invisible to it. Scope narrower
+   for *sensitivity* (one surface needing a tighter tolerance than the page can carry), never to
+   dodge nondeterminism — that is rule 1's job.
+3. **"Whole frame" means the viewport unless the page genuinely scrolls.** `fullPage: true` is
+   not automatically wider. It resizes the layout viewport to capture, which clears canvas
+   bitmaps; on a fixed-viewport composition like `/login` that returned a baseline with the entire
+   cinematic stage WIPED and ~40% dead space, 1.39MB for strictly less information than the 1.1MB
+   viewport shot. Use `fullPage: true` on real scrolling document pages; use the viewport on
+   fixed compositions, and say which you chose and why.
+
+Baselines are committed PNGs, so they carry repo weight — one per surface, not one per component.
+Re-baseline with `npm run test:e2e:update`, and never as a reflex: a diff is a finding until
+something explains it.
+
 ### Requirements in EARS (the upstream half of BDD)
 
 Before the failing spec, state the **requirement** in **EARS** (Easy Approach to Requirements
@@ -67,6 +104,20 @@ Write EARS acceptance criteria in plans, issues, and PRs; the `/ears` drill
 (`.claude/skills/ears/SKILL.md`) classifies a raw request into these patterns and scaffolds the
 matching specs. Anti-patterns EARS kills: vague "should/support/handle", compound requirements
 (one `shall` per line), and unverifiable responses (if a spec can't assert it, rewrite it).
+
+**A shared cap over a growing set of entities gets its arithmetic run at design time, not
+discovered live** (Eric, 2026-09-17, on `/api/wire`'s 30-row page cap silently hiding a member's
+own older trades: "our concern is identifying constraints at scale... one user having more than 30
+trades, two users having 15 trades, 5 users having 6 trades — basic math problems"). The framing
+that matters is not "how much data exists" (volume is a red herring — a five-person league with
+modest activity crosses the exact same cap a thousand-user one would) but "how many entities share
+this one fixed budget, and what does each one's slice look like at plausible N." When an EARS
+criterion introduces a limit/cap/page size shared across participants, personas, symbols, or any
+other growing set, state the per-entity math in the same breath — a sentence, not a model: "at 5
+active participants this is 6 rows each," caught by reading the requirement, never by waiting for
+real accounts to hit it. `tests/arch/pagination-consumer.spec.ts` catches the one specific failure
+mode this produced (a paginated contract with zero client consumers); it cannot catch the design
+gap itself — that's a review habit, not a mechanical gate.
 
 **Automated enforcement.** The red-green-refactor loop is backed by deterministic gates, so the
 suite runs whether or not anyone remembers:
@@ -263,3 +314,15 @@ Eric-only governance change) — then `@semantic-release/git` can be added back.
   view stylesheet — a 640px card looks right on a laptop and leaves two-thirds of a monitor empty.
 - **Honor `prefers-reduced-motion` for anything animated** — every animated surface needs the
   reduced-motion path, not just the cinematic ones.
+- **`lightweight-charts` throws under `happy-dom`** (`app/rstest.config.ts`'s test environment) —
+  `createChart` calls `getRgbStringViaBrowser()` to resolve a colour via a detached element's
+  `getComputedStyle`, and happy-dom hands back the raw hex instead of `rgb(...)`, which the
+  library's parser rejects (`Failed to parse color: #191919`). Not a canvas problem — a null 2D
+  context is tolerated fine. Fix: pass a small custom hex parser via `layout: { colorParsers: [...] }`
+  (`LayoutOptions.colorParsers`, `typings.d.ts`) — verified end to end (candles + a volume overlay +
+  a second pane all construct, `chart.remove()` tears down clean). Prefer not mounting the chart in
+  specs at all where possible — spec the pure data-mapping layer (bars → series data) instead; use
+  the `colorParsers` shim only for a deliberate mount smoke-test. (#2017 Phase 1 chart-section spike,
+  2026-09-08 — also corrects that plan's own assumption: the package's licence is **Apache-2.0**, not
+  MIT, which carries an attribution clause the library satisfies by default via `attributionLogo:
+  true`; leave that option alone unless Eric routes a `docs/BRAND.md` call to remove it.)

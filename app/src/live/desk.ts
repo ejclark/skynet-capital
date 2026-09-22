@@ -7,6 +7,23 @@
 
 export type Tone = "pos" | "neg" | "flat";
 
+/** One still-open tax lot inside a position — same column shape as `DeskPosition` (#3186 slice
+ *  1), only ever present when the server could account for the whole position from its lots. */
+export interface PositionLot {
+  readonly lotId: string;
+  readonly openedAt: string;
+  readonly quantity: string;
+  readonly costPerShare: string;
+  readonly price: string;
+  readonly costBasis: string;
+  readonly value: string;
+  readonly dayPl: string;
+  readonly dayTone: Tone;
+  readonly totalPl: string;
+  readonly returnPct: string;
+  readonly totalTone: Tone;
+}
+
 export interface DeskPosition {
   readonly symbol: string;
   readonly display: string;
@@ -25,17 +42,40 @@ export interface DeskPosition {
   readonly returnPct: string;
   readonly totalTone: Tone;
   readonly weightPct: number;
+  readonly lots?: readonly PositionLot[];
+}
+
+/** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in
+ *  `src/observatory/considerations-view.ts`. */
+export interface ConsiderationChip {
+  readonly id: string;
+  readonly kind: "at-risk" | "opportunity";
+  readonly symbol: string;
+  readonly display: string;
+  readonly notional: string;
+  readonly delta: string;
+  readonly deltaTone: Tone;
+  readonly reason: string;
+  readonly action: { readonly label: string; readonly href: string };
 }
 
 export interface DeskTiles {
   readonly openPositions: number;
   readonly invested: string;
+  /** Raw twin of `invested`, for cross-account summing (#2321) — never for display. */
+  readonly investedRaw: number;
   readonly dayPl: string;
   readonly dayTone: Tone;
+  /** Raw twin of `dayPl`. */
+  readonly dayPlRaw: number;
   readonly unrealized: string;
   readonly unrealizedNote: string;
   readonly unrealizedTone: Tone;
+  /** Raw twin of `unrealized`. */
+  readonly unrealizedRaw: number;
   readonly cash: string;
+  /** Raw twin of `cash`. */
+  readonly cashRaw: number;
 }
 
 export interface Desk {
@@ -45,6 +85,7 @@ export interface Desk {
   readonly error?: string;
   readonly tiles: DeskTiles;
   readonly positions: readonly DeskPosition[];
+  readonly considerations: readonly ConsiderationChip[];
 }
 
 export interface DeskSnapshot {
@@ -126,6 +167,12 @@ export interface DeskActivityEvent {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+  /** Realized P/L on a closing fill — absent on opening fills. */
+  readonly realizedPl?: string;
+  /** Return percentage on a closing fill — absent on opening fills. */
+  readonly returnPct?: string;
+  /** Tone for the realized P/L — absent when no P/L. */
+  readonly realizedTone?: Tone;
 }
 
 export interface DeskActivity {
@@ -141,25 +188,57 @@ export async function fetchDeskActivity(id: string): Promise<DeskActivity> {
   return (await res.json()) as DeskActivity;
 }
 
+/** Mirrors `domain/types.ts`'s `OrderForecast` — the structured, scoreable half of a persona's
+ *  forward claim, kept alongside the free-form `expectation` prose. */
+export interface DecisionForecast {
+  readonly direction: "up" | "down";
+  readonly magnitudePct?: number;
+  readonly horizonMs?: number;
+  readonly invalidator: string;
+}
+
 export interface DecisionOutcome {
   readonly symbol: string;
   readonly side: string;
   readonly quantity: number;
   readonly playbook?: string;
+  /** Only meaningful alongside `playbook`. */
+  readonly playbookMode?: "conservative" | "standard" | "aggressive";
+  readonly strategy?: string;
   readonly reason: string;
+  readonly expectation?: string;
+  readonly forecast?: DecisionForecast;
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
   readonly fill?: string;
+  /** The cycle's market context at this symbol, when captured — see `decision-json-view.ts`. */
+  readonly momentum?: number;
+  readonly sentiment?: number;
+  /** The raw→guarded quantity delta, when the risk guards resized this outcome's ask. */
+  readonly guardDelta?: string;
+  /** Cross-links to the matching Activity/blotter row (`id="act-<orderId>"`). */
+  readonly activityAnchor?: string;
+}
+
+/** A raw intent the guards refused in full this cycle — see `decision-json-view.ts`. */
+export interface RefusedIntent {
+  readonly symbol: string;
+  readonly side: string;
+  readonly quantity: number;
+  readonly strategy?: string;
+  readonly reason: string;
+  readonly expectation?: string;
 }
 
 export interface DecisionCycle {
   readonly at: string;
   readonly mode: "observe" | "live";
-  readonly status: "halted" | "placed" | "rejected" | "observed" | "quiet";
+  readonly status: "halted" | "placed" | "rejected" | "observed" | "refused" | "quiet";
   readonly headline: string;
   readonly rawCount: number;
   readonly guardedCount: number;
   readonly outcomes: readonly DecisionOutcome[];
+  readonly refusedIntents?: readonly RefusedIntent[];
   readonly halted?: string;
 }
 
@@ -175,4 +254,69 @@ export async function fetchDeskDecisions(id: string): Promise<DeskDecisions> {
   });
   if (!res.ok) throw new Error(`GET /api/desk/${id}/decisions → ${res.status}`);
   return (await res.json()) as DeskDecisions;
+}
+
+/** The Thesis Drawer shell's data (#3186 slice 4a) — mirrors `ThesisView` in
+ *  `src/observatory/thesis-json-view.ts`. */
+export type ThesisVerdict = "entering" | "exiting" | "holding" | "standing aside" | "no data yet";
+
+export interface ThesisCall {
+  readonly verdict: ThesisVerdict;
+  readonly why: string;
+  readonly window?: string;
+  readonly invalidator?: string;
+  readonly asOf?: string;
+}
+
+/** The decision behind a Thesis marker's fill — see `src/observatory/wire-reasoning.ts`. */
+export interface ThesisMarkerReasoning {
+  readonly reason: string;
+  readonly strategy?: string;
+  readonly expectation?: string;
+  readonly guardDelta?: string;
+}
+
+export interface ThesisMarker {
+  readonly n: number;
+  readonly kind: "entry" | "exit";
+  readonly at: string;
+  readonly label: string;
+  readonly activityAnchor: string;
+  /** Absent for a fill that predates the audit trail, or when no lookup is configured — never
+   *  fabricated. */
+  readonly reasoning?: ThesisMarkerReasoning;
+}
+
+export interface ThesisHealth {
+  readonly measured: boolean;
+  readonly label: string;
+  readonly detail?: string;
+}
+
+export interface ThesisEquityPoint {
+  readonly t: string;
+  readonly value: number;
+}
+
+export interface ThesisData {
+  readonly personaId?: string;
+  readonly thesis?: string;
+  readonly call: ThesisCall;
+  readonly health: ThesisHealth;
+  readonly equity: readonly ThesisEquityPoint[];
+  readonly markers: readonly ThesisMarker[];
+}
+
+export interface DeskThesis {
+  readonly available: boolean;
+  readonly kind: "human" | "bot";
+  readonly thesis?: ThesisData;
+}
+
+export async function fetchDeskThesis(id: string): Promise<DeskThesis> {
+  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/thesis`, {
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`GET /api/desk/${id}/thesis → ${res.status}`);
+  return (await res.json()) as DeskThesis;
 }

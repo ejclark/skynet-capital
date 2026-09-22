@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { parseLedgerHeader } from "../../scripts/event-material-decide.mjs";
 import { closeFromChart } from "../../scripts/event-material-scan.mjs";
 
 // The deterministic material-change probe (issue #724) — driven through the real CLI entrypoint,
@@ -44,6 +45,7 @@ type Explain = {
     vix: number | null;
     daysBand: string;
     adjacentIds: string[];
+    adjacentStrongIds: string[];
     screenStreak: number;
   };
   intervalDays: number;
@@ -145,7 +147,41 @@ describe("event-material-scan decide()", () => {
     expect(out.reasons.some((r) => r.startsWith("days-band-transition:"))).toBe(true);
   });
 
-  it("a new adjacent calendar event since the last row is material", () => {
+  it("a new STRONG adjacent (confirmed, high/critical) since the last row is material", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      adjacentIds: ["cpi-2026-09-11", "some-estimate-2026-09-10"],
+      adjacentStrongIds: ["cpi-2026-09-11"],
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["new-adjacent-event:cpi-2026-09-11"]);
+  });
+
+  it("weak corridor churn (estimate/low-impact, filtered out upstream) screens instead of buying a session (#2946)", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      adjacentIds: ["some-estimate-2026-09-10", "another-estimate-2026-09-12"],
+      adjacentStrongIds: [],
+    });
+    expect(verdict).toBe(0);
+    expect(out.verdict).toBe("screen");
+    expect(out.reasons).toEqual([]);
+  });
+
+  it("a legacy probe-ref (no adjacentStrongIds) diffs against its old all-id list — a truly new strong entrance still trips", () => {
+    const { verdict, out } = explain({
+      ledger: {
+        lastAssessed: "2026-09-01",
+        probeRef: { ...quietProbeRef, adjacentIds: ["old-confirmed-2026-09-10"] },
+      },
+      adjacentIds: ["old-confirmed-2026-09-10", "fomc-2026-09-16"],
+      adjacentStrongIds: ["old-confirmed-2026-09-10", "fomc-2026-09-16"],
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["new-adjacent-event:fomc-2026-09-16"]);
+  });
+
+  it("a caller that omits adjacentStrongIds falls back to the pre-filter behavior (every adjacent can trip)", () => {
     const { verdict, out } = explain({
       ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
       adjacentIds: ["cpi-2026-09-11"],
@@ -187,7 +223,24 @@ describe("event-material-scan applyScreen()", () => {
     expect(text).toContain("| 2026-09-01 | D-10 | Initial pulse. | — (stance set) | 2026-09-04 |");
   });
 
-  it("replaces an existing probe-ref block on the next screen instead of duplicating it", () => {
+  it("names new corridor entries in the screen row — recorded, never assessed (#2946)", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      adjacentIds: ["some-estimate-2026-09-10", "another-estimate-2026-09-12"],
+      adjacentStrongIds: [],
+      ledgerText: LEDGER_TEXT,
+    });
+    expect(verdict).toBe(0);
+    const text = out.ledgerText ?? "";
+    expect(text).toContain("**Deterministic screen (no Claude session).**");
+    expect(text).toContain(
+      "new in corridor since last pulse: `another-estimate-2026-09-12`, `some-estimate-2026-09-10` (recorded, not assessed)",
+    );
+    // and the fresh readings carry both lists forward for the next pulse's diff
+    expect(text).toContain('"adjacentStrongIds":[]');
+  });
+
+  it("appends a fresh probe-ref block rather than rewriting the existing one — the git-conflict fix (2026-09-19)", () => {
     const withRef = LEDGER_TEXT.replace(
       "**Last assessed:** 2026-09-01",
       `**Last assessed:** 2026-09-01\n<!-- probe-ref: ${JSON.stringify(quietProbeRef)} -->`,
@@ -196,8 +249,19 @@ describe("event-material-scan applyScreen()", () => {
       ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
       ledgerText: withRef,
     });
-    const matches = (out.ledgerText ?? "").match(/<!-- probe-ref:/g) ?? [];
-    expect(matches).toHaveLength(1);
+    const text = out.ledgerText ?? "";
+    // Two blocks now coexist — the original header's and the freshly appended one. Nothing
+    // upstream is ever rewritten, which is what lets two concurrent screens for the same event
+    // merge in git as disjoint additions instead of colliding on the same line.
+    const matches = text.match(/<!-- probe-ref:/g) ?? [];
+    expect(matches).toHaveLength(2);
+    expect(text.indexOf("**Last assessed:** 2026-09-01")).toBeLessThan(
+      text.lastIndexOf("**Last assessed:** 2026-09-04"),
+    );
+    // The fresh pair lands at the true end of the file, after the ledger table and its trailer.
+    expect(text.trimEnd().endsWith(`<!-- probe-ref: ${JSON.stringify(quietProbeRef)} -->`)).toBe(
+      false,
+    ); // sanity: it's a FRESH block (today's readings), not the stale one echoed back
   });
 
   it("never applies a screen edit on a material verdict — the field is simply absent", () => {
@@ -217,6 +281,30 @@ describe("event-material-scan applyScreen()", () => {
     });
     expect(verdict).toBe(2);
     expect((out as unknown as { error?: string }).error).toContain("Assessment ledger");
+  });
+});
+
+describe("event-material-scan parseLedgerHeader() — last occurrence wins", () => {
+  it("reads the only header when a doc has never been screened since creation", () => {
+    expect(parseLedgerHeader(LEDGER_TEXT)).toEqual({ lastAssessed: "2026-09-01", probeRef: null });
+  });
+
+  it("prefers a trailing appended pair over the original header", () => {
+    const withOriginal = LEDGER_TEXT.replace(
+      "**Last assessed:** 2026-09-01",
+      `**Last assessed:** 2026-09-01\n<!-- probe-ref: ${JSON.stringify(quietProbeRef)} -->`,
+    );
+    const freshRef = { ...quietProbeRef, vix: 17.1 };
+    const appended = `${withOriginal.trimEnd()}\n\n**Last assessed:** 2026-09-08\n<!-- probe-ref: ${JSON.stringify(freshRef)} -->\n`;
+    expect(parseLedgerHeader(appended)).toEqual({ lastAssessed: "2026-09-08", probeRef: freshRef });
+  });
+
+  it("takes the latest of three stacked pairs, not the first or a middle one", () => {
+    const three =
+      `${LEDGER_TEXT.trimEnd()}\n\n**Last assessed:** 2026-09-04\n<!-- probe-ref: {"vix":1} -->\n` +
+      `\n**Last assessed:** 2026-09-11\n<!-- probe-ref: {"vix":2} -->\n` +
+      `\n**Last assessed:** 2026-09-18\n<!-- probe-ref: {"vix":3} -->\n`;
+    expect(parseLedgerHeader(three)).toEqual({ lastAssessed: "2026-09-18", probeRef: { vix: 3 } });
   });
 });
 

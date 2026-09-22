@@ -1,3 +1,4 @@
+import type { JsonResponse } from "../http/fetch-json.js";
 import { type AlpacaOrder, ensureOk } from "./alpaca-trading-client.js";
 import type { AlpacaTradingTransport } from "./trading-transport.js";
 
@@ -24,8 +25,15 @@ export interface OptionChainRow {
   /** Previous close premium $/share, from the contracts endpoint. */
   readonly closePrice?: number;
   readonly openInterest?: number;
+  // Session volume from the same options-snapshot payload the quotes/greeks come from
+  // (`dailyBar.v`) — absent whenever the feed hasn't reported one yet, never a fabricated 0 that
+  // would misread "nothing traded" where the honest answer is "no data".
+  readonly volume?: number;
   readonly bid?: number;
   readonly ask?: number;
+  /** Present exactly when the data host returned a snapshot for this contract — the per-row
+   *  provenance the chain shows instead of a silent "—" (#3407 P2). */
+  readonly quoteSource?: "indicative";
   // The greeks the data host quoted for this contract, each carried ONLY when it arrived as a
   // finite number. A greek the feed omitted stays absent, so the desk reads it as ABSENT rather
   // than as a confident 0.00 — "no decay", "no convexity" — that nobody actually measured.
@@ -39,6 +47,22 @@ export interface OptionChainRow {
   readonly vega?: number;
   /** Dollars per share per 1 rate point. */
   readonly rho?: number;
+}
+
+/** One row of Alpaca's tradable-asset list (`GET /v2/assets`). */
+export interface AlpacaAssetRow {
+  readonly symbol: string;
+  readonly name?: string;
+}
+
+/** One daily OHLC+volume bar (Alpaca `/v2/stocks/{symbol}/bars`). */
+export interface Bar {
+  readonly t: string;
+  readonly o: number;
+  readonly h: number;
+  readonly l: number;
+  readonly c: number;
+  readonly v: number;
 }
 
 /** Contract payload subset (Trading API `/v2/options/contracts`). Numbers arrive as strings. */
@@ -81,6 +105,30 @@ export interface PlaceOptionOrderParams {
   /** Premium per share; required by Alpaca for limit orders. */
   readonly limitPrice?: number;
   readonly positionIntent: "buy_to_open" | "sell_to_open" | "buy_to_close" | "sell_to_close";
+  /** Alpaca accepts `day` or `gtc` for options; omit and the standing `day` is sent (#3407). */
+  readonly timeInForce?: "day" | "gtc";
+}
+
+/** One leg of a multi-leg (`mleg`) order — the structure's smallest unit, so a 2:1 ratio spread
+ *  carries `ratioQty` 2 and 1, and `quantity` on the order says how many of the whole. */
+export interface MultiLegOrderLeg {
+  readonly occSymbol: string;
+  readonly ratioQty: number;
+  readonly side: "buy" | "sell";
+  readonly positionIntent: PlaceOptionOrderParams["positionIntent"];
+}
+
+export interface PlaceMultiLegOrderParams {
+  readonly legs: readonly MultiLegOrderLeg[];
+  /** How many of the whole structure. */
+  readonly quantity: number;
+  /** Net premium per share for ONE unit of the structure, in Alpaca's own sign convention:
+   *  positive is a debit (you pay), negative is a credit (you receive). Stated only in the
+   *  Python SDK reference (`LimitOrderRequest.limit_price`), never on the docs pages — which is
+   *  how a credit spread gets sent as a debit by accident. Kept explicit here so no caller has
+   *  to remember. */
+  readonly netLimitPrice: number;
+  readonly timeInForce?: "day" | "gtc";
 }
 
 const num = (value: unknown): number | undefined => {
@@ -88,11 +136,55 @@ const num = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+/** A quoted price that may honestly be zero — a bid of $0.00 means nobody is bidding, which is
+ *  a real fact about a worthless contract, not a missing one (#3407 P2; the study found the zero
+ *  bid dropped and the row losing its mid). Junk (`null`, `""`, `[]`) stays absent. */
+/** What `getUnderlyingQuote` answers: last + prevClose always; bid/ask only when both are live. */
+export interface UnderlyingQuote {
+  readonly last: number;
+  readonly prevClose: number;
+  readonly bid?: number;
+  readonly ask?: number;
+}
+
+const price0 = (value: unknown): number | undefined => {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+/** The most contract pages one expirations read may walk (10,000 contracts each) — enough for
+ *  the busiest listings (SPY ≈ 60 expirations × ~150 strikes) with one page to spare, and a hard
+ *  stop against a runaway walk. */
+export const EXPIRATION_PAGE_BUDGET = 3;
+/** One retry on a 429, after this pause — the broker's own rate limit is 200 req/min. */
+const RATE_LIMIT_PAUSE_MS = 1_100;
+
+export type Sleep = (ms: number) => Promise<void>;
+const defaultSleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /** The greeks the snapshot payload carries, in the order a chain reads them. */
 const GREEK_KEYS = ["delta", "gamma", "theta", "vega", "rho"] as const;
 type GreekKey = (typeof GREEK_KEYS)[number];
 /** The `greeks` block of a snapshot, before any of it is trusted. */
 type RawGreeks = Partial<Record<GreekKey, unknown>>;
+
+/** One raw snapshot from the data host, before any field is trusted. */
+interface RawSnapshot {
+  readonly latestQuote?: { bp?: unknown; ap?: unknown };
+  readonly greeks?: RawGreeks;
+  readonly impliedVolatility?: unknown;
+  readonly dailyBar?: { v?: unknown };
+}
+
+/** A held contract's snapshot, every field present only when the feed quoted it. */
+export interface ContractSnapshot {
+  readonly bid?: number;
+  readonly ask?: number;
+  readonly greeks?: Partial<Record<GreekKey, number>>;
+  readonly impliedVol?: number;
+}
 
 /**
  * Parse one greek. Unlike `num`, zero and negatives are legitimate here (a deep-OTM gamma, a put's
@@ -117,27 +209,79 @@ const greeksOf = (raw: RawGreeks | undefined): Partial<Record<GreekKey, number>>
   return out;
 };
 
+/**
+ * A daily bar's volume field, when the feed reported a usable one. `null`, `undefined` and an
+ * empty string are UNREPORTED — deliberately not run through `Number()`, which turns all three
+ * into a perfectly plausible 0 and would let "the feed said nothing" render as "nothing traded".
+ * Unlike `num`, zero IS a legitimate value here (a real zero-volume day), so the gate is
+ * finite-and->=0, not finite-and->0 — a fresh small local copy of `alpaca-options-flow.ts`'s
+ * `barVolume`, kept separate on purpose: this client is the lower-level, protected module that
+ * adapter reads FROM, never the reverse.
+ */
+const barVolume = (value: unknown): number | undefined => {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+/**
+ * One OHLCV field of a daily bar — the same finiteness-only gate as `greek`, under a name that
+ * says what it reads. Zero is legitimate here too (a zero-volume day, a halted bar), so `num`'s
+ * `> 0` would silently drop a real bar; and non-numeric junk (`null`, `""`, `[]`, `true`) stays
+ * ABSENT rather than coercing to a confident 0, so `getBars` drops a corrupt bar whole instead of
+ * feeding a fabricated close into indicator math downstream.
+ */
+const barField = (value: unknown): number | undefined => greek(value);
+
 export class AlpacaOptionsClient {
   private readonly trading: AlpacaTradingTransport;
   private readonly data?: AlpacaTradingTransport;
+  private readonly sleep: Sleep;
 
-  constructor(trading: AlpacaTradingTransport, data?: AlpacaTradingTransport) {
+  constructor(
+    trading: AlpacaTradingTransport,
+    data?: AlpacaTradingTransport,
+    options: { readonly sleep?: Sleep } = {},
+  ) {
     this.trading = trading;
     if (data) this.data = data;
+    this.sleep = options.sleep ?? defaultSleep;
+  }
+
+  /** One trading-API read with the house's only rate-limit posture: a 429 earns exactly one
+   *  retry after a pause; a second 429 is returned as-is and `ensureOk` turns it into the typed
+   *  error the caller already handles. Never loops. */
+  private async getWithBackoff(path: string): Promise<JsonResponse> {
+    const first = await this.trading.get(path);
+    if (first.status !== 429) return first;
+    await this.sleep(RATE_LIMIT_PAUSE_MS);
+    return this.trading.get(path);
   }
 
   /**
-   * Upcoming expiration dates for an underlying, soonest first. One page of call contracts is
-   * enough to enumerate the near expirations the ticket offers; a symbol with more listings
-   * than one page simply shows its nearest months, which is what a learner wants anyway.
+   * Every upcoming expiration for an underlying, soonest first (#3407 P2: the study found the
+   * old single 1,000-contract page capped busy names at their nearest months and put LEAPS out
+   * of reach). Walks `page_token` up to `EXPIRATION_PAGE_BUDGET` pages of 10,000 contracts —
+   * the endpoint's own maximum — and stops early the moment a page has no `next_page_token`.
+   * `limit` remains a ceiling on the dates returned, for callers that want only the nearest.
    */
-  async getExpirations(underlying: string, onOrAfter: string, limit = 8): Promise<string[]> {
-    const path = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=call&status=active&expiration_date_gte=${onOrAfter}&limit=1000`;
-    const body = ensureOk<{ option_contracts?: AlpacaOptionContract[] }>(
-      await this.trading.get(path),
-    );
-    const dates = [...new Set((body.option_contracts ?? []).map((c) => c.expiration_date))];
-    return dates.sort().slice(0, limit);
+  async getExpirations(underlying: string, onOrAfter: string, limit?: number): Promise<string[]> {
+    const base = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=call&status=active&expiration_date_gte=${onOrAfter}&limit=10000`;
+    const dates = new Set<string>();
+    let pageToken: string | undefined;
+    for (let page = 0; page < EXPIRATION_PAGE_BUDGET; page += 1) {
+      const path = pageToken ? `${base}&page_token=${encodeURIComponent(pageToken)}` : base;
+      const body = ensureOk<{
+        option_contracts?: AlpacaOptionContract[];
+        next_page_token?: string | null;
+      }>(await this.getWithBackoff(path));
+      for (const c of body.option_contracts ?? []) dates.add(c.expiration_date);
+      if (!body.next_page_token) break;
+      pageToken = body.next_page_token;
+    }
+    const sorted = [...dates].sort();
+    return limit === undefined ? sorted : sorted.slice(0, limit);
   }
 
   /** The chain for one underlying/expiration/side, strikes ascending, quotes merged fail-soft. */
@@ -148,7 +292,7 @@ export class AlpacaOptionsClient {
   ): Promise<OptionChainRow[]> {
     const path = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=${type}&status=active&expiration_date=${expiration}&limit=500`;
     const body = ensureOk<{ option_contracts?: AlpacaOptionContract[] }>(
-      await this.trading.get(path),
+      await this.getWithBackoff(path),
     );
     const rows: OptionChainRow[] = (body.option_contracts ?? [])
       .filter((c) => c.tradable !== false && num(c.strike_price) !== undefined)
@@ -189,6 +333,115 @@ export class AlpacaOptionsClient {
   }
 
   /**
+   * The underlying's last trade + previous close (+ the NBBO when the session has one), from the
+   * data host — enrichment for a quote
+   * header, never the order path. Fail-soft like `getUnderlyingPrice`: undefined with no data
+   * transport, on a non-2xx, when either field is missing, or on any throw.
+   */
+  async getUnderlyingQuote(symbol: string): Promise<UnderlyingQuote | undefined> {
+    if (!this.data) return undefined;
+    try {
+      const response = await this.data.get(
+        `/v2/stocks/${encodeURIComponent(symbol)}/snapshot?feed=iex`,
+      );
+      if (response.status < 200 || response.status >= 300) return undefined;
+      const body = response.body as {
+        latestTrade?: { p?: unknown };
+        prevDailyBar?: { c?: unknown };
+        latestQuote?: { bp?: unknown; ap?: unknown };
+      } | null;
+      const last = num(body?.latestTrade?.p);
+      const prevClose = num(body?.prevDailyBar?.c);
+      if (last === undefined || prevClose === undefined) return undefined;
+      // The NBBO rides along for the ticket's limit-at-mid default (#3407 slice 6). Unlike an
+      // option's $0.00 bid (a real quote, `price0`), a stock with no bid or no ask outside the
+      // session has no market to price a limit against, so both must be positive to be carried.
+      const bid = num(body?.latestQuote?.bp);
+      const ask = num(body?.latestQuote?.ap);
+      const nbbo = bid !== undefined && ask !== undefined && bid > 0 && ask > 0 ? { bid, ask } : {};
+      return { last, prevClose, ...nbbo };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Daily OHLC+volume bars for the underlying, oldest first — the chart section's backfill data
+   * source (#2017 Phase 1). Data-host only, like `getUnderlyingPrice`/`getUnderlyingQuote`, and
+   * fail-soft — but with a distinction the chart must be able to read: `undefined` means the feed
+   * couldn't be reached (no data transport, a non-2xx, a throw), while an EMPTY array is a real,
+   * successful answer meaning the feed has nothing for this symbol/window (a brand-new or halted
+   * ticker). The two are never conflated. Takes explicit `start`/`end` so it stays a thin, testable
+   * wrapper; the lookback-window arithmetic and its clamp belong to the route that builds the URL.
+   */
+  async getBars(
+    symbol: string,
+    start: string,
+    end: string,
+    limit = 1000,
+  ): Promise<Bar[] | undefined> {
+    if (!this.data) return undefined;
+    try {
+      const response = await this.data.get(
+        `/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&start=${start}&end=${end}&limit=${limit}&feed=iex&adjustment=raw`,
+      );
+      if (response.status < 200 || response.status >= 300) return undefined;
+      const body = response.body as { bars?: Record<string, unknown>[] } | null;
+      const bars: Bar[] = [];
+      for (const raw of body?.bars ?? []) {
+        const t = typeof raw.t === "string" ? raw.t : undefined;
+        const o = barField(raw.o);
+        const h = barField(raw.h);
+        const l = barField(raw.l);
+        const c = barField(raw.c);
+        const v = barField(raw.v);
+        // A bar missing any OHLCV field or a usable timestamp is dropped WHOLE, never partially
+        // fabricated — one made-up close would cascade into wrong SMA/RSI math for every bar after it.
+        if (
+          t === undefined ||
+          o === undefined ||
+          h === undefined ||
+          l === undefined ||
+          c === undefined ||
+          v === undefined
+        ) {
+          continue;
+        }
+        bars.push({ t, o, h, l, c, v });
+      }
+      return bars;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * The full active, tradable US-equity asset list — the tier-2 symbol-search fallback's raw
+   * source (`alpaca-asset-cache.ts`). Fail-soft like every other method here: `undefined` on a
+   * non-2xx or a throw, never a fabricated list. This is a big response (Alpaca's whole equity
+   * universe, ~10-11k rows) — callers cache it, this method itself does no caching. TRADING host,
+   * same as `getExpirations`/`getChain`/`getContract` — not the DATA host.
+   */
+  async getAssets(): Promise<AlpacaAssetRow[] | undefined> {
+    try {
+      const response = await this.trading.get("/v2/assets?status=active&asset_class=us_equity");
+      if (response.status < 200 || response.status >= 300) return undefined;
+      const body = response.body;
+      if (!Array.isArray(body)) return undefined;
+      const rows: AlpacaAssetRow[] = [];
+      for (const raw of body as Record<string, unknown>[]) {
+        const symbol = typeof raw.symbol === "string" ? raw.symbol : undefined;
+        if (!symbol) continue;
+        const name = typeof raw.name === "string" ? raw.name : undefined;
+        rows.push({ symbol, ...(name !== undefined ? { name } : {}) });
+      }
+      return rows;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * The four option lifecycle activity types: `OPEXP` (expired worthless),
    * `OPASN` (assigned), `OPEXC` (exercised), `OPTRD` (the paired underlying-share settlement
    * trade). Read-only and never on the execution path, so this fails SOFT like `mergeQuotes` —
@@ -219,10 +472,73 @@ export class AlpacaOptionsClient {
       side: params.side,
       type: params.type,
       ...(params.type === "limit" ? { limit_price: params.limitPrice } : {}),
-      time_in_force: "day",
+      time_in_force: params.timeInForce ?? "day",
       position_intent: params.positionIntent,
     });
     return ensureOk<AlpacaOrder>(response);
+  }
+
+  /**
+   * A spread as ONE order (#3407 P3 slice 1): Alpaca's `mleg` order class — every leg on the
+   * same underlying, one net limit, filled together or not at all. Always a limit (a market
+   * spread hands the net to the market maker), always day unless the member picked GTC. The
+   * broker echoes the parent order; its `legs` carry the per-leg fills.
+   */
+  async placeMultiLegOrder(params: PlaceMultiLegOrderParams): Promise<AlpacaOrder> {
+    const response = await this.trading.post("/v2/orders", {
+      order_class: "mleg",
+      qty: params.quantity,
+      type: "limit",
+      limit_price: params.netLimitPrice,
+      time_in_force: params.timeInForce ?? "day",
+      legs: params.legs.map((leg) => ({
+        symbol: leg.occSymbol,
+        ratio_qty: leg.ratioQty,
+        side: leg.side,
+        position_intent: leg.positionIntent,
+      })),
+    });
+    return ensureOk<AlpacaOrder>(response);
+  }
+
+  /**
+   * One snapshot per held contract (#3407 P2 slice 3) — bid/ask, greeks and the feed's own
+   * implied vol, keyed by OCC symbol, through the multi-symbol snapshots endpoint (one call for
+   * the whole book). Fail-soft: no data transport, a non-2xx or a throw all yield an empty map,
+   * and the view names every contract it could not cover. Symbols are chunked to stay under the
+   * endpoint's URL limits.
+   */
+  async getContractSnapshots(
+    occSymbols: readonly string[],
+  ): Promise<Map<string, ContractSnapshot>> {
+    const out = new Map<string, ContractSnapshot>();
+    if (!this.data || occSymbols.length === 0) return out;
+    const CHUNK = 100;
+    for (let i = 0; i < occSymbols.length; i += CHUNK) {
+      const chunk = occSymbols.slice(i, i + CHUNK);
+      try {
+        const response = await this.data.get(
+          `/v1beta1/options/snapshots?symbols=${encodeURIComponent(chunk.join(","))}&feed=indicative`,
+        );
+        if (response.status < 200 || response.status >= 300) continue;
+        const body = response.body as { snapshots?: Record<string, RawSnapshot> } | null;
+        for (const [symbol, snap] of Object.entries(body?.snapshots ?? {})) {
+          const greeks = greeksOf(snap.greeks);
+          const bid = price0(snap.latestQuote?.bp);
+          const ask = num(snap.latestQuote?.ap);
+          const impliedVol = num(snap.impliedVolatility);
+          out.set(symbol, {
+            ...(bid !== undefined ? { bid } : {}),
+            ...(ask !== undefined ? { ask } : {}),
+            ...(Object.keys(greeks).length > 0 ? { greeks } : {}),
+            ...(impliedVol !== undefined ? { impliedVol } : {}),
+          });
+        }
+      } catch {
+        // fail-soft: this chunk stays uncovered
+      }
+    }
+    return out;
   }
 
   /** Indicative bid/ask/greeks from the data host, merged onto the chain. Fail-soft. */
@@ -241,7 +557,11 @@ export class AlpacaOptionsClient {
       const body = response.body as {
         snapshots?: Record<
           string,
-          { latestQuote?: { bp?: unknown; ap?: unknown }; greeks?: RawGreeks }
+          {
+            latestQuote?: { bp?: unknown; ap?: unknown };
+            greeks?: RawGreeks;
+            dailyBar?: { v?: unknown };
+          }
         >;
       } | null;
       const snapshots = body?.snapshots ?? {};
@@ -250,11 +570,15 @@ export class AlpacaOptionsClient {
         if (!snap) return row;
         return {
           ...row,
-          ...(num(snap.latestQuote?.bp) !== undefined
-            ? { bid: num(snap.latestQuote?.bp) as number }
+          quoteSource: "indicative",
+          ...(price0(snap.latestQuote?.bp) !== undefined
+            ? { bid: price0(snap.latestQuote?.bp) as number }
             : {}),
           ...(num(snap.latestQuote?.ap) !== undefined
             ? { ask: num(snap.latestQuote?.ap) as number }
+            : {}),
+          ...(barVolume(snap.dailyBar?.v) !== undefined
+            ? { volume: barVolume(snap.dailyBar?.v) as number }
             : {}),
           ...greeksOf(snap.greeks),
         };
@@ -265,8 +589,15 @@ export class AlpacaOptionsClient {
   }
 }
 
+/** Round to the cent, round-half-up. Options premiums are never sub-cent in practice, so this is
+ *  correct, not lossy — it exists to kill float noise (a raw mid rendered `2.9450000000000003` in
+ *  the Limit /share field) at the source, once, for every consumer. */
+function toCents(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 /** The premium a chain row can honestly quote: the bid/ask mid when both sides exist, else last close. */
 export function rowPremium(row: OptionChainRow): number | undefined {
-  if (row.bid !== undefined && row.ask !== undefined) return (row.bid + row.ask) / 2;
-  return row.closePrice;
+  if (row.bid !== undefined && row.ask !== undefined) return toCents((row.bid + row.ask) / 2);
+  return row.closePrice !== undefined ? toCents(row.closePrice) : undefined;
 }

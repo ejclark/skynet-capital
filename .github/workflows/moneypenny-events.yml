@@ -79,6 +79,15 @@ on:
     branches: [main]
   issues:
     types: [labeled]
+  # DEPENDABOT'S OWN PR IS THE TRIGGER (#3315, 2026-09-20) — dep-warden (.claude/agents/dep-warden.md)
+  # already reads the real changelog and runs full verify before merging patch/minor bumps, a
+  # stronger gate than CI-green alone (the generic dependabot/fetch-metadata auto-merge pattern
+  # several teams have walked back after 2026's supply-chain incidents trusts CI-green only). It
+  # sat idle until a session happened to invoke it by hand. `types: [opened]` only — dep-warden's
+  # own re-run on a later push isn't this trigger's job, and dependabot force-pushes its own PRs
+  # rather than adding commits, so `opened` fires again per revision anyway.
+  pull_request:
+    types: [opened]
   workflow_dispatch:
     inputs:
       command:
@@ -116,6 +125,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ═══ THE DEP-WARDEN LANE (#3315) ═══
+  # Fires the instant Dependabot opens a PR — no `route` dependency, no claim lease (dep-warden's
+  # own merge is naturally idempotent: a PR already merged or already escalated is a no-op read).
+  dep-warden:
+    name: dep-warden review
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: gate
+        uses: ./.github/actions/oauth-token-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — dependabot PR #${{ github.event.pull_request.number }} is open but nothing will review it."
+
+      - if: steps.gate.outputs.armed == 'true'
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        with:
+          # Dependabot itself is the only bot that can ever legitimately land here (the `if:` above
+          # already restricts the trigger to its own PRs) — named explicitly rather than `*`.
+          allowed_bots: "dependabot"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The App token, no fallback tier (see the file header) — GitHub forces a bot-authored
+          # `pull_request` event's default GITHUB_TOKEN to read-only, so merging or enabling
+          # auto-merge needs the App identity regardless of this workflow's own `permissions:` block.
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: |
+            --allowedTools "Bash,Read,Grep,Glob" --model claude-sonnet-5
+          prompt: |
+            Read `.claude/agents/dep-warden.md` in this repo and follow it exactly — it is your
+            complete instruction set. Review exactly one PR: #${{ github.event.pull_request.number }}
+            in this repo. Do not touch any other open dependabot PR this run.
+
   route:
     name: route
     runs-on: ubuntu-latest
@@ -172,6 +223,15 @@ jobs:
       # Which events owe research right now. Filtered against open research/<id> PR heads
       # (dueForResearch, specced) so back-to-back pushes can't double-research an event whose PR
       # is still open — concurrency serializes runs, and each new run sees the last one's PRs.
+      # THE SPEND CIRCUIT BREAKER (#2946, Eric 2026-09-16) — checked FIRST, ahead of everything
+      # below. The count-based caps (event-scan.mjs's horizon, dueForResearch's per-tick ceiling)
+      # bound session COUNT; this bounds relative USAGE, keyed to total_cost_usd from the cost meter
+      # above — the CLI's imputed API-equivalent cost under Max 20's flat fee, a usage proxy rather
+      # than a literal charge (research-circuit-breaker.json's `$why`). Fails HARD, not slow: once
+      # tripped (a GitHub issue label — never a committed file,
+      # #915), every tick dispatches nothing until a human removes the label, regardless of what
+      # the rolling window recomputes to later. scripts/moneypenny/circuit-breaker.mjs owns the
+      # mechanism and its own tests; this is only the one real call site.
       - name: List due events
         id: events
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
@@ -179,16 +239,42 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          DUE=$(node scripts/event-scan.mjs --due)
-          HEADS=$(gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]')
-          FILTERED=$(node -e '
-            import("./scripts/moneypenny/index.mjs").then((m) => {
-              const due = JSON.parse(process.argv[1]);
-              const heads = JSON.parse(process.argv[2]);
-              const out = m.dueForResearch(due, heads).map((e) => ({ id: e.id, reason: e.reason }));
-              console.log(JSON.stringify(out));
+          BREAKER=$(node -e '
+            import("./scripts/moneypenny/circuit-breaker.mjs").then((m) => {
+              try {
+                console.log(JSON.stringify(m.checkCircuitBreaker()));
+              } catch (err) {
+                console.error(`circuit breaker machinery failed: ${err.message}`);
+                process.exit(1);
+              }
             });
-          ' "$DUE" "$HEADS")
+          ')
+          echo "::notice::circuit breaker: $BREAKER"
+          if ! echo "$BREAKER" | jq -e '.dispatch' > /dev/null; then
+            REASON=$(echo "$BREAKER" | jq -r '.reason')
+            echo "::warning::research circuit breaker is OPEN — dispatching nothing this tick ($REASON)."
+            echo "due=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # DUE/HEADS go through temp files, never argv (#3307, 2026-09-18) — the calendar's own
+          # growth (#2946: 446+ events) pushed the serialized JSON past the OS ARG_MAX, and every
+          # `node -e '...' "$DUE" "$HEADS"` tick failed with `Argument list too long` (exit 126)
+          # once it did. A file has no such ceiling.
+          DUE_FILE=$(mktemp)
+          HEADS_FILE=$(mktemp)
+          node scripts/event-scan.mjs --due > "$DUE_FILE"
+          gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]' > "$HEADS_FILE"
+          FILTERED=$(DUE_FILE="$DUE_FILE" HEADS_FILE="$HEADS_FILE" node -e '
+            import("node:fs").then((fs) => {
+              import("./scripts/moneypenny/index.mjs").then((m) => {
+                const due = JSON.parse(fs.readFileSync(process.env.DUE_FILE, "utf8"));
+                const heads = JSON.parse(fs.readFileSync(process.env.HEADS_FILE, "utf8"));
+                const out = m.dueForResearch(due, heads).map((e) => ({ id: e.id, reason: e.reason }));
+                console.log(JSON.stringify(out));
+              });
+            });
+          ')
+          rm -f "$DUE_FILE" "$HEADS_FILE"
           echo "due=$FILTERED" >> "$GITHUB_OUTPUT"
           echo "::notice::due for research: $FILTERED"
 
@@ -238,6 +324,18 @@ jobs:
           # downstream in this run depends on that dance succeeding.
           echo "due=$STILL_DUE" >> "$GITHUB_OUTPUT"
           if [ "$SCREENED_COUNT" -eq 0 ]; then
+            exit 0
+          fi
+          # A 19-PR conflict backlog (2026-09-19) traced to this exact race: an event doc's header
+          # (`**Last assessed:**` + the `probe-ref` comment) is rewritten in place, not appended, and
+          # every merge to `main` re-triggers this workflow (issue #724's own design) — so a screen
+          # PR that takes a few minutes to clear CI races the next push's screen. If that push
+          # re-screens the same still-due event first, both PRs edit the same header line, a
+          # guaranteed same-logic conflict. Refuse to open a second screen PR while one is already
+          # open; the events it would have covered stay `due` and get screened cleanly next tick.
+          # See scripts/moneypenny/open-screen-pr.mjs's hasOpenScreenPr() for the full argument.
+          if [ "$(node scripts/moneypenny/open-screen-pr.mjs --check-open)" = "open" ]; then
+            echo "::notice::deterministic screen: an unmerged screen PR is already open — skipping this tick's PR to avoid a header-line race."
             exit 0
           fi
           BRANCH="moneypenny/screen-${{ github.run_id }}-${{ github.run_attempt }}"
@@ -326,12 +424,18 @@ jobs:
     # more parallel jobs, never a shared budget several events race against. `fail-fast: false` so
     # one event's session dying never cancels its siblings' already-in-flight work.
     # `max-parallel` (2026-09-05, docs/LESSONS.md): sixteen sessions opened inside five minutes and six
-    # of them died on their first turn (1 turn, ~400ms, $0 — a refused first call). The width of the
-    # fan-out is the constraint one level up from the GraphQL bucket; four at a time is far under the
-    # burst that failed and still clears a full due list inside one cadence.
+    # of them died on their first turn (1 turn, ~400ms, $0, empty modelUsage — a rejection before any
+    # tokens were generated). The action hid the actual reason ("full output hidden for security");
+    # re-read from the raw job logs 2026-09-09 confirms it is NOT the 2026-09-08 install-crash class
+    # (that fails before "Claude Code initialized" even prints) — clean init, then an instant zero-usage
+    # reject is the shape of a real upstream throttle, not a repo bug. 4 was chosen as "far under 16",
+    # never as a measured ceiling — nothing between 4 and 16 has ever been tried. 8 is a bounded step
+    # up, not a jump to the known-bad number, paired with the failure-diagnostics step below so a
+    # repeat is a one-line read instead of an hours-long archaeology dig. Revert to 4 (never higher
+    # without new data) if that step ever shows the same is_error/zero-usage signature again.
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 8
       matrix:
         event: ${{ fromJSON(needs.route.outputs.due_events) }}
     runs-on: ubuntu-latest
@@ -356,7 +460,7 @@ jobs:
 
       - if: steps.gate.outputs.armed == 'true'
         id: build
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So each PR this session opens
@@ -371,16 +475,25 @@ jobs:
           allowed_bots: "github-actions"
           # WebSearch/WebFetch on top of the build lane's list: a pulse check without the adjacency
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
-          # --model pins the lane deliberately instead of riding the action default — same
-          # route-by-who-pays rule as build-feedback (flat-rate lane, research-to-brief floor is
-          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only, scoped to ONE
+          # --model pins the lane deliberately instead of riding the action default.
+          # SONNET, NOT OPUS (Eric, 2026-09-17, #2946): this lane can fan out indefinitely — every
+          # merge to main is a tick, and the adjacency sweep in event-research.md can manufacture
+          # its own next generation of due events — so an unconditional Opus pin here is a lane
+          # that can burn an entire weekly quota in a day (measured: it did, ~24% in 24h). 99.2% of
+          # completed docs conclude "stand aside" (CLAUDE.md: a refusal is still P&L), so the
+          # judgment bar most sessions actually clear doesn't need Opus. Eric's explicit call,
+          # made without waiting on the S5 Haiku/Sonnet adequacy eval: the downside of an
+          # occasional under-powered research doc (cheap to catch, cheap to re-run) is not
+          # symmetric with the downside of unbounded Opus fan-out (the whole week's quota, gone).
+          # Revisit once S5's eval and the batching/tiering redesign (#2946) land — this pin is a
+          # stopgap, not a permanent floor. --max-turns is a runaway backstop only, scoped to ONE
           # event's work (a `never-assessed` initial write-up — TEMPLATE + stance + kill switches
           # + first ledger row — is the heaviest single-event case, typically 20-30 turns). The 60
           # set here 2026-08-28 turned out too tight within a day — two runs finished normal work
           # at turns 63 and 65-67, over cap (issue #904); 90 gives real headroom over the worst
           # observed overrun. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 150
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5 --max-turns 150
           # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
           # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
           # any other due event even though `event-scan.mjs --due` will still list every one of
@@ -393,6 +506,62 @@ jobs:
             its own sibling matrix job running in parallel right now, each responsible for its own
             id only. If `${{ matrix.event.id }}` is no longer due when you check (another run
             already handled it), say so and stop rather than picking a different one.
+
+      # THE SWALLOWED-ERROR FIX (docs/IDEAS.md side quest, banked 2026-09-06, built here 2026-09-09).
+      # claude-code-action prints "full output hidden for security" and buries the actual CLI result
+      # JSON — which is exactly what turned the 2026-09-05 burst incident into an hours-long log dig
+      # instead of a one-line read. The CLI always writes its structured result to this fixed temp
+      # path regardless of outcome; on failure, print it. This is NOT `show_full_output: true` (which
+      # would dump the whole conversation transcript, the thing the security note is about) — just the
+      # terminal result envelope (is_error, duration_ms, num_turns, total_cost_usd, modelUsage, and any
+      # error text it carries), which is diagnostic, not transcript.
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          cat /home/runner/work/_temp/claude-execution-output.json 2>/dev/null || \
+            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
+          echo "::endgroup::"
+
+      # THE COST METER (#2946). The step above prints the result envelope ONLY on failure, so the
+      # expensive path — a session that ran to completion — was the unmeasured one. That is why a
+      # lane which spent a full weekly token quota in ~24 hours showed nothing about it in its own
+      # logs: every successful session's total_cost_usd was read by nothing and discarded.
+      #
+      # One line per session, on every outcome. The ::notice:: makes it greppable in the run log;
+      # the step summary row aggregates all matrix legs into a single per-tick table, which is the
+      # view that answers "what did this push cost" without opening a job. Cheap enough to be
+      # unconditional — it is a jq read of a file the CLI already wrote.
+      #
+      # This repo runs Claude Max 20 (flat monthly fee, no per-token billing) — `usd`/`$` below is
+      # the CLI's imputed API-equivalent cost, a relative usage proxy for sizing the circuit breaker
+      # (research-circuit-breaker.json's `$why`), never a literal charge against this account.
+      - if: always()
+        name: Record this session's cost
+        run: |
+          F=/home/runner/work/_temp/claude-execution-output.json
+          ID='${{ matrix.event.id }}'
+          if [ ! -f "$F" ]; then
+            echo "::notice::cost — event=$ID no execution-output.json (died before Claude Code ran)"
+            echo "- \`$ID\` — no result envelope (died before Claude Code ran)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # RESULT_FILTER: the action's execution-output.json is the Agent SDK's full streamed
+          # message array, not a single object — the terminal envelope (total_cost_usd, num_turns,
+          # duration_ms, is_error) lives on the last `type: "result"` element. Discovered 2026-09-17:
+          # `.total_cost_usd` on the array itself failed every real session with `jq: Cannot index
+          # array with string`, so this step had NEVER successfully recorded a cost line on success
+          # since #2979 landed — the exact blind spot #2979 was meant to close. The `if type=="array"`
+          # guard also tolerates a future format reverting to a bare object without crashing the step
+          # again; each read falls back to "?" on any jq error rather than failing the step (`|| echo
+          # "?"`) — a missing number here should degrade the notice, never abort the workflow.
+          RESULT_FILTER='if type=="array" then ([.[] | select(.type=="result")] | last // {}) else . end'
+          COST=$(jq -r "$RESULT_FILTER | .total_cost_usd // \"?\"" "$F" 2>/dev/null || echo "?")
+          TURNS=$(jq -r "$RESULT_FILTER | .num_turns // \"?\"" "$F" 2>/dev/null || echo "?")
+          MS=$(jq -r "$RESULT_FILTER | .duration_ms // \"?\"" "$F" 2>/dev/null || echo "?")
+          ERR=$(jq -r "$RESULT_FILTER | .is_error // \"?\"" "$F" 2>/dev/null || echo "?")
+          echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
+          echo "- \`$ID\` — **\$$COST** (imputed, Max 20 flat-fee — not a literal charge) · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
@@ -430,7 +599,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
           # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
@@ -519,7 +688,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.

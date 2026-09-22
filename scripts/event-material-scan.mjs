@@ -39,6 +39,7 @@ import {
   applyScreen,
   computeAdjacentIds,
   decide,
+  isStrongAdjacent,
   parseLedgerHeader,
 } from "./event-material-decide.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
@@ -93,6 +94,7 @@ function loadEvents() {
     kind: "earnings",
     date: p.date,
     impact: "critical",
+    status: p.status, // feeds the strong-adjacent filter — earnings-print dates confirm via IR
     symbols: [p.symbol],
   }));
   return [...curated, ...derived];
@@ -188,6 +190,10 @@ async function buildState(id, today, opts = {}) {
   const reads = await Promise.all(symbols.map((sym) => latestClose(sym)));
   const vix = await latestClose("^VIX");
   const adjacentIds = computeAdjacentIds(event, allEvents);
+  // The adjacency filter (#2946): only confirmed high/critical adjacents may trip a session; the
+  // full corridor is still recorded in the probe-ref either way.
+  const byId = new Map(allEvents.map((e) => [e.id, e]));
+  const adjacentStrongIds = adjacentIds.filter((id) => isStrongAdjacent(byId.get(id)));
   const state = {
     event,
     today,
@@ -198,6 +204,7 @@ async function buildState(id, today, opts = {}) {
       vix: vix.price,
     },
     adjacentIds,
+    adjacentStrongIds,
   };
   // Provenance travels BESIDE the readings, never inside them: `market.symbols` stays a plain
   // symbol->number map, because applyScreen serializes `decision.readings` verbatim into the

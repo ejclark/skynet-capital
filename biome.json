@@ -73,7 +73,8 @@
         "**/src/scripts/**",
         "**/commitlint.config.js",
         "**/rstest.config.ts",
-        "**/app/rsbuild.config.ts"
+        "**/app/rsbuild.config.ts",
+        "**/playwright*.config.ts"
       ],
       "linter": {
         "rules": {
@@ -141,7 +142,8 @@
       "!**/coverage",
       "!**/spikes",
       "!.claude/workflows",
-      "!.design-sync/config.json"
+      "!.design-sync/config.json",
+      "!docs/design/**"
     ]
   }
 }

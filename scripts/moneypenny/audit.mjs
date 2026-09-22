@@ -170,10 +170,19 @@ export function gatherAuditDeps(nowMs) {
     .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.stall.name))
     .map((i) => i.number);
 
+  // A STALL IS ONLY A STALL IF THE WORK IS STILL WANTED (#2968). A receipt with no ledger whose
+  // event has left `--due` — beyond the research horizon, dropped from the calendar, or passed and
+  // aged out — is not a failing matrix leg; it is a receipt for work nobody will ever do, and
+  // `routeReceipts` closes it on the next push. Flagging it dispatches a repair session that can
+  // only report "nothing to repair", which is exactly what happened to #2968: a real Opus session
+  // spent discovering there was no failure. Deferral is NOT this case — the dispatch ceiling is
+  // applied downstream of `--due`, so a merely-deferred event is still listed here and still
+  // flaggable.
+  const dueIds = dueEventIds();
   const unclaimedIssues = [];
   for (const i of issues) {
     const id = i.title.match(/^\[event-research\] (.+)$/)?.[1];
-    if (id && !existsSync(`docs/research/events/${id}.md`)) {
+    if (id && dueIds.has(id) && !existsSync(`docs/research/events/${id}.md`)) {
       unclaimedIssues.push({ title: i.title, number: i.number, quietDays: daysSince(i.updatedAt) });
     }
   }
@@ -248,6 +257,28 @@ export function gatherAuditDeps(nowMs) {
     alreadyFlagged,
     alreadyFlaggedPRs,
   };
+}
+
+/**
+ * Which event ids `scripts/event-scan.mjs --due` currently lists. Local node, no network, no
+ * `npm ci` — the same call `gatherDeps` makes on the sweep side, made here so the stall check can
+ * tell "the matrix leg keeps dying" from "nothing is asking for this any more" (#2968).
+ *
+ * LOUD, never an empty set: a scan that cannot run must not quietly turn every receipt into a
+ * non-stall and switch this lane's eyes off. Same doctrine as `gatherAuditDeps`'s own `json`.
+ */
+function dueEventIds() {
+  let out;
+  try {
+    out = sh("node", ["scripts/event-scan.mjs", "--due"]);
+  } catch (err) {
+    throw new Error(`event-scan --due failed: ${String(err.stderr || err.message).trim()}`);
+  }
+  try {
+    return new Set(JSON.parse(out || "[]").map((e) => e.id));
+  } catch {
+    throw new Error(`event-scan --due returned unparseable JSON:\n${String(out).slice(0, 400)}`);
+  }
 }
 
 /**

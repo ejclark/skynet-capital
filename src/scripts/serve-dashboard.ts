@@ -11,6 +11,8 @@
  * over SSE as events arrive. `/add` lets people self-register their own Alpaca paper account,
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
+
+import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
@@ -142,6 +144,7 @@ async function main(): Promise<void> {
   const {
     allowlist,
     botControls,
+    council,
     subscriptions,
     knownPersonaIds,
     auth,
@@ -152,7 +155,7 @@ async function main(): Promise<void> {
     ownerEmailFor,
   } = setupAccess(process.env, liveRoster);
   const credentialsBridge = { knownPersonaIds: [...knownPersonaIds], findParticipant };
-  const opsStatus = wireOpsStatus(
+  const { opsStatus, insightsBridge } = wireOpsStatus(
     process.env,
     botControls,
     { hub, activity, authConfigured: Boolean(auth) },
@@ -190,6 +193,10 @@ async function main(): Promise<void> {
     readTags: (id) => orderAudit.list(id),
     feedbackLog,
     ownerEmailFor,
+    botControls,
+    // The same per-participant resolver the server config gets below — the recommender tool reads
+    // its chain through the member's OWN linked options client, never a shared one.
+    optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
   });
 
   createDashboardServer({
@@ -255,14 +262,47 @@ async function main(): Promise<void> {
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
+    recordOrderAudit: (entry) => orderAudit.record(entry),
     // `/wire`'s cross-participant feed: the same stores, called with no id.
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
+    // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
+    // no separate switch, matching Mission Control's own always-on-when-wired posture.
+    council: {
+      load: () => council.load(),
+      submit: (week, memberId, text, at) => {
+        council.submit(week, memberId, { text, at: at.toISOString() });
+      },
+    },
     progression: progressionService,
-    ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
+    // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
+    // bridge, works regardless of which machine's volume this process runs on) over the JSONL
+    // audit trail, which only ever had data when SKYNET_AUDIT_DIR happened to be set on THIS
+    // machine — never true in prod, since that dir lives on the bots machine's own volume.
+    ...(insightsBridge.readDecisions
+      ? { readDecisions: insightsBridge.readDecisions }
+      : auditDir
+        ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) }
+        : {}),
+    // The wire route's "why did that trade fire" join (PR 6) — no JSONL fallback: the fuzzy
+    // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
+    // the replicated store supports an exact order-id index.
+    ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
+    // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
+    ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
+    // Expectancy-with-a-CI (PR 7c) reads the same replicated store, same no-JSONL-fallback posture.
+    ...(insightsBridge.listRetrospectives
+      ? { listRetrospectives: insightsBridge.listRetrospectives }
+      : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
+    submitDraftOrder: desk.submitDraft,
+    activityEvents: activityEventBus,
+    activityLog: activityEventBus,
+    // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
+    alertDismissals: createAlertDismissals(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
   }).listen(PORT, () => {

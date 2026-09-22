@@ -1,0 +1,11 @@
+{
+  "id": "opec-plus-meeting-2026-10-04",
+  "kind": "geopolitical",
+  "title": "OPEC+ ministerial meeting (November quotas)",
+  "date": "2026-10-04",
+  "status": "estimate",
+  "source": "EST: opec.org/pr-detail/1835613-6-september-2026.html, fetched direct 2026-09-08, closes verbatim 'The next meeting will be held on 4 October 2026' — primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit and because market-events-data.ts defines no trusted source prefix for opec.org, so EST: is the honest label even against the group's own release. Checked 2026-09-08",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "2026-10-04 is a TWO-BODY DAY and the calendar has been tracking only one of them. opec-jmmc-68th-2026-10-04 (already filed, `low`) is the Joint Ministerial Monitoring Committee, which monitors conformity and recommends; THIS entry is the seven-country voluntary group — Saudi Arabia, Russia, Iraq, Kuwait, Kazakhstan, Algeria, Oman — which actually sets the quota, and it is the body that on 2026-09-06 decided to maintain September levels through October. Different roster, different mandate, same date, so they earn separate rows. Impact `medium` mirrors opec-plus-meeting-2026-09-06 and reflects the base case (another non-decision), not the consequence if the signal breaks. What makes this instance live, from the 09-06 close-out: it is the first ministerial that has to price the 2027 MSC baseline fight — third-party capacity audits ran January-September 2026, Iraq is pushing for a higher individual quota and used the UAE's 2026-05-01 exit as leverage (Semafor, 2026-09-03), and Kazakhstan carries the alliance's largest compensation burden. That fight, not the monthly number, is the tail. Also confirms the group's scheduling regularity now measured 5 for 5 on the record — monthly, on Sundays, each date named verbatim in the prior release (06-07, 07-05, 08-02, 09-06, 10-04), which is the observation FT-27 registered and the 09-06 close-out scored PASS. Note for whoever researches this: the consequence FT-27 registered — re-tiering opec-jmmc-68th-2026-10-04 from `low` to `medium` now that 10-04 carries two bodies — belongs to that entry's own lane and was deliberately NOT made by the proposer (one file per owner, #1449). Discovered during the opec-plus-meeting-2026-09-06 close-out (2026-09-08)."
+}

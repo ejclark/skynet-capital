@@ -1,0 +1,11 @@
+{
+  "id": "treasury-buyback-tips-1y10y-2026-10-21",
+  "kind": "rates",
+  "title": "Treasury liquidity-support buyback operation (TIPS 1-10Y, $750M cap, 1:40pm ET) — the day before the 5Y TIPS auction",
+  "date": "2026-10-21",
+  "status": "estimate",
+  "source": "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (August 2026 refunding, masthead 'For Publication August 5, 2026'), PDF text layer decompressed direct 2026-09-08 (plain curl, HTTP 200, 125,547 bytes, md5 79b65955e74a59f6bebff3adf8ba7b35) — the row reads verbatim announce 10/20/2026, operation 10/21/2026 1:40 pm - 2:00 pm, settle 10/22/2026, Liquidity Support, TIPS 1Y to 10Y, maturity range 10/22/2027 - 10/21/2036, min $0, max $750 million. Estimate, not confirmed, on the two counts every buyback row off this document carries: a tentative schedule is tentative by construction, and the confirming primary is the 10-20 operation announcement rather than this document. Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during treasury-buyback-tips-10y30y-2026-09-15 initial research (2026-09-08), off the same schedule primary. Filed for a stacking reason the calendar can already see: it lands the day BEFORE the tracked treasury-5y-tips-2026-10-22 auction, and its 10/22/2027 - 10/21/2036 window covers exactly the off-the-run short and belly TIPS whose relative-value the new 5Y issue reprices. That is the cleanest scheduled instance in this quarter of Treasury bidding for off-the-run TIPS on the eve of selling on-the-run TIPS, so the pair is worth reading together rather than separately. It is also the second read on whether the 2026-07-22 fill miss (54.0% of the $750M cap, the first since 2024-11-06 in this bucket) becomes a pattern — the first being its 09-29 sibling, proposed in the same PR. Low impact on size; the value is the stack. Proposed as an estimate; nothing here licenses an entry."
+}

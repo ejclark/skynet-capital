@@ -1,8 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
-import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
+import {
+  previewOrder,
+  type TicketOrderType,
+  type TicketTimeInForce,
+} from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
+import { requesterFor, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -35,6 +39,7 @@ interface TradeApiBody {
   readonly orderType?: TicketOrderType;
   readonly limitPrice?: number;
   readonly stopPrice?: number;
+  readonly timeInForce?: TicketTimeInForce;
 }
 
 const TRADE_BODY_CAP_BYTES = 8_192;
@@ -75,6 +80,10 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
       : undefined;
   const limitPrice = parsePositivePrice(body.limitPrice);
   const stopPrice = parsePositivePrice(body.stopPrice);
+  // Anything but the two named values is dropped, never coerced — the preview then shows the
+  // default it will send, so a stray value can't silently become a different order.
+  const timeInForce =
+    body.timeInForce === "day" || body.timeInForce === "gtc" ? body.timeInForce : undefined;
   return {
     participantId,
     symbol,
@@ -83,6 +92,7 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
     ...(orderType ? { orderType } : {}),
     ...(limitPrice !== undefined ? { limitPrice } : {}),
     ...(stopPrice !== undefined ? { stopPrice } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   };
 }
 
@@ -146,8 +156,16 @@ export async function serveTradeApi(
   const body = await readTradeBody(req, res);
   if (!body) return true;
 
-  // Identity: the session and nowhere else — exactly `/trade`'s resolution.
-  const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  // Identity: the session and nowhere else — exactly `/trade`'s resolution. Compared against the
+  // full owned set, not just the session's single default account, so a session owning more than
+  // one account (e.g. a human account plus a `/claim`-linked bot) can trade any of them, not only
+  // whichever one a bare default would land on.
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const requesterId = requesterFor(
+    body.participantId,
+    ownedIds,
+    config.hub.getState().participants,
+  );
   const refusal = await resolveStockRefusal(body.action, requesterId, config, session);
 
   if (path === "/api/trade/review") {
@@ -177,7 +195,7 @@ export async function serveTradeApi(
   if (!config.submitTrade) {
     sendJson(res, 200, {
       ok: false,
-      refusals: ["Trading isn't wired in this deployment — the ticket reviews and refuses."],
+      refusals: ["Trading isn't wired in this deployment — the order reviews and refuses."],
     });
     return true;
   }

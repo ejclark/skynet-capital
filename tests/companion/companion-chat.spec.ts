@@ -382,6 +382,36 @@ describe("model routing — the shared, cheap model, on every leg", () => {
     await chat({ messages: [userMsg("hi")], participantId: "acct-1" }, collect().handlers);
     expect(fetchCalls[0]?.model).toBe(COMPANION_MODEL);
   });
+
+  it("resolves the model once from Mission Control's dial and uses it on every leg of the turn", async () => {
+    const fetchCalls: { model?: string }[] = [];
+    const streamCalls: { model?: string }[] = [];
+    const chat = createCompanionChat(
+      { apiKey: "k", resolveModel: () => "claude-haiku-4-5" },
+      (_m, _u, _h, b) => {
+        fetchCalls.push(b as { model?: string });
+        return Promise.resolve(toolUseReply("get_play_catalog"));
+      },
+      fakeDoStream(["done"], streamCalls) as never,
+    );
+    await chat({ messages: [userMsg("hi")] }, collect().handlers);
+    expect(fetchCalls[0]?.model).toBe("claude-haiku-4-5");
+    expect(streamCalls[0]?.model).toBe("claude-haiku-4-5");
+  });
+
+  it("falls back to the protected file's default when the dial resolves nothing", async () => {
+    const fetchCalls: { model?: string }[] = [];
+    const chat = createCompanionChat(
+      { apiKey: "k", resolveModel: () => undefined },
+      (_m, _u, _h, b) => {
+        fetchCalls.push(b as { model?: string });
+        return Promise.resolve(textReply("ok"));
+      },
+      fakeDoStream(["unused"], []),
+    );
+    await chat({ messages: [userMsg("hi")] }, collect().handlers);
+    expect(fetchCalls[0]?.model).toBe(COMPANION_MODEL);
+  });
 });
 
 describe("history — trimmed, and never opening on a stray assistant turn", () => {

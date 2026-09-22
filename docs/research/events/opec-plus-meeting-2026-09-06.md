@@ -1,8 +1,8 @@
 # OPEC+ ministerial meeting (October quotas) — opec-plus-meeting-2026-09-06
 
 **Kind:** geopolitical · **Date:** 2026-09-06 (estimate, EST: opec.org press release 2026-08-02 states verbatim "The next meeting will be held on 6 September 2026" — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-31) · **Impact:** medium
-**Last assessed:** 2026-09-06
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","iea-omr-2026-09-11","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jobs-2026-09-04","jolts-2026-09-01","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","ppi-2026-09-10","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
+**Last assessed:** 2026-09-08
+<!-- probe-ref: {"symbols":{},"vix":15.3,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","iea-omr-2026-09-11","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jobs-2026-09-04","jolts-2026-09-01","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11","waller-economic-outlook-2026-09-03"],"screenStreak":0,"blocked":[{"url":"https://www.opec.org/press-releases.html","status":402,"at":"2026-09-08"},{"url":"https://www.vantagemarkets.com/market-analysis/brent-wti-crude-oil-price-today-hormuz-tanker-strikes-september-7-2026/","status":403,"at":"2026-09-08"}]} -->
 
 ## At a glance
 
@@ -329,3 +329,179 @@ the row as its receipt. The adjacency sweep (peer prints · macro surprises · V
 geopolitical · event tape) runs in every row; a dated adjacent event found gets proposed to
 `market-events.ts` as an `estimate` in the same PR. Close-out fills `## Outcome` below from re-run
 instrument data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out written 2026-09-08 01:45 UTC = 2026-09-07 21:45 ET — Labor Day evening.** The decision
+landed Sunday 2026-09-06 and crude has had one full session to price it. **US cash equities have
+had none**: 09-07 was a full closure, and the first session that can react opens in ~11¾ hours
+(09-08 09:30 ET). So the equity leg of the `This week` call is **not observable at close-out and is
+not scored** — this doc goes quiet before the datum exists, which is a consequence of the calendar
+position leg 1 flagged at D-6, not an oversight. Everything below scores the crude and
+chokepoint legs only.
+
+**Sourcing note — what "re-run instrument data" means for a `geopolitical` event with `symbols: []`.**
+`earnings-cycle.mjs` / `intraday-edges.mjs` are equity- and earnings-keyed and have no target here;
+the initial research said so and none was run. Their caches were busted anyway per the standing
+rule (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and the
+analog was honoured instead — **nothing below is from memory of the tape.** The decision is scored
+from OPEC's **own release**, `opec.org/pr-detail/1835613-6-september-2026.html`, fetched direct
+today; every price is a fresh Yahoo pull made this session (`BZ=F`, `CL=F`, `^VIX`, `XLE`, `USO` —
+the same endpoint `scripts/event-material-scan.mjs` uses); flow figures are attributed to the firm
+that produced them with the as-of date attached.
+
+### 1. The decision was the base case, and the pause finally got its primary — on the day
+
+Six consecutive rows of this ledger said the Q4 pause was delegate-sourced and **absent from OPEC's
+own record**. It is on the record now. The 2026-09-06 release, fetched verbatim today:
+
+- *"The seven OPEC+ countries, which previously announced additional voluntary adjustments in April
+  and November 2023, namely Saudi Arabia, Russia, Iraq, Kuwait, Kazakhstan, Algeria, and Oman met
+  virtually on 6 September 2026"* — the roster is the seven, no UAE, as the D-0 row established.
+- *"The seven participating countries decided to maintain September 2026 required production for
+  October 2026"* — **no October increase**.
+- *"The next meeting will be held on 4 October 2026."*
+
+**Kill switch 1 did not fire.** The delegate/Rystad reporting was right and the primary caught up to
+it. What does **not** transfer is the method: The National wrote the pause as settled fact on
+2026-08 with no primary behind it, and was right by luck of direction, not by evidence — this
+calendar keeps treating delegate-sourced OPEC guidance as directionally useful and never as a
+primary. Per-country October quotas (Saudi 10.478, Russia 9.949, Iraq 4.431, Kuwait 2.676,
+Kazakhstan 1.628, Algeria 1.007, Oman 0.841 mb/d) are **aggregator-sourced** (ANI/Gulf News,
+2026-09-07) and are recorded, not relied on. **The entry stays `estimate` at close-out**, and that
+is a schema fact rather than a doubt: `market-events-data.ts` defines no trusted source prefix for
+opec.org, so `EST:` is the honest label even against the group's own release. No date-keyed action
+was licensed at any point in this ledger's life.
+
+### 2. The call held, and the reason it held is the one the ledger kept re-deriving
+
+| Horizon | Call as written | What happened | Verdict |
+|---|---|---|---|
+| Today (D-6) | Stand aside | No position taken, event stayed `estimate` to the end | **Correct, trivially** — the falsifier (an OPEC+ headline moving Brent >5% in a session before 09-06) never fired |
+| This week | Watch the Hormuz tape, not the communiqué | The communiqué was a non-event; the tape moved on the chokepoint | **Correct, and the load-bearing one** — its falsifier (a statement announcing an October increase) did not fire |
+| This month | No position; crude is an input to the Fed corridor, not a trade | Unresolved at close-out — see §4 on KS4 | Not scored |
+| This quarter | Watch the 2027 baseline fight | Unresolved; next checkpoint 2026-10-04 | Not scored |
+
+**The measurement.** Friday 09-04 settles: Brent **96.28**, WTI **91.48**. The first post-decision
+session (Yahoo dates the bar **2026-09-08**; the trade is Monday **2026-09-07** — ICE Brent's
+session opens 20:00 ET Sunday, and the reporting corroborates the offset, see §5) ran Brent
+**o 96.90 · h 98.05 · l 95.97**, last **96.99** at 01:32 UTC; WTI **o 92.26 · h 93.29 · l 90.87**,
+last **92.30**. Settle-to-last that is **+0.74%** on Brent and **+0.91%** on WTI, with an intraday
+high **+1.84%**.
+
+That is a very small move for a session carrying a quota decision **and** three destroyed IRGC
+tankers **and** a refinery strike — and the composition is the point. Crude went up on the
+chokepoint, not on the paper: Kpler's 10-day moving average of commodity transits through Hormuz
+fell to **10/day on Sunday 09-06**, the lowest since May, from **>15 Friday** and **~13 Saturday**,
+with **2 vessels Saturday and 6 Sunday** (gCaptain/BOE Report/Rappler, 2026-09-07). The `This week`
+call told a reader to watch that number instead of the communiqué; the communiqué said exactly what
+everyone expected and the number is what moved.
+
+### 3. THE FINDING — the bypass amendment is 48 hours old and its corridor is already being shot at
+
+The D-0 row corrected this ledger's central claim: barrels are not all trapped behind Hormuz,
+because Saudi Arabia's East-West pipeline runs to **Yanbu on the Red Sea** and the UAE's ADCOP line
+runs to **Fujairah** outside the strait. On the very next day, **Monday 2026-09-07, Saudi Aramco's
+400,000 b/d Jizan refinery on the Red Sea coast was hit** — assessment ongoing, no group claiming
+responsibility, Aramco not commenting, described by sources as similar in scale to a strike a month
+earlier on the same facility (FT, via Shafaq News 2026-09-07; corroborated in shape by Türkiye
+Today, Al Bawaba and ground.news the same day).
+
+Read this precisely, because the temptation is to over-read it. **Jizan is a refinery and terminal
+near the Yemeni border, not Yanbu's crude export terminal** — the East-West artery was not hit and
+no bypass volume is known to have stopped. What the strike establishes is that the Red Sea flank is
+**inside somebody's range**, so "the barrels can route around the strait" is a claim about pipeline
+capacity, never about safety. The other direction of the same evidence is on the record too: when
+Ras Tanura was struck on **2026-03-02**, Aramco's documented response was to **reroute exports
+through Yanbu** — the bypass has already been used once this year as the answer to a Gulf-side
+outage. Both facts sharpen **FT-opec-plus-meeting-2026-09-06-1**; neither scores it. That test is
+resolved by the **September STEO on 2026-09-09** (score-by 09-10) and stays **`_open_`** in this
+event's fragment — the one open item this close-out deliberately leaves behind, because scoring it
+today would be scoring it from a story rather than from the agency's revision.
+
+### 4. Kill switches, final state — and one that outlives this document
+
+| # | Trigger | Final state |
+|---|---|---|
+| 1 | The 09-06 communiqué announces an October increase | **Did not fire** — release maintains September levels (primary, §1) |
+| 2 | Hormuz transit recovering >60 vessels/day for a week before 09-30 | **Did not fire, and moved further away** — 10/day 10-day MA, lowest since May. Still **mis-instrumented** as flagged 09-04 (AIS-blind to the ~5 mb/d dark-fleet gap); this close-out does not repair it, and the honest substitute stands: the EIA STEO shut-in series + Goldman's flow estimate, cross-read against price |
+| 3 | A member rejects its 2027 MSC baseline or exits, on/before 10-04 | **Did not fire.** The UAE exit predates registration by four months (09-06 note); Iraq and Kazakhstan remain the live triggers, and 10-04 is now inside the JMMC ledger's window, not this one's |
+| 4 | Brent sustaining **>$100 through 2026-09-30** | **Did not fire.** Closest approach is **98.05** intraday 09-07, **~1.99% under**. Its window runs 22 days **past** this close-out |
+
+**KS4 is the honest defect in this ledger's design and it is worth naming.** A kill switch keyed to
+2026-09-30 was registered on an event that closes out on 2026-09-08, so from tomorrow nothing here
+is watching it — the doc goes quiet by contract. The condition itself does not disappear: it is
+verbatim the [CPI ledger](cpi-2026-09-11.md)'s own stated flip condition for energy going from
+discountable headline to broadening core, and **that** ledger, live through 09-11, is where the
+watch belongs. The transferable lesson for the next geopolitical registration: **a kill switch
+whose window outlives `closeOutWithinDays` needs a named owner at registration time, or it is
+orphaned by construction.**
+
+### 5. Source hygiene — the sixth consecutive catch, plus two instrument failures
+
+- **Stale-source catch (6/6 rows).** A marketscreener piece titled *"Oil rises after OPEC meeting
+  maintains current output"* surfaced in a 2026 search and reads exactly like today's story — until
+  the numbers: Brent **$63.32**, WTI $59.45, output unchanged **for the first quarter of 2026**. It
+  is dated **2025-11-30**. Discarded, same trap as D-6/D-4/D-2/D-0.
+- **Our own intraday puller went blind.** `BZ=F` and `CL=F` returned **zero non-null bars** at
+  `1h`, `30m` and `5m` for the entire window after the 09-04 settle; only the **daily** endpoint
+  carried the live session. So no minute-level characterisation of the Sunday reopen is available
+  from our instrument — the daily OHLC in §2 is the whole of what we can see, and any future
+  attempt to study an open-gap reaction with this puller should expect the same gap.
+- **Session dating.** Yahoo labels the first post-decision session `2026-09-08` while the trade is
+  Monday `2026-09-07`. Corroborated externally rather than assumed: contemporaneous reporting has
+  Brent "approaching $98" and WTI "above $92" **on Monday 09-07**, against our own bar's high of
+  **98.05 / 93.29**. Levels are quoted to the source that produced them, not smoothed.
+- **VIX.** The last regular-session close is **14.53** (09-04). Yahoo also carries a 09-07 series
+  running 07:00–15:00 UTC and ending **15.30** — on a day US cash equities were shut. It is
+  recorded as an **off-session reading, not a close**, and it is what the probe-ref carries because
+  that is the field the probe fetches. Either way it is +0.8 to +0.9 against the D-0 reading, far
+  under the 3-point materiality bar: equities never repriced this event's risk at all.
+- **Blocked, recorded not substituted.** opec.org's press-release **index** returned **402** again
+  (third consecutive session) — the pr-detail page fetched cleanly, so the primary is intact;
+  `vantagemarkets.com` returned **403**. Both are in `probe-ref.blocked`. XLE **64.06** and USO
+  **141.96** are 09-04 closes and did not update — both are US-listed and 09-07 was a full closure.
+
+### 6. Forward tests scored
+
+| Test | Where | Result |
+|---|---|---|
+| **FT-25** (OPEC+ pauses — the delegate reporting is right) | `forward-tests/legacy.md` | **PASS** — the release maintains September levels for October |
+| **FT-26** (the decision is a non-event for crude, \|Brent 09-04→09-08\| < 3%) | `forward-tests/legacy.md` | **VOID** by its own registered condition — CENTCOM destroyed/disabled three IRGC tankers on 09-05, inside the window |
+| **FT-27** (the 09-06 release names 4 October as the seven's next meeting) | `forward-tests/legacy.md` | **PASS** — named verbatim; 10-04 is a two-body day |
+| **FT-opec-plus-meeting-2026-09-06-1** (Gulf barrels route around the chokepoint) | this event's fragment | **open** — scores off the 2026-09-09 STEO, by 09-10 |
+
+**FT-26 is void, and the tape is recorded next to it precisely so nobody later converts one into the
+other.** Its substantive question — did the decision move crude? — would have read *no* on the
+numbers in §2 (+0.74% against a 3% bar, with the 09-08 settle not yet in existence when this was
+written). That is an observation, **not a score**: the window contains a dated Hormuz military
+headline, which is exactly the contamination the void condition was registered to catch, and a
+window that cannot isolate the decision cannot pass a test about the decision. Registering the void
+condition on 08-31 and honouring it on 09-08 is the whole value of pre-registration.
+
+**FT-27's pass belongs to a neighbour, and this close-out does not spend it.** The test was
+registered by [`opec-jmmc-68th-2026-10-04`](opec-jmmc-68th-2026-10-04.md) and resolves on *this*
+event's release, with a score-by of 2026-09-07 that its own ledger cannot reach until October — so
+it is scored here, in the shared legacy file, per the close-out's mandate. Its stated consequence
+(re-tier `opec-jmmc-68th-2026-10-04` from `low` to `medium`, because 10-04 now carries both the
+JMMC and the seven-country ministerial) is **that lane's file to change, not this one's** — one
+file per owner. This PR proposes the second body as a new event instead.
+
+### 7. What this event licensed, and what transfers
+
+**Licensed: nothing, start to finish.** `symbols: []`, `estimate` at registration and `estimate` at
+close-out, no house playbook covering commodities. The deliverable was always the watch-list
+re-pointing, and that part earned its keep: a reader following this ledger watched Hormuz transits
+through a week in which they fell to a four-month low, instead of watching a communiqué that said
+what everyone already expected.
+
+**Three things transfer to the next OPEC ledger:**
+
+1. **The seven-country group names its own next date, every time, and meets monthly on Sundays** —
+   now **5 for 5** on the record (06-07, 07-05, 08-02, 09-06, 10-04). That regularity is reliable
+   enough to schedule against, which is what FT-27 tested and passed.
+2. **2026-10-04 is a two-body day** — the 68th JMMC (monitors and recommends) and the seven-country
+   ministerial (sets quotas). Proposed in this PR as
+   `proposals/opec-plus-meeting-2026-10-04.from-opec-plus-meeting-2026-09-06.json`, `estimate`.
+3. **Kill switches need an owner past the close-out window** (§4), and **a bypass claim is a
+   capacity claim, never a safety claim** (§3).

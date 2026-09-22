@@ -108,6 +108,60 @@ describe("bot-controls bridge client", () => {
       },
     );
   });
+
+  it("fires onDecisionsCursor with the parsed cursor from the raw response body", async () => {
+    const server = createInsightsListener({
+      record: () => Promise.resolve(),
+      controls: () => ({ bots: {} }),
+      decisionsCursor: () => ({ sauron: 42 }),
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const seen: Record<string, number>[] = [];
+      const client = resolveBotControls(
+        { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` } as NodeJS.ProcessEnv,
+        undefined,
+        (cursor) => seen.push({ ...cursor }),
+      );
+      await client.fetchOnce();
+      expect(seen).toEqual([{ sauron: 42 }]);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("fires onDecisionsCursor with {} when the bridge carries no cursor field", async () => {
+    await withBridge(
+      () => ({ bots: {} }),
+      async (base) => {
+        const seen: Record<string, number>[] = [];
+        const client = resolveBotControls(
+          { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
+          undefined,
+          (cursor) => seen.push({ ...cursor }),
+        );
+        await client.fetchOnce();
+        expect(seen).toEqual([{}]);
+      },
+    );
+  });
+
+  it("never lets a throwing onDecisionsCursor hook fail the poll it rides on", async () => {
+    await withBridge(
+      () => ({ bots: {} }),
+      async (base) => {
+        const client = resolveBotControls(
+          { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
+          undefined,
+          () => {
+            throw new Error("hook exploded");
+          },
+        );
+        await expect(client.fetchOnce()).resolves.toEqual({ bots: {} });
+      },
+    );
+  });
 });
 
 /**

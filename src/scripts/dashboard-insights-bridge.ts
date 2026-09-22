@@ -7,12 +7,41 @@
  * for the full reasoning + what was verified. Pulled out of `serve-dashboard.ts` to keep that
  * file's own complexity budget (`scripts/arch-scan.mjs`'s sibling lint gate).
  */
+import { join } from "node:path";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
+import {
+  type DecisionDb,
+  type DecisionFunnel,
+  openDecisionDb,
+  type RetrospectiveRecord,
+} from "../autonomous/decision-db.js";
+import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
+import type { OrderIntent } from "../domain/types.js";
 import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
+
+/**
+ * Opens the app-side decision store — this listener's own copy of what `bots` replicates over
+ * `POST /decisions` (`decision-wire.ts`). Derived from `SKYNET_INSIGHTS_DIR` (already pinned for
+ * `JsonlInsightStore`), never a new env var: `tests/arch/volume-persistence.spec.ts` is a blocking
+ * gate on exactly that shape. Dark when `SKYNET_INSIGHTS_DIR` is unset — same best-effort posture
+ * as `seedDecisionDb`'s bots-side counterpart, a missing/corrupt file must never fail boot.
+ */
+function seedAppDecisionDb(env: NodeJS.ProcessEnv): DecisionDb | undefined {
+  const dir = env.SKYNET_INSIGHTS_DIR;
+  if (!dir) return undefined;
+  try {
+    const db = openDecisionDb(join(dir, "decisions.db"));
+    console.log(`[decision-db] app-side replication store armed: ${join(dir, "decisions.db")}`);
+    return db;
+  } catch (error) {
+    console.warn("[decision-db] app-side open failed (non-fatal) — replication stays dark:", error);
+    return undefined;
+  }
+}
 
 export interface InsightsBridgeHandle {
   /** ISO time of the last authenticated `GET /controls` poll this app run, or `undefined` before
@@ -24,6 +53,19 @@ export interface InsightsBridgeHandle {
    *  Re-read from every poll rather than remembered, so a redeploy onto an unstamped build stops
    *  claiming the old commit instead of quietly keeping it. */
   readonly botsRunningSha: () => string | undefined;
+  /** The app-side decision store's own read, for `readDecisions` wiring in `serve-dashboard.ts` —
+   *  `undefined` when `SKYNET_INSIGHTS_DIR` is unset, exactly mirroring `seedAppDecisionDb`. */
+  readonly readDecisions?: (personaId: string) => Promise<DecisionRecord[]>;
+  /** The exact order-id join (PR 6) — same dark-when-unset posture as `readDecisions`, and the
+   *  SAME store: a decision surfaces here the instant replication has landed it, no separate wait. */
+  readonly findByOrderId?: (
+    orderId: string,
+  ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
+  readonly funnelFor?: (personaId: string) => DecisionFunnel;
+  /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
+   *  same dark-when-unset posture. */
+  readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
 }
 
 export interface CredentialsBridgeDeps {
@@ -43,10 +85,17 @@ export function startInsightsBridge(
   const insightsPort = resolveInsightsBridgePort(env);
   const botCredentialsSecret = env.SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET;
   const fingerprintSalt = env.SKYNET_STORE_SECRET;
+  const decisionDb = seedAppDecisionDb(env);
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
+    ...(decisionDb
+      ? {
+          decisionsCursor: () => decisionDb.maxAtAll(),
+          decisions: { recordBatch: (batch) => decisionDb.recordBatch(batch.records) },
+        }
+      : {}),
     // The bots process polls Mission Control state over the same private-net bridge. Stamps a
     // credentialsVersion fingerprint per known bot when the deps to do so are wired — never the
     // credential itself, see bot-credential-fingerprint.ts.
@@ -79,5 +128,17 @@ export function startInsightsBridge(
   return {
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
+    ...(decisionDb
+      ? {
+          readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId),
+          findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
+          // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
+          // position, not one per cycle, so this is generous headroom at this app's trade volume
+          // rather than the "growing feed" concern `listByPersona`'s own bound addresses.
+          listRetrospectives: (personaId: string) =>
+            decisionDb.listRetrospectives(personaId, { limit: 100 }),
+        }
+      : {}),
   };
 }

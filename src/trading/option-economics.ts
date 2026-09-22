@@ -1,3 +1,4 @@
+import type { PayoffCurve } from "./draft-order-preview.js";
 import type { OptionType } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 import { normalizeSymbol } from "./order-ticket.js";
@@ -23,7 +24,18 @@ export interface OptionTicketRequest {
   readonly orderType: "limit" | "market";
   /** Premium per share the trader will accept — required for limit orders. */
   readonly limitPrice?: number;
+  /** Day or good-till-cancelled (both accepted by Alpaca for options). Omit and the preview
+   *  says the default it will send: day — an option order that outlives the session it was
+   *  placed in is a deliberate choice, never a silent one (#3407 P1 slice 4). */
+  readonly timeInForce?: OptionTimeInForce;
 }
+
+export type OptionTimeInForce = "day" | "gtc";
+
+/** The standing default for an option order the member didn't stamp: today only. Unlike the
+ *  share ticket (a held stop must survive overnight to protect anything), an option premium
+ *  moves with every session's implied vol, so a resting limit is opted into, not assumed. */
+export const DEFAULT_OPTION_TIF: OptionTimeInForce = "day";
 
 export interface OptionTicketContext {
   readonly cash: number;
@@ -43,6 +55,21 @@ export interface OptionTicketContext {
    *  execution-time re-check (`option-trade-service.ts`'s `liveContext`), which reads the live
    *  account on every submit — same treatment as cash and held-shares affordability. */
   readonly optionsTradingLevel?: number;
+  /** The contract's quoted greeks, when the feed had them (#3407 P2 slice 2) — echoed, never
+   *  computed here. */
+  readonly greeks?: OptionPreviewGreeks;
+  /** Annualized IV solved from the contract's mid, when a no-arbitrage solution exists. */
+  readonly impliedVol?: number;
+  /** Calendar days to the contract's expiry, for the odds. */
+  readonly daysToExpiry?: number;
+}
+
+/** The four greeks the order screen shows; each present only when the feed quoted it. */
+export interface OptionPreviewGreeks {
+  readonly delta?: number;
+  readonly gamma?: number;
+  readonly theta?: number;
+  readonly vega?: number;
 }
 
 /**
@@ -69,6 +96,8 @@ export interface OptionTicketPreview {
   readonly expiration?: string;
   readonly orderType: "limit" | "market";
   readonly limitPrice?: number;
+  /** What the broker will be told — always stated, never hidden (#3407 P1). */
+  readonly timeInForce: OptionTimeInForce;
   readonly ok: boolean;
   /** Premium $/share the estimates below use (the limit when set, else the indicative). */
   readonly estPremium?: number;
@@ -81,6 +110,18 @@ export interface OptionTicketPreview {
   readonly maxProfit?: number | "uncapped";
   readonly maxLoss?: number;
   readonly breakeven?: number;
+  /** The contract's quoted greeks, when the feed had them (#3407 P2 slice 2). */
+  readonly greeks?: OptionPreviewGreeks;
+  /** Annualized IV from the mid, as a decimal. */
+  readonly impliedVol?: number;
+  /** P(finishes profitable at expiry), 0..1 — never shown without `expectedValue` beside it. */
+  readonly chanceOfProfit?: number;
+  /** Expected P/L at expiry for the whole order, dollars (can be negative). */
+  readonly expectedValue?: number;
+  /** The at-expiration curve the review draws (#3407; the study's row 8) — the same arithmetic
+   *  as `maxLoss` / `breakeven` above, sampled server-side. Absent on a refused or unpriced
+   *  order, and on a covered call reviewed without a spot (no basis, no honest curve). */
+  readonly payoff?: PayoffCurve;
   readonly refusals: string[];
   readonly warnings: string[];
 }

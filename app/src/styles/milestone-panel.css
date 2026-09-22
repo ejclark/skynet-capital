@@ -1,0 +1,36 @@
+/* the milestone panel template — one bordered card per milestone (title, count, progress bar,
+   nested content). Tokens only. Shared by onboarding (M·01) and the trading ladder (M·02). */
+
+.ms-panel {
+  max-width: var(--col-read);
+  background: var(--surface);
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: var(--panel-p);
+}
+.ms-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ms-panel-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.ms-panel-count {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ms-panel-bar {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin: 12px 0 18px;
+}

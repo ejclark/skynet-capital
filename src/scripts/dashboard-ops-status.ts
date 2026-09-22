@@ -58,9 +58,9 @@ export function wireOpsStatus(
   botControls: BotControlsStore,
   rest: Omit<OpsStatusSetupDeps, "env" | "insightsBridge">,
   credentialsDeps?: CredentialsBridgeDeps,
-): OpsStatusDeps | undefined {
+): { opsStatus: OpsStatusDeps | undefined; insightsBridge: InsightsBridgeHandle } {
   const insightsBridge = startInsightsBridge(env, botControls, credentialsDeps);
-  return setupOpsStatus({ env, insightsBridge, ...rest });
+  return { opsStatus: setupOpsStatus({ env, insightsBridge, ...rest }), insightsBridge };
 }
 
 export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefined {

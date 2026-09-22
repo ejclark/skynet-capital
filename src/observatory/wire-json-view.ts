@@ -3,7 +3,9 @@ import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-s
 import { formatPrice } from "./desk-data.js";
 import { FEEDBACK_KIND_ICON } from "./feedback-view.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
-import type { WirePnlRow, WireTradeRow } from "./wire-data.js";
+import type { WireTradeVitals } from "./vitals.js";
+import type { WirePnlRow } from "./wire-data.js";
+import type { WireTradeReasoning, WireTradeWithReasoning } from "./wire-reasoning.js";
 
 /**
  * THE WIRE AS DATA — `/api/wire`, the JSON twin behind the shell's Wire. Same
@@ -24,6 +26,10 @@ interface WireTradeView {
   readonly kind: "human" | "bot";
   readonly reconstructed: boolean;
   readonly when: string;
+  /** Absent for a human trade, or a bot trade whose decision wasn't found — never fabricated
+   *  (`wire-reasoning.ts`). Both fields are already display-ready; nothing here re-derives them. */
+  readonly reasoning?: WireTradeReasoning;
+  readonly vitals?: WireTradeVitals;
 }
 
 interface WirePnlView {
@@ -51,7 +57,7 @@ export interface WireView {
 }
 
 export function wireJsonView(
-  trades: readonly WireTradeRow[],
+  trades: readonly WireTradeWithReasoning[],
   pnl: readonly WirePnlRow[],
   feedback: readonly FeedbackLogEntry[],
   feedbackEnabled: boolean,
@@ -71,6 +77,8 @@ export function wireJsonView(
       kind: row.kind,
       reconstructed: row.reconstructed,
       when: formatActivityTime(row.at),
+      ...(row.reasoning ? { reasoning: row.reasoning } : {}),
+      ...(row.vitals ? { vitals: row.vitals } : {}),
     })),
     pnl: pnl.map((row) => ({
       who: row.participantName,

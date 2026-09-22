@@ -1,4 +1,8 @@
-import { AlpacaOptionsClient, rowPremium } from "../../src/alpaca/alpaca-options-client.js";
+import {
+  AlpacaOptionsClient,
+  EXPIRATION_PAGE_BUDGET,
+  rowPremium,
+} from "../../src/alpaca/alpaca-options-client.js";
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 
@@ -51,6 +55,114 @@ describe("AlpacaOptionsClient", () => {
     expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(["2026-09-18", "2026-10-16"]);
   });
 
+  /** N sequential Friday-ish weekly dates from a fixed anchor, guaranteed valid calendar dates. */
+  const weeklyDates = (n: number): string[] =>
+    Array.from({ length: n }, (_, i) => {
+      const d = new Date("2026-09-11T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + i * 7);
+      return d.toISOString().slice(0, 10);
+    });
+
+  it("returns all expirations when a symbol lists more than the old 8-row cap but no more than 20 (#2017 4c)", async () => {
+    const dates = weeklyDates(14);
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: dates.map((d) => contract(`SYM-${d}`, d, "100")),
+        },
+      }),
+    );
+    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates);
+  });
+
+  it("returns every expiration by default and honours an explicit ceiling (#3407 P2)", async () => {
+    const dates = weeklyDates(25);
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: dates.map((d) => contract(`SYM-${d}`, d, "100")),
+        },
+      }),
+    );
+    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates);
+    expect(await client.getExpirations("MSFT", "2026-08-19", 20)).toEqual(dates.slice(0, 20));
+  });
+
+  it("walks page_token across pages, asking for the endpoint's 10,000 maximum, and stops on a null token", async () => {
+    const log: Array<{ path: string }> = [];
+    const pages: Record<string, unknown> = {
+      "page_token=p2": {
+        option_contracts: [contract("C", "2027-01-15", "100")],
+        next_page_token: null,
+      },
+      "/v2/options/contracts?": {
+        option_contracts: [contract("A", "2026-10-16", "100"), contract("B", "2026-09-18", "100")],
+        next_page_token: "p2",
+      },
+    };
+    const client = new AlpacaOptionsClient(fakeTransport(pages, log));
+    expect(await client.getExpirations("SPY", "2026-08-19")).toEqual([
+      "2026-09-18",
+      "2026-10-16",
+      "2027-01-15",
+    ]);
+    expect(log).toHaveLength(2);
+    expect(log[0]?.path).toContain("limit=10000");
+    expect(log[1]?.path).toContain("page_token=p2");
+  });
+
+  it("stops at the page budget even when the broker keeps handing back tokens", async () => {
+    const log: Array<{ path: string }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport(
+        {
+          "/v2/options/contracts?": {
+            option_contracts: [contract("A", "2026-10-16", "100")],
+            next_page_token: "again",
+          },
+        },
+        log,
+      ),
+    );
+    await client.getExpirations("SPY", "2026-08-19");
+    expect(log).toHaveLength(EXPIRATION_PAGE_BUDGET);
+  });
+
+  it("retries a 429 exactly once after a pause, then surfaces the second one", async () => {
+    let calls = 0;
+    const slept: number[] = [];
+    const rateLimited: AlpacaTradingTransport = {
+      get: () => {
+        calls += 1;
+        return Promise.resolve(
+          calls === 1
+            ? { status: 429, body: { message: "too many requests" } }
+            : { status: 200, body: { option_contracts: [contract("A", "2026-10-16", "100")] } },
+        );
+      },
+      post: () => Promise.resolve({ status: 404, body: null }),
+      delete: () => Promise.resolve({ status: 404, body: null }),
+    };
+    const client = new AlpacaOptionsClient(rateLimited, undefined, {
+      sleep: (ms) => {
+        slept.push(ms);
+        return Promise.resolve();
+      },
+    });
+    expect(await client.getExpirations("SPY", "2026-08-19")).toEqual(["2026-10-16"]);
+    expect(calls).toBe(2);
+    expect(slept).toHaveLength(1);
+
+    const alwaysLimited: AlpacaTradingTransport = {
+      ...rateLimited,
+      get: () => Promise.resolve({ status: 429, body: { message: "too many requests" } }),
+    };
+    const stuck = new AlpacaOptionsClient(alwaysLimited, undefined, {
+      sleep: () => Promise.resolve(),
+    });
+    await expect(stuck.getExpirations("SPY", "2026-08-19")).rejects.toMatchObject({ status: 429 });
+  });
+
   it("returns the chain strikes ascending, dropping untradable and unpriced-strike rows", async () => {
     const client = new AlpacaOptionsClient(
       fakeTransport({
@@ -69,6 +181,67 @@ describe("AlpacaOptionsClient", () => {
     const chain = await client.getChain("MSFT", "2026-09-18", "put");
     expect(chain.map((r) => r.strike)).toEqual([420, 430]);
     expect(chain[0]).toMatchObject({ closePrice: 10.7, openInterest: 812 });
+  });
+
+  it("keeps a $0.00 bid as a real quote — the mid survives — and still drops junk (#3407 P2)", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("MSFT260918P00300000", "2026-09-18", "300"),
+            contract("MSFT260918P00310000", "2026-09-18", "310"),
+          ],
+        },
+      }),
+      fakeTransport({
+        "/v1beta1/options/snapshots/MSFT": {
+          snapshots: {
+            MSFT260918P00300000: { latestQuote: { bp: 0, ap: 0.02 } },
+            MSFT260918P00310000: { latestQuote: { bp: null, ap: "" } },
+          },
+        },
+      }),
+    );
+    const chain = await client.getChain("MSFT", "2026-09-18", "put");
+    expect(chain[0]).toMatchObject({ bid: 0, ask: 0.02, quoteSource: "indicative" });
+    expect(rowPremium(chain[0] as never)).toBeCloseTo(0.01);
+    expect(chain[1]?.bid).toBeUndefined();
+    expect(chain[1]?.ask).toBeUndefined();
+    expect(chain[1]?.quoteSource).toBe("indicative"); // a snapshot arrived, even if it quoted nothing
+  });
+
+  it("reads one snapshot per held contract in a single multi-symbol call, fail-soft (#3407 P2)", async () => {
+    const log: Array<{ path: string }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport({}),
+      fakeTransport(
+        {
+          "/v1beta1/options/snapshots?symbols=": {
+            snapshots: {
+              MSFT260918P00420000: {
+                latestQuote: { bp: 0, ap: 0.05 },
+                greeks: { delta: -0.42, theta: -0.19 },
+                impliedVolatility: 0.31,
+              },
+              AAPL261218C00150000: { latestQuote: { bp: null, ap: "" } },
+            },
+          },
+        },
+        log,
+      ),
+    );
+    const snaps = await client.getContractSnapshots(["MSFT260918P00420000", "AAPL261218C00150000"]);
+    expect(log[0]?.path).toContain("symbols=MSFT260918P00420000%2CAAPL261218C00150000");
+    expect(snaps.get("MSFT260918P00420000")).toEqual({
+      bid: 0,
+      ask: 0.05,
+      greeks: { delta: -0.42, theta: -0.19 },
+      impliedVol: 0.31,
+    });
+    expect(snaps.get("AAPL261218C00150000")).toEqual({});
+    expect(
+      (await new AlpacaOptionsClient(fakeTransport({})).getContractSnapshots(["X"])).size,
+    ).toBe(0);
   });
 
   it("merges indicative quotes from the data host, and fails SOFT when it errors", async () => {
@@ -92,7 +265,12 @@ describe("AlpacaOptionsClient", () => {
       }),
     );
     const chain = await withQuotes.getChain("MSFT", "2026-09-18", "put");
-    expect(chain[0]).toMatchObject({ bid: 10.5, ask: 10.9, delta: -0.42 });
+    expect(chain[0]).toMatchObject({
+      bid: 10.5,
+      ask: 10.9,
+      delta: -0.42,
+      quoteSource: "indicative",
+    });
     expect(rowPremium(chain[0] as never)).toBeCloseTo(10.7); // the mid
 
     const dataDown = new AlpacaOptionsClient(
@@ -178,6 +356,71 @@ describe("AlpacaOptionsClient", () => {
     expect(c).toMatchObject({ bid: 1.1, ask: 1.3 }); // quotes still merge without greeks
   });
 
+  describe("volume (#2017 Phase 1 slice 14)", () => {
+    it("merges a real dailyBar.v number onto the row", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({
+          "/v2/options/contracts?": {
+            option_contracts: [contract("MSFT260918P00420000", "2026-09-18", "420")],
+          },
+        }),
+        fakeTransport({
+          "/v1beta1/options/snapshots/MSFT": {
+            snapshots: { MSFT260918P00420000: { dailyBar: { v: 214 } } },
+          },
+        }),
+      );
+      const chain = await client.getChain("MSFT", "2026-09-18", "put");
+      expect(chain[0]?.volume).toBe(214);
+    });
+
+    it("reads null, absent, and an empty string as unreported — never a fabricated 0", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({
+          "/v2/options/contracts?": {
+            option_contracts: [
+              contract("A", "2026-09-18", "410"),
+              contract("B", "2026-09-18", "420"),
+              contract("C", "2026-09-18", "430"),
+            ],
+          },
+        }),
+        fakeTransport({
+          "/v1beta1/options/snapshots/MSFT": {
+            snapshots: {
+              A: { dailyBar: { v: null } },
+              B: { dailyBar: {} }, // key absent entirely
+              C: { dailyBar: { v: "" } },
+            },
+          },
+        }),
+      );
+      const [a, b, c] = await client.getChain("MSFT", "2026-09-18", "put");
+      expect(a?.volume).toBeUndefined();
+      expect(a).not.toHaveProperty("volume");
+      expect(b?.volume).toBeUndefined();
+      expect(c?.volume).toBeUndefined();
+    });
+
+    it("passes a genuine zero-volume day through AS 0, not dropped as absent", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({
+          "/v2/options/contracts?": {
+            option_contracts: [contract("MSFT260918P00420000", "2026-09-18", "420")],
+          },
+        }),
+        fakeTransport({
+          "/v1beta1/options/snapshots/MSFT": {
+            snapshots: { MSFT260918P00420000: { dailyBar: { v: 0 } } },
+          },
+        }),
+      );
+      const chain = await client.getChain("MSFT", "2026-09-18", "put");
+      expect(chain[0]?.volume).toBe(0);
+      expect(chain[0]).toHaveProperty("volume");
+    });
+  });
+
   it("parses greeks that arrive as numeric strings, as the contracts endpoint does", async () => {
     const client = new AlpacaOptionsClient(
       fakeTransport({
@@ -247,6 +490,85 @@ describe("AlpacaOptionsClient", () => {
     });
     expect(log[1]?.body).not.toHaveProperty("limit_price");
     expect(log[1]?.body).toMatchObject({ time_in_force: "day" });
+
+    // A member's own GTC passes through verbatim (#3407 P1 slice 4); the default stays day.
+    await client.placeOptionOrder({
+      occSymbol: "MSFT260918P00420000",
+      contracts: 1,
+      side: "sell",
+      type: "limit",
+      limitPrice: 10.7,
+      positionIntent: "sell_to_open",
+      timeInForce: "gtc",
+    });
+    expect(log[2]?.body).toMatchObject({ time_in_force: "gtc" });
+  });
+
+  it("places a spread as ONE mleg order — net limit in Alpaca's sign, legs in ratio, day by default (#3407 P3)", async () => {
+    const log: Array<{ path: string; body?: unknown }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport({ "/v2/orders": { id: "mleg-1", symbol: "", status: "accepted" } }, log),
+    );
+    await client.placeMultiLegOrder({
+      quantity: 2,
+      netLimitPrice: -3.1,
+      legs: [
+        {
+          occSymbol: "NVDA260918C00180000",
+          ratioQty: 1,
+          side: "sell",
+          positionIntent: "sell_to_open",
+        },
+        {
+          occSymbol: "NVDA260918C00200000",
+          ratioQty: 1,
+          side: "buy",
+          positionIntent: "buy_to_open",
+        },
+      ],
+    });
+    expect(log[0]?.path).toBe("/v2/orders");
+    expect(log[0]?.body).toEqual({
+      order_class: "mleg",
+      qty: 2,
+      type: "limit",
+      limit_price: -3.1,
+      time_in_force: "day",
+      legs: [
+        {
+          symbol: "NVDA260918C00180000",
+          ratio_qty: 1,
+          side: "sell",
+          position_intent: "sell_to_open",
+        },
+        {
+          symbol: "NVDA260918C00200000",
+          ratio_qty: 1,
+          side: "buy",
+          position_intent: "buy_to_open",
+        },
+      ],
+    });
+    await client.placeMultiLegOrder({
+      quantity: 1,
+      netLimitPrice: 2,
+      timeInForce: "gtc",
+      legs: [
+        {
+          occSymbol: "NVDA260918C00200000",
+          ratioQty: 1,
+          side: "buy",
+          positionIntent: "buy_to_open",
+        },
+        {
+          occSymbol: "NVDA260918C00180000",
+          ratioQty: 2,
+          side: "sell",
+          positionIntent: "sell_to_open",
+        },
+      ],
+    });
+    expect(log[1]?.body).toMatchObject({ time_in_force: "gtc", limit_price: 2 });
   });
 
   it("underlying price fails soft with no data transport and on error", async () => {
@@ -257,6 +579,156 @@ describe("AlpacaOptionsClient", () => {
       fakeTransport({ "/v2/stocks/MSFT/trades/latest": { trade: { p: 428.6 } } }),
     );
     expect(await priced.getUnderlyingPrice("MSFT")).toBe(428.6);
+  });
+
+  describe("getUnderlyingQuote", () => {
+    it("parses latestTrade.p and prevDailyBar.c from the snapshot endpoint", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({}),
+        fakeTransport({
+          "/v2/stocks/MSFT/snapshot": {
+            latestTrade: { p: 428.6 },
+            prevDailyBar: { c: 425.1 },
+          },
+        }),
+      );
+      expect(await client.getUnderlyingQuote("MSFT")).toEqual({ last: 428.6, prevClose: 425.1 });
+    });
+
+    it("carries latestQuote.bp/ap when both are positive, and drops a half or dead book (#3407 slice 6)", async () => {
+      const at = (latestQuote: unknown) =>
+        new AlpacaOptionsClient(
+          fakeTransport({}),
+          fakeTransport({
+            "/v2/stocks/MSFT/snapshot": {
+              latestTrade: { p: 428.6 },
+              prevDailyBar: { c: 425.1 },
+              latestQuote,
+            },
+          }),
+        );
+      expect(await at({ bp: 428.55, ap: 428.65 }).getUnderlyingQuote("MSFT")).toEqual({
+        last: 428.6,
+        prevClose: 425.1,
+        bid: 428.55,
+        ask: 428.65,
+      });
+      expect(await at({ bp: 0, ap: 428.65 }).getUnderlyingQuote("MSFT")).toEqual({
+        last: 428.6,
+        prevClose: 425.1,
+      });
+      expect(await at({ ap: 428.65 }).getUnderlyingQuote("MSFT")).toEqual({
+        last: 428.6,
+        prevClose: 425.1,
+      });
+    });
+
+    it("is undefined when prevDailyBar is missing", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({}),
+        fakeTransport({
+          "/v2/stocks/MSFT/snapshot": { latestTrade: { p: 428.6 } },
+        }),
+      );
+      expect(await client.getUnderlyingQuote("MSFT")).toBeUndefined();
+    });
+
+    it("is undefined when there is no data transport", async () => {
+      const bare = new AlpacaOptionsClient(fakeTransport({}));
+      expect(await bare.getUnderlyingQuote("MSFT")).toBeUndefined();
+    });
+
+    it("fails soft on a non-2xx response and on a throw", async () => {
+      const notFound = new AlpacaOptionsClient(fakeTransport({}), fakeTransport({}));
+      expect(await notFound.getUnderlyingQuote("MSFT")).toBeUndefined();
+
+      const throwing = new AlpacaOptionsClient(fakeTransport({}), {
+        get: () => Promise.reject(new Error("network down")),
+        post: () => Promise.reject(new Error("unused")),
+        delete: () => Promise.reject(new Error("unused")),
+      });
+      expect(await throwing.getUnderlyingQuote("MSFT")).toBeUndefined();
+    });
+  });
+
+  describe("getBars (#2017 Phase 1 chart backfill)", () => {
+    const bar = (t: string, o: number, h: number, l: number, c: number, v: number) => ({
+      t,
+      o,
+      h,
+      l,
+      c,
+      v,
+    });
+    const withBars = (body: unknown) =>
+      new AlpacaOptionsClient(fakeTransport({}), fakeTransport({ "/v2/stocks/MSFT/bars": body }));
+
+    it("is undefined when there is no data transport", async () => {
+      const bare = new AlpacaOptionsClient(fakeTransport({}));
+      expect(await bare.getBars("MSFT", "2026-03-01", "2026-09-08")).toBeUndefined();
+    });
+
+    it("parses OHLCV bars in feed order, every field a number and t a string", async () => {
+      const log: Array<{ path: string; body?: unknown }> = [];
+      const client = new AlpacaOptionsClient(
+        fakeTransport({}),
+        fakeTransport(
+          {
+            "/v2/stocks/MSFT/bars": {
+              bars: [
+                bar("2026-09-03T04:00:00Z", 420.1, 428.6, 419.8, 425.1, 18_204_000),
+                bar("2026-09-04T04:00:00Z", 425.5, 431.2, 424.9, 430.0, 21_010_500),
+              ],
+            },
+          },
+          log,
+        ),
+      );
+      const bars = await client.getBars("MSFT", "2026-03-01", "2026-09-08");
+      expect(bars).toEqual([
+        { t: "2026-09-03T04:00:00Z", o: 420.1, h: 428.6, l: 419.8, c: 425.1, v: 18_204_000 },
+        { t: "2026-09-04T04:00:00Z", o: 425.5, h: 431.2, l: 424.9, c: 430.0, v: 21_010_500 },
+      ]);
+      expect(log[0]?.path).toContain(
+        "/v2/stocks/MSFT/bars?timeframe=1Day&start=2026-03-01&end=2026-09-08&limit=1000",
+      );
+    });
+
+    it("drops a bar missing a field whole and keeps the rest — never a partial bar", async () => {
+      const client = withBars({
+        bars: [
+          bar("2026-09-03T04:00:00Z", 420.1, 428.6, 419.8, 425.1, 18_204_000),
+          { t: "2026-09-04T04:00:00Z", o: 425.5, h: 431.2, l: 424.9, v: 21_010_500 },
+          { t: "2026-09-05T04:00:00Z", o: 430.2, h: "not a number", l: 428.0, c: 429.5, v: 1 },
+          { o: 430.2, h: 433.0, l: 428.0, c: 429.5, v: 1 },
+          bar("2026-09-08T04:00:00Z", 429.0, 429.0, 429.0, 429.0, 0),
+        ],
+      });
+      const bars = await client.getBars("MSFT", "2026-03-01", "2026-09-08");
+      expect(bars?.map((b) => b.t)).toEqual(["2026-09-03T04:00:00Z", "2026-09-08T04:00:00Z"]);
+      // A zero-volume bar is a legitimate bar, not a corrupt one.
+      expect(bars?.[1]?.v).toBe(0);
+    });
+
+    it("returns an EMPTY array for a real empty answer — not the undefined of a failure", async () => {
+      const empty = await withBars({ bars: [] }).getBars("MSFT", "2026-03-01", "2026-09-08");
+      expect(empty).toEqual([]);
+      expect(empty).not.toBeUndefined();
+      // A 2xx with no `bars` key at all is the same honest nothing.
+      expect(await withBars({}).getBars("MSFT", "2026-03-01", "2026-09-08")).toEqual([]);
+    });
+
+    it("fails soft on a non-2xx response and on a throw", async () => {
+      const notFound = new AlpacaOptionsClient(fakeTransport({}), fakeTransport({}));
+      expect(await notFound.getBars("MSFT", "2026-03-01", "2026-09-08")).toBeUndefined();
+
+      const throwing = new AlpacaOptionsClient(fakeTransport({}), {
+        get: () => Promise.reject(new Error("network down")),
+        post: () => Promise.reject(new Error("unused")),
+        delete: () => Promise.reject(new Error("unused")),
+      });
+      expect(await throwing.getBars("MSFT", "2026-03-01", "2026-09-08")).toBeUndefined();
+    });
   });
 
   describe("getOptionLifecycleActivities (#468 criterion 6)", () => {
@@ -303,5 +775,23 @@ describe("AlpacaOptionsClient", () => {
       const client = new AlpacaOptionsClient(throwing);
       expect(await client.getOptionLifecycleActivities()).toEqual([]);
     });
+  });
+});
+
+describe("rowPremium — rounds to the cent at the source (round-half-up)", () => {
+  it("rounds the bid/ask mid to the cent", () => {
+    const rounded = rowPremium({ bid: 2.94, ask: 2.95 } as never);
+    expect(rounded).toBe(2.95);
+    // guard the float-noise bug directly: the raw mid is 2.9450000000000003 (unrounded),
+    // so pin that at most two decimals survive.
+    expect(String(rounded)).toMatch(/^\d+(\.\d{1,2})?$/);
+  });
+
+  it("rounds a closePrice fallback to the cent", () => {
+    expect(rowPremium({ closePrice: 1.005 } as never)).toBe(1.01);
+  });
+
+  it("returns undefined when neither bid/ask nor closePrice is present", () => {
+    expect(rowPremium({} as never)).toBeUndefined();
   });
 });

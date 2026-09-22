@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trade — Chain Composition — Lo-fi</title>
+<meta name="description" content="Four greybox shapes for how the options chain (and the chart) compose with the ticket at the Workbench's docked width, for #3407's live-review follow-up. Real values, no colour, no motion.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #111; --ink2: #3b3b3b; --ink3: #6a6a6a;
+    --line: #767676; --line2: #949494;
+    --paper: #fff; --grey: #f4f4f4; --grey2: #e6e6e6; --grey3: #d0d0d0;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #ebebeb; --ink2: #c9c9c9; --ink3: #9b9b9b;
+      --line: #6f6f6f; --line2: #3c3c3c;
+      --paper: #171717; --grey: #202020; --grey2: #2b2b2b; --grey3: #3b3b3b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ebebeb; --ink2: #c9c9c9; --ink3: #9b9b9b;
+    --line: #6f6f6f; --line2: #3c3c3c;
+    --paper: #171717; --grey: #202020; --grey2: #2b2b2b; --grey3: #3b3b3b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 14px/1.45 var(--sans); overflow-x: hidden; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 24px 16px 64px; }
+  .eyebrow { font: 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); margin: 0 0 8px; }
+  h1 { font-size: 22px; line-height: 1.15; margin: 0 0 8px; }
+  h2 { font-size: 15px; margin: 20px 0 6px; }
+  .lede { color: var(--ink2); max-width: 76ch; margin: 0 0 10px; }
+  .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+  .switchers { position: sticky; top: 0; z-index: 3; background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+  .group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .group-label { font: 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-right: 4px; min-width: 60px; }
+  .sw { font: inherit; font-size: 12.5px; padding: 5px 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; border-radius: 3px; }
+  .sw[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+  .sw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .shape-name { flex-basis: 100%; font-size: 12.5px; color: var(--ink2); margin: 4px 0 0; }
+  .shape-name b { font-weight: 700; color: var(--ink); }
+  .howto { max-width: 88ch; color: var(--ink2); margin: 12px 0 16px; font-size: 13px; }
+  .frame-wrap { overflow-x: auto; min-width: 0; margin-top: 14px; }
+  .frame { width: var(--fw); min-height: var(--fh); position: relative; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font-size: 12.5px; line-height: 1.35; }
+  .frame::after { content: "fold · " attr(data-fold); position: absolute; left: 0; right: 0; top: calc(var(--fh) - 1px); border-top: 1px dashed var(--line); font: 9px/1 var(--mono); color: var(--ink3); padding: 2px 4px; pointer-events: none; }
+  .fbar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--ink); background: var(--grey); font: 11px/1 var(--mono); }
+  .fbar .brand { font-weight: 700; }
+  .fbar .nav { flex: 1; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fbar .nav u { color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .fcap { margin: 0; padding: 4px 10px; border-bottom: 1px dashed var(--line2); font: 11.5px/1.3 var(--mono); color: var(--ink2); }
+  .revline { margin: 0; border: 1px dashed var(--line); padding: 4px 8px; font-size: 11.5px; }
+  .revline .flag { border: 1px solid var(--ink); padding: 0 5px; font: 11px var(--mono); }
+  .revline .flag::before { content: "⚑ "; }
+  .meta { font: 11px var(--mono); border: 1px dashed var(--line); padding: 4px 8px; color: var(--ink2); display: block; }
+  .fbody { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .cols { display: grid; gap: 12px; align-items: start; min-width: 0; }
+  .cols.two { grid-template-columns: 300px minmax(0, 1fr); }
+  .cols.one { grid-template-columns: minmax(0, 1fr); max-width: 340px; }
+  @media (max-width: 700px) { .cols.two { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .ftitle { font-size: 14px; font-weight: 700; margin: 0; }
+  .blk { position: relative; border: 1px solid var(--line); padding: 8px; background: var(--paper); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .blk.soft { border-color: var(--line2); }
+  .blk.dashed { border-style: dashed; }
+  .tag { position: absolute; top: -1px; right: -1px; font: 11px/1 var(--mono); letter-spacing: .04em; color: var(--ink3); background: var(--grey); border: 1px solid var(--line); border-top: 0; border-right: 0; padding: 2px 5px; }
+  .tag.new { border-style: dashed; font-style: italic; }
+  .bt { font-size: 12.5px; font-weight: 700; margin: 0; padding-right: 84px; }
+  .sub { color: var(--ink3); font-size: 11px; margin: 0; }
+  .why { font-size: 11px; color: var(--ink2); margin: 0; }
+  .why::before { content: "↳ "; color: var(--ink3); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+  .seg b, .seg span { font-weight: 400; padding: 4px 9px; font-size: 12px; white-space: nowrap; }
+  .seg b + b, .seg b + span, .seg span + b, .seg span + span { border-left: 1px solid var(--line); }
+  .seg .on { background: var(--grey2); font-weight: 700; }
+  .seg .on::before { content: "✓ "; }
+  .lbl { font: 11.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); display: block; margin-bottom: 3px; }
+  .field { display: flex; flex-direction: column; min-width: 0; }
+  .in { border: 1px solid var(--line); background: var(--grey); padding: 5px 8px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .in.tap { cursor: pointer; border-style: dashed; color: var(--ink2); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; overflow-x: auto; }
+  .chip { border: 1px solid var(--line); padding: 2px 7px; font-size: 11px; border-radius: 999px; white-space: nowrap; }
+  .chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+  .btn { display: inline-block; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 7px 12px; font-size: 12.5px; font-weight: 700; text-align: center; cursor: pointer; }
+  .btn.ghost { background: var(--paper); color: var(--ink); }
+  .btn.wide { display: block; width: 100%; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; font-size: 11.5px; margin: 0; }
+  .kv dt { color: var(--ink3); }
+  .kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .hatch { background: repeating-linear-gradient(135deg, var(--grey2) 0 6px, var(--paper) 6px 12px); border: 1px solid var(--line); display: grid; place-items: center; font: 11.5px var(--mono); color: var(--ink2); text-align: center; padding: 6px; min-height: 70px; }
+  .tw { overflow-x: auto; min-width: 0; }
+  .tw .tbl { min-width: 420px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .tbl th { text-align: right; font: 10.5px/1.2 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--ink3); padding: 3px 4px; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .tbl th:first-child, .tbl th:nth-child(2) { text-align: left; }
+  .tbl td { padding: 3px 4px; border-bottom: 1px solid var(--line2); vertical-align: top; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .tbl td:first-child { text-align: left; font-family: var(--sans); }
+  .tbl tr.atm td { font-weight: 700; background: var(--grey); }
+  .quote { font-size: 13px; font-weight: 700; margin: 0; }
+  .quote .up { font-weight: 400; font-size: 11.5px; color: var(--ink2); }
+  .rung { font: 11px/1 var(--mono); border: 1px dashed var(--line); padding: 2px 6px; display: inline-block; }
+</style>
+</head>
+<body>
+<main class="page">
+  <p class="eyebrow">Lo-fi shapes · docs/PATTERNS.md · #3407 follow-up</p>
+  <h1>Where does the chain live in the ticket, at the Workbench's docked width?</h1>
+  <p class="lede">Eric, 2026-09-22, live-reviewing the shipped Workbench (#3407 slice 4b/5): "the recent
+    updates… foobared the experience a bit by moving the greek/bid/ask/strike table into a separate
+    column… is it possible to have that table be expandable in the same form after stock symbol is
+    selected?" — plus where the candlestick chart (liked, unplaced) fits. Four shapes, one journey step
+    (NVDA committed, picking a strike), two viewports. Real chain slice from the reported screenshot.</p>
+  <p class="howto">Vanilla HTML/CSS/JS, no build step, no network. The URL hash is the state
+    (<code>#accordion/1280</code> = shape / viewport) so a link lands on a frame.</p>
+
+  <nav class="switchers" id="switchers">
+    <div class="group">
+      <span class="group-label">Shape</span>
+      <button class="sw" data-role="shape" data-shape="workbench">A · Workbench (shipped)</button>
+      <button class="sw" data-role="shape" data-shape="accordion">B · Ticket Accordion</button>
+      <button class="sw" data-role="shape" data-shape="collapsible">C · Collapsible Dock</button>
+      <button class="sw" data-role="shape" data-shape="drawer">D · Chain Sheet</button>
+    </div>
+    <div class="group">
+      <span class="group-label">Viewport</span>
+      <button class="sw" data-role="vp" data-vp="390">390</button>
+      <button class="sw" data-role="vp" data-vp="1280">1280</button>
+    </div>
+    <p class="shape-name" id="shape-name"></p>
+  </nav>
+
+  <div class="frame-wrap" id="stage"></div>
+</main>
+<script>
+function quoteBlk() {
+  return `<div class="blk">
+    <p class="quote">NVDA <span class="num">$227.30</span> <span class="up">▲ +$5.26 (+2.37%)</span></p>
+    <p class="sub mono">Rung 101 · Buy stock · earned · Account: Eric</p>
+  </div>`;
+}
+function chainRowsHtml() {
+  const rows = [
+    ['217.5', '841', '728', '10.16', '10.31', '769', '6,613', '0.20', '0.21', false],
+    ['220',   '2,776', '7,713', '7.66', '7.71', '770', '11,962', '0.34', '0.35', false],
+    ['222.5', '1,718', '16,230', '5.56', '5.61', '266', '16,288', '0.63', '0.65', false],
+    ['225',   '10,733', '31,390', '3.62', '3.67', '1,015', '28,581', '1.18', '1.24', false],
+    ['227.5', '3,122', '54,250', '2.13', '2.14', '78', '6,522', '2.25', '2.27', true],
+    ['230',   '7,950', '110,320', '1.17', '1.18', '111', '1,598', '3.69', '3.86', false],
+    ['232.5', '591', '31,765', '0.59', '0.60', '28', '283', '5.50', '5.73', false],
+  ];
+  return rows.map(r => `<tr${r[9] ? ' class="atm"' : ''}>
+      <td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>$${r[3]}</td><td>$${r[4]}</td>
+      <td>$${r[7]}</td><td>$${r[8]}</td><td>${r[5]}</td><td>${r[6]}</td>
+    </tr>`).join('');
+}
+function chainTable(compact) {
+  const rows = compact
+    ? chainRowsHtml().split('</tr>').filter(r => r.includes('atm') || r.includes('225') || r.includes('230')).slice(0,3).join('</tr>') + '</tr>'
+    : chainRowsHtml();
+  return `<div class="tw"><table class="tbl">
+    <thead><tr><th>Strike</th><th>C.OI</th><th>C.Vol</th><th>Bid</th><th>Ask</th><th>Bid</th><th>Ask</th><th>P.OI</th><th>P.Vol</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+function expTabs() {
+  return `<div class="chips">
+    <span class="chip on">Jun 17, 2027</span><span class="chip">Sep 17, 2027</span>
+    <span class="chip">Dec 17, 2027</span><span class="chip">Jan 21, 2028</span>
+    <span class="chip">Jun 16, 2028</span>
+  </div>`;
+}
+function ticketFields(strikeVal) {
+  return `<div class="blk">
+    <p class="bt">New trade<span class="tag">Limit</span></p>
+    <div class="row">
+      <div class="field"><span class="lbl">Strike</span><span class="in">${strikeVal}</span></div>
+      <div class="field"><span class="lbl">Shares</span><span class="in">10</span></div>
+    </div>
+    <div class="row">
+      <div class="field"><span class="lbl">Limit price</span><span class="in">227.51</span></div>
+      <div class="field"><span class="lbl">TIF</span><span class="seg"><span class="off">Day</span><b class="on">GTC</b></span></div>
+    </div>
+    <button class="btn wide">Review order</button>
+  </div>`;
+}
+function chartBlk(tall) {
+  return `<div class="blk">
+    <p class="bt">Chart</p>
+    <dl class="kv">
+      <dt>O</dt><dd>222.93</dd><dt>H</dt><dd>228.49</dd><dt>L</dt><dd>221.58</dd><dt>C</dt><dd>227.30</dd>
+      <dt>EMA</dt><dd>220.29</dd><dt>BB</dt><dd>232.56 / 219.52 / 206.48</dd><dt>RSI</dt><dd>56.2</dd>
+    </dl>
+    <div class="hatch" style="min-height:${tall ? 260 : 90}px">candlestick · Bollinger · EMA · RSI</div>
+  </div>`;
+}
+function symbolField() {
+  return `<div class="blk">
+    <div class="field"><span class="lbl">Symbol</span><span class="in">NVDA</span></div>
+  </div>`;
+}
+const TEMPLATES = {
+  workbench: {
+    1280: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">Leaderboard · Profile · <u>Trade</u> · Activity · Research</span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · Workbench, docked (≥1280px) — chain in its own column · shipped today (#3407 slice 4b/5)</p>
+      <div class="fbody">
+        <div class="cols two">
+          <div class="col">${quoteBlk()}${ticketFields('227.5')}</div>
+          <div class="col">
+            <div class="blk"><p class="bt">Chain<span class="tag">docked</span></p>${expTabs()}${chainTable(false)}
+              <button class="btn ghost wide">Show all 65 strikes</button></div>
+            ${chartBlk(false)}
+          </div>
+        </div>
+        <span class="meta">Baseline — this is the live app right now. No reversal; the reference point for A/B below.</span>
+      </div>`,
+    390: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">☰ <u>Trade</u></span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · folded — one section at a time, rail switch: Ticket · Chart · Chain · Orders</p>
+      <div class="fbody">
+        <div class="cols one">
+          ${quoteBlk()}
+          <div class="blk"><p class="bt">Chain<span class="tag">inline</span></p>${expTabs()}${chainTable(true)}</div>
+          ${ticketFields('227.5')}
+        </div>
+        <span class="meta">Already inline below 1280px — the fold never docked. This is the behavior Eric is describing wanting at every width.</span>
+      </div>`,
+  },
+  accordion: {
+    1280: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">Leaderboard · Profile · <u>Trade</u> · Activity · Research</span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · Ticket Accordion — chain is a step in the form; chart takes the freed column</p>
+      <div class="revline">reverses part of the Workbench composition call <span class="flag">#3407, 2026-09-22</span> — the chain leaves the docked side column</div>
+      <div class="fbody">
+        <div class="cols two">
+          <div class="col">
+            ${quoteBlk()}
+            <div class="blk"><p class="bt">Chain<span class="tag new">open</span></p>${expTabs()}${chainTable(false)}
+              <p class="sub">Auto-opens once a symbol commits. Auto-collapses to one line the instant a strike, bid or ask is picked:</p>
+              <div class="blk soft dashed"><p class="sub mono">Strike 227.5 · $2.14 ask · <u>Change</u></p></div>
+            </div>
+            ${ticketFields('227.5')}
+          </div>
+          <div class="col">${chartBlk(true)}</div>
+        </div>
+      </div>`,
+    390: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">☰ <u>Trade</u></span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · same accordion at every width — no fold/dock split for the chain</p>
+      <div class="fbody">
+        <div class="cols one">
+          ${quoteBlk()}
+          <div class="blk"><p class="bt">Chain<span class="tag new">open</span></p>${expTabs()}${chainTable(true)}</div>
+          ${ticketFields('227.5')}
+        </div>
+        <span class="meta">Chart still reached via the rail switch below 1280px — no room to promote a second column at phone width.</span>
+      </div>`,
+  },
+  collapsible: {
+    1280: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">Leaderboard · Profile · <u>Trade</u> · Activity · Research</span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · Workbench, docked — same two columns, chain pane now folds</p>
+      <span class="meta">Keeps the Workbench composition (#3407) as-is — adds a fold to the chain pane only. No reversal.</span>
+      <div class="fbody">
+        <div class="cols two">
+          <div class="col">${quoteBlk()}${ticketFields('227.5')}</div>
+          <div class="col">
+            <div class="blk"><p class="bt">Chain<span class="tag">collapsed ▸</span></p>
+              <p class="sub mono">Strike 227.5 · Bid $2.13 / Ask $2.14 · <u>Change</u></p>
+              <p class="why">tap to reopen, or focus/clear the Strike field</p>
+            </div>
+            ${chartBlk(false)}
+          </div>
+        </div>
+      </div>`,
+    390: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">☰ <u>Trade</u></span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · folded — identical to A; there's no dock below 1280px to fold</p>
+      <div class="fbody">
+        <div class="cols one">
+          ${quoteBlk()}
+          <div class="blk"><p class="bt">Chain<span class="tag">inline</span></p>${expTabs()}${chainTable(true)}</div>
+          ${ticketFields('227.5')}
+        </div>
+        <span class="meta">No change from A at this width — the collapse only exists where the dock does.</span>
+      </div>`,
+  },
+  drawer: {
+    1280: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">Leaderboard · Profile · <u>Trade</u> · Activity · Research</span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · Ticket + Chain Sheet — chain opens from the Strike field, closes on pick</p>
+      <div class="revline">reverses the Workbench composition call <span class="flag">#3407, 2026-09-22</span> further than B — the chain is never docked, even at 1280px; revives the "Drawer" pattern (PATTERNS.md, declined on Accounts for #2321, banked "for a surface whose detail is too large to fit inline" — a 65-strike × greeks table is that surface)</div>
+      <div class="fbody">
+        <div class="cols two">
+          <div class="col">
+            ${quoteBlk()}
+            <div class="blk"><p class="bt">New trade</p>
+              <div class="row"><div class="field"><span class="lbl">Strike</span><span class="in tap">Tap to browse the chain ▸</span></div></div>
+            </div>
+            <div class="blk soft dashed"><p class="bt">Sheet<span class="tag new">on tap</span></p>${expTabs()}${chainTable(true)}
+              <p class="sub">Slides over the ticket; closes the instant a strike, bid or ask is picked.</p></div>
+          </div>
+          <div class="col">${chartBlk(true)}</div>
+        </div>
+      </div>`,
+    390: () => `
+      <div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">☰ <u>Trade</u></span></div>
+      <p class="fcap">/app/trade?symbol=NVDA · same sheet at every width — a natural bottom sheet on a phone</p>
+      <div class="fbody">
+        <div class="cols one">
+          ${quoteBlk()}
+          <div class="blk"><p class="bt">New trade</p>
+            <div class="row"><div class="field"><span class="lbl">Strike</span><span class="in tap">Tap to browse the chain ▸</span></div></div>
+          </div>
+        </div>
+        <span class="meta">Replaces today's always-open inline table below 1280px too — the biggest behavior change of the four at phone width.</span>
+      </div>`,
+  },
+};
+const NAMES = {
+  workbench: 'A · Workbench, as shipped today — chain and chart dock beside the ticket at ≥1280px.',
+  accordion: 'B · Ticket Accordion — the chain is a collapsible step inside the form; the chart is promoted into the freed column. Answers both of Eric’s questions in one move.',
+  collapsible: 'C · Collapsible Dock — smallest diff: same two columns, the chain pane itself folds after a pick.',
+  drawer: 'D · Chain Sheet — the chain never lives on the page; it opens from the Strike field and closes on pick.',
+};
+const state = { shape: 'workbench', vp: 1280 };
+function render() {
+  document.querySelectorAll('.sw[data-role="shape"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shape === state.shape)));
+  document.querySelectorAll('.sw[data-role="vp"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vp) === state.vp)));
+  document.getElementById('shape-name').innerHTML = NAMES[state.shape];
+  const wide = state.vp === 1280;
+  const fh = wide ? 760 : 900;
+  document.getElementById('stage').innerHTML =
+    `<div class="frame" data-fold="${fh}" style="--fw:${state.vp}px;--fh:${fh}px">${TEMPLATES[state.shape][state.vp]()}</div>`;
+  const hash = `#${state.shape}/${state.vp}`;
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+}
+function readHash() {
+  const m = /^#(workbench|accordion|collapsible|drawer)\/(390|1280)$/.exec(location.hash);
+  if (!m) return false;
+  state.shape = m[1]; state.vp = Number(m[2]);
+  return true;
+}
+document.getElementById('switchers').addEventListener('click', e => {
+  const b = e.target.closest('.sw');
+  if (!b) return;
+  if (b.dataset.role === 'shape') state.shape = b.dataset.shape;
+  else state.vp = Number(b.dataset.vp);
+  render();
+});
+window.addEventListener('hashchange', () => { if (readHash()) render(); });
+readHash();
+render();
+</script>
+</body>
+</html>

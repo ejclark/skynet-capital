@@ -1,0 +1,11 @@
+{
+  "id": "jobs-2027-05-07",
+  "kind": "macro-print",
+  "title": "Employment Situation (Apr 2027 data), 08:30 ET",
+  "date": "2027-05-07",
+  "status": "estimate",
+  "source": "EST: derived from BLS's own published scheduling rule as re-implemented and re-validated by the jobs-2027-08-06 initial research on this calendar — the Employment Situation is released on the third Friday following the end of the reference week (the Sun-Sat week containing the 12th), a rule that scored 7 for 7 there against the four confirmed jobs-* entries (2026-09-04, 2026-10-02, 2026-11-06, 2026-12-04) and three historical Sunday-July-4 releases. For April 2027 data the reference week is Sun 2027-04-11 to Sat 2027-04-17, and the third Friday after 04-17 is 2027-05-07 — an ordinary NYSE session with no holiday within a week of it, so the rule's one documented failure mode (a holiday landing on the rule's own Friday) cannot fire. The prefix is EST: and not BLS: because bls.gov returns 403 to this lane's plain fetchers, the standing blind spot recorded in docs/process/EVENT-RESEARCH.md. Discovered in the never-assessed initial research of treasury-borrowing-estimates-2027-05-03, 2026-09-09",
+  "impact": "high",
+  "symbols": [],
+  "notes": "DISCOVERED as the corridor's far edge for treasury-borrowing-estimates-2027-05-03: it is D+4 from that release and D+2 from treasury-refunding-2027-05-05 (est), and it is the reason the May-2027 refunding week cannot be read cleanly on the tape even though only four other tracked events sit within +/-5 days of the Monday. The same geometry held in November 2026, where the sibling ledger closed its corridor list with jobs 11-06. Impact HIGH matches every other jobs-* entry on this calendar. Proposed as an estimate; nothing here licenses an entry."
+}

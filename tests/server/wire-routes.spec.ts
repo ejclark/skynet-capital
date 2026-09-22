@@ -11,11 +11,15 @@ import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.
 // wired, and each wired dep's data actually reaches the shell's JSON. Rendering detail lives in
 // wire-json-view.spec.ts.
 
-const capture = (): { res: ServerResponse; out: { status: number; body: string } } => {
-  const out = { status: 0, body: "" };
+const capture = (): {
+  res: ServerResponse;
+  out: { status: number; body: string; headers: Record<string, string> };
+} => {
+  const out = { status: 0, body: "", headers: {} as Record<string, string> };
   const res = {
-    writeHead(status: number) {
+    writeHead(status: number, headers?: Record<string, string>) {
       out.status = status;
+      out.headers = headers ?? {};
       return res;
     },
     end(payload: string) {
@@ -74,7 +78,7 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = { hub: hubWith([snapshot()]) };
 
-    await serveWireJson(res, deps, false);
+    await serveWireJson(res, "/api/wire", deps, false);
 
     expect(out.status).toBe(200);
     const wire = JSON.parse(out.body).wire;
@@ -89,7 +93,7 @@ describe("serveWireJson", () => {
       readAllTradeActivity: () => Promise.resolve([record()]),
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     const [trade] = JSON.parse(out.body).wire.trades;
     expect(trade.symbol).toBe("NVDA");
@@ -103,7 +107,7 @@ describe("serveWireJson", () => {
       readAllFeedback: () => Promise.resolve([entry({ title: "Shared idea" })]),
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     const [feedback] = JSON.parse(out.body).wire.feedback;
     expect(feedback.title).toBe("Shared idea");
@@ -121,7 +125,7 @@ describe("serveWireJson", () => {
       },
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     expect(requested).toEqual([[7]]);
   });
@@ -138,8 +142,197 @@ describe("serveWireJson", () => {
       },
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     expect(called).toBe(false);
+  });
+
+  // #2017 Phase 1 slice 12 — the who-else-traded row's server-side symbol scoping.
+  describe("?symbol= filtering", () => {
+    it("with no ?symbol= at all, behaves exactly as the plain Wire", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () =>
+          Promise.resolve([
+            record({ orderId: "a", symbol: "NVDA" }),
+            record({ orderId: "b", symbol: "TSLA" }),
+          ]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(2);
+    });
+
+    it("with a valid ?symbol=, filters the trade feed to that underlying", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () =>
+          Promise.resolve([
+            record({ orderId: "a", symbol: "NVDA" }),
+            record({ orderId: "b", symbol: "TSLA" }),
+          ]),
+      };
+
+      await serveWireJson(res, "/api/wire?symbol=NVDA", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(1);
+      expect(trades[0].symbol).toBe("NVDA");
+    });
+
+    it("silently ignores a malformed ?symbol= rather than 400ing the whole page", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve([record({ symbol: "NVDA" })]),
+      };
+
+      await serveWireJson(res, "/api/wire?symbol=!!not-valid!!", deps, false);
+
+      expect(out.status).toBe(200);
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(1);
+    });
+  });
+
+  describe("?per_page=/?before= pagination (PR 5, issue #2287)", () => {
+    const many = Array.from({ length: 5 }, (_, i) =>
+      record({ orderId: `ord-${i}`, at: `2026-08-2${i}T00:00:00.000Z` }),
+    );
+
+    it("defaults to 30 with no Link header when the page isn't full", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve(many),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      expect(JSON.parse(out.body).wire.trades).toHaveLength(5);
+      expect(out.headers.link).toBeUndefined();
+    });
+
+    it('clamps per_page, and a full page carries a Link: rel="next" header', async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve(many),
+      };
+
+      await serveWireJson(res, "/api/wire?per_page=2", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(2);
+      expect(trades[0].key.includes("2026-08-24T00:00:00.000Z")).toBe(true);
+      expect(trades[1].key.includes("2026-08-23T00:00:00.000Z")).toBe(true);
+      expect(out.headers.link).toBe(
+        '</api/wire?per_page=2&before=2026-08-23T00%3A00%3A00.000Z>; rel="next"',
+      );
+    });
+
+    it("follows the Link header's own before cursor to the next page", async () => {
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve(many),
+      };
+      const first = capture();
+      await serveWireJson(first.res, "/api/wire?per_page=2", deps, false);
+
+      const second = capture();
+      await serveWireJson(
+        second.res,
+        "/api/wire?per_page=2&before=2026-08-23T00:00:00.000Z",
+        deps,
+        false,
+      );
+      const { trades } = JSON.parse(second.out.body).wire;
+      expect(trades[0].key.includes("2026-08-22T00:00:00.000Z")).toBe(true);
+      expect(trades[1].key.includes("2026-08-21T00:00:00.000Z")).toBe(true);
+    });
+  });
+
+  describe("reasoning + vitals (PR 6, issue #2287)", () => {
+    const intent = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 10,
+      type: "market" as const,
+      reason: "panic fade",
+      strategy: "sauron-panic-claim",
+    };
+    const decision = {
+      at: 1,
+      personaId: "sauron",
+      mode: "live" as const,
+      rawIntents: [intent],
+      guardedIntents: [intent],
+      outcomes: [{ intent, action: "placed" as const }],
+    };
+
+    it("attaches reasoning to a bot row via the exact order-id join, none to a human row", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot(), snapshot({ id: "eric", kind: "human" })]),
+        readAllTradeActivity: () =>
+          Promise.resolve([
+            record({ orderId: "ord-bot", participantId: "sauron" }),
+            record({ orderId: "ord-human", participantId: "eric" }),
+          ]),
+        findByOrderId: (orderId) =>
+          orderId === "ord-bot" ? { record: decision, intent } : undefined,
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      const bot = trades.find((t: { whoId: string }) => t.whoId === "sauron");
+      const human = trades.find((t: { whoId: string }) => t.whoId === "eric");
+      expect(bot.reasoning).toMatchObject({ reason: "panic fade", strategy: "sauron-panic-claim" });
+      expect(human.reasoning).toBeUndefined();
+    });
+
+    it("attaches a live Loss headroom gauge when history is wired, nothing when it isn't", async () => {
+      const withHistory = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
+        findByOrderId: () => ({ record: decision, intent }),
+        readHistory: () =>
+          Promise.resolve([
+            {
+              at: "2026-08-19T00:00:00.000Z",
+              participantId: "sauron",
+              equity: 100_000,
+              cash: 0,
+              realizedPl: 0,
+            },
+            {
+              at: "2026-08-19T14:30:00.000Z",
+              participantId: "sauron",
+              equity: 100_000,
+              cash: 0,
+              realizedPl: 0,
+            },
+          ]),
+      };
+      await serveWireJson(withHistory.res, "/api/wire", deps, false);
+      const withHistoryTrades = JSON.parse(withHistory.out.body).wire.trades;
+      expect(withHistoryTrades[0].vitals.lossHeadroom.measured).toBe(true);
+
+      const withoutHistory = capture();
+      await serveWireJson(
+        withoutHistory.res,
+        "/api/wire",
+        { ...deps, readHistory: undefined },
+        false,
+      );
+      const withoutHistoryTrades = JSON.parse(withoutHistory.out.body).wire.trades;
+      expect(withoutHistoryTrades[0].vitals).toBeUndefined();
+    });
   });
 });

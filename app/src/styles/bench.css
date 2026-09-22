@@ -1,0 +1,68 @@
+/* THE DOCKED BENCH (#3407, Workbench slice 4b; composition revised 2026-09-22, twice) — /trade's
+   sections at the bench width (`use-bench-width.ts`, 1280px). The chain no longer docks as its
+   own pane — it is inline and collapsible inside the ticket instead (`option-gate.tsx`,
+   `.tkt-chain-summary` below). The chart's own placement now branches on the ticket kind
+   (`trade.tsx`'s `ticketOwnsChart`): an OPTION ticket carries the chart itself, beside its
+   order-detail block (`.tkt-review-split`, `ticket.css`) — the ticket pane (`.bench-ticket-full`)
+   spans the FULL grid so the chain table gets all available width ("the options table needs
+   access to all available screen width real estate," Eric, 2026-09-22); every other ticket kind
+   (stock, spread, locked, gated) keeps the two-column split, ticket left, chart right
+   (`.bench-side`), unchanged. The account's book runs the full width beneath either way. Below
+   the bench width the same `.bench` renders ONE pane (the switch's) in a single column;
+   `.bench-docked` is the grid. The media-query fallback is a safety net for a resize race. Tokens
+   only; no pixel cap (`fluid-shell-css.spec.ts`). Held as a hypothesis: if Eric reads this as a
+   mess on the live route, the bench folds at every width (frame.tsx). */
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5) 32px;
+  align-items: start;
+}
+.bench-docked {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.bench-pane {
+  min-width: 0;
+  /* a `?section=` scroll lands the pane's label under the sticky topbar, not behind it */
+  scroll-margin-top: 72px;
+}
+.bench-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.bench-docked > .bench-orders,
+.bench-docked > .bench-chain,
+.bench-docked > .bench-ticket-full {
+  grid-column: 1 / -1;
+}
+/* `.bench-chain` only ever renders docked when `?section=chain` is explicitly asked (`trade.tsx`'s
+   `shows`) — the standalone browsing view stays reachable at every width even though it no longer
+   auto-docks; full-span like `.bench-orders` rather than fighting the two-column grid for a pane
+   that's the exception, not the rule, here. */
+/* The pane label — the docked stand-in for the switch's button text, so the grid reads as a map.
+   The pane `?section=` names carries a leading bar as well as the accent (shape, not hue alone:
+   docs/BRAND.md → Accessibility). */
+.bench-pane-title {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 0 0 var(--space-2);
+  padding-left: 0;
+  border-left: 0 solid transparent;
+}
+.bench-pane[data-current="true"] > .bench-pane-title {
+  color: var(--accent);
+  padding-left: var(--space-2);
+  border-left: 3px solid var(--accent);
+}
+@media (max-width: 1279px) {
+  .bench-docked {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bench-docked > .bench-orders {
+    grid-column: auto;
+  }
+}

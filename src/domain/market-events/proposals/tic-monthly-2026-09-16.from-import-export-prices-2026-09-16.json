@@ -1,0 +1,11 @@
+{
+  "id": "tic-monthly-2026-09-16",
+  "kind": "macro-print",
+  "title": "Treasury International Capital (TIC) monthly release (July 2026 data) + the quarterly cut, 4:00 p.m. ET",
+  "date": "2026-09-16",
+  "status": "estimate",
+  "source": "EST: home.treasury.gov/data/treasury-international-capital-tic-system/release-dates-of-tic-data, fetched direct 2026-09-08 (HTTP 200) — its 2026 table puts the monthly release (\"Press release, data on long-term securities, short-term securities, financial firms at end of month before last\") on September 16, with the quarterly cut (\"nonfinancial firms, derivatives, portfolio claims and liabilities\") on the same date, and the page header states verbatim that \"All data releases occur at 4 p.m. Washington, D.C. time\". Reference month is July 2026 by the page's own \"month before last\" rule. Filed estimate on the lane's no-self-confirm limit — this event was discovered in an adjacency sweep, not researched — and because no `TSY:`-prefixed release naming this date was read; the taxonomy's TSY: prefix is scoped to the auction schedule. Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the import-export-prices-2026-09-16 pulse-check adjacency sweep (2026-09-08). Proposed because the corridor already tracks the demand side of the same question from four angles — treasury-20y-bond-2026-09-15, treasury-10y-tips-2026-09-17, treasury-coupon-announcement-2026-09-17 and mts-august-2026-09-11 — and TIC is the only monthly print that measures FOREIGN participation directly, which is the standing question behind a 4.7-4.8% 10Y into a coupon-heavy September. It is also the natural companion to the trade-price series this proposer researches: import prices and TIC are the two halves of the same external account (the price of what crosses the border, and who finances the gap), and the calendar tracks the FT-900 goods report (intl-trade-full-report-2026-10-06) but had no capital-account entry at all. Impact LOW and symbols empty, honestly: the 4:00 p.m. slot lands two hours AFTER the fomc-2026-09-16 statement, so on this particular date it is buried by construction, and no house playbook is macro-keyed. Its value to this calendar is as a monthly series worth having on the board, not as a tradeable date. Proposed as an estimate; nothing here licenses an entry."
+}

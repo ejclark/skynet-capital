@@ -1,0 +1,11 @@
+{
+  "id": "uk-public-sector-finances-2026-10-21",
+  "kind": "macro-print",
+  "title": "UK public sector finances, September 2026 (ONS, 07:00 London / 02:00 ET) — the last borrowing print before the Budget, published the same minute as UK CPI",
+  "date": "2026-10-21",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/publicsectorfinancesukseptember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release-calendar entry reads verbatim 'Public sector finances, UK: September 2026', '21 October 2026 at 7:00am', describing the headline measures of public sector net borrowing, net cash requirement and net debt, and marked 'This release is not yet published.' Corroborated the same session by a secondary Budget-timetable listing (evelyn.com Autumn Budget 2026 key dates, fetched 2026-09-09) which independently names '21 October' for both September inflation and the latest public sector finance statistics. Primary-sourced from the publisher's own calendar; filed estimate per this lane's no-self-confirm limit and the confirmed-prefix taxonomy's lack of an ONS slot. Discovered in the never-assessed initial research of uk-labour-market-2026-10-20, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-10-20 LANE, 2026-09-09. Two reasons it earns a slot. (1) SUBSTANCE: it is the last public-sector borrowing print before the 2026-10-28 Autumn Budget and the OBR Economic and Fiscal Outlook published with it, so it is the number against which the Chancellor's headroom arithmetic is scored seven days later — the fiscal analogue of what uk-labour-market-2026-10-20 is to the November MPR. (2) MECHANICS, and this is why the proposing lane cared: it lands at the SAME 07:00 London / 02:00 ET minute as uk-cpi-2026-10-21. The attribution discipline that works on 2026-10-20 — one UK release in the pre-dawn ET window, therefore one candidate explanation for a gilt or cable move — DOES NOT SURVIVE to 10-21, because two ONS releases share the minute. A calendar that carries only the CPI half would silently license a wrong attribution. Tiered LOW: symbols: [], no house playbook is rates-, fiscal- or sterling-keyed, and this repo tracks no UK-listed symbol. Estimate widens caution only; nothing date-keyed may act on this."
+}

@@ -118,7 +118,7 @@ describe("createDeployLagFetcher", () => {
       ["/runs?event=push&branch=main&per_page=20", CURRENT_RUNS],
       ["/actions/runs/1/jobs", CURRENT_JOBS],
     ]);
-    const counted = (method: "GET" | "POST" | "PUT" | "DELETE", url: string) => {
+    const counted = (method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string) => {
       calls++;
       return doFetch(method, url);
     };
@@ -198,7 +198,7 @@ describe("the reported running commit as the bots baseline", () => {
       ["/runs?event=push&branch=main&per_page=20", CURRENT_RUNS],
       ["/actions/runs/1/jobs", CURRENT_JOBS],
     ]);
-    const counted = (method: "GET" | "POST" | "PUT" | "DELETE", url: string) => {
+    const counted = (method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string) => {
       calls++;
       return doFetch(method, url);
     };

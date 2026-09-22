@@ -1,0 +1,11 @@
+{
+  "id": "uk-public-sector-finances-2026-12-22",
+  "kind": "macro-print",
+  "title": "UK public sector finances, November 2026 (ONS, 07:00 London / 02:00 ET) — the first borrowing print that contains a full month of the 28 October Budget's duty and tax changes",
+  "date": "2026-12-22",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/publicsectorfinancesuknovember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Public sector finances, UK: November 2026', 'Release date: 22 December 2026 7:00am', and 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-12-16, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-12-16 LANE, 2026-09-09. Why it earns a slot: it completes the PSF series this calendar already tracks (uk-public-sector-finances-2026-09-22, -10-21, -11-20) and it is the receipts-side counterpart to the CPI print that proposes it. The 28 October 2026 Budget's duty uprating shows up in the November CPI index as a price level and in THIS release as cash — the first full month of it — alongside the first clean read on what the SI 2026/987 electricity VAT zero-rate actually costs the Exchequer, a number HMRC's impact table left blank and deferred to the Budget. Tiered LOW on the same grounds as its siblings: symbols: [], no gilt or sterling instrument in this book, attribution value only. Estimate widens caution only; it licenses no date-keyed action."
+}

@@ -42,7 +42,7 @@ function Chapters({
       <MilestoneCard
         code="M·01"
         title="Onboarding"
-        desc="Get seated at the desk: connect Alpaca, say hello to Moneypenny, make your first trade."
+        desc="Get started: connect Alpaca, say hello to Moneypenny, make your first trade."
         state={ob?.complete ? "complete" : "progress"}
         done={ob?.done ?? 0}
         total={ob?.total ?? 3}
@@ -63,7 +63,7 @@ function Chapters({
       <MilestoneCard
         code="M·03"
         title="Playbooks"
-        desc="Prove a play by hand, then arm it to draft tickets for you. WIP — Season 1."
+        desc="Prove a play by hand, then arm it to draft orders for you. WIP — Season 1."
         state="wip"
         done={pb?.unlocked ?? 0}
         total={pb?.total ?? 4}
@@ -117,8 +117,8 @@ function LearnPage(): ReactElement {
       </header>
       {!data.linked ? (
         <p className="note">
-          Milestones light up from orders you fill on your own desk — this session isn't linked to
-          an account yet, so the journey shows from the start.
+          Milestones light up from orders you fill yourself — this session isn't linked to an
+          account yet, so the journey shows from the start.
         </p>
       ) : null}
       {data.celebrating.length > 0 ? (

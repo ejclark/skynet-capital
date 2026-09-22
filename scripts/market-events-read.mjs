@@ -23,9 +23,15 @@ function readJsonDir(dir, prefix) {
     });
 }
 
-/** `{ events, files }` — `events` deduped by id (canonical wins, else first proposal by name),
- *  unsorted; `files` every file read, shadowed proposals included, for the validator. Throws on a
- *  missing directory or malformed JSON — loud, never empty (event-scan.mjs's doctrine). */
+/** `{ events, superseded, files }` — `events` deduped by id (canonical wins, else first proposal by
+ *  name) and with every `supersededBy` re-slug removed (#3101), unsorted; `superseded` those removed
+ *  entries, so `--validate` can still enforce their contract on data the calendar no longer carries;
+ *  `files` every file read, shadowed proposals included, for the validator. Throws on a missing
+ *  directory or malformed JSON — loud, never empty (event-scan.mjs's doctrine).
+ *
+ *  The supersession filter runs AFTER the id dedupe, exactly as loadMarketEvents does it: a
+ *  superseded canonical file still shadows its proposals, so retiring an id can never resurrect it
+ *  through a proposal nobody has looked at since. */
 export function readCalendarDir(dir) {
   if (!existsSync(dir)) throw new Error(`cannot read ${dir} — refusing to guess.`);
   const canonical = readJsonDir(dir, "");
@@ -33,5 +39,10 @@ export function readCalendarDir(dir) {
   const byId = new Map();
   for (const { event } of canonical) byId.set(event?.id, event);
   for (const { event } of proposals) if (!byId.has(event?.id)) byId.set(event?.id, event);
-  return { events: [...byId.values()], files: [...canonical, ...proposals] };
+  const deduped = [...byId.values()];
+  return {
+    events: deduped.filter((e) => e?.supersededBy === undefined),
+    superseded: deduped.filter((e) => e?.supersededBy !== undefined),
+    files: [...canonical, ...proposals],
+  };
 }

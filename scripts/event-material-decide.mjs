@@ -25,6 +25,16 @@
 //     "corridor" framing this repo's own pulse checks already use (NVDA/MRVL/Jackson-Hole reads as
 //     one 3-day corridor); a new dated entry landing inside that window is exactly the kind of find
 //     a human adjacency sweep would flag.
+//   - THE ADJACENCY FILTER (#2946, 2026-09-10): only a CONFIRMED, high/critical-impact entry may
+//     trip `new-adjacent-event` ("strong" below); weaker adjacents are NAMED in the screen row
+//     (recorded, not assessed) instead of buying a session. Measured defeat of the unfiltered
+//     rule: at 446 events a corridor averages ~30 adjacents against ~3 strong ones, so calendar
+//     churn (252 pending proposals, ~338 new events/week) tripped the check on nearly every pulse —
+//     the probe produced 5 screens in its first 13 live days because its own subject's growth kept
+//     reading as material. An estimate→confirmed flip DOES trip once probe-refs carry
+//     adjacentStrongIds (the id was never in the strong set); a legacy probe-ref without that key
+//     falls back to its old all-id list, which can suppress ONE flip trip per legacy ledger — the
+//     bounded, documented under-trip; the other direction (an extra session) is the safe failure.
 //   - STALENESS_CEILING     3  — every 3rd consecutive pulse is forced material regardless of the
 //     readings (the issue's own suggested default), so an event can never coast on screens forever;
 //     a real session re-establishes the baseline at least that often.
@@ -32,16 +42,30 @@
 // digest-scan.mjs's COMMIT_THRESHOLD/HEARTBEAT_DAYS.
 //
 // REFERENCE-LEVEL STORAGE (open question 2): a machine-readable `<!-- probe-ref: {...} -->` block
-// embedded in the ledger header, right after `**Last assessed:**` — NOT a sidecar JSON file. Chosen
+// embedded in the ledger, right after a `**Last assessed:**` line — NOT a sidecar JSON file. Chosen
 // because the ledger is already this system's one source of truth per event (event-scan.mjs reads
-// nothing else), and a sidecar would need to stay in sync with a file it has no other tie to. The
-// probe-ref block is free-standing state (current readings + streak), not an assessment row, so it
-// is REPLACED in place on every pulse (screen or material) rather than appended — unlike the
-// assessment ledger table, which stays strictly append-only.
+// nothing else), and a sidecar would need to stay in sync with a file it has no other tie to.
+//
+// APPEND-ONLY, LIKE THE LEDGER TABLE (revised 2026-09-19, docs/LESSONS.md). This originally read
+// "REPLACED in place on every pulse... unlike the assessment ledger table, which stays strictly
+// append-only" — a deliberate choice that never weighed its git cost. Every merge to `main`
+// re-triggers the research workflow, so two screens racing the same still-due event both rewrote
+// the identical line, a guaranteed same-logic conflict that produced a 19-PR stuck backlog before
+// this fix. `applyScreen` now APPENDS a fresh `**Last assessed:**` + probe-ref pair at the true end
+// of the file on every pulse, same convention as the table; `parseLedgerHeader` takes the LAST such
+// pair in the file, so reading "current state" still means one lookup, just at the other end.
 export const PRICE_MOVE_THRESHOLD = 0.05;
 export const VIX_MOVE_THRESHOLD = 3;
 export const ADJACENCY_WINDOW_DAYS = 5;
 export const STALENESS_CEILING = 3;
+
+const STRONG_ADJACENT_IMPACTS = new Set(["critical", "high"]);
+
+/** "Strong" = the only adjacency allowed to trip a material verdict (#2946's filter): a confirmed
+ *  date on a high/critical-impact entry. Estimate/low/medium corridor churn feeds the calendar
+ *  itself, so treating it as material made the probe re-buy a session for its own subject's growth. */
+export const isStrongAdjacent = (a) =>
+  a?.status === "confirmed" && STRONG_ADJACENT_IMPACTS.has(a?.impact);
 
 export const daysBetween = (fromDate, toDate) =>
   Math.round(
@@ -94,9 +118,12 @@ function vixReason(probeRef, market) {
     : [];
 }
 
-function adjacencyReasons(probeRef, adjacentIds) {
-  const prior = new Set(probeRef.adjacentIds ?? []);
-  return adjacentIds.filter((id) => !prior.has(id)).map((id) => `new-adjacent-event:${id}`);
+function adjacencyReasons(probeRef, adjacentStrongIds) {
+  // Legacy probe-refs predate adjacentStrongIds: their all-id adjacentIds list doubles as the
+  // prior strong set (membership only ever meant "was adjacent"), so a genuinely new strong
+  // entrance still trips — see the header's filter note for the one bounded under-trip this buys.
+  const prior = new Set(probeRef.adjacentStrongIds ?? probeRef.adjacentIds ?? []);
+  return adjacentStrongIds.filter((id) => !prior.has(id)).map((id) => `new-adjacent-event:${id}`);
 }
 
 function stalenessReason(probeRef) {
@@ -106,12 +133,12 @@ function stalenessReason(probeRef) {
 /** Every threshold check against the prior probe-ref, in one pass. Pushes a short machine-readable
  *  reason string per trip; an empty return means nothing tracked moved. Each check is its own tiny
  *  function so this stays a flat concatenation, not a branch tree. */
-function tripReasons(event, probeRef, market, adjacentIds, band) {
+function tripReasons(event, probeRef, market, adjacentStrongIds, band) {
   return [
     ...daysBandReason(probeRef, band),
     ...priceMoveReasons(event.symbols ?? [], probeRef, market),
     ...vixReason(probeRef, market),
-    ...adjacencyReasons(probeRef, adjacentIds),
+    ...adjacencyReasons(probeRef, adjacentStrongIds),
     ...stalenessReason(probeRef),
   ];
 }
@@ -120,18 +147,24 @@ function tripReasons(event, probeRef, market, adjacentIds, band) {
  * The probe's verdict for one `interval-elapsed` pulse. Pure — every input is a plain value, so
  * this is fully exercisable through `--explain` (see event-material-scan.mjs).
  *
+ * `state.adjacentIds` is the full corridor (recorded verbatim in the probe-ref); the tripping list
+ * is `state.adjacentStrongIds` — already filtered through isStrongAdjacent by the caller. A caller
+ * that omits it (e.g. a hand-run `--explain`) gets the conservative default: every adjacent can
+ * trip, exactly the pre-filter behavior.
+ *
  * `state.ledger.probeRef` missing (an event whose ledger predates this contract, or whose initial
  * research never seeded one) is treated as "material" — `no-reference-baseline` — the safe default:
  * with nothing to diff against, a probe cannot honestly call anything quiet. That one full session
  * seeds the block for every screen after it.
  */
 export function decide(state) {
-  const { event, today, cadence, ledger, market = {}, adjacentIds = [] } = state;
+  const { event, today, cadence, ledger, market = {}, adjacentIds = [], adjacentStrongIds } = state;
+  const strong = adjacentStrongIds ?? adjacentIds;
   const daysOut = daysBetween(today, event.date);
   const band = bandFor(event.impact, daysOut, cadence);
   const probeRef = ledger?.probeRef ?? null;
   const reasons = probeRef
-    ? tripReasons(event, probeRef, market, adjacentIds, band)
+    ? tripReasons(event, probeRef, market, strong, band)
     : ["no-reference-baseline"];
 
   const verdict = reasons.length ? "material" : "screen";
@@ -146,6 +179,7 @@ export function decide(state) {
       vix: market.vix ?? null,
       daysBand: band.label,
       adjacentIds: [...adjacentIds].sort(),
+      adjacentStrongIds: [...strong].sort(),
       screenStreak,
     },
   };
@@ -187,6 +221,20 @@ function describeReadings(state, decision) {
       : `band unchanged (${decision.readings.daysBand})`,
   );
   bits.push(`${decision.readings.adjacentIds.length} adjacent event(s) tracked`);
+  // The adjacency filter's other half (#2946): churn too weak to trip a session is still NAMED
+  // here — the corridor stays visible to the next real assessment without buying one. Capped so a
+  // heavy-calendar week cannot inflate the deterministic row.
+  const priorIds = new Set(prior?.adjacentIds ?? []);
+  const freshIds = (state.adjacentIds ?? []).filter((id) => !priorIds.has(id)).sort();
+  if (freshIds.length > 0) {
+    const named = freshIds
+      .slice(0, 6)
+      .map((id) => `\`${id}\``)
+      .join(", ");
+    bits.push(
+      `new in corridor since last pulse: ${named}${freshIds.length > 6 ? ` +${freshIds.length - 6} more` : ""} (recorded, not assessed)`,
+    );
+  }
   return `Readings — ${bits.join(", ")}. Nothing tracked crossed its threshold.`;
 }
 
@@ -214,11 +262,23 @@ function insertLedgerRow(text, row) {
 }
 
 /**
- * Write a screen's outcome into the ledger's raw markdown: bump `**Last assessed:**`, replace the
- * probe-ref block with fresh readings, and append ONE table row — worded as a mechanical check,
- * never as an assessment (the honesty invariant: "screened", never "no change" or a verdict). Only
- * ever called on a "screen" verdict; a "material" verdict writes nothing here — the full session
- * appends its own row, same as today.
+ * Write a screen's outcome into the ledger's raw markdown: append a fresh `**Last assessed:**` +
+ * probe-ref pair at the true end of the file, and append ONE table row — worded as a mechanical
+ * check, never as an assessment (the honesty invariant: "screened", never "no change" or a
+ * verdict). Only ever called on a "screen" verdict; a "material" verdict writes nothing here — the
+ * full session appends its own row, same as today.
+ *
+ * APPEND, NOT REWRITE (2026-09-19, docs/LESSONS.md). This used to `.replace()` the existing
+ * `**Last assessed:**`/probe-ref line in place — free-standing state, the design comment above
+ * PRICE_MOVE_THRESHOLD argued, so it made sense for it to be "current state" rather than an
+ * append-only row. That argument never weighed the git cost: every merge to `main` re-triggers the
+ * research workflow, so two screens for the same still-due event, both in flight at once, each
+ * rewrote the SAME line — a guaranteed same-logic conflict, not a false positive, and it produced a
+ * 19-PR stuck backlog before this fix. Tacking a fresh pair onto the true end of the file instead
+ * makes two concurrent screens a pair of disjoint additions, which git merges cleanly on its own —
+ * the conflict becomes structurally impossible instead of merely rate-limited. parseLedgerHeader
+ * (below) and event-scan.mjs's loadLedgers both read the LAST such pair in the file, so a doc that
+ * has never been screened since creation still resolves correctly off its original header.
  */
 export function applyScreen(ledgerText, state, decision) {
   if (decision.verdict !== "screen") {
@@ -228,25 +288,26 @@ export function applyScreen(ledgerText, state, decision) {
   if (!/^\*\*Last assessed:\*\*\s*\S+/m.test(ledgerText)) {
     throw new Error("event-material-scan: ledger is missing the '**Last assessed:**' line");
   }
-  let text = ledgerText.replace(/^\*\*Last assessed:\*\*\s*\S+/m, `**Last assessed:** ${today}`);
-  const probeRefLine = `<!-- probe-ref: ${JSON.stringify(decision.readings)} -->`;
-  text = /^<!-- probe-ref:.*-->$/m.test(text)
-    ? text.replace(/^<!-- probe-ref:.*-->$/m, probeRefLine)
-    : text.replace(/^(\*\*Last assessed:\*\*.*)$/m, `$1\n${probeRefLine}`);
   const row =
     `| ${today} | D-${decision.daysOut} | **Deterministic screen (no Claude session).** ` +
     `${describeReadings(state, decision)} | — (screen; no assessment made) | ` +
     `${addDays(today, decision.intervalDays)} |`;
-  return insertLedgerRow(text, row);
+  const text = insertLedgerRow(ledgerText, row);
+  const probeRefLine = `<!-- probe-ref: ${JSON.stringify(decision.readings)} -->`;
+  return `${text.trimEnd()}\n\n**Last assessed:** ${today}\n${probeRefLine}\n`;
 }
 
 /** `**Last assessed:**` + an optional `<!-- probe-ref: {...} -->` line right after it — the ledger
- *  contract event-material-scan.mjs reads on the live path (docs/process/EVENT-RESEARCH.md). A
- *  malformed probe-ref block parses as absent (falls back to `no-reference-baseline`, never a
- *  crash) — a hand-edited ledger must degrade safely, not break the pulse pipeline. */
+ *  contract event-material-scan.mjs reads on the live path (docs/process/EVENT-RESEARCH.md). Takes
+ *  the LAST occurrence of each in the file, not the first: since applyScreen (above) only ever
+ *  APPENDS a fresh pair rather than rewriting the original header, the most recent state is
+ *  whichever one appears latest in the file — the original header for an unscreened doc, or the
+ *  newest trailing block for one that has been. A malformed probe-ref block parses as absent (falls
+ *  back to `no-reference-baseline`, never a crash) — a hand-edited ledger must degrade safely, not
+ *  break the pulse pipeline. */
 export function parseLedgerHeader(text) {
-  const lastAssessed = text.match(/^\*\*Last assessed:\*\*\s*(\S+)/m)?.[1] ?? null;
-  const raw = text.match(/^<!-- probe-ref:\s*(\{.*\})\s*-->$/m)?.[1];
+  const lastAssessed = [...text.matchAll(/^\*\*Last assessed:\*\*\s*(\S+)/gm)].at(-1)?.[1] ?? null;
+  const raw = [...text.matchAll(/^<!-- probe-ref:\s*(\{.*\})\s*-->$/gm)].at(-1)?.[1];
   let probeRef = null;
   if (raw) {
     try {

@@ -1,8 +1,13 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { type DeskOrderEvent, useOrderFill } from "../live/desk-events";
+import { fillHeadline } from "../live/fill-headline";
 import type { PlayInfo } from "../live/options";
+import { quoteQuery } from "../live/quote-query";
 import {
   buildDraft,
+  defaultTimeInForce,
   money,
   ORDER_TYPE_LABELS,
   orderTypeLabel,
@@ -14,9 +19,14 @@ import {
   type TicketOrderType,
   type TicketPreview,
   type TicketResult,
+  tifLabel,
 } from "../live/ticket";
-import { DisarmNote, GateHead } from "./gate-frame";
+import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
+import { QuoteHeader } from "./quote-header";
+import { RecentOrdersStrip } from "./recent-orders-strip";
+import { SymbolField } from "./symbol-field";
+import { TimeInForceField } from "./tif-field";
 
 /**
  * THE PRE-TRADE GATE (#738 phase 2e) — the merge-box state machine on a real ticket.
@@ -44,10 +54,14 @@ function OrderLine({ preview }: { readonly preview: TicketPreview }): ReactEleme
     preview.stopPrice !== undefined ? `stop ${money(preview.stopPrice)}` : "",
     preview.limitPrice !== undefined ? `limit ${money(preview.limitPrice)}` : "",
   ].filter(Boolean);
+  // The time in force the server says it will send — never hidden, even when the member left it
+  // on the default (#3407 P1: it used to be hard-coded and shown nowhere).
+  const tif = tifLabel(preview.timeInForce);
   return (
     <p className="gate-row">
       {orderTypeLabel(preview.orderType)}
       {prices.length ? ` · ${prices.join(" · ")}` : ""}
+      {tif ? ` · ${tif}` : ""}
     </p>
   );
 }
@@ -93,11 +107,16 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
   );
 }
 
-function GateStatus({ state }: { readonly state: GateState }): ReactElement | null {
-  if (state.step === "draft")
-    return <GateHead tone="draft">Draft — nothing is sent until every check passes</GateHead>;
-  if (state.step === "reviewing")
-    return <GateHead tone="checks">Reviewing against the desk…</GateHead>;
+function GateStatus({
+  state,
+  fill,
+}: {
+  readonly state: GateState;
+  /** The stream's frame for this ticket's order, once one arrived (#3407 P4 slice 2). */
+  readonly fill?: DeskOrderEvent;
+}): ReactElement | null {
+  if (state.step === "draft") return null;
+  if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
   if (state.step === "reviewed" || state.step === "submitting")
     return (
       <>
@@ -114,18 +133,18 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   if (state.result.ok)
     return (
       <>
-        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}`}</GateHead>
+        <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
           <p className="gate-note">
-            SIM account — simulated fill, real discipline. The blotter and timeline pick it up on
-            the next read.
+            SIM account — simulated fill, real discipline. Working orders below update now; the
+            blotter and timeline pick the fill up on the next read.
           </p>
         </div>
       </>
     );
   return (
     <>
-      <GateHead tone="refused">The desk refused at submit</GateHead>
+      <GateHead tone="refused">The gate refused at submit</GateHead>
       <div className="gate-body">
         {state.result.refusals.map((refusal) => (
           <p key={refusal} className="gate-row gate-refusal">
@@ -143,6 +162,8 @@ export function TradeGate({
   initialAction = "buy",
   showSide = true,
   play,
+  initialSymbol,
+  onSymbolCommit,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
@@ -156,9 +177,14 @@ export function TradeGate({
    * saying it was locked. Undefined callers (none today) get the old, unchecked behavior.
    */
   readonly play?: PlayInfo;
+  /** `?symbol=` (#2017 cockpit plan) — seeds the symbol field on mount so a remount (every
+   *  Instrument/Side switch keys this component fresh) doesn't drop a hand-typed symbol. */
+  readonly initialSymbol?: string;
+  /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
+  readonly onSymbolCommit?: (symbol: string) => void;
 }): ReactElement {
   const [fields, setFields] = useState<TicketFields>({
-    symbol: "",
+    symbol: initialSymbol ?? "",
     quantity: "",
     action: initialAction,
     orderType: "market",
@@ -166,6 +192,31 @@ export function TradeGate({
     stopPrice: "",
   });
   const [state, setState] = useState<GateState>({ step: "draft" });
+  const queryClient = useQueryClient();
+  /** The quote header's own committed symbol (#2017 Phase 0.9) — fetches on COMMIT only, never a
+   *  keystroke, mirroring the chain fetch's `chainSym` on the options ticket. */
+  const [quoteSym, setQuoteSym] = useState(initialSymbol ?? "");
+  /** LIMIT AT MID (#3407 slice 6 — Eric, 2026-09-22: "limit at mid — it's standard behavior").
+   *  The same quote the header shows (one query, `quoteQuery`) seeds the ticket: once a committed
+   *  symbol's NBBO arrives, the order type becomes Limit at the cent-rounded mid and TIF falls to
+   *  GTC (`defaultTimeInForce`) — an entry that waits for the price instead of paying the spread,
+   *  the habit this app exists to teach. Two guards keep it a seed and not a hand on the wheel:
+   *  it never overwrites a type or price the member has touched (`priced`), and a quote with no
+   *  live book leaves the ticket exactly as it was (Market, the honest default when there is no
+   *  mid to name). `seed` remembers what was seeded so the note below can say so — and so the
+   *  note disappears the moment the member edits the price. */
+  const quote = useQuery(quoteQuery(quoteSym));
+  const [priced, setPriced] = useState(false);
+  const [seed, setSeed] = useState<{ symbol: string; bid: number; ask: number; mid: number }>();
+  const mid = quote.data && "mid" in quote.data ? quote.data : undefined;
+  useEffect(() => {
+    if (priced || !mid || mid.mid === undefined || mid.bid === undefined || mid.ask === undefined)
+      return;
+    if (seed?.symbol === mid.symbol && seed.mid === mid.mid) return;
+    const { symbol, bid, ask } = mid;
+    setSeed({ symbol, bid, ask, mid: mid.mid });
+    setFields((f) => ({ ...f, orderType: "limit", limitPrice: mid.mid?.toFixed(2) ?? "" }));
+  }, [priced, mid, seed]);
   const symId = useId();
   const qtyId = useId();
   const sideId = useId();
@@ -184,8 +235,24 @@ export function TradeGate({
     };
 
   const priceField = priceFieldFor(fields.orderType);
+  /** A hand on the type or the price ends the seeding for this ticket (see `priced`). */
+  const price =
+    <K extends "orderType" | "limitPrice" | "stopPrice">(key: K) =>
+    (value: TicketFields[K]) => {
+      setPriced(true);
+      edit(key)(value);
+    };
+  const seeded =
+    seed !== undefined && fields.orderType === "limit" && fields.limitPrice === seed.mid.toFixed(2);
 
   const review = async () => {
+    // The Review button keeps focus (`keepFocus`), so a symbol typed and never blurred commits
+    // here — the quote header and `?symbol=` land exactly as the blur would have left them.
+    const typed = fields.symbol.trim().toUpperCase();
+    if (typed !== "" && typed !== quoteSym) {
+      setQuoteSym(typed);
+      onSymbolCommit?.(typed);
+    }
     setState({ step: "reviewing" });
     try {
       const { preview } = await reviewTicket(draft());
@@ -195,10 +262,19 @@ export function TradeGate({
     }
   };
 
+  const fill = useOrderFill(
+    deskId,
+    state.step === "done" && state.result.ok ? state.result.orderId : undefined,
+  );
+
   const submit = async (preview: TicketPreview) => {
     setState({ step: "submitting", preview });
     try {
-      setState({ step: "done", result: await submitTicket(draft()) });
+      const result = await submitTicket(draft());
+      setState({ step: "done", result });
+      // The working-orders section (#3407 P1 slice 2) reads the broker; a sent order should show
+      // up there on the same screen, not on the next visit.
+      if (result.ok) await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
@@ -213,18 +289,21 @@ export function TradeGate({
       <p className="panel-sub">
         Paper account · market, limit or stop · the gate reviews before anything is sent
       </p>
+      <QuoteHeader symbol={quoteSym} />
       <div className="gate-fields">
-        <div className="field">
-          <label htmlFor={symId}>Symbol</label>
-          <input
-            id={symId}
-            value={fields.symbol}
-            placeholder="AAPL"
-            maxLength={8}
-            spellCheck={false}
-            onChange={(e) => edit("symbol")(e.target.value)}
-          />
-        </div>
+        <SymbolField
+          id={symId}
+          label="Symbol"
+          value={fields.symbol}
+          placeholder="AAPL"
+          maxLength={8}
+          onChange={edit("symbol")}
+          onCommit={(s) => {
+            edit("symbol")(s);
+            setQuoteSym(s.trim().toUpperCase());
+            onSymbolCommit?.(s);
+          }}
+        />
         <div className="field">
           <label htmlFor={qtyId}>Shares</label>
           <input
@@ -256,7 +335,7 @@ export function TradeGate({
           <select
             id={typeId}
             value={fields.orderType}
-            onChange={(e) => edit("orderType")(e.target.value as TicketOrderType)}
+            onChange={(e) => price("orderType")(e.target.value as TicketOrderType)}
           >
             {(Object.keys(ORDER_TYPE_LABELS) as TicketOrderType[]).map((type) => (
               <option key={type} value={type}>
@@ -278,15 +357,31 @@ export function TradeGate({
               inputMode="decimal"
               value={fields[priceField]}
               placeholder="40.00"
-              onChange={(e) => edit(priceField)(e.target.value)}
+              onChange={(e) => price(priceField)(e.target.value)}
             />
           </div>
         ) : null}
       </div>
+      <TimeInForceField
+        fallback={defaultTimeInForce(fields.orderType)}
+        value={fields.timeInForce}
+        onChange={edit("timeInForce")}
+      />
+      {seeded && seed ? (
+        <p className="gate-note gate-note-seed">
+          Limit seeded at the mid — {money(seed.mid)}, between the {money(seed.bid)} bid and the{" "}
+          {money(seed.ask)} ask. Edit it, or switch the order type to Market.
+        </p>
+      ) : null}
       <p className="gate-note">{orderTypeNote(fields.orderType)}</p>
 
+      {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —
+          this stock ticket gets its own compact "here's what you've done" strip, same relative
+          position (right before the status block) as the options ticket's own intel elements. */}
+      <RecentOrdersStrip symbol={quoteSym} deskId={deskId} />
+
       <div className="gate" aria-live="polite">
-        <GateStatus state={state} />
+        <GateStatus state={state} fill={fill} />
       </div>
 
       {state.step === "reviewed" && state.preview.ok ? (
@@ -294,6 +389,7 @@ export function TradeGate({
           type="button"
           className="btn btn-primary"
           disabled={busy}
+          onMouseDown={keepFocus}
           onClick={() => submit(state.preview)}
         >
           Submit order{state.preview.estNotional ? ` — ${money(state.preview.estNotional)}` : ""}
@@ -307,6 +403,7 @@ export function TradeGate({
           type="button"
           className="btn btn-primary"
           disabled={busy || fields.symbol.trim() === "" || fields.quantity === ""}
+          onMouseDown={keepFocus}
           onClick={review}
         >
           {state.step === "reviewing" ? "Reviewing…" : "Review order"}

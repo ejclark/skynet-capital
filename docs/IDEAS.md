@@ -18,6 +18,94 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- `scripts/shoot/straddle.mjs` has been broken on `origin/main` (confirmed pre-existing, not caused
+  by this change) since at least the #3407-era ticket-field rename: it fills `ticket.getByLabel(
+  "Underlying")`, but `OptionGate`'s own symbol field has been labeled "Symbol" since `SymbolField`
+  shipped — `trade.mjs`'s own equivalent scenes use `getByLabel("Symbol")`/`getByRole("region", ...)
+  .getByLabel("Underlying")` correctly for the multi-leg builder, never for this single-leg ticket.
+  30s timeout on every run; `npm run shoot:trade` covers the same straddle view fine, so this is
+  dead weight until fixed or retired. _(src: Claude · while: relocating `.exp-tabs` onto the chain
+  header, 2026-09-21 — verifying `npm run shoot:straddle` still ran)_
+
+- A fresh `git worktree` created for a background build agent starts with an empty `node_modules`
+  (root and `app/`), which breaks the `.husky/pre-commit` hook's relative `./node_modules/.bin/biome`
+  call and fails `npm run verify` on unrelated things (missing `app`'s `@testing-library/jest-dom`
+  types, a spec needing a `tsx` binary). Two independent overnight `/work-issues` builds hit this
+  same friction on 2026-09-20 (one symlinked `node_modules/.bin` to the main checkout as a local
+  workaround, the other ran a full `npm ci` in both directories) — worth a real fix, likely either
+  `docs/DELEGATION.md`'s worktree-setup step running `npm ci` automatically, or a documented
+  one-liner every build-dispatch prompt should include. _(src: Claude · while: 2026-09-20 overnight
+  `/work-issues` pass — #3183 and #1867 builds)_
+
+- The Atlanta Fed's `GDPTrackingModelDataAndForecasts.xlsx` `ContribArchives` sheet — the per-vintage
+  archive the whole housing-starts nowcast "ladder" finding was built from — has not extended past
+  2026-07-28 as of 2026-09-18, seven weeks stale, while the same workbook's live `Contributions`/
+  `ChangeInContributions` sheets keep updating daily. `housing-starts-10-20`'s own
+  `FT-housing-starts-10-20-1` scores by 2026-10-23 against this same archive; if it's still stale
+  then, that close-out will need the same live-sheet workaround this one used (6-category split
+  only, no separate Equipment/IP/Structures). Also worth checking whether the media path move
+  (`/-/media/documents/...` → `/-/media/Project/Atlanta/FRBA/Documents/...`, discovered this
+  session) broke an automated re-fetch somewhere upstream. _(src: Claude · while:
+  housing-starts-2026-09-17 close-out)_
+- `quote-header` and the option chain fetch the underlying price independently; consolidate once
+  the chain route is reshaped (Phase 0 tasks #11-13). _(src: Claude · while: quote-header review,
+  #2017)_
+- Decide the app/src ↔ root src/domain boundary rule: symbol-field.tsx is the first app import of
+  root code (the ticker directory, pure data); app/src/live/*.ts hand-duplicates API shapes
+  instead. Shared package, path alias, or keep duplicating? _(src: Claude · while: slice 8a symbol
+  autocomplete)_
+
+### Prior research/summaries needed re-verification against source 3+ times in one execution pass
+
+Building the meta-orchestrator plan's slices, the same pattern recurred: a documented or
+agent-summarized description of a mechanism (envelope-scan's branch scoping, `ship.sh platter`'s
+auto-merge behavior, `doc-rot-scan.mjs`'s advisory status) turned out subtly incomplete or wrong once
+the actual source was read — each time caught before shipping, none after. Not a new problem to fix,
+but a reinforced discipline worth naming: treat a research summary as a lead, not ground truth,
+especially before touching anything CI/merge-gating-shaped. Surfaced by `/governor`'s own new
+cycle-close retro line's sibling discipline in `/work-issues` and this plan's demonstrated pass.
+_(src: Claude · while: executing the meta-orchestrator plan's slices A–D, 2026-09-08)_
+
+### TOKEN-EFFICIENCY.md's "Follow-up slices" list goes stale the moment a slice ships
+
+Slice 6 (repetition miner → `/charter` pipeline) was already built (`scripts/
+config-audit-intent-clusters.mjs`) but the doc's slice list still read as open — nothing currently
+checks a shipped slice off against its closing PR. `scripts/plan-closure-scan.mjs` already does the
+analogous thing for issues (flags a merged branch referencing an issue with no `Closes #N`); a
+similar check for a doc's own numbered "follow-up slices" list could catch this class generally, not
+just for this one doc.
+_(src: Claude · while: executing the meta-orchestrator plan's slices A–D, 2026-09-08)_
+
+### Eric's own brainstorming mid-session is a journaling pattern worth documenting
+
+Riffing/thinking-out-loud mid-session (the GitHub-Projects/event-bus/developer-mode riff banked in
+#1977 is the first instance) produced real durable reasoning — feeds into plans, is worth
+`/journey`-ing once it produces an actual claim → challenge → resolution exchange. Worth exploring
+whether this deserves a standing habit (when to trigger `/journey` vs. a captured-idea issue) rather
+than leaving it to whichever session happens to notice.
+_(src: Eric · while: the meta-orchestrator audit session, 2026-09-08)_
+
+### Promote the "Raw idea, verbatim" issue-capture block to a real skill once it recurs
+
+The block invented for #1977 (documented in `docs/ISSUES.md`) digests a raw brain dump into
+something interrogatable — occurrence #1. Per the rule of three (`docs/COACHES.md`), don't build a
+dedicated capture skill/agent yet; promote it once this shape has recurred two more times.
+_(src: Eric · while: the meta-orchestrator audit session, 2026-09-08)_
+
+### Widen the repetition-miner slice to catch main-session delegation, not just recurring task shapes
+
+`docs/process/TOKEN-EFFICIENCY.md` follow-up slice 6 (repetition miner → `/charter` pipeline) mines
+`data/duel-log.jsonl` for recurring uncodified task shapes. It should also answer a narrower,
+unmeasured question: after a heavy-tier main session (Opus/Fable) sequences work into pieces, does
+it actually delegate the mechanical pieces to `Agent`/`Workflow` (sonnet-floor per `COMPUTE.md`),
+or do the mechanical follow-through inline at its own tier? `config-audit.mjs` only enforces model
+floors on subagent frontmatter — it has no signal on main-session behavior, and the duel-log's
+`fanout.agent` field is a task label, not the agent-type, so it can't answer this today either. Any
+miner built for slice 6 should carry a `fanout.agent`-type field (or equivalent) so this becomes
+checkable, not just suspected.
+_(src: Claude · while: answering whether Fable-sequenced work should hand off to cheaper models,
+2026-09-06)_
+
 ### Multi-leg execution — the live 401 gate, and 401 finally earnable
 
 #1671 shipped everything a spread and a zero-DTE order can be gated and taught on without a real
@@ -959,10 +1047,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## In progress
 
-- The options chain as the entry instrument (#1481) — slice 1 (the base straddle view) shipped
-  in #1512; slice 2 (scroll-out columns both ways, greeks passed through, tap on bid / ask presets
-  side + price) is the remainder and closes it.
-  _(src: Eric · while: reading the Fidelity options chain frames, 2026-09-05)_
+- The trading-experience parity study (`docs/research/trading-parity-2026-09.md`) — Robinhood ·
+  Fidelity · thinkorswim inventoried, Robinhood's engagement mechanics interrogated, the audit
+  cross-examined, four lo-fi shapes commissioned; the parity plan issue carries the slices.
+  _(src: Eric · while: reviewing the /trade screenshots, 2026-09-21)_
 
 ---
 
@@ -973,7 +1061,9 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   it, locked segments visible-but-disabled with their reason (#1520). Mockup:
   [Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723).
 - The straddle view of the options chain — strike centre, calls left, puts right, the
-  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512
+  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512; slice 2 (scroll-out
+  columns both ways, greeks passed through, tap on a cell presets strike + price) — #2017 Phase 1
+  (PR #2117). #3299 flagged the "In progress" entry as stale on 2026-09-18.
 - `/teardown` — a reference design → patterns, mechanics, a borrow / adapt / skip call sheet;
   `scripts/teardown/redact.mjs` paints over account lines first — PR #1499
 
@@ -1290,3 +1380,95 @@ panel's per-agent stop is the only steering today; the ledger could carry the ou
 and the routing label applied, so what Eric sees is also what he can send back ("re-run #1327 at
 xhigh", "un-board that item"). Rule of three already met — three hand-written status tables today.
 _(src: Eric · while: watching the #1343 research run in the workflow view, 2026-09-04)_
+
+### A self-check after a fully-failed research batch, instead of relying on the next unrelated push
+The event-research lane is deliberately event-driven with no cron ("cron jobs are generally
+terrible", Eric 2026-08-19) — every push is the tick, and the workflow's own header accepts the
+residual: "a completely quiet repo checks nothing until the next merge or a manual scan dispatch."
+That residual became real on 2026-09-08: `claude-code-action@v1`'s floating tag moved to a broken
+release mid-session (docs/LESSONS.md), every matrix leg in two consecutive batches failed, zero PRs
+merged, and the self-perpetuating chain went fully silent with nothing to re-trigger it short of an
+unrelated push. Pinning the action version (this PR) removes the actual trigger for THIS incident,
+but the structural gap survives it: any failure mode that kills 100% of a batch still leaves the
+lane dark until something else pushes. A cheap mitigation — e.g. the existing CI-failure repair
+lane already fires in real time on `conclusion == 'failure'`; worth checking whether it actually
+fired for this incident (I found no capsule issue for it, unconfirmed why) before designing
+anything new — is a smaller, separate question than the pin itself.
+_(src: Claude · while: root-causing the 2026-09-08 event-research backlog, #2221/pin-PR)_
+
+### Inline fill-timeline row may need a viewport-width cap at 390px, not table-scroll width
+The new inline accordion (`blotter-row.tsx`, #2321) replaced the right-rail drawer, but its
+`<td colSpan={10}>` inherits the blotter table's own horizontal-scroll width (`min-width: 520px`),
+so on a 390px frame the timeline content's flex-wrap kicks in at 520px rather than the visible
+viewport — the tail (a fill's timestamp) sits past the fold rather than wrapping onto a new line.
+Confirmed by screenshot, not yet judged live. This matches the interrogation's own yellow-loop
+item on #2321: judge it live through 2026-09-16 — if it reads as unreadable, the fix is either a
+`position: sticky; left: 0` pin on `.row-timeline td` or breaking the timeline out to a sibling
+block under the table on narrow widths (a bottom sheet per `docs/PATTERNS.md`), not a redesign.
+_(src: Claude · while: screenshotting #2321's inline-accordion slice, 2026-09-09)_
+
+### The desk's `/activity` and `/decisions` feeds share the Activity page's exact pagination gap
+`#3187`'s retro found `/api/wire` unreachable past page one because no client read `nextCursor`/
+`Link`. The same `per_page`/`before` contract (`src/server/pagination.ts`) also governs
+`/api/desk/:id/activity` and `/api/desk/:id/decisions` (`src/server/desk-json-routes.ts`), and
+`app/src/live/desk.ts`'s `fetchDeskActivity`/`fetchDeskDecisions` show the identical pattern:
+fetch once, never read the cursor, no "load more". A trader-desk page with any real fill history
+past 30 rows, or a bot with more than 30 logged decisions, hits the same wall. Not fixed in
+`#3187` (scope was the Activity page Eric actually hit) — `tests/arch/pagination-consumer.spec.ts`
+only asserts SOME client consumer exists app-wide, so it stays green while these two remain silent.
+_(src: Claude · while: retro on #3187 — "what else crosses this shared contract")_
+
+### `scripts/ship.sh`'s REST `api()` helper 415s in this session's proxy environment — missing `Content-Type`
+`ship open` on #3195 failed its REST PR-create call with `HTTP 415` from the agent proxy: `"Request
+bodies must declare Content-Type: application/json."` `scripts/ship.sh`'s `api()` (around line 53)
+sends `-d "$3"` via curl with `Authorization`/`Accept`/`X-GitHub-Api-Version`/`User-Agent` headers
+but never `Content-Type: application/json` — curl defaults to
+`application/x-www-form-urlencoded` for a bare `-d`, which `api.github.com` itself tolerates but
+this session's proxy apparently does not. Worked around this once with a direct PATCH carrying the
+header explicitly; the designed fallback (one `mcp__github__*` call) is what the skill already
+prescribes, so this isn't blocking — but every `ship open`/`ship merge` in a proxied Claude Code
+Remote session will hit the same 415 until `api()` gains `-H "Content-Type: application/json"`.
+Cheap, mechanical, one-line fix; not made here to keep #3195 scoped to the reported bug.
+_(src: Claude · while: shipping #3195, the /api/wire pagination-consumer fix)_
+
+### A generation-time content gate for assistant replies (`MessageDisplay` hook, prompt/agent type) may not exist yet
+Retro'd 2026-09-17: a wake-reply rule in `CLAUDE.md` ("a wake with nothing new to report earns
+silence") was already correct and already loaded, and got skipped anyway generating an unneeded
+reply to a routine PR-merge confirmation. The harness's hook-event enum lists `MessageDisplay`
+among session hooks, but only a `command`-type hook is documented for it — `prompt`/`agent` hook
+types are explicitly scoped to tool events (PreToolUse/PostToolUse/PermissionRequest) only. If
+`MessageDisplay` (or an equivalent) supported a `prompt`-type hook, it could run a cheap classifier
+("does this reply add information the user doesn't already have") before an assistant message is
+shown — the actual tier-1 mechanical fix for this whole class of judgment lapse, as opposed to the
+partial workaround applied this session (`agentPushNotifEnabled: false`, which silences the push
+channel but not the underlying behavior). Not buildable from inside this repo — worth raising as a
+capability request to whoever owns the harness, not something to chase here.
+_(src: Claude · while: retro on the 2026-09-17 wake-reply lapse)_
+
+### Audit every prose-only judgment rule in CLAUDE.md/orient.md for whether it has a gate behind it
+Same retro as above surfaced the general pattern: any rule phrased as "always do X before Y" with
+no mechanical enforcement is a rule a model can silently skip under momentum, and the skip is
+invisible until a human catches the output. Candidates worth auditing, ranked by consequence if
+skipped: the interrogate-before-comply step (Orient step 2 — a compounding directive built straight
+from the prompt with no steelman/objection pass), the report-at-altitude doctrine (silence-worthy
+wakes vs. genuine escalations), and the envelope "never edit envelope.json to make this pass" line
+(currently enforced by `scripts/envelope-scan.mjs`, so likely already fine — worth confirming rather
+than assuming). Not a build — a scoping pass to find which of these, if any, could get even a
+partial mechanical backstop the way the wake-reply rule just did.
+_(src: Claude · while: retro on the 2026-09-17 wake-reply lapse)_
+
+### ITM/OTM quadrant tint on the options chain — subtle, single-hue, deferred
+Eric, 2026-09-22, pushing back on an initial red/green suggestion this session declined: his
+"tint/gradient" ask meant a subtle, secondary overlay (shade/opacity), not a hard fill, and he'd
+resolve the colourblind objection by "changing color" rather than dropping the idea — his own
+colourblindness is mild and he's found colourblind-mode remaps in games often make things WORSE for
+him specifically. Converged direction, not yet built (he explicitly deferred it — "progressive
+improvements as we get there"): extend the chain's EXISTING ITM rail (`.straddle-call-itm`/
+`.straddle-put-itm` in `straddle.css`, an accent-coloured box-shadow bar on the strike cell) into a
+subtle accent-tinted background wash on the ITM side of each row — one hue (the app's own accent,
+never red/green) plus position (which side of Strike) carries the meaning, so it never asks a
+colourblind reader to discriminate two hues against each other, and it can't collide with the app's
+existing red/green P/L vocabulary elsewhere. Same "real step, not a tone shift" rule this session
+already applied to the strike-pick row highlight (PR #3510) — pick a wash opacity that reads as
+clearly present without being loud.
+_(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_

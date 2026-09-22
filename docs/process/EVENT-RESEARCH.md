@@ -9,9 +9,17 @@ this doc defines *what* each assessment does. The event router's event-research 
 (`.github/workflows/moneypenny-events.yml`, ticked by every merge to main — registered in docs/ROUTINES.md)
 executes it; a human session following this doc by hand is equally valid.
 
-**Adding an event is the trigger.** Ship it as an ordinary PR; the scanner's `never-assessed`
-rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml` opens an
-`[event-research] <id>` issue within seconds of the merge). No other ceremony.
+**Adding an event is the trigger — above the floor.** Ship it as an ordinary PR; the scanner's
+`never-assessed` rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml`
+opens an `[event-research] <id>` issue within seconds of the merge). No other ceremony.
+**Just-in-time below the floor** (#2946, 2026-09-11): a low/medium-impact event does not buy its
+initial session the moment it lands — it waits for its outermost cadence band (low: D-15, medium:
+D-31; `EARLY_STANCE_IMPACTS` in `scripts/event-scan.mjs`). Measured because the calendar
+self-feeds: 338 initial sessions in 7 days, ~89% for low/medium events whose corridors were still
+churning — the initial went stale before the event arrived. High/critical keep the immediate
+initial (the stance has positioning value weeks out); below the floor the deterministic screen's
+corridor rows carry the event for free until its window, and the initial fires once, when the
+corridor has settled.
 
 **One file per event, named by its id.** The calendar is `src/domain/market-events/<id>.json`
 (issue #1449) — there is no shared array and no ordering to keep; the loader sorts `(date, id)`
@@ -20,6 +28,33 @@ at read time. `node scripts/event-scan.mjs --validate` fails a file whose name i
 lane at the same anchor line — 22 of 47 PRs touching it were flagged conflicted at a median 13.4 h
 to merge (#1324), and three merge-side fixes could not reach GitHub's server-side merge. An
 adjacent event you *propose* is a proposer-owned file (see the adjacency sweep below, #1717).
+
+**Retiring a re-slug: `"supersededBy": "<survivor-id>"`** (issue #3101). Two lanes sweeping on the
+same day can each discover one release and file it under a different slug — four duplicate pairs and
+one triplet reached the calendar that way, each copy drawing its own 30-day pulse and buying its own
+close-out. When you prove your own event is a second name for another entry, add the field **to your
+own file** and stop there: the loader drops the entry, and the file, its ledger and its forward-test
+fragment stay on disk as the record. Mark, don't delete — the shape every calendar standard uses
+(RFC 5545 `STATUS:CANCELLED`) and the only one one-file-per-owner permits.
+
+- **The survivor is the id that keeps researching.** Prefer the `confirmed` copy; between two
+  `estimate`s, the one filed first. Your entry must be `estimate` — the survivor owns the
+  confirming flip — and the survivor must be a canonical same-date `<id>.json`, never a proposal
+  and never itself superseded.
+- **Score your forward tests first.** A superseded id never reaches close-out, so an unscored row in
+  `docs/research/forward-tests/<id>.md` would be scored by nobody. `--validate` refuses the field
+  until the fragment is clean; a test killed *by* this fix is a kill, and the row says which kind.
+- **You cannot retire someone else's file.** Found a duplicate you don't own? Note it in your ledger
+  and say so on the survivor's issue — the owner's next pulse writes the field. That is one more
+  pulse, not thirty.
+- **The old `(DUPLICATE of …)` title annotation is replaced by the field.** It retired nothing, and
+  it blinded the detector: annotating one pair dropped its title-overlap score from 0.857 to 0.400.
+- **`--validate` now warns on same-date title overlap ≥ 45%** (advisory, never red — ISM and S&P
+  Global publish near-identical titles on the same day and are genuinely different publishers). A
+  warning is a prompt to read two titles, not a verdict; `supersededBy` is the part that binds.
+- **Both of those run after the duplicate exists. `--on-date` runs before it does** (#3361) — see
+  "Read the date before you propose" in the adjacency sweep below. Retiring a re-slug costs a pulse
+  and a forward-test reckoning; not filing it costs one command.
 
 ## The three assessment modes (keyed to the scanner's `reason` field)
 
@@ -66,6 +101,18 @@ Stance section with the row as its receipt.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
 
+**Read the date before you propose: `node scripts/event-scan.mjs --on-date=YYYY-MM-DD`** (issue
+#3361). It prints every entry already on that date — canonical, standing proposal, derived print,
+and retired re-slugs marked `✗ … [RETIRED — superseded by <id>]` so you can see a slug that was
+already tried. If your discovery is one of them, file nothing. **Run this instead of searching the
+calendar for your own words for the release**: the failure this exists to prevent was one sweep
+searching for "U.S. IIP" and filing a third copy of BEA's *"International Transactions and
+Investment Position"* — not a substring, so the search found nothing that was plainly there. A date
+you already hold has no false-negative rate; a search string you invented does. Reading nine titles
+costs seconds. (Same-date only, deliberately: D±1 scores 14 near-title pairs over the committed
+calendar and none is a re-slug — nine are Treasury auctions running a different tenor each day. The
+falsifier is the first confirmed same-release re-slug whose entries carry different dates.)
+
 Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new file
 `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` **in the same PR**, always
 `status: "estimate"` (`EST:`/`NEWS:` source) — never `confirmed` without a primary source. That
@@ -97,6 +144,24 @@ tape**. Score any forward tests this event carried — its own fragment
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
 `forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event forever.
 
+**A close-out waits for its own predictions** (issue #2988, 2026-09-15). The scanner marks a passed
+event `event-passed-unscored` from D+1 and a close-out is never screened — but scoring a prediction
+before its stated window closes is falsification, so a session dispatched before the event's own
+forward tests are scoreable can only re-read state and leave. Measured on `gastech-2026-09-14`:
+**three dispatches in 38 minutes**, no new information available to any of them, because each
+research PR's own merge re-triggered the push-driven sweep and the `research/<event-id>` branch key
+only dedupes while that PR is still *open*. `scripts/event-scan.mjs` now reads the event's own
+fragment (`scripts/forward-test-pending.mjs` — pure text, no network, no `npm ci`) and **holds the
+close-out until the latest unscored score-by**, reporting `close-out-held-for-forward-test` with
+that date on the human report. The wait is **clamped to `closeOutWithinDays`**: a test scoring after
+the ceiling is a *structural* conflict, not a timing one — the event would age out of its close-out
+window entirely — so the scanner dispatches immediately and names the test in `--due`'s
+`forwardTestsBeyondWindow`, and the session records those rows unscoreable at close-out on purpose,
+exactly as before. An unreadable row, a missing fragment, or an already-scored row all behave
+exactly as they did: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
+outcome record permanently while a wrong dispatch only costs a session. Legacy `FT-N` rows in
+`forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace to match on.
+
 **Registering a forward test** (initial research, or a stance change mid-run) appends one row to
 `docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
 with `<n>` counting up inside that file only. Never a row in `forward-tests.md` itself (the index
@@ -117,7 +182,7 @@ protocol above, unchanged.
 `**Last assessed:**`:
 
 ```
-<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,"daysBand":"critical:8+","adjacentIds":[],"screenStreak":0} -->
+<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,"daysBand":"critical:8+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
 ```
 
 This is the probe's one source of truth for "what did we see last time" — embedded in the ledger
@@ -137,7 +202,7 @@ in that file's header):
 | Underlying price move | ≥ 5% since the last recorded price, per tracked symbol | past ordinary daily noise for this calendar's names; peers are NOT probed (v1 simplification — a full session's adjacency sweep still checks them by hand) |
 | VIX regime | ≥ 3 points absolute since the last recorded reading | this calendar's own ledgers already treat a few-point VIX move as regime-relevant |
 | Cadence band transition | any change in the matched `assessment-cadence.json` band | a tightening/loosening interval is itself information worth a real look |
-| New adjacent event | any calendar entry within 5 days of this event's date not seen on the last pulse | the same "corridor" framing the adjacency sweep already uses by hand |
+| New adjacent event | a **confirmed, high/critical-impact** calendar entry within 5 days of this event's date not seen in the last pulse's `adjacentStrongIds` | the same "corridor" framing the adjacency sweep already uses by hand — filtered (#2946): at 446 events a corridor averages ~30 adjacents but ~3 strong ones, so the unfiltered rule tripped on the calendar's own churn (5 screens in 13 days). Weaker adjacents are **named in the screen row** (recorded, not assessed), not paid for |
 | Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
 | No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
 | Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |

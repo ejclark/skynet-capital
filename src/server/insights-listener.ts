@@ -6,6 +6,7 @@ import {
   BOT_CREDENTIALS_SECRET_HEADER,
 } from "../autonomous/bot-credentials-wire.js";
 import { type ControlsPollReport, controlsPollReport } from "../autonomous/controls-poll-wire.js";
+import { type DecisionBatch, parseDecisionBatch } from "../autonomous/decision-wire.js";
 import {
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
@@ -13,6 +14,9 @@ import {
   parseInsightRecord,
 } from "../autonomous/insight-record.js";
 import type { BotCredentials } from "./bot-credentials-gate.js";
+
+/** The bots→app decision-replication bridge route (`decision-wire.ts`). */
+const DECISIONS_PATH = "/decisions";
 
 /**
  * One insight record, JSON-encoded, is a few hundred bytes at most. 16 KB is generous headroom
@@ -28,6 +32,20 @@ export interface InsightsListenerConfig {
    * deployment with no controls store).
    */
   readonly controls?: () => ControlsState;
+  /**
+   * The app's own per-persona high-water mark (`DecisionDb.maxAtAll()`), folded into every
+   * `GET /controls` response as an additive `decisionsCursor` field — the cursor
+   * `decision-replication-client.ts` reads on the `bots` side to know what it hasn't sent yet.
+   * Omit to leave the field off entirely (a deployment with no app-side decision store).
+   */
+  readonly decisionsCursor?: () => Record<string, number>;
+  /**
+   * `POST /decisions` — the bots→app decision-replication bridge (PR 4). Omit to 404 the route,
+   * same posture as every other optional bridge surface here.
+   */
+  readonly decisions?: {
+    readonly recordBatch: (batch: DecisionBatch) => void;
+  };
   /**
    * Fires on every AUTHENTICATED `GET /controls` poll, regardless of whether `controls` above is
    * configured — the poll itself, not its payload, is the ops-status panel's credential-free
@@ -118,6 +136,11 @@ async function handleInsightPost(
     return;
   }
 
+  if (path === DECISIONS_PATH) {
+    await handleDecisionsPost(req, res, config);
+    return;
+  }
+
   if (path !== "/insights") {
     respond(res, 404, { error: "not found" });
     return;
@@ -199,11 +222,70 @@ function handleControlsGet(
     return;
   }
   try {
-    respond(res, 200, config.controls() as unknown as Record<string, unknown>);
+    const state = config.controls() as unknown as Record<string, unknown>;
+    const decisionsCursor = config.decisionsCursor?.();
+    respond(res, 200, decisionsCursor ? { ...state, decisionsCursor } : state);
   } catch (error) {
     process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);
     respond(res, 502, { error: "read failed" });
   }
+}
+
+/** `POST /decisions` — the bots→app decision-replication bridge (`decision-wire.ts`). Same trust
+ *  boundary and body-size cap as `/insights`; a malformed/oversized/unauthenticated body can only
+ *  ever produce an HTTP error response. */
+async function handleDecisionsPost(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: InsightsListenerConfig,
+): Promise<void> {
+  if (req.method !== "POST") {
+    res.setHeader("allow", "POST");
+    respond(res, 405, { error: "method not allowed" });
+    return;
+  }
+  if (req.headers[INSIGHTS_BRIDGE_SECRET_HEADER] !== INSIGHTS_BRIDGE_SHARED_SECRET) {
+    respond(res, 401, { error: "unauthorized" });
+    return;
+  }
+  if (!config.decisions) {
+    respond(res, 404, { error: "decisions not configured" });
+    return;
+  }
+
+  const bodyResult = await readBoundedBody(req);
+  if (!bodyResult.ok) {
+    try {
+      respond(res, bodyResult.reason === "too-large" ? 413 : 400, { error: bodyResult.reason });
+    } catch {
+      /* socket already gone — nothing left to respond to */
+    }
+    return;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = bodyResult.body.length > 0 ? JSON.parse(bodyResult.body) : undefined;
+  } catch {
+    respond(res, 400, { error: "malformed json" });
+    return;
+  }
+
+  const batch = parseDecisionBatch(parsed);
+  if (!batch) {
+    respond(res, 400, { error: "invalid decision batch" });
+    return;
+  }
+
+  try {
+    config.decisions.recordBatch(batch);
+  } catch (error) {
+    process.emitWarning(`[insights-listener] decision batch write failed: ${String(error)}`);
+    respond(res, 502, { error: "write failed" });
+    return;
+  }
+
+  respond(res, 200, { ok: true, count: batch.records.length });
 }
 
 /** `GET /bot-credentials?id=<personaId>` — never logs, never echoes anything BUT the requested

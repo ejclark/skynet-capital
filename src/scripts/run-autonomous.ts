@@ -37,6 +37,9 @@ import {
   restoreBotsState,
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
+import type { DecisionDb } from "../autonomous/decision-db.js";
+import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
+import { resolveDecisionReplication } from "../autonomous/decision-replication-client.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -60,6 +63,7 @@ import {
   resolveRoster,
   seedBotsState,
   seedDailyLossBaseline,
+  seedDecisionDb,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
@@ -104,8 +108,15 @@ async function runLive(): Promise<void> {
     }
     return true;
   });
+  // `decisionDb` doesn't exist yet at this point in boot (it's seeded further down, once the
+  // enabled roster is known) — `decisionReplication` reads it fresh via a getter on every poll
+  // rather than closing over a value, so the background poll (started later) sees it once seeded.
+  let decisionDbRef: DecisionDb | undefined;
+  const decisionReplication = resolveDecisionReplication(process.env, () => decisionDbRef);
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
+    undefined,
+    (cursor) => void decisionReplication.replicate(cursor),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
@@ -215,7 +226,18 @@ async function runLive(): Promise<void> {
 
   const mode = traderMode(process.env);
   const audit = auditStore(process.env);
-  const onDecision = decisionSink(audit);
+  const decisionDb = seedDecisionDb(process.env);
+  decisionDbRef = decisionDb;
+  if (decisionDb && audit) {
+    // Best-effort, idempotent (see decision-db-migration.ts) — a missing/corrupt read must never
+    // fail boot, it just leaves this boot's backfill incomplete until the next one retries it.
+    migrateAuditToDecisionDb(audit, decisionDb)
+      .then(
+        (n) => n > 0 && console.log(`[decision-db] migrated ${n} historical cycle(s) from JSONL`),
+      )
+      .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
+  }
+  const onDecision = decisionSink(audit, decisionDb);
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();

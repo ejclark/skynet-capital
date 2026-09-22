@@ -49,11 +49,11 @@ const CACHE = join(process.cwd(), "node_modules", ".cache", "expiration-displace
 const UA = "skynet-capital research (ejclark83@gmail.com)";
 
 /** Large caps spanning sectors, all listed since 1990 so the sample is not survivorship-shaped. */
-const BASKET = ["AAPL", "MSFT", "JPM", "XOM", "JNJ", "PG", "KO", "WMT"];
+export const BASKET = ["AAPL", "MSFT", "JPM", "XOM", "JNJ", "PG", "KO", "WMT"];
 const BENCH = "SPY";
 const LOOKBACK = 20;
 
-async function bars(symbol) {
+export async function bars(symbol) {
   mkdirSync(CACHE, { recursive: true });
   const path = join(CACHE, `${symbol}.json`);
   if (existsSync(path)) return JSON.parse(readFileSync(path, "utf8"));
@@ -163,7 +163,7 @@ function relvolFor(rows, index) {
   return base ? rows[index].volume / base : null;
 }
 
-function build(series) {
+export function build(series) {
   const index = new Map(
     Object.entries(series).map(([sym, rows]) => [sym, new Map(rows.map((r, i) => [r.date, i]))]),
   );
@@ -194,10 +194,22 @@ function band(label, rows) {
   );
 }
 
+/**
+ * The `--date` argument, or undefined. Its own function because `indexOf` returns -1 when the flag
+ * is absent, and `argv[-1 + 1]` is then whatever flag came first — so a bare `--fresh` used to
+ * scope the run to a "session" literally named "--fresh" and print the not-an-expiration message
+ * instead of the study (found 2026-09-06 by the opex-2027-09-17 lane, in the exact invocation the
+ * cache-discipline rule tells you to run).
+ */
+function dateArg(argv) {
+  const at = argv.indexOf("--date");
+  return at === -1 ? undefined : argv[at + 1];
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("--fresh")) rmSync(CACHE, { recursive: true, force: true });
-  const only = argv[argv.indexOf("--date") + 1];
+  const only = dateArg(argv);
 
   const series = {};
   for (const sym of [...BASKET, BENCH]) series[sym] = await bars(sym);
@@ -275,7 +287,11 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error(`expiration-displacement failed: ${error.message}`);
-  process.exit(1);
-});
+// Guarded because this module is also IMPORTED for its calendar arithmetic and relvol basket
+// (fomc-expiration-proximity.mjs) — an unguarded call ran the whole study as an import side effect.
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop())) {
+  main().catch((error) => {
+    console.error(`expiration-displacement failed: ${error.message}`);
+    process.exit(1);
+  });
+}

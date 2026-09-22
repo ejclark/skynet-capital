@@ -1,0 +1,11 @@
+{
+  "id": "jgb-20y-auction-2026-09-15",
+  "kind": "rates",
+  "title": "Japan 20-Year JGB auction (¥700bn reopening) — the same date as the US 20Y reopening",
+  "date": "2026-09-15",
+  "status": "estimate",
+  "source": "EST: mof.go.jp English JGB announcement 'Announcement of 20-year JGBs to Be Issued in September 2026' (policy/jgbs/auction/calendar/announcement/auct20260908e.htm), fetched direct 2026-09-08 — auction date 2026-09-15, issue 2026-09-16, issue amount 'About 700 billion yen', a reopening of the July 2026 issue maturing 2046-06-20; corroborated by MOF's own September 2026 auction calendar (calendar/2609e.htm, same session), which lists 09-15 20-year alongside 09-10 Liquidity Enhancement (1-5y) and 09-29 40-year. Primary-sourced, but filed estimate on the same two counts as ecb-decision-2026-09-10: market-events-data.ts defines no confirmed source prefix for a non-US sovereign debt office, and this lane may not self-confirm an event it discovered in-sweep, checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-08) while testing whether this ledger's 'synchronized global long-end move' leg is narrative or calendar. It is calendar: Japan sells 20-year duration on 2026-09-15, THE SAME DATE as treasury-20y-bond-2026-09-15 and the day before the 2026-09-16 FOMC. That makes 09-15 a two-sovereign long-end supply date rather than a US one, in a week when the 10Y JGB is above 3% for the first time since 1996 and the 30Y Bund has been above 3.84% (highest since 2011). Tiered `low` deliberately and NO PRICE CHANNEL IS CLAIMED: no house playbook is rates-keyed, no tracked symbol carries yen-rates exposure, and a US 20Y reopening's own drivers dominate a JGB spillover — what the entry buys is that a 09-15 long-end move is not automatically attributable to the US auction, the same attribution service ecb-decision-2026-09-10 bought for 09-10. Estimate widens caution only; it licenses no date-keyed action. Two related dates from the same MOF calendar are recorded here rather than filed, because neither is adjacent to anything this calendar tracks: a Liquidity Enhancement auction (1-5y, front-end) on 09-10, and the 40-year JGB on 09-29."
+}

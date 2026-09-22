@@ -10,28 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as OutpostRouteImport } from './routes/outpost'
 import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TradeRouteImport } from './routes/trade'
-import { Route as CollectionsIndexRouteImport } from './routes/collections.index'
-import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as LearnTradingRouteImport } from './routes/learn_.trading'
 import { Route as UIdRouteImport } from './routes/u.$id'
 import { Route as UIdIndexRouteImport } from './routes/u.$id.index'
 import { Route as UIdDecisionsRouteImport } from './routes/u.$id.decisions'
 import { Route as UIdPlaybooksRouteImport } from './routes/u.$id.playbooks'
 import { Route as UIdPulseRouteImport } from './routes/u.$id.pulse'
+import { Route as UIdThesisRouteImport } from './routes/u.$id.thesis'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountsRoute = AccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ActivityRoute = ActivityRouteImport.update({
@@ -49,6 +54,11 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
@@ -57,11 +67,6 @@ const LearnRoute = LearnRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OutpostRoute = OutpostRouteImport.update({
-  id: '/outpost',
-  path: '/outpost',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlaybooksRoute = PlaybooksRouteImport.update({
@@ -82,16 +87,6 @@ const SettingsRoute = SettingsRouteImport.update({
 const TradeRoute = TradeRouteImport.update({
   id: '/trade',
   path: '/trade',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CollectionsIndexRoute = CollectionsIndexRouteImport.update({
-  id: '/collections/',
-  path: '/collections/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CollectionsIdRoute = CollectionsIdRouteImport.update({
-  id: '/collections/$id',
-  path: '/collections/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LearnTradingRoute = LearnTradingRouteImport.update({
@@ -124,151 +119,155 @@ const UIdPulseRoute = UIdPulseRouteImport.update({
   path: '/pulse',
   getParentRoute: () => UIdRoute,
 } as any)
+const UIdThesisRoute = UIdThesisRouteImport.update({
+  id: '/thesis',
+  path: '/thesis',
+  getParentRoute: () => UIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
-  '/outpost': typeof OutpostRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
-  '/collections/$id': typeof CollectionsIdRoute
   '/learn/trading': typeof LearnTradingRoute
   '/u/$id': typeof UIdRouteWithChildren
-  '/collections/': typeof CollectionsIndexRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
+  '/u/$id/thesis': typeof UIdThesisRoute
   '/u/$id/': typeof UIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
-  '/outpost': typeof OutpostRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
-  '/collections/$id': typeof CollectionsIdRoute
   '/learn/trading': typeof LearnTradingRoute
-  '/collections': typeof CollectionsIndexRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
+  '/u/$id/thesis': typeof UIdThesisRoute
   '/u/$id': typeof UIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
-  '/outpost': typeof OutpostRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
-  '/collections/$id': typeof CollectionsIdRoute
   '/learn_/trading': typeof LearnTradingRoute
   '/u/$id': typeof UIdRouteWithChildren
-  '/collections/': typeof CollectionsIndexRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/playbooks': typeof UIdPlaybooksRoute
   '/u/$id/pulse': typeof UIdPulseRoute
+  '/u/$id/thesis': typeof UIdThesisRoute
   '/u/$id/': typeof UIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accounts'
     | '/activity'
     | '/feedback'
     | '/join'
+    | '/leaderboard'
     | '/learn'
     | '/onboarding'
-    | '/outpost'
     | '/playbooks'
     | '/research'
     | '/settings'
     | '/trade'
-    | '/collections/$id'
     | '/learn/trading'
     | '/u/$id'
-    | '/collections/'
     | '/u/$id/decisions'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
+    | '/u/$id/thesis'
     | '/u/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accounts'
     | '/activity'
     | '/feedback'
     | '/join'
+    | '/leaderboard'
     | '/learn'
     | '/onboarding'
-    | '/outpost'
     | '/playbooks'
     | '/research'
     | '/settings'
     | '/trade'
-    | '/collections/$id'
     | '/learn/trading'
-    | '/collections'
     | '/u/$id/decisions'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
+    | '/u/$id/thesis'
     | '/u/$id'
   id:
     | '__root__'
     | '/'
+    | '/accounts'
     | '/activity'
     | '/feedback'
     | '/join'
+    | '/leaderboard'
     | '/learn'
     | '/onboarding'
-    | '/outpost'
     | '/playbooks'
     | '/research'
     | '/settings'
     | '/trade'
-    | '/collections/$id'
     | '/learn_/trading'
     | '/u/$id'
-    | '/collections/'
     | '/u/$id/decisions'
     | '/u/$id/playbooks'
     | '/u/$id/pulse'
+    | '/u/$id/thesis'
     | '/u/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountsRoute: typeof AccountsRoute
   ActivityRoute: typeof ActivityRoute
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   LearnRoute: typeof LearnRoute
   OnboardingRoute: typeof OnboardingRoute
-  OutpostRoute: typeof OutpostRoute
   PlaybooksRoute: typeof PlaybooksRoute
   ResearchRoute: typeof ResearchRoute
   SettingsRoute: typeof SettingsRoute
   TradeRoute: typeof TradeRoute
-  CollectionsIdRoute: typeof CollectionsIdRoute
   LearnTradingRoute: typeof LearnTradingRoute
   UIdRoute: typeof UIdRouteWithChildren
-  CollectionsIndexRoute: typeof CollectionsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -278,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounts': {
+      id: '/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/activity': {
@@ -301,6 +307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/learn': {
       id: '/learn'
       path: '/learn'
@@ -313,13 +326,6 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/outpost': {
-      id: '/outpost'
-      path: '/outpost'
-      fullPath: '/outpost'
-      preLoaderRoute: typeof OutpostRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/playbooks': {
@@ -348,20 +354,6 @@ declare module '@tanstack/react-router' {
       path: '/trade'
       fullPath: '/trade'
       preLoaderRoute: typeof TradeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/collections/': {
-      id: '/collections/'
-      path: '/collections'
-      fullPath: '/collections/'
-      preLoaderRoute: typeof CollectionsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/collections/$id': {
-      id: '/collections/$id'
-      path: '/collections/$id'
-      fullPath: '/collections/$id'
-      preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/learn_/trading': {
@@ -406,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UIdPulseRouteImport
       parentRoute: typeof UIdRoute
     }
+    '/u/$id/thesis': {
+      id: '/u/$id/thesis'
+      path: '/thesis'
+      fullPath: '/u/$id/thesis'
+      preLoaderRoute: typeof UIdThesisRouteImport
+      parentRoute: typeof UIdRoute
+    }
   }
 }
 
@@ -413,6 +412,7 @@ interface UIdRouteChildren {
   UIdDecisionsRoute: typeof UIdDecisionsRoute
   UIdPlaybooksRoute: typeof UIdPlaybooksRoute
   UIdPulseRoute: typeof UIdPulseRoute
+  UIdThesisRoute: typeof UIdThesisRoute
   UIdIndexRoute: typeof UIdIndexRoute
 }
 
@@ -420,6 +420,7 @@ const UIdRouteChildren: UIdRouteChildren = {
   UIdDecisionsRoute: UIdDecisionsRoute,
   UIdPlaybooksRoute: UIdPlaybooksRoute,
   UIdPulseRoute: UIdPulseRoute,
+  UIdThesisRoute: UIdThesisRoute,
   UIdIndexRoute: UIdIndexRoute,
 }
 
@@ -427,20 +428,19 @@ const UIdRouteWithChildren = UIdRoute._addFileChildren(UIdRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountsRoute: AccountsRoute,
   ActivityRoute: ActivityRoute,
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,
+  LeaderboardRoute: LeaderboardRoute,
   LearnRoute: LearnRoute,
   OnboardingRoute: OnboardingRoute,
-  OutpostRoute: OutpostRoute,
   PlaybooksRoute: PlaybooksRoute,
   ResearchRoute: ResearchRoute,
   SettingsRoute: SettingsRoute,
   TradeRoute: TradeRoute,
-  CollectionsIdRoute: CollectionsIdRoute,
   LearnTradingRoute: LearnTradingRoute,
   UIdRoute: UIdRouteWithChildren,
-  CollectionsIndexRoute: CollectionsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

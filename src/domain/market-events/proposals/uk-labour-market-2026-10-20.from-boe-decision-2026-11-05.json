@@ -1,0 +1,11 @@
+{
+  "id": "uk-labour-market-2026-10-20",
+  "kind": "macro-print",
+  "title": "UK labour market overview — earnings, unemployment and vacancies (ONS, 07:00 London / 02:00 ET), the MPC's last wage read before the November forecast round",
+  "date": "2026-10-20",
+  "status": "estimate",
+  "source": "EST: gov.uk/government/statistics/announcements/uk-labour-market-october-2026, fetched direct 2026-09-09 (HTTP 200) — the statistics-announcement page reads verbatim 'Release date: 20 October 2026 7:00am (confirmed)'. Primary-sourced (the publisher's own pre-announcement register, which is the UK's statutory release-date mechanism), filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics — the same gap uk-labour-market-2026-09-15 was filed under. Discovered in the never-assessed initial research of boe-decision-2026-11-05, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE boe-decision-2026-11-05 LANE, 2026-09-09. Why it is filed: it is the LAST labour-market print the MPC sees before it votes on 2026-11-05 — the November release lands 2026-11-10, five days after the decision — so this is the final read on the wage leg of the second-round-effects argument that has split the committee 6-3 since July. The prior bulletin (Apr-Jun, fetched by the boe-decision-2026-09-17 lane) had regular pay +3.5%, total pay +4.1%, unemployment 4.9% and vacancies 707,000 and falling; the July majority's stated premise is a loose labour market and slowing wage growth, and the three dissenters' is a risk of second-round effects. It lands one morning before UK CPI 2026-10-21, the same consecutive-mornings pattern the September round had. Tiered LOW and NO PRICE CHANNEL IS CLAIMED: symbols: [], no house playbook is rates- or sterling-keyed. Estimate widens caution only."
+}

@@ -22,6 +22,17 @@ export type TicketAction = "buy" | "sell";
 /** Defaults to "market" everywhere it's optional — every existing caller keeps today's behavior. */
 export type TicketOrderType = "market" | "limit" | "stop";
 
+/** Day or good-till-cancelled — the two the desk shows (parity study row 13: Fidelity's five
+ *  and thinkorswim's eight stay declined until a member asks for one by name). */
+export type TicketTimeInForce = "day" | "gtc";
+
+/** The standing default when the member didn't choose: a market order is for today; a held
+ *  (limit/stop) order outlives the session it was placed in — a stop that expired overnight
+ *  wouldn't be protecting anything. Mirrors `AlpacaTradingClient.placeOrder`'s own fallback. */
+export function defaultTimeInForce(orderType: TicketOrderType): TicketTimeInForce {
+  return orderType === "market" ? "day" : "gtc";
+}
+
 export interface TicketHolding {
   readonly symbol: string;
   readonly quantity: number;
@@ -39,6 +50,8 @@ export interface TicketRequest {
   /** Required (and validated) when `orderType` is "stop" — a trigger price only, never a
    *  guaranteed fill price: once through, the order executes with plain market-order behavior. */
   readonly stopPrice?: number;
+  /** Omit and `defaultTimeInForce` decides; the preview always says which it will send. */
+  readonly timeInForce?: TicketTimeInForce;
 }
 
 export interface TicketContext {
@@ -64,6 +77,8 @@ export interface TicketPreview {
   readonly orderType: TicketOrderType;
   readonly limitPrice?: number;
   readonly stopPrice?: number;
+  /** What the broker will be told — never hidden, even when the member didn't choose (#3407). */
+  readonly timeInForce: TicketTimeInForce;
   /** True when the order may be submitted — no refusals. */
   readonly ok: boolean;
   /** Last known price per share, from the held position's mark. Undefined when unheld. */
@@ -106,7 +121,7 @@ function validateQuantity(quantity: number, refusals: string[]): void {
     return;
   }
   if (!Number.isInteger(quantity)) {
-    refusals.push("Whole shares only — fractional quantities aren't supported on this desk.");
+    refusals.push("Whole shares only — fractional quantities aren't supported.");
   }
 }
 
@@ -117,7 +132,7 @@ function validateSell(
   warnings: string[],
 ): void {
   if (!held || held.quantity <= 0) {
-    refusals.push("You don't hold this symbol — this desk doesn't open short positions.");
+    refusals.push("You don't hold this symbol — this account doesn't open short positions.");
     return;
   }
   if (quantity > held.quantity) {
@@ -223,7 +238,7 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
     refusals.push("You can only trade your own account.");
   }
   if (!context.tradingEnabled) {
-    refusals.push("Trading from the desk is switched off for this deployment.");
+    refusals.push("Trading is switched off for this deployment.");
   }
   if (!SYMBOL_PATTERN.test(symbol)) {
     refusals.push("That doesn't look like a stock symbol.");
@@ -265,6 +280,7 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
     quantity,
     orderType,
     ...pricedFields(orderType, request),
+    timeInForce: request.timeInForce ?? defaultTimeInForce(orderType),
     ok: refusals.length === 0,
     ...(estPrice !== undefined ? { estPrice } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),
@@ -296,4 +312,4 @@ export function previewClose(
  * that quietly does something else would not be.
  */
 export const ROLL_UNAVAILABLE_REASON =
-  "Rolling closes one options contract and opens another as a single atomic order. That combined order isn't built yet — close the position here, then open the new strike/expiry from the Trade ticket.";
+  "Rolling closes one options contract and opens another as a single atomic order. Roll from the Trade page's Option positions card — this blotter only closes.";

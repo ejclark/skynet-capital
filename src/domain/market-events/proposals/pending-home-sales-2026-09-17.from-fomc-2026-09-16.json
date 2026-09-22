@@ -1,0 +1,11 @@
+{
+  "id": "pending-home-sales-2026-09-17",
+  "kind": "macro-print",
+  "title": "Pending Home Sales Index (NAR, August 2026 data) — the first housing read after the decision, 10:00 a.m. ET on FOMC+1",
+  "date": "2026-09-17",
+  "status": "estimate",
+  "source": "EST: nar.realtor/press-releases/nar-statistical-news-release-schedule, fetched direct 2026-09-08 (HTTP 200), whose 2026 table reads \"Thursday, September 17 | August Pending Home Sales Index\" under the page's standing note \"All releases at 10 a.m. Eastern Time\" — the same publisher calendar and the same fetch that supplied the September Existing-Home Sales row proposed alongside this one. NAR is the producer of this series rather than an aggregator, which is the precedent the confirmed existing-home-sales-2026-11-12 entry cites for treating this calendar as primary. Filed `estimate` rather than `confirmed` on the single count that is not date doubt: this lane may not self-confirm an event it discovered in-sweep. Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the fomc-2026-09-16 pulse-check adjacency sweep (2026-09-08, D-8), in the same NAR fetch as existing-home-sales-2026-09-10.from-fomc-2026-09-16.json. The gap it fills: this calendar carries only the December edition of the Pending Home Sales Index (pending-home-sales-2026-12-17), so the August edition had no row despite landing one day after the September FOMC decision. Why the date is worth a row rather than a line in a ledger: PHSI is a contract-signings series, so the August data it reports predates the decision entirely — it cannot contain any reaction to it, which makes 09-17 a session where a housing print and a fresh post-statement rates tape are easy to conflate and shouldn't be. It also shares 09-17 with three already-tracked items (treasury-10y-tips-2026-09-17, treasury-coupon-announcement-2026-09-17, unsc-iran-panel-mandate-vote-2026-09-17) and sits one session before triple-witching (opex-2026-09-18). Impact LOW and symbols empty on the same inert-tape measurement the existing-home-sales-2026-11-12 ledger ran across the housing-print class; nothing here licenses an entry, and estimates widen caution rather than triggering action."
+}

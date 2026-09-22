@@ -1,0 +1,11 @@
+{
+  "id": "uk-cpi-2026-10-21",
+  "kind": "macro-print",
+  "title": "UK CPI — September 2026 consumer price inflation (ONS, 07:00 London / 02:00 ET), the last inflation print before the November MPC vote",
+  "date": "2026-10-21",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/consumerpriceinflationukseptember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Release date: 21 October 2026 7:00am' and states 'This release is not yet published'. Primary-sourced (the publisher's own release calendar), filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics — the same gap uk-cpi-2026-09-16 was filed under. Discovered in the never-assessed initial research of boe-decision-2026-11-05, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE boe-decision-2026-11-05 LANE, 2026-09-09. Why it is filed: it is the LAST CPI print the MPC sees before the 2026-11-05 decision and the November Monetary Policy Report — the October-data bulletin publishes 2026-11-18, thirteen days after the vote. It is also the print that should sit on or near the peak of the Bank's own July modal path, which had CPI peaking at 3.2% in Q4 2026 before falling to 1.7% at the two-year horizon; September data is the first month of that quarter. The composition matters more than the headline: July's 2.9% headline was almost entirely energy (housing and household services 4.1% on a 14.7% gas rise after an Ofgem cap change) against core flat at 2.6% and services falling 3.6% to 3.4%, and it is the SERVICES and core lines, not the headline, that the July majority cited as evidence of underlying disinflation. It lands one morning after the UK labour market release 2026-10-20 and seven days before the Autumn Budget. Tiered LOW and NO PRICE CHANNEL IS CLAIMED: symbols: [], no house playbook is rates- or sterling-keyed. Estimate widens caution only."
+}

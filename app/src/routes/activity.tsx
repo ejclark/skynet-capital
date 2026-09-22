@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { FormEvent, ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { fetchCouncil, submitThesis } from "../live/council";
 import {
   fetchWire,
   matchesWire,
@@ -14,6 +15,7 @@ import { PageFrame } from "../shell/frame";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { Toggle } from "../shell/toggle";
+import { TradeRow } from "../shell/wire-trade-row";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse
@@ -51,12 +53,13 @@ const KIND_CHIPS = [
   ["is:human", "Humans"],
 ] as const;
 
-type ActivitySection = "feed" | "pnl" | "pulse";
+type ActivitySection = "feed" | "pnl" | "pulse" | "council";
 
 const SECTIONS: readonly PageSection<ActivitySection>[] = [
   { id: "feed", label: "Trading activity" },
   { id: "pnl", label: "Booked P&L" },
   { id: "pulse", label: "Feedback pulse" },
+  { id: "council", label: "The Council" },
 ];
 
 /** The rail: the page's sections first, then — only while the feed is the current one — its filter
@@ -130,29 +133,6 @@ function WireFilterBar({
         />
       </div>
     </div>
-  );
-}
-
-function TradeRow({ trade }: { readonly trade: WireTrade }): ReactElement {
-  return (
-    <li className="wire-trade">
-      <span className={`wire-side tone-${trade.side === "buy" ? "pos" : "neg"}`}>
-        {trade.side.toUpperCase()}
-      </span>
-      <span className="wire-sym">{trade.symbol}</span>
-      <span className="num wire-qty">{trade.quantity}</span>
-      <span className="num wire-price">{trade.price}</span>
-      <Link to="/u/$id" params={{ id: trade.whoId }} className="wire-who">
-        {trade.who}
-      </Link>
-      <span className={`chip chip-${trade.kind}`}>{trade.kind === "bot" ? "BOT" : "HUMAN"}</span>
-      {trade.reconstructed ? (
-        <span className="wire-recon" title="Recovered after the fact, not watched live">
-          reconstructed
-        </span>
-      ) : null}
-      <span className="wire-when num">{trade.when}</span>
-    </li>
   );
 }
 
@@ -250,16 +230,109 @@ function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
   );
 }
 
+const COUNCIL_MAX_CHARS = 280;
+
+/** THE COUNCIL (issue #2224 shape 1) — one line per member per week, visible inside the gate
+ *  (`docs/THE-GAME.md:117`: "the argument is the product"). Resubmitting replaces this week's own
+ *  line, so the composer prefills from `mine` rather than always starting blank — the affordance
+ *  is "edit your line," never "post again." */
+function CouncilSection(): ReactElement {
+  const queryClient = useQueryClient();
+  const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
+  const [draft, setDraft] = useState<string | undefined>();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | undefined>();
+
+  if (council.isPending) return <p className="note">Tuning in…</p>;
+  if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
+  const data = council.data;
+  if (!data.enabled) {
+    return <p className="note">The Council isn't switched on yet in this deployment.</p>;
+  }
+
+  const text = draft ?? data.mine?.text ?? "";
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setNote(undefined);
+    try {
+      const result = await submitThesis(text);
+      if (result.ok) {
+        setDraft(undefined);
+        setNote(undefined);
+        await queryClient.invalidateQueries({ queryKey: ["council"] });
+      } else {
+        setNote(result.error ?? "Couldn't save that.");
+      }
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="wire-panel">
+      <h2 className="wire-h">The Council</h2>
+      <p className="note">
+        One line, once a week: your thesis and your bot's stance. Visible to the whole league — the
+        argument is the product.
+      </p>
+      <form className="council-compose" onSubmit={(e) => void submit(e)}>
+        <input
+          type="text"
+          value={text}
+          maxLength={COUNCIL_MAX_CHARS}
+          placeholder="I think NVDA runs, because…"
+          onChange={(e) => setDraft(e.target.value)}
+          disabled={busy}
+        />
+        <button
+          type="submit"
+          className="btn btn-primary council-submit"
+          disabled={busy || text.trim().length === 0}
+        >
+          {busy ? "Saving…" : data.mine ? "Update" : "Commit"}
+        </button>
+      </form>
+      <p className="council-count num">{COUNCIL_MAX_CHARS - text.length} left</p>
+      {note ? <p className="set-err">{note}</p> : null}
+      {data.entries.length === 0 ? (
+        <p className="note">Nobody's spoken yet this week — be the first.</p>
+      ) : (
+        <ul className="wire-fdbk council-entries">
+          {data.entries.map((entry) => (
+            <li key={entry.id}>
+              <span>{entry.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** The feed section — its filter bar travels with it, because the filter is the feed's control and
- *  not the page's (a bar for a list the section switch has paged away from is noise). */
+ *  not the page's (a bar for a list the section switch has paged away from is noise).
+ *
+ *  `/api/wire` pages at 30 rows (`src/server/pagination.ts`'s default); on a league with any real
+ *  trading volume that's today's trades alone, so "load older trades" is not a nicety — without it
+ *  every trade before the current page is permanently unreachable from this screen even though the
+ *  activity store still has it (#3187). */
 function FeedSection({
   wire,
   query,
   onChange,
+  onLoadMore,
+  loadingMore,
+  loadMoreError,
 }: {
   readonly wire: WireFeed;
   readonly query: string;
   readonly onChange: (next: string) => void;
+  readonly onLoadMore?: () => void;
+  readonly loadingMore: boolean;
+  readonly loadMoreError: boolean;
 }): ReactElement {
   const filter = parseWireQuery(query);
   const shown = wire.trades.filter((trade) => matchesWire(trade, filter));
@@ -280,6 +353,17 @@ function FeedSection({
           ))}
         </ul>
       )}
+      {onLoadMore ? (
+        <button
+          type="button"
+          className="btn wire-load-more"
+          onClick={onLoadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? "Loading…" : "Load older trades"}
+        </button>
+      ) : null}
+      {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
     </section>
   );
 }
@@ -287,7 +371,35 @@ function FeedSection({
 function WirePage(): ReactElement {
   const { q, section: asked } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const wire = useQuery({ queryKey: ["wire"], queryFn: fetchWire, refetchOnWindowFocus: true });
+  const wire = useQuery({
+    queryKey: ["wire"],
+    queryFn: () => fetchWire(),
+    refetchOnWindowFocus: true,
+  });
+  // Older pages walked back via "load older trades" — kept separate from react-query's own cache
+  // so a window-focus refetch of the first page doesn't have to know how to merge into it; a fresh
+  // first page simply resets the walk-back (`useEffect` below).
+  const [olderTrades, setOlderTrades] = useState<readonly WireTrade[]>([]);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  useEffect(() => {
+    setOlderTrades([]);
+    setCursor(wire.data?.nextCursor);
+    setLoadMoreError(false);
+  }, [wire.data]);
+  const loadMore = () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    fetchWire(cursor)
+      .then((page) => {
+        setOlderTrades((prev) => [...prev, ...page.trades]);
+        setCursor(page.nextCursor);
+      })
+      .catch(() => setLoadMoreError(true))
+      .finally(() => setLoadingMore(false));
+  };
   // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
   const [query, setQuery] = useState(q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -323,13 +435,23 @@ function WirePage(): ReactElement {
     );
 
   const feed = wire.data;
+  const feedWithOlder: WireFeed = { ...feed, trades: [...feed.trades, ...olderTrades] };
   const render = (id: ActivitySection): ReactElement =>
     id === "feed" ? (
-      <FeedSection wire={feed} query={query} onChange={setFilter} />
+      <FeedSection
+        wire={feedWithOlder}
+        query={query}
+        onChange={setFilter}
+        onLoadMore={cursor ? loadMore : undefined}
+        loadingMore={loadingMore}
+        loadMoreError={loadMoreError}
+      />
     ) : id === "pnl" ? (
       <PnlSection wire={feed} />
-    ) : (
+    ) : id === "pulse" ? (
       <PulseSection wire={feed} />
+    ) : (
+      <CouncilSection />
     );
 
   return (

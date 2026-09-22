@@ -197,7 +197,7 @@ const cards = [
     name: "Blotter",
     body: `
     <div class="blotter-card"><div class="blotter-scroll"><table class="blotter">
-      <thead><tr><th class="fold-col"></th><th>Symbol</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Value</th><th class="num">Day P/L</th><th class="num">Total P/L</th></tr></thead>
+      <thead><tr><th class="fold-col"></th><th>Symbol</th><th class="num">Qty</th><th class="num">Mark</th><th class="num">Value</th><th class="num">Day P/L</th><th class="num">Total P/L</th></tr></thead>
       <tbody>
         <tr><td class="fold-col"></td><td><button type="button" class="sym sym-link">META</button><span class="sym-sub">common shares</span></td><td class="num">60</td><td class="num">$622.00</td><td class="num">$37,320</td><td class="num tone-pos">+$420</td><td class="num tone-pos">+$13,194</td></tr>
         <tr><td class="fold-col"></td><td><button type="button" class="sym sym-link">NVDA</button><span class="sym-sub">common shares</span></td><td class="num">80</td><td class="num">$174.50</td><td class="num">$13,960</td><td class="num tone-neg">-$88</td><td class="num tone-pos">+$4,504</td></tr>

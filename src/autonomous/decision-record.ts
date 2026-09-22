@@ -1,4 +1,5 @@
-import type { OrderIntent, OrderResult } from "../domain/types.js";
+import type { MarketContext, OrderIntent, OrderResult } from "../domain/types.js";
+import type { GuardRefusal } from "../engine/guards.js";
 
 /**
  * The autonomy audit trail (Phase 0 of `docs/AUTONOMY-PLAN.md`). Every autonomous decision cycle —
@@ -33,6 +34,22 @@ export interface DecisionRecord {
   readonly outcomes: readonly IntentOutcome[];
   /** Set when the cycle was blocked by the kill switch / a circuit breaker — nothing was decided. */
   readonly halted?: string;
+  /**
+   * The market state the persona actually reasoned over this cycle — the critical-path field
+   * every signal-decay/MAE-MFE/regime-conditioning analytics measure blocks on
+   * (`docs/plans/where-are-we-documenting-*.md`). Every cycle recorded without it is a
+   * permanently unrecoverable observation, so this is captured even on a halted or quiet cycle.
+   * Optional because records written before this field existed have none — that MUST render as
+   * "not captured", never as an empty/synthetic context.
+   */
+  readonly context?: MarketContext;
+  /**
+   * Every raw intent the risk guards refused outright this cycle, with which rule fired —
+   * `applyGuardsWithVerdicts`'s additive half. `rawIntents.length - guardedIntents.length` always
+   * equals this array's length when both are present. Optional for the same backward-compat
+   * reason as `context`: a record written before this field existed has none.
+   */
+  readonly refusals?: readonly GuardRefusal[];
 }
 
 /** A place to persist decision records. Implementations must never throw on the write path. */

@@ -3,9 +3,12 @@ import type { ReactElement } from "react";
 import type { CollectionsIndex, ShelfMember } from "../live/collections";
 
 /**
- * The discovery surface's shared pieces (#738 phase 6a) — member rows and the shelf rail, used by
- * both the index and the per-shelf route. A persona's live desk is a router Link (the whole desk
- * arrives in-shell now); a persona nobody runs says so explicitly — never a link to nowhere.
+ * The discovery surface's shared pieces (originally #738 phase 6a; ported into Research's
+ * "Collections" section per #3333 slice 9) — member rows and the shelf rail. A persona's live desk
+ * is a router Link (the whole desk arrives in-shell now); a persona nobody runs says so explicitly
+ * — never a link to nowhere. `ShelfRail` selects via callback rather than a route Link because
+ * Collections is now a section of `/research`, not its own route — `onSelect` writes the same
+ * `?shelf=` search param the section switch's own URL-statefulness contract expects.
  * @category desk
  */
 
@@ -19,14 +22,14 @@ export function MemberRow({ member }: { readonly member: ShelfMember }): ReactEl
         </span>
         {member.desk ? (
           <Link to="/u/$id" params={{ id: member.desk.id }} className="cx-go">
-            {member.desk.name}'s desk →
+            {member.desk.name}'s account →
           </Link>
         ) : member.href ? (
           <a className="cx-go" href={member.href}>
             the study behind it →
           </a>
         ) : member.kind === "persona" ? (
-          <span className="cx-absent">no desk is running this today</span>
+          <span className="cx-absent">no account is running this today</span>
         ) : null}
       </div>
       <p className="cx-thesis">{member.thesis}</p>
@@ -40,31 +43,34 @@ export function MemberRow({ member }: { readonly member: ShelfMember }): ReactEl
 export function ShelfRail({
   index,
   currentId,
+  onSelect,
 }: {
   readonly index: CollectionsIndex;
   readonly currentId?: string;
+  readonly onSelect: (id: string | undefined) => void;
 }): ReactElement {
   return (
     <>
       <p className="rail-label">Collections</p>
-      {currentId === undefined ? (
-        <span className="rail-current" aria-current="page">
-          All shelves
-        </span>
-      ) : (
-        <Link to="/collections">All shelves</Link>
-      )}
-      {index.collections.map((shelf) =>
-        shelf.id === currentId ? (
-          <span key={shelf.id} className="rail-current" aria-current="page">
-            {shelf.name}
-          </span>
-        ) : (
-          <Link key={shelf.id} to="/collections/$id" params={{ id: shelf.id }}>
-            {shelf.name}
-          </Link>
-        ),
-      )}
+      <button
+        type="button"
+        className="railctl"
+        aria-pressed={currentId === undefined}
+        onClick={() => onSelect(undefined)}
+      >
+        All shelves
+      </button>
+      {index.collections.map((shelf) => (
+        <button
+          key={shelf.id}
+          type="button"
+          className="railctl"
+          aria-pressed={shelf.id === currentId}
+          onClick={() => onSelect(shelf.id)}
+        >
+          {shelf.name}
+        </button>
+      ))}
     </>
   );
 }

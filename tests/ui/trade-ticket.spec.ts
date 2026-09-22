@@ -69,6 +69,11 @@ describe("buildDraft", () => {
     });
   });
 
+  it("carries the member's own time in force, and nothing when they left the default (#3407)", () => {
+    expect(buildDraft("tony", fields()).timeInForce).toBeUndefined();
+    expect(buildDraft("tony", fields({ timeInForce: "gtc" })).timeInForce).toBe("gtc");
+  });
+
   it("carries the stop price on a stop order", () => {
     const draft = buildDraft("tony", fields({ orderType: "stop", stopPrice: "40" }));
     expect(draft.orderType).toBe("stop");

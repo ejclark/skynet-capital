@@ -2,7 +2,7 @@ import { anthropicApiError } from "../http/anthropic-reply.js";
 import type { fetchJson, JsonResponse } from "../http/fetch-json.js";
 import type { CompanionHandlers } from "./companion-chat.js";
 import { MAX_TOKENS_PER_REPLY, MAX_TOOL_ROUNDS } from "./companion-limits.js";
-import { COMPANION_MODEL } from "./companion-model.js";
+import type { CompanionModelId } from "./companion-model.js";
 import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
   COMPANION_TOOL_DEFS,
@@ -85,6 +85,7 @@ function toolsFor(participantId: string | undefined): readonly unknown[] {
 export async function runToolRounds(
   doFetch: DoFetch,
   headers: Headers,
+  model: CompanionModelId,
   volatile: string,
   initial: readonly unknown[],
   deskDeps: CompanionDeskDeps,
@@ -103,7 +104,16 @@ export async function runToolRounds(
       }
       return { kind: "continue", working, calls: round };
     }
-    const step = await oneRound(doFetch, headers, volatile, working, deps, participantId, handlers);
+    const step = await oneRound(
+      doFetch,
+      headers,
+      model,
+      volatile,
+      working,
+      deps,
+      participantId,
+      handlers,
+    );
     if (step.kind !== "next") return step;
     working = step.working;
   }
@@ -119,6 +129,7 @@ type RoundStep =
 async function oneRound(
   doFetch: DoFetch,
   headers: Headers,
+  model: CompanionModelId,
   volatile: string,
   working: readonly unknown[],
   deps: CompanionDeskDeps,
@@ -128,7 +139,7 @@ async function oneRound(
   let res: JsonResponse;
   try {
     res = await doFetch("POST", ANTHROPIC_URL, headers, {
-      model: COMPANION_MODEL,
+      model,
       max_tokens: MAX_TOKENS_PER_REPLY,
       system: systemBlocks(volatile),
       messages: working,

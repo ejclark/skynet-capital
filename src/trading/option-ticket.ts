@@ -1,10 +1,14 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
+import { singleLegOdds } from "../options/single-leg-odds.js";
+import { datedCurves, payoffCurve } from "./draft-order-preview.js";
 import {
+  DEFAULT_OPTION_TIF,
   OPTION_PLAY_LEVEL,
   type OptionPlayCode,
   type OptionTicketContext,
   type OptionTicketPreview,
   type OptionTicketRequest,
+  type OptionTimeInForce,
   payoff,
   SHARES_PER_CONTRACT,
   validateAffordability,
@@ -23,6 +27,7 @@ export type {
   OptionTicketContext,
   OptionTicketPreview,
   OptionTicketRequest,
+  OptionTimeInForce,
 } from "./option-economics.js";
 
 /**
@@ -66,7 +71,7 @@ function validateShape(request: OptionTicketRequest, refusals: string[]): void {
 function gateNotes(context: OptionTicketContext, refusals: string[], warnings: string[]): void {
   if (!context.isSelf) refusals.push("You can only trade your own account.");
   if (!context.tradingEnabled) {
-    refusals.push("Trading from the desk is switched off for this deployment.");
+    refusals.push("Trading is switched off for this deployment.");
   }
   if (context.marketOpen === false) {
     warnings.push("The market is closed — this order queues until the next session opens.");
@@ -106,7 +111,7 @@ function validatePlay(
   refusals: string[],
 ): void {
   if (play?.kind !== "option" || !play.optionType) {
-    refusals.push("Pick one of the option plays the desk offers.");
+    refusals.push("Pick one of the available option plays.");
     return;
   }
   const levelNote = levelRefusal(request.code, context);
@@ -168,6 +173,7 @@ export function previewOptionOrder(
     expiration: request.expiration,
     orderType: request.orderType,
     ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+    timeInForce: request.timeInForce ?? DEFAULT_OPTION_TIF,
     ok: refusals.length === 0,
     ...(estPremium !== undefined ? { estPremium } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),
@@ -176,9 +182,108 @@ export function previewOptionOrder(
     ...(refusals.length === 0
       ? payoff(request.code, request.strike, estPremium, context.underlyingPrice, scale)
       : {}),
+    ...(context.greeks ? { greeks: context.greeks } : {}),
+    ...(context.impliedVol !== undefined ? { impliedVol: context.impliedVol } : {}),
+    ...decisionInputs(refusals.length === 0, request, context, estPremium, {
+      underlying,
+      optionType,
+      side,
+    }),
     refusals,
     warnings,
   };
+}
+
+/** The order screen's decision inputs — odds (P2 slice 2) and the payoff curve — only on an
+ *  order that passed every check; a refused order shows its refusals, never an analysis of a
+ *  trade that will not be sent. */
+function decisionInputs(
+  ok: boolean,
+  request: OptionTicketRequest,
+  context: OptionTicketContext,
+  premium: number | undefined,
+  leg: { underlying: string; optionType: "call" | "put"; side: "buy" | "sell" },
+): Pick<OptionTicketPreview, "chanceOfProfit" | "expectedValue" | "payoff"> {
+  if (!ok) return {};
+  const scale = request.contracts * SHARES_PER_CONTRACT;
+  return {
+    ...oddsFor(request, context, premium, scale),
+    ...curveFor(request, leg.underlying, leg.optionType, leg.side, premium, context),
+  };
+}
+
+/** The at-expiration curve for the one leg (#3407; the payoff diagram the multi-leg review
+ *  already draws) — a covered call carries its 100 shares per contract at the spot, and gets no
+ *  curve at all without one, exactly as `payoff()` gives it no max loss then. */
+function curveFor(
+  request: OptionTicketRequest,
+  underlying: string,
+  optionType: "call" | "put",
+  side: "buy" | "sell",
+  premium: number | undefined,
+  context: OptionTicketContext,
+): Pick<OptionTicketPreview, "payoff"> {
+  if (premium === undefined) return {};
+  const spot = context.underlyingPrice;
+  const scale = request.contracts * SHARES_PER_CONTRACT;
+  if (request.code === "202" && spot === undefined) return {};
+  const legs = [
+    {
+      id: "leg",
+      underlying,
+      optionType,
+      strike: request.strike,
+      expiration: request.expiration,
+      action: side,
+      contracts: request.contracts,
+      limitPrice: premium,
+    },
+  ];
+  const stock =
+    request.code === "202" && spot !== undefined ? { shares: scale, basis: spot } : undefined;
+  const payoff = payoffCurve(legs, stock);
+  if (!payoff) return {};
+  // The pre-expiration lines (#3407 row 9) need the IV and the clock the odds already need;
+  // without them the chart draws expiration alone, never a guessed line.
+  const dated =
+    context.impliedVol !== undefined && context.daysToExpiry !== undefined
+      ? datedCurves(
+          legs,
+          payoff.points.map((p) => p.price),
+          { volatility: context.impliedVol, daysToExpiry: context.daysToExpiry },
+          stock,
+        )
+      : undefined;
+  return { payoff: dated ? { ...payoff, dated } : payoff };
+}
+
+/** Chance of profit and expected value for the order (#3407 P2 slice 2) — only when every input
+ *  is a real number; a missing IV or spot means no odds, never a guessed one. */
+function oddsFor(
+  request: OptionTicketRequest,
+  context: OptionTicketContext,
+  premium: number | undefined,
+  scale: number,
+): Pick<OptionTicketPreview, "chanceOfProfit" | "expectedValue"> {
+  if (
+    premium === undefined ||
+    context.underlyingPrice === undefined ||
+    context.impliedVol === undefined ||
+    context.daysToExpiry === undefined
+  ) {
+    return {};
+  }
+  const odds = singleLegOdds({
+    code: request.code,
+    strike: request.strike,
+    premium,
+    spot: context.underlyingPrice,
+    daysToExpiry: context.daysToExpiry,
+    volatility: context.impliedVol,
+  });
+  return odds
+    ? { chanceOfProfit: odds.chanceOfProfit, expectedValue: odds.expectedValuePerShare * scale }
+    : {};
 }
 
 /**
@@ -205,30 +310,53 @@ function validateClose(
   }
 }
 
+export interface CloseOrderChoice {
+  /** Market (today's default) or limit — a limit close names the premium per share it will
+   *  accept (#3407 P1 slice 3; closes were market-only before). */
+  readonly orderType?: "limit" | "market";
+  readonly limitPrice?: number;
+  /** Day unless the member says GTC (#3407 P1 slice 4). */
+  readonly timeInForce?: OptionTimeInForce;
+}
+
 export function previewOptionClose(
   occSymbol: string,
   context: OptionTicketContext,
   contracts?: number,
+  order: CloseOrderChoice = {},
 ): OptionTicketPreview {
   const parts = parseOccSymbol(occSymbol);
   const held = context.positions.find((p) => p.symbol === occSymbol.trim().toUpperCase());
   const heldContracts = held ? Math.abs(held.quantity) : 0;
   const closing = contracts ?? heldContracts;
   const isShort = (held?.quantity ?? 0) < 0;
+  const orderType = order.orderType ?? "market";
   const refusals: string[] = [];
   const warnings: string[] = [];
 
   gateNotes(context, refusals, warnings);
   if (!parts) refusals.push("That isn't an option contract symbol.");
   validateClose(heldContracts, closing, refusals, warnings);
+  if (orderType === "limit" && !(order.limitPrice && order.limitPrice > 0)) {
+    refusals.push("A limit close needs a limit price — the premium per share you'll accept.");
+  }
+  if (orderType === "market" && heldContracts > 0) {
+    warnings.push(
+      "A market close fills at whatever the spread says — a limit at the mark is the disciplined habit.",
+    );
+  }
 
-  // Mark per share: the position's market value over |contracts| × 100.
+  // Mark per share: the position's market value over |contracts| × 100. A limit close estimates
+  // off the limit itself — that is the number the member will actually accept.
   const mark =
     heldContracts > 0
       ? Math.abs((held as TicketHolding).marketValue) / (heldContracts * SHARES_PER_CONTRACT)
       : undefined;
+  const estPremium = orderType === "limit" && order.limitPrice ? order.limitPrice : mark;
   const estNotional =
-    mark !== undefined && closing > 0 ? mark * closing * SHARES_PER_CONTRACT : undefined;
+    estPremium !== undefined && closing > 0
+      ? estPremium * closing * SHARES_PER_CONTRACT
+      : undefined;
 
   return {
     code: "close",
@@ -240,9 +368,13 @@ export function previewOptionClose(
     side: isShort ? "buy" : "sell",
     positionIntent: isShort ? "buy_to_close" : "sell_to_close",
     contracts: closing,
-    orderType: "market",
+    orderType,
+    ...(orderType === "limit" && order.limitPrice !== undefined
+      ? { limitPrice: order.limitPrice }
+      : {}),
+    timeInForce: order.timeInForce ?? DEFAULT_OPTION_TIF,
     ok: refusals.length === 0,
-    ...(mark !== undefined ? { estPremium: mark } : {}),
+    ...(estPremium !== undefined ? { estPremium } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),
     refusals,
     warnings,

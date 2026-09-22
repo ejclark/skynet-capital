@@ -4,8 +4,8 @@
   "title": "7-Year Treasury Note auction",
   "date": "2026-09-24",
   "status": "confirmed",
-  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, checked 2026-08-18. Re-verified 2026-09-02 against Treasury's own Tentative-Auction-Schedule.xml ('Aug2026 Refunding Auction Calendar Official Ver 2'), which carries the 7-Year NOTE at auction 2026-09-24, announce 2026-09-17, settle 2026-09-30, ReOpeningIndicator=N — a new issue, not a reopening (the initial entry's '~6bd prior' estimate of ~09-18 is superseded by the primary's 09-17). Size/CUSIP re-checked 2026-09-09 and still do not exist: TA_WS/securities/upcoming reaches 2026-09-17 and stops short of the 2026-09-22/23/24 block, consistent with a 09-17 announce",
   "impact": "medium",
   "symbols": [],
-  "notes": "Closes the September coupon calendar."
+  "notes": "Closes the September coupon calendar. Announced 2026-09-17 alongside the 2Y and 5Y — one day after the FOMC, one day before quarterly OpEx — and the whole block settles 2026-09-30, the same day as the tracked federal funding deadline. Offering size has been $44B at every 7Y auction since 2025-01-28 (20 straight, Fiscal Data, checked 2026-09-09); the 09-17 size is registered as FT-treasury-7y-note-2026-09-24-1."
 }

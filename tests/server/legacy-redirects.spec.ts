@@ -63,9 +63,9 @@ describe("serveLegacyRedirect", () => {
   });
 
   it("keeps the pre-shell board folds working", () => {
-    expect(target("/leaderboard", "/leaderboard?by=cash")).toBe("/?by=cash");
-    expect(target("/bots-vs-humans")).toBe("/");
-    expect(target("/compare", "/compare?a=x&b=y")).toBe("/?a=x&b=y");
+    expect(target("/leaderboard", "/leaderboard?by=cash")).toBe("/app/leaderboard?by=cash");
+    expect(target("/bots-vs-humans")).toBe("/app/leaderboard");
+    expect(target("/compare", "/compare?a=x&b=y")).toBe("/app/leaderboard?a=x&b=y");
   });
 
   it("never redirects a POST — GET/HEAD only", () => {

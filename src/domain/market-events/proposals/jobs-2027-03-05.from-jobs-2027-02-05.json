@@ -1,0 +1,11 @@
+{
+  "id": "jobs-2027-03-05",
+  "kind": "macro-print",
+  "title": "Employment Situation (Feb 2027 data) — 08:30 ET, the last payroll before the March 2027 FOMC",
+  "date": "2027-03-05",
+  "status": "estimate",
+  "source": "EST: derived from BLS's own published scheduling rule — release on the third Friday following the end of the reference week (the Sun-Sat week containing the 12th) — re-implemented and re-validated from scratch 7 for 7 by the never-assessed initial research of jobs-2027-02-05 on 2026-09-09 (the four confirmed jobs-* entries on this calendar plus the three historical Sunday-July-4 releases 2004-07-02, 2010-07-02, 2021-07-02). For February 2027 data the reference week is Sun 2027-02-07 to Sat 2027-02-13, and the third Friday after 02-13 is 2027-03-05, an ordinary full NYSE session with no holiday within a week of it, so the rule's one documented failure mode -- a derived Friday landing on a closed session -- cannot fire. Prefix is EST: and not BLS: because bls.gov 403s this runner on all four schedule routes (/schedule/news_release/2027_sched.htm, /schedule/news_release/empsit.htm, /schedule/home.htm, /bls/news-release/empsit.htm, all HTTP 403 on 2026-09-09) and BLS has published no 2027 schedule at all. Discovered 2026-09-09 in the never-assessed initial research of jobs-2027-02-05",
+  "impact": "high",
+  "symbols": [],
+  "notes": "PROPOSED, NOT CANONICAL. Filed because it is the fact that makes the proposer's own structural claim checkable: federalreserve.gov/monetarypolicy/fomccalendars.htm (HTTP 200, page-stated 'Last Update: August 19, 2026') lists the 2027 meetings as January 26-27, March 16-17*, April 27-28, June 8-9*, July 27-28, September 14-15*, October 26-27, December 7-8*, so jobs-2027-02-05 is the FIRST payroll after the January meeting (D+9) and NOT the last before the March one -- this print is, at D-11 from March 16-17. Without this entry that claim rests on arithmetic nobody can check against the calendar. It also narrows a real coverage gap the sibling lanes have flagged repeatedly: tracked jobs-* entries run 2026-09-04 .. 2026-12-04 and then jump to 2027-05-07, with only proposals covering January and February. Impact high matches every other jobs-* entry. Proposed as an estimate; nothing here licenses an entry, and the date should be re-checked once bls.gov publishes a 2027 release schedule."
+}

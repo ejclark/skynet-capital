@@ -24,6 +24,21 @@ export interface AlpacaAccount {
   readonly options_trading_level?: string | number;
 }
 
+/** Alpaca portfolio-history payload (subset) — `/v2/account/portfolio/history`. Equity and its
+ *  already-flow-adjusted cumulative return over the requested window: `profit_loss_pct[i]` is the
+ *  account's return (as a fraction, e.g. `0.0123` = 1.23%) from `base_value` to `equity[i]`.
+ *  `base_value` is the window-start equity (the previous close when `base_value_asof` is set, else
+ *  the first returned point — the honest baseline Alpaca itself measures from, so the windows this
+ *  app shows can never disagree with the broker's own chart). Points are left-labeled; arrays align
+ *  per index. A `null` in any array marks a span the broker had no value for — skipped, never 0. */
+export interface AlpacaPortfolioHistory {
+  readonly timestamp: number[];
+  readonly equity: (number | null)[];
+  readonly profit_loss: (number | null)[];
+  readonly profit_loss_pct: (number | null)[];
+  readonly base_value: number | null;
+}
+
 /** Alpaca position payload (subset). */
 export interface AlpacaPosition {
   readonly symbol: string;
@@ -45,11 +60,26 @@ export interface AlpacaOrder {
   readonly type?: string;
   readonly limit_price?: string | null;
   readonly stop_price?: string | null;
+  /** "day" | "gtc" | "ioc" | … — echoed back by the broker; the desk shows it verbatim (#3407). */
+  readonly time_in_force?: string;
   readonly filled_qty?: string;
   readonly filled_avg_price?: string | null;
   readonly submitted_at?: string;
   readonly filled_at?: string | null;
   readonly canceled_at?: string | null;
+  /** Id lineage on a replace (#3407 P1 1b): the order this one superseded, and the one that
+   *  superseded this — both echoed by the broker, both absent on an order never replaced. */
+  readonly replaces?: string | null;
+  readonly replaced_by?: string | null;
+}
+
+/** What a replace may change — Alpaca allows quantity, price(s) and time in force on a working
+ *  limit or stop order; the type and side never change (a different order is a new order). */
+export interface ReplaceOrderParams {
+  readonly qty?: number;
+  readonly limit_price?: number;
+  readonly stop_price?: number;
+  readonly time_in_force?: "day" | "gtc";
 }
 
 export interface PlaceOrderParams {
@@ -62,6 +92,9 @@ export interface PlaceOrderParams {
   readonly limit_price?: number;
   /** Required when `type` is "stop". */
   readonly stop_price?: number;
+  /** Day or good-till-cancelled. Omit and the client keeps its standing default: market → day,
+   *  held (limit/stop) → gtc. The desk passes the member's own choice through (#3407 P1). */
+  readonly time_in_force?: "day" | "gtc";
 }
 
 /** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
@@ -91,6 +124,44 @@ export class AlpacaTradingClient {
     return ensureOk<AlpacaPosition[]>(await this.transport.get("/v2/positions"));
   }
 
+  /**
+   * Equity + flow-adjusted cumulative return over a window (`/v2/account/portfolio/history`). `period`
+   * is Alpaca's `number+unit` form (`"1W"`, `"1M"`, `"3M"`, `"1A"`, …); `timeframe` defaults to `"1D"`
+   * — daily resolution is valid for every window this app shows and keeps payloads small, so the
+   * four windows the net-worth view needs (7D/1M/3M/1Y) are four cheap calls, each returning the
+   * window's own `base_value` → last-`equity` arc (Alpaca's own flow-adjusted return, never a
+   * locally differenced guess that a deposit would distort). A non-2xx throws `AlpacaApiError`, same
+   * as every other read — the caller swallows it per-account so one unreachable account never blanks
+   * the aggregate.
+   */
+  async getPortfolioHistory(period: string, timeframe = "1D"): Promise<AlpacaPortfolioHistory> {
+    const query = new URLSearchParams({ period, timeframe });
+    return ensureOk<AlpacaPortfolioHistory>(
+      await this.transport.get(`/v2/account/portfolio/history?${query.toString()}`),
+    );
+  }
+
+  /**
+   * The same endpoint as `getPortfolioHistory`, addressed by an explicit date range instead of
+   * Alpaca's `period` token — for YTD/ALL (#3186 slice 2), which aren't `period` tokens Alpaca
+   * accepts. `dateStart`/`dateEnd` are `YYYY-MM-DD`; `dateEnd` is optional (Alpaca defaults it to
+   * today).
+   */
+  async getPortfolioHistoryByRange(
+    dateStart: string,
+    dateEnd?: string,
+    timeframe = "1D",
+  ): Promise<AlpacaPortfolioHistory> {
+    const query = new URLSearchParams({
+      date_start: dateStart,
+      timeframe,
+      ...(dateEnd ? { date_end: dateEnd } : {}),
+    });
+    return ensureOk<AlpacaPortfolioHistory>(
+      await this.transport.get(`/v2/account/portfolio/history?${query.toString()}`),
+    );
+  }
+
   /** Most-recent orders (any status), newest first — the account's transaction history. */
   getRecentOrders(limit = 15): Promise<AlpacaOrder[]> {
     return this.listOrders({ limit });
@@ -116,6 +187,14 @@ export class AlpacaTradingClient {
     return ensureOk<AlpacaOrder[]>(await this.transport.get(`/v2/orders?${query.toString()}`));
   }
 
+  /** One order by id, with whatever fill data Alpaca has for it right now — the read
+   *  `AlpacaBrokerAdapter.submit()`'s post-fill poll uses to learn the real `filled_avg_price`/
+   *  `filled_qty` a market order's initial "accepted" response doesn't yet carry. An unknown id
+   *  throws `AlpacaApiError`, same as any other non-2xx response. */
+  async getOrder(id: string): Promise<AlpacaOrder> {
+    return ensureOk<AlpacaOrder>(await this.transport.get(`/v2/orders/${id}`));
+  }
+
   /** Cancels a still-open order. Alpaca returns 204 on success; a filled/already-canceled order
    *  (or an unknown id) throws `AlpacaApiError`, same as any other non-2xx response. */
   async cancelOrder(id: string): Promise<void> {
@@ -123,6 +202,23 @@ export class AlpacaTradingClient {
     if (response.status < 200 || response.status >= 300) {
       throw new AlpacaApiError(response.status, response.body);
     }
+  }
+
+  /** Replaces a working order (Alpaca `PATCH /v2/orders/{id}`): the broker cancels the old id
+   *  and answers with the NEW order, whose `replaces` names the old one. Only the fields given
+   *  change. A filled/cancelled order, or an empty change, throws `AlpacaApiError` like any
+   *  other non-2xx; a transport without `patch` throws before touching the network. */
+  async replaceOrder(id: string, params: ReplaceOrderParams): Promise<AlpacaOrder> {
+    if (!this.transport.patch) {
+      throw new Error("this trading transport cannot replace orders (no PATCH)");
+    }
+    const body = {
+      ...(params.qty !== undefined ? { qty: params.qty } : {}),
+      ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
+      ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
+      ...(params.time_in_force !== undefined ? { time_in_force: params.time_in_force } : {}),
+    };
+    return ensureOk<AlpacaOrder>(await this.transport.patch(`/v2/orders/${id}`, body));
   }
 
   /** Market clock — whether the market is currently open. */
@@ -157,7 +253,7 @@ export class AlpacaTradingClient {
       // A held (limit/stop) order must outlive the trading day it was placed on — a stop-loss
       // that silently expired overnight wouldn't be protecting anything. Market orders keep the
       // existing "day" behavior unchanged.
-      time_in_force: type === "market" ? "day" : "gtc",
+      time_in_force: params.time_in_force ?? (type === "market" ? "day" : "gtc"),
       ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
       ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
     });

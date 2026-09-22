@@ -1,0 +1,11 @@
+{
+  "id": "uk-cpi-2027-10-20",
+  "kind": "macro-print",
+  "title": "UK CPI, September 2027 (ONS, 07:00 London) — the last clean print before the VAT base effect, and the baseline the step is measured against",
+  "date": "2027-10-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/consumerpriceinflationukseptember2027, fetched direct 2026-09-09 (HTTP 200) — the release page reads 'Consumer price inflation, UK: September 2027', 'Release date: 20 October 2027 7:00am', and states 'This release is not yet published'; ONS labels the entry Provisional. Filed estimate on that label, on this lane's no-self-confirm limit, and on the standing taxonomy gap (no confirmed prefix for the UK Office for National Statistics). Discovered in the never-assessed initial research of uk-cpi-2027-11-17, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2027-11-17 LANE, 2026-09-09, and it is ARITHMETICALLY REQUIRED to score a test already on the books. FT-uk-electricity-vat-reversion-2027-04-01-3 predicts 'an electricity y/y contribution approximately +0.09 to +0.13pp HIGHER THAN THE SEPTEMBER 2027 PRINT'S' — that comparator print was named but never put on the calendar, so the test had a prediction and no baseline. This is it. WHY IT IS THE CLEAN ONE: September 2027 compares a 5%-rated month against a 5%-rated September 2026 base (SI 2026/987's zero rate ran 2026-10-01 to 2027-03-31, fetched from legislation.gov.uk), so its electricity year-on-year carries NO VAT term at all; the very next print, 2027-11-17, compares a 5%-rated October against a ZERO-RATED base and carries +5.0000%. The step between two consecutive prints is the whole observation, and one half of it lands here. SECOND USE: this print is also the last UK CPI the 2027-11-04 MPC and Monetary Policy Report will have seen (BoE provisional dates, fetched), so it is what the Bank's near-term profile is anchored on when it has to project the base effect it cannot yet observe. Tiered LOW: symbols: [], no UK listing, gilt or sterling instrument on this calendar. Estimate widens caution only; it licenses no date-keyed action."
+}

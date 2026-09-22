@@ -2,6 +2,7 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { Participant } from "../participants/participant.js";
+import { createDraftTradeService, type SubmitDraftOrder } from "./draft-trade-service.js";
 import { createOptionTradeService, type SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import { createTradeService, type SubmitDeskTrade } from "./trade-service.js";
@@ -56,7 +57,7 @@ export function verifyOwnAccount(
   requesterId: string | undefined,
 ): AccountAccessResult {
   if (!deps.tradingEnabled) {
-    return { ok: false, refusals: ["Trading from the desk is switched off for this deployment."] };
+    return { ok: false, refusals: ["Trading is switched off for this deployment."] };
   }
   if (!requesterId || requesterId !== participantId) {
     return { ok: false, refusals: ["You can only trade your own account."] };
@@ -108,6 +109,8 @@ export function resolveDeskTrading(deps: ResolveDeskTradingDeps): {
   enabled: boolean;
   submit: SubmitDeskTrade;
   submitOption: SubmitOptionTrade;
+  /** The multi-leg seam (`draft-trade-service.ts`, #3407 P3) — bound to the same closure. */
+  submitDraft: SubmitDraftOrder;
 } {
   const enabled = deps.authConfigured;
   const verifyAccess = bindAccountIdentityGate({
@@ -124,6 +127,11 @@ export function resolveDeskTrading(deps: ResolveDeskTradingDeps): {
       ...(deps.now ? { now: deps.now } : {}),
     }),
     submitOption: createOptionTradeService({
+      verifyAccess,
+      ...(deps.recordAudit ? { recordAudit: deps.recordAudit } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
+    }),
+    submitDraft: createDraftTradeService({
       verifyAccess,
       ...(deps.recordAudit ? { recordAudit: deps.recordAudit } : {}),
       ...(deps.now ? { now: deps.now } : {}),

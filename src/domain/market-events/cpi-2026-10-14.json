@@ -4,7 +4,7 @@
   "title": "CPI release (Sep 2026 data)",
   "date": "2026-10-14",
   "status": "confirmed",
-  "source": "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
+  "source": "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET. Re-confirmed at the primary on 2026-09-08 by the D-36 pulse-check adjacency sweep, which read the schedule row verbatim: 'September 2026 | Oct. 14, 2026 | 08:30 AM'. Path note recorded because it sharpens a known lane blind spot: a direct curl of this page returned HTTP 403 even WITH browser headers (the limitation on ppi-2026-11-13 was recorded as applying to header-less fetchers), while the rendering fetcher reached the same page and returned the table — so the 403 is the fetcher class, not the headers. Originally checked 2026-08-15, re-read 2026-08-31 and 2026-09-08",
   "impact": "high",
   "symbols": []
 }

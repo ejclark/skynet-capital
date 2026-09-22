@@ -11,11 +11,19 @@
 // model; that residue stays with the config-audit / self-correcting loop. Contract:
 // docs/plans/doc-rot-gate.md.
 //
-//   node scripts/doc-rot-scan.mjs             # report + enforce (exit 1 if rot grew past budget)
-//   node scripts/doc-rot-scan.mjs --update    # rewrite doc-rot-budget.json (ratchet: only lower)
-//   node scripts/doc-rot-scan.mjs --candidate # highest-leverage finding as JSON (governor eye)
+// ① and ② share one ratcheted budget and are advisory in CI (since 2026-08-29, Eric — see
+// tests/arch/doc-rot.spec.ts) — pure doc-hygiene debt, the same class as arch-scan/dupe-scan/
+// dead-scan. ③ is checked and reported SEPARATELY, on its own exit code, and never enters that
+// ratchet or budget: a stale structural map means every blast-radius query (`graphify affected`,
+// governor's own file-fence reasoning) answers from outdated structure — a correctness risk, not a
+// hygiene one — so it stays a real, always-enforced gate rather than folding into the advisory debt
+// count. A binary "is it stale right now" fact also doesn't suit a ratchet that only ever lowers.
 //
-// Enforced in CI via tests/arch/doc-rot.spec.ts.
+//   node scripts/doc-rot-scan.mjs             # report + enforce ①②(exit 1)/③(exit 2)
+//   node scripts/doc-rot-scan.mjs --update    # rewrite doc-rot-budget.json for ①② (ratchet: only lower)
+//   node scripts/doc-rot-scan.mjs --candidate # highest-leverage ①②finding as JSON (governor eye)
+//
+// ①② enforced (advisory) in CI via tests/arch/doc-rot.spec.ts; ③ enforced (blocking) there too.
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -155,7 +163,7 @@ function staleGraphFindings() {
 // ---- report / enforce -----------------------------------------------------------------------------
 
 const files = scanSurface();
-const findings = [...deadRefFindings(files), ...deadScriptFindings(files), ...staleGraphFindings()];
+const findings = [...deadRefFindings(files), ...deadScriptFindings(files)];
 const debt = findings.length;
 
 if (process.argv.includes("--candidate")) {
@@ -187,6 +195,19 @@ console.log("📜 Doc-rot scan — docs that no longer describe reality");
 for (const f of findings.slice(0, 15)) console.log(`  ${f.kind.padEnd(12)} ${f.doc} → ${f.detail}`);
 if (debt > 15) console.log(`  … and ${debt - 15} more`);
 console.log(`\n  findings: ${debt} across ${files.length} docs`);
+
+// Check ③, separately and always-enforced — see the header comment for why this doesn't join ①②'s
+// ratcheted, advisory budget. Distinct exit code (2) so CI can tell "the graph is stale" apart from
+// "doc-hygiene debt grew" without parsing stderr text.
+const staleGraph = staleGraphFindings();
+if (staleGraph.length > 0) {
+  console.error(`\n✗ ${staleGraph[0].detail}`);
+  console.error(
+    "Fix: `npm run graph:refresh`, then commit the regenerated docs/STRUCTURE-graph.md.",
+  );
+  process.exit(2);
+}
+console.log("✓ structural graph is fresh.");
 
 const cap = budget.findings;
 if (debt > cap) {

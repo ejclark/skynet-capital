@@ -19,9 +19,9 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   (initial research + stance + kill switches + first ledger row).
 - `interval-elapsed` → pulse check appending ONE ledger row, including the mandatory adjacency sweep
   (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics touching the event's symbols) —
-  any dated adjacent event you discover is PROPOSED as a NEW FILE YOU OWN,
-  `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` (`"status": "estimate"`), in
-  the same PR, never `confirmed` and never as `<id>.json` (issue #1717: two sweeps discovering the
+  any dated adjacent event you discover **inside the research horizon** is PROPOSED as a NEW FILE
+  YOU OWN, `src/domain/market-events/proposals/<id>.from-<your-event-id>.json`
+  (`"status": "estimate"`), in the same PR, never `confirmed` and never as `<id>.json` (issue #1717: two sweeps discovering the
   same event on the same day both created `<id>.json`, the one add/add left after #1449). One file
   per owner (issue #1449): your own event's amendments go in
   `src/domain/market-events/<your-event-id>.json` and nowhere else — there is no shared array. On
@@ -30,6 +30,16 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   never reach you — `moneypenny-events.yml`'s deterministic screen already handled the quiet ones before
   this session started; you only see one because the probe found it material, or its own reference
   block was missing/stale, or the fetch failed. Research it exactly as any other pulse.)
+  **THE HORIZON LEASH (#2946).** Propose only what `assessment-cadence.json`'s `horizon` would
+  actually make due: nothing dated past `maxDaysOut`, and past `allImpactsWithinDays` only
+  critical/high. This sweep is what took the calendar to 641 canonical + 469 pending in two days
+  and spent a weekly token quota in ~24 hours — a proposal loads as a real event, becomes
+  `never-assessed`, buys its own session, and sweeps again. A proposal outside the horizon can
+  never become due, so it is pure clutter: it costs validation time and a reviewer's attention and
+  buys nothing. Note what you saw beyond the horizon in your ledger row instead — prose in a ledger
+  is free, a calendar file is not. (`scripts/event-scan-validation.mjs` separately caps discovery at
+  ONE generation: your proposer must be a canonical file or a derived earnings print, so a proposal
+  can never parent another.)
 - `event-passed-unscored` → closing outcome assessment, scoring registered forward tests from re-run
   instrument data (bust the instrument cache first:
   `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
@@ -51,16 +61,23 @@ every pair of open research PRs, and 2026-09-04's bare `FT-25` collision came fr
 live tip — docs/LESSONS.md). The legacy bare-number `FT-N` rows live in
 `docs/research/forward-tests/legacy.md`, frozen except for scoring.
 
-**Refresh the probe-ref block on every ledger you touch.** Every ledger header carries a
-`<!-- probe-ref: {...} -->` line right after `**Last assessed:**` (docs/process/EVENT-RESEARCH.md
-→ "Deterministic screening") — the deterministic screen's reference state for this event. Whenever
-you update `**Last assessed:**`, replace that line too with today's real readings: the current
-price for each symbol in the event's table row, the current VIX, the cadence band
-(`<impact>:<minDaysOut>+`, from `assessment-cadence.json`), the ids of other tracked events within 5
-days of this one's date, and `"screenStreak": 0` (a full session always resets the streak — it is
-never itself a screen). This is what lets the event's *next* pulse be screened instead of
-automatically material; skipping it doesn't break anything today, it just spends one more session
-than necessary next time.
+**Append a fresh probe-ref block on every ledger you touch — never rewrite the existing one.**
+Every ledger carries a `**Last assessed:**` line with a `<!-- probe-ref: {...} -->` line right
+after it (docs/process/EVENT-RESEARCH.md → "Deterministic screening") — the deterministic screen's
+reference state for this event. Whenever you update `**Last assessed:**`, add a NEW pair at the
+true end of the file (after the ledger table and its trailing "Rules." line) rather than editing
+the existing header in place: today's date, then a fresh `<!-- probe-ref: {...} -->` line with
+today's real readings — the current price for each symbol in the event's table row, the current
+VIX, the cadence band (`<impact>:<minDaysOut>+`, from `assessment-cadence.json`), the ids of other
+tracked events within 5 days of this one's date, and `"screenStreak": 0` (a full session always
+resets the streak — it is never itself a screen). The reader always takes the LAST such pair in the
+file, so this is what lets the event's *next* pulse be screened instead of automatically material —
+same as before. What changed (2026-09-19, docs/LESSONS.md): editing the header line in place is
+exactly the #1449 bug above wearing a different hat — two sessions touching the same event's ledger
+in the same window would rewrite the identical line and collide, instead of merging as the disjoint
+additions an append produces. Skipping the append entirely still doesn't break anything today, it
+just spends one more session than necessary next time; editing the OLD line in place is what to
+stop doing.
 
 Ship ONE PR for your assigned event, on a branch named EXACTLY `research/<event-id>` off `origin/main` — the
 branch name is the dedupe key that stops the next push-triggered run re-researching an event whose

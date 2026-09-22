@@ -2,6 +2,9 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+// @ts-expect-error — a .mjs gate script with no type declarations; the spec reads the real list so
+// the assertion below can never pin a stale tail (see the ECF:/NYSE: test).
+import { CONFIRMED_PREFIXES } from "../../scripts/event-scan-validation.mjs";
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
 import { earningsAsEvents, MARKET_EVENTS } from "../../src/domain/market-events.js";
 import { loadMarketEvents } from "../../src/domain/market-events-data.js";
@@ -17,10 +20,15 @@ const entry = (id: string, date: string) => ({
   symbols: [],
 });
 
-/** A fixture events DIRECTORY (one JSON file per event, issue #1449) + an empty calendar and
- *  ledger dir, validated through the real CLI. `files` maps file name → entry, so a spec can put
- *  an entry under the wrong name on purpose. */
-function validateFixture(files: Record<string, object>): string {
+/** A fixture events DIRECTORY (one JSON file per event, issue #1449) + a calendar and ledger dir,
+ *  validated through the real CLI. `files` maps file name → entry, so a spec can put an entry
+ *  under the wrong name on purpose. `prints` seeds earnings-calendar.ts, whose rows become DERIVED
+ *  events that exist without any file in the directory — the case the proposal depth cap has to
+ *  treat as established. */
+function validateFixture(
+  files: Record<string, object>,
+  prints: readonly { symbol: string; date: string; status: string; source: string }[] = [],
+): string {
   const dir = mkdtempSync(join(tmpdir(), "event-scan-"));
   try {
     mkdirSync(join(dir, "events", "proposals"), { recursive: true });
@@ -28,7 +36,7 @@ function validateFixture(files: Record<string, object>): string {
       writeFileSync(join(dir, "events", name), `${JSON.stringify(event, null, 2)}\n`);
     writeFileSync(
       join(dir, "earnings-calendar.ts"),
-      "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+      `export const UPCOMING_PRINTS: readonly EarningsPrint[] = ${JSON.stringify(prints)};\n`,
     );
     return execFileSync(
       "node",
@@ -45,6 +53,151 @@ function validateFixture(files: Record<string, object>): string {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+/** A fixture calendar + ledger + forward-test register, read through the real CLI's `--due` mode
+ *  on a pinned date. `ledgers` maps event id → ledger markdown, `fragments` maps event id →
+ *  forward-test fragment markdown; omitting either models an event that has neither. */
+function dueFixture(
+  today: string,
+  events: Record<string, object>,
+  ledgers: Record<string, string> = {},
+  fragments: Record<string, string> = {},
+): { id: string; reason: string; forwardTestsBeyondWindow?: { id: string; scoreBy: string }[] }[] {
+  const dir = mkdtempSync(join(tmpdir(), "event-scan-due-"));
+  try {
+    for (const sub of ["events/proposals", "ledgers", "forward-tests"])
+      mkdirSync(join(dir, sub), { recursive: true });
+    for (const [id, event] of Object.entries(events))
+      writeFileSync(join(dir, "events", `${id}.json`), JSON.stringify(event, null, 2));
+    for (const [id, md] of Object.entries(ledgers))
+      writeFileSync(join(dir, "ledgers", `${id}.md`), md);
+    for (const [id, md] of Object.entries(fragments))
+      writeFileSync(join(dir, "forward-tests", `${id}.md`), md);
+    writeFileSync(
+      join(dir, "earnings-calendar.ts"),
+      "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+    );
+    return JSON.parse(
+      execFileSync(
+        "node",
+        [
+          "scripts/event-scan.mjs",
+          "--due",
+          `--today=${today}`,
+          `--events-dir=${join(dir, "events")}`,
+          `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
+          `--ledger-dir=${join(dir, "ledgers")}`,
+          `--forward-tests-dir=${join(dir, "forward-tests")}`,
+        ],
+        { cwd: process.cwd(), encoding: "utf8", stdio: "pipe" },
+      ),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** An un-closed-out ledger: the `**Last assessed:**` line the scanner contracts on, no `## Outcome`. */
+const openLedger = (assessed: string) => `# fixture\n\n**Last assessed:** ${assessed}\n`;
+
+/** One forward-test fragment row. `outcome` empty = unscored. */
+const fragment = (rows: [id: string, scoreBy: string, outcome: string][]) =>
+  `| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |\n|---|---|---|---|---|---|\n${rows
+    .map(([id, scoreBy, outcome]) => `| ${id} | h | p | k | ${scoreBy} | ${outcome} |`)
+    .join("\n")}\n`;
+
+// THE FORWARD-TEST HOLD (#2988). A close-out is dispatched from D+1 and is never screened, but its
+// contract is to score its own registered predictions from settled data — so a test whose score-by
+// is later than D+1 makes every dispatch until that date a session that can only re-read state and
+// leave. Measured on gastech-2026-09-14: three dispatches in 38 minutes, no new information
+// available to any of them. The wait is clamped to closeOutWithinDays, because a close-out that
+// ages out of its window is lost permanently (withinHorizon's note) — a wrong hold is far worse
+// than a wrong dispatch, so every ambiguity here has to resolve toward dispatching.
+describe("event-scan close-out hold", () => {
+  const passed = { ...entry("alpha", "2026-09-14"), impact: "low" };
+  const ledgers = { alpha: openLedger("2026-09-15") };
+
+  it("holds the close-out until its own unscored test is scoreable, then dispatches", () => {
+    const frag = { alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-18", "_open_"]]) };
+    expect(dueFixture("2026-09-15", { alpha: passed }, ledgers, frag)).toEqual([]);
+    expect(dueFixture("2026-09-17", { alpha: passed }, ledgers, frag)).toEqual([]);
+    // 09-18 is the score-by itself: the window has closed, so the session can finally score it.
+    expect(dueFixture("2026-09-18", { alpha: passed }, ledgers, frag).map((e) => e.reason)).toEqual(
+      ["event-passed-unscored"],
+    );
+  });
+
+  it("never holds past closeOutWithinDays — it names the test and dispatches instead", () => {
+    // Score-by 2026-09-25 is D+11, past the 6-day close-out ceiling: waiting would destroy the
+    // outcome record rather than delay it, so the session goes out now and is told why.
+    const due = dueFixture("2026-09-15", { alpha: passed }, ledgers, {
+      alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-25", "_open_"]]),
+    });
+    expect(due).toEqual([
+      expect.objectContaining({
+        id: "alpha",
+        reason: "event-passed-unscored",
+        forwardTestsBeyondWindow: [{ id: "FT-alpha-2026-09-14-1", scoreBy: "2026-09-25" }],
+      }),
+    ]);
+  });
+
+  it("dispatches exactly as before when there is nothing scoreable to wait for", () => {
+    const cases: Record<string, string> = {
+      "no fragment at all": "",
+      "every row already scored": fragment([
+        ["FT-alpha-2026-09-14-1", "2026-09-18", "**pass** — scored 2026-09-15"],
+      ]),
+      "score-by already past": fragment([["FT-alpha-2026-09-14-1", "2026-09-14", "_open_"]]),
+      "no readable score-by": fragment([["FT-alpha-2026-09-14-1", "when it settles", "_open_"]]),
+    };
+    for (const [why, frag] of Object.entries(cases))
+      expect([
+        why,
+        dueFixture("2026-09-15", { alpha: passed }, ledgers, frag ? { alpha: frag } : {}).map(
+          (e) => e.reason,
+        ),
+      ]).toEqual([why, ["event-passed-unscored"]]);
+  });
+
+  it("reads the register's real row shapes — escaped pipes, date-led cells, trailing qualifiers", () => {
+    // Every one of these appears in the committed register (measured 2026-09-15 over 1,700 rows):
+    // `\|` inside a cell, a prediction cell that itself starts with a date, a score-by carrying an
+    // `(est.)` qualifier, and rows of 5 and 8 cells against a 6-column header. Header-index
+    // mapping breaks on all of it; "the last cell that starts with a date" survives it.
+    const md =
+      `| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |\n|---|---|---|---|---|---|\n` +
+      `| FT-alpha-2026-09-14-1 | median \\|move\\| 1.95% | 2026-09-14 prints below p75 | k | 2026-09-18 (est.) | — |\n` +
+      `| FT-alpha-2026-09-14-2 | h | p | k | 2026-09-16 |\n` +
+      `| FT-alpha-2026-09-14-3 | h | c2c | extra | cell | k | 2026-09-14 | _open_ |\n`;
+    expect(dueFixture("2026-09-15", { alpha: passed }, ledgers, { alpha: md })).toEqual([]);
+    // Row 1 (em-dash outcome, qualified date) and row 2 (no outcome cell) both still pend at
+    // 09-16; row 3's score-by is already past, so it never held anything.
+    expect(dueFixture("2026-09-17", { alpha: passed }, ledgers, { alpha: md })).toEqual([]);
+    expect(
+      dueFixture("2026-09-18", { alpha: passed }, ledgers, { alpha: md }).map((e) => e.reason),
+    ).toEqual(["event-passed-unscored"]);
+  });
+
+  it("leaves an already-closed-out event and an upcoming event untouched", () => {
+    const frag = { alpha: fragment([["FT-alpha-2026-09-14-1", "2026-09-18", "_open_"]]) };
+    // A ledger with `## Outcome` is silent forever — the hold must not resurrect it.
+    expect(
+      dueFixture(
+        "2026-09-15",
+        { alpha: passed },
+        { alpha: `${openLedger("2026-09-15")}\n## Outcome\n\nscored.\n` },
+        frag,
+      ),
+    ).toEqual([]);
+    // An event that has not happened yet routes on cadence, never through the close-out branch.
+    expect(
+      dueFixture("2026-09-13", { alpha: passed }, { alpha: openLedger("2026-09-01") }, frag).map(
+        (e) => e.reason,
+      ),
+    ).toEqual(["interval-elapsed"]);
+  });
+});
 
 // Event-calendar contract gate — the committed calendar (src/domain/market-events/*.json +
 // earnings-calendar.ts) and every assessment ledger (docs/research/events/) must satisfy the
@@ -114,6 +267,101 @@ describe("event-scan contract", () => {
         "proposals/bravo.from-zulu.json": proposal("bravo"),
       }),
     ).toThrow(/proposer "zulu" is not an event this calendar knows/);
+  });
+
+  // THE PROPOSAL DEPTH CAP (#2946). A proposal loads as a real event, so it becomes
+  // never-assessed, buys its own opus session, and that session's adjacency sweep writes more
+  // proposals — the loop that took the calendar to 641 canonical + 469 pending in two days and
+  // spent a weekly token quota in ~24 hours. Requiring the proposer to be CANONICAL means each
+  // generation must be paid for by real research before it can produce the next.
+  it("--validate caps discovery at one generation — a proposal cannot parent another", () => {
+    const proposal = (id: string) => ({
+      ...entry(id, "2026-05-01"),
+      status: "estimate",
+      source: "EST: fixture",
+    });
+    // bravo exists only as a proposal, so charlie is a second generation — refused.
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "proposals/bravo.from-alpha.json": proposal("bravo"),
+        "proposals/charlie.from-bravo.json": proposal("charlie"),
+      }),
+    ).toThrow(/proposer "bravo" is itself only a proposal — discovery is capped at ONE generation/);
+
+    // Once bravo has been researched into its canonical file, it may propose — the cycle is
+    // broken by requiring real work between generations, not by forbidding depth outright.
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "bravo.json": entry("bravo", "2026-05-01"),
+        "proposals/charlie.from-bravo.json": proposal("charlie"),
+      }),
+    ).not.toThrow();
+
+    // A shadowed proposal never loads, so the rule must not fire on it.
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "bravo.json": entry("bravo", "2026-05-01"),
+        "charlie.json": entry("charlie", "2026-05-01"),
+        "proposals/bravo.from-alpha.json": proposal("bravo"),
+        "proposals/charlie.from-bravo.json": proposal("charlie"),
+      }),
+    ).not.toThrow();
+  });
+
+  // THE DOCKET SLOT (#3058) AND THE PUBLISHER SLOTS (#2552). Thirteen court-sourced entries, then
+  // forty-two market-closure entries, each sat at `estimate` holding a first-hand read of the
+  // primary, because the trusted-prefix table had no slot to land on. `ECF:` and `NYSE:`/`SIFMA:`/
+  // `JPX:` are those slots. The expected error is BUILT from CONFIRMED_PREFIXES rather than typed
+  // out: #3058 wrote this assertion with the tail `…/FHFA/FRB/ECF` hardcoded, and #2552's three
+  // prefixes broke it two days later — the exact staleness the message was derived to prevent.
+  it("--validate accepts a filed-document and an exchange-calendar prefix, and names the real list when one is missing", () => {
+    for (const source of [
+      "ECF: storage.courtlistener.com/recap/… HTTP 200, 97,430 bytes, md5 ce42291a…",
+      "NYSE: nyse.com/markets/hours-calendars HTTP 200, 109,133 bytes",
+      "SIFMA: sifma.org/resources/general/holiday-schedule HTTP 200, 299,089 bytes",
+      "JPX: jpx.co.jp/english/corporate/about-jpx/calendar/ HTTP 200, 33,103 bytes",
+    ]) {
+      expect(() =>
+        validateFixture({ "docket.json": { ...entry("docket", "2026-10-02"), source } }),
+      ).not.toThrow();
+    }
+
+    expect(() =>
+      validateFixture({
+        "docket.json": { ...entry("docket", "2026-10-02"), source: "PACER: a login-gated docket" },
+      }),
+    ).toThrow(
+      `confirmed but source lacks a trusted prefix (${(CONFIRMED_PREFIXES as string[]).join("/")})`,
+    );
+  });
+
+  // A DERIVED earnings print is established by earnings-calendar.ts and has no file in the events
+  // directory, so a naive "proposer must be a canonical FILE" depth cap rejects anything a print
+  // proposes — and the rejection is unfixable, because writing `<print-id>.json` by hand is itself
+  // refused by the "earnings are derived" rule. Three print-parented proposals exist in the real
+  // calendar today and pass only because all three happen to be shadowed.
+  it("--validate lets a derived earnings print parent a proposal — it is established, not speculative", () => {
+    const print = {
+      symbol: "GOOG",
+      date: "2026-10-28",
+      status: "confirmed",
+      source: "IR: fixture",
+    };
+    expect(() =>
+      validateFixture(
+        {
+          "proposals/adtech-ruling-2026-10-02.from-goog-2026-10-28-print.json": {
+            ...entry("adtech-ruling-2026-10-02", "2026-10-02"),
+            status: "estimate",
+            source: "EST: fixture",
+          },
+        },
+        [print],
+      ),
+    ).not.toThrow();
   });
 
   it("the loader prefers the canonical file, else the first proposal by name, and rejects a bad proposal", () => {
@@ -203,6 +451,13 @@ describe("event-scan contract", () => {
     const out = execFileSync("node", ["scripts/event-scan.mjs", "--dump"], {
       cwd: process.cwd(),
       encoding: "utf8",
+      // The dump grows with every event added, and its source/notes fields are long by design
+      // (they carry the audit trail). It crossed Node's DEFAULT 1 MiB execFileSync buffer on
+      // 2026-09-06 at 344 events — origin/main was 1,039,149 bytes, ~9 KB of headroom, and the
+      // next research PR to merge spent it, failing as `spawnSync node ENOBUFS` rather than as
+      // anything about the calendar. 64 MiB is ~60x today's size: the gate stays a gate, and it
+      // fails on real drift instead of on the calendar's own growth.
+      maxBuffer: 64 * 1024 * 1024,
     });
     const dumped = JSON.parse(out);
     expect(dumped.curated).toEqual(JSON.parse(JSON.stringify(MARKET_EVENTS)));

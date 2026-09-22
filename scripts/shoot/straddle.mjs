@@ -157,11 +157,11 @@ try {
   await shoot("straddle-debug");
   throw error;
 }
-await page.getByText("Chain · NVDA").scrollIntoViewIfNeeded();
+await page.locator(".straddle").scrollIntoViewIfNeeded();
 await shoot("straddle-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByText("Chain · NVDA").scrollIntoViewIfNeeded();
+await page.locator(".straddle").scrollIntoViewIfNeeded();
 await shoot("straddle-desktop");
 
 await close();

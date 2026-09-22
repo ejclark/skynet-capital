@@ -1,0 +1,11 @@
+{
+  "id": "uk-public-sector-finances-2026-11-20",
+  "kind": "macro-print",
+  "title": "UK public sector finances, October 2026 (ONS, 07:00 London / 02:00 ET) — the first borrowing print after the Autumn Budget, and on its own morning rather than sharing CPI's minute",
+  "date": "2026-11-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/publicsectorfinancesukoctober2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release-calendar entry reads 'Public sector finances, UK: October 2026', publication '20 November 2026 at 7:00am', describing the headline measures of public sector net borrowing, net cash requirement and net debt, and marked 'This release is not yet published.' Primary-sourced from the publisher's own release calendar; filed estimate per this lane's no-self-confirm limit and the confirmed-prefix taxonomy's lack of an ONS slot. Discovered in the never-assessed initial research of uk-labour-market-2026-11-17, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-11-17 LANE, 2026-09-09. Two reasons it earns a slot. (1) SUBSTANCE: it is the first public-sector borrowing print published after the 2026-10-28 Autumn Budget and the OBR Economic and Fiscal Outlook that accompanied it, and its October reference month contains Budget day — so it is the first read on whether the Chancellor's headroom arithmetic is tracking. (2) MECHANICS, and this is the finding that made the proposing lane look: the October corridor's same-minute collision does NOT repeat in November. On 2026-10-21 UK CPI and UK public sector finances shared the same 07:00 London minute, which is why uk-public-sector-finances-2026-10-21 was proposed — a calendar carrying only the CPI half would have licensed a wrong attribution. In November ONS splits them: CPI on 2026-11-18 and this release on 2026-11-20, separate mornings, one candidate explanation each (both primaries fetched direct 2026-09-09). A calendar that carries the CPI half alone would leave a second pre-dawn UK release invisible two days later, which is the same defect in a different shape. Tiered LOW: symbols [], no house playbook is rates-, fiscal- or sterling-keyed, and this repo tracks no UK-listed symbol. Estimate widens caution only; nothing date-keyed may act on this."
+}

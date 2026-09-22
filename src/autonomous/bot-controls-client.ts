@@ -1,4 +1,5 @@
 import { fetchJson } from "../http/fetch-json.js";
+import { isRecord } from "../storage/parse-guards.js";
 import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
@@ -7,6 +8,7 @@ import {
   suspendedReason,
 } from "./bot-controls.js";
 import { controlsPollHeaders } from "./controls-poll-wire.js";
+import { parseDecisionsCursor } from "./decision-wire.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
@@ -50,6 +52,11 @@ export function resolveBotControls(
    *  client's hook (`bot-credentials-client.ts`), so a rotation reaches the running process within
    *  one poll interval without this file needing to know that client exists. */
   onFetched?: (state: ControlsState) => void,
+  /** Fires after every AUTHENTICATED poll, regardless of whether the body parsed as a valid
+   *  `ControlsState` — the decision-replication client's hook (`decision-replication-client.ts`).
+   *  The cursor is parsed from the RAW body, not from `ControlsState`, because it isn't part of
+   *  that persisted shape (`decision-wire.ts`'s module doc). Absent/malformed parses to `{}`. */
+  onDecisionsCursor?: (cursor: Readonly<Record<string, number>>) => void,
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
@@ -82,6 +89,12 @@ export function resolveBotControls(
           } catch {
             /* never let a downstream hook fail the poll it rides on */
           }
+        }
+        try {
+          const rawCursor = isRecord(response.body) ? response.body.decisionsCursor : undefined;
+          onDecisionsCursor?.(parseDecisionsCursor(rawCursor));
+        } catch {
+          /* never let a downstream hook fail the poll it rides on */
         }
         return parsed;
       } finally {

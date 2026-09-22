@@ -57,7 +57,7 @@ export const COURSES: readonly Course[] = [
     id: "stock-basics",
     title: "Stock basics — own it, book it",
     subtitle:
-      "The foundation everything else stands on: buy shares of a company you'd be glad to hold, then sell some and book a result for real. Two trades, and the desk is yours.",
+      "The foundation everything else stands on: buy shares of a company you'd be glad to hold, then sell some and book a result for real. Two trades, and it's yours.",
     milestones: [
       {
         id: "first-buy",

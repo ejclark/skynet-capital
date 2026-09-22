@@ -6,9 +6,9 @@ import { fetchJoin } from "../live/join";
 import { localSessionSuffix } from "../live/market-hours";
 import { meetMoneypenny } from "../live/moneypenny";
 import { fetchOnboarding, type Onboarding, type OnboardingStep } from "../live/onboarding";
-import { fetchPlaybooks } from "../live/playbooks";
 import { AlpacaGuide } from "../shell/alpaca-guide";
 import { PageFrame } from "../shell/frame";
+import { MilestonePanel } from "../shell/milestone-panel";
 import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
@@ -25,13 +25,11 @@ import { ProfileRail } from "../shell/profile-rail";
  *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
  *
  * `?moneypenny=intro` opens the rail on arrival — the deep link every "Meet Moneypenny ›" outside
- * this page uses. Once connected the account tiles ride the same read: equity, buying power,
- * rungs earned, playbooks unlocked. Honesty rule as everywhere (docs/BRAND.md): the figures are
- * the live board's, labelled simulated, and a stale read says so rather than showing zeros.
+ * this page uses. This page is the task checklist only — account figures (equity, buying power)
+ * live on Accounts, and ladder/playbook progress lives on Milestones (`/learn`); duplicating them
+ * here read as account-status content under a checklist heading, not an onboarding task (Eric,
+ * 2026-09-17).
  */
-
-const money = (n: number) =>
-  `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function StepGlyph({ done, active }: { readonly done: boolean; readonly active: boolean }) {
   return (
@@ -56,7 +54,7 @@ function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement |
   if (step.id === "first-trade")
     return (
       <Link className="btn btn-primary" to="/trade" search={{ play: "101" }}>
-        Open the trading desk ›
+        Open Trade ›
       </Link>
     );
   return null;
@@ -133,54 +131,6 @@ function Step({
   );
 }
 
-function AccountTiles({ data }: { readonly data: Onboarding }): ReactElement | null {
-  const a = data.account;
-  const playbooks = useQuery({
-    queryKey: ["playbooks"],
-    queryFn: fetchPlaybooks,
-    enabled: a !== undefined,
-  });
-  if (!a) return null;
-  return (
-    <div className="ob-tiles">
-      <div className="ob-tile ob-tile-lead">
-        <span className="ob-k">Equity</span>
-        <span className="ob-v num">{a.stale ? "—" : money(a.equity)}</span>
-        <span className="ob-note">
-          {a.stale ? "last account read failed" : "simulated · Alpaca paper"}
-        </span>
-      </div>
-      <div className="ob-tile">
-        <span className="ob-k">Buying power</span>
-        <span className="ob-v num">{a.stale ? "—" : money(a.cash)}</span>
-        <span className="ob-note">ready to deploy</span>
-      </div>
-      <div className="ob-tile">
-        <span className="ob-k">Ladder</span>
-        <span className="ob-v num">
-          {a.rungsEarned}
-          <span className="ob-unit"> / {a.rungsTotal} rungs</span>
-        </span>
-        <span className="ob-note">
-          {a.nextUp ? `next up · ${a.nextUp.title.toLowerCase()}` : "ladder complete"}
-        </span>
-      </div>
-      <div className="ob-tile">
-        <span className="ob-k">Playbooks</span>
-        <span className="ob-v num">
-          {playbooks.data?.unlocked ?? "—"}
-          <span className="ob-unit"> / {playbooks.data?.total ?? "—"} unlocked</span>
-        </span>
-        <span className="ob-note">
-          <Link className="ob-tile-link" to="/playbooks">
-            view playbooks ›
-          </Link>
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function OnboardingPage(): ReactElement {
   const { moneypenny } = Route.useSearch();
   const navigate = useNavigate();
@@ -211,7 +161,6 @@ function OnboardingPage(): ReactElement {
   const data = onboarding.data;
   const name = data.account?.displayName ?? data.viewerName;
   const firstOpen = data.steps.findIndex((s) => !s.done);
-  const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
   return (
     <PageFrame rail={<ProfileRail current="onboarding" />}>
       <ProfileMeta />
@@ -233,16 +182,7 @@ function OnboardingPage(): ReactElement {
           can be marked done.
         </p>
       ) : null}
-      <section className="ob-panel">
-        <div className="ob-panel-head">
-          <h2 className="ob-panel-title">Onboarding</h2>
-          <span className="ob-count num">
-            {data.done} / {data.total} complete
-          </span>
-        </div>
-        <div className="course-bar ob-bar">
-          <i style={{ width: `${pct}%` }} />
-        </div>
+      <MilestonePanel title="Onboarding" done={data.done} total={data.total}>
         <ol className="ob-steps">
           {data.steps.map((step, i) =>
             step.id === "connect" ? (
@@ -257,8 +197,7 @@ function OnboardingPage(): ReactElement {
             ),
           )}
         </ol>
-      </section>
-      <AccountTiles data={data} />
+      </MilestonePanel>
     </PageFrame>
   );
 }

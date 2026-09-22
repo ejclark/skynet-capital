@@ -15,10 +15,13 @@ import {
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
+import { serveCouncilApi } from "./council-api-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { serveDeskAlertsApi } from "./desk-alerts-route.js";
+import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
@@ -27,12 +30,14 @@ import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
+import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveSubscriptionsApi } from "./subscriptions-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
+import { serveTradeOrdersApi } from "./trade-orders-routes.js";
 
 export type { DashboardServerConfig };
 
@@ -49,7 +54,21 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   const channel = createBoardChannel();
   driveBoardChannel(config.hub, channel, config.ceremonies);
   return createServer((req, res) => {
-    void handle(req, res, config, channel);
+    void handle(req, res, config, channel).catch((error: unknown) => {
+      // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
+      // catch what it can reason about, but nothing here may ever escape to become an uncaught
+      // exception on Node's unhandled-rejection path — which on this runtime terminates the
+      // process. A crash here is a real production outage of the public dashboard, not a quietly
+      // dropped request, so failing closed with a response is not optional. `process.emitWarning`,
+      // not `console` — this is library code (the repo reserves console for scripts).
+      process.emitWarning(`[dashboard-server] unhandled error: ${String(error)}`);
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "internal error" }));
+      } else {
+        res.end();
+      }
+    });
   });
 }
 
@@ -111,6 +130,10 @@ async function serveWriteApis(
   session: Session | undefined,
 ): Promise<boolean> {
   if (await serveTradeApi(req, res, path, config, session)) return true;
+  if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
+  if (serveDeskEventsApi(req, res, path, config, session)) return true;
+  if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
+  if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;
@@ -120,6 +143,7 @@ async function serveWriteApis(
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await servePlaybooksApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
+  if (await serveCouncilApi(req, res, path, config.council, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;

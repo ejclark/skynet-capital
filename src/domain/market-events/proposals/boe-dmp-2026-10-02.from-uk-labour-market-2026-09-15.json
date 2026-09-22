@@ -1,0 +1,11 @@
+{
+  "id": "boe-dmp-2026-10-02",
+  "kind": "macro-print",
+  "title": "Bank of England Decision Maker Panel monthly data — firms' own expected wage growth one year ahead, the MPC's forward wage survey",
+  "date": "2026-10-02",
+  "status": "estimate",
+  "source": "EST: bankofengland.co.uk/decision-maker-panel/2026/september-2026, fetched direct 2026-09-09 (HTTP 200) — the Bank's own September-2026 DMP page carries no data and states verbatim 'This monthly Decision Maker Panel data will be published on 2 October 2026.' Primary (the publisher's own schedule); filed estimate per this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has FED: and no slot for a non-Fed central bank — the same gap boe-decision-2026-09-17, ecb-decision-2026-09-10 and boj-decision-2026-09-18 were filed under. Discovered in the never-assessed initial research of uk-labour-market-2026-09-15, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-09-15 LANE, 2026-09-09. The forward half of the same question the ONS print answers backward: the ONS measures wages PAID, the DMP measures wages FIRMS EXPECT TO PAY, and the July MPC minutes' hold rests entirely on there being 'little evidence' of energy feeding into wages. The July 2026 DMP is the reference: firms expected 3.4% average wage growth one year ahead against 4% realised over the past year, with 19% expecting energy to push wages up and 17% down — near-perfect cancellation, which is the survey evidence behind the majority's position (press-cited relay of the BoE release; the July DMP page itself was not fetched this session). This release lands between boe-decision-2026-09-17 and boe-decision-2026-11-05, and before uk-autumn-budget-2026-10-28, so it is the first read on whether the dissenters' second-round-effects case gains survey support after the September vote. Tiered LOW: UK-only, symbols: [], no rates- or sterling-keyed house playbook, and a monthly survey release has no measured tape reaction in this book. Estimate widens caution only."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "uk-quarterly-national-accounts-2026-12-22",
+  "kind": "macro-print",
+  "title": "UK GDP quarterly national accounts, Jul-Sep 2026 (ONS, 07:00 London / 02:00 ET) — the December edition, the only one of the four that is not a quarter-end",
+  "date": "2026-12-22",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/gdpquarterlynationalaccountsukjulytoseptember2026, fetched direct 2026-09-09 (HTTP 200) — reads verbatim 'GDP quarterly national accounts, UK: July to September 2026', '22 December 2026 7:00am', 'This release is not yet published'. Cadence corroborated from the publisher's own past-release listing (four pages scraped direct, HTTP 200 each): the Q3 edition has landed on 20-23 December in all 10 years 2016-2025 — 23 Dec 2016, 22 Dec 2017, 21 Dec 2018, 20 Dec 2019, 22 Dec 2020, 22 Dec 2021, 22 Dec 2022, 22 Dec 2023, 23 Dec 2024, 22 Dec 2025. Filed estimate on the two counts every ONS entry on this calendar carries: the confirmed-prefix taxonomy has no slot for a foreign national statistics institute, and this lane may not self-confirm an event it discovered in-sweep",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-quarterly-national-accounts-2026-09-30 LANE, 2026-09-09, during that event's never-assessed initial research. It is proposed for one measured reason rather than for completeness: the December edition is the ONLY quarter of the four that does NOT fall on a calendar quarter-end, which makes it the natural control for any claim that a QNA release day is eventful. Measured over 40 release days since 2016-09-30, the December editions are the quietest of the set on every UK series — IGLT.L 0.60x an ordinary non-quarter-end day (t = -3.22), FTSE 0.36x (t = -6.39) — and that is NOT December seasonality: against a late-December control (15-31 Dec, non-QNA, n = 90) they still run 0.61x on IGLT.L (t = -2.58) and 0.38x on FTSE (t = -4.61). The 09-30 lane reads that as confirmation of its measured null rather than as an edge, and proposes this entry so a future pulse can test the same identification out of sample. Tiered LOW and symbols [] on the same measured basis as the proposing lane: this repo tracks no UK-listed name and no house playbook is fiscal-, rates- or sterling-keyed. Estimate widens caution only; nothing date-keyed may act on this."
+}

@@ -19,6 +19,8 @@ export type DeskSubmitResult =
       readonly orderId: string;
       readonly status: string;
       readonly symbol: string;
+      /** The broker's echo of the time in force it accepted (#3407 P1) — shown, never assumed. */
+      readonly timeInForce?: string;
     }
   | { readonly ok: false; readonly refusals: string[] };
 
@@ -63,11 +65,17 @@ function brokerRefusal(error: unknown): string {
 
 /** Shared submit wrapper: a broker throw becomes a refusal string, never an exception. */
 async function submitToBroker(
-  place: () => Promise<{ id: string; status: string; symbol: string }>,
+  place: () => Promise<{ id: string; status: string; symbol: string; time_in_force?: string }>,
 ): Promise<DeskSubmitResult> {
   try {
     const order = await place();
-    return { ok: true, orderId: order.id, status: order.status, symbol: order.symbol };
+    return {
+      ok: true,
+      orderId: order.id,
+      status: order.status,
+      symbol: order.symbol,
+      ...(order.time_in_force ? { timeInForce: order.time_in_force } : {}),
+    };
   } catch (error) {
     return { ok: false, refusals: [brokerRefusal(error)] };
   }
@@ -80,7 +88,7 @@ async function submitToBroker(
  * the fill later; the symbol comes from the broker's own echo, never the form.
  */
 export async function submitAndAudit(
-  place: () => Promise<{ id: string; status: string; symbol: string }>,
+  place: () => Promise<{ id: string; status: string; symbol: string; time_in_force?: string }>,
   participant: Participant,
   deps: {
     recordAudit?: (entry: OrderAuditRecord) => Promise<void>;

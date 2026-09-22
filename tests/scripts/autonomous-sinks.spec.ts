@@ -1,5 +1,6 @@
+import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { InMemoryActivityEventBus } from "../../src/observatory/in-memory-activity-event-bus.js";
-import { botOrderPublisher } from "../../src/scripts/autonomous-sinks.js";
+import { botOrderPublisher, decisionSink } from "../../src/scripts/autonomous-sinks.js";
 
 /**
  * `botOrderPublisher` is the one bit of #1211 slice 2's wiring worth its own spec: given a bus,
@@ -46,5 +47,40 @@ describe("botOrderPublisher", () => {
         at: "2026-09-04T14:00:00.000Z",
       }),
     ).not.toThrow();
+  });
+});
+
+const decision = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
+  at: 1,
+  personaId: "sauron",
+  mode: "observe",
+  rawIntents: [],
+  guardedIntents: [],
+  outcomes: [],
+  ...over,
+});
+
+describe("decisionSink", () => {
+  it("writes to the decision DB when one is given, alongside the (absent-here) JSONL audit", () => {
+    const recorded: DecisionRecord[] = [];
+    const db = { record: (r: DecisionRecord) => recorded.push(r) };
+
+    decisionSink(undefined, db as never)(decision());
+
+    expect(recorded).toHaveLength(1);
+  });
+
+  it("is a no-op with neither sink configured — never throws", () => {
+    expect(() => decisionSink(undefined, undefined)(decision())).not.toThrow();
+  });
+
+  it("a throwing decision-db write is caught — DatabaseSync is synchronous, unlike the JSONL audit", () => {
+    const db = {
+      record: () => {
+        throw new Error("SQLITE_BUSY");
+      },
+    };
+
+    expect(() => decisionSink(undefined, db as never)(decision())).not.toThrow();
   });
 });

@@ -1,8 +1,12 @@
 import type { ReactElement } from "react";
+import type { DeskOrderEvent } from "../live/desk-events";
+import { fillHeadline } from "../live/fill-headline";
 import type { OptionPreview } from "../live/options";
+import { daysToExpiry, expiresIn } from "../live/straddle";
 import type { TicketResult } from "../live/ticket";
-import { money } from "../live/ticket";
-import { DisarmNote, GateHead } from "./gate-frame";
+import { money, orderTypeLabel, tifLabel } from "../live/ticket";
+import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
+import { PayoffChart } from "./payoff-chart";
 
 /**
  * The options gate's review rendering (#738 phase 10b) — the server's `OptionTicketPreview`
@@ -47,7 +51,48 @@ function PayoffGrid({ preview }: { readonly preview: OptionPreview }): ReactElem
       />
       <Est label="Max loss" value={money(preview.maxLoss)} />
       <Est label="Breakeven" value={money(preview.breakeven)} />
+      {/* Chance of profit never renders without expected value beside it (#3407 P2; the study's
+          ledger #20): 72%-to-win-$1 next to 28%-to-lose-$5 is the legible pair, POP alone is the
+          casino's number. Both absent when the solver had no honest input. */}
+      {preview.chanceOfProfit !== undefined && preview.expectedValue !== undefined ? (
+        <>
+          <Est label="Chance of profit" value={percent(preview.chanceOfProfit)} />
+          <Est label="Expected value" value={signedMoney(preview.expectedValue)} />
+        </>
+      ) : null}
+      {preview.impliedVol !== undefined ? (
+        <Est label="Implied vol" value={percent(preview.impliedVol)} />
+      ) : null}
     </dl>
+  );
+}
+
+/** "72%" — one decimal only when it changes the read (a 0.4% chance is not 0%). */
+export function percent(fraction: number): string {
+  const pct = fraction * 100;
+  return `${pct >= 10 || pct === 0 ? Math.round(pct) : pct.toFixed(1)}%`;
+}
+
+/** A signed dollar figure — the sign is a word-level cue, never a hue (a standing reader is
+ *  red/green colourblind), so the plus is written out. */
+export function signedMoney(value: number): string {
+  return value > 0 ? `+${money(value)}` : money(value);
+}
+
+/** The contract's quoted greeks in the desk's own units, "—" where the feed had none. */
+function GreeksLine({
+  greeks,
+}: {
+  readonly greeks: NonNullable<OptionPreview["greeks"]>;
+}): ReactElement {
+  const cell = (label: string, value: number | undefined, digits: number): string =>
+    `${label} ${value === undefined ? "—" : value.toFixed(digits)}`;
+  return (
+    <p className="gate-row num tkt-greeks">
+      {cell("Δ", greeks.delta, 2)} · {cell("Γ", greeks.gamma, 3)} · {cell("Θ", greeks.theta, 2)}
+      {" · "}
+      {cell("V", greeks.vega, 2)}
+    </p>
   );
 }
 /** The single-leg ticket's body: cost, max loss, breakeven, and the disarm note.
@@ -55,9 +100,21 @@ function PayoffGrid({ preview }: { readonly preview: OptionPreview }): ReactElem
  *  @category trading
  */
 export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview }): ReactElement {
+  // The order class, its limit and the time in force the server says it will send — the same
+  // line the share ticket echoes (#3407 P1); a member never learns the TIF after the fact.
+  const tif = tifLabel(preview.timeInForce);
   return (
     <div className="gate-body">
       {preview.occSymbol ? <p className="gate-row num tkt-occ">{preview.occSymbol}</p> : null}
+      <p className="gate-row">
+        {orderTypeLabel(preview.orderType)}
+        {preview.limitPrice !== undefined ? ` · limit ${money(preview.limitPrice)}` : ""}
+        {tif ? ` · ${tif}` : ""}
+        {/* DTE lands here, not on the chain (Eric, 2026-09-21): a member just picked the date
+            themselves, so a chain-header echo of it added nothing — the theta lesson belongs at
+            the moment it's actually decision-relevant, reviewing what's about to be sent. */}
+        {preview.expiration ? ` · ${expiresIn(daysToExpiry(preview.expiration, new Date()))}` : ""}
+      </p>
       {preview.refusals.map((refusal) => (
         <p key={refusal} className="gate-row gate-refusal">
           ✕ {refusal}
@@ -69,6 +126,11 @@ export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview
         </p>
       ))}
       {preview.ok ? <PayoffGrid preview={preview} /> : null}
+      {/* The same diagram the multi-leg review draws (#3407): the grid's numbers as a shape. */}
+      {preview.ok && preview.payoff && preview.maxLoss !== undefined ? (
+        <PayoffChart curve={preview.payoff} maxLoss={preview.maxLoss} />
+      ) : null}
+      {preview.ok && preview.greeks ? <GreeksLine greeks={preview.greeks} /> : null}
       <DisarmNote />
     </div>
   );
@@ -94,7 +156,13 @@ export function GateAction({
   const busy = state.step === "reviewing" || state.step === "submitting";
   if (state.step === "reviewed" && state.preview.ok) {
     return (
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={onSubmit}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={busy}
+        onMouseDown={keepFocus}
+        onClick={onSubmit}
+      >
         Submit order
         {state.preview.estNotional ? ` — ${money(state.preview.estNotional)}` : ""}
       </button>
@@ -112,6 +180,7 @@ export function GateAction({
       type="button"
       className="btn btn-primary"
       disabled={busy || !drafted}
+      onMouseDown={keepFocus}
       onClick={onReview}
     >
       {state.step === "reviewing" ? "Reviewing…" : "Review order"}
@@ -124,13 +193,14 @@ export function GateAction({
  */
 export function OptionGateStatus({
   state,
+  fill,
 }: {
   readonly state: OptionGateState;
+  /** The stream's frame for this ticket's order, once one arrived (#3407 P4 slice 2). */
+  readonly fill?: DeskOrderEvent;
 }): ReactElement | null {
-  if (state.step === "draft")
-    return <GateHead tone="draft">Draft — nothing is sent until every check passes</GateHead>;
-  if (state.step === "reviewing")
-    return <GateHead tone="checks">Reviewing against the desk…</GateHead>;
+  if (state.step === "draft") return null;
+  if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
   if (state.step === "reviewed" || state.step === "submitting")
     return (
       <>
@@ -147,7 +217,7 @@ export function OptionGateStatus({
   if (state.result.ok)
     return (
       <>
-        <GateHead tone="filled">{`Order ${state.result.orderId} ${state.result.status} — ${state.result.symbol}`}</GateHead>
+        <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
           <p className="gate-note">
             SIM account — simulated fill, real discipline. The blotter and timeline pick it up on
@@ -158,7 +228,7 @@ export function OptionGateStatus({
     );
   return (
     <>
-      <GateHead tone="refused">The desk refused at submit</GateHead>
+      <GateHead tone="refused">The gate refused at submit</GateHead>
       <div className="gate-body">
         {state.result.refusals.map((refusal) => (
           <p key={refusal} className="gate-row gate-refusal">

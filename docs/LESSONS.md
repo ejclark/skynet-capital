@@ -2148,3 +2148,413 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   cost, but a tool to sweep for it periodically is (docs/COACHES.md → Special teams).
 - **SIDE QUESTS:** none — `hero.css`'s `aspect-ratio: 21/9` sits on a fixed-width block, not a
   resizing grid track, so it doesn't share this failure mode; checked, not changed.
+
+### #2024 went red in CI on `app-typecheck` after a green local `verify`
+
+- **SHA:** n/a (fix on `package.json`)   **DATE:** 2026-09-08   **STATUS:** closed
+- **SIGNAL:** PR #2024 passed local `npm run verify` (`run-p typecheck lint test`, root only) and
+  still went red in CI's `verify` job on `app-typecheck`, within ~1 minute of push — one CI cycle
+  spent on a check the local run never ran.
+- **ROOT CAUSE:** `.github/workflows/pipeline.yml`'s `verify` job runs `npm run typecheck --prefix
+  app` and `npm test --prefix app` in addition to the root's `typecheck lint test`, but root
+  `package.json`'s `verify` script never called into `app/`. `scripts/ship.sh open` runs `npm run
+  verify` and calls it "parity with CI" — the parity claim was false for anything the app package
+  alone broke.
+- **PREVENTION:** script — root `verify` is now `run-p typecheck lint test typecheck:app test:app`,
+  with `typecheck:app` (`npm run typecheck --prefix app`) and `test:app` (`npm test --prefix app`)
+  added as their own scripts, so it runs the same five checks CI's `verify` job runs. `ship.sh
+  open` now refuses to push what CI would reject.
+- **SIDE QUESTS:** none.
+
+### The entire event-research lane went dark — every matrix leg failed identically, `claude-code-action@v1`'s floating tag moved to a broken release mid-session
+
+- **SHA:** (this PR)   **DATE:** 2026-09-08   **STATUS:** closed
+- **SIGNAL:** Eric asked why ~89 `[event-research]` receipt issues were piling up with zero pickup
+  (#1923 among them) despite the pipeline looking otherwise healthy. Investigation first found a
+  narrower gap (`flag-stall`'s audit was comment-only, #2221) — but a second pass, prompted by
+  "wouldn't solving the root cause prevent this entire mess", pulled the actual run logs instead of
+  reasoning from the workflow's own doc comments.
+- **ROOT CAUSE:** two consecutive `workflow_dispatch(scan)` runs (run #2210 at 22:24, #2215 at
+  22:29) failed **every single `research due events (...)` matrix leg** — not one event, all of
+  them, ~14–25 per run — each in 9–12 seconds with the identical error: `ReferenceError: Claude
+  Code native binary not found at /home/runner/.local/bin/claude ... errorClass:
+  "executable_not_found", code: "ENOENT"`, immediately after the installer itself printed "✔
+  Claude Code successfully installed!". Comparing resolved SHAs across runs: a run at 17:50 the
+  same day (success) resolved the floating `anthropics/claude-code-action@v1` tag to SHA
+  `9c5ddab2...` and installed **Claude Code v2.1.263** — worked fine. The 22:24/22:29 runs resolved
+  the *same* `@v1` tag to a *different* SHA `0d0e0876...`, installing **v2.1.265** — a newer
+  release whose install step regressed. The pipeline is entirely push-driven (a merged research PR
+  is the only thing that re-triggers the next scan), so once every leg in a batch fails, zero PRs
+  merge, zero pushes land, and the whole self-perpetuating chain goes silent — not "one stuck
+  event," the entire lane, until something else pushes to `main` or a human manually re-dispatches.
+- **PREVENTION:** all 6 `anthropics/claude-code-action@v1` call sites across
+  `moneypenny-events.yml`, `moneypenny-repair.yml`, and `claude.yml` are now pinned to the last
+  confirmed-good SHA (`9c5ddab2e6d17b83ea679153b31f1d5f023cf636`, v2.1.263) instead of the floating
+  `v1` tag. A floating major-version tag on a third-party action is a supply-chain risk this repo
+  had no defense against — any upstream release can silently break every session using it, with no
+  warning and no revert path short of "notice the backlog and dig through run logs." Bumping
+  forward again should happen deliberately (verify one matrix leg succeeds on the new SHA before
+  repinning), never by letting the tag float again.
+- **SIDE QUESTS:** #2221 (the `flag-stall` repair-dispatch gap) still ships — it's a genuine,
+  independent gap (a single event's session dying for its own reason while the rest of the lane
+  works fine) and remains the backstop for that rarer case; it just isn't the reason ~89 issues
+  piled up at once. Whether the workflow's own "no cron, event-driven only" design (accepted
+  residual: "a completely quiet repo checks nothing until the next merge or a manual scan
+  dispatch") should grow a cheap self-check after a fully-failed batch is a separate, smaller
+  question — logged to `docs/IDEAS.md` rather than built here, since this pin already removes the
+  actual trigger for it.
+
+---
+
+### The self-healing repair lane never saw `build-events` matrix-leg failures — the re-dispatch step signed with `GITHUB_TOKEN`, so its own run's completion event was suppressed
+
+- **SHA:** 04aec2c   **DATE:** 2026-09-06   **STATUS:** closed
+- **SHA:** 02ae543   **DATE:** 2026-09-06   **STATUS:** closed
+- **SHA:** b11b2aa   **DATE:** 2026-09-06   **STATUS:** closed
+- **SHA:** 5d0457e   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** 1c2c554   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** 79c8f42   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** e15fde9   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** 5fe36af   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** d7317ca   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** b5e30d1   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** ec4d11c   **DATE:** 2026-09-08   **STATUS:** closed
+- **COVERS:** every "Moneypenny Events (event-research automation)" failure on `main` between the
+  first of these and PR #2292 merging — the bug is still live (the fix is an open, held PR, not yet
+  merged) and `incident-scan.mjs` picked up 6 more recurrences in the time it took to write this
+  entry, growing the same never-assessed backlog from ~10 stuck events to 20+. Add the fix commit's
+  own sha here once #2292 lands, per `incident-scan.mjs`'s `isLearned()` matching convention.
+- **SIGNAL:** `ship.sh open`'s advisory `incident-scan` check, run on an unrelated PR, flagged 5
+  unlearned "Moneypenny Events (event-research automation)" failures on `main` over 14 days —
+  routed here rather than fixed inline since the failing branch's own work was unrelated. Pulling
+  each commit's check-runs (not just `incident-scan`'s display-title echo, which says nothing about
+  *why* a run failed) showed the same 8–10 far-future `never-assessed` calendar events
+  (`fomc-2027-12-08`, `fhfa-hpi-2027-11-30`, `fhfa-hpi-2027-12-28`, `fomc-minutes-2027-11-17`,
+  `fomc-blackout-start-2027-11-27`, `consumer-confidence-2027-12-22`,
+  `sifma-bond-holiday-close-2027-10-11`, `vix-expiration-2027-10-20`, and others) failing their
+  `research due events (…)` matrix leg on every single push, each with `claude-code-action`'s SDK
+  reporting `subtype: success, is_error: true` after ~17 turns and ~$1.47 — a real, completed
+  session that judged its own result a failure, not a crash or a timeout. Detection lag: at least
+  the full 14-day window `incident-scan.mjs` covers, likely longer — nothing had ever surfaced these
+  as a capsule issue, so there is no earlier data point to measure from.
+- **ROOT CAUSE:** `claude-code-action@v1` rejects `push` as an event type, so `moneypenny-events.yml`
+  re-fires itself as a `workflow_dispatch` on a push with due events (the "Re-dispatch for event
+  research" step, `gh workflow run moneypenny-events.yml … -f command=scan`) and `build-events` only
+  ever runs inside that re-dispatched run. That step signed the `gh workflow run` call with
+  `secrets.GITHUB_TOKEN`. GitHub's infinite-loop guard — **events triggered by GITHUB_TOKEN do not
+  start other workflow runs** — is the same mechanism this file's own header already documents
+  twice (the `issues.opened` hop that never fired `claude.yml`, and the `pull_request.opened` hop
+  that never fired `verify`), but it reaches one hop further than either: it also suppressed the
+  **completion** (`workflow_run`) event of the run that GITHUB_TOKEN itself started. So
+  `moneypenny-repair.yml`'s triage job — which exists specifically to file a capsule issue the
+  moment a run fails on `main` — never once fired for a `build-events` matrix leg, for as long as
+  the bug lived. Verified directly: for each of the 5 SHAs above, the actual failing
+  `research due events (fhfa-hpi-…)` run's completion timestamp has no corresponding
+  `moneypenny-repair.yml` run anywhere near it (checked ±30–60 min; the nearest real triage
+  invocation is unrelated, a `push`-triggered `route`-job failure that correctly filed #1421). By
+  contrast, every genuinely `push`-triggered failure on this same workflow (#1421, #1390, #1561) DID
+  get a capsule filed — confirming the gap is specific to the GITHUB_TOKEN-signed re-dispatch path,
+  not the repair lane in general. **What else crosses this system:** any future step that mints its
+  own `gh workflow run`/`gh pr merge`/similar call under `secrets.GITHUB_TOKEN` inherits the same
+  blind spot — the loop guard doesn't just hide the token's direct writes, it hides everything
+  downstream of the run that write started, including that run's own outcome.
+- **PREVENTION:** gate/script, PR #2292 (held for Eric — `.github/workflows/**` never auto-merges).
+  The re-dispatch step now signs with `steps.app-token.outputs.token` (already minted earlier in the
+  same `route` job for every other write in this file), the same fix already applied to every
+  PR-opening step for the identical underlying mechanism. This does not fix why these specific
+  events return `is_error: true` — that diagnosis becomes possible for the first time once the
+  capsule issue the repair lane files carries the actual log tail; before this fix, nobody could
+  even see that these events were failing at all.
+- **SIDE QUESTS:** → docs/IDEAS.md — (a) `event-scan.mjs --due` has no circuit breaker: an event
+  that fails every research attempt gets re-attempted on every single push, forever, at real API
+  cost (~$1.47 × every push × ~8 stuck events, sustained for days) with no backoff or
+  escalation-after-N-failures; (b) #2221 (open PR, `flag-stall` repair-dispatch) is a related but
+  independent detection path — it fires on a receipt *issue* sitting quiet 2+ days, via a direct
+  `workflow_dispatch` call rather than a `workflow_run` listener, so it does not inherit this bug —
+  but it is a slower backstop (days) for exactly this shape of failure, not a substitute for the
+  fast path this entry restores; (c) worth an audit of every other `gh workflow run` / `gh api -X
+  POST .../merges` call anywhere in `scripts/moneypenny/*.mjs` for the same
+  GITHUB_TOKEN-vs-App-token question, now that the mechanism is confirmed to reach past the
+  immediate write.
+
+### `max-parallel: 4` was a guess with a safety margin, not a measured ceiling — and the 2026-09-05 incident it cites is a different failure class than the 2026-09-08 one, not the same bug twice
+
+- **SHA:** (this PR)   **DATE:** 2026-09-09   **STATUS:** closed
+- **SIGNAL:** Eric, on hearing "4 parallel, 15-20 min each ≈ 12-16 events/hour": "something feels
+  wrong" — then, on the proposal to raise it, a sharper question: is the 2026-09-05 burst incident
+  actually the same `claude-code-action` install-crash class just fixed (this doc, the entry above),
+  meaning the whole throttle was built to work around a phantom problem?
+- **ROOT CAUSE:** (of the confusion) the 2026-09-05 entry above was written blind — its own text
+  says "the action hides the refusal text" — so its ROOT CAUSE line inferred "the shape of a
+  refused first call (rate-limit or capacity)" without ever seeing the actual result payload.
+  Re-pulling the raw logs for that incident's own covering SHAs (77a71ca, 8d12068, aaa0b3d,
+  a9fbb66, d7e545a, c2662e4) with the same technique that found 2026-09-08's cause settles it:
+  the two incidents are **not** the same bug. 2026-09-08 fails at spawn — `ReferenceError: Claude
+  Code native binary not found` — before the CLI subprocess ever reports back, because the install
+  step itself regressed. 2026-09-05's failing legs print `"Claude Code initialized"` cleanly (CLI
+  v2.1.261, a normal install), then 469ms later the CLI's own structured result comes back
+  `{"type":"result","subtype":"success","is_error":true,"duration_ms":469,"num_turns":1,
+  "total_cost_usd":0,"modelUsage":{}}` — zero tokens processed, no completion, no error text
+  (the action's own log: "Running Claude Code via SDK (full output hidden for security)... enable
+  `show_full_output: true` for full output"). A clean init followed by an instant, zero-usage,
+  unexplained reject is the signature of an upstream rejection at the first API call (rate-limit or
+  capacity), not a crash in this repo's control. So `max-parallel` is guarding a real constraint —
+  but the value itself (4) was chosen as "far under the 16 that broke," never as a measured safe
+  ceiling; nothing between 4 and 16 concurrent sessions has ever been tried.
+- **PREVENTION:** two changes, together, in `moneypenny-events.yml`'s `build-events` job. (1)
+  `max-parallel` raised 4 → 8 — a bounded step toward the untested middle, not a jump to the
+  known-bad 16, chosen because the repo's own research volume is expected to keep growing and the
+  4-wide throttle was costing real hours against a number nobody derived. (2) A failure-only step
+  that `cat`s the CLI's own fixed-path result file (`/home/runner/work/_temp/claude-execution-output.json`)
+  into the job log — closes the exact gap that turned 2026-09-05 into an inferred-not-confirmed
+  diagnosis. Deliberately not `show_full_output: true` (dumps the whole conversation transcript,
+  the thing the action's own security note is about) — just the terminal result envelope. If a
+  future batch shows the same is_error/zero-`modelUsage` signature at 8-wide, that step names it
+  immediately instead of requiring another hours-long log dig, and the number drops back to 4 (never
+  higher without new data).
+- **SIDE QUESTS:** none — this closes the "action swallows the refusal text" side quest banked
+  2026-09-06 (never actually filed to `docs/IDEAS.md`, only pointed to from the lesson entry —
+  built directly instead of parking it twice).
+
+### `/api/wire`'s page cap is a budget shared across every participant, not a per-user limit — nobody ran that arithmetic
+- **SHA:** n/a   **DATE:** 2026-09-17   **STATUS:** closed
+- **SIGNAL:** Eric on the Activity page: "I only see activity for trades that took place today. why aren't trades from the past few weeks showing up?" — eight days after the cause merged, caught by a member, not a gate.
+- **ROOT CAUSE:** `/api/wire` (`src/server/wire-routes.ts`) pages the trade feed at `DEFAULT_PAGE_SIZE = 30` (`src/server/pagination.ts`, PR #2329/issue #2287), newest-first, across ALL participants combined. That PR's own body says outright: "No frontend 'load more' UI wired in this PR... a consumer can start using the cursor whenever it's built (PR 6 is the natural next place)." PR 6 (#2355), merged 30 minutes later against the same plan issue, built a different feature (reasoning/vitals) instead. The parent plan issue (#2287) never grew an EARS criterion for "a member can see a trade older than page one" — only for the server contract (`WHEN a paginated endpoint is queried with no per_page, it SHALL return at most 30 rows`). The deferral lived only as a sentence in a merged PR body with no checkbox anywhere to keep it visible, so it had nowhere to stay open and simply vanished. `app/src/live/wire.ts`'s `fetchWire` called `/api/wire` once and never read the `Link: rel="next"` header; no "load more" control existed anywhere in the app.
+  Eric's own correction mid-fix sharpens this past "no consumer exists": the cap is a **shared budget divided across a growing number of participants**, not a per-user limit — the design never ran the arithmetic (1 user × 31 trades, or 5 users × 6 trades each, both exhaust it) that would have caught this at review time, with zero real trading activity required. "Volume" was the wrong frame; "how many entities share this one fixed number" is the right one.
+- **PREVENTION:** two layers, per the doctrine ranking.
+  1. **Gate** — `tests/arch/pagination-consumer.spec.ts`: fails if `src/server/pagination.ts`'s contract (`nextLinkHeader`/`paginateDesc`) is in use server-side but no `app/src` file reads `nextCursor`/`rel="next"` anywhere. Catches the specific failure that just happened (a growing pagination contract with zero client consumers) for any future paginated feed, not just this one.
+  2. **Doctrine line** — `docs/ENGINEERING.md`, EARS section: an EARS criterion that introduces a cap/limit/page size shared across a growing set of entities (participants, personas, symbols, …) must state the per-entity arithmetic in the same breath — a design-review habit a mechanical gate can't enforce, since it can't know whether the number chosen was ever actually checked against plausible N.
+  3. **The bug itself** — `app/src/live/wire.ts`/`app/src/routes/activity.tsx`: `fetchWire` now parses the `Link` header into `nextCursor`, and the Activity feed's Trading-activity section has a "Load older trades" control that walks the cursor back, accumulating older pages client-side.
+- **SIDE QUESTS:** the desk's `/activity` and `/decisions` feeds share the identical unconsumed-cursor gap (`app/src/live/desk.ts`) — not fixed here (out of this incident's scope), logged → `docs/IDEAS.md`.
+
+### A wake-reply rule written in prose was skipped at generation time — no gate exists for "does this reply add anything"
+
+- **SHA:** n/a   **DATE:** 2026-09-17   **STATUS:** closed
+- **SIGNAL:** Eric, after a PR-merge confirmation reply restated what the merge notification itself
+  already said: "Asking me to unsubscribe to merged prs. In what scenario would i give a fuck? I
+  expect a singular ask, to update config so I'm never bothered with these types of requests." Then,
+  when the offered fix was only a promise to apply the existing rule going forward: "The tldr; is
+  'my bad' with no corrective action.. meaning the same lapse in judgement in the future is
+  guaranteed?"
+- **ROOT CAUSE:** `CLAUDE.md` already states the exact rule on point — "a wake with nothing new to
+  report earns silence (re-arm the check-in), not a recap" — written days before this incident and
+  loaded into every session's context. It was skipped anyway, because nothing in the harness
+  enforces it. A hook can gate a tool call (PreToolUse/PostToolUse) or a session-lifecycle event
+  (Stop, SessionStart), but there is no hook surface over the CONTENT of an assistant's own free-text
+  reply before it reaches the user. So "is this message worth sending" lives entirely as prose,
+  re-derived from scratch at every wake, with a nonzero failure rate on every occurrence and no
+  structural backstop. **What else crosses this system:** every other prose-only judgment rule in
+  `CLAUDE.md`/Orient shares this exact vulnerability — the interrogate-before-comply step, the
+  report-at-altitude doctrine, even the "never restate what the notification already said" line
+  itself — each is a rule a model can silently skip under momentum, with nothing catching the skip.
+- **PREVENTION:** two layers, deliberately unequal in strength — the honest ranking, not the
+  aspirational one.
+  1. **Gate (partial)** — `agentPushNotifEnabled: false` in `~/.claude/settings.json` (this
+     session). Does NOT stop the underlying behavior (generating an unneeded reply) — no such gate
+     exists in this harness today — but does mechanically stop the harm Eric actually named: a push
+     landing on his device for a zero-information message. Full-stop for that one channel, zero
+     judgment involved on every future occurrence.
+  2. **Doctrine line — deliberately NOT rewritten.** The existing `CLAUDE.md` rule was already
+     correct and specific; restating it again would repeat the exact mistake this entry documents (a
+     prose fix for a prose-failure class). The honest prevention available today is tier-1 partial
+     (the push channel above) plus this ledger entry — not a stronger doctrine line, because the
+     evidence from this incident is that more prose does not close this class of gap.
+- **SIDE QUESTS:** → `docs/IDEAS.md` — (a) whether a `MessageDisplay` hook (present in the harness's
+  hook-event enum, but only a `command`-type hook today, not `prompt`/`agent`) could be extended to
+  support a cheap LLM classifier gating "does this reply add anything" before display — the actual
+  tier-1 fix for the general class, not buildable inside this repo, worth raising as a capability
+  request; (b) an audit of `CLAUDE.md`/`orient.md` for every other prose-only judgment rule with no
+  gate behind it, ranked by consequence if skipped — the interrogate-before-comply step is the most
+  consequential candidate.
+
+### A blind-replay eval design leaked hindsight through the search tool, not the corpus file it guarded against
+
+- **SHA:** n/a   **DATE:** 2026-09-18   **STATUS:** closed
+- **SIGNAL:** Caught by the eval itself, not by a human or a gate — one of four pilot replay agents
+  (#3264 slice 1, the Haiku/Sonnet adequacy eval named in #2946's plan) self-disclosed mid-report
+  that its WebSearch results surfaced the real outcome of the historical event it was supposed to be
+  blind-assessing. A second, parallel replay of a different event showed the same hindsight-shaped
+  framing without volunteering it.
+- **ROOT CAUSE:** the replay protocol correctly forbade reading this repo's own corpus file for the
+  sampled event (the one place the banked verdict literally lives), but every sampled event is, by
+  construction, in the past relative to today — the eval can only draw ground truth from events
+  already closed out. Live WebSearch does not respect that boundary: a query about a historical
+  macro print routinely surfaces the actual print result and its aftermath, information no real
+  initial assessment (dispatched *before* the event) could ever have had. The design guarded the one
+  leak path that was obvious (our own file) and missed the one that was structural (the open web
+  itself knowing what happened). Effect: every stance-match score the pilot produced is inflated —
+  it measured "reasonable judgment with hindsight-adjacent search results available," an easier task
+  than the one #2946's S5 spec actually asked for.
+- **PREVENTION:** two layers.
+  1. **Gate (partial)** — `docs/grind/haiku-eval-replay.instructions.md` now requires a
+     `CONTAMINATION_NOTE` field on every replay report: the agent must say plainly whether search
+     surfaced outcome-adjacent information, even when uncertain, rather than leaving disclosure to
+     chance. This is the mechanism that would have caught the second (non-disclosing) replay's leak
+     immediately instead of it passing as a clean result. Does not fix the underlying leak — only
+     makes it visible every time, which is what let this incident close in one pilot instead of
+     silently inflating the full 30-event batch.
+  2. **Doctrine line (this file's own instructions.md)** — the chore file's "Known open problem"
+     section blocks scaling to the full batch until a real fix lands: either constrain WebSearch to
+     a pre-event date cutoff, or switch from historical replay to prospective testing against newly
+     dispatched live events (no hindsight to leak by construction). Neither chosen yet — tracked on
+     #3264, not resolved here.
+- **SIDE QUESTS:** none — the general lesson (a tool's own knowledge boundary can leak past a
+  content-access restriction that looks complete) is banked here for any future eval design in this
+  repo that tries to test a model blind to an outcome using a search tool that already knows it.
+
+### 21 "Moneypenny Events" failures on `main` shared one display name and hid five distinct root causes
+
+- **SHA:** 711c8ec   **DATE:** 2026-09-11   **STATUS:** closed
+- **SHA:** a0e0f2e   **DATE:** 2026-09-11   **STATUS:** closed
+- **SHA:** bc38160   **DATE:** 2026-09-13   **STATUS:** closed
+- **SHA:** 33def2f   **DATE:** 2026-09-13   **STATUS:** closed
+- **COVERS:** the weekly-quota-exhaustion cluster only (see ROOT CAUSE) — the other 17 unlearned
+  shas in this window are two *different* root causes, split into the two entries immediately below
+  this one so each keeps its own COVERS list rather than one entry claiming all 21.
+- **SIGNAL:** `ship.sh open`'s advisory `incident-scan` check flagged 21 unlearned "Moneypenny
+  Events (event-research automation)" failures over 14 days while landing an unrelated PR (#3300).
+  `incident-scan`'s own display only ever echoes the workflow's run name, never the failing job's
+  error — every one of the 21 looked identical from that output alone. Pulling actual job logs via
+  the GitHub Actions REST API (not the MCP `actions_list`/`get_job_logs` tools, which round-trip
+  full run/job payloads too large to read in one call at this run volume — REST + a local `jq`
+  parse was the cheap path) found four more root causes than the SIGNAL line let on.
+- **ROOT CAUSE:** the research lane's self-feeding volume growth (#2946: 446 calendar events, 338
+  initial-research sessions in 7 days) burned a full weekly Claude usage quota by 2026-09-11 —
+  every "research due events" job in the 09-11/09-13 runs failed identically with `"You've hit your
+  weekly limit"`. Verified directly: run `34632506013` (711c8ec) had 27/27 failed jobs each ending
+  in that exact rate-limit message; run for `bc38160` showed the same signature on inspection.
+- **PREVENTION:** already shipped, before this retro ran. #2946's hardening — dispatch ceiling
+  (#2962), research horizon (#2971), Sonnet model tier, spend-based circuit breaker
+  (#3158/#3207/#3209/#3245) — landed 2026-09-15 through 09-17 and dropped remaining-life pulses from
+  5,375 to 2,320 with a per-tick cap of 6 sessions (confirmed on #3264: ~$1.13/session on Sonnet vs.
+  ~$2.90 Opus baseline, across 4 live sessions post-hardening). No further work needed for this
+  specific cause; these 4 shas were simply never retro'd after the fix landed, which is the actual
+  gap this entry closes.
+- **SIDE QUESTS:** none beyond what's captured in the next two entries, which this same
+  investigation surfaced.
+
+### The just-shipped rate-limit fix's own circuit breaker crashes reading a large prior run's log, plus two more shell steps break at the same growing volume
+
+- **SHA:** 8d47faf   **DATE:** 2026-09-17   **STATUS:** closed
+- **SHA:** 5a6b5b7   **DATE:** 2026-09-17   **STATUS:** closed
+- **SHA:** 2389414   **DATE:** 2026-09-16   **STATUS:** closed
+- **SHA:** b9c6b37   **DATE:** 2026-09-15   **STATUS:** closed
+- **SHA:** ff55c45   **DATE:** 2026-09-16   **STATUS:** closed
+- **SHA:** 6e53a31   **DATE:** 2026-09-17   **STATUS:** closed
+- **COVERS:** 14e4285 44436e8 fc46824 e718574 c8c8cac d996e17 6bd3059 6bc5549 2e3d141 — same
+  "research due events" small-batch job-failure shape (3–9 jobs, not the 20–55 of the rate-limit
+  cluster above) as the two confirmed `ff55c45`/`6e53a31` instances of cause 2 below; bucketed by
+  shape rather than individually log-checked for every one — flagged in #3307 as worth one more
+  spot-check before treating that inference as certain, not re-litigated here.
+- **SIGNAL:** same `incident-scan` sweep as the entry above; these 15 shas are NOT the rate-limit
+  cause — three separate exit codes (126, 5, 1) surfaced once actual job logs were pulled instead of
+  reading the run-name-only summary.
+- **ROOT CAUSE:** three independent shell steps in `moneypenny-events.yml` assumed bounded size and
+  broke as the same volume growth #2946 measured kept climbing — none had been connected to #2946
+  or to each other before this retro:
+  1. **`Argument list too long` (exit 126, `b9c6b37`).** The due-events filter passes `$DUE` and
+     `$HEADS` as `node -e '...' "$DUE" "$HEADS"` argv, which exceeded the OS `ARG_MAX` once the
+     calendar's serialized JSON grew past ~450 events.
+  2. **`jq: Cannot index array with string "total_cost_usd"` (exit 5, `ff55c45`, `6e53a31`).** The
+     per-event cost-reporting step assumes `claude-execution-output.json` is always a single object;
+     for some runs it's an array, and the crash fails an already-completed research session's job
+     red over what is only telemetry.
+  3. **`spawnSync gh ENOBUFS` (exit 1, `8d47faf`, `5a6b5b7`, `2389414`).** The spend-based circuit
+     breaker #2946's own hardening just shipped reads a *prior* run's full log via `spawnSync gh` to
+     total spend before dispatching. When that prior run is itself large — confirmed in all three
+     instances, each one was reading the log of the run immediately before it, including the
+     rate-limit cluster's own 27-job runs — the default `spawnSync` stdout buffer overflows. The
+     breaker correctly fails closed (refuses to dispatch rather than dispatching blind, the right
+     safety call) but reports the tick as a failed CI run instead of a clean no-op, which is what
+     put it in this ledger at all: **the fix for cause A above is what's causing part of cause B.**
+  All three are the same growth curve (#2946's 446 events / 338 sessions-a-week) hitting mechanical
+  assumptions — argv length, subprocess buffer size, output JSON shape — that nobody had load-tested,
+  rather than the cost problem #2946 framed it as.
+- **PREVENTION:** not yet fixed — filed as
+  [#3307](https://github.com/ejclark/skynet-capital/issues/3307) with a fix named per cause (stdin
+  instead of argv; guard the jq call against non-object shape; raise `spawnSync`'s `maxBuffer` or
+  switch to the Actions usage API for spend totals). Recording the lesson now rather than holding
+  this entry open until #3307 lands — the SIGNAL/ROOT CAUSE this ledger exists to preserve doesn't
+  need to wait on the fix; add the fix commit's own sha here once #3307 lands, per
+  `incident-scan.mjs`'s `isLearned()` matching convention.
+- **SIDE QUESTS:** logged on #3307 rather than here — the general pattern ("a shell step in this
+  workflow captures growing subprocess output/argv with no size bound") is worth a grep across
+  `moneypenny-events.yml`'s other steps for a fourth instance nobody has hit yet, tagged
+  `_(src: Claude · while: retro on 21 unlearned incidents)_` in `docs/IDEAS.md` if that sweep isn't
+  done as part of #3307 itself.
+
+### Receipt-close GraphQL failures in the same window are a third, already-tracked cause — not re-diagnosed here
+
+- **SHA:** 5e39acf   **DATE:** 2026-09-18   **STATUS:** closed
+- **SHA:** 65592c6   **DATE:** 2026-09-18   **STATUS:** closed
+- **SIGNAL:** same `incident-scan` sweep; both shas' failing job was `route`, and both logs showed
+  `##[error]close-receipt #<N> failed — GraphQL: Could not close the issue. (closeIssue)` against a
+  *different* receipt each time, inside an otherwise-successful batch of 15-20 closes per tick.
+- **ROOT CAUSE:** already filed and diagnosed on
+  [#3271](https://github.com/ejclark/skynet-capital/issues/3271) ("Moneypenny never closes a receipt
+  whose event left the due pool") — not re-derived here, just confirmed these two specific shas are
+  instances of that same bug rather than a new one.
+- **PREVENTION:** tracked on #3271, not yet fixed. Add the fix commit's own sha here once it lands.
+- **SIDE QUESTS:** none — the point of this entry is narrowly to stop these two shas from reading as
+  an unexplained mystery in `incident-scan`'s output; #3271 already owns the actual fix.
+
+### A "free-standing state, replace in place" design choice for one ledger field produced a 19-PR conflict backlog — the first fix only rate-limited it
+
+- **SHA:** n/a (a 19-PR backlog, not a single failing run)   **DATE:** 2026-09-19   **STATUS:** closed
+- **SIGNAL:** Eric: "there is a lot of research related prs that have conflicts. the conflicts
+  feels like the same structural/systemic problem that we've called out that remains unaddressed."
+  19 of 23 open PRs carried `conflict-flagged` + `needs-eric` — 17 the bot's "deterministic screen"
+  commits, 2 duplicate independent fixes of an already-merged cost-meter bug.
+- **ROOT CAUSE:** two layers, mechanical and behavioral. Mechanical — every screened event's ledger doc carries a
+  `**Last assessed:**` + `<!-- probe-ref: {...} -->` pair, deliberately designed (the open-question
+  comment above `PRICE_MOVE_THRESHOLD` in `event-material-decide.mjs`) as "free-standing state...
+  REPLACED in place on every pulse... unlike the assessment ledger table, which stays strictly
+  append-only." That argument weighed the sidecar-sync cost of a separate JSON file and never
+  weighed the git cost of the in-place choice: every merge to `main` re-triggers the research
+  workflow (issue #724's design), so two screens racing the same still-due event both rewrote the
+  identical line — a genuine same-logic conflict, not a false positive, which is why the
+  conflict-repair lane correctly refused to auto-resolve any of them.
+
+  Behavioral — the deeper layer, from Eric's follow-up pushback. The first fix shipped
+  ([#3328](https://github.com/ejclark/skynet-capital/pull/3328)/[#3329](https://github.com/ejclark/skynet-capital/pull/3329))
+  added a pre-flight guard that skips opening a second screen PR while one is already open. Eric,
+  immediately: "3329 looks like it simply avoids the problem" — and, on being shown the append-only
+  redesign, connected it explicitly to the standing "recurring blessing-ask is a scaling failure"
+  doctrine in `CLAUDE.md`: "It's alarming this type of low level failure occurred given I recently
+  added instructions aimed at ensuring our ability to scale." The guard was a correct, cheap,
+  legitimate throughput optimization — but it rate-limits the collision rather than making it
+  impossible, which is exactly the "propose the one-time fix, don't keep asking" failure mode that
+  doctrine names: a mutex around a mutable-state race still leaves the race in the architecture for
+  the next volume spike to find.
+- **PREVENTION:** `applyScreen` (`scripts/event-material-decide.mjs`) now APPENDS a fresh
+  `**Last assessed:**` + probe-ref pair at the true end of the file on every screen, instead of
+  rewriting the existing one — the same append-only convention the ledger table already used.
+  `parseLedgerHeader` and `event-scan.mjs`'s `loadLedgers` both take the LAST such pair in the file
+  (`matchAll(...).at(-1)`), so an unscreened doc still resolves off its original header and a
+  screened one resolves off its newest trailing block. `research-lint.mjs`'s blocked-source check
+  gets the same last-occurrence fix. `.github/prompts/event-research.md` (a full research session's
+  own instructions) is updated to append rather than rewrite too, closing the same hole on that
+  path. Two concurrent screens for the same event are now a pair of disjoint git additions — the
+  case the conflict-repair lane already auto-resolves — rather than a same-logic conflict, which
+  makes the collision structurally impossible rather than merely rate-limited. The #3328/#3329
+  guard stays in place as a minor throughput optimization (skips a redundant duplicate PR/API call)
+  but is no longer load-bearing for correctness.
+- **SIDE QUESTS:** none logged — the fix was scoped and landed in the same pass once the deeper
+  root cause was named.
+
+### A fourth `gh run view --log` timeout is the same already-tracked circuit-breaker fragility as #3307's cause 3 — not re-diagnosed here
+
+- **SHA:** b4dbb23   **DATE:** 2026-09-19   **STATUS:** closed
+- **SIGNAL:** `route` job failed on run 35415921799 (push): `dial tcp 140.82.114.22:443: i/o
+  timeout` fetching a prior run's log via `gh run view --log`, so `circuit breaker machinery
+  failed... refusing to dispatch with an incomplete spend total.`
+- **ROOT CAUSE:** same fragility as #3307's cause 3 (`docs/LESSONS.md`, "The just-shipped
+  rate-limit fix's own circuit breaker crashes reading a large prior run's log") — the breaker's
+  fetch of a prior run's full log has no bound on failure mode; that entry saw a buffer overflow,
+  this one a network timeout, both from the same unhardened call. The breaker's fail-closed response
+  is correct (it refused to dispatch blind rather than guessing); the unlearned-incident flag is the
+  job reading red over it, not a new defect.
+- **PREVENTION:** tracked on #3307, not yet fixed — not re-filed. Add this sha to #3307's own fix
+  commit once it lands, same as the other confirmed instances there.
+- **SIDE QUESTS:** none — narrowly confirming this sha is another instance of #3307, not deriving a
+  new cause.

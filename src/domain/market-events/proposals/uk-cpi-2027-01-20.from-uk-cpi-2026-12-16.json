@@ -1,0 +1,11 @@
+{
+  "id": "uk-cpi-2027-01-20",
+  "kind": "macro-print",
+  "title": "UK CPI — December 2026 consumer price inflation (ONS, 07:00 London / 02:00 ET), the first print after the December vote and the one that unwinds the Budget-timing base effect",
+  "date": "2027-01-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/consumerpriceinflationukdecember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Consumer price inflation, UK: December 2026', 'Release date: 20 January 2027 7:00am', and 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-12-16, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-12-16 LANE, 2026-09-09. Why it earns a slot: it is the mirror image of the print that proposes it, and it scores that print's central mechanism. The 2026 Budget is 28 October and the 2025 Budget was 26 November, so the alcohol-and-tobacco duty uprating lands in the NOVEMBER 2026 index while its base landed in the DECEMBER 2025 index — CPI division 02 (D7BV) rose +1.02% m/m in Dec-2025 and +1.35% in Dec-2023 (Autumn Statement 22 Nov 2023), against -1.07%/-0.82%/-1.10%/-0.20% in the late-October-Budget Decembers of 2018/2021/2022/2024. So whatever the 16 December print gains from duty timing, this print gives back: the same mechanism that pushes the November annual rate UP pushes the December annual rate DOWN. A reader who takes a higher 16 December headline as reacceleration and is not looking for the January unwind has the story backwards twice. Tiered LOW on the same grounds as every sibling UK CPI entry: symbols: [], no rates- or sterling-keyed house playbook. Estimate widens caution only; it licenses no date-keyed action."
+}

@@ -10,6 +10,7 @@
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
+//   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -50,9 +51,9 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
-import { dueForResearch, routeSweep } from "./events.mjs";
+import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -198,6 +199,36 @@ export function releaseClaim(slug) {
 }
 
 /**
+ * READ-ONLY peek at a lease — never claims, never reclaims a stale one, never writes anything.
+ * Exists so a caller that only wants to SKIP work Moneypenny already holds (e.g. `/work-issues`,
+ * which checks for an open PR but had no visibility into a claim taken before any PR exists) can
+ * ask "is this held right now?" without joining the claim protocol itself.
+ *
+ * Mirrors `claimHandoff`'s own read + staleness math exactly (same `readRef`/`claimAgeOf` shape) so
+ * the two never disagree about what counts as "currently claimed" — a stale lease is reclaimable, so
+ * it reads as unclaimed here too.
+ *
+ * @returns {{ claimed: boolean, reason: string }}
+ */
+export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS) {
+  const ref = `claim/${slug}`;
+  let existing;
+  try {
+    existing = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/${ref}`]));
+  } catch {
+    return { claimed: false, reason: "no lease found" }; // 404 — unclaimed
+  }
+  const age = nowMs - Date.parse(claimAgeOf(existing.object.sha));
+  if (age < staleAfterMs) {
+    return { claimed: true, reason: `held by a live claim (${Math.round(age / 60000)}m old)` };
+  }
+  return {
+    claimed: false,
+    reason: `lease is stale (${Math.round(age / 60000)}m old) — reclaimable`,
+  };
+}
+
+/**
  * The feedback lane's one step: claim the labelled issue's lease, and decide its model tier from
  * the body already in the event payload (no `gh issue view`, no second network hop). Appends
  * `number=` / `model=` to $GITHUB_OUTPUT when the claim wins, and narrates on stdout either way —
@@ -298,6 +329,39 @@ export function sweepShipped(readIssues, deps) {
   }
 }
 
+/** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967) — and, since
+ *  #2968's reconcile, the receipt reconcile's eyes too. One read, both consumers.
+ *
+ *  `routeSweep` dedupes its receipt issues against `openIssueTitles` — an exact-title match is the
+ *  ONLY thing standing between "one receipt per never-assessed event" and a fresh duplicate every
+ *  push. That list was a single un-paged `per_page=100` read, and this repo carries 403 open issues
+ *  (343 of them `event-research` receipts). So the dedupe could only see the newest 100: every
+ *  never-assessed event whose receipt had aged past that window got a SECOND receipt filed, then a
+ *  third. Measured on the day this landed: 50 duplicated receipt titles, `jobs-2027-04-02` among
+ *  them (#2859 on 09-09, #2967 on 09-15 — both stall-flagged, same event, same body).
+ *
+ *  Silent by construction, and self-feeding: each duplicate is one more open issue pushing the
+ *  window further past the receipts it was supposed to be checking.
+ *
+ *  Paged on the CORE bucket, per gh.mjs's own header. The loop itself now lives in `ghRestAll`
+ *  rather than here (#2968, merged into #3269's fix): the receipt reconcile needs the same list
+ *  with `number` attached, and paging it twice would double the router's cheapest-but-not-free
+ *  read for no gain. One house pattern for "page a REST list", still — just hoisted to where the
+ *  other `gh` plumbing lives, beside `ghRest` itself.
+ *
+ *  ONE AMENDMENT TO #3269's CALL: the 20-page ceiling is now a hard error, not a silent partial.
+ *  Degrading protected against an unbounded read, which is right — but a partial dedupe is the
+ *  exact failure this function exists to end, and at 2,000 open issues we want a red run, not a
+ *  quieter version of the same bug. The reconcile below drains the queue to a handful, so the
+ *  ceiling should never be approached again; if it ever is, that is news.
+ *
+ *  NOT ALSO FIXED HERE, captured instead: `shippedSweep`'s `gh issue list --limit 100` is capped
+ *  the same way. #2968's reconcile makes that moot for `event-research` — receipts now close
+ *  against the LEDGER on disk, which is both free and the correct oracle — so the sweep is no
+ *  longer run for that label at all. `feedback` keeps it, and keeps the cap: that one is GraphQL,
+ *  and its own comment records the day it exhausted the bucket outright (2026-08-26). */
+const openIssues = () => ghRestAll("issues?state=open").filter((i) => !i.pull_request);
+
 function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
     let out;
@@ -365,20 +429,53 @@ function gatherDeps(ctx) {
       },
     );
   };
+  // REST, not `gh issue list --json title` (2026-08-26): a second GraphQL query, on every push, to
+  // read scalars REST hands over on the core bucket. Paged — see `openTitles` above for what the
+  // single-page version cost. Read ONCE here and shared, rather than paged a second time for the
+  // reconcile's sake.
+  const open = needsScan ? openIssues() : [];
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
-    shippedEvents: needsScan ? shippedSweep("event-research") : [],
+    // `event-research` deliberately does NOT get the reference sweep any more (#2968). Its receipts
+    // are now closed by `routeReceipts` against the LEDGER on disk, which is both the correct oracle
+    // for this label and free — where this call spent the scarce GraphQL bucket to ask a question
+    // that had silently answered "nothing shipped" for 144 finished receipts.
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
-    // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
-    // every push, to read one scalar field REST hands over on the core bucket.
-    openIssueTitles: needsScan
-      ? ghRest("issues?state=open&per_page=100")
-          .filter((i) => !i.pull_request)
-          .map((i) => i.title)
-      : [],
+    openIssueTitles: open.map((i) => i.title),
+    openEventReceipts: needsScan ? readReceipts(open) : [],
   };
+}
+
+/**
+ * Join each open `[event-research]` receipt to the one fact that decides its fate: does its ledger
+ * exist on disk? Impure (it reads the checkout), so `routeReceipts` stays pure over plain data.
+ *
+ * FAIL CLOSED ON A MISSING LEDGER DIRECTORY. `existsSync` on a file under a directory that is not
+ * there returns false for every id, which would read as "none of these were ever researched" and
+ * close nothing — harmless — but the inverse assumption is one edit away from closing the entire
+ * queue on a checkout that never had `docs/`. Refusing outright is the same doctrine as
+ * `event-scan.mjs`'s "an unreadable input is an error, never an empty result".
+ */
+function readReceipts(openIssues) {
+  const dir = "docs/research/events";
+  if (!existsSync(dir))
+    throw new Error(
+      `moneypenny: ${dir} is missing from this checkout — refusing to judge receipts against a ` +
+        "ledger directory that is not there.",
+    );
+  const receipts = [];
+  for (const i of openIssues) {
+    const id = String(i.title ?? "").match(RECEIPT_TITLE_RE)?.[1];
+    if (!id) continue;
+    receipts.push({
+      number: i.number,
+      title: i.title,
+      hasLedger: existsSync(`${dir}/${id}.md`),
+    });
+  }
+  return receipts;
 }
 
 function execute(intents) {
@@ -389,7 +486,12 @@ function execute(intents) {
   } catch (err) {
     console.log(`::warning::could not upsert labels: ${String(err.message).slice(0, 200)}`);
   }
-  const { receipt, failed } = runIntents(intents, executeOne);
+  // One dispatch for every stall this run flagged, fired after the per-issue comments and labels
+  // have landed (#3280) — the sessions are the expensive part, and same-run siblings share a cause.
+  const stallRepairs = [];
+  const { receipt, failed } = runIntents(intents, (i) => executeOne(i, stallRepairs));
+  const dispatched = dispatchEventStallRepair(stallRepairs);
+  if (dispatched) receipt.push(dispatched);
   // A write we could not make IS a real fault — isolating the blast radius must not turn a failed
   // run green. The receipt now says which intent failed and why, instead of the run just stopping.
   if (failed) process.exitCode = 1;
@@ -503,7 +605,82 @@ function commentAndFlagConflict(i) {
   }
 }
 
-function executeOne(i) {
+/**
+ * The decision half of the event-research repair dispatch: every `flag-stall` in ONE audit run
+ * becomes ONE `gh workflow run` carrying the whole list, not one run per issue.
+ *
+ * WHY BATCHED (#3280). It used to fire per issue, and the measurement says that is exactly the
+ * wrong key: all 62 stall dispatches in the lane's history arrived in three bursts, each burst from
+ * a single push-driven audit run (35 on 2026-09-11, 23 on 2026-09-13, 4 on 2026-09-18) with zero
+ * cross-run duplicates. Receipts filed together cross `staleAfterDays` together, so same-run
+ * siblings share a root cause with a very high prior — on 09-18 three Opus sessions diagnosed the
+ * identical bug in parallel and produced two near-identical PRs plus one wasted session (#3269,
+ * #3270, #3275), which then conflicted and drew two more repair runs. The bigger the bug, the more
+ * duplicate sessions: backwards. The audit run is the cheapest class proxy that exists *before* a
+ * session has diagnosed anything (`repair.mjs`'s `signature()` cannot help — a CI failure arrives
+ * with its class, a stalled receipt arrives with nothing but an event id).
+ *
+ * It degrades to the old behaviour by construction: one intent ⇒ one number ⇒ one dispatch.
+ * `issue_number` is already `type: string` on moneypenny-repair.yml, so the list is a value change,
+ * not a schema change.
+ *
+ * Pure — the `gh` call lives in `dispatchEventStallRepair`, so a spec drives this with no network.
+ *
+ * @returns {{ args: string[], label: string } | null} the `gh` argv plus how a human reads the
+ *   batch, or null when there is nothing to dispatch.
+ */
+export function stallRepairDispatch(issueNumbers) {
+  const numbers = [...new Set((issueNumbers ?? []).filter(Boolean).map(Number))];
+  if (numbers.length === 0) return null;
+  return {
+    args: [
+      "workflow",
+      "run",
+      "moneypenny-repair.yml",
+      "--ref",
+      "main",
+      "-f",
+      `issue_number=${numbers.join(",")}`,
+    ],
+    label: numbers.map((n) => `#${n}`).join(", "),
+  };
+}
+
+/**
+ * The doing half. `flag-stall` (unlike `flag-silent-feedback`/`flag-plan-stall`, which need a
+ * human's or Eric's judgment, not a code fix) is exclusively about `[event-research]` receipt
+ * issues (gatherAuditDeps only builds `unclaimedIssues` from that title pattern) — a stalled one
+ * usually means the same matrix-leg session has been failing silently, push after push, since only
+ * a merged PR ever touches the issue.
+ *
+ * Dispatched once, after every comment/label in the run has landed, same "never turn a transient
+ * `gh` failure into a comment storm" doctrine as the conflict twin — and the warning names the
+ * whole list, because a batched failure loses N pings instead of one.
+ *
+ * @returns {string | null} a receipt line naming the batch, so the run summary stays honest about
+ *   there being one session rather than one per issue.
+ */
+function dispatchEventStallRepair(issueNumbers) {
+  const plan = stallRepairDispatch(issueNumbers);
+  if (!plan) return null;
+  try {
+    sh("gh", plan.args);
+    return `🔧 stall repair dispatched once for ${plan.label} — one session, one diagnosis`;
+  } catch (err) {
+    console.log(
+      `::warning::could not dispatch stall repair for ${plan.label}: ${String(err.message).slice(0, 200)}`,
+    );
+    return `❌ stall repair dispatch failed for ${plan.label} — ${String(err.message).slice(0, 200)}`;
+  }
+}
+
+/**
+ * @param i the intent to carry out.
+ * @param stallRepairs collector for `flag-stall` issue numbers — the dispatch is fired once per
+ *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
+ *   so an issue whose memory could not be written is not dispatched either, exactly as before.
+ */
+function executeOne(i, stallRepairs = []) {
   if (i.kind === "noop") {
     console.log(`· nothing to do (${i.reason})`);
     return `noop — ${i.reason}`;
@@ -544,14 +721,30 @@ function executeOne(i) {
   }
   if (i.kind === "flag-stall") {
     commentAndFlagStall(i);
+    if (i.issueNumber) stallRepairs.push(i.issueNumber);
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
-    return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber})` : ""}`;
+    return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber}, repair batched)` : ""}`;
   }
   if (i.kind === "close-shipped") {
     sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
     sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
     console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
     return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
+  if (i.kind === "close-receipt") {
+    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
+    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
+    sh("gh", [
+      "issue",
+      "close",
+      String(i.issueNumber),
+      "--reason",
+      i.closeReason,
+      "--comment",
+      i.body,
+    ]);
+    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
+    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
   }
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
@@ -600,6 +793,16 @@ function runCliFlag(argv, ctx) {
         ? `::notice::released the lease for ${slug}`
         : `::notice::no lease held for ${slug} — nothing to release`,
     );
+    return true;
+  }
+
+  // `--check-claim <slug>` (e.g. `feedback-1234`, `plan-1234`): read-only, never claims or writes.
+  // For a caller (e.g. `/work-issues`) that wants to skip an issue Moneypenny already holds, before
+  // any PR exists to signal it — see `isClaimed`'s own doc comment for why this exists.
+  const checkIdx = argv.indexOf("--check-claim");
+  if (checkIdx >= 0 && argv[checkIdx + 1]) {
+    const slug = slugify(argv[checkIdx + 1]);
+    console.log(JSON.stringify(isClaimed(slug)));
     return true;
   }
 

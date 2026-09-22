@@ -24,6 +24,27 @@
 }
 .draft-leg-price {
   color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The leg's premium is a field (#3407 P3 slice 4): narrow, numeric, the unit outside it. */
+.draft-leg-price input {
+  width: 84px;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.draft-leg-unit {
+  font-size: var(--text-xs);
+}
+.draft-net {
+  margin: 0 0 10px;
+  font-size: var(--text-sm);
+  color: var(--muted);
 }
 .draft-leg-remove {
   padding: 4px 9px;
@@ -53,4 +74,61 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+/* The payoff diagram (#3407; rows 8 / 19): one polyline over a dashed zero line, the loss side
+   hatched — texture and words carry the meaning, never hue alone. Scales to the panel's width. */
+.payoff {
+  margin: var(--space-3) 0 0;
+}
+.payoff-svg {
+  display: block;
+  width: 100%;
+  max-width: min(100%, 52ch);
+  height: auto;
+  aspect-ratio: 320 / 120;
+  overflow: visible;
+}
+.payoff-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.payoff-dated {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+.payoff-dated-today {
+  stroke-dasharray: 1.5 3;
+}
+.payoff-dated-halfway {
+  stroke-dasharray: 6 3;
+}
+.payoff-zero {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+.payoff-tick {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.payoff-hatch {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.payoff-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  fill: var(--text);
+}
+.payoff-caption {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
 }

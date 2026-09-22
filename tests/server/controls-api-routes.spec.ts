@@ -46,6 +46,7 @@ function controlsWith(calls: StoreCall[], allSuspended = false) {
       load: () => ({
         allSuspended,
         bots: { "bot-sauron": { suspended: true } },
+        companionModel: "claude-sonnet-5",
         updatedAt: "2026-08-28T12:00:00Z",
         updatedBy: "eric@example.com",
       }),
@@ -53,6 +54,8 @@ function controlsWith(calls: StoreCall[], allSuspended = false) {
         calls.push({ kind: "all", editor, value }),
       setBot: (id: string, patch: unknown, editor: string) =>
         calls.push({ kind: `bot:${id}`, editor, value: patch }),
+      setCompanionModel: (model: string, editor: string) =>
+        calls.push({ kind: "model", editor, value: model }),
     },
     isOwner: (email: string) => email === "eric@example.com",
     bots: () => [
@@ -143,6 +146,26 @@ describe("serveControlsApi", () => {
     await serveControlsApi(req, res, "/api/controls", configWith(controlsWith(calls)), owner);
     expect(calls).toEqual([]);
     expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: false, message: "Unknown bot." });
+  });
+
+  it("swaps Moneypenny's model through the shared authority", async () => {
+    const calls: StoreCall[] = [];
+    const { res, out } = fakeRes();
+    const req = postReq({ action: "set-companion-model", model: "claude-haiku-4-5" });
+    await serveControlsApi(req, res, "/api/controls", configWith(controlsWith(calls)), owner);
+    expect(calls).toEqual([
+      { kind: "model", editor: "eric@example.com", value: "claude-haiku-4-5" },
+    ]);
+    expect(JSON.parse(out.body ?? "{}").ok).toBe(true);
+  });
+
+  it("rejects an oversized model field with 400 before it reaches the authority", async () => {
+    const calls: StoreCall[] = [];
+    const { res, out } = fakeRes();
+    const req = postReq({ action: "set-companion-model", model: "x".repeat(41) });
+    await serveControlsApi(req, res, "/api/controls", configWith(controlsWith(calls)), owner);
+    expect(out.status).toBe(400);
+    expect(calls).toEqual([]);
   });
 
   it("rejects a malformed body with 400", async () => {

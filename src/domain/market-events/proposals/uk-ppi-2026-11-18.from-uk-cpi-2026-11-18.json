@@ -1,0 +1,11 @@
+{
+  "id": "uk-ppi-2026-11-18",
+  "kind": "macro-print",
+  "title": "UK PPI — October 2026 producer price inflation (ONS, 07:00 London / 02:00 ET), published in the SAME minute as the October CPI it feeds",
+  "date": "2026-11-18",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/producerpriceinflationukoctober2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Producer price inflation, UK: October 2026', 'Release date: 18 November 2026 7:00am', and states 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-11-18, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-11-18 LANE, 2026-09-09. Why it earns a slot rather than a ledger footnote: it is the only tracked release that publishes in the SAME 07:00 London minute as a UK CPI print, which makes it a pure attribution entry — any 02:00 ET UK reaction on 2026-11-18 has two candidate causes, not one, and the input-price series is the one that speaks to the energy question the CPI print is being read for. Its own content is upstream of the same October energy step: the Ofgem cap rises 4% to GBP 1,723 on 1 October (gas +8%) while SI 2026/987 zero-rates DOMESTIC electricity only — business supplies keep their VAT treatment, so PPI input prices see the wholesale and cap moves WITHOUT the consumer VAT cut. A PPI input print that looks hot against a CPI print that does not is that asymmetry, not a pass-through failure. Tiered LOW on the same grounds as its CPI sibling: symbols: [], no rates- or sterling-keyed house playbook, attribution value only. Estimate widens caution only."
+}

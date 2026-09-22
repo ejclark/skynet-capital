@@ -1,8 +1,8 @@
 # US–China tariff truce expires — Kuala Lumpur suspension of the additional 24% duty — us-china-tariff-truce-expiry-2026-11-10
 
 **Kind:** geopolitical · **Date:** 2026-11-10 (estimate, NEWS: EO 14358 verbatim "12:01 a.m. eastern standard time on November 10, 2026") · **Impact:** high
-**Last assessed:** 2026-09-04
-<!-- probe-ref: {"symbols":{},"vix":14.32,"daysBand":"high:61+","adjacentIds":["cpi-2026-11-10","crwv-2026-11-10-print","jobs-2026-11-06","ppi-2026-11-13"],"screenStreak":0} -->
+**Last assessed:** 2026-09-15
+<!-- probe-ref: {"symbols":{},"vix":17.6,"daysBand":"high:21+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","jgb-10y-auction-2026-11-05","productivity-costs-q3-2026-11-05","treasury-buyback-1mo2y-2026-11-05","jobs-2026-11-06","umich-sentiment-prelim-2026-11-06","treasury-3y-note-2026-11-09","wholesale-trade-2026-11-09","boj-summary-of-opinions-2026-11-10","cpi-2026-11-10","eia-steo-2026-11-10","jgb-30y-auction-2026-11-10","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","bund-30y-auction-2026-11-11","sifma-bond-market-closure-2026-11-11","existing-home-sales-2026-11-12","jgb-5y-auction-2026-11-12","mts-october-2026-11-12","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","ppi-2026-11-13","russell-recon-preliminary-2026-11-13"],"adjacentStrongIds":["jobs-2026-11-06","cpi-2026-11-10"],"screenStreak":0,"blocked":[{"url":"https://www.state.gov/releases/office-of-the-spokesperson/2026/05/the-united-states-to-host-g20-foreign-ministers-meeting-in-atlanta-georgia","status":403,"at":"2026-09-15"},{"url":"https://g20.org/events-calendar/","status":403,"at":"2026-09-15"}]} -->
 
 ## At a glance
 
@@ -16,28 +16,36 @@ MOFCOM/GAC Announcement No. 70 of 2025 suspended the six Oct-9-2025 export-contr
 the 0.1% extraterritorial rule and the rare-earth foreign-direct-product rule — "until November 10,
 2026," and a US court ruling has no effect on a Chinese administrative act. So the risk points at
 rare-earth-dependent supply chains (semis, autos, robotics, defense, aerospace), not at
-tariff-sensitive importers. Two things keep this a stand-aside rather than a trade: the natural
-venue for an extension, **APEC Shenzhen, is 2026-11-18/19 — eight days *after* the deadline**, and
-this administration has now papered over two tariff cliffs *within the same minute* they lapsed
-(IEEPA→Section 122 on 2026-02-24; Section 122→Section 301 on 2026-07-24), while the market's
-reaction to the single largest possible tariff shock — SCOTUS voiding the entire regime — was
-S&P 500 **+0.69%**. Trading this cliff has a bad record. Watch it; do not pre-position it. The date
-is **estimate** and stays that way for a schema reason, not a doubt reason (see the stance).
+tariff-sensitive importers. What keeps this a stand-aside rather than a trade: this administration
+has now papered over two tariff cliffs *within the same minute* they lapsed (IEEPA→Section 122 on
+2026-02-24; Section 122→Section 301 on 2026-07-24), the market's reaction to the single largest
+possible tariff shock — SCOTUS voiding the entire regime — was S&P 500 **+0.69%**, and the
+rare-earth complex itself is *easing* into the deadline (NdPr's first monthly decline since May;
+MP Materials −8.4% over the eight sessions to 2026-09-15). **Amended 2026-09-15:** the initial
+research's most uncomfortable structural fact — "the extension venue sits *after* the deadline" —
+**is retired**. It was written from leader-level meetings only; four venues sit *before* 11/10 (the
+2026-09-24 summit, the G20 trade ministerial 9/30, G20 FMCBG Bangkok 10/15, G20 foreign ministers
+Atlanta 10/30–31), and pre-summit analysis now names a one-year truce extension easing rare-earth
+pressure as the 9/24 meeting's single most likely deliverable. Trading this cliff has a bad record.
+Watch it; do not pre-position it. The date is **estimate** and stays that way for a schema reason,
+not a doubt reason (see the stance).
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-67) | Stand aside | High | Nothing is actionable 67 days out on a deadline whose US-side legal mechanism was terminated on 2026-02-24; this is a calendar-watch entry. | A USTR or Federal Register notice published before 2026-11-10 that keys a China rate change to that date, restoring a live US-side cliff |
-| This week | Watch the 2026-09-24 summit — it is the only pre-deadline venue | Medium | Trump–Xi on 9/24 (estimate) is the last scheduled leader-level meeting before 11/10; APEC Shenzhen (11/18–19) sits *after* it, so an extension has to be struck early or bridged. | A joint statement out of the 9/24 summit naming a Nov-10 extension or a successor arrangement — which would collapse this event to a formality |
-| This month (through early Oct) | Stand aside — do not buy the cliff | Medium | Buying tail protection 5+ weeks out on an event whose only live leg is a foreign administrative renewal, into a 14.3 VIX, is paying for a story. n=2 2026 tariff lapses were both replaced within the same minute. | Two-sided policy escalation before 2026-10-05 — a new MOFCOM control announcement *and* a US Entity-List/301 action inside the same fortnight — which would argue the arrangement is already unwinding rather than being renewed |
-| This quarter (through 11/10) | Treat rare-earth-dependent supply chains as the exposed leg — defined-risk only, no directional bet | Medium | If Announcement No. 70's suspension lapses, the 0.1% extraterritorial rule and the rare-earth FDPR return, and China held ~69% of 2025 mine output and up to ~90% of processing — that is the real transmission channel, not tariff pass-through. | MOFCOM publishing an extension or a narrowed selective-licensing regime before 2026-11-10 — the outcome one specialist read (Jack Lifton, InvestorNews 2026-07-17) already expects |
+| Today (D-56) | Stand aside | High | Nothing is actionable 56 days out, and the US-side leg is now refuted from a primary source rather than inferred: federalregister.gov's document API, fetched 2026-09-15, returns **zero** documents published since 2026-02-20 keying any change in China's duty rate to 2026-11-10. | A USTR or Federal Register notice published before 2026-11-10 that keys a China rate change to that date, restoring a live US-side cliff |
+| This week | Watch the 2026-09-24 summit — now the *first* of four pre-deadline venues, not the only one | Medium | Pre-summit analysis (Brownstein, 2026-09-09) calls it "a management meeting rather than a breakthrough summit" whose single most likely deliverable is a one-year Busan-truce extension "easing pressure around Chinese rare-earth export controls," and names the 11/10 deadline as the principal risk to that outlook. | A joint statement out of the 9/24 summit naming a Nov-10 extension or a successor arrangement — which would collapse this event to a formality |
+| This month (through early Oct) | Stand aside — do not buy the cliff | High (was Medium) | The tape says nobody is bidding this cliff: NdPr alloy $131.02/kg on 2026-09-03, −1.98% m/m and the complex's first monthly decline since May; PrNd oxide $96.69/kg (9/5) still under the $110 DoD floor; MP Materials 53.78 → 49.26 (−8.4%) over 9/3→9/15. Paying for tail protection five weeks out against a falling physical market is paying for a story. | Two-sided policy escalation before 2026-10-05 — a new MOFCOM control announcement *and* a US Entity-List/301 action inside the same fortnight — which would argue the arrangement is already unwinding rather than being renewed |
+| This quarter (through 11/10) | Treat rare-earth-dependent supply chains as the exposed leg — defined-risk only, no directional bet | Medium | If Announcement No. 70's suspension lapses, the 0.1% extraterritorial rule and the rare-earth FDPR return; China held ~69% of 2025 mine output and up to ~90% of processing, and the IEA puts **$6.5tn** of downstream production outside China at risk under full implementation. MOFCOM had published nothing and scheduled no briefing as of 2026-09-06. | MOFCOM publishing an extension or a narrowed selective-licensing regime before 2026-11-10 — the outcome one specialist read (Jack Lifton, InvestorNews 2026-07-17) already expects, and the outcome `FT-us-china-tariff-truce-expiry-2026-11-10-1` registers |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never** — position for a "24% tariff snapback" on 2026-11-10. The duty it refers to was terminated on 2026-02-24; the trade is against a fact, not a probability.
-- **Watch (dated)** — Trump–Xi summit **2026-09-24 (estimate)** · the deadline itself **2026-11-10 (estimate)** · APEC Shenzhen leaders' meeting **2026-11-18/19 (estimate)** · China's separate retaliation/exclusion suspension expiry **2026-12-31 (estimate)**.
-- **Escalation flag** — any new MOFCOM export-control announcement, or the addition of further US names to China's control list (MP Materials and USA Rare Earth were added 2026-06-22), before 11/10. Not tripped as of 2026-09-04.
-- **De-escalation flag** — MOFCOM extending Announcement No. 70's suspension, or a 9/24 summit deliverable naming it. Not tripped as of 2026-09-04.
-- **Compound-day caution (mechanical)** — 11/10 also carries `cpi-2026-11-10` (confirmed, 08:30 ET) and the estimated CRWV print. Nothing that session is cleanly attributable to this event; do not read the tape as a verdict on it.
+- **Watch (dated)** — Trump–Xi summit **2026-09-24 (estimate)** · G20 trade ministerial, Milwaukee **2026-09-30 (estimate)** · G20 FMCBG, Bangkok **2026-10-15 (estimate)** · G20 foreign ministers, Atlanta **2026-10-30/31 (estimate, proposed this pulse)** · the deadline itself **2026-11-10 (estimate)** · APEC Shenzhen leaders' meeting **2026-11-18/19 (estimate)** · China's separate retaliation/exclusion suspension expiry **2026-12-31 (estimate)**.
+- **Escalation flag** — any new MOFCOM export-control announcement, or the addition of further US names to China's control list (MP Materials and USA Rare Earth were added 2026-06-22), before 11/10. Not tripped as of 2026-09-15.
+- **De-escalation flag** — MOFCOM extending Announcement No. 70's suspension, or a 9/24 summit deliverable naming it. Not tripped as of 2026-09-15: MOFCOM issued no notice and had scheduled no briefing as of 2026-09-06.
+- **Truce-decay flag (new 2026-09-15)** — Chinese suppliers have refused *licensed* rare-earth shipments to US buyers since early August (Reuters, 2026-09-04; gallium exports −65%, yttrium −98% YTD per Chinese customs), which is the second use of the lever *during* the suspension after the 2026-06-22 MP Materials / USA Rare Earth listing. Read further named refusals as compliance decay, not headline noise — it is the strongest evidence against the benign base case.
+- **Physical-tape read (new 2026-09-15)** — the rare-earth complex is *easing* into the deadline, not bidding it. Treat a sustained NdPr reversal back above the **$110/kg** DoD-backed floor, or MP Materials reclaiming its 2026-09-03 **53.78** close, as the first sign the market has started to price a lapse.
+- **Compound-day caution (mechanical, amended 2026-09-15)** — 11/10 carries `cpi-2026-11-10` (confirmed, high, 08:30 ET) plus a 10Y note auction, the BoJ Summary of Opinions, the EIA STEO and a JGB 30Y auction; `jobs-2026-11-06` (confirmed, high) sits four days earlier. The estimated CRWV print previously named here **is no longer in this calendar**. Nothing that session is cleanly attributable to this event; do not read the tape as a verdict on it.
 
 ## Initial research
 
@@ -185,6 +193,38 @@ the date; the two dated things that would change this doc are the 2026-09-24 sum
 MOFCOM publication on the suspension. Estimate status widens caution only — nothing here is
 date-keyed action.
 
+**Amendment (2026-09-15 pulse, D-56) — one kill switch fired and the call got *more* confident, not
+less.** The stand-aside is unchanged; two of its supports moved.
+
+*Retired: "the extension venue sits after the deadline."* That was the initial research's one
+genuinely uncomfortable structural fact and it does not survive contact with this repo's own
+calendar. It was written from **leader-level** meetings alone, where APEC Shenzhen (11/18–19) really
+does post-date the clock. At **ministerial** level the picture inverts: `g20-trade-ministerial-milwaukee-2026-09-30`
+(trade ministers), `g20-fmcbg-bangkok-2026-10-15` (finance ministers — Bessent's own venue) and the
+G20 foreign ministers' meeting in Atlanta on **2026-10-30/31** (proposed this PR) all sit *before*
+11/10, as does the 9/24 summit itself. Four venues, not zero. The honest caveat is that foreign
+ministers are not the trade channel — the export-control file runs Bessent/Greer to He Lifeng/Wang
+Wentao — so these are bridging *opportunities*, not scheduled negotiations. Still: an extension
+never needed a leaders' meeting, and the argument that it had nowhere to be struck is gone.
+
+*Upgraded: the US-side refutation is now primary-sourced, not inferred.* The initial research flagged
+its own weakest link — that EO 14358's mootness was inferred from the termination of EO 14257's
+duties, with 14358 never named in the 2026-02-20 termination order. federalregister.gov's document
+API, fetched **2026-09-15**, returns **zero** documents published since 2026-02-20 keying any change
+in China's duty rate to 2026-11-10; the 20 China-tariff documents published since 09-01 are routine
+AD/CVD sunset, circumvention and ITC review notices plus one USTR "Notice of Conforming Amendments
+to Product Exclusions" (09-02). A negative search is not a formal revocation, but it is a much
+better floor than an inference.
+
+*The counter-evidence, stated at equal weight.* Reuters (2026-09-04) reports Chinese suppliers
+refusing **licensed** rare-earth shipments to US buyers since early August, with gallium exports
+−65% and yttrium −98% YTD on Chinese customs data — against a truce that committed China to pausing
+exactly those controls. Together with the 2026-06-22 listing of MP Materials and USA Rare Earth,
+that is the second use of the lever *while it was supposedly suspended*, and it is the single
+strongest argument that the benign base case is wrong. It is also why the quarter-horizon call stays
+Medium while the month-horizon call moves to High: the near-dated evidence (a falling physical
+market, a named expected deliverable) is much cleaner than the far-dated evidence.
+
 **Why the label stays `estimate` — a schema gap, not date doubt.** The EO's expiry language is
 primary and verbatim, which normally clears promotion in one step (the
 [`crwv-fully-connected-2026-09-29`](crwv-fully-connected-2026-09-29.md) precedent). It cannot clear
@@ -211,19 +251,28 @@ policy-dated events.
 - *"Tariff cliffs in this series fizzle"* dies the first time a lapse is allowed to stand with no
   same-day substitute — n=2 so far (2026-02-24, 2026-07-24), both papered instantly.
 - *"The extension venue is after the deadline"* dies if a pre-11/10 leader-level or ministerial
-  meeting is scheduled, or if the 2026-09-24 summit produces the extension directly.
+  meeting is scheduled, or if the 2026-09-24 summit produces the extension directly. — **FIRED
+  2026-09-15** on its own first clause: three ministerial venues pre-date 11/10 (Milwaukee 9/30,
+  Bangkok 10/15, Atlanta 10/30–31). The switch worked exactly as written; see the Amendment above.
+  Retired, not carried forward.
 
-**Forward test.** None registered in [`forward-tests.md`](../forward-tests.md). That register is the
-symbol-sweep's zero-capital price-hypothesis ledger; this doc's falsifiable claim is a policy
-outcome, not a price test, and its scoring venue is this event's own `## Outcome` close-out — same
-reasoning the [`trump-xi-summit-2026-09-24`](trump-xi-summit-2026-09-24.md) ledger applies to its
-guard-shaped stance.
+**Forward test (registered 2026-09-15).** `FT-us-china-tariff-truce-expiry-2026-11-10-1` in
+[`forward-tests/us-china-tariff-truce-expiry-2026-11-10.md`](../forward-tests/us-china-tariff-truce-expiry-2026-11-10.md) —
+the benign base case, stated so the tape can adjudicate it: Announcement No. 70's suspension is
+extended, replaced or narrowed before it lapses, rather than snapping back in full. The 2026-09-04
+initial research declined to register on the grounds that a policy outcome is not a price test; that
+reasoning is superseded by the sibling [`trump-xi-summit-2026-09-24`](trump-xi-summit-2026-09-24.md)
+ledger, which registered a policy-deliverable null (`FT-trump-xi-summit-2026-09-24-1`) on 2026-09-08
+— the register's bar is a dated, falsifiable prediction, not a price one. Score by **2026-11-12**,
+inside this event's six-day close-out window, so it never lands in `forwardTestsBeyondWindow`.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-04 | D-67 | Initial research banked (above). **Headline mechanism refuted:** SCOTUS held IEEPA does not authorize tariffs on 2026-02-20 (*Learning Resources v. Trump*, 24-1287, 6–3, Kavanaugh/Thomas/Alito dissenting); "Ending Certain Tariff Actions" terminated the IEEPA duties incl. EO 14257 the same day, CBP stopped collection 2026-02-24 — so EO 14358's Nov-10 clock restores nothing on the US side. Wall rebuilt elsewhere with no Nov-10 hook: Sec. 122 10% global surcharge 2026-02-24 → expired 12:01 EDT 2026-07-24 (150-day cap); USTR Sec. 301 forced-labor duties 10–12.5% on ~60 economies effective the same minute, China at 12.5% stacking to ~37.5% aggregate 301. **Live leg is China's:** MOFCOM/GAC Announcement No. 70 (2025-11-07) suspended the six 2025-10-09 announcements — incl. No. 61's 0.1% extraterritorial rule and the rare-earth FDPR, plus a delayed Ho/Er/Tm/Eu/Yb wave — until 2026-11-10. Concentration: ~69% of 2025 mine output, up to ~90% processing. China listed MP Materials + USA Rare Earth 2026-06-22, i.e. used the lever *during* the truce. **Reaction function:** the biggest possible tariff shock (2026-02-20 SCOTUS) gave S&P +0.69%/Nasdaq +0.9%/Dow +0.47% — both 2026 cliffs were substituted within the same minute. **Structural:** APEC leaders' meeting Shenzhen 2026-11-18/19 is 8 days AFTER the deadline; Bessent (May 2026) "not in a hurry", naming venues two of which post-date the clock. Aug-2 reporting: He Lifeng/Bessent/Greer call, China "serious concern" over new US curbs. VIX 14.32, SPX 7747.71, SOXX 502.20 (2026-09-03 closes). *Proposed to `market-events.ts` (estimate):* `apec-leaders-shenzhen-2026-11-18` and `china-retaliation-suspension-expiry-2026-12-31`. Also amended this event's own `notes`, which asserted the now-refuted 24% snapback. | — (stance set: refuse the tariff trade, watch the rare-earth leg) | 2026-09-18 (high, 61+d band: every 14d) |
+| 2026-09-15 | D-56 | **Adjacency sweep.** *Geopolitical — one kill switch FIRED:* "the extension venue sits after the deadline" was written from leader-level meetings only and does not survive this repo's own calendar — `g20-trade-ministerial-milwaukee-2026-09-30`, `g20-fmcbg-bangkok-2026-10-15` (Bessent's venue) and the **G20 foreign ministers' meeting, Atlanta 2026-10-30/31** all pre-date 11/10, as does the 9/24 summit. Four venues, not zero; caveat carried, foreign ministers are not the trade channel. *Event tape — the de-escalation case got a named shape:* pre-summit analysis (Brownstein, 9/9) calls 9/24 "a management meeting rather than a breakthrough summit" whose most likely deliverable is a one-year Busan-truce extension "easing pressure around Chinese rare-earth export controls," and names the 11/10 deadline as the principal risk to that outlook — but MOFCOM published **nothing** and had **no briefing scheduled** as of 9/6 (eastasiabrief 9/6; mining-technology), so the de-escalation flag stays untripped. *Counter-evidence at equal weight (new flag):* Reuters (9/4) — Chinese suppliers refusing **licensed** rare-earth shipments to US buyers since early August; gallium −65%, yttrium −98% YTD on Chinese customs data. Second use of the lever *during* the suspension after the 6/22 MP Materials / USA Rare Earth listing. *Peer/physical tape:* NdPr alloy **$131.02/kg** (SMM, 9/3) −1.98% m/m, the complex's **first monthly decline since May**; PrNd oxide $96.69/kg (9/5) −0.73% and still under the $110 DoD floor; Nd metal $141.79, Pr metal $150.69. MP Materials **53.78 → 49.26 (−8.4%)** 9/3→9/15. Nobody is bidding this cliff. *Kill switch 1 upgraded inference → primary:* federalregister.gov document API (fetched 9/15) returns **zero** documents since 2026-02-20 keying a China duty-rate change to 11/10; the 20 China-tariff documents since 09-01 are routine AD/CVD and ITC notices plus one USTR conforming-amendment exclusions notice (9/2). Untripped. *Scale:* IEA puts **$6.5tn** of downstream production outside China at risk under full implementation. *VIX regime — threshold crossed:* **17.60** (9/15) vs 14.32 (9/3), **+3.28pt**; attribution is the September macro calendar (Aug payrolls +162k v ~53k est, CPI 9/11, FOMC 9/16 with hike odds ~60–65%), not this event. SPX 7582.19 (−2.14%), SOXX 497.82 (−0.87%). *Corridor:* adjacents within ±5d **4 → 24**, of which two are confirmed high-impact (`jobs-2026-11-06`, `cpi-2026-11-10`) — newly recorded, the prior probe-ref carried no strong set. `crwv-2026-11-10-print` is **gone from the calendar**; compound-day caution amended. *Band:* high moves 61+d (14d) → **21+d (7d)**. *Proposed (estimate):* `g20-foreign-ministers-atlanta-2026-10-30`. state.gov and g20.org both 403'd — logged in `probe-ref.blocked`, prefix downgraded to `NEWS:`. | Kill switch 5 fired and retired; truce-decay and physical-tape flags added; month-horizon confidence Medium → High; `FT-us-china-tariff-truce-expiry-2026-11-10-1` registered — see the 2026-09-15 Amendment | 2026-09-22 (high, 21+d band: every 7d) |
+| 2026-09-22 | D-49 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-2.7pt since last), band unchanged (high:21+), 25 adjacent event(s) tracked, new in corridor since last pulse: `crwv-2026-11-10-print` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-29 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -232,3 +281,6 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-22
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"high:21+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","existing-home-sales-2026-11-12","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":1} -->

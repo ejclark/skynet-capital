@@ -27,6 +27,11 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
      a later cycle) resolves, per `docs/ISSUES.md`'s label vocabulary.
    - anything with an open PR already referencing it (`Fixes #N` / a branch named for the issue) —
      WIP limit 1 per issue, same rule as `/governor`'s athlete check. Inventory is waste.
+   - anything Moneypenny already has a live claim on — `node scripts/moneypenny/index.mjs
+     --check-claim feedback-<n>` (or `plan-<n>`) reporting `claimed: true`. Her feedback/plan lanes
+     claim an issue via a git-tag lease (2h TTL) *before* any PR exists, so the PR check above alone
+     misses that window — a manual pass during it would otherwise dispatch a duplicate build. The
+     check is read-only; it never joins or breaks her claim.
 
    Order the remainder oldest-first (FIFO) unless Eric names a priority order for this pass.
 
@@ -70,6 +75,11 @@ One line per issue as it resolves (`#123 → PR #456, auto-merge armed` / `#128 
 not a narrated play-by-play of the build. Close the pass with a short tally: shipped / parked /
 blocked, and what's left in the queue if it wasn't emptied. This is Eric's report altitude
 (`CLAUDE.md` → *Report at altitude*) applied to a burn-down instead of a time-boxed digest.
+
+One more line, optional, at the tally — never per-issue: did the same friction recur across ≥2 issues
+this pass, or surface a clear opportunity? Log it to `docs/IDEAS.md`
+(`(src: Claude · while: work-issues pass <date>)`); nothing to note → the tally above is the whole
+report. Same no-new-gate discipline as `/governor`'s own cycle-close retro line.
 
 ## Boundaries
 

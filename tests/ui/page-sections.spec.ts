@@ -54,6 +54,13 @@ describe("page sections", () => {
     it("says a section switch is the rail's control role, not a new dimension", () => {
       expect(frame).toContain("never a new dimension");
     });
+
+    it("names the bench as a composition of sections that folds, never a fourth word (#3407)", () => {
+      expect(frame).toContain("a BENCH is several SECTIONS");
+      expect(frame).toContain("FOLDED to ordinary exclusive sections below it");
+      expect(frame).toContain("The section switch renders only when");
+      expect(frame).toContain("falsifier");
+    });
   });
 
   describe("one mechanism, not two", () => {
@@ -67,7 +74,11 @@ describe("page sections", () => {
     });
 
     it("builds no tab strip — no page introduces tab roles", () => {
-      for (const path of ["app/src/routes/activity.tsx", "app/src/shell/section-switch.tsx"]) {
+      for (const path of [
+        "app/src/routes/activity.tsx",
+        "app/src/routes/trade.tsx",
+        "app/src/shell/section-switch.tsx",
+      ]) {
         expect(read(path)).not.toMatch(/role="tab(list)?"/);
       }
     });
@@ -105,9 +116,29 @@ describe("page sections", () => {
   });
 
   describe("sections are URL-stateful", () => {
-    it("validates a section param on both pages that have sections", () => {
-      expect(read("app/src/routes/activity.tsx")).toContain("search.section");
-      expect(read("app/src/routes/settings.tsx")).toContain("search.section");
+    it("validates a section param on every page that has sections", () => {
+      for (const path of [
+        "app/src/routes/activity.tsx",
+        "app/src/routes/settings.tsx",
+        "app/src/routes/trade.tsx",
+      ]) {
+        expect(read(path)).toContain("search.section");
+      }
+    });
+
+    it("gives Trade the same switch component — the bench folds to it (#3407)", () => {
+      expect(read("app/src/routes/trade.tsx")).toContain("SectionSwitch");
+    });
+
+    it("docks Trade's sections at one bench width and hides the switch there (#3407 slice 4b)", () => {
+      const trade = read("app/src/routes/trade.tsx");
+      // one breakpoint, owned by the hook — never a second media query in the route
+      expect(trade).toContain("useBenchWidth");
+      expect(read("app/src/shell/use-bench-width.ts")).toContain("BENCH_MIN_WIDTH = 1280");
+      // the switch renders only when folded (frame.tsx's doctrine)
+      expect(trade).toMatch(/docked \? null : \(\s*<>\s*<SectionSwitch/);
+      // the docked grid is a stylesheet of its own, imported by the index
+      expect(read("app/src/styles/index.css")).toContain("./bench.css");
     });
   });
 });

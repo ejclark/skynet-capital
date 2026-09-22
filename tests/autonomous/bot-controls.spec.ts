@@ -49,6 +49,19 @@ describe("parseControlsState — total, defensive", () => {
   });
 });
 
+describe("parseControlsState — the companion model dial (#1672 slice 4)", () => {
+  it("parses an allowlisted model", () => {
+    expect(parseControlsState({ companionModel: "claude-haiku-4-5" })).toEqual({
+      bots: {},
+      companionModel: "claude-haiku-4-5",
+    });
+  });
+
+  it("drops a model outside the allowlist rather than trusting it", () => {
+    expect(parseControlsState({ companionModel: "gpt-5" })).toEqual({ bots: {} });
+  });
+});
+
 describe("suspendedReason — the blockedReason seam", () => {
   it("blocks a per-bot suspend with the owner's reason", () => {
     const state = { bots: { sauron: { suspended: true } } };

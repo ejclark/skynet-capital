@@ -6,6 +6,7 @@ import {
   type TicketAction,
   type TicketOrderType,
   type TicketPreview,
+  type TicketTimeInForce,
 } from "../trading/order-ticket.js";
 import type { VerifyAccess } from "./account-identity-gate.js";
 import { marketOpen, readReview, submitAndAudit } from "./desk-gate.js";
@@ -37,6 +38,7 @@ interface DeskTradeRequest {
   readonly orderType?: TicketOrderType;
   readonly limitPrice?: number;
   readonly stopPrice?: number;
+  readonly timeInForce?: TicketTimeInForce;
 }
 
 export type DeskTradeResult =
@@ -45,6 +47,9 @@ export type DeskTradeResult =
       readonly orderId: string;
       readonly status: string;
       readonly symbol: string;
+      /** The broker's own echo of what it was told (#3407 P1) — absent only on a transport
+       *  double that doesn't echo it. */
+      readonly timeInForce?: string;
     }
   | { readonly ok: false; readonly refusals: string[] };
 
@@ -80,6 +85,7 @@ async function reviewLive(
       ...(request.orderType ? { orderType: request.orderType } : {}),
       ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
       ...(request.stopPrice !== undefined ? { stopPrice: request.stopPrice } : {}),
+      ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
     },
     {
       cash: Number(account.cash),
@@ -115,6 +121,7 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
           ...(preview.orderType !== "market" ? { type: preview.orderType } : {}),
           ...(preview.limitPrice !== undefined ? { limit_price: preview.limitPrice } : {}),
           ...(preview.stopPrice !== undefined ? { stop_price: preview.stopPrice } : {}),
+          time_in_force: preview.timeInForce,
         }),
       access.participant,
       deps,

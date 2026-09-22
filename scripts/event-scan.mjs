@@ -11,9 +11,17 @@
 // ("weekly at two months out, daily in the final week") lives entirely here, unit-testable.
 //
 //   node scripts/event-scan.mjs               # human report: every event, band, due mark
-//   node scripts/event-scan.mjs --due         # JSON array of events due for assessment ([] = no-op)
+//   node scripts/event-scan.mjs --due         # JSON array of events due for assessment ([] = no-op).
+//                                             # Bounded by assessment-cadence.json's `horizon`
+//                                             # (#2946): nothing past maxDaysOut, and past
+//                                             # allImpactsWithinDays only critical/high. Close-outs
+//                                             # are exempt — they expire permanently.
 //   node scripts/event-scan.mjs --validate    # enforce the contract (exit 1 on violation)
 //   node scripts/event-scan.mjs --dump        # extracted tables as JSON (the drift gate's input)
+//   ... --on-date=YYYY-MM-DD                  # every entry already on that date, retired ones
+//                                             # included. Run this BEFORE proposing an event
+//                                             # (#3361): a date lookup has no false-negative rate;
+//                                             # a title-similarity scan (#3360) does.
 //   ... --today=YYYY-MM-DD                    # deterministic date override for tests
 //   ... --events-file= --calendar-file= --cadence-file= --ledger-dir=   # fixture overrides (tests)
 //
@@ -27,7 +35,13 @@
 // never an empty result — a scheduled caller must not mistake "broken" for "nothing due".
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { compareEventOrder, DATE_RE, runValidate } from "./event-scan-validation.mjs";
+import {
+  compareEventOrder,
+  DATE_RE,
+  horizonProblems,
+  runValidate,
+} from "./event-scan-validation.mjs";
+import { closeOutHold } from "./forward-test-pending.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
 
 const ROOT = process.cwd();
@@ -42,6 +56,8 @@ const EVENTS_DIR = arg("events-dir") ?? join(ROOT, "src", "domain", "market-even
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
+const FORWARD_TESTS_DIR =
+  arg("forward-tests-dir") ?? join(ROOT, "docs", "research", "forward-tests");
 
 /** Whole calendar days from today's UTC date to `date` (negative = past) — mirrors
  *  earnings-calendar.ts daysUntil, re-implemented because this script must not need `npm ci`. */
@@ -88,19 +104,21 @@ function extractArray(file, marker) {
  *  the file → id pairing for the validator: "file name == id" is the one rule the loader cannot
  *  express by shape. Unreadable dir or malformed JSON throws — loud, never empty. */
 /** Canonical files, then proposals (`proposals/<id>.from-<proposer>.json`, issue #1717) for ids no
- *  canonical file names — first by file name wins, the same rule as loadMarketEvents. `files`
- *  carries every file read (shadowed proposals included) for the validator. */
+ *  canonical file names — first by file name wins, the same rule as loadMarketEvents. Entries their
+ *  own lane retired with `supersededBy` (#3101) come back separately in `superseded`: they are not
+ *  the calendar any more, but `--validate` still holds them to the contract. `files` carries every
+ *  file read (shadowed proposals included) for the validator. */
 function loadCurated() {
   try {
-    const { events, files } = readCalendarDir(EVENTS_DIR);
-    return { events: events.sort(compareEventOrder), files };
+    const { events, superseded, files } = readCalendarDir(EVENTS_DIR);
+    return { events: events.sort(compareEventOrder), superseded, files };
   } catch (err) {
     throw new Error(`event-scan: ${err.message}`);
   }
 }
 
 function loadEvents() {
-  const { events: curated, files } = loadCurated();
+  const { events: curated, superseded, files } = loadCurated();
   const prints = extractArray(
     CALENDAR_FILE,
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [",
@@ -115,7 +133,7 @@ function loadEvents() {
     impact: "critical",
     symbols: [p.symbol],
   }));
-  return { curated, derived, all: [...curated, ...derived], files };
+  return { curated, derived, all: [...curated, ...derived], superseded, files };
 }
 
 function loadCadence() {
@@ -124,8 +142,31 @@ function loadCadence() {
   return JSON.parse(readFileSync(CADENCE_FILE, "utf8"));
 }
 
+/** Fail closed on the horizon for the modes that actually decide what to research (--due and the
+ *  human report): an absent or nonsensical horizon must never read as "no horizon", which is the
+ *  uncapped behaviour of #2946. Deliberately NOT inside loadCadence — throwing there would
+ *  pre-empt `--validate`, which exists to REPORT every contract violation at once (a bad horizon
+ *  would hide all the others behind a stack trace), and would couple `--dump` to a field it never
+ *  reads. The rule itself lives once, in event-scan-validation.mjs, so the two callers cannot
+ *  drift apart. */
+function assertHorizon(cadence) {
+  const problems = horizonProblems(cadence.horizon);
+  if (problems.length)
+    throw new Error(
+      `event-scan: ${CADENCE_FILE} — refusing to scan with no valid research horizon (#2946):\n` +
+        `${problems.map((p) => `  - ${p}`).join("\n")}\n` +
+        "Run --validate for the full contract report.",
+    );
+}
+
 /** The ledger's machine contract: docs/research/events/<id>.md with a `**Last assessed:**` line
- *  and (once closed out) an `## Outcome` section. */
+ *  and (once closed out) an `## Outcome` section. Takes the LAST `**Last assessed:**` occurrence,
+ *  not the first — event-material-decide.mjs's applyScreen APPENDS a fresh one on every screen
+ *  (2026-09-19, docs/LESSONS.md) rather than rewriting the original header in place, precisely so
+ *  two screens racing the same event merge as disjoint additions instead of conflicting on one
+ *  line. Mirrors parseLedgerHeader's own "last occurrence wins" read in event-material-decide.mjs;
+ *  kept as a local regex here rather than a cross-module import since event-scan.mjs's own read
+ *  path has never otherwise depended on that file. */
 function loadLedgers() {
   const ledgers = new Map();
   if (!existsSync(LEDGER_DIR)) return ledgers;
@@ -134,7 +175,7 @@ function loadLedgers() {
     const text = readFileSync(join(LEDGER_DIR, f), "utf8");
     ledgers.set(basename(f, ".md"), {
       file: `docs/research/events/${f}`,
-      lastAssessed: text.match(/^\*\*Last assessed:\*\*\s*(\S+)/m)?.[1] ?? null,
+      lastAssessed: [...text.matchAll(/^\*\*Last assessed:\*\*\s*(\S+)/gm)].at(-1)?.[1] ?? null,
       hasOutcome: /^##\s+Outcome\b/m.test(text),
     });
   }
@@ -142,20 +183,94 @@ function loadLedgers() {
 }
 
 /** The adaptive-cadence decision for one event — the pure function at the system's core.
- *  Tested through the CLI (--due --today=… with fixture files), matching the handoff pattern. */
+ *  Tested through the CLI (--due --today=… with fixture files), matching the handoff pattern.
+ *
+ *  THE JUST-IN-TIME BRAKE (#2946, 2026-09-10/11) — never-assessed used to fire the moment an
+ *  event landed in the calendar, at ANY impact and ANY distance. With the calendar self-feeding
+ *  (proposals loading as events; 641 canonical + 469 pending over 2026-09-10→11 ALONE), that made
+ *  every arrival buy an Opus session immediately: 338 initial sessions in 7 days, ~89% of them
+ *  for low/medium-impact events weeks or months away — where the adjacency corridor is still
+ *  churning and the research goes stale before the event. High/critical keep the old behavior
+ *  (an early stance is the point of tracking them — the call sheet has positioning value weeks
+ *  out). Below that floor the initial becomes JUST-IN-TIME: assessed once, on entering the
+ *  event's outermost cadence band (low: D-15, medium: D-31 — the distance at which its own
+ *  cadence table starts pulsing it at the tighter intervals), then ordinary cadence and one
+ *  close-out. Same coverage, spread over time, bought when the corridor has settled. The
+ *  deterministic screen's corridor rows carry the event for free until then. */
+const EARLY_STANCE_IMPACTS = new Set(["critical", "high"]);
+
+/** The close-out is due, but its own forward tests cannot be scored yet (#2988) — not-due, with a
+ *  real `nextDueDate` rather than silence, so the hold reads as a decision on the human report. */
+const HELD = "close-out-held-for-forward-test";
+
+/** THE RESEARCH HORIZON (#2946, slice 2 — the pool cut, where the dispatch ceiling was the burst
+ *  cut). Nothing beyond `horizon.maxDaysOut` is ever due, and between `allImpactsWithinDays` and
+ *  that outer edge only high/critical qualify. An event does not leave the calendar — it simply
+ *  stops buying sessions until it comes inside the horizon, which is also when its research stops
+ *  going stale before the print.
+ *
+ *  WHY A SNAPSHOT UNDERSTATES THIS, and the number that justifies the thresholds: "due today"
+ *  only falls 108 → 98, because most of the deep backlog is already inside 30 days. But an event
+ *  90 days out pulses repeatedly on its way in, so the honest measure is pulses over every
+ *  upcoming event's remaining life: 5,375 → 2,320, a 57% cut (630 upcoming events, measured
+ *  2026-09-15). A tighter 30-day/all-impacts horizon scores 61% — four points more for losing all
+ *  long-lead preparation on high/critical prints, which is why 60/30 is the chosen knee.
+ *
+ *  Close-outs are deliberately upstream of this check: a passed event ages out of
+ *  closeOutWithinDays permanently, so the horizon must never be able to destroy an outcome record
+ *  (the same invariant the dispatch ceiling's close-out floor protects in moneypenny/events.mjs). */
+function withinHorizon(event, days, cadence) {
+  const horizon = cadence.horizon;
+  if (days > horizon.maxDaysOut) return false;
+  return days <= horizon.allImpactsWithinDays || EARLY_STANCE_IMPACTS.has(event.impact);
+}
+
 function assessmentDue(event, ledger, today, cadence) {
   const days = daysBetween(today, event.date);
   const none = { due: false, reason: null, intervalDays: null, nextDueDate: null };
 
   if (days < 0) {
     // Passed. One closing outcome assessment inside the close-out window, then silence forever.
-    if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays)
-      return { due: true, reason: "event-passed-unscored", intervalDays: null, nextDueDate: today };
+    // Ahead of the horizon check on purpose — see withinHorizon's note on permanent ageing-out.
+    if (!ledger?.hasOutcome && -days <= cadence.closeOutWithinDays) {
+      // THE FORWARD-TEST HOLD (#2988) — a close-out that cannot score its own predictions yet is
+      // a dispatch that can only re-read state and leave. See forward-test-pending.mjs for the
+      // measurement (3 sessions in 38 minutes on gastech-2026-09-14) and the parsing rules.
+      const { hold, until, beyondWindow } = closeOutHold(
+        event.id,
+        event.date,
+        today,
+        cadence.closeOutWithinDays,
+        FORWARD_TESTS_DIR,
+      );
+      if (hold) return { ...none, reason: HELD, nextDueDate: until };
+      // Structural, not timing: the test scores after this event's close-out ceiling, so waiting
+      // would age the outcome record out entirely. Dispatch now and NAME it, so the session
+      // records those rows unscoreable at close-out on purpose rather than by omission. `reason`
+      // itself is deliberately unchanged — moneypenny/events.mjs sorts on the exact string.
+      return {
+        due: true,
+        reason: "event-passed-unscored",
+        intervalDays: null,
+        nextDueDate: today,
+        ...(beyondWindow.length ? { forwardTestsBeyondWindow: beyondWindow } : {}),
+      };
+    }
     return none;
   }
 
-  if (!ledger?.lastAssessed)
+  // `beyond-horizon` rather than a bare `none`, so the human report says WHY an event is quiet
+  // instead of printing an empty cadence note. `due` stays false, so it never reaches --due.
+  if (!withinHorizon(event, days, cadence)) return { ...none, reason: "beyond-horizon" };
+
+  if (!ledger?.lastAssessed) {
+    if (
+      !EARLY_STANCE_IMPACTS.has(event.impact) &&
+      days > (cadence.bands[event.impact]?.[0]?.minDaysOut ?? 0)
+    )
+      return none;
     return { due: true, reason: "never-assessed", intervalDays: null, nextDueDate: today };
+  }
 
   const band = cadence.bands[event.impact].find((b) => days >= b.minDaysOut);
   const interval = band.intervalDays;
@@ -184,6 +299,13 @@ function printDue(rows) {
       intervalDays: verdict.intervalDays,
       reason: verdict.reason,
       ledger: ledger?.file ?? `docs/research/events/${e.id}.md`,
+      // Present only on a close-out whose own forward tests score AFTER its window closes (#2988):
+      // the session is told the conflict is structural rather than its own timing. The workflow's
+      // matrix forwards `{id, reason}` only, so this reaches a human reading `--due`, not the
+      // prompt — moneypenny-events.yml is envelope-protected and not this lane's to widen.
+      ...(verdict.forwardTestsBeyondWindow
+        ? { forwardTestsBeyondWindow: verdict.forwardTestsBeyondWindow }
+        : {}),
     }));
   process.stdout.write(`${JSON.stringify(due, null, 2)}\n`);
 }
@@ -213,6 +335,64 @@ function printReport(rows) {
   );
 }
 
+/** THE DATE LOOKUP (#3361) — what a lane reads BEFORE it proposes an event.
+ *
+ *  WHY A LISTING AND NOT A SEARCH. The measured failure was one mis-specified search string: a
+ *  D-14 sweep looked for "U.S. IIP", which is not a substring of BEA's own "International
+ *  Transactions and Investment Position", and filed a third copy of a release the calendar already
+ *  carried twice. A lookup keyed on the DATE is keyed on data the proposing lane already holds —
+ *  it is proposing FOR that date — so its recall does not depend on the lane's own vocabulary at
+ *  all. #3360's same-date title-overlap warning is the post-hoc half and is a heuristic tuned on
+ *  seven positives; reading nine titles is a decision procedure with no false-negative rate.
+ *
+ *  SAME-DATE ONLY, AND THAT IS A MEASUREMENT, NOT A DEFAULT (#3361's open question — whether to
+ *  also list D±1, since an off-by-one re-slug evades a same-date check exactly as it evades
+ *  #3360's same-date scan). Re-scoring titleOverlapWarnings at #3360's 0.45 over each date's D+1
+ *  cohort across the 720 committed live events returns 14 cross-date pairs and NOT ONE is a
+ *  re-slug: nine are Treasury auctions (a different tenor every day of a settlement week), the
+ *  rest cpi×ppi, dallas-fed-mfg×dallas-fed-tssos, iea-omr×opec-momr. A neighbour cohort would put
+ *  three near-identical adjacent rows in front of every auction proposal, scoring 0/14 against the
+ *  one failure it exists to catch. FALSIFIER: the first confirmed same-release re-slug whose two
+ *  entries carry different dates — one such pair and the D±1 cohort earns its place.
+ *
+ *  RETIRED ENTRIES PRINT, THEY DO NOT VANISH. `supersededBy` (#3360) stops an entry loading as the
+ *  calendar, but a lane about to re-file that release is the one caller who most needs to see the
+ *  slug was already tried and which id won — omit it and the next sweep re-proposes the very id a
+ *  lane just retired. Ahead of `assertHorizon` for the same reason `--dump` is: a listing of what
+ *  exists must not be able to fail on the cadence file's research horizon, which it never reads. */
+function printOnDate(tables, date) {
+  const rows = [...tables.all, ...tables.superseded]
+    .filter((e) => e?.date === date)
+    .sort(compareEventOrder);
+
+  // Loud-failure doctrine, applied to the caller rather than the file: an unreadable calendar has
+  // already thrown by now, so silence here would be the ONE output a lane could misread as "the
+  // check ran and found nothing" when it meant "the check never ran". Say it in words.
+  if (!rows.length) {
+    console.log(`No calendar entry on ${date} — nothing on that date to collide with.`);
+    console.log("(A real answer, not an empty read: an unreadable calendar throws instead.)");
+    return;
+  }
+
+  const idWidth = Math.max(...rows.map((e) => String(e.id).length));
+  for (const e of rows) {
+    const retired = e.supersededBy !== undefined;
+    console.log(
+      `${retired ? "✗" : "·"} ${String(e.id).padEnd(idWidth)}  ` +
+        `${String(e.status).padEnd(9)}  ${String(e.impact).padEnd(8)}  ${e.title}` +
+        (retired ? `  [RETIRED — superseded by ${e.supersededBy}]` : ""),
+    );
+  }
+
+  const retired = rows.filter((e) => e.supersededBy !== undefined).length;
+  console.log(
+    `\n${rows.length} entr${rows.length === 1 ? "y" : "ies"} on ${date}` +
+      (retired ? ` (${retired} retired)` : "") +
+      ". If one of them is the release you are about to propose, it is already on the calendar —" +
+      "\nfile nothing (see docs/process/EVENT-RESEARCH.md).",
+  );
+}
+
 function main() {
   const today = arg("today") ?? new Date().toISOString().slice(0, 10);
   if (!DATE_RE.test(today)) throw new Error("event-scan: --today must be YYYY-MM-DD.");
@@ -227,14 +407,27 @@ function main() {
     return;
   }
   if (has("validate")) {
-    runValidate(tables, cadence, ledgers);
+    runValidate(tables, cadence, ledgers, FORWARD_TESTS_DIR);
     return;
   }
+  // `has` as well as `arg` on purpose: a bare `--on-date 2026-09-16` (space, not `=`) would
+  // otherwise fall through and print the whole report, which a lane would read as "nothing on that
+  // date is flagged". A malformed value throws exactly as `--today` does.
+  const onDate = arg("on-date");
+  if (onDate !== undefined || has("on-date")) {
+    if (!DATE_RE.test(onDate ?? "")) throw new Error("event-scan: --on-date must be YYYY-MM-DD.");
+    printOnDate(tables, onDate);
+    return;
+  }
+
+  assertHorizon(cadence);
 
   const rows = tables.all
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))
     .map((r) => ({ ...r, verdict: assessmentDue(r.e, r.ledger, today, cadence) }))
-    .filter((r) => r.verdict.due || r.days >= 0)
+    // A held close-out (#2988) has already passed, so `days >= 0` would hide it — and a hold that
+    // is invisible is indistinguishable from an event the scanner forgot. Keep it on the report.
+    .filter((r) => r.verdict.due || r.days >= 0 || r.verdict.reason === HELD)
     .sort((a, b) => compareEventOrder(a.e, b.e));
 
   if (has("due")) printDue(rows);

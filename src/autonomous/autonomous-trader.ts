@@ -1,5 +1,5 @@
 import type { MarketContext, OrderResult } from "../domain/types.js";
-import { applyGuards, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
+import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
@@ -72,6 +72,8 @@ export class AutonomousTrader {
     const mode: TraderMode = this.config.mode ?? "live";
 
     // Kill switch / circuit breakers first: if halted, decide nothing and place nothing this cycle.
+    // The market context is still captured here — a halt is exactly the kind of cycle the
+    // replay/counterfactual measures want to see, not a gap in the tape.
     const blocked = this.config.blockedReason?.() ?? null;
     if (blocked) {
       this.config.onDecision?.({
@@ -82,13 +84,19 @@ export class AutonomousTrader {
         guardedIntents: [],
         outcomes: [],
         halted: blocked,
+        context,
       });
       return [];
     }
 
     const portfolio = await this.config.broker.getPortfolio();
     const rawIntents = this.config.persona.decide(context, portfolio);
-    const guardedIntents = applyGuards(rawIntents, portfolio, context, risk);
+    const { approved: guardedIntents, refused: refusals } = applyGuardsWithVerdicts(
+      rawIntents,
+      portfolio,
+      context,
+      risk,
+    );
 
     const results: OrderResult[] = [];
     const outcomes: IntentOutcome[] = [];
@@ -118,6 +126,8 @@ export class AutonomousTrader {
       rawIntents,
       guardedIntents,
       outcomes,
+      context,
+      ...(refusals.length > 0 ? { refusals } : {}),
     });
     return results;
   }

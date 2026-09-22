@@ -1,70 +1,6 @@
-/* the timeline drawer — right side sheet at elevation: sheet */
-.sym-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  display: block;
-}
-.sym-link:hover {
-  color: var(--accent);
-}
-.drawer-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 40%);
-  z-index: 40;
-}
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(420px, 94vw);
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  box-shadow: var(--elev-sheet);
-  z-index: 41;
-  display: flex;
-  flex-direction: column;
-}
-.drawer-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.drawer-head h2 {
-  font-size: 15px;
-  margin: 0;
-  font-weight: 700;
-}
-.drawer-close {
-  margin-left: auto;
-  border: none;
-  background: none;
-  font-size: 18px;
-  color: var(--muted);
-  cursor: pointer;
-  padding: 4px 8px;
-}
-.drawer-body {
-  overflow-y: auto;
-  padding: 16px;
-}
-.tl {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 14px;
-  border-left: 2px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* one order-fill row (`EventLine`, timeline-drawer.tsx) — rendered by the Activity tab's blotter
+   and `recent-orders-strip.tsx`'s "your recent orders" panel. The blotter row's own inline
+   fill-timeline accordion was retired here (#3186 slice 2): it duplicated the Activity tab. */
 .tl-event {
   display: flex;
   gap: 8px;
@@ -112,10 +48,4 @@
   font-family: var(--mono);
   font-weight: 700;
   cursor: help;
-}
-.tl-legend {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
 }

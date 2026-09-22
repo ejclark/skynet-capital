@@ -1,0 +1,11 @@
+{
+  "id": "tic-monthly-2026-11-18",
+  "kind": "macro-print",
+  "title": "Treasury International Capital (TIC) monthly release (September 2026 data), 4:00 p.m. ET",
+  "date": "2026-11-18",
+  "status": "estimate",
+  "source": "EST: home.treasury.gov/data/treasury-international-capital-tic-system/release-dates-of-tic-data, fetched direct 2026-09-08 (plain curl, HTTP 200) by the tic-monthly-2026-10-16 initial-research adjacency sweep — its 2026 table's November row reads '18' in the Monthly column, under the page header 'All data releases occur at 4 p.m. Washington, D.C. time'. Reference month September 2026 by the page's own 1.5-month lag rule. Corroborated mechanically by the same page's '11th business day plus 0 to 3 days' rule: with federal holidays excluded (Veterans Day 11-11, Thanksgiving 11-26) the 11th business day of November 2026 is 11-17, so the rule permits 11-17 through 11-20 and the published date sits inside it at offset +1. That convention reproduces 22 of the 24 published 2026-27 dates and hits 9 exactly. Filed estimate per this lane's no-self-confirm limit on an event discovered in-sweep — the proposer may not confirm what it found, only the event's own session may. Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the tic-monthly-2026-10-16 initial research (2026-09-08), proposed so the capital-account series keeps running past its second entry — the same move tic-monthly-2026-09-16 made for 10-16. Impact LOW and symbols empty for the standing reasons (16:00 ET is after the equity cash close, the data is six weeks stale, no house playbook is macro-keyed). Two things make it worth carrying rather than skipping. It is a NON-revision release, so it is the control against 10-16's annual-revision edition on the one cut that separated TIC releases at all this session (revision-month next sessions run mean |d10Y| 4.00bp against 2.55bp for the rest, t=+2.13, p=0.033). And it carries reference month September 2026, whose month-end 10Y is not yet known — so it is where the valuation model gets its first ordinary-month score after 10-16's zero-Δ special case. Proposed as an estimate; nothing here licenses an entry."
+}

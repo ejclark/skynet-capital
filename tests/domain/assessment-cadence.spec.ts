@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -47,6 +47,14 @@ const FIXTURES: readonly Fixture[] = [
   { id: "passed-old", date: "2026-05-20", impact: "critical", lastAssessed: "2026-05-19" },
   { id: "low-15", date: "2026-06-16", impact: "low", lastAssessed: "2026-05-20" },
   { id: "low-14", date: "2026-06-15", impact: "low", lastAssessed: "2026-05-25" },
+  // The just-in-time brake (scripts/event-scan.mjs header, #2946): below the high/critical floor
+  // the initial assessment waits for the outermost cadence band (medium D-31, low D-15). All
+  // dates pinned far in the future so these fixtures never rot.
+  { id: "jit-high-far", date: "2040-06-01", impact: "high" },
+  { id: "jit-medium-far", date: "2040-06-01", impact: "medium" },
+  { id: "jit-low-far", date: "2040-06-01", impact: "low" },
+  { id: "jit-medium-near", date: "2026-07-02", impact: "medium" }, // D-31 exactly — the boundary
+  { id: "jit-low-near", date: "2026-06-16", impact: "low" }, // D-15 exactly — the boundary
 ];
 
 let dir: string;
@@ -85,6 +93,22 @@ beforeAll(() => {
     );
   }
 
+  // Cadence math and the research horizon are separate concerns: this file asks WHICH events are
+  // due under the band table, while horizon (#2946) asks whether an event is close enough to be
+  // worth researching at all. Several fixtures below deliberately sit at 61+ days to pin the
+  // outermost band boundaries, which the committed 60-day horizon would otherwise suppress — so
+  // run against the REAL committed bands with only the horizon widened. The horizon's own
+  // behaviour is specced in research-horizon.spec.ts.
+  const cadenceFile = join(dir, "assessment-cadence.json");
+  const realCadence = JSON.parse(readFileSync("assessment-cadence.json", "utf8"));
+  writeFileSync(
+    cadenceFile,
+    JSON.stringify({
+      ...realCadence,
+      horizon: { maxDaysOut: 100_000, allImpactsWithinDays: 100_000 },
+    }),
+  );
+
   const out = execFileSync(
     "node",
     [
@@ -94,6 +118,7 @@ beforeAll(() => {
       `--events-dir=${join(dir, "market-events")}`,
       `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
       `--ledger-dir=${ledgerDir}`,
+      `--cadence-file=${cadenceFile}`,
     ],
     { cwd: process.cwd(), encoding: "utf8" },
   );
@@ -142,5 +167,21 @@ describe("assessment cadence (via event-scan.mjs --due)", () => {
   it("low tier stays sparse: 30d interval at 15d out, 7d inside two weeks", () => {
     expect(due.has("low-15")).toBe(false); // 12d since last check < 30d interval
     expect(due.get("low-14")?.intervalDays).toBe(7);
+  });
+});
+
+describe("the just-in-time brake (#2946)", () => {
+  it("high/critical still buy an initial session the moment they land — early stance is the point", () => {
+    expect(due.get("jit-high-far")?.reason).toBe("never-assessed");
+  });
+
+  it("below the floor, an event years out does NOT fire — the screen's corridor rows carry it", () => {
+    expect(due.has("jit-medium-far")).toBe(false);
+    expect(due.has("jit-low-far")).toBe(false);
+  });
+
+  it("the initial fires exactly at the outermost band boundary (medium D-31, low D-15)", () => {
+    expect(due.get("jit-medium-near")?.reason).toBe("never-assessed");
+    expect(due.get("jit-low-near")?.reason).toBe("never-assessed");
   });
 });

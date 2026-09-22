@@ -27,11 +27,13 @@ export interface LadderFill {
   readonly at: string;
 }
 
-/** One tagged submission — structurally satisfied by the extended `OrderAuditRecord`. */
+/** One tagged submission — structurally satisfied by the extended `OrderAuditRecord`. A
+ *  `"cancel"` line (the desk's cancel route, #3407) never earns anything: `codesForFill` joins
+ *  on `"open"` only, so it is accepted here purely so the audit trail stays one type. */
 export interface LadderTag {
   readonly orderId: string;
   readonly code?: TradeTypeCode;
-  readonly intent?: "open" | "close";
+  readonly intent?: "open" | "close" | "cancel" | "replace";
 }
 
 /** A milestone earned by a real fill — the order id IS the evidence. */

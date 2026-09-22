@@ -1,3 +1,5 @@
+import { paginateDesc } from "../server/pagination.js";
+import { parseOccSymbol } from "../trading/option-symbols.js";
 import { collapseActivity, type TradeActivityRecord } from "./activity-store.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 
@@ -24,34 +26,71 @@ export interface WireTradeRow {
    *  same provenance activity-store.ts already tracks, surfaced so the wire never implies a trade
    *  was watched landing when it was actually reconstructed. */
   readonly reconstructed: boolean;
+  /** The broker's own order id — deliberately widened onto this row (PR 6, issue #2287; it used to
+   *  be dropped here even though `TradeActivityRecord` always carries it) so the wire route can
+   *  join a trade to the `DecisionRecord` that produced it via `DecisionDb.findByOrderId`'s exact
+   *  index, rather than `decision-context.ts`'s fuzzy symbol+side+time match. */
+  readonly orderId: string;
+}
+
+/** True when a raw broker order symbol names a fill in `underlying` — a plain stock symbol
+ *  matches itself, and an OCC option-contract string (`NVDA261016C00185000`) matches when its
+ *  parsed `.underlying` does. A naive `record.symbol === underlying` would silently miss every
+ *  option fill on that name (`src/trading/option-symbols.ts`'s `parseOccSymbol`). */
+function matchesUnderlying(recordSymbol: string, underlying: string): boolean {
+  if (recordSymbol === underlying) return true;
+  return parseOccSymbol(recordSymbol)?.underlying === underlying;
+}
+
+export interface WireTradeRowsPage {
+  readonly rows: WireTradeRow[];
+  /** ISO timestamp of the oldest row on this page — pass back as `before` for the next page.
+   *  Absent means this page wasn't full, so there's nothing further back to fetch. */
+  readonly nextCursor?: string;
 }
 
 /** Collapse the durable ledger to one row per order, join in each order's participant, newest
- *  first, bounded to `limit` — a wire is a glance, not an archive. Unfilled/cancelled orders
- *  carry no honest side to show, so they're dropped (same rule as fillsFrom in desk-data.ts). */
+ *  first, keyset-paginated (PR 5, issue #2287 — replaces the old bare `limit` cap). Unfilled/
+ *  cancelled orders carry no honest side to show, so they're dropped (same rule as fillsFrom in
+ *  desk-data.ts).
+ *
+ * `underlyingFilter`, when given, narrows to fills on that underlying (stock or option) BEFORE
+ * pagination — #2017 Phase 1 slice 12. The unfiltered Wire's page bound is an unrelated window;
+ * filtering after paginating would let it silently drop a symbol's own older fill, so the filter
+ * always runs first. Omitted, behavior is byte-identical to the plain feed. */
 export function buildWireTradeRows(
   records: readonly TradeActivityRecord[],
   participants: readonly ParticipantSnapshot[],
-  limit: number,
-): WireTradeRow[] {
+  opts: { readonly limit: number; readonly before?: string },
+  underlyingFilter?: string,
+): WireTradeRowsPage {
   const byId = new Map(participants.map((p) => [p.id, p]));
-  return collapseActivity(records)
-    .filter((r) => r.filledQuantity > 0 && (r.side === "buy" || r.side === "sell"))
-    .slice(0, limit)
-    .map((r) => {
-      const participant = byId.get(r.participantId);
-      return {
-        participantId: r.participantId,
-        participantName: participant?.displayName ?? r.participantId,
-        kind: participant?.kind ?? "human",
-        symbol: r.symbol,
-        side: r.side,
-        quantity: r.filledQuantity,
-        ...(r.price !== undefined ? { price: r.price } : {}),
-        at: r.at,
-        reconstructed: r.source !== "stream",
-      };
-    });
+  const collapsed = collapseActivity(records).filter(
+    (r) => r.filledQuantity > 0 && (r.side === "buy" || r.side === "sell"),
+  );
+  const scoped = underlyingFilter
+    ? collapsed.filter((r) => matchesUnderlying(r.symbol, underlyingFilter))
+    : collapsed;
+  const { items, nextCursor } = paginateDesc(scoped, (r) => r.at, {
+    limit: opts.limit,
+    ...(opts.before !== undefined ? { before: opts.before } : {}),
+  });
+  const rows = items.map((r) => {
+    const participant = byId.get(r.participantId);
+    return {
+      participantId: r.participantId,
+      participantName: participant?.displayName ?? r.participantId,
+      kind: participant?.kind ?? "human",
+      symbol: r.symbol,
+      side: r.side,
+      quantity: r.filledQuantity,
+      ...(r.price !== undefined ? { price: r.price } : {}),
+      at: r.at,
+      reconstructed: r.source !== "stream",
+      orderId: r.orderId,
+    };
+  });
+  return { rows, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }
 
 export interface WirePnlRow {

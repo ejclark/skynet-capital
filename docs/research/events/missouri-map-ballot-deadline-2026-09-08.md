@@ -1,8 +1,8 @@
 # Missouri congressional-map ballot deadline — the US Supreme Court's window to stay the state ruling — missouri-map-ballot-deadline-2026-09-08
 
 **Kind:** geopolitical · **Date:** 2026-09-08 (estimate, NEWS: STLPR 2026-09-03 / KSMU 2026-09-04; the date is now separately cited to **Mo. Rev. Stat. § 115.125.2** by the applicant's own US Supreme Court filing, fetched direct 2026-09-05 — but this calendar has no `confirmed` source prefix for a statute or a court filing, so it stays `estimate`) · **Impact:** low
-**Last assessed:** 2026-09-05
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","challenger-job-cuts-2026-09-03","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-services-2026-09-03","jobs-2026-09-04","mts-august-2026-09-11","opec-plus-meeting-2026-09-06","ppi-2026-09-10","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
+**Last assessed:** 2026-09-09
+<!-- probe-ref: {"symbols":{},"vix":15.72,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","challenger-job-cuts-2026-09-03","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","existing-home-sales-2026-09-10","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","iea-omr-2026-09-11","ism-services-2026-09-03","jobs-2026-09-04","labor-day-market-closure-2026-09-07","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11","waller-economic-outlook-2026-09-03"],"screenStreak":0,"blocked":[{"url":"https://fox2now.com/news/missouri/federal-judge-temporarily-blocks-missouri-from-using-old-house-map-after-supreme-court-declined-case/","status":403,"at":"2026-09-09"}]} -->
 
 ## At a glance
 
@@ -274,6 +274,7 @@ point at all.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-05 | D-3 | Initial research banked (above). **Primary source obtained and it re-specifies this event:** the emergency application *Hoskins v. von Glahn*, No. **26A___** (filed 2026-09-04, ago.mo.gov, PDF text layer decompressed direct 2026-09-05) cites the 09-08 date to **Mo. Rev. Stat. § 115.125.2** — resolving half the entry's `estimate` rationale — while disclaiming it in the same sentence: "*Although this Court is not bound by it, Missouri has a state-law deadline of September 8 to alter the ballot*." The applicant asks for "*a decision no later than September 14, 2026*" and names the binding constraint as **UOCAVA, 52 U.S.C. § 20302(a)(8) — ballots to overseas/military voters by September 19**, "15 days from now," with the State "*genuinely unsure whether it can switch its governing congressional map in time*." **Status stays `estimate`:** the confirmed-prefix taxonomy has no slot for a statute or a court filing (same mechanical gap as [midterm-elections](midterm-elections-2026-11-03.md) and [boj-decision](boj-decision-2026-09-18.md)); the entry's `source`/`notes` are amended in this PR, the label is not. **New dated adjacency → proposed same-PR:** `missouri-uocava-ballot-mailing-2026-09-19`, `estimate`/`NEWS:`, `low`, `symbols: []` — the date after which the map question is moot for 11-03 regardless of the ruling. **Procedural posture (press, corroborated across KESQ/CNN, ABC17 22:19, WSLS/AP, NOTUS):** filed late Friday 09-04 with **Justice Kavanaugh**, Circuit Justice for the Eighth Circuit, who ordered respondent **Richard von Glahn** (People Not Politicians) to answer by **noon Monday 09-07**; no action taken as of 09-05. Below: MO Sup. Ct. **SC101805**, trial court 26AC-CC00440 (Loyola All About Redistricting, current to 09-03). **Material finding — the prior on the outcome is wrong in the intuitive direction.** The application's lead authority is ***Malliotakis v. Williams*, 146 S. Ct. 809 (2026) (No. 25A914)**, where this Court **granted** a stay of a New York *state-court* order redrawing a congressional district on **2026-03-02** (Alito, J., concurring; Sotomayor, Kagan, Jackson, JJ., dissenting), on § 1257(a)/§ 1651(a) jurisdiction over a non-final state judgment. SCOTUSblog (Baude, 03-06) read it as opening "a new big zone of Supreme Court discretion" likely to "generate more applications" — **this is that application**, and the applicant argues "*This case is far easier than Malliotakis*" because there the election was four months out. **Purcell runs toward the applicant here**, uniquely: the **August 4 primary already ran under the disputed HB 1 map with ~1.2M votes cast**, so the state court's order is the late change; cites *Merrill v. Milligan*, 142 S. Ct. 879, 880-81 (2022) (Kavanaugh, J., concurring) to the Circuit Justice now holding it, and *Abbott v. LULAC*, 146 S. Ct. 419. **One-sided record — respondent's brief did not exist at writing time; noted as a limit, not a lean.** **Seat math:** HB 1 targets **6-2 → 7-1** (Cleaver's Kansas City seat); House **218-213 + 4 vacancies**; the redistricting-net estimates *disagree* — Cook **~R+5** likeliest vs a raw enacted-map count of **R up to +16 / D +6** vs the [midterm ledger](midterm-elections-2026-11-03.md)'s carried **R +6 to +10** — so ±1 seat is inside the spread, which is the honest basis for `low`. **Adjacency sweep — peers:** n/a, `symbols: []`. **Volatility regime (baseline set, own probe, Yahoo closes):** VIX **14.53** (09-04), and across the ruling itself **15.20 (09-02) → 14.32 (09-03) → 14.53 (09-04)**; VVIX **84.42**; S&P **7718.60** (7666.60 → 7747.71 → 7718.60 over the same sessions); 10Y **4.784%**; RSP **219.00** — **no index-level reaction to a unanimous state-supreme-court map ruling is visible**, and the 09-03/09-04 sessions had their own named drivers anyway. **Macro (carried, not re-derived):** payrolls **+162k vs ~+55k** consensus on 09-04 and the FOMC blackout opening **09-05** ([jobs-2026-09-04](jobs-2026-09-04.md)); the ±5-day corridor around 09-08 is dense — **treasury-3y 09-08**, **AAPL iPhone 18 + treasury-10y + buyback-increase 09-09**, **PPI + ECB + treasury-30y 09-10**, **CPI 09-11** — i.e. this event will be structurally invisible next to a live CPI two sessions later. **Cross-ledger note, not an edit:** [midterm-elections](midterm-elections-2026-11-03.md)'s **FT-21** anchor RSP **219.79** now has the 09-04 close at **219.00**, below it (that bar had not populated at their probe time); theirs to score. **Registered:** **FT-missouri-map-ballot-deadline-2026-09-08-1** — no disposition of 26A___ on the public docket by 23:59 ET **2026-09-08**; score by **2026-09-09**. | — (stance set: stand aside, informational, no position at any horizon) | 2026-09-12 (low, 0+ band: every 7d) — but the event date passes 09-08, so the close-out window (6d) governs |
+| 2026-09-09 | D+1 | **Close-out (see `## Outcome`).** Docket number resolved to **26A304**, clearing the forward test's void condition: supremecourt.gov's public docket for *Hoskins v. von Glahn* (fetched direct today) reads **"Sep 08 2026 — Application (26A304) denied by Justice Kavanaugh."** **FT-missouri-map-ballot-deadline-2026-09-08-1 scores REFUTED** and kill switch 1 fired on its own terms — the calendar's original 09-08 date was right and this ledger's re-specification of it was wrong. Same afternoon, minutes later, **Chief Judge Stephen R. Clark (E.D. Mo.)** granted a **14-day TRO** in a separate suit by Republican candidates (Rep. Bob Onder et al.) barring the Secretary of State from using any map but HB 1 on 11-03, expressly noting "*the deadline for finalizing the state's ballot for November is Tuesday*" (Roll Call, 09-08); People Not Politicians noticed an emergency appeal to the **Eighth Circuit** the same evening. **New dated adjacency → proposed same-PR:** `missouri-map-tro-expiry-2026-09-22` (Fed. R. Civ. P. 65(b)(2), 14 days from entry), `estimate`/`NEWS:`, `low`, `symbols: []`. **Volatility/tape (own probe, Yahoo, fetched today):** VIX **14.53 (09-04) → 15.72 (09-08)**, +1.19 and inside the 3-pt screen threshold; S&P **7718.60 → 7673.52** (−0.58%); VVIX **84.42 → 88.69**; 10Y **4.784 → 4.81%**; RSP **219.00 → 216.73** (−1.04%, meta quote — the daily bar's close was still null at fetch). **Kill switch 4 did NOT fire**: RSP cleared 1% but 09-08's named drivers were the 3-year auction and pre-CPI positioning, not a redistricting ruling, and attributing an equal-weight breadth day to a court docket is exactly the inference leg 6 forbids. | — (no stance change; the event closes with the same no-position stance it opened with, and the *specification* claim inside it is scored wrong) | none — `## Outcome` written, this ledger goes quiet |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -282,3 +283,188 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
 (`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out written 2026-09-09, D+1 — inside the 6-day window, and one day after the event
+resolved on the date this ledger predicted it would not.** The headline is not the ruling. It is
+that **the calendar entry was right and the research that "corrected" it was wrong**: 2026-09-08
+was the operative date, the US Supreme Court spoke on it, and a federal district judge raced it to
+the minute. **FT-missouri-map-ballot-deadline-2026-09-08-1 scores REFUTED.**
+
+**Sourcing note — what "re-run instrument data" means for a `geopolitical` event with `symbols: []`.**
+`earnings-cycle.mjs` / `intraday-edges.mjs` are symbol- and earnings-keyed and have no target here;
+the initial research said so and none was run. Their caches were busted anyway per the standing rule
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and the analog was
+honoured instead — **nothing below is from memory of the tape.** The disposition is scored from the
+**Court's own public docket**, `supremecourt.gov` docket 26A304, fetched direct today; every price is
+a fresh Yahoo pull made this session (`^VIX`, `^GSPC`, `^VVIX`, `RSP`, `^TNX` — the same endpoint
+`scripts/event-material-scan.mjs` uses). `fox2now.com` returned **403** on direct fetch and is
+recorded in the probe-ref `blocked` array; where its reporting appears it is via other outlets.
+
+### 1. The docket spoke on 09-08 — the forward test is refuted, cleanly and without ambiguity
+
+The registered prediction: *no order disposing of emergency application* Hoskins v. von Glahn *—
+grant, denial, or administrative stay — is entered on the US Supreme Court's public docket by 23:59
+ET 2026-09-08.* The docket, fetched direct today:
+
+- **Sep 04 2026** — "Application (26A304) for a stay, submitted to Justice Kavanaugh"; response
+  requested, due noon EDT **Sep 07**; RNC brief in support filed.
+- **Sep 07 2026** — response from **Richard von Glahn** filed, with amicus briefs from Missouri
+  voters Maggard and Lombardi, the Campaign Legal Center/ACLU, the American Center for Law and
+  Justice, and the **State of Florida**.
+- **Sep 08 2026** — **"Application (26A304) denied by Justice Kavanaugh."** Replies from Hoskins and
+  the RNC entities were filed the same day, after the denial.
+
+**The void condition is cleared.** The forward test was written against a blank caption ("No.
+26A___") and instructed a scorer to resolve the docket number first; it is **26A304**, lower court
+Supreme Court of Missouri **SC101805**, exactly the case the ledger tracked. Nothing was withdrawn,
+transferred or consolidated. The test is scorable and it scores **against**.
+
+**Kill switch 1 fired verbatim** — "any order disposing of application 26A___ … entered on or before
+2026-09-08." **Kill switch 3 did not fire**: Kavanaugh denied the application *without* referring it
+to the full Court, and the order carried **no explanation and no dissents** (Roll Call, NOTUS,
+2026-09-08). So the reasoned-order-distinguishing-*Malliotakis* condition is not merely unfired —
+it is **unobservable**, and leg 3 gets the honest verdict below rather than a convenient one.
+
+### 2. The horizon table, scored
+
+| Horizon | Call as written | What happened | Verdict |
+|---|---|---|---|
+| Today (D-3) | Stand aside | No position taken; the event carried `symbols: []` and an `estimate` date to the end | **Correct, trivially** — its falsifier (a house playbook acquiring a litigation trigger) never fired |
+| This week | "Watch the **docket**, not the 09-08 date — and expect it to run past 09-08" | The docket disposed of 26A304 **on 09-08** | **WRONG — this is the scored miss.** Its own falsifier fired exactly as written |
+| This month | "Treat **2026-09-19** as the real terminal date, not 09-08" | Unresolved at close-out. 09-19 is still ahead, but the sibling [UOCAVA ledger](missouri-uocava-ballot-mailing-2026-09-19.md) has already retired the word *terminal*: § 20302(g) waivers exist and the statute is enforced by an AG suit, not by a clock | **Half-wrong before the date even arrives** — the framing was corrected by the sibling, not by the tape; not scored on the date itself |
+| This quarter | "Carry the result as a **seat-math input** to [midterm-elections-2026-11-03](midterm-elections-2026-11-03.md), and as nothing else" | Still the right disposal, but the input is now **indeterminate rather than resolved** — see §4 | **Correct in kind, premature in confidence** — the falsifier (a >1% redistricting-driven session) did not fire; see §5 |
+
+The `This week` row is the one that mattered and it is the one that failed. **Confidence was
+"Medium" and it was too high**, which is the honest reading: the ledger had one side's brief, no
+opposition, no docket number, and no instrument that measures a court — a Medium on top of that
+stack was a guess wearing a grade.
+
+### 3. THE FINDING — a party's disclaimer about who a deadline *binds* says nothing about what it *forces*
+
+This is the transferable lesson and it is worth more than the ruling.
+
+The initial research built its entire re-specification on one sentence from the applicant's own
+brief: "*Although this Court is not bound by it, Missouri has a state-law deadline of September 8 to
+alter the ballot.*" That sentence is **true and was read too far**. It establishes that 09-08 imposes
+no *jurisdictional* obligation on the Supreme Court. It does not establish — and cannot — that the
+Court will ignore it, because **09-08 was the date that forced every other actor's hand**, and a
+court deciding an emergency application decides into that world:
+
+- Kavanaugh had full briefing by noon **09-07** and ruled the **next day**, not on the applicant's
+  requested **09-14**. The briefing schedule the applicant proposed (reply by 5 p.m. 09-08) was
+  overtaken; the Court simply did not need it.
+- Judge Clark's TRO — issued *minutes after* the denial — cites the same clock in its own reasoning:
+  "*the deadline for finalizing the state's ballot for November is Tuesday*" (Roll Call, 09-08).
+  A federal judge treated 09-08 as the operative constraint on the same afternoon this ledger said
+  it was not one.
+- The appeal to the Eighth Circuit was noticed **that evening**, not later in the week.
+
+**The rule for the next session, stated so it generalises past this case:** when a date is an
+*administrative* deadline — a ballot lock, a filing cut-off, a settlement date, an exchange's
+close — the fact that a tribunal is not *bound* by it is a statement about jurisdiction, not about
+timing. **The right question is not "who does this date bind?" but "whose hand does this date
+force?"** — and when the answer is "everyone downstream," the tribunal's own schedule usually
+collapses onto it. This ledger asked the first question, answered it correctly, and got the timing
+exactly backwards.
+
+### 4. The legs, re-scored against what happened
+
+1. **09-08 is real, statutorily cited, and NOT the resolution point — the first two clauses hold,
+   the third is REFUTED.** Mo. Rev. Stat. § 115.125.2 is still the citation and the label is still
+   correctly `estimate` (the confirmed-prefix taxonomy has no slot for a statute or a court filing —
+   unchanged, and out of this lane's scope). Everything after the comma was wrong.
+2. **The binding federal constraint lands 09-19 — UNRESOLVED, and already narrowed elsewhere.** The
+   date has not arrived. The sibling ledger's own research replaced "terminal" with "not
+   self-executing": § 20302(a)(8) is expressly subject to § 20302(g)'s undue-hardship waiver, whose
+   grounds include "a delay in generating ballots due to a legal contest," and enforcement runs
+   through 52 U.S.C. § 20307. Nothing here needs re-deriving; it is theirs to score.
+3. **The *Malliotakis* base-rate correction — NOT REFUTED, but NOT VINDICATED EITHER, and the
+   distinction matters.** The application lost. A naive prior ("SCOTUS declines to disturb a state
+   high court on election mechanics") would have called the direction right. But the correction's
+   claim was never "a grant is likely" — it was "*a denial is not the default and no probability is
+   stated*," and the order came with **no reasoning and no dissent**, so it distinguishes nothing
+   and updates nothing about *Malliotakis*'s reach. **One unexplained emergency-docket order is not
+   a base rate.** A future session should carry the correction forward unchanged and resist the
+   temptation to score it as a win for the naive prior — that would be exactly the over-reading §3
+   is about.
+4. **Purcell runs toward the applicant — SUPPORTED, and in a way the ledger did not foresee: it won
+   in a different courthouse.** The argument the ledger read as unusually strong (the August 4
+   primary already ran under HB 1 with ~1.2M votes cast, so the state court's order is the late
+   change) lost at the Supreme Court on the papers and then **won a federal TRO the same hour**.
+   Chief Judge Stephen R. Clark (E.D. Mo.) found a "high probability of success" on the plaintiffs'
+   **Article I, § 2** theory — that the completed primary's ballots would be nullified — alongside
+   an Equal Protection claim and what Democracy Docket named "**Purcell in reverse**," and wrote
+   that "*Using a different map for the general election would wreak havoc on the fairness and
+   orderliness of Missouri's congressional elections*" (NOTUS, 09-08). **The ledger's read of the
+   argument's strength was right; its assumption that the Supreme Court was the forum where that
+   strength would be tested was wrong.** The one-sided-record limit the ledger flagged was the real
+   one, and it cut in an unexpected direction.
+5. **Seat math — UNCHANGED and now genuinely unresolved.** The single seat (MO-05, Cleaver's; HB 1
+   drawn for 6-2 → 7-1) is not settled by 09-08 at all. Two orders now point opposite ways and both
+   are live: the Missouri Supreme Court's 09-03 judgment bars the 2025 map, and Clark's 14-day TRO
+   compels it. The `low` impact tier survives on its original basis — ±1 seat sits inside the
+   disagreement between the redistricting-net estimates (Cook ~R+5 vs a raw count of R+16/D+6 vs
+   the midterm ledger's carried R+6 to +10) — and is, if anything, better supported now, because the
+   input the midterm ledger would consume is **still indeterminate 56 days from the election**.
+6. **No market channel — SUPPORTED, and the measurement is in §5.** Nothing in the tape distinguishes
+   the day two federal courts contradicted each other over a House seat from an ordinary pre-CPI
+   session.
+7. **The second-order "federal supervision of state-court map orders" channel — MIXED, unchanged,
+   and the break in the chain is now visible from a second angle.** The stay was denied, so
+   *Malliotakis* was not extended by this order. But the same substantive theory succeeded in a
+   district court, which is a *different* mechanism reaching the same place — federal courts
+   supervising state-court election orders — via Article I, § 2 rather than via the emergency
+   docket. The far-end break the ledger named still holds: the AI-data-center vehicle (H.R. 9340)
+   cleared committee **52-0**, i.e. largely indifferent to chamber control, so the court → seat math
+   → chamber odds → priced policy chain still breaks at the last link. **Naming the break is still
+   worth more than pretending the chain holds.**
+
+### 5. The measurement — and one data artifact recorded rather than smoothed over
+
+Fresh Yahoo pulls this session, 09-04 close (the registration baseline) → 09-08 close (the event day;
+09-07 was a full holiday closure, [labor-day-market-closure-2026-09-07](labor-day-market-closure-2026-09-07.md)):
+
+| Reading | 2026-09-04 | 2026-09-08 | Change |
+|---|---|---|---|
+| VIX | 14.53 | **15.72** | +1.19 pts — **inside** the deterministic screen's 3-point threshold |
+| S&P 500 | 7718.60 | **7673.52** | **−0.58%** |
+| VVIX | 84.42 | **88.69** | +4.27 |
+| 10Y (^TNX) | 4.784% | **4.81%** | +2.6 bp |
+| RSP (equal weight) | 219.00 | **216.73** | **−1.04%** (meta quote; the 09-08 daily bar's close was still `null` at fetch, low 216.625) |
+
+**Kill switch 4 did not fire, and refusing to fire it is the honest call.** Its wording is "the S&P
+**or any tracked name** moves >1% on a session **whose named driver is a redistricting ruling**."
+RSP cleared 1% on the day. The S&P did not, and 09-08's named drivers in this calendar are the
+[3-year note auction](treasury-3y-note-2026-09-08.md) and positioning ahead of
+[CPI on 09-11](cpi-2026-09-11.md). Equal-weight underperforming cap-weight by ~46 bp is a breadth
+observation, not a court docket — and attributing it to redistricting would be precisely the
+inference leg 6 exists to forbid. **Recorded, not claimed.**
+
+**The artifact, stated plainly:** Yahoo's `^VIX` series carries a **2026-09-07** daily bar
+(o 15.02 · h 15.32 · l 14.99 · c 15.30) on a date US markets were **fully closed**, while `^GSPC`
+and `RSP` have no bar at all for that date. VIX is not disseminated when the market is shut, so
+that bar is a vendor artifact and **is not used anywhere above** — 09-04 → 09-08 is the clean
+comparison. It is written down because the next session pulling this series will meet the same bar,
+and a silently-consumed holiday print is exactly the class of error the cache-discipline rule exists
+to prevent.
+
+### 6. What carries forward, and where
+
+- **`missouri-map-tro-expiry-2026-09-22`** is proposed in this PR (`estimate` / `NEWS:` / `low` /
+  `symbols: []`): Clark's TRO runs 14 days from entry under Fed. R. Civ. P. 65(b)(2), with a
+  preliminary-injunction hearing before it lapses. **The date is computed from the rule and the
+  reported 14-day term, not read off a scheduling order** — no hearing date was found in any
+  fetched source, and the entry says so.
+- **The Eighth Circuit appeal has no date** and is therefore not proposed. It is noted here so the
+  next reader does not mistake its absence for its non-existence.
+- **To [midterm-elections-2026-11-03](midterm-elections-2026-11-03.md)**: the seat-math input this
+  event was tracked to supply is **not resolved** — two live orders point opposite ways. Its own
+  **FT-midterm-elections-2026-11-03-1** (no US Supreme Court stay in effect on 09-08) reads
+  *confirmed* on its face: no stay issued. That ledger should score it knowing the substance went
+  the other way within the hour, in a different court, on a different theory — the caution its own
+  fragment already carries about a test's date ceasing to mean what it meant.
+- **No position was taken at any point in this ledger's life, and none was available.** The event
+  closed `estimate`, `symbols: []`, `low`. The refuted forward test cost nothing but a wrong
+  sentence, which is the whole reason forward tests are registered in writing before the fact.

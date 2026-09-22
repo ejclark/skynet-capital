@@ -37,8 +37,15 @@ export const FRAGMENT_DIR = join(ROOT, "docs/research/forward-tests");
 const LEGACY = "legacy";
 const ROW_RE = /^\|\s*(FT-[^|]+?)\s*\|/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-/** A namespaced id: FT-<event-id>-<n>, the event id ending in a YYYY-MM-DD (+ optional tail). */
-const NAMESPACED_RE = /^FT-(.+-\d{4}-\d{2}-\d{2}(?:-[a-z0-9]+)*)-(\d+)$/;
+/** A namespaced id: FT-<event-id>-<n>, the event id ending in a date (+ optional tail).
+ *  The date part is YYYY, YYYY-MM **or** YYYY-MM-DD: this calendar carries events whose real
+ *  granularity is coarser than a day, and requiring YYYY-MM-DD made a forward test unregisterable
+ *  for every one of them — `pjm-capacity-auction-2026-12`, `pjm-capacity-auction-2027-05` and
+ *  `aws-reinvent-2026` as of 2026-09-08, found when the first of those tried to register during a
+ *  pulse check. The gate's rule ("new rows are FT-<event-id>-<n>") was never the problem; the
+ *  pattern just could not spell the id the rule asks for. Bare-number legacy ids still fail this
+ *  (no `-YYYY` segment to match), which is the property that matters. */
+const NAMESPACED_RE = /^FT-(.+-\d{4}(?:-\d{2}){0,2}(?:-[a-z0-9]+)*)-(\d+)$/;
 const TABLE_HEADER_RE = /^\|\s*#\s*\|\s*Hypothesis\s*\|/m;
 
 const args = process.argv.slice(2);

@@ -1,4 +1,5 @@
 import type { ControlsState } from "../autonomous/bot-controls.js";
+import { COMPANION_MODEL, COMPANION_MODELS } from "../companion/companion-model.js";
 import type { FleetControls } from "../observatory/settings-view.js";
 import type { BotControlsStore } from "./bot-controls-store.js";
 
@@ -39,6 +40,8 @@ export function fleetControls(deps: ControlsDeps): FleetControls {
       displayName: bot.displayName,
       suspended: state.bots[bot.id]?.suspended === true,
     })),
+    companionModel: state.companionModel ?? COMPANION_MODEL,
+    companionModels: COMPANION_MODELS,
     ...(state.updatedAt ? { updatedAt: state.updatedAt } : {}),
     ...(state.updatedBy ? { updatedBy: state.updatedBy } : {}),
   };
@@ -46,12 +49,14 @@ export function fleetControls(deps: ControlsDeps): FleetControls {
 
 /** One call = one switch flipped — THE action authority. The action surface is exactly what the
  *  shell renders — a control plane accepts nothing it doesn't show. Unknown actions/bots refuse
- *  loudly, never guess. */
+ *  loudly, never guess. `model` is read only for `set-companion-model`; every other action
+ *  ignores it. */
 export function applyControlsAction(
   action: string,
   botId: string | undefined,
   editor: string,
   deps: ControlsDeps,
+  model?: string,
 ): ControlsActionResult {
   const at = deps.now?.() ?? new Date();
   try {
@@ -62,6 +67,12 @@ export function applyControlsAction(
           ? "All autonomous trading suspended — the fleet stands down within ~30 seconds."
           : "Global suspend lifted — bots resume their own settings within ~30 seconds.",
       );
+    }
+    if (action === "set-companion-model") {
+      const picked = COMPANION_MODELS.find((m) => m === model);
+      if (!picked) return { ok: false, notice: { kind: "error", message: "Unknown model." } };
+      deps.store.setCompanionModel(picked, editor, at);
+      return okNote(`Moneypenny now runs on ${picked} — takes effect on her next reply.`);
     }
     if (action !== "suspend" && action !== "resume") {
       return { ok: false, notice: { kind: "error", message: "Unknown action." } };

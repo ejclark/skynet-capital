@@ -1,10 +1,22 @@
 import type { ServerResponse } from "node:http";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
 import { EXPIRATION_PATTERN, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import { quoteView } from "../trading/quote-view.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { sendJson } from "./page-shell.js";
 
-/** Chain data for the ticket, degrading exactly as the legacy `ticketData` degrades. */
+/**
+ * Chain data for the ticket, degrading exactly as the legacy `ticketData` degrades.
+ *
+ * Every degraded response carries a machine-readable `reason` alongside the prose `chainNote`
+ * so the client can branch on *why* the chain didn't load without parsing English text:
+ * `"unlinked"` (no connected account yet), `"no-options"` (a genuine dead end — the symbol has
+ * no listed options), or `"failed"` (a feed/broker error — the ticket still works manually).
+ *
+ * The row payload widened for the scroll-out chain columns (#2017 Phase 1 slice 14): volume and
+ * the four commonly-shown greeks (delta/gamma/theta/vega) now ride alongside bid/ask/openInterest,
+ * each still absent — never a fabricated value — whenever the client didn't compute it.
+ */
 export async function serveChain(
   res: ServerResponse,
   url: string,
@@ -29,6 +41,7 @@ export async function serveChain(
     sendJson(res, 200, {
       chainNote:
         "Live option chains load through your own connected account, and your session isn't linked to one yet.",
+      reason: "unlinked",
     });
     return;
   }
@@ -36,23 +49,41 @@ export async function serveChain(
     const today = new Date().toISOString().slice(0, 10);
     const expirations = await client.getExpirations(symbol, today);
     if (expirations.length === 0) {
-      sendJson(res, 200, { chainNote: `No listed options found for ${symbol}. Check the symbol.` });
+      sendJson(res, 200, {
+        chainNote: `No listed options found for ${symbol}. Check the symbol.`,
+        reason: "no-options",
+      });
       return;
     }
     const expiration =
       requestedExp && expirations.includes(requestedExp)
         ? requestedExp
         : (expirations[0] as string);
-    const [chain, spot] = await Promise.all([
+    // One snapshot read serves both the chain's spot and the quote header (#3299 slice 1): the
+    // ticket used to fetch the same underlying twice — `/api/trade/quote` for the header and this
+    // route's `getUnderlyingPrice` for the divider row. The header now reads `quote` off the chain
+    // answer. `getUnderlyingPrice` stays as the fallback for a snapshot with no prior close.
+    const [chain, underlying] = await Promise.all([
       client.getChain(symbol, expiration, type),
-      client.getUnderlyingPrice(symbol),
+      client.getUnderlyingQuote(symbol),
     ]);
+    const spot = underlying?.last ?? (await client.getUnderlyingPrice(symbol));
+    // Quote coverage (#3407 P2): how many strikes the data host actually quoted, so the chain
+    // can say "greeks from the indicative feed · 38 of 41 strikes" instead of a silent "—".
+    const quoted = chain.filter((row) => row.quoteSource !== undefined).length;
     sendJson(res, 200, {
       symbol,
       optionType: type,
       expirations,
       expiration,
       ...(spot !== undefined ? { spot } : {}),
+      ...(underlying ? { quote: quoteView(symbol, underlying) } : {}),
+      quotes: {
+        source: quoted > 0 ? "indicative" : "unavailable",
+        quoted,
+        total: chain.length,
+        asOf: new Date().toISOString(),
+      },
       rows: chain.map((row) => {
         const premium = rowPremium(row);
         return {
@@ -62,12 +93,18 @@ export async function serveChain(
           ...(row.bid !== undefined ? { bid: row.bid } : {}),
           ...(row.ask !== undefined ? { ask: row.ask } : {}),
           ...(row.openInterest !== undefined ? { openInterest: row.openInterest } : {}),
+          ...(row.volume !== undefined ? { volume: row.volume } : {}),
+          ...(row.delta !== undefined ? { delta: row.delta } : {}),
+          ...(row.gamma !== undefined ? { gamma: row.gamma } : {}),
+          ...(row.theta !== undefined ? { theta: row.theta } : {}),
+          ...(row.vega !== undefined ? { vega: row.vega } : {}),
         };
       }),
     });
   } catch (error) {
     sendJson(res, 200, {
       chainNote: `Couldn't load the option chain right now — ${String(error)}. The ticket still works; premiums just can't be estimated.`,
+      reason: "failed",
     });
   }
 }

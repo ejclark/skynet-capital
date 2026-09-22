@@ -1,4 +1,4 @@
-import { cappingLeg, type DraftOrder } from "./draft-order.js";
+import { cappingLeg, type DraftOrder, draftSymbols } from "./draft-order.js";
 import { SHARES_PER_CONTRACT } from "./option-economics.js";
 
 /** What a leg set demands from the account before it can be approved — cash to secure puts (bare
@@ -26,13 +26,23 @@ export interface DraftRequirements {
  * account hasn't been paid yet against what it must be able to cover would understate risk for
  * any limit order that fills away from its quoted price. Revisit once slice 3 wires real premiums
  * through the draft, if a narrower (and still honest) number is wanted.
+ *
+ * A SELL THAT CLOSES demands nothing (#3407 P3 slice 3, the roll): `heldContracts` maps OCC
+ * symbol → long contracts the account already holds; a sell leg on a contract held long in at
+ * least that size is a sell-to-close, not a new short, so it neither needs shares behind it nor
+ * cash set aside. Without the map (the pure, account-less read) every sell is treated as an open.
  */
-export function draftRequirements(draft: DraftOrder): DraftRequirements {
+export function draftRequirements(
+  draft: DraftOrder,
+  heldContracts: ReadonlyMap<string, number> = new Map(),
+): DraftRequirements {
   let cash = 0;
   const sharesByUnderlying = new Map<string, number>();
+  const symbols = draftSymbols(draft);
 
-  for (const leg of draft.legs) {
-    if (leg.action !== "sell") continue;
+  draft.legs.forEach((leg, i) => {
+    if (leg.action !== "sell") return;
+    if ((heldContracts.get(symbols[i] ?? "") ?? 0) >= leg.contracts) return;
     const scale = leg.contracts * SHARES_PER_CONTRACT;
     const cap = cappingLeg(draft.legs, leg);
 
@@ -43,10 +53,10 @@ export function draftRequirements(draft: DraftOrder): DraftRequirements {
           leg.underlying,
           (sharesByUnderlying.get(leg.underlying) ?? 0) + scale,
         );
-      continue;
+      return;
     }
     cash += cap ? (leg.strike - cap.strike) * scale : leg.strike * scale;
-  }
+  });
 
   return { cash, sharesByUnderlying };
 }

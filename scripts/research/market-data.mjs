@@ -52,6 +52,47 @@ export async function bars(symbol) {
   return out;
 }
 
+// A quarter's own filings are ~90 days apart; a re-issue of the SAME reporting period (a
+// guidance update, a correction) files far sooner than that. Anything closer than this to the
+// prior kept print is the same fiscal period; anything farther is the next one.
+const SAME_PERIOD_GAP_DAYS = 45;
+
+/**
+ * Collapse raw Item 2.02 filing hits to one date per fiscal reporting period.
+ *
+ * Grouping by calendar quarter (`year, floor(month/3)`) breaks for an issuer whose fiscal Q4
+ * lands in January: the January print and the following fiscal-Q1 print in March both fall in
+ * calendar Q1, so the second collides with the first's key and is silently dropped (#3183 — KB
+ * Home, fiscal year end 1130, printed Q4 in January through FY2024).
+ *
+ * Grouping by day-gap instead sidesteps calendar quarters entirely: EDGAR's `reportDate` (the
+ * filing's period-of-report, more precise than `filingDate` when they diverge) is the ordering
+ * key, and two Item-2.02 filings collapse only when they're closer together than a real quarter
+ * ever is — i.e. they're re-issues of the same period, not two different ones.
+ *
+ * @param {{filingDate: string, reportDate?: string}[]} hits
+ * @returns {{dates: string[], discarded: {filingDate: string, reportDate?: string}[]}}
+ */
+export function collapseToFiscalPrints(hits) {
+  const sorted = [...hits].sort((a, b) => (a.filingDate < b.filingDate ? -1 : 1));
+  const kept = [];
+  const discarded = [];
+  for (const hit of sorted) {
+    const periodDate = hit.reportDate || hit.filingDate;
+    const last = kept[kept.length - 1];
+    if (last) {
+      const lastPeriodDate = last.reportDate || last.filingDate;
+      const gapDays = (new Date(periodDate) - new Date(lastPeriodDate)) / 86_400_000;
+      if (gapDays < SAME_PERIOD_GAP_DAYS) {
+        discarded.push(hit);
+        continue;
+      }
+    }
+    kept.push(hit);
+  }
+  return { dates: kept.map((h) => h.filingDate).sort(), discarded };
+}
+
 /** Earnings-release dates from SEC 8-K Item 2.02 filings. */
 export async function earningsDates(symbol) {
   const tickers = await cached(
@@ -75,18 +116,18 @@ export async function earningsDates(symbol) {
     for (let i = 0; i < r.form.length; i++) {
       if (r.form[i] !== "8-K") continue;
       const items = String(r.items?.[i] ?? "");
-      if (items.split(",").some((s) => s.trim().startsWith("2.02"))) hits.push(r.filingDate[i]);
+      if (items.split(",").some((s) => s.trim().startsWith("2.02")))
+        hits.push({ filingDate: r.filingDate[i], reportDate: r.reportDate?.[i] });
     }
   }
   // One event per reporting window: a quarter can carry several 8-Ks (guidance updates,
   // re-issues); the first Item-2.02 filing of the window is the print.
-  const seen = new Map();
-  for (const date of hits.sort()) {
-    const [y, m] = date.split("-").map(Number);
-    // A report lands in its expected month or spills into the next (NVDA has printed Feb 26 and Mar 2).
-    const q = Math.floor(((m - 1) % 12) / 3);
-    const key = `${y}-${q}`;
-    if (!seen.has(key)) seen.set(key, date);
+  const { dates, discarded } = collapseToFiscalPrints(hits);
+  if (discarded.length > 0) {
+    console.error(
+      `earningsDates(${symbol}): collapsed ${discarded.length} same-period re-issue(s) as ` +
+        `duplicates of an earlier print: ${discarded.map((d) => d.filingDate).join(", ")}`,
+    );
   }
-  return [...seen.values()].sort();
+  return dates;
 }

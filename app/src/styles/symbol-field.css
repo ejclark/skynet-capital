@@ -1,0 +1,32 @@
+/* The Symbol field's intellisense list (#738 phase 10, slice 8a). Tokens only. */
+
+/* Mobile-first: always an in-flow block under the input, never a floating overlay — at 390px an
+   overlay can run off the viewport. Rows are capped at 8 by `searchTickers`' own default limit. */
+.symbol-listbox {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--elev-recessed);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.symbol-option {
+  padding: 7px 9px 7px 8px;
+  border-radius: 5px;
+  border-left: 3px solid transparent;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.symbol-option:hover {
+  background: var(--surface-2);
+}
+/* Active row: a left border + bolder weight, never colour alone — a standing reader is
+   red/green colourblind (CLAUDE.md → Accessibility). */
+.symbol-option-active {
+  border-left-color: var(--accent);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}

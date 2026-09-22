@@ -8,10 +8,10 @@
  *
  * REUSE, NOT A NEW SPEND SURFACE. The companion shares the coach's existing
  * `ANTHROPIC_API_KEY` and its existing Console spend cap — no new credential, no new Fly secret,
- * no raised ceiling. It runs on the SAME model the coach already pays for
- * (`feedback-coach-model.ts`'s `MODEL`, mirrored here as `COMPANION_MODEL`), so this file
- * introduces no new per-token price point, only a companion-shaped set of round/size caps around
- * that one shared rate.
+ * no raised ceiling. `COMPANION_MODEL` started as the same Haiku tier the coach pays for
+ * (`feedback-coach-model.ts`'s `MODEL`); #1672 slice 3 moved the companion's own default to
+ * Sonnet 5 on a quality call, independent of the coach's tier — the two dials share a ceiling and
+ * a gate, not a model, from here on.
  *
  * FILING GOES THROUGH THE EXISTING COACH, NOT A SECOND MODEL LANE. The plan floated Sonnet
  * for issue-drafting; on inspection the shipped coach already drafts on Haiku, so the

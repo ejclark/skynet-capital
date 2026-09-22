@@ -9,7 +9,12 @@ class FakeTradingTransport implements AlpacaTradingTransport {
   readonly gets: string[] = [];
   readonly posts: Array<{ path: string; body: unknown }> = [];
   readonly deletes: string[] = [];
+  readonly patches: Array<{ path: string; body: unknown }> = [];
   constructor(private readonly responses: Record<string, JsonResponse>) {}
+  patch(path: string, body: unknown): Promise<JsonResponse> {
+    this.patches.push({ path, body });
+    return Promise.resolve(this.respond(path));
+  }
   private respond(path: string): JsonResponse {
     const hit = Object.entries(this.responses).find(([key]) => path.startsWith(key));
     return hit?.[1] ?? { status: 404, body: null };
@@ -128,6 +133,28 @@ describe("AlpacaTradingClient", () => {
     });
   });
 
+  describe("placeOrder — time in force (#3407 P1)", () => {
+    it("passes the member's own choice through verbatim", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders": { status: 200, body: { id: "o", symbol: "EEM", status: "accepted" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.placeOrder({ symbol: "EEM", qty: 1, side: "buy", time_in_force: "gtc" });
+      await client.placeOrder({
+        symbol: "EEM",
+        qty: 1,
+        side: "buy",
+        type: "limit",
+        limit_price: 40,
+        time_in_force: "day",
+      });
+
+      expect(transport.posts[0]?.body).toMatchObject({ time_in_force: "gtc" });
+      expect(transport.posts[1]?.body).toMatchObject({ time_in_force: "day" });
+    });
+  });
+
   describe("listOrders", () => {
     it("defaults to status=all, matching today's behavior", async () => {
       const transport = new FakeTradingTransport({ "/v2/orders": { status: 200, body: [] } });
@@ -154,6 +181,40 @@ describe("AlpacaTradingClient", () => {
     });
   });
 
+  describe("getOrder", () => {
+    it("returns the order by id, fill fields included", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/o1": {
+          status: 200,
+          body: {
+            id: "o1",
+            symbol: "NVDA",
+            qty: "10",
+            side: "buy",
+            status: "filled",
+            filled_qty: "10",
+            filled_avg_price: "176.42",
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const order = await client.getOrder("o1");
+
+      expect(order).toMatchObject({ id: "o1", filled_avg_price: "176.42" });
+      expect(transport.gets).toEqual(["/v2/orders/o1"]);
+    });
+
+    it("throws AlpacaApiError for an unknown id", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/ghost": { status: 404, body: { message: "not found" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.getOrder("ghost")).rejects.toBeInstanceOf(AlpacaApiError);
+    });
+  });
+
   describe("cancelOrder", () => {
     it("resolves on a 204 with no body", async () => {
       const transport = new FakeTradingTransport({ "/v2/orders/o1": { status: 204, body: null } });
@@ -170,6 +231,133 @@ describe("AlpacaTradingClient", () => {
       const client = new AlpacaTradingClient(transport);
 
       await expect(client.cancelOrder("o1")).rejects.toBeInstanceOf(AlpacaApiError);
+    });
+  });
+
+  describe("replaceOrder (#3407 P1 1b)", () => {
+    it("PATCHes only the fields given and returns the broker's NEW order with its lineage", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/o1": {
+          status: 200,
+          body: {
+            id: "o9",
+            symbol: "NVDA",
+            qty: "8",
+            side: "buy",
+            status: "pending_replace",
+            replaces: "o1",
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+      const order = await client.replaceOrder("o1", { qty: 8, limit_price: 172 });
+      expect(order.id).toBe("o9");
+      expect(order.replaces).toBe("o1");
+      expect(transport.patches).toEqual([
+        { path: "/v2/orders/o1", body: { qty: 8, limit_price: 172 } },
+      ]);
+    });
+
+    it("throws AlpacaApiError when the broker will not replace, and before the network without PATCH", async () => {
+      const refused = new AlpacaTradingClient(
+        new FakeTradingTransport({
+          "/v2/orders/o1": { status: 422, body: { message: "order is not replaceable" } },
+        }),
+      );
+      await expect(refused.replaceOrder("o1", { qty: 2 })).rejects.toBeInstanceOf(AlpacaApiError);
+      const noPatch = {
+        get: () => Promise.reject(),
+        post: () => Promise.reject(),
+        delete: () => Promise.reject(),
+      };
+      await expect(new AlpacaTradingClient(noPatch).replaceOrder("o1", { qty: 2 })).rejects.toThrow(
+        /cannot replace/,
+      );
+    });
+  });
+
+  describe("getPortfolioHistory", () => {
+    it("requests the period+timeframe and returns the parsed history on 200", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": {
+          status: 200,
+          body: {
+            timestamp: [1697241600, 1697760000],
+            equity: [2784.79, 2748.73],
+            profit_loss: [0, -25.42],
+            profit_loss_pct: [0, -0.0129],
+            base_value: 2784.79,
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const history = await client.getPortfolioHistory("1W");
+
+      expect(transport.gets).toEqual(["/v2/account/portfolio/history?period=1W&timeframe=1D"]);
+      expect(history.base_value).toBe(2784.79);
+      expect(history.profit_loss_pct).toEqual([0, -0.0129]);
+    });
+
+    it("throws AlpacaApiError on a non-2xx status", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": { status: 429, body: { message: "rate limited" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.getPortfolioHistory("1A")).rejects.toBeInstanceOf(AlpacaApiError);
+    });
+  });
+
+  describe("getPortfolioHistoryByRange", () => {
+    it("requests an explicit date_start/date_end instead of a period token", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": {
+          status: 200,
+          body: {
+            timestamp: [1704153600],
+            equity: [100_000],
+            profit_loss: [0],
+            profit_loss_pct: [0],
+            base_value: 100_000,
+          },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const history = await client.getPortfolioHistoryByRange("2026-01-01", "2026-09-16");
+
+      expect(transport.gets).toEqual([
+        "/v2/account/portfolio/history?date_start=2026-01-01&timeframe=1D&date_end=2026-09-16",
+      ]);
+      expect(history.base_value).toBe(100_000);
+    });
+
+    it("omits date_end when absent — Alpaca defaults it to today", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": {
+          status: 200,
+          body: { timestamp: [], equity: [], profit_loss: [], profit_loss_pct: [], base_value: 0 },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.getPortfolioHistoryByRange("2020-01-01");
+
+      expect(transport.gets).toEqual([
+        "/v2/account/portfolio/history?date_start=2020-01-01&timeframe=1D",
+      ]);
+    });
+
+    it("throws AlpacaApiError on a non-2xx status", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/account/portfolio/history": { status: 500, body: { message: "broker down" } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.getPortfolioHistoryByRange("2020-01-01")).rejects.toBeInstanceOf(
+        AlpacaApiError,
+      );
     });
   });
 });

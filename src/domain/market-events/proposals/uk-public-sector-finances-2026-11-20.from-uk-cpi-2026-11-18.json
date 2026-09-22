@@ -1,0 +1,11 @@
+{
+  "id": "uk-public-sector-finances-2026-11-20",
+  "kind": "macro-print",
+  "title": "UK public sector finances — October 2026 (ONS, 07:00 London / 02:00 ET), the first borrowing print after the Autumn Budget and the first carrying the electricity VAT zero-rate's revenue cost",
+  "date": "2026-11-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/publicsectorfinancesukoctober2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Public sector finances, UK: October 2026', 'Release date: 20 November 2026 7:00am', and states 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-11-18, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-11-18 LANE, 2026-09-09. Two days after the October CPI print, and it earns a slot for a reason that has nothing to do with borrowing headlines: it is the first monthly VAT receipts line covering October 2026, and therefore the first INDEPENDENT measurement of the SI 2026/987 electricity zero-rate's Exchequer cost. HMRC's own tax information and impact note (gov.uk, first published 2026-09-08) left the Exchequer-impact table EMPTY, deferring it to OBR certification 'at a future fiscal event' — the 2026-10-28 Autumn Budget — and widely-circulated press figures near GBP 850m have no primary source. This print is where the realised number starts appearing regardless of what the Budget certified. Note the two-sided reading it invites: the sibling ledger uk-electricity-vat-zero-rate-2026-10-01 established that the zero rate sunsets 2027-03-31 from INSIDE the Order, so a six-month revenue notch is not a structural deterioration and should not be read as one. Tiered LOW: symbols: [], no rates- or sterling-keyed house playbook, and the nearest transmission channel this repo has measured is the gilt-to-Treasury pipe quantified in uk-autumn-budget-2026-10-28, which opens only on the worst ~1% of gilt days. Estimate widens caution only."
+}

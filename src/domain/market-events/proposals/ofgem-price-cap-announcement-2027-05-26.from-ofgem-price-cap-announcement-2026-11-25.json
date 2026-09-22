@@ -1,0 +1,11 @@
+{
+  "id": "ofgem-price-cap-announcement-2027-05-26",
+  "kind": "macro-print",
+  "title": "Ofgem publishes the energy price cap for 1 July to 30 September 2027 — the first cap set on a fully restored 5% VAT base, and the control quarter for the reversion's size",
+  "date": "2027-05-26",
+  "status": "estimate",
+  "source": "EST: ofgem.gov.uk/news/changes-energy-price-cap-between-1-october-and-31-december-2026, fetched direct 2026-09-09 (HTTP 200) — Ofgem's own 26 August 2026 cap release, under 'Energy price cap level dates', reads verbatim 'The levels for the next periods will be announced by: ... 26 May 2027 - period 1 July 2027 to 30 September 2027'. It is the furthest-out date Ofgem publishes as of this fetch. The word is 'by' and Ofgem reserves early publication ('We may publish before this date if we need to because of external reasons'), so the day is a reasoning estimate on a fetched primary — EST: exactly. Also estimate on this lane's no-self-confirm limit and the confirmed-prefix taxonomy's lack of any slot for a UK sector regulator. Discovered 2026-09-09 during the never-assessed initial research of ofgem-price-cap-announcement-2026-11-25",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE ofgem-price-cap-announcement-2026-11-25 LANE, 2026-09-09, FROM THE SAME OFGEM PRIMARY. Why it is worth a slot rather than being left as the next quarter's routine: it is the CONTROL for the VAT reversion. The Apr-Jun 2027 cap (announced by 2027-02-23, proposed alongside this) is the one step that mixes a wholesale move with the mechanical 0%-to-5% electricity VAT snap-back, so its size alone cannot separate the two. The Jul-Sep 2027 cap is the first set on a fully restored 5% base with no tax change inside it, which is what lets the April step be decomposed after the fact into tax versus wholesale. That decomposition is the whole attribution question the uk-electricity-vat-zero-rate-2026-10-01 and uk-electricity-vat-reversion-2027-04-01 ledgers exist to answer, and it needs two observations, not one. Tiered LOW: symbols [], no UK listing, utility, gilt or sterling instrument anywhere in this calendar's eight-name US universe, and no house playbook keyed to energy or sterling. Estimate widens caution only; nothing date-keyed may act on this."
+}

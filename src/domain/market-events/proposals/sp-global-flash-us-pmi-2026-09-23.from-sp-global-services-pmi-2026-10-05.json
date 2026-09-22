@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-flash-us-pmi-2026-09-23",
+  "kind": "macro-print",
+  "title": "S&P Global Flash US PMI (Sep 2026) — 09:45 ET, the date this survey's information actually lands",
+  "date": "2026-09-23",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-09-09 (HTTP 200, 23,858 bytes) by the sp-global-services-pmi-2026-10-05 initial research: 'September 23 ... 13:45 UTC S&P Global Flash US PMI'. 13:45 UTC is 09:45 ET under EDT, the same slot the page gives the final US PMI releases on 10-01 and 10-05. Filed estimate on the standing schema gap this calendar has now hit three times, not on date doubt: market-events-data.ts defines no confirmed-source prefix for a private PMI compiler, and this lane does not self-confirm an event it discovered in-sweep.",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BECAUSE IT IS THE INFORMATIVE HALF OF A SURVEY THIS CALENDAR HAS NOW STARTED TRACKING AT ITS UNINFORMATIVE END. The final S&P Global US Services PMI (sp-global-services-pmi-2026-10-05) is the only major US services datum that is PRE-ANNOUNCED: the flash publishes ~2 weeks earlier and the final carries only the revision, measured at a mean |0.40pt| over May-Aug 2026 from S&P Global's own consecutive flash releases. The flash is where the ~85% of panel responses first reach the tape, it is unique in having NO ISM competitor in its slot (ISM publishes no flash), and it is the earliest read on a reference month that exists — i.e. exactly the properties the final lacks. Tracking the final while ignoring the flash would leave this calendar holding the revision and missing the number. NOT YET MEASURED: the 10-05 ledger's intraday work covers the FINAL release days only (08-05, 09-03); whether the flash's own 09:45-10:00 window is loud is an open question its initial research should answer first-hand, and nothing here asserts it is. Dated, cheap falsifier: the release either lands 2026-09-23 at 09:45 ET or it does not, self-adjudicating in 14 days. Discovered during the sp-global-services-pmi-2026-10-05 initial research (2026-09-09)."
+}

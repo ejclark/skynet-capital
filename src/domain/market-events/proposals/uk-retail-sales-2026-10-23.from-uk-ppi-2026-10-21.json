@@ -1,0 +1,11 @@
+{
+  "id": "uk-retail-sales-2026-10-23",
+  "kind": "macro-print",
+  "title": "UK retail sales, Great Britain — September 2026 (ONS, 07:00 London / 02:00 ET) — the last consumer-volume print before the 2026-10-28 Autumn Budget",
+  "date": "2026-10-23",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/retailsalesgreatbritainseptember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads verbatim 'Retail sales, Great Britain: September 2026', '23 October 2026 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has CENSUS: for the US retail print and no slot for the UK Office for National Statistics. Discovered in the adjacency sweep of the never-assessed initial research of uk-ppi-2026-10-21, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-ppi-2026-10-21 LANE, 2026-09-09, two days after its own event and inside its five-day corridor. Two reasons it earns a slot rather than a footnote. FIRST, PLACEMENT: it is the last UK consumer-volume print before the 2026-10-28 Autumn Budget (five days) and before the 2026-11-05 MPC meeting carrying the November Monetary Policy Report, and it closes an ONS week this calendar already tracks three times over — uk-cpi-2026-10-21, uk-ppi-2026-10-21 and uk-public-sector-finances-2026-10-21 all publish at 07:00 on 10-21, then retail sales lands 07:00 on 10-23. SECOND, IT IS THE MISSING DEMAND SIDE: this calendar's UK entries are all prices (CPI, PPI/SPPI), labour (uk-labour-market-2026-10-20) or fiscal (PSF). Nothing tracks UK consumer volumes, which is the series against which the September CPI print's composition is read. NAME COLLISION WORTH ONE SENTENCE IN ANY RECAP: retail-sales-2026-10-15 is the US Census print; this is Great Britain, eight days later, different publisher, different concept (GB volumes vs US nominal receipts). Expected LOW on the same measured grounds as every UK sibling: symbols: [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Not verified against a September-reference-month cadence listing — only the release page itself was fetched — so its own never-assessed research should reproduce the cadence before relying on it. Estimate widens caution only."
+}

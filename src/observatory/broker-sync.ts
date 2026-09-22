@@ -52,8 +52,19 @@ export function reconciledSnapshot(
   fresh: ParticipantSnapshot,
 ): ParticipantSnapshot {
   if (fresh.error) return current;
+  // When a fresh read returns fewer positions than the reducer holds (trades filled via stream
+  // but not yet persisted at the broker), trust the reducer. The realtime stream has the source
+  // of truth until a broker read contradicts *and* the broker is healthy. Preserve current
+  // positions when fresh comes back empty/smaller, since a broker re-read gap → empty-API-response
+  // is a known pattern (Alpaca sync lag, a fresh account, or a socket that dropped mid-fill).
+  // TODO: add a cadence-based full sync here if this gap persists; for now, prefer the good data.
+  const positions =
+    fresh.positions.length < current.positions.length && fresh.error === undefined
+      ? current.positions
+      : fresh.positions;
   const merged: ParticipantSnapshot = {
     ...fresh,
+    positions,
     // Never lost to a re-read: the reducer owns this number, the broker doesn't report it.
     ...(current.realizedPl !== undefined ? { realizedPl: current.realizedPl } : {}),
   };

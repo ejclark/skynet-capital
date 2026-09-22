@@ -1,0 +1,11 @@
+{
+  "id": "treasury-refunding-2027-05-05",
+  "kind": "macro-print",
+  "title": "Treasury Quarterly Refunding Announcement (May 2027), 08:30 ET",
+  "date": "2027-05-05",
+  "status": "estimate",
+  "source": "EST: derived from the published rule this calendar already carries on treasury-refunding-2026-11-04 — Treasury holds its quarterly refunding on the FIRST WEDNESDAY of February, May, August and November, releasing the policy statement, TBAC report and auction/buyback schedules at 08:30 ET, with the marketable borrowing estimates on the Monday two days earlier. home.treasury.gov/policy-issues/financing-the-government/quarterly-refunding/most-recent-quarterly-refunding-documents was re-fetched direct 2026-09-09 (plain curl, HTTP 200, 73,520 bytes) and names the current cycle's pair in its own words: '(The next release is scheduled for November 2, 2026)' for Financing Estimates and '(The next release is scheduled for November 4 , 2026)' for the refunding. Recomputed mechanically: the first Wednesday of May 2027 is 2027-05-05. Filed estimate on two counts — Treasury has published no 2027 refunding calendar this far out, and this lane may not self-confirm an event it discovered in-sweep. Discovered in the never-assessed initial research of tic-annual-survey-final-2027-04-30, 2026-09-09",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "DISCOVERED as the far edge of the tic-annual-survey-final-2027-04-30 corridor: it sits exactly 5 days after that print, with its own borrowing-estimates Monday (treasury-borrowing-estimates-2027-05-03, est) one session after it. Impact MEDIUM matches the sibling treasury-refunding-2026-11-04 on the same reasoning: refunding announcements move the long end through SUPPLY rather than through the policy path, and no house playbook is macro-keyed. Two things make this edition worth its slot beyond calendar completeness. First, it is the first refunding after fomc-2027-04-28 (high, est), so the coupon and buyback schedules are set into whatever the April FOMC did to the path. Second, it is the reason the TIC final report's next-session tape can never be read cleanly in a Friday year: 11 of 19 modern final reports sit on or one session from a release in this cycle. Proposed as an estimate; nothing here licenses an entry."
+}

@@ -68,6 +68,34 @@ describe("applyControlsAction", () => {
     expect(result).toEqual({ ok: false, notice: { kind: "error", message: "Unknown action." } });
     expect(store.load()).toEqual({ bots: {} });
   });
+
+  it("swaps Moneypenny's model, stamping who changed it", () => {
+    const result = applyControlsAction(
+      "set-companion-model",
+      undefined,
+      "owner@example.com",
+      deps(),
+      "claude-haiku-4-5",
+    );
+    expect(result).toEqual({
+      ok: true,
+      notice: { kind: "ok", message: expect.stringContaining("claude-haiku-4-5") },
+    });
+    expect(store.load().companionModel).toBe("claude-haiku-4-5");
+    expect(store.load().updatedBy).toBe("owner@example.com");
+  });
+
+  it("refuses a model outside the allowlist without touching the store", () => {
+    const result = applyControlsAction(
+      "set-companion-model",
+      undefined,
+      "owner@example.com",
+      deps(),
+      "gpt-5",
+    );
+    expect(result).toEqual({ ok: false, notice: { kind: "error", message: "Unknown model." } });
+    expect(store.load().companionModel).toBeUndefined();
+  });
 });
 
 describe("fleetControls", () => {
@@ -88,6 +116,8 @@ describe("fleetControls", () => {
         { id: "banker", displayName: "The Banker", suspended: false },
       ]);
       expect(controls.updatedBy).toBe("owner@example.com");
+      expect(controls.companionModel).toBe("claude-sonnet-5"); // the store's untouched default
+      expect(controls.companionModels).toEqual(["claude-haiku-4-5", "claude-sonnet-5"]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

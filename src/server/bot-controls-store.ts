@@ -4,6 +4,7 @@ import {
   EMPTY_CONTROLS,
   parseControlsState,
 } from "../autonomous/bot-controls.js";
+import type { CompanionModelId } from "../companion/companion-model.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 
 /**
@@ -51,6 +52,18 @@ export class BotControlsStore {
     const next: ControlsState = {
       ...state,
       allSuspended,
+      updatedAt: at.toISOString(),
+      updatedBy,
+    };
+    this.file.write(next);
+    return next;
+  }
+
+  setCompanionModel(model: CompanionModelId, updatedBy: string, at = new Date()): ControlsState {
+    const state = this.load();
+    const next: ControlsState = {
+      ...state,
+      companionModel: model,
       updatedAt: at.toISOString(),
       updatedBy,
     };

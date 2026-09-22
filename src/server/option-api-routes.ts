@@ -6,13 +6,17 @@ import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { impliedVolatility } from "../options/pricing.js";
+import { daysToExpiryFrom } from "../options/single-leg-odds.js";
+import type { OptionPreviewGreeks } from "../trading/option-economics.js";
 import {
   type OptionPlayCode,
   previewOptionClose,
   previewOptionOrder,
 } from "../trading/option-ticket.js";
 import type { Session } from "./auth/session.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
+import { serveBars } from "./bars-route.js";
+import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveChain } from "./option-chain-route.js";
@@ -25,6 +29,8 @@ import {
   sendJson,
 } from "./page-shell.js";
 import { type ParticipantProgression, playLocked } from "./progression-service.js";
+import { serveQuote } from "./quote-route.js";
+import { serveSymbolSearch } from "./symbol-search-route.js";
 
 /** Trade-type codes that ride the OPTION preview/review pipeline. */
 const OPTION_CODES = new Set(["201", "202", "301", "302"]);
@@ -36,7 +42,14 @@ async function reviewEstimates(
   expiration: string,
   type: "call" | "put",
   strike: number,
-): Promise<{ premium?: number; spot?: number }> {
+  now: Date,
+): Promise<{
+  premium?: number;
+  spot?: number;
+  greeks?: OptionPreviewGreeks;
+  impliedVol?: number;
+  daysToExpiry?: number;
+}> {
   if (!client) return {};
   try {
     const [chain, spot] = await Promise.all([
@@ -45,23 +58,55 @@ async function reviewEstimates(
     ]);
     const row = chain.find((r: OptionChainRow) => r.strike === strike);
     const premium = row ? rowPremium(row) : undefined;
+    // The order screen's greeks, IV and odds (#3407 P2 slice 2): greeks echoed from the row the
+    // feed quoted; IV solved from the mid the member is about to trade at; days from the clock.
+    const greeks = row ? quotedGreeks(row) : undefined;
+    const daysToExpiry = daysToExpiryFrom(expiration, now);
+    const impliedVol =
+      premium !== undefined && spot !== undefined && daysToExpiry !== undefined
+        ? impliedVolatility({ spot, strike, daysToExpiry, type, marketPrice: premium })
+        : undefined;
     return {
       ...(premium !== undefined ? { premium } : {}),
       ...(spot !== undefined ? { spot } : {}),
+      ...(greeks ? { greeks } : {}),
+      ...(impliedVol !== undefined ? { impliedVol } : {}),
+      ...(daysToExpiry !== undefined ? { daysToExpiry } : {}),
     };
   } catch {
     return {};
   }
 }
 
+/** The four greeks a row carries, or nothing when the feed quoted none of them. */
+function quotedGreeks(row: OptionChainRow): OptionPreviewGreeks | undefined {
+  const greeks: OptionPreviewGreeks = {
+    ...(row.delta !== undefined ? { delta: row.delta } : {}),
+    ...(row.gamma !== undefined ? { gamma: row.gamma } : {}),
+    ...(row.theta !== undefined ? { theta: row.theta } : {}),
+    ...(row.vega !== undefined ? { vega: row.vega } : {}),
+  };
+  return Object.keys(greeks).length > 0 ? greeks : undefined;
+}
+
 /**
  * THE OPTIONS TICKET AS DATA — the shell's twin of the legacy `/trade` option
- * pipeline (`option-order-review.ts`), three endpoints:
+ * pipeline (`option-order-review.ts`), plus the cockpit's read-only enrichment feeds:
  *
  *   GET  /api/trade/chain          → expirations + one expiration's chain + spot, through the
  *                                    REQUESTER'S OWN options client only — exactly the legacy
  *                                    ticket's `ticketData`, with every failure degrading to an
  *                                    honest `chainNote` instead of an error.
+ *   GET  /api/trade/quote          → last price + day $/% change for one symbol (#2017 Phase 0.9's
+ *                                    quote header), same requester-only client and fail-soft
+ *                                    `quoteNote` degrade as the chain (`quote-route.ts`).
+ *   GET  /api/trade/bars           → daily OHLC+volume bars for the chart section (#2017 Phase 1's
+ *                                    chart build-out), same requester-only client and fail-soft
+ *                                    `barsNote` degrade (`bars-route.ts`).
+ *   GET  /api/symbols/search        → tier-2 live Alpaca symbol lookup (Phase 0.8b), the Symbol
+ *                                    field's fallback on a curated-directory miss — same
+ *                                    requester-only client and fail-soft `{hits:[]}` degrade
+ *                                    (`symbol-search-route.ts`).
  *   POST /api/trade/option/review  → the pure `option-ticket.ts` rules against the desk snapshot
  *                                    plus best-effort premium/spot estimates. A refused order is
  *                                    a rendered explanation, never an error.
@@ -102,6 +147,7 @@ function parseOpenBody(
   if (typeof strike !== "number" || !Number.isFinite(strike)) return undefined;
   if (orderType !== "limit" && orderType !== "market") return undefined;
   const limitPrice = posFinite(body.limitPrice);
+  const timeInForce = parseTif(body.timeInForce);
   return {
     kind: "open",
     participantId,
@@ -112,7 +158,13 @@ function parseOpenBody(
     expiration,
     orderType,
     ...(limitPrice !== undefined ? { limitPrice } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   };
+}
+
+/** Day or GTC pass; anything else is dropped so the preview states the default it will send. */
+function parseTif(raw: unknown): "day" | "gtc" | undefined {
+  return raw === "day" || raw === "gtc" ? raw : undefined;
 }
 
 /** Strict shape gate for a CLOSE — direction and size resolve server-side from the live holding. */
@@ -125,11 +177,20 @@ function parseCloseBody(
   const contracts = body.contracts;
   if (contracts !== undefined && !(typeof contracts === "number" && Number.isFinite(contracts)))
     return undefined;
+  // A limit close (#3407 P1 slice 3): only the two named types pass; anything else is dropped
+  // and the preview then says "market", never coerced. The price is validated by the rules.
+  const orderType =
+    body.orderType === "limit" || body.orderType === "market" ? body.orderType : undefined;
+  const limitPrice = posFinite(body.limitPrice);
+  const timeInForce = parseTif(body.timeInForce);
   return {
     kind: "close",
     participantId,
     occSymbol: occSymbol.trim().toUpperCase(),
     ...(contracts !== undefined ? { contracts } : {}),
+    ...(orderType ? { orderType } : {}),
+    ...(limitPrice !== undefined ? { limitPrice } : {}),
+    ...(timeInForce ? { timeInForce } : {}),
   };
 }
 
@@ -203,7 +264,11 @@ async function reviewOption(
     // cash/position figures already sit on every desk's positions tab behind the invite gate.
     const closeContext = isSelf ? base : { ...base, positions: [] };
     sendJson(res, 200, {
-      preview: previewOptionClose(request.occSymbol, closeContext, request.contracts),
+      preview: previewOptionClose(request.occSymbol, closeContext, request.contracts, {
+        ...(request.orderType ? { orderType: request.orderType } : {}),
+        ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+        ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
+      }),
     });
     return;
   }
@@ -226,12 +291,16 @@ async function reviewOption(
     request.expiration,
     play?.optionType ?? "call",
     request.strike,
+    config.now?.() ?? new Date(),
   );
   sendJson(res, 200, {
     preview: previewOptionOrder(request, {
       ...base,
       ...(estimates.premium !== undefined ? { premium: estimates.premium } : {}),
       ...(estimates.spot !== undefined ? { underlyingPrice: estimates.spot } : {}),
+      ...(estimates.greeks ? { greeks: estimates.greeks } : {}),
+      ...(estimates.impliedVol !== undefined ? { impliedVol: estimates.impliedVol } : {}),
+      ...(estimates.daysToExpiry !== undefined ? { daysToExpiry: estimates.daysToExpiry } : {}),
     }),
   });
 }
@@ -260,7 +329,8 @@ async function submitOption(
   sendJson(res, 200, await config.submitOptionTrade(request, requesterId));
 }
 
-/** Handle `/api/trade/chain` and `/api/trade/option/*`. Returns true when answered. */
+/** Handle `/api/trade/chain`, `/api/trade/quote`, `/api/trade/bars`, and `/api/trade/option/*`.
+ *  Returns true when answered. */
 export async function serveOptionApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -269,11 +339,31 @@ export async function serveOptionApi(
   session: Session | undefined,
 ): Promise<boolean> {
   const isOrder = path === "/api/trade/option/review" || path === "/api/trade/option/submit";
-  if (path !== "/api/trade/chain" && !isOrder) return false;
+  if (
+    path !== "/api/trade/chain" &&
+    path !== "/api/trade/quote" &&
+    path !== "/api/trade/bars" &&
+    path !== "/api/symbols/search" &&
+    !isOrder
+  ) {
+    return false;
+  }
   // Identity: the session and nowhere else — exactly the legacy ticket's resolution.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   if (path === "/api/trade/chain") {
     if (requireGet(req, res)) await serveChain(res, req.url ?? "/", config, requesterId);
+    return true;
+  }
+  if (path === "/api/trade/quote") {
+    if (requireGet(req, res)) await serveQuote(res, req.url ?? "/", config, requesterId);
+    return true;
+  }
+  if (path === "/api/trade/bars") {
+    if (requireGet(req, res)) await serveBars(res, req.url ?? "/", config, requesterId);
+    return true;
+  }
+  if (path === "/api/symbols/search") {
+    if (requireGet(req, res)) await serveSymbolSearch(res, req.url ?? "/", config, requesterId);
     return true;
   }
   const raw = await readJsonPost(req, res, OPTION_BODY_CAP_BYTES);
@@ -283,10 +373,19 @@ export async function serveOptionApi(
     sendJson(res, 400, { error: "malformed option order body" });
     return true;
   }
+  // An order names a specific desk, so compare against the session's full owned set rather than
+  // the single default above — a session owning more than one account (a human account plus a
+  // `/claim`-linked bot, say) must be able to trade any of them, not only the default one.
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const orderRequesterId = requesterFor(
+    request.participantId,
+    ownedIds,
+    config.hub.getState().participants,
+  );
   const progression =
-    requesterId && config.progression
+    orderRequesterId && config.progression
       ? await config.progression.view(
-          requesterId,
+          orderRequesterId,
           session ? opaqueMemberId(session.email) : undefined,
         )
       : undefined;
@@ -296,9 +395,9 @@ export async function serveOptionApi(
       sendJson(res, 404, { error: "no such desk" });
       return true;
     }
-    await reviewOption(res, request, snapshot, config, requesterId, progression);
+    await reviewOption(res, request, snapshot, config, orderRequesterId, progression);
     return true;
   }
-  await submitOption(res, request, config, requesterId, progression);
+  await submitOption(res, request, config, orderRequesterId, progression);
   return true;
 }

@@ -2,7 +2,7 @@
 
 **Kind:** <kind> · **Date:** <YYYY-MM-DD> (<confirmed|estimate>, <source>) · **Impact:** <tier>
 **Last assessed:** <YYYY-MM-DD>
-<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"screenStreak":0,"blocked":[]} -->
+<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
 
 <!-- The `**Last assessed:**` line is scripts/event-scan.mjs's machine contract — update it with
      every assessment, or the scanner will keep marking this event due. Process:
@@ -11,15 +11,21 @@
      The `<!-- probe-ref: {...} -->` line right after it is scripts/event-material-scan.mjs's
      contract (issue #724) — the deterministic screen's reference state for THIS event: the last
      recorded price for each symbol in the table row, the last VIX reading, the cadence band label,
-     the adjacent-event ids known at the time, and how many consecutive pulses have been screened
-     (not researched) in a row. Populate it with today's real readings when writing THIS initial
+     the adjacent-event ids known at the time (adjacentIds) and the confirmed high/critical subset
+     that may trip a session (adjacentStrongIds, #2946), and how many consecutive pulses have been
+     screened (not researched) in a row. Populate it with today's real readings when writing THIS
+     initial
      research (it is what lets the event's very next `interval-elapsed` pulse be screenable instead
      of automatically material) — never hand-invent numbers, pull today's actual price/VIX the same
-     way the adjacency sweep already does. Every later pulse (screened or full-session) REPLACES
-     this line in place with fresh readings; it is free-standing current state, not an append-only
-     row like the ledger table below. A screen writes it mechanically; a full session should refresh
-     it too when appending its own row, so the streak resets and the baseline stays current. See
-     docs/process/EVENT-RESEARCH.md's "Deterministic screening" section for the full contract.
+     way the adjacency sweep already does. Every later pulse (screened or full-session) APPENDS a
+     fresh `**Last assessed:**` + probe-ref pair at the TRUE END of the file — never edits this
+     header line in place (2026-09-19, docs/LESSONS.md: two pulses racing the same event both
+     rewriting this line was a guaranteed git conflict; appending makes it a pair of disjoint
+     additions instead). The reader always takes the LAST such pair in the file, so "current state"
+     is still one lookup — just resolved at the other end. A screen writes its pair mechanically; a
+     full session should append its own too when adding its row, so the streak resets and the
+     baseline stays current. See docs/process/EVENT-RESEARCH.md's "Deterministic screening" section
+     for the full contract.
 
      `blocked` (issue #1711) records every failed fetch of a cited source this event's research has
      hit — egress block, 403, 5xx, whatever the tool reported — as

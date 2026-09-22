@@ -7,5 +7,5 @@
   "source": "EST: esaipower.com auction calendar — BRA 2030/31 May 2027; confirm vs pjm.com, checked 2026-08-17",
   "impact": "medium",
   "symbols": [],
-  "notes": "FERC collar (accepted 2026-04-28) covers only 2028/29 + 2029/30 — this is the cap-sunset event VST's Tier-2 gate keys on."
+  "notes": "FERC collar (accepted 2026-04-28) covers only 2028/29 + 2029/30 — this is the cap-sunset event VST's Tier-2 gate keys on. Amended 2026-09-09: the sunset holds (no collar extension to 2030/31 found), but PJM's own CIFP documents pre-load this auction with two dampers — RBP-committed resources must offer into every post-RBP RPM auction at $0 as price takers (target 6,831 MW, up-to-15-year term), and incremental new Large Loads are excluded from the RPM demand forecast for 2029/30 and beyond until covered by new supply. See docs/research/events/pjm-capacity-auction-2027-05.md."
 }

@@ -225,6 +225,154 @@ describe("GET /controls — onControlsPoll", () => {
   });
 });
 
+describe("GET /controls — decisionsCursor", () => {
+  async function withListener(
+    config: Parameters<typeof createInsightsListener>[0],
+    run: (base: string) => Promise<void>,
+  ): Promise<void> {
+    const server = createInsightsListener(config);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await run(`http://127.0.0.1:${port}`);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+  const get = (base: string) =>
+    fetch(`${base}/controls`, {
+      headers: { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
+    });
+
+  it("folds the cursor into the controls response when configured", async () => {
+    await withListener(
+      {
+        record: capturingRecorder().record,
+        controls: () => ({ bots: {} }),
+        decisionsCursor: () => ({ sauron: 42 }),
+      },
+      async (base) => {
+        const body = (await (await get(base)).json()) as Record<string, unknown>;
+        expect(body).toMatchObject({ bots: {}, decisionsCursor: { sauron: 42 } });
+      },
+    );
+  });
+
+  it("omits the field entirely when no decision store is configured", async () => {
+    await withListener(
+      { record: capturingRecorder().record, controls: () => ({ bots: {} }) },
+      async (base) => {
+        const body = (await (await get(base)).json()) as Record<string, unknown>;
+        expect(body).not.toHaveProperty("decisionsCursor");
+      },
+    );
+  });
+});
+
+describe("POST /decisions", () => {
+  const decision = {
+    at: 1,
+    personaId: "sauron",
+    mode: "observe",
+    rawIntents: [],
+    guardedIntents: [],
+    outcomes: [],
+  };
+  const validBatch = { kind: "decision.v1", personaId: "sauron", records: [decision] };
+
+  async function withListener(
+    config: Parameters<typeof createInsightsListener>[0],
+    run: (base: string) => Promise<void>,
+  ): Promise<void> {
+    const server = createInsightsListener(config);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await run(`http://127.0.0.1:${port}`);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+  const postDecisions = (base: string, body: unknown, opts: { auth?: boolean } = {}) =>
+    fetch(`${base}/decisions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(opts.auth === false
+          ? {}
+          : { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET }),
+      },
+      body: JSON.stringify(body),
+    });
+
+  it("accepts a valid batch and hands it to the store", async () => {
+    const received: unknown[] = [];
+    await withListener(
+      {
+        record: capturingRecorder().record,
+        decisions: { recordBatch: (batch) => void received.push(batch) },
+      },
+      async (base) => {
+        const res = await postDecisions(base, validBatch);
+        expect(res.status).toBe(200);
+        // `recordBatch` receives the PARSED `DecisionBatch` — `kind` is the wire envelope's own
+        // versioning field, stripped once the batch is validated (`decision-wire.ts`).
+        expect(received).toEqual([{ personaId: "sauron", records: [decision] }]);
+      },
+    );
+  });
+
+  it("rejects a malformed batch with 400, never reaching the store", async () => {
+    let called = false;
+    await withListener(
+      {
+        record: capturingRecorder().record,
+        decisions: {
+          recordBatch: () => {
+            called = true;
+          },
+        },
+      },
+      async (base) => {
+        const res = await postDecisions(base, { kind: "decision.v1", personaId: "sauron" }); // no records
+        expect(res.status).toBe(400);
+        expect(called).toBe(false);
+      },
+    );
+  });
+
+  it("404s when no decision store is configured", async () => {
+    await withListener({ record: capturingRecorder().record }, async (base) => {
+      expect((await postDecisions(base, validBatch)).status).toBe(404);
+    });
+  });
+
+  it("401s an unauthenticated request", async () => {
+    await withListener(
+      { record: capturingRecorder().record, decisions: { recordBatch: () => undefined } },
+      async (base) => {
+        expect((await postDecisions(base, validBatch, { auth: false })).status).toBe(401);
+      },
+    );
+  });
+
+  it("502s when the store write throws, never crashing the process", async () => {
+    await withListener(
+      {
+        record: capturingRecorder().record,
+        decisions: {
+          recordBatch: () => {
+            throw new Error("disk full");
+          },
+        },
+      },
+      async (base) => {
+        expect((await postDecisions(base, validBatch)).status).toBe(502);
+      },
+    );
+  });
+});
+
 describe("GET /bot-credentials", () => {
   async function withCredentialsListener(
     config: Parameters<typeof createInsightsListener>[0],

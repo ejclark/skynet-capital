@@ -1,0 +1,11 @@
+{
+  "id": "uk-labour-market-2026-10-20",
+  "kind": "macro-print",
+  "title": "UK labour market overview — earnings, unemployment and vacancies (ONS, 07:00 London / 02:00 ET), the last wage read before the Autumn Budget",
+  "date": "2026-10-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/uklabourmarketoctober2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release-calendar entry reads verbatim 'UK Labour Market: October 2026', '20 October 2026 at 7:00am', 'Estimates of employment, unemployment, inactivity, average weekly earnings, vacancies and other labour market related statistics for the UK', marked 'This release is not yet published.' Primary-sourced from the publisher's own schedule; filed estimate per this lane's no-self-confirm limit and the confirmed-prefix taxonomy's lack of an ONS slot. Discovered in the never-assessed initial research of uk-labour-market-2026-09-15, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-09-15 LANE, 2026-09-09. The successor print, and its placement is why it is worth a slot rather than being left to the next sweep: it lands EIGHT DAYS before uk-autumn-budget-2026-10-28 (Healey's first Budget plus the OBR forecast, proposed by the boe-decision-2026-09-17 lane) and SIXTEEN DAYS before boe-decision-2026-11-05, the November MPR round. So it is the last wage and employment reading a Chancellor's fiscal package and the committee's first full forecast round since July are both scored against. It carries Jun-Aug LFS/AWE, Jul-Sep vacancies, and the September payrolled-employees early estimate — the cell the ONS itself calls 'the most reliable measure of employees'. Tiered LOW for the same reasons as the September print: UK-only, symbols: [], no rates- or sterling-keyed house playbook, ~0.1% measured cable reaction to the last release. Estimate widens caution only."
+}

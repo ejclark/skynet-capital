@@ -224,6 +224,67 @@ describe("closing the last mile", () => {
   });
 });
 
+// ── the receipt reconcile (#2968) ─────────────────────────────────────────────
+// 199 open `[event-research]` receipts on 2026-09-18, 0 of them live: 144 whose ledger was on
+// `main` but whose PR carried no `Closes #` link, and 55 whose event had left `--due` (the #2971
+// research horizon, mostly) and so would never be dispatched again. Opening a receipt was
+// automatic; closing one needed a merged PR reference, and neither class has one.
+describe("moneypenny receipt reconcile", () => {
+  const receipts = () =>
+    dryRun("sweep-receipts.json") as (Intent & { why?: string; closeReason?: string })[];
+
+  it("closes a researched receipt against the LEDGER, not a `Closes #` link", () => {
+    const done = receipts().find((i) => i.issueNumber === 1473);
+
+    expect(done?.kind).toBe("close-receipt");
+    expect(done?.why).toBe("researched");
+    expect(done?.closeReason).toBe("completed");
+  });
+
+  it("closes a dormant receipt — no ledger, and its event has left `--due`", () => {
+    const dormant = receipts().find((i) => i.issueNumber === 2968);
+
+    expect(dormant?.kind).toBe("close-receipt");
+    expect(dormant?.why).toBe("dormant");
+    // `not planned`, not `completed` — nobody did this work, and the body has to say a fresh
+    // receipt reopens rather than implying the event was dropped.
+    expect(dormant?.closeReason).toBe("not planned");
+    expect(dormant?.body).toContain("fresh receipt opens automatically");
+  });
+
+  it("leaves an outstanding receipt alone — no ledger but still due is the stall audit's case", () => {
+    // #2900 tracks cpi-2026-09-11, which the fixture keeps in `dueEvents`. Closing it here would
+    // race the stall lane and silently drop live work — including work merely DEFERRED behind the
+    // dispatch ceiling, which stays in `--due` precisely so it stays distinguishable from handled.
+    expect(receipts().some((i) => i.issueNumber === 2900)).toBe(false);
+  });
+
+  it("ignores an open issue that is not a receipt at all", () => {
+    expect(receipts().some((i) => i.issueNumber === 2001)).toBe(false);
+  });
+
+  it("drains oldest-first and caps one tick's closes, so a backlog cannot trip secondary limits", () => {
+    const out = execFileSync(
+      "node",
+      [
+        "-e",
+        `import("./scripts/moneypenny/events.mjs").then((m) => {
+           const openEventReceipts = [50, 10, 30, 20].map((n) => ({
+             number: n, title: "[event-research] e-" + n, hasLedger: true,
+           }));
+           console.log(JSON.stringify(
+             m.routeReceipts({ openEventReceipts, dueEvents: [], reconcileCap: 2 })
+               .map((i) => i.issueNumber),
+           ));
+         });`,
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+
+    expect(JSON.parse(out)).toEqual([10, 20]);
+  });
+});
+
 // ── the sweep that could never fire (2026-08-22, #494) ────────────────────────
 // #475 shipped in PR #492 and stayed open. The sweep — the net built for exactly that — printed
 // `· nothing to do` on a manual scan AND a real push run. The cause was not an under-reporting
@@ -453,5 +514,63 @@ describe("intent isolation", () => {
       "release-claim `claim/feedback-1`",
       "noop",
     ]);
+  });
+});
+
+// THE DEFECT THIS FIXES (#3280): the stall dispatch fired once per flagged issue, so one bug that
+// stalled N receipts bought N parallel Opus sessions diagnosing it. On 2026-09-18 that was three
+// sessions, two near-identical PRs (#3269, #3270) and one wasted entirely (#3275) — and all 62
+// stall dispatches in the lane's history came from just three audit runs, zero cross-run
+// duplicates. The audit run is the dedupe key the data points at.
+const stallDispatch = (numbers: unknown): { args: string[]; label: string } | null =>
+  JSON.parse(
+    execFileSync(
+      "node",
+      [
+        "-e",
+        `import("./scripts/moneypenny/index.mjs").then((m) => {
+           console.log(JSON.stringify(m.stallRepairDispatch(JSON.parse(process.argv[1]))));
+         });`,
+        JSON.stringify(numbers),
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    ),
+  );
+
+describe("stall repair dispatch", () => {
+  it("fires ONE workflow run carrying every issue the audit flagged", () => {
+    const plan = stallDispatch([2967, 2968, 2969, 2970]);
+
+    // One argv, not four: the comma list is the whole point — `issue_number` is already
+    // `type: string` on moneypenny-repair.yml, so this is a value change, not a schema change.
+    expect(plan?.args).toEqual([
+      "workflow",
+      "run",
+      "moneypenny-repair.yml",
+      "--ref",
+      "main",
+      "-f",
+      "issue_number=2967,2968,2969,2970",
+    ]);
+    // The receipt has to name every issue in the batch, or a stall handled by a sibling's session
+    // looks like a stall nobody touched.
+    expect(plan?.label).toBe("#2967, #2968, #2969, #2970");
+  });
+
+  it("degrades to exactly today's single dispatch when one issue stalled", () => {
+    expect(stallDispatch([475])?.args.at(-1)).toBe("issue_number=475");
+    expect(stallDispatch([475])?.label).toBe("#475");
+  });
+
+  it("dispatches nothing when no stall was flagged", () => {
+    expect(stallDispatch([])).toBeNull();
+    expect(stallDispatch(null)).toBeNull();
+    // A `flag-stall` with no issue number (the audit can emit one) must not become a bare
+    // `issue_number=` dispatch that wakes a session with nothing to work.
+    expect(stallDispatch([undefined, 0])).toBeNull();
+  });
+
+  it("collapses a repeated issue number instead of listing it twice", () => {
+    expect(stallDispatch([2967, 2967, 2968])?.args.at(-1)).toBe("issue_number=2967,2968");
   });
 });

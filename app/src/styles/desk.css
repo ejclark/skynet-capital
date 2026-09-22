@@ -134,6 +134,12 @@ table.blotter {
   font-size: 12.5px;
   min-width: 520px;
 }
+/* Positions only (positions-table.tsx) — see that file's header comment for why: locks every
+   column's width from its `<colgroup>` so opening/closing the lots accordion can never resize a
+   column out from under the rest of the row. */
+.blotter-fixed {
+  table-layout: fixed;
+}
 .blotter th {
   text-align: left;
   padding: 8px 12px;
@@ -163,6 +169,66 @@ table.blotter {
 .sym-sub {
   font-size: 10.5px;
   color: var(--muted);
+}
+/* Lot-breakdown accordion (#3186 slice 1, restyled #3186 slice 2, slice 3) — the whole symbol
+   header is the trigger, not a separate labeled link (live-review: a small "N lots" text read as
+   unexpected custom behavior, and "lots" as unexplained jargon). Click anywhere on the symbol;
+   the chevron shows state, sharing the fold-col chevron's icon-rotates-on-expand language so both
+   disclosure controls on a row read as the same pattern. */
+.sym-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.sym-header:hover .sym {
+  color: var(--accent);
+}
+.sym-header svg {
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.sym-header[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+.sym-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+/* A single accent bar on the row's leading edge, not a border on every `td` — that drew a
+   vertical divider between EVERY column (Eric's live-review note: "distracting"). */
+.row-lot td {
+  background: var(--surface-2);
+}
+.row-lot td:first-child {
+  border-left: 3px solid var(--accent);
+}
+.lot-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+/* `.btn`'s `width: 100%` (gate.css) and `.mc-btn`'s `width: auto` (admin.css) are equal
+   specificity, so which one wins is source order, not intent — and during the table's own
+   column-width pass a percentage width is resolved as auto/min-content, which for wrapping text
+   collapses to its longest UNBROKEN WORD, not the full label. Two buttons collapsed that way
+   overlapped each other's text outright (Eric's live-review screenshot: "Close lot" and "Roll"
+   rendering on top of one another). The extra specificity here, not `!important`, is what beats
+   `.btn`'s rule reliably regardless of stylesheet order. */
+.lot-actions .btn {
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .expand-btn {
   border: 1px solid var(--border);
@@ -210,6 +276,20 @@ table.blotter {
   font-size: 13px;
 }
 
+/* "All accounts" Positions (#2321): one blotter-card per account, a plain heading between them —
+   the account switcher already carries the human/bot chip, this just repeats it as a section
+   label so a long scroll of positions still names whose book you're reading. */
+.accounts-group {
+  margin-top: 20px;
+}
+.accounts-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
 /* responsive disclosure: detail columns live on wide screens, fold below (the round-1 verdict) */
 .col-detail {
   display: none;
@@ -222,6 +302,73 @@ table.blotter {
   .row-more {
     display: none;
   }
+}
+
+/* close action column + inline close panel (#738 — close from the portfolio) */
+.act-col {
+  /* `width: 1%` is the usual "shrink to content" trick for a table-layout: auto column, but it
+     stops working once a cell holds a flex row of un-shrinkable buttons (the lot row's "Close
+     lot" + "Roll"): the browser treats 1% as a hard preference and squeezes the column below its
+     content's real width instead, and the buttons render outside the cell rather than growing it.
+     A `min-width` sized for the widest cell in this column (two buttons) sidesteps the algorithm
+     entirely — the parent row's single "Close all" button just has more room to its left. */
+  min-width: 160px;
+  white-space: nowrap;
+  text-align: right;
+}
+.close-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.row-close > td {
+  background: var(--surface-2);
+}
+.close-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+.close-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.close-panel-sym {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.close-panel-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.close-panel-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.close-panel-qty input {
+  width: 64px;
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+.close-panel-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+.close-panel-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 @media (max-width: 700px) {
   .desk-tiles {

@@ -3,6 +3,12 @@
 * {
   box-sizing: border-box;
 }
+html {
+  /* reserves the scrollbar track permanently so it appearing/disappearing between routes of
+     different content height never changes the viewport width the .frame grid computes against
+     — without this, the rail visibly shifts left then right on navigation (#reported 2026-09-17) */
+  scrollbar-gutter: stable;
+}
 body {
   margin: 0;
   background: var(--bg);

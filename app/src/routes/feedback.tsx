@@ -43,7 +43,7 @@ function FeedbackPage(): ReactElement {
         <h1>Your feedback</h1>
         <p>
           Bugs, features, enhancements — filed straight onto the build queue as GitHub issues.
-          Moneypenny files them from her rail; every filing gets a real answer.
+          Moneypenny files them for you; every filing gets a real answer.
         </p>
         {data.feedbackCount > 0 ? (
           <p className="fb-count num">

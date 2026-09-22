@@ -1,5 +1,8 @@
 /* the pre-trade gate (#738 phase 2e) — the merge-box state machine on a ticket. Tokens only. */
 
+/* `--col-wide`, the same cap the milestone strip used above it on the trade page (Eric, 2026-09-22: "consistent
+   section widths is much more visually appealing") — was `--col-read`, a reading-width cap that
+   fit prose, not a form whose neighbor on the page is already the wider column. */
 .gate-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -7,27 +10,33 @@
   box-shadow: var(--elev-base);
   padding: var(--panel-p);
   margin-top: 16px;
-  max-width: var(--col-read);
+  max-width: var(--col-wide);
 }
 .panel-title {
-  font-size: 13.5px;
+  font-size: var(--text-lg);
   font-weight: 700;
   margin: 0 0 3px;
 }
 .panel-sub {
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0 0 12px;
 }
+/* Content-sized fields (#3407 P0): columns are as many 150px-plus tracks as fit, the symbol
+   field spans two — so a 4-character strike or a 1-digit contracts count never stretches to a
+   third of the panel, and a 390px frame gets two columns without a breakpoint. */
 .gate-fields {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.gate-fields > .symbol-field {
+  grid-column: span 2;
 }
 .field label {
   display: block;
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   font-weight: 600;
   margin-bottom: 5px;
   color: var(--muted);
@@ -43,8 +52,27 @@
   border-radius: 6px;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--text-base);
   font-family: var(--sans);
+}
+/* The Strike field's destination flash (Eric, 2026-09-22, "what standard design choices... to
+   organically communicate" a chain click filling this field): a one-shot accent pulse, triggered
+   by `StrikeField`'s `flashKey` prop, distinct from focus/hover — this fires from a CLICK
+   elsewhere on the page, so the member's eye needs a cue at the field itself, not just at the
+   click point. `--dur-spatial` already zeroes under `prefers-reduced-motion` (`theme.css`), so a
+   reduced-motion reader gets the border-color end state instantly instead of a pulse. */
+@keyframes strike-flash {
+  0% {
+    background: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+    border-color: var(--accent);
+  }
+  100% {
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+}
+.strike-flash {
+  animation: strike-flash var(--dur-spatial) ease-out;
 }
 .gate {
   border: 1px solid var(--border);
@@ -53,12 +81,18 @@
   box-shadow: var(--elev-recessed);
   margin-bottom: 12px;
 }
+/* An empty region on the idle draft step: keep it mounted for aria-live, draw no chrome. */
+.gate:empty {
+  border: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+}
 .gate-head {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 10px 12px;
-  font-size: 12.5px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .gate-icon {
@@ -91,7 +125,7 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .gate-row {
   margin: 0;
@@ -102,11 +136,13 @@
 .gate-warning {
   color: var(--muted);
 }
+/* The estimate is a two-column definition list at every width (#3407 P0) — seven items read as
+   four even rows, never a ragged 4 + 3. */
 .gate-est {
   display: grid;
-  grid-template-columns: repeat(4, auto);
-  gap: 6px 18px;
-  margin: 2px 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-1) 0 0;
 }
 .gate-est div {
   display: flex;
@@ -114,7 +150,7 @@
   gap: 2px;
 }
 .gate-est dt {
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -125,7 +161,7 @@
 }
 .gate-note {
   margin: 2px 0 0;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   color: var(--muted);
   border-top: 1px dashed var(--border);
   padding-top: 8px;
@@ -137,7 +173,7 @@
   border: 1px solid var(--border);
   background: var(--surface-2);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-base);
   cursor: pointer;
   color: var(--text);
   font-family: var(--sans);
@@ -152,10 +188,8 @@
   cursor: not-allowed;
 }
 @media (max-width: 700px) {
+  /* Two tracks at phone width, the symbol still spanning both. */
   .gate-fields {
-    grid-template-columns: 1fr 1fr;
-  }
-  .gate-est {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
