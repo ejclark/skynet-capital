@@ -4,6 +4,7 @@ import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
+import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
@@ -174,6 +175,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The multi-leg execution seam (`draft-trade-service.ts`, #3407 P3). Absent = a reviewed
    *  draft is honestly "not sent" — the route says so in those words. */
   readonly submitDraftOrder?: SubmitDraftOrder;
+  /** The live fan-out half of the activity bus (`desk-events-route.ts`, #3407 P4) — a desk's
+   *  own order lifecycle as a stream. Absent = the route says so and the shell polls. */
+  readonly activityEvents?: Pick<ActivityEventBus, "subscribe">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
   /** Stock order data (Open Orders panel, order cancel) via a participant's own credentials. */

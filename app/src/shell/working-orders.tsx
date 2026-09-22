@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { useDeskEvents } from "../live/desk-events";
 import { cancelOrder, type DeskOrderRow, type DeskOrderState, fetchOrders } from "../live/orders";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 
@@ -111,18 +112,24 @@ function OrderRow({
   );
 }
 
+/** The poll that stands in when the event stream is absent or between reconnects. */
+export const FALLBACK_POLL_MS = 60_000;
+
 /** @category trading */
 export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
   const queryClient = useQueryClient();
+  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
+  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
+  useDeskEvents(deskId);
   const query = useQuery({
     queryKey: ["desk-orders", deskId],
     queryFn: () => fetchOrders(deskId),
     enabled: deskId !== "",
     staleTime: 10_000,
     // A working order changes state on the broker's clock, not the member's: poll while any is
-    // live, rest when none are.
+    // live, rest when none are — slowly, since the stream carries the fast path.
     refetchInterval: (q) =>
-      q.state.data?.available && q.state.data.working.length > 0 ? 15_000 : false,
+      q.state.data?.available && q.state.data.working.length > 0 ? FALLBACK_POLL_MS : false,
   });
   const [pendingId, setPendingId] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
