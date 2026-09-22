@@ -27,8 +27,15 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
  * audit line a submit does, tagged `intent: "cancel"`, so "who cancelled this" is answerable
  * from the same trail as "who placed it" (`order-audit-log.ts`).
  *
- * Deliberately not here: replace. It is its own slice (P1 1b) because a replaced order changes id
- * and the ledger needs the lineage before the UI can offer it honestly.
+ *   POST /api/trade/replace { participantId, orderId, quantity?, limitPrice?, stopPrice?,
+ *                             timeInForce? }
+ *                                           → `{ ok:true, orderId: <new>, replaces: <old>,
+ *                                             status }` once the broker replaced it (P1 1b).
+ *                                             Alpaca issues a NEW id on a replace and marks the
+ *                                             old one `replaced`; the audit line for the new id
+ *                                             carries `replaces`, so the ledger keeps the
+ *                                             lineage the UI needs to say "this is that order,
+ *                                             changed" rather than two unrelated rows.
  */
 
 const CANCEL_BODY_CAP_BYTES = 2_048;
@@ -48,6 +55,45 @@ function parseCancelBody(raw: string): CancelBody | undefined {
     return undefined;
   if (typeof orderId !== "string" || orderId.length === 0 || orderId.length > 100) return undefined;
   return { participantId, orderId };
+}
+
+interface ReplaceBody {
+  readonly participantId: string;
+  readonly orderId: string;
+  readonly quantity?: number;
+  readonly limitPrice?: number;
+  readonly stopPrice?: number;
+  readonly timeInForce?: "day" | "gtc";
+}
+
+const posNumber = (raw: unknown): number | undefined =>
+  typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : undefined;
+
+/** Strict: every field is optional, a present field must be well-formed (a string "5" is not a
+ *  quantity), and at least one change must be present — an empty replace is a malformed ask,
+ *  not a no-op the broker gets to reject. */
+function parseReplaceBody(raw: string): ReplaceBody | undefined {
+  const body = parseJsonRecord(raw);
+  if (!body) return undefined;
+  const { participantId, orderId, quantity, limitPrice, stopPrice, timeInForce } = body;
+  if (typeof participantId !== "string" || participantId.length === 0 || participantId.length > 100)
+    return undefined;
+  if (typeof orderId !== "string" || orderId.length === 0 || orderId.length > 100) return undefined;
+  if (quantity !== undefined && !(Number.isInteger(quantity) && posNumber(quantity)))
+    return undefined;
+  if (limitPrice !== undefined && posNumber(limitPrice) === undefined) return undefined;
+  if (stopPrice !== undefined && posNumber(stopPrice) === undefined) return undefined;
+  if (timeInForce !== undefined && timeInForce !== "day" && timeInForce !== "gtc") return undefined;
+  if ([quantity, limitPrice, stopPrice, timeInForce].every((v) => v === undefined))
+    return undefined;
+  return {
+    participantId,
+    orderId,
+    ...(quantity !== undefined ? { quantity: quantity as number } : {}),
+    ...(limitPrice !== undefined ? { limitPrice: limitPrice as number } : {}),
+    ...(stopPrice !== undefined ? { stopPrice: stopPrice as number } : {}),
+    ...(timeInForce !== undefined ? { timeInForce } : {}),
+  };
 }
 
 /** Only the broker's own sentence is the member's to act on; anything else collapses to a fixed
@@ -153,7 +199,83 @@ async function serveCancel(
   sendJson(res, 200, { ok: true, orderId: body.orderId });
 }
 
-/** Handle `/api/trade/orders` and `/api/trade/cancel`. Returns true when the request was answered. */
+function replaceRefusal(error: unknown): string {
+  if (error instanceof AlpacaApiError) {
+    const reason = (error.body as { message?: unknown } | null)?.message;
+    if (error.status === 404) return "That order isn't on the broker any more.";
+    if (error.status === 422 || error.status === 403) {
+      return `The broker couldn't change this order${
+        typeof reason === "string" && reason ? `: ${reason}` : "."
+      }`;
+    }
+    return typeof reason === "string" && reason
+      ? `The broker refused the change: ${reason}`
+      : "The broker refused the change.";
+  }
+  return "Couldn't reach the broker to change this order. Try again shortly.";
+}
+
+async function serveReplace(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Parameters<typeof resolveOwnedIds>[0],
+): Promise<void> {
+  const raw = await readJsonPost(req, res, CANCEL_BODY_CAP_BYTES);
+  if (raw === undefined) return;
+  const body = parseReplaceBody(raw);
+  if (!body) {
+    sendJson(res, 400, { error: "malformed replace body" });
+    return;
+  }
+  if (!ownsAccount(body.participantId, config, session)) {
+    sendJson(res, 200, {
+      ok: false,
+      refusals: ["You can only change orders on your own account."],
+    });
+    return;
+  }
+  const client = config.tradingClientFor?.(body.participantId);
+  if (!client) {
+    sendJson(res, 200, {
+      ok: false,
+      refusals: ["This session isn't linked to a trading account, so there is nothing to change."],
+    });
+    return;
+  }
+  let replaced: Awaited<ReturnType<typeof client.replaceOrder>>;
+  try {
+    replaced = await client.replaceOrder(body.orderId, {
+      ...(body.quantity !== undefined ? { qty: body.quantity } : {}),
+      ...(body.limitPrice !== undefined ? { limit_price: body.limitPrice } : {}),
+      ...(body.stopPrice !== undefined ? { stop_price: body.stopPrice } : {}),
+      ...(body.timeInForce !== undefined ? { time_in_force: body.timeInForce } : {}),
+    });
+  } catch (error) {
+    sendJson(res, 200, { ok: false, refusals: [replaceRefusal(error)] });
+    return;
+  }
+  // The new id gets the audit line; `replaces` is the lineage back to the id the member placed.
+  await config.recordOrderAudit?.({
+    participantId: body.participantId,
+    ...(session?.email ? { ownerEmail: session.email } : {}),
+    orderId: replaced.id,
+    at: new Date().toISOString(),
+    intent: "replace",
+    replaces: body.orderId,
+    symbol: replaced.symbol,
+    side: replaced.side,
+  });
+  sendJson(res, 200, {
+    ok: true,
+    orderId: replaced.id,
+    replaces: body.orderId,
+    status: replaced.status,
+  });
+}
+
+/** Handle `/api/trade/orders`, `/api/trade/cancel` and `/api/trade/replace`. Returns true when
+ *  the request was answered. */
 export async function serveTradeOrdersApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -167,6 +289,10 @@ export async function serveTradeOrdersApi(
   }
   if (path === "/api/trade/cancel") {
     await serveCancel(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/trade/replace") {
+    await serveReplace(req, res, config, session);
     return true;
   }
   return false;

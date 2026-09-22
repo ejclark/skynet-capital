@@ -6,7 +6,7 @@ import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
  * projection over `AlpacaTradingClient.listOrders`, no local persistence and no state machine of
  * its own. Every lo-fi shape in the parity study needs the same two lists whatever its layout:
  *
- *   - `working`  — orders the member can still act on (cancel today; replace later), including
+ *   - `working`  — orders the member can still act on (cancel; replace a limit or stop), including
  *                  a partial fill, which is still live for its remainder.
  *   - `recent`   — orders that reached a terminal state inside `RECENT_WINDOW_MS`, so the row a
  *                  member just submitted keeps telling its story (filled at what, cancelled,
@@ -23,6 +23,7 @@ export type DeskOrderState =
   | "partial"
   | "filled"
   | "cancelled"
+  | "replaced"
   | "rejected"
   | "expired";
 
@@ -45,6 +46,13 @@ export interface DeskOrderRow {
   readonly state: DeskOrderState;
   /** True exactly when a cancel can still reach the broker. */
   readonly cancelable: boolean;
+  /** True when a replace can: a working limit or stop (Alpaca's rule — a market order is on its
+   *  way, and the type never changes; a different type is a new order) (#3407 P1 1b). */
+  readonly replaceable: boolean;
+  /** The order this one superseded, when the broker says it did. */
+  readonly replaces?: string;
+  /** The order that superseded this one — a `replaced` row's forward pointer. */
+  readonly replacedBy?: string;
 }
 
 export interface DeskOrdersView {
@@ -66,12 +74,13 @@ const WORKING_STATUSES = new Set([
   "held",
   "pending_cancel",
   "pending_replace",
-  "replaced",
   "calculated",
 ]);
 
 const TERMINAL: Record<string, Exclude<DeskOrderState, "working" | "partial">> = {
   filled: "filled",
+  // A replaced order is done — its successor carries the working state under a new id.
+  replaced: "replaced",
   canceled: "cancelled",
   cancelled: "cancelled",
   done_for_day: "cancelled",
@@ -95,8 +104,13 @@ function stateFor(order: AlpacaOrder): DeskOrderState | undefined {
 
 function settledStamp(order: AlpacaOrder, state: DeskOrderState): string | undefined {
   if (state === "filled") return order.filled_at ?? undefined;
+  // Alpaca stamps a replaced order's `replaced_at`; it is not on our record, so the cancel or
+  // submit stamp keeps the row inside the recent window instead of dropping it.
+  if (state === "replaced") return order.canceled_at ?? order.submitted_at ?? undefined;
   return order.canceled_at ?? order.filled_at ?? undefined;
 }
+
+const REPLACEABLE_TYPES = new Set(["limit", "stop", "stop_limit"]);
 
 /** One broker record → one desk row, or undefined when the status is one this view can't
  *  honestly name. */
@@ -120,8 +134,13 @@ export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
     ...(order.time_in_force ? { timeInForce: order.time_in_force.toLowerCase() } : {}),
     ...(order.submitted_at ? { submittedAt: order.submitted_at } : {}),
     ...(settledAt ? { settledAt } : {}),
+    ...(order.replaces ? { replaces: order.replaces } : {}),
+    ...(order.replaced_by ? { replacedBy: order.replaced_by } : {}),
     state,
     cancelable: state === "working" || state === "partial",
+    replaceable:
+      (state === "working" || state === "partial") &&
+      REPLACEABLE_TYPES.has((order.type ?? "market").toLowerCase()),
   };
 }
 

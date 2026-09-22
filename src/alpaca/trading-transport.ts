@@ -7,6 +7,9 @@ import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 export interface AlpacaTradingTransport {
   get(path: string): Promise<JsonResponse>;
   post(path: string, body: unknown): Promise<JsonResponse>;
+  /** Alpaca replaces (modifies) an order with PATCH; optional so every existing fake still
+   *  satisfies the seam — a client method that needs it says so when it is absent. */
+  patch?(path: string, body: unknown): Promise<JsonResponse>;
   delete(path: string): Promise<JsonResponse>;
 }
 
@@ -46,6 +49,10 @@ export class FetchAlpacaTradingTransport implements AlpacaTradingTransport {
 
   post(path: string, body: unknown): Promise<JsonResponse> {
     return fetchJson("POST", `${this.config.baseUrl}${path}`, this.headers(), body);
+  }
+
+  patch(path: string, body: unknown): Promise<JsonResponse> {
+    return fetchJson("PATCH", `${this.config.baseUrl}${path}`, this.headers(), body);
   }
 
   delete(path: string): Promise<JsonResponse> {

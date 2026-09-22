@@ -63,6 +63,56 @@
   border-color: var(--neg);
   color: var(--neg);
 }
+/* The modify drawer (P1 1b): a full-width row under the order's line, the same left accent the
+   roll drawer wears on the positions card — a change in flight is visibly attached to its row. */
+.wo-modify {
+  flex: 1 1 100%;
+  margin: 4px 0 2px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wo-modify-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: end;
+}
+.wo-modify-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.wo-modify-fields input {
+  width: 8ch;
+  font-size: var(--text-base);
+  text-transform: none;
+}
+.wo-modify-tif {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.wo-modify-tif legend {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 2px;
+}
+.wo-modify-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
 .wo-notice {
   margin: 6px 0 0;
   font-size: var(--text-sm);
