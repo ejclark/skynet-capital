@@ -143,6 +143,37 @@ describe("serveDraftOrderApi", () => {
     expect(parsed.preview.unlimitedLoss).toBe(false);
   });
 
+  it("attaches today / halfway model lines when the own options client can price the legs (P4)", async () => {
+    const client = { getUnderlyingPrice: () => Promise.resolve(181.3) };
+    const cfg = config({
+      optionsClientFor: () => client,
+      now: () => new Date("2026-09-01T14:00:00Z"),
+    });
+    const one = await call(
+      { participantId: "human-ann", draft: undefined, action: { kind: "add-leg", leg: CALL_LEG } },
+      cfg,
+    );
+    const { parsed } = await call(
+      {
+        participantId: "human-ann",
+        draft: one.parsed.draft,
+        action: { kind: "add-leg", leg: HIGHER_CALL_LEG },
+      },
+      cfg,
+    );
+    expect(parsed.preview.payoff.dated.map((line: { label: string }) => line.label)).toEqual([
+      "today",
+      "halfway",
+    ]);
+    // Without a client the curve is expiration-only — never a guessed line.
+    const bare = await call({
+      participantId: "human-ann",
+      draft: one.parsed.draft,
+      action: { kind: "add-leg", leg: HIGHER_CALL_LEG },
+    });
+    expect(bare.parsed.preview.payoff.dated).toBeUndefined();
+  });
+
   it("refuses to submit a draft that was never reviewed — review is the only path to fire", async () => {
     const { parsed } = await call({
       participantId: "human-ann",
