@@ -60,6 +60,13 @@ export interface DecisionDb {
    *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
    *  totals would be a worse lie than a slow query. */
   funnelFor(personaId: string): DecisionFunnel;
+  /** Total realized P/L across every closed retrospective attributed to one playbook, for one
+   *  persona — the `compoundAllocation` toggle's whole basis (issue #3527 slice 3): a playbook's
+   *  effective budget is `capitalAllocated + realizedPlForPlaybook(...)` when enabled. Joins
+   *  `retrospectives` back to `intents.playbook_id` (retrospectives themselves aren't tagged with
+   *  a playbook id — only the intent that opened the position is). 0 when nothing has closed yet,
+   *  never `null` — an empty sum is an honest zero, not an absence. */
+  realizedPlForPlaybook(personaId: string, playbookId: string): number;
   close(): void;
 }
 
@@ -238,6 +245,15 @@ export function openDecisionDb(path: string): DecisionDb {
            intents.result_status AS result_status
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE decisions.persona_id = ?
+  `);
+  // Retrospectives carry no playbook id of their own — only the intent that opened the closed
+  // position does — so attributing realized P/L to a playbook means joining back through it.
+  const selectRealizedPlForPlaybook = db.prepare(`
+    SELECT SUM(retrospectives.realized) AS total
+    FROM retrospectives
+    JOIN intents ON intents.id = retrospectives.entry_intent_id
+    JOIN decisions ON decisions.id = intents.decision_id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ?
   `);
 
   /**
@@ -451,6 +467,13 @@ export function openDecisionDb(path: string): DecisionDb {
           resultStatus: r.result_status,
         })),
       );
+    },
+
+    realizedPlForPlaybook(personaId, playbookId): number {
+      const row = selectRealizedPlForPlaybook.get(playbookId, personaId) as {
+        total: number | null;
+      };
+      return row.total ?? 0;
     },
 
     findByOrderId(orderId) {

@@ -470,6 +470,71 @@ describe("DecisionDb", () => {
     });
   });
 
+  describe("realizedPlForPlaybook (issue #3527 slice 3)", () => {
+    const filledOutcome = (raw: OrderIntent, orderId: string, filledPrice: number) => ({
+      intent: raw,
+      action: "placed" as const,
+      result: {
+        intent: raw,
+        status: "filled" as const,
+        orderId,
+        filledQuantity: raw.quantity,
+        filledPrice,
+      },
+    });
+
+    it("returns 0 when nothing has closed under that playbook yet", () => {
+      expect(db.realizedPlForPlaybook("sauron", "S1-NVDA")).toBe(0);
+    });
+
+    it("sums realized P/L across every closed round-trip attributed to the playbook", () => {
+      const buy = intent({ side: "buy", quantity: 20, playbookId: "S1-NVDA" });
+      db.record({
+        at: 1_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [buy],
+        guardedIntents: [buy],
+        outcomes: [filledOutcome(buy, "o-1", 100)],
+      });
+      const sell = intent({ side: "sell", quantity: 20, playbookId: "S1-NVDA" });
+      db.record({
+        at: 2_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [sell],
+        guardedIntents: [sell],
+        outcomes: [filledOutcome(sell, "o-2", 120)],
+      });
+
+      expect(db.realizedPlForPlaybook("sauron", "S1-NVDA")).toBe(400);
+    });
+
+    it("scopes to the requested persona and playbook only", () => {
+      const buy = intent({ side: "buy", quantity: 20, playbookId: "S1-NVDA" });
+      db.record({
+        at: 1_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [buy],
+        guardedIntents: [buy],
+        outcomes: [filledOutcome(buy, "o-1", 100)],
+      });
+      const sell = intent({ side: "sell", quantity: 20, playbookId: "S1-NVDA" });
+      db.record({
+        at: 2_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [sell],
+        guardedIntents: [sell],
+        outcomes: [filledOutcome(sell, "o-2", 120)],
+      });
+
+      expect(db.realizedPlForPlaybook("beta-scout", "S1-NVDA")).toBe(0);
+      expect(db.realizedPlForPlaybook("sauron", "OTHER-PLAYBOOK")).toBe(0);
+    });
+  });
+
   describe("funnelFor (#2287 PR 7b)", () => {
     it("walks a mixed cycle into cycles/raw/survived/placed/filled/closed plus refusals", () => {
       const refused = intent({ symbol: "TSLA", side: "buy", quantity: 5 });

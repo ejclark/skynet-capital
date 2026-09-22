@@ -48,6 +48,9 @@ interface SubscribeBody {
   /** Owner opt-in to hold this subscription's trading dark until warmed up (#3543). Absent/false
    *  means unchanged, always-on behavior. */
   readonly requireWarmup?: boolean;
+  /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue #3527
+   *  slice 3). Absent/false means unchanged, flat-budget behavior. */
+  readonly compoundAllocation?: boolean;
 }
 
 const MAX_SYMBOLS = 20;
@@ -90,6 +93,7 @@ function parseSubscribeBody(raw: string): SubscribeBody | undefined {
       : undefined;
   const symbols = parseSymbols(body.symbols);
   const requireWarmup = body.requireWarmup === true;
+  const compoundAllocation = body.compoundAllocation === true;
   return id && playbookId && mode && capitalAllocated !== undefined
     ? {
         id,
@@ -98,6 +102,7 @@ function parseSubscribeBody(raw: string): SubscribeBody | undefined {
         capitalAllocated,
         ...(symbols ? { symbols } : {}),
         ...(requireWarmup ? { requireWarmup: true } : {}),
+        ...(compoundAllocation ? { compoundAllocation: true } : {}),
       }
     : undefined;
 }
@@ -188,6 +193,7 @@ async function handleSubscribe(
     enabled: true,
     ...(body.symbols ? { symbols: body.symbols } : {}),
     ...(body.requireWarmup ? { requireWarmup: true } : {}),
+    ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
   });
   sendJson(res, 200, { ok: true });
 }

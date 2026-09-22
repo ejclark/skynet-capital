@@ -171,6 +171,17 @@ export interface PlaybookSubscription {
    * card (`playbook-store-json-view.ts`); see #3543 for why enforcement needed its own pass.
    */
   readonly requireWarmup?: boolean;
+  /**
+   * Compounding opt-in (issue #3527 slice 3, Eric: "whether earnings or loss affect allocated
+   * capital can be a standard configuration option of the playbook... disabled state by default
+   * keeps this simple for now"). When true, this subscription's effective budget for
+   * `clampBuy`'s subscription-budget check is `capitalAllocated + realizedPlForPlaybook(...)`
+   * (closed round-trips under this playbook, for this persona) instead of `capitalAllocated`
+   * alone — a profitable playbook earns room to grow, a losing one shrinks. Absent/false changes
+   * nothing: the budget stays the flat configured number, exactly as every subscription behaves
+   * today.
+   */
+  readonly compoundAllocation?: boolean;
 }
 
 type OrderStatus = "filled" | "rejected";

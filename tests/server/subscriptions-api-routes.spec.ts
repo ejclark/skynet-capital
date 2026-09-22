@@ -244,6 +244,64 @@ describe("serveSubscriptionsApi", () => {
     expect(answered(out)).toEqual({ ok: true });
   });
 
+  it("subscribe: carries compoundAllocation: true through to the store (issue #3527)", async () => {
+    const calls: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      post({
+        id: "acct-mine",
+        playbookId: "S1-NVDA",
+        mode: "standard",
+        capitalAllocated: 1_000,
+        compoundAllocation: true,
+      }),
+      res,
+      "/api/playbook-store/subscribe",
+      configWith({ subscriptions: storeWith(calls) }),
+      session,
+    );
+    expect(calls).toEqual([
+      {
+        op: "subscribe",
+        id: "acct-mine",
+        sub: {
+          playbookId: "S1-NVDA",
+          mode: "standard",
+          capitalAllocated: 1_000,
+          enabled: true,
+          compoundAllocation: true,
+        },
+      },
+    ]);
+    expect(answered(out)).toEqual({ ok: true });
+  });
+
+  it("subscribe: omits compoundAllocation from the store write when absent or false", async () => {
+    const calls: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      post({
+        id: "acct-mine",
+        playbookId: "S1-NVDA",
+        mode: "standard",
+        capitalAllocated: 1_000,
+        compoundAllocation: false,
+      }),
+      res,
+      "/api/playbook-store/subscribe",
+      configWith({ subscriptions: storeWith(calls) }),
+      session,
+    );
+    expect(calls).toEqual([
+      {
+        op: "subscribe",
+        id: "acct-mine",
+        sub: { playbookId: "S1-NVDA", mode: "standard", capitalAllocated: 1_000, enabled: true },
+      },
+    ]);
+    expect(answered(out)).toEqual({ ok: true });
+  });
+
   it("subscribe: omits requireWarmup from the store write when absent or false", async () => {
     const calls: unknown[] = [];
     const { res, out } = fakeRes();

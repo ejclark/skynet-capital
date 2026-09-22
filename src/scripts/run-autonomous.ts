@@ -262,6 +262,12 @@ async function runLive(): Promise<void> {
         ...risk,
         subscriptions,
         playbookSymbols: new Map(enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
+        ...(decisionDb
+          ? {
+              realizedPlForPlaybook: (playbookId: string) =>
+                decisionDb.realizedPlForPlaybook(bot.persona.id, playbookId),
+            }
+          : {}),
       },
       blockedReason,
       safety,
