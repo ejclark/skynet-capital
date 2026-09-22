@@ -163,15 +163,6 @@ export interface PlaybookSubscription {
    */
   readonly symbols?: readonly string[];
   /**
-   * Owner opt-in (#3543): hold this subscription's OWN trading dark until it has enough closed
-   * round-trips to measure a whipsaw rate — the account owner's choice, off by default so every
-   * existing subscription keeps trading exactly as it always has. Absent/false changes nothing.
-   * Enforcement (actually holding live submission) is a separate, not-yet-built follow-up — today
-   * this field only drives the honest "warming up, trading held" read on the subscription's own
-   * card (`playbook-store-json-view.ts`); see #3543 for why enforcement needed its own pass.
-   */
-  readonly requireWarmup?: boolean;
-  /**
    * Compounding opt-in (issue #3527 slice 3, Eric: "whether earnings or loss affect allocated
    * capital can be a standard configuration option of the playbook... disabled state by default
    * keeps this simple for now"). When true, this subscription's effective budget for
