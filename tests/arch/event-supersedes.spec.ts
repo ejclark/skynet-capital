@@ -159,6 +159,25 @@ describe("supersededBy — the --validate contract", () => {
     expect([ok, out]).toEqual([true, expect.stringContaining("1 superseded, not loaded")]);
   });
 
+  // #2318/#1609: retiring an id that was ALREADY `confirmed` on a trusted source (an NYSE/SIFMA
+  // fetch, not a bare estimate) forces its status to "estimate" per the rule above, but that flip
+  // is retirement bookkeeping, not new epistemic doubt — the source line stays exactly as its own
+  // research wrote it. Refusing it for lacking an EST:/NEWS: prefix would force a lane to either
+  // rewrite (and thereby discard) a trustworthy fetch, or leave the duplicate live. Only entries
+  // that were never independently confirmed still need that prefix.
+  it("accepts a superseded entry whose source keeps its original confirmed-style prefix", () => {
+    const { ok, out } = validateFixture({
+      "survivor.json": survivor,
+      "reslug.json": entry("reslug", "2026-05-01", {
+        status: "estimate",
+        source:
+          "NYSE: nyse.com/markets/hours-calendars — independently confirmed before retirement",
+        supersededBy: "survivor",
+      }),
+    });
+    expect([ok, out]).toEqual([true, expect.stringContaining("1 superseded, not loaded")]);
+  });
+
   // Every rule below turns a typo into a red build. Without them `supersededBy` is the one field
   // that can delete an event from the calendar silently — which is strictly worse than the
   // duplicate it exists to retire.
@@ -304,5 +323,30 @@ describe("same-date title overlap — the advisory half", () => {
       }),
     });
     expect(out).not.toMatch(/share \d+% of their title words/);
+  });
+
+  // THE GAP #2318/#1609/#1969 EXPOSED: the original 0.45 threshold missed a known real duplicate
+  // (presidents-day/washingtons-birthday — one NYSE holiday row under two names, scored 0.43) while
+  // still excluding empire-state/philly-fed (0.41, two distinct regional Fed surveys) above. 0.42
+  // is the exact gap between them, so this pair is the one new true positive the strengthened
+  // threshold buys, with no new false positive alongside it.
+  it("catches the presidents-day/washingtons-birthday alias the original threshold missed", () => {
+    const { out } = validateFixture({
+      "presidents-day-market-closure.json": entry("presidents-day-market-closure", "2027-02-15", {
+        title:
+          "US equity markets closed — Washington's Birthday / Presidents Day (falls INSIDE February opex week in 2027)",
+      }),
+      "washingtons-birthday-market-closure.json": entry(
+        "washingtons-birthday-market-closure",
+        "2027-02-15",
+        {
+          title:
+            "US equity markets closed — Washington's Birthday (opens a 4-session week carrying two expirations)",
+        },
+      ),
+    });
+    expect(out).toMatch(
+      /⚠ 2027-02-15: "presidents-day-market-closure" and "washingtons-birthday-market-closure" share 43%/,
+    );
   });
 });

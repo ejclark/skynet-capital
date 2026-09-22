@@ -103,6 +103,13 @@ export function horizonProblems(horizon) {
 }
 
 // The date policy made lintable: confirmed needs a trusted prefix, estimates an honest one.
+//
+// A SUPERSEDED entry is exempt from the EST:/NEWS: pairing (#2318/#1609/#1969): `supersededBy`
+// forces status to "estimate" to mean "retired, defer to the survivor" (docs/process/
+// EVENT-RESEARCH.md), which is a bookkeeping state, not an epistemic downgrade — a retiring row
+// that was independently confirmed (a trusted `NYSE:`/`SIFMA:` fetch, say) keeps that source text
+// verbatim rather than being rewritten to satisfy a prefix rule that no longer describes it. The
+// "unknown status" and prefix-for-`confirmed` checks still apply unconditionally.
 function validateStatus(e, where, problems) {
   if (e.status === "confirmed") {
     if (!CONFIRMED_PREFIX.test(e.source ?? ""))
@@ -110,7 +117,7 @@ function validateStatus(e, where, problems) {
         `${where}: confirmed but source lacks a trusted prefix (${CONFIRMED_PREFIXES.join("/")})`,
       );
   } else if (e.status === "estimate") {
-    if (e.kind !== "earnings" && !ESTIMATE_PREFIX.test(e.source ?? ""))
+    if (!e.supersededBy && e.kind !== "earnings" && !ESTIMATE_PREFIX.test(e.source ?? ""))
       problems.push(`${where}: estimate but source lacks an EST:/NEWS: prefix`);
   } else {
     problems.push(`${where}: unknown status "${e.status}"`);
