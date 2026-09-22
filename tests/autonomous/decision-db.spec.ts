@@ -29,6 +29,36 @@ describe("decisionDbPathFrom", () => {
   });
 });
 
+describe("openDecisionDb — the missing-directory bug (found live in prod, 2026-09-22)", () => {
+  it("creates its own parent directory rather than throwing when it doesn't exist yet", () => {
+    // Reproduces the app-side production bug exactly: `SKYNET_INSIGHTS_DIR`-derived paths are a
+    // SUBDIRECTORY of the mount, only ever created as a side effect of a DIFFERENT store writing
+    // to it first. Every other test in this file pre-creates `dir` via `mkdtempSync`, which is
+    // precisely why this never failed a test before — the bug only shows on a genuinely fresh
+    // directory, exactly what production had.
+    const root = mkdtempSync(join(tmpdir(), "decision-db-missing-parent-"));
+    const nestedPath = join(root, "insights", "decisions.db");
+    let db: DecisionDb | undefined;
+    try {
+      expect(() => {
+        db = openDecisionDb(nestedPath);
+      }).not.toThrow();
+      db?.record({
+        at: 1,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+      });
+      expect(db?.listByPersona("sauron")).toHaveLength(1);
+    } finally {
+      db?.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("DecisionDb", () => {
   let dir: string;
   let dbPath: string;

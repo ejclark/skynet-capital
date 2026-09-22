@@ -1,3 +1,5 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderIntent, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
@@ -97,6 +99,16 @@ export function decisionDbPathFrom(botsStateDbPath: string): string {
 }
 
 export function openDecisionDb(path: string): DecisionDb {
+  // The bots-side path sits at the volume mount root (always present), but the app-side path
+  // (`SKYNET_INSIGHTS_DIR`-derived, a SUBDIRECTORY of the mount) is only ever created as a side
+  // effect of a DIFFERENT store (`JsonlInsightStore.record()`) writing to it first — this store
+  // never wrote anything itself. Without this, a fresh volume (or an insights dir that's simply
+  // never been written to) makes `DatabaseSync` throw on every boot, the caller's try/catch
+  // swallows it, and the whole replication feature goes permanently dark with no visible error
+  // (found live in prod: `/api/desk/:id/decisions` returned `available:false` on every request
+  // despite `SKYNET_INSIGHTS_DIR` being correctly pinned). A no-op when the directory already
+  // exists, so this is safe for the already-working bots-side path too.
+  mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   // A busy writer (a retention sweep, a concurrent migration) blocks a caller for up to 5s
   // instead of throwing SQLITE_BUSY immediately — `bots-state-db.ts` sets none today, which is
