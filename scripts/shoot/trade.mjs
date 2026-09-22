@@ -764,22 +764,25 @@ await shoot("trade-102-locked-phone");
 
 currentPlays = plays;
 await page.goto(`${origin}/app/trade?play=102`);
-await page.getByText("Milestone · Trading ladder").waitFor();
+await page.getByRole("link", { name: "Trading ladder →" }).waitFor();
 await shoot("trade-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
 
-// Page order (Eric, 2026-09-22): the milestone ladder sits above the Account field, and every
-// ticket panel now matches the ladder's own width — `AccountField` only renders for a session
-// with more than one account, so this scene swaps in a second one just to prove the order.
+// Page order (#3407, Workbench slice 5): the milestone strip moved to /learn/trading; the Account
+// field and the one-line rung chip sit directly above the ticket's nav, inside the ticket pane —
+// `AccountField` only renders for a session with more than one account, so this scene swaps in a
+// second one just to prove the order. PHONE FIRST.
 currentSettings = settingsTwoAccounts;
+await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=102`);
 await page.getByLabel("Account").waitFor();
+await page.getByRole("link", { name: "Trading ladder →" }).waitFor();
 const shootPageOrder = shooter(page, resolve("docs/shots/page-order"));
-await shootPageOrder("ladder-above-account-desktop");
-await page.setViewportSize({ width: 390, height: 844 });
-await shootPageOrder("ladder-above-account-phone");
+await shootPageOrder("account-beside-ticket-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await shootPageOrder("account-beside-ticket-desktop");
 await page.setViewportSize({ width: 1280, height: 900 });
 currentSettings = settings;
 

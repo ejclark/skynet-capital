@@ -1,7 +1,47 @@
 /* the options ticket + play picker (#738 phase 10b). Tokens only. */
 
-/* The milestone strip (#1461) — eyebrow · rail · status line. Mobile-first: the base rules are the
-   phone frame (nodes, codes, count, status); names under the nodes arrive at 600px. */
+/* The rung chip (#3407, Workbench slice 5) — the one line the ticket keeps when the milestone
+   strip moves to /learn/trading: rung · name · state word · count · the door to the ladder.
+   Wraps at 390px; one row wherever it fits. */
+.rung-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 12px 0 8px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text);
+}
+.rung-chip-eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rung-chip-name {
+  color: var(--text);
+}
+.rung-chip-state,
+.rung-chip-count {
+  color: var(--muted);
+}
+.rung-chip-earned {
+  color: var(--accent);
+}
+.rung-chip-link {
+  margin-left: auto;
+  color: var(--accent);
+  text-decoration: none;
+}
+.rung-chip-link:hover,
+.rung-chip-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* The milestone strip (#1461; on /learn/trading since #3407 slice 5) — eyebrow · rail · status
+   line. Mobile-first: the base rules are the phone frame (nodes, codes, count, status); names
+   under the nodes arrive at 600px. */
 .ladder-strip {
   display: flex;
   flex-direction: column;
