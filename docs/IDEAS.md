@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- `scripts/shoot/straddle.mjs` has been broken on `origin/main` (confirmed pre-existing, not caused
+  by this change) since at least the #3407-era ticket-field rename: it fills `ticket.getByLabel(
+  "Underlying")`, but `OptionGate`'s own symbol field has been labeled "Symbol" since `SymbolField`
+  shipped — `trade.mjs`'s own equivalent scenes use `getByLabel("Symbol")`/`getByRole("region", ...)
+  .getByLabel("Underlying")` correctly for the multi-leg builder, never for this single-leg ticket.
+  30s timeout on every run; `npm run shoot:trade` covers the same straddle view fine, so this is
+  dead weight until fixed or retired. _(src: Claude · while: relocating `.exp-tabs` onto the chain
+  header, 2026-09-21 — verifying `npm run shoot:straddle` still ran)_
+
 - A fresh `git worktree` created for a background build agent starts with an empty `node_modules`
   (root and `app/`), which breaks the `.husky/pre-commit` hook's relative `./node_modules/.bin/biome`
   call and fails `npm run verify` on unrelated things (missing `app`'s `@testing-library/jest-dom`

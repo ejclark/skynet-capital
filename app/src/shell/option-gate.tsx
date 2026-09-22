@@ -284,6 +284,32 @@ export function OptionGate({
     limitMissing && symbol.trim() !== "" && strike !== ""
       ? "A limit order needs a premium per share — pick a strike from the chain to seed it from the mid, or type one."
       : undefined;
+
+  // The expiration picker used to sit in the top fields grid, where `.exp-tabs`'s pill strip only
+  // had ~150px to work with — room for a date and a half (Eric, 2026-09-21). It now renders where
+  // the chain's own "Chain · SYM · date" eyebrow used to (removed below, redundant once a member
+  // has just picked the date themselves), full-width above the table — except when there's no
+  // chain to attach it to, where it falls back to the fields grid same as before.
+  const expirationField = (
+    <div className="field">
+      <label htmlFor={expId} id={`${expId}-label`}>
+        Expiration
+      </label>
+      <ExpirationField
+        id={expId}
+        chainData={chainData}
+        value={expiration}
+        onEdit={edit(setExpiration)}
+        zeroDteLocked={Boolean(zeroDte?.locked)}
+        zeroDteReason={
+          zeroDte?.opensAfter
+            ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
+            : undefined
+        }
+      />
+    </div>
+  );
+
   return (
     <section className="panel gate-panel" aria-label={play.name}>
       <h2 className="panel-title">{play.name}</h2>
@@ -308,25 +334,7 @@ export function OptionGate({
             onSymbolCommit?.(s);
           }}
         />
-        {showFields ? (
-          <div className="field">
-            <label htmlFor={expId} id={`${expId}-label`}>
-              Expiration
-            </label>
-            <ExpirationField
-              id={expId}
-              chainData={chainData}
-              value={expiration}
-              onEdit={edit(setExpiration)}
-              zeroDteLocked={Boolean(zeroDte?.locked)}
-              zeroDteReason={
-                zeroDte?.opensAfter
-                  ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
-                  : undefined
-              }
-            />
-          </div>
-        ) : null}
+        {showFields && !chainData ? expirationField : null}
       </div>
       {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
           full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
@@ -338,6 +346,7 @@ export function OptionGate({
           optionType={optionType}
           chainData={chainData}
           strike={strike}
+          expirationField={expirationField}
           onPickStrike={pickStrikeAndCommit}
           onPickSide={onChainCellPick}
         />

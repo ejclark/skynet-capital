@@ -1,10 +1,8 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { ChainQuoteCoverage, ChainRow } from "../live/options";
 import {
-  daysToExpiry,
   dividerIndex,
-  expiresIn,
   inTheMoney,
   mergeStraddle,
   type StraddleRow,
@@ -88,6 +86,7 @@ export function StraddleView({
   onPickSide,
   now = new Date(),
   quotes,
+  expirationField,
 }: {
   readonly symbol: string;
   readonly expiration: string;
@@ -107,6 +106,12 @@ export function StraddleView({
   /** Quote provenance for the side the ticket is on (#3407 P2) — rendered as one honest line
    *  under the table so a "—" cell reads as "not quoted", never as "zero". */
   readonly quotes?: ChainQuoteCoverage;
+  /** The caller's own expiration picker (the single-leg ticket's `.exp-tabs` strip), rendered
+   *  where the "Chain · SYM · date" eyebrow used to sit — the chain's full width is where that
+   *  strip actually has room to show more than 1.5 dates, unlike the cramped ticket grid it came
+   *  from. Omitted, nothing renders here (the multi-leg builder's plain `<select>` stays in its
+   *  own field grid, untouched). */
+  readonly expirationField?: ReactNode;
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const all = mergeStraddle(calls, puts);
@@ -132,12 +137,7 @@ export function StraddleView({
   }, [symbol, expiration]);
   return (
     <section className="straddle" aria-label={`Options chain for ${symbol}`}>
-      <div className="straddle-head">
-        <span className="straddle-eyebrow">
-          Chain · {symbol} · {expiration}
-        </span>
-        <span className="straddle-dte">{expiresIn(daysToExpiry(expiration, now))}</span>
-      </div>
+      {expirationField}
       <EarningsBadge symbol={symbol} now={now} />
       <div className="straddle-scroll" ref={scrollRef}>
         <table className="straddle-table">

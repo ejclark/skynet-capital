@@ -699,13 +699,19 @@ await shoot("trade-quote-options-phone");
 
 // The expiration field's horizontal tab strip (#2017 Phase 0 task 4c) — 13 expirations, more than
 // fit in the old 8-row-capped <select>, prove the strip needs a real horizontal swipe at 390px.
+// It now renders full-width above the chain table itself (see the next scene's comment), not in
+// the ~150px tile of the top fields grid — 13 dates need the room a fixed-width tab strip has to
+// actually show more than one and a half of them (Eric, 2026-09-21).
 await page.getByRole("button", { name: "2026-09-09" }).waitFor();
 await shoot("trade-exp-tabs-phone");
 
 // The chain table above the fields it drives (#2017 Phase 0 task 4e) — same navigation as the
 // quote-header/exp-tabs shots above (still `?play=201&symbol=NVDA`), proving the chain now renders
-// directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain.
-await page.getByText(/^Chain ·/).waitFor();
+// directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain. The
+// redundant "Chain · SYM · date" / "Expires today" eyebrow that used to sit here is gone — the
+// expiration tabs themselves now occupy that spot instead (Eric, 2026-09-21); DTE moved to the
+// order review (`docs/shots/order-odds`).
+await page.locator(".straddle-scroll").waitFor();
 await shoot("trade-chain-above-fields-phone");
 
 // The scroll-out stat columns (#2017 Phase 1 slice 14) — OI/Vol/Δ/Γ/Θ/Vega past the base
@@ -858,7 +864,7 @@ currentChain = {
 currentQuote = { symbol: "MU", last: 118.4, change: 1.05, changePct: 0.89, tone: "pos" };
 await page.clock.setFixedTime(new Date("2026-09-28T14:00:00Z"));
 await page.goto(`${origin}/app/trade?play=201&symbol=MU`);
-await page.getByText(/^Chain ·/).waitFor();
+await page.locator(".straddle-scroll").waitFor();
 await page.getByText("⚡").first().waitFor();
 const shootEarningsBadge = shooter(page, resolve("docs/shots/earnings-badge"));
 await shootEarningsBadge("earnings-badge-phone");
@@ -957,7 +963,7 @@ currentPlays = throughLongs;
 currentDesk = desk;
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.getByText(/^Chain ·/).waitFor();
+await page.locator(".straddle-scroll").waitFor();
 await page.getByRole("button", { name: "GTC" }).click();
 await page.getByText("Time in force").scrollIntoViewIfNeeded();
 // The straddle is wider than the phone; scrollIntoView can drag the page sideways — pin it back.
@@ -987,7 +993,7 @@ await page.setViewportSize({ width: 390, height: 844 });
 // Typed strike, then Review clicked straight away — the regression proof for the lost first
 // click (`keepFocus`, gate-frame.tsx): before the fix this click landed on nothing.
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.getByText(/^Chain ·/).waitFor();
+await page.locator(".straddle-scroll").waitFor();
 await page.getByLabel("Strike", { exact: true }).fill("175");
 await page.getByRole("button", { name: "Review order" }).click();
 await page.getByText("Chance of profit").waitFor();
@@ -1002,7 +1008,7 @@ await shootOrderOdds("order-odds-phone");
 currentPlays = throughLongs;
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
-await page.getByText(/^Chain ·/).waitFor();
+await page.locator(".straddle-scroll").waitFor();
 await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootTemplate = shooter(page, resolve("docs/shots/p0-template"));
@@ -1032,7 +1038,7 @@ await shootHonest("limit-note-phone");
 currentPlays = throughLongs;
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.getByText(/^Chain ·/).waitFor();
+await page.locator(".straddle-scroll").waitFor();
 // Bring the divider row (and the in-the-money rows around it) into the frame, not the page top.
 await page.getByText(/^Current price ·/).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollTo({ left: 0 }));
