@@ -93,6 +93,14 @@ import { TimeInForceField } from "./tif-field";
  * "Change" control. Collapsed, the summary line is the one honest state readout (strike ·
  * expiration · the seeded/edited premium) rather than a second source of truth for fields already
  * below it.
+ *
+ * ONE CARD (Eric, 2026-09-22: "instrument, side and type toggle controls should be part of a
+ * singular trading form on the same card"): Account/Rung/Instrument-Side-Type used to render as
+ * loose siblings above this panel (`trade.tsx`'s `DeskTicket`) — now they arrive as one `header`
+ * element and render inside this same `.gate-panel`, above the play name. The Spread instrument
+ * segment is gone from that nav (`ticket-nav.tsx`) — a spread is an option construct, not a third
+ * instrument alongside Stock/Option, so its own door is the `tkt-spread-cta` note at the end of
+ * this form instead (see its own comment, by `spreadPlay`).
  */
 
 /** @category trading */
@@ -109,6 +117,7 @@ export function OptionGate({
   plays,
   onPreset,
   chartSlot,
+  header,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -155,6 +164,10 @@ export function OptionGate({
    *  folded (the chart stays its own reachable section there, unchanged) and for every ticket that
    *  isn't this one (`DeskTicket` only forwards it to `OptionGate`). */
   readonly chartSlot?: ReactElement;
+  /** Account/Rung/Instrument-Side-Type — one card, not two (Eric, 2026-09-22: "instrument, side
+   *  and type toggle controls should be part of a singular trading form on the same card").
+   *  Rendered first, above the play name, in both the working panel below and the locked branch. */
+  readonly header?: ReactElement;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
@@ -403,7 +416,7 @@ export function OptionGate({
     }
   };
 
-  if (play.locked) return <LockedPanel play={play} />;
+  if (play.locked) return <LockedPanel header={header} play={play} />;
 
   // A limit order with no premium cannot pass its own review (#3407 P0 — the study found the
   // default ticket refused itself: `limit` with an empty price and Review enabled). Withhold
@@ -414,6 +427,15 @@ export function OptionGate({
     limitMissing && symbol.trim() !== "" && strike !== ""
       ? "A limit order needs a premium per share — pick a strike from the chain to seed it from the mid, or type one."
       : undefined;
+  /** THE SPREAD CTA (Eric, 2026-09-22: "if a user wants to perform multi-leg/chained trades... they
+   *  perform that at the end of filling out the form for the first leg" — replacing the removed
+   *  Spread instrument toggle, `ticket-nav.tsx`). Reuses the 401 rung already on the catalog as the
+   *  gate — no new milestone: 401 already IS "chain legs into a spread," earned by a first filled
+   *  option open like every other rung, so gating this CTA on its own `locked` is the same rule
+   *  `TicketNav`'s segments already follow, not a new one. `onPreset("401")` carries `?symbol=`/
+   *  `?exp=` forward for free (`trade.tsx`'s handler only ever touches `play`) — `draft-order-
+   *  builder.tsx`'s own `initialSymbol`/`initialExpiration` pick them back up on the fresh mount. */
+  const spreadPlay = plays?.find((p) => p.code === "401");
 
   // The expiration picker used to sit in the top fields grid, where `.exp-tabs`'s pill strip only
   // had ~150px to work with — room for a date and a half (Eric, 2026-09-21). It now renders where
@@ -523,6 +545,26 @@ export function OptionGate({
         onSubmit={() => void submit()}
         onReset={() => setState({ step: "draft" })}
       />
+      {drafted && spreadPlay ? (
+        <p className="tkt-note tkt-spread-cta">
+          {spreadPlay.locked ? (
+            <>
+              🔒 Chaining legs into a spread opens at Course 401
+              {spreadPlay.opensAfter
+                ? ` — after your first filled ${spreadPlay.opensAfter.code} (${spreadPlay.opensAfter.name})`
+                : ""}
+              .
+            </>
+          ) : (
+            <>
+              Trading more than one leg?{" "}
+              <button type="button" className="tkt-chain-change" onClick={() => onPreset?.("401")}>
+                Build a spread from here →
+              </button>
+            </>
+          )}
+        </p>
+      ) : null}
     </>
   );
   // A stable wrapper SHAPE regardless of `chartSlot` — only classNames toggle, never the element
@@ -543,6 +585,7 @@ export function OptionGate({
 
   return (
     <section className="panel gate-panel" aria-label={play.name}>
+      {header}
       <h2 className="panel-title">{play.name}</h2>
       <p className="panel-sub">
         Course {play.code} · {play.gloss}

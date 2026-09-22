@@ -63,6 +63,18 @@ import { useBenchWidth } from "../shell/use-bench-width";
  * the narrative (full name, state word, count); the rail is the quick switch. See
  * `ladder-rail.tsx`'s own doc comment for the full reasoning.
  *
+ * ONE CARD (Eric, 2026-09-22, same day again: "instrument, side and type toggle controls should
+ * be part of a singular trading form on the same card"): `AccountField`/`RungChip`/`TicketNav`
+ * used to render as loose siblings above whichever ticket body followed, in `DeskTicket` — two
+ * visually separate cards on screen (the toggles had no `.gate-panel` of their own to sit in).
+ * `DeskTicket` now composes them into one `header` element and hands it to the body that's about
+ * to render, which renders it INSIDE its own panel, above the play name — one card, every ticket
+ * kind and every locked/gated state alike. Spread came off the Instrument toggle in the same pass
+ * (`ticket-nav.tsx`'s own doc comment) — it's a construct chained from option legs, not a third
+ * instrument beside Stock/Option; its own door is now a CTA at the end of the option ticket's own
+ * form (`option-gate.tsx`'s `tkt-spread-cta`), reusing the 401 rung already on the catalog as the
+ * gate rather than standing up a new milestone.
+ *
  * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds four SHAPES
  * of data for one symbol and one account — the ticket, its daily chart, the options chain and the
  * account's book — so the rail carries the section switch, URL-stateful via `?section=`. "ticket"
@@ -184,12 +196,25 @@ function DeskTicket({
   // instead of a ticket. A sell (102) is an exit and stays open — the server holds the same line.
   const gate = plays.data?.gate;
   const gated = gate !== undefined && code !== "102";
-  return (
+  /** ONE CARD (Eric, 2026-09-22): Account/Rung/Instrument-Side-Type used to render as loose
+   *  siblings ABOVE whichever ticket body followed — now each body renders it itself, inside its
+   *  own `.gate-panel`. `headerNoNav` drops the nav for the multi-leg (401) ticket, which has no
+   *  Instrument/Side/Type of its own to toggle (`ticket-nav.tsx`'s own doc comment) — showing it
+   *  there would offer Stock/Option segments that don't describe a spread at all. */
+  const accountField =
+    accounts.length > 1 ? (
+      <AccountField accounts={accounts} deskId={desk} onChange={onDeskChange} />
+    ) : null;
+  const rungChip = plays.data ? <RungChip plays={plays.data.plays} code={code} /> : null;
+  const headerNoNav = (
     <>
-      {accounts.length > 1 ? (
-        <AccountField accounts={accounts} deskId={desk} onChange={onDeskChange} />
-      ) : null}
-      {plays.data ? <RungChip plays={plays.data.plays} code={code} /> : null}
+      {accountField}
+      {rungChip}
+    </>
+  );
+  const header = (
+    <>
+      {headerNoNav}
       {plays.data ? (
         <TicketNav
           plays={plays.data.plays}
@@ -198,50 +223,58 @@ function DeskTicket({
           onPreset={onPreset}
         />
       ) : null}
-      {gated ? (
-        <LadderGateCard note={gate.note} />
-      ) : info && info.kind === "multi-leg" ? (
-        info.locked ? (
-          <LockedPanel play={info} />
-        ) : (
-          <DraftOrderBuilder
-            deskId={desk}
-            incomingLeg={incomingLeg}
-            onIncomingLegHandled={onIncomingLegHandled}
-            onLegsChange={onLegsChange}
-          />
-        )
-      ) : info && info.kind === "option" ? (
-        <OptionGate
-          key={info.code}
-          deskId={desk}
-          play={info}
-          zeroDte={zeroDte}
-          initialSymbol={initialSymbol}
-          onSymbolCommit={onSymbolCommit}
-          initialStrike={initialStrike}
-          onStrikeCommit={onStrikeCommit}
-          initialExpiration={initialExpiration}
-          onExpirationCommit={onExpirationCommit}
-          plays={plays.data?.plays ?? []}
-          onPreset={onPreset}
-          chartSlot={chartSlot}
-        />
-      ) : (
-        <TradeGate
-          key={code}
-          deskId={desk}
-          initialAction={code === "102" ? "sell" : "buy"}
-          showSide={false}
-          play={info}
-          initialSymbol={initialSymbol}
-          onSymbolCommit={onSymbolCommit}
-        />
-      )}
-      {/* Working orders, Alerts and Option positions moved to the Orders section (#3407,
-          Workbench slice 3) — the account's book is its own pane, one rail tap away. */}
     </>
   );
+  if (gated) return <LadderGateCard header={header} note={gate.note} />;
+  if (info && info.kind === "multi-leg") {
+    return info.locked ? (
+      <LockedPanel header={headerNoNav} play={info} />
+    ) : (
+      <DraftOrderBuilder
+        header={headerNoNav}
+        deskId={desk}
+        initialSymbol={initialSymbol}
+        initialExpiration={initialExpiration}
+        incomingLeg={incomingLeg}
+        onIncomingLegHandled={onIncomingLegHandled}
+        onLegsChange={onLegsChange}
+      />
+    );
+  }
+  if (info && info.kind === "option") {
+    return (
+      <OptionGate
+        key={info.code}
+        header={header}
+        deskId={desk}
+        play={info}
+        zeroDte={zeroDte}
+        initialSymbol={initialSymbol}
+        onSymbolCommit={onSymbolCommit}
+        initialStrike={initialStrike}
+        onStrikeCommit={onStrikeCommit}
+        initialExpiration={initialExpiration}
+        onExpirationCommit={onExpirationCommit}
+        plays={plays.data?.plays ?? []}
+        onPreset={onPreset}
+        chartSlot={chartSlot}
+      />
+    );
+  }
+  return (
+    <TradeGate
+      key={code}
+      header={header}
+      deskId={desk}
+      initialAction={code === "102" ? "sell" : "buy"}
+      showSide={false}
+      play={info}
+      initialSymbol={initialSymbol}
+      onSymbolCommit={onSymbolCommit}
+    />
+  );
+  // Working orders, Alerts and Option positions moved to the Orders section (#3407, Workbench
+  // slice 3) — the account's book is its own pane, one rail tap away.
 }
 
 interface StageProps {

@@ -593,3 +593,99 @@ describe("OptionGate — chartSlot (Eric, 2026-09-22)", () => {
     expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
   });
 });
+
+/**
+ * ONE CARD + the spread CTA (Eric, 2026-09-22: "instrument, side and type toggle controls should
+ * be part of a singular trading form on the same card"; "if a user wants to perform multi-leg/
+ * chained trades... they perform that at the end of filling out the form for the first leg").
+ * `header` (Account/Rung/Instrument-Side-Type, composed by `trade.tsx`'s `DeskTicket`) renders
+ * inside this same panel now, and the removed Spread instrument toggle's replacement — a CTA
+ * gated on the existing 401 rung, no new milestone — appears once the single leg is drafted.
+ */
+describe("OptionGate — header + the spread CTA (Eric, 2026-09-22)", () => {
+  const spreadRung = (locked: boolean): PlayInfo => ({
+    code: "401",
+    id: "401",
+    name: "Multi-leg builder",
+    tldr: "",
+    kind: "multi-leg",
+    gloss: "",
+    locked,
+    earned: !locked,
+    ...(locked ? { opensAfter: { code: "201", name: "Sell a cash-secured put" } } : {}),
+  });
+
+  function renderGateFor({
+    plays,
+    onPreset,
+    header,
+    initialStrike,
+  }: {
+    readonly plays?: readonly PlayInfo[];
+    readonly onPreset?: (code: string) => void;
+    readonly header?: ReactElement;
+    readonly initialStrike?: string;
+  }): ReactElement {
+    const client = new QueryClient();
+    return (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          deskId="desk-1"
+          play={unlockedCallPlay}
+          initialSymbol="NVDA"
+          initialStrike={initialStrike}
+          plays={plays}
+          onPreset={onPreset}
+          header={header}
+        />
+      </QueryClientProvider>
+    );
+  }
+
+  it("renders header as the panel's first child, above the play name", async () => {
+    chainResult = fullChain;
+    render(renderGateFor({ header: <div data-testid="fixture-header">Header</div> }));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    const header = screen.getByTestId("fixture-header");
+    const panel = header.closest(".gate-panel");
+    expect(panel?.firstElementChild).toBe(header);
+    expect(panel?.querySelector("h2")?.textContent).toBe(unlockedCallPlay.name);
+  });
+
+  it("shows a 'build a spread' CTA once the form is drafted, and it presets 401", async () => {
+    chainResult = fullChain;
+    const presets: string[] = [];
+    render(
+      renderGateFor({
+        plays: [unlockedCallPlay, spreadRung(false)],
+        onPreset: (c) => presets.push(c),
+        initialStrike: "180",
+      }),
+    );
+
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(5));
+    fireEvent.click(screen.getByRole("button", { name: "Build a spread from here →" }));
+    expect(presets).toEqual(["401"]);
+  });
+
+  it("explains, rather than offering, the CTA while 401 is locked", async () => {
+    chainResult = fullChain;
+    render(renderGateFor({ plays: [unlockedCallPlay, spreadRung(true)], initialStrike: "180" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(5));
+    expect(
+      screen.queryByRole("button", { name: "Build a spread from here →" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/opens at Course 401/)).toBeInTheDocument();
+    expect(screen.getByText(/201 \(Sell a cash-secured put\)/)).toBeInTheDocument();
+  });
+
+  it("hides the CTA before the single-leg form is drafted", async () => {
+    chainResult = fullChain;
+    render(renderGateFor({ plays: [unlockedCallPlay, spreadRung(false)] }));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(screen.queryByText(/Trading more than one leg/)).not.toBeInTheDocument();
+  });
+});

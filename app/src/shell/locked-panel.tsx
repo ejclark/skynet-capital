@@ -14,9 +14,20 @@ import type { PlayInfo } from "../live/options";
  * for an account with fill history; `POST /api/trade/wheels` refuses an early flip regardless.
  * @category trading
  */
-export function LockedPanel({ play }: { readonly play: PlayInfo }): ReactElement {
+export function LockedPanel({
+  play,
+  header,
+}: {
+  readonly play: PlayInfo;
+  /** Account/Rung/Instrument-Side-Type — the same one-card header every ticket kind carries
+   *  (Eric, 2026-09-22: "instrument, side and type toggle controls should be part of a singular
+   *  trading form on the same card") — a locked segment renders disabled and explained right in
+   *  it, so the door OUT of "locked" stays on this same card, not a separate one above it. */
+  readonly header?: ReactElement;
+}): ReactElement {
   return (
     <section className="panel gate-panel" aria-label="Locked play">
+      {header}
       <h2 className="panel-title">🔒 {play.name}</h2>
       <p className="panel-sub">
         Course {play.code} · {play.tldr}

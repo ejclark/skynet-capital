@@ -11,16 +11,21 @@ import { meetMoneypenny } from "../live/moneypenny";
 export function LadderGateCard({
   note,
   compact = false,
+  header,
 }: {
   readonly note: string;
   /** The one-line form for the ladder page; the desk gets the full card. */
   readonly compact?: boolean;
+  /** Account/Rung/Instrument-Side-Type (Eric, 2026-09-22: one card, not two) — undefined on the
+   *  ladder page's compact form, which has neither. */
+  readonly header?: ReactElement;
 }): ReactElement {
   return (
     <section
       className={`ladder-gate${compact ? " ladder-gate-compact" : ""}`}
       aria-label="Ladder gate"
     >
+      {header}
       {compact ? null : <h2 className="ladder-gate-h">◷ The ladder is waiting on you</h2>}
       <p className="ladder-gate-p">
         {note}{" "}
