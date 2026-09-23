@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type DecisionCycle, fetchDeskDecisions, type RefusedIntent } from "../live/desk";
 
 /**
@@ -86,6 +86,18 @@ export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactEle
         hour: "2-digit",
         minute: "2-digit",
       });
+  // A collapsed quiet run (`quietSince`) carries its own oldest timestamp — render the full idle
+  // span rather than only the run's newest cycle, so the reader can see how long it's been quiet.
+  const since = cycle.quietSince ? new Date(cycle.quietSince) : undefined;
+  const sinceStamp =
+    since && !Number.isNaN(since.getTime())
+      ? since.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : undefined;
   return (
     <li className={`cycle cycle-${cycle.status}`}>
       <button
@@ -99,7 +111,7 @@ export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactEle
         <span className={`chip chip-${cycle.mode === "live" ? "human" : "bot"}`}>
           {cycle.mode.toUpperCase()}
         </span>
-        <span className="cycle-when num">{stamp}</span>
+        <span className="cycle-when num">{sinceStamp ? `${sinceStamp} – ${stamp}` : stamp}</span>
       </button>
       {open ? (
         <div className="cycle-body">
@@ -141,6 +153,30 @@ export function DecisionsSection({ deskId }: { readonly deskId: string }): React
     queryFn: () => fetchDeskDecisions(deskId),
     refetchOnWindowFocus: true,
   });
+  // Older pages walked back via "load older cycles" — kept separate from react-query's own cache
+  // so a window-focus refetch of the first page doesn't have to know how to merge into it; a
+  // fresh first page simply resets the walk-back. Same convention as `activity.tsx`'s wire feed.
+  const [olderCycles, setOlderCycles] = useState<readonly DecisionCycle[]>([]);
+  const [cursor, setCursor] = useState<number | undefined>(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  useEffect(() => {
+    setOlderCycles([]);
+    setCursor(decisions.data?.nextCursor);
+    setLoadMoreError(false);
+  }, [decisions.data]);
+  const loadMore = () => {
+    if (cursor === undefined || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    fetchDeskDecisions(deskId, cursor)
+      .then((page) => {
+        setOlderCycles((prev) => [...prev, ...page.cycles]);
+        setCursor(page.nextCursor);
+      })
+      .catch(() => setLoadMoreError(true))
+      .finally(() => setLoadingMore(false));
+  };
 
   if (decisions.isPending) return <p className="note">Reading the audit trail…</p>;
   if (decisions.isError) return <p className="note">The audit trail is unreachable.</p>;
@@ -157,11 +193,25 @@ export function DecisionsSection({ deskId }: { readonly deskId: string }): React
     return (
       <p className="note">No recorded cycles yet — the next autonomous run writes the first.</p>
     );
+  const cycles = [...trail.cycles, ...olderCycles];
   return (
-    <ul className="cycles">
-      {trail.cycles.map((cycle) => (
-        <CycleRow key={cycle.at} cycle={cycle} />
-      ))}
-    </ul>
+    <>
+      <ul className="cycles">
+        {cycles.map((cycle) => (
+          <CycleRow key={cycle.at} cycle={cycle} />
+        ))}
+      </ul>
+      {cursor !== undefined ? (
+        <button
+          type="button"
+          className="btn cycles-load-more"
+          onClick={loadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? "Loading…" : "Load older cycles"}
+        </button>
+      ) : null}
+      {loadMoreError ? <p className="set-err">Couldn't load older cycles — try again.</p> : null}
+    </>
   );
 }

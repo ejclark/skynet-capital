@@ -110,4 +110,27 @@ describe("CycleRow", () => {
     expect(screen.queryByText(/momentum|sentiment/)).not.toBeInTheDocument();
     expect(screen.queryByText("persona asked for", { exact: false })).not.toBeInTheDocument();
   });
+
+  it("renders a collapsed quiet run's full idle span, oldest–newest, when quietSince is present", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          status: "quiet",
+          headline: "no signals fired for 37 cycles — watching",
+          at: "2026-09-22T18:59:00Z",
+          quietSince: "2026-09-22T18:22:00Z",
+          outcomes: [],
+        })}
+      />,
+    );
+    expect(screen.getByText("no signals fired for 37 cycles — watching")).toBeInTheDocument();
+    // Both ends of the range render as "<from> – <to>", not just the run's newest cycle — locale
+    // formatting of the timestamps themselves is `toLocaleString`'s concern, not this test's.
+    expect(screen.getByText(/–/)).toBeInTheDocument();
+  });
+
+  it("renders only the single timestamp when quietSince is absent — the ordinary case", () => {
+    render(<CycleRow cycle={cycle()} />);
+    expect(screen.queryByText(/–/)).not.toBeInTheDocument();
+  });
 });

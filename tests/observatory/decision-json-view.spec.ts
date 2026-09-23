@@ -283,6 +283,55 @@ describe("decisionCyclesView", () => {
   });
 });
 
+describe("decisionCyclesView — collapsing a quiet run (#3608)", () => {
+  const quiet = (at: number) => record({ at, rawIntents: [], guardedIntents: [], outcomes: [] });
+
+  it("collapses several consecutive quiet cycles into a single row", () => {
+    const view = decisionCyclesView([quiet(1), quiet(2), quiet(3)]);
+    expect(view).toHaveLength(1);
+    expect(view[0]).toMatchObject({
+      status: "quiet",
+      headline: "no signals fired for 3 cycles — watching",
+    });
+    // `at` is the run's newest cycle; `quietSince` the oldest — the full idle span.
+    expect(new Date(view[0]?.at ?? 0).getTime()).toBe(3);
+    expect(new Date(view[0]?.quietSince ?? 0).getTime()).toBe(1);
+  });
+
+  it("leaves a lone quiet cycle exactly as it rendered before this existed — no quietSince", () => {
+    const view = decisionCyclesView([quiet(1)]);
+    expect(view).toHaveLength(1);
+    expect(view[0]).toMatchObject({
+      status: "quiet",
+      headline: "no signals fired — watching",
+    });
+    expect(view[0]).not.toHaveProperty("quietSince");
+  });
+
+  it("never merges a quiet run across a non-quiet cycle in between", () => {
+    const view = decisionCyclesView([quiet(1), record({ at: 2 }), quiet(3)]);
+    expect(view).toHaveLength(3);
+    expect(view.map((c) => c.status)).toEqual(["quiet", "observed", "quiet"]);
+    expect(view.every((c) => !("quietSince" in c))).toBe(true);
+  });
+
+  it("a run occupies exactly one page slot, and its cursor excludes the whole run", () => {
+    const records = [quiet(1), quiet(2), quiet(3), record({ at: 4 })];
+    const page = decisionCyclesPage(records, { limit: 1 });
+    expect(page.cycles).toHaveLength(1);
+    expect(page.cycles[0]?.status).toBe("observed");
+    // The next page's cursor must exclude the ENTIRE quiet run — the run's oldest member (1) —
+    // not just its newest, or the run would be split across two pages.
+    expect(page.nextCursor).toBe(4);
+    const next = decisionCyclesPage(records, { limit: 1, before: page.nextCursor });
+    expect(next.cycles).toHaveLength(1);
+    expect(next.cycles[0]).toMatchObject({ headline: "no signals fired for 3 cycles — watching" });
+    // Nothing precedes the run — a further page fetched past its own cursor comes back empty.
+    const exhausted = decisionCyclesPage(records, { limit: 1, before: next.nextCursor });
+    expect(exhausted.cycles).toHaveLength(0);
+  });
+});
+
 describe("decisionCyclesView — pagination (PR 5, issue #2287)", () => {
   const records = Array.from({ length: 5 }, (_, i) => record({ at: i + 1 }));
 

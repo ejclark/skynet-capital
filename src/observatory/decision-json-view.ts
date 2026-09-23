@@ -92,6 +92,10 @@ export interface DecisionCycleView {
    *  for a total refusal. */
   readonly refusedIntents?: readonly RefusedIntentView[];
   readonly halted?: string;
+  /** Present only on a collapsed quiet run (`groupQuietRuns`, #3608) — the oldest cycle's own
+   *  timestamp, so the UI can render the run's full idle span. `at` on this row is deliberately
+   *  the run's NEWEST cycle, so a reader scanning `at` top-to-bottom sees a normal timeline. */
+  readonly quietSince?: string;
 }
 
 function cycleStatus(record: DecisionRecord): CycleStatus {
@@ -167,34 +171,25 @@ export interface DecisionCyclesPage {
   readonly nextCursor?: number;
 }
 
-export function decisionCyclesView(
-  records: readonly DecisionRecord[],
-  opts: { readonly limit?: number; readonly before?: number } = {},
-): DecisionCyclesPage {
-  const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
-  const { items, nextCursor } = paginateDesc(
-    [...records].sort((a, b) => b.at - a.at),
-    (record) => record.at,
-    { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
-  );
-  const cycles = items.map((record) => {
-    const status = cycleStatus(record);
-    return {
-      at: new Date(record.at).toISOString(),
-      mode: record.mode,
-      status,
-      headline: cycleHeadline(record, status),
-      rawCount: record.rawIntents.length,
-      guardedCount: record.guardedIntents.length,
-      outcomes: record.outcomes.map((outcome) => outcomeView(record, outcome)),
-      ...(status === "refused"
-        ? {
-            // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
-            // record captured it; fall back to the bare raw intents (no guard named) for a
-            // record written before that field existed, or a path that doesn't populate it yet.
-            refusedIntents: (
-              record.refusals ?? record.rawIntents.map((intent) => ({ intent }))
-            ).map((r) => ({
+/** Runs `decisionCyclesView`'s per-record shaping — split out so a collapsed quiet run
+ *  (`quietRunView` below) can share the page's mapping step without duplicating it. */
+function cycleView(record: DecisionRecord): DecisionCycleView {
+  const status = cycleStatus(record);
+  return {
+    at: new Date(record.at).toISOString(),
+    mode: record.mode,
+    status,
+    headline: cycleHeadline(record, status),
+    rawCount: record.rawIntents.length,
+    guardedCount: record.guardedIntents.length,
+    outcomes: record.outcomes.map((outcome) => outcomeView(record, outcome)),
+    ...(status === "refused"
+      ? {
+          // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
+          // record captured it; fall back to the bare raw intents (no guard named) for a
+          // record written before that field existed, or a path that doesn't populate it yet.
+          refusedIntents: (record.refusals ?? record.rawIntents.map((intent) => ({ intent }))).map(
+            (r) => ({
               symbol: r.intent.symbol,
               side: r.intent.side,
               quantity: r.intent.quantity,
@@ -202,12 +197,80 @@ export function decisionCyclesView(
               reason: r.intent.reason,
               ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
               ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
-            })),
-          }
-        : {}),
-      ...(record.halted ? { halted: record.halted } : {}),
-    };
+            }),
+          ),
+        }
+      : {}),
+    ...(record.halted ? { halted: record.halted } : {}),
+  };
+}
+
+/** Consecutive `quiet` cycles are the dominant row shape once a persona has run for any length of
+ *  time at a once-a-minute cadence — a bot idle since the afternoon buries an earlier real signal
+ *  under hundreds of identical "watching" rows before pagination ever gets a say (found live,
+ *  2026-09-23: Sauron's own decision-history page still showed Sep 8 activity a full trading day
+ *  after real trades, because 30+ idle minutes of quiet rows filled the default page first). This
+ *  collapses a RUN of quiet cycles into one row before the page is sliced, fixing the volume at
+ *  its source rather than just growing the page size — the honest content of 25 empty minutes is
+ *  "nothing happened for 25 minutes", never 25 separate confirmations of it. A lone quiet cycle
+ *  (no quiet neighbor) stays exactly as it rendered before this existed; nothing here ever merges
+ *  a non-quiet cycle. `records` must already be sorted newest-first, so each group is a
+ *  contiguous, newest-first slice. */
+function groupQuietRuns(records: readonly DecisionRecord[]): DecisionRecord[][] {
+  const groups: DecisionRecord[][] = [];
+  for (const rec of records) {
+    const current = groups.at(-1);
+    if (current && cycleStatus(rec) === "quiet" && cycleStatus(groupNewest(current)) === "quiet") {
+      current.push(rec);
+    } else {
+      groups.push([rec]);
+    }
+  }
+  return groups;
+}
+
+/** A group from `groupQuietRuns` is never empty (every push starts it with one element) — these
+ *  spare every call site its own indexed-access cast around that invariant. `group` is
+ *  newest-first, so index 0 is the newest cycle and the last index the oldest. */
+function groupNewest(group: readonly DecisionRecord[]): DecisionRecord {
+  return group[0] as DecisionRecord;
+}
+function groupOldest(group: readonly DecisionRecord[]): DecisionRecord {
+  return group[group.length - 1] as DecisionRecord;
+}
+
+/** The collapsed view for a run of ≥2 consecutive quiet cycles — see `groupQuietRuns`. */
+function quietRunView(group: readonly DecisionRecord[]): DecisionCycleView {
+  const newest = groupNewest(group);
+  const oldest = groupOldest(group);
+  return {
+    at: new Date(newest.at).toISOString(),
+    mode: newest.mode,
+    status: "quiet",
+    headline: `no signals fired for ${group.length} cycles — watching`,
+    rawCount: 0,
+    guardedCount: 0,
+    outcomes: [],
+    quietSince: new Date(oldest.at).toISOString(),
+  };
+}
+
+export function decisionCyclesView(
+  records: readonly DecisionRecord[],
+  opts: { readonly limit?: number; readonly before?: number } = {},
+): DecisionCyclesPage {
+  const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
+  const groups = groupQuietRuns([...records].sort((a, b) => b.at - a.at));
+  // The sort key for a group is its OLDEST member's `at` — the run occupies one page slot, and an
+  // exclusive `before` boundary set to that value correctly excludes the whole run, never leaking
+  // a partial run across a page split.
+  const { items, nextCursor } = paginateDesc(groups, (group) => groupOldest(group).at, {
+    limit,
+    ...(opts.before !== undefined ? { before: opts.before } : {}),
   });
+  const cycles = items.map((group) =>
+    group.length > 1 ? quietRunView(group) : cycleView(groupNewest(group)),
+  );
   return { cycles, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }
 
