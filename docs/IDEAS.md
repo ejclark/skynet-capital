@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Prove a playbook does what its card says, with the retired Collections probe harness.** The
+  control-tape method (run on a hand-built tape, re-run with one input neutralised, keep only the
+  behaviour that disappears) was Collections' strongest idea and outlived the page. Aimed at a
+  tactical playbook, it becomes a behaviour spec: e.g. HC-SAURON's `sentiment-claim` tactic should buy
+  into sentiment ≤ −0.5 and NOT on the flattened control. Pairs with #3596's rule trace (a live
+  check) as the offline check. Restore `probe-tape.ts` from history rather than rebuild it; see
+  `docs/PATTERNS.md` → *discovery*. _(src: Claude · while: 2026-09-23 Collections teardown, #3623)_
+
 - The Barad-dûr 3D landmark (`shell/landmark-hero.tsx`, on a bot's Accounts > Overview) takes up a
   lot of vertical real estate above the fold and disrupts the page's flow — Eric likes the piece
   and wants to keep it, but wants it relocated to something smaller/collapsed (a corner thumbnail,

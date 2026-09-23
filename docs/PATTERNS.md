@@ -158,6 +158,22 @@ re-make.
 | **A real desk's order-type inventory** | Eight order types and five time-in-force options listed flat. | — | Fidelity study row 5 | declined here — list only what this desk executes; vapor options disabled "coming soon" are a trap |
 | **Three buying powers, margin, strategy dropdown** | Cash · margin · option buying power, a type selector, a calls/puts strategy list. | — | Fidelity study row 20 | declined here — paper, one desk, one number; the strategy list is the rail's preset |
 
+## The ledger — discovery (gleaned from the retired Collections, #3623)
+
+Collections (#588 → #617, 2026-08-26) was retired on 2026-09-23 after Eric's test: "collections feel
+of more interest if they are a derivative/byproduct of research. Otherwise… a relic design." Its
+origin was a Public.com teardown, not a research finding, so the *page* went. These are the ideas it
+carried, banked here before the code was deleted. The last tree that has the code is the parent of
+the retiring PR (`src/discovery/probe-tape.ts`, `collection-probes.ts`), so any of these can be
+restored from history rather than rebuilt.
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **Membership by controlled experiment** | Run the thing on a hand-built tape, then again with ONE input neutralised; it earns the label only for behaviour that disappears in the control run — so a label names what the signal *caused*, never what merely co-occurred. | `playbook-probe.ts` keeps the date-window half (`probeWindow` walks a synthetic print, and an estimate-date re-run is the control); the persona tapes were deleted with Collections | #617 | placed for playbook traits · banked for bot behaviour — the candidate is proving a tactical playbook does what its card says (`docs/IDEAS.md`, 2026-09-23) |
+| **A receipt behind every label** | Each membership carries the one sentence of evidence that earned it (the bot's own `reason` at the moment it acted, or what the probe observed), shown beside the label, never instead of it. | `PlayTrait.claim`, shown as the trait pill's tooltip on R&D → Playbooks (`playbook-store-cards.tsx`) | #617 | placed (traits) |
+| **Absence is named, never dropped** | A catalog entry no category claims renders in a visible "on no shelf" bucket with the reason, instead of silently vanishing from the browse surface. | — (the "On no shelf" block, deleted) | #617 | banked — the R&D → Playbooks card does the same job by showing a tactical playbook's "no window" honestly rather than hiding it (#3626) |
+| **Narrative shelves** | Browse by story ("Against the Crowd", "Ahead of the Print") rather than by a list or a sector. Public.com's "Themes". | — | #588 (Public.com teardown) | declined-here — #3623: not research-derived, and with four playbooks a shelf is a filter nobody needs yet |
+
 ## How a pattern enters
 
 1. **Named anywhere → a row here.** A teardown's vocabulary list, a call sheet's shape names, a
