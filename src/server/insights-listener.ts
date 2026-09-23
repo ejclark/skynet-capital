@@ -13,6 +13,7 @@ import {
   type InsightRecord,
   parseInsightRecord,
 } from "../autonomous/insight-record.js";
+import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { BotCredentials } from "./bot-credentials-gate.js";
 
 /** The bots→app decision-replication bridge route (`decision-wire.ts`). */
@@ -54,6 +55,14 @@ export interface InsightsListenerConfig {
    * Omit to leave the field off entirely (a deployment with no app-side decision store).
    */
   readonly decisionsCursor?: () => Record<string, number>;
+  /**
+   * The Playbook Store's saved subscriptions, folded into every `GET /controls` response as an
+   * additive `subscriptions` field (`subscriptions-wire.ts`, issue #3595) — the ONLY channel by
+   * which a member's subscribe/allocate/toggle reaches a live bot, since the two apps keep two
+   * different files and the bots one is never written. Omit to leave the field off entirely, the
+   * same posture as `decisionsCursor` above.
+   */
+  readonly subscriptions?: () => SubscriptionsSnapshot;
   /**
    * `POST /decisions` — the bots→app decision-replication bridge (PR 4). Omit to 404 the route,
    * same posture as every other optional bridge surface here.
@@ -239,7 +248,12 @@ function handleControlsGet(
   try {
     const state = config.controls() as unknown as Record<string, unknown>;
     const decisionsCursor = config.decisionsCursor?.();
-    respond(res, 200, decisionsCursor ? { ...state, decisionsCursor } : state);
+    const subscriptions = config.subscriptions?.();
+    respond(res, 200, {
+      ...state,
+      ...(decisionsCursor ? { decisionsCursor } : {}),
+      ...(subscriptions ? { subscriptions } : {}),
+    });
   } catch (error) {
     process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);
     respond(res, 502, { error: "read failed" });

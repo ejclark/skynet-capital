@@ -55,9 +55,16 @@ const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
 export class AutonomousTrader {
   private readonly config: AutonomousTraderConfig;
   private readonly lastOrderAt = new Map<string, number>();
+  /**
+   * The persona + risk config this trader is CURRENTLY trading under. Held apart from `config`
+   * (which is immutable) because a Playbook Store subscription change has to reach a running bot
+   * without a restart (issue #3595) — see `swapRoster`.
+   */
+  private current: { readonly persona: Persona; readonly risk: RiskConfig };
 
   constructor(config: AutonomousTraderConfig) {
     this.config = config;
+    this.current = { persona: config.persona, risk: config.risk ?? DEFAULT_RISK_CONFIG };
     if (config.initialCooldowns) {
       for (const [symbol, at] of config.initialCooldowns) {
         this.lastOrderAt.set(symbol, at);
@@ -65,8 +72,23 @@ export class AutonomousTrader {
     }
   }
 
+  /**
+   * Swap the roster this bot trades, in place. The cooldown map — and, because the process keeps
+   * running, every tracker feeding it — survives untouched; that durability is the whole reason
+   * this is a swap rather than a rebuild (`subscription-sync.ts`, same posture as
+   * `SwappableBotBroker.replaceCredentials`).
+   *
+   * Applied between cycles, never inside one: `evaluate` snapshots both halves together at the top
+   * of a cycle, so a swap landing mid-cycle takes effect on the next one instead of pairing one
+   * cycle's persona with another's guards.
+   */
+  swapRoster(next: { readonly persona: Persona; readonly risk: RiskConfig }): void {
+    this.current = { persona: next.persona, risk: next.risk };
+  }
+
   async evaluate(context: MarketContext): Promise<OrderResult[]> {
-    const risk = this.config.risk ?? DEFAULT_RISK_CONFIG;
+    // One read of the swappable pair, at the top — see `swapRoster`.
+    const { persona, risk } = this.current;
     const now = (this.config.now ?? Date.now)();
     const cooldown = this.config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
     const mode: TraderMode = this.config.mode ?? "live";
@@ -78,7 +100,7 @@ export class AutonomousTrader {
     if (blocked) {
       this.config.onDecision?.({
         at: now,
-        personaId: this.config.persona.id,
+        personaId: persona.id,
         mode,
         rawIntents: [],
         guardedIntents: [],
@@ -90,7 +112,7 @@ export class AutonomousTrader {
     }
 
     const portfolio = await this.config.broker.getPortfolio();
-    const rawIntents = this.config.persona.decide(context, portfolio);
+    const rawIntents = persona.decide(context, portfolio);
     const { approved: guardedIntents, refused: refusals } = applyGuardsWithVerdicts(
       rawIntents,
       portfolio,
@@ -121,7 +143,7 @@ export class AutonomousTrader {
 
     this.config.onDecision?.({
       at: now,
-      personaId: this.config.persona.id,
+      personaId: persona.id,
       mode,
       rawIntents,
       guardedIntents,
