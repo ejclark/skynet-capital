@@ -276,6 +276,85 @@ publisher primary, and enough for `estimate`, but one class of source thinner th
 consensus or whisper for August borrowing was findable, so leg 7's expectation is a read against the
 OBR's March profile and four published months of drift, not against a survey.
 
+## Outcome
+
+**Close-out (2026-09-23, D+1 — inside `closeOutWithinDays: 6`).** Macro-print mode, `symbols: []`:
+`earnings-cycle`/`intraday-edges` never had a target, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) touched nothing.
+"Re-run instrument data" here means a fresh, direct fetch of the ONS's own published bulletin and a
+fresh Yahoo pull for IGLT.L and the four tracked names — never memory of the tape.
+
+**What printed.** ONS *Public sector finances, UK: August 2026* (ons.gov.uk, published 2026-09-22
+07:00 London, fetched direct this session — WebFetch on the live bulletin page, cross-read against
+independent search coverage of the same release, IFS and LSE-hosted wire copy): August borrowing
+**£18.3bn** (+£2.9bn/19.0% y/y, **+£3.5bn above** the OBR March 2026 monthly profile). **Financial
+year to August 2026: £77.3bn**, −£2.2bn (2.7%) y/y but **+£8.1bn above the OBR March 2026
+forecast** — verbatim, *"this was £2.2 billion (2.7%) less than in the same period last year but
+£8.1 billion above the OBR forecast."* Central government net cash requirement **£10.0bn** in
+August (−£1.1bn/9.8% y/y). Debt **93.8% of GDP**, −1.3pp y/y (94.1% at end-July, per initial
+research — a consistent glide, not a jump). The pre-announced annual data updates landed exactly as
+named in leg 4: pension data revisions cut PSNFL by **£39.5bn** at March 2026, the **SNIB**
+reclassification −£0.7bn, MDB equity valuation −£1.2bn — a **stock** correction (public sector net
+financial liabilities), not a flow adjustment to the FYTD borrowing figure FT-3 is keyed to, so the
+two numbers don't contaminate each other the way leg 7's own caveat worried they might.
+
+**The tape.** IGLT.L's finalized 09-22 daily bar had not yet posted in the historical series at
+fetch time (its LSE session closes 16:30 London, and Yahoo's chart endpoint lagged the close by
+several hours) — scored instead from the same feed's live quote block, which carries the
+authoritative regular-session print: `regularMarketPrice 9.5875`, `regularMarketTime
+2026-09-22T15:35:01Z` (16:35 BST, the closing-auction print), against the finalized 2026-09-21 close
+of **9.6075**. **Move: −0.2082%**, cross-checked twice — once from the API's own
+`regularMarketChangePercent` field (−0.2082%) and once computed by hand from the two closes — both
+agree to four decimal places. VIX **14.21** (−4.44% on the day, live quote, same lag caveat), down
+from **17.2** at the last screened pulse (2026-09-16).
+
+**FT-uk-public-sector-finances-2026-09-22-2 — PASS.** IGLT.L's −0.2082% move is inside the
+registered **±0.486%** threshold (the general PSF-day mean) with room to spare, and it lands almost
+exactly on the closest historical analogue, the 2024-09-20 re-basing print's **0.214%** — a sixth
+observation in the same direction as all five priors in leg 5 (0.035/0.046/0.372/0.214/0.380%). The
+quiet-re-basing finding (n=5, t=-2.86) survives its first out-of-sample morning.
+
+**FT-uk-public-sector-finances-2026-09-22-3 — PASS.** FYTD-to-August borrowing printed **£8.1bn**
+above the OBR March 2026 forecast, not at-or-below — the overshoot this leg tracked didn't reverse,
+it widened (from **+£2.3bn** at FYTD-July). This was registered as the weakest of the four tests
+because the same release's annual updates could have moved the level either way; they didn't reach
+this cell (they revise a liabilities stock, not the borrowing flow), so the confound named at
+registration didn't actually fire this month.
+
+**Today/This week calls held — the channel kill did not trigger.** The only tracked names moving
+**>1%** on 2026-09-22 were **MRVL (+1.94%)** and **CRWV (+1.56%)** (Yahoo live quotes, full regular
+session), both on their own idiosyncratic news: MRVL's move traces to its own announcement of
+industry-first 2nm optical interconnects at the ECOC 2026 conference (and was in fact **down ~1%**
+in the premarket window this ledger's kill switch actually keys on — fxleaders.com, public.com,
+checked this session), and CRWV's to its own $25bn-plus customer-commitment news, a raised 2026
+revenue guide and a $3bn convertible-debt offering (foreignpolicyjournal.com, robinhood.com quote
+data, checked this session). No coverage anywhere ties either move to the ONS release. NVDA
+(+0.66%) and AVGO (+0.52%) were flat by comparison. The 02:00–09:30 ET channel-kill falsifier never
+had a candidate.
+
+**FT-uk-public-sector-finances-2026-09-22-1 and -4 — not yet scoreable, correctly held past
+close-out.** Both score by **2026-10-29** (the day after the actual 2026-10-28 Autumn Budget/EFO),
+past this event's `closeOutWithinDays: 6` window (event-scan.mjs's `--due` named both in
+`forwardTestsBeyondWindow` at dispatch). Left `_open_` in
+[`forward-tests/uk-public-sector-finances-2026-09-22.md`](../forward-tests/uk-public-sector-finances-2026-09-22.md)
+for the `forward-test-due` mode to pick up once the EFO publishes and each score-by date arrives —
+not re-opened, not edited here.
+
+**Honest limits.** (1) IGLT.L's and the four tracked names' 09-22 finalized daily bars had not
+posted in Yahoo's historical series at close-out time; the live-quote block is the same publisher's
+data one layer earlier, cross-checked against the prior finalized close by two independent
+arithmetic paths, but it is not the same artifact the initial research's event study was built from
+and a later re-pull could in principle differ by a rounding unit. (2) The channel-kill check is a
+plausibility read (no coverage ties the two >1% movers to the UK print, and both have named
+company-specific catalysts), not an exhaustive premarket-minute-by-minute audit — this repo has no
+intraday feed for LSE-hours US premarket action. (3) FT-1/FT-4 remain genuinely unresolved; the
+boundary/placement question they test is the one finding in this ledger that actually matters
+financially, and close-out does not settle it.
+
+This event is now scored. The scanner goes quiet on it permanently, with the one door back in
+EVENT-RESEARCH.md already describes: FT-1 and FT-4 reopen it as `forward-test-due` once their
+2026-10-29 score-by date arrives.
+
 ## Stance & kill switches
 
 **Stance (2026-09-09, D-13; date `estimate`): stand aside completely, and spend the run-in settling
@@ -354,6 +433,7 @@ because the stance takes no position and this book has no instrument that would 
 |---|---|---|---|---|
 | 2026-09-09 | D-13 | **Initial research** on an id that existed only as `proposals/…from-uk-public-sector-finances-2026-10-21.json` (read in full first); canonical `src/domain/market-events/uk-public-sector-finances-2026-09-22.json` written in this PR. **Date:** two publisher primaries — the ONS release page (*"Release date: 22 September 2026 7:00am"*, not yet published) **and** the live July 2026 bulletin's own *"Next release: 22 September 2026"* — plus cadence scraped direct across eight pages of the ONS past-release listing: **80** PSF bulletins 2020-01-22 → 2026-08-21, **80/80** on the 19th–26th, never a Monday, 25 Tuesdays, and 09-22 is a Tuesday. gov.uk statutory register **404**'d (recorded, not substituted). **Finding 1 — this is the Budget forecast's BOUNDARY print, not comfortably its input.** 2026-09-22 is **exactly 36 days** before 2026-10-28; the OBR's precedents are **34d** (Oct 2024, pre-measures *"finalised on 26 September"*) and **36d** (Nov 2025 fiscal determinants to 2025-10-21). Inside with **two days** on one convention, **on the line** on the other — where the 2024 analogue print (2024-09-20) had **six**. Both relays; **obr.uk 403'd twice, recorded** → FT-1. **Finding 2 — the re-basing prints are the QUIETEST days this series has.** First-party, five September (annual-update) releases vs all other sessions since 2020-11-20: IGLT.L **0.210%** vs **0.427%** control = **0.49x**, t = **-2.86** (and 0.43x vs PSF days, t = -2.94); five moves 0.035/0.046/0.372/0.214/0.380%, max **0.38%** vs p90 **0.900%**. → FT-2. **Finding 3 — the FTSE (1.32x) and ^TNX (1.09x) rows in that subset are FOMC contamination.** Fed calendar fetched: Sept decisions 2021-09-22, 2022-09-21, 2023-09-20, 2024-09-18, 2025-09-17 — **all five** September PSF prints within two days of one. **2026 breaks it**: FOMC 09-16, six days out, the widest gap in the sample. **Finding 4 — NO CO-PRINT, the clean contrast with the 10-21 sibling.** UK CPI Aug-2026 publishes **2026-09-16 07:00** (its own ONS page), so the sibling's attribution rule does not transfer; scoped claim, the ONS day-filter would not return a parseable view. **Adjacency sweep: peers** — none, `symbols: []`. **Macro** — baseline is the 2026-08-21 bulletin (July borrowing **£1.8bn**, +£0.7bn y/y, **+£2.3bn vs OBR**; FYTD **£56.7bn**, −£6.0bn/9.6% y/y, **+£2.3bn vs OBR**; debt **94.1% of GDP**; CGNCR **£2.8bn**, **+£3.9bn vs OBR**), keyed to *"the Economic and fiscal outlook — March 2026 report"*; the ONS states the **September** release makes its regular annual data updates (pension liabilities, MDB equity, lease liabilities, **SNIB** classification), so this print moves the **level**. **Volatility** — VIX **16.17** (2026-09-09); IGLT.L 20d realized **4.72%**, 60d 5.44%, vs 8.32% full-sample — calm. **Geopolitical** — UK fiscal/gilt narrative carried by reference from `uk-autumn-budget-2026-10-28`, not re-fetched. **Event tape** — no consensus or whisper findable for August borrowing. **Adjacency ids:** 36 within 5 days; the operational point is that the 09-16/17/18 central-bank block clears **before** this print, unlike every September PSF print measured. **One dated adjacency PROPOSED (`estimate`, own-owner file):** `uk-quarterly-national-accounts-2026-09-30` — ONS primary (*"30 September 2026 at 7:00am"*), the exact 2026 analogue of the 2024-09-30 QNA the OBR's 2024 pre-measures forecast **excluded**, and therefore the same convention tested from the other side → FT-4. **Replication note:** the sibling 10-21 lane's four ratios (IGLT.L 1.14x t=1.02, GBP/USD 0.88x, ^TNX 0.90x, ^FTSE 0.92x over 70 release days) reproduce to two decimals from an independent re-run; **SPY 1.03x** (t = 0.29) added — the US equity channel this book actually trades is flat. **Four forward tests registered:** FT-1 (this print is inside the EFO), FT-2 (IGLT.L within ±0.486% on 09-22), FT-3 (FYTD borrowing still above the March 2026 forecast), FT-4 (the 09-30 QNA falls outside the EFO). | — (stance set: stand aside, no position, no play; three analytical commitments — the proposal's placement claim is upheld but narrowed to a **boundary** case with a 0–2 day margin against the 2024 analogue's six, the re-basing is downgraded from a hazard to the **quietest** measured class of PSF day, and the co-print rule that governs the 10-21 sibling is shown **not** to apply here) | 2026-09-16 (`low:0+` → 7d — which lands on FOMC/UK-CPI day and D-6, before the print) |
 | 2026-09-16 | D-6 | **Deterministic screen (no Claude session).** Readings — VIX 17.2 (+1.0pt since last), band unchanged (low:0+), 47 adjacent event(s) tracked, new in corridor since last pulse: `bea-international-transactions-q2-2026-09-24`, `bowman-stress-testing-2026-09-18`, `costco-q4-fy2026-2026-09-24`, `dmo-pilot-switch-auction-test-2026-09-24`, `intl-transactions-q2-2026-09-24`, `japan-cpi-2026-09-18` +5 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-23 |
+| 2026-09-23 | D+1 | **Close-out completed, inside `closeOutWithinDays: 6`.** Cache busted first — macro-print kind, `symbols: []`, so neither instrument had a target, unchanged from initial research. ONS bulletin re-fetched direct: August borrowing £18.3bn (+£3.5bn vs OBR monthly profile); **FYTD-to-August £77.3bn, +£8.1bn above the OBR March 2026 forecast** (widened from +£2.3bn at FYTD-July); annual data updates landed as pre-announced (pension PSNFL −£39.5bn, SNIB −£0.7bn, MDB equity −£1.2bn — a liabilities-stock correction, not a borrowing-flow one). IGLT.L **−0.2082%** on 2026-09-22 (live-quote score, historical bar not yet finalized at fetch time; cross-checked two ways). **FT-2 PASSES** (inside ±0.486%, near-identical to the 2024 analogue's 0.214%). **FT-3 PASSES** (overshoot widened, did not reverse). Channel kill did not trigger: MRVL (+1.94%) and CRWV (+1.56%) were the only tracked names >1%, both on named company-specific news (MRVL's own 2nm optical-interconnect announcement — and actually down ~1% premarket, the window the kill switch keys on; CRWV's own $25bn+ customer-commitment/guidance/convertible-debt news), no coverage ties either to the ONS release. FT-1 and FT-4 (score by 2026-10-29) are past `closeOutWithinDays` and left `_open_` for `forward-test-due`. **`## Outcome` written above — this document goes quiet.** | FT-2 and FT-3 pass; stance (stand aside, no position, no play) confirmed correct — see `## Outcome` | — (closed; scanner goes quiet on this event, except for FT-1/FT-4's 2026-10-29 `forward-test-due` reopen) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -364,3 +444,10 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-23
+<!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
+<!-- Closed: no further pulse will read this block. Recorded per the append-only probe-ref contract
+     (EVENT-RESEARCH.md → "Deterministic screening") rather than left stale; adjacentIds is empty
+     because a closed event is never screened again, so there is no future pulse for a corridor list
+     to serve. -->
