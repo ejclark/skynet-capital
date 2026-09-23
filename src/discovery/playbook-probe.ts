@@ -3,9 +3,9 @@
  *
  * A playbook answers one question per cycle ("what should my book look like right now?"), so the
  * only honest way to describe it is to ASK it, day by day, around a synthetic print. Both readers
- * of that answer — the discovery shelves (`playbook-collections.ts`) and the R&D → Playbooks cards
- * (`playbook-store.ts`, #3623) — share this module rather than each running their own walk, so a
- * play can never be described one way on a shelf and a different way on its card.
+ * of that answer is the R&D → Playbooks card (`playbook-store.ts`, #3623) — the window, the target
+ * exposure and the proven traits all come from this one walk, so a card can never drift from what
+ * the playbook does. (The retired Collections shelves read it too; see `docs/PATTERNS.md`.)
  *
  * The roster comes from whatever `src/playbooks/registry.ts` exports — a new exported play is
  * probed the moment it lands, with nothing here to update. (`src/playbooks/**` is envelope-

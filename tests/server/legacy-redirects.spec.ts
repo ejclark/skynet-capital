@@ -41,8 +41,11 @@ describe("serveLegacyRedirect", () => {
     // The shell's own retired path — the page was renamed under a live bookmark.
     expect(target("/app/wire", "/app/wire?q=is%3Ahuman")).toBe("/app/activity?q=is%3Ahuman");
     expect(target("/research", "/research?q=NVDA")).toBe("/app/research?q=NVDA");
-    expect(target("/collections")).toBe("/app/collections");
-    expect(target("/collections/wheel-desks")).toBe("/app/collections/wheel-desks");
+    // Collections retired into R&D → Playbooks (#3623); a shelf query has nothing left to address.
+    expect(target("/collections")).toBe("/app/research?section=playbooks");
+    expect(target("/collections/wheel-desks", "/collections/wheel-desks?x=1")).toBe(
+      "/app/research?section=playbooks",
+    );
     expect(target("/account")).toBe("/app/settings");
     expect(target("/add", "/add?key=abc")).toBe("/app/onboarding?key=abc");
     expect(target("/feedback")).toBe("/app/feedback");

@@ -1,15 +1,12 @@
 import type { ServerResponse } from "node:http";
-import { browseCollections, unshelved } from "../discovery/collections.js";
 import { marketClosures } from "../domain/market-calendar.js";
 import { everyEvent } from "../domain/market-events.js";
-import { collectionsJsonView } from "../observatory/collections-json-view.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
 import { researchShelfJson } from "../observatory/research-json-view.js";
 import { standingsBoardView, standingsCompareView } from "../observatory/standings-board-view.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { Session } from "./auth/session.js";
 import type { BoardPatchChannel } from "./board-patch-routes.js";
-import { deskIndex } from "./collections-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
@@ -96,16 +93,6 @@ export async function serveContentApi(
       config.opsStatus
         ? { available: true, status: await config.opsStatus.status() }
         : { available: false },
-    );
-  }
-  if (path === "/api/collections") {
-    const collections = browseCollections();
-    return json(
-      collectionsJsonView(
-        collections,
-        unshelved(collections),
-        deskIndex(config.hub.getState().participants),
-      ),
     );
   }
   return false;

@@ -10,7 +10,7 @@
  * instead of only in prose.
  *
  * THE LIST MIRRORS THE DRAWER, WORD FOR WORD. It used to name seven places of its own
- * invention while the nav had grown to nine, so Portfolio, The Wire, Collections and Milestones had
+ * invention while the nav had grown to nine, so Portfolio, The Wire, Collections (since retired) and Milestones had
  * no entry at all and "Somewhere else" was frequently the only honest answer. Mirroring the drawer means a member picks the same word they just clicked,
  * and the list can only go stale if the nav changes, which `feedback-areas.spec.ts` now watches.
  * Routes with no drawer link (`/pulse`, `/events`, `/compare`, `/bots-vs-humans`, `/tower`) are
@@ -23,7 +23,6 @@ export const FEEDBACK_AREAS = [
   "Activity",
   "Trade",
   "R&D",
-  "Collections",
   "Milestones",
   "The login",
   "This feedback form",
@@ -46,7 +45,6 @@ const AREA_HINT: Record<FeedbackArea, string> = {
   Trade: "the trade ticket and order flow, /trade",
   "R&D":
     "research and playbooks — the board, a symbol page, the event calendar, subscribing a playbook, /research",
-  Collections: "the browsable bot and play catalogs, /collections",
   Milestones: "the trading-journey ladder and its rewards, /learn",
   "The login": "the sign-in page and the cinematic before it, /login",
   "This feedback form": "the feedback form, coach or their own filed list, /feedback",

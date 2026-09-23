@@ -1,15 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import { type CollectionsIndex, fetchCollections } from "../live/collections";
 import { useBoardView } from "../shell/board-section";
-import { CollectionsSection } from "../shell/collections-section";
 import { PageFrame } from "../shell/frame";
 import { PlaybooksRail, PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
-import { ShelfRail } from "../shell/shelf-parts";
 
 /**
  * RESEARCH (#738 phase 6c; filters-first + rail-controls per Eric's live reviews) — the shelf in
@@ -20,27 +16,26 @@ import { ShelfRail } from "../shell/shelf-parts";
  *
  * SECTIONS (#3333 slice 9; #3623): the same `SectionSwitch`/`sections.ts` mechanism
  * `accounts.tsx`/`activity.tsx`/`settings.tsx`/`trade.tsx` already use, URL-stateful via
- * `?section=`. "Playbooks" (`playbooks-section.tsx`) is the catalog plus subscribe. "Collections"
- * (`collections-section.tsx`) is the narrative-shelf browsing the now-deleted `/collections` routes
- * carried. Each section keeps its own rail content (the event horizon calendar for Board, the
- * "Subscribe as" account list for Playbooks, the shelf list for Collections) — the section switch
+ * `?section=`. "Playbooks" (`playbooks-section.tsx`) is the catalog plus subscribe. Each section
+ * keeps its own rail content (the event horizon calendar for Board, the "Subscribe as" account list
+ * for Playbooks) — the section switch
  * itself always leads the rail, per the frame's "rail drives content" rule. This file stays thin
  * route glue; each section's own markup, queries, and helpers live in its own `shell/*.tsx` file
  * (the arch fitness gate's cap forced the split).
  */
 
-type ResearchSection = "board" | "playbooks" | "collections";
+type ResearchSection = "board" | "playbooks";
 
 /*
  * R&D (#3623, Eric 2026-09-23: "rename this to R & D") — "Playbooks" is the one home for house
  * playbooks, moved here from each account's desk (`playbooks-section.tsx`). The Plays section is
- * retired (its evidence line, window, exposure and traits now ride on the Playbooks cards); an old
- * `?section=plays` link lands on Playbooks. Collections retires next (#3623 slice 5).
+ * retired (its evidence line, window, exposure and traits now ride on the Playbooks cards), and so
+ * is Collections (its ideas are banked in `docs/PATTERNS.md` → discovery); an old `?section=plays`
+ * or `?section=collections` link lands on Playbooks.
  */
 const SECTIONS: readonly PageSection<ResearchSection>[] = [
   { id: "board", label: "Board" },
   { id: "playbooks", label: "Playbooks" },
-  { id: "collections", label: "Collections" },
 ];
 
 function ResearchPage(): ReactElement {
@@ -69,14 +64,6 @@ function ResearchPage(): ReactElement {
   const onSelectAccount = (id: string | undefined) =>
     void navigate({ search: (prev) => ({ ...prev, account: id }), replace: true });
 
-  const collections = useQuery<CollectionsIndex>({
-    queryKey: ["collections"],
-    queryFn: fetchCollections,
-    enabled: section === "collections",
-  });
-  const onSelectShelf = (id: string | undefined) =>
-    void navigate({ search: (prev) => ({ ...prev, shelf: id }), replace: true });
-
   const onSelectSection = (next: ResearchSection) =>
     void navigate({
       search: (prev) => ({ ...prev, section: next === "board" ? undefined : next }),
@@ -92,13 +79,7 @@ function ResearchPage(): ReactElement {
         currentId={search.account}
         onSelect={onSelectAccount}
       />
-    ) : (
-      <ShelfRail
-        index={collections.data ?? { collections: [], unshelved: [] }}
-        currentId={search.shelf}
-        onSelect={onSelectShelf}
-      />
-    );
+    ) : null;
 
   return (
     <PageFrame
@@ -122,13 +103,7 @@ function ResearchPage(): ReactElement {
           accountId={search.account}
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
         />
-      ) : (
-        <CollectionsSection
-          collections={collections}
-          shelfId={search.shelf}
-          onSelectShelf={(id) => onSelectShelf(id)}
-        />
-      )}
+      ) : null}
     </PageFrame>
   );
 }
@@ -141,13 +116,12 @@ export const Route = createFileRoute("/research")({
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
       ? { q: search.q }
       : {}),
-    // The retired Plays section's links (bookmarks, old considerations chips) land on Playbooks.
-    ...(search.section === "plays"
+    // The retired Plays and Collections sections' links (bookmarks, old considerations chips) land on Playbooks.
+    ...(search.section === "plays" || search.section === "collections"
       ? { section: "playbooks" as ResearchSection }
       : typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
         ? { section: search.section as ResearchSection }
         : {}),
-    ...(facet(search.shelf) ? { shelf: facet(search.shelf) } : {}),
     ...(facet(search.account) ? { account: facet(search.account) } : {}),
   }),
   component: ResearchPage,

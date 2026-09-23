@@ -47,7 +47,6 @@ const TWINS: ReadonlyMap<string, string> = new Map([
   ["/wire", "/app/activity"],
   ["/app/wire", "/app/activity"],
   ["/research", "/app/research"],
-  ["/collections", "/app/collections"],
   // The account pages' shell home is Settings — profile, removal, rotation all live there now.
   ["/account", "/app/settings"],
   ["/rotate", "/app/settings"],
@@ -82,8 +81,10 @@ export function serveLegacyRedirect(
     res.writeHead(302, { location: `/app/leaderboard${search}` });
   } else if (TWINS.has(path)) {
     res.writeHead(302, { location: `${TWINS.get(path)}${search}` });
-  } else if (path.startsWith("/collections/")) {
-    res.writeHead(302, { location: `/app${path}${search}` });
+  } else if (path === "/collections" || path.startsWith("/collections/")) {
+    // Collections retired into R&D → Playbooks (#3623): every old shelf URL lands there, and its
+    // shelf query has nothing left to address, so it drops rather than riding along.
+    res.writeHead(302, { location: "/app/research?section=playbooks" });
   } else if (path.startsWith("/u/")) {
     res.writeHead(302, { location: deskTarget(path, url) });
   } else {

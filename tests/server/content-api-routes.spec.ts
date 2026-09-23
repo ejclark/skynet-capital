@@ -38,15 +38,6 @@ describe("serveContentApi", () => {
     ).toBe(false);
   });
 
-  it("serves the collections shelves without auth context — discovery is for every member", async () => {
-    const { res, out } = fakeRes();
-    expect(
-      await serveContentApi(res, "/api/collections", "/api/collections", configWith(), undefined),
-    ).toBe(true);
-    const body = JSON.parse(out.body ?? "{}");
-    expect(Array.isArray(body.collections)).toBe(true);
-  });
-
   it("serves ops status to any member — fleet health is the group's, not the owner's (#1296)", async () => {
     const status = {
       generatedAt: "2026-09-05T12:00:00Z",
