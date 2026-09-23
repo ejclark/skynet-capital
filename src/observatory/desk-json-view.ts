@@ -1,4 +1,4 @@
-import type { OutpostCatalog } from "../discovery/play-cards.js";
+import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { OpenLot, RoundTripLedger } from "../trading/round-trips.js";
@@ -170,7 +170,7 @@ export interface DeskView {
 export function deskView(
   snapshot: ParticipantSnapshot,
   ledger?: RoundTripLedger,
-  outpost?: OutpostCatalog,
+  playbooks: readonly PlaybookStoreEntry[] = [],
 ): DeskView {
   const invested = participantInvested(snapshot);
   const unrealized = participantUnrealized(snapshot);
@@ -227,10 +227,7 @@ export function deskView(
     name: snapshot.displayName,
     kind: snapshot.kind === "bot" ? "bot" : "human",
     ...(snapshot.error ? { error: snapshot.error } : {}),
-    considerations: considerationsFor(
-      forConsiderations,
-      outpost ?? { cards: [], authors: [], symbols: [], triggers: [], traits: [] },
-    ),
+    considerations: considerationsFor(forConsiderations, playbooks),
     tiles: {
       openPositions: snapshot.positions.length,
       invested: formatCurrency(invested),

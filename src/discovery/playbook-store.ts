@@ -3,13 +3,21 @@
  * (description, enter, exit-take-profit, exit-cut-losses, hold, metrics), explicitly a first cut
  * he called "continually refined," not a frozen schema.
  *
- * Unlike `play-cards.ts`'s traits (derived by walking the play), this copy is hand-authored —
+ * Unlike the traits (derived by walking the play, `playbook-probe.ts`), this copy is hand-authored —
  * the same category as `Playbook.thesis`/`evidence`, just structured into the shape Eric named
  * rather than one sentence. Keyed by playbook id so a house playbook missing an entry here still
  * renders (falls back to its own `thesis`), rather than the catalog silently dropping it.
  */
+import type { PlaybookMode } from "../domain/types.js";
 import type { Playbook } from "../playbooks/playbook.js";
-import { housePlaybooks } from "./playbook-probe.js";
+import {
+  evidenceHref,
+  housePlaybooks,
+  type PlayTrait,
+  probeWindow,
+  spanOf,
+  traitsOf,
+} from "./playbook-probe.js";
 
 interface PlaybookStoreCopy {
   readonly description: string;
@@ -30,6 +38,19 @@ export interface PlaybookMetric {
 export interface PlaybookStoreEntry extends PlaybookStoreCopy {
   readonly id: string;
   readonly symbol: string;
+  /** The whole basket (#3564). `symbol` stays as its first entry for existing readers; the card
+   *  shows every name, so a ten-name tactical basket never reads as one ticker. */
+  readonly symbols: readonly string[];
+  /** The citation the playbook carries — verbatim from the registry — and, when it names a
+   *  research doc we serve, that doc's route. Ported from the retired Plays cards (#3623). */
+  readonly evidence: string;
+  readonly evidenceHref?: string;
+  /** The date window read off the playbook by the probe ("D-20 to D-6"), and its target exposure
+   *  per mode. Absent for a tactical playbook, which has no window — its rules are the copy above. */
+  readonly window?: string;
+  readonly size?: Readonly<Record<PlaybookMode, number>>;
+  /** Probe-proven traits ("Confirmed dates only"…) — empty when nothing was proven. */
+  readonly traits: readonly PlayTrait[];
   /** Performance/eval data for the playbook (#885: "shape TBD"; #3543 slice 2 fills it in). Empty
    *  at the catalog level — this function has no account to measure against; an account-scoped
    *  caller (`playbook-store-json-view.ts`) adds to it. */
@@ -88,9 +109,19 @@ function entryOf(playbook: Playbook): PlaybookStoreEntry {
     exitCutLosses: "Not yet documented for this playbook.",
     hold: "Not yet documented for this playbook.",
   };
-  // The catalog card shows one symbol; a basket's first symbol stands in (see registry.ts's
-  // playbookRoster doc for the same call) — no playbook trades more than one yet.
-  return { id: playbook.id, symbol: playbook.symbols[0] ?? "", metrics: [], ...copy };
+  const href = evidenceHref(playbook);
+  const probe = playbook.tactics ? undefined : probeWindow(playbook);
+  return {
+    id: playbook.id,
+    symbol: playbook.symbols[0] ?? "",
+    symbols: playbook.symbols,
+    evidence: playbook.evidence,
+    ...(href ? { evidenceHref: href } : {}),
+    ...(probe ? { window: spanOf(probe), size: playbook.size } : {}),
+    traits: probe ? traitsOf(probe) : [],
+    metrics: [],
+    ...copy,
+  };
 }
 
 /** The whole Playbook Store catalog, derived fresh on each call — a new registered playbook is

@@ -1,6 +1,5 @@
 import type { ServerResponse } from "node:http";
 import { browseCollections, unshelved } from "../discovery/collections.js";
-import { outpostCatalog } from "../discovery/play-cards.js";
 import { marketClosures } from "../domain/market-calendar.js";
 import { everyEvent } from "../domain/market-events.js";
 import { collectionsJsonView } from "../observatory/collections-json-view.js";
@@ -82,11 +81,6 @@ export async function serveContentApi(
         ? await config.progression.view(id, session ? opaqueMemberId(session.email) : undefined)
         : undefined;
     return json(learnJsonView(progress));
-  }
-  if (path === "/api/outpost") {
-    // The Outpost's card catalog — derived from the registry on every call, so a
-    // new exported play is browsable the moment it lands with nothing here to update.
-    return json(outpostCatalog());
   }
   if (path === "/api/outpost/performance") {
     return json(await outpostPerformanceView(config));

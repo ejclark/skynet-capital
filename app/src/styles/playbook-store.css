@@ -1,4 +1,4 @@
-/* The Playbook Store (issue #885) — tokens only, same card/deck language as outpost.css's .pc/.op-deck. */
+/* R&D → Playbooks (the Playbook Store, #885; #3623) — tokens only. */
 
 .pb-deck {
   display: grid;
@@ -49,6 +49,82 @@
 .pb-card-triggers dd {
   margin: 0;
   line-height: 1.5;
+}
+
+.pb-card-h {
+  flex-wrap: wrap;
+}
+
+.pb-card-id {
+  white-space: nowrap;
+}
+
+.pb-card-symbols {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Fixed two columns, never a wrapping row: cards in a deck read by comparison (the retired Plays
+   cards' rule, carried over with their facts in #3623). */
+.pb-card-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.pb-card-facts dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.pb-card-facts dd {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.pb-card-modes {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* A trait is a proven fact, not a filter here: a dashed pill carrying its label, the claim on hover. */
+.pb-card-traits {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.pb-card-traits li {
+  padding: 3px 9px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pb-card-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.pb-card-evidence a {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
 }
 
 .pb-subscribe-form,
