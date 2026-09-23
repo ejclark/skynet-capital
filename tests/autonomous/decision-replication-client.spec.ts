@@ -63,9 +63,40 @@ describe("resolveDecisionReplication", () => {
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => botsDb,
         );
-        await client.replicate({ sauron: 1 }); // app already has sauron@1 — only @2 is new
-        expect(appDb.listByPersona("sauron").map((r) => r.at)).toEqual([2]);
+        await client.replicate({ sauron: 1 }); // ascending leg: only @2 is new above cursor 1
+        // The preview leg (unconditional, cursor-independent) also lands @1 — both rows this
+        // small a store fit inside LIVE_PREVIEW_BATCH, so it re-sends everything it has, harmlessly.
+        expect(appDb.listByPersona("sauron").map((r) => r.at)).toEqual([2, 1]);
         expect(appDb.listByPersona("beta-scout").map((r) => r.at)).toEqual([3]);
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    });
+
+    it("the preview leg lands the newest rows immediately, even with a huge cursor gap (the outage-backlog scenario, #3576)", async () => {
+      // Simulates exactly what production hit: a persona with a large chronological backlog the
+      // app hasn't seen (cursor far behind), plus fresh rows just produced. Before this fix, the
+      // fresh rows would wait behind the ENTIRE backlog, one MAX_DECISION_BATCH-sized ascending
+      // step per poll — here, in a single replicate() call, they must already be visible.
+      for (let at = 1; at <= 150; at++) botsDb.record(decision({ at }));
+
+      const server = createInsightsListener({
+        record: () => Promise.resolve(),
+        decisions: { recordBatch: (batch) => appDb.recordBatch(batch.records) },
+      });
+      await new Promise<void>((resolve) => server.listen(0, resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const client = resolveDecisionReplication(
+          { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
+          () => botsDb,
+        );
+        await client.replicate({ sauron: 0 }); // one poll, cursor at the very start of a 150-row backlog
+        // The preview leg: the newest row is visible after ONE poll, not ~2 (150 / MAX_DECISION_BATCH).
+        expect(appDb.listByPersona("sauron", { limit: 1 })[0]?.at).toBe(150);
+        // The ascending leg, checked in isolation (beforeAt excludes the preview leg's own rows,
+        // 131-150, so this can only be satisfied by the ascending leg's own MAX_DECISION_BATCH step).
+        expect(appDb.listByPersona("sauron", { beforeAt: 101, limit: 1 })[0]?.at).toBe(100);
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
