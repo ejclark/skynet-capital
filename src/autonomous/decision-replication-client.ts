@@ -20,10 +20,37 @@ import {
  * persona present locally but absent from the app's cursor (its very first replication) sends
  * everything from `at > 0`. Never throws — a dropped/rejected batch just resends whole on the next
  * poll, since the app's own high-water mark only advances once a batch actually lands.
+ *
+ * SECOND, INDEPENDENT LEG (2026-09-23, found live in prod after issue #2287's own directory-
+ * creation bug — #3576 — was fixed): the ascending leg above is strictly chronological and can
+ * only advance `MAX_DECISION_BATCH` rows per 30s poll. After ANY outage longer than a few minutes
+ * (that bug's own dark period was hours), the app's cursor sits far behind "now," and the ascending
+ * leg would need to drain the ENTIRE gap — at 15s/cycle, potentially hours of polls — before a
+ * single recent decision becomes visible. That is a materially worse failure mode than the outage
+ * itself: the dashboard looks frozen on stale history precisely when a member goes looking for
+ * "what did the bot just do."
+ *
+ * The preview leg below is the fix: every poll, UNCONDITIONALLY (no cursor check at all), also
+ * send the newest `LIVE_PREVIEW_BATCH` rows this process holds locally. This never replaces the
+ * ascending leg — that one is left untouched and remains the sole source of truth for "is
+ * everything present with no gaps," and will, on its own timeline, eventually drain any backlog in
+ * full. The preview leg is purely additive: idempotent (`DecisionDb.record()`'s own
+ * `UNIQUE(persona_id, at)`), so re-sending an already-known row every poll is a no-op on receipt,
+ * and cheap (a few hundred bytes × a small batch, over the private internal bridge). Its ONLY job
+ * is to guarantee recent activity surfaces within one poll interval of happening, regardless of how
+ * deep a historical backlog the ascending leg still has to work through — trading a temporary,
+ * self-healing gap in the MIDDLE of the app's history (it closes the moment the ascending leg
+ * catches up) for immediate visibility at the front, which is what the dashboard is actually for.
  */
 export interface DecisionReplicationClient {
   replicate(cursor: Readonly<Record<string, number>>): Promise<void>;
 }
+
+/** Small on purpose: this only needs to comfortably exceed how many rows accumulate between two
+ *  polls (one per persona per ~15s cycle, polled every 30s — so ~2 in the steady state) with wide
+ *  margin for a burst. It is NOT a backlog-draining budget; `MAX_DECISION_BATCH` still owns that
+ *  job on the ascending leg. */
+const LIVE_PREVIEW_BATCH = 20;
 
 const NOOP_CLIENT: DecisionReplicationClient = {
   replicate: async () => {
@@ -83,6 +110,11 @@ export function resolveDecisionReplication(
         const after = cursor[personaId] ?? 0;
         const rows = decisionDb.listSince(personaId, after, MAX_DECISION_BATCH);
         if (rows.length > 0) await sendOne(personaId, rows);
+
+        // The preview leg — see this module's own doc for why it exists and why it's safe to run
+        // unconditionally alongside the ascending leg above.
+        const preview = decisionDb.listByPersona(personaId, { limit: LIVE_PREVIEW_BATCH });
+        if (preview.length > 0) await sendOne(personaId, preview);
       }
     },
   };
