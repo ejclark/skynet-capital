@@ -371,6 +371,60 @@ describe("POST /decisions", () => {
       },
     );
   });
+
+  it("accepts a realistic full-size batch — found live in prod rejected 413 against the tiny /insights cap (2026-09-23)", async () => {
+    // A MAX_DECISION_BATCH-shaped batch, each record carrying a real MarketContext (the field
+    // every batch actually sent in prod carries) across enough symbols to comfortably exceed the
+    // 16 KB cap this route used to share with /insights, while staying well under the new,
+    // decisions-specific one.
+    const quotesFor = (i: number) =>
+      Object.fromEntries(
+        ["AMZN", "MRVL", "TSLA", "GOOGL", "META", "NVDA", "AAPL", "MSFT"].map((symbol) => [
+          symbol,
+          { symbol, bid: 100 + i, ask: 100.5 + i, last: 100.2 + i, asOf: "2026-09-23T00:00:00Z" },
+        ]),
+      );
+    const records = Array.from({ length: 100 }, (_, i) => ({
+      at: i + 1,
+      personaId: "sauron",
+      mode: "observe",
+      rawIntents: [],
+      guardedIntents: [],
+      outcomes: [],
+      context: { asOf: "2026-09-23T00:00:00Z", quotes: quotesFor(i) },
+    }));
+    const bigBatch = { kind: "decision.v1", personaId: "sauron", records };
+    expect(JSON.stringify(bigBatch).length).toBeGreaterThan(16 * 1024); // proves this would have 413'd before the fix
+
+    let receivedCount = 0;
+    await withListener(
+      {
+        record: capturingRecorder().record,
+        decisions: { recordBatch: (batch) => (receivedCount = batch.records.length) },
+      },
+      async (base) => {
+        const res = await postDecisions(base, bigBatch);
+        expect(res.status).toBe(200);
+        expect(receivedCount).toBe(100);
+      },
+    );
+  });
+
+  it("still 413s a genuinely oversized decisions body — the cap is raised, not removed", async () => {
+    await withListener(
+      { record: capturingRecorder().record, decisions: { recordBatch: () => undefined } },
+      async (base) => {
+        const huge = {
+          kind: "decision.v1",
+          personaId: "sauron",
+          records: [
+            { ...decision, context: { asOf: "x", quotes: { blob: "x".repeat(5 * 1024 * 1024) } } },
+          ],
+        };
+        expect((await postDecisions(base, huge)).status).toBe(413);
+      },
+    );
+  });
 });
 
 describe("GET /bot-credentials", () => {
