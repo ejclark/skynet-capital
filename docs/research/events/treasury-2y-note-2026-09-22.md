@@ -318,6 +318,7 @@ a genuine limit for tomorrow's close-out to pick up. Nothing here is directional
 | 2026-09-17 | D-5 | **Deterministic screen (no Claude session).** Readings — VIX 15.9 (-1.6pt since last), band unchanged (medium:0+), 50 adjacent event(s) tracked, new in corridor since last pulse: `bea-international-transactions-q2-2026-09-24`, `bowman-stress-testing-2026-09-18`, `costco-q4-fy2026-2026-09-24`, `dmo-pilot-switch-auction-test-2026-09-24`, `eia-weekly-petroleum-status-2026-09-23`, `intl-transactions-q2-2026-09-24` +8 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-19 |
 | 2026-09-19 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-1.1pt since last), band unchanged (medium:0+), 51 adjacent event(s) tracked, new in corridor since last pulse: `apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-21 |
 | 2026-09-21 | D-1 | Pulse check (full session, dispatched by `event-scan.mjs`, not a screen). Band unchanged (**medium:0+**). **The single largest pending item resolved WITH the hike-modal base case.** The 2026-09-16 FOMC hiked 25bp (target range 3.50–3.75% → 3.75–4.00%), exactly the ~87–91% priced probability this doc carried at D-7, and delivered a hawkish SEP on top (2026 median dot **4.1%** vs the ~3.9% this ledger tracked — the [FOMC sibling's own close-out](fomc-2026-09-16.md) scores `FT-fomc-2026-09-16-4` **KILLED** on that exact gap). Equities sold off on the day (S&P −0.45%, Dow −1.21%, press-aggregated, cited for context only) on the hawkish tone stacked atop an already-priced hike. **Rates — a fresh 2026 high, repricing continued through the decision.** Treasury's own daily par curve (fetched direct today), 09-14→09-18: **2Y 4.65→4.76 (+11bp)** — a new 2026 high, range now **3.38–4.76** — 3Y 4.73→4.83 (+10), 5Y 4.80→4.86 (+6), 10Y 4.97→5.01 (+4); **2s10s 32→25bp**, flattening resumed. Path was not monotone: 2Y spiked to 4.74 on the FOMC day itself, pulled back to 4.67 the next session, then rose to 4.76 — a hawkish-hold-the-line pattern, not one clean jump. No 09-19/09-20 (weekend) or 09-21 print posted yet at fetch time. **Event tape — the size tell held for a second consecutive month.** The 09-17 announcement (Fiscal Data `auctions_query`, fetched direct) confirms 2Y at **$69B**, CUSIP **91282CRP8**, exactly the `sb0590` refunding-table row this doc has carried since D-7 — no size-change kill switch fired. Auction results (yield, cover, allocation shares) are still null; both registered forward tests (`FT-47` indirect ≥57.2%, `FT-treasury-2y-note-2026-09-22-1` dealer ≤12.1%) score at tomorrow's close-out, not this pass. **The named D-7 gap resolved, and it complicates rather than confirms the six-tenor pattern.** The 20-Year reopening D-7 expected on 09-17 actually auctioned **09-15** (Fiscal Data, CUSIP 912810UX4, 19Y11M): stop **5.420%**, cover **2.57**, **dealer 16.86%** / indirect 52.47% / direct 30.68% (comp accepted $12.915B) — well above the ~2–11% dealer shares the other six tenors printed below-norm on. This is the 7th tenor read on the "underwriters absorbing nothing" thesis and does **not** extend the pattern; no 20Y-specific prior mean was computed this pass (budget), so it is logged as a fact, not yet scored against its own norm. **Volatility:** VIX **14.81** (09-18 close, Yahoo `^VIX`), unchanged from the D-3 probe-ref reading — no regime move. **Peers:** `symbols: []`, nothing to check. **Geopolitical:** not independently re-swept this pass (budget; no new escalation surfaced incidentally). **Adjacency —** `event-scan.mjs --on-date=2026-09-22` confirms no duplicate: 6 entries share this date (`jpx-market-closure`, `kb-home-q3-fy2026`, `missouri-map-tro-expiry`, `uk-public-sector-finances`, `unga-81-general-debate`, this event), none a re-slug. Corridor **51→52** tracked ids (±5 days); the only addition is `house-vote-ratepayer-protection-act-2026-09-17` (estimate, low, already closed out unscored elsewhere). No new confirmed high/critical adjacent — `adjacentStrongIds` stays `[opex-2026-09-18]`; `trump-xi-summit-2026-09-24` remains `estimate`/high and does not qualify. **No new dated adjacency discovered — nothing proposed this pass.** | **No change in direction — watch-only stands, no trade, no symbols.** The FOMC kill switch is retired (resolved WITH the base case, not against it); the size kill switch did not fire. The absorbed-not-stressed thesis carries into tomorrow's close-out with one open complication (the 20Y's 16.86% dealer print) rather than a clean seven-for-seven. Amendment written into the Stance section with this row as its receipt. | 2026-09-23 (close-out due D+1, `event-passed-unscored`; both registered forward tests score against tomorrow's results) |
+| 2026-09-23 | D+1 | **Close-out — the auction printed and is scored in full below.** Instrument cache busted per protocol (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); `symbols: []`, so neither symbol-keyed instrument applies and the scoring source is Treasury's own record, re-fetched this session, never memory. **Result (primary, two independent Treasury endpoints agreeing field-for-field):** `auctions_query` and the results release `R_20260922_2.pdf` (text layer decompressed direct) — CUSIP **91282CRP8**, Series BH-2028, coupon 4-3/4%, offering **$69,000,071,900** (the predicted $69B, exactly), **high yield 4.787%**, median **4.738%**, low **4.660%**, price **99.930225**, allotted-at-high **33.42%**; competitive tendered **$179,949,726,000** / accepted **$67,685,935,200**, subtotal (competitive+noncompetitive+FIMA) tendered **$181,263,862,700** / accepted **$69,000,071,900**, and the PDF's own footnote 4 states the bid-to-cover verbatim: **$181,263,862,700/$69,000,071,900 = 2.63** — inside the 2.44–2.75 band leg 5 measures. Bidder shares computed here from raw accepted dollars over competitive accepted: **indirect 57.79%** ($39,116,326,000) · **direct 29.02%** ($19,641,219,200) · **dealer 13.19%** ($8,928,390,000), summing to 100.0%. **`FT-47` PASSES** — indirect **57.79% ≥ 57.2%**, scored in full in [`forward-tests/legacy.md`](../forward-tests/legacy.md). **`FT-treasury-2y-note-2026-09-22-1` FAILS** — dealer **13.19% > 12.1%**, scored in full in [`forward-tests/treasury-2y-note-2026-09-22.md`](../forward-tests/treasury-2y-note-2026-09-22.md); neither test's void condition arose (size held $69B, FOMC hiked exactly 25bp). **The two tests disagree, and that disagreement is this close-out's finding, not a contradiction to resolve:** direct bidders absorbed **29.02%**, well above the ~23% norm this doc has carried since initial research, while dealers took slightly more than their own 12.1% norm too — domestic real money, not underwriters, is what actually grew, and indirect alone (FT-47's line) does not see it. **Reconciled against the six/seven-tenor absorption pattern:** dealer takedown ran below norm at six straight tenors through D-7 (52W, 2Y-Aug, 3Y, 5Y, 10Y, 30Y) before the 20Y's 16.86% print broke it at D-1; this auction is the **second consecutive** tenor to land above its own norm (13.19% vs 12.1%), though by a materially smaller margin than the 20Y's. **Rates — the tape did not read this as stress.** Treasury's daily par curve (fetched direct today): 2Y **4.76 (09-18/09-21) → 4.71 (09-22)**, easing 5bp on the auction day itself rather than selling off further; 2s10s held **25bp** (10Y 4.96). **Volatility:** VIX **14.21** (09-22 close, Cboe/Yahoo), down from 14.81/14.87 the prior two sessions — no regime reaction. **Scoring the four horizon calls.** **Today (D-1) "Stand aside" — CALL CORRECT**, nothing to act on before the print, exactly as stated. **This week "Watch the print, no position" and This month "a real read, not background" — THEIR SHARED FALSIFIER FIRED**: both named "dealer takedown above 12.1% *or* indirect below 57.2%" as the observation that withdraws the absorbed-not-stressed reading, and dealer cleared that bar. Recorded as fired, not explained away — no position was licensed or taken either way, so nothing tradeable was lost, but the reading the calls were built on is the one FT-1's kill text withdraws. **This quarter "Watch" — CALL SURVIVES ON ITS OWN NARROWER TERMS**: its falsifier required indirect **below** 57.2% *with* dealers above norm, a compound condition; indirect passed (57.79%), so this specific falsifier did not fire even though the dealer leg alone did — the letter of each call is scored as written, not harmonized after the fact. **No new forward test registered** — this event is closed and its document goes quiet, so a prediction banked in this fragment would never be scored. **Honest limits.** No when-issued level was found this session (a targeted web search returned no dated pre-auction WI for this CUSIP), so no tail/stop-through figure is reported — median (**4.738%**) and low (**4.660%**) are used as the reference points instead, both primary. The 2026 dealer-share series (n=13 now) carries one severe outlier (24.1%, March) and no computed standard deviation was applied to the 12.1% threshold at registration, so today's fail is scored on the letter of a point threshold, not a fenced range — unlike FT-20's band, there is no ambiguity about which side of the line 13.19% falls on. `## Outcome` written below. | Both forward tests scored (FT-47 pass, FT-...-1 fail); the absorbed-not-stressed reading is withdrawn on the composition leg as its own kill text specified, while the tenor-selective foreign-demand read (FT-47) survives — the event closes on a split verdict, not a clean one either way, and no position was ever taken | — (closed; scanner goes quiet on this event) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
@@ -325,5 +326,123 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
-**Last assessed:** 2026-09-21
-<!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eurostat-hicp-final-2026-09-17","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
+## Outcome
+
+**Close-out (2026-09-23, D+1 — inside the `closeOutWithinDays: 6` deadline).** Rates mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, unchanged since initial
+research); the cache was busted anyway per the lane's standing instruction, though nothing here
+reads it. "Re-run instrument data" means re-fetching the executed auction record itself, never
+recalling a prior row's document read: `api.fiscaldata.treasury.gov`'s `auctions_query` for CUSIP
+**91282CRP8** and Treasury's own results release `R_20260922_2.pdf` (text layer decompressed and
+read direct), which agree field-for-field; the daily par yield curve CSV (`home.treasury.gov`) for
+09-14 through 09-22; and Cboe's own VIX daily series (Yahoo `^VIX`). Every fetch resolved this
+session; nothing below is from memory.
+
+**What printed.**
+
+| Measure | 2026-09-22 | Prior-12 mean (this doc's own series) | Result |
+|---|---|---|---|
+| Offering | **$69,000,071,900** | $69B (12 straight) | 13th straight — no size-change kill fired |
+| **High yield** | **4.787%** | — | the highest 2Y stop of the tracked series |
+| **Bid-to-cover** | **2.63** | 2.61 (range 2.44–2.75) | inside FT-20-style band — inelasticity leg 5 not disturbed |
+| Competitive tendered | **$179,949,726,000** | — | — |
+| **Indirect** | **57.79%** | 57.2% (prior-11) | **at/above the mean — FT-47 PASSES** |
+| **Direct** | **29.02%** | ~23% | well above norm — the marginal absorber this print |
+| **Dealer** | **13.19%** | 12.1% (prior-11) | **above the threshold — FT-...-1 FAILS**, by 1.09pp |
+| Allotted at high | 33.42% | — | ordinary |
+
+Bidder shares are computed here from raw accepted dollars over competitive accepted
+($67,685,935,200) and sum to 100.0%, matching Treasury's own results release exactly. No
+when-issued level was found this session — a targeted search returned only a same-day cash-market
+2Y CMT read (Trading Economics, secondary, not a WI), so no tail/stop-through figure is reported;
+the median (**4.738%**) and low (**4.660%**) stand in as primary reference points instead.
+
+**Scoring the two forward tests — they disagree, and the disagreement is the finding.**
+
+**`FT-47` — PASSES**, scored in full in
+[`forward-tests/legacy.md`](../forward-tests/legacy.md). Indirect **57.79%** clears the 57.2%
+threshold by 0.6pp: front-end foreign demand survived the first nominal-coupon auction after a
+hike-modal FOMC, exactly the tenor-selective read this test exists to check.
+
+**`FT-treasury-2y-note-2026-09-22-1` — FAILS**, scored in full in
+[`forward-tests/treasury-2y-note-2026-09-22.md`](../forward-tests/treasury-2y-note-2026-09-22.md).
+Dealer takedown **13.19%** clears the 12.1% threshold by 1.09pp — the informative side of a test
+registered to be "weak on the pass side." Neither test's void condition arose: size held at exactly
+$69B, and the 2026-09-16 FOMC hiked exactly 25bp.
+
+**The mechanism: domestic direct bidders, not foreign indirects or underwriters, are what actually
+grew.** Direct participation at **29.02%** is well above the ~23% norm this doc has carried since
+initial research, while indirect (57.79%) and dealer (13.19%) both landed close to or slightly
+above their own norms. That is precisely the dissociation `FT-treasury-2y-note-2026-09-22-1`'s own
+registration named as a live risk — "indirect share alone is a partial proxy" — playing out on the
+one auction both tests were written to score. Indirect alone reads as an unremarkable pass; the full
+composition shows the marginal buyer changed, not that demand weakened.
+
+**Reconciled against the six-tenor absorption pattern this doc built pulse by pulse.** Dealer
+takedown ran below its own norm at six straight tenors through D-7 (52-week bill, 2Y-Aug, 3Y, 5Y,
+10Y, 30Y); the 20-Year reopening broke that pattern at D-1 with dealer **16.86%**, well outside the
+~2–11% band the other six ran under. This auction is the **second consecutive** tenor to land above
+its own dealer norm — but by a materially smaller margin (13.19% vs 12.1%, +1.09pp) than the 20Y's
+break (16.86% vs a ~2–11% band). **Stated plainly, so the magnitude is on the record:** the
+twelve-auction 2Y dealer series this doc built at initial research runs 7.3%–24.1% (mean 12.0%, one
+24.1% outlier in March) — 13.19% sits inside ordinary variance for this noisy metric even as it
+clears the specific point threshold `FT-...-1` registered. A real fail on the letter, not a
+dramatic one against the distribution — unlike FT-20's range-fence problem elsewhere on this
+calendar, there is no ambiguity about which side of the 12.1% line 13.19% falls on.
+
+**Rates — the tape did not read this as stress.** Treasury's par curve, fetched direct today: 2Y
+**4.76% (09-18/09-21) → 4.71% (09-22)** — easing 5bp on the auction day itself rather than selling
+off further — with 2s10s holding **25bp** (10Y 4.96%). VIX **14.21** (09-22 close), down from
+14.81/14.87 the prior two sessions — no regime reaction. A dealer print above its own norm, on a
+noisy metric, inside a market that richened rather than sold off, reads as ordinary variance rather
+than a funding-stress signal — the honest middle ground between "clean pass" and "the thesis broke."
+
+**Scoring the four horizon calls, as written, not harmonized after the fact.**
+
+- **Today (D-1) "Stand aside" — CALL CORRECT.** Nothing to act on before the print, exactly as
+  stated; its own falsifier ("nothing at D-1 licenses action on any horizon") did not need to fire
+  because nothing licensed action either way.
+- **This week "Watch the print, no position" and This month "a real read, not background" — THEIR
+  SHARED FALSIFIER FIRED.** Both named "dealer takedown above 12.1% *or* indirect below 57.2%" as
+  the observation that withdraws the absorbed-not-stressed reading; dealer cleared that bar.
+  Recorded as fired, not explained away — no position was ever licensed or taken on either call, so
+  nothing tradeable was lost, but the reading both calls rested on is the one `FT-...-1`'s kill text
+  withdraws.
+- **This quarter "Watch" — CALL SURVIVES ON ITS OWN NARROWER TERMS.** Its falsifier required
+  indirect **below** 57.2% *with* dealers above norm — a compound condition. Indirect passed
+  (57.79%), so this specific falsifier did not fire even though the dealer leg alone did. The
+  distinction is deliberate, not a rescue: This quarter's call was written to survive exactly this
+  shape of split print, and it does.
+
+**The conviction legs, out-of-sample.** **Leg 4 (front-end demand is strong and tenor-selective)**
+survives on the indirect line (57.79% ≥ the 57.2% norm this leg established) and is qualified, not
+refuted, on the composition line the D-13/D-7 amendments added — the tenor-selectivity claim was
+always about indirect share specifically, and that is exactly what held. **Leg 5 (bid-to-cover
+inelasticity)** is confirmed again: 2.63 sits inside the 2.44–2.75 band across a series that has now
+run from 3.455% to 4.787% in clearing yield. The D-7 amendment's **absorption leg** — "dealer
+takedown below norm everywhere" — is the one leg this print does not extend; it stood at six-for-six
+through D-7 and is now six-for-eight across the two tenors that priced after it (20Y, this one).
+
+**What the next 2Y should carry, and what it should not.** No new forward test is registered here:
+this event is closed and its document goes quiet, so a prediction banked in this fragment would
+never be scored. The successor,
+[`treasury-2y-note-2026-10-26`](treasury-2y-note-2026-10-26.md), inherits the tenor-selective
+indirect read as supported and should treat the six-tenor absorption claim as **contested, not
+confirmed** — two of the last two dealer-takedown prints on this calendar's curve landed above norm,
+one sharply (20Y) and one by a single point (this one), and a third print either direction settles
+whether that is a trend or two independent noisy draws.
+
+**Honest limits.** No when-issued level was found this session, so no tail/stop-through
+characterization is offered — a genuine gap against the sibling docs that had one, recorded rather
+than patched with a secondary figure. The 2026 dealer-share series remains n=13 with one severe
+outlier (24.1%, March) and this document never computed a standard deviation for the 12.1%
+threshold at registration, so "1.09pp above the mean" is the honest description of the fail's
+magnitude, not a statement about statistical significance. Geopolitical and peer channels were not
+independently re-swept this close-out session (budget; `symbols: []` gives peers no direct read on
+this event, and nothing incidental surfaced). The pre-registered Tokyo-blackout null (measured at
+D-7 across 1,108 auctions) is not re-litigated here because neither forward test's kill condition
+depended on it, and the auction's own indirect print (57.79%) needed no holiday excuse to clear its
+threshold.
+
+**Last assessed:** 2026-09-23 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eurostat-hicp-final-2026-09-17","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
