@@ -25,6 +25,21 @@ const DECISIONS_PATH = "/decisions";
  */
 const MAX_BODY_BYTES = 16 * 1024;
 
+/**
+ * `/decisions` is a DIFFERENT payload class from `/insights` and needs its own cap — a
+ * `DecisionRecord` carries the full `MarketContext` it reasoned over (quotes, momentum, sentiment
+ * across every symbol the persona watches) plus its raw/guarded intents and outcomes, easily
+ * multiple KB each, and a batch carries up to `MAX_DECISION_BATCH` (100) of them. Found live in
+ * prod (2026-09-23): every non-trivial batch — the ascending replication leg's own catch-up step,
+ * and the newest-rows preview leg added in #3581 — was silently rejected 413 against the shared
+ * 16 KB cap, which is sized for a single few-hundred-byte insight, not a hundred-record decision
+ * batch. This is almost certainly the real reason replication ever looked "stuck": a batch this
+ * size has likely never once fit under 16 KB. 4 MB is generous headroom for a realistic batch
+ * while still bounding a hostile/broken caller, the same reasoning `MAX_BODY_BYTES` above states
+ * for its own (much smaller) payload class.
+ */
+const MAX_DECISIONS_BODY_BYTES = 4 * 1024 * 1024;
+
 export interface InsightsListenerConfig {
   readonly record: (entry: InsightRecord) => Promise<void>;
   /**
@@ -267,7 +282,7 @@ async function handleDecisionsPost(
     return;
   }
 
-  const bodyResult = await readBoundedBody(req);
+  const bodyResult = await readBoundedBody(req, MAX_DECISIONS_BODY_BYTES);
   if (!bodyResult.ok) {
     try {
       respond(res, bodyResult.reason === "too-large" ? 413 : 400, { error: bodyResult.reason });
@@ -351,16 +366,20 @@ type BodyResult =
   | { readonly ok: false; readonly reason: "too-large" | "stream error" };
 
 /**
- * Reads the request body, never buffering past `MAX_BODY_BYTES`. Once the cap is crossed it stops
+ * Reads the request body, never buffering past `maxBytes`. Once the cap is crossed it stops
  * retaining further chunks (so a hostile/oversized body can't grow this process's memory) but
  * deliberately does NOT tear down the socket — this listener only reaches here after the
  * shared-secret check above passes, so the caller is always the `bots` process, never an
  * unauthenticated stranger; destroying the connection mid-body-write (as an earlier version of
  * this function did) raced the client's own request write and surfaced as a hard connection
  * reset instead of a clean 413. Letting the stream finish and *then* responding is both simpler
- * and more correct.
+ * and more correct. `maxBytes` defaults to `MAX_BODY_BYTES` — the small-insight cap; a caller
+ * with a different payload class (e.g. `/decisions`) passes its own.
  */
-function readBoundedBody(req: IncomingMessage): Promise<BodyResult> {
+function readBoundedBody(
+  req: IncomingMessage,
+  maxBytes: number = MAX_BODY_BYTES,
+): Promise<BodyResult> {
   return new Promise((resolve) => {
     let bytes = 0;
     let oversized = false;
@@ -373,7 +392,7 @@ function readBoundedBody(req: IncomingMessage): Promise<BodyResult> {
     };
     req.on("data", (chunk: Buffer) => {
       bytes += chunk.length;
-      if (bytes > MAX_BODY_BYTES) {
+      if (bytes > maxBytes) {
         oversized = true;
         chunks.length = 0; // stop holding retained bytes once we know we'll reject the body
         return;
