@@ -32,6 +32,15 @@ describe("resolveDecisionReplication", () => {
   });
 
   describe("against a real listener", () => {
+    // `dir`/`botsDb`/`appDb` are reassigned fresh by `beforeEach` for every test. A closure that
+    // reads them BY NAME (rather than capturing the current value) is only safe if it's guaranteed
+    // to run before the NEXT `beforeEach` reassigns them — true for a fast test, but not for one
+    // whose `client.replicate()` call is still in flight when the test's own timeout fires: JS has
+    // no promise cancellation, so that stale call keeps running in the background and its
+    // `recordBatch` closure would silently write into the NEXT test's `appDb` instead of its own
+    // (found live in CI, 2026-09-23 — a heavier test elsewhere in this file exposed exactly this
+    // race). Each test below captures its own `botsDb`/`appDb` into a local `const` up front and
+    // uses only that binding, so a straggler can never cross into another test's database.
     let dir: string;
     let botsDb: DecisionDb;
     let appDb: DecisionDb;
@@ -48,26 +57,28 @@ describe("resolveDecisionReplication", () => {
     });
 
     it("sends every local row above the cursor, and the app stores it", async () => {
-      botsDb.record(decision({ at: 1 }));
-      botsDb.record(decision({ at: 2 }));
-      botsDb.record(decision({ at: 3, personaId: "beta-scout" }));
+      const thisBotsDb = botsDb;
+      const thisAppDb = appDb;
+      thisBotsDb.record(decision({ at: 1 }));
+      thisBotsDb.record(decision({ at: 2 }));
+      thisBotsDb.record(decision({ at: 3, personaId: "beta-scout" }));
 
       const server = createInsightsListener({
         record: () => Promise.resolve(),
-        decisions: { recordBatch: (batch) => appDb.recordBatch(batch.records) },
+        decisions: { recordBatch: (batch) => thisAppDb.recordBatch(batch.records) },
       });
       await new Promise<void>((resolve) => server.listen(0, resolve));
       const { port } = server.address() as AddressInfo;
       try {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
-          () => botsDb,
+          () => thisBotsDb,
         );
         await client.replicate({ sauron: 1 }); // ascending leg: only @2 is new above cursor 1
         // The preview leg (unconditional, cursor-independent) also lands @1 — both rows this
         // small a store fit inside LIVE_PREVIEW_BATCH, so it re-sends everything it has, harmlessly.
-        expect(appDb.listByPersona("sauron").map((r) => r.at)).toEqual([2, 1]);
-        expect(appDb.listByPersona("beta-scout").map((r) => r.at)).toEqual([3]);
+        expect(thisAppDb.listByPersona("sauron").map((r) => r.at)).toEqual([2, 1]);
+        expect(thisAppDb.listByPersona("beta-scout").map((r) => r.at)).toEqual([3]);
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
@@ -78,60 +89,65 @@ describe("resolveDecisionReplication", () => {
       // app hasn't seen (cursor far behind), plus fresh rows just produced. Before this fix, the
       // fresh rows would wait behind the ENTIRE backlog, one MAX_DECISION_BATCH-sized ascending
       // step per poll — here, in a single replicate() call, they must already be visible.
-      for (let at = 1; at <= 150; at++) botsDb.record(decision({ at }));
+      const thisBotsDb = botsDb;
+      const thisAppDb = appDb;
+      for (let at = 1; at <= 150; at++) thisBotsDb.record(decision({ at }));
 
       const server = createInsightsListener({
         record: () => Promise.resolve(),
-        decisions: { recordBatch: (batch) => appDb.recordBatch(batch.records) },
+        decisions: { recordBatch: (batch) => thisAppDb.recordBatch(batch.records) },
       });
       await new Promise<void>((resolve) => server.listen(0, resolve));
       const { port } = server.address() as AddressInfo;
       try {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
-          () => botsDb,
+          () => thisBotsDb,
         );
         await client.replicate({ sauron: 0 }); // one poll, cursor at the very start of a 150-row backlog
         // The preview leg: the newest row is visible after ONE poll, not ~2 (150 / MAX_DECISION_BATCH).
-        expect(appDb.listByPersona("sauron", { limit: 1 })[0]?.at).toBe(150);
+        expect(thisAppDb.listByPersona("sauron", { limit: 1 })[0]?.at).toBe(150);
         // The ascending leg, checked in isolation (beforeAt excludes the preview leg's own rows,
         // 131-150, so this can only be satisfied by the ascending leg's own MAX_DECISION_BATCH step).
-        expect(appDb.listByPersona("sauron", { beforeAt: 101, limit: 1 })[0]?.at).toBe(100);
+        expect(thisAppDb.listByPersona("sauron", { beforeAt: 101, limit: 1 })[0]?.at).toBe(100);
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
-    });
+    }, 15_000); // 150 synchronous writes + two real HTTP round trips — generous headroom under a slow/shared CI runner
 
     it("re-sending the same cursor never duplicates rows on the app side — idempotent resend", async () => {
-      botsDb.record(decision({ at: 1 }));
+      const thisBotsDb = botsDb;
+      const thisAppDb = appDb;
+      thisBotsDb.record(decision({ at: 1 }));
       const server = createInsightsListener({
         record: () => Promise.resolve(),
-        decisions: { recordBatch: (batch) => appDb.recordBatch(batch.records) },
+        decisions: { recordBatch: (batch) => thisAppDb.recordBatch(batch.records) },
       });
       await new Promise<void>((resolve) => server.listen(0, resolve));
       const { port } = server.address() as AddressInfo;
       try {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
-          () => botsDb,
+          () => thisBotsDb,
         );
         await client.replicate({}); // first send
         await client.replicate({}); // a lost-ack resend — same cursor the caller last knew
-        expect(appDb.listByPersona("sauron")).toHaveLength(1);
+        expect(thisAppDb.listByPersona("sauron")).toHaveLength(1);
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
     });
 
     it("never throws when the bridge rejects the batch (e.g. no decisions route configured)", async () => {
+      const thisBotsDb = botsDb;
       const server = createInsightsListener({ record: () => Promise.resolve() }); // no `decisions`
-      botsDb.record(decision({ at: 1 }));
+      thisBotsDb.record(decision({ at: 1 }));
       await new Promise<void>((resolve) => server.listen(0, resolve));
       const { port } = server.address() as AddressInfo;
       try {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
-          () => botsDb,
+          () => thisBotsDb,
         );
         await expect(client.replicate({})).resolves.toBeUndefined();
       } finally {
@@ -140,10 +156,11 @@ describe("resolveDecisionReplication", () => {
     });
 
     it("never throws when the bridge URL points at nothing listening", async () => {
-      botsDb.record(decision({ at: 1 }));
+      const thisBotsDb = botsDb;
+      thisBotsDb.record(decision({ at: 1 }));
       const client = resolveDecisionReplication(
         { SKYNET_INSIGHTS_BRIDGE_URL: "http://127.0.0.1:1" },
-        () => botsDb,
+        () => thisBotsDb,
       );
       await expect(client.replicate({})).resolves.toBeUndefined();
     });
