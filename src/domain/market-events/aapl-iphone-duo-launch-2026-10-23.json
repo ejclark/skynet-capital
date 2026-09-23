@@ -1,0 +1,11 @@
+{
+  "id": "aapl-iphone-duo-launch-2026-10-23",
+  "kind": "product-launch",
+  "title": "iPhone Duo goes on sale — Apple's first foldable, supply-capped, six days before the est. FQ4 print",
+  "date": "2026-10-23",
+  "status": "confirmed",
+  "source": "IR: apple.com/newsroom/2026/09/apple-unveils-iphone-duo/, re-fetched direct 2026-09-23 by this event's own initial research — the independent second look this lane's no-self-confirm limit requires (the id was discovered and filed `estimate` on 2026-09-10 by the aapl-iphone-18-launch-2026-09-09 close-out, a sibling lane, off the same page). States verbatim: \"Customers in more than 70 countries and regions... will be able to pre-order iPhone Duo beginning at 5 a.m. PT on Friday, October 16, with availability beginning Friday, October 23. iPhone Duo will be available in 28 other countries and regions beginning Friday, October 30.\" Pricing corroborated on the same page: \"starts at $1,999 (U.S.)... in 256GB, 512GB, 1TB, and 2TB storage capacities.\"",
+  "impact": "medium",
+  "symbols": ["AAPL"],
+  "notes": "Canonical file written 2026-09-23 from proposals/aapl-iphone-duo-launch-2026-10-23.from-aapl-iphone-18-launch-2026-09-09.json, read in full first per EVENT-RESEARCH.md's 'when your own event was proposed by others'. That proposal's departure from the aapl-iphone-18-launch ledger's four-time ruling that pre-order/on-sale dates are 'launch sub-milestones, not market events' is adopted here unchanged: this is a new product category's first availability (Apple's first foldable), five weeks detached from the 09-09 keynote with its own pre-order cycle (10-16) and two-wave country rollout (10-23 / 10-30), landing six days before the est. 2026-10-29 FQ4 print where the launch's P/L first prices into a guide. Impact stays `medium`, matching the proposing event's own tier. The 10-16 pre-order date is NOT filed as its own entry — same sub-milestone ruling, upheld again."
+}
