@@ -89,6 +89,21 @@ describe("serveSubscriptionsApi", () => {
     expect(body.canManage).toBe(true);
   });
 
+  it("GET index: an owner with no subscriptions yet can still subscribe — absent key is an empty list", async () => {
+    // The real store omits an account until its first subscribe; reading that absence as "not
+    // yours" hid the Subscribe form from every account that had never subscribed (#3623).
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      get("/api/playbook-store?id=acct-mine"),
+      res,
+      "/api/playbook-store",
+      configWith({ subscriptions: { ...(storeWith() as object), load: () => ({}) } }),
+      session,
+    );
+    const body = answered(out);
+    expect(body.canManage).toBe(true);
+  });
+
   it("GET index: a non-owner gets the bare catalog — no cross-account visibility", async () => {
     const { res, out } = fakeRes();
     await serveSubscriptionsApi(

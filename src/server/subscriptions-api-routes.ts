@@ -146,7 +146,10 @@ async function serveStoreIndex(
   if (!requireGet(req, res)) return;
   const id = new URL(req.url ?? "", "http://localhost").searchParams.get("id");
   const owns = Boolean(id) && config.auth && resolveOwnedIds(session, config).includes(id ?? "");
-  const subscriptions = owns && id ? config.subscriptions?.load()[id] : undefined;
+  // The store omits an account until its first subscribe, so an owned account with no entry yet is
+  // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
+  const subscriptions =
+    owns && id && config.subscriptions ? (config.subscriptions.load()[id] ?? []) : undefined;
   sendJson(
     res,
     200,

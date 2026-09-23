@@ -166,7 +166,7 @@ function RootShell(): ReactElement {
               Activity
             </Link>
             <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
-              Research
+              R&amp;D
             </Link>
           </nav>
           <div className="topbar-actions">

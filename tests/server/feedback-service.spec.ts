@@ -11,7 +11,7 @@ describe("feedback-service issue body", () => {
     kind: "bug" as const,
     title: "It broke",
     details: "the chart wobbled",
-    area: "Research",
+    area: "R&D",
     submitterEmail: "Member@Example.com",
   };
 
@@ -44,7 +44,7 @@ describe("feedback-service issue body", () => {
 
     expect(body.indexOf("the chart wobbled")).toBeLessThan(body.indexOf("| **Kind** |"));
     expect(body).toContain("| **Kind** | 🐞 Bug |");
-    expect(body).toContain("| **Where** | Research |");
+    expect(body).toContain("| **Where** | R&D |");
   });
 
   it("omits the where row when the member didn't pick one", () => {

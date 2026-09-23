@@ -395,7 +395,7 @@ export function useBoardView({
     body: (
       <>
         <header className="page-header">
-          <h1>Research</h1>
+          <h1>R&amp;D</h1>
           <p>
             The living board: pick a lens and a span on the horizon, a name, or type a filter —
             everything below follows. Documents open on their own pages.
