@@ -13,6 +13,7 @@ import { useBoardView } from "../shell/board-section";
 import { CollectionsSection } from "../shell/collections-section";
 import { PageFrame } from "../shell/frame";
 import { OutpostRail } from "../shell/outpost-rail";
+import { PlaybooksRail, PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
 import { PlaysSection } from "../shell/plays-section";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
@@ -39,10 +40,16 @@ import { ShelfRail } from "../shell/shelf-parts";
  * and helpers live in its own `shell/*.tsx` file (the arch fitness gate's cap forced the split).
  */
 
-type ResearchSection = "board" | "plays" | "collections";
+type ResearchSection = "board" | "playbooks" | "plays" | "collections";
 
+/*
+ * R&D (#3623, Eric 2026-09-23: "rename this to R & D") — "Playbooks" is the one home for house
+ * playbooks, moved here from each account's desk (`playbooks-section.tsx`). Plays and Collections
+ * stay until their parts are ported (#3623 slices 4–5), then retire.
+ */
 const SECTIONS: readonly PageSection<ResearchSection>[] = [
   { id: "board", label: "Board" },
+  { id: "playbooks", label: "Playbooks" },
   { id: "plays", label: "Plays" },
   { id: "collections", label: "Collections" },
 ];
@@ -68,6 +75,10 @@ function ResearchPage(): ReactElement {
   };
 
   const board = useBoardView({ active: section === "board", query, setFilter });
+
+  const playbooks = usePlaybooksSection(section === "playbooks", search.account);
+  const onSelectAccount = (id: string | undefined) =>
+    void navigate({ search: (prev) => ({ ...prev, account: id }), replace: true });
 
   const outpostFilter: OutpostFilter = {
     author: search.author,
@@ -122,6 +133,12 @@ function ResearchPage(): ReactElement {
   const sectionRail =
     section === "board" ? (
       board.rail
+    ) : section === "playbooks" ? (
+      <PlaybooksRail
+        accounts={playbooks.accounts}
+        currentId={search.account}
+        onSelect={onSelectAccount}
+      />
     ) : section === "plays" ? (
       outpost.data ? (
         <OutpostRail
@@ -155,6 +172,12 @@ function ResearchPage(): ReactElement {
     >
       {section === "board" ? (
         board.body
+      ) : section === "playbooks" ? (
+        <PlaybooksSection
+          store={playbooks.store}
+          accountId={search.account}
+          accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
+        />
       ) : section === "plays" ? (
         <PlaysSection outpost={outpost} filter={outpostFilter} onToggle={onToggleOutpost} />
       ) : (
@@ -184,6 +207,7 @@ export const Route = createFileRoute("/research")({
     ...(facet(search.trigger) ? { trigger: facet(search.trigger) } : {}),
     ...(facet(search.trait) ? { trait: facet(search.trait) } : {}),
     ...(facet(search.shelf) ? { shelf: facet(search.shelf) } : {}),
+    ...(facet(search.account) ? { account: facet(search.account) } : {}),
   }),
   component: ResearchPage,
 });

@@ -18,7 +18,7 @@ const SHELL_CHORDS: readonly (readonly [string, string, string, Record<string, s
   ["t", "/trade", "Trade ticket"],
   ["w", "/activity", "Activity"],
   ["c", "/research", "Collections", { section: "collections" }],
-  ["r", "/research", "Research"],
+  ["r", "/research", "R&D"],
 ];
 
 const CHORD_WINDOW_MS = 1000;

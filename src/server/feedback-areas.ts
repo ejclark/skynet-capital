@@ -22,7 +22,7 @@ export const FEEDBACK_AREAS = [
   "Standings",
   "Activity",
   "Trade",
-  "Research",
+  "R&D",
   "Collections",
   "Milestones",
   "The login",
@@ -44,7 +44,8 @@ const AREA_HINT: Record<FeedbackArea, string> = {
   Standings: "the home board of everyone's performance, /",
   Activity: "the shared activity feed of who traded what, /activity",
   Trade: "the trade ticket and order flow, /trade",
-  Research: "the research lab, a symbol page, or the event calendar, /research",
+  "R&D":
+    "research and playbooks — the board, a symbol page, the event calendar, subscribing a playbook, /research",
   Collections: "the browsable bot and play catalogs, /collections",
   Milestones: "the trading-journey ladder and its rewards, /learn",
   "The login": "the sign-in page and the cinematic before it, /login",

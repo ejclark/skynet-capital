@@ -86,7 +86,7 @@ function renderDrawer(nav: NavContext): string {
   // Trade is global chrome — one click from every screen (desk-v2 handoff). The ticket
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
-  links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
+  links.push(drawerLink("/research", "R&D", "research", nav.active === "research"));
   // Collections: the browse surface for the bot and play catalogs — narrative shelves rather than
   // an alphabetical roster. Sits beside Research: both are "go and read" views.
   links.push(

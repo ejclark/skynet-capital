@@ -1,6 +1,9 @@
-// Visual harness for the Playbook Store's delegation fog (#1707) from the REAL built shell over
-// stub APIs: the same card, before and after rung 102 is earned. Locked draws the door — the
-// Subscribe button visible and disabled under the sentence naming the rung; earned draws the form.
+// Visual harness for R&D → Playbooks (#3623; the Playbook Store, #885) from the REAL built shell over
+// stub APIs. Every frame enters through the retired desk URL `/app/u/<id>/playbooks`, so the shots
+// also prove the redirect lands on R&D with the account pre-selected. The delegation fog (#1707):
+// the same card before and after rung 102 is earned — locked draws the door (Subscribe visible and
+// disabled under the sentence naming the rung); earned draws the form. Phone frame first
+// (docs/PICTURES.md → mobile-first), then desktop.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
 import { openShell } from "./shell.mjs";
@@ -20,6 +23,18 @@ const cards = [
     exitCutLosses:
       "Flat from D-5 through the print — the final week is NVDA's dead zone regardless of price.",
     hold: "No confirmed date in range, or already inside D-5: flat and waiting.",
+    metrics: [],
+  },
+  {
+    id: "HC-SAURON",
+    symbol: "AAPL",
+    description:
+      "Research-volume mode across a ten-name tech universe — small, frequent tranches probe every sentiment extreme and every momentum run.",
+    enter: "Small tranches on panic (mean-reversion) or an ordinary momentum run.",
+    exitTakeProfit: "Takes half off into exhausted euphoria, letting the rest ride.",
+    exitCutLosses:
+      "A universal momentum stop closes the WHOLE position the moment the thesis breaks.",
+    hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
     metrics: [],
   },
 ];
@@ -65,16 +80,20 @@ const settings = {
 
 // One shell per state rather than a reload: the browser serves a fulfilled route from its own
 // memory cache on reload, so a second state has to be a second page load with its own stubs.
-async function frame(tag, locked, expect) {
+async function frame(tag, locked, expect, viewport) {
   const { page, origin, shoot, close } = await openShell({
     name: "playbook-store",
+    ...(viewport ? { viewport } : {}),
     stubs: { "/api/playbook-store": store(locked), "/api/desk/*": desk, "/api/settings": settings },
   });
   await page.goto(`${origin}/app/u/human-joe/playbooks`);
-  await page.getByText(expect).waitFor();
+  await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=human-joe/);
+  await page.getByText(expect).first().waitFor();
   await shoot(tag);
   await close();
 }
 
+const PHONE = { width: 390, height: 844 };
+await frame("phone-delegation-earned", false, "Capital to delegate", PHONE);
 await frame("delegation-locked", true, "Delegating capital opens after");
 await frame("delegation-earned", false, "Capital to delegate");
