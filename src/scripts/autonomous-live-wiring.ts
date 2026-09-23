@@ -24,6 +24,7 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
+import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
@@ -32,9 +33,9 @@ import type { RiskConfig } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
+import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
-import type { enabledPlaybooks } from "../playbooks/registry.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
@@ -62,6 +63,9 @@ export async function bootMissionControl(
   // threaded straight through to resolveBotControls, see that file's own doc for why this is a
   // separate hook from onFetched rather than folded into ControlsState.
   onDecisionsCursor?: (cursor: Readonly<Record<string, number>>) => void,
+  // Fires on every poll carrying a well-formed Playbook Store snapshot (subscription-sync.ts's
+  // hook) — threaded straight through to resolveBotControls, same shape as the cursor above.
+  onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
@@ -76,6 +80,7 @@ export async function bootMissionControl(
       onFetched?.(state);
     },
     onDecisionsCursor,
+    onSubscriptions,
   );
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);
@@ -244,25 +249,66 @@ export function buildBotRosters(
   env: NodeJS.ProcessEnv,
 ): BotRoster[] {
   const subscriptionsByAccount = createSubscriptionStore(env).load();
-  return bots.map((bot) => {
-    const subscriptions = subscriptionsByAccount[bot.persona.id] ?? [];
-    const acctRoster = subscriptionRoster(subscriptions);
-    for (const bad of acctRoster.rejected) {
-      console.error(
-        `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
-      );
-    }
-    if (acctRoster.enabled.length > 0) {
-      console.log(
-        `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
-      );
-    }
-    return {
-      bot,
-      subscriptions,
-      enabled: mergeRosters(playbookRoster.enabled, acctRoster.enabled),
-    };
-  });
+  return bots.map((bot) =>
+    resolveBotRoster(bot, playbookRoster.enabled, subscriptionsByAccount[bot.persona.id] ?? []),
+  );
+}
+
+/**
+ * One bot's roster for a given subscription set. THE single definition, called both at boot (via
+ * `buildBotRosters` above, off the local file) and on every live subscription swap (issue #3595,
+ * off the snapshot the `/controls` poll carries) — a second copy is exactly how a swapped roster
+ * would drift from what a restart would have produced.
+ */
+export function resolveBotRoster(
+  bot: Bot,
+  houseEnabled: readonly EnabledPlaybook[],
+  subscriptions: readonly PlaybookSubscription[],
+): BotRoster {
+  const acctRoster = subscriptionRoster(subscriptions);
+  for (const bad of acctRoster.rejected) {
+    console.error(
+      `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
+    );
+  }
+  if (acctRoster.enabled.length > 0) {
+    console.log(
+      `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
+    );
+  }
+  return { bot, subscriptions, enabled: mergeRosters(houseEnabled, acctRoster.enabled) };
+}
+
+/** The two subscription-sensitive halves of a bot's trader config. */
+export interface TradingRoster {
+  /** The base persona with this roster's playbooks composed on (`withPlaybooks`). */
+  readonly persona: Persona;
+  /** The risk config the guards read — capital allocations and symbol filters ride here. */
+  readonly risk: RiskConfig;
+}
+
+/**
+ * What one bot trades under, for a resolved roster. Like `resolveBotRoster`, ONE definition shared
+ * by boot (`buildLiveBot` below) and by the live swap (`AutonomousTrader.swapRoster`), so a
+ * subscription change applied without a restart produces byte-for-byte what a restart would.
+ */
+export function tradingRoster(
+  roster: BotRoster,
+  baseRisk: RiskConfig,
+  realizedPlForPlaybook?: (playbookId: string) => number,
+): TradingRoster {
+  return {
+    // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
+    // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS or a
+    // Playbook Store subscription names them.
+    persona: withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS),
+    risk: {
+      ...baseRisk,
+      subscriptions: roster.subscriptions,
+      playbookSymbols: new Map(roster.enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
+      ...(realizedPlForPlaybook ? { realizedPlForPlaybook } : {}),
+    },
+  };
 }
 
 /** READINESS GATE + wiring for one live bot: a not-ready persona is pinned to `observe` (watched,
@@ -273,8 +319,9 @@ export function buildLiveBot(
   bot: Bot,
   opts: {
     mode: TraderMode;
-    playbookRoster: ReturnType<typeof enabledPlaybooks>;
-    risk: RiskConfig;
+    /** What this bot trades under at boot — `tradingRoster` above. The live subscription swap
+     *  (issue #3595) replaces exactly this pair via `AutonomousTrader.swapRoster`. */
+    trading: TradingRoster;
     blockedReason: () => string | null;
     safety: SafetyController;
     onDecision: (r: DecisionRecord) => void;
@@ -330,12 +377,9 @@ export function buildLiveBot(
     personaName: bot.persona.name,
     broker,
     trader: new AutonomousTrader({
-      // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
-      // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS names
-      // them — the enablement flip rides the approval-gated autonomy-ops path.
-      persona: withPlaybooks(bot.persona, opts.playbookRoster.enabled, UPCOMING_PRINTS),
+      persona: opts.trading.persona,
       broker,
-      risk: opts.risk,
+      risk: opts.trading.risk,
       mode: effectiveMode,
       // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
       // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.

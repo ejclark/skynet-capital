@@ -18,11 +18,13 @@ import {
 } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
+import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
+import { createSubscriptionStore } from "../server/subscription-store.js";
 
 /**
  * Opens the app-side decision store — this listener's own copy of what `bots` replicates over
@@ -92,6 +94,12 @@ export function startInsightsBridge(
   const botCredentialsSecret = env.SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET;
   const fingerprintSalt = env.SKYNET_STORE_SECRET;
   const decisionDb = seedAppDecisionDb(env);
+  // Read fresh on every poll, exactly like `botControls.load()` below — one small synchronous
+  // read of the same file the Playbook Store just wrote, so a subscribe reaches the bots process
+  // on the next poll with nothing to invalidate (issue #3595). Its own store instance rather than
+  // a threaded-through one: `SKYNET_SUBSCRIPTIONS_FILE` already pins the path on this app, and
+  // `JsonFileStore` holds no state between reads.
+  const subscriptions = createSubscriptionStore(env, (message) => console.error(message));
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
@@ -116,6 +124,7 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
+    subscriptions: () => buildSubscriptionsSnapshot(subscriptions.load(), Date.now()),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;

@@ -3,8 +3,10 @@ import { AutonomousTrader } from "../../src/autonomous/autonomous-trader.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { MomentumTracker } from "../../src/autonomous/momentum-tracker.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
+import { DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
 import { DayTraderPersona } from "../../src/personas/day-trader.js";
 import type { Persona } from "../../src/personas/persona.js";
+import type { BrokerPort } from "../../src/ports/broker.js";
 
 /** Persona that always wants to buy a fixed symbol — isolates the trader's own logic. */
 class AlwaysBuys implements Persona {
@@ -329,6 +331,147 @@ describe("AutonomousTrader", () => {
       await trader.evaluate(context(100, 0.05));
 
       expect(seen).toEqual([]);
+    });
+  });
+  /**
+   * The Playbook Store bridge (issue #3595): a subscription change reaches a RUNNING bot by
+   * swapping its persona + risk in place, because a restart would throw away exactly the state
+   * (cooldowns, and the trackers feeding them) that a mid-session change must not cost.
+   */
+  describe("swapRoster", () => {
+    const quotes = [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+      { symbol: "GOOGL", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ];
+    const twoSymbolContext = (): MarketContext => ({
+      asOf: "2026-07-24T14:00:00Z",
+      quotes: {
+        NVDA: { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "2026-07-24T14:00:00Z" },
+        GOOGL: { symbol: "GOOGL", bid: 100, ask: 100, last: 100, asOf: "2026-07-24T14:00:00Z" },
+      },
+      momentum: { NVDA: 0.05, GOOGL: 0.05 },
+    });
+
+    it("decides with the swapped-in persona on the next cycle", async () => {
+      const broker = new InMemoryBroker(1_000_000, quotes);
+      const trader = new AutonomousTrader({ persona: new AlwaysBuys(), broker, cooldownMs: 0 });
+
+      const first = await trader.evaluate(twoSymbolContext());
+      expect(first[0]?.intent.symbol).toBe("NVDA");
+
+      trader.swapRoster({
+        persona: {
+          id: "always",
+          name: "Always",
+          thesis: "test",
+          decide: () => [
+            { symbol: "GOOGL", side: "buy", quantity: 10, type: "market", reason: "swapped" },
+          ],
+        },
+        risk: DEFAULT_RISK_CONFIG,
+      });
+
+      const second = await trader.evaluate(twoSymbolContext());
+      expect(second[0]?.intent.symbol).toBe("GOOGL");
+    });
+
+    it("hands the swapped-in risk config to the guards", async () => {
+      const broker = new InMemoryBroker(1_000_000, quotes);
+      const records: DecisionRecord[] = [];
+      const trader = new AutonomousTrader({
+        persona: new PlaybookBuys(),
+        broker,
+        cooldownMs: 0,
+        onDecision: (r) => records.push(r),
+      });
+
+      expect(await trader.evaluate(twoSymbolContext())).toHaveLength(1);
+
+      // The member re-aimed the subscription at GOOGL — the S1-NVDA buy must now be refused.
+      trader.swapRoster({
+        persona: new PlaybookBuys(),
+        risk: {
+          ...DEFAULT_RISK_CONFIG,
+          subscriptions: [
+            {
+              accountId: "sauron",
+              playbookId: "S1-NVDA",
+              mode: "standard",
+              capitalAllocated: 5_000,
+              enabled: true,
+              createdAt: "2026-09-20T00:00:00.000Z",
+              updatedAt: "2026-09-23T00:00:00.000Z",
+              symbols: ["GOOGL"],
+            },
+          ],
+        },
+      });
+
+      expect(await trader.evaluate(twoSymbolContext())).toHaveLength(0);
+      expect(records.at(-1)?.refusals?.[0]?.reason).toBe("subscription-filter");
+    });
+
+    it("keeps the cooldown clock across the swap — the whole reason it is not a rebuild", async () => {
+      const broker = new InMemoryBroker(1_000_000, quotes);
+      const records: DecisionRecord[] = [];
+      let clock = 1_000;
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker,
+        cooldownMs: 60_000,
+        now: () => clock,
+        onDecision: (r) => records.push(r),
+      });
+
+      await trader.evaluate(context(100, 0.05));
+      trader.swapRoster({ persona: new AlwaysBuys(), risk: DEFAULT_RISK_CONFIG });
+
+      clock += 1_000;
+      expect(await trader.evaluate(context(100, 0.05))).toHaveLength(0);
+      expect(records.at(-1)?.outcomes[0]?.action).toBe("cooldown-skipped");
+    });
+
+    it("never lands mid-cycle — a swap during an in-flight cycle applies to the next one", async () => {
+      const broker = new InMemoryBroker(1_000_000, quotes);
+      // Holds the FIRST cycle open at its portfolio read, so the swap below lands mid-flight;
+      // every later cycle runs straight through.
+      let releasePortfolio: (() => void) | undefined;
+      let held = false;
+      const gated: BrokerPort = {
+        getPortfolio: async () => {
+          if (!held) {
+            held = true;
+            await new Promise<void>((resolve) => {
+              releasePortfolio = resolve;
+            });
+          }
+          return broker.getPortfolio();
+        },
+        submit: (intent) => broker.submit(intent),
+      };
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker: gated,
+        cooldownMs: 0,
+      });
+
+      const inFlight = trader.evaluate(twoSymbolContext());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      trader.swapRoster({
+        persona: {
+          id: "always",
+          name: "Always",
+          thesis: "test",
+          decide: () => [
+            { symbol: "GOOGL", side: "buy", quantity: 10, type: "market", reason: "swapped" },
+          ],
+        },
+        risk: DEFAULT_RISK_CONFIG,
+      });
+      releasePortfolio?.();
+
+      expect((await inFlight)[0]?.intent.symbol).toBe("NVDA");
+      expect((await trader.evaluate(twoSymbolContext()))[0]?.intent.symbol).toBe("GOOGL");
     });
   });
 });

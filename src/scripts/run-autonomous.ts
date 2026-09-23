@@ -44,8 +44,10 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
+import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
-import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
 import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
@@ -60,10 +62,12 @@ import {
   buildBotRosters,
   buildLiveBot,
   buildScoutDeps,
+  resolveBotRoster,
   resolveRoster,
   seedBotsState,
   seedDailyLossBaseline,
   seedDecisionDb,
+  tradingRoster,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
@@ -113,10 +117,21 @@ async function runLive(): Promise<void> {
   // rather than closing over a value, so the background poll (started later) sees it once seeded.
   let decisionDbRef: DecisionDb | undefined;
   const decisionReplication = resolveDecisionReplication(process.env, () => decisionDbRef);
+  // The subscription swap (issue #3595) can't exist yet either — the roster it swaps is built much
+  // further down, once credentials and the collision guard have settled who is actually trading.
+  // The hook below therefore PARKS the boot fetch's own snapshot instead of dropping it, and the
+  // roster replays it the moment it exists: a member's saved subscriptions are in force from this
+  // process's first cycle, not 30s into it.
+  let subscriptionSync: SubscriptionSync | undefined;
+  let parkedSubscriptions: SubscriptionsSnapshot | undefined;
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
     undefined,
     (cursor) => void decisionReplication.replicate(cursor),
+    (snapshot) => {
+      if (subscriptionSync) subscriptionSync.accept(snapshot);
+      else parkedSubscriptions = snapshot;
+    },
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
@@ -254,21 +269,14 @@ async function runLive(): Promise<void> {
   );
   await seedDailyLossBaseline(bots, safety);
   const botRosters = buildBotRosters(bots, playbookRoster, process.env); // issue #885
-  const traders: LiveBot[] = botRosters.map(({ bot, subscriptions, enabled }) =>
-    buildLiveBot(bot, {
+  const realizedPlFor = (bot: Bot) =>
+    decisionDb
+      ? (playbookId: string) => decisionDb.realizedPlForPlaybook(bot.persona.id, playbookId)
+      : undefined;
+  const traders: LiveBot[] = botRosters.map((botRoster) =>
+    buildLiveBot(botRoster.bot, {
       mode,
-      playbookRoster: { enabled: [...enabled], rejected: playbookRoster.rejected },
-      risk: {
-        ...risk,
-        subscriptions,
-        playbookSymbols: new Map(enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
-        ...(decisionDb
-          ? {
-              realizedPlForPlaybook: (playbookId: string) =>
-                decisionDb.realizedPlForPlaybook(bot.persona.id, playbookId),
-            }
-          : {}),
-      },
+      trading: tradingRoster(botRoster, risk, realizedPlFor(botRoster.bot)),
       blockedReason,
       safety,
       onDecision,
@@ -301,6 +309,43 @@ async function runLive(): Promise<void> {
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   announceScout(betaForcing, traders[0]?.personaName);
   const managedSymbols = new Set((botRosters[0]?.enabled ?? []).flatMap((e) => e.playbook.symbols)); // traders[0]'s account
+
+  // --- the Playbook Store bridge (issue #3595): a member's subscribe/allocate/toggle reaches
+  // these already-running traders on the next `/controls` poll, in place. `botRosters[i]` is
+  // reassigned so every later read of the roster (the scout's managed set below, and a subsequent
+  // swap's own baseline) sees what is actually being traded, not what boot happened to load.
+  subscriptionSync = createSubscriptionSync({
+    bots: botRosters.map((botRoster, i) => ({
+      personaId: botRoster.bot.persona.id,
+      applySubscriptions: (subscriptions) => {
+        const next = resolveBotRoster(botRoster.bot, playbookRoster.enabled, subscriptions);
+        botRosters[i] = next;
+        traders[i]?.trader.swapRoster(tradingRoster(next, risk, realizedPlFor(botRoster.bot)));
+      },
+    })),
+    onApplied: (version, at) => {
+      // The scout skips symbols a bot's own playbooks manage. Mutated in place rather than
+      // rebuilt: `buildScoutDeps` below closes over THIS set, so a replacement would never be seen.
+      managedSymbols.clear();
+      for (const entry of botRosters[0]?.enabled ?? []) {
+        for (const symbol of entry.playbook.symbols) managedSymbols.add(symbol);
+      }
+      console.log(
+        `[playbooks] Playbook Store subscriptions applied in place — version ${version}, stamped ${new Date(at).toISOString()}; no restart`,
+      );
+    },
+    onStale: (version, at, inForceAt) =>
+      console.warn(
+        `[playbooks] REFUSED subscriptions ${version} stamped ${new Date(at).toISOString()} — older than the snapshot already in force (${new Date(inForceAt).toISOString()})`,
+      ),
+    onApplyError: (personaId, error) =>
+      console.error(
+        `[playbooks] ${personaId}: subscription swap failed (roster unchanged):`,
+        error,
+      ),
+  });
+  // Whatever the boot fetch already carried, applied now that there is a roster to apply it to.
+  if (parkedSubscriptions) subscriptionSync.accept(parkedSubscriptions);
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real

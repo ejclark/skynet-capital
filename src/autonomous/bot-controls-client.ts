@@ -18,6 +18,7 @@ import {
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
 } from "./insight-record.js";
+import { parseSubscriptionsSnapshot, type SubscriptionsSnapshot } from "./subscriptions-wire.js";
 
 /**
  * The `bots` process's view of the owner's Mission Control (`/controls` on the internal bridge —
@@ -69,6 +70,13 @@ export function resolveBotControls(
    *  The cursor is parsed from the RAW body, not from `ControlsState`, because it isn't part of
    *  that persisted shape (`decision-wire.ts`'s module doc). Absent/malformed parses to `{}`. */
   onDecisionsCursor?: (cursor: Readonly<Record<string, number>>) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed Playbook Store snapshot
+   *  — the subscription-swap hook (`subscription-sync.ts`, issue #3595). Parsed from the RAW body
+   *  for the same reason the cursor above is: it is not part of the persisted `ControlsState`
+   *  shape. An app build that predates the field, or a payload that fails
+   *  `parseSubscriptionsSnapshot`, simply never fires this — which leaves the fleet on the last
+   *  roster it received, never on a partial one. */
+  onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
@@ -114,6 +122,13 @@ export function resolveBotControls(
         try {
           const rawCursor = isRecord(response.body) ? response.body.decisionsCursor : undefined;
           onDecisionsCursor?.(parseDecisionsCursor(rawCursor));
+        } catch {
+          /* never let a downstream hook fail the poll it rides on */
+        }
+        try {
+          const rawSubs = isRecord(response.body) ? response.body.subscriptions : undefined;
+          const snapshot = parseSubscriptionsSnapshot(rawSubs);
+          if (snapshot) onSubscriptions?.(snapshot);
         } catch {
           /* never let a downstream hook fail the poll it rides on */
         }
