@@ -290,6 +290,7 @@ deadline is what doc. 35 uses as its irreparable-harm clock.
 |---|---|---|---|---|
 | 2026-09-09 | D-13 | Initial research banked (above), and the canonical `src/domain/market-events/missouri-map-tro-expiry-2026-09-22.json` written this PR from the single proposal (`from-missouri-map-ballot-deadline-2026-09-08`). **The date is now READ, not computed.** *Onder v. State of Missouri*, No. **4:26-cv-01424-SRC** (E.D. Mo.), **doc. 35**, signed 2026-09-08, pulled from CourtListener RECAP (HTTP 200, 320,306 bytes) and PDF text layer decompressed direct, 13/13 pages: "*This order remains in effect for 14 days from the date of issuance. The Court will set a preliminary injunction hearing by separate order.*" 09-08 + 14 = **2026-09-22** (Tuesday). **But Rule 65(b)(2) is NOT the mechanism** the proposal derived it from: 65(b) governs TROs issued *without* notice, and doc. 35 says twice it was not — "*All parties, including Intervenors People Not Politicians and Richard von Glahn, had notice and submitted briefing*"; "*a hearing is not necessary because all parties have participated fully through their briefing.*" Docket corroborates (doc. 13 briefing order due noon 09-07; doc. 32 intervention granted before the TRO; memoranda docs. 29–30). **So 14 days is a discretionary term, extendable or replaceable by the same judge.** **The appellate docket is the live one:** doc. 36 emergency notice of appeal + doc. 38 emergency stay motion, same evening → **8th Cir. No. 26-2797**, docketed 09-08 **19:25 CT**, stay motion **19:55 CT**, both sides appeared that night. **Central call — 09-22 is a ceiling on a placeholder:** three mechanisms land first (Eighth Circuit emergency ruling; the district court's PI ruling, which *replaces* a TRO rather than letting it lapse; and **UOCAVA 09-19**, three days earlier, the operational forcing function — [missouri-uocava-ballot-mailing-2026-09-19](missouri-uocava-ballot-mailing-2026-09-19.md)). **Merits, direct:** Equal Protection likelihood ("*Replacing the HB 1 map after the primary would sort hundreds of thousands of voters into different districts*"), Art. I §2 via *United States v. Classic*, 313 U.S. 299, 318 (1941), imminence pinned to **Mo. Rev. Stat. § 115.125(2)** — the same 09-08 deadline the [sibling](missouri-map-ballot-deadline-2026-09-08.md) tracks. **"Purcell in reverse" is the holding, not an argument:** "*Issuing a TRO here would preserve, rather than disturb, the election rules that candidates, election officials, and voters have relied on*" — which answers the Hasen gamesmanship point the [UOCAVA ledger](missouri-uocava-ballot-mailing-2026-09-19.md) could only get in summary. **Gap recorded MIXED:** doc. 13 ordered briefing on abstention **and Rooker-Feldman**; no occurrence of Rooker/Feldman/abstention/Younger appears in the 13 pages recovered. **Adjacency sweep — peers:** n/a, `symbols: []`. **Volatility regime (baseline set; own probe, Yahoo closes, caches busted):** VIX **15.72**, VVIX **88.69**, S&P **7673.52**, 10Y **4.81%**, RSP **216.73** (09-08); across the clash VIX **14.53 → 15.72**, S&P **7718.60 → 7673.52 (−0.58%)** — no channel; Yahoo's 09-07 row is a holiday artifact (Labor Day closure) and is not relied on. **Corridor: 29 tracked events within ±5 days**, incl. **opex 09-18** (`high`), **BoJ 09-18**, **Trump–Xi summit 09-24** (`high`) and a **2-year note pricing on 09-22 itself** — structurally unobservable, the honest basis for `low`. **Status stays `estimate`:** no confirmed prefix exists for a court order, no self-confirming an in-sweep discovery. **No new dated adjacency proposed** — the PI hearing has no date (doc. 35: "by separate order"), the Eighth Circuit appeal carries none, and 8 of the 66 docket documents are undated procedural notices; adding litigation micro-dates would be calendar noise. **Blocked, recorded in probe-ref:** courtlistener.com HTML search **403**, dockets.justia.com **403**, CourtListener `docket-entries` REST **401**. **Registered:** **FT-…-1** (09-22 superseded, not reached; score by 2026-09-25), **FT-…-2** (8th Cir. reaches the stay rather than dismissing for want of jurisdiction; score by 2026-09-25), **FT-…-3** (the abstention/Rooker-Feldman gap is closed downstream; score by 2026-10-15). | — (stance set: stand aside, informational, no position at any horizon; specification corrected twice — the date is read not computed, and Rule 65(b)(2) is not its mechanism) | 2026-09-16 (low, 0+ band: every 7d) |
 | 2026-09-16 | D-6 | **Deterministic screen (no Claude session).** Readings — VIX 17.2 (+1.5pt since last), band unchanged (low:0+), 47 adjacent event(s) tracked, new in corridor since last pulse: `bea-international-transactions-q2-2026-09-24`, `boe-decision-2026-09-17`, `bowman-stress-testing-2026-09-18`, `costco-q4-fy2026-2026-09-24`, `dmo-pilot-switch-auction-test-2026-09-24`, `intl-transactions-q2-2026-09-24` +12 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-23 |
+| 2026-09-23 | D+1 | **Close-out (see `## Outcome`).** The TRO never reached its own 14-day term: the Eighth Circuit (Nos. 26-2797/26-2827) affirmed the district court and remanded for a **permanent injunction** on **2026-09-21**, judgment and mandate the same day; the district court entered a Permanent Injunction 09-21 and an **Amended Permanent Injunction 09-22** itself. **FT-…-1 scores PASS** (a superseding order landed on both named dockets before the kill switch's own deadline). **FT-…-2 scores PASS** (the 8th Cir.'s first substantive order denied the stay on alternative grounds, not an express want-of-jurisdiction dismissal, and the panel's own merits opinion later confirms jurisdiction outright). **FT-…-3 stays open** — beyond the 6-day close-out ceiling (`forwardTestsBeyondWindow`), recorded unscoreable at this close-out on purpose, though the merits opinion's own Rooker-Feldman/Younger treatment (read direct) bears on it favorably. Full sourcing and the market read are in `## Outcome`. | — (event passed; stance closed unexecuted — `estimate`/`low`/`symbols: []` meant nothing was ever licensed, and nothing was entered) | none — `## Outcome` written, this ledger goes quiet |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -300,3 +301,180 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out written 2026-09-23, D+1 — inside the `closeOutWithinDays: 6` ceiling, dispatched under
+the #2988 forward-test hold rule rather than a quiet screen.** `node scripts/event-scan.mjs --due`
+named this event `event-passed-unscored` and flagged
+**FT-missouri-map-tro-expiry-2026-09-22-3** (score-by 2026-10-15) in `forwardTestsBeyondWindow` —
+past the 2026-09-28 ceiling — which forces immediate dispatch rather than a hold on the two other
+still-pending tests (`-1`, `-2`, score-by 2026-09-25, two days from today). Geopolitical mode runs
+no `earnings-cycle`/`intraday-edges` instrument (`symbols: []`, unchanged since initial research);
+the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`)
+ran and found nothing to bust, and the analog — fresh, uncached docket and price pulls — was
+honoured instead. **Nothing below is from memory of the tape or of the sibling ledgers' own
+summaries**; every docket claim was re-pulled direct this session from CourtListener's v4 search API
+(`docket_id:74754230` for the district case, `docket_id:74762445` for the Eighth Circuit case) and
+the Eighth Circuit's own opinion PDF, decompressed locally with the same node/zlib text-layer
+technique the initial research used (`ecf.ca8.uscourts.gov/opndir/26/09/262797P.pdf`, 40 pages
+recovered, verified against the CM/ECF page footers).
+
+### The headline: the TRO was superseded a full day before its own term, by a permanent injunction — not by the stay the sibling ledgers reported
+
+**The premise this event was built on — "the TRO lapses on 09-22 unless something else happens
+first" — never got tested, because something else happened first, decisively.** Fresh docket pulls
+this session surface a chain the initial research's 2026-09-09 snapshot could not have seen (its own
+"honest limits" section flagged the snapshot as `2026-09-09T00:29:18Z` and said explicitly that
+anything filed 09-09 onward "is not in this research"):
+
+- **2026-09-09.** The Eighth Circuit (No. 26-2797) denied the intervenors' (PNP/von Glahn) motion
+  for a stay pending appeal — the TRO survived that round. The district court separately denied doc.
+  38, the intervenors' own emergency stay motion, the same day.
+- **2026-09-10.** The Supreme Court, application **26A326** (*People Not Politicians v. Onder*),
+  **granted a stay** "pausing the September 8, 2026 order entered by the United States District
+  Court... pending Eighth Circuit appeal and potential Supreme Court review" (supremecourt.gov
+  docket, fetched direct). This is the order the sibling
+  [UOCAVA](missouri-uocava-ballot-mailing-2026-09-19.md) and
+  [midterm](midterm-elections-2026-11-03.md) ledgers read and reported as settling the map question
+  in favor of the 2022 map — accurate as far as it went, but **a stay pending appeal, not a final
+  disposition**, and the midterm ledger's own side note said so explicitly: "this moots the computed
+  Rule 65(b)(2) arithmetic behind `missouri-map-tro-expiry-2026-09-22`, since a stayed TRO's 14-day
+  term does not run." That note undersold what was still live: the appeal itself.
+- **2026-09-11.** Plaintiffs (Onder et al., the TRO's beneficiaries) noticed a **cross-appeal** of
+  doc. 35 (No. 26-2827), and the Eighth Circuit set an expedited briefing schedule the same day —
+  consolidating with No. 26-2797.
+- **2026-09-17.** Oral argument, Eighth Circuit, Judges Loken, Stras and Justin D. Smith.
+- **2026-09-21.** **Per curiam opinion, Nos. 26-2797/26-2827** (40 pages, read direct): **"This
+  Court holds that Missouri's current plan to use the 2022 map in the November 2026 general election
+  violates the Constitution. Only use of the 2025 map complies with the Constitution and federal
+  law. We affirm the district court and remand for entry of a permanent injunction."** Judgment and
+  mandate issued the same day. The district court entered a **Permanent Injunction** the same day,
+  administratively staying its own enforcement "until September 28, 2026, at 5 p.m. Central Daylight
+  Time" to allow Supreme Court review.
+- **2026-09-21, same evening.** The losing side filed an "EMERGENCY MOTION to recall the mandate and
+  for stay of this court's order."
+- **2026-09-22 — this event's own nominal expiry date.** The district court entered an **Amended
+  Permanent Injunction**, changing the administrative-stay clause to expire at "the earlier of
+  September 28, 2026... or the issuance of rulings from superior federal appellate courts" — and the
+  opposition to the emergency motion to recall the mandate was filed the same day. Both docketed
+  under 4:26-cv-01424-SRC, entries 57 and 60.
+
+**So the 14-day clock this event was created to watch never ran out on its own terms, and it did not
+even need the 09-10 stay to be mooted — a full merits affirmance and a permanent injunction beat it
+by a day.** As of this close-out, the practical posture is: a permanent injunction requiring the 2025
+map is in place, administratively stayed through 09-28 (or an earlier superior-court ruling) to let
+a still-pending emergency motion to recall the mandate be heard. That residual uncertainty belongs to
+whatever event tracks the 09-28 window or the recall motion — not to this one, which closes on the
+question it was actually created to answer.
+
+### `FT-missouri-map-tro-expiry-2026-09-22-1` — PASS, scored two days ahead of its own score-by
+
+**Prediction:** "On or before 2026-09-22, a superseding order appears on the E.D. Mo. docket
+(4:26-cv-01424-SRC) or the Eighth Circuit docket (No. 26-2797) — a PI granted or denied, a stay
+granted or denied, or the TRO extended." **Kill switch:** the TRO lapsing by its own terms with no
+superseding order on either docket by end of 2026-09-22. Score-by was **2026-09-25**, three days
+past this close-out — **scored now rather than held, because the deciding facts are already dated,
+primary-sourced and unambiguous**, the same basis the [UOCAVA close-out](missouri-uocava-ballot-mailing-2026-09-19.md#outcome)
+used to score its own `-1` three days ahead of its stated date rather than leave a resolved
+question sitting open for the calendar's sake. **The prediction is satisfied on both named dockets,
+not just one**: the Eighth Circuit (No. 26-2797, consolidated with 26-2827) affirmed and remanded
+for a permanent injunction on 09-21; the district court (4:26-cv-01424-SRC) entered that permanent
+injunction the same day and amended it on 09-22 itself. This is a stronger order than anything the
+prediction's own menu named ("a PI granted or denied, a stay granted or denied, or the TRO
+extended") — a **permanent** injunction superseding the TRO outright. **Kill switch did not fire.**
+
+### `FT-missouri-map-tro-expiry-2026-09-22-2` — PASS, with the hedge on the record rather than smoothed over
+
+**Prediction:** "The Eighth Circuit's first substantive order in No. 26-2797 rules on the stay
+(grant or deny) rather than dismissing the appeal or denying it for lack of appellate jurisdiction
+over a TRO." **Kill switch:** an Eighth Circuit order "dismissing the appeal, or denying the stay
+expressly for want of jurisdiction over a temporary restraining order." Graded MIXED at initial
+research because "no Eighth Circuit authority was read direct" — that limit is now cleared. **The
+first substantive order (2026-09-09) denied the stay, but on alternative grounds, not a clean
+merits ruling** — the panel's own later opinion quotes it back: "*The Court cited Rutledge when it
+denied PNP's motion to stay the district court's temporary restraining order, explaining alternative
+reasons that 'we either lack jurisdiction over the appeal or, based on the briefing we have so far,
+the stay factors have not been met.'*" That is a real hedge, and the honest reading records it rather
+than rounding it to a clean win: one of the order's two stated grounds *was* jurisdictional doubt.
+**But it was an alternative ground, not the sole or express basis, and it did not survive**: the
+09-21 opinion states "*the Supreme Court implicitly determined that it had jurisdiction when it
+granted PNP's emergency stay application... Following the Supreme Court's stay order, all parties
+agree that this Court has jurisdiction to review the appeal*" — and the Court then decided the
+appeal fully on the merits (Elections Clause, Rooker-Feldman, Younger abstention, mootness, the
+Rule 65(c) bond question), the opposite of dismissing for want of jurisdiction. **Kill switch did not
+fire** — no order in No. 26-2797 ever dismissed the appeal or denied the stay *expressly* for want
+of jurisdiction; the closest thing to it was a hedge the court itself later resolved in favor of
+jurisdiction. Scored now for the same reason as `-1`: the deciding facts are dated, direct-sourced
+and complete, two days ahead of the 2026-09-25 score-by.
+
+### `FT-missouri-map-tro-expiry-2026-09-22-3` — left open, recorded unscoreable at this close-out on purpose, findings banked anyway
+
+Score-by is **2026-10-15**, past the **2026-09-28** close-out ceiling — `event-scan.mjs --due`
+named it in `forwardTestsBeyondWindow`, which is why this close-out dispatched today rather than
+holding for `-1`/`-2`'s nearer date. Per [`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md) and
+the [google-adtech precedent](google-adtech-opinion-unseal-2026-09-16.md#outcome), its row stays
+`_open_` in [the fragment](../forward-tests/missouri-map-tro-expiry-2026-09-22.md) rather than being
+scored here. **What this session's findings say about it, recorded because the data was in hand and
+not because it settles anything now:** the gap Leg 7 flagged — doc. 35 ordered briefing on
+abstention and Rooker-Feldman (doc. 13) but its 13 recovered pages never used those words — is
+**directly closed by the Eighth Circuit's 09-21 opinion**, which addresses both at length and by
+name. On Rooker-Feldman: "*PNP also argues that the district court lacked jurisdiction because the
+Rooker Feldman doctrine bars this action... Rooker Feldman does not apply here because Plaintiffs
+were not parties to the state court action and because the complaint here raised only federal law
+claims that the Missouri Supreme Court did not address in the state court action.*" On abstention:
+"*PNP next argues that the district court should have abstained under Younger v. Harris... Because no
+NOPSI category is present, the Court need not consider the Middlesex factors... Accordingly, Younger
+abstention is inapplicable here.*" A scorer reaching this row after 2026-10-15 should read this as
+strong support for the registered prediction ("the doctrines get written treatment at the next
+stage") — but the row is left for that scorer to write, not pre-empted here.
+
+### Market channel — re-measured with fresh pulls through 09-22, still no attributable reaction
+
+Fresh Yahoo pulls this session (`^GSPC`, `^VIX`, `^VVIX`, `RSP`, `^TNX`), cache busted first per the
+standing rule, through the last two trading sessions before and including the event date:
+
+| Reading | 2026-09-18 | 2026-09-21 (8th Cir. opinion day) | 2026-09-22 (event date) |
+|---|---|---|---|
+| S&P 500 | 7650.50 | 7764.70 | 7764.64 |
+| VIX | 14.81 | 14.87 | 14.21 |
+| VVIX | 87.38 | 85.77 | 83.17 |
+| 10Y (^TNX) | 4.998% | 4.963% | 4.968% |
+
+**S&P ran +1.49% on 09-21, the session the Eighth Circuit's opinion actually landed — the one day
+this event's own corridor could plausibly attribute a move to it — but the corridor itself supplies
+the obvious competing cause.** This ledger's own probe-ref already tracks
+**`sp-quarterly-rebalance-effective-2026-09-21`** and **`russell-quarterly-ipo-review-effective-2026-09-21`**
+landing on the identical date — a quarterly index-rebalance/IPO-review effective day is a
+well-documented source of outsized, broad index-level moves unconnected to any single name or
+story, exactly the kind of confound Leg 8 built this event's `low` impact tier around. VIX and VVIX
+both **fell** through the ruling (14.87 → 14.21, 85.77 → 83.17) rather than spiking, which is the
+opposite of what a market pricing in genuine uncertainty around a contested congressional map would
+do. **Kill switch 5 ("the S&P or any tracked name moves >1% on a session whose named driver is a
+redistricting ruling") does not fire**: a >1% move occurred, but attributing it to this ruling over
+same-day quarterly rebalancing would be exactly the inference leg 6 (in the sibling ballot-deadline
+ledger) and leg 8 here both warned against. **The event stays structurally unobservable, which is
+the honest basis `low` was assigned on.**
+
+### Verdict vs. the stance
+
+**Stand aside held, and cost nothing to hold.** No entry, exit or hedge was ever keyed to this
+event — `symbols: []`, `estimate` date, `low` impact meant no house playbook had a trigger here from
+the start, and none was needed: the market never produced an attributable signal to act on even in
+hindsight. What changed is the **specification**, corrected twice more: first, the event's own
+premise (a 14-day clock running to a lapse) never got tested because a stronger order — a permanent
+injunction — superseded it a day early; second, the "honest limit" flagged at initial research (no
+Eighth Circuit authority read direct) is cleared, and the doctrine gap Leg 7 flagged as MIXED is now
+closed in the plaintiffs'/Onder side's favor by the court's own words. **A correction to the sibling
+ledgers, not an edit to their files:** the [UOCAVA](missouri-uocava-ballot-mailing-2026-09-19.md) and
+[midterm](midterm-elections-2026-11-03.md) ledgers' 09-10/09-15 rows read the SCOTUS stay (26A326) as
+the map question settling toward the 2022 map; this close-out's direct read of the merits opinion
+shows the Eighth Circuit went the other way on 09-21, affirming that only the 2025 map is
+constitutional and ordering a permanent injunction to that effect (administratively stayed through
+09-28 pending further appellate action). Downstream ledgers carrying this as a seat-math input should
+treat the map question as **live again through at least 2026-09-28**, not settled — flagged here for
+whichever session next touches those files, per the same-PR-never-another-file's-canonical-doc rule.
+**No adjacency sweep performed beyond the docket/price read above** — the event is closing out, not
+continuing to watch; the residual uncertainty (the 09-28 stay window, the recall-mandate motion) is a
+new dated question for a different ledger, not a reason to keep this one open. Scanner goes quiet on
+this event now, with one forward test left genuinely open (`-3`, 2026-10-15) rather than closed out.
