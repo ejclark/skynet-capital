@@ -74,9 +74,11 @@ describe("resolveDecisionReplication", () => {
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => thisBotsDb,
         );
-        await client.replicate({ sauron: 1 }); // ascending leg: only @2 is new above cursor 1
-        // The preview leg (unconditional, cursor-independent) also lands @1 — both rows this
-        // small a store fit inside LIVE_PREVIEW_BATCH, so it re-sends everything it has, harmlessly.
+        // The ascending leg tracks its own resume point locally and ignores the passed cursor
+        // entirely (see the module's own bug note) — with a fresh client it starts at 0, so it
+        // sends BOTH rows here, same as the preview leg does unconditionally. Passing a cursor at
+        // all is just proving the client accepts (and ignores) whatever shape the app reports.
+        await client.replicate({ sauron: 1 });
         expect(thisAppDb.listByPersona("sauron").map((r) => r.at)).toEqual([2, 1]);
         expect(thisAppDb.listByPersona("beta-scout").map((r) => r.at)).toEqual([3]);
       } finally {
@@ -114,6 +116,46 @@ describe("resolveDecisionReplication", () => {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
     }, 15_000); // 150 synchronous writes + two real HTTP round trips — generous headroom under a slow/shared CI runner
+
+    it("keeps draining the ascending backlog even when the app's own cursor already claims it's caught up (found live, 2026-09-23)", async () => {
+      // Reproduces the real production bug: once the preview leg's own send lands, the app's
+      // decisionsCursor (maxAtAll() over EVERYTHING it has stored) reports back a value at the
+      // very end of the store — exactly what `pollutedCursor` simulates here. The buggy client
+      // read that straight into the ascending leg's resume point and never sent anything below it
+      // again, permanently hiding the backlog. The fixed client must ignore it and keep draining
+      // from its own locally-tracked progress regardless of what the app claims.
+      const thisBotsDb = botsDb;
+      const thisAppDb = appDb;
+      for (let at = 1; at <= 250; at++) thisBotsDb.record(decision({ at }));
+
+      const server = createInsightsListener({
+        record: () => Promise.resolve(),
+        decisions: { recordBatch: (batch) => thisAppDb.recordBatch(batch.records) },
+      });
+      await new Promise<void>((resolve) => server.listen(0, resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const client = resolveDecisionReplication(
+          { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
+          () => thisBotsDb,
+        );
+        const pollutedCursor = { sauron: 250 }; // the app claiming it already has everything
+        await client.replicate(pollutedCursor);
+        await client.replicate(pollutedCursor);
+        await client.replicate(pollutedCursor);
+        // 3 polls × MAX_DECISION_BATCH (100) covers the full 250-row backlog — every row present,
+        // not just the newest ones the preview leg would land on its own. `listSince`'s own limit
+        // clamps to 100 (decision-db.ts's MAX_PAGE), so reading the full range back takes three
+        // chunked calls rather than one call for 250.
+        const total =
+          thisAppDb.listSince("sauron", 0, 100).length +
+          thisAppDb.listSince("sauron", 100, 100).length +
+          thisAppDb.listSince("sauron", 200, 100).length;
+        expect(total).toBe(250);
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }, 15_000); // 250 synchronous writes + up to 6 real HTTP round trips (3 polls × 2 legs)
 
     it("re-sending the same cursor never duplicates rows on the app side — idempotent resend", async () => {
       const thisBotsDb = botsDb;
