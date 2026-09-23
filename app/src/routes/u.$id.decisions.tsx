@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchDesk, fetchDeskDecisions } from "../live/desk";
-import { CycleRow } from "../shell/decisions-section";
+import { DecisionsSection } from "../shell/decisions-section";
 import { DeskRail } from "../shell/desk-rail";
 import { PageFrame } from "../shell/frame";
 
 /**
  * THE BOT'S MIND (#738 phase 3a) — the decision-cycle viewer on the Actions-run template, at the
- * standalone `/u/:id/decisions` route. The run-row rendering itself (`CycleRow` and its
- * `OutcomeLine`/`RefusedLine` sub-components) lives in `../shell/decisions-section` — the same
- * component the accounts view's Decisions tab uses — so this route is just the page chrome
- * (header, rail, empty states) around it, not a second copy of the rendering.
+ * standalone `/u/:id/decisions` route. The list itself — fetch, empty states, "load older cycles"
+ * pagination (#3608) — lives in `../shell/decisions-section`'s `DecisionsSection`, the same
+ * component the accounts view's Decisions tab uses, so this route is just the page chrome
+ * (header, rail, the human-account gate) around it, not a second copy of the rendering.
  */
 
 function DecisionsPage(): ReactElement {
@@ -52,19 +52,8 @@ function DecisionsPage(): ReactElement {
           {d.name} is a human account — decision cycles are a bot's audit trail. The fill timeline
           on the Active view is the human record.
         </p>
-      ) : !trail.available ? (
-        <p className="note">
-          No decision audit trail is wired in this deployment (the runner records one when
-          SKYNET_INSIGHTS_DIR is set, or SKYNET_AUDIT_DIR as a legacy fallback).
-        </p>
-      ) : trail.cycles.length === 0 ? (
-        <p className="note">No recorded cycles yet — the next autonomous run writes the first.</p>
       ) : (
-        <ul className="cycles">
-          {trail.cycles.map((cycle) => (
-            <CycleRow key={cycle.at} cycle={cycle} />
-          ))}
-        </ul>
+        <DecisionsSection deskId={id} />
       )}
     </PageFrame>
   );

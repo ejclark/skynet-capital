@@ -172,3 +172,11 @@
   font-size: 11px;
   padding-left: 2px;
 }
+/* "Load older cycles" (#3608) — same shape as `.wire-load-more` (`wire.css`), the activity feed's
+   own walk-back control, so the two paginated feeds in this app read as one system. */
+.cycles-load-more {
+  width: auto;
+  margin-top: 10px;
+  font-size: 11.5px;
+  padding: 6px 12px;
+}

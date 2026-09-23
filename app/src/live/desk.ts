@@ -240,16 +240,24 @@ export interface DecisionCycle {
   readonly outcomes: readonly DecisionOutcome[];
   readonly refusedIntents?: readonly RefusedIntent[];
   readonly halted?: string;
+  /** Present only on a collapsed quiet run (`decision-json-view.ts`'s `quietRunView`) — the
+   *  oldest cycle's timestamp in the run, so the UI can render the full idle span alongside `at`
+   *  (the run's newest). */
+  readonly quietSince?: string;
 }
 
 export interface DeskDecisions {
   readonly available: boolean;
   readonly kind: "human" | "bot";
   readonly cycles: readonly DecisionCycle[];
+  /** Epoch ms cursor for the next older page (PR 5, issue #2287) — absent means this page wasn't
+   *  full, so there's nothing further back to fetch. Mirrors `WireData.nextCursor` in `wire.ts`. */
+  readonly nextCursor?: number;
 }
 
-export async function fetchDeskDecisions(id: string): Promise<DeskDecisions> {
-  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/decisions`, {
+export async function fetchDeskDecisions(id: string, before?: number): Promise<DeskDecisions> {
+  const params = before !== undefined ? `?before=${before}` : "";
+  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/decisions${params}`, {
     credentials: "same-origin",
   });
   if (!res.ok) throw new Error(`GET /api/desk/${id}/decisions → ${res.status}`);
