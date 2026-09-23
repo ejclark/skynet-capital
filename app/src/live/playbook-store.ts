@@ -8,9 +8,25 @@ import { postJson } from "./post";
 
 export type PlaybookMode = "conservative" | "standard" | "aggressive";
 
+/** A probe-proven trait ("Confirmed dates only") — mirrors `PlayTrait` in `playbook-probe.ts`. */
+export interface PlaybookTraitView {
+  readonly id: string;
+  readonly label: string;
+  readonly claim: string;
+}
+
 export interface PlaybookStoreCardView {
   readonly id: string;
   readonly symbol: string;
+  /** The whole basket; `symbol` is its first entry. */
+  readonly symbols: readonly string[];
+  /** The registry's citation, and its research-doc route when it names one (#3623). */
+  readonly evidence: string;
+  readonly evidenceHref?: string;
+  /** The probe's date window and per-mode target exposure — absent for a tactical playbook. */
+  readonly window?: string;
+  readonly size?: Readonly<Record<PlaybookMode, number>>;
+  readonly traits: readonly PlaybookTraitView[];
   readonly description: string;
   readonly enter: string;
   readonly exitTakeProfit: string;

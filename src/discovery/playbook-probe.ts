@@ -3,9 +3,9 @@
  *
  * A playbook answers one question per cycle ("what should my book look like right now?"), so the
  * only honest way to describe it is to ASK it, day by day, around a synthetic print. Both readers
- * of that answer — the discovery shelves (`playbook-collections.ts`) and the Outpost's cards
- * (`play-cards.ts`) — share this module rather than each running their own walk, so a play can
- * never be described one way on a shelf and a different way on its card.
+ * of that answer — the discovery shelves (`playbook-collections.ts`) and the R&D → Playbooks cards
+ * (`playbook-store.ts`, #3623) — share this module rather than each running their own walk, so a
+ * play can never be described one way on a shelf and a different way on its card.
  *
  * The roster comes from whatever `src/playbooks/registry.ts` exports — a new exported play is
  * probed the moment it lands, with nothing here to update. (`src/playbooks/**` is envelope-
@@ -103,4 +103,41 @@ export function spanOf(probe: WindowProbe): string {
 export function evidenceHref(playbook: Playbook): string | undefined {
   const slug = playbook.evidence.match(/docs\/research\/([\w./-]+)\.md/)?.[1];
   return slug ? `/research/${slug}` : undefined;
+}
+
+/** A short, checkable claim about the play — derived by the probe, never hand-typed. */
+export interface PlayTrait {
+  readonly id: string;
+  readonly label: string;
+  /** What the probe actually observed, in words. The receipt behind the label. */
+  readonly claim: string;
+}
+
+/** The traits a window probe proves. Moved here from the retired Plays cards (#3623) so the
+ *  R&D → Playbooks card keeps them — "Flat before the release" and "Confirmed dates only" are also
+ *  what the two playbook Collections shelves claimed, so this is their one surviving home. */
+export function traitsOf(probe: WindowProbe): PlayTrait[] {
+  const traits: PlayTrait[] = [];
+  if (probe.longDays.length > 0 && !probe.holdsThePrint) {
+    traits.push({
+      id: "flat-before-the-release",
+      label: "Flat before the release",
+      claim: `Long ${spanOf(probe)}, and out of the market by the time the number is public.`,
+    });
+  }
+  if (probe.holdsThePrint) {
+    traits.push({
+      id: "holds-the-print",
+      label: "Holds the print",
+      claim: "Still long when the number lands — the release itself is part of the bet.",
+    });
+  }
+  if (probe.longDays.length > 0 && !probe.opensOnAnEstimate) {
+    traits.push({
+      id: "confirmed-dates-only",
+      label: "Confirmed dates only",
+      claim: "Re-run with the same date as an estimate rather than confirmed: no position at all.",
+    });
+  }
+  return traits;
 }

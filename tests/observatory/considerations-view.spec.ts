@@ -1,4 +1,4 @@
-import type { OutpostCatalog, PlayCard } from "../../src/discovery/play-cards.js";
+import type { PlaybookStoreEntry } from "../../src/discovery/playbook-store.js";
 import {
   considerationsFor,
   type PositionForConsiderations,
@@ -16,24 +16,22 @@ const position = (over: Partial<PositionForConsiderations> = {}): PositionForCon
   ...over,
 });
 
-const catalog = (cards: readonly PlayCard[]): OutpostCatalog => ({
-  cards,
-  authors: [],
-  symbols: [],
-  triggers: [],
-  traits: [],
-});
+const catalog = (entries: readonly PlaybookStoreEntry[]): readonly PlaybookStoreEntry[] => entries;
 
-const play = (over: Partial<PlayCard> = {}): PlayCard => ({
+const play = (over: Partial<PlaybookStoreEntry> = {}): PlaybookStoreEntry => ({
   id: "nvda-earnings",
   symbol: "NVDA",
-  author: { id: "house", name: "Skynet Capital", kind: "house" },
-  thesis: "Long into the print.",
-  trigger: "earnings-window",
+  symbols: ["NVDA"],
+  description: "Long into the print.",
+  enter: "D-20",
+  exitTakeProfit: "none",
+  exitCutLosses: "D-5",
+  hold: "flat",
+  evidence: "internal study",
   window: "D-20 to D-6",
   size: { conservative: 0.02, standard: 0.05, aggressive: 0.1 },
   traits: [],
-  evidence: "internal study",
+  metrics: [],
   ...over,
 });
 
@@ -71,8 +69,24 @@ describe("considerationsFor", () => {
       symbol: "NVDA",
       notional: "—",
       reason: "Long into the print.",
-      action: { href: "/app/research?section=plays&symbol=NVDA" },
+      action: { href: "/app/research?section=playbooks" },
     });
+  });
+
+  it("chips every held symbol in a multi-symbol basket, one chip each", () => {
+    const chips = considerationsFor(
+      [position({ symbol: "GOOG", returnPct: 5 }), position({ symbol: "NVDA", returnPct: 5 })],
+      catalog([play({ symbols: ["NVDA", "GOOG"] })]),
+    );
+    expect(chips.map((c) => c.symbol).sort()).toEqual(["GOOG", "NVDA"]);
+    expect(new Set(chips.map((c) => c.id)).size).toBe(2);
+  });
+
+  it("leaves out a tactical playbook, which has no window to suggest", () => {
+    const { window: _window, size: _size, ...tactical } = play();
+    expect(
+      considerationsFor([position({ symbol: "NVDA", returnPct: 5 })], catalog([tactical])),
+    ).toHaveLength(0);
   });
 
   it("omits a play whose symbol isn't held", () => {

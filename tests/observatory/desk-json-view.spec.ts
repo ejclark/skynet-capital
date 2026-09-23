@@ -74,25 +74,23 @@ describe("deskView", () => {
   });
 
   it("folds a matching play into considerations when the catalog is threaded in", () => {
-    const view = deskView(snapshot(), undefined, {
-      cards: [
-        {
-          id: "aapl-earnings",
-          symbol: "AAPL",
-          author: { id: "house", name: "Skynet Capital", kind: "house" },
-          thesis: "Long into the print.",
-          trigger: "earnings-window",
-          window: "D-20 to D-6",
-          size: { conservative: 0.02, standard: 0.05, aggressive: 0.1 },
-          traits: [],
-          evidence: "internal study",
-        },
-      ],
-      authors: [],
-      symbols: [],
-      triggers: [],
-      traits: [],
-    });
+    const view = deskView(snapshot(), undefined, [
+      {
+        id: "aapl-earnings",
+        symbol: "AAPL",
+        symbols: ["AAPL"],
+        description: "Long into the print.",
+        enter: "D-20",
+        exitTakeProfit: "none",
+        exitCutLosses: "D-5",
+        hold: "flat",
+        evidence: "internal study",
+        window: "D-20 to D-6",
+        size: { conservative: 0.02, standard: 0.05, aggressive: 0.1 },
+        traits: [],
+        metrics: [],
+      },
+    ]);
     expect(view.considerations).toEqual([
       expect.objectContaining({ kind: "opportunity", symbol: "AAPL" }),
     ]);

@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { outpostCatalog } from "../discovery/play-cards.js";
+import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import {
   decisionCyclesView,
   expectancyView,
@@ -151,13 +151,13 @@ export async function serveDeskJson(
   // `deskView` already renders lot-free positions when `ledger` is undefined.
   const durable = await config.readTradeActivity?.(id);
   const ledger = durable ? deskLedger(found, durable) : undefined;
-  // The considerations rail (#3186 slice 3) folds house plays matching a held symbol into the desk
-  // payload — `outpostCatalog()` is a cheap, synchronous, in-memory walk of the playbook registry
-  // (same cost the `/api/outpost` route already pays per request), so no caching is added here.
+  // The considerations rail (#3186 slice 3) folds house playbooks matching a held symbol into the
+  // desk payload — `playbookStoreCatalog()` is a cheap, synchronous, in-memory walk of the playbook
+  // registry (same cost `/api/playbook-store` pays per request), so no caching is added here.
   res.end(
     JSON.stringify({
       generatedAt: state.generatedAt,
-      desk: deskView(found, ledger, outpostCatalog()),
+      desk: deskView(found, ledger, playbookStoreCatalog()),
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
         : {}),

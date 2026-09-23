@@ -209,6 +209,49 @@ function SubscriptionRow({
   );
 }
 
+const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
+
+/**
+ * The facts the probe derives from the playbook's own code — window, target exposure per mode, and
+ * the traits it proved — ported from the retired Plays cards (#3623) so they can never drift from
+ * what the playbook does. A tactical playbook has no window, so it shows none rather than a false
+ * "0%, no window" row; its rules are the Enter / Exit / Hold copy below.
+ */
+function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): ReactElement | null {
+  if (!(card.window && card.size) && card.traits.length === 0) return null;
+  return (
+    <>
+      {card.window && card.size ? (
+        <dl className="pb-card-facts">
+          <div>
+            <dt>Window</dt>
+            <dd className="num">{card.window}</dd>
+          </div>
+          <div>
+            <dt>Target exposure</dt>
+            <dd className="num">
+              {pct(card.size.conservative)} · {pct(card.size.standard)} ·{" "}
+              {pct(card.size.aggressive)}
+            </dd>
+            <dd className="pb-card-modes">
+              conservative · standard · aggressive, before risk guards
+            </dd>
+          </div>
+        </dl>
+      ) : null}
+      {card.traits.length > 0 ? (
+        <ul className="pb-card-traits">
+          {card.traits.map((trait) => (
+            <li key={trait.id} title={trait.claim}>
+              {trait.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
 export function PlaybookCard({
   accountId,
   card,
@@ -225,9 +268,11 @@ export function PlaybookCard({
   return (
     <section className="pb-card">
       <h2 className="pb-card-h">
-        {card.id} <span className="num">{card.symbol}</span>
+        <span className="pb-card-id">{card.id}</span>{" "}
+        <span className="num pb-card-symbols">{card.symbols.join(" · ")}</span>
       </h2>
       <p className="pb-card-description">{card.description}</p>
+      <PlaybookFacts card={card} />
       <dl className="pb-card-triggers">
         <dt>Enter</dt>
         <dd>{card.enter}</dd>
@@ -238,6 +283,10 @@ export function PlaybookCard({
         <dt>Hold</dt>
         <dd>{card.hold}</dd>
       </dl>
+      <footer className="pb-card-evidence">
+        <span className="num">{card.evidence}</span>
+        {card.evidenceHref ? <a href={card.evidenceHref}>the study behind it →</a> : null}
+      </footer>
       {canManage ? (
         card.subscription ? (
           // An existing subscription keeps every control it had — pausing and leaving are exits.

@@ -1,12 +1,13 @@
-import type { OutpostCatalog, PlayCard } from "../discovery/play-cards.js";
+import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
 import { formatCurrency, formatSigned, plClass } from "./render-atoms.js";
 
 /**
  * THE CONSIDERATIONS RAIL, AS DATA (#3186 slice 3) — one chip per thing worth a member's attention
  * on `/app/accounts`: a held position that's down enough to be worth a look ("at-risk"), or a house
- * play matching a symbol they already hold ("opportunity"). Composed from numbers `deskView()`
- * already has in hand (no new data source) and `outpostCatalog()` (already served at `/api/outpost`,
- * reused here rather than re-derived).
+ * playbook matching a symbol they already hold ("opportunity"). Composed from numbers `deskView()`
+ * already has in hand (no new data source) and `playbookStoreCatalog()` (already served at
+ * `/api/playbook-store`, reused here rather than re-derived; #3623 moved it off the retired Plays
+ * catalog).
  *
  * "News signals" are named in the issue's acceptance criteria but have no backing data anywhere in
  * this repo, and this plan authorizes no new external market-data integration — so this view ships
@@ -71,38 +72,49 @@ function atRiskChip(position: PositionForConsiderations): ConsiderationChip | un
   };
 }
 
-function opportunityChip(card: PlayCard): ConsiderationChip {
+function opportunityChip(
+  entry: PlaybookStoreEntry,
+  symbol: string,
+  window: string,
+): ConsiderationChip {
   return {
-    id: `opportunity-${card.id}`,
+    id: `opportunity-${entry.id}-${symbol}`,
     kind: "opportunity",
-    symbol: card.symbol,
-    // Play symbols are the underlying ticker (never an OCC option symbol) — already human-readable.
-    display: card.symbol,
+    symbol,
+    // Playbook symbols are the underlying ticker (never an OCC option symbol) — already readable.
+    display: symbol,
     notional: "—",
-    delta: card.window,
+    delta: window,
     deltaTone: "flat",
-    reason: card.thesis,
+    reason: entry.description,
     action: {
-      label: "View play",
-      // `/outpost` was retired into Research's "Plays" section (#3333 slice 9); this link
-      // pre-dates that move and was left pointing at the deleted route (Eric, 2026-09-22: dead
-      // link from the considerations rail).
-      href: `/app/research?section=plays&symbol=${encodeURIComponent(card.symbol)}`,
+      label: "View playbook",
+      // R&D → Playbooks is the one home for playbooks (#3623); the Plays section this used to
+      // link to is retired.
+      href: "/app/research?section=playbooks",
     },
   };
 }
 
-/** At-risk chips first (a loss outranks a suggestion), then opportunities — one per play matching a
- *  symbol the account already holds. A play the account doesn't hold at all isn't a "consideration"
- *  for this account; the full catalog stays the Outpost's job. */
+/** At-risk chips first (a loss outranks a suggestion), then opportunities — one per date-windowed
+ *  playbook symbol the account already holds. A playbook the account doesn't hold at all isn't a
+ *  "consideration" for this account; the full catalog is R&D → Playbooks' job. Tactical playbooks
+ *  (no window) are left out, as the retired Plays catalog left them out: a ten-name research basket
+ *  would otherwise chip every big-tech holding with the same suggestion. */
 export function considerationsFor(
   positions: readonly PositionForConsiderations[],
-  catalog: OutpostCatalog,
+  catalog: readonly PlaybookStoreEntry[],
 ): ConsiderationChip[] {
   const heldSymbols = new Set(positions.map((p) => p.symbol));
   const atRisk = positions
     .map(atRiskChip)
     .filter((chip): chip is ConsiderationChip => chip !== undefined);
-  const opportunities = catalog.cards.filter((c) => heldSymbols.has(c.symbol)).map(opportunityChip);
+  const opportunities = catalog.flatMap((entry) =>
+    entry.window === undefined
+      ? []
+      : entry.symbols
+          .filter((symbol) => heldSymbols.has(symbol))
+          .map((symbol) => opportunityChip(entry, symbol, entry.window ?? "")),
+  );
   return [...atRisk, ...opportunities];
 }

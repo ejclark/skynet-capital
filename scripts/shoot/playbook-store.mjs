@@ -23,6 +23,25 @@ const cards = [
     exitCutLosses:
       "Flat from D-5 through the print — the final week is NVDA's dead zone regardless of price.",
     hold: "No confirmed date in range, or already inside D-5: flat and waiting.",
+    symbols: ["NVDA"],
+    evidence:
+      "docs/research/nvda-earnings-cycle.md F1–F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
+    evidenceHref: "/research/nvda-earnings-cycle",
+    window: "D-20 to D-6",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    traits: [
+      {
+        id: "flat-before-the-release",
+        label: "Flat before the release",
+        claim: "Long D-20 to D-6, and out of the market by the time the number is public.",
+      },
+      {
+        id: "confirmed-dates-only",
+        label: "Confirmed dates only",
+        claim:
+          "Re-run with the same date as an estimate rather than confirmed: no position at all.",
+      },
+    ],
     metrics: [],
   },
   {
@@ -35,6 +54,10 @@ const cards = [
     exitCutLosses:
       "A universal momentum stop closes the WHOLE position the moment the thesis breaks.",
     hold: "Quiet conditions (no extreme, no run): does nothing that cycle.",
+    symbols: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"],
+    evidence:
+      "src/personas/sauron-hardcore.ts (Eric, 2026-08-20) — trade volume as research data, not P/L; not yet a docs/research/ backtest of its own.",
+    traits: [],
     metrics: [],
   },
 ];
