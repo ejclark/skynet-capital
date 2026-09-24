@@ -51,7 +51,74 @@ describe("tradeStats — the four measures", () => {
   });
 });
 
+describe("tradeStats — the playbook metrics family (#3665)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("breaks trips down by direction — a written option is the short side", () => {
+    const stats = tradeStats([trip(10), trip(5), trip(20, { short: true })]);
+    expect(stats.byDirection).toEqual({ long: 2, short: 1 });
+  });
+
+  it("breaks trips down by instrument, reading call/put from the OCC symbol", () => {
+    const stats = tradeStats([
+      trip(10),
+      trip(5, { symbol: "MSFT260918C00420000" }),
+      trip(-3, { symbol: "MSFT260918P00420000" }),
+      trip(8, { symbol: "NVDA261016P00120000" }),
+    ]);
+    expect(stats.byInstrument).toEqual({ stock: 1, call: 1, put: 2 });
+  });
+
+  it("sums capital committed as entry price × quantity across trips", () => {
+    const stats = tradeStats([
+      trip(0, { entryPrice: 100, quantity: 10 }),
+      trip(0, { entryPrice: 50, quantity: 4 }),
+    ]);
+    expect(stats.capitalCommitted).toBe(1200);
+  });
+
+  it("weights aggregate return by capital, so a tiny big-percent win can't outvote a large loss", () => {
+    const stats = tradeStats([
+      trip(5, { entryPrice: 10, quantity: 1, returnPct: 50 }),
+      trip(-500, { entryPrice: 100, quantity: 100, returnPct: -5 }),
+    ]);
+    // A naive mean of per-trip percents would read +22.5%; the capital-weighted truth is negative.
+    expect(stats.returnPct).toBeCloseTo((-495 / 10_010) * 100, 6);
+  });
+
+  it("names the longest and shortest holds by time, independent of dollars", () => {
+    const stats = tradeStats([
+      trip(500, { holdMs: 2 * DAY }),
+      trip(-10, { holdMs: 30 * DAY }),
+      trip(1, { holdMs: DAY / 4 }),
+    ]);
+    expect(stats.longestHold?.holdMs).toBe(30 * DAY);
+    expect(stats.shortestHold?.holdMs).toBe(DAY / 4);
+    expect(stats.bestTrade?.realized).toBe(500);
+  });
+
+  it("carries the new family through statsByPlaybook, per playbook", () => {
+    const [s1] = statsByPlaybook([
+      trip(10, { playbookId: "S1-NVDA", entryPrice: 100, quantity: 2 }),
+      trip(-4, { playbookId: "S1-NVDA", entryPrice: 100, quantity: 1, short: true }),
+    ]);
+    expect(s1?.byDirection).toEqual({ long: 1, short: 1 });
+    expect(s1?.capitalCommitted).toBe(300);
+    expect(s1?.returnPct).toBeCloseTo(2, 6);
+  });
+});
+
 describe("tradeStats — unmeasurable stats are null, never zero", () => {
+  it("leaves the playbook metrics honestly empty for an empty history", () => {
+    const stats = tradeStats([]);
+    expect(stats.returnPct).toBeNull();
+    expect(stats.longestHold).toBeNull();
+    expect(stats.shortestHold).toBeNull();
+    expect(stats.capitalCommitted).toBe(0);
+    expect(stats.byDirection).toEqual({ long: 0, short: 0 });
+    expect(stats.byInstrument).toEqual({ stock: 0, call: 0, put: 0 });
+  });
+
   it("returns null measures for an empty history", () => {
     const stats = tradeStats([]);
     expect(stats.trades).toBe(0);

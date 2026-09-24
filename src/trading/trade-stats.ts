@@ -1,4 +1,5 @@
 import { MARKET_TIMEZONE, marketDayKey } from "../domain/market-day.js";
+import { parseOccSymbol } from "./option-symbols.js";
 import type { RoundTrip } from "./round-trips.js";
 
 /**
@@ -48,6 +49,19 @@ export interface TradeStats {
   readonly bestTrade: RoundTrip | null;
   readonly worstTrade: RoundTrip | null;
   readonly avgHoldMs: number | null;
+  /** Ranked by hold time, not dollars — `bestTrade`/`worstTrade` answer a different question. */
+  readonly longestHold: RoundTrip | null;
+  readonly shortestHold: RoundTrip | null;
+  /** On a closed trip the buy/sell axis IS the direction: a long opened with a buy, a short (a
+   *  written option) opened with a sell. Every trip has one of each leg, so counting legs would
+   *  just repeat `trades` twice. */
+  readonly byDirection: { readonly long: number; readonly short: number };
+  readonly byInstrument: { readonly stock: number; readonly call: number; readonly put: number };
+  /** Σ entryPrice × quantity — the same basis each trip's own `returnPct` is measured against. */
+  readonly capitalCommitted: number;
+  /** netRealized ÷ capitalCommitted, in percent. Capital-weighted on purpose: averaging per-trip
+   *  percents would let a $10 trip at +50% outvote a $10k trip at −5%. Null with nothing committed. */
+  readonly returnPct: number | null;
   /** The streak in progress at the most recent close. */
   readonly currentStreak: StreakRun;
   readonly longestWinStreak: number;
@@ -91,7 +105,12 @@ export function tradeStats(trips: readonly RoundTrip[]): TradeStats {
   const avgLoss = losses.length > 0 ? grossLoss / losses.length : null;
 
   const ranked = [...trips].sort((a, b) => b.realized - a.realized);
+  const byHold = [...trips].sort((a, b) => b.holdMs - a.holdMs);
   const { current, longestWin, longestLoss } = streaks(trips);
+  const shorts = trips.filter((t) => t.short).length;
+  const byInstrument = { stock: 0, call: 0, put: 0 };
+  for (const trip of trips) byInstrument[parseOccSymbol(trip.symbol)?.type ?? "stock"] += 1;
+  const capitalCommitted = trips.reduce((s, t) => s + t.entryPrice * t.quantity, 0);
 
   return {
     trades: trips.length,
@@ -110,6 +129,12 @@ export function tradeStats(trips: readonly RoundTrip[]): TradeStats {
     bestTrade: ranked[0] ?? null,
     worstTrade: ranked.length > 0 ? (ranked[ranked.length - 1] as RoundTrip) : null,
     avgHoldMs: trips.length > 0 ? trips.reduce((s, t) => s + t.holdMs, 0) / trips.length : null,
+    longestHold: byHold[0] ?? null,
+    shortestHold: byHold.at(-1) ?? null,
+    byDirection: { long: trips.length - shorts, short: shorts },
+    byInstrument,
+    capitalCommitted,
+    returnPct: capitalCommitted > 0 ? (netRealized / capitalCommitted) * 100 : null,
     currentStreak: current,
     longestWinStreak: longestWin,
     longestLossStreak: longestLoss,
