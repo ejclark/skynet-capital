@@ -99,7 +99,9 @@ describe("playbookPerformance", () => {
       const rows = await playbookPerformance([participant({ id: "sauron" })], {
         ...base,
         findByOrderId: (orderId) =>
-          orderId.startsWith("b-") ? { record: scoutRecord, intent: {} as never } : undefined,
+          orderId.startsWith("b-")
+            ? { record: scoutRecord, intent: scoutRecord.outcomes[0]?.intent as never }
+            : undefined,
       });
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ playbookId: "BETA-SCOUT", trades: 1, netRealized: 100 });
@@ -215,5 +217,42 @@ describe("selectAccounts — a selection narrows, never widens", () => {
   it("drops a requested account the viewer does not own", () => {
     expect(selectAccounts(["a"], "a,someone-else")).toEqual(["a"]);
     expect(selectAccounts([], "someone-else")).toEqual([]);
+  });
+});
+
+describe("playbookPerformance — every trip tagged, however old (found 2026-09-24)", () => {
+  // 50 round trips, each opened by its own S1-NVDA decision. The store's default read is its
+  // newest 30 decisions — exactly what the production bridge serves for a page-less read.
+  const TRIPS = 50;
+  const fills = Array.from({ length: TRIPS }, (_, i) => [
+    fill({
+      orderId: `b-${i}`,
+      side: "buy",
+      price: 100,
+      at: new Date(Date.UTC(2026, 0, 1, 0, i * 2)).toISOString(),
+    }),
+    fill({
+      orderId: `s-${i}`,
+      side: "sell",
+      price: 101,
+      at: new Date(Date.UTC(2026, 0, 1, 0, i * 2 + 1)).toISOString(),
+    }),
+  ]).flat();
+  const records = Array.from({ length: TRIPS }, (_, i) => ({
+    ...decision([buyOutcome(`b-${i}`, "S1-NVDA")]),
+    at: i,
+  }));
+  const deps = {
+    readTradeActivity: () => Promise.resolve(fills),
+    readDecisions: () => Promise.resolve([...records].sort((a, b) => b.at - a.at).slice(0, 30)),
+    findByOrderId: (orderId: string) => {
+      const record = records.find((r) => r.outcomes[0]?.result?.orderId === orderId);
+      return record ? { record, intent: record.outcomes[0]?.intent as never } : undefined;
+    },
+  };
+
+  it("attributes all 50 trips, not just those inside the newest 30 decisions", async () => {
+    const [row] = await playbookPerformance([participant({ id: "sauron" })], deps);
+    expect(row).toMatchObject({ playbookId: "S1-NVDA", trades: TRIPS });
   });
 });
