@@ -1,6 +1,11 @@
 import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import { indexPlaybookTags, playbookTagsFromOutcomes } from "../trading/playbook-attribution.js";
+import {
+  indexPlaybookTags,
+  type PlaybookTag,
+  type PlaybookTagsByOrder,
+  playbookTagsFromOutcomes,
+} from "../trading/playbook-attribution.js";
 import type { RoundTrip } from "../trading/round-trips.js";
 import { type PlaybookStats, statsByPlaybook } from "../trading/trade-stats.js";
 import { type AccountDecisionsDeps, readAccountDecisions } from "./decision-account-view.js";
@@ -37,12 +42,37 @@ async function tripsFor(
 ): Promise<readonly RoundTrip[]> {
   const durable = await deps.readTradeActivity?.(participant.id);
   if (!durable) return [];
-  const decisions =
-    participant.kind === "bot" ? await readAccountDecisions(participant.id, deps) : undefined;
+  if (participant.kind !== "bot") return deskLedger(participant, durable).trips;
+  if (deps.findByOrderId) {
+    return deskLedger(participant, durable, tagsByOrder(durable, deps.findByOrderId)).trips;
+  }
+  // Legacy path, for a deployment without the order-id join: only the decisions a page-less read
+  // returns can tag, so older trips go untagged there.
+  const decisions = await readAccountDecisions(participant.id, deps);
   const tags = decisions
     ? indexPlaybookTags(playbookTagsFromOutcomes(decisions.flatMap((d) => d.outcomes)))
     : undefined;
   return deskLedger(participant, durable, tags).trips;
+}
+
+/** Each fill tagged by its OWN order id (found 2026-09-24): an indexed lookup per order, so a trip
+ *  opened months ago is attributed as surely as today's. Reading decisions and indexing their
+ *  outcomes only ever covered the store's newest page, a few minutes of a busy bot's passes. */
+function tagsByOrder(
+  fills: readonly { readonly orderId: string }[],
+  findByOrderId: NonNullable<PlaybookPerformanceDeps["findByOrderId"]>,
+): PlaybookTagsByOrder {
+  const tags: PlaybookTag[] = [];
+  for (const { orderId } of fills) {
+    const intent = findByOrderId(orderId)?.intent;
+    if (!intent?.playbookId) continue;
+    tags.push({
+      orderId,
+      playbookId: intent.playbookId,
+      ...(intent.playbookMode ? { playbookMode: intent.playbookMode } : {}),
+    });
+  }
+  return indexPlaybookTags(tags);
 }
 
 /** Every closed trade across every live participant, grouped by playbook and scored with the
