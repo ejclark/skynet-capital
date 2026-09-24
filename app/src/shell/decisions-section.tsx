@@ -108,6 +108,14 @@ export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactEle
       >
         <span className="cycle-glyph" aria-hidden="true" />
         <span className="cycle-headline">{cycle.headline}</span>
+        {cycle.authorPersona ? (
+          <span
+            className="chip chip-bot"
+            title={`Recorded under ${cycle.authorPersona}'s own decision history — trades on this account's broker`}
+          >
+            via {cycle.authorPersona}
+          </span>
+        ) : null}
         <span className={`chip chip-${cycle.mode === "live" ? "human" : "bot"}`}>
           {cycle.mode.toUpperCase()}
         </span>

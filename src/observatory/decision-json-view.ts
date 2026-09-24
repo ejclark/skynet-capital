@@ -96,6 +96,12 @@ export interface DecisionCycleView {
    *  timestamp, so the UI can render the run's full idle span. `at` on this row is deliberately
    *  the run's NEWEST cycle, so a reader scanning `at` top-to-bottom sees a normal timeline. */
   readonly quietSince?: string;
+  /** Present only when this cycle's own persona differs from the account being viewed — a
+   *  fallback mechanism like beta-scout, which trades on this account's broker but keeps its own
+   *  decision history under its own persona id (`decision-account-view.ts` pools it in). The raw
+   *  persona id, so the UI can badge it without guessing; absent for every cycle the account's own
+   *  persona produced. */
+  readonly authorPersona?: string;
 }
 
 function cycleStatus(record: DecisionRecord): CycleStatus {
@@ -173,7 +179,7 @@ export interface DecisionCyclesPage {
 
 /** Runs `decisionCyclesView`'s per-record shaping — split out so a collapsed quiet run
  *  (`quietRunView` below) can share the page's mapping step without duplicating it. */
-function cycleView(record: DecisionRecord): DecisionCycleView {
+function cycleView(record: DecisionRecord, homePersonaId?: string): DecisionCycleView {
   const status = cycleStatus(record);
   return {
     at: new Date(record.at).toISOString(),
@@ -183,6 +189,9 @@ function cycleView(record: DecisionRecord): DecisionCycleView {
     rawCount: record.rawIntents.length,
     guardedCount: record.guardedIntents.length,
     outcomes: record.outcomes.map((outcome) => outcomeView(record, outcome)),
+    ...(homePersonaId !== undefined && record.personaId !== homePersonaId
+      ? { authorPersona: record.personaId }
+      : {}),
     ...(status === "refused"
       ? {
           // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
@@ -215,12 +224,19 @@ function cycleView(record: DecisionRecord): DecisionCycleView {
  *  "nothing happened for 25 minutes", never 25 separate confirmations of it. A lone quiet cycle
  *  (no quiet neighbor) stays exactly as it rendered before this existed; nothing here ever merges
  *  a non-quiet cycle. `records` must already be sorted newest-first, so each group is a
- *  contiguous, newest-first slice. */
+ *  contiguous, newest-first slice. Also never merges across a `personaId` change — once an
+ *  account's decisions can include another persona's (`decision-account-view.ts`), a run of
+ *  quiet cycles must stay one persona's own idle span, never two personas' silence read as one. */
 function groupQuietRuns(records: readonly DecisionRecord[]): DecisionRecord[][] {
   const groups: DecisionRecord[][] = [];
   for (const rec of records) {
     const current = groups.at(-1);
-    if (current && cycleStatus(rec) === "quiet" && cycleStatus(groupNewest(current)) === "quiet") {
+    if (
+      current &&
+      cycleStatus(rec) === "quiet" &&
+      cycleStatus(groupNewest(current)) === "quiet" &&
+      rec.personaId === groupNewest(current).personaId
+    ) {
       current.push(rec);
     } else {
       groups.push([rec]);
@@ -239,8 +255,10 @@ function groupOldest(group: readonly DecisionRecord[]): DecisionRecord {
   return group[group.length - 1] as DecisionRecord;
 }
 
-/** The collapsed view for a run of ≥2 consecutive quiet cycles — see `groupQuietRuns`. */
-function quietRunView(group: readonly DecisionRecord[]): DecisionCycleView {
+/** The collapsed view for a run of ≥2 consecutive quiet cycles — see `groupQuietRuns`. Every
+ *  member shares one `personaId` (the grouping guarantees it), so `authorPersona` tags the whole
+ *  run exactly as a single ungrouped cycle would tag itself. */
+function quietRunView(group: readonly DecisionRecord[], homePersonaId?: string): DecisionCycleView {
   const newest = groupNewest(group);
   const oldest = groupOldest(group);
   return {
@@ -252,12 +270,22 @@ function quietRunView(group: readonly DecisionRecord[]): DecisionCycleView {
     guardedCount: 0,
     outcomes: [],
     quietSince: new Date(oldest.at).toISOString(),
+    ...(homePersonaId !== undefined && newest.personaId !== homePersonaId
+      ? { authorPersona: newest.personaId }
+      : {}),
   };
 }
 
 export function decisionCyclesView(
   records: readonly DecisionRecord[],
-  opts: { readonly limit?: number; readonly before?: number } = {},
+  opts: {
+    readonly limit?: number;
+    readonly before?: number;
+    /** The account being viewed — a cycle whose own `personaId` differs gets tagged
+     *  `authorPersona` (`decision-account-view.ts`'s cross-persona pool). Omit for a read that was
+     *  never widened past one persona, where every cycle is trivially the account's own. */
+    readonly homePersonaId?: string;
+  } = {},
 ): DecisionCyclesPage {
   const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
   const groups = groupQuietRuns([...records].sort((a, b) => b.at - a.at));
@@ -269,7 +297,9 @@ export function decisionCyclesView(
     ...(opts.before !== undefined ? { before: opts.before } : {}),
   });
   const cycles = items.map((group) =>
-    group.length > 1 ? quietRunView(group) : cycleView(groupNewest(group)),
+    group.length > 1
+      ? quietRunView(group, opts.homePersonaId)
+      : cycleView(groupNewest(group), opts.homePersonaId),
   );
   return { cycles, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }

@@ -244,6 +244,10 @@ export interface DecisionCycle {
    *  oldest cycle's timestamp in the run, so the UI can render the full idle span alongside `at`
    *  (the run's newest). */
   readonly quietSince?: string;
+  /** Present only when this cycle was recorded by a persona OTHER than the account being viewed —
+   *  a fallback mechanism like beta-scout, pooled in by `decision-account-view.ts` because it
+   *  trades on this account's broker while keeping its own decision history separately. */
+  readonly authorPersona?: string;
 }
 
 export interface DeskDecisions {

@@ -332,6 +332,47 @@ describe("decisionCyclesView — collapsing a quiet run (#3608)", () => {
   });
 });
 
+describe("decisionCyclesView — cross-persona pooling (found live, 2026-09-24)", () => {
+  it("tags a cycle recorded by another persona, leaving the account's own untagged", () => {
+    const view = decisionCyclesView(
+      [record({ at: 1, personaId: "sauron" }), record({ at: 2, personaId: "beta-scout" })],
+      { homePersonaId: "sauron" },
+    );
+    const [betaCycle, sauronCycle] = view; // newest first
+    expect(betaCycle?.authorPersona).toBe("beta-scout");
+    expect(sauronCycle).not.toHaveProperty("authorPersona");
+  });
+
+  it("never tags anything when homePersonaId is omitted — a read never widened past one persona", () => {
+    const view = decisionCyclesView([record({ at: 1, personaId: "beta-scout" })]);
+    expect(view[0]).not.toHaveProperty("authorPersona");
+  });
+
+  it("tags a whole collapsed quiet run when every member is the foreign persona's own", () => {
+    const quiet = (at: number, personaId: string) =>
+      record({ at, personaId, rawIntents: [], guardedIntents: [], outcomes: [] });
+    const view = decisionCyclesView([quiet(1, "beta-scout"), quiet(2, "beta-scout")], {
+      homePersonaId: "sauron",
+    });
+    expect(view).toHaveLength(1);
+    expect(view[0]).toMatchObject({
+      headline: "no signals fired for 2 cycles — watching",
+      authorPersona: "beta-scout",
+    });
+  });
+
+  it("never merges a quiet run across a persona change, even with identical status", () => {
+    const quiet = (at: number, personaId: string) =>
+      record({ at, personaId, rawIntents: [], guardedIntents: [], outcomes: [] });
+    const view = decisionCyclesView([quiet(1, "sauron"), quiet(2, "beta-scout")], {
+      homePersonaId: "sauron",
+    });
+    expect(view).toHaveLength(2); // not collapsed into one 2-cycle run
+    expect(view[0]).toMatchObject({ authorPersona: "beta-scout" });
+    expect(view[1]).not.toHaveProperty("authorPersona");
+  });
+});
+
 describe("decisionCyclesView — pagination (PR 5, issue #2287)", () => {
   const records = Array.from({ length: 5 }, (_, i) => record({ at: i + 1 }));
 

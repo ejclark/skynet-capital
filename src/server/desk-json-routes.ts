@@ -13,6 +13,7 @@ import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { readAccountDecisions } from "./decision-account-view.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
 /** The desk as data — same gate, same formatters as /u/:id's own views.
@@ -79,7 +80,10 @@ export async function serveDeskJson(
       res.end(JSON.stringify({ available: false, kind: found.kind, cycles: [] }));
       return;
     }
-    const records = await config.readDecisions?.(id);
+    // Pooled across every persona that trades on this account, not just the one whose id matches
+    // it — a fallback mechanism like beta-scout trades here while keeping its own decision history
+    // under its own persona id (`decision-account-view.ts`).
+    const records = await readAccountDecisions(id, config);
     // The funnel and expectancy are full-history aggregates, independent of the page the cycle
     // feed is on — neither lies about its totals just because the viewer scrolled back one page.
     const funnel = config.funnelFor?.(id);
@@ -90,7 +94,7 @@ export async function serveDeskJson(
           ? {
               available: true,
               kind: "bot",
-              ...decisionCyclesView(records, { limit, before: beforeAt }),
+              ...decisionCyclesView(records, { limit, before: beforeAt, homePersonaId: id }),
               ...(funnel ? { funnel: funnelView(funnel) } : {}),
               ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
             }
