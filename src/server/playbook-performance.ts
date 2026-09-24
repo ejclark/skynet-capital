@@ -1,10 +1,9 @@
-import type { DecisionRecord } from "../autonomous/decision-record.js";
-import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { indexPlaybookTags, playbookTagsFromOutcomes } from "../trading/playbook-attribution.js";
 import type { RoundTrip } from "../trading/round-trips.js";
 import { type PlaybookStats, statsByPlaybook } from "../trading/trade-stats.js";
+import { type AccountDecisionsDeps, readAccountDecisions } from "./decision-account-view.js";
 
 /**
  * HOUSE-WIDE PLAYBOOK PERFORMANCE — closes the gap `playbook-attribution.ts`'s own module doc
@@ -25,13 +24,13 @@ import { type PlaybookStats, statsByPlaybook } from "../trading/trade-stats.js";
  * honestly by excluding untagged trips rather than inventing a "human" bucket.
  */
 
-export interface PlaybookPerformanceDeps {
-  readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
-  readonly readDecisions?: (participantId: string) => Promise<readonly DecisionRecord[]>;
-}
+export type PlaybookPerformanceDeps = AccountDecisionsDeps;
 
 /** One participant's contribution to the house-wide trip pool — playbook-tagged when the
- *  participant is a bot with a decision audit trail wired, untagged otherwise. */
+ *  participant is a bot with a decision audit trail wired, untagged otherwise. Tags come from every
+ *  persona that traded on this ledger, not just its owner: beta-scout fills land on Sauron's broker
+ *  but file their decisions under "beta-scout", so an owner-only read left every BETA-SCOUT trip
+ *  untagged and missing from the stats. */
 async function tripsFor(
   participant: ParticipantSnapshot,
   deps: PlaybookPerformanceDeps,
@@ -39,7 +38,7 @@ async function tripsFor(
   const durable = await deps.readTradeActivity?.(participant.id);
   if (!durable) return [];
   const decisions =
-    participant.kind === "bot" ? await deps.readDecisions?.(participant.id) : undefined;
+    participant.kind === "bot" ? await readAccountDecisions(participant.id, deps) : undefined;
   const tags = decisions
     ? indexPlaybookTags(playbookTagsFromOutcomes(decisions.flatMap((d) => d.outcomes)))
     : undefined;
