@@ -109,6 +109,25 @@ robust, alpha fragile — is the finding.
   without a second confirming instance at a comparably elevated yield level — n=1 killed on its first
   out-of-sample test, same shape as the housing-starts ladder above.
 
+- **A French flash PMI's own-hours footprint on the CAC-minus-DAX residual, measured as genuinely
+  absent at registration (FT-sp-global-flash-france-pmi-2026-09-23-1)** — added 2026-09-24 from the
+  [sp-global-flash-france-pmi-2026-09-23 close-out](events/sp-global-flash-france-pmi-2026-09-23.md).
+  Registered on a 60-session base finding the residual quiet on three prior flash mornings; scored
+  on 2026-09-23 itself, the residual over 07:00-08:55 UTC ranked **p100** of 58 sessions — the single
+  most extreme reading in sample — killing the "no footprint" prediction on the letter of its own OR
+  kill switch. **What this does and does not refute:** the France-only raw CAC move in its own
+  07:15-07:30 window stayed an ordinary p69, even against the largest French PMI beat in over two
+  years (composite 48.5 to 51.2, crossing above 50 for the first time since its contraction began) —
+  so the extreme residual reading traces to the DAX falling -0.87% (2nd-lowest of 58 sessions) while
+  Germany's own Flash PMI printed a strong beat (composite 53.8, an 11-month high) the same morning,
+  the opposite of what a German-PMI-driven decline would look like. The kill is correct by the test's
+  own letter, but the evidence argues the CAC-minus-DAX construction is contaminated by idiosyncratic,
+  PMI-unrelated single-market noise on mornings when Germany also prints — exactly the CAC-40-is-the-
+  wrong-index limitation the registering document flagged before scoring. Do not re-propose this
+  construction on the CAC 40/DAX pair without switching to an instrument genuinely exposed to French
+  conditions alone (a domestic French mid-cap index, or the OAT-Bund spread) — the generalizable
+  lesson this close-out banked.
+
 - **A positional nowcast "ladder" derived from a post-hoc subdivision of one archive, falsified on
   its first out-of-sample instance (FT-housing-starts-2026-09-17-1)** — added 2026-09-18 from the
   [housing-starts-2026-09-17 close-out](events/housing-starts-2026-09-17.md). Leg 2 of that
