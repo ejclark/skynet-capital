@@ -11,11 +11,13 @@ import { chip, formatCurrency, formatSigned, pct, plClass, profileHref } from ".
 import { holdingsUnion } from "./standings-board-view.js";
 import { type CohortStats, cohortStats } from "./standings-cohort.js";
 import {
-  formatMetric,
   LEADER_METRICS,
   type LeaderMetric,
+  metricKnown,
   metricLabel,
+  metricText,
   metricValue,
+  rankValue,
 } from "./standings-metric.js";
 
 /**
@@ -107,22 +109,25 @@ function fieldLadder(
   bId: string | undefined,
 ): string {
   const live = data.participants.filter((p) => !p.error);
-  const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
-  const maxAbs = ranked.reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
+  const ranked = [...live].sort((a, b) => rankValue(b, metric) - rankValue(a, metric));
+  const maxAbs =
+    ranked
+      .filter((p) => metricKnown(p, metric))
+      .reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
 
   const rows = ranked
     .map((p) => {
-      const v = metricValue(p, metric);
+      const v = metricKnown(p, metric) ? metricValue(p, metric) : 0;
       const width = Math.max(2, (Math.abs(v) / maxAbs) * 100);
       const sign = metric === "equity" ? "flat" : plClass(v);
       const self = currentId && p.id === currentId ? " rank-self" : "";
       const you = currentId && p.id === currentId ? `<span class="you-mark">YOU</span>` : "";
       // data-field-key/data-field are the live patch's addresses; data-sort is what lets the list
       // reorder itself in place on a rank change instead of being rebuilt (see standings-patch.ts).
-      return `<li class="rank-row${self}" data-field-key="${escapeHtml(p.id)}" data-empire-key="${escapeHtml(p.id)}" data-sort="${v}">
+      return `<li class="rank-row${self}" data-field-key="${escapeHtml(p.id)}" data-empire-key="${escapeHtml(p.id)}" data-sort="${rankValue(p, metric)}">
         <a class="rank-name" href="${profileHref(p.id)}">${escapeHtml(p.displayName)} ${chip(p)}${you}</a>
         <span class="rank-bar"><i class="bar-${sign}" data-field-bar="bar" data-field-tone="bar" data-tone-prefix="bar-" style="width:${width.toFixed(1)}%"></i></span>
-        <span class="rank-val num ${sign}" data-field="value" data-field-tone="value">${formatMetric(v, metric)}</span>
+        <span class="rank-val num ${sign}" data-field="value" data-field-tone="value">${metricText(p, metric)}</span>
         ${comparePill(p.id, metric, aId, bId)}
       </li>`;
     })

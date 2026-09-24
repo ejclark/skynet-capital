@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useState } from "react";
 import type { BoardMetric } from "../live/board";
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
-import { type LeagueLine, readLeague } from "./league-data";
+import { type LeagueLine, type LeagueReading, readLeague } from "./league-data";
 
 /**
  * THE LEAGUE CARD (#3689 slice 4, design handoff 3a): where you stand, without leaving Accounts.
@@ -12,13 +12,14 @@ import { type LeagueLine, readLeague } from "./league-data";
  * sentence: how far you are from the entry just above you.
  *
  * It reads the same board snapshot and live channel as /leaderboard, with the same metrics under
- * the same names ("Equity", "Return %"). The design's "1M return" league needs a per-participant
- * 1-month metric the board doesn't compute yet; that's a later slice, not a relabel.
+ * the same names. It opens on "1M return" (the design's "this month, not all-time": a member who
+ * joined last week can lead it); the server's month-return sync fills that metric from each
+ * account's flow-adjusted broker history, so a deposit never ranks as a gain.
  */
 
 const METRICS: ReadonlyArray<{ key: BoardMetric; label: string }> = [
+  { key: "month", label: "1M" },
   { key: "equity", label: "Equity" },
-  { key: "return", label: "Return %" },
 ];
 
 function Line({ line, me }: { readonly line: LeagueLine; readonly me?: string }): ReactElement {
@@ -41,6 +42,13 @@ function Line({ line, me }: { readonly line: LeagueLine; readonly me?: string })
   );
 }
 
+/** The phone one-liner's tail: " · $1,204 behind Apex (yours)", or " · leading ✦". */
+function onelinerGap(gap: LeagueReading["gap"]): string {
+  if (!gap || gap.leading) return " · leading ✦";
+  const amount = gap.amount ? `${gap.amount} ` : "";
+  return ` · ${amount}behind ${gap.aheadName}${gap.aheadOwned ? " (yours)" : ""}`;
+}
+
 export function LeagueCard({
   ownedIds,
   meId,
@@ -49,7 +57,7 @@ export function LeagueCard({
   /** The viewer's own (human) entry, when they have one — the "you" row and the gap's subject. */
   readonly meId?: string;
 }): ReactElement | null {
-  const [metric, setMetric] = useState<BoardMetric>("equity");
+  const [metric, setMetric] = useState<BoardMetric>("month");
   const queryClient = useQueryClient();
   const board = useQuery(boardQueryOptions(metric));
   useEffect(() => connectBoardChannel(queryClient, metric), [queryClient, metric]);
@@ -61,7 +69,9 @@ export function LeagueCard({
   return (
     <section className="league-card" aria-label="League">
       <header className="league-head">
-        <span className="league-eyebrow">League</span>
+        <span className="league-eyebrow">
+          League · {metric === "month" ? "1M return" : "equity"}
+        </span>
         <fieldset className="league-toggle">
           <legend className="visually-hidden">Rank by</legend>
           {METRICS.map((m) => (
@@ -92,10 +102,7 @@ export function LeagueCard({
       {league.meRank !== undefined ? (
         <Link to="/leaderboard" search={{ by: metric }} className="league-oneliner">
           You're <b>#{league.meRank}</b>
-          {gap && !gap.leading
-            ? ` · ${gap.amount} behind ${gap.aheadName}${gap.aheadOwned ? " (yours)" : ""}`
-            : " · leading ✦"}{" "}
-          <span aria-hidden="true">›</span>
+          {onelinerGap(gap)} <span aria-hidden="true">›</span>
         </Link>
       ) : null}
       <p className="league-foot">
@@ -103,7 +110,7 @@ export function LeagueCard({
           <>You lead the league ✦</>
         ) : gap ? (
           <>
-            You're <b className="num">{gap.amount}</b> behind {gap.aheadName}
+            You're {gap.amount ? <b className="num">{gap.amount}</b> : null} behind {gap.aheadName}
             {gap.aheadOwned ? ", your own bot" : ""}.
           </>
         ) : null}{" "}

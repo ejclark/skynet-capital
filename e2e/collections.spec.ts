@@ -1,20 +1,18 @@
 import { expect, test } from "@playwright/test";
 
-// /collections and /collections/:id were deleted in #3343 — the narrative-shelf browsing now
-// lives as /research's "Collections" section (app/src/shell/collections-section.tsx). Behavioral
-// only (design decision 6). The shelf slugs are server-curated, not fixed, so this discovers a
-// real one by following the index's own link rather than guessing.
-test("renders the collections section", async ({ page }) => {
+// /collections and /collections/:id were folded into /research's "Collections" section in #3343,
+// then that section was retired in #3627 (Eric, 2026-09-23 — its ideas banked in docs/PATTERNS.md
+// → discovery). The current IA: an old `?section=collections` link — including a deep link to one
+// shelf — lands on R&D → Playbooks (app/src/routes/research.tsx validateSearch), so bookmarks never
+// dead-end. Behavioral only (design decision 6).
+test("an old collections link lands on R&D → Playbooks", async ({ page }) => {
   await page.goto("/app/research?section=collections");
-  await expect(page.getByRole("heading", { name: "Collections" })).toBeVisible();
+  await expect(page).toHaveURL(/[?&]section=playbooks\b/);
+  await expect(page.getByRole("heading", { level: 1, name: "Playbooks" })).toBeVisible();
 });
 
-test("renders a collection shelf", async ({ page }) => {
-  await page.goto("/app/research?section=collections");
-  const firstCard = page.locator(".cx-card").first();
-  await expect(firstCard).toBeVisible();
-  await firstCard.click();
-  await expect(page).toHaveURL(/[?&]section=collections\b/);
-  await expect(page).toHaveURL(/[?&]shelf=[^&]+/);
-  await expect(page.locator("h1")).toBeVisible();
+test("an old collection-shelf deep link lands on R&D → Playbooks", async ({ page }) => {
+  await page.goto("/app/research?section=collections&shelf=earnings");
+  await expect(page).toHaveURL(/[?&]section=playbooks\b/);
+  await expect(page.getByRole("heading", { level: 1, name: "Playbooks" })).toBeVisible();
 });
