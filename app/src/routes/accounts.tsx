@@ -22,6 +22,7 @@ import { DecisionsSection } from "../shell/decisions-section";
 import { useDefaultAccount } from "../shell/default-account";
 import { PageFrame } from "../shell/frame";
 import { NetWorthCondensed } from "../shell/networth-summary";
+import { parseLens } from "../shell/positions-lens";
 import { ProfileRail } from "../shell/profile-rail";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
@@ -349,6 +350,8 @@ export const Route = createFileRoute("/accounts")({
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
       ? { q: search.q }
       : {}),
+    // List · Map · Runway (#3689 slice 9): a lens on one positions list, not a route.
+    ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
   }),
   component: AccountsPage,
 });
