@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useMoneypenny } from "../live/moneypenny";
 import { fetchOnboarding } from "../live/onboarding";
 import { KeyboardChords } from "../shell/keyboard";
+import { MarketSession } from "../shell/market-session";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
 import { StatusPill } from "../shell/status-pill";
 
@@ -23,6 +24,9 @@ import { StatusPill } from "../shell/status-pill";
  *
  * Fleet ops health has no tab either (#1296): it hangs off the status pill in the bar's actions
  * (`status-pill.tsx`), which four signals earn without a fifth destination competing for the room.
+ *
+ * The market clock (#3689) sits between the views and the actions on every route: the time left
+ * to trade is shell-level information, not an Accounts feature.
  */
 
 function GearIcon(): ReactElement {
@@ -169,6 +173,7 @@ function RootShell(): ReactElement {
               R&amp;D
             </Link>
           </nav>
+          <MarketSession />
           <div className="topbar-actions">
             <StatusPill />
             <Link
