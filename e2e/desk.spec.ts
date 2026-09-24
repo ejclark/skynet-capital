@@ -14,9 +14,15 @@ test.describe("desk", () => {
     await expect(page.getByRole("heading", { name: /decisions/ })).toBeVisible();
   });
 
-  test("renders a desk's playbook store", async ({ page }) => {
+  // The Playbook Store left the desk in #3625 (Eric, 2026-09-23: "the legacy route should not have
+  // the playbook store view") — the desk route now only redirects to R&D → Playbooks with the same
+  // account pre-selected in the "Subscribe as" rail.
+  test("redirects a desk's playbooks link to R&D → Playbooks", async ({ page }) => {
     await page.goto("/app/u/day-trader/playbooks");
-    await expect(page.getByRole("heading", { name: /Playbook Store/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/research\?/);
+    await expect(page).toHaveURL(/[?&]section=playbooks\b/);
+    await expect(page).toHaveURL(/[?&]account=day-trader\b/);
+    await expect(page.getByRole("heading", { level: 1, name: "Playbooks" })).toBeVisible();
   });
 
   test("renders a desk's pulse view", async ({ page }) => {
