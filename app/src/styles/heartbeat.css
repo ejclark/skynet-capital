@@ -1,0 +1,99 @@
+/* The bot heartbeat (#3687 slice 3): `shell/heartbeat.tsx`. State rides the glyph, the word and the
+ * border's weight or dash, never hue alone (docs/BRAND.md → Accessibility). Existing tokens only. */
+
+.hb-chip-wrap {
+  position: relative;
+}
+.hb-chip {
+  font: 12px / 1.3 var(--mono);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hb-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.hb-chip[data-state="stale"],
+.hb-card[data-state="stale"] {
+  border: 2px solid var(--text);
+}
+.hb-chip[data-state="market-closed"],
+.hb-card[data-state="market-closed"] {
+  border-style: dashed;
+}
+.hb-chip[data-state="no-record"],
+.hb-card[data-state="no-record"] {
+  border-style: dotted;
+}
+.hb-pop {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: min(420px, 90vw);
+  max-width: 90vw;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+.hb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hb-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+}
+.hb-state {
+  margin: 0;
+  font: 15px / 1.35 var(--mono);
+}
+.hb-h {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.hb-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12.5px;
+}
+.hb-table th,
+.hb-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  white-space: nowrap;
+}
+.hb-table th {
+  font: 10.5px / 1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* At phone width the plain-words columns wrap rather than clip. */
+.hb-table td:nth-child(3),
+.hb-table td:nth-child(4) {
+  white-space: normal;
+}
