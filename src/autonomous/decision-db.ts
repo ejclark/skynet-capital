@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { OrderIntent, Side } from "../domain/types.js";
+import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { decisionFrom, intentRowToStored, paramsForRawIntent } from "./decision-db-rows.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
@@ -153,6 +153,16 @@ export function openDecisionDb(path: string): DecisionDb {
     CREATE INDEX IF NOT EXISTS intents_strategy ON intents(strategy);
     CREATE INDEX IF NOT EXISTS intents_symbol ON intents(symbol);
 
+    -- Each playbook consulted on a pass and what it concluded (#3687). Its own table rather than a
+    -- decisions column: CREATE IF NOT EXISTS reaches an existing database, an added column would not.
+    CREATE TABLE IF NOT EXISTS playbook_verdicts (
+      decision_id INTEGER NOT NULL REFERENCES decisions(id),
+      playbook_id TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      state TEXT NOT NULL,
+      PRIMARY KEY (decision_id, playbook_id, mode)
+    );
+
     -- The replay tape (shared across every bot — market state has no persona). One row per
     -- (at, symbol); "INSERT OR IGNORE" below means the first cycle to observe an instant owns it.
     CREATE TABLE IF NOT EXISTS market_signals (
@@ -207,6 +217,12 @@ export function openDecisionDb(path: string): DecisionDb {
   );
   const selectIntentsFor = db.prepare(
     "SELECT * FROM intents WHERE decision_id = ? ORDER BY id ASC",
+  );
+  const insertVerdict = db.prepare(
+    "INSERT OR IGNORE INTO playbook_verdicts (decision_id, playbook_id, mode, state) VALUES (?, ?, ?, ?)",
+  );
+  const selectVerdictsFor = db.prepare(
+    "SELECT playbook_id, mode, state FROM playbook_verdicts WHERE decision_id = ? ORDER BY rowid ASC",
   );
   const selectMaxAtAll = db.prepare(
     "SELECT persona_id, MAX(at) AS max_at FROM decisions GROUP BY persona_id",
@@ -324,6 +340,16 @@ export function openDecisionDb(path: string): DecisionDb {
     return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map(intentRowToStored);
   }
 
+  function verdictsFor(decisionId: number): PlaybookVerdict[] {
+    return (
+      selectVerdictsFor.all(decisionId) as { playbook_id: string; mode: string; state: string }[]
+    ).map((r) => ({
+      playbookId: r.playbook_id,
+      mode: r.mode as PlaybookVerdict["mode"],
+      state: r.state as PlaybookVerdict["state"],
+    }));
+  }
+
   function recordOne(entry: DecisionRecord): void {
     const contextJson = entry.context ? JSON.stringify(entry.context) : null;
     insertDecision.run(entry.at, entry.personaId, entry.mode, entry.halted ?? null, contextJson);
@@ -334,6 +360,11 @@ export function openDecisionDb(path: string): DecisionDb {
     // call inserted the decision row but crashed before its intents finished).
     if (!decisionRow) return;
     const decisionId = decisionRow.id;
+    // Before the early return below: idempotent by primary key, so a re-run fills in verdicts a
+    // crashed first attempt never reached.
+    for (const v of entry.playbookVerdicts ?? []) {
+      insertVerdict.run(decisionId, v.playbookId, v.mode, v.state);
+    }
     if (hasIntents.get(decisionId)) return;
 
     const usedOutcomes = new Set<number>();
@@ -392,6 +423,7 @@ export function openDecisionDb(path: string): DecisionDb {
         row.halted,
         row.context_json,
         intentRowsFor(row.id),
+        verdictsFor(row.id),
       ),
     );
   }
@@ -507,6 +539,7 @@ export function openDecisionDb(path: string): DecisionDb {
         row.decision_halted,
         row.decision_context_json,
         intentRowsFor(row.decision_id),
+        verdictsFor(row.decision_id),
       );
       const matched = record.outcomes.find((o) => o.result?.orderId === orderId);
       return matched ? { record, intent: matched.intent } : undefined;

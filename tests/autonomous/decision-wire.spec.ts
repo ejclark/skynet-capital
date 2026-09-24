@@ -50,6 +50,35 @@ describe("parseDecisionRecord", () => {
     expect(bare).not.toHaveProperty("refusals");
     expect(bare).not.toHaveProperty("context");
   });
+
+  describe("playbook verdicts (#3687)", () => {
+    const verdict = { playbookId: "S1-NVDA", mode: "standard", state: "no-window" };
+
+    it("carries well-formed verdicts across the wire", () => {
+      const parsed = parseDecisionRecord({ ...validRecord(), playbookVerdicts: [verdict] });
+      expect(parsed?.playbookVerdicts).toEqual([verdict]);
+    });
+
+    it("omits the field when absent or empty", () => {
+      expect(parseDecisionRecord(validRecord())).not.toHaveProperty("playbookVerdicts");
+      expect(parseDecisionRecord({ ...validRecord(), playbookVerdicts: [] })).not.toHaveProperty(
+        "playbookVerdicts",
+      );
+    });
+
+    it("fails the whole record closed on one malformed verdict", () => {
+      for (const bad of [
+        { ...verdict, state: "maybe" },
+        { ...verdict, mode: "yolo" },
+        { ...verdict, playbookId: "" },
+        "S1-NVDA",
+      ]) {
+        expect(parseDecisionRecord({ ...validRecord(), playbookVerdicts: [verdict, bad] })).toBe(
+          undefined,
+        );
+      }
+    });
+  });
 });
 
 describe("parseDecisionBatch", () => {

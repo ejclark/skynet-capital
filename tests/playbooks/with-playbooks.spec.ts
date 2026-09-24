@@ -96,3 +96,45 @@ describe("withPlaybooks", () => {
     expect(seenEvents).toBe(events);
   });
 });
+
+describe("withPlaybooks — per-playbook verdicts (#3687)", () => {
+  const darkPlay: Playbook = { ...nvdaPlay, id: "TEST-DARK", desiredState: () => "no-window" };
+  const tactical: Playbook = { ...nvdaPlay, id: "TEST-TACTICS", tactics: [] };
+
+  it("reports what every composed playbook concluded, one entry per playbook and mode", () => {
+    const composed = withPlaybooks(
+      base,
+      [
+        { playbook: nvdaPlay, mode: "standard" },
+        { playbook: darkPlay, mode: "conservative" },
+        { playbook: tactical, mode: "aggressive" },
+      ],
+      calendar,
+    );
+    expect(composed.playbookVerdicts?.(ctx)).toEqual([
+      { playbookId: "TEST-NVDA", mode: "standard", state: "long" },
+      { playbookId: "TEST-DARK", mode: "conservative", state: "no-window" },
+      { playbookId: "TEST-TACTICS", mode: "aggressive", state: "tactical" },
+    ]);
+  });
+
+  it("hands desiredState the same clock, calendar and events decide() uses", () => {
+    const seen: unknown[] = [];
+    const spy: Playbook = {
+      ...nvdaPlay,
+      desiredState: (asOf, cal, events) => {
+        seen.push([asOf, cal, events]);
+        return "flat";
+      },
+    };
+    const events = [{ symbol: "NVDA", at: "2026-08-16T14:00:00Z", kind: "test" }] as never;
+    withPlaybooks(base, [{ playbook: spy, mode: "standard" }], calendar, events).playbookVerdicts?.(
+      ctx,
+    );
+    expect(seen).toEqual([[ctx.asOf, calendar, events]]);
+  });
+
+  it("the dark default (no playbooks) exposes no verdicts at all", () => {
+    expect(withPlaybooks(base, [], calendar).playbookVerdicts).toBeUndefined();
+  });
+});

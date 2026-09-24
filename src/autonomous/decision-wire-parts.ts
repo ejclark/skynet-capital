@@ -1,11 +1,13 @@
-import type {
-  MarketContext,
-  OrderForecast,
-  OrderIntent,
-  OrderResult,
-  PlaybookMode,
-  Quote,
-  Side,
+import {
+  type MarketContext,
+  type OrderForecast,
+  type OrderIntent,
+  type OrderResult,
+  PLAYBOOK_VERDICT_STATES,
+  type PlaybookMode,
+  type PlaybookVerdict,
+  type Quote,
+  type Side,
 } from "../domain/types.js";
 import { GUARD_REFUSAL_REASONS, type GuardRefusal } from "../engine/guards.js";
 import { isRecord } from "../storage/parse-guards.js";
@@ -103,6 +105,15 @@ export function parseGuardRefusal(value: unknown): GuardRefusal | undefined {
   const reason = GUARD_REFUSAL_REASONS.find((r) => r === value.reason);
   if (!(intent && reason)) return undefined;
   return { intent, reason };
+}
+
+export function parsePlaybookVerdict(value: unknown): PlaybookVerdict | undefined {
+  if (!isRecord(value)) return undefined;
+  const playbookId = boundedString(value.playbookId);
+  const mode = PLAYBOOK_MODES.find((m) => m === value.mode);
+  const state = PLAYBOOK_VERDICT_STATES.find((s) => s === value.state);
+  if (!(playbookId && mode && state)) return undefined;
+  return { playbookId, mode, state };
 }
 
 function parseQuote(value: unknown): Quote | undefined {

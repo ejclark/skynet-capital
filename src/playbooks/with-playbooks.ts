@@ -11,7 +11,12 @@
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
-import { type EnabledPlaybook, type PlaybookEvent, playbookIntents } from "./playbook.js";
+import {
+  type EnabledPlaybook,
+  type PlaybookEvent,
+  playbookIntents,
+  playbookVerdicts,
+} from "./playbook.js";
 
 export function withPlaybooks(
   base: Persona,
@@ -34,5 +39,6 @@ export function withPlaybooks(
       const reflexes = base.decide(context, portfolio).filter((i) => !managed.has(i.symbol));
       return [...plays, ...reflexes];
     },
+    playbookVerdicts: (context) => playbookVerdicts(enabled, context.asOf, calendar, events),
   };
 }

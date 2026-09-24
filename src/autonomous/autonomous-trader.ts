@@ -113,6 +113,7 @@ export class AutonomousTrader {
 
     const portfolio = await this.config.broker.getPortfolio();
     const rawIntents = persona.decide(context, portfolio);
+    const playbookVerdicts = persona.playbookVerdicts?.(context) ?? [];
     const { approved: guardedIntents, refused: refusals } = applyGuardsWithVerdicts(
       rawIntents,
       portfolio,
@@ -150,6 +151,7 @@ export class AutonomousTrader {
       outcomes,
       context,
       ...(refusals.length > 0 ? { refusals } : {}),
+      ...(playbookVerdicts.length > 0 ? { playbookVerdicts } : {}),
     });
     return results;
   }

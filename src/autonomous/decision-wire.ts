@@ -5,6 +5,7 @@ import {
   parseIntentOutcome,
   parseMarketContext,
   parseOrderIntent,
+  parsePlaybookVerdict,
 } from "./decision-wire-parts.js";
 
 /**
@@ -66,6 +67,10 @@ export function parseDecisionRecord(value: unknown): DecisionRecord | undefined 
     ? value.refusals.map(parseGuardRefusal)
     : undefined;
   if (refusals?.some((r) => !r)) return undefined;
+  const verdicts = Array.isArray(value.playbookVerdicts)
+    ? value.playbookVerdicts.map(parsePlaybookVerdict)
+    : undefined;
+  if (verdicts?.some((v) => !v)) return undefined;
 
   return {
     at,
@@ -77,6 +82,9 @@ export function parseDecisionRecord(value: unknown): DecisionRecord | undefined 
     ...(typeof value.halted === "string" ? { halted: value.halted } : {}),
     ...(context ? { context } : {}),
     ...(refusals ? { refusals: refusals as DecisionRecord["refusals"] } : {}),
+    ...(verdicts?.length
+      ? { playbookVerdicts: verdicts as DecisionRecord["playbookVerdicts"] }
+      : {}),
   };
 }
 

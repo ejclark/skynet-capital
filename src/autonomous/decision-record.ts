@@ -1,4 +1,4 @@
-import type { MarketContext, OrderIntent, OrderResult } from "../domain/types.js";
+import type { MarketContext, OrderIntent, OrderResult, PlaybookVerdict } from "../domain/types.js";
 import type { GuardRefusal } from "../engine/guards.js";
 
 /**
@@ -50,6 +50,12 @@ export interface DecisionRecord {
    * reason as `context`: a record written before this field existed has none.
    */
   readonly refusals?: readonly GuardRefusal[];
+  /**
+   * Each playbook consulted this pass and what it concluded (#3687) — what lets a quiet cycle say
+   * "S1-NVDA: no window" instead of just "nothing fired". Absent on a halted pass (nothing was
+   * consulted), on a persona with no playbooks, and on records written before this existed.
+   */
+  readonly playbookVerdicts?: readonly PlaybookVerdict[];
 }
 
 /** A place to persist decision records. Implementations must never throw on the write path. */
