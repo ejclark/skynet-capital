@@ -1,11 +1,14 @@
 import type { ServerResponse } from "node:http";
 import type { AlpacaPortfolioHistory } from "../alpaca/alpaca-trading-client.js";
+import { BENCHMARK_LOOKBACK_DAYS, benchmarkReturns } from "../observatory/benchmark-returns.js";
 import {
   type AccountNetWorthInput,
   accountsNetWorthView,
+  type BenchmarkInput,
   type NetWorthWindowInput,
   type NetWorthWindowKey,
 } from "../observatory/networth-json-view.js";
+import { participantUnrealized } from "../observatory/participant-card.js";
 import type { Session } from "./auth/session.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -47,6 +50,39 @@ function emptyWindows(): Record<NetWorthWindowKey, NetWorthWindowInput> {
   return { "7D": {}, "1M": {}, "3M": {}, "1Y": {} };
 }
 
+/** The highest finite daily equity in a full-history read, with its day (#3689's high line). */
+function highestClose(
+  h: AlpacaPortfolioHistory | undefined,
+): { value: number; at: string } | undefined {
+  if (!h) return undefined;
+  let best: { value: number; at: string } | undefined;
+  h.equity.forEach((v, i) => {
+    const ts = h.timestamp[i];
+    if (typeof v !== "number" || !Number.isFinite(v) || v <= 0 || typeof ts !== "number") return;
+    if (!best || v > best.value) best = { value: v, at: new Date(ts * 1000).toISOString() };
+  });
+  return best;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** SPY's per-window return, through the first owned account with a market-data client. One feed
+ *  read serves every account and the aggregate. Any failure leaves the "vs S&P" column out rather
+ *  than guessing. */
+async function spyBenchmark(
+  config: DashboardServerConfig,
+  ownedIds: readonly string[],
+): Promise<BenchmarkInput> {
+  const client = ownedIds.map((id) => config.optionsClientFor?.(id)).find(Boolean);
+  if (!client) return {};
+  const end = config.now?.() ?? new Date();
+  const start = new Date(end.getTime() - BENCHMARK_LOOKBACK_DAYS * DAY_MS);
+  const bars = await client
+    .getBars("SPY", start.toISOString().slice(0, 10), end.toISOString().slice(0, 10))
+    .catch(() => undefined);
+  return bars ? benchmarkReturns(bars) : {};
+}
+
 async function accountNetWorth(
   config: DashboardServerConfig,
   found: {
@@ -59,6 +95,7 @@ async function accountNetWorth(
     readonly realizedPl?: number;
     readonly error?: string;
   },
+  unrealizedPl?: number,
 ): Promise<AccountNetWorthInput> {
   const id = found.id;
   const base = {
@@ -81,12 +118,15 @@ async function accountNetWorth(
   }
 
   // The account fetch gives `last_equity` (the previous close the day move measures from); the four
-  // history calls each give one window's flow-adjusted base→end arc. All five run in parallel and
-  // fail independently — a history timeout turns one window to "—", not the whole row.
-  const [account, ...histories] = await Promise.all([
+  // window history calls each give one window's flow-adjusted base→end arc; a sixth reads the whole
+  // history for the all-time high the hero draws (#3689). All six run in parallel and fail
+  // independently — a history timeout turns one window (or the high line) to "—", not the whole row.
+  const [account, fullHistory, ...histories] = await Promise.all([
     client.getAccount().catch(() => undefined),
+    client.getPortfolioHistoryByRange("2000-01-01").catch(() => undefined),
     ...WINDOW_KEYS.map((key) => client.getPortfolioHistory(PERIOD[key]).catch(() => undefined)),
   ]);
+  const allTimeHigh = highestClose(fullHistory);
 
   const lastEquityStr = account?.last_equity;
   const lastEquity =
@@ -116,6 +156,8 @@ async function accountNetWorth(
     cash: found.cash,
     ...(lastEquity !== undefined && Number.isFinite(lastEquity) ? { lastEquity } : {}),
     ...(typeof found.realizedPl === "number" ? { realizedPl: found.realizedPl } : {}),
+    ...(typeof unrealizedPl === "number" && Number.isFinite(unrealizedPl) ? { unrealizedPl } : {}),
+    ...(allTimeHigh ? { allTimeHigh } : {}),
     windows,
   };
 }
@@ -130,6 +172,7 @@ export async function serveNetWorthJson(
   const state = config.hub.getState();
   const board = state.participants;
 
+  const benchmarkRead = spyBenchmark(config, ownedIds);
   const inputs = await Promise.all(
     ownedIds.map((id): Promise<AccountNetWorthInput> => {
       const found = board.find((p) => p.id === id);
@@ -146,10 +189,10 @@ export async function serveNetWorthJson(
           windows: emptyWindows(),
         });
       }
-      return accountNetWorth(config, found);
+      return accountNetWorth(config, found, participantUnrealized(found));
     }),
   );
 
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-  res.end(JSON.stringify(accountsNetWorthView(state.generatedAt, inputs)));
+  res.end(JSON.stringify(accountsNetWorthView(state.generatedAt, inputs, await benchmarkRead)));
 }

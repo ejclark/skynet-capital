@@ -16,6 +16,17 @@ export interface NetWorthWindowView {
   readonly tone: Tone;
   readonly known: boolean;
   readonly partial?: boolean;
+  /** "+2.3 pts vs S&P" (#3689) — absent when either side of the comparison is unknown. */
+  readonly vsBenchmark?: string;
+  readonly vsBenchmarkTone?: Tone;
+}
+
+/** The account's all-time high (#3689). Absent for the aggregate and for an unknown history. */
+export interface AllTimeHighView {
+  readonly value: string;
+  readonly at: string;
+  /** The high as a fraction above today's value — 0 at a new high. Places the chart's line. */
+  readonly aboveNow: number;
 }
 
 export interface NetWorthStatsView {
@@ -32,7 +43,14 @@ export interface NetWorthStatsView {
   readonly bookedPl: string;
   readonly bookedTone: Tone;
   readonly bookedKnown: boolean;
+  /** Unrealized P/L — "on paper" in the UI. "—" when unknown. */
+  readonly onPaper: string;
+  readonly onPaperTone: Tone;
+  readonly onPaperKnown: boolean;
   readonly windows: readonly NetWorthWindowView[];
+  readonly allTimeHigh?: AllTimeHighView;
+  /** "$3,368" — the gain to a new high; absent at a high. */
+  readonly toNewHigh?: string;
 }
 
 export interface AccountNetWorthView extends NetWorthStatsView {

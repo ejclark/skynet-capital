@@ -1,0 +1,175 @@
+/* The net-worth card (#3689 slice 3, design handoff 3a): `shell/networth-card.tsx`. Numbers left,
+ * chart right, and the gap to a new high across the foot. At phone width it stacks into one
+ * column in the same order. Tokens only; tints are color-mix of one token. */
+
+.nw-card {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 8%, var(--surface)) 0%,
+    var(--surface-2) 70%
+  );
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.nw-card--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.nw-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+.nw-card:not(.nw-card--solo) .nw-main {
+  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+.nw-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.nw-value {
+  font-family: var(--mono);
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.nw-cents {
+  font-size: 24px;
+  color: var(--muted);
+}
+
+.nw-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.nw-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nw-stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.nw-stat-value {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nw-windows {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.nw-windows tr + tr {
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+.nw-windows th,
+.nw-windows td {
+  padding: 6px 0;
+}
+.nw-windows th {
+  width: 34px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.nw-windows td:nth-of-type(1) {
+  font-size: 13px;
+  font-weight: 700;
+}
+.nw-windows td:nth-of-type(2) {
+  text-align: right;
+  font-size: 11px;
+}
+/* a window that left an account out says so by shape (italic) and weight, not colour alone */
+.nw-windows .is-partial td:nth-of-type(1) {
+  font-style: italic;
+}
+
+.nw-chart {
+  padding: 6px 16px 10px;
+  min-width: 0;
+}
+.nw-chart .hero-chart {
+  margin: 0;
+  max-width: none;
+}
+.nw-chart .hero-chart-canvas {
+  height: 190px;
+}
+
+.nw-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 20px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  font-size: 12px;
+  color: var(--muted);
+}
+.nw-to-high b {
+  color: var(--charged);
+  font-family: var(--mono);
+}
+.nw-at-high {
+  color: var(--charged);
+  font-weight: 700;
+}
+.nw-meter {
+  position: relative;
+  width: 120px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.nw-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 50%, transparent),
+    var(--charged)
+  );
+}
+
+@media (max-width: 860px) {
+  .nw-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nw-card:not(.nw-card--solo) .nw-main {
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  }
+  .nw-value {
+    font-size: 32px;
+  }
+  .nw-foot {
+    justify-content: space-between;
+  }
+}

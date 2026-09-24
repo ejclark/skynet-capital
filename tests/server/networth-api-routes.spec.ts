@@ -39,6 +39,8 @@ function fakeClient(opts: {
   readonly lastEquity?: string;
   readonly windows?: WinMap;
   readonly failHistory?: boolean;
+  /** The full-history read's daily equity closes (for the all-time high), keyed by epoch seconds. */
+  readonly full?: readonly [number, number][];
 }): AlpacaTradingClient {
   return {
     getAccount: async () => ({
@@ -48,6 +50,16 @@ function fakeClient(opts: {
       status: "ACTIVE",
       ...(opts.lastEquity !== undefined ? { last_equity: opts.lastEquity } : {}),
     }),
+    getPortfolioHistoryByRange: () =>
+      opts.failHistory
+        ? Promise.reject(new Error("history down"))
+        : Promise.resolve({
+            timestamp: (opts.full ?? []).map(([t]) => t),
+            equity: (opts.full ?? []).map(([, v]) => v),
+            profit_loss: [],
+            profit_loss_pct: [],
+            base_value: null,
+          }),
     getPortfolioHistory: (period: string) => {
       if (opts.failHistory) return Promise.reject(new Error("history down"));
       const key = PERIOD_TO_KEY[period];
@@ -242,5 +254,74 @@ describe("serveNetWorthJson", () => {
     // Sauron's snapshot (fixture above) carries no realizedPl — the total can't honestly sum.
     expect((body.total as { bookedKnown: boolean }).bookedKnown).toBe(false);
     expect((body.total as { bookedPl: string }).bookedPl).toBe("—");
+  });
+
+  describe("the hero's extras (#3689 slice 3)", () => {
+    const heroConfig = (spy: { t: string; c: number }[] | undefined) =>
+      configWith({
+        resolveOwnerIds: () => ["human-eric"],
+        now: () => new Date("2026-09-23T20:00:00Z"),
+        tradingClientFor: () =>
+          fakeClient({
+            lastEquity: "100000",
+            windows: { "7D": { pct: 0.01, base: 100_000, end: 101_000 } },
+            // 2026-09-19 closed at 104,000: above today's 101,000.
+            full: [
+              [Date.UTC(2026, 8, 18) / 1000, 99_000],
+              [Date.UTC(2026, 8, 19) / 1000, 104_000],
+              [Date.UTC(2026, 8, 22) / 1000, null as unknown as number],
+            ],
+          }),
+        optionsClientFor: () => ({ getBars: async () => spy }) as never,
+      });
+
+    type Row = {
+      onPaper: string;
+      onPaperTone: string;
+      toNewHigh?: string;
+      allTimeHigh?: { value: string; at: string; aboveNow: number };
+      windows: { label: string; vsBenchmark?: string; vsBenchmarkTone?: string }[];
+    };
+    const rowOf = (out: Answer): Row => (answered(out).accounts as Row[])[0] as Row;
+
+    it("reports what's on paper from the board's positions", async () => {
+      const { res, out } = fakeRes();
+      await serveNetWorthJson(res, heroConfig(undefined), session);
+      // NVDA: 1 share at $100, marked at $110.
+      expect(rowOf(out).onPaper).toBe("+$10");
+      expect(rowOf(out).onPaperTone).toBe("pos");
+    });
+
+    it("draws the all-time high from the full history and the gap to it", async () => {
+      const { res, out } = fakeRes();
+      await serveNetWorthJson(res, heroConfig(undefined), session);
+      const row = rowOf(out);
+      expect(row.allTimeHigh?.value).toBe("$104,000");
+      expect(row.allTimeHigh?.at).toBe("9/19");
+      expect(row.allTimeHigh?.aboveNow).toBeCloseTo(104_000 / 101_000 - 1, 6);
+      expect(row.toNewHigh).toBe("$3,000");
+    });
+
+    it("scores each window against SPY over the same span", async () => {
+      const { res, out } = fakeRes();
+      const spy = [
+        { t: "2026-09-16T04:00:00Z", c: 500 },
+        { t: "2026-09-23T04:00:00Z", c: 503 },
+      ];
+      await serveNetWorthJson(res, heroConfig(spy), session);
+      const w7 = must(
+        rowOf(out).windows.find((w) => w.label === "7D"),
+        "7D",
+      );
+      // +1.00% vs SPY's +0.60% = +0.4 pts.
+      expect(w7.vsBenchmark).toBe("+0.4 pts vs S&P");
+      expect(w7.vsBenchmarkTone).toBe("pos");
+    });
+
+    it("leaves the S&P column out when the feed can't answer", async () => {
+      const { res, out } = fakeRes();
+      await serveNetWorthJson(res, heroConfig(undefined), session);
+      expect(rowOf(out).windows.every((w) => w.vsBenchmark === undefined)).toBe(true);
+    });
   });
 });

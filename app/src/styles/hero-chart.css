@@ -75,6 +75,20 @@
     transparent 6px
   );
 }
+/* the all-time high (#3689): the chart's dashed "charged" line, named here in words */
+.hero-chart-legend-swatch--high {
+  background: repeating-linear-gradient(
+    to right,
+    var(--charged) 0,
+    var(--charged) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+.hero-chart-legend-high {
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
 .hero-chart-canvas {
   position: relative;
   width: 100%;

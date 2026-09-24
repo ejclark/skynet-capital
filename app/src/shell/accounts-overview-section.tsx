@@ -3,7 +3,7 @@ import type { ConsiderationChip, DeskSnapshot } from "../live/desk";
 import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { ConsiderationsRail } from "./considerations-rail";
-import { HeroChart } from "./hero-chart";
+import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
 
 /**
@@ -14,9 +14,14 @@ import { NetWorthRoster } from "./networth-summary";
  * table. For "All accounts": the roster table, then each account's grouped positions. The
  * net-worth-at-a-glance hero (value, day move, ROI) stays in the Cockpit header, not duplicated
  * here.
+ *
+ * #3689 slice 3: the Overview now opens with the net-worth card (value, today / locked in / on
+ * paper, each window against the S&P, the chart with the all-time high), so the sticky header
+ * drops its condensed copy on this section and keeps it on the others.
  */
 export function OverviewSection({
   stats,
+  caption,
   allAccounts,
   roster,
   loading,
@@ -30,6 +35,7 @@ export function OverviewSection({
   onFilterChange,
 }: {
   readonly stats: NetWorthStatsView | null;
+  readonly caption: string;
   readonly allAccounts: boolean;
   readonly roster: readonly AccountNetWorthView[];
   readonly loading: boolean;
@@ -46,6 +52,11 @@ export function OverviewSection({
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
     <div className="networth-detail">
+      <NetWorthCard
+        stats={stats}
+        caption={caption}
+        accountId={allAccounts ? undefined : accountId}
+      />
       <p className="desk-note">
         {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
         positions
@@ -53,10 +64,7 @@ export function OverviewSection({
       {allAccounts ? (
         <NetWorthRoster accounts={roster} />
       ) : (
-        <>
-          <HeroChart accountId={accountId} />
-          <ConsiderationsRail chips={considerations} />
-        </>
+        <ConsiderationsRail chips={considerations} />
       )}
       {desksLoading ? (
         <p className="note">Reading positions…</p>

@@ -23,13 +23,17 @@ const settings = {
 // Net-worth payload — one fetch carries every account plus the aggregate, so the switcher never
 // re-fetches. Windows come from Alpaca's portfolio history (flow-adjusted); the aggregate per
 // window is `Σend / Σbase − 1`. Values are server-formatted strings the browser places as-is.
-const win = (label, value, tone, note, partial = false) => ({
+// `vs` is the "vs S&P" column (#3689 slice 3): the window's return minus SPY's, in points.
+const win = (label, value, tone, note, partial = false, vs = undefined) => ({
   label,
   value,
   tone,
   note,
   known: true,
   ...(partial ? { partial: true } : {}),
+  ...(vs
+    ? { vsBenchmark: `${vs} pts vs S&P`, vsBenchmarkTone: vs.startsWith("-") ? "neg" : "pos" }
+    : {}),
 });
 
 const ericStats = {
@@ -43,13 +47,19 @@ const ericStats = {
   bookedPl: "+$12,480.00",
   bookedTone: "pos",
   bookedKnown: true,
+  onPaper: "+$47,832.14",
+  onPaperTone: "pos",
+  onPaperKnown: true,
   positionCount: 6,
   windows: [
-    win("7D", "+1.2%", "pos", "last week"),
-    win("1M", "+3.4%", "pos", "last month"),
-    win("3M", "+8.1%", "pos", "last quarter"),
-    win("1Y", "+12.7%", "pos", "last year"),
+    win("7D", "+1.2%", "pos", "last week", false, "+0.4"),
+    win("1M", "+3.4%", "pos", "last month", false, "+1.9"),
+    win("3M", "+8.1%", "pos", "last quarter", false, "+2.6"),
+    win("1Y", "+12.7%", "pos", "last year", false, "-1.8"),
   ],
+  // The high was set 9/19, $3,368 above today — the dashed line on the chart and the meter.
+  allTimeHigh: { value: "$1,051,200", at: "9/19", aboveNow: 3368 / 1047832 },
+  toNewHigh: "$3,368",
 };
 
 const sauronStats = {
@@ -444,7 +454,7 @@ await page.setViewportSize({ width: 390, height: 844 });
 // the cash/position detail, and the hero chart (#3186 slice 2). Single account (Eric) first.
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.getByText("Portfolio").waitFor();
+await page.locator(".hero-chart-legend").waitFor();
 // Considerations rail (#3186 slice 3), below the hero chart.
 await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-phone");
@@ -481,12 +491,12 @@ await page.setViewportSize({ width: 1280, height: 900 });
 
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.getByText("Portfolio").waitFor();
+await page.locator(".hero-chart-legend").waitFor();
 await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
-// Glossary (#3689 slice 2): the plain label "locked in" with its explanation opened by focus.
-await page.getByRole("button", { name: "locked in" }).focus();
+// Glossary (#3689 slice 2): the plain label "Locked in" with its explanation opened by focus.
+await page.getByRole("button", { name: "Locked in" }).focus();
 await page.getByRole("tooltip").waitFor();
 await shootCockpit("accounts-glossary-desktop");
 
