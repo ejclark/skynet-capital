@@ -34,6 +34,7 @@ export const POSITION_CHIPS = [
   ["pl:>0", "In profit"],
   ["pl:<0", "Losing"],
   ["dte:<21", "Expiring within 3 weeks"],
+  ["event:before-expiry", "Earnings before expiry"],
 ] as const;
 
 const CHIP_QUALIFIERS: readonly string[] = POSITION_CHIPS.map(([q]) => q);

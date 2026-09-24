@@ -110,11 +110,33 @@ function clocksFor(p: Held, option: boolean): string[] {
   const days = p.plain.expiresInDays;
   if (days !== undefined)
     clocks.push(days === 0 ? "Expires today" : `Expires in ${p.plain.expiresIn}`);
+  // The event clock only when it can still move this position: before expiry for an option, the
+  // stock's own event for shares (a Fed date on every share card would be noise).
+  const event = p.plain.nextEvent;
+  if (event && (event.beforeExpiry || (days === undefined && event.scope === "stock")))
+    clocks.push(event.label);
   const qty = Math.abs(p.quantity).toLocaleString("en-US");
   clocks.push(
     `${qty} ${option ? "contracts" : "shares"} · worth ${formatCurrency(Math.abs(p.marketValue))}`,
   );
   return clocks;
+}
+
+/**
+ * The design's IV-crush card: a long option holding through its own earnings print. The option
+ * is priced up for the news, and the day after the print that extra drains away, so the title
+ * warns even when the stock moves the right way. Undefined when it doesn't apply.
+ */
+function earningsCopy(p: Held): { title: string; why: string } | undefined {
+  const event = p.plain.nextEvent;
+  const occ = parseOccSymbol(p.symbol);
+  if (!(occ && p.quantity > 0 && event?.beforeExpiry && event.label.startsWith("Earnings")))
+    return undefined;
+  const move = occ.type === "call" ? "rises" : "drops";
+  return {
+    title: `Earnings on ${expiryDay(event.at)} could shrink this ${occ.type} even if ${occ.underlying} ${move}`,
+    why: "✦ options cost more before earnings. the day after, that extra drains away (iv crush), so a right call can still lose. decide before the print, not after.",
+  };
 }
 
 /** Title, long caption and Moneypenny's reason, from the kind and how much time is left. */
@@ -174,6 +196,7 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
     plTone: plClass(pl),
     captionShort,
     ...copyFor(kind, p, ret, pl, basis),
+    ...(kind === "at-risk" ? earningsCopy(p) : undefined),
     clocks: clocksFor(p, option),
     primary: { label: "Review on Trade ↗", href: tradeHref(deskId, p.symbol) },
     secondary: { label: "Show in table", href: `#pos-${encodeURIComponent(p.symbol)}` },

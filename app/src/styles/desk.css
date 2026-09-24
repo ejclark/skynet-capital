@@ -457,6 +457,16 @@ table.blotter {
   display: block;
   white-space: nowrap;
 }
+/* "Earnings Oct 28" over "before expiry": the words carry the warning, the charged tone repeats it */
+/* the label may wrap ("Fed meeting / Sep 16") so a narrow table never clips it under Close */
+.next-event-label,
+.next-event-when {
+  display: block;
+}
+.next-event-when {
+  font-size: 11px;
+  color: var(--charged);
+}
 .blotter .muted {
   color: var(--muted);
 }
