@@ -406,3 +406,140 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-23
 <!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-09-24, day after the print).** Macro-print mode carries no `earnings-cycle` run
+(`symbols: []`); `intraday-edges`'s cache was busted per the lane contract
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), and every intraday
+figure below is a fresh, uncached fetch through the same Yahoo chart layer used at registration.
+Primary: **S&P Global's own Flash Germany PMI release**, "Growth in German private sector output
+accelerates in September despite increased inflationary pressures"
+(`pmi.spglobal.com/Public/Home/PressRelease/f449c8cf9d0f40259b75db995660c2af`, located via the
+publisher's own past-release archive and fetched direct today — **HTTP 200, 132,307 bytes**,
+PDF-parsed in-session). The same archive page corroborates the ordering this document's leg 1 and leg
+7 rest on: `September 23 2026 07:30 UTC | S&P Global Flash Germany PMI`, and further down the same
+list, `September 23 2026 08:00 UTC | S&P Global Flash Eurozone PMI` — both delivered on the listed
+slot. **One fetch blocked, recorded not worked around:** the archive listing page itself started
+returning an AWS WAF challenge (**HTTP 202**, empty content, same `pmi.spglobal.com` host) partway
+through this session, after the direct per-release PDF above had already been fetched successfully —
+this closed the door on independently pulling the Eurozone release's own PDF for its composite figure,
+so kill switch 2 below is left unscored rather than guessed from a secondary.
+
+**What printed — the composite crosses back above 50, on the leg of the survey this ledger flagged as
+below water.**
+
+| Measure | Sep flash | Aug (as restated in the Sep release) | Δ | Superlative |
+|---|---|---|---|---|
+| **Composite Output Index** | **53.8** | 51.8 | **+2.0** | **11-month high** |
+| Services Business Activity | **52.9** | 49.7 | **+3.2** | 7-month high — **ends the 5-month contraction** |
+| Manufacturing Output | 55.9 | 56.6 | −0.7 | 2-month low |
+| Manufacturing PMI | 53.8 | 54.3 | −0.5 | 2-month low |
+
+Embargo line, read from the PDF itself: **"Embargoed until 0930 CEST (0730 UTC) 23 September 2026"**,
+**"Data were collected 10-21 September 2026"** — two days later into the month than August's
+10–19 window, still inside the release's own stated norm. Phil Smith (S&P Global Market
+Intelligence): *"the strongest rise in business activity for almost a year, with the service sector
+finally rejoining manufacturing in growth territory after a quieter period that followed the outbreak
+of the Middle East war."* **The leg-3 "below water" services line this ledger's initial research
+flagged (48.5 in August, a fifth straight monthly decline) closed the gap entirely** — services printed
+52.9, ending the contraction rather than merely slowing it. Manufacturing gave back a little of August's
+55-month-high output reading (56.7 → 55.9) but stayed solidly in expansion.
+
+**The window — SESSION'S MAIN MEASUREMENT, re-run exactly as registered, cache busted.** Yahoo 5-minute
+bars, `range=60d` (delivered 2026-07-02..2026-09-23, **n=60** sessions — **2026-06-23 has aged out of
+the trailing window since registration**, replaced at the recent end by today's own print), identical
+construction to registration (open of the bar starting A → close of the bar starting B−5m), each window
+percentile-ranked against its own freshly re-fetched 60-session distribution, on **^GDAXI** and
+**^FCHI**:
+
+| Window (UTC) | What is new then | Raw \|move\| — DAX | Raw \|move\| — CAC | DAX−CAC residual |
+|---|---|---|---|---|
+| 07:15–07:30 | France prints | p77 | p25 | **p97** |
+| **07:30–07:45** | **GERMANY prints** | **p52** | — | **p32** |
+| 07:45–08:00 | nothing | p45 | p28 | p45 |
+| 08:00–08:15 | the aggregate | **p98** | **p90** | p67 |
+| 08:15–08:30 | control | p42 | p38 | p30 |
+
+**FT-sp-global-flash-germany-pmi-2026-09-23-1 — scored PASS.** The registered prediction needed BOTH
+arms to hold in the German print's own **07:30–07:45 UTC** window: (i) the DAX−CAC residual ranks at or
+below its own trailing-60-session median, and (ii) neither the raw DAX nor that residual reaches p90.
+Both held — residual **|move| percentile 32** (below the p50 median), raw DAX **|move| percentile 52**,
+residual again **32** (neither at p90). **The kill switch — residual ≥p90, or ranking above median
+while the raw DAX also reaches p90 — does not fire.** Scored in
+[`forward-tests/sp-global-flash-germany-pmi-2026-09-23.md`](../forward-tests/sp-global-flash-germany-pmi-2026-09-23.md).
+**This is the sharpest version of the null available, not merely a repeat of it**: 2026-09-23 was a
+genuinely loud session in Frankfurt — the aggregate's own 08:00–08:15 UTC window ran DAX p98 / CAC p90,
+and the symmetric France-window control (DAX−CAC at 07:15–07:30 UTC, meant to read as background noise)
+hit **p97**, its loudest reading in either the registration or close-out sample. The German print's own
+fifteen minutes was the quiet slot on an otherwise noisy morning, which is a stronger disconfirmation of
+a German-print effect than a quiet day would have been — a quiet slot on a quiet day proves less than a
+quiet slot on a loud one.
+
+**Daily tape, 09-21 → 09-23 closes (own fetches, cache busted; Yahoo's daily feed has no 09-22 print for
+any of the three European indices, recorded not worked around):** ^GDAXI **25,575.01 → 25,410.63**
+(**−0.64%**), ^FCHI **8,138.94 → 8,123.41** (**−0.19%**), ^STOXX50E **6,318.20 → 6,299.82** (**−0.29%**),
+`^VIX` **14.87 → 15.18** (+0.31pt, no regime threshold crossed — the same reading the US-flash close-out
+recorded for the same two days). The session leaned red across the board, consistent with the loud
+08:00–08:15 UTC aggregate window above, not with the quiet German-specific slot.
+
+**Kill switches, scored.**
+
+1. **"DAX−CAC residual reaches p90, or ranks above median while raw DAX also reaches p90"** — **did
+   not fire.** Scored above as FT-1's PASS.
+2. **"Germany's September composite and the Eurozone September composite move the same direction
+   month-on-month by more than 0.3pt each"** — **unscored, blocked.** Germany's own move is known
+   (+2.0pt, 51.8 → 53.8) but the Eurozone release's own PDF could not be reached this session (the
+   archive listing's WAF challenge above); guessing the comparison from a secondary would violate this
+   lane's re-run-not-memory rule, so it is left open rather than forced. The [sibling Eurozone
+   ledger](sp-global-flash-eurozone-pmi-2026-09-23.md) has not yet closed out as of this PR and owns
+   that figure; a future pulse on either ledger can close this one out from its own primary.
+3. **"No September Flash Germany PMI on 2026-09-23, or a slot other than 07:30 UTC"** — **did not
+   fire.** Published on schedule; confirmed by the release's own embargo line and the publisher's
+   archive.
+4. **"Either 2026-06-23 or 2026-07-24 turns out not to have been a Flash Germany PMI date"** — **not
+   re-litigated this session**; nothing surfaced to contradict the registration-time finding, and this
+   kill switch is about the registration sample, not close-out data.
+5. **"A September flash→final revision beyond ±1.0pt at the 2026-10-01 / 2026-10-05 German finals"** —
+   **not yet scoreable.** The release's own methodology note restates those exact dates: *"Final
+   September data are published on 1 October for manufacturing and 5 October for services and composite
+   indicators"* — corroborating leg 7 a second time. Scores at the German finals.
+6. **"A sub-50 German composite on 09-23"** — **did not fire.** Composite printed 53.8, an 11-month
+   high — the opposite of this kill switch's condition.
+7. **"Germany fails to print ahead of the aggregate on 09-23, or the ordering changes"** — **did not
+   fire.** Confirmed via the same archive page: Germany 07:30 UTC, Eurozone 08:00 UTC, ordering intact.
+8. **"`market-events-data.ts` gains a confirmed-source prefix covering a private PMI compiler"** — **did
+   not fire.** The calendar entry stays `estimate` on the unchanged schema gap; no flip made in this PR.
+
+**Scoring the calls.**
+
+- **Today (D-14) "Stand aside" — CORRECT.** No trade was ever on the table, and the German print's own
+  window measured at base rate for a second time (registration and close-out), on a day loud enough
+  elsewhere that a real effect had every opportunity to show up and did not.
+- **This week "Watch the ECB decision instead" — CORRECT, and settled.** Its falsifier was
+  non-publication or a slot other than 07:30 UTC; neither happened.
+- **This month "Read the sequence, don't read 07:30 as the 08:00 answer" — NOT RE-SCORED THIS
+  SESSION.** Its falsifier (Germany and Eurozone composites moving the same direction, >0.3pt each)
+  is the same comparison kill switch 2 above leaves open pending the Eurozone print; Germany's own
+  side is now **+2.0pt**, up.
+- **This quarter "Prefer the aggregate to its noisier, earlier component" — NOT YET SCOREABLE.** Its
+  falsifier is the September flash→final revision, governed by the **2026-10-01** and **2026-10-05**
+  German finals; nothing is claimed for it here.
+
+**Honest limits.**
+- **The Eurozone comparison (kill switch 2, "This month") is the one open thread this close-out could
+  not settle from a primary** — recorded as blocked, not guessed, per this lane's rules. It does not
+  affect FT-1's own scoring, which is self-contained to the German window.
+- **2026-06-23 has left the trailing 60-session sample** the percentile ranks are computed against;
+  the close-out window is now 2026-07-02..2026-09-23, so registration and close-out percentiles are
+  each computed against a different (though heavily overlapping) trailing distribution — expected under
+  "re-run fresh, never from memory," and the reason the 2026-07-24/2026-08-21 percentiles printed above
+  differ slightly from the numbers recorded at registration.
+- **The three cash indices remain heavily correlated**, as at registration — the loud 07:15–07:30 and
+  08:00–08:15 UTC readings on 09-23 do not establish three independent "loud" events, just one broad
+  move visible in all of them; this is why the German-specific residual, not the raw indices, is the
+  test that matters.
+
+This event is now scored on its own forward test. The scanner goes quiet on it permanently, with one
+kill switch (2) and one horizon call ("This month") still open pending the Eurozone sibling's own
+close-out.
