@@ -17,11 +17,25 @@ import { ViewTabs } from "./view-tabs";
  * @category accounts
  */
 
+/** The plain filter chips (#3689 slice 6b), each a qualifier in the one query model. "All" isn't
+ *  here: it's the absence of every chip's qualifier, and clearing them is its action. */
 export const POSITION_CHIPS = [
-  ["is:option", "Options only"],
+  ["is:option", "Options"],
+  ["is:share", "Shares"],
   ["pl:>0", "In profit"],
-  ["pl:<0", "Under water"],
+  ["pl:<0", "Losing"],
+  ["dte:<21", "Expiring within 3 weeks"],
 ] as const;
+
+const CHIP_QUALIFIERS: readonly string[] = POSITION_CHIPS.map(([q]) => q);
+
+/** The query with every chip qualifier removed, keeping any typed search words. */
+export function clearChips(query: string): string {
+  return query
+    .split(/\s+/)
+    .filter((p) => p && !CHIP_QUALIFIERS.includes(p.toLowerCase()))
+    .join(" ");
+}
 
 export function PositionsFilterBar({
   query,
@@ -31,32 +45,47 @@ export function PositionsFilterBar({
   readonly onChange: (next: string) => void;
 }): ReactElement {
   const inputId = useId();
+  const tokens = query.toLowerCase().split(/\s+/);
+  const noChip = !POSITION_CHIPS.some(([q]) => tokens.includes(q));
   return (
     <div className="filter-bar">
       <div className="filter-query">
         <label className="visually-hidden" htmlFor={inputId}>
-          Filter positions
+          Search or filter positions
         </label>
         <input
           id={inputId}
           type="text"
           value={query}
           spellCheck={false}
-          placeholder="filter — try NVDA, is:option, pl:>0"
+          placeholder="Search or filter: NVDA, is:option, dte:<21, pl:>0"
           onChange={(e) => onChange(e.target.value)}
         />
+        <span className="filter-kbd" aria-hidden="true">
+          /
+        </span>
       </div>
-      {POSITION_CHIPS.map(([qualifier, label]) => (
+      <div className="filter-chips">
         <button
-          key={qualifier}
           type="button"
           className="filter-chip"
-          aria-pressed={query.toLowerCase().split(/\s+/).includes(qualifier)}
-          onClick={() => onChange(toggleQualifier(query, qualifier))}
+          aria-pressed={noChip}
+          onClick={() => onChange(clearChips(query))}
         >
-          {label}
+          All
         </button>
-      ))}
+        {POSITION_CHIPS.map(([qualifier, label]) => (
+          <button
+            key={qualifier}
+            type="button"
+            className="filter-chip"
+            aria-pressed={tokens.includes(qualifier)}
+            onClick={() => onChange(toggleQualifier(query, qualifier))}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -70,7 +70,7 @@ describe("PositionsBlotter", () => {
     for (const [, label] of POSITION_CHIPS) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
-    fireEvent.click(screen.getByRole("button", { name: "Options only" }));
+    fireEvent.click(screen.getByRole("button", { name: "Options" }));
     expect(seen).toEqual(["is:option"]);
   });
 
@@ -87,10 +87,7 @@ describe("PositionsBlotter", () => {
     );
     expect(screen.getByText("MSFT put")).toBeInTheDocument();
     expect(screen.queryByText("SPY")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Options only" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: "Options" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("renders the one New trade card", () => {
