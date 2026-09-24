@@ -355,6 +355,125 @@ const sauronDesk = {
 const ericActivity = {
   available: true,
   activity: [
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c7",
+      symbol: "MSFT",
+      display: "MSFT",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-22T19:10:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "+$1,240",
+      returnPct: "+6.2%",
+      realizedTone: "pos",
+    },
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c6",
+      symbol: "AMD260918C00150000",
+      display: "AMD Sep 18 150 Call",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-19T17:02:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "+$410",
+      returnPct: "+18.3%",
+      realizedTone: "pos",
+    },
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c5",
+      symbol: "GOOGL",
+      display: "GOOGL",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-17T14:45:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "+$365",
+      returnPct: "+2.1%",
+      realizedTone: "pos",
+    },
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c4",
+      symbol: "META",
+      display: "META",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-15T15:30:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "+$880",
+      returnPct: "+4.4%",
+      realizedTone: "pos",
+    },
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c3",
+      symbol: "TSLA260912P00380000",
+      display: "TSLA Sep 12 380 Put",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-12T16:20:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "-$620",
+      returnPct: "-41.0%",
+      realizedTone: "neg",
+    },
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c2",
+      symbol: "AMZN",
+      display: "AMZN",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-08T18:05:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "+$210",
+      returnPct: "+1.3%",
+      realizedTone: "pos",
+    },
+    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
+    {
+      orderId: "ord-c1",
+      symbol: "NFLX",
+      display: "NFLX",
+      side: "sell",
+      quantity: 1,
+      filled: 1,
+      price: "$1.00",
+      status: "filled",
+      at: "2026-09-04T19:40:00Z",
+      backfilled: false,
+      origin: "desk",
+      realizedPl: "-$145",
+      returnPct: "-0.9%",
+      realizedTone: "neg",
+    },
     {
       orderId: "ord-001",
       symbol: "NVDA260918C00180000",
@@ -499,6 +618,12 @@ await shootCockpit("accounts-summary-desktop");
 await page.getByRole("button", { name: "Locked in" }).focus();
 await page.getByRole("tooltip").waitFor();
 await shootCockpit("accounts-glossary-desktop");
+
+// Form strip (#3689 slice 3b): hover the newest close to open its popover.
+await page.keyboard.press("Escape");
+await page.getByRole("link", { name: /^Closed .*: MSFT,/ }).hover();
+await page.locator(".form-pop").first().waitFor({ state: "attached" });
+await shootCockpit("accounts-form-desktop");
 
 await page.goto(`${origin}/app/accounts?account=all`);
 await page.getByText("Net worth · all accounts").waitFor();

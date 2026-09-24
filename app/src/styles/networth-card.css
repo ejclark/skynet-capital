@@ -130,6 +130,10 @@
   font-size: 12px;
   color: var(--muted);
 }
+/* a single account with no closes yet and no known high: no footer rule over nothing */
+.nw-foot:empty {
+  display: none;
+}
 .nw-to-high b {
   color: var(--charged);
   font-family: var(--mono);
