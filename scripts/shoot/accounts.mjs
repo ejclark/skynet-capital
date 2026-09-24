@@ -148,6 +148,49 @@ const pos = (
 
 // Considerations rail (#3186 slice 3) — one at-risk chip (a losing options lot) and one
 // opportunity chip (a house play matching a held symbol), so the screenshot proves both kinds.
+// Needs a decision (#3689 slice 7), as decisions-view.ts writes them: most money at stake first.
+const ericDecisions = [
+  {
+    id: "at-risk-NVDA260918C00180000",
+    kind: "at-risk",
+    symbol: "NVDA260918C00180000",
+    display: "NVDA Sep 18 180 Call",
+    plainName: "Call option · profits if NVDA rises",
+    pl: "-$310 · −12.2%",
+    plTone: "neg",
+    title: "Down 12% with 25 days left",
+    captionShort: "Needs NVDA above $185.10 by Sep 18 to profit.",
+    caption:
+      "NVDA Sep 18 180 Call has lost $310 of the $2,540 it cost. Worst case from here: −$2,540.",
+    why: "✦ time is working against this one. an option loses value fastest in its last three weeks, even if the stock doesn't move.",
+    clocks: ["Expires in 25 days", "3 contracts · worth $2,226"],
+    primary: {
+      label: "Review on Trade ↗",
+      href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
+    },
+    secondary: { label: "Show in table", href: "#pos-NVDA260918C00180000" },
+    stakeRaw: 2226,
+    range: { type: "call", side: "long", strike: 180, breakeven: 185.1 },
+  },
+  {
+    id: "lock-in-AAPL",
+    kind: "lock-in",
+    symbol: "AAPL",
+    display: "AAPL",
+    plainName: "Shares · profits if AAPL rises",
+    pl: "+$10,520 · +26.5%",
+    plTone: "pos",
+    title: "Up 27%: consider locking some of it in",
+    captionShort: "Bought at $198.50; now $251.10.",
+    caption: "AAPL has made $10,520 on $39,700. Closing some of it now locks that part in.",
+    why: "✦ winners can give it back. closing part turns what's on paper into what's locked in, and the rest keeps running.",
+    clocks: ["200 shares · worth $50,220"],
+    primary: { label: "Review on Trade ↗", href: "/app/trade?desk=human-eric&symbol=AAPL" },
+    secondary: { label: "Show in table", href: "#pos-AAPL" },
+    stakeRaw: 50220,
+  },
+];
+
 const ericConsiderations = [
   {
     id: "at-risk-NVDA260918C00180000",
@@ -180,6 +223,7 @@ const ericDesk = {
     name: "Eric",
     kind: "human",
     considerations: ericConsiderations,
+    decisions: ericDecisions,
     // Where the money is (#3689 slice 5): long shares, long options, cash — adding to 100%.
     allocation: {
       shares: "$198,386",
@@ -629,6 +673,7 @@ const { page, origin, out, close } = await openShell({
       rows: [
         {
           symbol: "NVDA260918C00180000",
+          spot: 181.32,
           positionGreeks: { delta: 186, gamma: 4.2, theta: -38.4, vega: 21.6 },
         },
       ],
@@ -665,14 +710,12 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor();
-// Considerations rail (#3186 slice 3), below the hero chart.
-await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-phone");
 
-// Expand the at-risk chip: notional larger than the P/L delta, the reason, and the action button.
-await page.getByRole("button", { name: /^At risk NVDA Sep 18 180 Call/ }).click();
-await page.locator('.consid-chip-head[aria-expanded="true"]').waitFor();
-await shootCockpit("accounts-considerations-expanded-phone");
+// Needs a decision (#3689 slice 7): the card with its details open, scrolled into view.
+await page.locator(".decisions").scrollIntoViewIfNeeded();
+await page.getByRole("button", { name: /Why, and details/ }).click();
+await shootCockpit("accounts-decision-phone");
 
 // Positions section — the blotter below the sticky header.
 await page.goto(`${origin}/app/accounts?section=positions`);
@@ -702,7 +745,7 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor();
-await page.getByText("At risk").waitFor();
+await page.locator(".decisions").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
 // Glossary (#3689 slice 2): the plain label "Locked in" with its explanation opened by focus.
@@ -727,6 +770,12 @@ await page.goto(`${origin}/app/accounts`);
 await page.locator(".league-card").waitFor();
 await page.locator(".hero-chart-legend").waitFor();
 await shootCockpit("accounts-wide-desktop");
+
+// Needs a decision at 1600 (#3689 slice 7): the at-risk card, details open, range bar with "now".
+await page.locator(".decisions").scrollIntoViewIfNeeded();
+await page.getByRole("button", { name: /Why, and details/ }).click();
+await page.mouse.move(0, 0);
+await shootCockpit("accounts-decision-desktop");
 
 // The positions table at 1600 (#3689 slice 6): plain names, expiry in days, decay, breakeven,
 // best / worst case, with the Breakeven glossary open.

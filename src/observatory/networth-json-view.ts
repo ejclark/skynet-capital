@@ -81,7 +81,7 @@ export interface NetWorthWindowView {
 
 /** The all-time high the hero draws as a reference line (#3689). Absent for the aggregate — a sum
  *  of per-account highs set on different days was never the book's high. */
-export interface AllTimeHighView {
+interface AllTimeHighView {
   /** "$1,051,200". */
   readonly value: string;
   /** "9/19" — the day it was set. */

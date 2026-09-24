@@ -13,7 +13,7 @@ import type { NetWorthWindowKey } from "./networth-json-view.js";
  * reach (a short feed, a new listing) is left out rather than stretched.
  */
 
-export const WINDOW_DAYS: Record<NetWorthWindowKey, number> = {
+const WINDOW_DAYS: Record<NetWorthWindowKey, number> = {
   "7D": 7,
   "1M": 30,
   "3M": 91,

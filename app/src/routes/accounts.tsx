@@ -251,7 +251,6 @@ function CockpitBody({
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
   if (section === "overview") {
     const { stats, caption, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
-    const considerations = desks.data?.[0]?.desk.considerations ?? [];
     return (
       <OverviewSection
         stats={stats}
@@ -262,7 +261,6 @@ function CockpitBody({
         loading={networth.isPending}
         error={networth.isError}
         accountId={accountId}
-        considerations={considerations}
         desks={desks.data}
         desksLoading={desks.isPending}
         desksError={desks.isError}

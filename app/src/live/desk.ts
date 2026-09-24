@@ -56,6 +56,33 @@ export interface DeskPosition {
   readonly worst?: string;
 }
 
+/** One card in "Needs a decision" (#3689 slice 7) — mirrors `Decision` in
+ *  `src/observatory/decisions-view.ts`. Every string is server-written; `stakeRaw` only sorts. */
+export interface Decision {
+  readonly id: string;
+  readonly kind: "at-risk" | "lock-in" | "idea";
+  readonly symbol: string;
+  readonly display: string;
+  readonly plainName: string;
+  readonly pl: string;
+  readonly plTone: Tone;
+  readonly title: string;
+  readonly captionShort: string;
+  readonly caption: string;
+  readonly why: string;
+  readonly clocks: readonly string[];
+  readonly primary: { readonly label: string; readonly href: string };
+  readonly secondary?: { readonly label: string; readonly href: string };
+  readonly stakeRaw: number;
+  /** A single-leg option's outcome numbers; the client adds the live spot. */
+  readonly range?: {
+    readonly type: "call" | "put";
+    readonly side: "long" | "short";
+    readonly strike: number;
+    readonly breakeven: number;
+  };
+}
+
 /** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in
  *  `src/observatory/considerations-view.ts`. */
 export interface ConsiderationChip {
@@ -111,6 +138,8 @@ export interface Desk {
   readonly tiles: DeskTiles;
   readonly positions: readonly DeskPosition[];
   readonly considerations: readonly ConsiderationChip[];
+  /** Optional on the client so an older payload still renders (the pager then hides). */
+  readonly decisions?: readonly Decision[];
   /** Optional on the client so an older server (or fixture) without it still renders. */
   readonly allocation?: DeskAllocation;
 }
