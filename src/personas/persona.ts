@@ -1,5 +1,5 @@
 import { heldQuantity } from "../domain/portfolio.js";
-import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
+import type { MarketContext, OrderIntent, PlaybookVerdict, Portfolio } from "../domain/types.js";
 
 /**
  * A trading persona: a named strategy with a point of view.
@@ -18,6 +18,9 @@ export interface Persona {
   /** One-line thesis, surfaced in reports and touch-point recaps. */
   readonly thesis: string;
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[];
+  /** What each composed playbook concluded for this context — present only on a persona wrapped
+   *  by `withPlaybooks`, so the trader can record verdicts without knowing the playbook layer. */
+  playbookVerdicts?(context: MarketContext): readonly PlaybookVerdict[];
 }
 
 /** Read a symbol's momentum signal, defaulting to flat when absent. */

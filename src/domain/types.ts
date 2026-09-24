@@ -57,6 +57,22 @@ export interface Portfolio {
 export type PlaybookMode = "conservative" | "standard" | "aggressive";
 export const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
 
+/** What one playbook concluded on one decision pass (#3687). `tactical` marks a rule-chain
+ *  playbook, which has no single book-level state — only that it was consulted. */
+export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical";
+export const PLAYBOOK_VERDICT_STATES: readonly PlaybookVerdictState[] = [
+  "long",
+  "flat",
+  "no-window",
+  "tactical",
+];
+
+export interface PlaybookVerdict {
+  readonly playbookId: string;
+  readonly mode: PlaybookMode;
+  readonly state: PlaybookVerdictState;
+}
+
 /**
  * A persona's proposed trade. Personas express *direction and conviction*; the engine
  * owns *risk and sizing*. `reason` is required — it feeds the touch-point recaps and

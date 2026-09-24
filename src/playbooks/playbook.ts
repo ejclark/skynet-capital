@@ -53,7 +53,13 @@
  */
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
-import type { MarketContext, OrderIntent, PlaybookMode, Portfolio } from "../domain/types.js";
+import type {
+  MarketContext,
+  OrderIntent,
+  PlaybookMode,
+  PlaybookVerdict,
+  Portfolio,
+} from "../domain/types.js";
 import { type TacticalRule, tacticalIntentForSymbol } from "./tactical-playbook.js";
 
 /** What a playbook wants its book to look like at a moment in time. */
@@ -294,6 +300,22 @@ function tacticalPlaybookIntents(
  * `desiredState` goes uncalled for it. See `tactical-playbook.ts`'s module doc for why this is a
  * second shape rather than more fields bolted onto the state machine.
  */
+/** Each enabled playbook's verdict for this pass — the same pure `desiredState` call
+ *  `playbookIntents` makes, recorded so a quiet pass can say which playbooks looked and why each
+ *  stayed dark (#3687). Recomputing is exact: `desiredState` depends only on its arguments. */
+export function playbookVerdicts(
+  enabled: readonly EnabledPlaybook[],
+  asOfIso: string,
+  calendar: readonly EarningsPrint[],
+  events: readonly PlaybookEvent[] = [],
+): PlaybookVerdict[] {
+  return enabled.map(({ playbook, mode }) => ({
+    playbookId: playbook.id,
+    mode,
+    state: playbook.tactics ? "tactical" : playbook.desiredState(asOfIso, calendar, events),
+  }));
+}
+
 export function playbookIntents(
   enabled: readonly EnabledPlaybook[],
   context: MarketContext,

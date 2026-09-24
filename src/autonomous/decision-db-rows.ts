@@ -3,6 +3,7 @@ import type {
   OrderForecast,
   OrderIntent,
   PlaybookMode,
+  PlaybookVerdict,
   Side,
 } from "../domain/types.js";
 import type { GuardRefusal, GuardRefusalReason } from "../engine/guards.js";
@@ -200,6 +201,7 @@ export function decisionFrom(
   halted: string | null,
   contextJson: string | null,
   intentRows: readonly StoredIntentRow[],
+  playbookVerdicts: readonly PlaybookVerdict[] = [],
 ): DecisionRecord {
   const rawIntents: OrderIntent[] = [];
   const guardedIntents: OrderIntent[] = [];
@@ -226,5 +228,6 @@ export function decisionFrom(
     ...(halted ? { halted } : {}),
     ...(contextJson ? { context: JSON.parse(contextJson) as MarketContext } : {}),
     ...(refusals.length > 0 ? { refusals } : {}),
+    ...(playbookVerdicts.length > 0 ? { playbookVerdicts } : {}),
   };
 }

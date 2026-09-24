@@ -210,6 +210,56 @@ describe("AutonomousTrader", () => {
     expect((await broker.getPortfolio()).positions[0]?.quantity).toBe(10);
   });
 
+  describe("playbook verdicts (#3687)", () => {
+    const verdicts = [{ playbookId: "S1-NVDA", mode: "standard", state: "no-window" }] as const;
+    /** A quiet persona that still reports what its playbooks concluded — the case that motivated this. */
+    const quietWithPlaybooks: Persona = {
+      id: "quiet",
+      name: "Quiet",
+      thesis: "test",
+      decide: () => [],
+      playbookVerdicts: () => verdicts,
+    };
+    const broker = () =>
+      new InMemoryBroker(1_000_000, [{ symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" }]);
+
+    it("stamps each playbook's verdict on the pass, even when nothing fired", async () => {
+      const records: DecisionRecord[] = [];
+      const trader = new AutonomousTrader({
+        persona: quietWithPlaybooks,
+        broker: broker(),
+        onDecision: (r) => records.push(r),
+      });
+      await trader.evaluate(context(100, 0));
+      expect(records[0]?.outcomes).toHaveLength(0);
+      expect(records[0]?.playbookVerdicts).toEqual(verdicts);
+    });
+
+    it("records no verdicts on a halted pass — nothing was consulted", async () => {
+      const records: DecisionRecord[] = [];
+      const trader = new AutonomousTrader({
+        persona: quietWithPlaybooks,
+        broker: broker(),
+        blockedReason: () => "manual",
+        onDecision: (r) => records.push(r),
+      });
+      await trader.evaluate(context(100, 0));
+      expect(records[0]?.halted).toBe("manual");
+      expect(records[0]).not.toHaveProperty("playbookVerdicts");
+    });
+
+    it("omits the field for a persona with no playbook layer", async () => {
+      const records: DecisionRecord[] = [];
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker: broker(),
+        onDecision: (r) => records.push(r),
+      });
+      await trader.evaluate(context(100, 0.05));
+      expect(records[0]).not.toHaveProperty("playbookVerdicts");
+    });
+  });
+
   it("captures the market context the persona reasoned over on every cycle", async () => {
     const broker = new InMemoryBroker(1_000_000, [
       { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },

@@ -93,6 +93,54 @@ describe("DecisionDb", () => {
     db = openDecisionDb(dbPath); // afterEach expects a live handle
   });
 
+  describe("playbook verdicts (#3687)", () => {
+    const quiet = (at: number): DecisionRecord => ({
+      at,
+      personaId: "sauron",
+      mode: "live",
+      rawIntents: [],
+      guardedIntents: [],
+      outcomes: [],
+      playbookVerdicts: [
+        { playbookId: "S1-NVDA", mode: "standard", state: "no-window" },
+        { playbookId: "S1-NVDA", mode: "aggressive", state: "no-window" },
+        { playbookId: "HC-SAURON", mode: "standard", state: "tactical" },
+      ],
+    });
+
+    it("round-trips a quiet pass's verdicts, in order, across a fresh open", () => {
+      db.record(quiet(1));
+      db.close();
+      const reopened = openDecisionDb(dbPath);
+      expect(reopened.listByPersona("sauron")[0]?.playbookVerdicts).toEqual(
+        quiet(1).playbookVerdicts,
+      );
+      reopened.close();
+      db = openDecisionDb(dbPath);
+    });
+
+    it("recording the same pass twice stores each verdict once", () => {
+      db.record(quiet(1));
+      db.record(quiet(1));
+      expect(db.listByPersona("sauron")[0]?.playbookVerdicts).toHaveLength(3);
+    });
+
+    it("reaches a database created before the verdicts table existed", () => {
+      db.close();
+      const raw = new DatabaseSync(dbPath);
+      raw.exec("DROP TABLE playbook_verdicts");
+      raw.close();
+      db = openDecisionDb(dbPath);
+      db.record(quiet(2));
+      expect(db.listByPersona("sauron")[0]?.playbookVerdicts).toHaveLength(3);
+    });
+
+    it("leaves the field absent on a pass that recorded none", () => {
+      db.record({ ...quiet(3), playbookVerdicts: undefined });
+      expect(db.listByPersona("sauron")[0]).not.toHaveProperty("playbookVerdicts");
+    });
+  });
+
   it("captures the market context and structured strategy/forecast fields", () => {
     const raw = intent({
       strategy: "sauron-panic-claim",
