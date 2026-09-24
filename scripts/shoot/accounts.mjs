@@ -735,6 +735,52 @@ const board = {
 const etNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
 const etMinutes = etNow.getHours() * 60 + etNow.getMinutes();
 const sessionOpen = etNow.getDay() % 6 !== 0 && etMinutes >= 570 && etMinutes < 960;
+// The Heartbeat tab's no-trade log (#3687 slice 4): an idle stretch, a pass the risk guards
+// refused, and a halted one — the passes that never became an Activity row.
+const sauronNoTrades = {
+  available: true,
+  kind: "bot",
+  cycles: [
+    {
+      at: "2026-09-23T18:59:00Z",
+      quietSince: "2026-09-23T18:22:00Z",
+      mode: "live",
+      status: "quiet",
+      headline: "no signals fired for 148 cycles — watching",
+      rawCount: 0,
+      guardedCount: 0,
+      outcomes: [],
+    },
+    {
+      at: "2026-09-23T18:21:00Z",
+      mode: "live",
+      status: "refused",
+      headline: "refused by S2 — earnings print inside the hold",
+      rawCount: 1,
+      guardedCount: 0,
+      outcomes: [],
+      refusedIntents: [
+        {
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 40,
+          strategy: "sauron-panic-claim",
+          reason: "panic -0.82 exhausting, rebound momentum turning",
+        },
+      ],
+    },
+    {
+      at: "2026-09-23T14:05:00Z",
+      mode: "live",
+      status: "halted",
+      headline: "halted: daily-loss breaker",
+      rawCount: 0,
+      guardedCount: 0,
+      outcomes: [],
+      halted: "daily-loss breaker",
+    },
+  ],
+};
 const sauronHeartbeat = () => {
   const lastAgo = sessionOpen ? 22_000 : 16 * 3_600_000;
   return {
@@ -799,6 +845,7 @@ const { page, origin, out, close } = await openShell({
     "/api/desk/human-eric/activity": ericActivity,
     "/api/desk/bot-sauron/activity": sauronActivity,
     "/api/desk/bot-sauron/heartbeat": sauronHeartbeat,
+    "/api/desk/bot-sauron/decisions": sauronNoTrades,
     "/api/accounts/human-eric/equity-curve": ericEquityCurve,
     "/api/trade/bars": spyBars,
   },
@@ -935,11 +982,17 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
 await page.locator(".hb-section").waitFor();
 await shootCockpit("accounts-heartbeat-phone");
+// The no-trade log below the verdicts, scrolled into view (#3687 slice 4).
+await page.locator(".hb-log .cycles").scrollIntoViewIfNeeded();
+await shootCockpit("accounts-heartbeat-log-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.locator(".hb-chip").click();
 await page.locator(".hb-pop").waitFor();
 await shootCockpit("accounts-heartbeat-chip-desktop");
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
+await page.locator(".hb-log .cycles").waitFor();
+await shootCockpit("accounts-heartbeat-log-desktop");
 
 // Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
 await page.setViewportSize({ width: 390, height: 844 });

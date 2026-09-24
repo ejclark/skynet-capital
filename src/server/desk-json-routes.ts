@@ -48,6 +48,9 @@ async function decisionsPayload(
   config: DashboardServerConfig,
   limit: number,
   before: number | undefined,
+  /** `?trades=none` (#3687 slice 4): only the passes that placed nothing — idle, refused, halted,
+   *  rejected — which now live on the Heartbeat tab while trades carry their own decisions. */
+  noTrades = false,
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind, cycles: [] };
   const page = await readAccountDecisionsPage(found.id, config, {
@@ -55,7 +58,10 @@ async function decisionsPayload(
     ...(before !== undefined ? { before } : {}),
   });
   if (!page) return { available: false, kind: "bot", cycles: [] };
-  const view = decisionCyclesView(page.records, {
+  const records = noTrades
+    ? page.records.filter((r) => !r.outcomes.some((o) => o.action === "placed"))
+    : page.records;
+  const view = decisionCyclesView(records, {
     limit,
     ...(before !== undefined ? { before } : {}),
     homePersonaId: found.id,
@@ -154,7 +160,11 @@ export async function serveDeskJson(
     return;
   }
   if (sub === "decisions") {
-    res.end(JSON.stringify(await decisionsPayload(found, config, limit, beforeAt)));
+    res.end(
+      JSON.stringify(
+        await decisionsPayload(found, config, limit, beforeAt, params.get("trades") === "none"),
+      ),
+    );
     return;
   }
   if (sub === "thesis") {

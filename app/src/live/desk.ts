@@ -347,8 +347,16 @@ export interface DeskDecisions {
   readonly nextCursor?: number;
 }
 
-export async function fetchDeskDecisions(id: string, before?: number): Promise<DeskDecisions> {
-  const params = before !== undefined ? `?before=${before}` : "";
+export async function fetchDeskDecisions(
+  id: string,
+  before?: number,
+  opts: { readonly noTrades?: boolean } = {},
+): Promise<DeskDecisions> {
+  const query = new URLSearchParams();
+  if (before !== undefined) query.set("before", String(before));
+  if (opts.noTrades) query.set("trades", "none");
+  const qs = query.toString();
+  const params = qs ? `?${qs}` : "";
   const res = await fetch(`/api/desk/${encodeURIComponent(id)}/decisions${params}`, {
     credentials: "same-origin",
   });
