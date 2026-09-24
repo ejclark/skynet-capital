@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useMemo, useRef, useState } from "react";
 import type { Decision } from "../live/desk";
 import { fetchOptionPositions } from "../live/options";
+import { GLOSSARY, type GlossaryKey } from "./glossary";
+import { GlossaryTerm } from "./glossary-term";
 import { OutcomeRange } from "./outcome-range";
 
 /**
@@ -45,6 +47,17 @@ function writeSnoozed(accountId: string, ids: readonly string[]): void {
 }
 
 const SWIPE_PX = 40;
+
+/** The card's one lesson, opened in place as a glossary popover so reading it never leaves the
+ *  decision. A term this client's glossary doesn't know (an older build) simply isn't drawn. */
+function LearnLink({ learn }: { readonly learn?: Decision["learn"] }): ReactElement | null {
+  if (!(learn && learn.term in GLOSSARY)) return null;
+  return (
+    <p className="decision-learn">
+      <GlossaryTerm term={learn.term as GlossaryKey}>{learn.label}</GlossaryTerm>
+    </p>
+  );
+}
 
 export function DecisionPager({
   accountId,
@@ -196,7 +209,10 @@ export function DecisionPager({
                 ))}
               </ul>
             </div>
-            <p className="decision-why">{d.why}</p>
+            <div>
+              <p className="decision-why">{d.why}</p>
+              <LearnLink learn={d.learn} />
+            </div>
           </div>
         ) : null}
       </article>

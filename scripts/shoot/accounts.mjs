@@ -208,6 +208,7 @@ const ericDecisions = [
       "NVDA Sep 18 180 Call has lost $310 of the $2,540 it cost. Worst case from here: −$2,540.",
     why: "✦ options cost more before earnings. the day after, that extra drains away (iv crush), so a right call can still lose. decide before the print, not after.",
     clocks: ["Expires in 25 days", "Earnings Aug 26", "3 contracts · worth $2,226"],
+    learn: { term: "ivCrush", label: "What is IV crush?" },
     primary: {
       label: "Review on Trade ↗",
       href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
@@ -958,6 +959,11 @@ await page.locator(".decisions").scrollIntoViewIfNeeded();
 await page.getByRole("button", { name: /Why, and details/ }).click();
 await page.mouse.move(0, 0);
 await shootCockpit("accounts-decision-desktop");
+// The card's lesson opened in place (#3689 follow-up): "What is IV crush?" as a glossary popover.
+await page.evaluate(() => window.scrollBy(0, 320));
+await page.locator(".decision-learn button").hover();
+await shootCockpit("accounts-decision-learn-desktop");
+await page.mouse.move(0, 0);
 
 // Map lens (#3689 slice 9, handoff 3c): the treemap with the options strip and the stacked
 // decisions column; then the Runway (slice 10's lens, built alongside).

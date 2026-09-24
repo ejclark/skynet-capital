@@ -96,6 +96,8 @@ export interface Decision {
     readonly strike: number;
     readonly breakeven: number;
   };
+  /** A glossary term the card opens in place ("What is IV crush?"); unknown terms are dropped. */
+  readonly learn?: { readonly term: string; readonly label: string };
 }
 
 /** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in
