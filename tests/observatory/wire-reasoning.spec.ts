@@ -61,6 +61,7 @@ describe("attachWireReasoning", () => {
         orderId === "ord-1" ? { record, intent: guardedIntent } : undefined,
     });
     expect(rows[0]?.reasoning).toEqual({
+      personaId: "sauron",
       reason: "panic fade",
       strategy: "sauron-panic-claim",
       expectation: "expect a bounce",
@@ -131,5 +132,27 @@ describe("attachWireReasoning", () => {
       findByOrderId: () => ({ record, intent: guardedIntent }),
     });
     expect(withoutHistory[0]).not.toHaveProperty("vitals");
+  });
+});
+
+describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", () => {
+  it("carries the playbook and whose decision it was, which need not be the account's own", () => {
+    const scouted = intent({ playbookId: "BETA-SCOUT", playbookMode: "conservative" });
+    const record: DecisionRecord = {
+      at: 1,
+      personaId: "beta-scout",
+      mode: "live",
+      rawIntents: [scouted],
+      guardedIntents: [scouted],
+      outcomes: [{ intent: scouted, action: "placed" }],
+    };
+    const rows = attachWireReasoning([row()], {
+      findByOrderId: () => ({ record, intent: scouted as never }),
+    });
+    expect(rows[0]?.reasoning).toMatchObject({
+      personaId: "beta-scout",
+      playbookId: "BETA-SCOUT",
+      playbookMode: "conservative",
+    });
   });
 });

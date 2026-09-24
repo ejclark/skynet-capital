@@ -13,10 +13,28 @@ import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
+import { reasoningForOrder } from "../observatory/wire-reasoning.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisions } from "./decision-account-view.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
+
+/** A bot's activity rows each carry the decision that placed them (#3687 slice 4), via the same
+ *  exact order-id join the wire feed and the Thesis tab use. Human rows pass through untouched. */
+function withDecisions<V extends { readonly activity: readonly { readonly orderId: string }[] }>(
+  kind: string,
+  view: V,
+  config: DashboardServerConfig,
+): V {
+  if (kind !== "bot" || !config.findByOrderId) return view;
+  return {
+    ...view,
+    activity: view.activity.map((event) => {
+      const reasoning = reasoningForOrder(event.orderId, config);
+      return reasoning ? { ...event, reasoning } : event;
+    }),
+  };
+}
 
 /** `/api/desk/:id/heartbeat` (#3687) — from the bot's OWN passes, not the pooled account view:
  *  beta-scout runs after every bot, so its records would make a dead loop look alive. */
@@ -77,11 +95,15 @@ export async function serveDeskJson(
         records
           ? {
               available: true,
-              ...deskActivityView(records, origins, {
-                limit,
-                before: before ?? undefined,
-                ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
-              }),
+              ...withDecisions(
+                found.kind,
+                deskActivityView(records, origins, {
+                  limit,
+                  before: before ?? undefined,
+                  ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
+                }),
+                config,
+              ),
             }
           : { available: false, activity: [] },
       ),

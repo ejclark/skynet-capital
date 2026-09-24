@@ -25,6 +25,11 @@ export interface WireTradeReasoning {
   readonly expectation?: string;
   /** Set only when the risk guards resized the persona's raw ask before it reached the broker. */
   readonly guardDelta?: string;
+  /** The playbook that fired it, when one did (#885 attribution). */
+  readonly playbookId?: string;
+  readonly playbookMode?: string;
+  /** Whose decision this was — not always the account's own: beta-scout trades on Sauron's. */
+  readonly personaId: string;
 }
 
 export interface WireTradeWithReasoning extends WireTradeRow {
@@ -58,6 +63,9 @@ export function reasoningForOrder(
   const guardDelta = guardDeltaFor(record, intent);
   return {
     reason: intent.reason,
+    personaId: record.personaId,
+    ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
+    ...(intent.playbookMode ? { playbookMode: intent.playbookMode } : {}),
     ...(intent.strategy ? { strategy: intent.strategy } : {}),
     ...(intent.expectation ? { expectation: intent.expectation } : {}),
     ...(guardDelta ? { guardDelta } : {}),
