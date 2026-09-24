@@ -89,6 +89,15 @@ export function LeagueCard({
           <Line key={l.row.key} line={l} me={meId} />
         ))}
       </ol>
+      {league.meRank !== undefined ? (
+        <Link to="/leaderboard" search={{ by: metric }} className="league-oneliner">
+          You're <b>#{league.meRank}</b>
+          {gap && !gap.leading
+            ? ` · ${gap.amount} behind ${gap.aheadName}${gap.aheadOwned ? " (yours)" : ""}`
+            : " · leading ✦"}{" "}
+          <span aria-hidden="true">›</span>
+        </Link>
+      ) : null}
       <p className="league-foot">
         {gap?.leading ? (
           <>You lead the league ✦</>

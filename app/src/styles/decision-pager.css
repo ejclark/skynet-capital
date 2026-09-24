@@ -307,3 +307,41 @@
     border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   }
 }
+
+/* Phone (#3689 slice 8, handoff 3b): the action row is ‹ · primary · ›, every target 44px, and
+   the header's arrows step aside. A swipe also pages. */
+.decision-phone-nav {
+  display: none;
+}
+@media (max-width: 700px) {
+  .decisions-nav,
+  .decisions-order,
+  .decision-btn--secondary {
+    display: none;
+  }
+  .decision-why-toggle {
+    flex-basis: 100%;
+    min-height: 44px;
+    text-align: left;
+  }
+  .decision-phone-nav {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 18px;
+  }
+  .decision-btn--primary {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .decision-snooze {
+    width: 44px;
+    height: 44px;
+  }
+}

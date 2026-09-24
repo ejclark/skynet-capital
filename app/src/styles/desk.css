@@ -468,3 +468,57 @@ table.blotter {
   font-family: var(--mono);
   font-size: 10.5px;
 }
+
+/* Holding steady as cards (#3689 slice 8, handoff 3b): at phone width the positions blotter trades
+   its wide table for one card per position. Each card is a 44px+ link to the position on Trade. */
+.pos-cards {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pos-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.pos-card-top,
+.pos-card-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pos-card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.pos-card-pl {
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.pos-card-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.pos-card-ret {
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+@media (max-width: 700px) {
+  .pos-blotter .blotter-card {
+    display: none;
+  }
+  .pos-cards {
+    display: flex;
+  }
+}

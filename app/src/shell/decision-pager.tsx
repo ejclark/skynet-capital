@@ -156,14 +156,34 @@ export function DecisionPager({
             >
               ✦ Why, and details {detailsOpen ? "▴" : "▾"}
             </button>
+            {live.length > 1 ? (
+              <button
+                type="button"
+                className="decision-phone-nav"
+                aria-label="Previous decision"
+                onClick={() => page(-1)}
+              >
+                ‹
+              </button>
+            ) : null}
             {d.secondary ? (
-              <a className="decision-btn" href={d.secondary.href}>
+              <a className="decision-btn decision-btn--secondary" href={d.secondary.href}>
                 {d.secondary.label}
               </a>
             ) : null}
             <a className="decision-btn decision-btn--primary" href={d.primary.href}>
               {d.primary.label}
             </a>
+            {live.length > 1 ? (
+              <button
+                type="button"
+                className="decision-phone-nav"
+                aria-label="Next decision"
+                onClick={() => page(1)}
+              >
+                ›
+              </button>
+            ) : null}
           </div>
         </div>
         {detailsOpen ? (

@@ -114,3 +114,17 @@
     border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   }
 }
+
+/* Phone (#3689 slice 8, handoff 3b): the compact money card. The bar stays with its amounts under
+   the cash line; the greeks keep their plain labels (still one tap from the glossary) and drop the
+   sentence under each. */
+@media (max-width: 700px) {
+  .money-legend,
+  .money-greek .money-note {
+    display: none;
+  }
+  .money-cell {
+    gap: 6px;
+    padding: 12px 16px;
+  }
+}
