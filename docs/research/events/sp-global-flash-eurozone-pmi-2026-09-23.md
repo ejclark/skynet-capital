@@ -400,5 +400,98 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-24, D+1 — inside the `closeOutWithinDays` deadline).** Macro-print mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []`, unchanged since initial research); the
+cache was busted anyway per the lane's standing instruction, though nothing here reads it. Every
+figure below is a fresh, uncached fetch made this session: S&P Global's own September flash release
+PDF (`www.pmi.spglobal.com/Public/Home/PressRelease/ab6649de01fd4c38a7f2c9a3e52a81bf`, reached with a
+browser user-agent after a plain fetch 403'd — the same egress pattern the [US flash sibling's
+close-out](sp-global-flash-us-pmi-2026-09-23.md) logged — **HTTP 200, 137,110 bytes**, PDF-parsed
+in-session), the publisher's own past-release archive re-pulled to confirm delivery
+(`pmi.spglobal.com/Public/Release/PressReleases?language=en`, **HTTP 200, 88,621 bytes**), and Yahoo
+5-minute bars for **FEZ, EZU, VGK, EWG, EWQ, SPY** (`range=60d`, delivered **2026-06-30 → 2026-09-23**,
+**n=60** sessions) plus Cboe's `^VIX` daily series.
+
+**What printed — a beat, not a nothing-print, and still no regime break.**
+
+| Measure | Sep flash | Aug final (restated in the Sep release) | Δ | Superlative |
+|---|---|---|---|---|
+| **Composite Output Index** | **53.1** | 52.0 | **+1.1** | **41-month high** |
+| Services Business Activity | 53.0 | 51.6 | +1.4 | 10-month high |
+| Manufacturing Output | 53.4 | 53.3 | +0.1 | 55-month high |
+| Manufacturing PMI | 52.7 | 52.7 | 0.0 | unchanged pace |
+
+The release's own embargo line reads **"Embargoed until 1000 CEST (0800 UTC) 23 September 2026"** —
+the exact date and slot this doc has carried as `estimate` since initial research — and its collection
+line reads **"Data were collected 10-21 September 2026,"** which lands after the **09-10 ECB
+decision** exactly as leg 6 predicted from the August release's own methodology (predicted ~09-10 to
+~09-19; actual 10-21 — same shape, a few days later). Chris Williamson's own comment, quoted not
+characterised: *"more encouraging is the resilience of economic growth being reported... indicative
+of GDP rising at a quarterly rate of 0.4%."* **A sub-50 print did not happen** — the kill switch tied
+to a regime break does not fire, and every base rate in this document keeps applying to the regime it
+was measured in.
+
+**Date, slot and mechanism — all three SUPPORTED out of sample, from primaries re-checked today.**
+The past-release archive, re-pulled fresh, records the Eurozone aggregate **delivered at 08:00 UTC**
+on 2026-09-23 exactly as forecast, and — the mechanism leg 2 rests on — records **Flash France PMI at
+07:15 UTC** and **Flash Germany PMI at 07:30 UTC** the same morning, both ahead of the 08:00 UTC
+aggregate they are weighted into. The kill switch *"France or Germany fails to print ahead of the
+aggregate"* does not fire; the pre-announcement mechanism holds a second time, out of sample.
+
+**The load-bearing measurement — the registered forward test, re-run exactly as constructed at
+registration.** Euro proxy minus SPY, same window, 09:30–09:45 ET, percentile-ranked against a fresh
+trailing 60-session distribution ending 2026-09-23 (the registration's own 60d sample has since
+rolled forward — re-run, not recalled, per the lane's cache-discipline rule):
+
+| Instrument | Residual | Percentile (n=60) | At/below median? |
+|---|---|---|---|
+| FEZ − SPY | −0.08pp | p38.3 | yes |
+| EZU − SPY | −0.70pp | p3.3 | yes |
+| VGK − SPY | −0.05pp | p46.7 | yes |
+| EWG − SPY | +0.10pp | p75.0 | no |
+| EWQ − SPY | +0.14pp | p74.5 | no |
+
+**3 of 5 at or below their own median, 0 of 5 at or above p90.** Both of
+[`FT-sp-global-flash-eurozone-pmi-2026-09-23-1`](../forward-tests/sp-global-flash-eurozone-pmi-2026-09-23.md)'s
+registered arms hold — (i) at least 3 of 5 at or below median: **exactly 3**; (ii) none reaching p90:
+**none did**, the ceiling reached is p75 — so the test **PASSES**, scored in full in that fragment. The
+European complex still did not decouple from SPY at the US open on this Eurozone flash day, which is
+the one observation this test was ever designed to produce (per its own text: *"a pass is one
+observation that this print does not reach the US session, never evidence that it is inert in
+European hours"*). Neither void clause fired: no named dated catalyst ran inside 09:30–09:45 ET
+today, and the release was not delayed or moved off 08:00 UTC.
+
+**Supplementary color, not scored — the later windows ran hotter today than the registration sample's
+aggregate, and that is exactly what the mechanism this doc names would produce.** At 09:45–10:00 ET
+(the US flash's own window) the European five ran FEZ p83.3 / EZU p70.0 / VGK p55.0 / EWG p31.7 / EWQ
+p74.6 — **4 of 5 at or above median** on this single day, against the 7-of-15-aggregate reading
+carried from three registration days. The [US flash's own close-out](sp-global-flash-us-pmi-2026-09-23.md),
+re-run independently the same session, found its own window the loudest of its four-day sample (**5 of
+5 at or above median, 3 of 5 at or above p90**). Read together this is one day, not a contradiction of
+the registered claim: the registered test is specifically about **09:30–09:45**, where today's European
+five stayed at base rate, and a single hot day at 09:45 is exactly what "the US print, not the European
+one, moves the European proxies too" would look like if the two complexes trade together once the US
+release lands. **n=1, not sized, not re-argued** — the clock-ordering claim (leg 3(c)) is not retested
+here because doing so needs the same multi-day construction as at registration, which this close-out
+does not rebuild.
+
+**VIX close 2026-09-23: 15.18** (own `^VIX` fetch), independently cross-checked against the same-day
+close the [5Y Treasury sibling's close-out](treasury-5y-note-2026-09-23.md) recorded — both land on
+15.18. No regime shift; nothing here changes the `low` tier.
+
+**The call, scored against the tape.** No capital was deployed at any point across this event's life
+— the stand-aside guard held from initial research through close-out, so nothing needed correcting on
+the capital side. The analytical claims fare the same as the guard: the sibling's named confound stays
+**sized and small**, out of sample as well as in it; the structural mechanism (pre-announcement by
+components) held a second time; the tier stays `low` on a second measurement rather than an inherited
+assumption. **This event's only registered forward test scores today and nothing carries forward** —
+this doc goes quiet after this entry per the close-out rule; no `forward-test-due` re-dispatch is
+expected for this id absent a new registration.
+
 **Last assessed:** 2026-09-23
 <!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":2} -->
+
+**Last assessed:** 2026-09-24 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
