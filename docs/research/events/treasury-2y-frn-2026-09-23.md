@@ -390,6 +390,7 @@ fragment stays self-contained:
 
 | 2026-09-15 | D-8 | **Pulse check. The 09-05 straddle resolved, and the session's contribution is to price it in first differences.** **(a) The straddle is near-settled:** [`fomc-2026-09-16`](fomc-2026-09-16.md) now reads **91.4% hike** (futures-derived, *"data as of September 14"*) / **86.2%** venue VWAP / **0% cut**, vs the CME ~65% · Kalshi 51.5% · Polymarket 49.0% this doc quoted on 09-05 — leg 6's asymmetry will almost certainly be realised, not merely risked. **(b) The index has already stepped, before its determination:** 13-week bill discount **3.800 (09-08) → 3.970 (09-14)**, **+17.0bp** — the **largest one-week move in two years** and only the **second ≥17bp week since 2024-01-01** (fiscaldata `auctions_query`, `security_term:13-Week`, HTTP 200, 38,885 bytes, 246 rows since 2022; the other is **2024-09-23 at −21.0bp**, the mirror after that September's FOMC; 10 of 245 weeks ≥17bp = **4.1%** since 2022). Versus R1's **08-24** determination of **3.715** the index is already **+25.5bp** with 09-21 still to come — so the Δindex ≥ +10bp condition below is **live, not hypothetical**. **(c) NEW MEASUREMENT — a rising index is close to margin-neutral, which is the number leg 6 could not supply.** Full 154-auction series re-pulled (HTTP 200, 59,082 bytes, 2014-01-29 → 2026-08-26, no new rows since 08-26) and differenced: corr(Δindex, Δmargin) = **−0.087** (n=153) all-history, **+0.076** on 2021+ (n=69) — the parent's level corr of **+0.824** is a ZIRP artifact and this is its first-difference test. Conditioned on **Δindex ≥ +10bp** (n=31): mean Δmargin **+0.37bp**, wider in **14/31**, range [−10.6, +11.4]. At ≥+20bp (n=11): mean **+0.01bp**, wider 4/11. **(d) On this event's EXACT setup — R2 · R1 ≤ 6bp · Δindex ≥ +10bp — n=4:** 2017-12-27 (3.5→**3.5**), 2018-03-28 (1.6→**4.9**), 2018-09-25 (4.7→**5.0**), 2022-06-22 (0.0→**−0.3**); mean R2−R1 **+0.83bp**, range **[−0.3, +3.3]**. On R1 = **5.5bp** that centres 09-23 at **~6.3bp** spanning **5.2–8.8bp** — **`-2`'s 3.5–8.5bp band survives, tilted into its upper half, with the top analogue clearing the ceiling by 0.3bp.** Recorded as a refinement; **deliberately NOT registered as a third test**, since `-2` already scores this one observation (the doc's own stated no-stacking precedent). **(e) The kill switch loses its alibi:** SOFR **3.62%** on 09-14, *down* 3bp from **3.65%** (09-04), p99 **3.70%** (an 8bp tail), volume **$2.86T** (NY Fed `markets.newyorkfed.org`, HTTP 200) — the index rose 17bp while overnight secured funding **eased**, which separates policy repricing from a squeeze. The one >10.0bp precedent (2018-12-26) was a squeeze; with none visible, a fire on 09-23 would be **FRN-specific**, not 2018 again. Base rate unchanged at **1 of 16**. **(f) Date integrity:** schedule PDF re-fetched today, **byte-identical at 17,195 bytes** (md5 `a079d72f…`) — the 09-23 row has not moved; still `estimate`, confirming primary is the **09-17** announcement, now itself a tracked calendar row (last pulse's proposal landed as canonical `treasury-coupon-announcement-2026-09-17`, medium, with its own initial research). **Adjacency sweep — peers:** n/a, `symbols: []`. **Macro:** PPI 09-10 headline **+0.4%** in line, core **+0.2%** *below* consensus, but y/y **5.4% vs 5.3%**; CPI 09-11 core **+0.3%** (unrounded 0.29%) against a book that had priced 0.2% at 65% — both per the sibling ledgers. **Rates (Treasury par, primary, 09-14 close vs 09-04):** 3-Mo **4.11** (+20bp) · 2Y **4.65** (+28) · 5Y **4.80** (+26) · 7Y **4.88** (+23) · 10Y **4.97** (+19) · 20Y **5.37** · 30Y **5.34** (+10) — a bear flattener, 2s30s 87→69bp; a policy-path repricing, which is exactly the channel the index sits in. **VIX 17.54** (09-15) vs **14.53** (09-04) = **+3.01**, past the 3-point regime threshold and out of the 14–17 range the CPI ledger measured as 28 sessions long. **Geopolitical:** Brent above **$108** and WTI **$104.71** (09-14, per `fomc-2026-09-16`) — an energy-led inflation impulse feeding the hike book; **Trump–Xi summit 09-24** (high, `estimate`) still one day after; UNSC Iran panel mandate expiry **09-26**. **Event tape:** 13-week supply pinned at **$92B** for **12 consecutive** auctions through 09-14 — the switch's "supply" reading has nothing behind it either; no new FRN auction since 08-26, so `-1` and `-2` remain unscoreable until the print. **Adjacency — corridor 15 → 34** tracked entries within ±5 days, one confirmed high/critical (**opex-2026-09-18**). **NO new dated event proposed.** The one candidate this sweep surfaced is the **2026-09-21 13-week bill** — now materially more load-bearing than on 09-05, since it is the auction that fixes the index — and it is declined again for the same reason, verified this session rather than inherited: **the calendar tracks zero bill auctions of any tenor** (`ls src/domain/market-events/` matches no `*-bill-*`/`4-week`/`13-week`/`52-week` id), so filing it opens a ~150-events-a-year recurring class rather than adding an event. Leg 6 stays checkable through `frn_index_determination_date` on the 09-23 print itself. | **Stance refined, not changed** — still zero-position and read-only; the refinement is that the policy straddle is now measured at **near margin-neutral in first differences**, the expected centre moves **5.5 → ~6.3bp** inside an unchanged registered band, and a >10.0bp fire would now be FRN-specific rather than a funding echo | 2026-09-22 (low; D-8 is inside the 0+/7d band, and 7 days from today is 09-22 — D-1, the last pulse before the print) |
 | 2026-09-22 | D-1 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-2.7pt since last), band unchanged (low:0+), 46 adjacent event(s) tracked, new in corridor since last pulse: `apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18`, `bea-international-transactions-q2-2026-09-24`, `costco-q4-fy2026-2026-09-24`, `dmo-pilot-switch-auction-test-2026-09-24`, `eia-weekly-petroleum-status-2026-09-23`, `intl-transactions-q2-2026-09-24` +6 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-29 |
+| 2026-09-24 | D+1 | **Close-out — the auction printed and is scored in full below.** Instrument cache busted per protocol; `symbols: []`, so neither symbol-keyed instrument applies and the scoring source is Treasury's own auction record, re-fetched this session (`fiscaldata.treasury.gov` `auctions_query`, CUSIP **91282CRD5**), never memory. **Result:** `spread` **0.0500** (identity holds, `-1` PASSES on its uninformative side), `high_discnt_margin` **4.0bp** (inside the registered **3.5–8.5bp** band, `-2` PASSES), `avg_med_discnt_margin` **1.0bp**, `soma_accepted` **0** (leg 5's new-issue-only rollover pattern extends to 11/11 since 2024), `frn_index_determination_date` **2026-09-21** exactly as leg 6's chain named, `frn_index_determination_rate` **4.015%** (+30.0bp vs R1's 3.715%, +4.5bp beyond the 09-15 pulse's 3.970% reading), closing time **11:30 AM**, offering **$28,000,000,000** as a **Yes**-flagged reopening — every inherited kill switch (>10.0bp margin, margin outside 3.5–8.5bp, `spread` ≠ 0.0500, index date ≠ 09-21, announcement not a $28B `R`-marked reopening) checked and none fired. **But the 09-15 refinement's point estimate missed:** R2−R1 printed **−1.5bp** (5.5→4.0bp), a compression, against that pulse's **~6.3bp** centre (span 5.2–8.8bp) built from the exact-setup n=4 analogue; the coarser Δindex ≥ +20bp bucket (n=11, mean **+0.01bp**, tighter in 7/11) — a closer match to this cycle's realized +30.0bp move than the ≤10bp-conditioned n=4 set — called the direction right where the finer analogue didn't. Recorded as a model-selection lesson, not a kill: neither registered test's threshold depended on the refined centre. **Demand softened on conventional measures while the margin tightened:** bid-to-cover **2.63**, down from 3.14 (08-26) and 3.37 (07-29); indirect share (of competitive accepted) **59.09%**, down from 66.56% (08-26); dealer share **40.92%**, up from 33.08% — a dissociation between weaker headline demand and a tighter margin that no registered test here measures. **Rates:** Treasury's par curve 09-14→09-23 continued repricing higher across the curve (3-Mo 4.11→4.19, 2Y 4.65→4.85, 10Y 4.97→5.11); **VIX 15.18** (09-23 close) vs 14.87 (09-21) — inside the 3-point regime bar. Both forward tests scored in [`forward-tests/treasury-2y-frn-2026-09-23.md`](../forward-tests/treasury-2y-frn-2026-09-23.md). `## Outcome` written below. | Both registered forward tests PASS; the stance's core content — a measured, biased, regime-straddling "free read" for 10-28 — stands, refined by one honest miss (the exact-setup analogue's centering) that a coarser, better-matched bucket would have called correctly | — (closed; scanner goes quiet on this event) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to the
 next session, not an essay. The adjacency sweep (peer prints · macro surprises · VIX regime ·
@@ -397,5 +398,96 @@ geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated ad
 proposed as a new `src/domain/market-events/<id>.json` (`status: "estimate"`) in the same PR. Close-out
 fills `## Outcome` below from re-run instrument data (cache busted first), never from memory.
 
-**Last assessed:** 2026-09-22
-<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":1} -->
+## Outcome
+
+**Close-out (2026-09-24, D+1 — inside the `closeOutWithinDays: 6` deadline).** Rates mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []`, unchanged since initial research); the
+cache was busted anyway per the lane's standing instruction, though nothing here reads it. "Re-run
+instrument data" means the executed auction record itself, re-fetched this session, never a prior
+row's document read: `api.fiscaldata.treasury.gov`'s `auctions_query` for CUSIP **91282CRD5**
+(fields `high_discnt_margin`, `avg_med_discnt_margin`, `spread`, `soma_accepted`,
+`frn_index_determination_date/rate`, `closing_time_comp`, `reopening`, `offering_amt`,
+`bid_to_cover_ratio`, and the raw bidder-accepted/tendered fields), Treasury's daily par
+yield-curve CSV for 09-14→09-23, and Cboe's VIX daily series (Yahoo `^VIX`). Every fetch resolved
+this session.
+
+**What printed.**
+
+| Field | 2026-09-23 | Prediction / prior | Result |
+|---|---|---|---|
+| `spread` | **0.0500** | Must equal 0.0500 (`-1`) | **Identity holds — 104/104 since 2014** |
+| `high_discnt_margin` | **4.0bp** | 3.5–8.5bp (`-2`); 09-15 pulse centred ~6.3bp (5.2–8.8bp) | **Inside the registered band; below the refined centre** |
+| `avg_med_discnt_margin` | 1.0bp | — | recorded, not tested |
+| `soma_accepted` | **0** | Leg 5: reopenings almost never carry one | **Holds — new-issue-only rollover now 11/11 since 2024** |
+| `frn_index_determination_date` | **2026-09-21** | Leg 6's chain named this exact date | **Matches** |
+| `frn_index_determination_rate` | **4.015%** | R1 (08-24) 3.715% \| 09-15 pulse reading 3.970% | **+30.0bp vs R1, +4.5bp beyond the last pulse** |
+| Closing time | **11:30 AM** | Modal | **Matches** |
+| Offering / reopening flag | **$28,000,000,000 / Yes** | $28B grid, `R` marker | **Matches — 21 of 21 since 2024-05-29** |
+| Bid-to-cover | **2.63** | 3.14 (08-26), 3.37 (07-29) | **Weaker, third straight decline** |
+| Indirect share (of comp. accepted) | **59.09%** | 66.56% (08-26) | **Down 7.5pp** |
+| Dealer share | **40.92%** | 33.08% (08-26) | **Up 7.8pp** |
+
+Bidder shares computed here from raw accepted dollars over `comp_accepted` ($27,989,762,500):
+indirect $16,537,912,500 / dealer $11,451,850,000 / direct $0, summing to 100.0%.
+
+**Scoring the two forward tests — both PASS**, scored in full in
+[`forward-tests/treasury-2y-frn-2026-09-23.md`](../forward-tests/treasury-2y-frn-2026-09-23.md).
+
+**`FT-treasury-2y-frn-2026-09-23-1` — PASSES**, as its 103/103 (now 104/104) base rate said it
+almost certainly would. The pass is uninformative by the test's own registration; its value was
+always in the fail it did not have. BF-2028's `spread = 0.0500` stamp is still intact five weeks
+before the 2026-10-28 new issue tests it independently.
+
+**`FT-treasury-2y-frn-2026-09-23-2` — PASSES.** 4.0bp sits inside the registered 3.5–8.5bp band
+(base rate 72% all-history / 82% since 2021, disclosed as moderately informative). But the print
+lands **below** R1 (5.5bp), not above it, and **below** the 09-15 pulse's own refined centre of
+~6.3bp — the pass is real on the letter of the registered test, and the refinement layered on top
+of it missed the direction its own math implied.
+
+**The mechanism: the 09-15 refinement's exact-setup analogue (n=4) was thinner and worse-matched
+than a coarser bucket already sitting in the same pulse.** That session conditioned on the precise
+historical setup (R2 · R1 ≤ 6bp · Δindex ≥ +10bp, n=4: mean R2−R1 **+0.83bp**) to centre this
+print at ~6.3bp. But this cycle's realized index move was **+30.0bp** off R1 — well past the
++10bp threshold that n=4 sample used, and squarely inside the **Δindex ≥ +20bp** bucket the same
+pulse also computed (n=11, mean **+0.01bp**, tighter in **7 of 11**) — the bucket whose magnitude
+actually matches what happened. That coarser bucket called the sign right; the finer, headline
+number the pulse foregrounded did not. Recorded as a model-selection lesson for the next FRN in
+this series: when a live cycle's Δindex exceeds the exact-setup sample's own range, the wider
+bucket at the matching magnitude is the better read, not the thinner one nearest the labels.
+Neither registered test's threshold depended on this centre, so nothing here is a kill — `-2`
+passed exactly as written.
+
+**A dissociation the registered tests do not measure.** Demand softened by two conventional
+gauges — bid-to-cover **2.63** (down from 3.14, 3.37) and indirect share **59.09%** (down from
+66.56%) — while the margin itself tightened rather than widened. Dealers absorbed the difference
+(40.92%, up from 33.08%). This is context, not a scored claim: no forward test in this fragment or
+its parents keys on bidder composition for this event, and the calendar's own composition genre
+(the 2Y **note** ledgers) tests that question on a different security.
+
+**Rates — the tape kept repricing through the print, unremarkably for this instrument.** Treasury's
+par curve, fetched direct: 3-Mo **4.11 (09-14) → 4.19 (09-23)**, 2Y **4.65 → 4.85**, 10Y **4.97 →
+5.11** — continued post-FOMC drift, not a reaction to this auction specifically (`symbols: []`, no
+transmission channel exists). VIX **15.18** (09-23 close) vs **14.87** (09-21) — inside the
+3-point regime bar this doc has used throughout.
+
+**What this closes and what it hands to 2026-10-28.** The three durable outputs the 09-05 initial
+research and 09-15 pulse built — the measured/biased free read, the timing asymmetry, and the
+SOMA-rollover asymmetry — all stand: this print is the earliest test of the `spread` identity
+(passed), confirms the index-post-FOMC timing chain exactly as scheduled, and confirms
+`soma_accepted = 0` as a pure private-demand print. The **−1.50bp tightening bias** measured at
+initial research remains unregistered against 10-28 (owned instead by
+[`FT-treasury-coupon-announcement-2026-10-22-2`](../forward-tests/treasury-coupon-announcement-2026-10-22.md)),
+and this print adds one more data point to that population once 10-28 prices: R2 (4.0bp) vs
+whatever the new issue stamps.
+
+**Honest limits.** No when-issued level was sought or found for this CUSIP; the auction's own
+distributional fields (high/median/low margin) are the reference. The −1.5bp Δmargin observed here
+is one draw and does not itself revise the n=31/n=11 base rates the 09-15 pulse computed — those
+stay as documented, with this print now available as one additional out-of-sample observation for
+whichever later session next re-runs that regression. The bidder-composition dissociation noted
+above was not tested against any prior norm computed specifically for FRN reopenings (only the
+sibling 2Y **note** ledgers carry that machinery), so "weaker demand" here is a relative statement
+against this CUSIP's own two prior prints, not a full-series base rate.
+
+**Last assessed:** 2026-09-24 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
