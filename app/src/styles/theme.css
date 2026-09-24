@@ -32,6 +32,9 @@
   --accent: #35d0ba;
   --pos: #3fb950;
   --neg: #f85149;
+  /* BRAND.md's warm-white "charged/electric" highlight — new highs and the market clock's now-knob
+     (#3689). Emphasis only, never P/L direction. */
+  --charged: #eafffa;
 
   --accent-contrast: #04302b;
   --pos-contrast: #05170d;
@@ -125,6 +128,9 @@
     --accent: #0e9f8c;
     --pos: #1a7f37;
     --neg: #cf222e;
+    /* warm-white vanishes on white, so light mode's "charged" is a deep teal ink: 6.4:1 on
+       --surface-2, the same emphasis role in the only direction that shows up */
+    --charged: #0a5f54;
     --accent-contrast: #032420; /* on --accent #0e9f8c: 4.98:1 (white was 3.30, under AA) */
     --pos-contrast: #ffffff;
     /* on white the ramp has room the dark column doesn't: deepening it RAISES the leader's
@@ -153,6 +159,7 @@
   --accent: #0e9f8c;
   --pos: #1a7f37;
   --neg: #cf222e;
+  --charged: #0a5f54;
   --accent-contrast: #032420; /* on --accent #0e9f8c: 4.98:1 (white was 3.30, under AA) */
   --pos-contrast: #ffffff;
   /* the light ramp, twice over — this block and the prefers-color-scheme copy above must move

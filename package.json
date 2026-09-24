@@ -88,7 +88,8 @@
     "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth && npm run test:e2e:ct",
     "test:e2e:update": "playwright test --update-snapshots",
     "test:e2e:auth:update": "playwright test -c playwright.auth.config.ts --update-snapshots",
-    "test:e2e:ct:update": "playwright test -c app/playwright-ct.config.ts --update-snapshots"
+    "test:e2e:ct:update": "playwright test -c app/playwright-ct.config.ts --update-snapshots",
+    "shoot:market-session": "tsx scripts/shoot/market-session.mjs"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",

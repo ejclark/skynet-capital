@@ -1,0 +1,157 @@
+/* The topbar market clock (#3689 slice 1, design handoff 3a) — `shell/market-session.tsx`.
+ *
+ * Sits between the view nav and the actions. Wide screens get the full 440px widget; laptop widths
+ * drop the track's labels and the min-width so the nav keeps its room; at the shell's 860px wrap
+ * point it becomes its own full-width row under the nav (handoff 3b: the session widget is the
+ * second thing a phone sees). Tokens only; every tint is a color-mix of one.
+ *
+ * Colour never carries the state alone: the eyebrow SAYS open/closed/opens-in, and power hour is
+ * named in words beside its tick. The knob has no transition on purpose — a clock doesn't animate.
+ */
+
+.market-session {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 12px;
+  min-width: 440px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+}
+.market-session + .topbar-actions {
+  margin-left: 0;
+}
+
+.session-label {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+.session-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.session-left {
+  font-size: 11px;
+  color: var(--muted);
+}
+.session-left b {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.session-track-wrap {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.session-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.session-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--elapsed);
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    var(--accent)
+  );
+}
+.session-power {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: var(--power);
+  border-left: 1px dashed var(--charged);
+}
+.session-knob {
+  position: absolute;
+  top: 50%;
+  left: var(--elapsed);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--charged);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.session-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.session-power-label {
+  color: var(--charged);
+}
+
+/* closed: the track reads as spent, muted — the eyebrow drops the accent */
+.market-session[data-state="closed"] {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+.market-session[data-state="closed"] .session-eyebrow {
+  color: var(--muted);
+}
+.market-session[data-state="closed"] .session-dot {
+  background: var(--muted);
+  box-shadow: none;
+}
+.market-session[data-state="closed"] .session-fill {
+  background: color-mix(in srgb, var(--muted) 35%, var(--surface-2));
+}
+
+@media (max-width: 1280px) {
+  .market-session {
+    min-width: 0;
+  }
+  .session-track-wrap {
+    min-width: 120px;
+  }
+  .session-ticks {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .market-session {
+    order: 4;
+    flex-basis: 100%;
+    margin: 4px 0 6px;
+  }
+  .market-session + .topbar-actions {
+    margin-left: auto;
+  }
+  .session-ticks {
+    display: flex;
+  }
+}
