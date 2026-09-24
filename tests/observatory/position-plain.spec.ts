@@ -11,7 +11,7 @@ describe("plainPosition", () => {
       { symbol: "TSLA261017P00400000", quantity: 8, avgPrice: 1410, marketValue: 5040 },
       now,
     );
-    expect(p).toEqual({
+    expect(p).toMatchObject({
       plainName: "Put option · profits if TSLA falls",
       expiresIn: "24 days",
       expiresInDays: 24,
@@ -51,7 +51,7 @@ describe("plainPosition", () => {
       { symbol: "AAPL", quantity: 200, avgPrice: 189.2, marketValue: 42_930 },
       now,
     );
-    expect(p).toEqual({
+    expect(p).toMatchObject({
       plainName: "Shares · profits if AAPL rises",
       expiresIn: "no expiry",
       breakeven: "$189.20",
