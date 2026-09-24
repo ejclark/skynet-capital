@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { type DeskPosition, matchesFilter, parseDeskQuery, toggleQualifier } from "../live/desk";
+import { fetchOptionPositions, type OptionPositions } from "../live/options";
 import { PositionsTable } from "./positions-table";
 import { ViewTabs } from "./view-tabs";
 
@@ -60,6 +62,25 @@ export function PositionsFilterBar({
 }
 
 /** Tabs + filter bar + the filtered table, for one account. */
+const dollars = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+/** "−$12/day" per held contract, from the option book's per-holding theta (#3689 slice 6). A
+ *  contract the feed didn't quote has no entry, so its cell reads "—" rather than a made-up zero. */
+export function decayBySymbol(statement: OptionPositions | undefined): ReadonlyMap<string, string> {
+  const out = new Map<string, string>();
+  if (!statement?.available) return out;
+  for (const row of statement.rows) {
+    const theta = row.positionGreeks?.theta;
+    if (theta === undefined || !Number.isFinite(theta)) continue;
+    out.set(row.symbol, `${theta < 0 ? "−" : "+"}${dollars.format(Math.abs(theta))}/day`);
+  }
+  return out;
+}
+
 export function PositionsBlotter({
   deskId,
   positions,
@@ -73,11 +94,25 @@ export function PositionsBlotter({
 }): ReactElement {
   const filter = parseDeskQuery(query);
   const shown = positions.filter((p) => matchesFilter(p, filter));
+  const hasOptions = positions.some((p) => p.isOption);
+  // Same cache as the Money strip and the Trade page's option card: one read of the option book.
+  const statement = useQuery({
+    queryKey: ["option-positions", deskId],
+    queryFn: () => fetchOptionPositions(deskId),
+    enabled: hasOptions,
+    staleTime: 30_000,
+  });
+  const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
   return (
     <>
       <ViewTabs deskId={deskId} query={query} onPick={onFilterChange} />
       <PositionsFilterBar query={query} onChange={onFilterChange} />
-      <PositionsTable positions={shown} deskId={deskId} totalCount={positions.length} />
+      <PositionsTable
+        positions={shown}
+        deskId={deskId}
+        totalCount={positions.length}
+        decayBySymbol={decay}
+      />
     </>
   );
 }

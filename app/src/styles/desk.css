@@ -419,3 +419,32 @@ table.blotter {
   color: var(--accent);
   font-size: 18px;
 }
+
+/* The beginner columns (#3689 slice 6): Total P/L with its return beneath at 80%, best/worst split
+   into a gain and a loss (signs and words carry it as well as tint), and the plain sub-lines under
+   a position's name. */
+.pl-cell b {
+  display: block;
+  font-weight: 700;
+}
+.pl-cell-ret {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+}
+/* best above worst, one line each: the sign and the word ("unlimited") carry which is which */
+.best-worst span {
+  display: block;
+  white-space: nowrap;
+}
+.blotter .muted {
+  color: var(--muted);
+}
+.sym-sub--plain,
+.sym-sub--num {
+  display: block;
+}
+.sym-sub--num {
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
