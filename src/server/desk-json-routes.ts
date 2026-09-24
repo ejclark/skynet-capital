@@ -16,7 +16,7 @@ import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder } from "../observatory/wire-reasoning.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { readAccountDecisions } from "./decision-account-view.js";
+import { readAccountDecisionsPage } from "./decision-account-view.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
 /** A bot's activity rows each carry the decision that placed them (#3687 slice 4), via the same
@@ -33,6 +33,45 @@ function withDecisions<V extends { readonly activity: readonly { readonly orderI
       const reasoning = reasoningForOrder(event.orderId, config);
       return reasoning ? { ...event, reasoning } : event;
     }),
+  };
+}
+
+/** How many passes to read per persona per page — the store's own max. A page of cycles then
+ *  collapses quiet runs out of these, so one page can span far more time than `limit` rows. */
+const DECISION_READ = 100;
+
+/** `/api/desk/:id/decisions` — bots only, and only when an audit trail is wired; both absences
+ *  say so plainly. Pooled across every persona that trades on this account (beta-scout keeps its
+ *  own history under its own id), and paged through the store rather than a fixed newest window. */
+async function decisionsPayload(
+  found: { readonly id: string; readonly kind: string },
+  config: DashboardServerConfig,
+  limit: number,
+  before: number | undefined,
+): Promise<unknown> {
+  if (found.kind !== "bot") return { available: false, kind: found.kind, cycles: [] };
+  const page = await readAccountDecisionsPage(found.id, config, {
+    limit: DECISION_READ,
+    ...(before !== undefined ? { before } : {}),
+  });
+  if (!page) return { available: false, kind: "bot", cycles: [] };
+  const view = decisionCyclesView(page.records, {
+    limit,
+    ...(before !== undefined ? { before } : {}),
+    homePersonaId: found.id,
+  });
+  const nextCursor = view.nextCursor ?? page.horizon;
+  // The funnel and expectancy are full-history aggregates, independent of the page the cycle
+  // feed is on — neither lies about its totals just because the viewer scrolled back one page.
+  const funnel = config.funnelFor?.(found.id);
+  const retrospectives = config.listRetrospectives?.(found.id);
+  return {
+    available: true,
+    kind: "bot",
+    cycles: view.cycles,
+    ...(nextCursor !== undefined ? { nextCursor } : {}),
+    ...(funnel ? { funnel: funnelView(funnel) } : {}),
+    ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
   };
 }
 
@@ -115,32 +154,7 @@ export async function serveDeskJson(
     return;
   }
   if (sub === "decisions") {
-    // Bots only, and only when an audit trail is wired — both absences say so plainly.
-    if (found.kind !== "bot") {
-      res.end(JSON.stringify({ available: false, kind: found.kind, cycles: [] }));
-      return;
-    }
-    // Pooled across every persona that trades on this account, not just the one whose id matches
-    // it — a fallback mechanism like beta-scout trades here while keeping its own decision history
-    // under its own persona id (`decision-account-view.ts`).
-    const records = await readAccountDecisions(id, config);
-    // The funnel and expectancy are full-history aggregates, independent of the page the cycle
-    // feed is on — neither lies about its totals just because the viewer scrolled back one page.
-    const funnel = config.funnelFor?.(id);
-    const retrospectives = config.listRetrospectives?.(id);
-    res.end(
-      JSON.stringify(
-        records
-          ? {
-              available: true,
-              kind: "bot",
-              ...decisionCyclesView(records, { limit, before: beforeAt, homePersonaId: id }),
-              ...(funnel ? { funnel: funnelView(funnel) } : {}),
-              ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
-            }
-          : { available: false, kind: "bot", cycles: [] },
-      ),
-    );
+    res.end(JSON.stringify(await decisionsPayload(found, config, limit, beforeAt)));
     return;
   }
   if (sub === "thesis") {

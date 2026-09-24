@@ -63,7 +63,10 @@ export interface InsightsBridgeHandle {
   readonly botsGate: () => readonly PersonaGateVerdict[] | undefined;
   /** The app-side decision store's own read, for `readDecisions` wiring in `serve-dashboard.ts` —
    *  `undefined` when `SKYNET_INSIGHTS_DIR` is unset, exactly mirroring `seedAppDecisionDb`. */
-  readonly readDecisions?: (personaId: string) => Promise<DecisionRecord[]>;
+  readonly readDecisions?: (
+    personaId: string,
+    page?: { readonly before?: number; readonly limit?: number },
+  ) => Promise<DecisionRecord[]>;
   /** The exact order-id join (PR 6) — same dark-when-unset posture as `readDecisions`, and the
    *  SAME store: a decision surfaces here the instant replication has landed it, no separate wait. */
   readonly findByOrderId?: (
@@ -148,7 +151,11 @@ export function startInsightsBridge(
     botsGate: () => botsGate,
     ...(decisionDb
       ? {
-          readDecisions: async (personaId: string) => decisionDb.listByPersona(personaId),
+          readDecisions: async (personaId, page) =>
+            decisionDb.listByPersona(personaId, {
+              ...(page?.limit !== undefined ? { limit: page.limit } : {}),
+              ...(page?.before !== undefined ? { beforeAt: page.before } : {}),
+            }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
           funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
