@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
-import type { ConsiderationChip, DeskSnapshot } from "../live/desk";
+import type { DeskSnapshot } from "../live/desk";
 import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
-import { ConsiderationsRail } from "./considerations-rail";
+import { DecisionPager } from "./decision-pager";
 import { LeagueCard } from "./league-card";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
@@ -31,7 +31,6 @@ export function OverviewSection({
   loading,
   error,
   accountId,
-  considerations,
   desks,
   desksLoading,
   desksError,
@@ -46,7 +45,6 @@ export function OverviewSection({
   readonly loading: boolean;
   readonly error: boolean;
   readonly accountId: string;
-  readonly considerations: readonly ConsiderationChip[];
   readonly desks: readonly DeskSnapshot[] | undefined;
   readonly desksLoading: boolean;
   readonly desksError: boolean;
@@ -85,7 +83,7 @@ export function OverviewSection({
       {allAccounts ? (
         <NetWorthRoster accounts={roster} />
       ) : (
-        <ConsiderationsRail chips={considerations} />
+        <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
       )}
       {desksLoading ? (
         <p className="note">Reading positions…</p>

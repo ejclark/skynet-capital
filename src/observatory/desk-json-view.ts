@@ -9,6 +9,7 @@ import {
   considerationsFor,
   type PositionForConsiderations,
 } from "./considerations-view.js";
+import { type Decision, decisionsFor } from "./decisions-view.js";
 import { formatPrice } from "./desk-data.js";
 import {
   NO_ORIGIN_EVIDENCE,
@@ -211,6 +212,8 @@ export interface DeskView {
   readonly positions: readonly DeskPositionView[];
   readonly considerations: readonly ConsiderationChip[];
   readonly allocation: DeskAllocation;
+  /** One card at a time on the Overview (#3689 slice 7), ordered by money at stake. */
+  readonly decisions: readonly Decision[];
 }
 
 export function deskView(
@@ -272,12 +275,18 @@ export function deskView(
         ...(lots ? { lots } : {}),
       };
     });
+  const considerations = considerationsFor(forConsiderations, playbooks);
   return {
     id: snapshot.id,
     name: snapshot.displayName,
     kind: snapshot.kind === "bot" ? "bot" : "human",
     ...(snapshot.error ? { error: snapshot.error } : {}),
-    considerations: considerationsFor(forConsiderations, playbooks),
+    considerations,
+    decisions: decisionsFor(
+      snapshot.id,
+      snapshot.positions.map((p) => ({ ...p, plain: plainPosition(p, now) })),
+      considerations,
+    ),
     tiles: {
       openPositions: snapshot.positions.length,
       invested: formatCurrency(invested),
