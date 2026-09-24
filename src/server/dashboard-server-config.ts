@@ -113,7 +113,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * (Phase 2.1). Omit to show the honest "not recorded yet" seam. Keyed by participant id, which for
    * a bot equals its persona id.
    */
-  readonly readDecisions?: (participantId: string) => Promise<readonly DecisionRecord[]>;
+  readonly readDecisions?: (
+    participantId: string,
+    page?: { readonly before?: number; readonly limit?: number },
+  ) => Promise<readonly DecisionRecord[]>;
   /**
    * The exact broker-order-id join into the decision store (PR 6, issue #2287) — an indexed,
    * synchronous lookup (unlike `readDecisions`'s per-persona list), so the wire route can attach

@@ -283,6 +283,45 @@ describe("serveDeskJson", () => {
     expect(humanBody.activity[0]).not.toHaveProperty("reasoning");
   });
 
+  it("walks /decisions back through the whole trail, not just the store's newest 30 (found 2026-09-24)", async () => {
+    // 60 halted passes (a halted cycle never collapses into a quiet run, so one pass = one row),
+    // behind a store whose default read is its newest 30 — exactly the production bridge.
+    const ats = Array.from({ length: 60 }, (_, i) => 1_000 + i);
+    const readDecisions = (_id: string, page?: { before?: number; limit?: number }) =>
+      Promise.resolve(
+        ats
+          .filter((at) => at < (page?.before ?? Number.POSITIVE_INFINITY))
+          .sort((x, y) => y - x)
+          .slice(0, page?.limit ?? 30)
+          .map((at) => ({
+            at,
+            personaId: "sauron",
+            mode: "live" as const,
+            rawIntents: [],
+            guardedIntents: [],
+            outcomes: [],
+            halted: "manual",
+          })),
+      );
+    const seen: string[] = [];
+    let url = "/api/desk/sauron/decisions?per_page=30";
+    for (let guard = 0; guard < 10; guard++) {
+      const page = fakeRes();
+      await serveDeskJson(
+        page.res,
+        "/api/desk/sauron/decisions",
+        url,
+        configWith({ readDecisions }),
+      );
+      const body = answered(page.out) as { cycles: { at: string }[]; nextCursor?: number };
+      seen.push(...body.cycles.map((c) => c.at));
+      if (body.nextCursor === undefined) break;
+      url = `/api/desk/sauron/decisions?per_page=30&before=${body.nextCursor}`;
+    }
+    expect(seen).toHaveLength(60);
+    expect(new Set(seen).size).toBe(60);
+  });
+
   it("paginates activity via per_page/before query params (PR 5, issue #2287)", async () => {
     const records = Array.from({ length: 5 }, (_, i) => ({
       orderId: `ord-${i}`,
