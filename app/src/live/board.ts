@@ -11,18 +11,23 @@
 
 export type FieldTone = "pos" | "neg" | "flat";
 
-/** Mirrors the server's `LeaderMetric` — the four snapshot-derived rankings Standings offers. */
-export type BoardMetric = "equity" | "pl" | "return" | "realized";
+/** Mirrors the server's `LeaderMetric` — the rankings Standings offers. */
+export type BoardMetric = "equity" | "pl" | "return" | "realized" | "month";
 
 export const BOARD_METRICS: ReadonlyArray<{ key: BoardMetric; label: string }> = [
   { key: "equity", label: "Equity" },
+  { key: "month", label: "1M return" },
   { key: "pl", label: "Unrealized P/L" },
   { key: "return", label: "Return %" },
   { key: "realized", label: "Realized P/L" },
 ];
 
 export const parseBoardMetric = (raw: unknown): BoardMetric =>
-  raw === "pl" || raw === "return" || raw === "realized" ? raw : "equity";
+  raw === "pl" || raw === "return" || raw === "realized" || raw === "month" ? raw : "equity";
+
+/** The server's `UNKNOWN_RANK`: a row with no value for the metric (a 1M return not yet synced)
+ *  sorts below every real one, reads "—", and never takes part in a gap. */
+export const isUnranked = (row: { readonly sortValue: number }): boolean => row.sortValue <= -1e8;
 
 export interface BoardRow {
   readonly key: string;

@@ -63,3 +63,15 @@ describe("formatGap", () => {
     expect(formatGap(0.42, "return")).toBe("0.4 pts");
   });
 });
+
+describe("readLeague on the 1M return", () => {
+  it("names who's ahead but gives no amount when either side hasn't synced", () => {
+    const rows = [row("apex", 4.2), row("eric", -1e9, "human")];
+    const l = readLeague(rows, ["eric"], "month", 5, "eric");
+    expect(l.gap).toEqual({ leading: false, aheadName: "Apex", aheadOwned: false });
+  });
+
+  it("measures the gap in points", () => {
+    expect(formatGap(2.25, "month")).toBe("2.3 pts");
+  });
+});

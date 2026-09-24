@@ -1,4 +1,4 @@
-import type { BoardMetric, BoardRow } from "../live/board";
+import { type BoardMetric, type BoardRow, isUnranked } from "../live/board";
 
 /**
  * The league card's reading of the board (#3689 slice 4): the top of the field, every row the
@@ -37,9 +37,11 @@ const money = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-/** The gap in the metric's unit: dollars for money metrics, points for the return %. */
+/** The gap in the metric's unit: dollars for money metrics, points for a return %. */
 export function formatGap(delta: number, metric: BoardMetric): string {
-  return metric === "return" ? `${delta.toFixed(1)} pts` : money.format(Math.ceil(delta));
+  return metric === "return" || metric === "month"
+    ? `${delta.toFixed(1)} pts`
+    : money.format(Math.ceil(delta));
 }
 
 export function readLeague(
@@ -66,7 +68,10 @@ export function readLeague(
     meRank: me.rank,
     gap: {
       leading: false,
-      amount: formatGap(ahead.row.sortValue - me.row.sortValue, metric),
+      // no number to subtract when either side's 1M return hasn't synced yet
+      ...(isUnranked(ahead.row) || isUnranked(me.row)
+        ? {}
+        : { amount: formatGap(ahead.row.sortValue - me.row.sortValue, metric) }),
       aheadName: ahead.row.name,
       aheadOwned: ahead.owned,
     },

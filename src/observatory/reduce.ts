@@ -28,8 +28,15 @@ export function reduceObservatory(state: DashboardData, event: ObservatoryEvent)
       };
     }
     case "participant_updated": {
+      // The 1-month return rides its own slow sync (`month-return-sync.ts`); a snapshot rebuilt
+      // from a broker read never carries it, so carry the last known value forward instead of
+      // blanking the league's 1M column for up to a sync interval.
       const participants = state.participants.map((p) =>
-        p.id === event.participant.id ? event.participant : p,
+        p.id !== event.participant.id
+          ? p
+          : event.participant.monthReturnPct === undefined && p.monthReturnPct !== undefined
+            ? { ...event.participant, monthReturnPct: p.monthReturnPct }
+            : event.participant,
       );
       // A rotated credential can only ever point the account at a NEW accountId, never make an
       // existing pair start colliding out of nowhere — but it's cheap enough to just recompute
