@@ -247,6 +247,20 @@ export interface DeskActivityEvent {
   readonly returnPct?: string;
   /** Tone for the realized P/L — absent when no P/L. */
   readonly realizedTone?: Tone;
+  /** The decision that placed this order — bot accounts only, when the audit trail resolves it
+   *  (#3687 slice 4). Absent means none was found, never an empty placeholder. */
+  readonly reasoning?: ActivityReasoning;
+}
+
+export interface ActivityReasoning {
+  readonly reason: string;
+  /** Whose decision it was — not always the account's own persona (beta-scout trades on Sauron's). */
+  readonly personaId: string;
+  readonly strategy?: string;
+  readonly expectation?: string;
+  readonly guardDelta?: string;
+  readonly playbookId?: string;
+  readonly playbookMode?: string;
 }
 
 export interface DeskActivity {

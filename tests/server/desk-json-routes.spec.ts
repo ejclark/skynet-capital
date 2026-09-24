@@ -231,6 +231,58 @@ describe("serveDeskJson", () => {
     expect(body.thesis.markers[0]?.reasoning).toMatchObject({ reason: "panic fade" });
   });
 
+  it("attaches each bot activity row's decision, and never a human row's (#3687 slice 4)", async () => {
+    const fill = {
+      orderId: "ord-1",
+      participantId: "sauron",
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 1,
+      filledQuantity: 1,
+      status: "filled",
+      at: "2026-08-20T00:00:00.000Z",
+      source: "stream" as const,
+    };
+    const scouted = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 1,
+      type: "market" as const,
+      reason: "forced pick",
+      playbookId: "BETA-SCOUT",
+    };
+    const record = {
+      at: 1,
+      personaId: "beta-scout",
+      mode: "live" as const,
+      rawIntents: [scouted],
+      guardedIntents: [scouted],
+      outcomes: [],
+    };
+    const config = configWith({
+      readTradeActivity: async () => [fill],
+      findByOrderId: (orderId) => (orderId === "ord-1" ? { record, intent: scouted } : undefined),
+    });
+    const bot = fakeRes();
+    await serveDeskJson(bot.res, "/api/desk/sauron/activity", "/api/desk/sauron/activity", config);
+    const botBody = answered(bot.out) as { activity: { reasoning?: Record<string, unknown> }[] };
+    expect(botBody.activity[0]?.reasoning).toMatchObject({
+      reason: "forced pick",
+      personaId: "beta-scout",
+      playbookId: "BETA-SCOUT",
+    });
+
+    const human = fakeRes();
+    await serveDeskJson(
+      human.res,
+      "/api/desk/human-eric/activity",
+      "/api/desk/human-eric/activity",
+      config,
+    );
+    const humanBody = answered(human.out) as { activity: Record<string, unknown>[] };
+    expect(humanBody.activity[0]).not.toHaveProperty("reasoning");
+  });
+
   it("paginates activity via per_page/before query params (PR 5, issue #2287)", async () => {
     const records = Array.from({ length: 5 }, (_, i) => ({
       orderId: `ord-${i}`,

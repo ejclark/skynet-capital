@@ -628,9 +628,34 @@ const ericActivity = {
   ],
 };
 
+// Beta-scout's forced picks as they read live (#3687 slice 4): placed on Sauron's broker, decided
+// under "beta-scout" — the row opens to that decision, reason verbatim from the production trail.
+const scoutReason = (sentiment, strength) =>
+  `BETA-PHASE FORCED PICK — no organic trade fired today, so this was chosen from whatever signal already existed, not a conviction call: sentiment=${sentiment} momentum=-0.001 (combined strength ${strength}, ranked among 2 forced picks). Do not read this as playbook-evidence performance.`;
+const scoutFill = (orderId, symbol, quantity, price, sentiment, strength) => ({
+  orderId,
+  symbol,
+  display: symbol,
+  side: "buy",
+  quantity,
+  filled: quantity,
+  price,
+  status: "filled",
+  at: "2026-09-23T19:02:00Z",
+  backfilled: false,
+  origin: "unknown",
+  reasoning: {
+    reason: scoutReason(sentiment, strength),
+    personaId: "beta-scout",
+    playbookId: "BETA-SCOUT",
+    playbookMode: "conservative",
+  },
+});
 const sauronActivity = {
   available: true,
   activity: [
+    scoutFill("ord-s3", "MSFT", 9, "$428.10", "0.60", "0.601"),
+    scoutFill("ord-s2", "AMZN", 18, "$231.44", "0.50", "0.501"),
     {
       orderId: "ord-s1",
       symbol: "TSLA",
@@ -915,5 +940,17 @@ await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.locator(".hb-chip").click();
 await page.locator(".hb-pop").waitFor();
 await shootCockpit("accounts-heartbeat-chip-desktop");
+
+// Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.getByRole("button", { name: "Why MSFT was bought" }).click();
+await page.locator(".row-why").waitFor();
+await shootCockpit("accounts-activity-why-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.getByRole("button", { name: "Why MSFT was bought" }).click();
+await page.locator(".row-why").waitFor();
+await shootCockpit("accounts-activity-why-desktop");
 
 await close();

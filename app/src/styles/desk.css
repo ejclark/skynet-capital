@@ -522,3 +522,16 @@ table.blotter {
     display: flex;
   }
 }
+
+/* The activity row's "why" (#3687 slice 4): the inline row accordion, but always visible — unlike
+   .fold-col/.row-more above, which hide at wide widths because theirs is overflow detail. */
+.why-col {
+  width: 28px;
+}
+.row-why td {
+  background: var(--surface-2);
+  font-size: 12px;
+}
+.why-grid dd {
+  white-space: normal;
+}

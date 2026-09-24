@@ -221,6 +221,7 @@ describe("thesisView", () => {
       (orderId) => (orderId === "ord-1" ? { record: record(), intent: guarded } : undefined),
     );
     expect(view.markers[0]?.reasoning).toEqual({
+      personaId: "sauron",
       reason: "momentum continuation above the shelf",
       strategy: "sauron-panic-claim",
       expectation: "expect a bounce",
