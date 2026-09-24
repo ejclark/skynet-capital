@@ -147,6 +147,46 @@ describe("serveDeskJson", () => {
     expect(answered(unwired.out)).toMatchObject({ available: false, kind: "bot" });
   });
 
+  it("serves /heartbeat from the bot's OWN passes only, bots-only, honest when unwired", async () => {
+    const human = fakeRes();
+    await serveDeskJson(
+      human.res,
+      "/api/desk/human-eric/heartbeat",
+      "/api/desk/human-eric/heartbeat",
+      configWith(),
+    );
+    expect(answered(human.out)).toMatchObject({ available: false, kind: "human" });
+
+    const unwired = fakeRes();
+    await serveDeskJson(
+      unwired.res,
+      "/api/desk/sauron/heartbeat",
+      "/api/desk/sauron/heartbeat",
+      configWith(),
+    );
+    expect(answered(unwired.out)).toMatchObject({ available: false, kind: "bot" });
+
+    const asked: string[] = [];
+    const wired = fakeRes();
+    await serveDeskJson(
+      wired.res,
+      "/api/desk/sauron/heartbeat",
+      "/api/desk/sauron/heartbeat",
+      configWith({
+        readDecisions: (id) => {
+          asked.push(id);
+          return Promise.resolve([]);
+        },
+      }),
+    );
+    expect(answered(wired.out)).toMatchObject({
+      available: true,
+      heartbeat: { state: "no-record", lastPassAt: null },
+    });
+    // Never the pooled account view: a beta-scout pass must not make a dead loop look alive.
+    expect(asked).toEqual(["sauron"]);
+  });
+
   it("forwards config.findByOrderId into /thesis so a filled marker carries its reasoning", async () => {
     const activity = [
       {

@@ -1,5 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
+import { regularSessionOpen } from "../domain/market-session.js";
+import { botHeartbeatView } from "../observatory/bot-heartbeat-view.js";
 import {
   decisionCyclesView,
   expectancyView,
@@ -16,6 +18,18 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisions } from "./decision-account-view.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
+/** `/api/desk/:id/heartbeat` (#3687) — from the bot's OWN passes, not the pooled account view:
+ *  beta-scout runs after every bot, so its records would make a dead loop look alive. */
+async function heartbeatPayload(
+  found: { readonly id: string; readonly kind: string },
+  config: DashboardServerConfig,
+): Promise<unknown> {
+  const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
+  return records
+    ? { available: true, heartbeat: botHeartbeatView(records, new Date(), regularSessionOpen()) }
+    : { available: false, kind: found.kind };
+}
+
 /** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
  *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race).
@@ -28,7 +42,7 @@ export async function serveDeskJson(
   config: DashboardServerConfig,
 ): Promise<void> {
   const rest = decodeURIComponent(path.slice("/api/desk/".length));
-  const sub = ["activity", "decisions", "pulse", "thesis"].find((name) =>
+  const sub = ["activity", "decisions", "heartbeat", "pulse", "thesis"].find((name) =>
     rest.endsWith(`/${name}`),
   );
   const id = sub ? rest.slice(0, -(sub.length + 1)) : rest;
@@ -72,6 +86,10 @@ export async function serveDeskJson(
           : { available: false, activity: [] },
       ),
     );
+    return;
+  }
+  if (sub === "heartbeat") {
+    res.end(JSON.stringify(await heartbeatPayload(found, config)));
     return;
   }
   if (sub === "decisions") {

@@ -12,3 +12,14 @@ describe("regularSessionOpen", () => {
     expect(regularSessionOpen(new Date("2026-09-05T15:00:00Z"))).toBe(false); // Saturday
   });
 });
+
+describe("regularSessionOpen — the exchange calendar", () => {
+  it("is closed all day on a full holiday", () => {
+    expect(regularSessionOpen(new Date("2026-11-26T16:00:00Z"))).toBe(false); // Thanksgiving, 11:00 ET
+  });
+
+  it("closes at 1:00 PM ET on an early-close day", () => {
+    expect(regularSessionOpen(new Date("2026-11-27T17:00:00Z"))).toBe(true); // 12:00 ET
+    expect(regularSessionOpen(new Date("2026-11-27T18:30:00Z"))).toBe(false); // 13:30 ET
+  });
+});
