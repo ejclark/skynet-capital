@@ -37,6 +37,13 @@ major.
 5. **On green + patch/minor + no breaking note:** merge via native GitHub auto-merge if not already
    enabled (`enable_pr_auto_merge`, SQUASH) — dependabot PRs don't get this by default. Comment briefly
    on what you checked (the changelog claim, the verify result) so the merge has a paper trail.
+   **First run `node scripts/envelope-scan.mjs --check <the PR's changed files>`**: a blocking path
+   (every `github-actions` bump edits `.github/workflows/**`) is never armed, whatever its semver
+   level — it boards the platter (`scripts/ship.sh platter`, `.claude/skills/ship/SKILL.md`) instead
+   of waiting as its own held PR. 2026-09-24: the automated lane armed a claude-code-action bump that
+   edited three workflow files. **Armed is not merged**: report a PR as merged only once GitHub says
+   so; until then it is "armed, CI <state>" — the same pass reported six PRs merged that were all
+   red on the PR-title commitlint check.
 6. **On major, breaking note, load-bearing package, or failed verify:** do not merge, do not enable
    auto-merge. Leave a comment stating precisely what you found (the breaking change, the failure, the
    package) and that this needs Eric's call. Report it in your summary as escalated, not as done.
