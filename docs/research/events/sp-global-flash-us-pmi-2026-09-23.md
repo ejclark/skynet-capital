@@ -342,3 +342,158 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-09-24, day after the print).** Macro-print mode carries no `earnings-cycle` run
+(`symbols: []`); `intraday-edges`'s cache was busted per the lane contract
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and every figure below
+comes from a fresh, uncached re-fetch — the report from S&P Global's own release PDFs, the tape from
+Yahoo 5-minute and daily bars. Primary: **S&P Global's own flash release**, "Business growth surges to
+fastest for over five years and job gains accelerate, but price pressures also intensify amid spike in
+costs" (`pmi.spglobal.com/Public/Home/PressRelease/ed177f50167b4203ac490a961ea706be`, re-fetched direct
+today with a browser user-agent after a plain fetch returned **403** — the same egress pattern this
+ledger's D-1 row already logged for the calendar page — **HTTP 200, 131,231 bytes**, PDF-parsed
+in-session), cross-checked against FXStreet and Newsquawk wire summaries, both dated 2026-09-23.
+
+**What printed — the fourth consecutive beat, and the largest one.**
+
+| Measure | Sep flash | Aug final (as restated in the Sep release) | Δ | Superlative |
+|---|---|---|---|---|
+| **Composite Output Index** | **58.4** | 56.0 | **+2.4** | **62-month high** |
+| Services Business Activity | 58.7 | 56.5 | +2.2 | 59-month high |
+| Manufacturing Output | 56.7 | 53.1 | +3.6 | 53-month high |
+| **Manufacturing PMI** | **57.0** | 53.9 | +3.1 | 52-month high |
+
+Chris Williamson (S&P Global Market Intelligence): *"US business continues to boom, with output growing
+at the fastest rate for over five years in September... the latest improvement in business activity is
+the greatest recorded since early 2015."* Employment rose "at a pace not seen for over four years."
+**Prices, the D-7 reading note's own focus:** *"Price pressures intensified in September... the overall
+rate of inflation hitting the highest since October 2022... blamed widely on higher fuel and transport
+costs."* Selling-price inflation also rose but stayed **below** the March–July rates — a genuinely mixed
+read the reading note anticipated rather than a clean hawkish signal. **One honest discrepancy, recorded
+not chased:** this release restates August services at **56.5** and manufacturing output at **53.1**,
+against **56.8** and **51.9** as printed live in August's own flash (leg 1's table drew from the August
+PDF directly) — S&P Global states it does not revise underlying survey data but does revise seasonal
+adjustment factors, which is the likeliest source; it moves no conclusion below. Methodology note
+confirms: *"Final September data are published on 1 October for manufacturing and 5 October for services
+and composite indicators"* — matching this calendar's own `sp-global-services-pmi-2026-10-05` entry
+exactly, an incidental corroboration of that sibling event's own date.
+
+**The window — SESSION'S MAIN MEASUREMENT, re-run exactly as registered.** Yahoo 5-minute bars,
+`range=60d` (delivered 2026-06-30..09-23; **n=60** sessions, **51** for `^TNX`), identical construction
+(open of the bar starting A → close of the bar starting B−5m), each window percentile-ranked against
+its own trailing distribution — cache busted, fetched fresh today, same layer as registration:
+
+| Instrument | 09:30–09:45 | **09:45–10:00 (the window)** | 10:00–10:15 | 10:15–10:30 |
+|---|---|---|---|---|
+| SPY | −0.113% (p55) | **−0.158% (p72)** | −0.139% (p72) | −0.096% (p58) |
+| QQQ | −0.299% (p55) | **−0.203% (p53)** | −0.414% (p92) | −0.126% (p52) |
+| TLT | −0.147% (p88) | **−0.344% (p98)** | −0.093% (p67) | −0.133% (p97) |
+| IWM | −0.535% (p93) | **−0.153% (p50)** | −0.002% (p0) | −0.218% (p82) |
+| `^TNX` | +0.341% (p92) | **+0.559% (p98)** | +0.218% (p84) | +0.158% (p88) |
+
+**5 of 5 instrument-days sit AT OR ABOVE the window's own median** (SPY p72, QQQ p53, TLT p98, IWM
+exactly p50, `^TNX` p98) — **zero** below median, against the **≥3 of 5** bar
+`FT-sp-global-flash-us-pmi-2026-09-23-1` needed to pass and the **≥3 below** bar that would have killed
+it. This is the loudest of the four flash days measured across this doc and its registration sample
+combined: **3 of 5 at or above p90** (TLT, `^TNX`, and SPY at p72 close behind), where the 10% base rate
+implies well under 1. The sibling's kill switch — *"the 09-23 flash's own window is also dead quiet"* —
+does not fire for a second time out of sample; the pre-announcement mechanism keeps surviving the test
+it wrote for itself.
+
+**Daily tape, 09-22 → 09-23 closes (own fetches, cache busted):** SPY **773.38 → 767.81** (**−0.72%**),
+QQQ **747.46 → 741.21** (**−0.84%**), IWM **287.21 → 281.92** (**−1.84%**), TLT **81.75 → 80.46**
+(**−1.58%**), `^TNX` **4.963% (09-21 close; 09-22 missing from Yahoo's daily feed, recorded not
+worked around) → 5.114%** (**+15.1bp**), `^VIX` **14.87 (09-21) → 15.18** (+0.31pt, no regime
+threshold crossed). The full session, not just the window, ran the same direction as the morning:
+equities, small caps and duration all down together with yields up — a coherent "hot growth repriced
+hawkishly" day, distinct in shape from all three flash days in the registration sample.
+
+**Direction — REFUTED as a tradeable edge a fourth time, and this is the cleanest refutation of the
+four.** The composite delivered the **largest** beat measured (+2.4, versus +0.7 / +1.7 / +1.5 on the
+prior three flash days) — the single occasion where "loud" should have been easiest to read — and the
+tape did the opposite of the naive reaction function. The stance's own "Today" falsifier reads: *"the
+window resolving in the same cross-instrument direction the print's own surprise implies (a beat →
+SPY/QQQ/IWM up and `^TNX` up together...) in 4 or more of SPY/QQQ/TLT/IWM/`^TNX`."* Implied-direction
+match, scored instrument by instrument: SPY **wrong** (down, beat implied up), QQQ **wrong** (down),
+IWM **wrong** (down), TLT **right** (down, consistent with a hawkish repricing), `^TNX` **right** (up).
+**2 of 5 — below the 4-of-5 bar — so the falsifier does NOT fire**, and the "Today" stand-aside call
+survives on its own written terms for a fourth straight release. The largest beat in sample produced an
+equity **sell-off**, not a rally: a growth number this strong, arriving four days after a hawkish FOMC
+dot plot (2026-09-16, `median 4.1%`), read as more-hikes-for-longer rather than as good news — the
+inverse of what "loud but readable" would require, and a genuinely new failure mode (the first of the
+four days where yields and equities moved in *opposite* directions rather than together).
+
+**Scoring the calls — every falsifier checked, none fired.**
+
+- **Today (D-14) "Stand aside" — CORRECT, and the strongest confirmation yet.** Falsifier (4-of-5
+  cross-instrument direction match) scored **2 of 5** — does not fire. A record beat produced a
+  broad sell-off with no readable reaction function, exactly the "loud, unreadable" case this call was
+  built for.
+- **This week (D-7 refresh) "Mark 09-23 09:45 ET and read it, do not trade it" — CORRECT.** Falsifier
+  was non-publication or a slot other than 09:45 ET; neither happened — S&P Global published on
+  schedule, corroborated by its own PDF and two independent wire summaries (FXStreet, Newsquawk) dated
+  2026-09-23. The panel's post-FOMC read (leg 7) delivered exactly the informational content that row
+  anticipated: a record composite with intensifying price pressures, four days after the hike.
+- **This month "Treat the flash as the tradeable-window candidate, and the candidacy failed on
+  direction, not volume" — CORRECT, and now the tier's own falsifier is the one checked.** Falsifier
+  (window below median in 3+ of 5) scored **0 of 5** — does not fire. The `medium` impact tier holds;
+  the n=3 pattern from registration is now n=4, unanimous on volume (4 of 4 flash days above median in
+  the majority of instruments) and unanimous on direction (4 of 4 producing a different equity sign or
+  reaction shape).
+- **This quarter "Read the pair as number then receipt" — NOT YET SCOREABLE.** Its falsifier is the
+  September flash→final revision on **2026-10-05**, governed by
+  [`sp-global-services-pmi-2026-10-05.md`](sp-global-services-pmi-2026-10-05.md); nothing is claimed for
+  it here.
+
+**Kill switches, scored.**
+
+1. **"Window below its own median in 3+ of 5" (registers `FT-sp-global-flash-us-pmi-2026-09-23-1`)** —
+   **did not fire.** 0 of 5 below median; **scored PASS** in the forward-tests fragment.
+2. **"Window resolves in the implied direction in 4+ of 5"** — **did not fire.** 2 of 5 matched.
+3. **"No September Flash US PMI on 2026-09-23, or a slot other than 09:45 ET"** — **did not fire.**
+   Published on schedule.
+4. **"Flash→final revision beyond ±1.0pt"** — **not yet scoreable**, scores 2026-10-05 (sibling ledger).
+5. **"Sub-50 composite flash"** — **did not fire.** 58.4, a 62-month high.
+6. **"A tracked or untracked catalyst lands inside 09:30–10:30 ET"** — **did not fire, on the tracked
+   calendar.** Same-day tracked members stayed outside the window (2Y FRN 11:30 ET, 5Y note 13:00 ET,
+   Meta Connect afternoon, EIA weekly 10:30 ET — 45 minutes past the window's close); no untracked
+   same-window catalyst surfaced in today's re-check either. The attribution caveat this kill switch
+   exists to police is therefore unnecessary here: the window's loudness and direction can be attributed
+   to the print itself.
+7. **"`market-events-data.ts` gains a confirmed-source prefix for a private PMI compiler"** — **did not
+   fire.** The calendar entry stays `estimate` on the unchanged schema gap; no flip made in this PR.
+
+**Forward tests.** `FT-sp-global-flash-us-pmi-2026-09-23-1` **scored PASS** in
+[`forward-tests/sp-global-flash-us-pmi-2026-09-23.md`](../forward-tests/sp-global-flash-us-pmi-2026-09-23.md)
+— the window ranked at or above its own trailing median in **5 of 5** instruments, clearing the ≥3
+bar with no ambiguity. No legacy `FT-N` row references this event.
+
+**Calendar fed.** Nothing new proposed this pulse — the corridor and same-day competitors were already
+fully swept at D-1 and D-7 (2y FRN, 5y note, Meta Connect, the EIA weekly, the three same-morning Flash
+Eurozone/France/Germany siblings, all canonical); today's close-out re-checked the tracked window and
+found no new same-day entrant.
+
+**Honest limits.**
+- **n=4 flash release days total, still a small sample for the volume claim and a smaller one for the
+  direction claim.** This close-out adds a fourth data point that is unanimous with the first three on
+  volume and adds a genuinely new *shape* of unreadability (opposite-signed equities/yields rather than
+  same-signed), which strengthens "loud but unreadable" as a description while not converting it into a
+  model — there is still no reaction function to size, on four different reaction shapes now instead of
+  three.
+- **Attribution beyond the tracked calendar is not exhaustively cleared.** The FOMC's 2026-09-16 dot
+  plot is four trading days behind this print and plausibly still repricing; this close-out cannot
+  separate "the PMI surprised hawkishly on its own" from "risk assets are still digesting the SEP and
+  this print was the trigger, not the cause." Both readings are consistent with "don't trade the
+  print," so the stance is unaffected either way.
+- **The five instruments are correlated**, as at registration — the effective n behind "5 of 5" is
+  below five, and this close-out does not re-litigate that limit.
+- **August's restated subindex values (leg-1 discrepancy above) are noted, not chased** — S&P Global's
+  own methodology permits seasonal-adjustment revisions; no conclusion in this document depends on the
+  0.3pt (services) or 1.2pt (manufacturing output) difference.
+- No consensus term was ever collected for this flash (the D-14 and D-7 rows' largest open item) — this
+  close-out scores volume and direction, neither of which needed one; a genuine surprise-vs-expectation
+  test remains undone and is not attempted retroactively here.
+
+This event is now scored. The scanner goes quiet on it permanently.
