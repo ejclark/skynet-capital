@@ -704,6 +704,43 @@ const board = {
   },
 };
 
+// The bot heartbeat (#3687 slice 3). The topbar market clock reads the real time, so the fixture
+// follows it: a live loop mid-session when the market is open, an idle one otherwise — a frame
+// saying "Beating" beside "Opens in 2h" would picture a state the server can never return.
+const etNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+const etMinutes = etNow.getHours() * 60 + etNow.getMinutes();
+const sessionOpen = etNow.getDay() % 6 !== 0 && etMinutes >= 570 && etMinutes < 960;
+const sauronHeartbeat = () => {
+  const lastAgo = sessionOpen ? 22_000 : 16 * 3_600_000;
+  return {
+    available: true,
+    heartbeat: {
+      state: sessionOpen ? "beating" : "market-closed",
+      marketOpen: sessionOpen,
+      lastPassAt: new Date(Date.now() - lastAgo).toISOString(),
+      sinceLastPassMs: lastAgo,
+      cadenceMs: 15_000,
+      staleAfterMs: 120_000,
+      playbooks: [
+        {
+          playbookId: "HC-SAURON",
+          mode: "standard",
+          state: "tactical",
+          since: new Date(Date.now() - lastAgo - 2 * 3_600_000).toISOString(),
+          sinceIsLowerBound: false,
+        },
+        {
+          playbookId: "S1-NVDA",
+          mode: "standard",
+          state: "no-window",
+          since: "2026-09-22T13:30:00Z",
+          sinceIsLowerBound: true,
+        },
+      ],
+    },
+  };
+};
+
 const { page, origin, out, close } = await openShell({
   name: "accounts",
   stubs: {
@@ -736,6 +773,7 @@ const { page, origin, out, close } = await openShell({
     "/api/desk/bot-sauron": sauronDesk,
     "/api/desk/human-eric/activity": ericActivity,
     "/api/desk/bot-sauron/activity": sauronActivity,
+    "/api/desk/bot-sauron/heartbeat": sauronHeartbeat,
     "/api/accounts/human-eric/equity-curve": ericEquityCurve,
     "/api/trade/bars": spyBars,
   },
@@ -865,5 +903,17 @@ await page.getByRole("dialog").waitFor();
 await page.waitForTimeout(400);
 await shootCockpit("accounts-new-high-desktop");
 atHigh = false;
+
+// The bot heartbeat (#3687 slice 3): the Heartbeat section at phone width, then the header chip
+// opened on the desktop Activity tab — the glance that rides every tab.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
+await page.locator(".hb-section").waitFor();
+await shootCockpit("accounts-heartbeat-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.locator(".hb-chip").click();
+await page.locator(".hb-pop").waitFor();
+await shootCockpit("accounts-heartbeat-chip-desktop");
 
 await close();

@@ -21,6 +21,7 @@ import { ActivityTable } from "../shell/activity-table";
 import { DecisionsSection } from "../shell/decisions-section";
 import { useDefaultAccount } from "../shell/default-account";
 import { PageFrame } from "../shell/frame";
+import { HeartbeatChip, HeartbeatSection } from "../shell/heartbeat";
 import { NetWorthCondensed } from "../shell/networth-summary";
 import { parseLens } from "../shell/positions-lens";
 import { ProfileRail } from "../shell/profile-rail";
@@ -48,7 +49,7 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * aggregate per window is `Σend / Σbase − 1` across the accounts that reported one.
  */
 
-type AccountsSection = "overview" | "activity" | "decisions" | "thesis";
+type AccountsSection = "overview" | "activity" | "heartbeat" | "decisions" | "thesis";
 
 /** Overview merges what were once separate Summary and Positions tabs (Eric: "the summary page
  *  does very little atm... summary and positions should be merged into a single section/view").
@@ -67,6 +68,7 @@ const BASE_SECTIONS: readonly PageSection<AccountsSection>[] = [
  *  falls back to the first section, which is Overview. */
 const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
   ...BASE_SECTIONS,
+  { id: "heartbeat", label: "Heartbeat" },
   { id: "decisions", label: "Decisions" },
   { id: "thesis", label: "Thesis" },
 ];
@@ -248,6 +250,7 @@ function CockpitBody({
   });
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
 
+  if (section === "heartbeat") return <HeartbeatSection deskId={accountId} />;
   if (section === "decisions") return <DecisionsSection deskId={accountId} />;
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
   if (section === "overview") {
@@ -314,6 +317,7 @@ function AccountsBody({
             isDefault={isDefault}
             onToggleDefault={onToggleDefault}
           />
+          {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
           {section === "overview" ? null : stats ? (
             <NetWorthCondensed stats={stats} caption={caption} />
           ) : (
