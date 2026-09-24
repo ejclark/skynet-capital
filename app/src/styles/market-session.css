@@ -40,6 +40,11 @@
   text-transform: uppercase;
   color: var(--accent);
 }
+/* "OPENS IN 42m": the eyebrow is uppercase, the duration is not ("7H 50M" reads as a code) */
+.session-eyebrow-time {
+  text-transform: none;
+  letter-spacing: 0.08em;
+}
 .session-dot {
   width: 7px;
   height: 7px;

@@ -46,6 +46,23 @@ contexts, and `claude.yml` runs with `--allowedTools "Bash,Read,Write,Edit,Glob,
 no way to read a canvas at all. A session that can see a design is a claude.ai-backed session, so
 that is where the lane runs.
 
+## The zero-setup path: attach the export
+
+A Claude Design session also exports a zip (`README.md` spec + `.dc.html` boards + `_ds/`).
+Attaching it to any Claude Code session with a one-line ask ("apply this, ship it") is a complete
+handoff (Eric, 2026-09-24, the accounts redesign #3689: "attaching the artifact from the claude
+design session is enough for you to take it from here"). The session does the rest, with no
+routine, token or marker needed:
+
+1. Read the bundle's `README.md`. It is the spec: the options to build, fidelity, components,
+   data contract and copy rules.
+2. Write the IA decision and slicing into a `plan` issue (`/issue`), with the README pasted
+   verbatim inside the fold. The zip does not outlive the session, so the issue becomes the
+   bundle store.
+3. Label it `ready` and build slice 1. Each slice ships its own screenshots from our app. Don't
+   screenshot the `.dc.html` board: its pan/zoom canvas renders blank headless (verified
+   2026-09-24).
+
 ## Arming the tap (one sitting, then never again)
 
 Steps 1–2 are Eric's alone: the routine belongs to his account and the token is a credential.

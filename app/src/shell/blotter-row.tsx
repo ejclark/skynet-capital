@@ -5,6 +5,7 @@ import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition, PositionLot, Tone } from "../live/desk";
 import { type OptionPreview, reviewOption, submitOption } from "../live/options";
 import { reviewTicket, submitTicket, type TicketPreview, type TicketResult } from "../live/ticket";
+import { buysLabel } from "./glossary";
 
 /**
  * One blotter row (#738 phase 2c, extracted 3b) — responsive disclosure per the round-1 verdict:
@@ -117,7 +118,7 @@ export function BlotterRow({
               type="button"
               className="sym-header"
               aria-expanded={lotsOpen}
-              aria-label={`${position.lots.length} lots for ${position.display}`}
+              aria-label={`${buysLabel(position.lots.length)} for ${position.display}`}
               onClick={() => setLotsOpen(!lotsOpen)}
             >
               <svg
@@ -132,6 +133,12 @@ export function BlotterRow({
               <span className="sym-header-text">
                 <span className="sym">{position.display}</span>
                 {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
+              </span>
+              <span
+                className="buys-chip"
+                title={`You bought this at ${position.lots.length} different times and prices`}
+              >
+                {buysLabel(position.lots.length)}
               </span>
             </button>
           ) : (
@@ -190,7 +197,7 @@ export function BlotterRow({
                   aria-expanded={closeLotId === lot.lotId}
                   onClick={() => setCloseLotId(closeLotId === lot.lotId ? undefined : lot.lotId)}
                 >
-                  Close lot
+                  Close this buy
                 </button>
                 {position.isOption ? (
                   <button
@@ -368,7 +375,7 @@ function ClosePanel({
     <div className="close-panel">
       <div className="close-panel-head">
         <span className="close-panel-sym">{position.display}</span>
-        <span className="close-panel-unrealized num tone-{position.totalTone}">
+        <span className={`close-panel-unrealized num tone-${position.totalTone}`}>
           {position.totalPl} total P/L
         </span>
       </div>

@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { AccountNetWorthView, NetWorthStatsView, NetWorthWindowView } from "../live/networth";
+import { GlossaryTerm } from "./glossary-term";
 
 /**
  * The Accounts page's net-worth components (#2321) — the Cockpit's sticky at-a-glance
@@ -123,7 +124,9 @@ export function NetWorthCondensed({
           {stats.bookedKnown ? (
             <span className={`networth-condensed-booked num tone-${stats.bookedTone}`}>
               {stats.bookedPl}
-              <span className="desk-note">booked P/L</span>
+              <span className="desk-note">
+                <GlossaryTerm term="lockedIn">locked in</GlossaryTerm>
+              </span>
             </span>
           ) : null}
         </div>

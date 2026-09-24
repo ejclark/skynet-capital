@@ -40,11 +40,16 @@ export function MarketSession({ now }: { readonly now?: Date }): ReactElement {
       <div className="session-label" aria-hidden="true">
         <span className="session-eyebrow">
           <span className="session-dot" />
-          {view.state === "pre"
-            ? `Opens in ${formatMinutes(view.minutesLeft)}`
-            : open
-              ? "Market open"
-              : "Market closed"}
+          {view.state === "pre" ? (
+            <>
+              Opens in{" "}
+              <span className="session-eyebrow-time">{formatMinutes(view.minutesLeft)}</span>
+            </>
+          ) : open ? (
+            "Market open"
+          ) : (
+            "Market closed"
+          )}
         </span>
         <span className="session-left">
           {open ? (

@@ -19,7 +19,8 @@ describe("MarketSession", () => {
   });
 
   it("counts down to the open pre-market", () => {
-    render(<MarketSession now={new Date("2026-09-24T12:48:00Z")} />);
-    expect(screen.getByText("Opens in 42m")).toBeInTheDocument();
+    const { container } = render(<MarketSession now={new Date("2026-09-24T12:48:00Z")} />);
+    expect(container.querySelector(".session-eyebrow")).toHaveTextContent("Opens in 42m");
+    expect(screen.getByText("42m")).toHaveClass("session-eyebrow-time");
   });
 });

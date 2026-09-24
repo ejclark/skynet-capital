@@ -3,7 +3,6 @@
 // shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
 // expanded. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
-import { resolve } from "node:path";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -41,6 +40,9 @@ const ericStats = {
   dayKnown: true,
   cash: "$847,200.00",
   cashKnown: true,
+  bookedPl: "+$12,480.00",
+  bookedTone: "pos",
+  bookedKnown: true,
   positionCount: 6,
   windows: [
     win("7D", "+1.2%", "pos", "last week"),
@@ -417,7 +419,7 @@ const spyBars = {
   }),
 };
 
-const { page, origin, close } = await openShell({
+const { page, origin, out, close } = await openShell({
   name: "accounts",
   stubs: {
     "/api/settings": settings,
@@ -431,7 +433,8 @@ const { page, origin, close } = await openShell({
   },
 });
 
-const out = resolve("docs/shots/pr-2321");
+// Frames go where the caller says (argv[2]) — never over a committed docs/shots/ directory, which a
+// hard-coded path here once silently overwrote on every run.
 const shootCockpit = shooter(page, out);
 
 // --- PHONE FIRST (390px) ---
@@ -447,8 +450,8 @@ await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-phone");
 
 // Expand the at-risk chip: notional larger than the P/L delta, the reason, and the action button.
-await page.getByRole("button", { name: /NVDA Sep 18 180 Call/ }).click();
-await page.getByText("$2,226").waitFor();
+await page.getByRole("button", { name: /^At risk NVDA Sep 18 180 Call/ }).click();
+await page.locator('.consid-chip-head[aria-expanded="true"]').waitFor();
 await shootCockpit("accounts-considerations-expanded-phone");
 
 // Positions section — the blotter below the sticky header.
@@ -457,8 +460,8 @@ await page.getByText("Nvidia").first().waitFor();
 await shootCockpit("accounts-positions-phone");
 
 // Lot breakdown (#3186 slice 1) — expand the NVDA call's lot accordion: two lots sharing the
-// parent row's exact columns, each with its own Close lot / Roll actions.
-await page.getByRole("button", { name: /lots for NVDA Sep 18 180 Call/ }).click();
+// parent row's exact columns, each with its own Close this buy / Roll actions.
+await page.getByRole("button", { name: /buys for NVDA Sep 18 180 Call/ }).click();
 await page.getByText("$1,484").waitFor();
 await shootCockpit("accounts-positions-lots-phone");
 
@@ -481,6 +484,11 @@ await page.getByText("Net worth · Eric").waitFor();
 await page.getByText("Portfolio").waitFor();
 await page.getByText("At risk").waitFor();
 await shootCockpit("accounts-summary-desktop");
+
+// Glossary (#3689 slice 2): the plain label "locked in" with its explanation opened by focus.
+await page.getByRole("button", { name: "locked in" }).focus();
+await page.getByRole("tooltip").waitFor();
+await shootCockpit("accounts-glossary-desktop");
 
 await page.goto(`${origin}/app/accounts?account=all`);
 await page.getByText("Net worth · all accounts").waitFor();

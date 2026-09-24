@@ -191,6 +191,18 @@ table.blotter {
 .sym-header:hover .sym {
   color: var(--accent);
 }
+/* "3 buys" (#3689 slice 2) — the lots accordion's plain-language handle: you bought this at three
+   different times and prices. The row's chevron still opens it; the chip says what's inside. */
+.buys-chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  white-space: nowrap;
+}
 .sym-header svg {
   color: var(--muted);
   flex-shrink: 0;

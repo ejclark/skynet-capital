@@ -33,7 +33,7 @@ function CardBody({ id }: { readonly id: string }): ReactElement {
         <dd className={`num tone-${d.tiles.dayTone}`}>{d.tiles.dayPl}</dd>
       </div>
       <div>
-        <dt>Unrealized</dt>
+        <dt>On paper</dt>
         <dd className={`num tone-${d.tiles.unrealizedTone}`}>{d.tiles.unrealized}</dd>
       </div>
       <div>
