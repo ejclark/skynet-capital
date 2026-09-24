@@ -330,5 +330,68 @@ in the same PR — your own file, never another event's canonical one (#1717). C
 `## Outcome` below from re-run instrument data (cache busted first), never from memory — after which
 this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-24, D+1 — inside the close-out window).** No symbol-keyed instrument applies
+(`symbols: []`, macro/sector mode, unchanged since initial research); `node_modules/.cache/earnings-cycle`
+and `.../intraday-edges` were busted per the lane's standing instruction, though nothing here reads
+them. "Re-run instrument data" means re-fetching each auction's own executed record from
+`api.fiscaldata.treasury.gov`'s `auctions_query` this session, independently of — and cross-checked
+against — the sibling ledgers that own those events; nothing below is recalled from either document.
+
+**The closure itself happened exactly as documented; one re-check this session was blocked, not
+skipped.** A fresh fetch of `jpx.co.jp/english/derivatives/rules/holidaytrading/index.html`, attempted
+to re-confirm 09-23 still read `Open | Finalized` and had not been republished as `Not Open` (the leg-2
+stability kill switch), returned **HTTP 403** — the remote-egress blindspot this lane's own
+`EVENT-RESEARCH.md` honesty rules already name for exchange domains. Logged to `probe-ref.blocked`
+below rather than silently dropped. No republication signal reached this session by any other route
+(the 2026-09-22 screen, two days prior, still read the finalized xlsx as `Open`), so the kill switch is
+carried as **not fired on last-known state**, not as freshly re-confirmed. Everything else this row's
+stance rests on — Tokyo cash dark, Osaka index derivatives open through the 13:00 ET auction window, the
+price-limit reference pinned to 2026-09-18 — was mechanical and primary-sourced at initial research and
+is not re-observable after the fact.
+
+**The attribution guard held, and it held for the reason the TL;DR named.** Both Treasury auctions this
+row exists to pre-refuse an explanation for did print, and one printed soft:
+
+| Auction | CUSIP | Indirect | vs. this doc's registered threshold | Source |
+|---|---|---|---|---|
+| 5-Year note (`confirmed`) | 91282CRN3 | **54.31%** | below **59.24%** (own last-12 floor) — a new 12-print low | `auctions_query`, fetched direct this session; matches [`treasury-5y-note-2026-09-23.md`](treasury-5y-note-2026-09-23.md)'s own independent close-out field-for-field (competitive accepted $69,668,682,000; indirect $37,837,082,000) |
+| 2Y FRN reopening (`estimate`) | 91282CRD5 | **59.09%** | below **75.20%** (n=2 holiday mean) | `auctions_query`, fetched direct this session (competitive accepted $27,989,762,500; indirect $16,537,912,500) |
+
+The 5-Year printed softer than this doc's own kill line — the highest stop of its tracked life
+(5.033%), a +3.1bp tail, bid-to-cover 2.21 (a new 12-print low). Per the standing finding (16 Treasury
+auctions on this holiday class since 2016, zero 5-Years and zero FRNs; aggregate nominal null
+t = −0.468), **Tokyo's closure is still not an available explanation for it.** The sibling ledger's own
+close-out independently attributes the miss to a **+3.1bp tail into the 2026-09-16 FOMC's hawkish 25bp
+hike**, not to Japanese demand — exactly the attribution this row exists to hold off. The FRN printed
+near the middle of its own recent range (50.91–72.44%) and nowhere close to the n=2 holiday mean,
+consistent with that mean being a small-sample artifact rather than a demand effect.
+
+**Forward tests — two of three scored, one still open.**
+
+- **`FT-jpx-market-closure-2026-09-23-1`** (5-Year indirect at/above 59.24%) — **KILLED**. The print,
+  54.31%, missed the registered floor by 4.93pp. Per the test's own pre-stated design ("a pass is close
+  to the base rate and only the kill is informative"), this is the informative outcome: the refusal of
+  the closure attribution was never conditioned on the print's level, so it holds despite a break of the
+  auction's own recent range rather than through an ordinary one. Full row:
+  [`forward-tests/jpx-market-closure-2026-09-23.md`](../forward-tests/jpx-market-closure-2026-09-23.md).
+- **`FT-jpx-market-closure-2026-09-23-2`** (FRN indirect below 75.20%) — **PASSED**. 59.09%, 16.1pp under
+  the kill line and inside the FRN's own last-12 range. One observation, not a promotion — the doc
+  registered this as weak evidence by design.
+- **`FT-jpx-market-closure-2026-09-23-3`** (JPX publishes a standalone holiday-session statistic by
+  2026-09-30) — **not yet due**; score-by is 2026-09-30, past this close-out's own window. Left `_open_`
+  on purpose — `scripts/event-scan.mjs` re-dispatches this same lane as `forward-test-due` when that date
+  arrives.
+
+**The call, scored against the tape.** Stand-aside held throughout — zero capital, by design. The one
+thing this row was built to prove — that "Tokyo was shut" is not an available explanation for a soft
+09-23 print — was tested against the softest 5-Year print of the sibling doc's entire tracked life and
+survived on the same n=0 precedent basis stated at initial research. Nothing here licenses revisiting
+that refusal, and nothing here licenses a position.
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":1} -->
+
+**Last assessed:** 2026-09-24 (close-out — this event goes quiet except for FT-3's `forward-test-due` reopening on/after 2026-09-30)
+<!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0,"blocked":[{"url":"https://www.jpx.co.jp/english/derivatives/rules/holidaytrading/index.html","status":"403","at":"2026-09-24"}]} -->

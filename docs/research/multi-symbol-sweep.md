@@ -549,6 +549,27 @@ robust, alpha fragile — is the finding.
   re-propose this attribution rule without a fresh registration and a design that isolates the roll
   and same-day-catalyst confounds first.
 
+- **A pass-close-to-the-base-rate registration on a tenor already known to be tailing
+  (FT-jpx-market-closure-2026-09-23-1)** — added 2026-09-24 from the
+  [jpx-market-closure-2026-09-23 close-out](events/jpx-market-closure-2026-09-23.md). The test
+  registered that the 2026-09-23 5-Year note would clear its own last-12-print indirect floor
+  (59.24%) — disclosed at registration as "close to the base rate" (11 of the last 12 prints had
+  cleared it) with the kill, not the pass, carrying the information. It printed **54.31%** indirect,
+  4.93pp under the floor and a new 12-print low, on the highest stop (5.033%), the widest tail
+  (+3.1bp) and the lowest bid-to-cover (2.21) of the tracked series — the sibling
+  [treasury-5y-note-2026-09-23 close-out](events/treasury-5y-note-2026-09-23.md) independently
+  attributes the miss to a +3.1bp tail into the 2026-09-16 FOMC's hawkish 25bp hike. **What this
+  does and does not refute:** nothing about the parent hypothesis — the test existed to check
+  whether a dark Tokyo cash market is an *available explanation* for a soft print, and the parent
+  document's own registered basis for refusing that explanation (zero 5-Year and zero FRN auctions
+  on this holiday class in 16 instances since 2016) is about historical precedent, not about any
+  given print's level, so the kill does not touch it. What the kill does confirm is the test's own
+  disclosed weakness: a floor cleared by 11 of 12 prior prints is a low bar, and this auction's own
+  demand deterioration (already flagged by the sibling ledger across five pulses) was the more
+  likely source of a miss than any genuine new information. Do not re-propose an auction-print
+  threshold registered against a tenor's own base rate as informative on the pass side; size the
+  threshold to what would actually discriminate a real effect from ordinary tail risk.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
