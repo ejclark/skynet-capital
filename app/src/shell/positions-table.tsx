@@ -54,6 +54,7 @@ export function PositionsTable({
             <col className="col-detail" style={{ width: 100 }} />
             <col className="col-detail" style={{ width: 96 }} />
             <col className="col-detail" style={{ width: 130 }} />
+            <col className="col-detail" style={{ width: 150 }} />
             <col style={{ width: 128 }} />
           </colgroup>
           <thead>
@@ -76,6 +77,7 @@ export function PositionsTable({
               <th className="num col-detail">
                 <GlossaryTerm term="bestWorst" />
               </th>
+              <th className="col-detail">Next event</th>
               <th className="act-col" aria-label="Close position" />
             </tr>
           </thead>

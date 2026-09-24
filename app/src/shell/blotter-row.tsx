@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
-import type { DeskPosition, PositionLot, Tone } from "../live/desk";
+import type { DeskPosition, PositionEvent, PositionLot, Tone } from "../live/desk";
 import { type OptionPreview, reviewOption, submitOption } from "../live/options";
 import { reviewTicket, submitTicket, type TicketPreview, type TicketResult } from "../live/ticket";
 import { buysLabel } from "./glossary";
@@ -25,9 +25,19 @@ import { buysLabel } from "./glossary";
 /** The numeric columns shared byte-for-byte between the parent row and every lot row beneath it
  *  (#3186 slice 1), so "a lot row uses the identical column set as the parent" is enforced by
  *  sharing markup. #3689 slice 6 reshaped them for beginners: Qty · Value · Today · Total P/L
- *  (return beneath) · Expires in · Decay / day · Breakeven · Best / worst case. A lot row has no
- *  expiry/decay/breakeven/best-worst of its own (they're the position's), so those cells stay
- *  blank there. */
+ *  (return beneath) · Expires in · Decay / day · Breakeven · Best / worst case · Next event. A lot
+ *  row has no expiry/decay/breakeven/best-worst/event of its own (they're the position's), so
+ *  those cells stay blank there. */
+interface PlainCells {
+  readonly expiresIn?: string;
+  readonly decay?: string;
+  readonly breakeven?: string;
+  readonly best?: string;
+  readonly worst?: string;
+  readonly event?: PositionEvent;
+  readonly shares: boolean;
+}
+
 function PositionCells({
   quantity,
   value,
@@ -46,14 +56,7 @@ function PositionCells({
   readonly totalTone: Tone;
   readonly returnPct: string;
   /** The position-level plain columns; omitted on a lot row. */
-  readonly plain?: {
-    readonly expiresIn?: string;
-    readonly decay?: string;
-    readonly breakeven?: string;
-    readonly best?: string;
-    readonly worst?: string;
-    readonly shares: boolean;
-  };
+  readonly plain?: PlainCells;
 }): ReactElement {
   const quiet = (v: string | undefined, none: string) =>
     v === undefined ? (
@@ -89,6 +92,22 @@ function PositionCells({
           <span className="muted">—</span>
         ) : null}
       </td>
+      <td className="col-detail next-event">{plain ? <EventCell event={plain.event} /> : null}</td>
+    </>
+  );
+}
+
+/** "Earnings Oct 28" (the date glued so a wrap never splits "Oct / 28"), with "before expiry" said in words beneath when it lands while the option
+ *  is alive (never a colour alone). A market-wide print reads muted: it moves everything. */
+function EventCell({ event }: { readonly event?: PositionEvent }): ReactElement {
+  if (!event) return <span className="muted">—</span>;
+  const own = event.scope === "stock";
+  return (
+    <>
+      <span className={own ? "next-event-label" : "next-event-label muted"}>
+        {event.label.replace(/ (\w{3}) (\d{1,2})$/, " $1\u00a0$2")}
+      </span>
+      {own && event.beforeExpiry ? <span className="next-event-when">before expiry</span> : null}
     </>
   );
 }
@@ -129,6 +148,19 @@ function PlainSub({ position }: { readonly position: DeskPosition }): ReactEleme
       </span>
     </>
   );
+}
+
+/** The position-level plain columns `PositionCells` prints, from the server's plain fields. */
+function plainCells(position: DeskPosition, decay: string | undefined): PlainCells {
+  return {
+    ...(position.expiresIn ? { expiresIn: position.expiresIn } : {}),
+    ...(position.isOption ? (decay ? { decay } : {}) : { decay: "none" }),
+    ...(position.breakeven ? { breakeven: position.breakeven } : {}),
+    ...(position.best ? { best: position.best } : {}),
+    ...(position.worst ? { worst: position.worst } : {}),
+    ...(position.nextEvent ? { event: position.nextEvent } : {}),
+    shares: !position.isOption,
+  };
 }
 
 export function BlotterRow({
@@ -206,14 +238,7 @@ export function BlotterRow({
           totalPl={position.totalPl}
           totalTone={position.totalTone}
           returnPct={position.returnPct}
-          plain={{
-            ...(position.expiresIn ? { expiresIn: position.expiresIn } : {}),
-            ...(position.isOption ? (decay ? { decay } : {}) : { decay: "none" }),
-            ...(position.breakeven ? { breakeven: position.breakeven } : {}),
-            ...(position.best ? { best: position.best } : {}),
-            ...(position.worst ? { worst: position.worst } : {}),
-            shares: !position.isOption,
-          }}
+          plain={plainCells(position, decay)}
         />
         <td className="act-col">
           <button
@@ -271,7 +296,7 @@ export function BlotterRow({
             .filter((lot) => lot.lotId === closeLotId)
             .map((lot) => (
               <tr className="row-close" key={`close-${lot.lotId}`}>
-                <td colSpan={11}>
+                <td colSpan={12}>
                   <ClosePanel
                     deskId={deskId}
                     position={lotAsPosition(position, lot)}
@@ -283,7 +308,7 @@ export function BlotterRow({
         : null}
       {open ? (
         <tr className="row-more">
-          <td colSpan={11}>
+          <td colSpan={12}>
             <dl className="more-grid">
               <div>
                 <dt>Cost basis</dt>
@@ -309,7 +334,7 @@ export function BlotterRow({
       ) : null}
       {closeOpen ? (
         <tr className="row-close">
-          <td colSpan={11}>
+          <td colSpan={12}>
             <ClosePanel deskId={deskId} position={position} onDone={() => setCloseOpen(false)} />
           </td>
         </tr>

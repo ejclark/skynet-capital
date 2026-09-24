@@ -31,7 +31,8 @@ describe("decisionsFor", () => {
       captionShort: "Needs TSLA below $385.90 by Oct 17 to profit.",
       pl: "-$6,240 · −55.3%",
       plTone: "neg",
-      clocks: ["Expires in 24 days", "8 contracts · worth $5,040"],
+      // the next headline macro print before expiry rides along as a clock (#3689 follow-up)
+      clocks: ["Expires in 24 days", "Jobs report Oct 2", "8 contracts · worth $5,040"],
       primary: {
         label: "Review on Trade ↗",
         href: "/app/trade?desk=eric&symbol=TSLA&strike=400&exp=2026-10-17",
@@ -45,6 +46,7 @@ describe("decisionsFor", () => {
     const [d] = decisionsFor("eric", [held("NVDA261009C00200000", 2, 500, 400)], []);
     expect(d?.title).toBe("Down 60% with 16 days left");
     expect(d?.why).toMatch(/last three weeks/);
+    expect(d?.learn?.term).toBe("timeDecay");
   });
 
   it("suggests locking in a big winner, with a lower bar for shares than options", () => {
@@ -52,6 +54,7 @@ describe("decisionsFor", () => {
     expect(share).toMatchObject({
       kind: "lock-in",
       title: "Up 30%: consider locking some of it in",
+      learn: { term: "lockedIn" },
     });
     expect(decisionsFor("eric", [held("NVDA261218C00130000", 1, 500, 700)], [])).toEqual([]);
   });

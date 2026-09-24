@@ -72,3 +72,36 @@ describe("clearChips", () => {
     expect(clearChips("")).toBe("");
   });
 });
+
+// `event:before-expiry` — the "Earnings before expiry" chip (#3689 follow-up).
+describe("event:before-expiry", () => {
+  const printing = pos({
+    symbol: "MSFT261120C00500000",
+    display: "MSFT call",
+    isOption: true,
+    nextEvent: { label: "Earnings Oct 27", at: "2026-10-27", beforeExpiry: true, scope: "stock" },
+  });
+  const fedOnly = pos({
+    symbol: "SPY261120C00600000",
+    display: "SPY call",
+    isOption: true,
+    nextEvent: {
+      label: "Fed meeting Oct 28",
+      at: "2026-10-28",
+      beforeExpiry: true,
+      scope: "market",
+    },
+  });
+
+  it("keeps options whose own stock prints before they expire, not a Fed date", () => {
+    const f = parseDeskQuery("event:before-expiry");
+    expect([printing, fedOnly, soon, shares].filter((p) => matchesFilter(p, f))).toEqual([
+      printing,
+    ]);
+  });
+
+  it("replaces the other instrument chips and clears with All", () => {
+    expect(toggleQualifier("is:share", "event:before-expiry")).toBe("event:before-expiry");
+    expect(clearChips("msft event:before-expiry")).toBe("msft");
+  });
+});

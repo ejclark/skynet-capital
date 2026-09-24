@@ -54,7 +54,22 @@ export interface DeskPosition {
   readonly best?: string;
   /** "−$6,560" or "unlimited". */
   readonly worst?: string;
+  /** The next dated thing that can move it (`src/observatory/position-event.ts`). */
+  readonly nextEvent?: PositionEvent;
 }
+
+/** Mirrors the server's `NextEvent`: "Earnings Oct 28" and whether it lands before expiry. */
+export interface PositionEvent {
+  readonly label: string;
+  readonly at: string;
+  readonly beforeExpiry: boolean;
+  readonly scope: "stock" | "market";
+}
+
+/** The stock's own event (its earnings print) lands while the option is alive — the case the
+ *  "Earnings before expiry" chip and `event:before-expiry` keep. A Fed date doesn't count. */
+export const eventBeforeExpiry = (p: Pick<DeskPosition, "nextEvent">): boolean =>
+  p.nextEvent?.scope === "stock" && p.nextEvent.beforeExpiry;
 
 /** One card in "Needs a decision" (#3689 slice 7) — mirrors `Decision` in
  *  `src/observatory/decisions-view.ts`. Every string is server-written; `stakeRaw` only sorts. */
@@ -81,6 +96,8 @@ export interface Decision {
     readonly strike: number;
     readonly breakeven: number;
   };
+  /** A glossary term the card opens in place ("What is IV crush?"); unknown terms are dropped. */
+  readonly learn?: { readonly term: string; readonly label: string };
 }
 
 /** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in
@@ -161,7 +178,8 @@ export async function fetchDesk(id: string): Promise<DeskSnapshot> {
  * The filter grammar — the blotter's subset of the Issues bar: bare terms match the display name,
  * `is:option`/`is:share` split by instrument, `pl:>0`/`pl:<0` split by the sign of total P/L, and
  * `dte:<N` / `dte:<=N` keeps what expires within N days (#3689 slice 6b; shares never match,
- * since they don't expire). Chips and the query text are ONE model; both sides write this string.
+ * since they don't expire), and `event:before-expiry` keeps options whose stock prints before
+ * they expire. Chips and the query text are ONE model; both sides write this string.
  */
 export interface DeskFilter {
   readonly terms: readonly string[];
@@ -169,6 +187,8 @@ export interface DeskFilter {
   readonly plSign?: 1 | -1;
   /** Keep positions expiring in at most this many days. */
   readonly maxDays?: number;
+  /** Keep only options with their stock's own event before expiry. */
+  readonly eventBeforeExpiry?: boolean;
 }
 
 export function parseDeskQuery(query: string): DeskFilter {
@@ -176,9 +196,11 @@ export function parseDeskQuery(query: string): DeskFilter {
   let option: boolean | undefined;
   let plSign: 1 | -1 | undefined;
   let maxDays: number | undefined;
+  let beforeExpiry = false;
   for (const token of query.toLowerCase().split(/\s+/).filter(Boolean)) {
     const dte = /^dte:<(=?)(\d{1,4})$/.exec(token);
     if (dte) maxDays = Number(dte[2]) - (dte[1] ? 0 : 1);
+    else if (token === "event:before-expiry") beforeExpiry = true;
     else if (token === "is:option") option = true;
     else if (token === "is:share") option = false;
     else if (token === "pl:>0") plSign = 1;
@@ -190,6 +212,7 @@ export function parseDeskQuery(query: string): DeskFilter {
     ...(option === undefined ? {} : { option }),
     ...(plSign ? { plSign } : {}),
     ...(maxDays === undefined ? {} : { maxDays }),
+    ...(beforeExpiry ? { eventBeforeExpiry: true } : {}),
   };
 }
 
@@ -202,6 +225,7 @@ export function matchesFilter(position: DeskPosition, filter: DeskFilter): boole
     (position.expiresInDays === undefined || position.expiresInDays > filter.maxDays)
   )
     return false;
+  if (filter.eventBeforeExpiry && !eventBeforeExpiry(position)) return false;
   const haystack = `${position.display} ${position.symbol}`.toLowerCase();
   return filter.terms.every((term) => haystack.includes(term));
 }
@@ -210,9 +234,9 @@ export function matchesFilter(position: DeskPosition, filter: DeskFilter): boole
  *  GitHub's is:open/is:closed replace rather than stack (a book can't be both in profit and
  *  under water; both armed guaranteed an empty ladder — Eric's live-review screenshot). */
 const EXCLUSIVE_GROUPS: readonly (readonly string[])[] = [
-  // Only options expire, so "expiring within 3 weeks" already means options, and a share can
-  // never match it: the three replace one another rather than stack.
-  ["is:option", "is:share", "dte:<21"],
+  // Only options expire, so "expiring within 3 weeks" and "earnings before expiry" already mean
+  // options, and a share can never match either: the four replace one another rather than stack.
+  ["is:option", "is:share", "dte:<21", "event:before-expiry"],
   ["pl:>0", "pl:<0"],
 ];
 

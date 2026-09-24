@@ -201,12 +201,14 @@ const ericDecisions = [
     plainName: "Call option · profits if NVDA rises",
     pl: "-$310 · −12.2%",
     plTone: "neg",
-    title: "Down 12% with 25 days left",
+    // the IV-crush card: a long call holding through its own print (#3689 follow-up)
+    title: "Earnings on Aug 26 could shrink this call even if NVDA rises",
     captionShort: "Needs NVDA above $185.10 by Sep 18 to profit.",
     caption:
       "NVDA Sep 18 180 Call has lost $310 of the $2,540 it cost. Worst case from here: −$2,540.",
-    why: "✦ time is working against this one. an option loses value fastest in its last three weeks, even if the stock doesn't move.",
-    clocks: ["Expires in 25 days", "3 contracts · worth $2,226"],
+    why: "✦ options cost more before earnings. the day after, that extra drains away (iv crush), so a right call can still lose. decide before the print, not after.",
+    clocks: ["Expires in 25 days", "Earnings Aug 26", "3 contracts · worth $2,226"],
+    learn: { term: "ivCrush", label: "What is IV crush?" },
     primary: {
       label: "Review on Trade ↗",
       href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
@@ -393,6 +395,7 @@ const PLAIN = {
     breakeven: "$172.40",
     best: "unlimited",
     worst: "−$17,240",
+    nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: false, scope: "stock" },
   },
   AAPL: {
     plainName: "Shares · profits if AAPL rises",
@@ -400,6 +403,13 @@ const PLAIN = {
     breakeven: "$198.50",
     best: "unlimited",
     worst: "−$39,700",
+    // AAPL's own print is past the 60-day share horizon, so the headline macro print stands in
+    nextEvent: {
+      label: "Fed meeting Sep 16",
+      at: "2026-09-16",
+      beforeExpiry: false,
+      scope: "market",
+    },
   },
   NVDA260918C00180000: {
     plainName: "Call option · profits if NVDA rises",
@@ -408,6 +418,7 @@ const PLAIN = {
     breakeven: "$185.10",
     best: "unlimited",
     worst: "−$1,530",
+    nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: true, scope: "stock" },
   },
 };
 ericDesk.desk.positions = ericDesk.desk.positions.map((p) => ({ ...p, ...PLAIN[p.symbol] }));
@@ -698,33 +709,36 @@ const spyBars = {
   }),
 };
 
-// The league (#3689 slice 4): a 9-entry field where Eric owns himself (#3) and Sauron (#9). The
-// card highlights both, ⋯-skips to Sauron, and shows Eric's gap to Futurist just above him.
+// The league (#3689 slice 4, 1M since its follow-up): a 9-entry field ranked by this month's return,
+// where Eric owns himself (#3) and Sauron (#9). The card highlights both, ⋯-skips to Sauron, and
+// shows Eric's gap to Futurist just above him in points. Sauron's month hasn't synced yet, so it
+// ranks last and reads "—" (the server's UNKNOWN_RANK), never a false 0%. The stub answers by path
+// alone, so this is the board the card's default "1M" asks for.
 const boardRow = (key, name, kind, value, sortValue) => ({
   key,
   name,
   kind,
   value,
-  tone: "pos",
+  tone: sortValue < -1e8 || sortValue === 0 ? "flat" : sortValue > 0 ? "pos" : "neg",
   bar: 0,
   sortValue,
 });
 const board = {
   seq: 1,
   generatedAt: "2026-09-23T20:00:00Z",
-  metric: "equity",
+  metric: "month",
   view: {
     blocks: {},
     rows: [
-      boardRow("bot-apex", "Apex", "bot", "$1,112,400", 1112400),
-      boardRow("bot-futurist", "Futurist", "bot", "$1,051,832", 1051832),
-      boardRow("human-eric", "Eric", "human", "$1,047,832", 1047832),
-      boardRow("human-maya", "Maya", "human", "$1,020,115", 1020115),
-      boardRow("bot-atlas", "Atlas", "bot", "$998,040", 998040),
-      boardRow("human-sam", "Sam", "human", "$975,300", 975300),
-      boardRow("bot-nova", "Nova", "bot", "$950,210", 950210),
-      boardRow("human-lee", "Lee", "human", "$902,660", 902660),
-      boardRow("bot-sauron", "Sauron", "bot", "$512,407", 512407),
+      boardRow("bot-apex", "Apex", "bot", "+6.84%", 6.84),
+      boardRow("bot-futurist", "Futurist", "bot", "+5.12%", 5.12),
+      boardRow("human-eric", "Eric", "human", "+4.37%", 4.37),
+      boardRow("human-maya", "Maya", "human", "+2.90%", 2.9),
+      boardRow("bot-atlas", "Atlas", "bot", "+1.05%", 1.05),
+      boardRow("human-sam", "Sam", "human", "-0.62%", -0.62),
+      boardRow("bot-nova", "Nova", "bot", "-1.48%", -1.48),
+      boardRow("human-lee", "Lee", "human", "-3.10%", -3.1),
+      boardRow("bot-sauron", "Sauron", "bot", "—", -1e9),
     ],
   },
 };
@@ -945,6 +959,11 @@ await page.locator(".decisions").scrollIntoViewIfNeeded();
 await page.getByRole("button", { name: /Why, and details/ }).click();
 await page.mouse.move(0, 0);
 await shootCockpit("accounts-decision-desktop");
+// The card's lesson opened in place (#3689 follow-up): "What is IV crush?" as a glossary popover.
+await page.evaluate(() => window.scrollBy(0, 320));
+await page.locator(".decision-learn button").hover();
+await shootCockpit("accounts-decision-learn-desktop");
+await page.mouse.move(0, 0);
 
 // Map lens (#3689 slice 9, handoff 3c): the treemap with the options strip and the stacked
 // decisions column; then the Runway (slice 10's lens, built alongside).
