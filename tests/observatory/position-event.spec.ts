@@ -86,5 +86,6 @@ describe("the IV-crush decision", () => {
     expect(d?.title).toBe("Earnings on Oct 27 could shrink this call even if MSFT rises");
     expect(d?.clocks).toContain("Earnings Oct 27");
     expect(d?.why).toMatch(/iv crush/);
+    expect(d?.learn).toEqual({ term: "ivCrush", label: "What is IV crush?" });
   });
 });

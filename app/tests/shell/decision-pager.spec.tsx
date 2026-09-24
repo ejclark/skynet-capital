@@ -66,6 +66,16 @@ describe("DecisionPager", () => {
     );
   });
 
+  it("opens the card's lesson in place, and skips a term this build doesn't know", () => {
+    const withLearn = decision({ learn: { term: "ivCrush", label: "What is IV crush?" } });
+    const unknown = decision({ id: "x", learn: { term: "gammaScalp", label: "What is it?" } });
+    wrap(<DecisionPager accountId="eric" decisions={[withLearn, unknown]} />);
+    fireEvent.click(screen.getByRole("button", { name: /Why, and details/ }));
+    expect(screen.getByRole("button", { name: "What is IV crush?" })).toBeInTheDocument();
+    fireEvent.click(next());
+    expect(screen.queryByText("What is it?")).not.toBeInTheDocument();
+  });
+
   it("keeps details open across pages", () => {
     wrap(<DecisionPager accountId="eric" decisions={[decision({}), lockIn]} />);
     fireEvent.click(screen.getByRole("button", { name: /Why, and details/ }));
