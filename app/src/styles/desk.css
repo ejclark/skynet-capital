@@ -80,37 +80,57 @@
   color: var(--muted);
 }
 
+/* The positions search (#3689 slice 6b): a full-width recessed field with the "/" shortcut shown,
+   the plain filter chips on their own wrapping row beneath it. */
 .filter-bar {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 12px;
-  flex-wrap: wrap;
-  align-items: center;
 }
 .filter-query {
-  flex: 1;
-  min-width: 220px;
+  position: relative;
 }
 .filter-query input {
   width: 100%;
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 9px;
+  padding: 10px 40px 10px 14px;
   box-shadow: var(--elev-recessed);
   color: var(--text);
   font-family: var(--mono);
   font-size: 12.5px;
 }
+.filter-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  pointer-events: none;
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .filter-chip {
   font-size: 12px;
   font-weight: 600;
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
+  white-space: nowrap;
 }
 .filter-chip[aria-pressed="true"] {
   background: var(--surface-2);

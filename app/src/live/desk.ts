@@ -130,33 +130,49 @@ export async function fetchDesk(id: string): Promise<DeskSnapshot> {
 
 /**
  * The filter grammar — the blotter's subset of the Issues bar: bare terms match the display name,
- * `is:option`/`is:share` split by instrument, `pl:>0`/`pl:<0` split by the sign of total P/L.
- * Chips and the query text are ONE model; both sides write this string.
+ * `is:option`/`is:share` split by instrument, `pl:>0`/`pl:<0` split by the sign of total P/L, and
+ * `dte:<N` / `dte:<=N` keeps what expires within N days (#3689 slice 6b; shares never match,
+ * since they don't expire). Chips and the query text are ONE model; both sides write this string.
  */
 export interface DeskFilter {
   readonly terms: readonly string[];
   readonly option?: boolean;
   readonly plSign?: 1 | -1;
+  /** Keep positions expiring in at most this many days. */
+  readonly maxDays?: number;
 }
 
 export function parseDeskQuery(query: string): DeskFilter {
   const terms: string[] = [];
   let option: boolean | undefined;
   let plSign: 1 | -1 | undefined;
+  let maxDays: number | undefined;
   for (const token of query.toLowerCase().split(/\s+/).filter(Boolean)) {
-    if (token === "is:option") option = true;
+    const dte = /^dte:<(=?)(\d{1,4})$/.exec(token);
+    if (dte) maxDays = Number(dte[2]) - (dte[1] ? 0 : 1);
+    else if (token === "is:option") option = true;
     else if (token === "is:share") option = false;
     else if (token === "pl:>0") plSign = 1;
     else if (token === "pl:<0") plSign = -1;
     else terms.push(token);
   }
-  return { terms, ...(option === undefined ? {} : { option }), ...(plSign ? { plSign } : {}) };
+  return {
+    terms,
+    ...(option === undefined ? {} : { option }),
+    ...(plSign ? { plSign } : {}),
+    ...(maxDays === undefined ? {} : { maxDays }),
+  };
 }
 
 export function matchesFilter(position: DeskPosition, filter: DeskFilter): boolean {
   if (filter.option !== undefined && position.isOption !== filter.option) return false;
   if (filter.plSign === 1 && position.totalPlRaw <= 0) return false;
   if (filter.plSign === -1 && position.totalPlRaw >= 0) return false;
+  if (
+    filter.maxDays !== undefined &&
+    (position.expiresInDays === undefined || position.expiresInDays > filter.maxDays)
+  )
+    return false;
   const haystack = `${position.display} ${position.symbol}`.toLowerCase();
   return filter.terms.every((term) => haystack.includes(term));
 }
@@ -165,7 +181,9 @@ export function matchesFilter(position: DeskPosition, filter: DeskFilter): boole
  *  GitHub's is:open/is:closed replace rather than stack (a book can't be both in profit and
  *  under water; both armed guaranteed an empty ladder — Eric's live-review screenshot). */
 const EXCLUSIVE_GROUPS: readonly (readonly string[])[] = [
-  ["is:option", "is:share"],
+  // Only options expire, so "expiring within 3 weeks" already means options, and a share can
+  // never match it: the three replace one another rather than stack.
+  ["is:option", "is:share", "dte:<21"],
   ["pl:>0", "pl:<0"],
 ];
 
