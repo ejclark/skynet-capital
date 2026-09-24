@@ -28,6 +28,7 @@ async function outpostPerformanceView(config: DashboardServerConfig): Promise<un
     playbooks: await playbookPerformance(state.participants, {
       readTradeActivity: config.readTradeActivity,
       readDecisions: config.readDecisions,
+      findByOrderId: config.findByOrderId,
     }),
   };
 }

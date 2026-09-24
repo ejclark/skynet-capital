@@ -61,7 +61,7 @@ describe("playbookPerformance", () => {
     ];
 
     const rows = await playbookPerformance(
-      [participant({ id: "sauron" }), participant({ id: "beta-scout" })],
+      [participant({ id: "sauron" }), participant({ id: "vader" })],
       {
         readTradeActivity: async (id) => (id === "sauron" ? buySell("a") : buySell("b")),
         readDecisions: async (id) => [
@@ -72,6 +72,39 @@ describe("playbookPerformance", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ playbookId: "S1-NVDA", trades: 2, netRealized: 200 });
+  });
+
+  describe("a persona trading on ANOTHER bot's ledger (found live, 2026-09-24)", () => {
+    // Production topology: beta-scout is not a participant with its own account. Its fills land on
+    // Sauron's broker, while its decisions file under "beta-scout". Sauron's own decisions know
+    // nothing about those orders.
+    const sauronLedger = [
+      fill({ orderId: "b-buy", side: "buy", price: 100 }),
+      fill({ orderId: "b-sell", side: "sell", price: 110, at: "2026-01-02T00:00:00Z" }),
+    ];
+    const scoutRecord: DecisionRecord = {
+      ...decision([buyOutcome("b-buy", "BETA-SCOUT")]),
+      personaId: "beta-scout",
+    };
+    const base = {
+      readTradeActivity: async () => sauronLedger,
+      readDecisions: async (id: string) => (id === "beta-scout" ? [scoutRecord] : []),
+    };
+
+    it("tags the trip with the other persona's playbook, found by order id", async () => {
+      const rows = await playbookPerformance([participant({ id: "sauron" })], {
+        ...base,
+        findByOrderId: (orderId) =>
+          orderId.startsWith("b-") ? { record: scoutRecord, intent: {} as never } : undefined,
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ playbookId: "BETA-SCOUT", trades: 1, netRealized: 100 });
+    });
+
+    it("leaves the trip untagged, never guessed, when the order-id join isn't wired", async () => {
+      const rows = await playbookPerformance([participant({ id: "sauron" })], base);
+      expect(rows).toEqual([]);
+    });
   });
 
   it("never attributes a human participant's trades to a playbook — readDecisions is bot-only", async () => {
