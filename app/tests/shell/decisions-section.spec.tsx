@@ -133,4 +133,14 @@ describe("CycleRow", () => {
     render(<CycleRow cycle={cycle()} />);
     expect(screen.queryByText(/–/)).not.toBeInTheDocument();
   });
+
+  it("badges a cycle recorded by another persona pooled onto this account (found live, 2026-09-24)", () => {
+    render(<CycleRow cycle={cycle({ authorPersona: "beta-scout" })} />);
+    expect(screen.getByText("via beta-scout")).toBeInTheDocument();
+  });
+
+  it("renders no persona badge for the account's own cycles — the ordinary case", () => {
+    render(<CycleRow cycle={cycle()} />);
+    expect(screen.queryByText(/^via /)).not.toBeInTheDocument();
+  });
 });
