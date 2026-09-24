@@ -274,3 +274,137 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-23
 <!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-09-24, D+1 — inside the `closeOutWithinDays: 6` deadline).** This is a
+macro/sector print carrying no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by
+design, Leg 4), so "re-run instrument data" here means: EIA's own Table 4 and Table 9 CSVs
+(`ir.eia.gov/wpsr/table4.csv`, HTTP 200, 2,313 bytes; `ir.eia.gov/wpsr/table9.csv`, HTTP 200,
+46,772 bytes) re-fetched direct today, after the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), plus fresh Yahoo daily
+bars for CL=F, BZ=F, HO=F, RB=F, XLE, XOP, USO and ^VIX. The prior-week (09-11) column on both
+CSVs reproduced the 09-16 sibling's own close-out figures exactly (utilization 96.8, commercial
+crude 423.429, gasoline 207.732, distillate 107.859), the same corroboration discipline that
+sibling used. **^VIX returned no reading for 2026-09-22 on two independent fetches (Yahoo's own
+gap, not a request error)** — disclosed rather than filled in; 09-23's close is used instead. No
+other source was blocked this session. Nothing below is scored from memory of the tape.
+
+**The headline verdict: the stand-aside call was free and right, but the measured counterweight
+this ledger was built to carry did not survive to close-out — two of three forward tests kill, and
+the compression thesis that justified the whole ledger reversed inside its own falsifier window.**
+
+### What printed — EIA Table 4/9, week ending 2026-09-18, released 2026-09-23
+
+| Series | Prior week (09-11) | This week (09-18) | w/w | Read |
+|---|---|---|---|---|
+| Commercial crude ex-SPR | 423.429 | **426.398** | **+2.969** | a **build** — the sign FT-…-3 is keyed to |
+| Crude oil exports | 4,831 | **3,281** | **−1,550** | fell further, not the registered recovery — below the 3,417 floor |
+| Percent utilization | 96.8% | **94.0%** | **−2.8pt** | landed exactly on FT-…-1's registered floor |
+| Crude inputs to refineries | 17,330 kb/d | **16,811 kb/d** | **−519** | consistent with the utilization drop |
+| Gross inputs to refineries | 17,449 kb/d | **16,951 kb/d** | **−498** | — |
+| Operable capacity | 18,027 kb/d | **18,027 kb/d** | unchanged | — |
+| Domestic production | 13,944 kb/d | **13,939 kb/d** | −5 | flat |
+| Total motor gasoline | 207.732 | **206.046** | **−1.686** | a draw |
+| Distillate fuel oil | 107.859 | **107.431** | **−0.428** | a draw — still no STEO-path collapse |
+| SPR | 284.957 | **284.552** | **−0.405** | drawdown continues, unrelated to the weekly commercial print |
+
+*(All figures EIA Tables 4/9, both re-fetched direct 2026-09-24; prior-week column reproduces the
+09-16 sibling's own close-out numbers verbatim, the corroboration noted above.)*
+
+**Market, same session (Yahoo daily bars, re-fetched):** CL=F closed **94.59 (09-22) → 92.16
+(09-23), −2.57%**; BZ=F closed **99.25 (09-22) → 103.08 (09-23), +3.86%**. The Brent–WTI
+front-month spread — the number the whole ledger was built around — went **4.66 → 10.92** in that
+one session, blowing straight through the **≥ $5.38** re-widening threshold this ledger's Kill
+Switch #1 and `FT-…-2`'s own early-kill clause both named. **One dated confound worth recording
+plainly:** the October WTI contract expired 2026-09-22 at **$94.59** — the same figure this
+close-out uses as CL=F's pre-print close — so the front-month series rolled to November within the
+window being scored. The registered method (continuous front-month CL=F, the same convention
+every prior WPSR sign-test in this series has used) is applied unchanged; the roll is disclosed
+rather than used to explain away the result.
+
+**Geopolitical context, `NEWS:` only, not primary:** multiple outlets (Bloomberg, Gulf News,
+Reuters via EnergyNow/Rio Times, 2026-09-22/23) report Saudi Aramco **restarted the East-West
+Petroline at a reduced rate on 2026-09-22/23** and that the US and Iran held a "very productive"
+meeting on de-escalating the Hormuz standoff — partially triggering Kill Switch #5 ("the shock
+resolves"). This is offered as context for *why* the arb may have moved, not as a substitute for
+the primary-sourced price/flow data scored below.
+
+### The three forward tests
+
+**`FT-eia-weekly-petroleum-status-2026-09-23-1` — the turnaround interval: PASS, exactly on the
+floor.** Utilization printed **94.0%**, the precise lower bound of the registered 94.0–97.8
+interval — a **2.8-point** w/w decline that undershot both convergent point estimates named at
+registration (97.8−2.40=95.4, and 2025's-analog 95.9) by roughly a full point. The interval held,
+but with zero cushion: of the three high-base analogs (1997 −0.9, 1998 −2.4, 2018 −7.2), this
+print's −2.8 sits between 1998 and 2018, worse than either of the two milder analogs and closer to
+the floor than the analog spread's central tendency implied. Worth flagging forward rather than
+treated as a clean confirmation: if the decline keeps this pace, the next `eia-weekly-*` sibling is
+the one that tests the 94.0 floor for real.
+
+**`FT-eia-weekly-petroleum-status-2026-09-23-2` — the export-recovery / arb-lag claim: KILL, on
+both legs of its own design.** Crude exports printed **3,281 kb/d**, below the registered 3,417
+floor and **1,550 kb/d** lower than the prior week's 4,831 — the opposite of recovery. Separately,
+and more decisively, the Brent–WTI spread's own early-kill clause fired the same session: **10.92**
+against the **≥5.38** threshold, closing out the compression premise Leg 2 was built on before the
+export reading even needed to be checked. Both signals point the same direction: the three-week
+lag structure this ledger measured (+0.417 corr, 2021+) did not survive its first live out-of-sample
+test, and the "compression bites early October" hand-off this ledger made to the 09-30 and later
+siblings should be treated as **withdrawn**, not carried forward — the input it depended on
+(a compressed arb) reversed inside the same week.
+
+**`FT-eia-weekly-petroleum-status-2026-09-23-3` — the print-is-not-the-price-setter attribution
+rule, observation 3 of 3: KILL, matched pair.** Commercial crude printed a **build** (+2.969 Mbbl)
+and CL=F closed **down** (−2.57%, 09-22→09-23) — under the textbook convention (build is bearish),
+that is a **matched** pair, the sign the test was built to catch as a falsifier. The rule had two
+prior mismatches (09-10: bearish print, WTI up; 09-16: draw, WTI down) and needed a third print to
+reach its own stated promotion bar of 2–3 observations; instead the third print broke the pattern
+in the textbook direction. Per the test's own kill switch, **the print reasserts itself as a
+price-setter and the written attribution rule loses its evidence** — it does not survive to a
+fourth trial without a fresh registration. The contract-roll confound noted above is disclosed as
+a limit on how cleanly this one session's sign can be read, but the same continuous-front-month
+method scored the two prior (clean) observations, so it is not treated as grounds to discard this
+result.
+
+### Calls scored against the horizon table
+
+- **Today** (stand aside, nothing to wait up for): **right.** No energy exposure existed before or
+  during the print; the call never had anything to be wrong about.
+- **This week** (stand aside; read 09-16 as this print's setup, not as a signal): **right** — no
+  trade, and the setup reading was accurate (09-16 didn't collapse either prior).
+- **This month** (avoid treating any weekly print as an energy signal — watch the Brent–WTI spread
+  instead): **the watch was the right instrument, and the compression call it was watching for
+  broke.** The spread's own named falsifier — closing ≥$5.38 through 2026-10-16 — fired on this very
+  session, 7 days after being written. The call to watch the spread, not the print, is vindicated as
+  a method; the specific compression finding and the early-October hand-off built on it are dead.
+  Recorded honestly rather than smoothed into a partial win.
+- **This quarter** (no energy exposure — the refusal is the call): **right and untested** — no
+  house playbook gained an energy leg and no tracked symbol gained crude exposure in this window,
+  so Leg 4 stays REFUTED and the refusal stands unchallenged.
+
+### Honest limits, closed out
+
+- **Two of three forward tests killed on their first live scoring** — this is the ledger's own
+  measured counterweight failing to survive contact with the data, not a flattering close-out. The
+  next `eia-weekly-petroleum-status-*` initial research should not assume the Brent–WTI lag
+  structure or the compression regime without re-measuring both from scratch.
+- **The Petroline restart (`NEWS:` only) and the arb re-widening are consistent with each other**
+  but this session cannot separate "the shock resolving removed its own price effect" from "the
+  three-week lag model was simply wrong" — both explanations are recorded rather than one favored,
+  exactly the caution the initial research asked for.
+- **FT-…-1 passed but with zero cushion** — banked for the 09-30 sibling, which studied the +21-day
+  offset and found a stronger sub-96.0 case; this print's pace argues that case deserves more
+  weight, not less.
+- **The WTI contract roll (Oct expiring 09-22) sits inside the exact window FT-…-3 scores** —
+  disclosed above, not used to discard the result, since the same continuous-front-month
+  convention scored both of the rule's prior (undisputed) observations.
+- **^VIX has no 2026-09-22 reading in Yahoo's series** on two independent fetches — a genuine gap,
+  not filled in with an estimate.
+
+**Stance:** closed at **stand aside**, as registered — zero capital, nothing to reverse. The
+*measured-counterweight* half of the ledger's thesis (Leg 2, the reason this print earned a file at
+all) is the part that broke: exports fell further, not toward recovery, and the arb it was keyed to
+re-widened past its own falsifier in the same session. This document goes quiet; the killed
+export-lag and attribution-rule hypotheses are banked in
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md#kill-list--recorded-so-they-are-never-re-proposed)
+so neither is re-proposed on the next `eia-weekly-petroleum-status-*` sibling without new prints.
