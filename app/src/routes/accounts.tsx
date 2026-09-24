@@ -18,7 +18,6 @@ import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
-import { DecisionsSection } from "../shell/decisions-section";
 import { useDefaultAccount } from "../shell/default-account";
 import { PageFrame } from "../shell/frame";
 import { HeartbeatChip, HeartbeatSection } from "../shell/heartbeat";
@@ -49,7 +48,7 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * aggregate per window is `Σend / Σbase − 1` across the accounts that reported one.
  */
 
-type AccountsSection = "overview" | "activity" | "heartbeat" | "decisions" | "thesis";
+type AccountsSection = "overview" | "activity" | "heartbeat" | "thesis";
 
 /** Overview merges what were once separate Summary and Positions tabs (Eric: "the summary page
  *  does very little atm... summary and positions should be merged into a single section/view").
@@ -69,14 +68,13 @@ const BASE_SECTIONS: readonly PageSection<AccountsSection>[] = [
 const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
   ...BASE_SECTIONS,
   { id: "heartbeat", label: "Heartbeat" },
-  { id: "decisions", label: "Decisions" },
   { id: "thesis", label: "Thesis" },
 ];
 
-/** Decisions and Thesis only make sense for one bot account at a time, never the "All accounts"
- *  aggregate or a human account — Decisions is autonomous trading's audit trail (Eric: "tied to
- *  autonomous trading... currently only bot accounts"), and Thesis is a persona's own standing call
- *  (the same reasoning: it's the bot's, not the portfolio's). */
+/** Heartbeat and Thesis only make sense for one bot account at a time, never the "All accounts"
+ *  aggregate or a human account — Heartbeat is the bot loop's liveness plus its passes that placed
+ *  nothing (the Decisions tab folded into it and into Activity, #3687; Eric: "tied to autonomous
+ *  trading... currently only bot accounts"), and Thesis is a persona's own standing call. */
 function sectionsFor(kind: "human" | "bot" | undefined): readonly PageSection<AccountsSection>[] {
   return kind === "bot" ? ALL_SECTIONS : BASE_SECTIONS;
 }
@@ -251,7 +249,6 @@ function CockpitBody({
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
 
   if (section === "heartbeat") return <HeartbeatSection deskId={accountId} />;
-  if (section === "decisions") return <DecisionsSection deskId={accountId} />;
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
   if (section === "overview") {
     const { stats, caption, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
@@ -345,12 +342,19 @@ function AccountsBody({
   );
 }
 
+/** Decisions folded into Activity and Heartbeat (#3687 slice 4): a saved `?section=decisions`
+ *  link lands on Heartbeat, where its no-trade passes now live, never back on Overview. */
+function sectionFromSearch(raw: unknown): { section?: AccountsSection } {
+  const id = raw === "decisions" ? "heartbeat" : raw;
+  return typeof id === "string" && ALL_SECTIONS.some((s) => s.id === id)
+    ? { section: id as AccountsSection }
+    : {};
+}
+
 export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
-    ...(typeof search.section === "string" && ALL_SECTIONS.some((s) => s.id === search.section)
-      ? { section: search.section as AccountsSection }
-      : {}),
+    ...sectionFromSearch(search.section),
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
       ? { q: search.q }
       : {}),

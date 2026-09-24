@@ -322,6 +322,48 @@ describe("serveDeskJson", () => {
     expect(new Set(seen).size).toBe(60);
   });
 
+  it("serves only the passes that placed nothing with ?trades=none (#3687 slice 4)", async () => {
+    const buy = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 1,
+      type: "market" as const,
+      reason: "fade",
+    };
+    const pass = (at: number, extra: Record<string, unknown>) => ({
+      at,
+      personaId: "sauron",
+      mode: "live" as const,
+      rawIntents: [],
+      guardedIntents: [],
+      outcomes: [],
+      ...extra,
+    });
+    const records = [
+      pass(3_000, { outcomes: [{ intent: buy, action: "placed" }] }),
+      pass(2_000, { halted: "daily-loss" }),
+      pass(1_000, {}),
+    ];
+    const config = configWith({ readDecisions: () => Promise.resolve(records) });
+    const all = fakeRes();
+    await serveDeskJson(
+      all.res,
+      "/api/desk/sauron/decisions",
+      "/api/desk/sauron/decisions",
+      config,
+    );
+    expect((answered(all.out) as { cycles: unknown[] }).cycles).toHaveLength(3);
+    const idle = fakeRes();
+    await serveDeskJson(
+      idle.res,
+      "/api/desk/sauron/decisions",
+      "/api/desk/sauron/decisions?trades=none",
+      config,
+    );
+    const body = answered(idle.out) as { cycles: { status: string }[] };
+    expect(body.cycles.map((c) => c.status)).toEqual(["halted", "quiet"]);
+  });
+
   it("paginates activity via per_page/before query params (PR 5, issue #2287)", async () => {
     const records = Array.from({ length: 5 }, (_, i) => ({
       orderId: `ord-${i}`,

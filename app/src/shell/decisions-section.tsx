@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
-import { type DecisionCycle, fetchDeskDecisions, type RefusedIntent } from "../live/desk";
+import {
+  type DecisionCycle,
+  type DeskDecisions,
+  fetchDeskDecisions,
+  type RefusedIntent,
+} from "../live/desk";
 
 /**
  * ACCOUNTS' DECISIONS SECTION — ported from the retired `/u/:id/decisions` route ("the bot's
@@ -154,11 +159,35 @@ export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactEle
   );
 }
 
+/** A filtered page can come back empty while older passes still exist (a stretch of the trail
+ *  that was all trades): walk on a bounded few pages rather than show an empty one. */
+async function fetchPage(
+  deskId: string,
+  before: number | undefined,
+  noTrades: boolean,
+): Promise<DeskDecisions> {
+  let page = await fetchDeskDecisions(deskId, before, { noTrades });
+  for (let hop = 0; hop < 5 && page.cycles.length === 0 && page.nextCursor !== undefined; hop++) {
+    page = await fetchDeskDecisions(deskId, page.nextCursor, { noTrades });
+  }
+  return page;
+}
+
 /** @category accounts */
-export function DecisionsSection({ deskId }: { readonly deskId: string }): ReactElement {
+export function DecisionsSection({
+  deskId,
+  noTrades = false,
+  emptyText = "No recorded cycles yet — the next autonomous run writes the first.",
+}: {
+  readonly deskId: string;
+  /** Only the passes that placed nothing (#3687 slice 4) — the Heartbeat tab's log, now that
+   *  trades carry their own decisions on Activity. */
+  readonly noTrades?: boolean;
+  readonly emptyText?: string;
+}): ReactElement {
   const decisions = useQuery({
-    queryKey: ["desk-decisions", deskId],
-    queryFn: () => fetchDeskDecisions(deskId),
+    queryKey: ["desk-decisions", deskId, noTrades],
+    queryFn: () => fetchPage(deskId, undefined, noTrades),
     refetchOnWindowFocus: true,
   });
   // Older pages walked back via "load older cycles" — kept separate from react-query's own cache
@@ -177,7 +206,7 @@ export function DecisionsSection({ deskId }: { readonly deskId: string }): React
     if (cursor === undefined || loadingMore) return;
     setLoadingMore(true);
     setLoadMoreError(false);
-    fetchDeskDecisions(deskId, cursor)
+    fetchPage(deskId, cursor, noTrades)
       .then((page) => {
         setOlderCycles((prev) => [...prev, ...page.cycles]);
         setCursor(page.nextCursor);
@@ -197,10 +226,7 @@ export function DecisionsSection({ deskId }: { readonly deskId: string }): React
         SKYNET_INSIGHTS_DIR is set, or SKYNET_AUDIT_DIR as a legacy fallback).
       </p>
     );
-  if (trail.cycles.length === 0)
-    return (
-      <p className="note">No recorded cycles yet — the next autonomous run writes the first.</p>
-    );
+  if (trail.cycles.length === 0) return <p className="note">{emptyText}</p>;
   const cycles = [...trail.cycles, ...olderCycles];
   return (
     <>

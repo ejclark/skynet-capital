@@ -97,3 +97,9 @@
 .hb-table td:nth-child(4) {
   white-space: normal;
 }
+.hb-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
