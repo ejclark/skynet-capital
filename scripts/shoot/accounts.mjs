@@ -73,6 +73,12 @@ const sauronStats = {
   cash: "$201,400.00",
   cashKnown: true,
   positionCount: 3,
+  bookedPl: "—",
+  bookedTone: "flat",
+  bookedKnown: false,
+  onPaper: "+$22,106.00",
+  onPaperTone: "pos",
+  onPaperKnown: true,
   windows: [
     win("7D", "+0.8%", "pos", "last week"),
     win("1M", "-1.1%", "neg", "last month"),
@@ -90,6 +96,12 @@ const totalStats = {
   cash: "$1,048,600.00",
   cashKnown: true,
   positionCount: 9,
+  bookedPl: "—",
+  bookedTone: "flat",
+  bookedKnown: false,
+  onPaper: "+$22,106.00",
+  onPaperTone: "pos",
+  onPaperKnown: true,
   windows: [
     win("7D", "+1.1%", "pos", "last week"),
     win("1M", "+2.3%", "pos", "last month"),
@@ -101,11 +113,40 @@ const totalStats = {
 const networth = {
   generatedAt: "2026-09-11T00:00:00Z",
   accounts: [
-    { id: "human-eric", name: "Eric", kind: "human", ...ericStats },
-    { id: "bot-sauron", name: "Sauron", kind: "bot", ...sauronStats },
+    {
+      id: "human-eric",
+      name: "Eric",
+      kind: "human",
+      ...ericStats,
+      idle: "81% idle",
+      idlePct: 80.9,
+    },
+    {
+      id: "bot-sauron",
+      name: "Sauron",
+      kind: "bot",
+      ...sauronStats,
+      idle: "39% idle",
+      idlePct: 39.3,
+    },
   ],
-  total: totalStats,
+  total: { ...totalStats, idle: "67% idle", idlePct: 67.2 },
 };
+
+// The same book at a new all-time high (#3689 slice 10): the ceremony's frame swaps this in.
+const networthAtHigh = {
+  ...networth,
+  accounts: [
+    {
+      ...networth.accounts[0],
+      value: "$1,051,200.00",
+      allTimeHigh: { value: "$1,051,200", at: "9/23", aboveNow: 0 },
+      toNewHigh: undefined,
+    },
+    networth.accounts[1],
+  ],
+};
+let atHigh = false;
 
 // Desk snapshots — the Positions section's blotter. Real tickers, honest P/L tones.
 const pos = (
@@ -690,7 +731,7 @@ const { page, origin, out, close } = await openShell({
       },
       representative: true,
     },
-    "/api/accounts/networth": networth,
+    "/api/accounts/networth": () => (atHigh ? networthAtHigh : networth),
     "/api/desk/human-eric": ericDesk,
     "/api/desk/bot-sauron": sauronDesk,
     "/api/desk/human-eric/activity": ericActivity,
@@ -777,6 +818,10 @@ await page.goto(`${origin}/app/accounts?account=all`);
 await page.getByText("Net worth · all accounts").waitFor();
 await shootCockpit("accounts-all-summary-desktop");
 
+// The All-accounts roster (#3689 slice 10, handoff 2b): sparkline, month vs S&P, deployed · idle.
+await page.locator(".networth-roster").scrollIntoViewIfNeeded();
+await shootCockpit("accounts-roster-desktop");
+
 // Wide (1600px, #3689 slice 4): net worth and league side by side, the design's hero row.
 await page.mouse.move(0, 0);
 await page.setViewportSize({ width: 1600, height: 1000 });
@@ -811,5 +856,14 @@ await page.locator(".blotter-card").first().scrollIntoViewIfNeeded();
 await page.getByRole("button", { name: "Breakeven" }).hover();
 await page.getByRole("tooltip").waitFor();
 await shootCockpit("accounts-table-desktop");
+
+// The new-high ceremony (#3689 slice 10, handoff 2c): the same page, the book at a new high.
+atHigh = true;
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${origin}/app/accounts`);
+await page.getByRole("dialog").waitFor();
+await page.waitForTimeout(400);
+await shootCockpit("accounts-new-high-desktop");
+atHigh = false;
 
 await close();
