@@ -80,7 +80,7 @@ describe("BlotterRow", () => {
 
   it("shows no lots trigger when the position carries no lots", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
-    expect(screen.queryByRole("button", { name: /lots for SPY/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /buys for SPY/ })).not.toBeInTheDocument();
   });
 
   it("renders no detail line when the position carries none — nothing to say beats a static label", () => {
@@ -135,7 +135,7 @@ describe("BlotterRow", () => {
     it("reveals lot rows sharing the parent's exact columns when the trigger is clicked", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
 
-      fireEvent.click(screen.getByRole("button", { name: /2 lots for SPY/ }));
+      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
 
       expect(screen.getByText("$49,005")).toBeInTheDocument();
       expect(screen.getByText("$50,495")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("BlotterRow", () => {
 
     it("sums the visible lot columns back to the parent row", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /2 lots for SPY/ }));
+      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
 
       const sum = (a: string, b: string) =>
         Number(a.replace(/[^0-9.-]/g, "")) + Number(b.replace(/[^0-9.-]/g, ""));
@@ -159,11 +159,11 @@ describe("BlotterRow", () => {
       expect(sum(lots.lots?.[0]?.totalPl ?? "0", lots.lots?.[1]?.totalPl ?? "0")).toBe(995);
     });
 
-    it("opens a lot-scoped close panel from Close lot, independent of the other lot", () => {
+    it("opens a lot-scoped close panel from Close this buy, independent of the other lot", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /2 lots for SPY/ }));
+      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
 
-      const closeLotButtons = screen.getAllByRole("button", { name: "Close lot" });
+      const closeLotButtons = screen.getAllByRole("button", { name: "Close this buy" });
       expect(closeLotButtons).toHaveLength(2);
       fireEvent.click(closeLotButtons[0] as HTMLElement);
 
@@ -174,7 +174,7 @@ describe("BlotterRow", () => {
 
     it("renders no Roll button on a stock's lots — rolling only exists for options", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /2 lots for SPY/ }));
+      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
 
       expect(screen.queryByRole("button", { name: /Roll/ })).not.toBeInTheDocument();
     });
@@ -205,7 +205,7 @@ describe("BlotterRow", () => {
 
     it("renders Roll disabled with the reason, never a silent no-op button", () => {
       render(inTable(<BlotterRow position={optionLots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /1 lots for NVDA Dec 18 130 Call/ }));
+      fireEvent.click(screen.getByRole("button", { name: /1 buy for NVDA Dec 18 130 Call/ }));
 
       const rollButtons = screen.getAllByRole("button", { name: /Roll —/ });
       expect(rollButtons).toHaveLength(1);

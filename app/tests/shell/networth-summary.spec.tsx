@@ -18,7 +18,7 @@ const base: NetWorthStatsView = {
 };
 
 describe("NetWorthCondensed", () => {
-  it("shows booked P/L once the account has reported one", () => {
+  it("shows locked-in (booked) P/L once the account has reported one", () => {
     render(
       <NetWorthCondensed
         stats={{ ...base, bookedPl: "+$1,500", bookedTone: "pos", bookedKnown: true }}
@@ -26,11 +26,11 @@ describe("NetWorthCondensed", () => {
       />,
     );
     expect(screen.getByText("+$1,500")).toBeInTheDocument();
-    expect(screen.getByText("booked P/L")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "locked in" })).toBeInTheDocument();
   });
 
-  it("omits the booked P/L line entirely — never a false $0 — when it isn't known yet", () => {
+  it("omits the locked-in P/L line entirely — never a false $0 — when it isn't known yet", () => {
     render(<NetWorthCondensed stats={base} caption="Sauron" />);
-    expect(screen.queryByText("booked P/L")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "locked in" })).not.toBeInTheDocument();
   });
 });

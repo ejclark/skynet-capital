@@ -1,0 +1,62 @@
+/* Glossary popovers (#3689 slice 2) — `shell/glossary-term.tsx`. A dotted underline says "there's
+ * more here"; the popover is the design handoff's: ~290px, radius 11, --surface-2, the hover
+ * elevation. It only appears on demand, so it carries the one shadow on the page at a time. */
+
+.gloss {
+  position: relative;
+  display: inline-block;
+}
+.gloss-term {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
+  text-underline-offset: 3px;
+}
+.gloss-term:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.gloss-pop {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 290px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.6);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  text-align: left;
+}
+.gloss-pop[hidden] {
+  display: none;
+}
+.gloss-pop-term {
+  font-weight: 700;
+}
+.gloss-pop-jargon {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}

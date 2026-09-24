@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { Tone } from "../live/desk";
+import { GlossaryTerm } from "./glossary-term";
 
 /** Only the fields this grid actually renders — decoupled from `DeskTiles`' raw twins so an
  *  aggregate across several accounts (which has no single `Raw` field of its own) fits too. */
@@ -36,7 +37,9 @@ export function DeskTilesGrid({ tiles }: { readonly tiles: DeskTilesFigures }): 
         <span className="desk-note">today's move</span>
       </div>
       <div className="desk-tile">
-        <span className="desk-k">Unrealized</span>
+        <span className="desk-k">
+          <GlossaryTerm term="onPaper" />
+        </span>
         <span className={`desk-v num tone-${tiles.unrealizedTone}`}>{tiles.unrealized}</span>
         <span className="desk-note">{tiles.unrealizedNote}</span>
       </div>
