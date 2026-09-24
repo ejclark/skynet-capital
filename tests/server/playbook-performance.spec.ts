@@ -1,7 +1,11 @@
 import type { DecisionRecord, IntentOutcome } from "../../src/autonomous/decision-record.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
-import { playbookPerformance } from "../../src/server/playbook-performance.js";
+import {
+  playbookPerformance,
+  playbookPerformanceView,
+  selectAccounts,
+} from "../../src/server/playbook-performance.js";
 
 /**
  * `playbookPerformance` (#2287 PR 7d) — the house-wide pool: every participant's closed trips,
@@ -146,5 +150,70 @@ describe("playbookPerformance", () => {
   it("contributes nothing for a participant with no ledger reader wired at all", async () => {
     const rows = await playbookPerformance([participant({ id: "offline" })], {});
     expect(rows).toEqual([]);
+  });
+});
+
+describe("playbookPerformanceView — mine vs. the house, never blended (#3665)", () => {
+  // Two bots on the same playbook: "mine" earns +10, "theirs" earns +30.
+  const ledgers: Record<string, TradeActivityRecord[]> = {
+    mine: [
+      fill({ orderId: "m-buy", side: "buy", price: 100 }),
+      fill({ orderId: "m-sell", side: "sell", price: 101, at: "2026-01-02T00:00:00Z" }),
+    ],
+    theirs: [
+      fill({ orderId: "t-buy", side: "buy", price: 100 }),
+      fill({ orderId: "t-sell", side: "sell", price: 103, at: "2026-01-02T00:00:00Z" }),
+    ],
+  };
+  const deps = {
+    readTradeActivity: async (id: string) => ledgers[id] ?? [],
+    readDecisions: async (id: string) => [
+      decision([buyOutcome(id === "mine" ? "m-buy" : "t-buy", "S1-NVDA")]),
+    ],
+  };
+  const everyone = [participant({ id: "mine" }), participant({ id: "theirs" })];
+
+  it("scores the house across everyone and 'mine' across only the scoped accounts", async () => {
+    const view = await playbookPerformanceView(everyone, ["mine"], deps);
+    expect(view.house[0]).toMatchObject({ playbookId: "S1-NVDA", trades: 2, netRealized: 40 });
+    expect(view.mine?.[0]).toMatchObject({ playbookId: "S1-NVDA", trades: 1, netRealized: 10 });
+    expect(view.accounts).toEqual(["mine"]);
+  });
+
+  it("reports 'mine' as null, not an empty list, when the viewer has no live account in scope", async () => {
+    const view = await playbookPerformanceView(everyone, [], deps);
+    expect(view.mine).toBeNull();
+    expect(view.accounts).toEqual([]);
+    const offline = await playbookPerformanceView(
+      [participant({ id: "mine", error: "sync failed" }), participant({ id: "theirs" })],
+      ["mine"],
+      deps,
+    );
+    expect(offline.mine).toBeNull();
+  });
+
+  it("an account with no attributed trips still reads as an empty 'mine', distinct from null", async () => {
+    const view = await playbookPerformanceView(
+      [...everyone, participant({ id: "idle" })],
+      ["idle"],
+      deps,
+    );
+    expect(view.mine).toEqual([]);
+    expect(view.accounts).toEqual(["idle"]);
+  });
+});
+
+describe("selectAccounts — a selection narrows, never widens", () => {
+  it("defaults to every owned account", () => {
+    expect(selectAccounts(["a", "b"], null)).toEqual(["a", "b"]);
+  });
+
+  it("narrows to the requested subset of owned accounts", () => {
+    expect(selectAccounts(["a", "b", "c"], "c, a")).toEqual(["a", "c"]);
+  });
+
+  it("drops a requested account the viewer does not own", () => {
+    expect(selectAccounts(["a"], "a,someone-else")).toEqual(["a"]);
+    expect(selectAccounts([], "someone-else")).toEqual([]);
   });
 });

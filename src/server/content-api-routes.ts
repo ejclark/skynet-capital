@@ -7,30 +7,36 @@ import { standingsBoardView, standingsCompareView } from "../observatory/standin
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { Session } from "./auth/session.js";
 import type { BoardPatchChannel } from "./board-patch-routes.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
+import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
-import { playbookPerformance } from "./playbook-performance.js";
+import { playbookPerformanceView, selectAccounts } from "./playbook-performance.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
-/** Per-playbook trade performance (#2287, #885) — every closed trip any participant's fills
- *  attributed to a playbook, pooled and scored with the same win-rate/expectancy/streaks family
- *  the account-level view already uses. No weighting/benchmark layer yet, by design. Split out of
+/** Per-playbook trade performance (#2287, #885, #3665) — every closed trip any participant's fills
+ *  attributed to a playbook, as two separate groupings: the house-wide collective, and the viewer's
+ *  own accounts (narrowable by `?accounts=a,b`). No weighting/benchmark layer yet, by design. Split out of
  *  `serveContentApi` to keep that dispatcher's own branching complexity under the fitness gate. */
-async function outpostPerformanceView(config: DashboardServerConfig): Promise<unknown> {
-  const state = config.hub.getState();
-  return {
-    playbooks: await playbookPerformance(state.participants, {
+function outpostPerformanceView(
+  config: DashboardServerConfig,
+  url: string,
+  session: Session | undefined,
+): Promise<unknown> {
+  const requested = new URL(url, "http://localhost").searchParams.get("accounts");
+  return playbookPerformanceView(
+    config.hub.getState().participants,
+    selectAccounts(resolveOwnedIds(session, config), requested),
+    {
       readTradeActivity: config.readTradeActivity,
       readDecisions: config.readDecisions,
       findByOrderId: config.findByOrderId,
-    }),
-  };
+    },
+  );
 }
 
 /** The shell's content JSON family: the wire, the research shelf, the
@@ -81,7 +87,7 @@ export async function serveContentApi(
     return json(learnJsonView(progress));
   }
   if (path === "/api/outpost/performance") {
-    return json(await outpostPerformanceView(config));
+    return json(await outpostPerformanceView(config, url, session));
   }
   if (path === "/api/ops-status") {
     // GROUP-VISIBLE (#1296, Eric: fleet health "should be public for the group"). Every request

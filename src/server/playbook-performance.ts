@@ -52,7 +52,46 @@ export async function playbookPerformance(
   participants: readonly ParticipantSnapshot[],
   deps: PlaybookPerformanceDeps,
 ): Promise<PlaybookStats[]> {
+  return (await playbookPerformanceView(participants, [], deps)).house;
+}
+
+/**
+ * The two groupings Eric asked for (#3665), kept apart: the house-wide collective and the viewer's
+ * own accounts. They are separate lists on purpose — a surface showing both must never be able to
+ * blend "how everyone did" into "how I did".
+ */
+export interface PlaybookPerformanceView {
+  readonly house: PlaybookStats[];
+  /** Null when no scoped account is live — an absence, not an empty list posing as zero trades. */
+  readonly mine: PlaybookStats[] | null;
+  /** The accounts `mine` actually covers, so a reader can see what "mine" means. */
+  readonly accounts: readonly string[];
+}
+
+/** Each participant's ledger is read and tagged once; both groupings slice the same trips. */
+export async function playbookPerformanceView(
+  participants: readonly ParticipantSnapshot[],
+  scope: readonly string[],
+  deps: PlaybookPerformanceDeps,
+): Promise<PlaybookPerformanceView> {
   const live = participants.filter((p) => !p.error);
   const tripLists = await Promise.all(live.map((p) => tripsFor(p, deps)));
-  return statsByPlaybook(tripLists.flat());
+  const accounts = live.map((p) => p.id).filter((id) => scope.includes(id));
+  const mine = live.flatMap((p, i) => (accounts.includes(p.id) ? (tripLists[i] ?? []) : []));
+  return {
+    house: statsByPlaybook(tripLists.flat()),
+    mine: accounts.length > 0 ? statsByPlaybook(mine) : null,
+    accounts,
+  };
+}
+
+/**
+ * Which accounts "mine" covers: the viewer's owned accounts, optionally narrowed by a
+ * comma-separated `?accounts=` selection. A selection can only narrow, never widen — naming an
+ * account the viewer doesn't own is silently dropped, not honored.
+ */
+export function selectAccounts(owned: readonly string[], requested: string | null): string[] {
+  if (!requested) return [...owned];
+  const picked = new Set(requested.split(",").map((id) => id.trim()));
+  return owned.filter((id) => picked.has(id));
 }
