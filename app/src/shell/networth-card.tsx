@@ -1,5 +1,6 @@
 import { type ReactElement, useMemo } from "react";
 import type { NetWorthStatsView } from "../live/networth";
+import { FormStrip } from "./form-strip";
 import { GlossaryTerm } from "./glossary-term";
 import { HeroChart } from "./hero-chart";
 
@@ -102,9 +103,10 @@ export function NetWorthCard({
           <HeroChart accountId={accountId} high={highLine} />
         </div>
       ) : null}
-      {high && toHigh !== undefined ? (
+      {accountId || (high && toHigh !== undefined) ? (
         <div className="nw-foot">
-          {stats.toNewHigh ? (
+          {accountId ? <FormStrip accountId={accountId} /> : null}
+          {!high ? null : stats.toNewHigh ? (
             <span className="nw-to-high">
               To a new high <b className="num">{stats.toNewHigh}</b>
             </span>
@@ -112,9 +114,11 @@ export function NetWorthCard({
             <span className="nw-to-high nw-at-high">At a new high ✦</span>
           )}
           {/* the words beside it carry the gap; the meter is its picture */}
-          <span className="nw-meter" aria-hidden="true">
-            <span className="nw-meter-fill" style={{ width: `${(toHigh * 100).toFixed(1)}%` }} />
-          </span>
+          {toHigh !== undefined ? (
+            <span className="nw-meter" aria-hidden="true">
+              <span className="nw-meter-fill" style={{ width: `${(toHigh * 100).toFixed(1)}%` }} />
+            </span>
+          ) : null}
         </div>
       ) : null}
     </section>

@@ -1,0 +1,105 @@
+/* The Form strip (#3689 slice 3b) — `shell/form-strip.tsx`, in the net-worth card's footer. Squares
+ * are 26×22, radius 5: ✓ on a green tint, ✕ on a red one. The glyph carries win or loss; the tint
+ * repeats it. The popover shows on hover or focus with the same shadow as the glossary popovers. */
+
+.form-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-right: auto;
+  min-width: 0;
+}
+.form-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.form-summary {
+  font-size: 12px;
+  color: var(--muted);
+}
+.form-summary b {
+  color: var(--text);
+}
+.form-squares {
+  display: flex;
+  gap: 4px;
+}
+.form-sq {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: outline-color 0.15s ease;
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+}
+.form-sq--win {
+  background: color-mix(in srgb, var(--pos) 22%, var(--surface-2));
+  color: var(--pos);
+}
+.form-sq--loss {
+  background: color-mix(in srgb, var(--neg) 18%, var(--surface-2));
+  color: var(--neg);
+}
+.form-sq--flat {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.form-sq:hover,
+.form-sq:focus-visible {
+  outline-color: var(--accent);
+}
+.form-pop {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.6);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+  pointer-events: none;
+}
+.form-sq:hover .form-pop,
+.form-sq:focus-visible .form-pop {
+  display: flex;
+}
+.form-pop-k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.form-pop-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.form-pop-pl {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+.form-pop-open {
+  font-size: 12px;
+  color: var(--accent);
+}
