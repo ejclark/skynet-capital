@@ -5,6 +5,7 @@ import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { ConsiderationsRail } from "./considerations-rail";
 import { LeagueCard } from "./league-card";
+import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
 
@@ -52,6 +53,8 @@ export function OverviewSection({
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
 }): ReactElement {
+  // One account's desk carries the Money strip's allocation (#3689 slice 5).
+  const singleDesk = allAccounts ? undefined : desks?.[0]?.desk;
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
@@ -67,10 +70,18 @@ export function OverviewSection({
           meId={owned.find((a) => a.kind === "human")?.id}
         />
       </div>
-      <p className="desk-note">
-        {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
-        positions
-      </p>
+      {!allAccounts && singleDesk?.allocation ? (
+        <MoneyStrip
+          accountId={accountId}
+          allocation={singleDesk.allocation}
+          hasOptions={singleDesk.positions.some((p) => p.isOption)}
+        />
+      ) : (
+        <p className="desk-note">
+          {stats.cashKnown ? `cash ${stats.cash} ready to use` : "cash —"} · {stats.positionCount}{" "}
+          open positions
+        </p>
+      )}
       {allAccounts ? (
         <NetWorthRoster accounts={roster} />
       ) : (

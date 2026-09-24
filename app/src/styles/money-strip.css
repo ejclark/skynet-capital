@@ -1,0 +1,116 @@
+/* "Where your money is" (#3689 slice 5): `shell/money-strip.tsx`. One panel of three cells
+ * divided by hairlines. The stacked bar tells the slices apart by pattern as well as tint: options
+ * solid accent, shares a lighter accent tint, cash hatched. A legend names every slice in words. */
+
+.money-strip {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1.1fr;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin: 0 0 16px;
+}
+.money-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px;
+  min-width: 0;
+}
+.money-cell + .money-cell {
+  border-left: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+.money-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.money-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.money-slice {
+  flex-basis: 0;
+  min-width: 4px;
+}
+.money-slice--shares {
+  background: color-mix(in srgb, var(--accent) 55%, var(--surface-2));
+}
+.money-slice--options {
+  background: var(--accent);
+}
+.money-slice--cash {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-2) 0 3px,
+    color-mix(in srgb, var(--muted) 35%, var(--surface-2)) 3px 5px
+  );
+}
+.money-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+.money-legend b {
+  color: var(--text);
+  font-family: var(--mono);
+}
+.money-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+.money-cash {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+}
+.money-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+.money-link {
+  font-size: 12.5px;
+}
+.money-greeks {
+  gap: 12px;
+}
+.money-greek {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: baseline;
+}
+.money-greek b {
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: right;
+}
+.money-greek .money-note {
+  grid-column: 1 / -1;
+}
+.money-greek-label {
+  font-size: 12.5px;
+}
+
+@media (max-width: 860px) {
+  .money-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .money-cell + .money-cell {
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  }
+}
