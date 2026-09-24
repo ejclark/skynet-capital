@@ -98,6 +98,36 @@ describe("deskView", () => {
 });
 
 /** Slice 1 of #3186 — the positions accordion's lot breakdown. */
+describe("deskView allocation (#3689 slice 5)", () => {
+  it("splits the money into shares, options and cash, adding to 100%", () => {
+    const { allocation } = deskView(snapshot());
+    // 42,930 shares + 10,920 options + 11,090 cash = 64,940.
+    expect(allocation).toMatchObject({
+      shares: "$42,930",
+      options: "$10,920",
+      cash: "$11,090",
+      cashShare: "17.1%",
+      shareCount: 200,
+    });
+    expect(allocation.sharesPct + allocation.optionsPct + allocation.cashPct).toBeCloseTo(100, 10);
+  });
+
+  it("leaves a short out of the bar rather than drawing a negative slice", () => {
+    const { allocation } = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AAPL", quantity: 100, avgPrice: 100, marketValue: 10_000 },
+          { symbol: "TSLA", quantity: -10, avgPrice: 400, marketValue: -4_000 },
+        ],
+        cash: 10_000,
+      }),
+    );
+    expect(allocation.sharesPct).toBeCloseTo(50, 10);
+    // The short still counts toward exposure: 100 − 10 shares.
+    expect(allocation.shareCount).toBe(90);
+  });
+});
+
 describe("deskView lots", () => {
   const ledgerWith = (open: OpenLot[]): RoundTripLedger => ({
     trips: [],

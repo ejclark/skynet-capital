@@ -78,6 +78,20 @@ export interface DeskTiles {
   readonly cashRaw: number;
 }
 
+/** Where the money is (#3689 slice 5) — mirrors `DeskAllocation` in desk-json-view.ts. The three
+ *  percentages are of long shares + long options + cash, and add to 100. */
+export interface DeskAllocation {
+  readonly shares: string;
+  readonly options: string;
+  readonly cash: string;
+  readonly sharesPct: number;
+  readonly optionsPct: number;
+  readonly cashPct: number;
+  readonly cashShare: string;
+  /** Signed shares held across stock positions — their delta, for "market exposure". */
+  readonly shareCount: number;
+}
+
 export interface Desk {
   readonly id: string;
   readonly name: string;
@@ -86,6 +100,8 @@ export interface Desk {
   readonly tiles: DeskTiles;
   readonly positions: readonly DeskPosition[];
   readonly considerations: readonly ConsiderationChip[];
+  /** Optional on the client so an older server (or fixture) without it still renders. */
+  readonly allocation?: DeskAllocation;
 }
 
 export interface DeskSnapshot {

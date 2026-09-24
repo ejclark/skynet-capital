@@ -180,6 +180,17 @@ const ericDesk = {
     name: "Eric",
     kind: "human",
     considerations: ericConsiderations,
+    // Where the money is (#3689 slice 5): long shares, long options, cash — adding to 100%.
+    allocation: {
+      shares: "$198,386",
+      options: "$2,226",
+      cash: "$847,200",
+      sharesPct: 18.93,
+      optionsPct: 0.21,
+      cashPct: 80.86,
+      cashShare: "80.9%",
+      shareCount: 300,
+    },
     positions: [
       pos(
         "NVDA",
@@ -584,6 +595,22 @@ const { page, origin, out, close } = await openShell({
   stubs: {
     "/api/settings": settings,
     "/api/board": board,
+    // The netted option book the Money strip reads its plain greeks from: the NVDA call, 3 contracts.
+    "/api/trade/option-positions": {
+      available: true,
+      asOf: "2026-09-23T20:00:00Z",
+      rows: [],
+      book: {
+        delta: 186,
+        gamma: 4.2,
+        theta: -38.4,
+        vega: 21.6,
+        covered: 1,
+        total: 1,
+        uncovered: [],
+      },
+      representative: true,
+    },
     "/api/accounts/networth": networth,
     "/api/desk/human-eric": ericDesk,
     "/api/desk/bot-sauron": sauronDesk,
