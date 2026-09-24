@@ -260,8 +260,99 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-24, D+1 — inside the `closeOutWithinDays: 6` deadline).** Rates mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design, unchanged since initial
+research); the cache was busted anyway per the lane's standing instruction, though nothing here
+reads it. "Re-run instrument data" means re-fetching the executed auction record itself, never
+recalling a prior row's document read: `api.fiscaldata.treasury.gov`'s `auctions_query` for CUSIP
+**91282CRN3** (fetched direct this session), cross-checked field-for-field against helious.io's own
+auction page and its dedicated `auc-91282CRN3-2026-09-23` write-up, and against
+investinglive.com's auction report for the when-issued level Treasury itself never publishes; the
+daily par yield curve CSV (`home.treasury.gov`) for 09-18 through 09-23; and Cboe's VIX daily series
+(Yahoo `^VIX`). Every fetch resolved this session; nothing below is from memory.
+
+**What printed — a genuinely weak auction on every leg, not a paid-for one.**
+
+| Measure | 2026-09-23 | This doc's own 12-print norm (D7 row) | Result |
+|---|---|---|---|
+| Offering | **$70,000,000,000** | $70B (13 straight) | 13th straight — no size-change kill fired |
+| **High yield** | **5.033%** | — | the highest 5Y stop of this doc's life |
+| When-issued (secondary — investinglive, Treasury publishes none for this tenor) | 5.002% | — | — |
+| **Tail** | **+3.1bp** | ~0.2–0.9bp (Jul/Aug prints) | wider than either recent print, not near-zero |
+| **Bid-to-cover** | **2.21** | 2.342 (range 2.28–2.41) | below the *entire* prior 12-print range — a new low |
+| Competitive accepted | $69,668,682,000 | — | denominator (matches Fiscal Data field-for-field) |
+| **Indirect** | **54.31%** | 63.47% (median 61.55, range 59.24–74.85) | **a new 12-print low, −4.93pp below the prior low — kills FT-...-2** |
+| Direct | 29.92% | no dedicated 5Y norm computed; ~23–27% band seen at initial research | well above that band — the marginal absorber, same shape as the 2Y sibling's 09-22 print |
+| **Dealer (primary)** | **15.77%** | 11.86% (median 12.31, range 8.84–15.61) | **above the entire prior 12-print range — kills FT-...-1** |
+| Auction grade (investinglive) | **D** | — | — |
+
+Bidder shares are computed here from raw accepted dollars over competitive accepted
+($69,668,682,000) and sum to 100.0%, matching investinglive's independently-published percentages
+to the hundredth — a clean secondary cross-check on the primary Fiscal Data record, not a
+substitute for it.
+
+**Scoring the two forward tests — both kill, and the disagreement is the finding.**
+
+**`FT-treasury-5y-note-2026-09-23-1` (dealer take-down below 11.86%) — KILLED**, scored in full in
+[`forward-tests/treasury-5y-note-2026-09-23.md`](../forward-tests/treasury-5y-note-2026-09-23.md).
+Dealers took **15.77%**, clearing the 11.86% threshold by 3.91pp and landing above the entire prior
+12-print range (8.84–15.61%). Per the test's own registered kill condition, this makes the 09-15
+20Y sponsorship break a **curve-wide capacity problem**, not a long-end-specific one — confirming,
+not refuting, premise (d)'s capacity leg.
+
+**`FT-treasury-5y-note-2026-09-23-2` (indirect at or above 61.51%) — KILLED, decisively**, scored in
+full in the same fragment. Indirect printed **54.31%**, not just below the 61.51% pass line but
+**below 59.24%** — the test's own pre-registered kill threshold (a new 12-print low) — by 4.93pp.
+Neither test's void condition arose: size held at exactly $70B on the 09-17 announcement, and the
+2026-09-16 FOMC hiked exactly 25bp.
+
+**The mechanism split premise (d) staked its whole claim on this discriminating exactly, and it
+resolved half right, half wrong.** The D7 row split the 09-15 20Y's sponsorship break by
+mechanism — dealer take-down (capacity, tenor-agnostic, predicted to transfer) vs indirect share
+(composition, term-premium-specific, predicted to stay a flat ~2pp residual at the belly). The
+capacity leg transferred exactly as predicted: dealer take-down is now the **second consecutive**
+above-norm print on this curve, following the 2Y's own 09-22 miss
+([sibling](treasury-2y-note-2026-09-22.md), 13.19% vs a 12.1% threshold) — two data points on a
+tenor-agnostic statistic is the pattern the mechanism argument needs, and it is building. The
+composition leg did **not** stay a residual: it deepened to a new multi-auction low on the same
+print, the exact observation this doc's own registration named as the discriminator between
+"residual" and "deepening trend." **Both of the doc's own registered horizon-table falsifiers
+fired on this one print** — "This month"'s (2Y dealer above 12.1%, fired 09-22) and "This
+quarter"'s (5Y indirect below 59.24%, fired today) — which means the "only the capacity leg
+travels" framing understated how broken this auction cycle's belly demand actually is: composition
+broke too, on the same auction, at the same time.
+
+**The registered kill switch for an extreme result into a hawkish FOMC aftermath fires.** Its
+condition — "tails well beyond the recent +0.9bp band with indirect at new multi-auction lows, and
+it lands into a hawkish-hold/hike FOMC aftermath" — is met on every clause: +3.1bp tail (vs a
+0.2–0.9bp recent band), a new 12-print indirect low, and the 2026-09-16 FOMC delivered exactly the
+hawkish 25bp hike this doc tracked through D-1. Per its own text this escalates the belly/rate side
+of the long-duration-tech duration-sensitivity guard from background context to an explicit
+same-day caution flag — banked here as this event's terminal finding rather than propagated live,
+since this event carries `symbols: []` and this lane may not edit another event's file; a symbol-
+keyed ledger picking up long-duration-tech sensitivity next inherits this print as a data point.
+
+**The call itself, scored against the tape.** The stand-aside, no-new-position guard held
+throughout this event's life: zero capital was deployed at any point across five pulses and a
+close-out, so nothing here needed correcting on the capital side regardless of how the analytical
+premises fared. What did not hold up is the D7 amendment's confidence that foreign demand was a
+flat residual rather than a live trend — it deepened on the very next print, at the same time the
+capacity leg it was paired against also failed a second consecutive tenor. **Level concession did
+not buy adequate demand.** The stop came in **+64.0bp** through August's 4.393% level (vs the
+~+43.7bp concession this doc was pricing at D7 off the 09-15 cash curve) and the auction still
+tailed 3.1bp with indirect at a new low — a materially larger concession than flagged, and still
+not enough to clear at or above the doc's own norms on any bidder-mix leg. **No forward test in
+this doc scores past this close-out** — both registered predictions settled today, so nothing
+carries this ledger into `forward-test-due`. This doc goes quiet after this entry per the close-out
+rule.
+
 **Last assessed:** 2026-09-20
 <!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":2} -->
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
+
+**Last assessed:** 2026-09-24 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
