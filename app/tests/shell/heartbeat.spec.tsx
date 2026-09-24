@@ -7,8 +7,15 @@ import { HeartbeatChip, HeartbeatSection } from "../../src/shell/heartbeat";
 let next: DeskHeartbeat = { available: false };
 const realFetch = globalThis.fetch;
 beforeEach(() => {
-  globalThis.fetch = (() =>
-    Promise.resolve(new Response(JSON.stringify(next), { status: 200 }))) as typeof fetch;
+  globalThis.fetch = ((url: string) =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify(
+          String(url).includes("/decisions") ? { available: true, kind: "bot", cycles: [] } : next,
+        ),
+        { status: 200 },
+      ),
+    )) as typeof fetch;
 });
 afterEach(() => {
   globalThis.fetch = realFetch;

@@ -8,6 +8,7 @@ import {
   sinceText,
   VERDICT_WORDS,
 } from "../live/heartbeat";
+import { DecisionsSection } from "./decisions-section";
 
 /**
  * THE BOT HEARTBEAT (#3687 slice 3, shapes A + B — Eric's pick 2026-09-24): a chip in the account
@@ -119,6 +120,15 @@ export function HeartbeatSection({ deskId }: { readonly deskId: string }): React
       <section className="hb-card">
         <h2 className="hb-h">What each playbook concluded on the last pass</h2>
         <VerdictTable playbooks={heartbeat.playbooks} />
+      </section>
+      <section className="hb-log">
+        <h2 className="hb-h">Passes that placed no trade — idle, blocked, halted</h2>
+        <p className="note">Passes that did trade open from their row on Activity.</p>
+        <DecisionsSection
+          deskId={deskId}
+          noTrades
+          emptyText="Every recorded pass placed a trade."
+        />
       </section>
     </div>
   );
