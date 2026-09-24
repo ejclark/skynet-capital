@@ -51,6 +51,9 @@ export interface NetWorthStatsView {
   readonly allTimeHigh?: AllTimeHighView;
   /** "$3,368" — the gain to a new high; absent at a high. */
   readonly toNewHigh?: string;
+  /** "33% idle" and its number, for the roster's deployed · idle bar (#3689 slice 10). */
+  readonly idle?: string;
+  readonly idlePct?: number;
 }
 
 export interface AccountNetWorthView extends NetWorthStatsView {

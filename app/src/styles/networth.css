@@ -115,3 +115,41 @@
     font-size: 24px;
   }
 }
+
+/* The All-accounts roster (#3689 slice 10, handoff 2b): the month as a sparkline, the month
+   against the S&P under its return, and deployed · idle as words over a thin bar (solid =
+   deployed, hatched = idle cash). */
+.roster-spark {
+  display: block;
+  width: 88px;
+  height: 24px;
+}
+.roster-vs {
+  display: block;
+  font-size: 11px;
+}
+.roster-idle {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 90px;
+}
+.roster-idle-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+.roster-idle-bar {
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-2) 0 3px,
+    color-mix(in srgb, var(--muted) 35%, var(--surface-2)) 3px 5px
+  );
+}
+.roster-idle-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}

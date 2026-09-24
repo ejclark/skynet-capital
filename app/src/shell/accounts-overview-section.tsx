@@ -8,6 +8,7 @@ import { LeagueCard } from "./league-card";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
+import { NewHighCeremony } from "./new-high-ceremony";
 import { useLens } from "./positions-lens";
 
 /**
@@ -60,6 +61,9 @@ export function OverviewSection({
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
     <div className="networth-detail">
+      {allAccounts ? null : (
+        <NewHighCeremony key={accountId} accountId={accountId} caption={caption} stats={stats} />
+      )}
       <div className="overview-hero">
         <NetWorthCard
           stats={stats}
@@ -84,7 +88,12 @@ export function OverviewSection({
         </p>
       )}
       {allAccounts ? (
-        <NetWorthRoster accounts={roster} />
+        <NetWorthRoster
+          accounts={roster}
+          decisionsById={
+            new Map((desks ?? []).map((d) => [d.desk.id, d.desk.decisions?.length ?? 0]))
+          }
+        />
       ) : lens === "map" ? null : (
         <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
       )}

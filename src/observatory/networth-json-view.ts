@@ -115,6 +115,23 @@ export interface NetWorthStatsView {
   readonly allTimeHigh?: AllTimeHighView;
   /** "$3,368" — the gain that would set a new high; absent at a high or when the high is unknown. */
   readonly toNewHigh?: string;
+  /** Cash as a share of the account (#3689 slice 10, the roster's deployed · idle bar): "33% idle"
+   *  plus the number for the bar. Absent when value or cash isn't known. */
+  readonly idle?: string;
+  readonly idlePct?: number;
+}
+
+/** "33% idle" — cash over total value, clamped to 0..100 for the bar. */
+function idleView(
+  equity: number | undefined,
+  cash: number | undefined,
+): {
+  idle?: string;
+  idlePct?: number;
+} {
+  if (typeof equity !== "number" || typeof cash !== "number" || equity <= 0) return {};
+  const pct = Math.min(100, Math.max(0, (cash / equity) * 100));
+  return { idle: `${pct.toFixed(0)}% idle`, idlePct: pct };
 }
 
 export interface AccountNetWorthView extends NetWorthStatsView {
@@ -246,6 +263,7 @@ export function netWorthStatsView(input: {
       windowView(input.windows[w.key], w.label, w.note, input.benchmark?.[w.key]),
     ),
     ...highView(input.equity, input.allTimeHigh, input.generatedAt ?? ""),
+    ...idleView(input.equity, input.cash),
   };
 }
 
@@ -312,6 +330,7 @@ function aggregateStats(
     onPaperTone: onPaperKnown ? plClass(totalOnPaper) : "flat",
     onPaperKnown,
     windows,
+    ...idleView(totalEquity, totalCash),
   };
 }
 

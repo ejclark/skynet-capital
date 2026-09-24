@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { AccountNetWorthView, NetWorthStatsView, NetWorthWindowView } from "../live/networth";
 import { GlossaryTerm } from "./glossary-term";
+import { RosterSparkline } from "./roster-sparkline";
 
 /**
  * The Accounts page's net-worth components (#2321) — the Cockpit's sticky at-a-glance
@@ -51,10 +52,19 @@ function NetWorthHero({
   );
 }
 
+/**
+ * The All-accounts roster (#3689 slice 10, handoff 2b): one row per owned account with its month
+ * as a sparkline, net worth, today, the month against the S&P, and how much of it is deployed
+ * versus idle (folded in here; there's no separate capital-by-account block). "Needs you" counts
+ * the account's open decision cards.
+ */
 export function NetWorthRoster({
   accounts,
+  decisionsById,
 }: {
   readonly accounts: readonly AccountNetWorthView[];
+  /** Open decision cards per account id, from the desks the page already loaded. */
+  readonly decisionsById?: ReadonlyMap<string, number>;
 }): ReactElement | null {
   if (accounts.length <= 1) return null;
   return (
@@ -63,47 +73,70 @@ export function NetWorthRoster({
         <thead>
           <tr>
             <th scope="col">Account</th>
+            <th scope="col">Last month</th>
             <th scope="col" className="num">
               Net worth
             </th>
             <th scope="col" className="num">
               Today
             </th>
-            {accounts[0]?.windows.map((w) => (
-              <th key={w.label} scope="col" className="num">
-                {w.label}
-              </th>
-            )) ?? null}
+            <th scope="col" className="num">
+              1M vs S&amp;P
+            </th>
+            <th scope="col">Deployed · idle</th>
+            <th scope="col" className="num">
+              Needs you
+            </th>
           </tr>
         </thead>
         <tbody>
-          {accounts.map((a) => (
-            <tr key={a.id}>
-              <th scope="row">
-                {a.name}{" "}
-                <span className={`chip chip-${a.kind}`}>{a.kind === "bot" ? "BOT" : "HUMAN"}</span>
-                {a.error ? <span className="desk-note"> · {a.error}</span> : null}
-              </th>
-              <td className="num">{a.value}</td>
-              <td className={`num tone-${a.dayTone}`}>{a.dayChange}</td>
-              {a.windows.map((w) => (
-                <td key={w.label} className={`num tone-${w.tone}`}>
-                  {w.value}
+          {accounts.map((a) => {
+            const month = a.windows.find((w) => w.label === "1M");
+            const moves = decisionsById?.get(a.id);
+            return (
+              <tr key={a.id}>
+                <th scope="row">
+                  {a.name}{" "}
+                  <span className={`chip chip-${a.kind}`}>
+                    {a.kind === "bot" ? "BOT" : "HUMAN"}
+                  </span>
+                  {a.error ? <span className="desk-note"> · {a.error}</span> : null}
+                </th>
+                <td>
+                  <RosterSparkline accountId={a.id} />
                 </td>
-              ))}
-            </tr>
-          ))}
+                <td className="num">{a.value}</td>
+                <td className={`num tone-${a.dayTone}`}>{a.dayChange}</td>
+                <td className="num">
+                  <span className={`tone-${month?.tone ?? "flat"}`}>{month?.value ?? "—"}</span>
+                  {month?.vsBenchmark ? (
+                    <span className={`roster-vs tone-${month.vsBenchmarkTone ?? "flat"}`}>
+                      {month.vsBenchmark}
+                    </span>
+                  ) : null}
+                </td>
+                <td>
+                  {a.idle !== undefined && a.idlePct !== undefined ? (
+                    <span className="roster-idle">
+                      <span className="roster-idle-text">{a.idle}</span>
+                      <span className="roster-idle-bar" aria-hidden="true">
+                        <span style={{ width: `${(100 - a.idlePct).toFixed(1)}%` }} />
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="desk-note">—</span>
+                  )}
+                </td>
+                <td className="num">{moves === undefined ? "—" : moves}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-/** The Cockpit's sticky at-a-glance — a condensed net-worth hero that stays visible while the
- *  section detail (Positions, Activity, roster) scrolls below. Shows the total value, the day's
- *  move, and ROI pills (7D/1M/3M/1Y); the cash/position detail and the per-account roster live in
- *  the Summary section body, not here, so the sticky bar stays compact. Same server-formatted
- *  strings as {@link NetWorthHero}, placed tighter for a bar that never leaves the viewport. */
 export function NetWorthCondensed({
   stats,
   caption,

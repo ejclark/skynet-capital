@@ -181,3 +181,15 @@ describe("accountsNetWorthView", () => {
     expect(oneMissing.total?.bookedPl).toBe("—");
   });
 });
+
+describe("idle share (#3689 slice 10)", () => {
+  it("says how much of each account, and the book, sits in cash", () => {
+    const view = accountsNetWorthView("t", [
+      account({ id: "a", equity: 100_000, cash: 33_000 }),
+      account({ id: "b", equity: 100_000, cash: 0 }),
+    ]);
+    expect(view.accounts[0]).toMatchObject({ idle: "33% idle", idlePct: 33 });
+    expect(view.accounts[1]).toMatchObject({ idle: "0% idle" });
+    expect(view.total).toMatchObject({ idle: "17% idle" });
+  });
+});
