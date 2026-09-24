@@ -20,6 +20,8 @@ export interface LeagueReading {
   /** Top N, then (after a gap marker) any owned rows below it, in rank order. */
   readonly top: readonly LeagueLine[];
   readonly below: readonly LeagueLine[];
+  /** The viewer's own rank, for the phone's one-line league (#3689 slice 8). */
+  readonly meRank?: number;
   /** The sentence under the ladder, or undefined when the viewer isn't on the board. */
   readonly gap?: {
     readonly leading: boolean;
@@ -57,10 +59,11 @@ export function readLeague(
   const me = ranked.find((l) => l.row.key === meId) ?? ranked.find((l) => l.owned) ?? undefined;
   if (!me) return { top, below };
   const ahead = ranked[me.rank - 2];
-  if (!ahead) return { top, below, gap: { leading: true } };
+  if (!ahead) return { top, below, meRank: me.rank, gap: { leading: true } };
   return {
     top,
     below,
+    meRank: me.rank,
     gap: {
       leading: false,
       amount: formatGap(ahead.row.sortValue - me.row.sortValue, metric),

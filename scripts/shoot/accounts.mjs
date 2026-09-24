@@ -3,6 +3,8 @@
 // shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
 // expanded. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
+
+import { join } from "node:path";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -709,24 +711,30 @@ await page.setViewportSize({ width: 390, height: 844 });
 // the cash/position detail, and the hero chart (#3186 slice 2). Single account (Eric) first.
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".hero-chart-legend").waitFor();
+await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
+
+// The whole phone Overview in one tall frame (#3689 slice 8, handoff 3b): value and one line,
+// the league as a line, the money card, one decision card, then positions as cards.
+await page.locator(".pos-cards").waitFor();
+await page.screenshot({
+  path: join(out, "accounts-phone-full.jpg"),
+  type: "jpeg",
+  quality: 50,
+  fullPage: true,
+});
+console.log(`shot ${join(out, "accounts-phone-full.jpg")}`);
 
 // Needs a decision (#3689 slice 7): the card with its details open, scrolled into view.
 await page.locator(".decisions").scrollIntoViewIfNeeded();
 await page.getByRole("button", { name: /Why, and details/ }).click();
 await shootCockpit("accounts-decision-phone");
 
-// Positions section — the blotter below the sticky header.
+// Positions at phone width (#3689 slice 8): one card per position, not the wide table. The lot
+// breakdown lives in the wide table, so its frame moved to the desktop pass below.
 await page.goto(`${origin}/app/accounts?section=positions`);
-await page.getByText("Nvidia").first().waitFor();
+await page.locator(".pos-card").first().scrollIntoViewIfNeeded();
 await shootCockpit("accounts-positions-phone");
-
-// Lot breakdown (#3186 slice 1) — expand the NVDA call's lot accordion: two lots sharing the
-// parent row's exact columns, each with its own Close this buy / Roll actions.
-await page.getByRole("button", { name: /buys for NVDA Sep 18 180 Call/ }).click();
-await page.getByText("$1,484").waitFor();
-await shootCockpit("accounts-positions-lots-phone");
 
 // Activity section — the order timeline below the sticky header. Waits on the Symbol column
 // (always visible) rather than Status, which lives in a `col-detail` cell hidden at phone width.
@@ -744,9 +752,15 @@ await page.setViewportSize({ width: 1280, height: 900 });
 
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".hero-chart-legend").waitFor();
+await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await page.locator(".decisions").waitFor();
 await shootCockpit("accounts-summary-desktop");
+
+// Lot breakdown (#3186 slice 1) in the wide table: the NVDA call's two buys, each with its own
+// Close this buy / Roll actions.
+await page.getByRole("button", { name: /buys for NVDA Sep 18 180 Call/ }).click();
+await page.getByText("$1,484").waitFor();
+await shootCockpit("accounts-positions-lots-desktop");
 
 // Glossary (#3689 slice 2): the plain label "Locked in" with its explanation opened by focus.
 await page.getByRole("button", { name: "Locked in" }).focus();
@@ -768,7 +782,7 @@ await page.mouse.move(0, 0);
 await page.setViewportSize({ width: 1600, height: 1000 });
 await page.goto(`${origin}/app/accounts`);
 await page.locator(".league-card").waitFor();
-await page.locator(".hero-chart-legend").waitFor();
+await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-wide-desktop");
 
 // Needs a decision at 1600 (#3689 slice 7): the at-risk card, details open, range bar with "now".

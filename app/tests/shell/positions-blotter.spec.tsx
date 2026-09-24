@@ -85,7 +85,8 @@ describe("PositionsBlotter", () => {
         />,
       ),
     );
-    expect(screen.getByText("MSFT put")).toBeInTheDocument();
+    // The table and the phone's cards (#3689 slice 8) both list what the filter kept.
+    expect(screen.getAllByText("MSFT put").length).toBeGreaterThan(0);
     expect(screen.queryByText("SPY")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Options" })).toHaveAttribute("aria-pressed", "true");
   });

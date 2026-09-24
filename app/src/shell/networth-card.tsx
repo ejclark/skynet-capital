@@ -58,6 +58,9 @@ export function NetWorthCard({
     [high],
   );
   const toHigh = high ? 1 / (1 + high.aboveNow) : undefined;
+  // The phone's one line (#3689 slice 8, handoff 3b): today, this month, and the month against
+  // the S&P. The stats, windows table, chart and footer stay on wider screens.
+  const month = stats.windows.find((w) => w.label === "1M" && w.known);
 
   return (
     <section
@@ -70,6 +73,23 @@ export function NetWorthCard({
           {whole}
           {cents ? <span className="nw-cents">{cents}</span> : null}
         </span>
+        <p className="nw-phone-line">
+          <span className={`num tone-${stats.dayTone}`}>{stats.dayChange}</span> today
+          {month ? (
+            <>
+              {" · "}
+              <span className={`num tone-${month.tone}`}>{month.value}</span> this month
+              {month.vsBenchmark ? (
+                <>
+                  {" · "}
+                  <span className={`num tone-${month.vsBenchmarkTone ?? "flat"}`}>
+                    {month.vsBenchmark}
+                  </span>
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </p>
         <div className="nw-stats">
           <Stat label="Today" value={stats.dayChange} tone={stats.dayTone} />
           <Stat

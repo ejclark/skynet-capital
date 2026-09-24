@@ -138,3 +138,32 @@
     align-items: start;
   }
 }
+
+/* Phone (#3689 slice 8): the league as one tappable line. */
+.league-oneliner {
+  display: none;
+}
+@media (max-width: 700px) {
+  .league-card {
+    padding: 0;
+  }
+  .league-card .league-head,
+  .league-card .league-list,
+  .league-card .league-foot {
+    display: none;
+  }
+  .league-oneliner {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .league-oneliner span {
+    margin-left: auto;
+    color: var(--muted);
+  }
+}

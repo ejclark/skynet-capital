@@ -38,6 +38,10 @@ const lockIn = decision({
   range: undefined,
 });
 
+/** The header's › (the phone's copy in the action row is CSS-hidden on wide screens; jsdom has
+ *  no CSS, so both are in the tree). */
+const next = () => screen.getAllByRole("button", { name: "Next decision" })[0] as HTMLElement;
+
 const wrap = (ui: ReactElement) =>
   render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
 
@@ -48,9 +52,9 @@ describe("DecisionPager", () => {
     wrap(<DecisionPager accountId="eric" decisions={[decision({}), lockIn]} />);
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
     expect(screen.getByText("Down 55% from what you paid")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next decision" }));
+    fireEvent.click(next());
     expect(screen.getByText("Up 30%: consider locking some of it in")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next decision" }));
+    fireEvent.click(next());
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
   });
 
@@ -66,7 +70,7 @@ describe("DecisionPager", () => {
     wrap(<DecisionPager accountId="eric" decisions={[decision({}), lockIn]} />);
     fireEvent.click(screen.getByRole("button", { name: /Why, and details/ }));
     expect(screen.getByText("Expires in 24 days")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next decision" }));
+    fireEvent.click(next());
     expect(screen.getByRole("button", { name: /Why, and details/ })).toHaveAttribute(
       "aria-expanded",
       "true",

@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useId, useMemo } from "react";
 import { type DeskPosition, matchesFilter, parseDeskQuery, toggleQualifier } from "../live/desk";
 import { fetchOptionPositions, type OptionPositions } from "../live/options";
+import { PositionCards } from "./position-cards";
 import { PositionsTable } from "./positions-table";
 import { ViewTabs } from "./view-tabs";
 
@@ -136,12 +137,17 @@ export function PositionsBlotter({
     <>
       <ViewTabs deskId={deskId} query={query} onPick={onFilterChange} />
       <PositionsFilterBar query={query} onChange={onFilterChange} />
-      <PositionsTable
-        positions={shown}
-        deskId={deskId}
-        totalCount={positions.length}
-        decayBySymbol={decay}
-      />
+      <div className="pos-blotter">
+        <PositionsTable
+          positions={shown}
+          deskId={deskId}
+          totalCount={positions.length}
+          decayBySymbol={decay}
+        />
+        {shown.length > 0 ? (
+          <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
+        ) : null}
+      </div>
     </>
   );
 }
