@@ -247,11 +247,12 @@ function CockpitBody({
   if (section === "decisions") return <DecisionsSection deskId={accountId} />;
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
   if (section === "overview") {
-    const { stats, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
+    const { stats, caption, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
     const considerations = desks.data?.[0]?.desk.considerations ?? [];
     return (
       <OverviewSection
         stats={stats}
+        caption={caption}
         allAccounts={allAccounts}
         roster={roster}
         loading={networth.isPending}
@@ -310,7 +311,7 @@ function AccountsBody({
             isDefault={isDefault}
             onToggleDefault={onToggleDefault}
           />
-          {stats ? (
+          {section === "overview" ? null : stats ? (
             <NetWorthCondensed stats={stats} caption={caption} />
           ) : (
             <p className="note">

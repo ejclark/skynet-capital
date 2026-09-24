@@ -14,6 +14,9 @@ const base: NetWorthStatsView = {
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
+  onPaper: "—",
+  onPaperTone: "flat",
+  onPaperKnown: false,
   windows: [],
 };
 

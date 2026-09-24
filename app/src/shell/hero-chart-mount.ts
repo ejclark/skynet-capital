@@ -37,6 +37,28 @@ function toPercentPoints(points: readonly LineData[]): LineData[] {
   return points.map((p) => ({ ...p, value: Number(p.value) * 100 }));
 }
 
+/** The all-time-high reference line (#3689): its label, and how far above TODAY's value it sits
+ *  (a fraction; 0 at a new high). The mount places it on the range's own %-return scale. */
+export interface HighLine {
+  readonly label: string;
+  readonly aboveNow: number;
+}
+
+/** Where the high sits on a range whose last point is `lastReturn`: today is `(1 + lastReturn)` ×
+ *  the range's start, the high is `(1 + aboveNow)` × today. A fraction, like every point here. */
+export function highLineReturn(lastReturn: number, aboveNow: number): number {
+  return (1 + lastReturn) * (1 + aboveNow) - 1;
+}
+
+/** `#rrggbb` at an alpha, as `rgba()` — the canvas takes plain colour strings, not `color-mix()`.
+ *  Anything that isn't a 6-digit hex passes through unchanged (full strength beats no line). */
+function withAlpha(color: string, alpha: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color.trim());
+  if (!m) return color;
+  const [r, g, b] = [m[1], m[2], m[3]].map((h) => Number.parseInt(h ?? "0", 16));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 /** Mount the portfolio + benchmark overlay into `container`. `extra` merges over the base chart
  *  options, same escape hatch `mountBarsChart` offers for the deliberate mount smoke test. */
 export function mountHeroChart(
@@ -44,6 +66,7 @@ export function mountHeroChart(
   series: OverlaySeries,
   palette: ChartPalette,
   extra: DeepPartial<ChartOptions> = {},
+  high?: HighLine,
 ): MountedHeroChart {
   const { layout: extraLayout, ...extraRest } = extra;
   const chart: IChartApi = createChart(container, {
@@ -75,6 +98,18 @@ export function mountHeroChart(
     priceLineVisible: false,
   });
   portfolioSeries.setData(toPercentPoints(series.portfolio));
+
+  // The high: dashed "charged" warm-white at half strength. Emphasis, never P/L direction; the
+  // dash, not the hue, is what separates it from the lines. It sits on the portfolio's scale.
+  if (high && latestPortfolio) {
+    portfolioSeries.createPriceLine({
+      price: highLineReturn(Number(latestPortfolio.value), high.aboveNow) * 100,
+      color: withAlpha(palette.charged ?? palette.accent, 0.5),
+      lineStyle: LineStyle.Dashed,
+      lineWidth: 1,
+      axisLabelVisible: false,
+    });
+  }
 
   const benchmarkSeries = chart.addSeries(LineSeries, {
     color: palette.text,

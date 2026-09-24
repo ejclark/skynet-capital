@@ -44,6 +44,8 @@ export interface ChartPalette extends ChartTone {
   readonly text: string;
   readonly border: string;
   readonly accent: string;
+  /** BRAND.md's "charged" highlight — the hero chart's all-time-high line (#3689). */
+  readonly charged?: string;
 }
 
 const FALLBACK: ChartPalette = {
@@ -66,6 +68,7 @@ export function readChartPalette(root: HTMLElement = document.documentElement): 
     text: token("--muted", FALLBACK.text),
     border: token("--border", FALLBACK.border),
     accent: token("--accent", FALLBACK.accent),
+    charged: token("--charged", "#eafffa"),
   };
 }
 

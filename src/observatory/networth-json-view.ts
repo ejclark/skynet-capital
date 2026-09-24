@@ -56,7 +56,14 @@ export interface AccountNetWorthInput {
   /** Present when the account read failed; the row carries the honest reason and is excluded from totals. */
   readonly error?: string;
   readonly windows: Record<NetWorthWindowKey, NetWorthWindowInput>;
+  /** The mark on what's still held (Σ market value − cost), from the board snapshot. */
+  readonly unrealizedPl?: number;
+  /** Highest daily-close equity in the account's whole history (#3689), with its date. */
+  readonly allTimeHigh?: { readonly value: number; readonly at: string };
 }
+
+/** SPY's return per window (`benchmark-returns.ts`); a window it doesn't cover is absent. */
+export type BenchmarkInput = Partial<Record<NetWorthWindowKey, number>>;
 
 export interface NetWorthWindowView {
   readonly label: string;
@@ -67,6 +74,21 @@ export interface NetWorthWindowView {
   readonly known: boolean;
   /** True on an aggregate window computed over a SUBSET of live accounts — the note says so. */
   readonly partial?: boolean;
+  /** "+2.3 pts vs S&P" — this window's return minus SPY's (#3689). Absent when either is unknown. */
+  readonly vsBenchmark?: string;
+  readonly vsBenchmarkTone?: Tone;
+}
+
+/** The all-time high the hero draws as a reference line (#3689). Absent for the aggregate — a sum
+ *  of per-account highs set on different days was never the book's high. */
+export interface AllTimeHighView {
+  /** "$1,051,200". */
+  readonly value: string;
+  /** "9/19" — the day it was set. */
+  readonly at: string;
+  /** The high as a fraction ABOVE today's value (0.0032 = 0.32% above; 0 at a new high), so the
+   *  chart can place the line on its own %-return scale without the browser re-deriving dollars. */
+  readonly aboveNow: number;
 }
 
 export interface NetWorthStatsView {
@@ -85,7 +107,14 @@ export interface NetWorthStatsView {
   readonly bookedPl: string;
   readonly bookedTone: Tone;
   readonly bookedKnown: boolean;
+  /** Unrealized P/L — the mark on what's still held ("on paper" in the UI). "—" when unknown. */
+  readonly onPaper: string;
+  readonly onPaperTone: Tone;
+  readonly onPaperKnown: boolean;
   readonly windows: readonly NetWorthWindowView[];
+  readonly allTimeHigh?: AllTimeHighView;
+  /** "$3,368" — the gain that would set a new high; absent at a high or when the high is unknown. */
+  readonly toNewHigh?: string;
 }
 
 export interface AccountNetWorthView extends NetWorthStatsView {
@@ -102,16 +131,63 @@ export interface AccountsNetWorthView {
   readonly total: NetWorthStatsView | null;
 }
 
+/** "+2.3 pts vs S&P" for a window's return against SPY's; nothing when either side is unknown. */
+function vsBenchmark(
+  r: number,
+  bench: number | undefined,
+): { vsBenchmark?: string; vsBenchmarkTone?: Tone } {
+  if (bench === undefined || !Number.isFinite(bench)) return {};
+  const pts = Math.round((r - bench) * 1000) / 10;
+  return {
+    vsBenchmark: `${pts >= 0 ? "+" : ""}${pts.toFixed(1)} pts vs S&P`,
+    vsBenchmarkTone: plClass(pts),
+  };
+}
+
 function windowView(
   input: NetWorthWindowInput | undefined,
   label: string,
   note: string,
+  bench?: number,
 ): NetWorthWindowView {
   const r = input?.returnFraction;
   if (r === undefined || !Number.isFinite(r)) {
     return { label, note, value: "—", tone: "flat", known: false };
   }
-  return { label, note, value: pct(r * 100), tone: plClass(r), known: true };
+  return {
+    label,
+    note,
+    value: pct(r * 100),
+    tone: plClass(r),
+    known: true,
+    ...vsBenchmark(r, bench),
+  };
+}
+
+/** "9/19" in UTC — the day a high was set. */
+function monthDay(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+
+/** The high line and the gap to it. The live value can sit above the last recorded close, so
+ *  the high is whichever is greater, and "at a new high" means no gap to show. */
+function highView(
+  equity: number | undefined,
+  high: { readonly value: number; readonly at: string } | undefined,
+  generatedAt: string,
+): { allTimeHigh?: AllTimeHighView; toNewHigh?: string } {
+  if (typeof equity !== "number" || !high || !Number.isFinite(high.value) || equity <= 0) return {};
+  const atNewHigh = equity >= high.value;
+  const value = atNewHigh ? equity : high.value;
+  return {
+    allTimeHigh: {
+      value: formatCurrency(value),
+      at: monthDay(atNewHigh ? generatedAt : high.at),
+      aboveNow: atNewHigh ? 0 : value / equity - 1,
+    },
+    ...(atNewHigh ? {} : { toNewHigh: formatCurrency(value - equity) }),
+  };
 }
 
 /** The day move as one "amount · percent" string, or "—" when the previous close isn't known. */
@@ -136,7 +212,11 @@ export function netWorthStatsView(input: {
   readonly positionCount: number;
   readonly lastEquity?: number;
   readonly realizedPl?: number;
+  readonly unrealizedPl?: number;
+  readonly allTimeHigh?: { readonly value: number; readonly at: string };
   readonly windows: Record<NetWorthWindowKey, NetWorthWindowInput>;
+  readonly benchmark?: BenchmarkInput;
+  readonly generatedAt?: string;
 }): NetWorthStatsView {
   const valueKnown = typeof input.equity === "number";
   const cashKnown = typeof input.cash === "number";
@@ -145,6 +225,8 @@ export function netWorthStatsView(input: {
     ? dayChangeView(input.equity as number, input.lastEquity as number)
     : undefined;
   const bookedKnown = typeof input.realizedPl === "number" && Number.isFinite(input.realizedPl);
+  const onPaperKnown =
+    typeof input.unrealizedPl === "number" && Number.isFinite(input.unrealizedPl);
   return {
     value: valueKnown ? formatCurrency(input.equity as number) : "—",
     valueKnown,
@@ -157,13 +239,22 @@ export function netWorthStatsView(input: {
     bookedPl: bookedKnown ? formatSigned(input.realizedPl as number) : "—",
     bookedTone: bookedKnown ? plClass(input.realizedPl as number) : "flat",
     bookedKnown,
-    windows: NET_WORTH_WINDOWS.map((w) => windowView(input.windows[w.key], w.label, w.note)),
+    onPaper: onPaperKnown ? formatSigned(input.unrealizedPl as number) : "—",
+    onPaperTone: onPaperKnown ? plClass(input.unrealizedPl as number) : "flat",
+    onPaperKnown,
+    windows: NET_WORTH_WINDOWS.map((w) =>
+      windowView(input.windows[w.key], w.label, w.note, input.benchmark?.[w.key]),
+    ),
+    ...highView(input.equity, input.allTimeHigh, input.generatedAt ?? ""),
   };
 }
 
 /** The "all accounts" aggregate — sums equity/cash/positions, and lifts each window's flow-adjusted
  *  return to the book level as `Σend / Σbase − 1` over the accounts that reported it. */
-function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsView {
+function aggregateStats(
+  live: readonly AccountNetWorthInput[],
+  benchmark: BenchmarkInput,
+): NetWorthStatsView {
   const totalEquity = live.reduce((sum, a) => sum + (a.equity ?? 0), 0);
   const totalCash = live.reduce((sum, a) => sum + (a.cash ?? 0), 0);
   const positionCount = live.reduce((sum, a) => sum + a.positionCount, 0);
@@ -171,6 +262,8 @@ function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsVie
   // honesty the day move applies: a partial sum would understate what's actually been booked.
   const bookedKnown = live.every((a) => typeof a.realizedPl === "number");
   const totalBooked = bookedKnown ? live.reduce((sum, a) => sum + (a.realizedPl ?? 0), 0) : 0;
+  const onPaperKnown = live.every((a) => typeof a.unrealizedPl === "number");
+  const totalOnPaper = onPaperKnown ? live.reduce((sum, a) => sum + (a.unrealizedPl ?? 0), 0) : 0;
   // The day move is known only when EVERY live account knows its previous close — one unknown
   // account makes a partial sum misstate the book, so the honest answer is "—".
   const dayKnown = live.every((a) => typeof a.lastEquity === "number" && a.lastEquity !== 0);
@@ -200,6 +293,7 @@ function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsVie
       tone: plClass(r),
       known: true,
       ...(reporting.length < live.length ? { partial: true } : {}),
+      ...vsBenchmark(r, benchmark[w.key]),
     };
   });
   return {
@@ -214,6 +308,9 @@ function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsVie
     bookedPl: bookedKnown ? formatSigned(totalBooked) : "—",
     bookedTone: bookedKnown ? plClass(totalBooked) : "flat",
     bookedKnown,
+    onPaper: onPaperKnown ? formatSigned(totalOnPaper) : "—",
+    onPaperTone: onPaperKnown ? plClass(totalOnPaper) : "flat",
+    onPaperKnown,
     windows,
   };
 }
@@ -222,6 +319,7 @@ function aggregateStats(live: readonly AccountNetWorthInput[]): NetWorthStatsVie
 export function accountsNetWorthView(
   generatedAt: string,
   inputs: readonly AccountNetWorthInput[],
+  benchmark: BenchmarkInput = {},
 ): AccountsNetWorthView {
   const accounts: AccountNetWorthView[] = inputs.map((a) => ({
     id: a.id,
@@ -239,13 +337,13 @@ export function accountsNetWorthView(
             lastEquity: undefined,
             windows: emptyWindowsInput(),
           }
-        : a,
+        : { ...a, benchmark, generatedAt },
     ),
   }));
   const live = inputs.filter((a) => a.error === undefined && typeof a.equity === "number");
   return {
     generatedAt,
     accounts,
-    total: live.length === 0 ? null : aggregateStats(live),
+    total: live.length === 0 ? null : aggregateStats(live, benchmark),
   };
 }
