@@ -791,6 +791,20 @@ await page.getByRole("button", { name: /Why, and details/ }).click();
 await page.mouse.move(0, 0);
 await shootCockpit("accounts-decision-desktop");
 
+// Map lens (#3689 slice 9, handoff 3c): the treemap with the options strip and the stacked
+// decisions column; then the Runway (slice 10's lens, built alongside).
+await page.goto(`${origin}/app/accounts?lens=map`);
+await page.locator(".map-tree").scrollIntoViewIfNeeded();
+await page.mouse.move(0, 0);
+// The hatched cash tile is detail-heavy for JPEG; a lower quality keeps this frame under 100KB.
+await page.screenshot({ path: join(out, "accounts-map-desktop.jpg"), type: "jpeg", quality: 45 });
+console.log(`shot ${join(out, "accounts-map-desktop.jpg")}`);
+await page.goto(`${origin}/app/accounts?lens=runway`);
+await page.locator(".runway").scrollIntoViewIfNeeded();
+await shootCockpit("accounts-runway-desktop");
+await page.goto(`${origin}/app/accounts`);
+await page.locator(".decisions").waitFor();
+
 // The positions table at 1600 (#3689 slice 6): plain names, expiry in days, decay, breakeven,
 // best / worst case, with the Breakeven glossary open.
 await page.locator(".blotter-card").first().scrollIntoViewIfNeeded();

@@ -2,9 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId, useMemo } from "react";
-import { type DeskPosition, matchesFilter, parseDeskQuery, toggleQualifier } from "../live/desk";
+import {
+  type Decision,
+  type DeskAllocation,
+  type DeskPosition,
+  matchesFilter,
+  parseDeskQuery,
+  toggleQualifier,
+} from "../live/desk";
 import { fetchOptionPositions, type OptionPositions } from "../live/options";
 import { PositionCards } from "./position-cards";
+import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
 import { ViewTabs } from "./view-tabs";
 
@@ -116,11 +124,21 @@ export function PositionsBlotter({
   positions,
   query,
   onFilterChange,
+  lens,
+  onLensChange,
+  allocation,
+  decisions = [],
 }: {
   readonly deskId: string;
   readonly positions: readonly DeskPosition[];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  /** List · Map · Runway (#3689 slice 9). Omitted where the lens switch doesn't apply (`/u/:id`). */
+  readonly lens?: Lens;
+  readonly onLensChange?: (next: Lens) => void;
+  /** The Map lens sizes cash from it; without one, Map falls back to List. */
+  readonly allocation?: DeskAllocation;
+  readonly decisions?: readonly Decision[];
 }): ReactElement {
   const filter = parseDeskQuery(query);
   const shown = positions.filter((p) => matchesFilter(p, filter));
@@ -133,21 +151,36 @@ export function PositionsBlotter({
     staleTime: 30_000,
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
+  const view = lens === "map" && !allocation ? "list" : (lens ?? "list");
   return (
     <>
+      {lens && onLensChange ? (
+        <div className="positions-head">
+          <h2 className="positions-title">
+            Positions <span className="num">{positions.length}</span>
+          </h2>
+          <LensSwitch lens={view} onChange={onLensChange} />
+        </div>
+      ) : null}
       <ViewTabs deskId={deskId} query={query} onPick={onFilterChange} />
       <PositionsFilterBar query={query} onChange={onFilterChange} />
-      <div className="pos-blotter">
-        <PositionsTable
-          positions={shown}
-          deskId={deskId}
-          totalCount={positions.length}
-          decayBySymbol={decay}
-        />
-        {shown.length > 0 ? (
-          <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
-        ) : null}
-      </div>
+      {view === "map" && allocation ? (
+        <MapLens positions={shown} allocation={allocation} decisions={decisions} />
+      ) : view === "runway" ? (
+        <RunwayLens positions={shown} />
+      ) : (
+        <div className="pos-blotter">
+          <PositionsTable
+            positions={shown}
+            deskId={deskId}
+            totalCount={positions.length}
+            decayBySymbol={decay}
+          />
+          {shown.length > 0 ? (
+            <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />
+          ) : null}
+        </div>
+      )}
     </>
   );
 }

@@ -8,6 +8,7 @@ import { LeagueCard } from "./league-card";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
+import { useLens } from "./positions-lens";
 
 /**
  * ACCOUNTS' OVERVIEW SECTION — Summary's old cash/position detail and per-account roster, then the
@@ -53,6 +54,8 @@ export function OverviewSection({
 }): ReactElement {
   // One account's desk carries the Money strip's allocation (#3689 slice 5).
   const singleDesk = allAccounts ? undefined : desks?.[0]?.desk;
+  // The Map lens stacks the decisions beside the map (handoff 3c), so the pager steps aside.
+  const [lens] = useLens();
   if (loading) return <p className="note">Reading your net worth…</p>;
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
@@ -82,7 +85,7 @@ export function OverviewSection({
       )}
       {allAccounts ? (
         <NetWorthRoster accounts={roster} />
-      ) : (
+      ) : lens === "map" ? null : (
         <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
       )}
       {desksLoading ? (

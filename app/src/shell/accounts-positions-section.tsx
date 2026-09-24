@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { DeskSnapshot } from "../live/desk";
 import { LandmarkHero } from "./landmark-hero";
 import { NewTradeCard, PositionsBlotter } from "./positions-blotter";
+import { useLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
 
 /**
@@ -24,6 +25,7 @@ function SingleAccountPositions({
   readonly onFilterChange: (next: string) => void;
 }): ReactElement {
   const { desk: d, landmark } = desk;
+  const [lens, setLens] = useLens();
   return (
     <>
       {landmark && !d.error ? (
@@ -38,6 +40,10 @@ function SingleAccountPositions({
             positions={d.positions}
             query={query}
             onFilterChange={onFilterChange}
+            lens={lens}
+            onLensChange={setLens}
+            {...(d.allocation ? { allocation: d.allocation } : {})}
+            decisions={d.decisions ?? []}
           />
           <NewTradeCard deskId={d.id} />
         </>
