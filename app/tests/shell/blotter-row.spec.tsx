@@ -61,7 +61,9 @@ describe("BlotterRow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Detail for/ }));
 
-    expect(screen.getByText("Cost / share")).toBeInTheDocument();
+    // The fold carries what the narrow table hides (#3689 slice 6).
+    expect(screen.getByText("Cost basis")).toBeInTheDocument();
+    expect(screen.getByText("Best / worst case")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Detail for/ })).toHaveAttribute(
       "aria-expanded",
       "true",
@@ -124,7 +126,7 @@ describe("BlotterRow", () => {
 
     it("starts with the lot rows collapsed", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      expect(screen.queryByText("$49,005")).not.toBeInTheDocument();
+      expect(screen.queryByText("$49,995")).not.toBeInTheDocument();
     });
 
     it("renders no visible 'lots' label — the whole symbol header is the trigger", () => {
@@ -137,8 +139,9 @@ describe("BlotterRow", () => {
 
       fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
 
-      expect(screen.getByText("$49,005")).toBeInTheDocument();
-      expect(screen.getByText("$50,495")).toBeInTheDocument();
+      // Each lot's own value in the parent's Value column (#3689 slice 6 retired cost basis there).
+      expect(screen.getByText("$49,995")).toBeInTheDocument();
+      expect(screen.getByText("$50,500")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Close all" })).toBeInTheDocument();
       // A lot row trades the symbol column for its opened-at date — no "Lot ·" label filler,
       // no raw fill history (BUY/SELL): only what's still on the ledger, header-aligned.
@@ -211,5 +214,49 @@ describe("BlotterRow", () => {
       expect(rollButtons).toHaveLength(1);
       for (const button of rollButtons) expect(button).toBeDisabled();
     });
+  });
+});
+
+describe("BlotterRow plain columns (#3689 slice 6)", () => {
+  const put = {
+    symbol: "TSLA261017P00400000",
+    display: "TSLA Oct 17 400 Put",
+    detail: "8 ct",
+    isOption: true,
+    quantity: "8",
+    costPerShare: "$1,410.00",
+    price: "$630.00",
+    costBasis: "$11,280",
+    value: "$5,040",
+    dayPl: "-$320",
+    dayPct: "-6.0%",
+    dayTone: "neg" as const,
+    totalPl: "-$6,240",
+    totalPlRaw: -6240,
+    returnPct: "-55.3%",
+    totalTone: "neg" as const,
+    weightPct: 2,
+    plainName: "Put option · profits if TSLA falls",
+    expiresIn: "24 days",
+    expiresInDays: 24,
+    breakeven: "$385.90",
+    best: "+$308,720",
+    worst: "−$11,280",
+  };
+
+  it("says what the position bets on, when it expires, and its best and worst case", () => {
+    render(inTable(<BlotterRow position={put} deskId="eric" decay="−$64/day" />));
+    expect(screen.getByText("Put option · profits if TSLA falls")).toBeInTheDocument();
+    expect(screen.getByText("24 days")).toBeInTheDocument();
+    expect(screen.getByText("−$64/day")).toHaveClass("tone-neg");
+    expect(screen.getByText("$385.90")).toBeInTheDocument();
+    expect(screen.getByText("+$308,720")).toHaveClass("tone-pos");
+    expect(screen.getByText("−$11,280")).toHaveClass("tone-neg");
+  });
+
+  it("reads '—' for decay when the feed hasn't quoted the contract, never a made-up zero", () => {
+    render(inTable(<BlotterRow position={put} deskId="eric" />));
+    const decayCell = screen.getByText("24 days").closest("td")?.nextElementSibling;
+    expect(decayCell).toHaveTextContent("—");
   });
 });

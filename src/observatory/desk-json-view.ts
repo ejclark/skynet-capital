@@ -23,6 +23,7 @@ import {
   type ParticipantSnapshot,
   unrealizedPl,
 } from "./participant-snapshot.js";
+import { type PlainPosition, plainPosition } from "./position-plain.js";
 import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
 
 /**
@@ -61,7 +62,7 @@ export interface PositionLot {
   readonly totalTone: Tone;
 }
 
-interface DeskPositionView {
+interface DeskPositionView extends PlainPosition {
   readonly symbol: string;
   readonly display: string;
   readonly detail: string;
@@ -216,7 +217,10 @@ export function deskView(
   snapshot: ParticipantSnapshot,
   ledger?: RoundTripLedger,
   playbooks: readonly PlaybookStoreEntry[] = [],
+  /** The clock for "expires in N days" (#3689 slice 6); the server's `config.now`, pinned in specs. */
+  clock: () => Date = () => new Date(),
 ): DeskView {
+  const now = clock();
   const invested = participantInvested(snapshot);
   const unrealized = participantUnrealized(snapshot);
   const returnOnCost = invested > 0 ? (unrealized / invested) * 100 : 0;
@@ -240,6 +244,7 @@ export function deskView(
         returnPct: basis > 0 ? (pl / basis) * 100 : null,
       });
       return {
+        ...plainPosition(position, now),
         symbol: position.symbol,
         display,
         // Stock positions get no detail line — "common shares" was a static label that never

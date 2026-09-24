@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { DeskPosition } from "../live/desk";
 import { BlotterRow } from "./blotter-row";
+import { GlossaryTerm } from "./glossary-term";
 
 /**
  * The positions blotter (#738 phase 2c, extracted #2321) — shared between a single desk (`/u/:id`)
@@ -20,9 +21,12 @@ export function PositionsTable({
   positions,
   deskId,
   totalCount,
+  decayBySymbol,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
+  /** "−$12/day" per OCC symbol, from the option book (#3689 slice 6); absent until it answers. */
+  readonly decayBySymbol?: ReadonlyMap<string, string>;
   /** Unfiltered count, for the empty-state copy (0 open vs. 0 matching a filter). */
   readonly totalCount: number;
 }): ReactElement {
@@ -41,35 +45,48 @@ export function PositionsTable({
         <table className="blotter blotter-fixed">
           <colgroup>
             <col className="fold-col" style={{ width: 32 }} />
-            <col style={{ width: 190 }} />
-            <col style={{ width: 70 }} />
-            <col className="col-detail" style={{ width: 90 }} />
-            <col style={{ width: 90 }} />
-            <col className="col-detail" style={{ width: 100 }} />
+            <col style={{ width: 220 }} />
+            <col style={{ width: 56 }} />
             <col style={{ width: 100 }} />
-            <col className="col-detail" style={{ width: 90 }} />
             <col style={{ width: 90 }} />
-            <col className="col-detail" style={{ width: 80 }} />
-            <col style={{ width: 170 }} />
+            <col style={{ width: 124 }} />
+            <col style={{ width: 88 }} />
+            <col className="col-detail" style={{ width: 100 }} />
+            <col className="col-detail" style={{ width: 96 }} />
+            <col className="col-detail" style={{ width: 130 }} />
+            <col style={{ width: 128 }} />
           </colgroup>
           <thead>
             <tr>
               <th className="fold-col" aria-label="Row detail" />
-              <th>Symbol</th>
+              <th>Position</th>
               <th className="num">Qty</th>
-              <th className="num col-detail">Cost / share</th>
-              <th className="num">Mark</th>
-              <th className="num col-detail">Cost basis</th>
               <th className="num">Value</th>
-              <th className="num col-detail">Day P/L</th>
+              <th className="num">Today</th>
               <th className="num">Total P/L</th>
-              <th className="num col-detail">Return</th>
+              <th className="num">
+                <GlossaryTerm term="expiresIn" />
+              </th>
+              <th className="num col-detail">
+                <GlossaryTerm term="timeDecay">Decay / day</GlossaryTerm>
+              </th>
+              <th className="num col-detail">
+                <GlossaryTerm term="breakeven" />
+              </th>
+              <th className="num col-detail">
+                <GlossaryTerm term="bestWorst" />
+              </th>
               <th className="act-col" aria-label="Close position" />
             </tr>
           </thead>
           <tbody>
             {positions.map((position) => (
-              <BlotterRow key={position.symbol} position={position} deskId={deskId} />
+              <BlotterRow
+                key={position.symbol}
+                position={position}
+                deskId={deskId}
+                decay={decayBySymbol?.get(position.symbol)}
+              />
             ))}
           </tbody>
         </table>

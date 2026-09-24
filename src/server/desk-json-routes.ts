@@ -179,7 +179,7 @@ export async function serveDeskJson(
   res.end(
     JSON.stringify({
       generatedAt: state.generatedAt,
-      desk: deskView(found, ledger, playbookStoreCatalog()),
+      desk: deskView(found, ledger, playbookStoreCatalog(), config.now),
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
         : {}),

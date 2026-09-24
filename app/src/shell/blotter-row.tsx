@@ -22,42 +22,73 @@ import { buysLabel } from "./glossary";
  * @category trading
  */
 
-/** The 8 numeric columns shared byte-for-byte between the parent row and every lot row beneath
- *  it (#3186 slice 1) — pulled into one component specifically so "a lot row uses the identical
- *  column set as the parent" is enforced by sharing markup, not by two hand-kept-in-sync blocks. */
+/** The numeric columns shared byte-for-byte between the parent row and every lot row beneath it
+ *  (#3186 slice 1), so "a lot row uses the identical column set as the parent" is enforced by
+ *  sharing markup. #3689 slice 6 reshaped them for beginners: Qty · Value · Today · Total P/L
+ *  (return beneath) · Expires in · Decay / day · Breakeven · Best / worst case. A lot row has no
+ *  expiry/decay/breakeven/best-worst of its own (they're the position's), so those cells stay
+ *  blank there. */
 function PositionCells({
   quantity,
-  costPerShare,
-  price,
-  costBasis,
   value,
   dayPl,
   dayTone,
   totalPl,
   totalTone,
   returnPct,
+  plain,
 }: {
   readonly quantity: string;
-  readonly costPerShare: string;
-  readonly price: string;
-  readonly costBasis: string;
   readonly value: string;
   readonly dayPl: string;
   readonly dayTone: Tone;
   readonly totalPl: string;
   readonly totalTone: Tone;
   readonly returnPct: string;
+  /** The position-level plain columns; omitted on a lot row. */
+  readonly plain?: {
+    readonly expiresIn?: string;
+    readonly decay?: string;
+    readonly breakeven?: string;
+    readonly best?: string;
+    readonly worst?: string;
+    readonly shares: boolean;
+  };
 }): ReactElement {
+  const quiet = (v: string | undefined, none: string) =>
+    v === undefined ? (
+      <span className="muted">—</span>
+    ) : v === none ? (
+      <span className="muted">{v}</span>
+    ) : (
+      v
+    );
   return (
     <>
       <td className="num">{quantity}</td>
-      <td className="num col-detail">{costPerShare}</td>
-      <td className="num">{price}</td>
-      <td className="num col-detail">{costBasis}</td>
       <td className="num">{value}</td>
-      <td className={`num col-detail tone-${dayTone}`}>{dayPl}</td>
-      <td className={`num tone-${totalTone}`}>{totalPl}</td>
-      <td className={`num col-detail tone-${totalTone}`}>{returnPct}</td>
+      <td className={`num tone-${dayTone}`}>{dayPl}</td>
+      <td className={`num tone-${totalTone} pl-cell`}>
+        <b>{totalPl}</b>
+        <span className="pl-cell-ret">{returnPct}</span>
+      </td>
+      <td className="num">{plain ? quiet(plain.expiresIn, "no expiry") : null}</td>
+      <td className={`num col-detail${plain?.decay?.startsWith("−") ? " tone-neg" : ""}`}>
+        {plain ? quiet(plain.decay, "none") : null}
+      </td>
+      <td className="num col-detail">{plain ? quiet(plain.breakeven, "") : null}</td>
+      <td className="num col-detail best-worst">
+        {plain?.best && plain.worst ? (
+          <>
+            <span className={plain.best === "unlimited" ? "muted" : "tone-pos"}>{plain.best}</span>
+            <span className={plain.worst === "unlimited" ? "muted" : "tone-neg"}>
+              {plain.worst}
+            </span>
+          </>
+        ) : plain ? (
+          <span className="muted">—</span>
+        ) : null}
+      </td>
     </>
   );
 }
@@ -84,12 +115,31 @@ function lotAsPosition(position: DeskPosition, lot: PositionLot): DeskPosition {
   };
 }
 
+/** The line under a position's name: what it bets on in plain words, then what it cost and what
+ *  it's worth now (the cost/mark columns this replaced). */
+function PlainSub({ position }: { readonly position: DeskPosition }): ReactElement {
+  return (
+    <>
+      {position.plainName ? (
+        <span className="sym-sub sym-sub--plain">{position.plainName}</span>
+      ) : null}
+      <span className="sym-sub sym-sub--num">
+        cost {position.costPerShare} · now {position.price}
+        {position.detail ? ` · ${position.detail}` : ""}
+      </span>
+    </>
+  );
+}
+
 export function BlotterRow({
   position,
   deskId,
+  decay,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
+  /** "−$12/day": this holding's time decay from the option book, when the feed quoted it. */
+  readonly decay?: string;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -132,7 +182,7 @@ export function BlotterRow({
               </svg>
               <span className="sym-header-text">
                 <span className="sym">{position.display}</span>
-                {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
+                <PlainSub position={position} />
               </span>
               <span
                 className="buys-chip"
@@ -144,21 +194,26 @@ export function BlotterRow({
           ) : (
             <>
               <span className="sym">{position.display}</span>
-              {position.detail ? <span className="sym-sub">{position.detail}</span> : null}
+              <PlainSub position={position} />
             </>
           )}
         </td>
         <PositionCells
           quantity={position.quantity}
-          costPerShare={position.costPerShare}
-          price={position.price}
-          costBasis={position.costBasis}
           value={position.value}
           dayPl={position.dayPl}
           dayTone={position.dayTone}
           totalPl={position.totalPl}
           totalTone={position.totalTone}
           returnPct={position.returnPct}
+          plain={{
+            ...(position.expiresIn ? { expiresIn: position.expiresIn } : {}),
+            ...(position.isOption ? (decay ? { decay } : {}) : { decay: "none" }),
+            ...(position.breakeven ? { breakeven: position.breakeven } : {}),
+            ...(position.best ? { best: position.best } : {}),
+            ...(position.worst ? { worst: position.worst } : {}),
+            shares: !position.isOption,
+          }}
         />
         <td className="act-col">
           <button
@@ -180,9 +235,6 @@ export function BlotterRow({
               </td>
               <PositionCells
                 quantity={lot.quantity}
-                costPerShare={lot.costPerShare}
-                price={lot.price}
-                costBasis={lot.costBasis}
                 value={lot.value}
                 dayPl={lot.dayPl}
                 dayTone={lot.dayTone}
@@ -234,22 +286,22 @@ export function BlotterRow({
           <td colSpan={11}>
             <dl className="more-grid">
               <div>
-                <dt>Cost / share</dt>
-                <dd>{position.costPerShare}</dd>
-              </div>
-              <div>
                 <dt>Cost basis</dt>
                 <dd>{position.costBasis}</dd>
               </div>
               <div>
-                <dt>Day P/L</dt>
-                <dd className={`tone-${position.dayTone}`}>
-                  {position.dayPl} ({position.dayPct})
-                </dd>
+                <dt>Decay / day</dt>
+                <dd>{position.isOption ? (decay ?? "—") : "none"}</dd>
               </div>
               <div>
-                <dt>Return</dt>
-                <dd className={`tone-${position.totalTone}`}>{position.returnPct}</dd>
+                <dt>Breakeven</dt>
+                <dd>{position.breakeven ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>Best / worst case</dt>
+                <dd>
+                  {position.best && position.worst ? `${position.best} / ${position.worst}` : "—"}
+                </dd>
               </div>
             </dl>
           </td>

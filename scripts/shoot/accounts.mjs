@@ -298,6 +298,33 @@ const ericDesk = {
   },
 };
 
+// Plain words per position (#3689 slice 6), as the server's position-plain.ts writes them.
+const PLAIN = {
+  NVDA: {
+    plainName: "Shares · profits if NVDA rises",
+    expiresIn: "no expiry",
+    breakeven: "$172.40",
+    best: "unlimited",
+    worst: "−$17,240",
+  },
+  AAPL: {
+    plainName: "Shares · profits if AAPL rises",
+    expiresIn: "no expiry",
+    breakeven: "$198.50",
+    best: "unlimited",
+    worst: "−$39,700",
+  },
+  NVDA260918C00180000: {
+    plainName: "Call option · profits if NVDA rises",
+    expiresIn: "25 days",
+    expiresInDays: 25,
+    breakeven: "$185.10",
+    best: "unlimited",
+    worst: "−$1,530",
+  },
+};
+ericDesk.desk.positions = ericDesk.desk.positions.map((p) => ({ ...p, ...PLAIN[p.symbol] }));
+
 const sauronDesk = {
   generatedAt: "2026-09-11T00:00:00Z",
   desk: {
@@ -599,7 +626,12 @@ const { page, origin, out, close } = await openShell({
     "/api/trade/option-positions": {
       available: true,
       asOf: "2026-09-23T20:00:00Z",
-      rows: [],
+      rows: [
+        {
+          symbol: "NVDA260918C00180000",
+          positionGreeks: { delta: 186, gamma: 4.2, theta: -38.4, vega: 21.6 },
+        },
+      ],
       book: {
         delta: 186,
         gamma: 4.2,
@@ -695,5 +727,12 @@ await page.goto(`${origin}/app/accounts`);
 await page.locator(".league-card").waitFor();
 await page.locator(".hero-chart-legend").waitFor();
 await shootCockpit("accounts-wide-desktop");
+
+// The positions table at 1600 (#3689 slice 6): plain names, expiry in days, decay, breakeven,
+// best / worst case, with the Breakeven glossary open.
+await page.locator(".blotter-card").first().scrollIntoViewIfNeeded();
+await page.getByRole("button", { name: "Breakeven" }).hover();
+await page.getByRole("tooltip").waitFor();
+await shootCockpit("accounts-table-desktop");
 
 await close();

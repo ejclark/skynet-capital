@@ -43,6 +43,17 @@ export interface DeskPosition {
   readonly totalTone: Tone;
   readonly weightPct: number;
   readonly lots?: readonly PositionLot[];
+  /** Plain words (#3689 slice 6; `src/observatory/position-plain.ts`). Optional so an older payload
+   *  or fixture without them still renders, showing "—". */
+  readonly plainName?: string;
+  /** "37 days", "today", or "no expiry". */
+  readonly expiresIn?: string;
+  readonly expiresInDays?: number;
+  readonly breakeven?: string;
+  /** "+$13,440" or "unlimited". */
+  readonly best?: string;
+  /** "−$6,560" or "unlimited". */
+  readonly worst?: string;
 }
 
 /** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in

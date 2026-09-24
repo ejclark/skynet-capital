@@ -38,7 +38,9 @@ describe("PositionsTable", () => {
   it("renders a blotter row per position, headers included", () => {
     render(withClient(<PositionsTable positions={[position()]} deskId="sauron" totalCount={1} />));
 
-    expect(screen.getByText("Mark")).toBeInTheDocument();
+    // Beginner column names, the jargon ones one hover from their glossary (#3689 slice 6).
+    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Breakeven" })).toBeInTheDocument();
     expect(screen.getByText("SPY")).toBeInTheDocument();
   });
 
