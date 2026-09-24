@@ -1,0 +1,140 @@
+/* The league card (#3689 slice 4): `shell/league-card.tsx`. Every row you own gets the accent
+ * tint, a border and bold weight. The highlight is shape and weight as well as colour, and your
+ * bots also carry an outlined "YOURS" word. Tokens only. */
+
+.league-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  min-width: 0;
+}
+.league-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.league-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.league-toggle {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.league-toggle button {
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: none;
+  color: var(--muted);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.league-toggle button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+.league-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.league-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+.league-row.is-owned {
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  font-weight: 700;
+}
+.league-rank {
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.league-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.league-value {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chip-you {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  color: var(--accent);
+}
+.league-yours {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.league-more {
+  padding: 0 10px;
+  color: var(--muted);
+  line-height: 1;
+}
+.league-foot {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.league-foot b {
+  color: var(--text);
+}
+.league-link {
+  white-space: nowrap;
+}
+
+/* the Overview's top row: net worth and league side by side when there's room, stacked otherwise */
+.overview-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin: 0 0 16px;
+}
+.overview-hero > .nw-card {
+  margin: 0;
+}
+@media (min-width: 1500px) {
+  .overview-hero {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: start;
+  }
+}

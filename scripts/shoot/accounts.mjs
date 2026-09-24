@@ -548,10 +548,42 @@ const spyBars = {
   }),
 };
 
+// The league (#3689 slice 4): a 9-entry field where Eric owns himself (#3) and Sauron (#9). The
+// card highlights both, ⋯-skips to Sauron, and shows Eric's gap to Futurist just above him.
+const boardRow = (key, name, kind, value, sortValue) => ({
+  key,
+  name,
+  kind,
+  value,
+  tone: "pos",
+  bar: 0,
+  sortValue,
+});
+const board = {
+  seq: 1,
+  generatedAt: "2026-09-23T20:00:00Z",
+  metric: "equity",
+  view: {
+    blocks: {},
+    rows: [
+      boardRow("bot-apex", "Apex", "bot", "$1,112,400", 1112400),
+      boardRow("bot-futurist", "Futurist", "bot", "$1,051,832", 1051832),
+      boardRow("human-eric", "Eric", "human", "$1,047,832", 1047832),
+      boardRow("human-maya", "Maya", "human", "$1,020,115", 1020115),
+      boardRow("bot-atlas", "Atlas", "bot", "$998,040", 998040),
+      boardRow("human-sam", "Sam", "human", "$975,300", 975300),
+      boardRow("bot-nova", "Nova", "bot", "$950,210", 950210),
+      boardRow("human-lee", "Lee", "human", "$902,660", 902660),
+      boardRow("bot-sauron", "Sauron", "bot", "$512,407", 512407),
+    ],
+  },
+};
+
 const { page, origin, out, close } = await openShell({
   name: "accounts",
   stubs: {
     "/api/settings": settings,
+    "/api/board": board,
     "/api/accounts/networth": networth,
     "/api/desk/human-eric": ericDesk,
     "/api/desk/bot-sauron": sauronDesk,
@@ -628,5 +660,13 @@ await shootCockpit("accounts-form-desktop");
 await page.goto(`${origin}/app/accounts?account=all`);
 await page.getByText("Net worth · all accounts").waitFor();
 await shootCockpit("accounts-all-summary-desktop");
+
+// Wide (1600px, #3689 slice 4): net worth and league side by side, the design's hero row.
+await page.mouse.move(0, 0);
+await page.setViewportSize({ width: 1600, height: 1000 });
+await page.goto(`${origin}/app/accounts`);
+await page.locator(".league-card").waitFor();
+await page.locator(".hero-chart-legend").waitFor();
+await shootCockpit("accounts-wide-desktop");
 
 await close();

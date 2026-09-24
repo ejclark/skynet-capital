@@ -1,8 +1,10 @@
 import type { ReactElement } from "react";
 import type { ConsiderationChip, DeskSnapshot } from "../live/desk";
 import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
+import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { ConsiderationsRail } from "./considerations-rail";
+import { LeagueCard } from "./league-card";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
 
@@ -22,6 +24,7 @@ import { NetWorthRoster } from "./networth-summary";
 export function OverviewSection({
   stats,
   caption,
+  owned,
   allAccounts,
   roster,
   loading,
@@ -36,6 +39,7 @@ export function OverviewSection({
 }: {
   readonly stats: NetWorthStatsView | null;
   readonly caption: string;
+  readonly owned: readonly OwnedAccount[];
   readonly allAccounts: boolean;
   readonly roster: readonly AccountNetWorthView[];
   readonly loading: boolean;
@@ -52,11 +56,17 @@ export function OverviewSection({
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
     <div className="networth-detail">
-      <NetWorthCard
-        stats={stats}
-        caption={caption}
-        accountId={allAccounts ? undefined : accountId}
-      />
+      <div className="overview-hero">
+        <NetWorthCard
+          stats={stats}
+          caption={caption}
+          accountId={allAccounts ? undefined : accountId}
+        />
+        <LeagueCard
+          ownedIds={owned.map((a) => a.id)}
+          meId={owned.find((a) => a.kind === "human")?.id}
+        />
+      </div>
       <p className="desk-note">
         {stats.cashKnown ? `cash ${stats.cash} dry powder` : "cash —"} · {stats.positionCount} open
         positions

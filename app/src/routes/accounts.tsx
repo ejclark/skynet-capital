@@ -225,12 +225,15 @@ function CockpitBody({
   section,
   deskIds,
   accountId,
+  accounts,
   query,
   onFilterChange,
 }: {
   readonly section: AccountsSection;
   readonly deskIds: readonly string[];
   readonly accountId: string;
+  /** Every account the session owns — the league card highlights all of them (#3689). */
+  readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
 }): ReactElement {
@@ -253,6 +256,7 @@ function CockpitBody({
       <OverviewSection
         stats={stats}
         caption={caption}
+        owned={accounts}
         allAccounts={allAccounts}
         roster={roster}
         loading={networth.isPending}
@@ -329,6 +333,7 @@ function AccountsBody({
           section={section}
           deskIds={deskIds}
           accountId={accountId}
+          accounts={accounts}
           query={query}
           onFilterChange={onFilterChange}
         />
