@@ -117,6 +117,6 @@
   },
   "dependencies": {
     "@babylonjs/core": "9.22.1",
-    "marked": "18.0.10"
+    "marked": "18.0.13"
   }
 }
