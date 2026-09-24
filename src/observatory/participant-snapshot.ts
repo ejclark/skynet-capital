@@ -84,6 +84,13 @@ export interface ParticipantSnapshot {
   readonly activity?: ActivityView[];
   /** True when the account read failed; the snapshot then carries zeros and the error. */
   readonly error?: string;
+  /**
+   * The account's flow-adjusted return over the last month, as a percent (Alpaca's own
+   * `profit_loss_pct` over `period=1M`, so a deposit never reads as a gain). Written by the
+   * month-return sync on its own slow cadence, never by a snapshot read; absent until the first
+   * sync lands. It ranks the league's 1M metric.
+   */
+  readonly monthReturnPct?: number;
 }
 
 /**

@@ -1,6 +1,7 @@
 import type { ServerResponse } from "node:http";
 import type { AlpacaPortfolioHistory } from "../alpaca/alpaca-trading-client.js";
 import { BENCHMARK_LOOKBACK_DAYS, benchmarkReturns } from "../observatory/benchmark-returns.js";
+import { lastFinite } from "../observatory/month-return-sync.js";
 import {
   type AccountNetWorthInput,
   accountsNetWorthView,
@@ -34,17 +35,6 @@ const PERIOD: Record<NetWorthWindowKey, string> = {
 };
 
 const WINDOW_KEYS: readonly NetWorthWindowKey[] = ["7D", "1M", "3M", "1Y"];
-
-/** The last finite value in an Alpaca history array — skips the `null`s the broker emits for spans
- *  it had no value for, so a trailing gap never reads as a 0 return. */
-function lastFinite(arr: readonly (number | null)[] | undefined): number | undefined {
-  if (!arr) return undefined;
-  for (let i = arr.length - 1; i >= 0; i--) {
-    const v = arr[i];
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-  }
-  return undefined;
-}
 
 function emptyWindows(): Record<NetWorthWindowKey, NetWorthWindowInput> {
   return { "7D": {}, "1M": {}, "3M": {}, "1Y": {} };

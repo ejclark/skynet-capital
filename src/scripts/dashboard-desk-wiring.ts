@@ -14,6 +14,7 @@ import { publishingOrderAuditLog } from "../observatory/activity-publishing.js";
 import { createBrokerSync } from "../observatory/broker-sync.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
+import { createMonthReturnSync } from "../observatory/month-return-sync.js";
 import { mergeRoster, type Participant } from "../participants/participant.js";
 import type { ParticipantStore } from "../participants/participant-store.js";
 import { resolveDeskTrading } from "../server/account-identity-gate.js";
@@ -102,6 +103,13 @@ export function wireDeskTrading(deps: DeskTradingDeps): DeskTradingWiring {
     clientFactory: deps.clientFactory,
   });
   brokerSync.start();
+  // The league's 1M metric: a slow, separate sweep of each account's flow-adjusted month return.
+  createMonthReturnSync({
+    getState: () => deps.hub.getState(),
+    apply: deps.apply,
+    findParticipant: deps.findParticipant,
+    clientFactory: deps.clientFactory,
+  }).start();
 
   const orderAudit = publishingOrderAuditLog(createOrderAuditLog(deps.env), deps.activityEventBus);
   const desk = resolveDeskTrading({

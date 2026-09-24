@@ -2,7 +2,13 @@ import type { FieldTone, WorldPatchOp } from "../universe/world-patch.js";
 import type { DashboardData } from "./dashboard-data.js";
 import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
 import { type CohortStats, cohortStats } from "./standings-cohort.js";
-import { formatMetric, type LeaderMetric, metricValue } from "./standings-metric.js";
+import {
+  type LeaderMetric,
+  metricKnown,
+  metricText,
+  metricValue,
+  rankValue,
+} from "./standings-metric.js";
 
 /**
  * THE STANDINGS FIELD PATCH — what the live board says instead of re-rendering itself.
@@ -40,16 +46,19 @@ export interface RowView {
  *  ordinal: the view no longer renders one, so there is no rank text to patch. */
 export function rowViews(data: DashboardData, metric: LeaderMetric): RowView[] {
   const live = data.participants.filter((p) => !p.error);
-  const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
-  const maxAbs = ranked.reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
+  const ranked = [...live].sort((a, b) => rankValue(b, metric) - rankValue(a, metric));
+  const maxAbs =
+    ranked
+      .filter((p) => metricKnown(p, metric))
+      .reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
   return ranked.map((p) => {
-    const v = metricValue(p, metric);
+    const v = metricKnown(p, metric) ? metricValue(p, metric) : 0;
     return {
       key: p.id,
-      value: formatMetric(v, metric),
+      value: metricText(p, metric),
       tone: metric === "equity" ? "flat" : plClass(v),
       bar: Math.max(2, (Math.abs(v) / maxAbs) * 100),
-      sortValue: v,
+      sortValue: rankValue(p, metric),
     };
   });
 }
