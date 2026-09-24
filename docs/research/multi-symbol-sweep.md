@@ -503,6 +503,52 @@ robust, alpha fragile — is the finding.
   should check the pre-auction yield regime first, not assume the reopening/new-issue split holds
   at a yield extreme.
 
+- **A three-week Brent–WTI-spread lead over US crude exports, killed on its first live
+  out-of-sample test on both of its own legs (FT-eia-weekly-petroleum-status-2026-09-23-2)** —
+  added 2026-09-24 from the
+  [eia-weekly-petroleum-status-2026-09-23 close-out](events/eia-weekly-petroleum-status-2026-09-23.md).
+  Measured against EIA weekly crude exports (`wcrexus2`, 1,857 observations, 2021+), the spread's
+  lead over exports peaked at three weeks (corr +0.417) and, keyed to the week ending 08-28's wide
+  6.21 reading, predicted the 2026-09-23 print would show exports **recovering above 3,417 kb/d**.
+  It printed **3,281 kb/d**, below the floor and 1,550 kb/d under the prior week — the opposite of
+  recovery. Separately, and more decisively, the test's own named early-kill condition — the
+  Brent–WTI front-month spread closing ≥ $5.38, the pre-attack six-month mean — fired the same
+  session: the spread went **4.66 → 10.92** from 2026-09-22 to 2026-09-23, an order of magnitude
+  past the threshold. **Why this is a clean kill and not bad luck:** the test registered both an
+  outcome prediction and an independent falsifier on the mechanism it depended on (a compressed
+  arb), and both broke in the same session — the compression the whole lag structure was built on
+  reversed before the export reading even needed to be checked. **What this does and does not
+  refute:** the underlying correlation (+0.417, ~17% of variance, already disclosed as modest at
+  registration) is not re-estimated here and may still hold on a longer sample; what dies is the
+  specific claim that a narrow-tercile spread reading in mid-September 2026 could be used to predict
+  the direction of exports three weeks out during an active supply-shock regime, where the shock
+  itself (a pipeline outage, reported restarting the same week) can move the spread faster than the
+  three-week lag the correlation was measured on. Do not re-propose this lag structure as a live
+  signal without a fresh registration built on a sample that separates shock-regime weeks from
+  ordinary ones.
+
+- **A weekly-print-is-not-the-price-setter attribution rule, broken on its third observation after
+  two clean mismatches (FT-eia-weekly-petroleum-status-2026-09-23-3)** — added 2026-09-24 from the
+  [eia-weekly-petroleum-status-2026-09-23 close-out](events/eia-weekly-petroleum-status-2026-09-23.md).
+  The rule tested whether the sign of the weekly commercial-crude change matched the sign of WTI
+  front-month's close-to-close move under the textbook convention (draw is bullish, build is
+  bearish) — a mismatch, taken as evidence the print was not the tape's price-setter during the
+  2026 Petroline/Hormuz supply-shock regime. The 2026-09-10 print mismatched (bearish headline,
+  WTI +6.69%) and the 2026-09-16 print mismatched (a draw, WTI −3.21%) — two observations short of
+  the rule's own stated 2–3-print promotion bar. The 2026-09-23 print broke the pattern: a
+  **build** (commercial crude +2.969 Mbbl) paired with WTI **down** (−2.57%, 09-22→09-23) is a
+  **matched**, textbook-consistent pair, exactly the sign the test was pre-registered to treat as a
+  kill. **What this does and does not refute:** the two prior mismatches are not retracted — they
+  remain genuine observations from a regime where other catalysts (a same-day FOMC statement on
+  09-16) were live confounds each time, disclosed at registration. What breaks is the claim, built
+  from n=2, that the print reliably fails to move the tape in this regime; n=3 says it can. A
+  disclosed but unresolved confound travels with this kill: October WTI expired the same session
+  used as the pre-print baseline close, so a front-month contract roll sits inside the window
+  scored — the same continuous-front-month convention scored the two prior (undisputed)
+  observations, so the roll is recorded rather than treated as grounds to discard the result. Do not
+  re-propose this attribution rule without a fresh registration and a design that isolates the roll
+  and same-day-catalyst confounds first.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
