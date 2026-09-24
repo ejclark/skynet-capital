@@ -201,12 +201,13 @@ const ericDecisions = [
     plainName: "Call option · profits if NVDA rises",
     pl: "-$310 · −12.2%",
     plTone: "neg",
-    title: "Down 12% with 25 days left",
+    // the IV-crush card: a long call holding through its own print (#3689 follow-up)
+    title: "Earnings on Aug 26 could shrink this call even if NVDA rises",
     captionShort: "Needs NVDA above $185.10 by Sep 18 to profit.",
     caption:
       "NVDA Sep 18 180 Call has lost $310 of the $2,540 it cost. Worst case from here: −$2,540.",
-    why: "✦ time is working against this one. an option loses value fastest in its last three weeks, even if the stock doesn't move.",
-    clocks: ["Expires in 25 days", "3 contracts · worth $2,226"],
+    why: "✦ options cost more before earnings. the day after, that extra drains away (iv crush), so a right call can still lose. decide before the print, not after.",
+    clocks: ["Expires in 25 days", "Earnings Aug 26", "3 contracts · worth $2,226"],
     primary: {
       label: "Review on Trade ↗",
       href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
@@ -393,6 +394,7 @@ const PLAIN = {
     breakeven: "$172.40",
     best: "unlimited",
     worst: "−$17,240",
+    nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: false, scope: "stock" },
   },
   AAPL: {
     plainName: "Shares · profits if AAPL rises",
@@ -400,6 +402,13 @@ const PLAIN = {
     breakeven: "$198.50",
     best: "unlimited",
     worst: "−$39,700",
+    // AAPL's own print is past the 60-day share horizon, so the headline macro print stands in
+    nextEvent: {
+      label: "Fed meeting Sep 16",
+      at: "2026-09-16",
+      beforeExpiry: false,
+      scope: "market",
+    },
   },
   NVDA260918C00180000: {
     plainName: "Call option · profits if NVDA rises",
@@ -408,6 +417,7 @@ const PLAIN = {
     breakeven: "$185.10",
     best: "unlimited",
     worst: "−$1,530",
+    nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: true, scope: "stock" },
   },
 };
 ericDesk.desk.positions = ericDesk.desk.positions.map((p) => ({ ...p, ...PLAIN[p.symbol] }));

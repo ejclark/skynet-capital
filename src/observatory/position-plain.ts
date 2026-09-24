@@ -2,6 +2,7 @@ import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { PositionView } from "./broker-positions.js";
 import { OPTION_MULTIPLIER } from "./broker-positions.js";
 import { formatPrice } from "./desk-data.js";
+import { type NextEvent, nextEventFor } from "./position-event.js";
 import { formatCurrency } from "./render-atoms.js";
 
 /**
@@ -31,6 +32,8 @@ export interface PlainPosition {
   readonly best: string;
   /** "−$6,560" or "unlimited". */
   readonly worst: string;
+  /** The next dated thing that can move it ("Earnings Oct 28"), from `position-event.ts`. */
+  readonly nextEvent?: NextEvent;
 }
 
 const DAY_MS = 86_400_000;
@@ -55,6 +58,20 @@ const loss = (x: number) => `−${formatCurrency(Math.abs(x))}`;
 
 export function plainPosition(position: PositionView, now: Date): PlainPosition {
   const parts = parseOccSymbol(position.symbol);
+  const event = nextEventFor(
+    parts?.underlying ?? position.symbol,
+    parts?.expiration,
+    now.toISOString(),
+  );
+  const withEvent = (p: PlainPosition): PlainPosition => (event ? { ...p, nextEvent: event } : p);
+  return withEvent(plainFacts(position, parts, now));
+}
+
+function plainFacts(
+  position: PositionView,
+  parts: ReturnType<typeof parseOccSymbol>,
+  now: Date,
+): PlainPosition {
   const qty = position.quantity;
   if (!parts) {
     // Shares: a long can lose what it cost and has no ceiling; a short is the mirror image.
