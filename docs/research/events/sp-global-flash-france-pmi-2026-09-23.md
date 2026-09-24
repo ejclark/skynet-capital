@@ -394,5 +394,96 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-24, D+1 of the `closeOutWithinDays: 6` window).** `symbols: []`, so
+`earnings-cycle`/`intraday-edges` never had a target for this event; the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran first
+regardless, since this ledger's own footprint study re-fetches Yahoo bars through the same layer.
+Everything below is a fresh direct fetch made today, never a read of this ledger's own memory.
+
+**The print itself, from the release PDF, not a wire — and it is a big surprise, not a
+confirmation.** `pmi.spglobal.com`'s press-release archive (fetched today, browser UA required)
+confirms the slot delivered exactly as forecast — `September 23 2026 07:15 UTC | S&P Global Flash
+France PMI`, ahead of Germany's `07:30 UTC` and the Eurozone aggregate's `08:00 UTC` in the same
+list — so the date/slot kill switch and the print-ordering kill switch (leg 2's pre-announcement
+sequence) both did **not** fire. The September Flash France release PDF itself
+(`pmi.spglobal.com/.../PressRelease/279e2ad2fc264c1486c8ebc0034e13fb`, HTTP 200, text-extracted
+in-session), headlined *"French private sector activity rebounds in September and rises at fastest
+pace in over two years"*:
+
+| Index | Sep 2026 flash | Aug 2026 | Note in-document |
+|---|---|---|---|
+| Composite Output | **51.2** | 48.5 | **25-month high** |
+| Services Business Activity | **51.4** | 48.0 | **10-month high** |
+| Manufacturing Output | 50.2 | 50.7 | 2-month low |
+| Manufacturing PMI | 50.3 | 51.1 | 2-month low |
+
+**Kill switch fires: "A September French flash composite at or above 50.0."** 51.2 clears it by
+1.2 points. The publisher's own economist calls the September read *"surprising resilience,"*
+citing *"payback… after the extreme heat seen in August"* — the exact bounce-back mechanism leg 6
+of the initial research flagged as a dated risk, but this document's base case (a 48–50 band) did
+not size a move this large. **France stops being the euro area's sub-50 member this month, and the
+"drag" framing that made this entry worth reading on its own — rather than deferring to the
+aggregate — is dead as stated.** The composite-below-48.0 kill did not fire (opposite direction).
+The revision leg (kill switch: "runs UP on all three headline indices at the finals") cannot be
+scored yet — the finals land 2026-10-01 and 2026-10-05, both outside this close-out's window, and
+no forward test was registered against them at initial research, so this thread has no re-dispatch
+mechanism once this document goes quiet; noted here as an honest, permanent gap rather than
+invented around.
+
+**FT-sp-global-flash-france-pmi-2026-09-23-1 — scored KILL, on fresh 5-minute bars, cache busted.**
+Re-fetched `^FCHI`/`^GDAXI`, `range=60d interval=5m` (delivered 2026-07-02 → 2026-09-23, n=60/58
+sessions depending on window overlap with the daily bar count), identical windows and the identical
+CAC-minus-DAX residual construction as registration:
+
+| Window (UTC) | CAC raw | CAC − DAX residual |
+|---|---|---|
+| 07:15–07:30 (France-only) | +0.038% **p69** | +0.165 **p100** |
+| 07:00–07:15 (control) | −0.016% p30 | +0.285 p96 |
+| **07:00–08:55 (flash morning — arm i)** | −0.340% p16 | **+0.531 p100** |
+| 07:00–15:25 (full session) | −0.713% p12 | +0.356 p89 |
+| Overnight gap (prior close → 07:00) | — | −0.086 p46 |
+
+**Arm (i) fails — the residual over the flash morning ranks at the top of its own 58-session
+distribution, not at or below its median.** Arm (ii) holds on its own terms (raw 07:15–07:30 is
+p69, well under the p90 kill threshold), but the prediction needs both arms, and the kill switch is
+written as an OR: *"the residual ranks ABOVE its own trailing median, OR the raw move reaches
+p90"* — the first clause alone is enough. **Verdict: kill**, moved to the sweep doc's kill list
+below.
+
+**What actually drove the residual, checked rather than assumed — and it argues AGAINST reading
+this as the footprint the hypothesis was testing for.** The DAX fell **−0.87%** over 07:00–08:55,
+its 2nd-lowest reading in the 58-session sample — but Germany's own Flash PMI, released at 07:30
+UTC inside that same window (`pmi.spglobal.com/.../PressRelease/f449c8cf9d0f40259b75db995660c2af`,
+fetched today), was **strong, not weak**: Composite **53.8** (Aug 51.8, **11-month high**), Services
+**52.9** (Aug 49.7, 7-month high) — the opposite of what would explain a sharp DAX decline through a
+macro-print channel. Meanwhile the French index that actually carries this study's hypothesis moved
+an ordinary **p69** in its own 15-minute window, despite sitting under the largest French PMI
+surprise in over two years. **Read together: the kill fired on DAX-side noise uncorrelated with
+either country's PMI, not on a demonstrated France-driven footprint** — which is the exact
+contamination leg 8 (Honest limits) named up front as the CAC 40's core weakness as an instrument
+for a French domestic survey. The letter of the pre-registered test still governs the verdict
+(kill, not void — no named French-risk catalyst was running in the window, which is the only
+documented void condition), but the next attempt at this hypothesis should follow leg 8's own
+prescription: a domestic French mid-cap index or the OAT–Bund spread, not the CAC 40, precisely
+because today is a live demonstration of the contamination that instrument choice invites when
+Germany also prints in the same 30-minute window.
+
+**No new event proposed.** No named, dated catalyst was found in the 07:00–08:55 UTC window beyond
+the already-tracked Germany/Eurozone flash prints on the same calendar row.
+
+**Honest limits carried into this close-out.** Kill switch #5 (either 2026-06-23 or 2026-07-24 not
+actually a Flash France PMI date) was not re-investigated — the publisher's archive only carries
+roughly the trailing 30 days, so neither older date is re-verifiable from today's fetch, exactly as
+the initial research anticipated. The schema-gap kill (a confirmed-source prefix for a private PMI
+compiler) did not fire; the date stays `estimate` on the same basis as at registration. **This
+document is now closed.** No trade was taken, none is authorized, and the record above — a dead
+"sub-50 drag" framing plus a killed footprint hypothesis, with the mechanism honestly disentangled
+from the headline print — is the final word on it.
+
 **Last assessed:** 2026-09-23
 <!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":2} -->
+
+**Last assessed:** 2026-09-24
+<!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"closed","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
