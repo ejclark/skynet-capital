@@ -34,6 +34,11 @@ export interface EarningsPrint {
   readonly status: PrintDateStatus;
   /** Where the date came from — an IR announcement (confirmed) or cadence reasoning (estimate). */
   readonly source: string;
+  /**
+   * The honest window around an ESTIMATE, when the research has bounded it (CRWV: cadence says
+   * 11-10, aggregators say 11-16 → Nov 9–16). A reader that must avoid the print keys on `start`.
+   */
+  readonly window?: { readonly start: string; readonly end: string };
 }
 
 /**
@@ -96,6 +101,7 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     date: "2026-11-10",
     status: "estimate",
     source: "8-K cadence off 2026-08-11 midday print",
+    window: { start: "2026-11-09", end: "2026-11-16" },
   },
   {
     symbol: "MU",

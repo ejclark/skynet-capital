@@ -16,6 +16,7 @@ import {
 } from "../trading/option-ticket.js";
 import type { Session } from "./auth/session.js";
 import { serveBars } from "./bars-route.js";
+import { serveBrief } from "./brief-route.js";
 import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
@@ -329,6 +330,21 @@ async function submitOption(
   sendJson(res, 200, await config.submitOptionTrade(request, requesterId));
 }
 
+/** The read-only GETs this family answers, each resolved against the requester's own account. */
+type GetRoute = (
+  res: ServerResponse,
+  url: string,
+  config: DashboardServerConfig,
+  requesterId: string | undefined,
+) => Promise<void>;
+const GET_ROUTES: Readonly<Record<string, GetRoute>> = {
+  "/api/trade/chain": serveChain,
+  "/api/trade/quote": serveQuote,
+  "/api/trade/bars": serveBars,
+  "/api/symbols/search": serveSymbolSearch,
+  "/api/research/brief": serveBrief,
+};
+
 /** Handle `/api/trade/chain`, `/api/trade/quote`, `/api/trade/bars`, and `/api/trade/option/*`.
  *  Returns true when answered. */
 export async function serveOptionApi(
@@ -339,31 +355,12 @@ export async function serveOptionApi(
   session: Session | undefined,
 ): Promise<boolean> {
   const isOrder = path === "/api/trade/option/review" || path === "/api/trade/option/submit";
-  if (
-    path !== "/api/trade/chain" &&
-    path !== "/api/trade/quote" &&
-    path !== "/api/trade/bars" &&
-    path !== "/api/symbols/search" &&
-    !isOrder
-  ) {
-    return false;
-  }
+  const read = GET_ROUTES[path];
+  if (!(read || isOrder)) return false;
   // Identity: the session and nowhere else — exactly the legacy ticket's resolution.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
-  if (path === "/api/trade/chain") {
-    if (requireGet(req, res)) await serveChain(res, req.url ?? "/", config, requesterId);
-    return true;
-  }
-  if (path === "/api/trade/quote") {
-    if (requireGet(req, res)) await serveQuote(res, req.url ?? "/", config, requesterId);
-    return true;
-  }
-  if (path === "/api/trade/bars") {
-    if (requireGet(req, res)) await serveBars(res, req.url ?? "/", config, requesterId);
-    return true;
-  }
-  if (path === "/api/symbols/search") {
-    if (requireGet(req, res)) await serveSymbolSearch(res, req.url ?? "/", config, requesterId);
+  if (read) {
+    if (requireGet(req, res)) await read(res, req.url ?? "/", config, requesterId);
     return true;
   }
   const raw = await readJsonPost(req, res, OPTION_BODY_CAP_BYTES);

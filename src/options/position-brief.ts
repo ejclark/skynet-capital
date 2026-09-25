@@ -144,7 +144,7 @@ function assumptionLines(input: BriefInputs, retiredWindow: string | undefined):
 export function positionBrief(raw: BriefInputs): PositionBrief {
   const today = etDateOf(raw.now);
   const { input, retiredWindow } = normalizeInputs(raw, today);
-  const expirations = input.chain.map((q) => q.expiration);
+  const expirations = input.expirations ?? input.chain.map((q) => q.expiration);
   const strip = dteStrip(expirations, today, input.earnings, input.catalysts);
   const firstIn = strip.find((m) => m.verdict === "in")?.expiration;
   const richness = richnessOf(

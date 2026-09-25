@@ -34,6 +34,9 @@ export interface OptionChainRow {
   /** Present exactly when the data host returned a snapshot for this contract — the per-row
    *  provenance the chain shows instead of a silent "—" (#3407 P2). */
   readonly quoteSource?: "indicative";
+  /** When the feed says this bid/ask was quoted (`latestQuote.t`) — NOT when we fetched it. The
+   *  Position Brief's pulse ages quotes off this; absent when the feed gave no usable stamp. */
+  readonly quotedAt?: string;
   // The greeks the data host quoted for this contract, each carried ONLY when it arrived as a
   // finite number. A greek the feed omitted stays absent, so the desk reads it as ABSENT rather
   // than as a confident 0.00 — "no decay", "no convexity" — that nobody actually measured.
@@ -143,6 +146,8 @@ const num = (value: unknown): number | undefined => {
 export interface UnderlyingQuote {
   readonly last: number;
   readonly prevClose: number;
+  /** When the last trade printed (`latestTrade.t`), so a reader can age it; absent when unstamped. */
+  readonly lastAt?: string;
   readonly bid?: number;
   readonly ask?: number;
 }
@@ -346,7 +351,7 @@ export class AlpacaOptionsClient {
       );
       if (response.status < 200 || response.status >= 300) return undefined;
       const body = response.body as {
-        latestTrade?: { p?: unknown };
+        latestTrade?: { p?: unknown; t?: unknown };
         prevDailyBar?: { c?: unknown };
         latestQuote?: { bp?: unknown; ap?: unknown };
       } | null;
@@ -359,7 +364,8 @@ export class AlpacaOptionsClient {
       const bid = num(body?.latestQuote?.bp);
       const ask = num(body?.latestQuote?.ap);
       const nbbo = bid !== undefined && ask !== undefined && bid > 0 && ask > 0 ? { bid, ask } : {};
-      return { last, prevClose, ...nbbo };
+      const lastAt = stampOf(body?.latestTrade?.t);
+      return { last, prevClose, ...nbbo, ...(lastAt ? { lastAt } : {}) };
     } catch {
       return undefined;
     }
@@ -558,7 +564,7 @@ export class AlpacaOptionsClient {
         snapshots?: Record<
           string,
           {
-            latestQuote?: { bp?: unknown; ap?: unknown };
+            latestQuote?: { bp?: unknown; ap?: unknown; t?: unknown };
             greeks?: RawGreeks;
             dailyBar?: { v?: unknown };
           }
@@ -571,6 +577,9 @@ export class AlpacaOptionsClient {
         return {
           ...row,
           quoteSource: "indicative",
+          ...(stampOf(snap.latestQuote?.t)
+            ? { quotedAt: stampOf(snap.latestQuote?.t) as string }
+            : {}),
           ...(price0(snap.latestQuote?.bp) !== undefined
             ? { bid: price0(snap.latestQuote?.bp) as number }
             : {}),
@@ -587,6 +596,11 @@ export class AlpacaOptionsClient {
       return rows;
     }
   }
+}
+
+/** A feed timestamp worth carrying: an ISO string that parses. Anything else stays absent. */
+function stampOf(value: unknown): string | undefined {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? value : undefined;
 }
 
 /** Round to the cent, round-half-up. Options premiums are never sub-cent in practice, so this is

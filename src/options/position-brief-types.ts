@@ -102,6 +102,12 @@ export interface BriefInputs {
   readonly sessionOpen: boolean;
   readonly stake: BriefStake;
   readonly chain: readonly BriefQuote[];
+  /**
+   * Every listed expiration, when the caller fetched quotes for only some of them — the strip must
+   * still show an expiry as "spans print" even though no one should price it. Defaults to the
+   * chain's own expirations.
+   */
+  readonly expirations?: readonly string[];
   /** Annualized realized volatility (decimal) over ~20 sessions — the richness yardstick. */
   readonly realizedVol?: number;
   /** IV rank 0–100 when the IV instrument has a full window; absent until it does. */
