@@ -192,3 +192,12 @@
     min-width: 10em;
   }
 }
+/* The positions row's way in (#3729 step 4) — sized like the row's own Close button beside it,
+ * which `.act-col`'s 160px minimum already makes room for. */
+.guidance-link {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 11px;
+  padding: 4px 10px;
+  text-decoration: none;
+}

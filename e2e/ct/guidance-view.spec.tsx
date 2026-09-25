@@ -51,3 +51,27 @@ test.describe("desktop, 1280px", () => {
     await expectComponentShot(component, "guidance-view-desktop.png");
   });
 });
+
+test.describe("phone, 390px — from your paper account", () => {
+  test.use({ viewport: { width: 390, height: 520 } });
+  test("the positions link lands with the account's shares already in", async ({ mount }) => {
+    const HELD = { shares: 400, costBasis: 70 };
+    const component = await mount(
+      <GuidanceView
+        guidance={positionGuidance(inputs({ stake: HELD }))}
+        stake={HELD}
+        stakeKey="account"
+        held={HELD}
+        changes={undefined}
+        refreshing={false}
+        onStake={noop}
+        onRefresh={noop}
+        onUse={noop}
+      />,
+    );
+    await expectComponentShot(
+      component.getByRole("list", { name: "At a glance" }).locator(".."),
+      "guidance-view-from-account.png",
+    );
+  });
+});

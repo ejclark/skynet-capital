@@ -63,9 +63,45 @@ function Freshness({ pulse }: { readonly pulse: readonly PulseItem[] }): ReactEl
   );
 }
 
+/** Says where the numbers came from, and offers the paper position when a saved stake differs. */
+function HeldLine({
+  held,
+  stake,
+  stakeKey,
+  onStake,
+}: {
+  readonly held?: GuidanceStake;
+  readonly stake: GuidanceStake;
+  readonly stakeKey: string;
+  readonly onStake: (next: GuidanceStake) => void;
+}): ReactElement | null {
+  if (!held) return null;
+  const summary = `${held.shares} shares${held.costBasis !== undefined ? ` at ${usd(held.costBasis)}` : ""}`;
+  if (stakeKey === "account") {
+    return (
+      <p className="guidance-muted">From your paper account: {summary}. Edit to try a what-if.</p>
+    );
+  }
+  if (held.shares === stake.shares && held.costBasis === stake.costBasis) return null;
+  return (
+    <p className="guidance-muted">
+      Your paper account holds {summary}.{" "}
+      <button
+        type="button"
+        className="btn guidance-btn"
+        onClick={() => onStake({ ...stake, ...held })}
+      >
+        Use that
+      </button>
+    </p>
+  );
+}
+
 export function GuidanceView({
   guidance,
   stake,
+  stakeKey = "saved",
+  held,
   changes,
   refreshing,
   notice,
@@ -75,6 +111,10 @@ export function GuidanceView({
 }: {
   readonly guidance: PositionGuidance;
   readonly stake: GuidanceStake;
+  /** Where the stake came from — remounts the form when the account's position arrives. */
+  readonly stakeKey?: string;
+  /** The member's paper position in this symbol, when the account holds it. */
+  readonly held?: GuidanceStake;
   /** `diffGuidance` against this browser's last look; undefined on a first visit. */
   readonly changes: readonly string[] | undefined;
   readonly refreshing: boolean;
@@ -109,7 +149,8 @@ export function GuidanceView({
         </p>
       ) : null}
       <Freshness pulse={g.pulse} />
-      <GuidanceStakeForm key={g.symbol} stake={stake} onChange={onStake} />
+      <HeldLine held={held} stake={stake} stakeKey={stakeKey} onStake={onStake} />
+      <GuidanceStakeForm key={`${g.symbol}:${stakeKey}`} stake={stake} onChange={onStake} />
       <ul className="guidance-glance" aria-label="At a glance">
         {g.calls.map((c) => (
           <GlanceLine key={c.lever} call={c} rows={rowsFor(c.lever)} />

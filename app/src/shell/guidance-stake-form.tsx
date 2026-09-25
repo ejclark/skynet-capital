@@ -84,7 +84,9 @@ export function GuidanceStakeForm({
   readonly onChange: (next: GuidanceStake) => void;
 }): ReactElement {
   const entered = Object.keys(stake).length > 0;
-  const [open, setOpen] = useState(!entered);
+  // Open until a goal is picked: without one no option call is available, so the form is the
+  // next thing to do — even when the shares arrived from the paper account.
+  const [open, setOpen] = useState(!(entered && stake.goal));
   const set = (field: NumericField, value: number | undefined) => {
     const next: Record<string, unknown> = { ...stake };
     if (value === undefined) delete next[field];

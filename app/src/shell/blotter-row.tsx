@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
@@ -241,6 +242,18 @@ export function BlotterRow({
           plain={plainCells(position, decay)}
         />
         <td className="act-col">
+          {/* Shares only: the guidance is about what to do with a stock you hold (#3729 step 4).
+              The link carries the symbol and account, never the stake — the tab reads the
+              position from this same account in the browser. */}
+          {position.isOption ? null : (
+            <Link
+              to="/trade"
+              search={{ desk: deskId, symbol: position.symbol, section: "guidance" }}
+              className="btn mc-btn guidance-link"
+            >
+              Guidance
+            </Link>
+          )}
           <button
             type="button"
             className="btn mc-btn close-btn"

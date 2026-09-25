@@ -15,23 +15,27 @@ const { stake: _fixtureStake, ...MARKET } = inputs();
 const INCOME = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" };
 const requested: string[] = [];
 
+let deskBody: unknown = { generatedAt: "", desk: { positions: [] } };
+
 function serve(market: GuidanceMarket): void {
   globalThis.fetch = ((url: string) => {
     requested.push(url);
-    return Promise.resolve(new Response(JSON.stringify({ market }), { status: 200 }));
+    const body = url.startsWith("/api/desk/") ? deskBody : { market };
+    return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   }) as typeof fetch;
 }
 
-function mount(onUse: (row: LadderRow) => void = () => undefined) {
+function mount(onUse: (row: LadderRow) => void = () => undefined, deskId = "") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <GuidanceSection symbol="CRWV" onUse={onUse} />
+      <GuidanceSection symbol="CRWV" deskId={deskId} onUse={onUse} />
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  deskBody = { generatedAt: "", desk: { positions: [] } };
   localStorage.clear();
   requested.length = 0;
   serve(MARKET);
@@ -134,5 +138,33 @@ describe("guidance tab — a refresh that fails", () => {
     expect(await screen.findByText("Couldn't build it just now.")).toBeTruthy();
     expect(screen.getByRole("list", { name: "At a glance" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
+  });
+});
+
+describe("guidance tab — from your positions (#3729 step 4)", () => {
+  const holding = (quantity: string, costPerShare: string) => ({
+    generatedAt: "",
+    desk: { positions: [{ symbol: "CRWV", isOption: false, quantity, costPerShare }] },
+  });
+
+  it("starts from the paper position when nothing is saved, and says so", async () => {
+    deskBody = holding("400", "$70.00");
+    mount(undefined, "desk-1");
+    expect(await screen.findByText(/From your paper account: 400 shares at \$70\.00/)).toBeTruthy();
+    expect(requested.some((u) => u.includes("400") || u.includes("70"))).toBe(false);
+  });
+
+  it("keeps a saved what-if, and offers the paper position beside it", async () => {
+    deskBody = holding("200", "$75.00");
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    mount(undefined, "desk-1");
+    fireEvent.click(await screen.findByRole("button", { name: "Use that" }));
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem("skynet-guidance-stake:CRWV") ?? "{}")).toMatchObject({
+        shares: 200,
+        costBasis: 75,
+        goal: "income",
+      }),
+    );
   });
 });

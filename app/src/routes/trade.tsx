@@ -332,7 +332,9 @@ function Pane({
   if (id === "guidance") {
     // Keyed by symbol: a new symbol remounts the tab, so one symbol's stake and last-seen snapshot
     // can never render against — or be saved under — another symbol's market.
-    return <GuidanceSection key={symbol} symbol={symbol} onUse={props.onGuidanceUse} />;
+    return (
+      <GuidanceSection key={symbol} symbol={symbol} deskId={desk} onUse={props.onGuidanceUse} />
+    );
   }
   if (id === "chain") {
     return (

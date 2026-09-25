@@ -4,6 +4,7 @@ import type {
   GuidanceSnapshot,
   GuidanceStake,
 } from "../../../src/options/position-guidance-types";
+import type { DeskSnapshot } from "./desk";
 
 /**
  * POSITION GUIDANCE, CLIENT SIDE (#3729 step 3). The route answers with the MARKET only — quotes,
@@ -96,3 +97,22 @@ export function readSnapshot(symbol: string): GuidanceSnapshot | undefined {
 }
 export const writeSnapshot = (symbol: string, snapshot: GuidanceSnapshot): void =>
   writeJson(SNAPSHOT_KEY(symbol), snapshot);
+
+const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
+
+/**
+ * The member's paper position in `symbol`, as a stake (#3729 step 4): shares and average cost from
+ * the account the trade page is already reading. Stock only — an option row is not "shares you
+ * hold". Undefined when the account holds none, so a hypothetical stake is never overwritten.
+ */
+export function heldStake(
+  desk: DeskSnapshot | undefined,
+  symbol: string,
+): GuidanceStake | undefined {
+  const held = desk?.desk.positions.find((p) => !p.isOption && p.symbol === symbol);
+  if (!held) return undefined;
+  const shares = Math.floor(num(held.quantity));
+  const costBasis = num(held.costPerShare);
+  if (!(shares > 0)) return undefined;
+  return { shares, ...(costBasis > 0 ? { costBasis } : {}) };
+}
