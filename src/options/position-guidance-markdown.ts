@@ -23,6 +23,7 @@ const PULSE_MARK: Readonly<Record<PulseStatus, string>> = { fresh: "✓", aging:
 const DTE_WORD = {
   in: "✓ in",
   "too-short": "✕ too short",
+  "after-decision": "✕ after the hold-or-sell date",
   "spans-print": "✕ spans print",
 } as const;
 

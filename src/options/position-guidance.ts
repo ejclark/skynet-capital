@@ -151,7 +151,7 @@ export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
   const today = etDateOf(raw.now);
   const { input, retiredWindow } = normalizeInputs(raw, today);
   const expirations = input.expirations ?? input.chain.map((q) => q.expiration);
-  const strip = dteStrip(expirations, today, input.earnings, input.catalysts);
+  const strip = dteStrip(expirations, today, input.earnings, input.catalysts, input.stake.goal);
   const firstIn = strip.find((m) => m.verdict === "in")?.expiration;
   const richness = richnessOf(
     input.ivRank,

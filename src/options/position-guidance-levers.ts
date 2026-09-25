@@ -1,5 +1,12 @@
 import { headlineRow, type LadderDrop, type LadderResult } from "./position-guidance-ladder.js";
-import { actionable, capConfidence, pct, richnessCap, usd } from "./position-guidance-rules.js";
+import {
+  actionable,
+  capConfidence,
+  optionsCutoff,
+  pct,
+  richnessCap,
+  usd,
+} from "./position-guidance-rules.js";
 import type {
   Confidence,
   DteMark,
@@ -66,9 +73,16 @@ function bandWhy(ctx: LeverContext): GuidanceReason | undefined {
     return why("DTE-FLOOR", `${span} — no print on the calendar; under 7 DTE is excluded.`);
   }
   const evidence = ctx.input.printEvidence ?? "an earnings gap can outrun what options price";
+  const cutoff = optionsCutoff(ctx.input.earnings, ctx.input.stake.goal);
+  if (cutoff?.kind === "decision") {
+    return why(
+      "DTE-PRINT",
+      `${span} only: nothing may still be open on ${cutoff.date}, when you decide whether to hold through the earnings window ${windowText(ctx.input)}.`,
+    );
+  }
   return why(
     "DTE-PRINT",
-    `${span} only: later ones span the print window ${windowText(ctx.input)} — ${evidence}.`,
+    `${span} only: later ones span the earnings window ${windowText(ctx.input)} — ${evidence}.`,
   );
 }
 
@@ -93,7 +107,7 @@ function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
     reasons: [
       why(
         "DTE-PRINT",
-        `Every listed expiry is under 7 days or spans the print window ${windowText(ctx.input)}.`,
+        `Every listed expiry is under 7 days, runs past your hold-or-sell date, or spans the earnings window ${windowText(ctx.input)}.`,
       ),
     ],
     provesWrong: "A new weekly lists inside the clean band.",
@@ -141,8 +155,7 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
       provesWrong: "Implied rises to 1.2× realized or better.",
     });
   }
-  let grade: Confidence = capConfidence("high", richnessCap(ctx.richness));
-  if (ctx.richness.verdict === "middling") grade = capConfidence(grade, "medium");
+  const grade: Confidence = capConfidence("high", richnessCap(ctx.richness));
   const bestWhy = why(
     "PRICE-AT-BID",
     `Best: ${usd(best.strike)} call ${best.expiration} — bid ${usd(best.bid)}, ${pct(best.annualizedYield)} annualized, ${pct(best.probAssigned)} model odds of assignment.`,
@@ -167,7 +180,7 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
     until: ctx.input.earnings
       ? {
           date: last,
-          why: "last expiry before the print window — stop writing until the print passes",
+          why: "last usable expiry — stop selling calls until the earnings report passes",
         }
       : { date: last, why: "longest in-band expiry — refresh the guidance before rolling" },
   });

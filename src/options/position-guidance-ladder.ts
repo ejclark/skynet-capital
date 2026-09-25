@@ -157,7 +157,14 @@ function rowFor(
   };
 }
 
-/** The ladder for one lever: top `LADDER_DEPTH` strikes by yield-at-bid, per in-band expiry. */
+/**
+ * The ladder for one lever: per in-band expiry, the `LADDER_DEPTH` strikes whose |delta| sits
+ * nearest the headline target, shown in strike order. NOT the top strikes by yield — yield rises
+ * with risk, so that set is always the three riskiest strikes under the delta cap, and the headline
+ * pick (which looks for the target delta) would then choose among the wrong rows.
+ */
+const fromTarget = (row: LadderRow): number => Math.abs(Math.abs(row.delta) - HEADLINE_DELTA);
+
 export function buildLadder(
   lever: LadderRow["lever"],
   input: GuidanceInputs,
@@ -171,8 +178,9 @@ export function buildLadder(
       input.chain
         .filter((q) => q.expiration === mark.expiration && q.type === side.type)
         .flatMap((q) => rowFor(side, q, mark, input, dropped) ?? [])
-        .sort((a, b) => b.annualizedYield - a.annualizedYield || a.strike - b.strike)
-        .slice(0, LADDER_DEPTH),
+        .sort((a, b) => fromTarget(a) - fromTarget(b) || a.strike - b.strike)
+        .slice(0, LADDER_DEPTH)
+        .sort((a, b) => a.strike - b.strike),
     );
   return { rows, dropped };
 }
@@ -187,8 +195,6 @@ export function headlineRow(rows: readonly LadderRow[]): LadderRow | undefined {
   const long = rows.filter((r) => r.dte >= HEADLINE_MIN_DTE);
   const pool = long.length > 0 ? long : rows;
   return [...pool].sort(
-    (a, b) =>
-      Math.abs(Math.abs(a.delta) - HEADLINE_DELTA) - Math.abs(Math.abs(b.delta) - HEADLINE_DELTA) ||
-      b.annualizedYield - a.annualizedYield,
+    (a, b) => fromTarget(a) - fromTarget(b) || b.annualizedYield - a.annualizedYield,
   )[0];
 }
