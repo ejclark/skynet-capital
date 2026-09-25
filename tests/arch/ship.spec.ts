@@ -165,6 +165,39 @@ describe("ship checkbody — the picture/format contract", () => {
     expect(stderr).toContain("journey");
   });
 
+  it("accepts a gitGraph picture — GitHub has drawn it for years; the parser is the gate, not a type list", () => {
+    const pic = [
+      "## The picture",
+      "",
+      "```mermaid",
+      "gitGraph",
+      '    commit id: "main"',
+      "    branch item-1",
+      '    commit id: "fix a"',
+      "    checkout main",
+      "    merge item-1",
+      "```",
+      "",
+      "_Caption — the platter's merge order, drawn from scripts/ship.sh platter_",
+      "",
+    ].join("\n");
+    const { code, stderr } = run(["checkbody", body(`${pic}\n## Summary\n\n- boards one item\n`)]);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+  });
+
+  it("refuses a mermaid picture that will not parse — a syntax error is the opening frame", () => {
+    const { code, stderr } = run([
+      "checkbody",
+      body(
+        "## The picture\n\n```mermaid\nflowchart LR\n    A[foo(bar)] --> B\n```\n\n_Caption — a chart_\n\n## Summary\n\n- x\n",
+      ),
+    ]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("will not render on GitHub");
+    expect(stderr).toContain("Parse error");
+  });
+
   it("refuses branch-form raw.githubusercontent URLs — they 404 at squash-merge (PR #446)", () => {
     const { code, stderr } = run([
       "checkbody",

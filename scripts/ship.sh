@@ -129,19 +129,17 @@ cmd_checkbody() {
 $over"
   fi
 
-  # 4. Mermaid stable-types allowlist — GitHub's deployed mermaid lags releases, and a syntax
-  #    error renders as the PR's OPENING FRAME. Beta types are fine in comments/discussion, never
-  #    as the fridge picture. (This checks the diagram TYPE, not full syntax — the honest limit.)
-  local t bad=""
-  while IFS= read -r t; do
-    case "$t" in
-      flowchart|graph|sequenceDiagram|stateDiagram-v2|erDiagram|classDiagram|pie|gantt|timeline|"") ;;
-      *) bad="$bad $t" ;;
-    esac
-  done <<EOF_TYPES
-$(awk '/^```mermaid/{want=1;next} want && /^[[:space:]]*$/{next} want && /^%%/{next} want{print $1; want=0}' "$f")
-EOF_TYPES
-  [ -z "$bad" ] || fail "mermaid type(s) not in the stable allowlist:$bad — use flowchart/sequenceDiagram/stateDiagram-v2/erDiagram/classDiagram/pie/gantt/timeline (docs/PICTURES.md; 'journey' is a UX chart, wrong shape for reasoning)."
+  # 4. Every mermaid block must PARSE under the Mermaid version github.com renders (11.17.2 on
+  #    2026-09-25) — a syntax error renders as the PR's OPENING FRAME. scripts/mermaid-lint.mjs is
+  #    the one parser, pinned to GitHub's version; it replaced a type-only allowlist that admitted
+  #    "this checks the diagram TYPE, not full syntax" and kept out every richer type GitHub has
+  #    drawn for years (gitGraph, quadrantChart, C4…). Notes (advisory) print to stdout and are
+  #    ignored here; problems come back on stderr and fail the body.
+  local mm
+  if ! mm="$(node scripts/mermaid-lint.mjs "$f" 2>&1 >/dev/null)"; then
+    fail "a mermaid block will not render on GitHub (docs/PICTURES.md):
+$mm"
+  fi
 
   if [ "$fails" -gt 0 ]; then
     echo "ship checkbody: $fails problem(s) — the PR body is the durable record; see docs/PICTURES.md." >&2

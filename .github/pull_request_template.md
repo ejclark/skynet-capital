@@ -17,7 +17,8 @@ UI → before/after screenshots (≤100KB JPEG under docs/shots/pr-<n>/; ship.sh
 never hand-write a branch URL, those 404 the moment the branch deletes at merge) ·
 dataflow/pipeline → flowchart LR · route/request → sequenceDiagram · lifecycle/gate/mode →
 stateDiagram-v2 · schema → erDiagram · config → before/after table.
-Mermaid: stable types only, ≤15 nodes, plain words in labels, no init/style blocks.
+Mermaid: any type GitHub draws (npm run mermaid:lint parses every block — a syntax error is the
+opening frame), ≤15 nodes, plain words in labels, no theme/hex — emphasis by edge weight and shape.
 The picture states WHAT changed — never how good it is. -->
 
 _Caption —_

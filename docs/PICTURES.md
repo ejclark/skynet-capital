@@ -28,14 +28,26 @@ this guide teaches, the template reminds, and the ship gate enforces existence; 
 The waiver is a first-class move, not a loophole: a 3-node flowchart on a typo fix burns the
 glance it claims to save and trains the reader to skip the slot. Skips stay visible and auditable.
 
-## Mermaid that renders on GitHub — stable types only
+## Mermaid that renders on GitHub — any type 11.17.2 draws, and every block is parsed
 
-GitHub renders Mermaid natively in PR bodies, issues, and `.md` files. Templates and this guide
-prescribe **stable types only** — `flowchart` (/`graph`), `sequenceDiagram`, `stateDiagram-v2`,
-`erDiagram`, `classDiagram`, `pie`, `gantt`, `timeline`. Beta types (`xychart-beta`, `block-beta`,
-`architecture-beta`…) are permitted ad hoc but never prescribed: GitHub's deployed Mermaid version
-lags releases, and a syntax error renders as the PR's *opening frame*. Never use the `journey`
-type for reasoning journeys — it's a UX-satisfaction chart, the wrong shape entirely.
+GitHub renders Mermaid natively in PR bodies, issues and `.md` files — on **Mermaid 11.17.2**
+(read from github.com's production renderer bundle, 2026-09-25; upstream is 12.0.0). **The gate is
+the parser, not a type list:** `npm run mermaid:lint` parses every ```` ```mermaid ```` block with
+that exact pinned version (`scripts/mermaid-lint.mjs`), and `ship.sh checkbody`, `issue:lint` and
+the CI corpus scan all run it — so a diagram that passes here draws there, and the fear that
+motivated the old "stable types only" rule (a syntax error as the opening frame) is caught before
+push. The type menu is therefore everything 11.17.2 draws: `flowchart`, `sequenceDiagram`,
+`stateDiagram-v2`, `erDiagram`, `classDiagram`, `gitGraph`, `quadrantChart`, `requirementDiagram`,
+`timeline`, `mindmap`, `kanban`, `pie`, `gantt`, and the beta family (`xychart-beta`, `sankey-beta`,
+`block-beta`, `architecture-beta`, `radar-beta`, `treemap-beta`, `packet-beta`, `C4Context` and
+kin). Pick by the change, per the decision table. Never `usecase-beta` or `agentflow-beta` (12.x
+only — GitHub shows an error), never `zenuml` (a plugin), and never the `journey` type for
+reasoning journeys — it's a UX-satisfaction chart, the wrong shape entirely; the lint refuses all
+four. Known traps the lint catches for you: unquoted parentheses in a label (`A["SPY 450C (weekly)"]`),
+a colon inside a `timeline` period (`0931`, not `09:31`), and iconify/Font Awesome icons (GitHub
+renders every one as `?` — `architecture-beta` gets only its built-in cloud/database/disk/internet/
+server). The GitHub *mobile app* does not render Mermaid at all (open since 2024); a phone browser
+does, so the 390px rule below is about the browser.
 
 Copy-paste starters (all field-verified shapes):
 
@@ -70,10 +82,14 @@ stateDiagram-v2
 `src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
 containing special characters. The real reading condition is a phone at 390px.
 
-**Dark mode:** the default is NO `%%{init}%%` block and no `style`/`classDef` statements — GitHub
-auto-themes both modes for free. Brand-styled mermaid is allowed only via a contrast-verified
-snippet checked in here, never improvised per-PR (hand-picked hex that looks right in one theme
-breaks in the other — that exact drift already shipped once).
+**Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
+from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
+in `%%{init}%%`, which is deprecated upstream anyway). Emphasis that survives both modes and a
+colourblind reader is *achromatic*: a thick edge (`==>`) for what is new, a dotted one (`-.->`) for
+what is removed, a `subgraph "this PR"`, a diamond for a fork, `@{ shape: cyl }` for a store — never
+a colour alone (`BRAND.md` → *Accessibility*). Brand-styled mermaid is allowed only via a
+contrast-verified snippet checked in here, never improvised per-PR (hand-picked hex that looks
+right in one theme breaks in the other — that exact drift already shipped once).
 
 ## Screenshots — mechanics that keep pictures alive
 
