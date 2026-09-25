@@ -2624,6 +2624,14 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
      Pinned by `tests/arch/ship.spec.ts` → "ship open --hold — the label is on before the PR is
      ever ready".
   2. **Belt and braces (protected, Eric's merge):** the arm job should re-read the PR's LIVE labels
-     before arming instead of trusting the event payload. It boards the platter.
-- **SIDE QUESTS:** any other workflow gate that reads `github.event.pull_request.labels` has the
-  same snapshot race; worth one grep when the platter item lands.
+     before arming instead of trusting the event payload. Boarded as platter #3738.
+  3. **The fix's own first use found its gap (same day):** the platter's `--hold` labelled #3738
+     and then stranded it as a draft — a Claude Code cloud session's proxy refuses GraphQL and
+     serves draft→ready at `POST /pulls/{n}/ccr/ready_for_review` instead, and the closing line
+     still printed "ready for review". `promote_ready` now tries GraphQL, falls back to that route,
+     and succeeds only on GitHub's own `draft:false`; a failure prints "still a DRAFT". Caught
+     because the process shipped before the work it protects — the platter was its first test.
+- **SIDE QUESTS:** checked — no other workflow gate reads `github.event.pull_request.labels`.
+  Still open: `ship.sh automerge`'s `enablePullRequestAutoMerge` is GraphQL-only too, so from a
+  cloud session it can only fail; the MCP arm tool is the primary path there, which is why it
+  hasn't bitten.

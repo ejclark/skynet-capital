@@ -63,6 +63,22 @@ http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an ap
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
 
+# Draft → ready for PR $1 (GraphQL node id $2); 0 only when GitHub confirms it is no longer a draft.
+# REST has no ready-for-review endpoint, so GraphQL goes first — but a Claude Code cloud session's
+# proxy refuses GraphQL outright and serves the same transition at a session-only REST route. The
+# first live `--hold` (the 2026-09-25 platter, #3738) labelled its PR and then stranded it as a
+# draft because only GraphQL was tried (docs/LESSONS.md). Each path is judged by its own answer.
+promote_ready() {
+  local rq rpayload rgql rresp
+  rq='mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { number isDraft } } }'
+  rpayload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$rq" "$2")"
+  rgql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "User-Agent: skynet-ship" -d "$rpayload" "https://api.github.com/graphql")"
+  grep -q '"isDraft":false' <<<"$rgql" && return 0
+  rresp="$(api POST "/pulls/$1/ccr/ready_for_review")"
+  [ "$(http_of "$rresp")" = 200 ] && grep -q '"draft":false' <<<"$(body_of "$rresp")"
+}
+
 # checkbody — the picture/format contract as a pure, testable linter (no network, no git writes).
 # The 2026-08-20 hat-team research finding this encodes: format compliance tracks enforcement,
 # never willingness (fridge rule adopted by 4/126 bodies while comment-only; every machine-gated
@@ -322,18 +338,13 @@ EOF_SHOTS
         echo "ship: could NOT label #$num hold-merge (HTTP $lhttp) — left as a DRAFT so it cannot auto-merge. Label it, then mark it ready by hand." >&2
         return
       fi
-      local node rq rpayload rgql
-      node="$(printf '%s' "$body" | json_field node_id)"
-      rq='mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { number isDraft } } }'
-      rpayload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$rq" "$node")"
-      rgql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-        -H "User-Agent: skynet-ship" -d "$rpayload" "https://api.github.com/graphql")"
-      if grep -q '"isDraft":false' <<<"$rgql"; then
+      if promote_ready "$num" "$(printf '%s' "$body" | json_field node_id)"; then
         echo "ship: promoted #$num to ready — the ready_for_review event carries hold-merge, so nothing arms it."
+        echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
       else
         echo "ship: labelled #$num but could NOT promote it from draft — mark it ready by hand (verify won't run on a draft)." >&2
+        echo "ship: held for Eric (still a DRAFT, auto-merge unarmed) — do NOT arm. STOP. No polling."
       fi
-      echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
     # The arming usually happens through the MCP tool, which never runs this script — so the
     # instruction printed here is the last place the envelope answer can reach the session that
     # arms. Print the REFUSAL as the next step when the diff is in the irreversible class.

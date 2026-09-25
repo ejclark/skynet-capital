@@ -513,14 +513,34 @@ describe("ship open --hold — the label is on before the PR is ever ready", () 
 
   it("labels hold-merge before it promotes the draft to ready", () => {
     const label = open.indexOf('{"labels":["hold-merge"]}');
-    const promote = open.indexOf("markPullRequestReadyForReview");
+    const promote = open.indexOf("promote_ready");
     expect(label).toBeGreaterThan(-1);
     expect(promote).toBeGreaterThan(label);
   });
 
   it("never promotes when the label failed — an unlabelled ready PR merges on green", () => {
     const failed = open.indexOf("could NOT label");
-    const promote = open.indexOf("markPullRequestReadyForReview");
+    const promote = open.indexOf("promote_ready");
     expect(open.slice(failed, promote)).toContain("return");
+  });
+
+  // The first live --hold (#3738) labelled its PR and stranded it as a draft: a Claude Code cloud
+  // session's proxy refuses GraphQL, and GraphQL was the only promote path tried.
+  const fn = script.slice(
+    script.indexOf("promote_ready() {"),
+    script.indexOf("\n}\n", script.indexOf("promote_ready() {")),
+  );
+
+  it("falls back to the session's REST route when GraphQL does not confirm the promote", () => {
+    const gql = fn.indexOf("markPullRequestReadyForReview");
+    const rest = fn.indexOf("/ccr/ready_for_review");
+    expect(gql).toBeGreaterThan(-1);
+    expect(rest).toBeGreaterThan(gql);
+    expect(fn).toContain(`grep -q '"draft":false'`);
+  });
+
+  it("never reports a stranded draft as ready", () => {
+    const failure = open.slice(open.indexOf("could NOT promote"));
+    expect(failure.slice(0, 300)).toContain("still a DRAFT");
   });
 });
