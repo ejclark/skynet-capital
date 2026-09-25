@@ -168,6 +168,13 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
       `Covered calls need 100 shares per contract — you hold ${shares}.`,
     );
   }
+  if (stake.goal === undefined) {
+    return notAvailable(
+      "covered-calls",
+      "GOAL",
+      "Pick a goal first — keep the shares, earn income, or exit. It decides which strikes fit.",
+    );
+  }
   if (stake.costBasis === undefined && stake.goal !== "exit") {
     return notAvailable(
       "covered-calls",
@@ -204,10 +211,14 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
     });
   }
   const keep = best.bid * 100;
+  const net =
+    stake.costBasis !== undefined ? (best.strike - stake.costBasis) * 100 + keep : undefined;
   const basisGain =
-    stake.costBasis !== undefined
-      ? ` That's ${usd((best.strike - stake.costBasis) * 100 + keep)} more than you paid for those 100.`
-      : "";
+    net === undefined
+      ? ""
+      : net >= 0
+        ? ` That's ${usd(net)} more than you paid for those 100.`
+        : ` That's ${usd(-net)} less than you paid for those 100 — a loss, which your exit goal accepts.`;
   const outcome = why(
     stake.goal === "keep-shares" ? "GOAL" : "STRIKE-BASIS",
     `If ${symbol} closes above ${usd(best.strike)} on ${best.expiration} (about a ${pct(best.probAssigned)} chance), 100 of your ${shares} shares are sold at ${usd(best.strike)} — you keep the ${usd(keep)} but miss any rise above it.${basisGain}${stake.goal === "keep-shares" ? " You want to keep the shares, so favour the rows with the lowest chance." : ""}`,

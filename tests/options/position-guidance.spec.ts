@@ -1,5 +1,6 @@
 import { diffGuidance, positionGuidance, snapshotOf } from "../../src/options/position-guidance.js";
 import { buildLadder } from "../../src/options/position-guidance-ladder.js";
+import { guidanceToMarkdown } from "../../src/options/position-guidance-markdown.js";
 import {
   dteStrip,
   etDateOf,
@@ -282,9 +283,9 @@ describe("what changed since you last looked", () => {
     expect(diffGuidance(undefined, first)).toEqual([]);
     const next = positionGuidance(inputs({ realizedVol: 1.0, spot: 84, chain: CHAIN }));
     const lines = diffGuidance(snapshotOf(first), next);
-    expect(lines).toContain("Spot +5.0% since 2026-09-25.");
+    expect(lines).toContain("Stock price +5.0% since 2026-09-25.");
     expect(lines).toContain("Covered calls: Reasonable now (medium) → Wait (low).");
-    expect(lines).toContain("Premium: rich → cheap.");
+    expect(lines).toContain("Option prices for sellers: paying well → paying poorly.");
   });
 });
 
@@ -535,5 +536,53 @@ describe("defaults that never act for you (#3729 step 2b)", () => {
     expect(cc?.reasons[1]?.text).toMatch(
       /100 of your 400 shares are sold at .* miss any rise above it/,
     );
+  });
+});
+
+describe("step 2b review regressions — nothing false on the surface a member acts on", () => {
+  it("an underwater exit says 'less than you paid — a loss', never '$-335 more'", () => {
+    const cc = positionGuidance(inputs({ stake: { shares: 400, costBasis: 100, goal: "exit" } }))
+      .calls[1];
+    const text = cc?.reasons.map((r) => r.text).join(" ") ?? "";
+    expect(text).not.toMatch(/\$-/);
+    expect(text).toContain("less than you paid");
+  });
+
+  it("an exit with no basis never labels a call row as buying shares", () => {
+    const md = guidanceToMarkdown(
+      positionGuidance(inputs({ stake: { shares: 400, goal: "exit" } })),
+    );
+    const callRows = md.split("\n").filter((l) => l.includes(" call |"));
+    expect(callRows.length).toBeGreaterThan(0);
+    for (const row of callRows) expect(row).not.toContain("you buy");
+  });
+
+  it("with no goal, covered calls wait for one rather than saying 'reasonable now'", () => {
+    const cc = positionGuidance(inputs({ stake: { shares: 400, costBasis: 70 } })).calls[1];
+    expect(cc).toMatchObject({ call: "NOT AVAILABLE" });
+    expect(cc?.reasons[0]?.text).toContain("Pick a goal first");
+  });
+
+  it("after the close, DECIDE is a plan for the open and never promises today's price", () => {
+    const zone = "2026-11-04T01:00:00Z";
+    const c = positionGuidance(inputs({ now: zone, chain: [], sessionOpen: false })).calls[0];
+    expect(c).toMatchObject({ call: "DECIDE", atOpen: true });
+    expect(c?.reasons.map((r) => r.text).join(" ")).not.toContain("today's price");
+  });
+
+  it("section 7 and the stake line speak plainly too", () => {
+    const first = positionGuidance(inputs());
+    const next = positionGuidance(inputs({ realizedVol: 1.0, spot: 84 }));
+    const md = guidanceToMarkdown(next, diffGuidance(snapshotOf(first), next));
+    for (const word of [
+      "Spot ",
+      "Premium:",
+      "basis **",
+      "goal **income",
+      "| spot |",
+      "| chain |",
+    ]) {
+      expect(md).not.toContain(word);
+    }
   });
 });

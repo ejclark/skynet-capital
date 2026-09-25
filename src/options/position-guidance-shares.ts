@@ -73,7 +73,10 @@ function decideCall(input: GuidanceInputs, end: string): LeverCall {
         "SHARES",
         `Earnings are due ${windowText(input)}. Hold through: the stock can jump or drop sharply overnight, and nobody can call which way.`,
       ),
-      why("SHARES", `Sell before: you lock in today's price. ${TAXABLE}`),
+      why(
+        "SHARES",
+        `Sell before: you trade the unknown earnings move for a price you can see. ${TAXABLE}`,
+      ),
       keep
         ? why(
             "GOAL",

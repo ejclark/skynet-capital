@@ -208,7 +208,7 @@ export interface LadderRow {
   readonly probAssigned: number;
   /** Model P(trading through the strike at any time before expiry) — roughly 2× the above. */
   readonly probTouch: number;
-  /** Covered call: total return if called away, measured from basis (or spot without one). */
+  /** Covered call: total return if called away, measured from basis — absent when no basis was entered. */
   readonly returnIfCalled?: number;
   /** Cash-secured put: the effective price paid per share if assigned (strike − bid). */
   readonly effectiveEntry?: number;

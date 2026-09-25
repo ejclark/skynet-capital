@@ -1,4 +1,11 @@
-import { CALL_WORDS, LEVER_NAME, pct, usd } from "./position-guidance-rules.js";
+import {
+  CALL_WORDS,
+  GOAL_WORDS,
+  LEVER_NAME,
+  PULSE_WORDS,
+  pct,
+  usd,
+} from "./position-guidance-rules.js";
 import type { Confidence, PositionGuidance, PulseStatus } from "./position-guidance-types.js";
 
 /**
@@ -38,7 +45,7 @@ function header(b: PositionGuidance): string[] {
 function pulse(b: PositionGuidance): string[] {
   const rows = b.pulse.map(
     (p) =>
-      `| ${PULSE_MARK[p.status]} ${p.status} | ${p.id} | ${tableCell(p.source)} | ${p.asOf ?? "—"} | ${tableCell(p.note)} |`,
+      `| ${PULSE_MARK[p.status]} ${p.status} | ${PULSE_WORDS[p.id] ?? p.id} | ${tableCell(p.source)} | ${p.asOf ?? "—"} | ${tableCell(p.note)} |`,
   );
   return [
     "### 1 · Pulse",
@@ -54,12 +61,12 @@ function stake(b: PositionGuidance): string[] {
   const s = b.stake;
   const parts = [
     `Shares **${s.shares ?? 0}**`,
-    s.costBasis !== undefined ? `basis **${usd(s.costBasis)}**` : "basis —",
+    s.costBasis !== undefined ? `paid **${usd(s.costBasis)}** a share` : "paid — (not entered)",
     s.unrealizedPnl !== undefined
       ? `unrealized **${s.unrealizedPnl >= 0 ? "+" : "−"}${usd(Math.abs(s.unrealizedPnl))}** (${pct(s.unrealizedPct ?? 0, 1)})`
       : undefined,
     s.cash !== undefined ? `cash **${usd(s.cash)}**` : "cash —",
-    s.goal ? `goal **${s.goal}**` : "goal — (not set)",
+    s.goal ? `goal **${GOAL_WORDS[s.goal] ?? s.goal}**` : "goal — (not set)",
     s.happyToOwnAt !== undefined ? `happy to own at **${usd(s.happyToOwnAt)}**` : undefined,
     s.concentration !== undefined ? `**${pct(s.concentration)}** of portfolio` : undefined,
   ].filter(Boolean);
@@ -116,9 +123,11 @@ function ladder(b: PositionGuidance): string[] {
   const rows = b.ladder.map((r) => {
     const kind = r.lever === "covered-calls" ? "call" : "put";
     const outcome =
-      r.returnIfCalled !== undefined
-        ? `sold at ${usd(r.strike)}: ${pct(r.returnIfCalled, 1)} over what you paid`
-        : `you buy at ${usd(r.effectiveEntry ?? r.strike)} a share`;
+      r.lever === "covered-calls"
+        ? r.returnIfCalled === undefined
+          ? `100 shares sold at ${usd(r.strike)}`
+          : `100 shares sold at ${usd(r.strike)}: ${pct(Math.abs(r.returnIfCalled), 1)} ${r.returnIfCalled >= 0 ? "above" : "below"} what you paid`
+        : `you buy 100 at ${usd(r.effectiveEntry ?? r.strike)} a share`;
     const flag = r.deltaDisagreement !== undefined ? " ⚠ data check: feed and model disagree" : "";
     return `| ${r.expiration} (${r.dte}d) | ${usd(r.strike)} ${kind} | ${usd(r.bid * 100)} | ${pct(r.annualizedYield, 1)} | ${pct(r.probAssigned)} / ${pct(r.probTouch)} | ${outcome} | 1 of ${r.maxContracts}${flag} |`;
   });
@@ -127,7 +136,7 @@ function ladder(b: PositionGuidance): string[] {
     "",
     ...(rows.length
       ? [
-          "| Expiry | Strike | You receive now | ≈ a year, if repeated | Chance exercised: at expiry / at any point | If exercised | Contracts |",
+          "| Expiry | Strike | You receive now | ≈ a year, if repeated | Chance exercised at expiry / chance the price touches the strike first | If exercised | Contracts |",
           "|---|---|---|---|---|---|---|",
           ...rows,
         ]

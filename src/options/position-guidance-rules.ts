@@ -235,3 +235,28 @@ export const CALL_WORDS: Readonly<Record<string, string>> = {
   DECIDE: "Decide",
   "STAND ASIDE": "Stand aside",
 };
+
+/** How good option prices are for a seller, in plain words (for "what changed"). */
+export const RICHNESS_WORDS: Readonly<Record<string, string>> = {
+  rich: "paying well",
+  middling: "about average",
+  cheap: "paying poorly",
+  unknown: "unknown",
+};
+
+/** The member's goal, in plain words. */
+export const GOAL_WORDS: Readonly<Record<string, string>> = {
+  income: "earn income",
+  "keep-shares": "keep the shares",
+  exit: "exit",
+};
+
+/** What each freshness check is about, in plain words. */
+export const PULSE_WORDS: Readonly<Record<string, string>> = {
+  spot: "Stock price",
+  chain: "Option prices",
+  research: "Research",
+  "earnings-date": "Earnings date",
+  filings: "Company filings",
+  session: "Market hours",
+};
