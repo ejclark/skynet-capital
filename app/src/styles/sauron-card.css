@@ -1,0 +1,170 @@
+/* Sauron's character card (#3727, design handoff 6a): `shell/sauron-card.tsx`. The live tower in a
+ * 664px art box whose edges dissolve into the page, grain and a vignette over it, a thin accent
+ * frame that fades out before the shade, then an ember-lit, noise-edged mist that becomes the
+ * league's panel. No shadows, no motion of its own (the scene inside owns all motion).
+ *
+ * The scene's two colours have no app-theme twin and are the same in both themes — the tower is
+ * always at night — so they live here, like `hero.css`'s night background. */
+
+.char-card {
+  --eye-ember: #ff7a2e;
+  --scene-ground: #05070b;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+/* ---- the art column ---- */
+.char-art {
+  position: relative;
+  height: 664px;
+}
+.char-art-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--scene-ground);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 92%, transparent 100%);
+}
+.char-art-clip iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.char-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.14;
+}
+.char-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 80% at 64% 38%,
+    transparent 55%,
+    color-mix(in srgb, var(--scene-ground) 70%, transparent) 100%
+  );
+}
+.char-frame {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 600px;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 10px;
+  -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 80%, transparent 100%);
+}
+.char-corner {
+  position: absolute;
+  top: -1px;
+  width: 14px;
+  height: 14px;
+  border: 0 solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-top-width: 1px;
+}
+.char-corner--left {
+  left: -1px;
+  border-left-width: 1px;
+  border-top-left-radius: 10px;
+}
+.char-corner--right {
+  right: -1px;
+  border-right-width: 1px;
+  border-top-right-radius: 10px;
+}
+
+/* ---- the shade: the forge seat and the mist, over the bottom 90px of the art ---- */
+.char-blend {
+  position: relative;
+  z-index: 1;
+  margin-top: -90px;
+}
+.char-shade {
+  display: block;
+  width: 100%;
+  height: 90px;
+  overflow: visible;
+  pointer-events: none;
+}
+.char-ember {
+  fill: var(--eye-ember);
+  opacity: 0.16;
+}
+.char-mist-stop {
+  stop-color: var(--surface);
+}
+.char-floor {
+  fill: var(--surface);
+}
+
+/* ---- the league, as the card's body ---- */
+.char-body {
+  margin-top: -1px;
+  padding: 2px 28px 20px;
+  background: var(--surface);
+}
+.char-body .league-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  gap: 12px;
+}
+.char-body .league-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+}
+.char-body .league-toggle {
+  padding: 2px;
+}
+.char-body .league-toggle button {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.char-body .league-toggle button[aria-pressed="true"] {
+  background: var(--bg);
+}
+.char-body .league-row {
+  gap: 10px;
+  padding: 10px 14px;
+}
+.char-body .league-foot {
+  font-size: 13px;
+}
+.char-body .league-link:hover {
+  color: var(--charged);
+}
+
+/* Phones keep the whole ladder here: the card is designed at 384px, so the one-line league the
+ * standalone card falls back to (league-card.css) would throw away the part the art frames. */
+@media (max-width: 700px) {
+  .char-body .league-card .league-head {
+    display: flex;
+  }
+  .char-body .league-card .league-list {
+    display: flex;
+  }
+  .char-body .league-card .league-foot {
+    display: block;
+  }
+  .char-body .league-oneliner {
+    display: none;
+  }
+  .char-body {
+    padding: 2px 16px 18px;
+  }
+}

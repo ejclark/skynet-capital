@@ -1039,14 +1039,13 @@ await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");
 
-// The profile portrait (#3725): Sauron's Overview, where the landmark sits top right beside net
-// worth. Phone first (the portrait stacks under net worth, square), then the wide grid, then the
-// same grid mid-glance after a range chip is clicked.
-const portraitReady = async () => {
-  await page.locator(".portrait iframe").waitFor();
-  await page.frameLocator(".portrait iframe").locator("canvas").waitFor();
+// Sauron's character card (#3727, handoff 6a): the tower over the league, top right of the
+// Overview. Phone first (the card follows the decision, full ladder kept), then the wide grid,
+// then the same grid mid-glance after a range chip is clicked.
+const cardReady = async () => {
+  await page.locator(".char-art iframe").waitFor();
   await page.waitForFunction(
-    () => document.querySelector(".portrait iframe")?.contentWindow?.__ready === true,
+    () => document.querySelector(".char-art iframe")?.contentWindow?.__ready === true,
     undefined,
     { timeout: 60000 },
   );
@@ -1054,15 +1053,22 @@ const portraitReady = async () => {
 };
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
-await page.locator(".portrait").scrollIntoViewIfNeeded();
-await portraitReady();
-await shootCockpit("accounts-portrait-phone");
-await page.setViewportSize({ width: 1650, height: 1000 });
+await cardReady();
+// Element shots are taken after scrolling, so the sticky top bar and cockpit head would paint over
+// the card's top. Unstick them for this one frame.
+await page.addStyleTag({ content: ".topbar, .cockpit-head { position: static !important; }" });
+await page.locator(".char-card").screenshot({
+  path: join(out, "accounts-card-phone.jpg"),
+  type: "jpeg",
+  quality: 62,
+});
+console.log(`shot ${join(out, "accounts-card-phone.jpg")}`);
+await page.setViewportSize({ width: 1650, height: 1100 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
-await portraitReady();
-await shootCockpit("accounts-portrait-desktop");
+await cardReady();
+await shootCockpit("accounts-card-desktop");
 await page.getByRole("button", { name: "3M", exact: true }).click();
 await page.waitForTimeout(900);
-await shootCockpit("accounts-portrait-glance-desktop");
+await shootCockpit("accounts-card-glance-desktop");
 
 await close();
