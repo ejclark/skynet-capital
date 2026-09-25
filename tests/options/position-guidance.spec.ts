@@ -475,3 +475,27 @@ describe("per-strike honesty (#3729 step 2)", () => {
     expect(b.calls[1]?.confidence).toBe("medium");
   });
 });
+
+describe("a blocked lever says only why (#3734 review)", () => {
+  it("carries exactly one reason, with no price in it", () => {
+    const b = positionGuidance(
+      inputs({
+        pulse: [
+          ...inputs().pulse.filter((p) => p.id !== "spot"),
+          {
+            id: "spot",
+            source: "s",
+            status: "aging",
+            note: "4.8% apart, after hours",
+            blocksPricing: true,
+          },
+        ],
+      }),
+    );
+    for (const c of [b.calls[1], b.calls[2]]) {
+      expect(c?.reasons).toHaveLength(1);
+      expect(c?.reasons[0]?.text).not.toContain("$");
+      expect(c?.until).toBeUndefined();
+    }
+  });
+});

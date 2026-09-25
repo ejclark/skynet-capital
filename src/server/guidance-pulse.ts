@@ -72,6 +72,13 @@ const gapOf = (a: number, b: number): number => Math.abs(a / b - 1);
 export function spotPulse(obs: SpotObservation | undefined, now: string, open: boolean): PulseItem {
   const source = "Alpaca IEX last trade × option parity";
   if (!obs) return row("spot", source, "stale", "no spot from the feed");
+  if (!obs.lastAt) return row("spot", source, "aging", "the feed gave no trade time");
+  // AGE FIRST. A trade too old to be a price is stale whatever the cross-check says — otherwise a
+  // disagreement would grade an old trade BETTER than an agreeing one (#3734 review).
+  const age = Date.parse(now) - Date.parse(obs.lastAt);
+  const aged = ageStatus(age, open, SPOT_AGING_MS, SPOT_STALE_MS);
+  const when = `${ageText(age)}${open ? "" : " (as of close)"}`;
+  if (aged === "stale") return row("spot", source, "stale", `last trade ${when}`, obs.lastAt);
   const fmt = (x: number) => `$${x.toFixed(2)}`;
   if (obs.parity !== undefined && gapOf(obs.last, obs.parity) > PARITY_TOLERANCE) {
     const gap = (gapOf(obs.last, obs.parity) * 100).toFixed(1);
@@ -90,21 +97,12 @@ export function spotPulse(obs: SpotObservation | undefined, now: string, open: b
     const note = `IEX last ${fmt(obs.last)} vs IEX bid/ask mid ${fmt(obs.mid)} — no tight call/put pair to settle it`;
     return row("spot", source, "aging", note, obs.lastAt);
   }
-  if (!obs.lastAt) return row("spot", source, "aging", "the feed gave no trade time");
-  const age = Date.parse(now) - Date.parse(obs.lastAt);
-  const status = ageStatus(age, open, SPOT_AGING_MS, SPOT_STALE_MS);
   const cross =
     obs.parity !== undefined
       ? "matches option parity"
       : "unverified — no tight call/put pair to cross-check";
-  const graded = status === "fresh" && obs.parity === undefined ? "aging" : status;
-  return row(
-    "spot",
-    source,
-    graded,
-    `${ageText(age)}${open ? "" : " (as of close)"} · ${cross}`,
-    obs.lastAt,
-  );
+  const graded = aged === "fresh" && obs.parity === undefined ? "aging" : aged;
+  return row("spot", source, graded, `${when} · ${cross}`, obs.lastAt);
 }
 
 /** The median quote age across every strike the guidance will price. */

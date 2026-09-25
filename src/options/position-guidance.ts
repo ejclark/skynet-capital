@@ -56,19 +56,22 @@ function applyPulse(calls: readonly LeverCall[], input: GuidanceInputs): LeverCa
     });
     const option = c.lever !== "shares" && c.call !== "NOT AVAILABLE";
     const blocker = input.pulse.find((p) => p.blocksPricing);
-    if (option && blocker) {
-      next = {
-        ...note(`Prices can't be trusted until the open — ${blocker.note}.`),
+    if (option && (blocker || chain?.status === "stale")) {
+      // A lever the prices can't support says ONLY that — never beside a "Best: $95 call, bid $1.65"
+      // line priced off the very data it just said not to trust (#3734 review).
+      const { until: _dropped, ...rest } = c;
+      const text = blocker
+        ? `Prices can't be trusted until the open — ${blocker.note}.`
+        : `Quotes are stale — ${chain?.note}. Refresh before acting.`;
+      return {
+        ...rest,
         call: "WAIT",
         confidence: "none",
-      };
-    } else if (option && chain?.status === "stale") {
-      next = {
-        ...note(`Quotes are stale — ${chain.note}. Refresh before acting.`),
-        call: "WAIT",
-        confidence: "none",
-      };
-    } else if (option && chain?.status === "aging") {
+        reasons: [{ rule: "PULSE", text }],
+        atOpen: false,
+      } satisfies LeverCall;
+    }
+    if (option && chain?.status === "aging") {
       next = {
         ...note(`Option quotes are ${chain.note}. Confidence capped medium.`),
         confidence: capConfidence(next.confidence, "medium"),

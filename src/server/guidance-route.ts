@@ -10,6 +10,7 @@ import {
   daysBetween,
   etDateOf,
   MIN_DTE,
+  optionsCutoff,
   richnessExpiry,
 } from "../options/position-guidance-rules.js";
 import type { GuidanceMarket, GuidanceQuote } from "../options/position-guidance-types.js";
@@ -39,7 +40,7 @@ import { sendJson } from "./page-shell.js";
 /**
  * GET /api/trade/guidance — the MARKET half of position guidance over live data (#3729).
  *
- * `?symbol=CRWV[&sides=calls|puts|calls,puts][&refresh=1]` → `{ market }` (a `GuidanceMarket`).
+ * `?symbol=CRWV[&refresh=1]` → `{ market }` (a `GuidanceMarket`).
  *
  * The member's stake — shares, cost basis, cash — never comes here: the browser runs
  * `positionGuidance({ ...market, stake })` itself (the app already runs `src/` code client-side), so
@@ -52,7 +53,7 @@ import { sendJson } from "./page-shell.js";
  *
  * Cost posture (Eric, 2026-09-25: "cost efficient", never cheap): quotes are fetched only for the
  * expiries the guidance may actually price (≥ 7 DTE and before the earnings window) and only for
- * the sides asked for; every listed expiry is still shown on the strip.
+ * both sides; every listed expiry is still shown on the strip.
  */
 
 const COALESCE_MS = 15_000;
@@ -71,17 +72,6 @@ interface MarketRead {
   readonly inputs: Promise<GuidanceMarket | { readonly reason: string; readonly note: string }>;
 }
 const inflight = new Map<string, MarketRead>();
-
-type Sides = readonly ("call" | "put")[];
-
-/** `?sides=calls`, `puts` or `calls,puts` (the default): which ladders the member's stake can use. */
-export function sidesFrom(raw: string | null): Sides {
-  const asked = new Set((raw ?? "calls,puts").split(","));
-  const sides: ("call" | "put")[] = [];
-  if (asked.has("calls")) sides.push("call");
-  if (asked.has("puts")) sides.push("put");
-  return sides.length > 0 ? sides : ["call", "put"];
-}
 
 function ledgerFor(symbol: string, printDate: string | undefined) {
   if (!printDate) return undefined;
@@ -113,7 +103,6 @@ async function readMarket(
   config: DashboardServerConfig,
   requesterId: string,
   symbol: string,
-  sides: Sides,
   deps: GuidanceDeps,
   refresh: boolean,
 ): Promise<GuidanceMarket | { readonly reason: string; readonly note: string }> {
@@ -148,13 +137,11 @@ async function readMarket(
     expirations.find((e) => daysBetween(today, e) >= 1) ?? (expirations[0] as string);
   const pages = await Promise.all(
     [...new Set([parityExp, ...priceable])].flatMap((expiration) =>
-      (["call", "put"] as const)
-        .filter((t) => expiration === parityExp || sides.includes(t))
-        .map(async (type) => ({
-          expiration,
-          type,
-          rows: await chainFor(client, symbol, expiration, type),
-        })),
+      (["call", "put"] as const).map(async (type) => ({
+        expiration,
+        type,
+        rows: await chainFor(client, symbol, expiration, type),
+      })),
     ),
   );
   const days = (e: string) =>
@@ -178,7 +165,14 @@ async function readMarket(
   const atm = atmIv(
     chain,
     spot,
-    richnessExpiry(priceable.map((e) => ({ expiration: e, dte: daysBetween(today, e) }))),
+    richnessExpiry(
+      priceable
+        .filter((e) => {
+          const cutoff = optionsCutoff(earnings, undefined);
+          return !(cutoff && e > cutoff.date);
+        })
+        .map((e) => ({ expiration: e, dte: daysBetween(today, e) })),
+    ),
   );
   const mid =
     quote.bid !== undefined && quote.ask !== undefined ? (quote.bid + quote.ask) / 2 : undefined;
@@ -252,19 +246,19 @@ export async function serveGuidance(
     });
     return;
   }
-  // The stake never reaches the server: shares, basis and cash stay in the member's browser, where
-  // the engine applies them to this market read. Only WHICH sides to price travels, and it is not
-  // sensitive.
-  const sides = sidesFrom(params.get("sides"));
+  // The stake never reaches the server, not even as a coarse fact: shares, basis and cash stay in
+  // the member's browser, where the engine applies them to this market read. Both sides are always
+  // priced — a "calls only" flag would itself say "holds 100+ shares, no cash" — and one read then
+  // serves every stake, so changing the stake never re-fetches.
   const refresh = params.get("refresh") === "1";
-  const key = `${requesterId}:${symbol}:${sides.join(",")}`;
+  const key = `${requesterId}:${symbol}`;
   const cached = inflight.get(key);
   const fresh = cached && Date.now() - cached.at < COALESCE_MS && !refresh;
   const read: MarketRead = fresh
     ? cached
     : {
         at: Date.now(),
-        inputs: readMarket(client, config, requesterId, symbol, sides, deps, refresh),
+        inputs: readMarket(client, config, requesterId, symbol, deps, refresh),
       };
   if (!fresh) {
     for (const [k, v] of inflight) if (Date.now() - v.at >= COALESCE_MS) inflight.delete(k);

@@ -4,7 +4,7 @@ import type { GuidanceMarket } from "../../src/options/position-guidance-types.j
 import { priceOption } from "../../src/options/pricing.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { serveGuidance, sidesFrom } from "../../src/server/guidance-route.js";
+import { serveGuidance } from "../../src/server/guidance-route.js";
 
 /**
  * GET /api/trade/guidance (#3729 slice 3): live reads through the member's own account, pulse-
@@ -36,7 +36,7 @@ function fakeRes() {
   return { res, out, json: () => JSON.parse(out.body ?? "{}") };
 }
 
-function broker(spot = 80, chainShift = 0) {
+function broker(spot = 80, chainShift = 0, open = true) {
   const chainCalls: string[] = [];
   const client = {
     getUnderlyingQuote: () =>
@@ -44,14 +44,20 @@ function broker(spot = 80, chainShift = 0) {
     getExpirations: () => Promise.resolve(EXPIRATIONS),
     getBars: () =>
       Promise.resolve(
-        Array.from({ length: 30 }, (_, i) => ({
-          t: `d${i}`,
-          o: 80,
-          h: 80,
-          l: 80,
-          c: 80 * (i % 2 ? 1.03 : 1),
-          v: 1,
-        })),
+        // 30 daily bars ending TODAY (ET); today's is a partial session with an absurd close, so a
+        // realized vol that counts it is unmistakable.
+        Array.from({ length: 30 }, (_, i) => {
+          const day = new Date(Date.UTC(2026, 7, 27 + i, 4));
+          const today = i === 29;
+          return {
+            t: day.toISOString(),
+            o: 80,
+            h: 80,
+            l: 80,
+            c: today ? 400 : 80 * (i % 2 ? 1.03 : 1),
+            v: 1,
+          };
+        }),
       ),
     getChain: (_s: string, expiration: string, type: "call" | "put") => {
       chainCalls.push(`${expiration}:${type}`);
@@ -79,7 +85,7 @@ function broker(spot = 80, chainShift = 0) {
   };
   const config = {
     optionsClientFor: () => client,
-    tradingClientFor: () => ({ isMarketOpen: () => Promise.resolve(true) }),
+    tradingClientFor: () => ({ isMarketOpen: () => Promise.resolve(open) }),
   } as unknown as DashboardServerConfig;
   return { config, chainCalls };
 }
@@ -142,10 +148,25 @@ describe("serveGuidance", () => {
     expect(strip.find((m) => m.expiration === "2026-11-13")?.verdict).toBe("spans-print");
   });
 
-  it("prices only the sides asked for (plus the parity pair)", async () => {
+  it("reads no stake-derived hint either — both sides are always priced", async () => {
     const { config, chainCalls } = broker();
     await serveGuidance(fakeRes().res, `${URL}&sides=calls&refresh=1`, config, "guidance-g", deps);
-    expect(chainCalls.filter((c) => c.endsWith(":put"))).toEqual(["2026-10-02:put"]);
+    expect(chainCalls.filter((c) => c.endsWith(":put")).length).toBeGreaterThan(1);
+  });
+
+  it("skips today's partial bar in realized vol while the market is open, and counts it once closed", async () => {
+    const open = fakeRes();
+    await serveGuidance(open.res, `${URL}&refresh=1`, broker().config, "guidance-h", deps);
+    const shut = fakeRes();
+    await serveGuidance(
+      shut.res,
+      `${URL}&refresh=1`,
+      broker(80, 0, false).config,
+      "guidance-i",
+      deps,
+    );
+    expect(open.json().market.realizedVol).toBeLessThan(1);
+    expect(shut.json().market.realizedVol).toBeGreaterThan(1);
   });
 
   it("grades each input off the feed's own timestamps — and never grades the indicative feed fresh", async () => {
@@ -180,11 +201,5 @@ describe("serveGuidance", () => {
     expect(chainCalls.length).toBe(once);
     await serveGuidance(fakeRes().res, `${URL}&refresh=1`, config, "guidance-e", deps);
     expect(chainCalls.length).toBe(once * 2);
-  });
-
-  it("reads sides, defaulting to both", () => {
-    expect(sidesFrom(null)).toEqual(["call", "put"]);
-    expect(sidesFrom("puts")).toEqual(["put"]);
-    expect(sidesFrom("junk")).toEqual(["call", "put"]);
   });
 });

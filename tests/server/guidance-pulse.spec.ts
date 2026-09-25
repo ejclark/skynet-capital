@@ -165,3 +165,17 @@ describe("chainPulse — the indicative feed", () => {
     expect(chainPulse([ago(10_000)], 1, NOW, true, "opra").status).toBe("fresh");
   });
 });
+
+describe("spotPulse — age first (#3734 review)", () => {
+  it("an old trade is stale in session even when it disagrees with parity", () => {
+    expect(spotPulse({ last: 80, lastAt: ago(6 * 60_000), parity: 82 }, NOW, true).status).toBe(
+      "stale",
+    );
+  });
+
+  it("a five-day-old spot is stale out of hours, gap or no gap", () => {
+    expect(
+      spotPulse({ last: 80, lastAt: ago(5 * 86_400_000), parity: 84 }, NOW, false).status,
+    ).toBe("stale");
+  });
+});
