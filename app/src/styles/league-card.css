@@ -122,23 +122,6 @@
   white-space: nowrap;
 }
 
-/* the Overview's top row: net worth and league side by side when there's room, stacked otherwise */
-.overview-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  margin: 0 0 16px;
-}
-.overview-hero > .nw-card {
-  margin: 0;
-}
-@media (min-width: 1500px) {
-  .overview-hero {
-    grid-template-columns: minmax(0, 1fr) 380px;
-    align-items: start;
-  }
-}
-
 /* Phone (#3689 slice 8): the league as one tappable line. */
 .league-oneliner {
   display: none;

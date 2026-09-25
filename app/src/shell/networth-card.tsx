@@ -1,4 +1,4 @@
-import { type ReactElement, useMemo } from "react";
+import { type ReactElement, type ReactNode, useMemo } from "react";
 import type { NetWorthStatsView } from "../live/networth";
 import { FormStrip } from "./form-strip";
 import { GlossaryTerm } from "./glossary-term";
@@ -44,11 +44,14 @@ export function NetWorthCard({
   stats,
   caption,
   accountId,
+  children,
 }: {
   readonly stats: NetWorthStatsView;
   readonly caption: string;
   /** The single account whose curve to chart; omitted for the "All accounts" book. */
   readonly accountId?: string;
+  /** A full-width row under the footer — the Overview seats "where your money is" here (#3725). */
+  readonly children?: ReactNode;
 }): ReactElement {
   const [whole, cents] = splitCents(stats.value);
   const high = stats.allTimeHigh;
@@ -141,6 +144,7 @@ export function NetWorthCard({
           ) : null}
         </div>
       ) : null}
+      {children}
     </section>
   );
 }

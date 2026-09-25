@@ -4,6 +4,7 @@ import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { DecisionPager } from "./decision-pager";
+import { LandmarkPortrait } from "./landmark-portrait";
 import { LeagueCard } from "./league-card";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
@@ -23,6 +24,11 @@ import { useLens } from "./positions-lens";
  * #3689 slice 3: the Overview now opens with the net-worth card (value, today / locked in / on
  * paper, each window against the S&P, the chart with the all-time high), so the sticky header
  * drops its condensed copy on this section and keeps it on the others.
+ *
+ * #3725: the top is a two-by-two grid, `worth | portrait` over `decide | league`. The left column
+ * is the money story (net worth with "where your money is" as its bottom row, then what needs a
+ * decision), the right is identity and standing (the landmark's portrait, then the league). An
+ * account with no landmark lets the league move up into the portrait's slot.
  */
 export function OverviewSection({
   stats,
@@ -55,6 +61,7 @@ export function OverviewSection({
 }): ReactElement {
   // One account's desk carries the Money strip's allocation (#3689 slice 5).
   const singleDesk = allAccounts ? undefined : desks?.[0]?.desk;
+  const landmark = allAccounts || singleDesk?.error ? undefined : desks?.[0]?.landmark;
   // The Map lens stacks the decisions beside the map (handoff 3c), so the pager steps aside.
   const [lens] = useLens();
   if (loading) return <p className="note">Reading your net worth…</p>;
@@ -64,39 +71,57 @@ export function OverviewSection({
       {allAccounts ? null : (
         <NewHighCeremony key={accountId} accountId={accountId} caption={caption} stats={stats} />
       )}
-      <div className="overview-hero">
-        <NetWorthCard
-          stats={stats}
-          caption={caption}
-          accountId={allAccounts ? undefined : accountId}
-        />
-        <LeagueCard
-          ownedIds={owned.map((a) => a.id)}
-          meId={owned.find((a) => a.kind === "human")?.id}
-        />
+      <div className={landmark ? "overview-grid has-portrait" : "overview-grid"}>
+        <div className="overview-worth">
+          <NetWorthCard
+            stats={stats}
+            caption={caption}
+            accountId={allAccounts ? undefined : accountId}
+          >
+            {!allAccounts && singleDesk?.allocation ? (
+              <MoneyStrip
+                accountId={accountId}
+                allocation={singleDesk.allocation}
+                hasOptions={singleDesk.positions.some((p) => p.isOption)}
+              />
+            ) : null}
+          </NetWorthCard>
+          {!allAccounts && singleDesk?.allocation ? null : (
+            <p className="desk-note">
+              {stats.cashKnown ? `cash ${stats.cash} ready to use` : "cash —"} ·{" "}
+              {stats.positionCount} open positions
+            </p>
+          )}
+        </div>
+        {landmark && singleDesk ? (
+          <div className="overview-portrait">
+            <LandmarkPortrait
+              name={singleDesk.name}
+              power={landmark.power}
+              health={landmark.health}
+              scope=".networth-detail"
+            />
+          </div>
+        ) : null}
+        <div className="overview-decide">
+          {allAccounts ? (
+            <NetWorthRoster
+              accounts={roster}
+              decisionsById={
+                new Map((desks ?? []).map((d) => [d.desk.id, d.desk.decisions?.length ?? 0]))
+              }
+            />
+          ) : lens === "map" ? null : (
+            <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
+          )}
+        </div>
+        <div className="overview-league">
+          <LeagueCard
+            ownedIds={owned.map((a) => a.id)}
+            meId={owned.find((a) => a.kind === "human")?.id}
+          />
+        </div>
       </div>
-      {!allAccounts && singleDesk?.allocation ? (
-        <MoneyStrip
-          accountId={accountId}
-          allocation={singleDesk.allocation}
-          hasOptions={singleDesk.positions.some((p) => p.isOption)}
-        />
-      ) : (
-        <p className="desk-note">
-          {stats.cashKnown ? `cash ${stats.cash} ready to use` : "cash —"} · {stats.positionCount}{" "}
-          open positions
-        </p>
-      )}
-      {allAccounts ? (
-        <NetWorthRoster
-          accounts={roster}
-          decisionsById={
-            new Map((desks ?? []).map((d) => [d.desk.id, d.desk.decisions?.length ?? 0]))
-          }
-        />
-      ) : lens === "map" ? null : (
-        <DecisionPager accountId={accountId} decisions={singleDesk?.decisions ?? []} />
-      )}
       {desksLoading ? (
         <p className="note">Reading positions…</p>
       ) : desksError || !desks ? (

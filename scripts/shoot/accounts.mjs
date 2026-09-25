@@ -425,11 +425,24 @@ ericDesk.desk.positions = ericDesk.desk.positions.map((p) => ({ ...p, ...PLAIN[p
 
 const sauronDesk = {
   generatedAt: "2026-09-11T00:00:00Z",
+  // A persona-mapped bot, so the world projection gives it a landmark: the Overview's portrait (#3725).
+  landmark: { power: 0.62, health: 0.15 },
   desk: {
     id: "bot-sauron",
     name: "Sauron",
     kind: "bot",
     considerations: [],
+    decisions: ericDecisions.slice(0, 1),
+    allocation: {
+      shares: "$17,010",
+      options: "$0",
+      cash: "$983,040",
+      sharesPct: 1.7,
+      optionsPct: 0,
+      cashPct: 98.3,
+      cashShare: "98.3%",
+      shareCount: 50,
+    },
     positions: [
       pos(
         "TSLA",
@@ -861,6 +874,7 @@ const { page, origin, out, close } = await openShell({
     "/api/desk/bot-sauron/heartbeat": sauronHeartbeat,
     "/api/desk/bot-sauron/decisions": sauronNoTrades,
     "/api/accounts/human-eric/equity-curve": ericEquityCurve,
+    "/api/accounts/bot-sauron/equity-curve": ericEquityCurve,
     "/api/trade/bars": spyBars,
   },
 });
@@ -1024,5 +1038,31 @@ await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");
+
+// The profile portrait (#3725): Sauron's Overview, where the landmark sits top right beside net
+// worth. Phone first (the portrait stacks under net worth, square), then the wide grid, then the
+// same grid mid-glance after a range chip is clicked.
+const portraitReady = async () => {
+  await page.locator(".portrait iframe").waitFor();
+  await page.frameLocator(".portrait iframe").locator("canvas").waitFor();
+  await page.waitForFunction(
+    () => document.querySelector(".portrait iframe")?.contentWindow?.__ready === true,
+    undefined,
+    { timeout: 60000 },
+  );
+  await page.waitForTimeout(1200);
+};
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".portrait").scrollIntoViewIfNeeded();
+await portraitReady();
+await shootCockpit("accounts-portrait-phone");
+await page.setViewportSize({ width: 1650, height: 1000 });
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await portraitReady();
+await shootCockpit("accounts-portrait-desktop");
+await page.getByRole("button", { name: "3M", exact: true }).click();
+await page.waitForTimeout(900);
+await shootCockpit("accounts-portrait-glance-desktop");
 
 await close();

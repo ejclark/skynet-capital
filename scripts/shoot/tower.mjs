@@ -62,6 +62,11 @@ const SHOTS = [
   { tag: "eye-behind", w: 1600, h: 1000, alphaOffset: Math.PI, beta: 1.5, radius: 75 },
   { tag: "eye-above", w: 1600, h: 1000, beta: 0.35, radius: 80 },
   { tag: "eye-below", w: 1600, h: 1000, beta: 2.2, radius: 90 },
+  // The profile's picture frame (plan #3725): the scene frames itself, so these skip posing. The
+  // glance pose posts a click far to the frame's left (where the page's filters sit) and captures
+  // mid-glance, so the turn toward it is visible.
+  { tag: "portrait", w: 380, h: 520, portrait: true },
+  { tag: "portrait-glance", w: 380, h: 520, portrait: true, glance: [-420, 330] },
 ];
 
 async function main() {
@@ -90,7 +95,8 @@ async function main() {
   try {
     for (const s of shots) {
       const page = await browser.newPage({ viewport: { width: s.w, height: s.h } });
-      const url = `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}`;
+      const frame = s.portrait ? "&frame=portrait" : "";
+      const url = `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}${frame}`;
       await page.goto(url, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
 
@@ -100,6 +106,20 @@ async function main() {
       // THEN park the camera. Order matters and used to be reversed: posing before the settle let the
       // idle orbit drift alpha by ~0.1 rad during the wait, so the captured angle was never the angle
       // asked for and varied run to run. Pose last, seek immediately, capture — nothing runs in between.
+      if (s.glance) {
+        await page.evaluate(
+          ([x, y]) => window.postMessage({ type: "tower:glance", x, y }, window.location.origin),
+          s.glance,
+        );
+        await page.waitForTimeout(900);
+      }
+      if (s.portrait) {
+        const file = join(OUT, `tower-${s.tag}.png`);
+        await page.screenshot({ path: file, timeout: 30000 });
+        console.log(`  ${s.tag.padEnd(12)} → ${file}`);
+        await page.close();
+        continue;
+      }
       await page.evaluate(({ beta, radius, whole, alphaOffset }) => {
         const eye = window.__eye;
         if (!(eye && window.__towerPose)) return;

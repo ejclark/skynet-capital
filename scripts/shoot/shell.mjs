@@ -16,7 +16,7 @@
 //    hand-rolled servers returned without responding, so the header renders its "connecting…" state.
 //    Answering it would change every existing frame, so the behaviour is preserved exactly.
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
@@ -49,6 +49,19 @@ export async function openShell({
   const server = createServer((req, res) => {
     const path = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
     if (isAppShellPath(path)) return serveAppShell(res, path, { distDir: dist });
+    // The landmark portrait (#3725) embeds the real `/tower` scene. Served when the scene bundle is
+    // built (`npm run build:scene`); otherwise the frame 404s and stays the night background.
+    const scene = { "/tower": "src/three/scene.html", "/three/scene.js": "public/three/scene.js" }[
+      path
+    ];
+    if (scene && existsSync(scene)) {
+      res.writeHead(200, {
+        "content-type": path.endsWith(".js")
+          ? "application/javascript"
+          : "text/html; charset=utf-8",
+      });
+      return res.end(readFileSync(scene));
+    }
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("not the shell");
   });
@@ -56,7 +69,11 @@ export async function openShell({
   const origin = `http://127.0.0.1:${server.address().port}`;
 
   const exe = resolveChromium();
-  const browser = await chromium.launch(exe ? { executablePath: exe } : {});
+  // SwiftShader so the tower's WebGL renders headless (the same flags scripts/shoot/tower.mjs uses).
+  const browser = await chromium.launch({
+    ...(exe ? { executablePath: exe } : {}),
+    args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
+  });
   const page = await browser.newPage({ viewport, colorScheme });
   await page.route("**/events*", () => {
     // Deliberately empty: never answered, never aborted. The shell's EventSource stays pending and

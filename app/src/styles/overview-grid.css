@@ -1,0 +1,110 @@
+/* The Overview's top (#3725): `shell/accounts-overview-section.tsx`. A two-by-two grid on wide
+ * screens, `worth | portrait` over `decide | league`: the money story on the left, identity and
+ * standing on the right. The portrait stretches to the net-worth card's height, which is what
+ * gives the Eye room. With no landmark, the league takes the right column from the top. One
+ * column below 1200px, in DOM order: worth, portrait, decide, league. */
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin: 0 0 16px;
+}
+.overview-grid > * {
+  min-width: 0;
+}
+.overview-grid .nw-card,
+.overview-grid .decisions {
+  margin: 0;
+}
+.overview-decide:empty,
+.overview-league:empty {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .overview-grid {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-areas:
+      "worth league"
+      "decide league";
+    align-items: start;
+  }
+  .overview-grid.has-portrait {
+    grid-template-areas:
+      "worth portrait"
+      "decide league";
+  }
+  .overview-worth {
+    grid-area: worth;
+  }
+  .overview-decide {
+    grid-area: decide;
+  }
+  .overview-league {
+    grid-area: league;
+  }
+  .overview-portrait {
+    grid-area: portrait;
+    align-self: stretch;
+    display: flex;
+  }
+}
+
+/* "Where your money is" as the net-worth card's bottom row: the card's frame, a hairline above. */
+.nw-card .money-strip {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 0 0 14px 14px;
+  background: transparent;
+}
+
+/* The portrait — the scene's own night, identical in both themes, at elevation: raised. */
+.portrait {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--elev-raised);
+  background: #05070b;
+}
+.portrait iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 70vh;
+  border: none;
+}
+@media (min-width: 1200px) {
+  .portrait iframe {
+    flex: 1;
+    aspect-ratio: auto;
+    max-height: none;
+    min-height: 380px;
+  }
+}
+.portrait-caption {
+  padding: 6px 12px;
+  font-size: 10.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.portrait--still {
+  gap: 8px;
+  padding: 16px 18px;
+  justify-content: center;
+  background: var(--surface);
+  box-shadow: var(--elev-base);
+}
+.portrait--still strong {
+  font-size: 13px;
+}
+.portrait--still .hero-enter {
+  align-self: flex-start;
+}
