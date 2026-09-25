@@ -26,7 +26,7 @@ describe("readLedger", () => {
     expect(readLedger(ledger("- **No buy signal exists** — S1 kill-listed."), "CRWV")).toEqual({
       assessed: "2026-09-24",
       probePrice: 79.88,
-      stance: "Stand aside · E1",
+      stance: "Stand aside",
       confidence: "high",
       buySignal: false,
     });
@@ -58,5 +58,16 @@ describe("readLedger — a ledger appends a probe per pulse", () => {
       Number(m[1]),
     );
     expect(readLedger(md, "CRWV").probePrice).toBe(probes.at(-1));
+  });
+
+  // #3729 persona review: "S2 · E1" and "09-30" mean nothing on a trade form.
+  it("drops the research's playbook codes and writes dates the way the tab does", () => {
+    const md = ledger("").replace(
+      "| **Stand aside** · E1 |",
+      "| Stand aside · S2 · E1 — nothing before **MU 09-30** / **Fully Connected 09-29–10-01** |",
+    );
+    expect(readLedger(md, "CRWV").stance).toBe(
+      "Stand aside — nothing before MU Sep 30 / Fully Connected Sep 29–Oct 1",
+    );
   });
 });

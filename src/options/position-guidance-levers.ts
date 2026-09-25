@@ -2,9 +2,11 @@ import { headlineRow, type LadderDrop, type LadderResult } from "./position-guid
 import {
   actionable,
   capConfidence,
+  dayText,
   optionsCutoff,
   pct,
   richnessCap,
+  spanText,
   usd,
 } from "./position-guidance-rules.js";
 import type {
@@ -40,7 +42,7 @@ export const why = (rule: GuidanceReason["rule"], text: string): GuidanceReason 
 export function windowText(input: GuidanceInputs): string {
   const e = input.earnings;
   if (!e) return "no earnings report on the calendar";
-  const span = e.start === e.end ? e.start : `${e.start}–${e.end}`;
+  const span = spanText(e.start, e.end);
   return `${span}${e.status === "estimate" ? ", estimated" : ""}`;
 }
 
@@ -79,7 +81,7 @@ function bandWhy(ctx: LeverContext): GuidanceReason | undefined {
   const inBand = ctx.strip.filter((m) => m.verdict === "in");
   const last = inBand.at(-1);
   if (!last) return undefined;
-  const span = `Only expiries ${inBand[0]?.dte}–${last.dte} days out (through ${last.expiration})`;
+  const span = `Only expiries ${inBand[0]?.dte}–${last.dte} days out (through ${dayText(last.expiration)})`;
   if (!ctx.input.earnings) {
     return why("DTE-FLOOR", `${span}. Under 7 days, the premium isn't worth the risk.`);
   }
@@ -88,7 +90,7 @@ function bandWhy(ctx: LeverContext): GuidanceReason | undefined {
   if (cutoff?.kind === "decision") {
     return why(
       "DTE-PRINT",
-      `${span}: nothing should still be open on ${cutoff.date}, when you decide whether to hold through earnings (${windowText(ctx.input)}).`,
+      `${span}: nothing should still be open on ${dayText(cutoff.date)}, when you decide whether to hold through earnings (${windowText(ctx.input)}).`,
     );
   }
   return why(
@@ -141,7 +143,7 @@ function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
 const receive = (row: LadderRow, kind: "call" | "put"): GuidanceReason =>
   why(
     "PRICE-AT-BID",
-    `Sell 1 ${kind}: ${usd(row.strike)} strike, expires ${row.expiration}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${pct(row.annualizedYield)} a year only if you could repeat it every time).`,
+    `Sell 1 ${kind}: ${usd(row.strike)} strike, expires ${dayText(row.expiration)}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${pct(row.annualizedYield)} a year only if you could repeat it every time).`,
   );
 
 function notAvailable(
@@ -188,7 +190,7 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
   const last = ctx.strip.filter((m) => m.verdict === "in").at(-1)?.expiration ?? "";
   const falsifier =
     ctx.input.earnings?.status === "estimate"
-      ? `If the company announces its earnings date for on or before ${last} → come back here; that expiry would then cross the report.`
+      ? `If the company announces its earnings date for on or before ${dayText(last)} → come back here; that expiry would then cross the report.`
       : "If option prices fall below how much the stock actually moves → come back here.";
   if (!best) {
     return lever({
@@ -221,7 +223,7 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
         : ` That's ${usd(-net)} less than you paid for those 100 — a loss, which your exit goal accepts.`;
   const outcome = why(
     stake.goal === "keep-shares" ? "GOAL" : "STRIKE-BASIS",
-    `If ${symbol} closes above ${usd(best.strike)} on ${best.expiration} (about a ${pct(best.probAssigned)} chance), 100 of your ${shares} shares are sold at ${usd(best.strike)} — you keep the ${usd(keep)} but miss any rise above it.${basisGain}${stake.goal === "keep-shares" ? " You want to keep the shares, so favour the rows with the lowest chance." : ""}`,
+    `If ${symbol} closes above ${usd(best.strike)} on ${dayText(best.expiration)} (about a ${pct(best.probAssigned)} chance), 100 of your ${shares} shares are sold at ${usd(best.strike)} — you keep the ${usd(keep)} but miss any rise above it.${basisGain}${stake.goal === "keep-shares" ? " You want to keep the shares, so favour the rows with the lowest chance." : ""}`,
   );
   return lever({
     lever: "covered-calls",
@@ -264,8 +266,8 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
         "Selling a put means agreeing to buy the stock — and the research doesn't support buying it right now.",
       );
   const falsifier = ledger?.buySignal
-    ? `If the research withdraws its buy signal${earnings ? ` before ${earnings.start}` : ""} → come back here.`
-    : `If the research starts supporting a buy${earnings ? ` before ${earnings.start}` : ""} → come back here.`;
+    ? `If the research withdraws its buy signal${earnings ? ` before ${dayText(earnings.start)}` : ""} → come back here.`
+    : `If the research starts supporting a buy${earnings ? ` before ${dayText(earnings.start)}` : ""} → come back here.`;
   const best = headlineRow(ladder.rows);
   const held = stake.shares ?? 0;
   const concentration =
@@ -302,7 +304,7 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
   }
   const outcome = why(
     "STRIKE-OWN",
-    `If ${symbol} closes below ${usd(best.strike)} on ${best.expiration} (about a ${pct(best.probAssigned)} chance), you must buy 100 shares for ${usd(best.strike * 100)} — even if it's far lower then. Your cost would be ${usd(best.effectiveEntry ?? best.strike)} a share after the premium.`,
+    `If ${symbol} closes below ${usd(best.strike)} on ${dayText(best.expiration)} (about a ${pct(best.probAssigned)} chance), you must buy 100 shares for ${usd(best.strike * 100)} — even if it's far lower then. Your cost would be ${usd(best.effectiveEntry ?? best.strike)} a share after the premium.`,
   );
   return lever({
     lever: "cash-secured-puts",

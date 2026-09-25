@@ -2,10 +2,12 @@ import { diffGuidance, positionGuidance, snapshotOf } from "../../src/options/po
 import { buildLadder } from "../../src/options/position-guidance-ladder.js";
 import { guidanceToMarkdown } from "../../src/options/position-guidance-markdown.js";
 import {
+  dayText,
   dteStrip,
   etDateOf,
   MAX_SHORT_DELTA,
   richnessOf,
+  spanText,
   weekdaysBefore,
 } from "../../src/options/position-guidance-rules.js";
 import type { GuidanceInputs } from "../../src/options/position-guidance-types.js";
@@ -46,8 +48,8 @@ describe("DTE strip (DTE-FLOOR · DTE-PRINT)", () => {
 
   it("warns — never excludes — for a catalyst before the expiry", () => {
     expect(strip[0]?.catalysts).toEqual([
-      "Fully Connected opens (2026-09-29)",
-      "MU reports earnings (2026-09-30)",
+      "Fully Connected opens (Sep 29)",
+      "MU reports earnings (Sep 30)",
     ]);
     expect(strip[0]?.verdict).toBe("in");
   });
@@ -124,7 +126,7 @@ describe("the three calls — the CRWV fixture", () => {
       confidence: "medium",
       until: { date: "2026-11-02" },
     });
-    expect(shares?.provesWrong).toContain("announces its earnings date before 2026-11-02");
+    expect(shares?.provesWrong).toContain("announces its earnings date before Nov 2");
   });
 
   it("WRITEs covered calls at medium at most — the richness read is a proxy without IV rank", () => {
@@ -297,14 +299,14 @@ describe("the headline strike", () => {
     const quoted = b.ladder.find(
       (r) =>
         r.lever === "covered-calls" &&
-        headline.includes(`$${r.strike.toFixed(2)} strike, expires ${r.expiration}`),
+        headline.includes(`$${r.strike.toFixed(2)} strike, expires ${dayText(r.expiration)}`),
     );
     expect(quoted?.dte).toBeGreaterThanOrEqual(21);
     const topYield = Math.max(
       ...b.ladder.filter((r) => r.lever === "covered-calls").map((r) => r.annualizedYield),
     );
     expect(quoted?.annualizedYield).toBeLessThan(topYield);
-    expect(csp?.reasons.some((r) => r.text.includes("2026-10-02"))).toBe(false);
+    expect(csp?.reasons.some((r) => r.text.includes("Oct 2"))).toBe(false);
   });
 });
 
@@ -349,7 +351,7 @@ describe("review regressions — calls a member could act on must never be false
     expect(b.dteStrip.every((m) => m.verdict === "in")).toBe(true);
     expect(b.waitingOn.some((w) => w.label.startsWith("Print window"))).toBe(false);
     expect(b.calls[0]?.until).toBeUndefined();
-    expect(b.assumptions.some((a) => a.includes("2026-11-09–2026-11-16 has passed"))).toBe(true);
+    expect(b.assumptions.some((a) => a.includes("Nov 9–16 has passed"))).toBe(true);
   });
 
   it("mid-window, the waiting list shows the window closing, not opening", () => {
@@ -584,5 +586,26 @@ describe("step 2b review regressions — nothing false on the surface a member a
     ]) {
       expect(md).not.toContain(word);
     }
+  });
+});
+
+// #3729 persona review: "Oct 16", "2026-10-16", "UNTIL OCT 30" and "Nov 9–16" on one screen read
+// as four different things. Every sentence the engine writes now uses one form.
+describe("dates as a member reads them", () => {
+  it("writes a day and a span the same way everywhere", () => {
+    expect(dayText("2026-10-02")).toBe("Oct 2");
+    expect(spanText("2026-11-09", "2026-11-16")).toBe("Nov 9–16");
+    expect(spanText("2026-10-30", "2026-11-02")).toBe("Oct 30–Nov 2");
+    expect(spanText("2026-11-10", "2026-11-10")).toBe("Nov 10");
+  });
+
+  it("never puts an ISO date in a reason, a falsifier or an until line", () => {
+    const b = positionGuidance(inputs());
+    const prose = b.calls.flatMap((c) => [
+      ...c.reasons.map((r) => r.text),
+      c.provesWrong,
+      c.until?.why ?? "",
+    ]);
+    expect(prose.filter((t) => /\d{4}-\d{2}-\d{2}/.test(t))).toEqual([]);
   });
 });

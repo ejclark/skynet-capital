@@ -135,7 +135,7 @@ export function dteStrip(
             : "in";
     const hits = catalysts
       .filter((c) => c.date >= today && c.date <= expiration)
-      .map((c) => `${c.label} (${c.date})`);
+      .map((c) => `${c.label} (${dayText(c.date)})`);
     return [{ expiration, dte, verdict, catalysts: hits }];
   });
 }
@@ -284,3 +284,23 @@ export const DTE_WORD = {
   "after-decision": "✕ after your hold-or-sell date",
   "spans-print": "✕ crosses earnings",
 } as const;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * A date as a member reads it: "2026-10-16" → "Oct 16". Every sentence the guidance writes uses
+ * this; the ISO form stays in the structured fields (`until.date`, `expiration`) for sorting and
+ * links. Persona review (#3729): four date formats on one screen read as four different things.
+ */
+export function dayText(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return m && d ? `${MONTHS[m - 1]} ${d}` : iso;
+}
+
+/** A span of days: "Nov 9–16" within a month, "Oct 30–Nov 2" across one. */
+export function spanText(start: string, end: string): string {
+  if (start === end) return dayText(start);
+  return start.slice(0, 7) === end.slice(0, 7)
+    ? `${dayText(start)}–${Number(end.slice(8))}`
+    : `${dayText(start)}–${dayText(end)}`;
+}

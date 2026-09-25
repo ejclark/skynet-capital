@@ -140,7 +140,7 @@ function waitingOn(input: GuidanceInputs, today: string): WaitingOn[] {
     items.push({
       date: decision,
       label: "Decide whether to hold through earnings",
-      source: "house rule",
+      source: "our rule — 5 trading days before the earnings window",
     });
   }
   if (e && e.start >= today) {

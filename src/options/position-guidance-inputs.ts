@@ -1,3 +1,4 @@
+import { spanText } from "./position-guidance-rules.js";
 import type { GuidanceInputs, GuidanceStake } from "./position-guidance-types.js";
 
 /**
@@ -39,7 +40,7 @@ export function normalizeInputs(raw: GuidanceInputs, today: string): NormalizedI
   const e = raw.earnings;
   if (e && e.end < today) {
     const { earnings: _past, ...rest } = raw;
-    return { input: { ...rest, stake }, retiredWindow: `${e.start}–${e.end}` };
+    return { input: { ...rest, stake }, retiredWindow: spanText(e.start, e.end) };
   }
   return { input: { ...raw, stake } };
 }
