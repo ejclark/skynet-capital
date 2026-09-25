@@ -5,24 +5,26 @@ import { EdgarFilings } from "../adapters/edgar-filings.js";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents } from "../domain/market-events.js";
-import { positionBrief } from "../options/position-brief.js";
-import { briefToMarkdown } from "../options/position-brief-markdown.js";
-import { atmIv, daysBetween, etDateOf, MIN_DTE } from "../options/position-brief-rules.js";
+import { positionGuidance } from "../options/position-guidance.js";
+import { guidanceToMarkdown } from "../options/position-guidance-markdown.js";
+import { atmIv, daysBetween, etDateOf, MIN_DTE } from "../options/position-guidance-rules.js";
 import type {
-  BriefGoal,
-  BriefInputs,
-  BriefQuote,
-  BriefStake,
-} from "../options/position-brief-types.js";
+  GuidanceGoal,
+  GuidanceInputs,
+  GuidanceQuote,
+  GuidanceStake,
+} from "../options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { printEvidenceFor } from "../research/print-evidence.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { marketOpen } from "./desk-gate.js";
 import {
   activePrint,
   parityImpliedSpot,
   realizedVolatility,
-  toBriefQuote,
-} from "./brief-market.js";
+  toGuidanceQuote,
+} from "./guidance-market.js";
 import {
   chainPulse,
   clockSessionOpen,
@@ -31,14 +33,12 @@ import {
   researchPulse,
   sessionPulse,
   spotPulse,
-} from "./brief-pulse.js";
-import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { marketOpen } from "./desk-gate.js";
+} from "./guidance-pulse.js";
 import { readLedger } from "./ledger-stance.js";
 import { sendJson } from "./page-shell.js";
 
 /**
- * GET /api/research/brief — the Position Brief over live data (#3729, slice 3).
+ * GET /api/trade/guidance — the position guidance over live data (#3729, slice 3).
  *
  * `?symbol=CRWV&shares=400&basis=70&cash=40000&goal=income&own=65&portfolio=250000[&refresh=1]`
  *
@@ -48,26 +48,26 @@ import { sendJson } from "./page-shell.js";
  * not two); `refresh=1` bypasses even that. The stake rides in the query and is never stored.
  *
  * Cost posture (Eric, 2026-09-25: "cost efficient", never cheap): quotes are fetched only for the
- * expiries the Brief may actually price (≥ 7 DTE and before the print window) and only for the
+ * expiries the guidance may actually price (≥ 7 DTE and before the print window) and only for the
  * sides the stake can use; every listed expiry is still shown on the strip.
  */
 
 const COALESCE_MS = 15_000;
 const MAX_EXPIRATIONS = 12;
 const BARS_LOOKBACK_DAYS = 45;
-const GOALS: readonly BriefGoal[] = ["income", "keep-shares", "exit"];
+const GOALS: readonly GuidanceGoal[] = ["income", "keep-shares", "exit"];
 
 /** What the route reads besides the member's broker — injectable so specs run offline and on a fixed clock. */
-export interface BriefDeps {
+export interface GuidanceDeps {
   readonly edgar: Pick<EdgarFilings, "eightKs">;
   readonly now: () => string;
 }
-const LIVE: BriefDeps = { edgar: new EdgarFilings(), now: () => new Date().toISOString() };
+const LIVE: GuidanceDeps = { edgar: new EdgarFilings(), now: () => new Date().toISOString() };
 
 interface MarketRead {
   readonly at: number;
   readonly inputs: Promise<
-    Omit<BriefInputs, "stake"> | { readonly reason: string; readonly note: string }
+    Omit<GuidanceInputs, "stake"> | { readonly reason: string; readonly note: string }
   >;
 }
 const inflight = new Map<string, MarketRead>();
@@ -78,9 +78,9 @@ const queryNumber = (v: string | null): number | undefined => {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 };
 
-export function stakeFromQuery(params: URLSearchParams): BriefStake {
-  const goal = params.get("goal") as BriefGoal | null;
-  const pick = (key: string, field: keyof BriefStake) => {
+export function stakeFromQuery(params: URLSearchParams): GuidanceStake {
+  const goal = params.get("goal") as GuidanceGoal | null;
+  const pick = (key: string, field: keyof GuidanceStake) => {
     const n = queryNumber(params.get(key));
     return n !== undefined ? { [field]: n } : {};
   };
@@ -126,9 +126,9 @@ async function readMarket(
   symbol: string,
   wantCalls: boolean,
   wantPuts: boolean,
-  deps: BriefDeps,
+  deps: GuidanceDeps,
   refresh: boolean,
-): Promise<Omit<BriefInputs, "stake"> | { readonly reason: string; readonly note: string }> {
+): Promise<Omit<GuidanceInputs, "stake"> | { readonly reason: string; readonly note: string }> {
   const now = deps.now();
   const today = etDateOf(now);
   const active = activePrint(UPCOMING_PRINTS, symbol, today);
@@ -146,7 +146,7 @@ async function readMarket(
     deps.edgar.eightKs(symbol, { fresh: refresh }),
   ]);
   if (!quote)
-    return { reason: "failed", note: `No live quote for ${symbol} — nothing to brief on.` };
+    return { reason: "failed", note: `No live quote for ${symbol} — nothing to advise on.` };
   if (expirations.length === 0)
     return { reason: "no-options", note: `No listed options for ${symbol}.` };
   const spot = quote.last;
@@ -170,8 +170,8 @@ async function readMarket(
   );
   const days = (e: string) =>
     daysToExpiryFrom(e, new Date(now)) ?? Math.max(1, daysBetween(today, e));
-  const chain: BriefQuote[] = pages.flatMap(({ expiration, type, rows }) =>
-    rows.map((row) => toBriefQuote(row, expiration, type, spot, days(expiration))),
+  const chain: GuidanceQuote[] = pages.flatMap(({ expiration, type, rows }) =>
+    rows.map((row) => toGuidanceQuote(row, expiration, type, spot, days(expiration))),
   );
   const parityRows = (t: "call" | "put") =>
     pages.find((p) => p.expiration === parityExp && p.type === t)?.rows ?? [];
@@ -230,17 +230,17 @@ async function readMarket(
   };
 }
 
-export async function serveBrief(
+export async function serveGuidance(
   res: ServerResponse,
   url: string,
   config: DashboardServerConfig,
   requesterId: string | undefined,
-  deps: BriefDeps = LIVE,
+  deps: GuidanceDeps = LIVE,
 ): Promise<void> {
   const params = new URL(url, "http://localhost").searchParams;
   const symbol = (params.get("symbol") ?? "").trim().toUpperCase();
   if (!UNDERLYING_PATTERN.test(symbol)) {
-    sendJson(res, 400, { error: "the brief wants ?symbol=<underlying>" });
+    sendJson(res, 400, { error: "guidance wants ?symbol=<underlying>" });
     return;
   }
   const client =
@@ -248,7 +248,7 @@ export async function serveBrief(
   if (!(client && requesterId)) {
     sendJson(res, 200, {
       reason: "unlinked",
-      note: "The Brief reads live quotes through your own connected account, and your session isn't linked to one yet.",
+      note: "The guidance reads live quotes through your own connected account, and your session isn't linked to one yet.",
     });
     return;
   }
@@ -283,14 +283,14 @@ export async function serveBrief(
       sendJson(res, 200, market);
       return;
     }
-    const brief = positionBrief({ ...market, stake });
-    sendJson(res, 200, { brief, markdown: briefToMarkdown(brief) });
+    const guidance = positionGuidance({ ...market, stake });
+    sendJson(res, 200, { guidance, markdown: guidanceToMarkdown(guidance) });
   } catch {
     inflight.delete(key);
     // A fixed sentence, never the exception text — a raw error can carry internals (desk-gate.ts).
     sendJson(res, 200, {
       reason: "failed",
-      note: "Couldn't build the Brief right now — try again shortly.",
+      note: "Couldn't build the guidance right now — try again shortly.",
     });
   }
 }

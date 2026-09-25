@@ -1,9 +1,9 @@
-import { positionBrief } from "../../src/options/position-brief.js";
-import { briefToMarkdown } from "../../src/options/position-brief-markdown.js";
-import { inputs } from "./position-brief-fixture.js";
+import { positionGuidance } from "../../src/options/position-guidance.js";
+import { guidanceToMarkdown } from "../../src/options/position-guidance-markdown.js";
+import { inputs } from "./position-guidance-fixture.js";
 
 /**
- * The Brief's markdown template (#3729): the section order is a contract — a member scanning the
+ * The guidance's markdown template (#3729): the section order is a contract — a member scanning the
  * same sections in the same place every visit is the whole point of a fixed template.
  */
 
@@ -18,8 +18,8 @@ const HEADINGS = [
   "### 8 · Assumptions & disclosure",
 ];
 
-describe("briefToMarkdown", () => {
-  const md = briefToMarkdown(positionBrief(inputs()));
+describe("guidanceToMarkdown", () => {
+  const md = guidanceToMarkdown(positionGuidance(inputs()));
 
   it("opens with the symbol, spot and as-of line", () => {
     expect(md.split("\n")[0]).toBe("## CRWV · $80.00 · as of 2026-09-25T18:00:00Z · market open");
@@ -36,7 +36,7 @@ describe("briefToMarkdown", () => {
   });
 
   it("says why an empty section is empty rather than dropping it", () => {
-    const bare = briefToMarkdown(positionBrief(inputs({ chain: [], pulse: [] })));
+    const bare = guidanceToMarkdown(positionGuidance(inputs({ chain: [], pulse: [] })));
     expect(bare).toContain("_No pulse reported — treat every number below as unverified._");
     expect(bare).toContain("_No strike passes the rules — see the calls above for why._");
     expect(bare.split("\n").filter((l) => l.startsWith("### "))).toEqual(HEADINGS);
@@ -47,8 +47,8 @@ describe("briefToMarkdown", () => {
   });
 
   it("distinguishes a first visit from 'nothing moved'", () => {
-    expect(md).toContain("_First Brief for this symbol — nothing to compare yet._");
-    expect(briefToMarkdown(positionBrief(inputs()), [])).toContain(
+    expect(md).toContain("_First look at this symbol — nothing to compare yet._");
+    expect(guidanceToMarkdown(positionGuidance(inputs()), [])).toContain(
       "_Nothing moved since you last looked._",
     );
   });

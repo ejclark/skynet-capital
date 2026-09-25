@@ -1,12 +1,12 @@
 import type { ServerResponse } from "node:http";
 import { priceOption } from "../../src/options/pricing.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
-import { serveBrief, stakeFromQuery } from "../../src/server/brief-route.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
+import { serveGuidance, stakeFromQuery } from "../../src/server/guidance-route.js";
 
 /**
- * GET /api/research/brief (#3729 slice 3): live reads through the member's own account, pulse-
- * checked against the feed's own timestamps, fetched only where the Brief may price, and coalesced
+ * GET /api/trade/guidance (#3729 slice 3): live reads through the member's own account, pulse-
+ * checked against the feed's own timestamps, fetched only where the guidance may price, and coalesced
  * for 15 seconds so a double-tap costs one pull.
  */
 
@@ -89,41 +89,41 @@ const deps = {
   },
   now: () => NOW,
 };
-const URL = "/api/research/brief?symbol=CRWV&shares=400&basis=70&cash=40000&goal=income";
+const URL = "/api/trade/guidance?symbol=CRWV&shares=400&basis=70&cash=40000&goal=income";
 
-describe("serveBrief", () => {
+describe("serveGuidance", () => {
   it("400s a non-symbol, and tells an unlinked session the honest note", async () => {
     const a = fakeRes();
-    await serveBrief(a.res, "/x?symbol=!!", broker().config, "ann", deps);
+    await serveGuidance(a.res, "/x?symbol=!!", broker().config, "ann", deps);
     expect(a.out.status).toBe(400);
     const b = fakeRes();
-    await serveBrief(b.res, URL, {} as DashboardServerConfig, "ann", deps);
+    await serveGuidance(b.res, URL, {} as DashboardServerConfig, "ann", deps);
     expect(b.json().reason).toBe("unlinked");
   });
 
-  it("answers the Brief and its markdown template from live reads", async () => {
+  it("answers the guidance and its markdown template from live reads", async () => {
     const { config } = broker();
     const r = fakeRes();
-    await serveBrief(r.res, `${URL}&refresh=1`, config, "brief-a", deps);
-    const { brief, markdown } = r.json();
-    expect(brief.calls.map((c: { lever: string }) => c.lever)).toEqual([
+    await serveGuidance(r.res, `${URL}&refresh=1`, config, "guidance-a", deps);
+    const { guidance, markdown } = r.json();
+    expect(guidance.calls.map((c: { lever: string }) => c.lever)).toEqual([
       "shares",
       "covered-calls",
       "cash-secured-puts",
     ]);
-    expect(brief.stake).toMatchObject({ shares: 400, costBasis: 70, cash: 40000 });
+    expect(guidance.stake).toMatchObject({ shares: 400, costBasis: 70, cash: 40000 });
     expect(markdown.split("\n")[0]).toContain("## CRWV · $80.00");
   });
 
-  it("prices only expiries the Brief may trade — never one spanning the print window", async () => {
+  it("prices only expiries the guidance may trade — never one spanning the print window", async () => {
     const { config, chainCalls } = broker();
-    await serveBrief(fakeRes().res, `${URL}&refresh=1`, config, "brief-b", deps);
+    await serveGuidance(fakeRes().res, `${URL}&refresh=1`, config, "guidance-b", deps);
     expect(chainCalls.some((c) => c.startsWith("2026-11-13") || c.startsWith("2026-11-20"))).toBe(
       false,
     );
     const r = fakeRes();
-    await serveBrief(r.res, `${URL}&refresh=1`, config, "brief-b2", deps);
-    const strip = r.json().brief.dteStrip;
+    await serveGuidance(r.res, `${URL}&refresh=1`, config, "guidance-b2", deps);
+    const strip = r.json().guidance.dteStrip;
     expect(strip.find((m: { expiration: string }) => m.expiration === "2026-11-13").verdict).toBe(
       "spans-print",
     );
@@ -131,9 +131,9 @@ describe("serveBrief", () => {
 
   it("grades each input off the feed's own timestamps", async () => {
     const r = fakeRes();
-    await serveBrief(r.res, `${URL}&refresh=1`, broker().config, "brief-c", deps);
+    await serveGuidance(r.res, `${URL}&refresh=1`, broker().config, "guidance-c", deps);
     const pulse = Object.fromEntries(
-      r.json().brief.pulse.map((p: { id: string; status: string }) => [p.id, p.status]),
+      r.json().guidance.pulse.map((p: { id: string; status: string }) => [p.id, p.status]),
     );
     expect(pulse).toMatchObject({
       spot: "fresh",
@@ -145,18 +145,18 @@ describe("serveBrief", () => {
 
   it("refuses to answer when option parity says spot is wrong", async () => {
     const r = fakeRes();
-    await serveBrief(r.res, `${URL}&refresh=1`, broker(80, 4).config, "brief-d", deps);
-    const calls = r.json().brief.calls as { call: string }[];
+    await serveGuidance(r.res, `${URL}&refresh=1`, broker(80, 4).config, "guidance-d", deps);
+    const calls = r.json().guidance.calls as { call: string }[];
     expect(calls.every((c) => c.call === "NO ANSWER")).toBe(true);
   });
 
   it("coalesces a double-tap into one pull, and refresh=1 forces a new one", async () => {
     const { config, chainCalls } = broker();
-    await serveBrief(fakeRes().res, URL, config, "brief-e", deps);
+    await serveGuidance(fakeRes().res, URL, config, "guidance-e", deps);
     const once = chainCalls.length;
-    await serveBrief(fakeRes().res, URL, config, "brief-e", deps);
+    await serveGuidance(fakeRes().res, URL, config, "guidance-e", deps);
     expect(chainCalls.length).toBe(once);
-    await serveBrief(fakeRes().res, `${URL}&refresh=1`, config, "brief-e", deps);
+    await serveGuidance(fakeRes().res, `${URL}&refresh=1`, config, "guidance-e", deps);
     expect(chainCalls.length).toBe(once * 2);
   });
 

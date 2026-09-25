@@ -35,7 +35,7 @@ export interface OptionChainRow {
    *  provenance the chain shows instead of a silent "—" (#3407 P2). */
   readonly quoteSource?: "indicative";
   /** When the feed says this bid/ask was quoted (`latestQuote.t`) — NOT when we fetched it. The
-   *  Position Brief's pulse ages quotes off this; absent when the feed gave no usable stamp. */
+   *  position guidance's pulse ages quotes off this; absent when the feed gave no usable stamp. */
   readonly quotedAt?: string;
   // The greeks the data host quoted for this contract, each carried ONLY when it arrived as a
   // finite number. A greek the feed omitted stays absent, so the desk reads it as ABSENT rather

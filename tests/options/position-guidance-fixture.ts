@@ -1,9 +1,9 @@
-import type { BriefInputs, BriefQuote } from "../../src/options/position-brief-types.js";
+import type { GuidanceInputs, GuidanceQuote } from "../../src/options/position-guidance-types.js";
 import { priceOption } from "../../src/options/pricing.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 
 /**
- * A frozen CRWV-shaped world for the Position Brief specs (#3729): spot $80, every contract priced
+ * A frozen CRWV-shaped world for the position guidance specs (#3729): spot $80, every contract priced
  * by our own Black-Scholes at 80% IV with a 6%-of-price spread, so every number a spec checks is
  * self-consistent and hand-verifiable. The calendar is the ledger's own: an estimate print window
  * of Nov 9–16, Fully Connected on 09-29 and MU on 09-30.
@@ -32,7 +32,7 @@ export function quoteAt(
   type: "call" | "put",
   now = NOW,
   spot = SPOT,
-): BriefQuote {
+): GuidanceQuote {
   const days = daysToExpiryFrom(expiration, new Date(now)) ?? 1;
   const v = priceOption({ spot, strike, daysToExpiry: days, volatility: IV, type });
   const price = v?.price ?? 0;
@@ -47,11 +47,11 @@ export function quoteAt(
   };
 }
 
-export const CHAIN: readonly BriefQuote[] = EXPIRATIONS.flatMap((e) =>
+export const CHAIN: readonly GuidanceQuote[] = EXPIRATIONS.flatMap((e) =>
   STRIKES.flatMap((k) => [quoteAt(e, k, "call"), quoteAt(e, k, "put")]),
 );
 
-export function inputs(overrides: Partial<BriefInputs> = {}): BriefInputs {
+export function inputs(overrides: Partial<GuidanceInputs> = {}): GuidanceInputs {
   return {
     symbol: "CRWV",
     now: NOW,

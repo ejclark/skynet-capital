@@ -16,10 +16,10 @@ import {
 } from "../trading/option-ticket.js";
 import type { Session } from "./auth/session.js";
 import { serveBars } from "./bars-route.js";
-import { serveBrief } from "./brief-route.js";
 import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { serveGuidance } from "./guidance-route.js";
 import { serveChain } from "./option-chain-route.js";
 import type { DeskOptionRequest } from "./option-trade-service.js";
 import {
@@ -342,7 +342,7 @@ const GET_ROUTES: Readonly<Record<string, GetRoute>> = {
   "/api/trade/quote": serveQuote,
   "/api/trade/bars": serveBars,
   "/api/symbols/search": serveSymbolSearch,
-  "/api/research/brief": serveBrief,
+  "/api/trade/guidance": serveGuidance,
 };
 
 /** Handle `/api/trade/chain`, `/api/trade/quote`, `/api/trade/bars`, and `/api/trade/option/*`.

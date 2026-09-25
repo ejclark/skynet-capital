@@ -1,8 +1,8 @@
-import { daysBetween } from "../options/position-brief-rules.js";
-import type { PulseItem, PulseStatus } from "../options/position-brief-types.js";
+import { daysBetween } from "../options/position-guidance-rules.js";
+import type { PulseItem, PulseStatus } from "../options/position-guidance-types.js";
 
 /**
- * THE PULSE — how fresh each Position Brief input is, measured against its live source (#3729;
+ * THE PULSE — how fresh each position guidance input is, measured against its live source (#3729;
  * Eric, 2026-09-25: "a sanity/pulse check against live information sources to ensure we're not
  * acting on cached/stale information"). Every assessor here is PURE: it takes what the live fetch
  * observed plus `now`, and returns one pulse row. The engine applies the demotion each status
@@ -98,7 +98,7 @@ export function spotPulse(obs: SpotObservation | undefined, now: string, open: b
   );
 }
 
-/** The median quote age across every strike the Brief will price. */
+/** The median quote age across every strike the guidance will price. */
 export function chainPulse(
   quotedAt: readonly string[],
   total: number,

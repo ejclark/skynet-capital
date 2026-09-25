@@ -143,6 +143,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
   (a brokerage screenshot carries account data).
 - **Domain accuracy & honesty.** Real tickers, strategy-accurate underlyings, honest `SIM`/`LIVE`
   labels. Never let a flourish imply something false about markets or P/L.
+- **No coined names in copy or in questions to Eric — name what the thing does** (Eric, 2026-09-25,
+  on "the Brief": "another cute word you keep using that i've told you to stop because it's
+  confusing"). A feature, screen or option is described by its job ("position guidance", "the
+  trade form's Guidance tab"), never by a label invented mid-session. When a decision needs his
+  opinion, first state what each system being joined does and what the join is for; a menu of
+  unexplained names is not a question he can answer. The lore layer (below) is the one place
+  invented names belong, and even there the mechanic is said plainly beside it.
 - **Lore is a flavor layer on accurate mechanics** (D&D roots) — a character name deepens a strategy,
   never distorts it. Keep the lore system extensible (mixed multiverse).
 

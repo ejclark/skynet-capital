@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { readLedger } from "../../src/server/ledger-stance.js";
 
-/** Reading a research ledger for the Brief (#3729) — conservative: only an explicit bold "Buy" licenses one. */
+/** Reading a research ledger for the guidance (#3729) — conservative: only an explicit bold "Buy" licenses one. */
 
 const ledger = (signals: string) => `# X print
 **Kind:** earnings · **Date:** 2026-11-10

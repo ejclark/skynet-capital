@@ -6,10 +6,10 @@ import {
   researchPulse,
   sessionPulse,
   spotPulse,
-} from "../../src/server/brief-pulse.js";
+} from "../../src/server/guidance-pulse.js";
 
 /**
- * The Brief's pulse (#3729): every input graded against its live source's OWN timestamp. Each row
+ * The guidance's pulse (#3729): every input graded against its live source's OWN timestamp. Each row
  * of the pulse table has a case proving the status fires — "stale" is what demotes a call.
  */
 
