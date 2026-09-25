@@ -21,6 +21,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { marketOpen } from "./desk-gate.js";
 import {
   activePrint,
+  ivRankOf,
   parityImpliedSpot,
   realizedVolatility,
   toGuidanceQuote,
@@ -115,12 +116,14 @@ async function readMarket(
   const barsFrom = new Date(Date.parse(now) - BARS_LOOKBACK_DAYS * 86_400_000)
     .toISOString()
     .slice(0, 10);
-  const [quote, expirations, bars, open, filings] = await Promise.all([
+  const [quote, expirations, bars, open, filings, ivSamples] = await Promise.all([
     client.getUnderlyingQuote(symbol),
     client.getExpirations(symbol, today, MAX_EXPIRATIONS).catch(() => [] as string[]),
     client.getBars(symbol, barsFrom, today),
     trading ? marketOpen(trading) : Promise.resolve(undefined),
     deps.edgar.eightKs(symbol, { fresh: refresh }),
+    // The IV clock's history (local disk): a failed read degrades to "no rank yet", never a 500.
+    config.ivHistory?.list(symbol).catch(() => []) ?? Promise.resolve([]),
   ]);
   if (!quote)
     return { reason: "failed", note: `No live quote for ${symbol} — nothing to advise on.` };
@@ -176,6 +179,7 @@ async function readMarket(
   );
   const mid =
     quote.bid !== undefined && quote.ask !== undefined ? (quote.bid + quote.ask) / 2 : undefined;
+  const ivRank = ivRankOf(ivSamples, symbol, now);
   return {
     symbol,
     now,
@@ -184,6 +188,7 @@ async function readMarket(
     chain,
     expirations,
     ...(realizedVol !== undefined ? { realizedVol } : {}),
+    ...(ivRank !== undefined ? { ivRank } : {}),
     ...(earnings ? { earnings } : {}),
     ...(evidence ? { printEvidence: evidence.text } : {}),
     catalysts: allEvents(now)

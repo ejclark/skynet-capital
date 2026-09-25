@@ -28,6 +28,7 @@ import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
+import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
@@ -43,6 +44,7 @@ import { wireAccountDeskAccess, wireDeskTrading } from "./dashboard-desk-wiring.
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
+import { startIvClock } from "./iv-clock-wiring.js";
 
 const PORT = resolvePort(process.env);
 
@@ -103,6 +105,11 @@ async function main(): Promise<void> {
       for (const transition of transitions) ceremonies.emit(transition);
     },
   });
+
+  // The IV clock: one at-the-money IV sample per tracked underlying per trading day, so IV rank
+  // can exist a year from now (#3729). Host-configured credentials only — never a member's.
+  const ivHistory = createIvHistoryStore(process.env);
+  startIvClock(ivHistory, dataSource, envRoster);
 
   // Autonomous decision audit trail (Phase 2.1) — the same JSONL the runner writes when
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
@@ -309,6 +316,7 @@ async function main(): Promise<void> {
     alertDismissals: createAlertDismissals(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
+    ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(

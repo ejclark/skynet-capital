@@ -19,10 +19,11 @@ export { InMemoryIvHistory };
  * falls back to a relative `data/…` path — and `tests/arch/volume-persistence.spec.ts` then
  * (correctly) demands the matching var be pinned under the `/data` mount in `fly.toml`, because a
  * relative default writes inside the container image and is erased on every deploy. `fly.toml` is
- * envelope-protected (deploy topology is Eric's), so this store takes its directory EXPLICITLY and
- * the wiring PR that first schedules a tick adds the pin. Shipping the factory without the pin
- * would have quietly built a series that resets every merge — the one failure mode a year-long
- * history cannot survive.
+ * envelope-protected (deploy topology is Eric's), so this store takes its directory EXPLICITLY.
+ * The one factory, `createIvHistoryStore` in `iv-sampler.ts`, has NO default: an unset
+ * `SKYNET_IV_HISTORY_DIR` turns the IV clock off instead of building a series that resets every
+ * merge — the one failure mode a year-long history cannot survive. The `fly.toml` pin boards the
+ * protected-path platter.
  */
 export class JsonlIvHistoryStore implements IvHistoryPort {
   private readonly store: JsonlKeyedStore<IvSample>;

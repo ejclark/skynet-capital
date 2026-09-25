@@ -3,6 +3,7 @@ import { positionGuidance } from "../../src/options/position-guidance.js";
 import type { GuidanceMarket } from "../../src/options/position-guidance-types.js";
 import { priceOption } from "../../src/options/pricing.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
+import { InMemoryIvHistory } from "../../src/research/in-memory-iv-history.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveGuidance } from "../../src/server/guidance-route.js";
 
@@ -201,5 +202,42 @@ describe("serveGuidance", () => {
     expect(chainCalls.length).toBe(once);
     await serveGuidance(fakeRes().res, `${URL}&refresh=1`, config, "guidance-e", deps);
     expect(chainCalls.length).toBe(once * 2);
+  });
+
+  it("ranks richness off the IV clock's history once a full year exists — and not before", async () => {
+    // A sample a week for 400 days; today's is the year's high, so the rank is 100.
+    const year = new InMemoryIvHistory();
+    for (let week = 0; week < 58; week += 1) {
+      await year.save({
+        at: new Date(Date.parse(NOW) - week * 7 * 86_400_000).toISOString(),
+        symbol: "CRWV",
+        atmIv: week === 0 ? 1.2 : 0.6 + (week % 5) * 0.05,
+        spot: 80,
+        daysToExpiry: 30,
+      });
+    }
+    const full = fakeRes();
+    await serveGuidance(
+      full.res,
+      URL,
+      { ...broker().config, ivHistory: year },
+      "guidance-iv-a",
+      deps,
+    );
+    const market: GuidanceMarket = full.json().market;
+    expect(market.ivRank).toBe(100);
+    expect(inBrowser(market).richness.basis).toBe("iv-rank");
+
+    const month = new InMemoryIvHistory();
+    await month.save({ at: NOW, symbol: "CRWV", atmIv: 0.9, spot: 80, daysToExpiry: 30 });
+    const partial = fakeRes();
+    await serveGuidance(
+      partial.res,
+      URL,
+      { ...broker().config, ivHistory: month },
+      "guidance-iv-b",
+      deps,
+    );
+    expect(partial.json().market.ivRank).toBeUndefined();
   });
 });
