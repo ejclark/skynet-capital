@@ -23,23 +23,20 @@ export function servePublicRoute(path: string, res: ServerResponse, hub: Observa
     return true;
   }
 
-  // Live Babylon.js 3D scene exploration (see src/three/) — public so it's easy to eyeball on deploy.
+  // Live three.js 3D scene (Barad-dûr) (see src/three/) — public so it's easy to eyeball on deploy.
   if (path === "/tower") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(threeScenePage());
     return true;
   }
 
-  // The scene's own assets: the esbuild bundle (our tree-shaken Babylon + kit) and the prefiltered
-  // IBL environment. Both are served BY US rather than a CDN — a third-party CDN is unreachable from
-  // the headless verification browser and would be an unpinned production dependency.
-  if (path === "/three/scene.js" || path === "/three/environment.env") {
+  // The scene's bundle (three.js + our kit), served BY US rather than a CDN — a third-party CDN is
+  // unreachable from the headless verification browser and would be an unpinned production dependency.
+  if (path === "/three/scene.js") {
     const asset = readSceneAsset(path.slice("/three/".length));
     if (!asset) return false;
     res.writeHead(200, {
-      "content-type": path.endsWith(".js")
-        ? "application/javascript; charset=utf-8"
-        : "application/octet-stream",
+      "content-type": "application/javascript; charset=utf-8",
       "cache-control": "public, max-age=3600",
     });
     res.end(asset);

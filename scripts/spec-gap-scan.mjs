@@ -39,9 +39,10 @@ const isTypeOnly = (f) => {
 // live GPU context; there is no honest unit assertion to make about them without a browser, and a
 // spec that only checked "a mesh was constructed" would be implementation-peeking theatre. They are
 // verified instead by the screenshot harness (scripts/shoot/tower.mjs), which is the real contract.
-// NOTE the deliberate split that makes this narrow: all the *decidable* logic (the tower profile
-// curve, the seeded RNG, state→render params) lives in src/three/kit/{profile,rng,params}.ts, which
-// are pure, excluded from this list, and fully specced in tests/three/kit.spec.ts.
+// NOTE the deliberate split that makes this narrow: all the *decidable* logic (the tier table, the
+// seeded RNG, rock noise, fin/horn/almond shapes, state→render params, the merge bucket) lives in
+// src/three/kit/{profile,rng,noise,shapes,params,bucket}.ts, which are NOT on this list and are
+// specced in tests/three/.
 const isWebglBound = (f) =>
   f.startsWith("src/three/pieces/") ||
   f === "src/three/scene-main.ts" ||
@@ -49,8 +50,7 @@ const isWebglBound = (f) =>
     "src/three/kit/env.ts",
     "src/three/kit/materials.ts",
     "src/three/kit/greebles.ts",
-    "src/three/kit/sky.ts",
-    "src/three/kit/smoke.ts",
+    "src/three/kit/fire-glsl.ts",
   ].includes(f);
 
 // Every src module, minus files with no unit-testable behavior:

@@ -1,100 +1,69 @@
-import { clamp, clamp01, lerp } from "../../math/num.js";
+import { clamp01, lerp } from "../../math/num.js";
 
 /**
- * The tower's SHAPE, as pure math — radius/height curves and per-ring layout, with no Babylon and no
- * meshes. Keeping the silhouette here (rather than inline in the builder) is what makes it tunable,
- * reviewable, and unit-testable: the profile IS the design, so it deserves to be tested like logic.
+ * The shaft's SHAPE as pure data — the tier table from the Barad-dûr design handoff, with no three.js
+ * and no meshes. The silhouette IS the design, so it lives here where a spec can assert it.
+ *
+ * The tower is no longer one smooth necking curve: it is seven stacked tiers, each a drum that steps
+ * in at the ledge above it. The builder then randomises every tier (polygon count, rotation, axis
+ * drift, fins, annexes) — that per-tier irregularity is what kills the symmetry the old ring-stack had.
+ *
+ * World units ≈ metres, y-up, origin at the base centre. The shaft rises out of the stepped fortress,
+ * whose top keep ends at y ≈ 102.
  */
 
-/** The tower's overall dimensions. Scaled by game state (see params.ts) so the landmark can level. */
-export interface TowerProfile {
-  /** Radius at the base, world units. */
-  readonly baseRadius: number;
-  /** Radius at the crown. */
-  readonly crownRadius: number;
-  /** Total height from the plinth to the crown. */
-  readonly height: number;
-  /**
-   * Neck exponent. <1 necks in FAST (broad fortress → slender spire, the Barad-dûr read);
-   * 1 is a straight cone; >1 stays fat then tapers late.
-   */
-  readonly neck: number;
-  /** How many stacked masonry rings compose the shaft. */
-  readonly rings: number;
+/** One stacked tier of the shaft: `[y0, y1]` vertical extent, radius at its foot and its lip. */
+export interface Tier {
+  readonly y0: number;
+  readonly y1: number;
+  readonly rBottom: number;
+  readonly rTop: number;
 }
+
+export interface TowerProfile {
+  /** Base → crown. Each tier's y0 is the previous tier's y1. */
+  readonly tiers: readonly Tier[];
+}
+
+const t = (y0: number, y1: number, rBottom: number, rTop: number): Tier => ({
+  y0,
+  y1,
+  rBottom,
+  rTop,
+});
 
 export const DEFAULT_PROFILE: TowerProfile = {
-  baseRadius: 15.5,
-  crownRadius: 2.4,
-  height: 78,
-  neck: 0.55,
-  rings: 22,
+  tiers: [
+    t(100, 140, 19.5, 17.2),
+    t(140, 176, 16.2, 14.6),
+    t(176, 210, 13.6, 12.2),
+    t(210, 240, 11.4, 10.3),
+    t(240, 266, 9.6, 8.7),
+    t(266, 288, 8.2, 7.4),
+    t(288, 302, 7.2, 6.8),
+  ],
 };
 
-/**
- * Radius at height fraction `t` (0 = base, 1 = crown). The `neck` exponent is what gives the
- * fortress its dramatic taper instead of a dull cone.
- */
-export function radiusAt(profile: TowerProfile, t: number): number {
-  const clamped = clamp01(t);
-  return lerp(profile.baseRadius, profile.crownRadius, clamped ** profile.neck);
-}
+/** Where the shaft meets the fortress — the fixed point `scaleProfile` stretches away from. */
+export const SHAFT_FOOT = 100;
 
-/** One masonry ring's placement — everything a builder needs, with no geometry decisions baked in. */
-export interface RingLayout {
-  /** 0-based index from the base. */
-  readonly index: number;
-  /** Height fraction 0..1. */
-  readonly t: number;
-  /** World-space Y of the ring's base. */
-  readonly y: number;
-  /** Ring radius at this height. */
-  readonly radius: number;
-  /** Vertical extent of this ring. */
-  readonly height: number;
-  /** How many slats go around — denser near the base so masonry scale stays constant. */
-  readonly slats: number;
-  /** True for the lower rings that carry buttress spikes. */
-  readonly buttressed: boolean;
-}
-
-/** Circumference-proportional slat count, so stones look the same SIZE at every height. */
-function slatsFor(radius: number): number {
-  return clamp(Math.round(radius * 2.6), 8, 64);
+/** World-space Y of the crown (the top of the last tier), where the bowl and horns sit. */
+export function crownY(profile: TowerProfile): number {
+  return profile.tiers.at(-1)?.y1 ?? SHAFT_FOOT;
 }
 
 /**
- * Lay out every ring of the shaft, base → crown. Pure: returns plain data a builder turns into
- * meshes, which is what lets the whole silhouette be asserted in a spec.
+ * Scale a profile by a 0..1 power level — the landmark "levels up" (docs/LIVING-UNIVERSE.md).
+ * Height reads as dominance, so the shaft stretches (from its foot, so it stays rooted in the
+ * fortress); radii barely move so it never looks bloated. Power ≈ 0.62 (the standalone default)
+ * reproduces the handoff's proportions almost exactly.
  */
-export function layoutRings(profile: TowerProfile = DEFAULT_PROFILE): readonly RingLayout[] {
-  const out: RingLayout[] = [];
-  const ringHeight = profile.height / profile.rings;
-  for (let index = 0; index < profile.rings; index++) {
-    const t = index / profile.rings;
-    const radius = radiusAt(profile, t);
-    out.push({
-      index,
-      t,
-      y: t * profile.height,
-      radius,
-      height: ringHeight,
-      slats: slatsFor(radius),
-      buttressed: index < Math.round(profile.rings * 0.4),
-    });
-  }
-  return out;
-}
-
-/** Scale a profile by a 0..1 power level — the landmark "levels up" (docs/LIVING-UNIVERSE.md). */
 export function scaleProfile(profile: TowerProfile, power: number): TowerProfile {
   const p = clamp01(power);
-  // Height reads as dominance, so it gets the widest swing; the base barely moves so the tower
-  // stays planted on its mountain rather than shrinking away from it.
+  const h = lerp(0.72, 1.18, p);
+  const r = lerp(0.92, 1.06, p);
+  const y = (v: number): number => SHAFT_FOOT + (v - SHAFT_FOOT) * h;
   return {
-    ...profile,
-    height: profile.height * lerp(0.72, 1.18, p),
-    baseRadius: profile.baseRadius * lerp(0.92, 1.06, p),
-    rings: Math.round(profile.rings * lerp(0.8, 1.15, p)),
+    tiers: profile.tiers.map((tier) => t(y(tier.y0), y(tier.y1), tier.rBottom * r, tier.rTop * r)),
   };
 }

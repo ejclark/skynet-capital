@@ -3,7 +3,7 @@
  * time. Determinism is load-bearing here: screenshot verification only catches real visual
  * regressions if the geometry doesn't reshuffle between runs.
  *
- * Pure math, no Babylon — unit-testable without a browser.
+ * Pure math, no three.js — unit-testable without a browser.
  */
 
 /** A deterministic 0..1 source. Same seed ⇒ same sequence, forever. */

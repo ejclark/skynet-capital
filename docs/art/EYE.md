@@ -419,3 +419,23 @@ neither, exactly:
 The trap this table exists to prevent: treating "fire" and "eye" as the same layer. They are figure and
 ground. The anatomy is figure; the turbulence is ground, and ground that overruns figure is the exact
 failure mode of every attempt so far.
+
+---
+
+## The fire-first rebuild (2026-09-25) — and the engine switch
+
+A Claude Design handoff ("Barad-dûr tower + fire Eye rebuild", tracked in its plan issue) settled the
+standing brief above by inverting it: **the body is a fire that holds an almond's shape**, not an eyeball
+that burns. It is also the first piece ported to **three.js**. The design was authored in three.js 0.184,
+and a port to Babylon was hitting translation traps within the first hour: mirrored handedness, reversed
+triangle winding, different subdivision semantics and different light units. Each one is a place fidelity
+leaks, so the scene now runs on the same engine and version the design was drawn in (Eric: "tooling parity
+smooths out the transition and removes opportunity for problems to surface when bouncing between systems").
+
+| The brief | The mechanism (`src/three/pieces/eye-shader.ts`) |
+|---|---|
+| "anatomy must be unmistakable" | An almond mesh (unit sphere, y and z scaled by √(1−x²)) and a separate black slit-pupil mesh. The anatomy is geometry now, so no shader term can erase it. |
+| "iris… radial, never concentric" | Radial fibres `fbm(dir·7, r·2.2 − t·.3)` over domain-warped fire that flows outward. |
+| "turbulence on the edges to FRAME the almond" | The corona is a camera-facing plane that draws flame tongues *outside* the almond's projected outline, taller upward. It stays out of the middle, so the fire is ground, not figure. |
+| "aberration, ghost-like" / the blue-white threads | A faint electric undertone: thin iso-lines of a second fbm, gated by a slow flicker and kept to the rim. Quieter than the fire, by design. |
+| "it does not follow you. It sweeps" | yaw = .85 sin(.11t) + .35 sin(.037t), pitch = .16 + .06 sin(.07t). The beam shares the rotation. Only the corona plane faces the camera, and it is just a canvas for the rim's flames. |

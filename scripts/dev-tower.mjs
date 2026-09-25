@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Interactive local dev loop for the /tower Babylon scene — the fast alternative to a PR + verify +
+// Interactive local dev loop for the /tower three.js scene — the fast alternative to a PR + verify +
 // deploy cycle for iterating on 3D work. Rebuilds public/three/scene.js automatically on save (esbuild
 // --watch) and serves ./public statically, so the loop is: edit a piece/shader → save → refresh the
 // browser tab. No server process, no credentials, no deploy.
