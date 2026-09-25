@@ -5,6 +5,7 @@ import {
   atmIv,
   CALL_WORDS,
   capConfidence,
+  dayText,
   dteStrip,
   etDateOf,
   GUIDANCE_DISCLOSURE,
@@ -235,7 +236,7 @@ export function diffGuidance(
   const move = (guidance.spot - previous.spot) / previous.spot;
   if (Math.abs(move) >= 0.005) {
     lines.push(
-      `Stock price ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${previous.asOf.slice(0, 10)}.`,
+      `Stock price ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${dayText(previous.asOf.slice(0, 10))}.`,
     );
   }
   for (const now of guidance.calls) {

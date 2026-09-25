@@ -43,7 +43,7 @@ describe("guidanceToMarkdown", () => {
   });
 
   it("dates the waiting-on list and marks the hold decision", () => {
-    expect(md).toContain("- [ ] **2026-11-02** — Decide whether to hold through earnings");
+    expect(md).toContain("- [ ] **Nov 2** — Decide whether to hold through earnings");
   });
 
   it("distinguishes a first visit from 'nothing moved'", () => {

@@ -4,6 +4,7 @@ import {
   actionable,
   CALL_WORDS,
   DOTS,
+  dayText,
   LEVER_NAME,
   pct,
   usd,
@@ -22,13 +23,8 @@ import type { LadderRow, LeverCall } from "../../../src/options/position-guidanc
  *   - Confidence is dots plus a word, never hue (a standing reader is red/green colourblind).
  */
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2026-10-16" → "Oct 16" — the year is always this one or next, and the ISO form stays in the title. */
-export function shortDate(iso: string): string {
-  const [, m, d] = iso.split("-").map(Number);
-  return m && d ? `${MONTHS[m - 1]} ${d}` : iso;
-}
+/** One date form on every surface — the engine's own (`dayText`), re-exported for the view. */
+export const shortDate = dayText;
 
 export const isActionable = (call: LeverCall): boolean =>
   call.call === "WRITE" && actionable(call.confidence);

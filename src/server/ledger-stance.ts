@@ -1,3 +1,4 @@
+import { dayText } from "../options/position-guidance-rules.js";
 import type { Confidence } from "../options/position-guidance-types.js";
 import { todayCallOf } from "./research-event-calls.js";
 
@@ -23,8 +24,7 @@ export interface LedgerRead {
   readonly buySignal: boolean;
 }
 
-const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const md = (m: string, d: string): string => `${MONTH[Number(m) - 1]} ${Number(d)}`;
+const md = (m: string, d: string): string => dayText(`2000-${m}-${d}`);
 
 /**
  * The ledger's call cell as a member reads it (#3729 persona review): markdown stripped, the

@@ -2,6 +2,7 @@ import {
   CALL_WORDS,
   DOTS,
   DTE_WORD,
+  dayText,
   GOAL_WORDS,
   LEVER_NAME,
   PULSE_MARK,
@@ -64,7 +65,7 @@ function calls(b: PositionGuidance): string[] {
   const rows = b.calls.map((c) => {
     const call = `**${CALL_WORDS[c.call] ?? c.call}**${c.atOpen ? " _(plan for the open)_" : ""}`;
     const reasons = c.reasons.map((r) => tableCell(r.text)).join("<br>");
-    const until = c.until ? `<br>_Until ${c.until.date}: ${tableCell(c.until.why)}_` : "";
+    const until = c.until ? `<br>_Until ${dayText(c.until.date)}: ${tableCell(c.until.why)}_` : "";
     return `| ${LEVER_NAME[c.lever]} | ${call} | ${DOTS[c.confidence]} ${c.confidence} | ${reasons}${until} | ${tableCell(c.provesWrong)} |`;
   });
   return [
@@ -82,7 +83,7 @@ function waiting(b: PositionGuidance): string[] {
     "### 4 · Until / waiting on",
     "",
     ...(b.waitingOn.length
-      ? b.waitingOn.map((w) => `- [ ] **${w.date}** — ${w.label} _(${w.source})_`)
+      ? b.waitingOn.map((w) => `- [ ] **${dayText(w.date)}** — ${w.label} _(${w.source})_`)
       : ["_Nothing dated on the calendar — the calls stand until prices or the research change._"]),
     "",
   ];

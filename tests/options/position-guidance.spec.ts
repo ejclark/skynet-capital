@@ -285,7 +285,7 @@ describe("what changed since you last looked", () => {
     expect(diffGuidance(undefined, first)).toEqual([]);
     const next = positionGuidance(inputs({ realizedVol: 1.0, spot: 84, chain: CHAIN }));
     const lines = diffGuidance(snapshotOf(first), next);
-    expect(lines).toContain("Stock price +5.0% since 2026-09-25.");
+    expect(lines).toContain("Stock price +5.0% since Sep 25.");
     expect(lines).toContain("Covered calls: Reasonable now (medium) → Wait (low).");
     expect(lines).toContain("Option prices for sellers: paying well → paying poorly.");
   });
