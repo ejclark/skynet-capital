@@ -37,7 +37,9 @@ function nonHolderCall(input: BriefInputs, decision: string | undefined): LeverC
       lever: "shares",
       call: "BUY",
       confidence: ledger.buyConfidence,
-      reasons: [ledgerWhy, why("SHARES", `Be flat by ${decision ?? "the print"} (S2).`)],
+      reasons: decision
+        ? [ledgerWhy, why("SHARES", `Be flat by ${decision}, before the print window (S2).`)]
+        : [ledgerWhy],
       provesWrong: "The ledger's own kill switch fires before you enter.",
       ...(decision ? { until: { date: decision, why: "S2: flat before the print window" } } : {}),
     });

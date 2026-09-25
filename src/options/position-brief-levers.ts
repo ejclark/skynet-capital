@@ -61,9 +61,14 @@ function bandWhy(ctx: LeverContext): BriefReason | undefined {
   const inBand = ctx.strip.filter((m) => m.verdict === "in");
   const last = inBand.at(-1);
   if (!last) return undefined;
+  const span = `Expiries ${inBand[0]?.dte}–${last.dte} DTE (through ${last.expiration})`;
+  if (!ctx.input.earnings) {
+    return why("DTE-FLOOR", `${span} — no print on the calendar; under 7 DTE is excluded.`);
+  }
+  const evidence = ctx.input.printEvidence ?? "an earnings gap can outrun what options price";
   return why(
     "DTE-PRINT",
-    `Expiries ${inBand[0]?.dte}–${last.dte} DTE only (through ${last.expiration}): later ones span the print window ${windowText(ctx.input)}, where this name's options have underpriced the move (FT-15).`,
+    `${span} only: later ones span the print window ${windowText(ctx.input)} — ${evidence}.`,
   );
 }
 
@@ -159,10 +164,12 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
     confidence: grade,
     reasons: [bestWhy, band, ...goalWhy, richWhy(ctx.richness)],
     provesWrong: falsifier,
-    until: {
-      date: last,
-      why: "last expiry before the print window — stop writing until the print passes",
-    },
+    until: ctx.input.earnings
+      ? {
+          date: last,
+          why: "last expiry before the print window — stop writing until the print passes",
+        }
+      : { date: last, why: "longest in-band expiry — re-run the Brief before rolling" },
   });
 }
 
@@ -190,7 +197,9 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
   const buyWhy = ledger?.buySignal
     ? why("LEDGER", `Research licenses a buy (${ledger.buyConfidence}).`)
     : why("LEDGER", "A put you'd be assigned on is a buy — and no research licenses a buy here.");
-  const falsifier = `The research ledger registers a buy signal${earnings ? ` before ${earnings.start}` : ""}.`;
+  const falsifier = ledger?.buySignal
+    ? `The research ledger withdraws its buy signal (its kill switch fires)${earnings ? ` before ${earnings.start}` : ""}.`
+    : `The research ledger registers a buy signal${earnings ? ` before ${earnings.start}` : ""}.`;
   const best = headlineRow(ladder.rows);
   if (!best) {
     return lever({
@@ -225,7 +234,9 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
     lever: "cash-secured-puts",
     call: writing ? "WRITE" : "WAIT",
     confidence: grade,
-    reasons: writing ? [bestWhy, band, ...concentration] : [buyWhy, ...concentration, bestWhy],
+    reasons: writing
+      ? [bestWhy, buyWhy, ...concentration, band]
+      : [buyWhy, ...concentration, bestWhy],
     provesWrong: falsifier,
     ...(writing
       ? {

@@ -294,3 +294,77 @@ describe("the headline strike", () => {
     expect(csp?.reasons.some((r) => r.text.includes("2026-10-02"))).toBe(false);
   });
 });
+
+describe("review regressions — calls a member could act on must never be false", () => {
+  it("a CSP WRITE on a licensed buy is falsified by the signal's withdrawal, and says why", () => {
+    const b = positionBrief(
+      inputs({
+        ivRank: 70,
+        stake: { cash: 40_000, goal: "income", happyToOwnAt: 75 },
+        ledger: { buySignal: true, buyConfidence: "high", stance: "S1 licensed", source: "x" },
+      }),
+    );
+    expect(b.calls[2]?.call).toBe("WRITE");
+    expect(b.calls[2]?.provesWrong).toContain("withdraws its buy signal");
+    expect(b.calls[2]?.reasons.map((r) => r.rule)).toContain("LEDGER");
+  });
+
+  it("with no print on the calendar, nothing claims a print window", () => {
+    const { earnings: _none, ...rest } = inputs();
+    const b = positionBrief(rest as BriefInputs);
+    const text = JSON.stringify(b.calls);
+    expect(text).not.toContain("print window");
+    expect(b.dteStrip.every((m) => m.verdict !== "spans-print")).toBe(true);
+  });
+
+  it("symbol-specific print evidence is an input — absent, only the generic caveat renders", () => {
+    const { printEvidence: _none, ...rest } = inputs({ symbol: "AAPL" });
+    const b = positionBrief(rest as BriefInputs);
+    expect(JSON.stringify(b)).not.toContain("FT-15");
+    expect(positionBrief(inputs()).calls[1]?.reasons.some((r) => r.text.includes("FT-15"))).toBe(
+      true,
+    );
+  });
+
+  it("a closed print window is retired and reported, not carried forever", () => {
+    const after = "2026-11-18T15:00:00Z";
+    const chain = ["2026-11-27", "2026-12-04"].flatMap((e) =>
+      [90, 95, 100].map((k) => quoteAt(e, k, "call", after)),
+    );
+    const b = positionBrief(inputs({ now: after, chain }));
+    expect(b.dteStrip.every((m) => m.verdict === "in")).toBe(true);
+    expect(b.waitingOn.some((w) => w.label.startsWith("Print window"))).toBe(false);
+    expect(b.calls[0]?.until).toBeUndefined();
+    expect(b.assumptions.some((a) => a.includes("2026-11-09–2026-11-16 has passed"))).toBe(true);
+  });
+
+  it("mid-window, the waiting list shows the window closing, not opening", () => {
+    const b = positionBrief(inputs({ now: "2026-11-12T15:00:00Z", chain: [] }));
+    expect(b.waitingOn.map((w) => w.label)).toContain(
+      "Print window closes — re-run the Brief on the new tape",
+    );
+  });
+
+  it("a zero cost basis is treated as not given — never Infinity", () => {
+    const b = positionBrief(inputs({ stake: { shares: 400, costBasis: 0, goal: "income" } }));
+    expect(b.stake.costBasis).toBeUndefined();
+    expect(JSON.stringify(b)).not.toContain("null");
+    expect(b.ladder.every((r) => Number.isFinite(r.returnIfCalled ?? 0))).toBe(true);
+  });
+
+  it("stale quotes demote every option lever and blank the ladder", () => {
+    const b = positionBrief(
+      inputs({
+        pulse: [
+          ...inputs().pulse.filter((p) => p.id !== "chain"),
+          { id: "chain", source: "s", status: "stale", note: "20 min old" },
+        ],
+      }),
+    );
+    expect(b.ladder).toEqual([]);
+    for (const c of [b.calls[1], b.calls[2]]) {
+      expect(c).toMatchObject({ call: "WAIT", confidence: "none" });
+      expect(c?.reasons[0]?.rule).toBe("PULSE");
+    }
+  });
+});

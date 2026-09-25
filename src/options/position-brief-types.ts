@@ -107,6 +107,13 @@ export interface BriefInputs {
   /** IV rank 0–100 when the IV instrument has a full window; absent until it does. */
   readonly ivRank?: number;
   readonly earnings?: EarningsWindow;
+  /**
+   * This name's own researched finding on how its options price its prints, quoted from its ledger
+   * (CRWV: "its options have underpriced its print moves — Q2 implied ~15.5% vs ~18.6% realized
+   * (FT-15)"). Symbol-specific evidence is an INPUT, never baked into the engine's text; absent, the
+   * Brief falls back to the generic model caveat.
+   */
+  readonly printEvidence?: string;
   readonly catalysts: readonly BriefCatalyst[];
   readonly ledger?: LedgerStance;
   readonly pulse: readonly PulseItem[];

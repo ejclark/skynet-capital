@@ -1,3 +1,4 @@
+import { normalizeInputs } from "./position-brief-inputs.js";
 import { buildLadder } from "./position-brief-ladder.js";
 import { cashSecuredPutCall, coveredCallCall } from "./position-brief-levers.js";
 import {
@@ -52,7 +53,7 @@ function applyPulse(calls: readonly LeverCall[], input: BriefInputs): LeverCall[
       ...next,
       reasons: [{ rule: "PULSE" as const, text }, ...next.reasons].slice(0, 3),
     });
-    if (chain?.status === "stale" && c.lever !== "shares" && c.call === "WRITE") {
+    if (chain?.status === "stale" && c.lever !== "shares" && c.call !== "NOT AVAILABLE") {
       next = {
         ...note(`Quotes are stale — ${chain.note}. Refresh before acting.`),
         call: "WAIT",
@@ -108,25 +109,41 @@ function waitingOn(input: BriefInputs, today: string): WaitingOn[] {
       source: "house rule",
     });
   }
-  if (e) {
+  if (e && e.start >= today) {
     items.push({
       date: e.start,
       label: `Print window opens${e.status === "estimate" ? " — date unconfirmed, watch IR" : ""}`,
+      source: e.source,
+    });
+  } else if (e && e.end >= today) {
+    items.push({
+      date: e.end,
+      label: "Print window closes — re-run the Brief on the new tape",
       source: e.source,
     });
   }
   return items.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label));
 }
 
-const ASSUMPTIONS = [
-  "Premiums are priced at the bid (what a seller receives); the mid is shown for reference only.",
-  "Odds are a lognormal model at each contract's own IV — no jumps, no early assignment, no dividends.",
-  "Across an earnings print the model understates the move: this name's options have underpriced its prints (FT-15).",
-  "Sessions exclude weekends only; exchange holidays are not modelled.",
-];
+function assumptionLines(input: BriefInputs, retiredWindow: string | undefined): string[] {
+  return [
+    "Premiums are priced at the bid (what a seller receives); the mid is shown for reference only.",
+    "Odds are a lognormal model at each contract's own IV — no jumps, no early assignment, no dividends.",
+    input.printEvidence
+      ? `Across an earnings print the model understates the move: ${input.printEvidence}.`
+      : "Across an earnings print the model can understate the move — a gap is a jump it does not price.",
+    "Sessions exclude weekends only; exchange holidays are not modelled.",
+    ...(retiredWindow
+      ? [
+          `The print window ${retiredWindow} has passed — no next print was supplied, so no expiry is cut for one.`,
+        ]
+      : []),
+  ];
+}
 
-export function positionBrief(input: BriefInputs): PositionBrief {
-  const today = etDateOf(input.now);
+export function positionBrief(raw: BriefInputs): PositionBrief {
+  const today = etDateOf(raw.now);
+  const { input, retiredWindow } = normalizeInputs(raw, today);
   const expirations = input.chain.map((q) => q.expiration);
   const strip = dteStrip(expirations, today, input.earnings, input.catalysts);
   const firstIn = strip.find((m) => m.verdict === "in")?.expiration;
@@ -153,8 +170,9 @@ export function positionBrief(input: BriefInputs): PositionBrief {
     waitingOn: waitingOn(input, today),
     richness,
     dteStrip: strip,
-    ladder: [...calls.rows, ...puts.rows],
-    assumptions: ASSUMPTIONS,
+    // Stale quotes never render as a ladder: a row priced off them would read as current.
+    ladder: pulseOf(input.pulse, "chain")?.status === "stale" ? [] : [...calls.rows, ...puts.rows],
+    assumptions: assumptionLines(input, retiredWindow),
     disclosure: BRIEF_DISCLOSURE,
   };
 }
