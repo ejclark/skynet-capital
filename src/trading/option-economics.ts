@@ -1,5 +1,5 @@
 import type { PayoffCurve } from "./draft-order-preview.js";
-import type { OptionType } from "./option-symbols.js";
+import { type OptionType, parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 import { normalizeSymbol } from "./order-ticket.js";
 
@@ -139,6 +139,26 @@ export function heldShares(
   return held ? Math.max(0, held.quantity) : 0;
 }
 
+/**
+ * Shares of `underlying` still free to cover a NEW short call: held shares minus 100 for every
+ * call already sold on it (a short call is a negative contract count). Counting all held shares
+ * let a second covered call be written on shares the first already promised — a naked call in
+ * all but name (#3729 step 4b, found while teaching the guidance the same rule).
+ */
+export function freeShares(
+  context: { readonly positions: OptionTicketContext["positions"] },
+  underlying: string,
+): number {
+  const promised = context.positions
+    .filter((p) => p.quantity < 0)
+    .filter((p) => {
+      const parts = parseOccSymbol(p.symbol);
+      return parts?.underlying === underlying && parts.type === "call";
+    })
+    .reduce((n, p) => n - p.quantity * SHARES_PER_CONTRACT, 0);
+  return Math.max(0, heldShares(context, underlying) - promised);
+}
+
 /** Payoff facts per play, all per the standard textbook arithmetic, in whole dollars. */
 export function payoff(
   code: OptionPlayCode,
@@ -196,10 +216,13 @@ export function validateAffordability(
   }
   if (request.code === "202") {
     const needed = request.contracts * SHARES_PER_CONTRACT;
-    const held = heldShares(context, normalizeSymbol(request.underlying));
-    if (held < needed) {
+    const underlying = normalizeSymbol(request.underlying);
+    const held = heldShares(context, underlying);
+    const free = freeShares(context, underlying);
+    if (free < needed) {
+      const promised = held - free;
       refusals.push(
-        `Covered means you hold the shares: ${request.contracts} contract${request.contracts === 1 ? "" : "s"} needs ${needed} shares of ${normalizeSymbol(request.underlying)} and you hold ${held}. This desk never sells naked calls.`,
+        `Covered means you hold the shares: ${request.contracts} contract${request.contracts === 1 ? "" : "s"} needs ${needed} shares of ${underlying} and you hold ${held}${promised > 0 ? `, ${promised} of them already covering calls you've sold` : ""}. This desk never sells naked calls.`,
       );
     }
     return;

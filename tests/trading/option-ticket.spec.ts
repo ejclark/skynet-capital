@@ -331,3 +331,28 @@ describe("previewOptionClose — direction from the held sign", () => {
     expect(none.refusals.join(" ")).toContain("nothing to close");
   });
 });
+
+// #3729 step 4b: a covered call already open holds its 100 shares — a second call can't reuse them.
+describe("previewOptionOrder — shares already covering a call you sold", () => {
+  const request = { ...csp, code: "202" as const, contracts: 2 };
+  const shares = { symbol: "MSFT", quantity: 300, avgPrice: 400, marketValue: 0 };
+  const sold = { symbol: "MSFT260918C00440000", quantity: -2, avgPrice: 5, marketValue: 0 };
+
+  it("refuses when the free shares fall short, and says which are already promised", () => {
+    const preview = previewOptionOrder(request, context({ positions: [shares, sold] }));
+    expect(preview.ok).toBe(false);
+    expect(preview.refusals.join(" ")).toContain(
+      "you hold 300, 200 of them already covering calls you've sold",
+    );
+  });
+
+  it("ignores long calls, puts, and other stocks when counting what's promised", () => {
+    const noise = [
+      { symbol: "MSFT260918C00440000", quantity: 2, avgPrice: 5, marketValue: 0 },
+      { symbol: "MSFT260918P00380000", quantity: -2, avgPrice: 5, marketValue: 0 },
+      { symbol: "NVDA260918C00200000", quantity: -2, avgPrice: 5, marketValue: 0 },
+    ];
+    const preview = previewOptionOrder(request, context({ positions: [shares, ...noise] }));
+    expect(preview.refusals.join(" ")).not.toContain("Covered means");
+  });
+});
