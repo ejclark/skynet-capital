@@ -102,6 +102,7 @@
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
     "@types/node": "26.6.2",
+    "@types/three": "0.184.1",
     "acorn": "8.18.0",
     "dependency-cruiser": "18.3.1",
     "esbuild": "0.28.2",
@@ -116,7 +117,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "@babylonjs/core": "9.27.1",
-    "marked": "18.0.13"
+    "marked": "18.0.13",
+    "three": "0.184.0"
   }
 }

@@ -1,152 +1,163 @@
-import { PointLight } from "@babylonjs/core/Lights/pointLight";
-import { Effect } from "@babylonjs/core/Materials/effect";
-import { ShaderMaterial } from "@babylonjs/core/Materials/shaderMaterial";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
-import { Matrix } from "@babylonjs/core/Maths/math.vector";
-import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import type { Scene } from "@babylonjs/core/scene";
+import * as THREE from "three";
+import { fireMaterial } from "../kit/fire-glsl.js";
 import type { TowerParams } from "../kit/params.js";
-import { GLOBE_FRAGMENT, GLOBE_VERTEX } from "./eye-shader.js";
+import { almondify } from "../kit/shapes.js";
+import { BEAM, BODY, CORONA } from "./eye-shader.js";
 
 /**
- * THE EYE — a naked almond of fire hung between the tower's horns. Art direction: `docs/art/EYE.md`.
+ * THE EYE — fire first. Design handoff §6–7; art direction `docs/art/EYE.md`.
  *
- *   eyeRoot ─ pivot ─ globe   the Eye: a sphere whose visible surface is CUT to the almond by discard
- *                   └ gaze ─ beam   so the beam leaves from wherever the pupil is actually pointing
+ *   eye (gaze rotation) ─ body   almond of flowing fire, breathing with the flicker
+ *                       └ pupil  the one thing up there that does not burn
+ *   gaze (same rotation) ─ beam  two faint cones, starting OUTSIDE the eyeball
+ *   corona                       camera-facing flame field fitted to the projected outline
+ *   glow / glowBack              the Eye lights its own tower
  *
- * There is deliberately no lid, brow, socket or faceplate — the reference has none, and both earlier
- * attempts died on that: a billboarded card (flat, and it swung to face the viewer) and then a stone
- * shell with the almond cut out of it (dimensional, but it housed a thing that must not be housed).
- * The shape now belongs to the flame; see the shader for how the silhouette is carved and licked.
- *
- * Nothing billboards. The Eye sweeps on its own schedule and never tracks the camera — being ignored
- * is the point.
+ * The Eye and the beam share one rotation, so the pupil always faces down the beam. Nothing here
+ * tracks the camera except the corona plane, which is only a canvas for the fire around the rim —
+ * the Eye itself sweeps on its own schedule. Being ignored is the point.
  */
 
+/** Half-extents of the almond (≈35% larger than the previous globe). */
+export const EW = 15;
+export const EH = 8.2;
+export const ED = 5.4;
+/** Height of the Eye's centre above the crown bowl. */
+export const EYE_LIFT = 30;
+/** Corona plane edge, in multiples of EW. */
+const CORONA_SIZE = 3.2;
+
+/** The handoff's flicker: three incommensurate sines, range ≈ ±1. */
+export const flicker = (t: number): number =>
+  0.5 * Math.sin(t * 5.3) + 0.3 * Math.sin(t * 11.7 + 1.3) + 0.2 * Math.sin(t * 23.1 + 0.4);
+
+/** The slow searching gaze: yaw sweeps ±~1.2 rad over minutes, pitch nods just below level. */
+export function gazeAt(t: number): { yaw: number; pitch: number } {
+  return {
+    yaw: Math.sin(t * 0.11) * 0.85 + Math.sin(t * 0.037) * 0.35,
+    pitch: 0.16 + Math.sin(t * 0.07) * 0.06,
+  };
+}
+
+function almond(widthSegs: number, taperZ: boolean): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(1, widthSegs, widthSegs / 2);
+  almondify((g.attributes.position as THREE.BufferAttribute).array as Float32Array, taperZ);
+  g.computeVertexNormals();
+  return g;
+}
+
 export interface EyeBuild {
-  readonly root: TransformNode;
-  /** Rotate to aim the eye. Globe and beam both hang from it, so they can never disagree. */
-  readonly pivot: TransformNode;
-  /** Node the gaze beam hangs from — under the pivot, so it follows the pupil. */
-  readonly gaze: TransformNode;
-  readonly light: PointLight;
-  readonly material: ShaderMaterial;
-  /** The flame mesh itself — the emitter volumetric scattering casts its shafts from. */
-  readonly emitter: Mesh;
+  /** Everything the Eye owns, ready to add to the scene. */
+  readonly group: THREE.Group;
+  /** Drive the Eye to time `t` (seconds). Pure in `t` — a seek renders the same frame every time. */
+  update(t: number, camera: THREE.Camera): void;
 }
 
-/** Register the shader sources once per page. */
-function registerShaders(): void {
-  if (!Effect.ShadersStore.skynetEyeGlobeVertexShader) {
-    Effect.ShadersStore.skynetEyeGlobeVertexShader = GLOBE_VERTEX;
-    Effect.ShadersStore.skynetEyeGlobeFragmentShader = GLOBE_FRAGMENT;
+export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
+  const group = new THREE.Group();
+  group.name = "eye-of-sauron";
+
+  const eye = new THREE.Group();
+  eye.name = "eye";
+  eye.position.copy(at);
+  eye.rotation.order = "YXZ";
+  const body = new THREE.Mesh(almond(72, true), fireMaterial("eye-fire", BODY));
+  body.name = "eye-fire";
+  body.scale.set(EW, EH, ED);
+  eye.add(body);
+  const pupil = new THREE.Mesh(
+    almond(48, false),
+    new THREE.MeshBasicMaterial({ name: "eye-pupil", color: 0x140300 }),
+  );
+  pupil.name = "eye-pupil";
+  pupil.rotation.z = Math.PI / 2;
+  pupil.scale.set(EH * 0.9, 1.7, ED * 1.32);
+  eye.add(pupil);
+  group.add(eye);
+
+  // Corona — drawn after the body (renderOrder) so its additive fire lays over the rim.
+  const coronaU = {
+    uW: { value: 1 },
+    uH: { value: EH / EW },
+    uEW: { value: EW },
+    uReach: { value: params.eyeIntensity },
+  };
+  const coronaMat = fireMaterial(
+    "eye-corona",
+    CORONA,
+    { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false },
+    coronaU,
+  );
+  const corona = new THREE.Mesh(
+    new THREE.PlaneGeometry(EW * CORONA_SIZE, EW * CORONA_SIZE),
+    coronaMat,
+  );
+  corona.name = "eye-corona";
+  corona.renderOrder = 5;
+  group.add(corona);
+
+  // Beam: an outer veil and a hotter core. Starts ED·1.05 in front, OUTSIDE the eyeball — spanning
+  // from the centre washed the pupil grey and cost the almond a canthus (an earlier attempt's bug).
+  const gaze = new THREE.Group();
+  gaze.name = "gaze";
+  gaze.rotation.order = "YXZ";
+  const len = params.gazeReach;
+  for (const [r0, r1, strength, streak] of [
+    [3.2, 120, 0.09, 3],
+    [1.2, 40, 0.16, 6],
+  ] as const) {
+    const g = new THREE.CylinderGeometry(r1, r0, len, 48, 1, true);
+    g.rotateX(Math.PI / 2);
+    g.translate(0, 0, len / 2 + ED * 1.05);
+    const mat = fireMaterial(
+      `eye-beam-${streak}`,
+      BEAM,
+      {
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        fog: false,
+        side: THREE.DoubleSide,
+      },
+      { uLen: { value: len }, uStrength: { value: strength }, uStreak: { value: streak } },
+    );
+    gaze.add(new THREE.Mesh(g, mat));
   }
-}
+  group.add(gaze);
 
-/** Radius of the eyeball. The aperture is sized off this so the two can't drift apart. */
-const GLOBE_R = 12.5;
+  // The Eye lights its own tower: a hot key just in front along the gaze, a softer one behind.
+  const I = params.eyeIntensity;
+  const glow = new THREE.PointLight(0xff7a2e, 16000 * I, 320, 1.6);
+  const glowBack = new THREE.PointLight(0xff9e3d, 5000 * I, 160, 1.6);
+  group.add(glow, glowBack);
 
-export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild {
-  registerShaders();
-  const root = new TransformNode("eyeRoot", scene);
-  root.position.y = y;
+  // A bleeding account's Eye still burns — it just gutters less (flicker amplitude follows health).
+  const amp = THREE.MathUtils.lerp(0.7, 1.15, (params.health + 1) / 2);
+  const fwd = new THREE.Vector3();
+  const side = new THREE.Vector3();
+  const camRight = new THREE.Vector3();
 
-  const pivot = new TransformNode("eyePivot", scene);
-  pivot.parent = root;
+  return {
+    group,
+    update(t, camera) {
+      const { yaw, pitch } = gazeAt(t);
+      eye.rotation.set(pitch, yaw, 0);
+      gaze.position.copy(at);
+      gaze.rotation.copy(eye.rotation);
+      const f = flicker(t) * amp;
+      body.scale.set(EW * (1 + f * 0.018), EH * (1 + f * 0.028), ED * (1 + f * 0.018));
 
-  // ---- The Eye itself: a sphere, cut to an almond of flame in the fragment shader ----
-  const material = new ShaderMaterial(
-    "eyeGlobeMat",
-    scene,
-    { vertex: "skynetEyeGlobe", fragment: "skynetEyeGlobe" },
-    {
-      attributes: ["position", "normal"],
-      uniforms: ["worldViewProjection", "iTime", "iPower", "iCamO", "iLightO", "iRadius"],
-      needAlphaBlending: true,
+      corona.position.copy(at);
+      corona.quaternion.copy(camera.quaternion);
+      fwd.set(0, 0, 1).applyEuler(eye.rotation);
+      side.set(1, 0, 0).applyEuler(eye.rotation);
+      camRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+      coronaU.uW.value = Math.hypot(EW * side.dot(camRight), ED * fwd.dot(camRight)) / EW;
+
+      glow.position.set(at.x + Math.sin(yaw) * 8, at.y, at.z + Math.cos(yaw) * 8);
+      glowBack.position.set(at.x - Math.sin(yaw) * 7, at.y + 4, at.z - Math.cos(yaw) * 7);
+      glow.intensity = 16000 * I * (1 + f * 0.14);
+      glowBack.intensity = 5000 * I * (1 - f * 0.1);
     },
-  );
-  // The flame's outer tongues feather out, so the material blends — but the almond's interior is fully
-  // opaque and must still occlude the crown behind it, hence depth writes stay on.
-  material.forceDepthWrite = true;
-  material.setFloat("iTime", 0);
-  material.setFloat("iPower", params.eyeIntensity);
-  material.setVector3("iCamO", new Vector3(0, 0, 20));
-  // Key light in the eye's own frame — slightly up and to camera-left, so the chatoyant band sits
-  // off-centre rather than symmetrically through the pupil (symmetry reads as decal, not stone).
-  material.setVector3("iLightO", new Vector3(0.45, 0.7, 0.55));
-  material.setFloat("iRadius", GLOBE_R);
-
-  const globe = CreateSphere("eyeGlobe", { diameter: GLOBE_R * 2, segments: 48 }, scene);
-  globe.material = material;
-  globe.parent = pivot;
-  globe.isPickable = false;
-
-  // The eye math (iris axis = +Z, lid axis = +Y) lives in object space, so the camera has to be
-  // expressed there too. Doing it on the CPU once per frame beats inverting a mat4 per-fragment:
-  // GLSL ES 1.0 has no matrix inverse, and this is one 4x4 invert against thousands of pixels.
-  const camO = new Vector3();
-  const inv = new Matrix();
-  globe.onBeforeRenderObservable.add(() => {
-    const cam = scene.activeCamera;
-    if (!cam) return;
-    globe.getWorldMatrix().invertToRef(inv);
-    Vector3.TransformCoordinatesToRef(cam.globalPosition, inv, camO);
-    material.setVector3("iCamO", camO);
-  });
-
-  // The eye lights its own tower — this is what makes the crown feel radioactive.
-  const light = new PointLight("eyeGlow", Vector3.Zero(), scene);
-  light.diffuse = new Color3(1.0, 0.44, 0.11);
-  light.intensity = params.eyeIntensity * 1.15;
-  light.range = 120;
-  light.parent = root;
-
-  // ---- Gaze beam, under the pivot so it leaves from where the pupil actually points ----
-  const gaze = new TransformNode("gaze", scene);
-  gaze.parent = pivot;
-
-  const beamMat = new StandardMaterial("beamMat", scene);
-  beamMat.emissiveColor = new Color3(1.0, 0.44, 0.12);
-  beamMat.disableLighting = true;
-  beamMat.alpha = 0.035;
-
-  const coreMat = new StandardMaterial("beamCoreMat", scene);
-  coreMat.emissiveColor = new Color3(1.0, 0.78, 0.42);
-  coreMat.disableLighting = true;
-  coreMat.alpha = 0.07;
-
-  const reach = params.gazeReach;
-  // The beam starts OUTSIDE the eyeball, not at its centre. Spanning from the origin meant the
-  // cylinder passed through the flame and washed whichever side faced the camera — the pupil went
-  // grey and the almond lost a canthus. Light leaves a surface; it does not begin inside one.
-  const beamStart = GLOBE_R * 1.05;
-  const beamLen = reach - beamStart;
-
-  const beam = CreateCylinder(
-    "beam",
-    { diameterTop: 2.2, diameterBottom: reach * 0.11, height: beamLen, tessellation: 24 },
-    scene,
-  );
-  beam.material = beamMat;
-  beam.rotation.x = Math.PI / 2;
-  beam.position.z = beamStart + beamLen / 2;
-  beam.parent = gaze;
-  beam.isPickable = false;
-
-  const core = CreateCylinder(
-    "beamCore",
-    { diameterTop: 0.7, diameterBottom: reach * 0.04, height: beamLen, tessellation: 20 },
-    scene,
-  );
-  core.material = coreMat;
-  core.rotation.x = Math.PI / 2;
-  core.position.z = beamStart + beamLen / 2;
-  core.parent = gaze;
-  core.isPickable = false;
-
-  return { root, pivot, gaze, light, material, emitter: globe };
+  };
 }

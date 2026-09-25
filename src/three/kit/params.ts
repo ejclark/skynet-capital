@@ -9,7 +9,7 @@ import { clamp01, lerp } from "../../math/num.js";
  * (`src/universe/world-state.ts` → `LandmarkState.prominence`, `EmpireState`) onto render dials, so
  * every renderer reads the same rules instead of re-deriving (and drifting from) them.
  *
- * Pure math, no Babylon — unit-testable without a browser.
+ * Pure math, no three.js — unit-testable without a browser.
  */
 
 /** Every dial the tower render exposes, already resolved to concrete numbers. */
@@ -23,13 +23,13 @@ export interface TowerParams {
   readonly health: number;
   /** Eye emissive intensity multiplier. */
   readonly eyeIntensity: number;
-  /** How far the gaze beam reaches, world units — "commands more" at higher standing. */
+  /** Length of the gaze beam, world units — "commands more" at higher standing. ~950 at the default. */
   readonly gazeReach: number;
-  /** Molten forge glow under the fortress; falls off hard when positions bleed. */
+  /** Heat of the lit windows (the forge seen through the slits); falls off hard when positions bleed. */
   readonly forgeIntensity: number;
-  /** Storm/ember density multiplier around the crown. */
+  /** Ember density multiplier around the Eye. */
   readonly stormDensity: number;
-  /** Extra masonry detail passes granted at higher standing (0..2). */
+  /** Extra detail passes granted at higher standing (0..2) — more lit windows: a busier fortress. */
   readonly detailPasses: number;
 }
 
@@ -60,7 +60,7 @@ export function resolveTowerParams(state: TowerStateInput): TowerParams {
     power,
     health,
     eyeIntensity: lerp(0.55, 1.6, power ** 1.4) * lerp(0.7, 1.15, warmth),
-    gazeReach: lerp(70, 190, power),
+    gazeReach: lerp(600, 1150, power),
     forgeIntensity: lerp(0.25, 1.35, warmth) * lerp(0.8, 1.2, power),
     stormDensity: lerp(0.45, 1.4, power),
     detailPasses: power > 0.8 ? 2 : power > 0.45 ? 1 : 0,

@@ -14,7 +14,8 @@ describe("threeScenePage", () => {
     const html = threeScenePage();
     expect(html).toContain("/three/scene.js");
     // A CDN would be unpinned in production and unreachable from the headless verification browser.
-    expect(html).not.toContain("cdn.babylonjs.com");
+    expect(html).not.toContain("unpkg.com");
+    expect(html).not.toContain("cdn.jsdelivr.net");
   });
 
   it("hands the canvas to the bundle's entry point", () => {

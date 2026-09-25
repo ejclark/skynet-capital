@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Screenshot harness for the /tower Babylon scene — the verification loop for 3D work.
+// Screenshot harness for the /tower three.js scene — the verification loop for 3D work.
 //
 // A continuously-rendering canvas never goes "network idle" or "stable", so generic screenshot
 // tooling times out on it. We instead wait on the scene's own `window.__ready` flag, let a few
@@ -42,65 +42,26 @@ const CHROME = resolveChromium();
  * foreshortened and the frame can't be judged. */
 const SEEK_TIME = 0.6;
 
+// Poses are EYE-relative (alphaOffset from the angle that looks straight down the gaze) or, with
+// `whole: true`, frame the full tower from its mid-height. Radii are world units at the handoff's
+// scale: the tower is ~395 tall, the Eye's almond 30 wide.
 const SHOTS = [
-  // Every pose is now EYE-RELATIVE. With a billboarded Eye any angle worked; a directional one
-  // means a fixed alpha can frame the tower's back, which is how the hero shot lost its Eye.
-  { tag: "hero", w: 1600, h: 1000, faceEye: true, alphaOffset: -0.85, beta: 1.18, radius: 175 },
-  { tag: "silhouette", w: 1600, h: 1000, faceEye: true, alphaOffset: 1.9, beta: 1.3, radius: 230 },
-  {
-    tag: "crown-close",
-    w: 1600,
-    h: 1000,
-    faceEye: true,
-    alphaOffset: -0.5,
-    beta: 1.12,
-    radius: 95,
-  },
-  // The Eye is the piece under active art direction, so it gets its own pose: framed on the
-  // aperture, close enough to judge chatoyancy and the iris parallax.
-  { tag: "eye", w: 1600, h: 1000, faceEye: true, beta: 1.5, radius: 30 },
-  // Same framing swung off-axis: the whole point of the rebuild is that the Eye holds up when
-  // you are NOT in front of it — parallax shifts the pupil, the chatoyant band travels.
-  {
-    tag: "eye-oblique",
-    w: 1600,
-    h: 1000,
-    faceEye: true,
-    alphaOffset: 0.75,
-    beta: 1.32,
-    radius: 34,
-  },
-  { tag: "mobile", w: 430, h: 900, faceEye: true, alphaOffset: -0.85, beta: 1.18, radius: 210 },
+  { tag: "hero", w: 1600, h: 1000, whole: true, alphaOffset: -0.68, beta: 1.43, radius: 640 },
+  { tag: "silhouette", w: 1600, h: 1000, whole: true, alphaOffset: 1.9, beta: 1.5, radius: 700 },
+  { tag: "crown-close", w: 1600, h: 1000, alphaOffset: -0.5, beta: 1.3, radius: 150 },
+  // The Eye is the piece under active art direction, so it gets its own close poses.
+  { tag: "eye", w: 1600, h: 1000, beta: 1.5, radius: 70 },
+  { tag: "eye-oblique", w: 1600, h: 1000, alphaOffset: 0.75, beta: 1.32, radius: 75 },
+  // Phone first: the /tower hero at 390px wide.
+  { tag: "mobile", w: 390, h: 844, whole: true, alphaOffset: -0.68, beta: 1.43, radius: 820 },
   // ---- Full-angle coverage: DEFAULT, not opt-in ----------------------------------------------------
-  // Two real regressions shipped and reached production before anyone looked from these angles — a
-  // shape that silently went empty past ~90° off-axis, and (separately) one that lost its own read from
-  // directly behind. Both were only caught by hand, after the fact, on user report. A piece whose
-  // silhouette is claimed to hold "in every direction" is a testable claim; this suite tests it every
-  // run rather than trusting the claim. Add angles here for any piece under active 3D work; don't rely
-  // on remembering to check by hand (docs/art/EYE.md "the bar" section is the standing checklist this
-  // enforces mechanically instead of by discipline alone).
-  {
-    tag: "eye-side",
-    w: 1600,
-    h: 1000,
-    faceEye: true,
-    alphaOffset: Math.PI / 2,
-    beta: 1.5,
-    radius: 35,
-  },
-  {
-    tag: "eye-behind",
-    w: 1600,
-    h: 1000,
-    faceEye: true,
-    alphaOffset: Math.PI,
-    beta: 1.5,
-    radius: 35,
-  },
-  // beta near the poles: modest values clip into the tower's own crown geometry (a camera-placement
-  // trap, not a shader defect — found and worked around during verification). 0.15 / 2.35 clear it.
-  { tag: "eye-above", w: 1600, h: 1000, faceEye: true, beta: 0.15, radius: 35 },
-  { tag: "eye-below", w: 1600, h: 1000, faceEye: true, beta: 2.35, radius: 55 },
+  // Two real regressions once shipped that only showed from these angles (a shape that went empty
+  // past ~90° off-axis, one that lost its read from behind). A silhouette claimed to hold "in every
+  // direction" is a testable claim; this suite tests it every run (docs/art/EYE.md "the bar").
+  { tag: "eye-side", w: 1600, h: 1000, alphaOffset: 1.25, beta: 1.5, radius: 80 },
+  { tag: "eye-behind", w: 1600, h: 1000, alphaOffset: Math.PI, beta: 1.5, radius: 75 },
+  { tag: "eye-above", w: 1600, h: 1000, beta: 0.35, radius: 80 },
+  { tag: "eye-below", w: 1600, h: 1000, beta: 2.2, radius: 90 },
 ];
 
 async function main() {
@@ -139,23 +100,16 @@ async function main() {
       // THEN park the camera. Order matters and used to be reversed: posing before the settle let the
       // idle orbit drift alpha by ~0.1 rad during the wait, so the captured angle was never the angle
       // asked for and varied run to run. Pose last, seek immediately, capture — nothing runs in between.
-      await page.evaluate(({ alpha, beta, radius, faceEye, alphaOffset }) => {
-        const cam = window.__towerCamera;
-        if (!cam) return;
-        cam.beta = beta;
-        cam.radius = radius;
-        // faceEye poses are described relative to the Eye itself, so they stay correct as the tower's
-        // proportions change; the rest keep their absolute framing of the whole silhouette.
-        if (faceEye && window.__eye) {
-          cam.alpha = window.__eye.facingAlpha + (alphaOffset ?? 0);
-          cam.setTarget(cam.target.set(0, window.__eye.y, 0));
-        } else {
-          cam.alpha = alpha;
-        }
+      await page.evaluate(({ beta, radius, whole, alphaOffset }) => {
+        const eye = window.__eye;
+        if (!(eye && window.__towerPose)) return;
+        const alpha = eye.facingAlpha + (alphaOffset ?? 0);
+        const target = whole
+          ? [0, (window.__tower?.height ?? 395) / 2 - 18, 0]
+          : [eye.x, eye.y, eye.z];
+        window.__towerPose({ alpha, beta, radius, target });
       }, s);
-      // Seek to a fixed moment. `__towerSeek` now holds the clock and camera for its own frame (see
-      // scene-main.ts); before that guard existed this call was decorative and every shot captured a
-      // different instant, which quietly made shot-to-shot comparison meaningless while looking rigorous.
+      // Seek to a fixed moment. `__towerSeek` stops the loop and renders exactly that instant (see scene-main.ts).
       await page.evaluate((time) => window.__towerSeek?.(time), SEEK_TIME);
       await page.waitForTimeout(250);
 
