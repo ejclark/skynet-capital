@@ -64,14 +64,25 @@ export function spotPulse(obs: SpotObservation | undefined, now: string, open: b
   if (obs.parity !== undefined) {
     const gap = Math.abs(obs.last / obs.parity - 1);
     if (gap > PARITY_TOLERANCE) {
+      // Out of session, option marks go stale and wide on their own, so a gap is a warning — the
+      // calls are already plans for the open. In session, one of two live sources is wrong.
       return row(
         "spot",
         source,
-        "stale",
-        `IEX $${obs.last.toFixed(2)} vs option-implied $${obs.parity.toFixed(2)} (${(gap * 100).toFixed(1)}% apart)`,
+        open ? "stale" : "aging",
+        `IEX $${obs.last.toFixed(2)} vs option-implied $${obs.parity.toFixed(2)} (${(gap * 100).toFixed(1)}% apart${open ? "" : ", after hours"})`,
         obs.lastAt,
       );
     }
+  } else if (open) {
+    // No second source in session means spot is unverified — never graded as if it were checked.
+    return row(
+      "spot",
+      source,
+      "stale",
+      "no at-the-money call/put pair to cross-check spot",
+      obs.lastAt,
+    );
   }
   if (!obs.lastAt) return row("spot", source, "aging", "the feed gave no trade time");
   const age = Date.parse(now) - Date.parse(obs.lastAt);
@@ -180,10 +191,17 @@ export function earningsPulse(
 
 /** 8-Ks filed after the research was last worked — each one is news the ledger has not read. */
 export function filingsPulse(
-  filings: readonly { readonly date: string; readonly items: string }[] | undefined,
+  read:
+    | {
+        readonly fetchedAt: string;
+        readonly filings: readonly { readonly date: string; readonly items: string }[];
+      }
+    | undefined,
   since: string | undefined,
-  fetchedAt: string,
+  now: string,
 ): PulseItem {
+  const filings = read?.filings;
+  const fetchedAt = read?.fetchedAt ?? now;
   const source = "SEC EDGAR 8-K filings";
   if (!filings)
     return row("filings", source, "aging", "EDGAR unreachable — new filings unchecked", fetchedAt);
@@ -195,7 +213,8 @@ export function filingsPulse(
       "no research date to compare filings against",
       fetchedAt,
     );
-  const fresh = filings.filter((f) => f.date > since);
+  // ON or after: a filing dated the research day may have landed after the research was written.
+  const fresh = filings.filter((f) => f.date >= since);
   if (fresh.length === 0)
     return row("filings", source, "fresh", `no 8-K since research (${since})`, fetchedAt);
   const list = fresh.map((f) => `${f.date}${f.items ? ` items ${f.items}` : ""}`).join("; ");
@@ -203,7 +222,7 @@ export function filingsPulse(
     "filings",
     source,
     "stale",
-    `${fresh.length} new 8-K since research: ${list}`,
+    `${fresh.length} 8-K on or after the research date: ${list}`,
     fetchedAt,
   );
 }

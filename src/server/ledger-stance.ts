@@ -33,14 +33,18 @@ function confidenceOf(cell: string | undefined): Confidence | undefined {
 /** `**Last assessed:** 2026-09-18`, or a later `(D-47 pulse, 2026-09-24.)` in the TL;DR. */
 function assessedOf(md: string): string | undefined {
   const dates = [
-    md.match(/\*\*Last assessed:\*\*\s*(\d{4}-\d{2}-\d{2})/)?.[1],
+    ...[...md.matchAll(/\*\*Last assessed:\*\*\s*(\d{4}-\d{2}-\d{2})/g)].map((m) => m[1]),
     ...[...md.matchAll(/pulse,\s*(\d{4}-\d{2}-\d{2})/g)].map((m) => m[1]),
   ].filter((d): d is string => Boolean(d));
   return dates.sort().at(-1);
 }
 
+/**
+ * A ledger APPENDS a `Last assessed` + `probe-ref` pair on every pulse, so the newest probe is the
+ * LAST one in the file — reading the first would grade today's tape against a week-old price.
+ */
 function probePriceOf(md: string, symbol: string): number | undefined {
-  const raw = md.match(/<!--\s*probe-ref:\s*(\{.*?\})\s*-->/)?.[1];
+  const raw = [...md.matchAll(/<!--\s*probe-ref:\s*(\{.*?\})\s*-->/g)].at(-1)?.[1];
   if (!raw) return undefined;
   try {
     const price = (JSON.parse(raw) as { symbols?: Record<string, unknown> }).symbols?.[symbol];

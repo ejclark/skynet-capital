@@ -44,8 +44,8 @@ describe("spotPulse — two independent reads of spot", () => {
     expect(p.note).toContain("as of close");
   });
 
-  it("never grades fresh without the parity cross-check", () => {
-    expect(spotPulse({ last: 80, lastAt: ago(1_000) }, NOW, true).status).toBe("aging");
+  it("never grades fresh without the parity cross-check, even after hours", () => {
+    expect(spotPulse({ last: 80, lastAt: ago(3_600_000) }, NOW, false).status).toBe("aging");
   });
 });
 
@@ -90,16 +90,19 @@ describe("earnings, filings and session", () => {
 
   it("a new 8-K after the research date is stale and named", () => {
     const p = filingsPulse(
-      [
-        { date: "2026-09-25", items: "8.01" },
-        { date: "2026-09-17", items: "1.01" },
-      ],
+      {
+        fetchedAt: "2026-09-25T17:58:00Z",
+        filings: [
+          { date: "2026-09-25", items: "8.01" },
+          { date: "2026-09-17", items: "1.01" },
+        ],
+      },
       "2026-09-24",
       NOW,
     );
     expect(p).toMatchObject({
       status: "stale",
-      note: "1 new 8-K since research: 2026-09-25 items 8.01",
+      note: "1 8-K on or after the research date: 2026-09-25 items 8.01",
     });
   });
 
@@ -112,5 +115,26 @@ describe("earnings, filings and session", () => {
     expect(clockSessionOpen(NOW)).toBe(true);
     expect(clockSessionOpen("2026-09-25T21:00:00Z")).toBe(false); // 17:00 ET
     expect(clockSessionOpen("2026-09-26T15:00:00Z")).toBe(false); // Saturday
+  });
+});
+
+describe("review regressions — nothing unverified reaches the engine graded as checked", () => {
+  it("in session, a spot with no parity pair is stale — unverified, not 'aging'", () => {
+    expect(spotPulse({ last: 80, lastAt: ago(1_000) }, NOW, true).status).toBe("stale");
+  });
+
+  it("after hours, a parity gap warns rather than refuses — the calls are plans for the open", () => {
+    expect(spotPulse({ last: 80, lastAt: ago(3_600_000), parity: 82 }, NOW, false).status).toBe(
+      "aging",
+    );
+  });
+
+  it("counts an 8-K filed ON the research day, and dates the pulse by the fetch", () => {
+    const p = filingsPulse(
+      { fetchedAt: "2026-09-25T17:58:00Z", filings: [{ date: "2026-09-24", items: "8.01" }] },
+      "2026-09-24",
+      NOW,
+    );
+    expect(p).toMatchObject({ status: "stale", asOf: "2026-09-25T17:58:00Z" });
   });
 });

@@ -60,6 +60,12 @@ function applyPulse(calls: readonly LeverCall[], input: BriefInputs): LeverCall[
         confidence: "none",
       };
     }
+    if (spot?.status === "aging") {
+      next = {
+        ...note(`Spot is only partly verified — ${spot.note}. Confidence capped medium.`),
+        confidence: capConfidence(next.confidence, "medium"),
+      };
+    }
     if (research?.status === "stale") {
       next = {
         ...note(`Research is stale — ${research.note}. Confidence capped low.`),

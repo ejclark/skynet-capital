@@ -3,7 +3,7 @@ import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import { EdgarFilings } from "../adapters/edgar-filings.js";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
-import { nextPrint } from "../domain/earnings-calendar.js";
+import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents } from "../domain/market-events.js";
 import { positionBrief } from "../options/position-brief.js";
 import { briefToMarkdown } from "../options/position-brief-markdown.js";
@@ -18,7 +18,7 @@ import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { printEvidenceFor } from "../research/print-evidence.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import {
-  earningsWindowOf,
+  activePrint,
   parityImpliedSpot,
   realizedVolatility,
   toBriefQuote,
@@ -127,11 +127,13 @@ async function readMarket(
   wantCalls: boolean,
   wantPuts: boolean,
   deps: BriefDeps,
+  refresh: boolean,
 ): Promise<Omit<BriefInputs, "stake"> | { readonly reason: string; readonly note: string }> {
   const now = deps.now();
   const today = etDateOf(now);
-  const print = nextPrint(symbol, now);
-  const earnings = earningsWindowOf(print);
+  const active = activePrint(UPCOMING_PRINTS, symbol, today);
+  const print = active?.print;
+  const earnings = active?.window;
   const trading = config.tradingClientFor?.(requesterId);
   const barsFrom = new Date(Date.parse(now) - BARS_LOOKBACK_DAYS * 86_400_000)
     .toISOString()
@@ -141,7 +143,7 @@ async function readMarket(
     client.getExpirations(symbol, today, MAX_EXPIRATIONS).catch(() => [] as string[]),
     client.getBars(symbol, barsFrom, today),
     trading ? marketOpen(trading) : Promise.resolve(undefined),
-    deps.edgar.eightKs(symbol),
+    deps.edgar.eightKs(symbol, { fresh: refresh }),
   ]);
   if (!quote)
     return { reason: "failed", note: `No live quote for ${symbol} — nothing to brief on.` };
@@ -152,8 +154,9 @@ async function readMarket(
   const priceable = expirations.filter(
     (e) => daysBetween(today, e) >= MIN_DTE && !(earnings && e >= earnings.start),
   );
-  // The nearest listed expiry always gets both sides: it feeds the parity cross-check on spot.
-  const parityExp = priceable[0] ?? (expirations[0] as string);
+  // Parity reads spot off the NEAREST listed expiry, both sides: the least time for a dividend
+  // (which parity cannot see) to fall inside it, and the tightest at-the-money quotes.
+  const parityExp = expirations[0] as string;
   const pages = await Promise.all(
     [...new Set([parityExp, ...priceable])].flatMap((expiration) =>
       (["call", "put"] as const)
@@ -259,7 +262,16 @@ export async function serveBrief(
     ? cached
     : {
         at: Date.now(),
-        inputs: readMarket(client, config, requesterId, symbol, wantCalls, wantPuts, deps),
+        inputs: readMarket(
+          client,
+          config,
+          requesterId,
+          symbol,
+          wantCalls,
+          wantPuts,
+          deps,
+          params.get("refresh") === "1",
+        ),
       };
   if (!fresh) {
     for (const [k, v] of inflight) if (Date.now() - v.at >= COALESCE_MS) inflight.delete(k);
@@ -273,11 +285,12 @@ export async function serveBrief(
     }
     const brief = positionBrief({ ...market, stake });
     sendJson(res, 200, { brief, markdown: briefToMarkdown(brief) });
-  } catch (error) {
+  } catch {
     inflight.delete(key);
+    // A fixed sentence, never the exception text — a raw error can carry internals (desk-gate.ts).
     sendJson(res, 200, {
       reason: "failed",
-      note: `Couldn't build the Brief right now — ${String(error)}.`,
+      note: "Couldn't build the Brief right now — try again shortly.",
     });
   }
 }

@@ -65,11 +65,19 @@ export class EdgarFilings {
     return this.tickers.value.get(symbol.toUpperCase());
   }
 
-  /** Every 8-K in EDGAR's recent-filings page, newest first. */
-  async eightKs(symbol: string): Promise<readonly EightK[] | undefined> {
+  /**
+   * Every 8-K in EDGAR's recent-filings page, newest first, with WHEN it was fetched — the pulse
+   * reports that time, not the request's. `fresh` (a member's refresh) skips the five-minute cache.
+   */
+  async eightKs(
+    symbol: string,
+    options: { readonly fresh?: boolean } = {},
+  ): Promise<{ readonly fetchedAt: string; readonly filings: readonly EightK[] } | undefined> {
     const now = this.clock();
     const hit = this.filings.get(symbol);
-    if (hit && now - hit.at <= FILINGS_TTL_MS) return hit.value;
+    if (hit && !options.fresh && now - hit.at <= FILINGS_TTL_MS) {
+      return { fetchedAt: new Date(hit.at).toISOString(), filings: hit.value };
+    }
     try {
       const cik = await this.cikOf(symbol);
       if (!cik) return undefined;
@@ -87,7 +95,7 @@ export class EdgarFilings {
         }
       });
       this.filings.set(symbol, { at: now, value: out });
-      return out;
+      return { fetchedAt: new Date(now).toISOString(), filings: out };
     } catch {
       return undefined;
     }

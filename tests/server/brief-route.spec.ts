@@ -83,7 +83,10 @@ function broker(spot = 80, chainShift = 0) {
 }
 
 const deps = {
-  edgar: { eightKs: () => Promise.resolve([{ date: "2026-09-22", items: "1.01" }]) },
+  edgar: {
+    eightKs: () =>
+      Promise.resolve({ fetchedAt: NOW, filings: [{ date: "2026-09-22", items: "1.01" }] }),
+  },
   now: () => NOW,
 };
 const URL = "/api/research/brief?symbol=CRWV&shares=400&basis=70&cash=40000&goal=income";

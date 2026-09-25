@@ -117,3 +117,20 @@ export function earningsWindowOf(print: EarningsPrint | undefined): EarningsWind
       : `${print.source}; ±${ESTIMATE_WINDOW_DAYS}d`,
   };
 }
+
+/**
+ * The print a Brief must respect TODAY: the earliest one whose window has not yet closed. Not
+ * `nextPrint`, which drops an estimate the moment its point date passes (and on a UTC date) —
+ * while the research-bounded window says the print may still be days away.
+ */
+export function activePrint(
+  prints: readonly EarningsPrint[],
+  symbol: string,
+  today: string,
+): { readonly print: EarningsPrint; readonly window: EarningsWindow } | undefined {
+  return prints
+    .filter((p) => p.symbol === symbol)
+    .map((print) => ({ print, window: earningsWindowOf(print) as EarningsWindow }))
+    .filter(({ window }) => window.end >= today)
+    .sort((a, b) => a.print.date.localeCompare(b.print.date))[0];
+}

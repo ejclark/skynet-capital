@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { readLedger } from "../../src/server/ledger-stance.js";
 
 /** Reading a research ledger for the Brief (#3729) — conservative: only an explicit bold "Buy" licenses one. */
@@ -35,5 +36,27 @@ describe("readLedger", () => {
     expect(readLedger(ledger("- **Buy** — S1 window open D-20→D-5."), "CRWV").buySignal).toBe(true);
     expect(readLedger(ledger("- **Buy/sell** — neither licensed."), "CRWV").buySignal).toBe(false);
     expect(readLedger(ledger("- prose that says buy somewhere"), "CRWV").buySignal).toBe(false);
+  });
+});
+
+describe("readLedger — a ledger appends a probe per pulse", () => {
+  it("grades against the NEWEST probe, not the first one in the file", () => {
+    const md = `${ledger("- **No buy signal exists**")}
+
+**Last assessed:** 2026-09-21
+<!-- probe-ref: {"symbols":{"CRWV":81.36}} -->
+
+**Last assessed:** 2026-09-24
+<!-- probe-ref: {"symbols":{"CRWV":86.90}} -->
+`;
+    expect(readLedger(md, "CRWV")).toMatchObject({ assessed: "2026-09-24", probePrice: 86.9 });
+  });
+
+  it("reads the real CRWV ledger's newest probe", () => {
+    const md = readFileSync("docs/research/events/crwv-2026-11-10-print.md", "utf8");
+    const probes = [...md.matchAll(/probe-ref: \{"symbols":\{"CRWV":([\d.]+)\}/g)].map((m) =>
+      Number(m[1]),
+    );
+    expect(readLedger(md, "CRWV").probePrice).toBe(probes.at(-1));
   });
 });

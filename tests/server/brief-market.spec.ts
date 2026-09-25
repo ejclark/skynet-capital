@@ -1,5 +1,6 @@
 import { priceOption } from "../../src/options/pricing.js";
 import {
+  activePrint,
   earningsWindowOf,
   parityImpliedSpot,
   realizedVolatility,
@@ -81,5 +82,23 @@ describe("earningsWindowOf", () => {
     expect(
       earningsWindowOf({ symbol: "X", date: "2026-10-28", status: "confirmed", source: "IR" }),
     ).toMatchObject({ start: "2026-10-28", end: "2026-10-29" });
+  });
+});
+
+describe("activePrint — the window, not the point date, decides", () => {
+  const crwv = {
+    symbol: "CRWV",
+    date: "2026-11-10",
+    status: "estimate" as const,
+    source: "c",
+    window: { start: "2026-11-09", end: "2026-11-16" },
+  };
+
+  it("still respects an estimate after its point date while the window is open", () => {
+    expect(activePrint([crwv], "CRWV", "2026-11-12")?.window.end).toBe("2026-11-16");
+  });
+
+  it("retires it once the window closes", () => {
+    expect(activePrint([crwv], "CRWV", "2026-11-17")).toBeUndefined();
   });
 });

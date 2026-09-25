@@ -20,7 +20,7 @@ describe("EdgarFilings", () => {
       urls.push(url);
       return Promise.resolve(url.includes("company_tickers") ? tickers : submissions);
     });
-    expect(await edgar.eightKs("CRWV")).toEqual([
+    expect((await edgar.eightKs("CRWV"))?.filings).toEqual([
       { date: "2026-09-22", items: "1.01,2.03" },
       { date: "2026-08-11", items: "2.02,9.01" },
     ]);
@@ -43,6 +43,8 @@ describe("EdgarFilings", () => {
     t = FILINGS_TTL_MS + 1;
     await edgar.eightKs("CRWV");
     expect(calls).toBe(2);
+    await edgar.eightKs("CRWV", { fresh: true });
+    expect(calls).toBe(3); // a member's refresh skips the cache
   });
 
   it("is undefined — never an empty list — when EDGAR fails", async () => {
