@@ -2,6 +2,8 @@ import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import type { EarningsWindow, GuidanceQuote } from "../options/position-guidance-types.js";
 import { impliedVolatility } from "../options/pricing.js";
+import { ivReading } from "../research/iv-rank.js";
+import type { IvSample } from "../research/iv-record.js";
 
 /**
  * The position guidance's market arithmetic (#3729) — pure transforms from what the feed returned to
@@ -149,4 +151,18 @@ export function activePrint(
     .map((print) => ({ print, window: earningsWindowOf(print) as EarningsWindow }))
     .filter(({ window }) => window.end >= today)
     .sort((a, b) => a.print.date.localeCompare(b.print.date))[0];
+}
+
+/**
+ * IV rank (0–100) off the IV clock's recorded history (#3729), or `undefined` until `iv-rank.ts`
+ * has a full, continuous year for the name. Absent is honest: the guidance then judges richness by
+ * implied ÷ realized and caps a write at medium, instead of ranking against a partial window.
+ */
+export function ivRankOf(
+  samples: readonly IvSample[],
+  symbol: string,
+  now: string,
+): number | undefined {
+  const reading = ivReading(symbol, samples, now);
+  return reading?.rank.kind === "value" ? reading.rank.value : undefined;
 }
