@@ -298,6 +298,24 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      # The `if:` above reads labels from the EVENT PAYLOAD — a snapshot taken when the PR was
+      # opened/marked ready, minutes before verify finishes. A `hold-merge` applied after that
+      # snapshot (ship.sh --hold used to label just after `opened`, which is how #3735 merged
+      # unreviewed — docs/LESSONS.md) is invisible to it. Re-read the LIVE labels right before
+      # arming; a failed read fails the job, so nothing arms unchecked.
+      - name: Still unheld? (live labels, not the event snapshot)
+        id: hold
+        if: ${{ steps.app-token.outputs.token != '' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          LABELS=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
+          if printf '%s\n' "$LABELS" | grep -qx 'hold-merge'; then
+            echo "hold-merge is on the PR now — not arming"; echo "held=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "held=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
@@ -341,7 +359,7 @@ jobs:
           echo "blocking=$BLOCKING" >> "$GITHUB_OUTPUT"
 
       - name: Arm auto-merge (or merge directly if already green)
-        if: ${{ steps.envelope.outputs.blocking == 'false' && steps.app-token.outputs.token != '' }}
+        if: ${{ steps.envelope.outputs.blocking == 'false' && steps.hold.outputs.held == 'false' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |

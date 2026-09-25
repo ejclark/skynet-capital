@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lintWorkflow } from "../../scripts/workflow-lint.mjs";
@@ -282,5 +282,29 @@ jobs:
     expect(() =>
       execFileSync("node", ["scripts/workflow-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
     ).not.toThrow();
+  });
+});
+
+// #3735 merged while labelled `hold-merge`: the arm job's `if:` reads labels from the event
+// payload, a snapshot taken before `ship.sh --hold` applied the label (docs/LESSONS.md). The job
+// now re-reads the LIVE labels before arming; this pins that the arm step still depends on it.
+describe("arm-auto-merge — a hold applied after the triggering event still holds", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(
+    pipeline.indexOf("\n  arm-auto-merge:"),
+    pipeline.indexOf("\n  deploy:"),
+  );
+
+  it("reads the PR's labels from the API at run time, not only from the event payload", () => {
+    expect(job).toMatch(
+      /id: hold[\s\S]*issues\/\$\{\{ github\.event\.pull_request\.number \}\}\/labels/,
+    );
+    expect(job).toContain("grep -qx 'hold-merge'");
+  });
+
+  it("arms only when that live read said unheld", () => {
+    const arm = job.slice(job.indexOf("- name: Arm auto-merge"));
+    expect(arm).toContain("steps.hold.outputs.held == 'false'");
+    expect(job.indexOf("id: hold")).toBeLessThan(job.indexOf("- name: Arm auto-merge"));
   });
 });
