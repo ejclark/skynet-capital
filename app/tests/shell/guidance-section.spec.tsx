@@ -30,7 +30,7 @@ function mount(onUse: (row: LadderRow) => void = () => undefined, deskId = "") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <GuidanceSection symbol="CRWV" deskId={deskId} onUse={onUse} />
+      <GuidanceSection symbol="CRWV" deskId={deskId} onUse={onUse} onManage={() => undefined} />
     </QueryClientProvider>,
   );
 }
@@ -183,6 +183,6 @@ describe("guidance tab — calls already sold (#3729 step 4b)", () => {
         ],
       },
     } as unknown as DeskSnapshot;
-    expect(heldStake(desk, "CRWV")).toEqual({ shares: 400, costBasis: 70, callsSold: 2 });
+    expect(heldStake(desk, "CRWV")).toMatchObject({ shares: 400, costBasis: 70, callsSold: 2 });
   });
 });

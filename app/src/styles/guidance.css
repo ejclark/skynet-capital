@@ -201,3 +201,16 @@
   padding: 4px 10px;
   text-decoration: none;
 }
+/* "Calls you've sold" (#3729) — its own section above Covered calls, same card grammar. */
+.guidance-manage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The Option positions row the guidance handed off to: marked by a rule and weight, never hue
+ * alone (docs/BRAND.md → Accessibility), so the member lands on the right contract. */
+.tkt-close-row-focus {
+  border-left: 3px solid var(--text);
+  padding-left: var(--space-2);
+  font-weight: 600;
+}

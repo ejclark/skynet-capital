@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { diffGuidance, positionGuidance, snapshotOf } from "../../../src/options/position-guidance";
-import type { GuidanceStake, LadderRow } from "../../../src/options/position-guidance-types";
+import type {
+  GuidanceStake,
+  LadderRow,
+  ManageCall,
+} from "../../../src/options/position-guidance-types";
 import { fetchDesk } from "../live/desk";
 import {
   fetchGuidance,
@@ -13,6 +17,7 @@ import {
   writeSnapshot,
   writeStake,
 } from "../live/guidance";
+import { fetchOptionPositions } from "../live/options";
 import { GuidanceView } from "./guidance-view";
 
 /**
@@ -30,11 +35,14 @@ export function GuidanceSection({
   symbol,
   deskId,
   onUse,
+  onManage,
 }: {
   readonly symbol: string;
   /** The account the trade page is on — its position in `symbol`, if any, seeds the stake. */
   readonly deskId: string;
   readonly onUse: (row: LadderRow) => void;
+  /** "Use this" on a call already sold — opens it on the Orders pane's Option positions card. */
+  readonly onManage: (call: ManageCall) => void;
 }): ReactElement {
   const client = useQueryClient();
   const answer = useQuery(guidanceQuery(symbol));
@@ -44,12 +52,22 @@ export function GuidanceSection({
     queryFn: () => fetchDesk(deskId),
     enabled: deskId !== "",
   });
-  const held = heldStake(desk.data, symbol);
+  // The Option positions card's own key — its bid/ask price a call already sold.
+  const holdsOptions = desk.data?.desk.positions.some((p) => p.isOption) ?? false;
+  const quotes = useQuery({
+    queryKey: ["option-positions", deskId],
+    queryFn: () => fetchOptionPositions(deskId),
+    enabled: deskId !== "" && holdsOptions,
+    staleTime: 30_000,
+  });
+  const held = heldStake(desk.data, symbol, quotes.data);
   // A stake the member saved wins; with none, the paper position is the starting point (#3729
   // step 4 — the positions row links here with only the symbol, never the stake, in the URL).
   const [saved, setSaved] = useState<GuidanceStake>(() => readStake(symbol));
   const fromAccount = Object.keys(saved).length === 0 && held !== undefined;
-  const stake = fromAccount ? held : saved;
+  // Calls already open are a fact about the account, not a what-if: they ride on either stake.
+  const base = fromAccount ? held : saved;
+  const stake = held?.openCalls ? { ...base, openCalls: held.openCalls } : base;
   // Read once per mount (the caller keys this component by symbol): the PREVIOUS visit's snapshot.
   const [previous] = useState(() => readSnapshot(symbol));
   const [refreshing, setRefreshing] = useState(false);
@@ -126,6 +144,7 @@ export function GuidanceSection({
       onStake={onStake}
       onRefresh={() => void onRefresh()}
       onUse={onUse}
+      onManage={onManage}
     />
   );
 }

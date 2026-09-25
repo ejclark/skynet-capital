@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { fetchDesk } from "../live/desk";
 import { DeskAlerts } from "./desk-alerts";
-import { OptionPositionsCard } from "./option-positions";
+import { OptionPositionsCard, type PositionFocus } from "./option-positions";
 import { WorkingOrders } from "./working-orders";
 
 /**
@@ -15,7 +15,14 @@ import { WorkingOrders } from "./working-orders";
  * width (slice 4).
  * @category trading
  */
-export function OrdersSection({ deskId }: { readonly deskId: string }): ReactElement {
+export function OrdersSection({
+  deskId,
+  focus,
+}: {
+  readonly deskId: string;
+  /** A held contract the position guidance handed off — see `PositionFocus`. */
+  readonly focus?: PositionFocus;
+}): ReactElement {
   const desk = useQuery({
     queryKey: ["desk", deskId],
     queryFn: () => fetchDesk(deskId),
@@ -26,7 +33,11 @@ export function OrdersSection({ deskId }: { readonly deskId: string }): ReactEle
       <WorkingOrders deskId={deskId} />
       <DeskAlerts deskId={deskId} />
       {desk.data ? (
-        <OptionPositionsCard deskId={deskId} positions={desk.data.desk.positions} />
+        <OptionPositionsCard
+          deskId={deskId}
+          positions={desk.data.desk.positions}
+          {...(focus ? { focus } : {})}
+        />
       ) : null}
     </div>
   );

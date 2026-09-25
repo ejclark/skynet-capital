@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/experimental-ct-react";
 import { GuidanceView } from "../../app/src/shell/guidance-view";
 import { positionGuidance } from "../../src/options/position-guidance";
-import { inputs } from "../../tests/options/position-guidance-fixture";
+import { inputs, quoteAt } from "../../tests/options/position-guidance-fixture";
 import { expectComponentShot } from "./harness";
 
 // The trade form's Guidance tab (#3729 step 3), phone frame FIRST — mobile-first on the trading
@@ -73,5 +73,49 @@ test.describe("phone, 390px — from your paper account", () => {
       component.getByRole("list", { name: "At a glance" }).locator(".."),
       "guidance-view-from-account.png",
     );
+  });
+});
+
+test.describe("phone, 390px — calls you've already sold", () => {
+  test.use({ viewport: { width: 390, height: 1600 } });
+  test("one to buy back (most of the premium kept), one to roll (open through earnings)", async ({
+    mount,
+  }) => {
+    const near = quoteAt("2026-10-16", 100, "call");
+    const far = quoteAt("2026-11-13", 95, "call");
+    const openCalls = [
+      {
+        occ: "CRWV261016C00100000",
+        strike: 100,
+        expiration: "2026-10-16",
+        contracts: 1,
+        premium: (near.ask ?? 0) * 2.6,
+        ...(near.bid !== undefined ? { bid: near.bid } : {}),
+        ...(near.ask !== undefined ? { ask: near.ask } : {}),
+      },
+      {
+        occ: "CRWV261113C00095000",
+        strike: 95,
+        expiration: "2026-11-13",
+        contracts: 1,
+        premium: 4.1,
+        ...(far.bid !== undefined ? { bid: far.bid } : {}),
+        ...(far.ask !== undefined ? { ask: far.ask } : {}),
+      },
+    ];
+    const stake = { ...STAKE, openCalls };
+    const component = await mount(
+      <GuidanceView
+        guidance={positionGuidance(inputs({ stake }))}
+        stake={stake}
+        changes={undefined}
+        refreshing={false}
+        onStake={noop}
+        onRefresh={noop}
+        onUse={noop}
+      />,
+    );
+    await expect(component.getByRole("region", { name: "Calls you've sold" })).toBeVisible();
+    await expectComponentShot(component, "guidance-view-calls-sold.png");
   });
 });

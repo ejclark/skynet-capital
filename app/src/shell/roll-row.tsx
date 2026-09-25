@@ -100,7 +100,8 @@ function useChain(parts: HeldContract | undefined, expiration: string): ChainDat
 
 function heldContract(position: DeskPosition): HeldContract | undefined {
   const parts = parseOccSymbol(position.symbol);
-  const contracts = Number(position.quantity);
+  // `quantity` is display text — "−1,000" carries a comma a bare Number() reads as NaN.
+  const contracts = Number(position.quantity.replace(/,/g, ""));
   if (!(parts && Number.isFinite(contracts)) || contracts === 0) return undefined;
   return { ...parts, contracts };
 }
@@ -109,14 +110,18 @@ export function RollRow({
   deskId,
   position,
   onFilled,
+  initialTarget,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
   readonly onFilled: () => void;
+  /** A target the position guidance suggested (#3729) — seeds the pickers; the member still
+   *  reviews and confirms, and the strike still snaps to one the target chain lists. */
+  readonly initialTarget?: { readonly strike: number; readonly expiration: string };
 }): ReactElement | null {
   const held = heldContract(position);
-  const [expiration, setExpiration] = useState("");
-  const [strike, setStrike] = useState("");
+  const [expiration, setExpiration] = useState(initialTarget?.expiration ?? "");
+  const [strike, setStrike] = useState(initialTarget ? String(initialTarget.strike) : "");
   // Typed prices win over the crossing quote (#3407 P3 slice 4) — "" means the quote's.
   const [closeText, setCloseText] = useState("");
   const [openText, setOpenText] = useState("");

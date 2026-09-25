@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import type { LadderRow } from "../../../src/options/position-guidance-types";
+import type { LadderRow, ManageCall } from "../../../src/options/position-guidance-types";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { normalizeExpiration } from "../live/expiration";
+import { focusFrom, manageSearch, ROLL_TO } from "../live/manage-handoff";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import { navForPlay, type PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
@@ -24,6 +26,7 @@ import { LadderGateCard } from "../shell/ladder-gate";
 import { LockedPanel } from "../shell/locked-panel";
 import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
+import type { PositionFocus } from "../shell/option-positions";
 import { OrdersSection } from "../shell/orders-section";
 import { RungChip } from "../shell/rung-chip";
 import { SectionSwitch } from "../shell/section-switch";
@@ -292,6 +295,10 @@ interface StageProps {
   readonly onChainPick: (pick: ChainPick) => void;
   /** A strike picked on the Guidance tab — presets the ticket to that covered call or put. */
   readonly onGuidanceUse: (row: LadderRow) => void;
+  /** A covered call the guidance's "Calls you've sold" handed off — opens it on the Orders pane. */
+  readonly onManage: (call: ManageCall) => void;
+  /** The held contract `?manage=` names, when there is one (see `PositionFocus`). */
+  readonly focus: PositionFocus | undefined;
   readonly onExpirationCommit: (expiration: string) => void;
   readonly onPreset: (code: PlayCode) => void;
   readonly onSymbolCommit: (symbol: string) => void;
@@ -328,12 +335,20 @@ function Pane({
 }): ReactElement {
   const { symbol, play, strike, expiration, desk, plays } = props;
   if (id === "chart") return <ChartSection symbol={symbol} />;
-  if (id === "orders") return <OrdersSection deskId={desk} />;
+  if (id === "orders") {
+    return <OrdersSection deskId={desk} {...(props.focus ? { focus: props.focus } : {})} />;
+  }
   if (id === "guidance") {
     // Keyed by symbol: a new symbol remounts the tab, so one symbol's stake and last-seen snapshot
     // can never render against — or be saved under — another symbol's market.
     return (
-      <GuidanceSection key={symbol} symbol={symbol} deskId={desk} onUse={props.onGuidanceUse} />
+      <GuidanceSection
+        key={symbol}
+        symbol={symbol}
+        deskId={desk}
+        onUse={props.onGuidanceUse}
+        onManage={props.onManage}
+      />
     );
   }
   if (id === "chain") {
@@ -476,7 +491,16 @@ function guidanceSearch<T extends { section?: TradeSection }>(prev: T, row: Ladd
 }
 
 function TradePage(): ReactElement {
-  const { desk, play, symbol, strike, exp, section: askedSection } = Route.useSearch();
+  const {
+    desk,
+    play,
+    symbol,
+    strike,
+    exp,
+    section: askedSection,
+    manage,
+    rollTo,
+  } = Route.useSearch();
   const navigate = Route.useNavigate();
   const section = resolveSection(SECTIONS, askedSection);
   const docked = useBenchWidth();
@@ -623,6 +647,8 @@ function TradePage(): ReactElement {
     plays: plays.data?.plays,
     onChainPick,
     onGuidanceUse,
+    onManage: (call) => void navigate({ search: (prev) => manageSearch(prev, call) }),
+    focus: focusFrom(manage, rollTo),
     onExpirationCommit: commitExpiration,
     onPreset: (code) =>
       void navigate({ resetScroll: false, search: (prev) => ({ ...prev, play: code }) }),
@@ -718,6 +744,15 @@ export const Route = createFileRoute("/trade")({
     const strike = normalizeStrike(search.strike);
     // `?exp=` (#3407, Workbench slice 4a): ISO date or dropped, same posture as symbol/strike.
     const exp = normalizeExpiration(search.exp);
+    // `?manage=` (#3729): a held contract's OCC symbol, or dropped; `?rollTo=` only its target shape.
+    const manage =
+      typeof search.manage === "string" && parseOccSymbol(search.manage)
+        ? search.manage.toUpperCase()
+        : undefined;
+    const rollTo =
+      manage && typeof search.rollTo === "string" && ROLL_TO.test(search.rollTo)
+        ? search.rollTo
+        : undefined;
     return {
       ...(typeof search.desk === "string" && search.desk.length > 0 && search.desk.length <= 100
         ? { desk: search.desk }
@@ -726,6 +761,8 @@ export const Route = createFileRoute("/trade")({
       ...(symbol !== undefined ? { symbol } : {}),
       ...(strike !== undefined ? { strike } : {}),
       ...(exp !== undefined ? { exp } : {}),
+      ...(manage !== undefined ? { manage } : {}),
+      ...(rollTo !== undefined ? { rollTo } : {}),
       // `?section=` (#2017 Phase 1 chart build-out): only a known section id passes, exactly as
       // `activity.tsx` narrows its own; anything else is dropped and `resolveSection` falls back.
       ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
