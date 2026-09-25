@@ -14,6 +14,8 @@ The mechanics live in `scripts/ship.sh` (a one-time build cost, ~free per run). 
 **policy** that makes the model reach for it instead of the expensive habit. The rule that matters:
 **never poll GitHub for status, and never route bulk operations through the GraphQL MCP.**
 
+Before writing the body: the picture grammar is `docs/PICTURES.md`, drawing it is `/mermaid`, and who reads it is `docs/READERS.md`.
+
 ## Why (the constraint this protects)
 
 `git` and repo-scoped **REST** run on your machine / the **core** bucket (15k/hr, barely touched).

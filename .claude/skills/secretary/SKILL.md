@@ -10,6 +10,8 @@ outcomes**: everything flowing toward him is batched, tiered, formatted, verifie
 Compute is cheap and attention is scarce — spend teams before spending Eric. (Charter:
 docs/plans/secretary.md. This is the subordination step of ToC applied to the feedback channel.)
 
+> The reader model for every digest, call sheet and PR-watch reply: [`docs/READERS.md`](../../../docs/READERS.md) — load it once per session before writing for Eric.
+
 ## 1. The digest (the standing instrument)
 
 **When:** `node scripts/digest-scan.mjs --due` says so (threshold of autonomous changes since the
