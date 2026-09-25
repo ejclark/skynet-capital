@@ -97,7 +97,8 @@ function manage(b: PositionGuidance): string[] {
     const kept = m.kept === undefined ? "—" : pct(m.kept);
     const call = `**${MANAGE_WORDS[m.call] ?? m.call}**${m.atOpen ? " _(plan for the open)_" : ""}`;
     const reasons = m.reasons.map((r) => tableCell(r.text)).join("<br>");
-    return `| ${what} | ${kept} | ${call} | ${DOTS[m.confidence]} ${m.confidence} | ${reasons} |`;
+    const back = m.provesWrong ? `<br>_Come back if: ${tableCell(m.provesWrong)}_` : "";
+    return `| ${what} | ${kept} | ${call} | ${DOTS[m.confidence]} ${m.confidence} | ${reasons}${back} |`;
   });
   return [
     "### 3b · Calls you've already sold",

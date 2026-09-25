@@ -1,15 +1,8 @@
 import { buildLadder, headlineRow } from "./position-guidance-ladder.js";
 import { type LeverContext, why, windowText } from "./position-guidance-levers.js";
-import {
-  capConfidence,
-  daysBetween,
-  dayText,
-  pct,
-  pulseOf,
-  usd,
-} from "./position-guidance-rules.js";
+import { daysBetween, dayText, pct, pulseOf, usd } from "./position-guidance-rules.js";
+import { decisionDate } from "./position-guidance-shares.js";
 import type {
-  Confidence,
   GuidanceReason,
   LadderRow,
   ManageCall,
@@ -46,12 +39,13 @@ const netText = (net: number): string =>
     ? `a net credit of ${usd(net * 100)} a contract`
     : `a net cost of ${usd(-net * 100)} a contract`;
 
-function keptLine(c: OpenCall, ask: number, kept: number): GuidanceReason {
+function keptLine(c: OpenCall, ask: number, kept: number, spot: number): GuidanceReason {
+  const where = spot > c.strike ? "past" : "toward";
   return why(
     "MANAGE",
     kept >= 0
       ? `Buying it back costs ${usd(ask * 100)} a contract now — you've kept ${pct(kept)} of the ${usd(c.premium * 100)} you took in.`
-      : `Buying it back costs ${usd(ask * 100)} a contract — more than the ${usd(c.premium * 100)} you took in, because the stock has risen toward the strike.`,
+      : `Buying it back costs ${usd(ask * 100)} a contract — more than the ${usd(c.premium * 100)} you took in, because the stock has risen ${where} the strike.`,
   );
 }
 
@@ -87,7 +81,12 @@ interface Verdict {
   readonly rollTo?: ManageCall["rollTo"];
 }
 
-function rollOrBuyBack(target: LadderRow | undefined, ask: number, lead: GuidanceReason): Verdict {
+function rollOrBuyBack(
+  ctx: LeverContext,
+  target: LadderRow | undefined,
+  ask: number,
+  lead: GuidanceReason,
+): Verdict {
   if (target) {
     const net = target.bid - ask;
     return {
@@ -107,18 +106,44 @@ function rollOrBuyBack(target: LadderRow | undefined, ask: number, lead: Guidanc
     call: "BUY BACK",
     reasons: [
       lead,
-      why("MANAGE", `No call to roll into fits the rules right now, so buy this one back.`),
+      why(
+        "MANAGE",
+        ctx.input.stake.costBasis === undefined
+          ? "Enter what you paid per share to see a call to roll into — until then, buying it back is the clean way out."
+          : "No call to roll into fits the rules right now, so buy this one back.",
+      ),
     ],
     provesWrong: "",
   };
 }
 
-function throughEarnings(ctx: LeverContext, c: OpenCall, ask: number): Verdict {
-  const lead = why(
-    "DTE-PRINT",
-    `It's still open through the earnings report (${windowText(ctx.input)}) — the stock can jump past ${usd(c.strike)} overnight, and this call caps what you keep.`,
-  );
-  const v = rollOrBuyBack(rollTarget(ctx, c, ask, { later: false, credit: false }), ask, lead);
+/** Whether this call outlives what the rules allow a NEW call to: the expiry strip's own verdict
+ *  (so the two sections of one read never disagree), else the earnings window itself. */
+function lateKind(ctx: LeverContext, c: OpenCall): "spans-print" | "after-decision" | undefined {
+  const verdict = ctx.strip.find((m) => m.expiration === c.expiration)?.verdict;
+  if (verdict === "spans-print" || verdict === "after-decision") return verdict;
+  const e = ctx.input.earnings;
+  return verdict === undefined && e && c.expiration >= e.start ? "spans-print" : undefined;
+}
+
+function throughEarnings(
+  ctx: LeverContext,
+  c: OpenCall,
+  ask: number,
+  kind: "spans-print" | "after-decision",
+): Verdict {
+  const decision = decisionDate(ctx.input);
+  const lead =
+    kind === "spans-print" || !decision
+      ? why(
+          "DTE-PRINT",
+          `It's still open through the earnings report (${windowText(ctx.input)}) — the stock can jump past ${usd(c.strike)} overnight, and this call caps what you keep.`,
+        )
+      : why(
+          "DTE-PRINT",
+          `It stays open past ${dayText(decision)}, your hold-or-sell date before earnings — if you sell the shares then, this call is left uncovered.`,
+        );
+  const v = rollOrBuyBack(ctx, rollTarget(ctx, c, ask, { later: false, credit: false }), ask, lead);
   return {
     ...v,
     provesWrong: `If the company announces its earnings date for after ${dayText(c.expiration)} → this call no longer crosses the report.`,
@@ -145,22 +170,79 @@ function nearAssignment(ctx: LeverContext, c: OpenCall, ask: number, dte: number
       provesWrong,
     };
   }
-  const v = rollOrBuyBack(rollTarget(ctx, c, ask, { later: true, credit: true }), ask, lead);
+  const v = rollOrBuyBack(ctx, rollTarget(ctx, c, ask, { later: true, credit: true }), ask, lead);
   return { ...v, provesWrong };
 }
 
-function verdictFor(ctx: LeverContext, c: OpenCall, ask: number, dte: number): Verdict {
-  const { symbol, spot, stake, earnings } = ctx.input;
-  const kept = (c.premium - ask) / c.premium;
-  if (earnings && c.expiration >= earnings.start && stake.goal !== "exit") {
-    return throughEarnings(ctx, c, ask);
+/** Past the strike with more than a week left: likely exercised at expiry, not yet urgent. */
+function inTheMoney(ctx: LeverContext, c: OpenCall, ask: number, kept: number): Verdict {
+  const { symbol, spot, stake } = ctx.input;
+  const lead = why(
+    "MANAGE",
+    `${symbol} is at ${usd(spot)}, above your ${usd(c.strike)} strike — if it closes there on ${dayText(c.expiration)}, ${c.contracts * 100} shares sell at ${usd(c.strike)}.`,
+  );
+  const provesWrong = `If ${symbol} falls back below ${usd(c.strike)} before ${dayText(c.expiration)} → the call expires worthless and you keep the shares.`;
+  if (stake.goal === "keep-shares") {
+    const v = rollOrBuyBack(ctx, rollTarget(ctx, c, ask, { later: true, credit: true }), ask, lead);
+    return { ...v, provesWrong };
   }
+  return {
+    call: "KEEP",
+    reasons: [
+      lead,
+      keptLine(c, ask, kept, spot),
+      why(
+        "MANAGE",
+        `Keeping it is fine if selling at ${usd(c.strike)} suits you; roll or buy it back if you'd rather keep the shares.`,
+      ),
+    ],
+    provesWrong,
+    until: {
+      date: c.expiration,
+      why: `it's likely exercised — your shares sell at ${usd(c.strike)}`,
+    },
+  };
+}
+
+/** The member wants out: exercise IS the exit, so the call is never fought — only explained. */
+function exitVerdict(ctx: LeverContext, c: OpenCall, ask: number, dte: number): Verdict {
+  const { symbol, spot } = ctx.input;
   if (spot > c.strike && dte <= ASSIGNMENT_WINDOW_DAYS) return nearAssignment(ctx, c, ask, dte);
+  const kept = (c.premium - ask) / c.premium;
+  return {
+    call: "KEEP",
+    reasons: [
+      why(
+        "GOAL",
+        `Above ${usd(c.strike)} on ${dayText(c.expiration)}, ${c.contracts * 100} shares sell at ${usd(c.strike)} — the exit you asked for; below it you keep the premium and the shares.`,
+      ),
+      why(
+        "MANAGE",
+        "If you'd rather sell the shares outright now, buy this call back first — otherwise it's left uncovered.",
+      ),
+      keptLine(c, ask, kept, spot),
+    ],
+    provesWrong: `If ${symbol} is still below ${usd(c.strike)} near ${dayText(c.expiration)} → the call expires, and you'd sell the shares another way.`,
+    until: { date: c.expiration, why: "it's exercised (your exit) or expires" },
+  };
+}
+
+function verdictFor(ctx: LeverContext, c: OpenCall, ask: number, dte: number): Verdict {
+  const { symbol, spot, stake } = ctx.input;
+  const kept = (c.premium - ask) / c.premium;
+  if (stake.goal === "exit") return exitVerdict(ctx, c, ask, dte);
+  const late = lateKind(ctx, c);
+  if (late) return throughEarnings(ctx, c, ask, late);
+  if (spot > c.strike) {
+    return dte <= ASSIGNMENT_WINDOW_DAYS
+      ? nearAssignment(ctx, c, ask, dte)
+      : inTheMoney(ctx, c, ask, kept);
+  }
   if (kept >= TAKE_PROFIT) {
     return {
       call: "BUY BACK",
       reasons: [
-        keptLine(c, ask, kept),
+        keptLine(c, ask, kept, spot),
         why(
           "MANAGE",
           `What's left is small pay for ${dte} more day${dte === 1 ? "" : "s"} of capping your shares — buying it back locks in the rest.`,
@@ -172,7 +254,7 @@ function verdictFor(ctx: LeverContext, c: OpenCall, ask: number, dte: number): V
   return {
     call: "KEEP",
     reasons: [
-      keptLine(c, ask, kept),
+      keptLine(c, ask, kept, spot),
       why("MANAGE", `Time does the rest if ${symbol} stays below ${usd(c.strike)}.`),
     ],
     provesWrong: `If ${symbol} climbs toward ${usd(c.strike)} → come back; rolling or buying back may fit.`,
@@ -201,9 +283,11 @@ function noAnswer(c: OpenCall, dte: number, text: string): ManageCall {
 export function manageCalls(ctx: LeverContext): ManageCall[] {
   const { input, today } = ctx;
   const spot = pulseOf(input.pulse, "spot");
+  const chain = pulseOf(input.pulse, "chain");
   const blocker = input.pulse.find((p) => p.blocksPricing);
   return (input.stake.openCalls ?? []).map((c) => {
     const dte = daysBetween(today, c.expiration);
+    if (dte < 0) return noAnswer(c, dte, "This call has expired — refresh your positions.");
     if (c.ask === undefined) {
       return noAnswer(
         c,
@@ -217,8 +301,26 @@ export function manageCalls(ctx: LeverContext): ManageCall[] {
     if (blocker) {
       return noAnswer(c, dte, `Prices can't be trusted until the market opens — ${blocker.note}.`);
     }
+    // A roll is priced off the option chain — never off one this same read calls out of date.
+    if (chain?.status === "stale") {
+      return noAnswer(
+        c,
+        dte,
+        `Option prices are out of date — ${chain.note}. Refresh before acting.`,
+      );
+    }
     const v = verdictFor(ctx, c, c.ask, dte);
-    const cap: Confidence = spot?.status === "aging" ? "medium" : "high";
+    // Every answered verdict is a mechanical rule, graded medium; a partly verified stock price
+    // says so in the reasons, as it does on every other lever.
+    const aging =
+      spot?.status === "aging"
+        ? [
+            why(
+              "PULSE",
+              `The stock price is only partly verified — ${spot.note}. Confidence capped at medium.`,
+            ),
+          ]
+        : [];
     const acting = v.call === "BUY BACK" || v.call === "ROLL";
     return {
       occ: c.occ,
@@ -227,8 +329,8 @@ export function manageCalls(ctx: LeverContext): ManageCall[] {
       contracts: c.contracts,
       dte,
       call: v.call,
-      confidence: capConfidence("medium", cap),
-      reasons: v.reasons.slice(0, 3),
+      confidence: "medium",
+      reasons: [...aging, ...v.reasons].slice(0, 3),
       provesWrong: v.provesWrong,
       ...(v.until ? { until: v.until } : {}),
       atOpen: !input.sessionOpen && acting,

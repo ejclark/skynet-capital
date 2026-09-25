@@ -69,9 +69,19 @@ describe("calls you've sold — open through the earnings report", () => {
     expect(m?.rollTo?.net).toBeCloseTo((target.bid ?? 0) - (c.ask ?? 0), 6);
   });
 
-  it("doesn't fight an exit — the member who wants out keeps the call", () => {
+  it("doesn't fight an exit — exercise is the exit, and it says to buy back before selling", () => {
     const [m] = manageOf([open("2026-11-13", 95, 4)], {}, { ...STAKE, goal: "exit" });
-    expect(m?.call).not.toBe("ROLL");
+    expect(m?.call).toBe("KEEP");
+    expect(m?.reasons[0]?.text).toContain("the exit you asked for");
+    expect(m?.reasons[1]?.text).toContain("buy this call back first");
+    expect(m?.until?.why).not.toContain("half the premium");
+  });
+
+  it("treats an expiry after the hold-or-sell date like one across the report", () => {
+    // Nov 6 is past the decision date (Nov 2) the expiry strip marks unusable for new calls.
+    const [m] = manageOf([open("2026-11-06", 95, 4)]);
+    expect(["ROLL", "BUY BACK"]).toContain(m?.call);
+    expect(m?.reasons[0]?.text).toContain("your hold-or-sell date");
   });
 });
 
@@ -132,5 +142,48 @@ describe("calls you've sold — the rest of the guidance sees them", () => {
     );
     expect(md).toContain("### 3b · Calls you've already sold");
     expect(md).toContain("$100.00 call, Oct 16 (1)");
+  });
+});
+
+// #3749 review: the most common state a sold call ends in — past the strike, weeks left.
+describe("calls you've sold — in the money with more than a week left", () => {
+  it("says the shares will likely sell at the strike, never that the stock is still below it", () => {
+    const [m] = manageOf([open("2026-10-16", 75, 3)]);
+    expect(m?.call).toBe("KEEP");
+    const text = m?.reasons.map((r) => r.text).join(" ") ?? "";
+    expect(text).toContain("above your $75.00 strike");
+    expect(text).not.toContain("stays below");
+    expect(m?.provesWrong).toContain("falls back below $75.00");
+    expect(m?.until?.why).toContain("likely exercised");
+  });
+
+  it("offers a roll or a buy-back when the member wants to keep the shares", () => {
+    const [m] = manageOf([open("2026-10-16", 75, 3)], {}, { ...STAKE, goal: "keep-shares" });
+    expect(["ROLL", "BUY BACK"]).toContain(m?.call);
+  });
+});
+
+describe("calls you've sold — honest about its own inputs", () => {
+  it("never prices a roll off an option chain the read calls out of date", () => {
+    const pulse: PulseItem[] = [
+      { id: "chain", source: "Alpaca", asOf: NOW, status: "stale", note: "quotes 40 min old" },
+    ];
+    const [m] = manageOf([open("2026-11-13", 95, 4)], { pulse });
+    expect(m?.call).toBe("NO ANSWER");
+    expect(m?.rollTo).toBeUndefined();
+  });
+
+  it("says when the stock price is only partly verified", () => {
+    const pulse: PulseItem[] = [
+      { id: "spot", source: "IEX", asOf: NOW, status: "aging", note: "no parity pair" },
+    ];
+    const [m] = manageOf([open("2026-10-16", 100, 2)], { pulse });
+    expect(m?.reasons[0]?.text).toContain("only partly verified");
+  });
+
+  it("drops a contract that has already expired", () => {
+    const [m] = manageOf([open("2026-09-18", 100, 2, { ask: 0.05 })]);
+    expect(m?.call).toBe("NO ANSWER");
+    expect(m?.reasons[0]?.text).toContain("expired");
   });
 });
