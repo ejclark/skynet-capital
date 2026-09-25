@@ -19,7 +19,7 @@ const positive = (x: number | undefined): x is number =>
 
 function cleanStake(stake: GuidanceStake): GuidanceStake {
   return {
-    goal: stake.goal,
+    ...(stake.goal ? { goal: stake.goal } : {}),
     ...(positive(stake.shares) ? { shares: Math.floor(stake.shares) } : {}),
     ...(positive(stake.costBasis) ? { costBasis: stake.costBasis } : {}),
     ...(positive(stake.cash) ? { cash: stake.cash } : {}),

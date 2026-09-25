@@ -3,6 +3,7 @@ import { buildLadder } from "./position-guidance-ladder.js";
 import { cashSecuredPutCall, coveredCallCall } from "./position-guidance-levers.js";
 import {
   atmIv,
+  CALL_WORDS,
   capConfidence,
   dteStrip,
   etDateOf,
@@ -14,6 +15,7 @@ import {
 } from "./position-guidance-rules.js";
 import { decisionDate, sharesCall } from "./position-guidance-shares.js";
 import type {
+  Confidence,
   GuidanceInputs,
   GuidanceSnapshot,
   LeverCall,
@@ -34,64 +36,72 @@ import type {
  * information sources to ensure we're not acting on cached/stale information"). A stale input is
  * never shown as if current; it lowers the calls that depend on it.
  */
-function applyPulse(calls: readonly LeverCall[], input: GuidanceInputs): LeverCall[] {
+/** The lever a pulse makes unanswerable outright — it says only why, nothing priced. */
+function overridden(c: LeverCall, input: GuidanceInputs): LeverCall | undefined {
+  const spot = pulseOf(input.pulse, "spot");
+  const chain = pulseOf(input.pulse, "chain");
+  const { until: _dropped, ...rest } = c;
+  if (spot?.status === "stale") {
+    const text = `No answer — the stock price couldn't be verified: ${spot.note}.`;
+    return { ...rest, call: "NO ANSWER", confidence: "none", reasons: [{ rule: "PULSE", text }] };
+  }
+  const option = c.lever !== "shares" && c.call !== "NOT AVAILABLE";
+  const blocker = input.pulse.find((p) => p.blocksPricing);
+  if (!(option && (blocker || chain?.status === "stale"))) return undefined;
+  // A lever the prices can't support says ONLY that — never beside a "sell 1 call … you receive
+  // $165" line priced off the very data it just said not to trust (#3734 review).
+  const text = blocker
+    ? `Prices can't be trusted until the market opens — ${blocker.note}.`
+    : `Option prices are out of date — ${chain?.note}. Refresh before acting.`;
+  return {
+    ...rest,
+    call: "WAIT",
+    confidence: "none",
+    reasons: [{ rule: "PULSE", text }],
+    atOpen: false,
+  };
+}
+
+/** Every cap a partly-trustworthy input puts on this lever, most important first. */
+function demotions(c: LeverCall, input: GuidanceInputs): { text: string; cap: Confidence }[] {
   const spot = pulseOf(input.pulse, "spot");
   const chain = pulseOf(input.pulse, "chain");
   const research = pulseOf(input.pulse, "research");
   const filings = pulseOf(input.pulse, "filings");
-  return calls.map((c) => {
-    if (spot?.status === "stale") {
-      const { until: _dropped, ...rest } = c;
-      return {
-        ...rest,
-        call: "NO ANSWER",
-        confidence: "none",
-        reasons: [{ rule: "PULSE", text: `No honest answer — spot unverified: ${spot.note}.` }],
-      } satisfies LeverCall;
-    }
-    let next: LeverCall = c;
-    const note = (text: string) => ({
-      ...next,
-      reasons: [{ rule: "PULSE" as const, text }, ...next.reasons].slice(0, 3),
+  const out: { text: string; cap: Confidence }[] = [];
+  if (c.lever !== "shares" && c.call !== "NOT AVAILABLE" && chain?.status === "aging") {
+    out.push({
+      text: `Option prices are ${chain.note}. Confidence capped at medium.`,
+      cap: "medium",
     });
-    const option = c.lever !== "shares" && c.call !== "NOT AVAILABLE";
-    const blocker = input.pulse.find((p) => p.blocksPricing);
-    if (option && (blocker || chain?.status === "stale")) {
-      // A lever the prices can't support says ONLY that — never beside a "Best: $95 call, bid $1.65"
-      // line priced off the very data it just said not to trust (#3734 review).
-      const { until: _dropped, ...rest } = c;
-      const text = blocker
-        ? `Prices can't be trusted until the open — ${blocker.note}.`
-        : `Quotes are stale — ${chain?.note}. Refresh before acting.`;
-      return {
-        ...rest,
-        call: "WAIT",
-        confidence: "none",
-        reasons: [{ rule: "PULSE", text }],
-        atOpen: false,
-      } satisfies LeverCall;
-    }
-    if (option && chain?.status === "aging") {
+  }
+  if (spot?.status === "aging") {
+    out.push({
+      text: `The stock price is only partly verified — ${spot.note}. Confidence capped at medium.`,
+      cap: "medium",
+    });
+  }
+  if (research?.status === "stale") {
+    out.push({
+      text: `The research is out of date — ${research.note}. Confidence capped at low.`,
+      cap: "low",
+    });
+  } else if (filings?.status === "stale") {
+    out.push({ text: `${filings.note} — read them before acting.`, cap: "medium" });
+  }
+  return out;
+}
+
+function applyPulse(calls: readonly LeverCall[], input: GuidanceInputs): LeverCall[] {
+  return calls.map((c) => {
+    const forced = overridden(c, input);
+    if (forced) return forced;
+    let next: LeverCall = c;
+    for (const d of demotions(c, input)) {
       next = {
-        ...note(`Option quotes are ${chain.note}. Confidence capped medium.`),
-        confidence: capConfidence(next.confidence, "medium"),
-      };
-    }
-    if (spot?.status === "aging") {
-      next = {
-        ...note(`Spot is only partly verified — ${spot.note}. Confidence capped medium.`),
-        confidence: capConfidence(next.confidence, "medium"),
-      };
-    }
-    if (research?.status === "stale") {
-      next = {
-        ...note(`Research is stale — ${research.note}. Confidence capped low.`),
-        confidence: capConfidence(next.confidence, "low"),
-      };
-    } else if (filings?.status === "stale") {
-      next = {
-        ...note(`${filings.note} — read before acting.`),
-        confidence: capConfidence(next.confidence, "medium"),
+        ...next,
+        reasons: [{ rule: "PULSE" as const, text: d.text }, ...next.reasons].slice(0, 3),
+        confidence: capConfidence(next.confidence, d.cap),
       };
     }
     if (next.confidence === "low" || next.confidence === "none") {
@@ -128,20 +138,20 @@ function waitingOn(input: GuidanceInputs, today: string): WaitingOn[] {
   if (decision && decision >= today) {
     items.push({
       date: decision,
-      label: "Hold-through-the-print decision falls due (S2)",
+      label: "Decide whether to hold through earnings",
       source: "house rule",
     });
   }
   if (e && e.start >= today) {
     items.push({
       date: e.start,
-      label: `Print window opens${e.status === "estimate" ? " — date unconfirmed, watch IR" : ""}`,
+      label: `Earnings window opens${e.status === "estimate" ? " — date not yet confirmed by the company" : ""}`,
       source: e.source,
     });
   } else if (e && e.end >= today) {
     items.push({
       date: e.end,
-      label: "Print window closes — refresh the guidance on the new tape",
+      label: "Earnings window closes — refresh the guidance on the new prices",
       source: e.source,
     });
   }
@@ -150,15 +160,15 @@ function waitingOn(input: GuidanceInputs, today: string): WaitingOn[] {
 
 function assumptionLines(input: GuidanceInputs, retiredWindow: string | undefined): string[] {
   return [
-    "Premiums are priced at the bid (what a seller receives); the mid is shown for reference only.",
-    "Odds are a lognormal model at each contract's own IV — no jumps, no early assignment, no dividends.",
+    "Every amount you'd receive uses the bid — the price a seller actually gets, not the midpoint.",
+    "Chances come from a standard pricing model at each option's own price — it assumes no sudden jumps, no early exercise and no dividends.",
     input.printEvidence
-      ? `Across an earnings print the model understates the move: ${input.printEvidence}.`
-      : "Across an earnings print the model can understate the move — a gap is a jump it does not price.",
-    "Sessions exclude weekends only; exchange holidays are not modelled.",
+      ? `Across an earnings report the model understates the move: ${input.printEvidence}.`
+      : "Across an earnings report the model can understate the move — an overnight gap is a jump it does not price.",
+    "Trading days skip weekends only; market holidays aren't counted.",
     ...(retiredWindow
       ? [
-          `The print window ${retiredWindow} has passed — no next print was supplied, so no expiry is cut for one.`,
+          `The earnings window ${retiredWindow} has passed and no next date is on the calendar, so no expiry is excluded for one.`,
         ]
       : []),
   ];
@@ -232,7 +242,7 @@ export function diffGuidance(
     if (!was) continue;
     if (was.call !== now.call || was.confidence !== now.confidence) {
       lines.push(
-        `${LEVER_NAME[now.lever]}: ${was.call} (${was.confidence}) → ${now.call} (${now.confidence}).`,
+        `${LEVER_NAME[now.lever]}: ${CALL_WORDS[was.call] ?? was.call} (${was.confidence}) → ${CALL_WORDS[now.call] ?? now.call} (${now.confidence}).`,
       );
     }
   }

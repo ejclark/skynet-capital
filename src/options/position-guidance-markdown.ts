@@ -1,8 +1,8 @@
-import { LEVER_NAME, pct, usd } from "./position-guidance-rules.js";
+import { CALL_WORDS, LEVER_NAME, pct, usd } from "./position-guidance-rules.js";
 import type { Confidence, PositionGuidance, PulseStatus } from "./position-guidance-types.js";
 
 /**
- * THE BRIEF AS MARKDOWN — the same fixed-order template the UI renders, for chat, the companion and
+ * POSITION GUIDANCE AS MARKDOWN — the same fixed-order template the UI renders, for chat, the companion and
  * issue comments, at zero model tokens (#3729). Section order and headings are a contract pinned by
  * `tests/options/position-guidance-markdown.spec.ts`; every section always renders, and an empty one
  * says why rather than disappearing (a missing section reads as "nothing to see", which is a claim).
@@ -21,10 +21,10 @@ const DOTS: Readonly<Record<Confidence, string>> = {
 const PULSE_MARK: Readonly<Record<PulseStatus, string>> = { fresh: "✓", aging: "~", stale: "✕" };
 
 const DTE_WORD = {
-  in: "✓ in",
-  "too-short": "✕ too short",
-  "after-decision": "✕ after the hold-or-sell date",
-  "spans-print": "✕ spans print",
+  in: "✓ usable",
+  "too-short": "✕ under 7 days",
+  "after-decision": "✕ after your hold-or-sell date",
+  "spans-print": "✕ crosses earnings",
 } as const;
 
 /** Escape the one character that breaks a table cell. */
@@ -59,7 +59,7 @@ function stake(b: PositionGuidance): string[] {
       ? `unrealized **${s.unrealizedPnl >= 0 ? "+" : "−"}${usd(Math.abs(s.unrealizedPnl))}** (${pct(s.unrealizedPct ?? 0, 1)})`
       : undefined,
     s.cash !== undefined ? `cash **${usd(s.cash)}**` : "cash —",
-    `goal **${s.goal}**`,
+    s.goal ? `goal **${s.goal}**` : "goal — (not set)",
     s.happyToOwnAt !== undefined ? `happy to own at **${usd(s.happyToOwnAt)}**` : undefined,
     s.concentration !== undefined ? `**${pct(s.concentration)}** of portfolio` : undefined,
   ].filter(Boolean);
@@ -68,15 +68,15 @@ function stake(b: PositionGuidance): string[] {
 
 function calls(b: PositionGuidance): string[] {
   const rows = b.calls.map((c) => {
-    const call = `**${c.call}**${c.atOpen ? " _(plan for the open)_" : ""}`;
-    const reasons = c.reasons.map((r) => `${tableCell(r.text)} \`${r.rule}\``).join("<br>");
+    const call = `**${CALL_WORDS[c.call] ?? c.call}**${c.atOpen ? " _(plan for the open)_" : ""}`;
+    const reasons = c.reasons.map((r) => tableCell(r.text)).join("<br>");
     const until = c.until ? `<br>_Until ${c.until.date}: ${tableCell(c.until.why)}_` : "";
     return `| ${LEVER_NAME[c.lever]} | ${call} | ${DOTS[c.confidence]} ${c.confidence} | ${reasons}${until} | ${tableCell(c.provesWrong)} |`;
   });
   return [
     "### 3 · The calls",
     "",
-    "| Lever | Call | Confidence | Why | Proves it wrong |",
+    "| | Call | Confidence | Why | Come back if |",
     "|---|---|---|---|---|",
     ...rows,
     "",
@@ -89,20 +89,18 @@ function waiting(b: PositionGuidance): string[] {
     "",
     ...(b.waitingOn.length
       ? b.waitingOn.map((w) => `- [ ] **${w.date}** — ${w.label} _(${w.source})_`)
-      : [
-          "_Nothing dated on the calendar — the calls stand until the tape or the research changes._",
-        ]),
+      : ["_Nothing dated on the calendar — the calls stand until prices or the research change._"]),
     "",
   ];
 }
 
 function strip(b: PositionGuidance): string[] {
   return [
-    "### 5 · DTE strip",
+    "### 5 · Expiry dates",
     "",
     ...(b.dteStrip.length
       ? [
-          "| Expiry | DTE | Verdict | Catalysts before it |",
+          "| Expiry | Days left | Usable? | Events before it |",
           "|---|---|---|---|",
           ...b.dteStrip.map(
             (m) =>
@@ -119,21 +117,21 @@ function ladder(b: PositionGuidance): string[] {
     const kind = r.lever === "covered-calls" ? "call" : "put";
     const outcome =
       r.returnIfCalled !== undefined
-        ? `${pct(r.returnIfCalled, 1)} if called`
-        : `own at ${usd(r.effectiveEntry ?? r.strike)}`;
-    const flag = r.deltaDisagreement !== undefined ? " ⚠ feed Δ disagrees" : "";
-    return `| ${r.expiration} (${r.dte}d) | ${usd(r.strike)} ${kind} | ${usd(r.bid)} / ${usd(r.mid)} | ${pct(r.annualizedYield, 1)} | ${pct(r.probAssigned)} / ${pct(r.probTouch)} | ${outcome} | ${r.contracts}${flag} |`;
+        ? `sold at ${usd(r.strike)}: ${pct(r.returnIfCalled, 1)} over what you paid`
+        : `you buy at ${usd(r.effectiveEntry ?? r.strike)} a share`;
+    const flag = r.deltaDisagreement !== undefined ? " ⚠ data check: feed and model disagree" : "";
+    return `| ${r.expiration} (${r.dte}d) | ${usd(r.strike)} ${kind} | ${usd(r.bid * 100)} | ${pct(r.annualizedYield, 1)} | ${pct(r.probAssigned)} / ${pct(r.probTouch)} | ${outcome} | 1 of ${r.maxContracts}${flag} |`;
   });
   return [
     "### 6 · Strike ladder",
     "",
     ...(rows.length
       ? [
-          "| Expiry | Strike | Bid / mid | Annualized (bid) | P(assigned) / P(touch) | Outcome | Contracts |",
+          "| Expiry | Strike | You receive now | ≈ a year, if repeated | Chance exercised: at expiry / at any point | If exercised | Contracts |",
           "|---|---|---|---|---|---|---|",
           ...rows,
         ]
-      : ["_No strike passes the rules — see the calls above for why._"]),
+      : ["_No strike passes our checks — see the calls above for why._"]),
     "",
   ];
 }
@@ -152,10 +150,10 @@ function assumptions(b: PositionGuidance): string[] {
   const r = b.richness;
   const richLine =
     r.basis === "iv-rank"
-      ? `Premium read from IV rank ${r.ivRank?.toFixed(0)}.`
+      ? `Option prices judged against their own past year (${r.ivRank?.toFixed(0)} on a 0–100 scale).`
       : r.basis === "iv-vs-realized"
-        ? "Premium read from implied ÷ realized volatility — IV rank has no full window yet."
-        : "No premium read available.";
+        ? "Option prices judged against how much the stock has actually moved — a full year of option-price history isn't collected yet."
+        : "No read yet on whether option prices are high or low.";
   return [
     "### 8 · Assumptions & disclosure",
     "",

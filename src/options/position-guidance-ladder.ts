@@ -72,7 +72,9 @@ function sideFor(lever: LadderRow["lever"], input: GuidanceInputs): Side {
   const { spot, stake } = input;
   if (lever === "covered-calls") {
     const lots = Math.floor((stake.shares ?? 0) / 100);
-    const protectBasis = stake.costBasis !== undefined && stake.goal !== "exit";
+    // Without a basis there is no honest "if called" figure and no floor under the strike, so a
+    // covered call is offered only once the member says what they paid (unless they want out).
+    const needsBasis = stake.goal !== "exit";
     return {
       lever,
       type: "call",
@@ -80,7 +82,7 @@ function sideFor(lever: LadderRow["lever"], input: GuidanceInputs): Side {
       reject: (strike) =>
         strike <= spot
           ? "otm"
-          : protectBasis && strike < (stake.costBasis ?? 0)
+          : needsBasis && (stake.costBasis === undefined || strike < stake.costBasis)
             ? "basis"
             : undefined,
     };
@@ -147,7 +149,7 @@ function rowFor(
   if (!valuation || assigned === undefined || touch === undefined) return drop("quote");
   if (Math.abs(valuation.delta) > MAX_SHORT_DELTA) return drop("delta");
   const capital = side.type === "call" ? input.spot : q.strike;
-  const basis = input.stake.costBasis ?? input.spot;
+  const basis = input.stake.costBasis;
   const disagreement =
     q.feedDelta === undefined ? undefined : Math.abs(q.feedDelta - valuation.delta);
   return {
@@ -161,13 +163,16 @@ function rowFor(
     probAssigned: assigned,
     probTouch: touch,
     ...(side.type === "call"
-      ? { returnIfCalled: (q.strike - basis + quote.bid) / basis }
+      ? basis !== undefined
+        ? { returnIfCalled: (q.strike - basis + quote.bid) / basis }
+        : {}
       : { effectiveEntry: q.strike - quote.bid }),
     delta: valuation.delta,
     ...(disagreement !== undefined && disagreement > DELTA_TOLERANCE
       ? { deltaDisagreement: disagreement }
       : {}),
-    contracts,
+    contracts: 1,
+    maxContracts: contracts,
   };
 }
 
