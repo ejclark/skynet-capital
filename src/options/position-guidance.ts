@@ -10,6 +10,7 @@ import {
   GUIDANCE_DISCLOSURE,
   LEVER_NAME,
   pulseOf,
+  RICHNESS_WORDS,
   richnessExpiry,
   richnessOf,
 } from "./position-guidance-rules.js";
@@ -108,7 +109,7 @@ function applyPulse(calls: readonly LeverCall[], input: GuidanceInputs): LeverCa
       if (next.call === "WRITE") next = { ...next, call: "WAIT" };
       if (next.call === "BUY") next = { ...next, call: "STAND ASIDE" };
     }
-    const acting = next.call === "WRITE" || next.call === "BUY" || next.call === "SELL";
+    const acting = ["WRITE", "BUY", "SELL", "DECIDE"].includes(next.call);
     return { ...next, atOpen: !input.sessionOpen && acting };
   });
 }
@@ -234,7 +235,7 @@ export function diffGuidance(
   const move = (guidance.spot - previous.spot) / previous.spot;
   if (Math.abs(move) >= 0.005) {
     lines.push(
-      `Spot ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${previous.asOf.slice(0, 10)}.`,
+      `Stock price ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${previous.asOf.slice(0, 10)}.`,
     );
   }
   for (const now of guidance.calls) {
@@ -247,7 +248,9 @@ export function diffGuidance(
     }
   }
   if (previous.richness !== guidance.richness.verdict) {
-    lines.push(`Premium: ${previous.richness} → ${guidance.richness.verdict}.`);
+    lines.push(
+      `Option prices for sellers: ${RICHNESS_WORDS[previous.richness]} → ${RICHNESS_WORDS[guidance.richness.verdict]}.`,
+    );
   }
   return lines;
 }
