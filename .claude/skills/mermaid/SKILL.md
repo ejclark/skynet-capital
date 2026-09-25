@@ -39,9 +39,14 @@ lint, caption it.** Every step has an owner below.
 | a config, a before/after of values | a GFM table (no diagram) | — |
 | a typo, a chore | `Picture: waived — <reason>` | — |
 
-Cross-cutting cards: `reference/config-theming.md` (themes and themeVariables — and why they stay off
-on GitHub surfaces). Frontmatter config and directives, layouts and icons, accessibility and the
-parse API, the CLI and ecosystem land in the next slice of #3748.
+Cross-cutting cards (open one when the question is not "which type" but "how do I configure it"):
+
+- `reference/config-theming.md` — themes and themeVariables, and why they stay off on GitHub
+- `reference/config-configuration.md` — YAML frontmatter config, directives, the secure keys, per-diagram sections
+- `reference/config-layouts.md` — ELK vs dagre, the hand-drawn look, icon packs and which diagrams take icons
+- `reference/config-accessibility.md` — accTitle/accDescr, KaTeX math, and the parse/render API a headless validator uses
+
+Still to land: the CLI, the ecosystem of renderers, and what each validator can and cannot check.
 
 ## 2. GitHub is the renderer — what it does and does not draw (11.17.2, read 2026-09-25)
 
