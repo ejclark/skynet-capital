@@ -329,7 +329,11 @@ function Pane({
   const { symbol, play, strike, expiration, desk, plays } = props;
   if (id === "chart") return <ChartSection symbol={symbol} />;
   if (id === "orders") return <OrdersSection deskId={desk} />;
-  if (id === "guidance") return <GuidanceSection symbol={symbol} onUse={props.onGuidanceUse} />;
+  if (id === "guidance") {
+    // Keyed by symbol: a new symbol remounts the tab, so one symbol's stake and last-seen snapshot
+    // can never render against — or be saved under — another symbol's market.
+    return <GuidanceSection key={symbol} symbol={symbol} onUse={props.onGuidanceUse} />;
+  }
   if (id === "chain") {
     return (
       <ChainSection

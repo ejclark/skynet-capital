@@ -122,11 +122,11 @@
   border-radius: 8px;
   background: var(--surface);
 }
+/* The verdict sits beside its lever's name, never a screen-width away from it. */
 .guidance-lever-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
   gap: 4px 12px;
 }
 .guidance-lever-head h3 {
@@ -165,8 +165,10 @@
 .guidance-flag {
   font-weight: 600;
 }
-.guidance-size {
+.guidance-quote {
   color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--text-sm);
 }
 .guidance-more[open] > summary {
   margin-bottom: var(--space-2);

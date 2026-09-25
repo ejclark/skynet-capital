@@ -34,12 +34,9 @@ export function GuidanceSection({
   const client = useQueryClient();
   const answer = useQuery(guidanceQuery(symbol));
   const [stake, setStake] = useState<GuidanceStake>(() => readStake(symbol));
-  const [previous, setPrevious] = useState(() => readSnapshot(symbol));
+  // Read once per mount (the caller keys this component by symbol): the PREVIOUS visit's snapshot.
+  const [previous] = useState(() => readSnapshot(symbol));
   const [refreshing, setRefreshing] = useState(false);
-  useEffect(() => {
-    setStake(readStake(symbol));
-    setPrevious(readSnapshot(symbol));
-  }, [symbol]);
 
   const market = answer.data && "market" in answer.data ? answer.data.market : undefined;
   const guidance = useMemo(

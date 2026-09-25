@@ -36,7 +36,7 @@ export const isActionable = (call: LeverCall): boolean =>
 function Confidence({ call }: { readonly call: LeverCall }): ReactElement {
   return (
     <span className="guidance-confidence">
-      <span aria-hidden="true">{DOTS[call.confidence]}</span> {call.confidence}
+      <span aria-hidden="true">{DOTS[call.confidence]}</span> {call.confidence} confidence
     </span>
   );
 }
@@ -66,7 +66,7 @@ export function GlanceLine({
         </span>
       ) : null}
       {call.until ? (
-        <span className="guidance-until">until {shortDate(call.until.date)}</span>
+        <span className="guidance-until">stands until {shortDate(call.until.date)}</span>
       ) : null}
     </li>
   );
@@ -111,6 +111,10 @@ function StrikeCard({
           {shortDate(row.expiration)} · {row.dte} days
         </span>
       </p>
+      <p className="guidance-quote">
+        bid {usd(row.bid)} · mid {usd(row.mid)} · delta {Math.abs(row.delta).toFixed(2)} · 1
+        contract (you could cover up to {row.maxContracts})
+      </p>
       {brief ? null : (
         <>
           <p>
@@ -121,14 +125,11 @@ function StrikeCard({
             About a {pct(row.probAssigned)} chance it's exercised; {pct(row.probTouch)} it touches
             the strike first. {outcome(row)}
           </p>
-          {row.deltaDisagreement !== undefined ? (
-            <p className="guidance-flag">
-              ⚠ Data check: the feed and our model disagree on this one.
-            </p>
-          ) : null}
-          <p className="guidance-size">1 contract · you could cover up to {row.maxContracts}</p>
         </>
       )}
+      {row.deltaDisagreement !== undefined ? (
+        <p className="guidance-flag">⚠ Data check: the feed and our model disagree on this one.</p>
+      ) : null}
       {onUse ? (
         <>
           <p className="guidance-agree">
