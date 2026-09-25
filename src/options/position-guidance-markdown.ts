@@ -1,12 +1,15 @@
 import {
   CALL_WORDS,
+  DOTS,
+  DTE_WORD,
   GOAL_WORDS,
   LEVER_NAME,
+  PULSE_MARK,
   PULSE_WORDS,
   pct,
   usd,
 } from "./position-guidance-rules.js";
-import type { Confidence, PositionGuidance, PulseStatus } from "./position-guidance-types.js";
+import type { PositionGuidance } from "./position-guidance-types.js";
 
 /**
  * POSITION GUIDANCE AS MARKDOWN — the same fixed-order template the UI renders, for chat, the companion and
@@ -17,22 +20,6 @@ import type { Confidence, PositionGuidance, PulseStatus } from "./position-guida
  * Hue never carries meaning (a standing reader is red/green colourblind — CLAUDE.md): confidence and
  * freshness are words plus a shape (●●○, ✓ ~ ✕), never a colour alone.
  */
-
-const DOTS: Readonly<Record<Confidence, string>> = {
-  high: "●●●",
-  medium: "●●○",
-  low: "●○○",
-  none: "○○○",
-};
-
-const PULSE_MARK: Readonly<Record<PulseStatus, string>> = { fresh: "✓", aging: "~", stale: "✕" };
-
-const DTE_WORD = {
-  in: "✓ usable",
-  "too-short": "✕ under 7 days",
-  "after-decision": "✕ after your hold-or-sell date",
-  "spans-print": "✕ crosses earnings",
-} as const;
 
 /** Escape the one character that breaks a table cell. */
 const tableCell = (s: string): string => s.replaceAll("|", "\\|");

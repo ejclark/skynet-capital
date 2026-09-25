@@ -41,6 +41,8 @@ const TEXT_PAIRS: readonly [string, string][] = [
   ["--text", "--bg"],
   ["--muted", "--surface"],
   ["--muted", "--bg"],
+  ["--text", "--surface-2"], // raised cards: the guidance strike rows (#3729)
+  ["--muted", "--surface-2"],
   ["--accent-contrast", "--accent"], // a pinned day, a pressed lens, any accent-filled control
 ];
 const UI_PAIRS: readonly [string, string][] = [

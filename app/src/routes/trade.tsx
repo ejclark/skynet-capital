@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import type { LadderRow } from "../../../src/options/position-guidance-types";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { normalizeExpiration } from "../live/expiration";
 import { fetchPlays, type PlayInfo } from "../live/options";
@@ -18,6 +19,7 @@ import {
 import { ChartSection } from "../shell/chart-section";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
+import { GuidanceSection } from "../shell/guidance-section";
 import { LadderGateCard } from "../shell/ladder-gate";
 import { LockedPanel } from "../shell/locked-panel";
 import { MilestoneStrip } from "../shell/milestone-strip";
@@ -98,7 +100,7 @@ import { useBenchWidth } from "../shell/use-bench-width";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
-type TradeSection = "ticket" | "chart" | "chain" | "orders";
+type TradeSection = "ticket" | "chart" | "chain" | "guidance" | "orders";
 
 // "ticket" stays first: `resolveSection` falls back to the first entry, and the ticket is the
 // untyped default. The chain joined as the bench's second tool (#3407, Workbench slice 2).
@@ -106,6 +108,7 @@ const SECTIONS: readonly PageSection<TradeSection>[] = [
   { id: "ticket", label: "Ticket" },
   { id: "chart", label: "Chart" },
   { id: "chain", label: "Chain" },
+  { id: "guidance", label: "Guidance" },
   { id: "orders", label: "Orders" },
 ];
 
@@ -287,6 +290,8 @@ interface StageProps {
   readonly desk: string;
   readonly plays: readonly PlayInfo[] | undefined;
   readonly onChainPick: (pick: ChainPick) => void;
+  /** A strike picked on the Guidance tab — presets the ticket to that covered call or put. */
+  readonly onGuidanceUse: (row: LadderRow) => void;
   readonly onExpirationCommit: (expiration: string) => void;
   readonly onPreset: (code: PlayCode) => void;
   readonly onSymbolCommit: (symbol: string) => void;
@@ -324,6 +329,11 @@ function Pane({
   const { symbol, play, strike, expiration, desk, plays } = props;
   if (id === "chart") return <ChartSection symbol={symbol} />;
   if (id === "orders") return <OrdersSection deskId={desk} />;
+  if (id === "guidance") {
+    // Keyed by symbol: a new symbol remounts the tab, so one symbol's stake and last-seen snapshot
+    // can never render against — or be saved under — another symbol's market.
+    return <GuidanceSection key={symbol} symbol={symbol} onUse={props.onGuidanceUse} />;
+  }
   if (id === "chain") {
     return (
       <ChainSection
@@ -419,7 +429,7 @@ function Bench({
     document.getElementById(`bench-${asked}`)?.scrollIntoView({ block: "start" });
   }, [docked, asked]);
   const shows = (id: TradeSection) =>
-    id === "chain" ? asked === "chain" : docked || section === id;
+    id === "chain" || id === "guidance" ? asked === id : docked || section === id;
   const pane = (id: TradeSection, className?: string) =>
     shows(id) ? (
       <BenchPane
@@ -441,12 +451,26 @@ function Bench({
     <div className={docked ? "bench bench-docked" : "bench"}>
       {pane("ticket", ticketOwnsChart ? "bench-ticket bench-ticket-full" : "bench-ticket")}
       {pane("chain", "bench-chain")}
+      {pane("guidance", "bench-guidance")}
       {shows("chart") && !ticketOwnsChart ? (
         <div className="bench-side">{pane("chart")}</div>
       ) : null}
       {pane("orders", "bench-orders")}
     </div>
   );
+}
+
+/** The ticket a guidance strike presets: covered call → rung 202, put → 201, strike + expiry
+ *  together, and the section back to the ticket so the member lands on the preset form. */
+function guidanceSearch<T extends { section?: TradeSection }>(prev: T, row: LadderRow) {
+  const next = {
+    ...prev,
+    play: (row.lever === "covered-calls" ? "202" : "201") as PlayInfo["code"],
+    strike: String(row.strike),
+    exp: row.expiration,
+  };
+  delete next.section;
+  return next;
 }
 
 function TradePage(): ReactElement {
@@ -552,6 +576,11 @@ function TradePage(): ReactElement {
       },
     });
   };
+  /** "Use this" on a guidance strike (#3729): the covered call is rung 202, the put 201; strike
+   *  and expiry travel together, and the member lands on the preset ticket — which defaults to one
+   *  contract, as the guidance sized it. A rung not yet earned shows its own locked panel there. */
+  const onGuidanceUse = (row: LadderRow) =>
+    void navigate({ search: (prev) => guidanceSearch(prev, row) });
   /** `?exp=` follows whichever tool changed it — the chain pane's browse or the ticket's own
    *  field — so the two never name different contracts. `replace: true`, a refinement. */
   const commitExpiration = (next: string) => {
@@ -591,6 +620,7 @@ function TradePage(): ReactElement {
     desk: activeDesk ?? "",
     plays: plays.data?.plays,
     onChainPick,
+    onGuidanceUse,
     onExpirationCommit: commitExpiration,
     onPreset: (code) =>
       void navigate({ resetScroll: false, search: (prev) => ({ ...prev, play: code }) }),
@@ -619,7 +649,17 @@ function TradePage(): ReactElement {
       <hr />
       {/* Docked, every pane is already on the page — the switch would be a control with nothing
           to choose (frame.tsx: "The section switch renders only when folded"). */}
-      {docked ? null : (
+      {/* Docked, the switch is hidden, and the guidance and chain panes show only when asked —
+          so the guidance needs its own way in (#3729 review: desktop members could reach it only
+          by typing the URL). */}
+      {docked ? (
+        <>
+          <Link to="/trade" search={(prev) => ({ ...prev, section: "guidance" as const })}>
+            Guidance for this stock
+          </Link>
+          <hr />
+        </>
+      ) : (
         <>
           <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
           <hr />
