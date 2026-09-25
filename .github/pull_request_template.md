@@ -15,8 +15,10 @@ Any other section is deletable when it doesn't apply; The picture is only ever W
 before any prose. Pick by change type (copy-paste examples: docs/PICTURES.md):
 UI → before/after screenshots (≤100KB JPEG under docs/shots/pr-<n>/; ship.sh SHA-pins the raw URL —
 never hand-write a branch URL, those 404 the moment the branch deletes at merge) ·
-dataflow/pipeline → flowchart LR · route/request → sequenceDiagram · lifecycle/gate/mode →
-stateDiagram-v2 · schema → erDiagram · config → before/after table.
+behaviour before/after → sequenceDiagram with Before/After notes · lifecycle/gate/mode →
+stateDiagram-v2 · branch mechanics → gitGraph · dataflow → delta flowchart (thick = new, dotted =
+removed) · a number over time → xychart-beta · a call sheet → quadrantChart · schema → erDiagram ·
+config → before/after table. The vocabulary card and the story → picture table: docs/PICTURES.md.
 Mermaid: any type GitHub draws (npm run mermaid:lint parses every block — a syntax error is the
 opening frame), ≤15 nodes, plain words in labels, no theme/hex — emphasis by edge weight and shape.
 The picture states WHAT changed — never how good it is. -->

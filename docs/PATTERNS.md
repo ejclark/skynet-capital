@@ -186,3 +186,20 @@ restored from history rather than rebuilt.
    names where it might land instead.
 4. **A pattern that stops fitting gets a note, not a deletion** — the row is the memory that it was
    tried (constant geometry's row already carries its revisit note).
+
+## The ledger — pictures
+
+Rows for the picture grammar (`PICTURES.md`), one per named shape; the census of 2026-09-25 named the
+anti-pattern and the two shapes that beat it.
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **One shape for every change** (anti-pattern) | Sources fan into one module and out to surfaces, whatever the change was; nothing marks what is new. | 8 of 11 diagrams in the 40-PR census | Claude, census 2026-09-25 | named — the thing the rows below replace |
+| **Before/After halves** | A sequence diagram whose two `Note over` halves show the same exchange before and after the fix; the picture makes the causal argument. | PR #3737 | Claude, 2026-09-25 | placed |
+| **Delta grammar** | Thick edge = new, dotted = removed, `subgraph "this PR"` = added; meaning survives without hue. | `PICTURES.md` → delta grammar; PR #3747's own picture | Eric's colourblind rule + census | placed |
+| **Sketch register** | `look: handDrawn` marks a *proposed* diagram (a plan issue) as not built; classic look marks shipped. | `PICTURES.md`; plan issues | Claude, 2026-09-25 (the diagram cousin of the lo-fi greybox rule) | seeded — judged on #3748 vs slice 2's PR |
+| **Diagram as procedure** | A `flowchart TD` decision tree sessions execute step by step; the instance ledger applies it. | `docs/FOG-OF-WAR.md` | Eric, 2026-09-06 | placed — named here for the first time |
+| **Series map** | One flowchart with a subgraph per slice of a multi-PR series; this PR's edges thick. | the 11-PR guidance series (missed) | Claude, census | seeded |
+| **Generated picture** | A diagram emitted from the same data as the table beside it (platter gitGraph, digest kanban, budget xychart) — the picture cannot disagree with the data. | `ship.sh platter`, `/secretary` | Claude, 2026-09-25 | seeded — slice 7 |
+| **Storybook architecture** | One C4 page per container: context, container/component diagram, canonical flow, lifecycle, code roots — a component library of the system. | `docs/architecture/` | Eric, 2026-09-25 ("a storybook version… in a component library fashion") | seeded — slice 6 |
+| **Diagram as contract** | A drawn boundary compiles into an import gate; a drawn lifecycle compiles into EARS lines and specs; drift is a red check. | a boundary gate script under `scripts/` and the `/ears` skill (both slice 8–9 of #3748) | Eric, 2026-09-25 ("infrastructure as code… non-deterministic into deterministic") | seeded — slices 8–9 |

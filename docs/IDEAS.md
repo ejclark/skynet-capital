@@ -18,6 +18,31 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Render Mermaid inside the app** — `/research` (`src/server/research-service.ts`, `marked`) and the
+  architecture storybook show diagrams as code blocks in-app; first candidate is static SVG rendered
+  by the existing Playwright harness at build time, never a client-side mermaid bundle on a member
+  surface. _(src: Claude · while: the Mermaid program, #3748)_
+- **A quarterly `info` canary** for GitHub's deployed Mermaid version (a comment carrying a mermaid
+  block with just `info` prints it); when it reports 12.x, decide on `layout: dagre` pins before
+  ELK re-flows every diagram. _(src: Claude · while: #3748 — the pin in scripts/mermaid-lint.mjs)_
+- **The vendored "Diagrams first" output-style line** (`docs/vendor/claude-code/output-styles.md`
+  L66-81) into `orient.md`: an in-session explanation of code or flow opens with a diagram. Eric
+  put AI→human chat in scope (2026-09-25); judge on a week of replies. _(src: Claude · while: #3748)_
+- **Digest picture slot** — the revival condition (2–3 digests on cadence, IDEAS L296) is met with
+  13 shipped; a generated `kanban` of the ready queue is the candidate. _(src: Claude · while: #3748)_
+- **Prose-in-cells** — the table-as-media rule lets a paragraph in a cell pass as a picture (#3735,
+  243 words above the fold); an advisory cell-length note in `checkbody`. _(src: Claude · while: the
+  2026-09-25 PR census)_
+- **`ship.sh verifybody <pr>`** — re-fetch the stored body, fail on a mangled embed or a missing fold;
+  3 of 9 screenshot PRs in the census had an HTML-escaped `<img>` as their opening frame. Promoted
+  from L1213. _(src: Claude · while: the 2026-09-25 PR census)_
+- **The GitHub-attachment probe** (L1242) is still the real fix for those mangled frames. _(src:
+  Claude · while: the census)_
+- **Landing-meter columns for engagement** — `comms-scan` learns diagram type / nodes / look, and the
+  digest gains Eric's comments and reactions per PR, so "did a richer picture engage more" gets a
+  number (his stated alignment signal). _(src: Eric ("stronger engagement is an indicator that we are
+  aligned", 2026-09-25) · while: #3748)_
+
 - **Prove a playbook does what its card says, with the retired Collections probe harness.** The
   control-tape method (run on a hand-built tape, re-run with one input neutralised, keep only the
   behaviour that disappears) was Collections' strongest idea and outlived the page. Aimed at a
