@@ -2,11 +2,13 @@ import { headlineRow, type LadderDrop, type LadderResult } from "./position-guid
 import {
   actionable,
   capConfidence,
+  coverableLots,
   dayText,
   optionsCutoff,
   pct,
   richnessCap,
   spanText,
+  strikeFloor,
   usd,
 } from "./position-guidance-rules.js";
 import type {
@@ -170,6 +172,13 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
       `Covered calls need 100 shares per contract — you hold ${shares}.`,
     );
   }
+  if (coverableLots(stake) === 0) {
+    return notAvailable(
+      "covered-calls",
+      "COVERAGE",
+      `All ${Math.floor(shares / 100)} of your 100-share lots already have a call sold against them — nothing is left to cover until one closes or expires.`,
+    );
+  }
   if (stake.goal === undefined) {
     return notAvailable(
       "covered-calls",
@@ -213,13 +222,13 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
     });
   }
   const keep = best.bid * 100;
-  const net =
-    stake.costBasis !== undefined ? (best.strike - stake.costBasis) * 100 + keep : undefined;
+  const floor = strikeFloor(stake);
+  const net = floor !== undefined ? (best.strike - floor) * 100 + keep : undefined;
   const basisGain =
     net === undefined
       ? ""
       : net >= 0
-        ? ` That's ${usd(net)} more than you paid for those 100.`
+        ? ` That's ${usd(net)} more than you paid for those 100${stake.premiumsCollected ? ", counting the premium you've already collected" : ""}.`
         : ` That's ${usd(-net)} less than you paid for those 100 — a loss, which your exit goal accepts.`;
   const outcome = why(
     stake.goal === "keep-shares" ? "GOAL" : "STRIKE-BASIS",
