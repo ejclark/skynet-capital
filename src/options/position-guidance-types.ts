@@ -5,7 +5,7 @@
  * every visit reads a change at a glance (Eric, 2026-09-25: "a standardize template/form … to
  * quickly parse information over repetition/time").
  *
- * Position guidance is the research call sheet (`docs/process/EVENT-RESEARCH.md` — Call · Confidence · Why
+ * Position guidance is the research call sheet (`docs/research/events/TEMPLATE.md` — Call · Confidence · Why
  * · Proves it wrong), keyed by LEVER instead of by horizon and personalised by the member's stake.
  * It follows that contract rather than `recommend.ts`'s "a list, never a suggestion": calls are
  * graded, a low grade renders as a stand-aside (never a small bet), and every call carries the
@@ -166,7 +166,7 @@ export interface LeverCall {
   readonly atOpen: boolean;
 }
 
-export type DteVerdict = "in" | "too-short" | "spans-print";
+export type DteVerdict = "in" | "too-short" | "after-decision" | "spans-print";
 
 export interface DteMark {
   readonly expiration: string;

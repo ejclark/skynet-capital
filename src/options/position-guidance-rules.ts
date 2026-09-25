@@ -10,7 +10,7 @@ import type {
 } from "./position-guidance-types.js";
 
 /**
- * THE BRIEF'S RULES — every threshold in one place, each with the reason it exists (#3729). The
+ * THE GUIDANCE RULES — every threshold in one place, each with the reason it exists (#3729). The
  * rule ids are what a guidance read's "why" lines cite, so a reader can trace any call back to a line here.
  * PURE: no I/O, no clock.
  */
@@ -80,9 +80,28 @@ export function weekdaysBefore(date: string, sessions: number): string {
 }
 
 /**
+ * The last expiry options may be sold on, given the goal. An option must never outlive the
+ * decision the SHARES row asks for: if "decide whether to hold through earnings" falls due on
+ * Nov 2, a call expiring Nov 6 is still open on the day the member may sell the shares under it.
+ * So for every goal but keep-shares, options stop at the decision date; keep-shares (the member
+ * has already chosen to hold through) may sell right up to the earnings window.
+ */
+export function optionsCutoff(
+  earnings: EarningsWindow | undefined,
+  goal: string | undefined,
+): { readonly date: string; readonly kind: "decision" | "window" } | undefined {
+  if (!earnings) return undefined;
+  return goal === "keep-shares"
+    ? { date: earnings.start, kind: "window" }
+    : { date: weekdaysBefore(earnings.start, DECISION_SESSIONS_BEFORE_PRINT), kind: "decision" };
+}
+
+/**
  * DTE-PRINT + DTE-FLOOR: mark every listed expiry in or out. An expiry on or after the print
- * window's START spans the print — FT-15 found CRWV's options underprice its print moves (Q2 implied
- * ~15.5% vs ~18.6% realized), so premium sold across a print is underpriced insurance. Catalysts
+ * window's START spans the print — this name's own research may show its options underprice the
+ * move (the "options underprice CRWV's earnings moves" forward test: Q2 implied ~15.5% vs ~18.6%
+ * realized), so premium sold across a print is underpriced insurance. An expiry after the
+ * decision date (`optionsCutoff`) outlives the hold-or-sell decision and is out too. Catalysts
  * before an expiry are a warning, never an exclusion.
  */
 export function dteStrip(
@@ -90,12 +109,20 @@ export function dteStrip(
   today: string,
   earnings: EarningsWindow | undefined,
   catalysts: readonly GuidanceCatalyst[],
+  goal?: string,
 ): DteMark[] {
+  const cutoff = optionsCutoff(earnings, goal);
   return [...new Set(expirations)].sort().flatMap((expiration) => {
     const dte = daysBetween(today, expiration);
     if (dte < 0) return [];
     const verdict =
-      earnings && expiration >= earnings.start ? "spans-print" : dte < MIN_DTE ? "too-short" : "in";
+      earnings && expiration >= earnings.start
+        ? "spans-print"
+        : cutoff?.kind === "decision" && expiration > cutoff.date
+          ? "after-decision"
+          : dte < MIN_DTE
+            ? "too-short"
+            : "in";
     const hits = catalysts
       .filter((c) => c.date >= today && c.date <= expiration)
       .map((c) => `${c.label} (${c.date})`);
@@ -140,10 +167,15 @@ export function richnessOf(
   return { verdict: "unknown", basis: "none", atmIv: atm, realizedVol };
 }
 
-/** How richness caps a WRITE: without IV rank the read is a proxy, so it can never grade high. */
+/**
+ * How richness caps a WRITE. Without IV rank the read is a proxy, so it can never grade high — and
+ * only a RICH proxy reading (IV ÷ realized ≥ RICH_IV_TO_RV) licenses selling at all: a middling
+ * ratio caps low, which is a stand-aside. Otherwise the 1.2 threshold would change nothing, since
+ * 1.1 and 1.3 would both grade medium.
+ */
 export function richnessCap(richness: Richness): Confidence {
-  if (richness.basis === "iv-rank") return "high";
-  if (richness.basis === "iv-vs-realized") return "medium";
+  if (richness.basis === "iv-rank") return richness.verdict === "middling" ? "medium" : "high";
+  if (richness.basis === "iv-vs-realized") return richness.verdict === "rich" ? "medium" : "low";
   return "low";
 }
 

@@ -36,7 +36,8 @@ describe("DTE strip (DTE-FLOOR · DTE-PRINT)", () => {
   });
 
   it("excludes every expiry on or after the estimate window's start, not its point date", () => {
-    const verdicts = Object.fromEntries(strip.map((m) => [m.expiration, m.verdict]));
+    const keep = dteStrip(EXPIRATIONS, etDateOf(NOW), inputs().earnings, [], "keep-shares");
+    const verdicts = Object.fromEntries(keep.map((m) => [m.expiration, m.verdict]));
     expect(verdicts["2026-11-06"]).toBe("in");
     expect(verdicts["2026-11-13"]).toBe("spans-print");
     expect(verdicts["2026-11-20"]).toBe("spans-print");
@@ -126,7 +127,7 @@ describe("the three calls — the CRWV fixture", () => {
     expect(cc).toMatchObject({
       call: "WRITE",
       confidence: "medium",
-      until: { date: "2026-11-06" },
+      until: { date: "2026-10-30" },
     });
     expect(cc?.reasons.map((r) => r.rule)).toContain("DTE-PRINT");
   });
@@ -327,9 +328,10 @@ describe("review regressions — calls a member could act on must never be false
     const { printEvidence: _none, ...rest } = inputs({ symbol: "AAPL" });
     const b = positionGuidance(rest as GuidanceInputs);
     expect(JSON.stringify(b)).not.toContain("FT-15");
-    expect(positionGuidance(inputs()).calls[1]?.reasons.some((r) => r.text.includes("FT-15"))).toBe(
-      true,
+    const keep = positionGuidance(
+      inputs({ stake: { shares: 400, costBasis: 70, goal: "keep-shares" } }),
     );
+    expect(keep.calls[1]?.reasons.some((r) => r.text.includes("FT-15"))).toBe(true);
   });
 
   it("a closed print window is retired and reported, not carried forever", () => {
@@ -372,5 +374,46 @@ describe("review regressions — calls a member could act on must never be false
       expect(c).toMatchObject({ call: "WAIT", confidence: "none" });
       expect(c?.reasons[0]?.rule).toBe("PULSE");
     }
+  });
+});
+
+describe("contradictions found in review (#3729) — the guidance must not argue with itself", () => {
+  it("an option never outlives the hold-or-sell decision: income stops at Nov 2", () => {
+    const b = positionGuidance(inputs());
+    const decided = weekdaysBefore("2026-11-09", 5);
+    expect(b.ladder.every((r) => r.expiration <= decided)).toBe(true);
+    expect(b.dteStrip.find((m) => m.expiration === "2026-11-06")?.verdict).toBe("after-decision");
+  });
+
+  it("keep-shares, already committed to holding through, may sell up to the earnings window", () => {
+    const b = positionGuidance(
+      inputs({ stake: { shares: 400, costBasis: 70, goal: "keep-shares" } }),
+    );
+    expect(b.ladder.some((r) => r.expiration === "2026-11-06")).toBe(true);
+  });
+
+  it("without IV rank, a middling ratio (1.0–1.2) is a wait, not the same WRITE as 1.3", () => {
+    const middling = positionGuidance(inputs({ realizedVol: IV / 1.1 }));
+    expect(middling.richness.verdict).toBe("middling");
+    expect(middling.calls[1]).toMatchObject({ call: "WAIT", confidence: "low" });
+    expect(positionGuidance(inputs({ realizedVol: IV / 1.3 })).calls[1]?.call).toBe("WRITE");
+  });
+
+  it("the rows kept per expiry are the ones nearest the target delta, not the riskiest", () => {
+    const b = positionGuidance(inputs());
+    const oct30 = b.ladder.filter(
+      (r) => r.lever === "covered-calls" && r.expiration === "2026-10-30",
+    );
+    const distance = (d: number) => Math.abs(Math.abs(d) - 0.2);
+    const kept = Math.max(...oct30.map((r) => distance(r.delta)));
+    const strip = dteStrip(EXPIRATIONS, etDateOf(NOW), inputs().earnings, [], "income");
+    const all = buildLadder(
+      "covered-calls",
+      { ...inputs(), stake: { shares: 400, costBasis: 70, goal: "income" } },
+      strip,
+    );
+    expect(all.rows.filter((r) => r.expiration === "2026-10-30")).toEqual(oct30);
+    expect(oct30.some((r) => distance(r.delta) <= kept)).toBe(true);
+    expect(Math.min(...oct30.map((r) => distance(r.delta)))).toBeLessThan(0.05);
   });
 });
