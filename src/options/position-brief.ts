@@ -60,6 +60,12 @@ function applyPulse(calls: readonly LeverCall[], input: BriefInputs): LeverCall[
         confidence: "none",
       };
     }
+    if (spot?.status === "aging") {
+      next = {
+        ...note(`Spot is only partly verified — ${spot.note}. Confidence capped medium.`),
+        confidence: capConfidence(next.confidence, "medium"),
+      };
+    }
     if (research?.status === "stale") {
       next = {
         ...note(`Research is stale — ${research.note}. Confidence capped low.`),
@@ -144,7 +150,7 @@ function assumptionLines(input: BriefInputs, retiredWindow: string | undefined):
 export function positionBrief(raw: BriefInputs): PositionBrief {
   const today = etDateOf(raw.now);
   const { input, retiredWindow } = normalizeInputs(raw, today);
-  const expirations = input.chain.map((q) => q.expiration);
+  const expirations = input.expirations ?? input.chain.map((q) => q.expiration);
   const strip = dteStrip(expirations, today, input.earnings, input.catalysts);
   const firstIn = strip.find((m) => m.verdict === "in")?.expiration;
   const richness = richnessOf(
