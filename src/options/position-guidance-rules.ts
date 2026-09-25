@@ -312,7 +312,8 @@ export function spanText(start: string, end: string): string {
  * in all but name, which this desk never sells.
  */
 export function coverableLots(stake: GuidanceStake): number {
-  return Math.max(0, Math.floor((stake.shares ?? 0) / 100) - (stake.callsSold ?? 0));
+  const open = (stake.openCalls ?? []).reduce((n, c) => n + c.contracts, 0);
+  return Math.max(0, Math.floor((stake.shares ?? 0) / 100) - Math.max(stake.callsSold ?? 0, open));
 }
 
 /**

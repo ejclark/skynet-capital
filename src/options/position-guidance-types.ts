@@ -61,6 +61,24 @@ export interface GuidanceStake {
   readonly callsSold?: number;
   /** Premium already received on this position, in dollars — it lowers the strike floor. */
   readonly premiumsCollected?: number;
+  /** Covered calls already open on this stock, from the member's own account — what "Calls you've
+   *  sold" manages. Read in the browser; like the rest of the stake, never sent to the server. */
+  readonly openCalls?: readonly OpenCall[];
+}
+
+/** One covered call the member has already sold and still holds open. */
+export interface OpenCall {
+  /** The contract's OCC symbol — how the hand-off finds it on the Option positions card. */
+  readonly occ: string;
+  readonly strike: number;
+  readonly expiration: string;
+  /** Contracts open (positive). */
+  readonly contracts: number;
+  /** Premium received, per share. */
+  readonly premium: number;
+  /** The live quote for buying it back (ask) or its bid, per share, when the account had one. */
+  readonly bid?: number;
+  readonly ask?: number;
 }
 
 /** One listed contract as the feed quoted it. Bid is what a SELLER receives — every yield uses it. */
@@ -167,7 +185,8 @@ export type RuleId =
   | "GOAL"
   | "COVERAGE"
   | "SIZE"
-  | "PULSE";
+  | "PULSE"
+  | "MANAGE";
 
 export interface GuidanceReason {
   readonly rule: RuleId;
@@ -262,6 +281,8 @@ export interface PositionGuidance {
   readonly dteStrip: readonly DteMark[];
   readonly ladder: readonly LadderRow[];
   readonly assumptions: readonly string[];
+  /** One call per covered call already open — empty when none is. */
+  readonly manage: readonly ManageCall[];
   readonly disclosure: string;
 }
 
@@ -275,4 +296,28 @@ export interface GuidanceSnapshot {
     readonly confidence: Confidence;
   }[];
   readonly richness: Richness["verdict"];
+}
+
+/** What to do with a covered call that is already open. */
+export type ManageVerdict = "KEEP" | "BUY BACK" | "ROLL" | "LET IT GO" | "NO ANSWER";
+
+export interface ManageCall {
+  readonly occ: string;
+  readonly strike: number;
+  readonly expiration: string;
+  readonly contracts: number;
+  /** Calendar days from today's ET date to expiry. */
+  readonly dte: number;
+  readonly call: ManageVerdict;
+  readonly confidence: Confidence;
+  /** At most three, most important first. */
+  readonly reasons: readonly GuidanceReason[];
+  readonly provesWrong: string;
+  readonly until?: { readonly date: string; readonly why: string };
+  /** Market closed: a plan for the next open, never an instruction for now. */
+  readonly atOpen: boolean;
+  /** Share of the premium kept if bought back at the ask now (0..1; negative = costs more). */
+  readonly kept?: number;
+  /** ROLL only: the call to sell in its place, and the net per share (+ credit, − cost). */
+  readonly rollTo?: { readonly strike: number; readonly expiration: string; readonly net: number };
 }

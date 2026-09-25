@@ -80,6 +80,35 @@ function calls(b: PositionGuidance): string[] {
   ];
 }
 
+const MANAGE_WORDS: Readonly<Record<string, string>> = {
+  KEEP: "Keep it",
+  "BUY BACK": "Buy it back",
+  ROLL: "Roll it",
+  "LET IT GO": "Let it go",
+  "NO ANSWER": "No answer",
+};
+
+/** Calls already open — rendered only when there are some (a holder with none has nothing here,
+ *  and an empty "managing" section would read as a claim about calls that don't exist). */
+function manage(b: PositionGuidance): string[] {
+  if (b.manage.length === 0) return [];
+  const rows = b.manage.map((m) => {
+    const what = `${usd(m.strike)} call, ${dayText(m.expiration)} (${m.contracts})`;
+    const kept = m.kept === undefined ? "—" : pct(m.kept);
+    const call = `**${MANAGE_WORDS[m.call] ?? m.call}**${m.atOpen ? " _(plan for the open)_" : ""}`;
+    const reasons = m.reasons.map((r) => tableCell(r.text)).join("<br>");
+    return `| ${what} | ${kept} | ${call} | ${DOTS[m.confidence]} ${m.confidence} | ${reasons} |`;
+  });
+  return [
+    "### 3b · Calls you've already sold",
+    "",
+    "| Contract | Premium kept | Call | Confidence | Why |",
+    "|---|---|---|---|---|",
+    ...rows,
+    "",
+  ];
+}
+
 function waiting(b: PositionGuidance): string[] {
   return [
     "### 4 · Until / waiting on",
@@ -172,6 +201,7 @@ export function guidanceToMarkdown(
     ...pulse(guidance),
     ...stake(guidance),
     ...calls(guidance),
+    ...manage(guidance),
     ...waiting(guidance),
     ...strip(guidance),
     ...ladder(guidance),

@@ -162,8 +162,8 @@ function notAvailable(
   });
 }
 
-export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverCall {
-  const { stake, symbol } = ctx.input;
+/** Why no covered call can be offered at all — before any price is read — or undefined. */
+function coveredCallBlocked(stake: GuidanceInputs["stake"]): LeverCall | undefined {
   const shares = stake.shares ?? 0;
   if (shares < 100) {
     return notAvailable(
@@ -193,6 +193,14 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
       "Enter what you paid per share first — without it, a strike could sell your shares for less than you paid.",
     );
   }
+  return undefined;
+}
+
+export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverCall {
+  const { stake, symbol } = ctx.input;
+  const shares = stake.shares ?? 0;
+  const blocked = coveredCallBlocked(stake);
+  if (blocked) return blocked;
   const band = bandWhy(ctx);
   if (!band) return noBand(ctx, "covered-calls");
   const best = headlineRow(ladder.rows);
