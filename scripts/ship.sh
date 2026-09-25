@@ -142,9 +142,10 @@ cmd_open() {
     --base) base="$2"; shift 2 ;;
     --body-file) bodyfile="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
-    # hold-for-Eric PRs (carve-outs, a `Needs from you` block): opened READY FOR REVIEW with
-    # auto-merge left unarmed — never as a draft. A draft skips `verify` and reads as "Claude still
-    # has work to do" (Eric, 2026-09-04, on #1304); the hold is the unarmed merge, not the draft bit.
+    # hold-for-Eric PRs (carve-outs, a `Needs from you` block, a PR awaiting its review): they END
+    # ready for review with auto-merge unarmed — never LEFT as a draft. A lingering draft skips
+    # `verify` and reads as "Claude still has work to do" (Eric, 2026-09-04, on #1304). They do
+    # START as a draft for about a second: see the ORDER note in cmd_open.
     --hold) hold=1; shift ;;
     --draft) echo "ship open: --draft is gone — use --hold (ready for review, auto-merge unarmed)" >&2; exit 1 ;;
     *) echo "ship open: unknown arg $1" >&2; exit 1 ;;
@@ -287,9 +288,16 @@ EOF_SHOTS
     sleep $((2**n)); done
 
   local body; body="$(cat "$bodyfile")"
-  # draft is always false: a draft PR skips `verify` and can't auto-merge (docs/LESSONS.md 2026-08-14).
-  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':False}))" \
-    "$title" "$branch" "$base" "$body")"
+  # ORDER, for a held PR: open as a DRAFT → label `hold-merge` → promote to ready. pipeline.yml's
+  # arm job decides from the labels in the triggering EVENT's payload. Opened ready, the `opened`
+  # event carried no label (it is applied a moment later), so the job armed anyway and a held PR
+  # merged the moment it went green — #3735, 2026-09-25, merged before its correctness review
+  # landed (docs/LESSONS.md). Opened as a draft, the arm job skips the `opened` event; the
+  # `ready_for_review` event that follows the label carries it, so the job skips that one too, and
+  # `verify` runs on it. The draft lives for about a second, inside this function — never lingers.
+  # An unheld PR is opened ready, as always: a draft skips `verify` (docs/LESSONS.md 2026-08-14).
+  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
+    "$title" "$branch" "$base" "$body" "$hold")"
   echo "ship: opening PR over REST (core bucket)…"
   local resp http body opened_hits=""; resp="$(api POST "/pulls" "$payload")"
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
@@ -309,7 +317,21 @@ EOF_SHOTS
       if [ "$lhttp" = 200 ]; then
         echo "ship: labelled #$num hold-merge — it now enumerates as waiting on Eric."
       else
-        echo "ship: could NOT label #$num hold-merge (HTTP $lhttp) — apply it by hand or the hold is invisible." >&2
+        # Promoting an UNLABELLED draft would hand the arm job exactly the event it arms on. Leave
+        # it a draft: a stuck draft is visible and safe; an unlabelled ready PR merges on green.
+        echo "ship: could NOT label #$num hold-merge (HTTP $lhttp) — left as a DRAFT so it cannot auto-merge. Label it, then mark it ready by hand." >&2
+        return
+      fi
+      local node rq rpayload rgql
+      node="$(printf '%s' "$body" | json_field node_id)"
+      rq='mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { number isDraft } } }'
+      rpayload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$rq" "$node")"
+      rgql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+        -H "User-Agent: skynet-ship" -d "$rpayload" "https://api.github.com/graphql")"
+      if grep -q '"isDraft":false' <<<"$rgql"; then
+        echo "ship: promoted #$num to ready — the ready_for_review event carries hold-merge, so nothing arms it."
+      else
+        echo "ship: labelled #$num but could NOT promote it from draft — mark it ready by hand (verify won't run on a draft)." >&2
       fi
       echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
     # The arming usually happens through the MCP tool, which never runs this script — so the

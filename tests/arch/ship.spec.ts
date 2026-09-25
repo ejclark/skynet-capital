@@ -491,3 +491,36 @@ describe("ship automerge — the source contract behind that", () => {
     expect(source).toMatch(/merging directly/);
   });
 });
+
+/**
+ * A HOLD THAT HOLDS (2026-09-25, #3735). pipeline.yml's arm job reads the labels in the triggering
+ * event's payload. `ship open --hold` used to open the PR ready and label it a moment later, so the
+ * `opened` event carried no `hold-merge` and the job armed it anyway — a held PR merged on green,
+ * before its correctness review landed. The fix is an ORDER inside cmd_open: open as a draft (the
+ * arm job skips drafts), label, then promote (the `ready_for_review` event carries the label). A
+ * network-free check of that order, read straight from the script so it cannot drift.
+ */
+describe("ship open --hold — the label is on before the PR is ever ready", () => {
+  const script = readFileSync("scripts/ship.sh", "utf8");
+  const start = script.indexOf("cmd_open()");
+  const next = script.indexOf("\ncmd_", start + 1);
+  const open = script.slice(start, next === -1 ? undefined : next);
+
+  it("opens a held PR as a draft, and only a held one", () => {
+    expect(open).toContain("'draft':sys.argv[5]=='1'");
+    expect(open).toMatch(/"\$title" "\$branch" "\$base" "\$body" "\$hold"/);
+  });
+
+  it("labels hold-merge before it promotes the draft to ready", () => {
+    const label = open.indexOf('{"labels":["hold-merge"]}');
+    const promote = open.indexOf("markPullRequestReadyForReview");
+    expect(label).toBeGreaterThan(-1);
+    expect(promote).toBeGreaterThan(label);
+  });
+
+  it("never promotes when the label failed — an unlabelled ready PR merges on green", () => {
+    const failed = open.indexOf("could NOT label");
+    const promote = open.indexOf("markPullRequestReadyForReview");
+    expect(open.slice(failed, promote)).toContain("return");
+  });
+});

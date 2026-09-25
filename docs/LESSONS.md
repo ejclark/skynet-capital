@@ -2598,3 +2598,32 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   prose-only judgment rule in `CLAUDE.md`/orient.md for whether it has a gate behind it." Three
   independent instances now (wake-reply restating, the #3328/#3329 collision mutex, this one) is
   enough evidence to treat that audit as due, not merely worth doing eventually.
+
+### `ship open --hold` never held a PR that went green — the arm job read labels from the `opened` event, before the label existed
+
+- **SHA:** eec5067 (#3735)   **DATE:** 2026-09-25   **STATUS:** closed
+- **SIGNAL:** a push of review fixes to #3735's branch was rejected ("cannot lock ref … unable to
+  resolve reference") because the branch was gone: `skynet-envoy[bot]` had squash-merged #3735 at
+  21:25 while it still carried `hold-merge` — before its independent correctness review reported
+  two false member-facing statements. Detection lag: ~3 minutes (merge → rejected push). Cost: the
+  review fixes landed as a second PR (#3736), and `main` carried the false copy for ~15 minutes
+  with no UI consumer yet — low stakes this time, but it is the same mechanism that would land a
+  held protected-path or taste-fork PR unreviewed.
+- **ROOT CAUSE:** `pipeline.yml`'s `arm-auto-merge` job gates on
+  `!contains(github.event.pull_request.labels.*.name, 'hold-merge')` — the labels in the
+  triggering EVENT's payload, a snapshot. `scripts/ship.sh` opened held PRs READY and applied
+  `hold-merge` in a second call a moment later, so the `opened` event never carried the label and
+  the job armed every held PR that went green. `--hold` had been a no-op against a green PR since
+  the label was introduced (#1343); earlier held PRs in this session (#3730, #3731, #3734) only
+  "held" because their review fixes were pushed before CI finished on the first commit.
+- **PREVENTION:**
+  1. **Fix (not protected, shipped):** `ship.sh open --hold` opens as a DRAFT (the arm job skips
+     drafts), applies `hold-merge`, then promotes via `markPullRequestReadyForReview` — the
+     `ready_for_review` event now carries the label, so the job skips it and `verify` runs on it. If
+     the label call fails the PR is left a draft (safe and visible) rather than promoted unheld.
+     Pinned by `tests/arch/ship.spec.ts` → "ship open --hold — the label is on before the PR is
+     ever ready".
+  2. **Belt and braces (protected, Eric's merge):** the arm job should re-read the PR's LIVE labels
+     before arming instead of trusting the event payload. It boards the platter.
+- **SIDE QUESTS:** any other workflow gate that reads `github.event.pull_request.labels` has the
+  same snapshot race; worth one grep when the platter item lands.
