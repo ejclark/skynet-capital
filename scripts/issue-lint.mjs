@@ -19,7 +19,9 @@
 // reporter is the one move Zimmermann's bug-report research rules out (docs/ISSUES.md).
 //
 // Dependency-free (node built-ins). Loud-failure doctrine: an unreadable input is an error.
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
@@ -45,18 +47,6 @@ export const MAX_TITLE = 120;
  *  entire note; a duplicated table or boilerplate line stays under it). */
 const DUP_BLOCK_MIN = 80;
 
-const STABLE_MERMAID = new Set([
-  "flowchart",
-  "graph",
-  "sequenceDiagram",
-  "stateDiagram-v2",
-  "erDiagram",
-  "classDiagram",
-  "pie",
-  "gantt",
-  "timeline",
-]);
-
 // Google's named bad-description examples, plus the ones this repo has actually seen.
 const VAGUE_TITLES = [
   "fix bug",
@@ -76,19 +66,6 @@ const VAGUE_TITLES = [
 export function aboveFold(body) {
   const at = body.indexOf("<details");
   return at === -1 ? body : body.slice(0, at);
-}
-
-/** Mermaid diagram types declared in the body, in order. */
-function mermaidTypes(body) {
-  return [...body.matchAll(/```mermaid\s*\n([\s\S]*?)```/g)]
-    .map((m) =>
-      m[1]
-        .split("\n")
-        .map((l) => l.trim())
-        .find((l) => l && !l.startsWith("%%")),
-    )
-    .filter(Boolean)
-    .map((first) => first.split(/\s+/)[0]);
 }
 
 /** Paragraph blocks repeated verbatim — #455 filed its entire note twice (a paste accident the
@@ -136,14 +113,17 @@ function checkBullets(text, problems) {
   }
 }
 
-/** Pictures that will not render, and URLs that will not survive the branch's deletion. */
+/** Pictures that will not render, and URLs that will not survive the branch's deletion.
+ *
+ *  Mermaid is parsed by scripts/mermaid-lint.mjs — the one parser, pinned to the Mermaid version
+ *  github.com renders — run as the same CLI `ship.sh checkbody` uses, so a diagram is judged the
+ *  same way in a PR body and an issue body. A subprocess because the parser is async and ~1.5s to
+ *  load, while `lintIssue` is sync by contract (issue-lint-audit.mjs maps it over a corpus); a body
+ *  with no mermaid block never spawns it. Replaced a type allowlist on 2026-09-25 that checked the
+ *  first word and nothing else. */
 function checkMedia(text, problems) {
-  for (const type of mermaidTypes(text)) {
-    if (!STABLE_MERMAID.has(type)) {
-      problems.push(
-        `mermaid type "${type}" is not in the stable allowlist — a syntax error renders as the issue's opening frame (docs/PICTURES.md)`,
-      );
-    }
+  if (/^[ \t]*`{3,}[ \t]*mermaid\b/m.test(text)) {
+    for (const p of mermaidProblems(text)) problems.push(p);
   }
   const rawUrls =
     text.match(/raw\.githubusercontent\.com\/[^/\s)]+\/[^/\s)]+\/([^/\s)]+)\//g) ?? [];
@@ -152,6 +132,27 @@ function checkMedia(text, problems) {
       problems.push(`raw URL is not SHA-pinned — branch URLs 404 at squash-merge: ${url}`);
     }
   }
+}
+
+/** The mermaid CLI's problems for a body. Exit 1 carries JSON on stdout (problems found); any other
+ *  failure is rethrown — a gate that cannot run must never report clean. */
+function mermaidProblems(text) {
+  const cli = fileURLToPath(new URL("./mermaid-lint.mjs", import.meta.url));
+  let out;
+  try {
+    out = execFileSync(process.execPath, [cli, "--stdin", "--json"], {
+      input: text,
+      encoding: "utf8",
+    });
+  } catch (error) {
+    const e = /** @type {{ status?: number, stdout?: string }} */ (error);
+    if (e.status !== 1 || !e.stdout) throw error;
+    out = e.stdout;
+  }
+  return JSON.parse(out).problems.map(
+    (p) =>
+      `mermaid ${p} — a diagram that will not render is the issue's opening frame (docs/PICTURES.md)`,
+  );
 }
 
 /** Titles: empty calories fail; length past the scan budget is only a note. */

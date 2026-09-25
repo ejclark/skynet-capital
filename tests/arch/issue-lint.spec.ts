@@ -63,10 +63,20 @@ describe("issue lint — the capsule contract", () => {
     expect(problems.join(" ")).toContain("appears twice");
   });
 
-  it("rejects a beta mermaid type — a syntax error renders as the issue's opening frame", () => {
-    const { code, problems } = lint("**The ask.**\n\n```mermaid\nxychart-beta\n  title x\n```\n");
+  it("accepts a beta mermaid type GitHub renders — the parser is the gate now, not an allowlist", () => {
+    const { code, problems } = lint(
+      '**The ask.**\n\n```mermaid\nxychart-beta\n  title "budget"\n  x-axis [w1, w2]\n  y-axis "items" 0 --> 40\n  bar [38, 22]\n```\n',
+    );
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+  });
+
+  it("rejects a mermaid block that will not parse — a syntax error renders as the issue's opening frame", () => {
+    const { code, problems } = lint(
+      "**The ask.**\n\n```mermaid\nflowchart LR\n  A[foo(bar)] --> B\n```\n",
+    );
     expect(code).toBe(1);
-    expect(problems.join(" ")).toContain("xychart-beta");
+    expect(problems.join(" ")).toContain("will not parse");
   });
 
   it("rejects a raw URL pinned to a branch — those 404 the day the branch deletes", () => {
