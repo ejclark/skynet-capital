@@ -452,6 +452,10 @@ common routes:
 - **A finished Claude Design session** → a `[handoff]` GitHub issue carrying contract + bundle
   ([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing — Eric's comment or label is the
   go signal, exactly as `ready` is for a plan.
+- **Drawing or reviewing any diagram** (a PR picture, an issue, a plan's lifecycle, an architecture
+  page, a reply) → **`/mermaid`** — the type by story, the delta grammar, GitHub's actual renderer
+  facts and one reference card per type, loaded only then (Eric, 2026-09-25: expert on demand, no
+  standing tax). Who reads it: [`docs/READERS.md`](docs/READERS.md).
 - Report-outs and digests → `/secretary` · caught drift → `/retro` · rising token burn →
   [`docs/process/TOKEN-EFFICIENCY.md`](docs/process/TOKEN-EFFICIENCY.md).
 - **A recurring domain needs bounded experimentation** (thin slice → pressure test → find the
