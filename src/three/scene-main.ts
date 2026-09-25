@@ -40,19 +40,27 @@ export interface Pose {
 }
 
 /**
- * How the page embeds us. `frame=portrait` is the profile's picture frame (plan #3725): the camera
- * fits the upper shaft, crown and Eye to whatever box the page gives us, holds still, and can't
- * zoom. `embed=1` alone just turns zoom off, so a page's scroll wheel scrolls the page.
+ * How the page embeds us. `frame=card` is the art column of the profile's Sauron character card
+ * (plan #3727, design handoff 6a): the camera frames the whole tower to whatever box the page gives
+ * it, holds still (no zoom, no drag, no orbit — the card is static), and sets the Eye right of
+ * centre. `embed=1` alone just turns zoom off, so a page's scroll wheel scrolls the page.
  */
-function embedFromQuery(): { readonly portrait: boolean; readonly embed: boolean } {
+function embedFromQuery(): { readonly card: boolean; readonly embed: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
-    const portrait = q.get("frame") === "portrait";
-    return { portrait, embed: portrait || q.get("embed") === "1" };
+    const card = q.get("frame") === "card";
+    return { card, embed: card || q.get("embed") === "1" };
   } catch {
-    return { portrait: false, embed: false };
+    return { card: false, embed: false };
   }
 }
+
+/**
+ * The card's framing, as fractions of the frame's height and width (handoff 6a): the horn tips sit
+ * ~20px under the top of a 664px art box, the lit fortress wall falls in the bottom 90px (the shade
+ * that blends into the league), and the Eye lands ~60% across — right of centre on purpose.
+ */
+const CARD = { top: 0.03, wall: 0.9, eyeAcross: 0.6, wallY: 30 } as const;
 
 /** A glance request from the embedding page: a point in this frame's CSS pixels (may lie outside). */
 interface GlanceMessage {
@@ -108,18 +116,24 @@ export function start(canvas: HTMLCanvasElement): void {
     return Math.max(halfH / Math.tan(vf), halfW / Math.tan(hf));
   };
   const H = eyeAt.y + 63;
-  if (mode.portrait) {
-    // The picture frame: from the shaft's top tier to the horn tips, a three-quarter view of the
-    // Eye's face. Re-fit on every resize so the Eye always fills the frame it is given.
-    const lo = tower.crown.y - 55;
-    const hi = eyeAt.y + 44;
-    const fit = (): void =>
+  if (mode.card) {
+    // Fit horn tips → fortress wall to CARD.top → CARD.wall of the frame's height, then slide the
+    // view window so the Eye sits CARD.eyeAcross of the way over. A view offset shifts the picture
+    // without turning the camera, so the perspective stays the hero's. Re-fit on every resize.
+    const hi = eyeAt.y + 42;
+    const span = (hi - CARD.wallY) / (CARD.wall - CARD.top);
+    const centreY = hi + CARD.top * span - span / 2;
+    const fit = (): void => {
+      const w = canvas.clientWidth || window.innerWidth;
+      const h = canvas.clientHeight || window.innerHeight;
+      camera.setViewOffset(w, h, -(CARD.eyeAcross - 0.5) * w, 0, w, h);
       pose({
-        alpha: Math.PI / 2 - 0.35,
-        beta: 1.45,
-        radius: throwFor((hi - lo) / 2, 36) * 1.08,
-        target: [eyeAt.x, (lo + hi) / 2, eyeAt.z],
+        alpha: 0.893,
+        beta: 1.43,
+        radius: span / 2 / Math.tan((camera.fov * Math.PI) / 360),
+        target: [eyeAt.x, centreY, eyeAt.z],
       });
+    };
     fit();
     window.addEventListener("resize", fit);
   } else {
@@ -132,7 +146,8 @@ export function start(canvas: HTMLCanvasElement): void {
     });
   }
   controls.enableZoom = !mode.embed;
-  controls.autoRotate = !(reduce || mode.portrait);
+  controls.enabled = !mode.card;
+  controls.autoRotate = !(reduce || mode.card);
   controls.autoRotateSpeed = ORBIT_SPEED;
   controls.addEventListener("start", () => {
     controls.autoRotate = false;

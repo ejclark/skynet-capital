@@ -19,8 +19,8 @@
   // The bundle exposes __startTower; keep this shell dumb so all logic stays in the typed kit.
   (() => {
     var canvas = document.getElementById("c");
-    // Embedded (the profile's portrait, plan #3725): the page owns the chrome, so drop the HUD.
-    if (/[?&](embed=1|frame=portrait)/.test(location.search)) document.body.className = "embed";
+    // Embedded (the profile's character card, plan #3727): the page owns the chrome, so no HUD.
+    if (/[?&](embed=1|frame=card)/.test(location.search)) document.body.className = "embed";
     if (window.__startTower) window.__startTower(canvas);
   })();
 </script>
