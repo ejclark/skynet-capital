@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { fireMaterial } from "../kit/fire-glsl.js";
+import type { Gaze } from "../kit/glance.js";
 import type { TowerParams } from "../kit/params.js";
 import { almondify } from "../kit/shapes.js";
 import { BEAM, BODY, CORONA } from "./eye-shader.js";
@@ -32,7 +33,7 @@ export const flicker = (t: number): number =>
   0.5 * Math.sin(t * 5.3) + 0.3 * Math.sin(t * 11.7 + 1.3) + 0.2 * Math.sin(t * 23.1 + 0.4);
 
 /** The slow searching gaze: yaw sweeps ±~1.2 rad over minutes, pitch nods just below level. */
-export function gazeAt(t: number): { yaw: number; pitch: number } {
+export function gazeAt(t: number): Gaze {
   return {
     yaw: Math.sin(t * 0.11) * 0.85 + Math.sin(t * 0.037) * 0.35,
     pitch: 0.16 + Math.sin(t * 0.07) * 0.06,
@@ -49,8 +50,11 @@ function almond(widthSegs: number, taperZ: boolean): THREE.BufferGeometry {
 export interface EyeBuild {
   /** Everything the Eye owns, ready to add to the scene. */
   readonly group: THREE.Group;
-  /** Drive the Eye to time `t` (seconds). Pure in `t` — a seek renders the same frame every time. */
-  update(t: number, camera: THREE.Camera): void;
+  /**
+   * Drive the Eye to time `t` (seconds). Pure in `t` — a seek renders the same frame every time.
+   * `aim` maps the sweep's gaze to the one actually shown (a glance toward the page, kit/glance.ts).
+   */
+  update(t: number, camera: THREE.Camera, aim?: (sweep: Gaze) => Gaze): void;
 }
 
 export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
@@ -139,8 +143,9 @@ export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
 
   return {
     group,
-    update(t, camera) {
-      const { yaw, pitch } = gazeAt(t);
+    update(t, camera, aim) {
+      const sweep = gazeAt(t);
+      const { yaw, pitch } = aim ? aim(sweep) : sweep;
       eye.rotation.set(pitch, yaw, 0);
       gaze.position.copy(at);
       gaze.rotation.copy(eye.rotation);

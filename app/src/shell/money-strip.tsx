@@ -6,7 +6,9 @@ import { fetchOptionPositions, type OptionBookGreeks } from "../live/options";
 import { GlossaryTerm } from "./glossary-term";
 
 /**
- * WHERE YOUR MONEY IS (#3689 slice 5, design handoff 3a): one panel, three cells.
+ * WHERE YOUR MONEY IS (#3689 slice 5, design handoff 3a): one row, three cells. Since #3725 it is
+ * the net-worth card's bottom row rather than a card of its own: value, then what the value is
+ * made of, in one frame.
  *  1. The split: shares, options, and cash as a stacked bar, each slice also named with its amount.
  *  2. Cash ready to use, linking to the plays that fit your playbooks (this replaces the old
  *     "dry powder" note).

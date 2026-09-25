@@ -1,0 +1,20 @@
+import { glanceMessage } from "../../src/shell/landmark-portrait";
+
+/** The only thing that crosses into the tower's frame on a filter click: a point, in its own pixels. */
+describe("glanceMessage", () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height }) as DOMRect;
+
+  it("points at the control's centre, measured from the frame's top-left", () => {
+    const m = glanceMessage(rect(1200, 240, 360, 440), rect(700, 250, 40, 20));
+    expect(m).toEqual({ type: "tower:glance", x: -480, y: 20 });
+  });
+
+  it("carries nothing but the message type and the point", () => {
+    expect(Object.keys(glanceMessage(rect(0, 0, 1, 1), rect(0, 0, 1, 1))).sort()).toEqual([
+      "type",
+      "x",
+      "y",
+    ]);
+  });
+});
