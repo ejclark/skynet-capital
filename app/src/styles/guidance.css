@@ -37,6 +37,11 @@
   text-transform: uppercase;
   color: var(--muted);
 }
+.guidance-notice {
+  font-weight: 600;
+  border-left: 3px solid var(--text);
+  padding-left: var(--space-2);
+}
 .guidance-muted {
   color: var(--muted);
 }

@@ -135,8 +135,11 @@ describe("page sections", () => {
       // one breakpoint, owned by the hook — never a second media query in the route
       expect(trade).toContain("useBenchWidth");
       expect(read("app/src/shell/use-bench-width.ts")).toContain("BENCH_MIN_WIDTH = 1280");
-      // the switch renders only when folded (frame.tsx's doctrine)
-      expect(trade).toMatch(/docked \? null : \(\s*<>\s*<SectionSwitch/);
+      // the switch renders only when folded (frame.tsx's doctrine); docked, that branch carries
+      // only the guidance link (#3729 — the one pane with no other way in), never the switch
+      const docked = /docked \? \(([\s\S]*?)\) : \(\s*<>\s*<SectionSwitch/.exec(trade);
+      expect(docked).not.toBeNull();
+      expect(docked?.[1]).not.toContain("SectionSwitch");
       // the docked grid is a stylesheet of its own, imported by the index
       expect(read("app/src/styles/index.css")).toContain("./bench.css");
     });

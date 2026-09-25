@@ -118,3 +118,21 @@ describe("guidance tab — freshness", () => {
     expect(await screen.findByText(/Data stale: Option prices/)).toBeTruthy();
   });
 });
+
+describe("guidance tab — a refresh that fails", () => {
+  it("keeps the last good read on screen and says why, beside it", async () => {
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    mount();
+    await screen.findByRole("list", { name: "At a glance" });
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ reason: "failed", note: "Couldn't build it just now." }), {
+          status: 200,
+        }),
+      )) as typeof fetch;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    expect(await screen.findByText("Couldn't build it just now.")).toBeTruthy();
+    expect(screen.getByRole("list", { name: "At a glance" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
+  });
+});

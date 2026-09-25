@@ -84,8 +84,9 @@ function outcome(row: LadderRow): string {
     return `If exercised, you pay ${usd(row.effectiveEntry ?? row.strike)} a share after the premium.`;
   }
   if (row.returnIfCalled === undefined) return `If exercised, 100 shares go at ${usd(row.strike)}.`;
-  const side = row.returnIfCalled >= 0 ? "above" : "below";
-  return `If exercised, 100 shares go at ${usd(row.strike)} — ${pct(Math.abs(row.returnIfCalled), 1)} ${side} what you paid.`;
+  // `returnIfCalled` includes the premium kept, so it is a total return — not the sale price's gap.
+  const word = row.returnIfCalled >= 0 ? "gain" : "loss";
+  return `If exercised, 100 shares go at ${usd(row.strike)} — a ${pct(Math.abs(row.returnIfCalled), 1)} total ${word} on what you paid, premium included.`;
 }
 
 function StrikeCard({

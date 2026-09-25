@@ -68,6 +68,7 @@ export function GuidanceView({
   stake,
   changes,
   refreshing,
+  notice,
   onStake,
   onRefresh,
   onUse,
@@ -77,6 +78,8 @@ export function GuidanceView({
   /** `diffGuidance` against this browser's last look; undefined on a first visit. */
   readonly changes: readonly string[] | undefined;
   readonly refreshing: boolean;
+  /** A refresh that failed: shown above the last good read, which stays. */
+  readonly notice?: string;
   readonly onStake: (next: GuidanceStake) => void;
   readonly onRefresh: () => void;
   readonly onUse: (row: LadderRow) => void;
@@ -100,6 +103,11 @@ export function GuidanceView({
           {refreshing ? "Refreshing…" : "Refresh"}
         </button>
       </header>
+      {notice ? (
+        <p className="guidance-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
       <Freshness pulse={g.pulse} />
       <GuidanceStakeForm key={g.symbol} stake={stake} onChange={onStake} />
       <ul className="guidance-glance" aria-label="At a glance">

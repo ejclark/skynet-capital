@@ -649,7 +649,17 @@ function TradePage(): ReactElement {
       <hr />
       {/* Docked, every pane is already on the page — the switch would be a control with nothing
           to choose (frame.tsx: "The section switch renders only when folded"). */}
-      {docked ? null : (
+      {/* Docked, the switch is hidden, and the guidance and chain panes show only when asked —
+          so the guidance needs its own way in (#3729 review: desktop members could reach it only
+          by typing the URL). */}
+      {docked ? (
+        <>
+          <Link to="/trade" search={(prev) => ({ ...prev, section: "guidance" as const })}>
+            Guidance for this stock
+          </Link>
+          <hr />
+        </>
+      ) : (
         <>
           <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
           <hr />

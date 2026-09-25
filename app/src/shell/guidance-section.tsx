@@ -37,6 +37,8 @@ export function GuidanceSection({
   // Read once per mount (the caller keys this component by symbol): the PREVIOUS visit's snapshot.
   const [previous] = useState(() => readSnapshot(symbol));
   const [refreshing, setRefreshing] = useState(false);
+  // A refresh the server couldn't build: said beside the last good read, never in place of it.
+  const [notice, setNotice] = useState<string | undefined>();
 
   const market = answer.data && "market" in answer.data ? answer.data.market : undefined;
   const guidance = useMemo(
@@ -47,29 +49,54 @@ export function GuidanceSection({
     if (guidance) writeSnapshot(symbol, snapshotOf(guidance));
   }, [guidance, symbol]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // A background refetch already in flight could land after this one with older data.
+      await client.cancelQueries({ queryKey: guidanceKey(symbol) });
+      const fresh = await fetchGuidance(symbol, true);
+      // The server answers a failed build as 200 {reason, note}: keep the good market on screen.
+      if ("market" in fresh || !market) client.setQueryData(guidanceKey(symbol), fresh);
+      setNotice("market" in fresh ? undefined : fresh.note);
+    } catch {
+      setNotice("Couldn't reach the guidance right now — the read below is the last good one.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  const retry = (
+    <button
+      type="button"
+      className="btn guidance-btn"
+      onClick={() => void onRefresh()}
+      disabled={refreshing}
+    >
+      {refreshing ? "Trying…" : "Try again"}
+    </button>
+  );
   if (symbol === "") {
     return <p className="note">Pick a symbol on the ticket to see guidance for it.</p>;
   }
   if (answer.isPending) return <p className="note">Reading live prices for {symbol}…</p>;
   if (answer.isError) {
-    return <p className="note">Couldn't reach the guidance right now — try again shortly.</p>;
+    return (
+      <div className="note">
+        <p>Couldn't reach the guidance right now.</p>
+        {retry}
+      </div>
+    );
   }
   if (!guidance) {
-    return <p className="note">{"note" in answer.data ? answer.data.note : ""}</p>;
+    return (
+      <div className="note">
+        <p>{"note" in answer.data ? answer.data.note : ""}</p>
+        {"reason" in answer.data && answer.data.reason === "failed" ? retry : null}
+      </div>
+    );
   }
   const onStake = (next: GuidanceStake) => {
     setStake(next);
     writeStake(symbol, next);
-  };
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      client.setQueryData(guidanceKey(symbol), await fetchGuidance(symbol, true));
-    } catch {
-      /* the last read stays on screen, with its own freshness marks */
-    } finally {
-      setRefreshing(false);
-    }
   };
   return (
     <GuidanceView
@@ -77,6 +104,7 @@ export function GuidanceSection({
       stake={stake}
       changes={previous ? diffGuidance(previous, guidance) : undefined}
       refreshing={refreshing}
+      notice={notice}
       onStake={onStake}
       onRefresh={() => void onRefresh()}
       onUse={onUse}
