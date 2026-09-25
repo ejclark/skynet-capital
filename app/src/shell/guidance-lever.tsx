@@ -29,7 +29,9 @@ export const shortDate = dayText;
 export const isActionable = (call: LeverCall): boolean =>
   call.call === "WRITE" && actionable(call.confidence);
 
-function Confidence({ call }: { readonly call: LeverCall }): ReactElement {
+function Confidence({ call }: { readonly call: LeverCall }): ReactElement | null {
+  // "none confidence" beside "Not available" is noise — there is no call to grade.
+  if (call.confidence === "none") return null;
   return (
     <span className="guidance-confidence">
       <span aria-hidden="true">{DOTS[call.confidence]}</span> {call.confidence} confidence
@@ -224,9 +226,11 @@ export function LeverCard({
           {call.until.why}
         </p>
       ) : null}
-      <p className="guidance-comeback">
-        <span className="guidance-kicker">What would change this</span> {call.provesWrong}
-      </p>
+      {call.provesWrong.replace(/[—\s-]/g, "") ? (
+        <p className="guidance-comeback">
+          <span className="guidance-kicker">What would change this</span> {call.provesWrong}
+        </p>
+      ) : null}
       {call.lever === "shares" ? null : (
         <Strikes call={call} rows={rows} symbol={symbol} onUse={onUse} />
       )}

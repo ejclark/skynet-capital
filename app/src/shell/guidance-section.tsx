@@ -2,10 +2,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { diffGuidance, positionGuidance, snapshotOf } from "../../../src/options/position-guidance";
 import type { GuidanceStake, LadderRow } from "../../../src/options/position-guidance-types";
+import { fetchDesk } from "../live/desk";
 import {
   fetchGuidance,
   guidanceKey,
   guidanceQuery,
+  heldStake,
   readSnapshot,
   readStake,
   writeSnapshot,
@@ -26,14 +28,28 @@ import { GuidanceView } from "./guidance-view";
  */
 export function GuidanceSection({
   symbol,
+  deskId,
   onUse,
 }: {
   readonly symbol: string;
+  /** The account the trade page is on — its position in `symbol`, if any, seeds the stake. */
+  readonly deskId: string;
   readonly onUse: (row: LadderRow) => void;
 }): ReactElement {
   const client = useQueryClient();
   const answer = useQuery(guidanceQuery(symbol));
-  const [stake, setStake] = useState<GuidanceStake>(() => readStake(symbol));
+  // Same key the ticket reads — a cache hit, not a second round trip.
+  const desk = useQuery({
+    queryKey: ["desk", deskId],
+    queryFn: () => fetchDesk(deskId),
+    enabled: deskId !== "",
+  });
+  const held = heldStake(desk.data, symbol);
+  // A stake the member saved wins; with none, the paper position is the starting point (#3729
+  // step 4 — the positions row links here with only the symbol, never the stake, in the URL).
+  const [saved, setSaved] = useState<GuidanceStake>(() => readStake(symbol));
+  const fromAccount = Object.keys(saved).length === 0 && held !== undefined;
+  const stake = fromAccount ? held : saved;
   // Read once per mount (the caller keys this component by symbol): the PREVIOUS visit's snapshot.
   const [previous] = useState(() => readSnapshot(symbol));
   const [refreshing, setRefreshing] = useState(false);
@@ -95,13 +111,15 @@ export function GuidanceSection({
     );
   }
   const onStake = (next: GuidanceStake) => {
-    setStake(next);
+    setSaved(next);
     writeStake(symbol, next);
   };
   return (
     <GuidanceView
       guidance={guidance}
       stake={stake}
+      stakeKey={fromAccount ? "account" : "saved"}
+      held={held}
       changes={previous ? diffGuidance(previous, guidance) : undefined}
       refreshing={refreshing}
       notice={notice}

@@ -1,7 +1,25 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import type { DeskPosition } from "../../src/live/desk";
 import { BlotterRow } from "../../src/shell/blotter-row";
+
+// The row's Guidance link (#3729 step 4) is a router Link; no router here, so render its href.
+rstest.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    className,
+    search,
+  }: {
+    children: ReactNode;
+    className?: string;
+    search: Record<string, string>;
+  }) => (
+    <a href={`/trade?${new URLSearchParams(search).toString()}`} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 const position = (overrides: Partial<DeskPosition> = {}): DeskPosition =>
   ({
@@ -258,5 +276,21 @@ describe("BlotterRow plain columns (#3689 slice 6)", () => {
     render(inTable(<BlotterRow position={put} deskId="eric" />));
     const decayCell = screen.getByText("24 days").closest("td")?.nextElementSibling;
     expect(decayCell).toHaveTextContent("—");
+  });
+});
+
+describe("the Guidance link (#3729 step 4)", () => {
+  it("links a stock row to its guidance with the symbol and account, never the stake", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <table>
+          <tbody>
+            <BlotterRow position={position({ symbol: "CRWV" })} deskId="desk-1" />
+          </tbody>
+        </table>
+      </QueryClientProvider>,
+    );
+    const href = screen.getByRole("link", { name: "Guidance" }).getAttribute("href") ?? "";
+    expect(href).toBe("/trade?desk=desk-1&symbol=CRWV&section=guidance");
   });
 });
