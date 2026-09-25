@@ -175,6 +175,27 @@ a colour alone (`BRAND.md` → *Accessibility*). Brand-styled mermaid is allowed
 contrast-verified snippet checked in here, never improvised per-PR (hand-picked hex that looks
 right in one theme breaks in the other — that exact drift already shipped once).
 
+**The one sanctioned colour snippet** (promised here on 2026-08-20, checked in 2026-09-25 — verified
+by `tests/ui/mermaid-classdef.spec.ts` against both of GitHub's canvases with the same formula the
+app's tokens pass): the fill and the text are fixed together, so their 7.4:1 never depends on the
+theme; the 3px stroke carries the boundary in light mode and the fill carries it in dark; `removed`
+and `changed` live in the stroke alone. Copy it whole; never pick a hex in flight.
+
+```mermaid
+flowchart LR
+    a[existing step] ==> b[new step]:::new
+    a -.-> c[old step]:::removed
+    b --> d[adjusted step]:::changed
+    classDef new fill:#35D0BA,color:#04302B,stroke:#04302B,stroke-width:3px
+    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
+    classDef changed stroke:#0E9F8C,stroke-width:3px
+```
+
+The colours are `BRAND.md` tokens — `--accent` and `--accent-contrast` for *new* (teal is the
+machine/system signal), `--muted` (light) for *removed*, `--accent` (light) for *changed* — never
+`--pos`/`--neg`, which mean profit and loss and nothing else.
+
+
 ## Screenshots — mechanics that keep pictures alive
 
 - **≤100KB JPEG**, committed under `docs/shots/pr-<n>/` (the ship gate fails anything larger —

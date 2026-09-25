@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { contrast } from "../support/contrast.js";
 
 /**
  * WCAG contrast, held mechanically (Eric, 2026-09-06, on the research rail: "I have mild red/green
@@ -22,19 +23,6 @@ function palette(block: string): Map<string, string> {
 const dark = palette(THEME.slice(0, THEME.indexOf("@media (prefers-color-scheme: light)")));
 const lightStart = THEME.indexOf("@media (prefers-color-scheme: light)");
 const light = palette(THEME.slice(lightStart, THEME.indexOf("}\n}", lightStart)));
-
-function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const v = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  }) as [number, number, number];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-export function contrast(a: string, b: string): number {
-  const [x, y] = [luminance(a), luminance(b)];
-  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-}
 
 const TEXT_PAIRS: readonly [string, string][] = [
   ["--text", "--surface"],
