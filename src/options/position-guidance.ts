@@ -1,6 +1,7 @@
 import { normalizeInputs } from "./position-guidance-inputs.js";
 import { buildLadder } from "./position-guidance-ladder.js";
 import { cashSecuredPutCall, coveredCallCall } from "./position-guidance-levers.js";
+import { manageCalls } from "./position-guidance-manage.js";
 import {
   atmIv,
   CALL_WORDS,
@@ -212,6 +213,7 @@ export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
         ? []
         : [...calls.rows, ...puts.rows],
     assumptions: assumptionLines(input, retiredWindow),
+    manage: manageCalls(ctx),
     disclosure: GUIDANCE_DISCLOSURE,
   };
 }
