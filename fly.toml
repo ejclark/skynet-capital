@@ -51,6 +51,10 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # Account playbook subscriptions (issue #885, subscription-store.ts) — which playbooks an
   # account subscribed to and the capital reserved per subscription.
   SKYNET_SUBSCRIPTIONS_FILE = "/data/playbook-subscriptions.json"
+  # The IV clock's daily at-the-money IV series (#3729, research/iv-sampler.ts). Read a year later
+  # as IV rank, so a missed day can never be backfilled; the store has NO relative default, so the
+  # clock stays off until this line exists rather than recording onto the container's disk.
+  SKYNET_IV_HISTORY_DIR = "/data/iv-history"
   # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots app has no
   # volume of its own, so it relays insight records to this app's internal-only listener
   # (src/server/insights-listener.ts) on port 8788 — deliberately NOT in [http_service] below, so
