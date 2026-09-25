@@ -5,6 +5,7 @@ import {
   atmIv,
   CALL_WORDS,
   capConfidence,
+  dayText,
   dteStrip,
   etDateOf,
   GUIDANCE_DISCLOSURE,
@@ -140,7 +141,7 @@ function waitingOn(input: GuidanceInputs, today: string): WaitingOn[] {
     items.push({
       date: decision,
       label: "Decide whether to hold through earnings",
-      source: "house rule",
+      source: "our rule — 5 trading days before the earnings window",
     });
   }
   if (e && e.start >= today) {
@@ -235,7 +236,7 @@ export function diffGuidance(
   const move = (guidance.spot - previous.spot) / previous.spot;
   if (Math.abs(move) >= 0.005) {
     lines.push(
-      `Stock price ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${previous.asOf.slice(0, 10)}.`,
+      `Stock price ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${dayText(previous.asOf.slice(0, 10))}.`,
     );
   }
   for (const now of guidance.calls) {

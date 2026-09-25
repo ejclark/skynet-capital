@@ -20,7 +20,7 @@ test.describe("phone, 390px", () => {
         guidance={guidance}
         stake={STAKE}
         changes={[
-          "Stock price +2.4% since 2026-09-24.",
+          "Stock price +2.4% since Sep 24.",
           "Covered calls: Wait (low) → Reasonable now (medium).",
         ]}
         refreshing={false}

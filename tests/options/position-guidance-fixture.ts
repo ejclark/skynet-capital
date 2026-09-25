@@ -75,7 +75,7 @@ export function inputs(overrides: Partial<GuidanceInputs> = {}): GuidanceInputs 
     ledger: {
       buySignal: false,
       buyConfidence: "none",
-      stance: "Stand aside · S2 · E1 — no buy signal exists",
+      stance: "Stand aside — no buy signal exists",
       source: "docs/research/events/crwv-2026-11-10-print.md",
     },
     pulse: [

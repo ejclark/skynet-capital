@@ -2,6 +2,7 @@ import { type LeverContext, lever, why, windowText } from "./position-guidance-l
 import {
   actionable,
   DECISION_SESSIONS_BEFORE_PRINT,
+  dayText,
   usd,
   weekdaysBefore,
 } from "./position-guidance-rules.js";
@@ -46,7 +47,10 @@ function nonHolderCall(input: GuidanceInputs, decision: string | undefined): Lev
       call: "BUY",
       confidence: ledger.buyConfidence,
       reasons: decision
-        ? [ledgerWhy, why("SHARES", `Plan to be out by ${decision}, before the earnings report.`)]
+        ? [
+            ledgerWhy,
+            why("SHARES", `Plan to be out by ${dayText(decision)}, before the earnings report.`),
+          ]
         : [ledgerWhy],
       provesWrong: "If the research withdraws its buy signal before you buy → come back here.",
       ...(decision ? { until: { date: decision, why: "be out before the earnings report" } } : {}),
@@ -57,7 +61,7 @@ function nonHolderCall(input: GuidanceInputs, decision: string | undefined): Lev
     call: "STAND ASIDE",
     confidence: ledger ? "medium" : "low",
     reasons: [ledgerWhy],
-    provesWrong: `If the research starts supporting a buy${decision ? ` before ${decision}` : ""} → come back here.`,
+    provesWrong: `If the research starts supporting a buy${decision ? ` before ${dayText(decision)}` : ""} → come back here.`,
   });
 }
 
@@ -142,8 +146,8 @@ export function sharesCall({ input, today }: LeverContext): LeverCall {
       why(
         "SHARES",
         decision
-          ? `Nothing calls for a change before ${decision}, when you decide whether to hold through earnings.`
-          : "Nothing calls for a change — no earnings report or research signal is on the calendar.",
+          ? `Nothing suggests a change before ${dayText(decision)}, when you decide whether to hold through earnings.`
+          : "Nothing suggests a change — no earnings report or research signal is on the calendar.",
       ),
       ...noGoal,
       ledgerReason(input),
@@ -151,7 +155,7 @@ export function sharesCall({ input, today }: LeverContext): LeverCall {
     ],
     provesWrong:
       earnings?.status === "estimate" && decision
-        ? `If the company announces its earnings date before ${decision} → come back here; the decision comes sooner.`
+        ? `If the company announces its earnings date before ${dayText(decision)} → come back here; the decision comes sooner.`
         : "If the stock makes a big move on company-specific news → come back here.",
     ...(decision
       ? {

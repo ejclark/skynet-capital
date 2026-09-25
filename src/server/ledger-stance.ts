@@ -1,3 +1,4 @@
+import { dayText } from "../options/position-guidance-rules.js";
 import type { Confidence } from "../options/position-guidance-types.js";
 import { todayCallOf } from "./research-event-calls.js";
 
@@ -23,7 +24,20 @@ export interface LedgerRead {
   readonly buySignal: boolean;
 }
 
-const plain = (s: string): string => s.replace(/\*\*|__|`/g, "").trim();
+const md = (m: string, d: string): string => dayText(`2000-${m}-${d}`);
+
+/**
+ * The ledger's call cell as a member reads it (#3729 persona review): markdown stripped, the
+ * research's playbook codes dropped ("Stand aside · S2 · E1" → "Stand aside" — the codes index
+ * docs/research, they mean nothing on a trade form), and dates written "Sep 30", not "09-30".
+ */
+const plain = (s: string): string =>
+  s
+    .replace(/\*\*|__|`/g, "")
+    .replace(/\s*·\s*\b[A-Z]{1,2}\d{1,2}\b/g, "")
+    .replace(/\b\d{4}-(0[1-9]|1[0-2])-([0-3]\d)\b/g, (_, m, d) => md(m, d))
+    .replace(/\b(0[1-9]|1[0-2])-([0-3]\d)\b/g, (_, m, d) => md(m, d))
+    .trim();
 
 function confidenceOf(cell: string | undefined): Confidence | undefined {
   const word = cell?.toLowerCase().match(/high|medium|low|none/)?.[0];
