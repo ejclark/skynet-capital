@@ -417,3 +417,85 @@ describe("contradictions found in review (#3729) — the guidance must not argue
     expect(Math.min(...oct30.map((r) => distance(r.delta)))).toBeLessThan(0.05);
   });
 });
+
+describe("per-strike honesty (#3729 step 2)", () => {
+  it("drops a strike whose own quote is 25 minutes old, even when the rest are fresh", () => {
+    const old = "2026-09-25T17:35:00Z";
+    const chain = CHAIN.map((q) =>
+      q.strike === 95 ? { ...q, quotedAt: old } : { ...q, quotedAt: NOW },
+    );
+    const b = positionGuidance(inputs({ chain }));
+    expect(b.ladder.some((r) => r.strike === 95)).toBe(false);
+  });
+
+  it("keeps last session's quotes when the market is closed — they are labelled as of close", () => {
+    const chain = CHAIN.map((q) => ({ ...q, quotedAt: "2026-09-24T20:00:00Z" }));
+    expect(positionGuidance(inputs({ chain, sessionOpen: false })).ladder.length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it("drops a strike with fewer than 100 contracts open, and names why when nothing is left", () => {
+    const thin = positionGuidance(
+      inputs({ chain: CHAIN.map((q) => ({ ...q, openInterest: 12 })) }),
+    );
+    expect(thin.ladder).toEqual([]);
+    expect(thin.calls[1]?.reasons[0]?.text).toContain("too few contracts open");
+  });
+
+  it("a pulse that blocks pricing empties the ladder and makes every option lever wait", () => {
+    const b = positionGuidance(
+      inputs({
+        pulse: [
+          ...inputs().pulse.filter((p) => p.id !== "spot"),
+          {
+            id: "spot",
+            source: "s",
+            status: "aging",
+            note: "4.8% apart, after hours",
+            blocksPricing: true,
+          },
+        ],
+      }),
+    );
+    expect(b.ladder).toEqual([]);
+    expect(b.calls[1]).toMatchObject({ call: "WAIT", confidence: "none" });
+  });
+
+  it("an aging option feed caps the option levers at medium", () => {
+    const b = positionGuidance(
+      inputs({
+        ivRank: 70,
+        pulse: [
+          ...inputs().pulse.filter((p) => p.id !== "chain"),
+          { id: "chain", source: "s", status: "aging", note: "indicative" },
+        ],
+      }),
+    );
+    expect(b.calls[1]?.confidence).toBe("medium");
+  });
+});
+
+describe("a blocked lever says only why (#3734 review)", () => {
+  it("carries exactly one reason, with no price in it", () => {
+    const b = positionGuidance(
+      inputs({
+        pulse: [
+          ...inputs().pulse.filter((p) => p.id !== "spot"),
+          {
+            id: "spot",
+            source: "s",
+            status: "aging",
+            note: "4.8% apart, after hours",
+            blocksPricing: true,
+          },
+        ],
+      }),
+    );
+    for (const c of [b.calls[1], b.calls[2]]) {
+      expect(c?.reasons).toHaveLength(1);
+      expect(c?.reasons[0]?.text).not.toContain("$");
+      expect(c?.until).toBeUndefined();
+    }
+  });
+});

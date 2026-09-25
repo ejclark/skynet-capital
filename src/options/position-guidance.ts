@@ -9,6 +9,7 @@ import {
   GUIDANCE_DISCLOSURE,
   LEVER_NAME,
   pulseOf,
+  richnessExpiry,
   richnessOf,
 } from "./position-guidance-rules.js";
 import { decisionDate, sharesCall } from "./position-guidance-shares.js";
@@ -53,11 +54,27 @@ function applyPulse(calls: readonly LeverCall[], input: GuidanceInputs): LeverCa
       ...next,
       reasons: [{ rule: "PULSE" as const, text }, ...next.reasons].slice(0, 3),
     });
-    if (chain?.status === "stale" && c.lever !== "shares" && c.call !== "NOT AVAILABLE") {
-      next = {
-        ...note(`Quotes are stale — ${chain.note}. Refresh before acting.`),
+    const option = c.lever !== "shares" && c.call !== "NOT AVAILABLE";
+    const blocker = input.pulse.find((p) => p.blocksPricing);
+    if (option && (blocker || chain?.status === "stale")) {
+      // A lever the prices can't support says ONLY that — never beside a "Best: $95 call, bid $1.65"
+      // line priced off the very data it just said not to trust (#3734 review).
+      const { until: _dropped, ...rest } = c;
+      const text = blocker
+        ? `Prices can't be trusted until the open — ${blocker.note}.`
+        : `Quotes are stale — ${chain?.note}. Refresh before acting.`;
+      return {
+        ...rest,
         call: "WAIT",
         confidence: "none",
+        reasons: [{ rule: "PULSE", text }],
+        atOpen: false,
+      } satisfies LeverCall;
+    }
+    if (option && chain?.status === "aging") {
+      next = {
+        ...note(`Option quotes are ${chain.note}. Confidence capped medium.`),
+        confidence: capConfidence(next.confidence, "medium"),
       };
     }
     if (spot?.status === "aging") {
@@ -152,7 +169,7 @@ export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
   const { input, retiredWindow } = normalizeInputs(raw, today);
   const expirations = input.expirations ?? input.chain.map((q) => q.expiration);
   const strip = dteStrip(expirations, today, input.earnings, input.catalysts, input.stake.goal);
-  const firstIn = strip.find((m) => m.verdict === "in")?.expiration;
+  const firstIn = richnessExpiry(strip.filter((m) => m.verdict === "in"));
   const richness = richnessOf(
     input.ivRank,
     atmIv(input.chain, input.spot, firstIn),
@@ -176,8 +193,12 @@ export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
     waitingOn: waitingOn(input, today),
     richness,
     dteStrip: strip,
-    // Stale quotes never render as a ladder: a row priced off them would read as current.
-    ladder: pulseOf(input.pulse, "chain")?.status === "stale" ? [] : [...calls.rows, ...puts.rows],
+    // Stale quotes, or prices unfit to solve from, never render as a ladder: a row priced off them
+    // would read as current.
+    ladder:
+      pulseOf(input.pulse, "chain")?.status === "stale" || input.pulse.some((p) => p.blocksPricing)
+        ? []
+        : [...calls.rows, ...puts.rows],
     assumptions: assumptionLines(input, retiredWindow),
     disclosure: GUIDANCE_DISCLOSURE,
   };

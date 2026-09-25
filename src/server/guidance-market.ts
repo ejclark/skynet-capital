@@ -47,13 +47,27 @@ export function parityImpliedSpot(
     .map((c) => ({ c, p: byStrike.get(c.strike) }))
     .filter((x): x is { c: OptionChainRow; p: OptionChainRow } => x.p !== undefined)
     .sort((a, b) => Math.abs(a.c.strike - spot) - Math.abs(b.c.strike - spot));
-  const atm = pairs[0];
-  if (!atm) return undefined;
-  const c = midOf(atm.c);
-  const p = midOf(atm.p);
-  if (c === undefined || p === undefined) return undefined;
-  const implied = c - p + atm.c.strike * Math.exp((-rate * daysToExpiry) / 365);
-  return implied > 0 ? implied : undefined;
+  // The nearest-to-spot pair whose BOTH sides are tight enough to read a price off. A wide quote's
+  // mid is a guess, and a guess on each side makes a gap that says nothing about spot.
+  for (const { c, p } of pairs.slice(0, PARITY_PAIRS_TRIED)) {
+    const call = tightMid(c);
+    const put = tightMid(p);
+    if (call === undefined || put === undefined) continue;
+    const implied = call - put + c.strike * Math.exp((-rate * daysToExpiry) / 365);
+    return implied > 0 ? implied : undefined;
+  }
+  return undefined;
+}
+
+/** A parity pair's quotes must be at least this tight (spread ÷ mid) to read spot off. */
+export const PARITY_MAX_SPREAD = 0.05;
+/** How many strikes out from the money parity looks for a tight pair before giving up. */
+const PARITY_PAIRS_TRIED = 3;
+
+function tightMid(row: OptionChainRow): number | undefined {
+  const mid = midOf(row);
+  if (mid === undefined || row.bid === undefined || row.ask === undefined) return undefined;
+  return (row.ask - row.bid) / mid <= PARITY_MAX_SPREAD ? mid : undefined;
 }
 
 /** A chain row as the guidance reads it: the bid a seller receives, the IV solved from the mid. */
@@ -77,6 +91,8 @@ export function toGuidanceQuote(
     ...(row.ask !== undefined ? { ask: row.ask } : {}),
     ...(iv !== undefined ? { iv } : {}),
     ...(row.delta !== undefined ? { feedDelta: row.delta } : {}),
+    ...(row.quotedAt ? { quotedAt: row.quotedAt } : {}),
+    ...(row.openInterest !== undefined ? { openInterest: row.openInterest } : {}),
   };
 }
 

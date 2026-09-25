@@ -32,6 +32,15 @@ export const RICH_IV_TO_RV = 1.2;
 /** Below 1, the market charges less than the stock actually moves — selling it is underpaid. */
 export const CHEAP_IV_TO_RV = 1.0;
 
+/** In session, a strike quoted longer ago than this is not a price anyone can sell at. */
+export const QUOTE_STALE_MS = 15 * 60 * 1000;
+
+/** Liquidity floor: fewer contracts open than this and the quote is a number nobody trades against. */
+export const MIN_OPEN_INTEREST = 100;
+
+/** Richness compares like with like: IV from the expiry nearest this many days, not the nearest weekly. */
+export const RICHNESS_TARGET_DAYS = 25;
+
 /** Feed-delta vs our-delta disagreement worth flagging as a data-quality problem. */
 export const DELTA_TOLERANCE = 0.05;
 
@@ -128,6 +137,20 @@ export function dteStrip(
       .map((c) => `${c.label} (${c.date})`);
     return [{ expiration, dte, verdict, catalysts: hits }];
   });
+}
+
+/**
+ * The expiry richness reads IV from: the usable one nearest `RICHNESS_TARGET_DAYS`. The nearest
+ * weekly carries event premium and gamma that a 20-session realized vol has nothing to compare to.
+ */
+export function richnessExpiry(
+  marks: readonly { readonly expiration: string; readonly dte: number }[],
+): string | undefined {
+  return [...marks].sort(
+    (a, b) =>
+      Math.abs(a.dte - RICHNESS_TARGET_DAYS) - Math.abs(b.dte - RICHNESS_TARGET_DAYS) ||
+      a.dte - b.dte,
+  )[0]?.expiration;
 }
 
 /** The at-the-money IV of the nearest in-band expiry: the mean IV of the strikes closest to spot. */

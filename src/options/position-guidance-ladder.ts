@@ -6,6 +6,8 @@ import {
   MAX_SHORT_DELTA,
   MAX_SPREAD_OF_MID,
   MIN_BID,
+  MIN_OPEN_INTEREST,
+  QUOTE_STALE_MS,
 } from "./position-guidance-rules.js";
 import type {
   DteMark,
@@ -28,7 +30,7 @@ import { probabilityAbove, probabilityBelow, probabilityOfTouch } from "./termin
  * and would discard the 0.20–0.30 band income sellers actually use. The delta cap is the one rule.
  */
 
-export type LadderDrop = "quote" | "otm" | "basis" | "delta" | "own" | "cash";
+export type LadderDrop = "quote" | "stale" | "thin" | "otm" | "basis" | "delta" | "own" | "cash";
 
 export interface LadderResult {
   readonly rows: readonly LadderRow[];
@@ -38,6 +40,8 @@ export interface LadderResult {
 
 const emptyDrops = (): Record<LadderDrop, number> => ({
   quote: 0,
+  stale: 0,
+  thin: 0,
   otm: 0,
   basis: 0,
   delta: 0,
@@ -107,6 +111,16 @@ function rowFor(
   };
   const rejected = side.reject(q.strike);
   if (rejected) return drop(rejected);
+  // In session, each strike is aged on its OWN quote time: a fresh median across the chain can
+  // hide the one strike the guidance would recommend being 25 minutes old.
+  if (
+    input.sessionOpen &&
+    q.quotedAt !== undefined &&
+    Date.parse(input.now) - Date.parse(q.quotedAt) > QUOTE_STALE_MS
+  ) {
+    return drop("stale");
+  }
+  if (q.openInterest !== undefined && q.openInterest < MIN_OPEN_INTEREST) return drop("thin");
   const quote = tradable(q);
   if (!quote) return drop("quote");
   const contracts = side.contracts(q.strike);

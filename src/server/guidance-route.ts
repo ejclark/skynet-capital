@@ -5,15 +5,15 @@ import { EdgarFilings } from "../adapters/edgar-filings.js";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents } from "../domain/market-events.js";
-import { positionGuidance } from "../options/position-guidance.js";
-import { guidanceToMarkdown } from "../options/position-guidance-markdown.js";
-import { atmIv, daysBetween, etDateOf, MIN_DTE } from "../options/position-guidance-rules.js";
-import type {
-  GuidanceGoal,
-  GuidanceInputs,
-  GuidanceQuote,
-  GuidanceStake,
-} from "../options/position-guidance-types.js";
+import {
+  atmIv,
+  daysBetween,
+  etDateOf,
+  MIN_DTE,
+  optionsCutoff,
+  richnessExpiry,
+} from "../options/position-guidance-rules.js";
+import type { GuidanceMarket, GuidanceQuote } from "../options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { printEvidenceFor } from "../research/print-evidence.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
@@ -38,24 +38,27 @@ import { readLedger } from "./ledger-stance.js";
 import { sendJson } from "./page-shell.js";
 
 /**
- * GET /api/trade/guidance — the position guidance over live data (#3729, slice 3).
+ * GET /api/trade/guidance — the MARKET half of position guidance over live data (#3729).
  *
- * `?symbol=CRWV&shares=400&basis=70&cash=40000&goal=income&own=65&portfolio=250000[&refresh=1]`
+ * `?symbol=CRWV[&refresh=1]` → `{ market }` (a `GuidanceMarket`).
+ *
+ * The member's stake — shares, cost basis, cash — never comes here: the browser runs
+ * `positionGuidance({ ...market, stake })` itself (the app already runs `src/` code client-side), so
+ * a real-portfolio number never lands in a URL or a server log. One market read also serves every
+ * stake, which is what makes the coalesce below safe to share.
  *
  * Every market input is fetched LIVE per request through the member's own connected account, then
- * pulse-checked against its source's own timestamps before the engine sees it. The one sharing is
- * a 15-second coalesce of identical in-flight market reads (so a double-tap costs one Alpaca pull,
- * not two); `refresh=1` bypasses even that. The stake rides in the query and is never stored.
+ * pulse-checked against its source's own timestamps. The one sharing is a 15-second coalesce of
+ * identical in-flight reads (a double-tap costs one Alpaca pull, not two); `refresh=1` bypasses it.
  *
  * Cost posture (Eric, 2026-09-25: "cost efficient", never cheap): quotes are fetched only for the
- * expiries the guidance may actually price (≥ 7 DTE and before the print window) and only for the
- * sides the stake can use; every listed expiry is still shown on the strip.
+ * expiries the guidance may actually price (≥ 7 DTE and before the earnings window) and only for
+ * both sides; every listed expiry is still shown on the strip.
  */
 
 const COALESCE_MS = 15_000;
 const MAX_EXPIRATIONS = 12;
 const BARS_LOOKBACK_DAYS = 45;
-const GOALS: readonly GuidanceGoal[] = ["income", "keep-shares", "exit"];
 
 /** What the route reads besides the member's broker — injectable so specs run offline and on a fixed clock. */
 export interface GuidanceDeps {
@@ -66,33 +69,9 @@ const LIVE: GuidanceDeps = { edgar: new EdgarFilings(), now: () => new Date().to
 
 interface MarketRead {
   readonly at: number;
-  readonly inputs: Promise<
-    Omit<GuidanceInputs, "stake"> | { readonly reason: string; readonly note: string }
-  >;
+  readonly inputs: Promise<GuidanceMarket | { readonly reason: string; readonly note: string }>;
 }
 const inflight = new Map<string, MarketRead>();
-
-const queryNumber = (v: string | null): number | undefined => {
-  if (v === null || v.trim() === "") return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : undefined;
-};
-
-export function stakeFromQuery(params: URLSearchParams): GuidanceStake {
-  const goal = params.get("goal") as GuidanceGoal | null;
-  const pick = (key: string, field: keyof GuidanceStake) => {
-    const n = queryNumber(params.get(key));
-    return n !== undefined ? { [field]: n } : {};
-  };
-  return {
-    goal: goal && GOALS.includes(goal) ? goal : "income",
-    ...pick("shares", "shares"),
-    ...pick("basis", "costBasis"),
-    ...pick("cash", "cash"),
-    ...pick("own", "happyToOwnAt"),
-    ...pick("portfolio", "portfolioValue"),
-  };
-}
 
 function ledgerFor(symbol: string, printDate: string | undefined) {
   if (!printDate) return undefined;
@@ -124,11 +103,9 @@ async function readMarket(
   config: DashboardServerConfig,
   requesterId: string,
   symbol: string,
-  wantCalls: boolean,
-  wantPuts: boolean,
   deps: GuidanceDeps,
   refresh: boolean,
-): Promise<Omit<GuidanceInputs, "stake"> | { readonly reason: string; readonly note: string }> {
+): Promise<GuidanceMarket | { readonly reason: string; readonly note: string }> {
   const now = deps.now();
   const today = etDateOf(now);
   const active = activePrint(UPCOMING_PRINTS, symbol, today);
@@ -154,18 +131,17 @@ async function readMarket(
   const priceable = expirations.filter(
     (e) => daysBetween(today, e) >= MIN_DTE && !(earnings && e >= earnings.start),
   );
-  // Parity reads spot off the NEAREST listed expiry, both sides: the least time for a dividend
-  // (which parity cannot see) to fall inside it, and the tightest at-the-money quotes.
-  const parityExp = expirations[0] as string;
+  // Parity reads spot off the nearest expiry at least a day out, both sides: the least time for a
+  // dividend (which parity cannot see) to fall inside it, without 0-DTE's wide, gamma-driven marks.
+  const parityExp =
+    expirations.find((e) => daysBetween(today, e) >= 1) ?? (expirations[0] as string);
   const pages = await Promise.all(
     [...new Set([parityExp, ...priceable])].flatMap((expiration) =>
-      (["call", "put"] as const)
-        .filter((t) => expiration === parityExp || (t === "call" ? wantCalls : wantPuts))
-        .map(async (type) => ({
-          expiration,
-          type,
-          rows: await chainFor(client, symbol, expiration, type),
-        })),
+      (["call", "put"] as const).map(async (type) => ({
+        expiration,
+        type,
+        rows: await chainFor(client, symbol, expiration, type),
+      })),
     ),
   );
   const days = (e: string) =>
@@ -180,9 +156,26 @@ async function readMarket(
   const total = pages.reduce((n, p) => n + p.rows.length, 0);
   const ledger = ledgerFor(symbol, print?.date);
   const evidence = printEvidenceFor(symbol);
-  const closes = (bars ?? []).map((b) => b.c);
+  // In session today's bar is a partial day; counting it would understate realized vol and flatter
+  // the implied ÷ realized ratio.
+  const closes = (bars ?? [])
+    .filter((b) => !(sessionOpen && etDateOf(b.t) === today))
+    .map((b) => b.c);
   const realizedVol = realizedVolatility(closes);
-  const atm = atmIv(chain, spot, priceable[0]);
+  const atm = atmIv(
+    chain,
+    spot,
+    richnessExpiry(
+      priceable
+        .filter((e) => {
+          const cutoff = optionsCutoff(earnings, undefined);
+          return !(cutoff && e > cutoff.date);
+        })
+        .map((e) => ({ expiration: e, dte: daysBetween(today, e) })),
+    ),
+  );
+  const mid =
+    quote.bid !== undefined && quote.ask !== undefined ? (quote.bid + quote.ask) / 2 : undefined;
   return {
     symbol,
     now,
@@ -212,6 +205,7 @@ async function readMarket(
           last: spot,
           ...(quote.lastAt ? { lastAt: quote.lastAt } : {}),
           ...(parity !== undefined ? { parity } : {}),
+          ...(mid !== undefined ? { mid } : {}),
         },
         now,
         sessionOpen,
@@ -252,26 +246,19 @@ export async function serveGuidance(
     });
     return;
   }
-  const stake = stakeFromQuery(params);
-  const wantCalls = (stake.shares ?? 0) >= 100;
-  const wantPuts = (stake.cash ?? 0) > 0;
-  const key = `${requesterId}:${symbol}:${wantCalls}:${wantPuts}`;
+  // The stake never reaches the server, not even as a coarse fact: shares, basis and cash stay in
+  // the member's browser, where the engine applies them to this market read. Both sides are always
+  // priced — a "calls only" flag would itself say "holds 100+ shares, no cash" — and one read then
+  // serves every stake, so changing the stake never re-fetches.
+  const refresh = params.get("refresh") === "1";
+  const key = `${requesterId}:${symbol}`;
   const cached = inflight.get(key);
-  const fresh = cached && Date.now() - cached.at < COALESCE_MS && params.get("refresh") !== "1";
+  const fresh = cached && Date.now() - cached.at < COALESCE_MS && !refresh;
   const read: MarketRead = fresh
     ? cached
     : {
         at: Date.now(),
-        inputs: readMarket(
-          client,
-          config,
-          requesterId,
-          symbol,
-          wantCalls,
-          wantPuts,
-          deps,
-          params.get("refresh") === "1",
-        ),
+        inputs: readMarket(client, config, requesterId, symbol, deps, refresh),
       };
   if (!fresh) {
     for (const [k, v] of inflight) if (Date.now() - v.at >= COALESCE_MS) inflight.delete(k);
@@ -283,8 +270,7 @@ export async function serveGuidance(
       sendJson(res, 200, market);
       return;
     }
-    const guidance = positionGuidance({ ...market, stake });
-    sendJson(res, 200, { guidance, markdown: guidanceToMarkdown(guidance) });
+    sendJson(res, 200, { market });
   } catch {
     inflight.delete(key);
     // A fixed sentence, never the exception text — a raw error can carry internals (desk-gate.ts).
