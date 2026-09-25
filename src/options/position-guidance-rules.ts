@@ -6,6 +6,7 @@ import type {
   GuidanceCatalyst,
   GuidanceQuote,
   PulseItem,
+  PulseStatus,
   Richness,
 } from "./position-guidance-types.js";
 
@@ -260,3 +261,26 @@ export const PULSE_WORDS: Readonly<Record<string, string>> = {
   filings: "Company filings",
   session: "Market hours",
 };
+
+/** Confidence as a shape — hue never carries it alone (CLAUDE.md, colourblind reader). */
+export const DOTS: Readonly<Record<Confidence, string>> = {
+  high: "●●●",
+  medium: "●●○",
+  low: "●○○",
+  none: "○○○",
+};
+
+/** Freshness as a glyph, always beside its word. */
+export const PULSE_MARK: Readonly<Record<PulseStatus, string>> = {
+  fresh: "✓",
+  aging: "~",
+  stale: "✕",
+};
+
+/** Each expiry verdict, glyph first. */
+export const DTE_WORD = {
+  in: "✓ usable",
+  "too-short": "✕ under 7 days",
+  "after-decision": "✕ after your hold-or-sell date",
+  "spans-print": "✕ crosses earnings",
+} as const;
