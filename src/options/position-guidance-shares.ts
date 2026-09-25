@@ -1,11 +1,11 @@
-import { type LeverContext, lever, why, windowText } from "./position-brief-levers.js";
+import { type LeverContext, lever, why, windowText } from "./position-guidance-levers.js";
 import {
   actionable,
   DECISION_SESSIONS_BEFORE_PRINT,
   usd,
   weekdaysBefore,
-} from "./position-brief-rules.js";
-import type { BriefInputs, BriefReason, LeverCall } from "./position-brief-types.js";
+} from "./position-guidance-rules.js";
+import type { GuidanceInputs, GuidanceReason, LeverCall } from "./position-guidance-types.js";
 
 /**
  * THE SHARES LEVER (#3729) — BUY / HOLD / SELL / STAND ASIDE on the stock itself. Three rules carry
@@ -16,20 +16,20 @@ import type { BriefInputs, BriefReason, LeverCall } from "./position-brief-types
  */
 
 /** The day the hold-through-the-print fork falls due: 5 sessions before the window opens. */
-export function decisionDate(input: BriefInputs): string | undefined {
+export function decisionDate(input: GuidanceInputs): string | undefined {
   return input.earnings
     ? weekdaysBefore(input.earnings.start, DECISION_SESSIONS_BEFORE_PRINT)
     : undefined;
 }
 
-export function ledgerReason(input: BriefInputs): BriefReason {
+export function ledgerReason(input: GuidanceInputs): GuidanceReason {
   return input.ledger
     ? why("LEDGER", `Research: ${input.ledger.stance}`)
     : why("LEDGER", "No research ledger covers this name — nothing licenses a new position.");
 }
 
 /** No shares: the only question is whether research licenses opening one. */
-function nonHolderCall(input: BriefInputs, decision: string | undefined): LeverCall {
+function nonHolderCall(input: GuidanceInputs, decision: string | undefined): LeverCall {
   const { ledger } = input;
   const ledgerWhy = ledgerReason(input);
   if (ledger?.buySignal && actionable(ledger.buyConfidence)) {
@@ -54,7 +54,7 @@ function nonHolderCall(input: BriefInputs, decision: string | undefined): LeverC
 }
 
 /** Inside the S2 zone (decision date → window end): the goal decides flat vs a conscious hold. */
-function decisionZoneCall(input: BriefInputs, end: string): LeverCall {
+function decisionZoneCall(input: GuidanceInputs, end: string): LeverCall {
   const keep = input.stake.goal === "keep-shares";
   return lever({
     lever: "shares",
@@ -71,7 +71,7 @@ function decisionZoneCall(input: BriefInputs, end: string): LeverCall {
       ledgerReason(input),
     ],
     provesWrong: `The print passes inside ${windowText(input)} with a move inside one expected move.`,
-    until: { date: end, why: "the print window closes; re-run the Brief on the new tape" },
+    until: { date: end, why: "the print window closes; refresh the guidance on the new tape" },
   });
 }
 

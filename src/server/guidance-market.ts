@@ -1,10 +1,10 @@
 import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
-import type { BriefQuote, EarningsWindow } from "../options/position-brief-types.js";
+import type { EarningsWindow, GuidanceQuote } from "../options/position-guidance-types.js";
 import { impliedVolatility } from "../options/pricing.js";
 
 /**
- * The Position Brief's market arithmetic (#3729) — pure transforms from what the feed returned to
+ * The position guidance's market arithmetic (#3729) — pure transforms from what the feed returned to
  * what the engine reads. No I/O, no clock; every "no honest answer" is `undefined`, never a guess.
  */
 
@@ -32,7 +32,7 @@ const midOf = (row: OptionChainRow): number | undefined =>
 /**
  * The underlying implied by put-call parity at the strike nearest spot: S ≈ C − P + K·e^(−rT).
  * An independent second read of spot, derived from the option market rather than the IEX tape —
- * if the two disagree by more than a percent, one of them is wrong and the Brief refuses to answer.
+ * if the two disagree by more than a percent, one of them is wrong and the guidance refuses to answer.
  * (American early-exercise premium near the money over a few weeks is cents; the tolerance absorbs it.)
  */
 export function parityImpliedSpot(
@@ -56,14 +56,14 @@ export function parityImpliedSpot(
   return implied > 0 ? implied : undefined;
 }
 
-/** A chain row as the Brief reads it: the bid a seller receives, the IV solved from the mid. */
-export function toBriefQuote(
+/** A chain row as the guidance reads it: the bid a seller receives, the IV solved from the mid. */
+export function toGuidanceQuote(
   row: OptionChainRow,
   expiration: string,
   type: "call" | "put",
   spot: number,
   daysToExpiry: number,
-): BriefQuote {
+): GuidanceQuote {
   const mid = midOf(row);
   const iv =
     mid === undefined
@@ -80,7 +80,7 @@ export function toBriefQuote(
   };
 }
 
-/** Days either side of an unbounded ESTIMATE the Brief treats as the print's window. */
+/** Days either side of an unbounded ESTIMATE the guidance treats as the print's window. */
 export const ESTIMATE_WINDOW_DAYS = 7;
 
 const shift = (date: string, days: number): string => {
@@ -119,7 +119,7 @@ export function earningsWindowOf(print: EarningsPrint | undefined): EarningsWind
 }
 
 /**
- * The print a Brief must respect TODAY: the earliest one whose window has not yet closed. Not
+ * The print a guidance read must respect TODAY: the earliest one whose window has not yet closed. Not
  * `nextPrint`, which drops an estimate the moment its point date passes (and on a UTC date) —
  * while the research-bounded window says the print may still be days away.
  */

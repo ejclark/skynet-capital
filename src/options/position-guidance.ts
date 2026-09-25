@@ -1,31 +1,31 @@
-import { normalizeInputs } from "./position-brief-inputs.js";
-import { buildLadder } from "./position-brief-ladder.js";
-import { cashSecuredPutCall, coveredCallCall } from "./position-brief-levers.js";
+import { normalizeInputs } from "./position-guidance-inputs.js";
+import { buildLadder } from "./position-guidance-ladder.js";
+import { cashSecuredPutCall, coveredCallCall } from "./position-guidance-levers.js";
 import {
   atmIv,
-  BRIEF_DISCLOSURE,
   capConfidence,
   dteStrip,
   etDateOf,
+  GUIDANCE_DISCLOSURE,
   LEVER_NAME,
   pulseOf,
   richnessOf,
-} from "./position-brief-rules.js";
-import { decisionDate, sharesCall } from "./position-brief-shares.js";
+} from "./position-guidance-rules.js";
+import { decisionDate, sharesCall } from "./position-guidance-shares.js";
 import type {
-  BriefInputs,
-  BriefSnapshot,
+  GuidanceInputs,
+  GuidanceSnapshot,
   LeverCall,
-  PositionBrief,
+  PositionGuidance,
   StakeView,
   WaitingOn,
-} from "./position-brief-types.js";
+} from "./position-guidance-types.js";
 
 /**
  * THE POSITION BRIEF ENGINE (#3729) — one pure function from a member's stake plus the live-checked
  * market inputs to the fixed-order template. Deterministic by design, not by thrift: templated,
  * rule-cited lines are auditable in a way generated prose is not, and they cost zero model tokens
- * per Brief. PURE: no I/O, no clock — the caller supplies `now` and each input's pulse status.
+ * per request. PURE: no I/O, no clock — the caller supplies `now` and each input's pulse status.
  */
 
 /**
@@ -33,7 +33,7 @@ import type {
  * information sources to ensure we're not acting on cached/stale information"). A stale input is
  * never shown as if current; it lowers the calls that depend on it.
  */
-function applyPulse(calls: readonly LeverCall[], input: BriefInputs): LeverCall[] {
+function applyPulse(calls: readonly LeverCall[], input: GuidanceInputs): LeverCall[] {
   const spot = pulseOf(input.pulse, "spot");
   const chain = pulseOf(input.pulse, "chain");
   const research = pulseOf(input.pulse, "research");
@@ -86,7 +86,7 @@ function applyPulse(calls: readonly LeverCall[], input: BriefInputs): LeverCall[
   });
 }
 
-function stakeView(input: BriefInputs): StakeView {
+function stakeView(input: GuidanceInputs): StakeView {
   const { stake, spot } = input;
   const shares = stake.shares ?? 0;
   const basis = stake.costBasis;
@@ -102,7 +102,7 @@ function stakeView(input: BriefInputs): StakeView {
   };
 }
 
-function waitingOn(input: BriefInputs, today: string): WaitingOn[] {
+function waitingOn(input: GuidanceInputs, today: string): WaitingOn[] {
   const items: WaitingOn[] = input.catalysts
     .filter((c) => c.date >= today)
     .map((c) => ({ date: c.date, label: c.label, source: c.source }));
@@ -124,14 +124,14 @@ function waitingOn(input: BriefInputs, today: string): WaitingOn[] {
   } else if (e && e.end >= today) {
     items.push({
       date: e.end,
-      label: "Print window closes — re-run the Brief on the new tape",
+      label: "Print window closes — refresh the guidance on the new tape",
       source: e.source,
     });
   }
   return items.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label));
 }
 
-function assumptionLines(input: BriefInputs, retiredWindow: string | undefined): string[] {
+function assumptionLines(input: GuidanceInputs, retiredWindow: string | undefined): string[] {
   return [
     "Premiums are priced at the bid (what a seller receives); the mid is shown for reference only.",
     "Odds are a lognormal model at each contract's own IV — no jumps, no early assignment, no dividends.",
@@ -147,7 +147,7 @@ function assumptionLines(input: BriefInputs, retiredWindow: string | undefined):
   ];
 }
 
-export function positionBrief(raw: BriefInputs): PositionBrief {
+export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
   const today = etDateOf(raw.now);
   const { input, retiredWindow } = normalizeInputs(raw, today);
   const expirations = input.expirations ?? input.chain.map((q) => q.expiration);
@@ -179,31 +179,34 @@ export function positionBrief(raw: BriefInputs): PositionBrief {
     // Stale quotes never render as a ladder: a row priced off them would read as current.
     ladder: pulseOf(input.pulse, "chain")?.status === "stale" ? [] : [...calls.rows, ...puts.rows],
     assumptions: assumptionLines(input, retiredWindow),
-    disclosure: BRIEF_DISCLOSURE,
+    disclosure: GUIDANCE_DISCLOSURE,
   };
 }
 
-/** The slice of a Brief a viewer keeps, to diff against next time. */
-export function snapshotOf(brief: PositionBrief): BriefSnapshot {
+/** The slice of a guidance read a viewer keeps, to diff against next time. */
+export function snapshotOf(guidance: PositionGuidance): GuidanceSnapshot {
   return {
-    asOf: brief.asOf,
-    spot: brief.spot,
-    calls: brief.calls.map((c) => ({ lever: c.lever, call: c.call, confidence: c.confidence })),
-    richness: brief.richness.verdict,
+    asOf: guidance.asOf,
+    spot: guidance.spot,
+    calls: guidance.calls.map((c) => ({ lever: c.lever, call: c.call, confidence: c.confidence })),
+    richness: guidance.richness.verdict,
   };
 }
 
 /** "What changed since you last looked" — plain lines, empty when nothing moved. */
-export function diffBriefs(previous: BriefSnapshot | undefined, brief: PositionBrief): string[] {
+export function diffGuidance(
+  previous: GuidanceSnapshot | undefined,
+  guidance: PositionGuidance,
+): string[] {
   if (!previous) return [];
   const lines: string[] = [];
-  const move = (brief.spot - previous.spot) / previous.spot;
+  const move = (guidance.spot - previous.spot) / previous.spot;
   if (Math.abs(move) >= 0.005) {
     lines.push(
       `Spot ${move > 0 ? "+" : ""}${(move * 100).toFixed(1)}% since ${previous.asOf.slice(0, 10)}.`,
     );
   }
-  for (const now of brief.calls) {
+  for (const now of guidance.calls) {
     const was = previous.calls.find((c) => c.lever === now.lever);
     if (!was) continue;
     if (was.call !== now.call || was.confidence !== now.confidence) {
@@ -212,8 +215,8 @@ export function diffBriefs(previous: BriefSnapshot | undefined, brief: PositionB
       );
     }
   }
-  if (previous.richness !== brief.richness.verdict) {
-    lines.push(`Premium: ${previous.richness} → ${brief.richness.verdict}.`);
+  if (previous.richness !== guidance.richness.verdict) {
+    lines.push(`Premium: ${previous.richness} → ${guidance.richness.verdict}.`);
   }
   return lines;
 }

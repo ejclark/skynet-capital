@@ -4,10 +4,10 @@ import {
   earningsWindowOf,
   parityImpliedSpot,
   realizedVolatility,
-  toBriefQuote,
-} from "../../src/server/brief-market.js";
+  toGuidanceQuote,
+} from "../../src/server/guidance-market.js";
 
-/** The Brief's market arithmetic (#3729), each number checked against a hand-computable case. */
+/** The guidance's market arithmetic (#3729), each number checked against a hand-computable case. */
 
 describe("realizedVolatility", () => {
   it("annualizes the sample stdev of log returns by √252", () => {
@@ -45,12 +45,12 @@ describe("parityImpliedSpot", () => {
   });
 });
 
-describe("toBriefQuote", () => {
+describe("toGuidanceQuote", () => {
   it("solves IV from the mid and keeps the bid a seller receives", () => {
     const price =
       priceOption({ spot: 80, strike: 90, daysToExpiry: 30, volatility: 0.8, type: "call" })
         ?.price ?? 0;
-    const q = toBriefQuote(
+    const q = toGuidanceQuote(
       { occSymbol: "x", strike: 90, bid: price - 0.02, ask: price + 0.02, delta: 0.25 },
       "2026-10-30",
       "call",

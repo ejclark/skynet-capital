@@ -6,8 +6,13 @@ import {
   MAX_SHORT_DELTA,
   MAX_SPREAD_OF_MID,
   MIN_BID,
-} from "./position-brief-rules.js";
-import type { BriefInputs, BriefQuote, DteMark, LadderRow } from "./position-brief-types.js";
+} from "./position-guidance-rules.js";
+import type {
+  DteMark,
+  GuidanceInputs,
+  GuidanceQuote,
+  LadderRow,
+} from "./position-guidance-types.js";
 import { priceOption } from "./pricing.js";
 import { daysToExpiryFrom } from "./single-leg-odds.js";
 import { probabilityAbove, probabilityBelow, probabilityOfTouch } from "./terminal-odds.js";
@@ -41,7 +46,7 @@ const emptyDrops = (): Record<LadderDrop, number> => ({
 });
 
 /** PRICE-AT-BID: a quote a seller could actually hit — bid ≥ a dime, spread ≤ 15% of mid, IV solved. */
-function tradable(q: BriefQuote): { bid: number; mid: number; iv: number } | undefined {
+function tradable(q: GuidanceQuote): { bid: number; mid: number; iv: number } | undefined {
   const { bid, ask, iv } = q;
   if (bid === undefined || ask === undefined || iv === undefined) return undefined;
   if (!(bid >= MIN_BID && ask >= bid && iv > 0)) return undefined;
@@ -52,14 +57,14 @@ function tradable(q: BriefQuote): { bid: number; mid: number; iv: number } | und
 
 interface Side {
   readonly lever: LadderRow["lever"];
-  readonly type: BriefQuote["type"];
+  readonly type: GuidanceQuote["type"];
   /** Contracts this strike supports, or 0 when the stake cannot cover it. */
   readonly contracts: (strike: number) => number;
   /** A rule-named reason this strike is out, or undefined when it may be sold. */
   readonly reject: (strike: number) => LadderDrop | undefined;
 }
 
-function sideFor(lever: LadderRow["lever"], input: BriefInputs): Side {
+function sideFor(lever: LadderRow["lever"], input: GuidanceInputs): Side {
   const { spot, stake } = input;
   if (lever === "covered-calls") {
     const lots = Math.floor((stake.shares ?? 0) / 100);
@@ -91,9 +96,9 @@ function sideFor(lever: LadderRow["lever"], input: BriefInputs): Side {
 
 function rowFor(
   side: Side,
-  q: BriefQuote,
+  q: GuidanceQuote,
   mark: DteMark,
-  input: BriefInputs,
+  input: GuidanceInputs,
   drops: Record<LadderDrop, number>,
 ): LadderRow | undefined {
   const drop = (reason: LadderDrop): undefined => {
@@ -155,7 +160,7 @@ function rowFor(
 /** The ladder for one lever: top `LADDER_DEPTH` strikes by yield-at-bid, per in-band expiry. */
 export function buildLadder(
   lever: LadderRow["lever"],
-  input: BriefInputs,
+  input: GuidanceInputs,
   strip: readonly DteMark[],
 ): LadderResult {
   const side = sideFor(lever, input);

@@ -1,13 +1,13 @@
-import { headlineRow, type LadderDrop, type LadderResult } from "./position-brief-ladder.js";
-import { actionable, capConfidence, pct, richnessCap, usd } from "./position-brief-rules.js";
+import { headlineRow, type LadderDrop, type LadderResult } from "./position-guidance-ladder.js";
+import { actionable, capConfidence, pct, richnessCap, usd } from "./position-guidance-rules.js";
 import type {
-  BriefInputs,
-  BriefReason,
   Confidence,
   DteMark,
+  GuidanceInputs,
+  GuidanceReason,
   LeverCall,
   Richness,
-} from "./position-brief-types.js";
+} from "./position-guidance-types.js";
 
 /**
  * THE THREE LEVER CALLS — shares, covered calls, cash-secured puts (#3729). Each call is graded,
@@ -17,15 +17,15 @@ import type {
  */
 
 export interface LeverContext {
-  readonly input: BriefInputs;
+  readonly input: GuidanceInputs;
   readonly today: string;
   readonly strip: readonly DteMark[];
   readonly richness: Richness;
 }
 
-export const why = (rule: BriefReason["rule"], text: string): BriefReason => ({ rule, text });
+export const why = (rule: GuidanceReason["rule"], text: string): GuidanceReason => ({ rule, text });
 
-export function windowText(input: BriefInputs): string {
+export function windowText(input: GuidanceInputs): string {
   const e = input.earnings;
   if (!e) return "no print on the calendar";
   const span = e.start === e.end ? e.start : `${e.start}–${e.end}`;
@@ -45,7 +45,7 @@ const DROP_TEXT: Readonly<Record<LadderDrop, string>> = {
   cash: "not covered by your cash",
 };
 
-function dropWhy(result: LadderResult): BriefReason {
+function dropWhy(result: LadderResult): GuidanceReason {
   const top = (Object.entries(result.dropped) as [LadderDrop, number][])
     .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1])
@@ -57,7 +57,7 @@ function dropWhy(result: LadderResult): BriefReason {
   );
 }
 
-function bandWhy(ctx: LeverContext): BriefReason | undefined {
+function bandWhy(ctx: LeverContext): GuidanceReason | undefined {
   const inBand = ctx.strip.filter((m) => m.verdict === "in");
   const last = inBand.at(-1);
   if (!last) return undefined;
@@ -72,7 +72,7 @@ function bandWhy(ctx: LeverContext): BriefReason | undefined {
   );
 }
 
-function richWhy(r: Richness): BriefReason {
+function richWhy(r: Richness): GuidanceReason {
   if (r.basis === "iv-rank")
     return why("RICHNESS", `IV rank ${r.ivRank?.toFixed(0)} — premium is ${r.verdict}.`);
   if (r.basis === "iv-vs-realized" && r.atmIv !== undefined && r.realizedVol !== undefined) {
@@ -169,7 +169,7 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
           date: last,
           why: "last expiry before the print window — stop writing until the print passes",
         }
-      : { date: last, why: "longest in-band expiry — re-run the Brief before rolling" },
+      : { date: last, why: "longest in-band expiry — refresh the guidance before rolling" },
   });
 }
 
@@ -190,7 +190,7 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
     ? {
         until: {
           date: earnings.end,
-          why: "the print resolves the biggest known unknown — re-run the Brief after it",
+          why: "the print resolves the biggest known unknown — refresh the guidance after it",
         },
       }
     : {};

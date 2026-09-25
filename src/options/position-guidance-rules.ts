@@ -1,17 +1,17 @@
 import { CHEAP_IV_RANK, RICH_IV_RANK } from "./outlook.js";
 import type {
-  BriefCatalyst,
-  BriefQuote,
   Confidence,
   DteMark,
   EarningsWindow,
+  GuidanceCatalyst,
+  GuidanceQuote,
   PulseItem,
   Richness,
-} from "./position-brief-types.js";
+} from "./position-guidance-types.js";
 
 /**
  * THE BRIEF'S RULES — every threshold in one place, each with the reason it exists (#3729). The
- * rule ids are what a Brief's "why" lines cite, so a reader can trace any call back to a line here.
+ * rule ids are what a guidance read's "why" lines cite, so a reader can trace any call back to a line here.
  * PURE: no I/O, no clock.
  */
 
@@ -41,7 +41,7 @@ export const DECISION_SESSIONS_BEFORE_PRINT = 5;
 /** Ladder rows kept per expiry, per lever. */
 export const LADDER_DEPTH = 3;
 
-export const BRIEF_DISCLOSURE =
+export const GUIDANCE_DISCLOSURE =
   "Educational · modelled mechanics, not financial advice. Quotes are indicative and re-checked " +
   "live by the ticket before any order; odds are a lognormal model with no jumps.";
 
@@ -89,7 +89,7 @@ export function dteStrip(
   expirations: readonly string[],
   today: string,
   earnings: EarningsWindow | undefined,
-  catalysts: readonly BriefCatalyst[],
+  catalysts: readonly GuidanceCatalyst[],
 ): DteMark[] {
   return [...new Set(expirations)].sort().flatMap((expiration) => {
     const dte = daysBetween(today, expiration);
@@ -105,7 +105,7 @@ export function dteStrip(
 
 /** The at-the-money IV of the nearest in-band expiry: the mean IV of the strikes closest to spot. */
 export function atmIv(
-  chain: readonly BriefQuote[],
+  chain: readonly GuidanceQuote[],
   spot: number,
   expiration: string | undefined,
 ): number | undefined {
@@ -161,7 +161,7 @@ export const HEADLINE_DELTA = 0.2;
 /** Prefer at least three weeks: time decay is fastest relative to risk from here out (≤ the print cap). */
 export const HEADLINE_MIN_DTE = 21;
 
-/** Display names, in the Brief's fixed lever order. */
+/** Display names, in the guidance's fixed lever order. */
 export const LEVER_NAME = {
   shares: "Shares",
   "covered-calls": "Covered calls",

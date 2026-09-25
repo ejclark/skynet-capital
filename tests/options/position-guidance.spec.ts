@@ -1,23 +1,23 @@
-import { diffBriefs, positionBrief, snapshotOf } from "../../src/options/position-brief.js";
-import { buildLadder } from "../../src/options/position-brief-ladder.js";
+import { diffGuidance, positionGuidance, snapshotOf } from "../../src/options/position-guidance.js";
+import { buildLadder } from "../../src/options/position-guidance-ladder.js";
 import {
   dteStrip,
   etDateOf,
   MAX_SHORT_DELTA,
   richnessOf,
   weekdaysBefore,
-} from "../../src/options/position-brief-rules.js";
-import type { BriefInputs } from "../../src/options/position-brief-types.js";
+} from "../../src/options/position-guidance-rules.js";
+import type { GuidanceInputs } from "../../src/options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import { probabilityAbove } from "../../src/options/terminal-odds.js";
-import { CHAIN, EXPIRATIONS, IV, inputs, NOW, quoteAt, SPOT } from "./position-brief-fixture.js";
+import { CHAIN, EXPIRATIONS, IV, inputs, NOW, quoteAt, SPOT } from "./position-guidance-fixture.js";
 
 /**
- * The Position Brief engine (#3729). Every number is checked against arithmetic a desk can redo by
+ * The position guidance engine (#3729). Every number is checked against arithmetic a desk can redo by
  * hand; every rule id has a case that fires it; every pulse row has a case proving its demotion.
  */
 
-const byLever = (b: ReturnType<typeof positionBrief>) => ({
+const byLever = (b: ReturnType<typeof positionGuidance>) => ({
   shares: b.calls[0],
   cc: b.calls[1],
   csp: b.calls[2],
@@ -110,7 +110,7 @@ describe("the ladder, priced at the bid", () => {
 });
 
 describe("the three calls — the CRWV fixture", () => {
-  const { shares, cc, csp } = byLever(positionBrief(inputs()));
+  const { shares, cc, csp } = byLever(positionGuidance(inputs()));
 
   it("HOLDs shares until 5 sessions before the print window, and names the fork", () => {
     expect(weekdaysBefore("2026-11-09", 5)).toBe("2026-11-02");
@@ -139,7 +139,7 @@ describe("the three calls — the CRWV fixture", () => {
   });
 
   it("renders the three levers in fixed order", () => {
-    expect(positionBrief(inputs()).calls.map((c) => c.lever)).toEqual([
+    expect(positionGuidance(inputs()).calls.map((c) => c.lever)).toEqual([
       "shares",
       "covered-calls",
       "cash-secured-puts",
@@ -149,50 +149,56 @@ describe("the three calls — the CRWV fixture", () => {
 
 describe("the stake shapes the calls", () => {
   it("STRIKE-BASIS: with basis above spot, no call strike sits below it", () => {
-    const brief = positionBrief(inputs({ stake: { shares: 400, costBasis: 95, goal: "income" } }));
-    const calls = brief.ladder.filter((r) => r.lever === "covered-calls");
+    const guidance = positionGuidance(
+      inputs({ stake: { shares: 400, costBasis: 95, goal: "income" } }),
+    );
+    const calls = guidance.ladder.filter((r) => r.lever === "covered-calls");
     expect(calls.every((r) => r.strike >= 95)).toBe(true);
   });
 
   it("…unless the goal is exit, when the basis stops protecting strikes", () => {
-    const brief = positionBrief(inputs({ stake: { shares: 400, costBasis: 95, goal: "exit" } }));
-    expect(brief.ladder.some((r) => r.lever === "covered-calls" && r.strike < 95)).toBe(true);
-    expect(brief.calls[0]?.call).toBe("SELL");
+    const guidance = positionGuidance(
+      inputs({ stake: { shares: 400, costBasis: 95, goal: "exit" } }),
+    );
+    expect(guidance.ladder.some((r) => r.lever === "covered-calls" && r.strike < 95)).toBe(true);
+    expect(guidance.calls[0]?.call).toBe("SELL");
   });
 
   it("covered calls are NOT AVAILABLE under 100 shares", () => {
-    expect(positionBrief(inputs({ stake: { shares: 50, goal: "income" } })).calls[1]?.call).toBe(
+    expect(positionGuidance(inputs({ stake: { shares: 50, goal: "income" } })).calls[1]?.call).toBe(
       "NOT AVAILABLE",
     );
   });
 
   it("STRIKE-OWN: no put strike above the happy-to-own price", () => {
-    const brief = positionBrief(
+    const guidance = positionGuidance(
       inputs({ stake: { cash: 40_000, goal: "income", happyToOwnAt: 70 } }),
     );
     expect(
-      brief.ladder.filter((r) => r.lever === "cash-secured-puts").every((r) => r.strike <= 70),
+      guidance.ladder.filter((r) => r.lever === "cash-secured-puts").every((r) => r.strike <= 70),
     ).toBe(true);
   });
 
   it("a non-holder with no buy signal is told to STAND ASIDE", () => {
-    expect(positionBrief(inputs({ stake: { goal: "income" } })).calls[0]?.call).toBe("STAND ASIDE");
+    expect(positionGuidance(inputs({ stake: { goal: "income" } })).calls[0]?.call).toBe(
+      "STAND ASIDE",
+    );
   });
 });
 
 describe("richness", () => {
   it("cheap premium (implied below realized) turns WRITE into WAIT", () => {
-    expect(positionBrief(inputs({ realizedVol: 1.0 })).calls[1]?.call).toBe("WAIT");
+    expect(positionGuidance(inputs({ realizedVol: 1.0 })).calls[1]?.call).toBe("WAIT");
   });
 
   it("a rich IV rank lifts the covered-call cap to high", () => {
-    expect(positionBrief(inputs({ ivRank: 70 })).calls[1]?.confidence).toBe("high");
+    expect(positionGuidance(inputs({ ivRank: 70 })).calls[1]?.confidence).toBe("high");
   });
 
   it("no rank and no realized vol means unknown, capped low — a stand-aside", () => {
     expect(richnessOf(undefined, 0.8, undefined).verdict).toBe("unknown");
     const { realizedVol: _omit, ...rest } = inputs();
-    expect(positionBrief(rest as BriefInputs).calls[1]).toMatchObject({
+    expect(positionGuidance(rest as GuidanceInputs).calls[1]).toMatchObject({
       call: "WAIT",
       confidence: "low",
     });
@@ -204,11 +210,11 @@ describe("the S2 decision zone", () => {
   const chain = EXPIRATIONS.flatMap((e) => [quoteAt(e, 90, "call", zone)]);
 
   it("an income holder goes flat into the print", () => {
-    expect(positionBrief(inputs({ now: zone, chain })).calls[0]?.call).toBe("SELL");
+    expect(positionGuidance(inputs({ now: zone, chain })).calls[0]?.call).toBe("SELL");
   });
 
   it("a keep-shares holder HOLDs as a conscious call", () => {
-    const b = positionBrief(
+    const b = positionGuidance(
       inputs({ now: zone, chain, stake: { shares: 400, goal: "keep-shares" } }),
     );
     expect(b.calls[0]).toMatchObject({ call: "HOLD", until: { date: "2026-11-16" } });
@@ -225,25 +231,25 @@ describe("pulse — stale inputs demote, never masquerade", () => {
     });
 
   it("an unverified spot means no honest answer on every lever", () => {
-    const b = positionBrief(withPulse("spot", "stale", "IEX and parity disagree by 2.1%"));
+    const b = positionGuidance(withPulse("spot", "stale", "IEX and parity disagree by 2.1%"));
     expect(b.calls.every((c) => c.call === "NO ANSWER" && c.confidence === "none")).toBe(true);
   });
 
   it("stale quotes turn a WRITE into a WAIT", () => {
-    expect(positionBrief(withPulse("chain", "stale")).calls[1]).toMatchObject({
+    expect(positionGuidance(withPulse("chain", "stale")).calls[1]).toMatchObject({
       call: "WAIT",
       confidence: "none",
     });
   });
 
   it("stale research caps every call low — and low is a stand-aside", () => {
-    const b = positionBrief(withPulse("research", "stale", "8 days old"));
+    const b = positionGuidance(withPulse("research", "stale", "8 days old"));
     expect(b.calls[1]).toMatchObject({ call: "WAIT", confidence: "low" });
     expect(b.calls[1]?.reasons[0]?.rule).toBe("PULSE");
   });
 
   it("new filings since research cap at medium and lead the why", () => {
-    const b = positionBrief(
+    const b = positionGuidance(
       inputs({
         ivRank: 70,
         pulse: [
@@ -257,7 +263,7 @@ describe("pulse — stale inputs demote, never masquerade", () => {
   });
 
   it("a closed market turns acting calls into plans for the open", () => {
-    const b = positionBrief(inputs({ sessionOpen: false }));
+    const b = positionGuidance(inputs({ sessionOpen: false }));
     expect(b.calls[1]).toMatchObject({ call: "WRITE", atOpen: true });
     expect(b.calls[0]?.atOpen).toBe(false); // HOLD is not an action
   });
@@ -265,10 +271,10 @@ describe("pulse — stale inputs demote, never masquerade", () => {
 
 describe("what changed since you last looked", () => {
   it("is empty on a first visit and names each moved call after", () => {
-    const first = positionBrief(inputs());
-    expect(diffBriefs(undefined, first)).toEqual([]);
-    const next = positionBrief(inputs({ realizedVol: 1.0, spot: 84, chain: CHAIN }));
-    const lines = diffBriefs(snapshotOf(first), next);
+    const first = positionGuidance(inputs());
+    expect(diffGuidance(undefined, first)).toEqual([]);
+    const next = positionGuidance(inputs({ realizedVol: 1.0, spot: 84, chain: CHAIN }));
+    const lines = diffGuidance(snapshotOf(first), next);
     expect(lines).toContain("Spot +5.0% since 2026-09-25.");
     expect(lines).toContain("Covered calls: WRITE (medium) → WAIT (medium).");
     expect(lines).toContain("Premium: rich → cheap.");
@@ -277,8 +283,8 @@ describe("what changed since you last looked", () => {
 
 describe("the headline strike", () => {
   it("is the ~0.20-delta row at 3+ weeks, not the highest annualized yield", () => {
-    const { cc, csp } = byLever(positionBrief(inputs()));
-    const b = positionBrief(inputs());
+    const { cc, csp } = byLever(positionGuidance(inputs()));
+    const b = positionGuidance(inputs());
     const headline = cc?.reasons[0]?.text ?? "";
     const quoted = b.ladder.find(
       (r) =>
@@ -297,7 +303,7 @@ describe("the headline strike", () => {
 
 describe("review regressions — calls a member could act on must never be false", () => {
   it("a CSP WRITE on a licensed buy is falsified by the signal's withdrawal, and says why", () => {
-    const b = positionBrief(
+    const b = positionGuidance(
       inputs({
         ivRank: 70,
         stake: { cash: 40_000, goal: "income", happyToOwnAt: 75 },
@@ -311,7 +317,7 @@ describe("review regressions — calls a member could act on must never be false
 
   it("with no print on the calendar, nothing claims a print window", () => {
     const { earnings: _none, ...rest } = inputs();
-    const b = positionBrief(rest as BriefInputs);
+    const b = positionGuidance(rest as GuidanceInputs);
     const text = JSON.stringify(b.calls);
     expect(text).not.toContain("print window");
     expect(b.dteStrip.every((m) => m.verdict !== "spans-print")).toBe(true);
@@ -319,9 +325,9 @@ describe("review regressions — calls a member could act on must never be false
 
   it("symbol-specific print evidence is an input — absent, only the generic caveat renders", () => {
     const { printEvidence: _none, ...rest } = inputs({ symbol: "AAPL" });
-    const b = positionBrief(rest as BriefInputs);
+    const b = positionGuidance(rest as GuidanceInputs);
     expect(JSON.stringify(b)).not.toContain("FT-15");
-    expect(positionBrief(inputs()).calls[1]?.reasons.some((r) => r.text.includes("FT-15"))).toBe(
+    expect(positionGuidance(inputs()).calls[1]?.reasons.some((r) => r.text.includes("FT-15"))).toBe(
       true,
     );
   });
@@ -331,7 +337,7 @@ describe("review regressions — calls a member could act on must never be false
     const chain = ["2026-11-27", "2026-12-04"].flatMap((e) =>
       [90, 95, 100].map((k) => quoteAt(e, k, "call", after)),
     );
-    const b = positionBrief(inputs({ now: after, chain }));
+    const b = positionGuidance(inputs({ now: after, chain }));
     expect(b.dteStrip.every((m) => m.verdict === "in")).toBe(true);
     expect(b.waitingOn.some((w) => w.label.startsWith("Print window"))).toBe(false);
     expect(b.calls[0]?.until).toBeUndefined();
@@ -339,21 +345,21 @@ describe("review regressions — calls a member could act on must never be false
   });
 
   it("mid-window, the waiting list shows the window closing, not opening", () => {
-    const b = positionBrief(inputs({ now: "2026-11-12T15:00:00Z", chain: [] }));
+    const b = positionGuidance(inputs({ now: "2026-11-12T15:00:00Z", chain: [] }));
     expect(b.waitingOn.map((w) => w.label)).toContain(
-      "Print window closes — re-run the Brief on the new tape",
+      "Print window closes — refresh the guidance on the new tape",
     );
   });
 
   it("a zero cost basis is treated as not given — never Infinity", () => {
-    const b = positionBrief(inputs({ stake: { shares: 400, costBasis: 0, goal: "income" } }));
+    const b = positionGuidance(inputs({ stake: { shares: 400, costBasis: 0, goal: "income" } }));
     expect(b.stake.costBasis).toBeUndefined();
     expect(JSON.stringify(b)).not.toContain("null");
     expect(b.ladder.every((r) => Number.isFinite(r.returnIfCalled ?? 0))).toBe(true);
   });
 
   it("stale quotes demote every option lever and blank the ladder", () => {
-    const b = positionBrief(
+    const b = positionGuidance(
       inputs({
         pulse: [
           ...inputs().pulse.filter((p) => p.id !== "chain"),

@@ -1,11 +1,11 @@
 /**
  * THE POSITION BRIEF — the template contract (#3729). One fixed shape, rendered identically by the
- * React component, the markdown renderer (`position-brief-markdown.ts`), the companion and an issue
+ * React component, the markdown renderer (`position-guidance-markdown.ts`), the companion and an issue
  * comment. The fixed order is the point: a member scanning the same sections in the same place on
  * every visit reads a change at a glance (Eric, 2026-09-25: "a standardize template/form … to
  * quickly parse information over repetition/time").
  *
- * The Brief is the research call sheet (`docs/process/EVENT-RESEARCH.md` — Call · Confidence · Why
+ * Position guidance is the research call sheet (`docs/process/EVENT-RESEARCH.md` — Call · Confidence · Why
  * · Proves it wrong), keyed by LEVER instead of by horizon and personalised by the member's stake.
  * It follows that contract rather than `recommend.ts`'s "a list, never a suggestion": calls are
  * graded, a low grade renders as a stand-aside (never a small bet), and every call carries the
@@ -21,7 +21,7 @@ export type PulseStatus = "fresh" | "aging" | "stale";
 /**
  * The inputs the pulse strip reports on. The engine never reads a clock (it stays pure): the
  * server measures each input against its live source and hands the status in; the engine only
- * applies the demotion each status carries (see `applyPulse` in `position-brief-rules.ts`).
+ * applies the demotion each status carries (see `applyPulse` in `position-guidance-rules.ts`).
  */
 export type PulseInputId = "spot" | "chain" | "research" | "earnings-date" | "filings" | "session";
 
@@ -37,15 +37,15 @@ export interface PulseItem {
 }
 
 /** What the member wants out of the position — it changes which calls are sensible. */
-export type BriefGoal = "income" | "keep-shares" | "exit";
+export type GuidanceGoal = "income" | "keep-shares" | "exit";
 
 /** The member's stake. Every field optional: a cash-only member has no shares, a holder may have no cash. */
-export interface BriefStake {
+export interface GuidanceStake {
   readonly shares?: number;
   /** Average cost per share. Shapes strikes (never below basis); never drives SELL — sunk cost. */
   readonly costBasis?: number;
   readonly cash?: number;
-  readonly goal: BriefGoal;
+  readonly goal: GuidanceGoal;
   /** The price the member would happily own more at — the ceiling for a cash-secured put strike. */
   readonly happyToOwnAt?: number;
   /** Whole-portfolio value, for the concentration line. */
@@ -53,7 +53,7 @@ export interface BriefStake {
 }
 
 /** One listed contract as the feed quoted it. Bid is what a SELLER receives — every yield uses it. */
-export interface BriefQuote {
+export interface GuidanceQuote {
   readonly expiration: string;
   readonly strike: number;
   readonly type: "call" | "put";
@@ -78,7 +78,7 @@ export interface EarningsWindow {
 }
 
 /** A dated event the calls are waiting on (a conference, a peer's print, an IR announcement). */
-export interface BriefCatalyst {
+export interface GuidanceCatalyst {
   readonly date: string;
   readonly label: string;
   readonly source: string;
@@ -94,14 +94,14 @@ export interface LedgerStance {
   readonly source: string;
 }
 
-export interface BriefInputs {
+export interface GuidanceInputs {
   readonly symbol: string;
   /** ISO-8601. Supplied by the caller — the engine has no clock. */
   readonly now: string;
   readonly spot: number;
   readonly sessionOpen: boolean;
-  readonly stake: BriefStake;
-  readonly chain: readonly BriefQuote[];
+  readonly stake: GuidanceStake;
+  readonly chain: readonly GuidanceQuote[];
   /**
    * Every listed expiration, when the caller fetched quotes for only some of them — the strip must
    * still show an expiry as "spans print" even though no one should price it. Defaults to the
@@ -117,10 +117,10 @@ export interface BriefInputs {
    * This name's own researched finding on how its options price its prints, quoted from its ledger
    * (CRWV: "its options have underpriced its print moves — Q2 implied ~15.5% vs ~18.6% realized
    * (FT-15)"). Symbol-specific evidence is an INPUT, never baked into the engine's text; absent, the
-   * Brief falls back to the generic model caveat.
+   * guidance falls back to the generic model caveat.
    */
   readonly printEvidence?: string;
-  readonly catalysts: readonly BriefCatalyst[];
+  readonly catalysts: readonly GuidanceCatalyst[];
   readonly ledger?: LedgerStance;
   readonly pulse: readonly PulseItem[];
   /** Risk-free rate for the odds; defaults to 0 like the rest of `src/options/`. */
@@ -147,7 +147,7 @@ export type RuleId =
   | "SIZE"
   | "PULSE";
 
-export interface BriefReason {
+export interface GuidanceReason {
   readonly rule: RuleId;
   readonly text: string;
 }
@@ -157,7 +157,7 @@ export interface LeverCall {
   readonly call: SharesCall | OptionCall;
   readonly confidence: Confidence;
   /** At most three, most important first. */
-  readonly reasons: readonly BriefReason[];
+  readonly reasons: readonly GuidanceReason[];
   /** The dated observation that would prove this call wrong. */
   readonly provesWrong: string;
   /** "Until when": the date the next decision is due, and what we are waiting to see. */
@@ -216,14 +216,14 @@ export interface WaitingOn {
   readonly source: string;
 }
 
-export interface StakeView extends BriefStake {
+export interface StakeView extends GuidanceStake {
   readonly unrealizedPnl?: number;
   readonly unrealizedPct?: number;
   /** Share of the portfolio in this one name, 0..1. */
   readonly concentration?: number;
 }
 
-export interface PositionBrief {
+export interface PositionGuidance {
   readonly symbol: string;
   readonly asOf: string;
   readonly spot: number;
@@ -240,8 +240,8 @@ export interface PositionBrief {
   readonly disclosure: string;
 }
 
-/** The minimal slice of a Brief kept per viewer to answer "what changed since you last looked". */
-export interface BriefSnapshot {
+/** The minimal slice of a guidance read kept per viewer to answer "what changed since you last looked". */
+export interface GuidanceSnapshot {
   readonly asOf: string;
   readonly spot: number;
   readonly calls: readonly {

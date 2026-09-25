@@ -1,5 +1,5 @@
 /**
- * SEC EDGAR 8-K filings for one symbol — the Position Brief's "has anything material been filed
+ * SEC EDGAR 8-K filings for one symbol — the position guidance's "has anything material been filed
  * since the research was last worked?" check (#3729). The primary source, the same one
  * `scripts/research/market-data.mjs` reads for print dates: `company_tickers.json` for the CIK,
  * then `data.sec.gov/submissions/CIK##########.json` for the recent filings.

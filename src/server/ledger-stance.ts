@@ -1,8 +1,8 @@
-import type { Confidence } from "../options/position-brief-types.js";
+import type { Confidence } from "../options/position-guidance-types.js";
 import { todayCallOf } from "./research-event-calls.js";
 
 /**
- * WHAT A RESEARCH LEDGER CURRENTLY SAYS, as the Position Brief needs it (#3729): when it was last
+ * WHAT A RESEARCH LEDGER CURRENTLY SAYS, as the position guidance needs it (#3729): when it was last
  * assessed, the price it was assessed at, its nearest-horizon call, and whether it licenses a BUY.
  * Pure markdown reading over the ledger contract (`docs/research/events/TEMPLATE.md`) — the same
  * decision header `research-event-calls.ts` parses for the shelf.

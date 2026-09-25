@@ -1,6 +1,6 @@
 import { EdgarFilings, FILINGS_TTL_MS } from "../../src/adapters/edgar-filings.js";
 
-/** EDGAR 8-Ks for the Brief's filings pulse (#3729): primary source, fail-soft, briefly cached. */
+/** EDGAR 8-Ks for the guidance's filings pulse (#3729): primary source, fail-soft, briefly cached. */
 
 const tickers = { "0": { ticker: "CRWV", cik_str: 1769628 } };
 const submissions = {

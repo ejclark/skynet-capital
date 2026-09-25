@@ -1,10 +1,10 @@
-import { LEVER_NAME, pct, usd } from "./position-brief-rules.js";
-import type { Confidence, PositionBrief, PulseStatus } from "./position-brief-types.js";
+import { LEVER_NAME, pct, usd } from "./position-guidance-rules.js";
+import type { Confidence, PositionGuidance, PulseStatus } from "./position-guidance-types.js";
 
 /**
  * THE BRIEF AS MARKDOWN — the same fixed-order template the UI renders, for chat, the companion and
  * issue comments, at zero model tokens (#3729). Section order and headings are a contract pinned by
- * `tests/options/position-brief-markdown.spec.ts`; every section always renders, and an empty one
+ * `tests/options/position-guidance-markdown.spec.ts`; every section always renders, and an empty one
  * says why rather than disappearing (a missing section reads as "nothing to see", which is a claim).
  *
  * Hue never carries meaning (a standing reader is red/green colourblind — CLAUDE.md): confidence and
@@ -29,12 +29,12 @@ const DTE_WORD = {
 /** Escape the one character that breaks a table cell. */
 const tableCell = (s: string): string => s.replaceAll("|", "\\|");
 
-function header(b: PositionBrief): string[] {
+function header(b: PositionGuidance): string[] {
   const session = b.sessionOpen ? "market open" : "market closed — quotes as of close";
   return [`## ${b.symbol} · ${usd(b.spot)} · as of ${b.asOf} · ${session}`, ""];
 }
 
-function pulse(b: PositionBrief): string[] {
+function pulse(b: PositionGuidance): string[] {
   const rows = b.pulse.map(
     (p) =>
       `| ${PULSE_MARK[p.status]} ${p.status} | ${p.id} | ${tableCell(p.source)} | ${p.asOf ?? "—"} | ${tableCell(p.note)} |`,
@@ -49,7 +49,7 @@ function pulse(b: PositionBrief): string[] {
   ];
 }
 
-function stake(b: PositionBrief): string[] {
+function stake(b: PositionGuidance): string[] {
   const s = b.stake;
   const parts = [
     `Shares **${s.shares ?? 0}**`,
@@ -65,7 +65,7 @@ function stake(b: PositionBrief): string[] {
   return ["### 2 · Your stake", "", parts.join(" · "), ""];
 }
 
-function calls(b: PositionBrief): string[] {
+function calls(b: PositionGuidance): string[] {
   const rows = b.calls.map((c) => {
     const call = `**${c.call}**${c.atOpen ? " _(plan for the open)_" : ""}`;
     const reasons = c.reasons.map((r) => `${tableCell(r.text)} \`${r.rule}\``).join("<br>");
@@ -82,7 +82,7 @@ function calls(b: PositionBrief): string[] {
   ];
 }
 
-function waiting(b: PositionBrief): string[] {
+function waiting(b: PositionGuidance): string[] {
   return [
     "### 4 · Until / waiting on",
     "",
@@ -95,7 +95,7 @@ function waiting(b: PositionBrief): string[] {
   ];
 }
 
-function strip(b: PositionBrief): string[] {
+function strip(b: PositionGuidance): string[] {
   return [
     "### 5 · DTE strip",
     "",
@@ -113,7 +113,7 @@ function strip(b: PositionBrief): string[] {
   ];
 }
 
-function ladder(b: PositionBrief): string[] {
+function ladder(b: PositionGuidance): string[] {
   const rows = b.ladder.map((r) => {
     const kind = r.lever === "covered-calls" ? "call" : "put";
     const outcome =
@@ -140,14 +140,14 @@ function ladder(b: PositionBrief): string[] {
 function changes(lines: readonly string[] | undefined): string[] {
   const body =
     lines === undefined
-      ? ["_First Brief for this symbol — nothing to compare yet._"]
+      ? ["_First look at this symbol — nothing to compare yet._"]
       : lines.length
         ? lines.map((l) => `- ${l}`)
         : ["_Nothing moved since you last looked._"];
   return ["### 7 · What changed since you last looked", "", ...body, ""];
 }
 
-function assumptions(b: PositionBrief): string[] {
+function assumptions(b: PositionGuidance): string[] {
   const r = b.richness;
   const richLine =
     r.basis === "iv-rank"
@@ -164,17 +164,20 @@ function assumptions(b: PositionBrief): string[] {
   ];
 }
 
-/** Render a Brief. `changed` is `diffBriefs(previous, brief)` — undefined on a first visit. */
-export function briefToMarkdown(brief: PositionBrief, changed?: readonly string[]): string {
+/** Render guidance. `changed` is `diffGuidance(previous, guidance)` — undefined on a first visit. */
+export function guidanceToMarkdown(
+  guidance: PositionGuidance,
+  changed?: readonly string[],
+): string {
   return [
-    ...header(brief),
-    ...pulse(brief),
-    ...stake(brief),
-    ...calls(brief),
-    ...waiting(brief),
-    ...strip(brief),
-    ...ladder(brief),
+    ...header(guidance),
+    ...pulse(guidance),
+    ...stake(guidance),
+    ...calls(guidance),
+    ...waiting(guidance),
+    ...strip(guidance),
+    ...ladder(guidance),
     ...changes(changed),
-    ...assumptions(brief),
+    ...assumptions(guidance),
   ].join("\n");
 }
