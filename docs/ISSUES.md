@@ -135,11 +135,11 @@ once; this section is only what differs for issues.
 | Issue type | The picture that earns its place |
 |---|---|
 | Bug on a visual surface | the member's screenshot / clip — already the highest-value field on the form |
-| Plan or multi-slice story | `flowchart LR` of the end-state path (join → approve → connect → trade) |
+| Plan or multi-slice story | `flowchart` of the slices and what unlocks what — this PR's edges thick |
+| A plan's lifecycle (a gate, a mode, a rung) | `stateDiagram-v2` — each guarded transition is one EARS line |
 | New route or request path | `sequenceDiagram` |
 | Gate, mode, or lifecycle change | `stateDiagram-v2` |
-| Options / trade-offs to settle | a table: option · what you get · what it costs |
-| Idea, one-liner, small ask | **waived** — `Picture: waived — one-line ask` |
+| A proposed, not-yet-built diagram | any of the above with `config: { look: handDrawn }` — the sketch register — captioned as proposed |
 
 Two issue-specific cautions:
 
@@ -167,7 +167,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | above-fold budget | ≤1,200 chars before the first fold | ~one phone screen |
 | bullets | ≤120 chars each | matches `ship.sh checkbody` |
 | duplicate blocks | no paragraph repeated verbatim | #455 shipped its whole body twice |
-| mermaid | stable types only | a syntax error renders as the opening frame |
+| mermaid | every block parses under GitHub's own Mermaid (`scripts/mermaid-lint.mjs`) | a syntax error renders as the opening frame |
 | `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤80 chars, not `Fix bug`-class | Google's rule, their anti-patterns |

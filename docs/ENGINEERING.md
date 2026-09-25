@@ -241,7 +241,7 @@ research behind it: [`ISSUES.md`](ISSUES.md); gate: `npm run issue:lint`; drill:
 picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scripts/ship.sh checkbody`):
 
 1. **The picture** — the fridge rule: something judgeable by eye in ~10 seconds, before any prose.
-   Chosen by change type (before/after screenshots for UI, a stable-type mermaid for structure, a
+   Chosen by change type (before/after screenshots for UI, a Mermaid picture that parses under GitHub's version (`npm run mermaid:lint`) for structure, a
    table for config), captioned, SHA-pinned. Trivial change → an explicit `Picture: waived — <reason>`
    line: the honest skip *is* the proportional form, and it stays visible for audit.
 2. **Summary** — 1–3 bullets, ≤120 chars each, plain language: what ships. A changed route earns a

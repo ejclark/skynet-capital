@@ -11,22 +11,58 @@ over every feedback surface). Owner: the secretary skill (template codification)
 finding, one line: **format compliance tracks enforcement + distribution, never willingness** — so
 this guide teaches, the template reminds, and the ship gate enforces existence; taste is never gated.
 
-## The decision table — change type → picture
+## The decision table — the story → the picture
 
-| Change type | Picture | Why it wins |
+Pick by what the picture must *show*, never by habit: a 40-PR census (2026-09-25) found 8 of 11
+diagrams were one fan-in/fan-out flowchart whatever the change was — the named anti-pattern is
+**one shape for every change** (`PATTERNS.md`). The best frames in that sample made the *causal
+argument*: a sequence with Before/After halves (#3737), a flowchart with decision diamonds and
+labelled before/after branches (#3710). Each row names the one feature that makes the type read;
+the starters below are validated by `npm run mermaid:lint` and the `/mermaid` skill carries the
+full card per type.
+
+| The picture must show… | Picture | The feature that makes it read |
 |---|---|---|
-| UI change | before/after screenshots, 2-col table of `<img width="49%">` | the one grammar judged in <10s |
-| Single new screen | one `<img width="600">` | uncapped 2× shots dominate the fold |
-| Dataflow / pipeline | ```` ```mermaid ```` `flowchart LR` | reads like a sentence |
-| New route / request path | `sequenceDiagram` | actors + ordered messages ARE the story |
-| Lifecycle / gate / mode (`SIM`/`LIVE`) | `stateDiagram-v2` | guarded transitions are the point |
-| Schema / data model | `erDiagram` (or `classDiagram`) | relationship deltas seen, not read |
-| Config / constants | table: key · before · after · why | scannable left edge (the gate counts a GFM table as media — 2026-08-22) |
+| A UI change | before/after screenshots, 2-col table of `<img width="49%">` | the one grammar judged in <10s |
+| A single new screen | one `<img width="600">` | uncapped 2× shots dominate the fold |
+| A behaviour before vs after | `sequenceDiagram` | two `Note over` halves, *Before* / *After*; `autonumber` |
+| A new route / request path | `sequenceDiagram` | `alt`/`else` for the error branch; ≤4 participants |
+| A lifecycle, gate or mode (`SIM`/`LIVE`, draft→ready→done) | `stateDiagram-v2` | a composite state + guard labels on transitions |
+| Branch / merge mechanics (platter, backport, worktrees) | `gitGraph` | one branch per item, `tag:` per step |
+| A dataflow, pipeline or decision path | `flowchart` (`TD` past ~6 nodes) | the delta grammar: `==>` new, `-.->` removed, a diamond per fork |
+| A number moving over time (a budget ratchet, latency, counts) | `xychart-beta` | bar + line on one axis, the series named in the title |
+| A call sheet or triage (confidence × impact, borrow/adapt/skip) | `quadrantChart` | ≤6 points; never P&L implied (`BRAND.md`) |
+| A retro or incident | `timeline` (+ `ishikawa-beta` for the cause) | sections Detect / Respond / Learn; no `:` in periods |
+| A brain-dump or the scope of a study | `mindmap` | three branches, one level of leaves |
+| A backlog snapshot (a digest) | `kanban` | generated from labels, never hand-kept |
+| The system, its containers, its components | `C4Context` → `C4Container` → `C4Component` | boundaries; `Rel` labels carry the technology |
+| A schema or a type change | `erDiagram` / `classDiagram` | cardinality glyphs; before/after namespaces |
+| A module split (decompose) | `treeView-beta` or `classDiagram` | the tree the PR adds or moves |
+| Requirements ↔ specs ↔ PRs | `requirementDiagram` | `satisfies` / `verifies` per EARS line |
+| Where tokens, money or requests split | `sankey-beta` | generated from a ledger |
+| Layers or regions where position means something | `block-beta` | columns; the region a change touches |
+| Config / constants | table: key · before · after · why | scannable left edge (a GFM table counts as media — 2026-08-22) |
 | Risk / irreversible touch | `> [!WARNING]` top-level | pre-attentive; see the caution budget |
-| Trivial (typo/chore/pure docs) | `Picture: waived — <reason>` | an honest skip beats a decorative diagram |
+| Trivial (typo / chore / pure docs) | `Picture: waived — <reason>` | an honest skip beats a decorative diagram |
 
 The waiver is a first-class move, not a loophole: a 3-node flowchart on a typo fix burns the
 glance it claims to save and trains the reader to skip the slot. Skips stay visible and auditable.
+
+**The vocabulary card** — the words that turn "make it richer" into a precise request:
+*sequence with before/after notes · state diagram · gitGraph · delta flowchart · xychart · quadrant
+call sheet · timeline retro · mindmap · kanban snapshot · C4 (context / container / component) ·
+hand-drawn look (proposed, not built)*. Each is a row above and a card in `/mermaid`.
+
+**The delta grammar** — how a diagram marks *what changed* for a reader who cannot rely on hue:
+
+| Meaning | Draw it as | Never as |
+|---|---|---|
+| new in this change | thick edge `==>`, or `subgraph "this PR"` | a green fill |
+| removed / the old path | dotted edge `-.->` | a red fill |
+| changed | `classDef changed stroke-width:3px` (no colour) | a hue shift |
+| a fork | a diamond `{ }` | — |
+| a store / a document / a person | `@{ shape: cyl }` / `@{ shape: doc }` / `@{ shape: person }` | — |
+| proposed, not built (plan issues) | frontmatter `config: { look: handDrawn }` — the sketch register | — |
 
 ## Mermaid that renders on GitHub — any type 11.17.2 draws, and every block is parsed
 
@@ -49,34 +85,82 @@ renders every one as `?` — `architecture-beta` gets only its built-in cloud/da
 server). The GitHub *mobile app* does not render Mermaid at all (open since 2024); a phone browser
 does, so the 390px rule below is about the browser.
 
-Copy-paste starters (all field-verified shapes):
+Copy-paste starters (every one parses under `npm run mermaid:lint`; the `/mermaid` skill carries
+the full card per type):
 
 ````markdown
 ```mermaid
-flowchart LR
-    form[/feedback form/] --> issue[labeled issue]
-    issue --> pm{moneypenny} --> session[fresh build session] --> pr[PR]
+flowchart TD
+    body["PR body"] -.-> list["type allowlist"]
+    body ==> parse["parse under GitHub's Mermaid"] ==> ok{"parses?"}
+    ok ==>|yes| draws["GitHub draws it"]
+    ok ==>|no| stop["push refused"]
 ```
 ````
+_The delta flowchart: dotted = the removed path, thick = the new one, a diamond per fork._
 
 ````markdown
 ```mermaid
 sequenceDiagram
-    Member->>App: submit feedback
-    App->>GitHub: file labeled issue
-    GitHub->>Claude: label event starts build
+    autonumber
+    participant S as ship.sh
+    participant G as GitHub
+    participant A as arm-auto-merge
+    Note over S,A: Before
+    S->>G: open PR
+    G->>A: opened (no label)
+    A->>G: arms and merges
+    Note over S,A: After
+    S->>G: open as draft, label hold-merge, mark ready
+    G->>A: ready_for_review (labelled)
+    A-->>G: skips
 ```
 ````
+_Before/After halves: the same exchange twice, the fix visible in the second half (#3737)._
 
 ````markdown
 ```mermaid
 stateDiagram-v2
     [*] --> draft
     draft --> ready: Eric flips
+    state executing {
+        [*] --> building
+        building --> verifying: specs green
+    }
     ready --> executing
     executing --> done: PR merges
 ```
 ````
+_A lifecycle: the composite state holds the sub-steps; every transition carries its guard._
+
+````markdown
+```mermaid
+gitGraph
+    commit id: "main"
+    branch item-1
+    commit id: "fix commitlint"
+    checkout main
+    merge item-1 tag: "1/2"
+    branch item-2
+    commit id: "pin flyctl"
+    checkout main
+    merge item-2 tag: "2/2"
+```
+````
+_Branch mechanics: a platter merges one commit per item, so a bad item reverts alone._
+
+````markdown
+```mermaid
+quadrantChart
+    title Calls, this week
+    x-axis Low edge --> High edge
+    y-axis Low confidence --> High confidence
+    NVDA guards: [0.8, 0.75]
+    TSLA stand aside: [0.3, 0.2]
+    SPY straddle: [0.6, 0.5]
+```
+````
+_A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 
 **The legibility budget:** ≤15 nodes; plain words, not paths (`login canvas`, never
 `src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
