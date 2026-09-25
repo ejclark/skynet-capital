@@ -12,7 +12,7 @@ const HEADINGS = [
   "### 2 · Your stake",
   "### 3 · The calls",
   "### 4 · Until / waiting on",
-  "### 5 · DTE strip",
+  "### 5 · Expiry dates",
   "### 6 · Strike ladder",
   "### 7 · What changed since you last looked",
   "### 8 · Assumptions & disclosure",
@@ -38,12 +38,12 @@ describe("guidanceToMarkdown", () => {
   it("says why an empty section is empty rather than dropping it", () => {
     const bare = guidanceToMarkdown(positionGuidance(inputs({ chain: [], pulse: [] })));
     expect(bare).toContain("_No pulse reported — treat every number below as unverified._");
-    expect(bare).toContain("_No strike passes the rules — see the calls above for why._");
+    expect(bare).toContain("_No strike passes our checks — see the calls above for why._");
     expect(bare.split("\n").filter((l) => l.startsWith("### "))).toEqual(HEADINGS);
   });
 
   it("dates the waiting-on list and marks the hold decision", () => {
-    expect(md).toContain("- [ ] **2026-11-02** — Hold-through-the-print decision falls due (S2)");
+    expect(md).toContain("- [ ] **2026-11-02** — Decide whether to hold through earnings");
   });
 
   it("distinguishes a first visit from 'nothing moved'", () => {
@@ -51,5 +51,15 @@ describe("guidanceToMarkdown", () => {
     expect(guidanceToMarkdown(positionGuidance(inputs()), [])).toContain(
       "_Nothing moved since you last looked._",
     );
+  });
+});
+
+describe("plain language (#3729 step 2b)", () => {
+  it("shows no trading jargon or rule ids to the member", () => {
+    const md = guidanceToMarkdown(positionGuidance(inputs()));
+    for (const word of ["WRITE", " print", "DTE", "PRICE-AT-BID", "lognormal", "annualized"]) {
+      expect(md).not.toContain(word);
+    }
+    expect(md).toContain("Reasonable now");
   });
 });

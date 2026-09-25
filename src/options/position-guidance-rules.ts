@@ -51,8 +51,8 @@ export const DECISION_SESSIONS_BEFORE_PRINT = 5;
 export const LADDER_DEPTH = 3;
 
 export const GUIDANCE_DISCLOSURE =
-  "Educational · modelled mechanics, not financial advice. Quotes are indicative and re-checked " +
-  "live by the ticket before any order; odds are a lognormal model with no jumps.";
+  "Educational, not financial advice. Option prices here are estimates; the trade form re-checks " +
+  "live prices before any order. Chances come from a standard pricing model that assumes no sudden jumps.";
 
 const RANK: Readonly<Record<Confidence, number>> = { none: 0, low: 1, medium: 2, high: 3 };
 
@@ -222,3 +222,16 @@ export const LEVER_NAME = {
   "covered-calls": "Covered calls",
   "cash-secured-puts": "Cash-secured puts",
 } as const;
+
+/** The plain words a member reads for each machine call. */
+export const CALL_WORDS: Readonly<Record<string, string>> = {
+  WRITE: "Reasonable now",
+  WAIT: "Wait",
+  "NOT AVAILABLE": "Not available",
+  "NO ANSWER": "No answer",
+  BUY: "Buy",
+  HOLD: "Hold",
+  SELL: "Sell",
+  DECIDE: "Decide",
+  "STAND ASIDE": "Stand aside",
+};

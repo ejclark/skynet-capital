@@ -46,7 +46,7 @@ describe("DTE strip (DTE-FLOOR · DTE-PRINT)", () => {
   it("warns — never excludes — for a catalyst before the expiry", () => {
     expect(strip[0]?.catalysts).toEqual([
       "Fully Connected opens (2026-09-29)",
-      "MU prints (2026-09-30)",
+      "MU reports earnings (2026-09-30)",
     ]);
     expect(strip[0]?.verdict).toBe("in");
   });
@@ -87,9 +87,12 @@ describe("the ladder, priced at the bid", () => {
   });
 
   it("sizes covered calls by 100-share lots and puts by cash", () => {
-    expect(rows.every((r) => r.contracts === 4)).toBe(true);
+    expect(rows.every((r) => r.contracts === 1 && r.maxContracts === 4)).toBe(true);
     const puts = buildLadder("cash-secured-puts", input, strip).rows;
-    for (const p of puts) expect(p.contracts).toBe(Math.floor(40_000 / (p.strike * 100)));
+    for (const p of puts) {
+      expect(p.contracts).toBe(1);
+      expect(p.maxContracts).toBe(Math.floor(40_000 / (p.strike * 100)));
+    }
   });
 
   it("drops a quote whose spread is over 15% of mid, and says so", () => {
@@ -120,7 +123,7 @@ describe("the three calls — the CRWV fixture", () => {
       confidence: "medium",
       until: { date: "2026-11-02" },
     });
-    expect(shares?.provesWrong).toContain("IR confirms a print date before 2026-11-02");
+    expect(shares?.provesWrong).toContain("announces its earnings date before 2026-11-02");
   });
 
   it("WRITEs covered calls at medium at most — the richness read is a proxy without IV rank", () => {
@@ -210,15 +213,18 @@ describe("the S2 decision zone", () => {
   const zone = "2026-11-03T15:00:00Z";
   const chain = EXPIRATIONS.flatMap((e) => [quoteAt(e, 90, "call", zone)]);
 
-  it("an income holder goes flat into the print", () => {
-    expect(positionGuidance(inputs({ now: zone, chain })).calls[0]?.call).toBe("SELL");
+  it("an income holder is asked to decide — never told to sell", () => {
+    const c = positionGuidance(inputs({ now: zone, chain })).calls[0];
+    expect(c?.call).toBe("DECIDE");
+    expect(c?.reasons.map((r) => r.text).join(" ")).toMatch(/Hold through.*Sell before.*taxable/s);
   });
 
-  it("a keep-shares holder HOLDs as a conscious call", () => {
+  it("a keep-shares holder is asked too, with their goal named", () => {
     const b = positionGuidance(
-      inputs({ now: zone, chain, stake: { shares: 400, goal: "keep-shares" } }),
+      inputs({ now: zone, chain, stake: { shares: 400, costBasis: 70, goal: "keep-shares" } }),
     );
-    expect(b.calls[0]).toMatchObject({ call: "HOLD", until: { date: "2026-11-16" } });
+    expect(b.calls[0]).toMatchObject({ call: "DECIDE", until: { date: "2026-11-16" } });
+    expect(b.calls[0]?.reasons.some((r) => r.rule === "GOAL")).toBe(true);
   });
 });
 
@@ -277,7 +283,7 @@ describe("what changed since you last looked", () => {
     const next = positionGuidance(inputs({ realizedVol: 1.0, spot: 84, chain: CHAIN }));
     const lines = diffGuidance(snapshotOf(first), next);
     expect(lines).toContain("Spot +5.0% since 2026-09-25.");
-    expect(lines).toContain("Covered calls: WRITE (medium) → WAIT (medium).");
+    expect(lines).toContain("Covered calls: Reasonable now (medium) → Wait (low).");
     expect(lines).toContain("Premium: rich → cheap.");
   });
 });
@@ -290,8 +296,7 @@ describe("the headline strike", () => {
     const quoted = b.ladder.find(
       (r) =>
         r.lever === "covered-calls" &&
-        headline.includes(`${r.expiration} `) &&
-        headline.includes(`$${r.strike.toFixed(2)} call`),
+        headline.includes(`$${r.strike.toFixed(2)} strike, expires ${r.expiration}`),
     );
     expect(quoted?.dte).toBeGreaterThanOrEqual(21);
     const topYield = Math.max(
@@ -349,7 +354,7 @@ describe("review regressions — calls a member could act on must never be false
   it("mid-window, the waiting list shows the window closing, not opening", () => {
     const b = positionGuidance(inputs({ now: "2026-11-12T15:00:00Z", chain: [] }));
     expect(b.waitingOn.map((w) => w.label)).toContain(
-      "Print window closes — refresh the guidance on the new tape",
+      "Earnings window closes — refresh the guidance on the new prices",
     );
   });
 
@@ -497,5 +502,38 @@ describe("a blocked lever says only why (#3734 review)", () => {
       expect(c?.reasons[0]?.text).not.toContain("$");
       expect(c?.until).toBeUndefined();
     }
+  });
+});
+
+describe("defaults that never act for you (#3729 step 2b)", () => {
+  it("with no goal, a holder HOLDs and is asked to pick one — nothing defaults to income", () => {
+    const b = positionGuidance(inputs({ stake: { shares: 400, costBasis: 70 } }));
+    expect(b.calls[0]?.call).toBe("HOLD");
+    expect(
+      b.calls[0]?.reasons.some((r) => r.rule === "GOAL" && r.text.startsWith("Pick a goal")),
+    ).toBe(true);
+  });
+
+  it("SELL appears only for an exit goal, and always says it is a taxable sale", () => {
+    const b = positionGuidance(inputs({ stake: { shares: 400, costBasis: 70, goal: "exit" } }));
+    expect(b.calls[0]?.call).toBe("SELL");
+    expect(b.calls[0]?.reasons.map((r) => r.text).join(" ")).toContain("taxable");
+  });
+
+  it("covered calls wait for what you paid — without it no strike is offered", () => {
+    const b = positionGuidance(inputs({ stake: { shares: 400, goal: "income" } }));
+    expect(b.calls[1]).toMatchObject({ call: "NOT AVAILABLE" });
+    expect(b.calls[1]?.reasons[0]?.text).toContain("Enter what you paid");
+    expect(b.ladder.some((r) => r.lever === "covered-calls")).toBe(false);
+  });
+
+  it("leads with money and states both sides of the outcome", () => {
+    const cc = positionGuidance(inputs()).calls[1];
+    expect(cc?.reasons[0]?.text).toMatch(
+      /^Sell 1 call: .* You receive \$[\d,.]+ now — yours whatever happens/,
+    );
+    expect(cc?.reasons[1]?.text).toMatch(
+      /100 of your 400 shares are sold at .* miss any rise above it/,
+    );
   });
 });

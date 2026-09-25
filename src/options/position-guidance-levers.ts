@@ -12,15 +12,20 @@ import type {
   DteMark,
   GuidanceInputs,
   GuidanceReason,
+  LadderRow,
   LeverCall,
   Richness,
 } from "./position-guidance-types.js";
 
 /**
- * THE THREE LEVER CALLS — shares, covered calls, cash-secured puts (#3729). Each call is graded,
- * explained in at most three rule-cited lines, and carries a dated falsifier plus an "until" (the
- * date the next decision falls due and what we are waiting to see). The house rule applies to every
- * lever: a grade below medium is a stand-aside, never a small bet. PURE: no I/O, no clock.
+ * THE OPTION LEVERS — covered calls and cash-secured puts (#3729). Each call is graded, explained in
+ * at most three plain lines, and carries a "come back if" line plus an "until" (the date the next
+ * decision falls due). A grade below medium is a stand-aside, never a small bet.
+ *
+ * THE COPY IS WRITTEN FOR SOMEONE NEW TO OPTIONS (#3729 persona review): money first ("you receive
+ * $145 now"), both sides of every outcome ("you keep $X, but miss any rise above $95"), no jargon a
+ * member would have to look up ("earnings report", not "print"; "days", not "DTE"), and annualized
+ * yield only as a qualified aside — it is not what anyone earns. PURE: no I/O, no clock.
  */
 
 export interface LeverContext {
@@ -34,9 +39,9 @@ export const why = (rule: GuidanceReason["rule"], text: string): GuidanceReason 
 
 export function windowText(input: GuidanceInputs): string {
   const e = input.earnings;
-  if (!e) return "no print on the calendar";
+  if (!e) return "no earnings report on the calendar";
   const span = e.start === e.end ? e.start : `${e.start}–${e.end}`;
-  return `${span}${e.status === "estimate" ? " (estimate)" : ""}`;
+  return `${span}${e.status === "estimate" ? ", estimated" : ""}`;
 }
 
 export function lever(call: Omit<LeverCall, "atOpen">): LeverCall {
@@ -44,15 +49,19 @@ export function lever(call: Omit<LeverCall, "atOpen">): LeverCall {
 }
 
 const DROP_TEXT: Readonly<Record<LadderDrop, string>> = {
-  quote: "untradable quotes (bid under $0.10, spread over 15% of mid, or no IV)",
-  stale: "quotes older than 15 minutes",
+  quote:
+    "prices too thin to sell at (bid under $0.10, a wide gap between bid and ask, or no volatility read)",
+  stale: "prices older than 15 minutes",
   thin: "too few contracts open (under 100)",
-  otm: "at or in the money",
-  basis: "below your cost basis",
-  delta: "delta over 0.30",
-  own: "above your happy-to-own price",
+  otm: "at or past today's price",
+  basis: "below what you paid",
+  delta: "more than a 30% chance of being exercised",
+  own: "above the price you'd be happy to own at",
   cash: "not covered by your cash",
 };
+
+const MANAGING =
+  "Managing it: once you've kept about half the premium, buying the option back early is a common way to lock that in.";
 
 function dropWhy(result: LadderResult): GuidanceReason {
   const top = (Object.entries(result.dropped) as [LadderDrop, number][])
@@ -62,7 +71,7 @@ function dropWhy(result: LadderResult): GuidanceReason {
     .map(([k, n]) => `${n} ${DROP_TEXT[k]}`);
   return why(
     "PRICE-AT-BID",
-    `No strike survives the rules: ${top.join("; ") || "no quotes in band"}.`,
+    `No strike passes our checks: ${top.join("; ") || "no prices available in range"}.`,
   );
 }
 
@@ -70,34 +79,42 @@ function bandWhy(ctx: LeverContext): GuidanceReason | undefined {
   const inBand = ctx.strip.filter((m) => m.verdict === "in");
   const last = inBand.at(-1);
   if (!last) return undefined;
-  const span = `Expiries ${inBand[0]?.dte}–${last.dte} DTE (through ${last.expiration})`;
+  const span = `Only expiries ${inBand[0]?.dte}–${last.dte} days out (through ${last.expiration})`;
   if (!ctx.input.earnings) {
-    return why("DTE-FLOOR", `${span} — no print on the calendar; under 7 DTE is excluded.`);
+    return why("DTE-FLOOR", `${span}. Under 7 days, the premium isn't worth the risk.`);
   }
-  const evidence = ctx.input.printEvidence ?? "an earnings gap can outrun what options price";
+  const evidence = ctx.input.printEvidence ?? "the stock can gap further than option prices expect";
   const cutoff = optionsCutoff(ctx.input.earnings, ctx.input.stake.goal);
   if (cutoff?.kind === "decision") {
     return why(
       "DTE-PRINT",
-      `${span} only: nothing may still be open on ${cutoff.date}, when you decide whether to hold through the earnings window ${windowText(ctx.input)}.`,
+      `${span}: nothing should still be open on ${cutoff.date}, when you decide whether to hold through earnings (${windowText(ctx.input)}).`,
     );
   }
   return why(
     "DTE-PRINT",
-    `${span} only: later ones span the earnings window ${windowText(ctx.input)} — ${evidence}.`,
+    `${span}: later ones cross the earnings report (${windowText(ctx.input)}) — ${evidence}.`,
   );
 }
 
 function richWhy(r: Richness): GuidanceReason {
-  if (r.basis === "iv-rank")
-    return why("RICHNESS", `IV rank ${r.ivRank?.toFixed(0)} — premium is ${r.verdict}.`);
-  if (r.basis === "iv-vs-realized" && r.atmIv !== undefined && r.realizedVol !== undefined) {
+  if (r.basis === "iv-rank") {
     return why(
       "RICHNESS",
-      `Implied ${pct(r.atmIv)} vs realized ${pct(r.realizedVol)} (×${(r.atmIv / r.realizedVol).toFixed(2)}) — premium is ${r.verdict} for how much it moves.`,
+      `Option prices sit at ${r.ivRank?.toFixed(0)} on a 0–100 scale of their past year — ${r.verdict === "rich" ? "sellers are paid well" : r.verdict === "cheap" ? "sellers are underpaid" : "about average"}.`,
     );
   }
-  return why("RICHNESS", "No read on whether premium is rich — no IV history and no realized vol.");
+  if (r.basis === "iv-vs-realized" && r.atmIv !== undefined && r.realizedVol !== undefined) {
+    const priced = `Options are pricing moves of about ${pct(r.atmIv)} a year; the stock has actually moved about ${pct(r.realizedVol)}`;
+    const verdict =
+      r.verdict === "rich"
+        ? "sellers are being paid well for the risk"
+        : r.verdict === "cheap"
+          ? "sellers are underpaid for the risk"
+          : "only a little extra — not enough to be worth selling yet";
+    return why("RICHNESS", `${priced} — ${verdict}.`);
+  }
+  return why("RICHNESS", "We can't yet tell whether option prices are high or low for this stock.");
 }
 
 function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
@@ -109,27 +126,54 @@ function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
     reasons: [
       why(
         "DTE-PRINT",
-        `Every listed expiry is under 7 days, runs past your hold-or-sell date, or spans the earnings window ${windowText(ctx.input)}.`,
+        `Every listed expiry is under 7 days away, runs past your hold-or-sell date, or crosses the earnings report (${windowText(ctx.input)}).`,
       ),
     ],
-    provesWrong: "A new weekly lists inside the clean band.",
-    ...(end ? { until: { date: end, why: "the print passes and a clean cycle opens" } } : {}),
+    provesWrong: "If a new expiry is listed inside the safe range → come back here.",
+    ...(end
+      ? {
+          until: { date: end, why: "the earnings report passes and a clean set of expiries opens" },
+        }
+      : {}),
+  });
+}
+
+const receive = (row: LadderRow, kind: "call" | "put"): GuidanceReason =>
+  why(
+    "PRICE-AT-BID",
+    `Sell 1 ${kind}: ${usd(row.strike)} strike, expires ${row.expiration}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${pct(row.annualizedYield)} a year only if you could repeat it every time).`,
+  );
+
+function notAvailable(
+  which: LeverCall["lever"],
+  rule: GuidanceReason["rule"],
+  text: string,
+): LeverCall {
+  return lever({
+    lever: which,
+    call: "NOT AVAILABLE",
+    confidence: "none",
+    reasons: [why(rule, text)],
+    provesWrong: "—",
   });
 }
 
 export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverCall {
-  const { stake } = ctx.input;
+  const { stake, symbol } = ctx.input;
   const shares = stake.shares ?? 0;
   if (shares < 100) {
-    return lever({
-      lever: "covered-calls",
-      call: "NOT AVAILABLE",
-      confidence: "none",
-      reasons: [
-        why("COVERAGE", `Covered calls need 100 shares per contract — you hold ${shares}.`),
-      ],
-      provesWrong: "—",
-    });
+    return notAvailable(
+      "covered-calls",
+      "COVERAGE",
+      `Covered calls need 100 shares per contract — you hold ${shares}.`,
+    );
+  }
+  if (stake.costBasis === undefined && stake.goal !== "exit") {
+    return notAvailable(
+      "covered-calls",
+      "STRIKE-BASIS",
+      "Enter what you paid per share first — without it, a strike could sell your shares for less than you paid.",
+    );
   }
   const band = bandWhy(ctx);
   if (!band) return noBand(ctx, "covered-calls");
@@ -137,8 +181,8 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
   const last = ctx.strip.filter((m) => m.verdict === "in").at(-1)?.expiration ?? "";
   const falsifier =
     ctx.input.earnings?.status === "estimate"
-      ? `IR confirms the print on or before ${last}, or implied falls below realized before you open.`
-      : "Implied falls below realized before you open.";
+      ? `If the company announces its earnings date for on or before ${last} → come back here; that expiry would then cross the report.`
+      : "If option prices fall below how much the stock actually moves → come back here.";
   if (!best) {
     return lever({
       lever: "covered-calls",
@@ -148,56 +192,49 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
       provesWrong: falsifier,
     });
   }
-  if (ctx.richness.verdict === "cheap") {
+  const grade: Confidence = capConfidence("high", richnessCap(ctx.richness));
+  if (!actionable(grade)) {
     return lever({
       lever: "covered-calls",
       call: "WAIT",
-      confidence: "medium",
+      confidence: grade,
       reasons: [richWhy(ctx.richness), band],
-      provesWrong: "Implied rises to 1.2× realized or better.",
+      provesWrong:
+        "If option prices rise to at least 1.2× what the stock actually moves → come back here.",
     });
   }
-  const grade: Confidence = capConfidence("high", richnessCap(ctx.richness));
-  const bestWhy = why(
-    "PRICE-AT-BID",
-    `Best: ${usd(best.strike)} call ${best.expiration} — bid ${usd(best.bid)}, ${pct(best.annualizedYield)} annualized, ${pct(best.probAssigned)} model odds of assignment.`,
+  const keep = best.bid * 100;
+  const basisGain =
+    stake.costBasis !== undefined
+      ? ` That's ${usd((best.strike - stake.costBasis) * 100 + keep)} more than you paid for those 100.`
+      : "";
+  const outcome = why(
+    stake.goal === "keep-shares" ? "GOAL" : "STRIKE-BASIS",
+    `If ${symbol} closes above ${usd(best.strike)} on ${best.expiration} (about a ${pct(best.probAssigned)} chance), 100 of your ${shares} shares are sold at ${usd(best.strike)} — you keep the ${usd(keep)} but miss any rise above it.${basisGain}${stake.goal === "keep-shares" ? " You want to keep the shares, so favour the rows with the lowest chance." : ""}`,
   );
-  const goalWhy =
-    stake.goal === "keep-shares"
-      ? [why("GOAL", "Assignment sells your shares — favour the lowest-odds rows.")]
-      : ladder.dropped.basis > 0
-        ? [
-            why(
-              "STRIKE-BASIS",
-              `No strike below your ${usd(stake.costBasis ?? 0)} basis — assignment would lock in a loss.`,
-            ),
-          ]
-        : [];
   return lever({
     lever: "covered-calls",
-    call: actionable(grade) ? "WRITE" : "WAIT",
+    call: "WRITE",
     confidence: grade,
-    reasons: [bestWhy, band, ...goalWhy, richWhy(ctx.richness)],
+    reasons: [receive(best, "call"), outcome, band],
     provesWrong: falsifier,
-    until: ctx.input.earnings
-      ? {
-          date: last,
-          why: "last usable expiry — stop selling calls until the earnings report passes",
-        }
-      : { date: last, why: "longest in-band expiry — refresh the guidance before rolling" },
+    until: {
+      date: last,
+      why: ctx.input.earnings
+        ? `last usable expiry — stop selling calls until earnings pass. ${MANAGING}`
+        : `the longest usable expiry — refresh the guidance before selling another. ${MANAGING}`,
+    },
   });
 }
 
 export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): LeverCall {
-  const { stake, ledger, earnings } = ctx.input;
+  const { stake, ledger, earnings, symbol } = ctx.input;
   if (!(stake.cash && stake.cash > 0)) {
-    return lever({
-      lever: "cash-secured-puts",
-      call: "NOT AVAILABLE",
-      confidence: "none",
-      reasons: [why("COVERAGE", "No cash entered — a put must be fully cash-secured.")],
-      provesWrong: "—",
-    });
+    return notAvailable(
+      "cash-secured-puts",
+      "COVERAGE",
+      "Enter your cash — a put must be fully covered by cash you set aside.",
+    );
   }
   const band = bandWhy(ctx);
   if (!band) return noBand(ctx, "cash-secured-puts");
@@ -205,17 +242,30 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
     ? {
         until: {
           date: earnings.end,
-          why: "the print resolves the biggest known unknown — refresh the guidance after it",
+          why: "the earnings report settles the biggest unknown — refresh the guidance after it",
         },
       }
     : {};
   const buyWhy = ledger?.buySignal
-    ? why("LEDGER", `Research licenses a buy (${ledger.buyConfidence}).`)
-    : why("LEDGER", "A put you'd be assigned on is a buy — and no research licenses a buy here.");
+    ? why("LEDGER", `The research supports buying (confidence: ${ledger.buyConfidence}).`)
+    : why(
+        "LEDGER",
+        "Selling a put means agreeing to buy the stock — and the research doesn't support buying it right now.",
+      );
   const falsifier = ledger?.buySignal
-    ? `The research ledger withdraws its buy signal (its kill switch fires)${earnings ? ` before ${earnings.start}` : ""}.`
-    : `The research ledger registers a buy signal${earnings ? ` before ${earnings.start}` : ""}.`;
+    ? `If the research withdraws its buy signal${earnings ? ` before ${earnings.start}` : ""} → come back here.`
+    : `If the research starts supporting a buy${earnings ? ` before ${earnings.start}` : ""} → come back here.`;
   const best = headlineRow(ladder.rows);
+  const held = stake.shares ?? 0;
+  const concentration =
+    held > 0
+      ? [
+          why(
+            "CONCENTRATION",
+            `Being assigned adds 100 shares to the ${held} you already hold — the same bet, bigger.`,
+          ),
+        ]
+      : [];
   if (!best) {
     return lever({
       lever: "cash-secured-puts",
@@ -227,39 +277,31 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
     });
   }
   let grade: Confidence = capConfidence("high", richnessCap(ctx.richness));
-  if (ctx.richness.verdict !== "rich") grade = capConfidence(grade, "medium");
   grade = capConfidence(grade, ledger?.buySignal ? ledger.buyConfidence : "low");
-  const held = stake.shares ?? 0;
-  const concentration =
-    held > 0
-      ? [
-          why(
-            "CONCENTRATION",
-            `Assignment adds ${best.contracts * 100} shares to the ${held} you hold — the same exposure, larger.`,
-          ),
-        ]
-      : [];
   if (stake.happyToOwnAt === undefined) grade = capConfidence(grade, "medium");
-  const bestWhy = why(
-    "PRICE-AT-BID",
-    `Best: ${usd(best.strike)} put ${best.expiration} — bid ${usd(best.bid)}, ${pct(best.annualizedYield)} annualized, you'd own at ${usd(best.effectiveEntry ?? best.strike)}.`,
+  if (!actionable(grade)) {
+    return lever({
+      lever: "cash-secured-puts",
+      call: "WAIT",
+      confidence: grade,
+      reasons: [buyWhy, ...concentration, richWhy(ctx.richness)],
+      provesWrong: falsifier,
+      ...after,
+    });
+  }
+  const outcome = why(
+    "STRIKE-OWN",
+    `If ${symbol} closes below ${usd(best.strike)} on ${best.expiration} (about a ${pct(best.probAssigned)} chance), you must buy 100 shares for ${usd(best.strike * 100)} — even if it's far lower then. Your cost would be ${usd(best.effectiveEntry ?? best.strike)} a share after the premium.`,
   );
-  const writing = actionable(grade);
   return lever({
     lever: "cash-secured-puts",
-    call: writing ? "WRITE" : "WAIT",
+    call: "WRITE",
     confidence: grade,
-    reasons: writing
-      ? [bestWhy, buyWhy, ...concentration, band]
-      : [buyWhy, ...concentration, bestWhy],
+    reasons: [receive(best, "put"), outcome, ...concentration, buyWhy],
     provesWrong: falsifier,
-    ...(writing
-      ? {
-          until: {
-            date: best.expiration,
-            why: "expiry — decide then whether to roll or take the shares",
-          },
-        }
-      : after),
+    until: {
+      date: best.expiration,
+      why: `expiry — decide then whether to sell another put or take the shares. ${MANAGING}`,
+    },
   });
 }

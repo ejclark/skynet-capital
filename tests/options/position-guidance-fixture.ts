@@ -67,10 +67,10 @@ export function inputs(overrides: Partial<GuidanceInputs> = {}): GuidanceInputs 
       source: "8-K cadence; ledger window Nov 9–16",
     },
     printEvidence:
-      "its options have underpriced its print moves — Q2 implied ~15.5% vs ~18.6% realized (FT-15)",
+      "its options have underpriced its earnings-day moves (last quarter: priced for ~15.5%, moved ~18.6%; research test FT-15, still open)",
     catalysts: [
       { date: "2026-09-29", label: "Fully Connected opens", source: "IR" },
-      { date: "2026-09-30", label: "MU prints", source: "IR" },
+      { date: "2026-09-30", label: "MU reports earnings", source: "IR" },
     ],
     ledger: {
       buySignal: false,

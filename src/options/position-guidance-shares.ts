@@ -8,14 +8,22 @@ import {
 import type { GuidanceInputs, GuidanceReason, LeverCall } from "./position-guidance-types.js";
 
 /**
- * THE SHARES LEVER (#3729) — BUY / HOLD / SELL / STAND ASIDE on the stock itself. Three rules carry
- * it: a BUY exists only where research licenses one; a holder's HOLD runs until the S2 fork (five
- * sessions before the print window), where the goal decides flat vs a conscious hold; and cost
- * basis never drives the call — it is sunk cost, and only shapes strike selection elsewhere.
+ * THE SHARES LEVER (#3729) — what to do with the stock itself. Four rules carry it:
+ *
+ *   - A BUY exists only where research licenses one.
+ *   - Nothing acts on the member's behalf. There is NO default goal: outside the earnings decision
+ *     zone a holder simply holds; inside it every goal but `exit` gets DECIDE — the two choices
+ *     stated side by side — never a bare SELL the member did not ask for (#3729 persona review: an
+ *     unset goal used to read as "income" and said SELL a long-term holding into earnings).
+ *   - SELL appears only when the member's own goal is `exit`, and always says it is a taxable sale.
+ *   - Cost basis never drives the call — it is sunk cost, and only shapes strike selection.
+ *
  * PURE: no I/O, no clock.
  */
 
-/** The day the hold-through-the-print fork falls due: 5 sessions before the window opens. */
+const TAXABLE = "Selling is a taxable sale — check what it means for you before you do it.";
+
+/** The day the hold-or-sell-before-earnings decision falls due: 5 sessions before the window. */
 export function decisionDate(input: GuidanceInputs): string | undefined {
   return input.earnings
     ? weekdaysBefore(input.earnings.start, DECISION_SESSIONS_BEFORE_PRINT)
@@ -24,11 +32,11 @@ export function decisionDate(input: GuidanceInputs): string | undefined {
 
 export function ledgerReason(input: GuidanceInputs): GuidanceReason {
   return input.ledger
-    ? why("LEDGER", `Research: ${input.ledger.stance}`)
-    : why("LEDGER", "No research ledger covers this name — nothing licenses a new position.");
+    ? why("LEDGER", `The research says: ${input.ledger.stance}`)
+    : why("LEDGER", "No research covers this stock yet, so nothing supports buying more.");
 }
 
-/** No shares: the only question is whether research licenses opening one. */
+/** No shares: the only question is whether research supports opening a position. */
 function nonHolderCall(input: GuidanceInputs, decision: string | undefined): LeverCall {
   const { ledger } = input;
   const ledgerWhy = ledgerReason(input);
@@ -38,10 +46,10 @@ function nonHolderCall(input: GuidanceInputs, decision: string | undefined): Lev
       call: "BUY",
       confidence: ledger.buyConfidence,
       reasons: decision
-        ? [ledgerWhy, why("SHARES", `Be flat by ${decision}, before the print window (S2).`)]
+        ? [ledgerWhy, why("SHARES", `Plan to be out by ${decision}, before the earnings report.`)]
         : [ledgerWhy],
-      provesWrong: "The ledger's own kill switch fires before you enter.",
-      ...(decision ? { until: { date: decision, why: "S2: flat before the print window" } } : {}),
+      provesWrong: "If the research withdraws its buy signal before you buy → come back here.",
+      ...(decision ? { until: { date: decision, why: "be out before the earnings report" } } : {}),
     });
   }
   return lever({
@@ -49,29 +57,36 @@ function nonHolderCall(input: GuidanceInputs, decision: string | undefined): Lev
     call: "STAND ASIDE",
     confidence: ledger ? "medium" : "low",
     reasons: [ledgerWhy],
-    provesWrong: `The research ledger registers a buy signal${decision ? ` before ${decision}` : ""}.`,
+    provesWrong: `If the research starts supporting a buy${decision ? ` before ${decision}` : ""} → come back here.`,
   });
 }
 
-/** Inside the S2 zone (decision date → window end): the goal decides flat vs a conscious hold. */
-function decisionZoneCall(input: GuidanceInputs, end: string): LeverCall {
+/** Inside the decision zone (decision date → window end): state both choices, pick neither. */
+function decideCall(input: GuidanceInputs, end: string): LeverCall {
   const keep = input.stake.goal === "keep-shares";
   return lever({
     lever: "shares",
-    call: keep ? "HOLD" : "SELL",
+    call: "DECIDE",
     confidence: "medium",
     reasons: [
-      why("SHARES", `Inside the print decision zone — window ${windowText(input)}.`),
       why(
         "SHARES",
-        keep
-          ? "Holding through is your conscious call: print gaps are fat-tailed coin flips (S2)."
-          : "S2: never hold through the print — gaps are fat-tailed coin flips.",
+        `Earnings are due ${windowText(input)}. Hold through: the stock can jump or drop sharply overnight, and nobody can call which way.`,
       ),
-      ledgerReason(input),
+      why("SHARES", `Sell before: you lock in today's price. ${TAXABLE}`),
+      keep
+        ? why(
+            "GOAL",
+            "You said you want to keep the shares — holding through is consistent with that.",
+          )
+        : ledgerReason(input),
     ],
-    provesWrong: `The print passes inside ${windowText(input)} with a move inside one expected move.`,
-    until: { date: end, why: "the print window closes; refresh the guidance on the new tape" },
+    provesWrong:
+      "If the earnings report passes and the stock moves less than a normal day's range → the risk was smaller than feared.",
+    until: {
+      date: end,
+      why: "the earnings window closes — refresh the guidance on the new prices",
+    },
   });
 }
 
@@ -79,13 +94,12 @@ export function sharesCall({ input, today }: LeverContext): LeverCall {
   const { stake, earnings } = input;
   const decision = decisionDate(input);
   if (!((stake.shares ?? 0) > 0)) return nonHolderCall(input, decision);
-  const ledgerWhy = ledgerReason(input);
   const basisWhy =
     stake.costBasis !== undefined
       ? [
           why(
             "SHARES",
-            `Your ${usd(stake.costBasis)} basis shapes strikes, never hold-vs-sell — it's sunk cost.`,
+            `What you paid (${usd(stake.costBasis)}) shapes which strikes are safe to sell — it never decides whether to hold.`,
           ),
         ]
       : [];
@@ -97,16 +111,26 @@ export function sharesCall({ input, today }: LeverContext): LeverCall {
       reasons: [
         why(
           "GOAL",
-          "Your goal is exit — the covered-call row shows strikes that pay you to leave.",
+          "You said you want out. The covered-call row shows strikes that pay you to leave.",
         ),
+        why("SHARES", TAXABLE),
         ...basisWhy,
       ],
-      provesWrong: "You change the goal — the call follows the goal, not the tape.",
+      provesWrong: "If you change your goal → the guidance changes with it.",
     });
   }
   if (decision && earnings && today >= decision && today <= earnings.end) {
-    return decisionZoneCall(input, earnings.end);
+    return decideCall(input, earnings.end);
   }
+  const noGoal =
+    stake.goal === undefined
+      ? [
+          why(
+            "GOAL",
+            "Pick a goal — keep the shares, earn income, or exit. It changes which strikes fit.",
+          ),
+        ]
+      : [];
   return lever({
     lever: "shares",
     call: "HOLD",
@@ -115,21 +139,22 @@ export function sharesCall({ input, today }: LeverContext): LeverCall {
       why(
         "SHARES",
         decision
-          ? `Nothing licenses a change before ${decision}, when the hold-through-the-print fork falls due.`
-          : "Nothing licenses a change — no print or playbook trigger is on the calendar.",
+          ? `Nothing calls for a change before ${decision}, when you decide whether to hold through earnings.`
+          : "Nothing calls for a change — no earnings report or research signal is on the calendar.",
       ),
-      ledgerWhy,
+      ...noGoal,
+      ledgerReason(input),
       ...basisWhy,
     ],
     provesWrong:
       earnings?.status === "estimate" && decision
-        ? `IR confirms a print date before ${decision} — the fork arrives sooner.`
-        : "A dated, name-specific catalyst moves the stock more than one expected move.",
+        ? `If the company announces its earnings date before ${decision} → come back here; the decision comes sooner.`
+        : "If the stock makes a big move on company-specific news → come back here.",
     ...(decision
       ? {
           until: {
             date: decision,
-            why: `decide whether to hold through the print window ${windowText(input)}`,
+            why: `decide whether to hold through earnings (${windowText(input)})`,
           },
         }
       : {}),

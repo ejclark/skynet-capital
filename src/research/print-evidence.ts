@@ -16,7 +16,7 @@ export interface PrintEvidence {
 
 const EVIDENCE: Readonly<Record<string, PrintEvidence>> = {
   CRWV: {
-    text: "its options have underpriced its print moves (Q2: ~15.5% implied vs ~18.6% realized; FT-15, open)",
+    text: "its options have underpriced its earnings-day moves (last quarter: priced for ~15.5%, moved ~18.6%; research test FT-15, still open)",
     source: "docs/research/forward-tests/legacy.md → FT-15",
   },
 };

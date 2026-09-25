@@ -51,7 +51,8 @@ export interface GuidanceStake {
   /** Average cost per share. Shapes strikes (never below basis); never drives SELL — sunk cost. */
   readonly costBasis?: number;
   readonly cash?: number;
-  readonly goal: GuidanceGoal;
+  /** Unset until the member picks one — nothing defaults to acting on their behalf. */
+  readonly goal?: GuidanceGoal;
   /** The price the member would happily own more at — the ceiling for a cash-secured put strike. */
   readonly happyToOwnAt?: number;
   /** Whole-portfolio value, for the concentration line. */
@@ -145,7 +146,7 @@ export interface GuidanceInputs {
 export type GuidanceMarket = Omit<GuidanceInputs, "stake">;
 
 export type Lever = "shares" | "covered-calls" | "cash-secured-puts";
-export type SharesCall = "BUY" | "HOLD" | "SELL" | "STAND ASIDE" | "NO ANSWER";
+export type SharesCall = "BUY" | "HOLD" | "SELL" | "DECIDE" | "STAND ASIDE" | "NO ANSWER";
 export type OptionCall = "WRITE" | "WAIT" | "NOT AVAILABLE" | "NO ANSWER";
 
 /** Every reason names the rule that produced it, so the "why" is templated and auditable. */
@@ -215,7 +216,10 @@ export interface LadderRow {
   readonly delta: number;
   /** Set when the feed's delta disagrees with ours by more than the tolerance — a data-quality flag. */
   readonly deltaDisagreement?: number;
+  /** Contracts this row suggests — always 1, so no row ever offers the whole position by default. */
   readonly contracts: number;
+  /** The most the stake could cover (all 100-share lots, or all the cash) — shown, never defaulted to. */
+  readonly maxContracts: number;
 }
 
 /** Whether premium is rich, and how we know — IV rank when history exists, IV ÷ realized otherwise. */
