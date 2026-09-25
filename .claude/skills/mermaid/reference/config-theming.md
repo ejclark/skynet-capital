@@ -162,17 +162,7 @@ What it does NOT solve:
 12. **`info`:** v11.13.0.
 
 No example failed to parse. Two need care: (3) and (9) are false positives, where `valid` hides a setting that was ignored.)
-```text
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#ffffff"
-    primaryTextColor: "#111111"
-    primaryBorderColor: "#111111"
-    lineColor: "#333333"
-    fontSize: "18px"
----
+```mermaid
 flowchart TD
     accTitle: Base theme customised for a colourblind reader
     accDescr: Black on white nodes; emphasis carried by stroke width and dash, never hue
@@ -184,14 +174,13 @@ flowchart TD
     class C changed
     class D removed
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
 ```text
-%%{init: { "theme": "neutral", "themeVariables": { "fontSize": "18px" } } }%%
+%%{init: { "themeVariables": { "fontSize": "18px" } } }%%
 flowchart LR
     A["plan"] --> B["build"] --> C["ship"]
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
+_(not for GitHub surfaces — sets a fixed theme; shown for recognition)_
 
 ```mermaid
 ---
@@ -205,29 +194,17 @@ flowchart LR
     idea["proposed, not built"] -.-> plan["plan issue"] ==> build["build session"]
 ```
 
-```text
+```mermaid
 ---
 config:
   look: handDrawn
   handDrawnSeed: 7
-  theme: neutral
 ---
 flowchart LR
     idea["proposed, not built"] -.-> plan["plan issue"] ==> build["build session"]
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
----
-config:
-  theme: base
-  themeVariables:
-    git0: "#222222"
-    git1: "#666666"
-    gitBranchLabel0: "#ffffff"
-    gitBranchLabel1: "#ffffff"
-    commitLabelFontSize: "14px"
----
+```mermaid
 gitGraph
     commit id: "main"
     branch item-1
@@ -235,38 +212,16 @@ gitGraph
     checkout main
     merge item-1 tag: "1/1"
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
----
-config:
-  theme: base
-  themeVariables:
-    pie1: "#111111"
-    pie2: "#777777"
-    pie3: "#dddddd"
-    pieStrokeColor: "#000000"
-    pieStrokeWidth: "3px"
-    pieOpacity: "1"
-    pieSectionTextColor: "#ffffff"
----
+```mermaid
 pie showData
     title Calls by verdict
     "verbatim" : 5
     "amended" : 3
     "reject" : 2
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#000000, #888888"
-      titleColor: "#111111"
----
+```mermaid
 xychart-beta
     title "Fills per hour"
     x-axis [09, 10, 11, 12]
@@ -274,43 +229,28 @@ xychart-beta
     bar [3, 5, 7, 4]
     line [2, 4, 6, 5]
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
----
-config:
-  theme: base
-  themeVariables:
-    darkMode: true
-    background: "#0d1117"
-    primaryColor: "#1f2937"
-    primaryTextColor: "#f0f6fc"
-    lineColor: "#f0f6fc"
----
+```mermaid
 sequenceDiagram
     participant S as ship.sh
     participant G as GitHub
     S->>G: open PR
     G-->>S: merged
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
+```mermaid
 ---
 config:
-  theme: redux
   look: neo
 ---
 flowchart LR
     a["plan"] ==> b["build"] -.-> c["retired path"]
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
+```mermaid
 ---
 config:
   layout: elk
-  theme: neutral
 ---
 flowchart TD
     a["issue capsule"] --> b["build session"]
@@ -318,19 +258,11 @@ flowchart TD
     c -->|yes| d["ship"]
     c -.->|no| b
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
-```text
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: red
----
+```mermaid
 flowchart LR
     a --> b
 ```
-_(pins a theme — not for GitHub surfaces, where the page owns light/dark; shown for reference)_
 
 ```mermaid
 info
