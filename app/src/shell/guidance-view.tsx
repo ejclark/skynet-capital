@@ -76,13 +76,14 @@ function HeldLine({
   readonly onStake: (next: GuidanceStake) => void;
 }): ReactElement | null {
   if (!held) return null;
-  const summary = `${held.shares} shares${held.costBasis !== undefined ? ` at ${usd(held.costBasis)}` : ""}`;
+  const summary = `${held.shares} shares${held.costBasis !== undefined ? ` at ${usd(held.costBasis)}` : ""}${held.callsSold ? `, ${held.callsSold} call${held.callsSold === 1 ? "" : "s"} already sold` : ""}`;
   if (stakeKey === "account") {
     return (
       <p className="guidance-muted">From your paper account: {summary}. Edit to try a what-if.</p>
     );
   }
-  if (held.shares === stake.shares && held.costBasis === stake.costBasis) return null;
+  const same = (k: "shares" | "costBasis" | "callsSold") => held[k] === stake[k];
+  if (same("shares") && same("costBasis") && same("callsSold")) return null;
   return (
     <p className="guidance-muted">
       Your paper account holds {summary}.{" "}

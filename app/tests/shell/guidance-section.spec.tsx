@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { GuidanceMarket, LadderRow } from "../../../src/options/position-guidance-types";
 import { inputs } from "../../../tests/options/position-guidance-fixture";
-import { cleanStake, guidanceQuery } from "../../src/live/guidance";
+import type { DeskSnapshot } from "../../src/live/desk";
+import { cleanStake, guidanceQuery, heldStake } from "../../src/live/guidance";
 import { GuidanceSection } from "../../src/shell/guidance-section";
 
 /**
@@ -166,5 +167,22 @@ describe("guidance tab — from your positions (#3729 step 4)", () => {
         goal: "income",
       }),
     );
+  });
+});
+
+describe("guidance tab — calls already sold (#3729 step 4b)", () => {
+  it("counts the account's open short calls on this stock as lots already covered", () => {
+    const desk = {
+      generatedAt: "",
+      desk: {
+        positions: [
+          { symbol: "CRWV", isOption: false, quantity: "400", costPerShare: "$70.00" },
+          { symbol: "CRWV261016C00095000", isOption: true, quantity: "-2", costPerShare: "$1.65" },
+          { symbol: "CRWV261016P00070000", isOption: true, quantity: "-1", costPerShare: "$1.10" },
+          { symbol: "NVDA261016C00200000", isOption: true, quantity: "-1", costPerShare: "$2.00" },
+        ],
+      },
+    } as unknown as DeskSnapshot;
+    expect(heldStake(desk, "CRWV")).toEqual({ shares: 400, costBasis: 70, callsSold: 2 });
   });
 });

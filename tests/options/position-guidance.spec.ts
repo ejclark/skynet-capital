@@ -609,3 +609,32 @@ describe("dates as a member reads them", () => {
     expect(prose.filter((t) => /\d{4}-\d{2}-\d{2}/.test(t))).toEqual([]);
   });
 });
+
+// #3729 step 4b: calls already sold take their lots out of play; premium already collected lowers
+// the strike floor (basis minus premiums), so a strike just under what was paid can still break even.
+describe("calls you've already sold, and premium you've collected", () => {
+  const ccRows = (b: ReturnType<typeof positionGuidance>) =>
+    b.ladder.filter((r) => r.lever === "covered-calls");
+
+  it("offers only the lots no call is open against", () => {
+    const b = positionGuidance(inputs({ stake: { ...inputs().stake, callsSold: 3 } }));
+    expect(ccRows(b).every((r) => r.maxContracts === 1)).toBe(true);
+  });
+
+  it("says nothing is left to cover when every lot already has a call", () => {
+    const b = positionGuidance(inputs({ stake: { ...inputs().stake, callsSold: 4 } }));
+    expect(b.calls[1]?.call).toBe("NOT AVAILABLE");
+    expect(b.calls[1]?.reasons[0]?.text).toContain("All 4 of your 100-share lots");
+    expect(ccRows(b)).toEqual([]);
+  });
+
+  it("lowers the strike floor by the premium collected per share", () => {
+    // Paid $100 for 400 shares; $4,400 collected is $11 a share, so the floor is $89.
+    const stake = { shares: 400, costBasis: 100, cash: 0, goal: "income" as const };
+    const plain = ccRows(positionGuidance(inputs({ stake })));
+    const net = ccRows(positionGuidance(inputs({ stake: { ...stake, premiumsCollected: 4400 } })));
+    expect(plain.some((r) => r.strike < 100)).toBe(false);
+    expect(net.some((r) => r.strike >= 89 && r.strike < 100)).toBe(true);
+    expect(net.every((r) => r.strike >= 89)).toBe(true);
+  });
+});

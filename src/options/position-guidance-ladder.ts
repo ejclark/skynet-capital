@@ -1,4 +1,5 @@
 import {
+  coverableLots,
   DELTA_TOLERANCE,
   HEADLINE_DELTA,
   HEADLINE_MIN_DTE,
@@ -8,6 +9,7 @@ import {
   MIN_BID,
   MIN_OPEN_INTEREST,
   QUOTE_STALE_MS,
+  strikeFloor,
 } from "./position-guidance-rules.js";
 import type {
   DteMark,
@@ -71,7 +73,8 @@ interface Side {
 function sideFor(lever: LadderRow["lever"], input: GuidanceInputs): Side {
   const { spot, stake } = input;
   if (lever === "covered-calls") {
-    const lots = Math.floor((stake.shares ?? 0) / 100);
+    const lots = coverableLots(stake);
+    const floor = strikeFloor(stake);
     // Without a basis there is no honest "if called" figure and no floor under the strike, so a
     // covered call is offered only once the member says what they paid (unless they want out).
     const needsBasis = stake.goal !== "exit";
@@ -82,7 +85,7 @@ function sideFor(lever: LadderRow["lever"], input: GuidanceInputs): Side {
       reject: (strike) =>
         strike <= spot
           ? "otm"
-          : needsBasis && (stake.costBasis === undefined || strike < stake.costBasis)
+          : needsBasis && (floor === undefined || strike < floor)
             ? "basis"
             : undefined,
     };
@@ -149,7 +152,7 @@ function rowFor(
   if (!valuation || assigned === undefined || touch === undefined) return drop("quote");
   if (Math.abs(valuation.delta) > MAX_SHORT_DELTA) return drop("delta");
   const capital = side.type === "call" ? input.spot : q.strike;
-  const basis = input.stake.costBasis;
+  const basis = strikeFloor(input.stake);
   const disagreement =
     q.feedDelta === undefined ? undefined : Math.abs(q.feedDelta - valuation.delta);
   return {

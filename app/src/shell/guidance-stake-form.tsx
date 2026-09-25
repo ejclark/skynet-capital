@@ -14,13 +14,21 @@ import { Toggle } from "./toggle";
  * the engine here (see `live/guidance.ts`).
  */
 
-type NumericField = "shares" | "costBasis" | "cash" | "happyToOwnAt";
+type NumericField =
+  | "shares"
+  | "costBasis"
+  | "cash"
+  | "happyToOwnAt"
+  | "callsSold"
+  | "premiumsCollected";
 
 const FIELDS: readonly (readonly [NumericField, string, string])[] = [
   ["shares", "Shares you hold", "0"],
   ["costBasis", "What you paid, per share", "needed for covered calls"],
   ["cash", "Cash you'd set aside", "for cash-secured puts"],
   ["happyToOwnAt", "Price you'd happily buy more at", "optional"],
+  ["callsSold", "Calls already sold on these shares", "contracts, if any"],
+  ["premiumsCollected", "Premium collected so far ($)", "lowers your break-even"],
 ];
 
 const GOAL_OPTIONS: readonly (readonly [GuidanceGoal, string])[] = [
@@ -34,6 +42,7 @@ export function stakeSummary(stake: GuidanceStake): string {
     `${stake.shares ?? 0} shares`,
     stake.costBasis !== undefined ? `paid ${usd(stake.costBasis)}` : "paid —",
     stake.cash !== undefined ? `cash ${usd(stake.cash)}` : undefined,
+    stake.callsSold ? `${stake.callsSold} call${stake.callsSold === 1 ? "" : "s"} sold` : undefined,
     stake.goal ? `goal: ${GOAL_WORDS[stake.goal]}` : "no goal picked",
   ];
   return parts.filter(Boolean).join(" · ");

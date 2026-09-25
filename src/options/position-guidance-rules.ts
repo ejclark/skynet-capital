@@ -5,6 +5,7 @@ import type {
   EarningsWindow,
   GuidanceCatalyst,
   GuidanceQuote,
+  GuidanceStake,
   PulseItem,
   PulseStatus,
   Richness,
@@ -303,4 +304,24 @@ export function spanText(start: string, end: string): string {
   return start.slice(0, 7) === end.slice(0, 7)
     ? `${dayText(start)}–${Number(end.slice(8))}`
     : `${dayText(start)}–${dayText(end)}`;
+}
+
+/**
+ * 100-share lots still free to sell a call against: every lot minus the calls already open on it
+ * (#3729 step 4b). Counting all lots would offer a call on shares already promised — a naked call
+ * in all but name, which this desk never sells.
+ */
+export function coverableLots(stake: GuidanceStake): number {
+  return Math.max(0, Math.floor((stake.shares ?? 0) / 100) - (stake.callsSold ?? 0));
+}
+
+/**
+ * The lowest strike a covered call may sit at: what the member paid per share, less the premium
+ * already collected on the position (spread over its shares). Selling at this floor breaks even
+ * on the whole position, premiums included — the plan's "basis minus premiums".
+ */
+export function strikeFloor(stake: GuidanceStake): number | undefined {
+  const { costBasis, premiumsCollected, shares } = stake;
+  if (costBasis === undefined) return undefined;
+  return premiumsCollected && shares ? costBasis - premiumsCollected / shares : costBasis;
 }

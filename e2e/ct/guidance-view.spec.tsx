@@ -53,9 +53,9 @@ test.describe("desktop, 1280px", () => {
 });
 
 test.describe("phone, 390px — from your paper account", () => {
-  test.use({ viewport: { width: 390, height: 520 } });
+  test.use({ viewport: { width: 390, height: 1400 } });
   test("the positions link lands with the account's shares already in", async ({ mount }) => {
-    const HELD = { shares: 400, costBasis: 70 };
+    const HELD = { shares: 400, costBasis: 70, callsSold: 2 };
     const component = await mount(
       <GuidanceView
         guidance={positionGuidance(inputs({ stake: HELD }))}

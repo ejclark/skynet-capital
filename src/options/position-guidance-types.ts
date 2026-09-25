@@ -57,6 +57,10 @@ export interface GuidanceStake {
   readonly happyToOwnAt?: number;
   /** Whole-portfolio value, for the concentration line. */
   readonly portfolioValue?: number;
+  /** Covered calls already open against these shares, in contracts — those lots are spoken for. */
+  readonly callsSold?: number;
+  /** Premium already received on this position, in dollars — it lowers the strike floor. */
+  readonly premiumsCollected?: number;
 }
 
 /** One listed contract as the feed quoted it. Bid is what a SELLER receives — every yield uses it. */
@@ -208,7 +212,7 @@ export interface LadderRow {
   readonly probAssigned: number;
   /** Model P(trading through the strike at any time before expiry) — roughly 2× the above. */
   readonly probTouch: number;
-  /** Covered call: total return if called away, measured from basis — absent when no basis was entered. */
+  /** Covered call: total return if called away, measured from the strike floor (basis less premiums collected) — absent with no basis. */
   readonly returnIfCalled?: number;
   /** Cash-secured put: the effective price paid per share if assigned (strike − bid). */
   readonly effectiveEntry?: number;

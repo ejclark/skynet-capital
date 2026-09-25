@@ -26,6 +26,8 @@ function cleanStake(stake: GuidanceStake): GuidanceStake {
     ...(positive(stake.cash) ? { cash: stake.cash } : {}),
     ...(positive(stake.happyToOwnAt) ? { happyToOwnAt: stake.happyToOwnAt } : {}),
     ...(positive(stake.portfolioValue) ? { portfolioValue: stake.portfolioValue } : {}),
+    ...(positive(stake.callsSold) ? { callsSold: Math.floor(stake.callsSold) } : {}),
+    ...(positive(stake.premiumsCollected) ? { premiumsCollected: stake.premiumsCollected } : {}),
   };
 }
 

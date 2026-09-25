@@ -4,6 +4,7 @@ import type {
   GuidanceSnapshot,
   GuidanceStake,
 } from "../../../src/options/position-guidance-types";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskSnapshot } from "./desk";
 
 /**
@@ -60,12 +61,16 @@ export function cleanStake(raw: unknown): GuidanceStake {
   const costBasis = positive(r.costBasis);
   const cash = positive(r.cash);
   const happyToOwnAt = positive(r.happyToOwnAt);
+  const callsSold = positive(r.callsSold);
+  const premiumsCollected = positive(r.premiumsCollected);
   const goal = GOALS.find((g) => g === r.goal);
   return {
     ...(shares !== undefined ? { shares: Math.floor(shares) } : {}),
     ...(costBasis !== undefined ? { costBasis } : {}),
     ...(cash !== undefined ? { cash } : {}),
     ...(happyToOwnAt !== undefined ? { happyToOwnAt } : {}),
+    ...(callsSold !== undefined ? { callsSold: Math.floor(callsSold) } : {}),
+    ...(premiumsCollected !== undefined ? { premiumsCollected } : {}),
     ...(goal ? { goal } : {}),
   };
 }
@@ -109,10 +114,23 @@ export function heldStake(
   desk: DeskSnapshot | undefined,
   symbol: string,
 ): GuidanceStake | undefined {
-  const held = desk?.desk.positions.find((p) => !p.isOption && p.symbol === symbol);
+  const positions = desk?.desk.positions ?? [];
+  const held = positions.find((p) => !p.isOption && p.symbol === symbol);
   if (!held) return undefined;
   const shares = Math.floor(num(held.quantity));
   const costBasis = num(held.costPerShare);
   if (!(shares > 0)) return undefined;
-  return { shares, ...(costBasis > 0 ? { costBasis } : {}) };
+  // Calls already sold on this stock (a short call is a negative quantity) — those lots are taken.
+  const callsSold = positions
+    .filter((p) => p.isOption && num(p.quantity) < 0)
+    .filter((p) => {
+      const parts = parseOccSymbol(p.symbol);
+      return parts?.underlying === symbol && parts.type === "call";
+    })
+    .reduce((n, p) => n - num(p.quantity), 0);
+  return {
+    shares,
+    ...(costBasis > 0 ? { costBasis } : {}),
+    ...(callsSold > 0 ? { callsSold } : {}),
+  };
 }

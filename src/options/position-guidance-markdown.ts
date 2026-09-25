@@ -56,6 +56,8 @@ function stake(b: PositionGuidance): string[] {
     s.cash !== undefined ? `cash **${usd(s.cash)}**` : "cash —",
     s.goal ? `goal **${GOAL_WORDS[s.goal] ?? s.goal}**` : "goal — (not set)",
     s.happyToOwnAt !== undefined ? `happy to own at **${usd(s.happyToOwnAt)}**` : undefined,
+    s.callsSold ? `**${s.callsSold}** call${s.callsSold === 1 ? "" : "s"} already sold` : undefined,
+    s.premiumsCollected ? `**${usd(s.premiumsCollected)}** premium collected` : undefined,
     s.concentration !== undefined ? `**${pct(s.concentration)}** of portfolio` : undefined,
   ].filter(Boolean);
   return ["### 2 · Your stake", "", parts.join(" · "), ""];
