@@ -56,38 +56,47 @@ export interface SpotObservation {
   readonly lastAt?: string;
   /** The underlying implied by put-call parity at the money — the second, independent source. */
   readonly parity?: number;
+  /** IEX's own bid/ask midpoint — a third read, same venue, useful when no tight pair exists. */
+  readonly mid?: number;
 }
 
+const gapOf = (a: number, b: number): number => Math.abs(a / b - 1);
+
+/**
+ * Spot, cross-checked. A disagreement is a WARNING (aging — confidence capped medium), never an
+ * automatic refusal: the option feed is indicative, and how often it legitimately disagrees with
+ * IEX has not been measured yet (#3729). Out of hours a parity gap additionally `blocksPricing` —
+ * every strike would be solved from mismatched data — so the rows wait for the open. Only a
+ * missing spot, or one too old to be a price, is stale.
+ */
 export function spotPulse(obs: SpotObservation | undefined, now: string, open: boolean): PulseItem {
   const source = "Alpaca IEX last trade × option parity";
   if (!obs) return row("spot", source, "stale", "no spot from the feed");
-  if (obs.parity !== undefined) {
-    const gap = Math.abs(obs.last / obs.parity - 1);
-    if (gap > PARITY_TOLERANCE) {
-      // Out of session, option marks go stale and wide on their own, so a gap is a warning — the
-      // calls are already plans for the open. In session, one of two live sources is wrong.
-      return row(
-        "spot",
-        source,
-        open ? "stale" : "aging",
-        `IEX $${obs.last.toFixed(2)} vs option-implied $${obs.parity.toFixed(2)} (${(gap * 100).toFixed(1)}% apart${open ? "" : ", after hours"})`,
-        obs.lastAt,
-      );
-    }
-  } else if (open) {
-    // No second source in session means spot is unverified — never graded as if it were checked.
-    return row(
-      "spot",
-      source,
-      "stale",
-      "no at-the-money call/put pair to cross-check spot",
-      obs.lastAt,
-    );
+  const fmt = (x: number) => `$${x.toFixed(2)}`;
+  if (obs.parity !== undefined && gapOf(obs.last, obs.parity) > PARITY_TOLERANCE) {
+    const gap = (gapOf(obs.last, obs.parity) * 100).toFixed(1);
+    const note = `IEX ${fmt(obs.last)} vs option-implied ${fmt(obs.parity)} (${gap}% apart${open ? "" : ", after hours"})`;
+    return {
+      ...row("spot", source, "aging", note, obs.lastAt),
+      ...(open ? {} : { blocksPricing: true }),
+    };
+  }
+  if (
+    obs.parity === undefined &&
+    obs.mid !== undefined &&
+    open &&
+    gapOf(obs.last, obs.mid) > PARITY_TOLERANCE
+  ) {
+    const note = `IEX last ${fmt(obs.last)} vs IEX bid/ask mid ${fmt(obs.mid)} — no tight call/put pair to settle it`;
+    return row("spot", source, "aging", note, obs.lastAt);
   }
   if (!obs.lastAt) return row("spot", source, "aging", "the feed gave no trade time");
   const age = Date.parse(now) - Date.parse(obs.lastAt);
   const status = ageStatus(age, open, SPOT_AGING_MS, SPOT_STALE_MS);
-  const cross = obs.parity === undefined ? "no parity cross-check" : "matches option parity";
+  const cross =
+    obs.parity !== undefined
+      ? "matches option parity"
+      : "unverified — no tight call/put pair to cross-check";
   const graded = status === "fresh" && obs.parity === undefined ? "aging" : status;
   return row(
     "spot",
@@ -104,19 +113,25 @@ export function chainPulse(
   total: number,
   now: string,
   open: boolean,
+  feed: "indicative" | "opra" = "indicative",
 ): PulseItem {
-  const source = "Alpaca indicative option snapshots";
+  const source =
+    feed === "indicative" ? "Alpaca indicative option snapshots" : "OPRA option quotes";
   if (quotedAt.length === 0)
     return row("chain", source, "stale", `no quote times on ${total} strikes`);
   const ages = quotedAt.map((t) => Date.parse(now) - Date.parse(t)).sort((a, b) => a - b);
   const median = ages[Math.floor(ages.length / 2)] ?? 0;
   const newest = quotedAt.reduce((a, b) => (a > b ? a : b));
-  const status = ageStatus(median, open, CHAIN_AGING_MS, CHAIN_STALE_MS);
+  const aged = ageStatus(median, open, CHAIN_AGING_MS, CHAIN_STALE_MS);
+  // An indicative feed is derived, not the consolidated market: a recent stamp says the estimate is
+  // recent, not that anyone will fill at it. It is never graded fresh.
+  const status = feed === "indicative" && aged === "fresh" ? "aging" : aged;
+  const kind = feed === "indicative" ? "indicative (not the consolidated market) · " : "";
   return row(
     "chain",
     source,
     status,
-    `median ${ageText(median)} · ${quotedAt.length}/${total} strikes quoted`,
+    `${kind}median ${ageText(median)} · ${quotedAt.length}/${total} strikes quoted`,
     newest,
   );
 }

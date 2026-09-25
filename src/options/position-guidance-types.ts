@@ -34,6 +34,12 @@ export interface PulseItem {
   readonly status: PulseStatus;
   /** One plain line: why this status ("2 new 8-Ks since research", "quotes 3 min old"). */
   readonly note: string;
+  /**
+   * The input is unfit to PRICE from, even though it is fit to show: out of hours with the option
+   * marks and the stock's price disagreeing, every yield and delta would be solved from mismatched
+   * data. The engine then drops the strike rows and waits for the open.
+   */
+  readonly blocksPricing?: boolean;
 }
 
 /** What the member wants out of the position — it changes which calls are sensible. */
@@ -63,6 +69,10 @@ export interface GuidanceQuote {
   readonly iv?: number;
   /** The feed's delta, kept only to cross-check our own Black-Scholes delta. */
   readonly feedDelta?: number;
+  /** When the feed says this bid/ask was quoted — a strike older than the stale bar is dropped. */
+  readonly quotedAt?: string;
+  /** Contracts open — under the liquidity floor, a quote is a number nobody trades against. */
+  readonly openInterest?: number;
 }
 
 /**
@@ -126,6 +136,13 @@ export interface GuidanceInputs {
   /** Risk-free rate for the odds; defaults to 0 like the rest of `src/options/`. */
   readonly rate?: number;
 }
+
+/**
+ * Everything the engine needs except the member's stake — what `/api/trade/guidance` returns. The
+ * stake is applied in the member's own browser, so shares, cost basis and cash never travel in a
+ * URL or land in a server log.
+ */
+export type GuidanceMarket = Omit<GuidanceInputs, "stake">;
 
 export type Lever = "shares" | "covered-calls" | "cash-secured-puts";
 export type SharesCall = "BUY" | "HOLD" | "SELL" | "STAND ASIDE" | "NO ANSWER";

@@ -23,10 +23,23 @@ describe("spotPulse — two independent reads of spot", () => {
     expect(p.note).toContain("matches option parity");
   });
 
-  it("is stale when IEX and option parity disagree by more than 1%", () => {
+  it("warns (aging) — never refuses — when IEX and option parity disagree by more than 1%", () => {
     const p = spotPulse({ last: 80, lastAt: ago(1_000), parity: 82 }, NOW, true);
-    expect(p.status).toBe("stale");
+    expect(p.status).toBe("aging");
     expect(p.note).toContain("2.4% apart");
+    expect(p.blocksPricing).toBeUndefined();
+  });
+
+  it("out of hours, a parity gap blocks pricing — every strike would be solved from mismatched data", () => {
+    expect(
+      spotPulse({ last: 80, lastAt: ago(3_600_000), parity: 84 }, NOW, false).blocksPricing,
+    ).toBe(true);
+  });
+
+  it("with no tight pair, IEX's own bid/ask mid is the fallback cross-check", () => {
+    const p = spotPulse({ last: 80, lastAt: ago(1_000), mid: 82 }, NOW, true);
+    expect(p).toMatchObject({ status: "aging" });
+    expect(p.note).toContain("IEX bid/ask mid $82.00");
   });
 
   it("ages by the trade's own time: 2 min aging, 6 min stale, in session", () => {
@@ -119,8 +132,10 @@ describe("earnings, filings and session", () => {
 });
 
 describe("review regressions — nothing unverified reaches the engine graded as checked", () => {
-  it("in session, a spot with no parity pair is stale — unverified, not 'aging'", () => {
-    expect(spotPulse({ last: 80, lastAt: ago(1_000) }, NOW, true).status).toBe("stale");
+  it("in session, a spot with no parity pair is 'unverified' (aging) — capped, never graded as checked", () => {
+    const p = spotPulse({ last: 80, lastAt: ago(1_000) }, NOW, true);
+    expect(p.status).toBe("aging");
+    expect(p.note).toContain("unverified");
   });
 
   it("after hours, a parity gap warns rather than refuses — the calls are plans for the open", () => {
@@ -136,5 +151,17 @@ describe("review regressions — nothing unverified reaches the engine graded as
       NOW,
     );
     expect(p).toMatchObject({ status: "stale", asOf: "2026-09-25T17:58:00Z" });
+  });
+});
+
+describe("chainPulse — the indicative feed", () => {
+  it("is never graded fresh, however recent its stamps", () => {
+    const p = chainPulse([ago(10_000), ago(20_000)], 2, NOW, true);
+    expect(p.status).toBe("aging");
+    expect(p.note).toContain("indicative (not the consolidated market)");
+  });
+
+  it("an OPRA feed with recent stamps is fresh", () => {
+    expect(chainPulse([ago(10_000)], 1, NOW, true, "opra").status).toBe("fresh");
   });
 });

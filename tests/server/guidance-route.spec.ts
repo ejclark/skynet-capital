@@ -1,8 +1,10 @@
 import type { ServerResponse } from "node:http";
+import { positionGuidance } from "../../src/options/position-guidance.js";
+import type { GuidanceMarket } from "../../src/options/position-guidance-types.js";
 import { priceOption } from "../../src/options/pricing.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { serveGuidance, stakeFromQuery } from "../../src/server/guidance-route.js";
+import { serveGuidance, sidesFrom } from "../../src/server/guidance-route.js";
 
 /**
  * GET /api/trade/guidance (#3729 slice 3): live reads through the member's own account, pulse-
@@ -89,7 +91,11 @@ const deps = {
   },
   now: () => NOW,
 };
-const URL = "/api/trade/guidance?symbol=CRWV&shares=400&basis=70&cash=40000&goal=income";
+const URL = "/api/trade/guidance?symbol=CRWV";
+const STAKE = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" as const };
+
+/** What the member's browser does with the answer: apply the stake it never sent. */
+const inBrowser = (market: GuidanceMarket) => positionGuidance({ ...market, stake: STAKE });
 
 describe("serveGuidance", () => {
   it("400s a non-symbol, and tells an unlinked session the honest note", async () => {
@@ -101,53 +107,69 @@ describe("serveGuidance", () => {
     expect(b.json().reason).toBe("unlinked");
   });
 
-  it("answers the guidance and its markdown template from live reads", async () => {
-    const { config } = broker();
+  it("answers the market half only; the browser applies the stake", async () => {
     const r = fakeRes();
-    await serveGuidance(r.res, `${URL}&refresh=1`, config, "guidance-a", deps);
-    const { guidance, markdown } = r.json();
-    expect(guidance.calls.map((c: { lever: string }) => c.lever)).toEqual([
+    await serveGuidance(r.res, `${URL}&refresh=1`, broker().config, "guidance-a", deps);
+    const { market } = r.json();
+    expect(market.stake).toBeUndefined();
+    expect(inBrowser(market).calls.map((c) => c.lever)).toEqual([
       "shares",
       "covered-calls",
       "cash-secured-puts",
     ]);
-    expect(guidance.stake).toMatchObject({ shares: 400, costBasis: 70, cash: 40000 });
-    expect(markdown.split("\n")[0]).toContain("## CRWV · $80.00");
   });
 
-  it("prices only expiries the guidance may trade — never one spanning the print window", async () => {
+  it("never reads or echoes a stake someone puts in the URL", async () => {
+    const r = fakeRes();
+    await serveGuidance(
+      r.res,
+      `${URL}&shares=400&basis=70&cash=40000&refresh=1`,
+      broker().config,
+      "guidance-f",
+      deps,
+    );
+    expect(r.out.body).not.toMatch(/costBasis|"cash"|"shares"/);
+  });
+
+  it("prices only expiries guidance may trade — never one spanning the earnings window", async () => {
     const { config, chainCalls } = broker();
-    await serveGuidance(fakeRes().res, `${URL}&refresh=1`, config, "guidance-b", deps);
+    const r = fakeRes();
+    await serveGuidance(r.res, `${URL}&refresh=1`, config, "guidance-b", deps);
     expect(chainCalls.some((c) => c.startsWith("2026-11-13") || c.startsWith("2026-11-20"))).toBe(
       false,
     );
-    const r = fakeRes();
-    await serveGuidance(r.res, `${URL}&refresh=1`, config, "guidance-b2", deps);
-    const strip = r.json().guidance.dteStrip;
-    expect(strip.find((m: { expiration: string }) => m.expiration === "2026-11-13").verdict).toBe(
-      "spans-print",
-    );
+    const strip = inBrowser(r.json().market).dteStrip;
+    expect(strip.find((m) => m.expiration === "2026-11-13")?.verdict).toBe("spans-print");
   });
 
-  it("grades each input off the feed's own timestamps", async () => {
+  it("prices only the sides asked for (plus the parity pair)", async () => {
+    const { config, chainCalls } = broker();
+    await serveGuidance(fakeRes().res, `${URL}&sides=calls&refresh=1`, config, "guidance-g", deps);
+    expect(chainCalls.filter((c) => c.endsWith(":put"))).toEqual(["2026-10-02:put"]);
+  });
+
+  it("grades each input off the feed's own timestamps — and never grades the indicative feed fresh", async () => {
     const r = fakeRes();
     await serveGuidance(r.res, `${URL}&refresh=1`, broker().config, "guidance-c", deps);
     const pulse = Object.fromEntries(
-      r.json().guidance.pulse.map((p: { id: string; status: string }) => [p.id, p.status]),
+      r.json().market.pulse.map((p: { id: string; status: string }) => [p.id, p.status]),
     );
     expect(pulse).toMatchObject({
       spot: "fresh",
-      chain: "fresh",
+      chain: "aging",
       "earnings-date": "aging",
       session: "fresh",
     });
   });
 
-  it("refuses to answer when option parity says spot is wrong", async () => {
+  it("warns — does not refuse — when option parity disagrees with spot in session", async () => {
     const r = fakeRes();
     await serveGuidance(r.res, `${URL}&refresh=1`, broker(80, 4).config, "guidance-d", deps);
-    const calls = r.json().guidance.calls as { call: string }[];
-    expect(calls.every((c) => c.call === "NO ANSWER")).toBe(true);
+    const market = r.json().market as GuidanceMarket;
+    expect(market.pulse.find((p) => p.id === "spot")).toMatchObject({ status: "aging" });
+    const calls = inBrowser(market).calls;
+    expect(calls.some((c) => c.call === "NO ANSWER")).toBe(false);
+    expect(calls.every((c) => c.confidence !== "high")).toBe(true);
   });
 
   it("coalesces a double-tap into one pull, and refresh=1 forces a new one", async () => {
@@ -160,10 +182,9 @@ describe("serveGuidance", () => {
     expect(chainCalls.length).toBe(once * 2);
   });
 
-  it("reads the stake from the query, dropping junk and defaulting the goal", () => {
-    expect(stakeFromQuery(new URLSearchParams("shares=400&basis=abc&cash=-5&goal=moon"))).toEqual({
-      goal: "income",
-      shares: 400,
-    });
+  it("reads sides, defaulting to both", () => {
+    expect(sidesFrom(null)).toEqual(["call", "put"]);
+    expect(sidesFrom("puts")).toEqual(["put"]);
+    expect(sidesFrom("junk")).toEqual(["call", "put"]);
   });
 });

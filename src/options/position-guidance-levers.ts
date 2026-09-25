@@ -45,6 +45,8 @@ export function lever(call: Omit<LeverCall, "atOpen">): LeverCall {
 
 const DROP_TEXT: Readonly<Record<LadderDrop, string>> = {
   quote: "untradable quotes (bid under $0.10, spread over 15% of mid, or no IV)",
+  stale: "quotes older than 15 minutes",
+  thin: "too few contracts open (under 100)",
   otm: "at or in the money",
   basis: "below your cost basis",
   delta: "delta over 0.30",
