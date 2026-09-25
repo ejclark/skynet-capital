@@ -94,3 +94,25 @@ describe("validateDraftAccount", () => {
     expect(verdict.refusals).toHaveLength(2);
   });
 });
+
+// #3729 step 4b: shares behind a call already sold are spoken for — unless this draft buys it back.
+describe("validateDraftAccount — calls already sold", () => {
+  const OPEN_SHORT = { symbol: "NVDA260918C00170000", quantity: -1, avgPrice: 4, marketValue: 0 };
+  const held = (quantity: number) => ({ symbol: "NVDA", quantity, avgPrice: 100, marketValue: 0 });
+
+  it("refuses a new short call on shares an open short call already covers", () => {
+    const verdict = validateDraftAccount(addLeg(emptyDraft(), NAKED_CALL), {
+      cash: 0,
+      positions: [held(100), OPEN_SHORT],
+    });
+    expect(verdict.ok).toBe(false);
+    expect(verdict.refusals[0]).toMatch(/you hold 100, 100 of them already covering calls/);
+  });
+
+  it("passes a roll: buying the old call back frees the shares for the new one", () => {
+    const buyBack: NewLeg = { ...NAKED_CALL, strike: 170, action: "buy" };
+    const roll = addLeg(addLeg(emptyDraft(), buyBack), NAKED_CALL);
+    const verdict = validateDraftAccount(roll, { cash: 0, positions: [held(100), OPEN_SHORT] });
+    expect(verdict.refusals).toEqual([]);
+  });
+});

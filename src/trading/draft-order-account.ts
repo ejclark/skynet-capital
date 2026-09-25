@@ -1,6 +1,6 @@
-import type { DraftOrder, DraftVerdict } from "./draft-order.js";
+import { type DraftOrder, type DraftVerdict, draftSymbols } from "./draft-order.js";
 import { draftRequirements } from "./draft-order-requirements.js";
-import { heldShares } from "./option-economics.js";
+import { freeShares, heldShares } from "./option-economics.js";
 import { parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 
@@ -32,14 +32,37 @@ export function validateDraftAccount(
   }
   for (const [underlying, needed] of sharesByUnderlying) {
     const held = heldShares(context, underlying);
-    if (held < needed) {
+    const free = freeShares(context, underlying) + sharesFreedByDraft(draft, context, underlying);
+    if (free < needed) {
+      const promised = held - free;
       refusals.push(
-        `A short call needs the shares behind it: ${underlying} needs ${needed} held and you hold ${held}. This desk never sells naked calls.`,
+        `A short call needs the shares behind it: ${underlying} needs ${needed} held and you hold ${held}${promised > 0 ? `, ${promised} of them already covering calls you've sold` : ""}. This desk never sells naked calls.`,
       );
     }
   }
 
   return { ok: refusals.length === 0, refusals, warnings: [] };
+}
+
+/**
+ * Shares this same draft frees on `underlying` by buying back calls already sold — a roll closes
+ * the old short call and writes a new one, and the new one may use the shares the old one held.
+ */
+function sharesFreedByDraft(
+  draft: DraftOrder,
+  context: DraftAccountContext,
+  underlying: string,
+): number {
+  const symbols = draftSymbols(draft);
+  return draft.legs.reduce((freed, leg, i) => {
+    if (leg.action !== "buy" || leg.optionType !== "call" || leg.underlying !== underlying) {
+      return freed;
+    }
+    const symbol = (symbols[i] ?? "").toUpperCase();
+    const short = context.positions.find((p) => p.symbol.toUpperCase() === symbol);
+    const closing = short && short.quantity < 0 ? Math.min(leg.contracts, -short.quantity) : 0;
+    return freed + closing * 100;
+  }, 0);
 }
 
 /** OCC symbol → long contracts held, so a sell that closes one is not read as a new short. */
