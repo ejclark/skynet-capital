@@ -204,6 +204,11 @@ machine/system signal), `--muted` (light) for *removed*, `--accent` (light) for 
   (empirical: PR #446's screenshots, the flagship fridge PR, were dead by 2026-08-20).
 - **One representative frame per changed surface**; prefer a before/after composite (one file)
   over a gallery. Side-by-side via a 2-column GFM table of `<img width="49%">`.
+- **`docs/shots/` holds only the frames a PR's picture slot needs.** A showcase for humans (a
+  before/after gallery, a demo reel for a colleague) goes on the issue or the PR as a comment,
+  never into the tree (Eric, 2026-09-26, on #3760: "the before and after don't need baked into
+  source code; github issue would've been adequate"). Attach via SHA-pinned raw URLs from the
+  commit that carried them, so a revert of the tree copy leaves the comment intact.
 - **Trading surfaces shoot the phone frame first** (the ticket, the options chain, the milestone
   strip — CLAUDE.md → *Mobile-first on the trading surfaces*, Eric 2026-09-05): pass
   `viewport: { width: 390, height: 844 }` to the harness for the first frame and the default
