@@ -13,9 +13,11 @@ market, etc. Knowing my persona provides you more creative thought on features t
 my journeys."* And on why this file exists at all: *"I also want a persona for me to better
 understand the journeys, how I think, my needs, etc."*
 
-His standing preferences, from his profile: *"Concise and succinct communication that naturally
-clarifies nuance. I am a purist in principle and a pragmatist to accelerate completing larger
-objectives. I likely have ADHD thus enjoy side quests. That's how you build a strong donation."*
+- _hypothesis — he enjoys side quests: the proximity hunt is a standing ask of his (CLAUDE.md →
+  "Side quests — Claude generates ideas too", and the brain-dump rule's "explicit invitation for
+  side quests", 2026-09-06), so a surface that offers the next adjacent thing keeps him longer than
+  one that ends. Proves it wrong: a dated note from him that a suggested detour on a member surface
+  was noise._
 
 What is known, not guessed: he is red/green colourblind (2026-09-06: *"I have mild red/green
 colorblindness. Higher contrast colors make it easier for me to detect these details"* —
@@ -56,9 +58,10 @@ member's stake plus the live-checked market inputs to the fixed-order template")
 
 Beneath the trading need, the design need he named the same day: *"a key part of the value add is
 to gain the screen real estate on the left to elevate design to something way more engaging, fun,
-and ultimately useful."* And the conduit he sees for the "when": *"The calendar widget is a good
-conduit to have a lot of information within reach but be highly efficient on screen real estate…
-the calendar to have a glance at what events are happening in various time frames.. which can help
+and ultimately useful."* And the conduit he sees for the "when", in two messages the same day: *"The calendar widget is a
+good conduit to have a lot of information within reach but be highly efficient on screen real
+estate."* Then: *"Where my head goes with reach and design.. this can serve multiple purposes.. the
+calendar to have a glance at what events are happening in various time frames.. which can help
 influence playbooks to consider, strategies to try, decisions to execute."*
 
 ## 4. How he decides
@@ -73,7 +76,8 @@ influence playbooks to consider, strategies to try, decisions to execute."*
   through wargaming scenarios until diminishing returns take over. lift and shift sections when
   grouping. It's easier to iterate when all the right pieces are present than to mentally juggle all
   the pieces in your head to get a perfect design up front. Favor simplicity first, then break all
-  the problems down to fit everything together in a tighter design."*
+  the problems down to fit everything together in a tighter design."* (His numbered list — 1, its
+  sub-item, 2 — run together here with the numbers dropped.)
 - **Defers a thin fork until data erodes it** (2026-09-07): *"I tend to defer these decisions.
   Completing other known work consistently provides extra insights that result in strong enough
   data points to make an informed decision; the fork erodes into a clear/linear path."*

@@ -13,7 +13,7 @@
           "goto": "/app/",
           "sees": "the league table, ranked rows, no word about where a new member starts",
           "ears": "WHEN a signed-in member with no linked account opens the app, the app shall land them on a page with a visible next step into onboarding.",
-          "expect": [{ "url": "/app/leaderboard" }, { "role": "link", "name": "Onboarding" }],
+          "expect": [{ "role": "link", "name": "Onboarding" }],
           "known_gap": "dead end 1 — first sign-in lands on the leaderboard with no onboarding cue (src/server/auth/oauth-callback.ts:79 → / → app/src/routes/index.tsx:21 → /leaderboard)",
           "where": "src/server/auth/oauth-callback.ts:79",
           "severity": "high",
