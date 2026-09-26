@@ -27,28 +27,36 @@ function useHeartbeat(deskId: string) {
   });
 }
 
+/** Which playbook each verdict belongs to is the owner's to see (#885, Eric 2026-08-29: "at this
+ *  time, we do not show what playbooks others are using"; docs/IA.md §5.2 — a non-owned bot shows
+ *  "state + verdict words, playbook ids withheld"). The server strips the id for anyone else
+ *  (`desk-owner-gate.ts`); the column also stays off when `showPlaybook` is false or no line
+ *  carries an id, so a non-owner's page never draws an empty or leaked Playbook column. */
 export function VerdictTable({
   playbooks,
+  showPlaybook = true,
 }: {
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
+  readonly showPlaybook?: boolean;
 }): ReactElement {
   if (!playbooks) {
     return <p className="note">No playbook verdicts recorded yet.</p>;
   }
+  const named = showPlaybook && playbooks.some((p) => p.playbookId);
   return (
     <table className="hb-table">
       <thead>
         <tr>
-          <th scope="col">Playbook</th>
+          {named ? <th scope="col">Playbook</th> : null}
           <th scope="col">Mode</th>
           <th scope="col">Last pass</th>
           <th scope="col">Held</th>
         </tr>
       </thead>
       <tbody>
-        {playbooks.map((p) => (
-          <tr key={`${p.playbookId}:${p.mode}`}>
-            <td className="num">{p.playbookId}</td>
+        {playbooks.map((p, i) => (
+          <tr key={named ? `${p.playbookId}:${p.mode}` : `${i}:${p.mode}`}>
+            {named ? <td className="num">{p.playbookId}</td> : null}
             <td>{p.mode}</td>
             <td>{VERDICT_WORDS[p.state]}</td>
             <td>{sinceText(p)}</td>
@@ -70,7 +78,13 @@ function StateText({ heartbeat }: { readonly heartbeat: Heartbeat }): ReactEleme
 }
 
 /** Shape A — the header chip. Renders nothing until there is something true to say. */
-export function HeartbeatChip({ deskId }: { readonly deskId: string }): ReactElement | null {
+export function HeartbeatChip({
+  deskId,
+  showPlaybooks = true,
+}: {
+  readonly deskId: string;
+  readonly showPlaybooks?: boolean;
+}): ReactElement | null {
   const query = useHeartbeat(deskId);
   const [open, setOpen] = useState(false);
   if (!query.data?.available) return null;
@@ -88,15 +102,22 @@ export function HeartbeatChip({ deskId }: { readonly deskId: string }): ReactEle
       </button>
       {open ? (
         <div className="hb-pop">
-          <VerdictTable playbooks={heartbeat.playbooks} />
+          <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />
         </div>
       ) : null}
     </div>
   );
 }
 
-/** Shape B — the Heartbeat section. */
-export function HeartbeatSection({ deskId }: { readonly deskId: string }): ReactElement {
+/** Shape B — the Heartbeat section. `showPlaybooks={false}` on a bot the viewer does not own
+ *  (`/u/:id/decisions`) keeps the verdict table's ids and the passes' playbook chips off (#885). */
+export function HeartbeatSection({
+  deskId,
+  showPlaybooks = true,
+}: {
+  readonly deskId: string;
+  readonly showPlaybooks?: boolean;
+}): ReactElement {
   const query = useHeartbeat(deskId);
   if (query.isPending) return <p className="note">Listening for the heartbeat…</p>;
   if (query.isError) return <p className="note">The heartbeat is unreachable right now.</p>;
@@ -119,7 +140,7 @@ export function HeartbeatSection({ deskId }: { readonly deskId: string }): React
       </section>
       <section className="hb-card">
         <h2 className="hb-h">What each playbook concluded on the last pass</h2>
-        <VerdictTable playbooks={heartbeat.playbooks} />
+        <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />
       </section>
       <section className="hb-log">
         <h2 className="hb-h">Passes that placed no trade — idle, blocked, halted</h2>
@@ -128,6 +149,7 @@ export function HeartbeatSection({ deskId }: { readonly deskId: string }): React
           deskId={deskId}
           noTrades
           emptyText="Every recorded pass placed a trade."
+          showPlaybooks={showPlaybooks}
         />
       </section>
     </div>
