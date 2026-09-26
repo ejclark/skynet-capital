@@ -18,6 +18,33 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A Ghost of Yōtei lore layer, translated to mechanics** — Eric wants its "vibes" in the
+  app's delightfulness. Translate, never copy: the guiding wind → a motion cue that points at the
+  next action (the next rung's door, the next slice); sumi-e ink → the hand-drawn look on GitHub
+  (already the sketch register) and SVG ink edges on in-app diagrams; Kurosawa mode → a
+  monochrome high-contrast theme that is colourblind-native by construction (the standing reader
+  is red/green colourblind); petals and leaves → the fanfare budget on wins. The brand objection
+  to settle first, written down before any build: `BRAND.md` sanctions exactly one warm palette
+  (the Eye of Sauron); vermilion would be a second, so this is a *placed* lore layer (the mixed
+  multiverse is sanctioned) with its palette decided in `BRAND.md`, never a drift. Judged first on
+  a Claude Design canvas as 3–5 named shapes on a candidate surface; the placed one ships through
+  the forge roster. _(src: Eric ("Ghost of Yotei vibes… theming the mermaid diagrams could be
+  amazing", 2026-09-26) · while: the Mermaid handoff)_
+- **The ceiling for visual charts, by surface** — GitHub: Mermaid with no theme, the hand-drawn
+  look is the richest register, and anything richer is a still image (≤100KB) rendered by the
+  app. The app: three.js is already in the tree (`src/three`), so a three.js chart is a piece for
+  the forge roster (`/vision` → art-director → piece-wright → set-dresser), with two house limits:
+  a chart a member *decides* on stays 2D and honest (perspective on a P/L curve implies something
+  false), 3D is for atmosphere and lore surfaces; and mobile-first on trading surfaces. A Claude
+  Design artboard can run WebGL (the canvas's live-render board proved a 3.5 MB script loads), so
+  a showcase effect can be judged on the canvas before any code. _(src: Eric ("is it possible to
+  get to babylon/three.js detailed charts? jw what the upper limit", 2026-09-26) · while: the
+  Mermaid handoff)_
+- **In-app Mermaid theming rides the first placed member diagram** — a theme is impossible on
+  GitHub and free in the app once the in-app renderer (#3748 slice 7a) exists; 7a is held until
+  fork 5 on the shape-inventory canvas places the first member diagram (the Wheel, a bot's pass,
+  the unlock map). The Yōtei ink register is a candidate theme for that renderer. _(src: Claude ·
+  while: the same)_
 - **The design → code handoff contract can be a diagram** — `docs/HANDOFFS.md` moves artboards;
   Mermaid is the shared representation both a canvas and a diff read losslessly, for structure and
   behaviour (never look). A design session emits the `sequenceDiagram` or `stateDiagram-v2`
