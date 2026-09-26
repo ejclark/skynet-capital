@@ -16,6 +16,8 @@
 // and the count that got none.
 //
 // Read-only, no network writes. Uses `gh`, which is present wherever Moneypenny runs.
+// Exit 2: could not reach gh (could not do its job). A closing PR it could not read, or a
+// malformed skynet-spec block, is named with a `·` note on stderr — stdout stays the report.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { ghRest } from "./moneypenny/gh.mjs";
@@ -107,7 +109,16 @@ function hydrateClosingPrs(refs) {
       try {
         const pr = ghRest(`pulls/${number}`);
         prCache.set(number, { state: pr.merged ? "MERGED" : "UNMERGED", createdAt: pr.created_at });
-      } catch {
+      } catch (err) {
+        // Optional per reference: the scoreboard stays a conservative lower bound without it (see
+        // above). But the undercount is named, so a lane that looks unanswered can be told apart
+        // from one whose closing PR simply could not be read.
+        const why = String(err?.stderr || err?.message || err)
+          .trim()
+          .split("\n")[0];
+        console.error(
+          `· feedback-scan: closing PR #${number} unreadable (${why}) — counted as not merged`,
+        );
         prCache.set(number, undefined);
       }
     }
@@ -137,8 +148,9 @@ export function firstAnswerAt(issue) {
   return earliest ?? null;
 }
 
-/** Classify one issue into the lane's terminal states. Pure — this is the whole scoreboard. */
-export function outcomeOf(issue) {
+/** Classify one issue into the lane's terminal states. Pure — this is the whole scoreboard.
+ *  `notes`, when given, collects any input it had to skip (a malformed spec block). */
+export function outcomeOf(issue, notes) {
   const labels = (issue.labels ?? []).map((l) => l.name);
   const merged = (issue.closedByPullRequests ?? []).filter((p) => p.state === "MERGED");
   const answeredAt = firstAnswerAt(issue);
@@ -161,7 +173,7 @@ export function outcomeOf(issue) {
     answered: outcome !== "no-answer",
     hoursToAnswer: hours,
     curated: labels.includes(LABELS.curated.name),
-    rounds: roundsOf(issue.body),
+    rounds: roundsOf(issue.body, notes && ((why) => notes.push(`#${issue.number} ${why}`))),
     terminal: labels.filter((l) => TERMINAL.includes(l)),
   };
 }
@@ -171,13 +183,16 @@ export function outcomeOf(issue) {
  * curated issue since 2026-08-22 and read by NOTHING — which made the promise that the round ceiling
  * would be "set from the observed distribution" empty. This is the reader.
  */
-export function roundsOf(body = "") {
+export function roundsOf(body = "", onMalformed) {
   const block = /```skynet-spec\s*\n([\s\S]*?)\n```/.exec(String(body ?? ""));
   if (!block) return null;
   try {
     const rounds = JSON.parse(block[1]).rounds;
     return Number.isFinite(rounds) ? rounds : null;
   } catch {
+    // Optional: `rounds` is a side statistic, and the round stats already count only issues that
+    // carry one. A block that does not parse is still named, so it is not mistaken for "no rounds".
+    onMalformed?.("skynet-spec block is not valid JSON — rounds not counted");
     return null;
   }
 }
@@ -226,7 +241,9 @@ function main(argv) {
       process.exit(2);
     }
   }
-  const rows = issues.map(outcomeOf);
+  const notes = [];
+  const rows = issues.map((issue) => outcomeOf(issue, notes));
+  for (const note of notes) console.error(`· feedback-scan: ${note}`);
   const score = scoreboard(rows);
   if (argv.includes("--json")) {
     console.log(JSON.stringify({ score, rows }, null, 2));
