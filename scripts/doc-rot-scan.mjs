@@ -6,7 +6,12 @@
 // structural map — PR #284). This eye catches the mechanically detectable classes of rot:
 //   ① repo-relative file paths referenced in docs that no longer exist
 //   ② `npm run <script>` references naming scripts absent from package.json
-//   ③ a stale structural map (STRUCTURE-graph.md's built-from commit > 30 days behind HEAD)
+//   ③ a stale structural map (STRUCTURE-graph.md's built-from commit > 50 commits or > 30 days
+//     behind HEAD), and — degrading honestly — an UNKNOWN state when that commit is not reachable
+//     from the checkout (a shallow fetch, a rewritten history) instead of a silent pass. Before
+//     2026-09-26 an unreachable commit returned no finding, so a shallow clone always passed and the
+//     days-only threshold called a map 1,862+ commits behind "fresh" at day 29 (#3769 slice 1, the
+//     lousy-agents lesson "degrade honestly: a missing input is a named state, never a quiet pass").
 // Semantic claims ("only Sauron carries lore") are honestly OUT of scope — undetectable without a
 // model; that residue stays with the config-audit / self-correcting loop. Contract:
 // docs/plans/doc-rot-gate.md.
@@ -19,7 +24,7 @@
 // hygiene one — so it stays a real, always-enforced gate rather than folding into the advisory debt
 // count. A binary "is it stale right now" fact also doesn't suit a ratchet that only ever lowers.
 //
-//   node scripts/doc-rot-scan.mjs             # report + enforce ①②(exit 1)/③(exit 2)
+//   node scripts/doc-rot-scan.mjs             # report + enforce ①②(exit 1)/③(exit 2; exit 3 = unknown)
 //   node scripts/doc-rot-scan.mjs --update    # rewrite doc-rot-budget.json for ①② (ratchet: only lower)
 //   node scripts/doc-rot-scan.mjs --candidate # highest-leverage ①②finding as JSON (governor eye)
 //
@@ -31,6 +36,10 @@ import { dirname, join, resolve } from "node:path";
 const ROOT = process.cwd();
 const BUDGET_FILE = join(ROOT, "doc-rot-budget.json");
 const STALE_DAYS = 30;
+/** Commits behind HEAD before the map is stale. A call, not a measurement: the only data point is
+ *  the 170-commit drift ADR-0008 records and the 1,862+ found on 2026-09-26; the falsifier is a
+ *  false red on `main` from this threshold within two weeks of landing (#3769). */
+const STALE_COMMITS = 50;
 
 // Scan surface (pre-settled fork in the plan): top-level docs + the root intent files. JOURNEYS/ and
 // plans/ are historical records — they describe their moment, not the present, and rot honestly.
@@ -142,22 +151,34 @@ function staleGraphFindings() {
         stdio: ["ignore", "pipe", "ignore"],
       }).trim();
     } catch {
-      return null; // not a repo / unknown sha — skip gracefully rather than false-flag
+      return null;
     }
   };
   const builtAt = git("show", "-s", "--format=%ct", m[1]);
   const headAt = git("show", "-s", "--format=%ct", "HEAD");
-  if (!(builtAt && headAt)) return [];
+  const commits = git("rev-list", "--count", `${m[1]}..HEAD`);
+  if (!(builtAt && headAt && commits !== null)) {
+    // Degrade honestly: not a repo, or a commit this checkout cannot see (shallow fetch, rewritten
+    // history). That is not "fresh" — it is unknown, and it gets its own exit code so a shallow CI
+    // job cannot pass this check by accident.
+    return [
+      {
+        kind: "unknown-graph",
+        doc: "docs/STRUCTURE-graph.md",
+        detail: `built from ${m[1]}, which this checkout cannot reach — freshness UNKNOWN, not fresh (a shallow fetch or a rewritten history); deepen the fetch or run \`npm run graph:refresh\``,
+      },
+    ];
+  }
   const days = (Number(headAt) - Number(builtAt)) / 86_400;
-  return days > STALE_DAYS
-    ? [
-        {
-          kind: "stale-graph",
-          doc: "docs/STRUCTURE-graph.md",
-          detail: `built from ${m[1]}, ${Math.floor(days)}d behind HEAD (max ${STALE_DAYS}d) — the graph-refresh workflow may be broken`,
-        },
-      ]
-    : [];
+  const behind = Number(commits);
+  if (behind <= STALE_COMMITS && days <= STALE_DAYS) return [];
+  return [
+    {
+      kind: "stale-graph",
+      doc: "docs/STRUCTURE-graph.md",
+      detail: `built from ${m[1]}, ${behind} commits and ${Math.floor(days)}d behind HEAD (max ${STALE_COMMITS} commits / ${STALE_DAYS}d) — refresh is manual`,
+    },
+  ];
 }
 
 // ---- report / enforce -----------------------------------------------------------------------------
@@ -201,11 +222,13 @@ console.log(`\n  findings: ${debt} across ${files.length} docs`);
 // "doc-hygiene debt grew" without parsing stderr text.
 const staleGraph = staleGraphFindings();
 if (staleGraph.length > 0) {
-  console.error(`\n✗ ${staleGraph[0].detail}`);
+  const [f] = staleGraph;
+  console.error(`\n${f.kind === "unknown-graph" ? "?" : "✗"} ${f.detail}`);
   console.error(
-    "Fix: `npm run graph:refresh`, then commit the regenerated docs/STRUCTURE-graph.md.",
+    "Fix: `npm run graph:refresh` (graphify: `uv tool install graphifyy`), then commit the\n" +
+      "regenerated docs/STRUCTURE-graph.md. Refresh is manual — no workflow does it (GH006).",
   );
-  process.exit(2);
+  process.exit(f.kind === "unknown-graph" ? 3 : 2);
 }
 console.log("✓ structural graph is fresh.");
 

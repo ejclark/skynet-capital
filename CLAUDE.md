@@ -55,6 +55,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
 
 - **Anything short of lovable is inadequate.** Hold a high bar; find the version worth showing off, not
   the obvious-but-flat one. Polish and taste are the point.
+  **Calibrated for a pet project** (Eric, 2026-09-26): "I don't expect corners to be cut, but I also
+  suspect there are elements that are 'good enough' to maximize time invested on highest outcome
+  systems first." Spend the polish where it is seen — a member surface, a showcase contender, a
+  script that is the product of a process lane ("comparable to investing in building higher quality
+  scripts that provide top tier outcomes while remaining cost efficient") — and hold internals at
+  good-enough on purpose, said out loud in the plan, never by accident. The before/after pairs he
+  will cherry-pick for a colleague get the extreme treatment; the lesson card format does not.
 - **Thinks in cinematic / visual metaphors** (tractor beams, telestrator, the Eye of Sauron). Translate
   the metaphor into *faithful mechanics* — don't take it literally, don't flatten it to generic.
 - **Eric directs by outcome, not by technique.** He has said plainly he's an amateur at 3D rendering — he
