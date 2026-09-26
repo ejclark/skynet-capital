@@ -39,6 +39,16 @@ describe("ActivityTable — each bot trade opens to its decision", () => {
     expect(screen.getByText("BETA-SCOUT · conservative")).toBeInTheDocument();
   });
 
+  // #885: "at this time, we do not show what playbooks others are using" — a non-owner's page.
+  it("keeps the playbook row off a page the viewer does not own, the rest of the why intact", () => {
+    render(<ActivityTable events={[scouted]} showPlaybook={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
+    expect(screen.getByText(/BETA-PHASE FORCED PICK/)).toBeInTheDocument();
+    expect(screen.getByText("beta-scout")).toBeInTheDocument();
+    expect(screen.queryByText("Playbook")).not.toBeInTheDocument();
+    expect(screen.queryByText(/BETA-SCOUT/)).not.toBeInTheDocument();
+  });
+
   it("gives a row with no resolved decision no toggle, in a table that has one", () => {
     render(<ActivityTable events={[scouted, event({ orderId: "ord-2" })]} />);
     expect(screen.getAllByRole("button")).toHaveLength(1);

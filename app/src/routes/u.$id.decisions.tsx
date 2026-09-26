@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchDesk } from "../live/desk";
-import { AccountPage } from "../shell/account-head";
+import { AccountPage, useOwnsAccount } from "../shell/account-head";
 import { PageFrame } from "../shell/frame";
 import { HeartbeatSection } from "../shell/heartbeat";
 
@@ -13,11 +13,16 @@ import { HeartbeatSection } from "../shell/heartbeat";
  * and the passes that placed no trade (`heartbeat.tsx`, one component on both pages). The passes
  * that DID trade open from their row on this page's Activity, as they do on the Profile page. The
  * route's name is a later IA call; the head's switch calls it Heartbeat.
+ *
+ * Any member can read any bot here, but which playbooks it runs is its owner's (#885, Eric
+ * 2026-08-29: "at this time, we do not show what playbooks others are using"; docs/IA.md §5.2):
+ * the server withholds the ids from a non-owner, and this page never asks the section to draw them.
  */
 
 function HeartbeatPage(): ReactElement {
   const { id } = Route.useParams();
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
+  const isOwn = useOwnsAccount(id);
 
   if (desk.isPending)
     return (
@@ -48,7 +53,7 @@ function HeartbeatPage(): ReactElement {
           orders are on Activity.
         </p>
       ) : (
-        <HeartbeatSection deskId={id} />
+        <HeartbeatSection deskId={id} showPlaybooks={isOwn} />
       )}
     </AccountPage>
   );
