@@ -9,6 +9,8 @@
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
 //   node scripts/envelope-scan.mjs --check <paths...>   # protected?
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
+// Exit 1 also means "could not verify" — a missing manifest, an undiffable base, an unnameable
+// branch, an unreadable base package.json — each printed as its own UNKNOWN, never as a pass.
 //
 // A diffAware/behavior-verified exemption path (#852/#716/#858, `envelope-widening.mjs` +
 // `envelope-behavior.mjs`) once let a protected diff clear the hold by proving pure-insertion,
@@ -143,23 +145,40 @@ function resolveBranch() {
   if (explicit) return explicit;
   try {
     return git("rev-parse", "--abbrev-ref", "HEAD");
-  } catch {
-    return "";
+  } catch (error) {
+    // Required input: "not a lane — skipped" is a verdict about the branch, and with no branch it
+    // cannot be made. Fail closed like the missing manifest and the undiffable base: UNKNOWN is
+    // never a pass. (A full checkout always answers; this fires only outside a git work tree.)
+    console.error(
+      `✗ envelope scan: branch UNKNOWN — no --lane or GITHUB_HEAD_REF, and git could not name HEAD (${String(error.message).split("\n")[0]}).\n` +
+        "  Cannot tell whether this is an autonomous lane. Refusing to pass; pass --lane <branch>.",
+    );
+    process.exit(1);
   }
 }
 
-/** New RUNTIME deps in package.json since mergeBase, as breach entries — [] when none or unknown. */
+/** New RUNTIME deps in package.json since mergeBase, as breach entries — [] when none; an UNKNOWN
+ *  breach when the base's package.json cannot be read, since "no new deps" then cannot be shown. */
 function runtimeDepBreaches(changed, mergeBase) {
   if (manifest.allowNewRuntimeDeps || !changed.includes("package.json")) return [];
-  let added = [];
+  // A package.json deleted on the branch adds no dependency: its head side is legitimately empty.
+  const headPath = join(ROOT, "package.json");
+  const headPkg = existsSync(headPath) ? readFileSync(headPath, "utf8") : "{}";
+  let basePkg;
   try {
-    added = addedRuntimeDeps(
-      git("show", `${mergeBase}:package.json`),
-      readFileSync(join(ROOT, "package.json"), "utf8"),
-    );
-  } catch {
-    /* a package.json absent from the base is a new file — the path rules already cover the rest */
+    basePkg = git("show", `${mergeBase}:package.json`);
+  } catch (error) {
+    // Required input: the verdict "no new runtime dependency" rests on the base's package.json. An
+    // unreadable one (absent at the base, or git failed) is a named UNKNOWN breach, never a pass.
+    return [
+      {
+        path: "package.json → dependencies",
+        pattern: "dependencies",
+        why: `UNKNOWN — cannot read package.json at the merge base (${String(error.message).split("\n")[0]}), so a new runtime dependency cannot be ruled out`,
+      },
+    ];
   }
+  const added = addedRuntimeDeps(basePkg, headPkg);
   return added.map((dep) => ({
     path: `package.json → dependencies.${dep}`,
     pattern: "dependencies",
