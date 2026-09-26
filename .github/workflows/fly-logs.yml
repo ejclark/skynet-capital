@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
           # releases call that 403s under runner load; a pinned version downloads a fixed asset.
