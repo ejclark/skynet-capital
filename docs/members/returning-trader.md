@@ -83,18 +83,19 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ### j2 — the fill on Activity
 
-1. phone only — `/app/trade?desk=human-eric&section=chain` — "Pick a symbol on the Ticket to browse
-   its options chain." **WHEN a pane needs a symbol it does not have, the app shall offer the
-   symbol input in that pane.** _known gap — dead end 3._ Judge: can this reader tell what to do
-   next in ten seconds?
+1. phone only — `/app/trade?desk=human-eric&section=chain` — "Pick a symbol to browse its options
+   chain." with the Symbol field in the same note. **WHEN a pane needs a symbol it does not have,
+   the app shall offer the symbol input in that pane.** _Fixed — #3807 slice 2e._ Judge: can this
+   reader tell what to do next in ten seconds?
 2. `/app/activity` — the feed. **WHEN the member opens Activity, the app shall show the feed with
    the newest event first.** Judge: can the reader find today's fill?
 
 ### j3 — my own desk, and back
 
-1. `/app/accounts` — nothing links the desk page for this same account. **WHEN the member is on
-   their cockpit, the app shall link the other view of the same account (the desk) or fold it in.**
-   _known gap — dead end 6._ Judge: does the reader know there are two pages for one account?
+1. `/app/accounts` — the head's "Open as the league sees it" opens the same account's page,
+   `/u/human-eric`. **WHEN the member is on their Profile page with one account picked, the app
+   shall link that account's page as the league sees it (`/u/:id`).** _Fixed — #3807 slice 2e._
+   Judge: does the reader know there are two pages for one account?
 2. `/app/u/human-eric` — the desk; the rail's only way out is "← Leaderboard". **WHEN the member is
    on their own desk, the app shall link back to their cockpit.** _known gap — dead end 6._ Judge:
    does the reader land where they started?

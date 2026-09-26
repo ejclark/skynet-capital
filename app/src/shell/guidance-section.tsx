@@ -19,6 +19,7 @@ import {
 } from "../live/guidance";
 import { fetchOptionPositions } from "../live/options";
 import { GuidanceView } from "./guidance-view";
+import { SymbolPrompt } from "./symbol-prompt";
 
 /**
  * The trade form's Guidance tab (#3729 step 3): reads the MARKET for the ticket's symbol, applies
@@ -36,6 +37,7 @@ export function GuidanceSection({
   deskId,
   onUse,
   onManage,
+  onSymbolCommit,
 }: {
   readonly symbol: string;
   /** The account the trade page is on — its position in `symbol`, if any, seeds the stake. */
@@ -43,6 +45,8 @@ export function GuidanceSection({
   readonly onUse: (row: LadderRow) => void;
   /** "Use this" on a call already sold — opens it on the Orders pane's Option positions card. */
   readonly onManage: (call: ManageCall) => void;
+  /** Set when the ticket is not on screen (folded): the empty pane asks for the symbol itself. */
+  readonly onSymbolCommit?: (symbol: string) => void;
 }): ReactElement {
   const client = useQueryClient();
   const answer = useQuery(guidanceQuery(symbol));
@@ -109,7 +113,11 @@ export function GuidanceSection({
     </button>
   );
   if (symbol === "") {
-    return <p className="note">Pick a symbol on the ticket to see guidance for it.</p>;
+    return onSymbolCommit ? (
+      <SymbolPrompt ask="Pick a symbol to see guidance for it." onCommit={onSymbolCommit} />
+    ) : (
+      <p className="note">Pick a symbol on the ticket to see guidance for it.</p>
+    );
   }
   if (answer.isPending) return <p className="note">Reading live prices for {symbol}…</p>;
   if (answer.isError) {

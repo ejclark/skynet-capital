@@ -67,9 +67,10 @@ fails costs them more trust than a control that is greyed with a reason.
 4. `/app/u/sauron/decisions` — every cycle: what the persona wanted, "N past the guards", what
    happened. **WHEN a viewer reads a bot's decisions, the app shall gloss its own words where they
    appear.** Judge: does a first-time reader understand "past the guards"?
-5. `/app/u/sauron/thesis` — the thesis, its markers, a disabled Subscribe cluster. **WHEN a control
-   is disabled, the app shall show its reason as visible text, not only in a title.** _known gap —
-   dead end 8._ Judge: does this reader know why Subscribe is off?
+5. `/app/u/sauron/thesis` — the thesis, its markers, a disabled Subscribe cluster, each reason in
+   a sentence under the buttons. **WHEN a control is disabled, the app shall show its reason as
+   visible text, not only in a title.** _Fixed — #3807 slice 2e._ Judge: does this reader know why
+   Subscribe is off?
 6. `/app/u/sauron` — the desk rail: Active · Decisions · Thesis · Pulse · ← Leaderboard. **WHEN a
    viewer is on a desk, the app shall offer that account's activity beside its decisions.** _known
    gap — dead end 5._ Judge: can this reader find what the bot actually did?

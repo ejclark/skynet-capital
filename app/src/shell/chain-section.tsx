@@ -8,6 +8,7 @@ import { ChainStraddle } from "./chain-straddle";
 import { ExpirationField } from "./option-fields";
 import { QuoteHeader } from "./quote-header";
 import type { PickedCell } from "./straddle-view";
+import { SymbolPrompt } from "./symbol-prompt";
 
 /**
  * THE CHAIN SECTION (#3407, Workbench slice 2) — the options chain as its own pane on `/trade`,
@@ -89,6 +90,7 @@ export function ChainSection({
   onExpirationChange,
   onPick,
   markedStrikes,
+  onSymbolCommit,
 }: {
   /** The committed `?symbol=`; "" until the ticket has one. */
   readonly symbol: string;
@@ -105,6 +107,8 @@ export function ChainSection({
    *  inline chain) — outlined here too, so a member who tapped a leg from THIS pane can see it
    *  stuck before switching to the ticket to review. Undefined off the Spread rung. */
   readonly markedStrikes?: readonly number[];
+  /** Set when the ticket is not on screen (folded): the empty pane asks for the symbol itself. */
+  readonly onSymbolCommit?: (symbol: string) => void;
 }): ReactElement {
   const expId = useId();
   const [expiration, setExpiration] = useState(initialExpiration ?? "");
@@ -122,7 +126,11 @@ export function ChainSection({
     placeholderData: keepPreviousData,
   });
   if (symbol === "") {
-    return <p className="note">Pick a symbol on the Ticket to browse its options chain.</p>;
+    return onSymbolCommit ? (
+      <SymbolPrompt ask="Pick a symbol to browse its options chain." onCommit={onSymbolCommit} />
+    ) : (
+      <p className="note">Pick a symbol on the Ticket to browse its options chain.</p>
+    );
   }
   if (chain.isPending) return <p className="note">Loading the {symbol} chain…</p>;
   if (chain.isError) return <p className="note">The chain for {symbol} is unreachable.</p>;

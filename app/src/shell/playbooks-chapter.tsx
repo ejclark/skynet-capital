@@ -12,6 +12,8 @@ import { fetchPlaybooks, type HumanPlaybook } from "../live/playbooks";
  * things (#3622 parked, #3527 deliberate).
  * @category learning
  */
+const ARM_UNAVAILABLE_REASON = "Arming opens to human accounts with Season 1.";
+
 function PlaybookCard({ p }: { readonly p: HumanPlaybook }): ReactElement {
   return (
     <div className={`pbk${p.unlocked ? " pbk-unlocked" : ""}`}>
@@ -35,14 +37,15 @@ function PlaybookCard({ p }: { readonly p: HumanPlaybook }): ReactElement {
           {p.unlocked ? "✓ EARNED · PREVIEW" : "◷ LOCKED"}
         </span>
         {p.unlocked ? (
-          <button
-            type="button"
-            className="btn"
-            disabled
-            title="Arming opens to human accounts with Season 1"
-          >
-            Arm · soon
-          </button>
+          <>
+            <button type="button" className="btn" disabled aria-describedby={`arm-why-${p.id}`}>
+              Arm · soon
+            </button>
+            {/* Visible, never a title (#3807 slice 2e, dead end 8): a phone has no hover. */}
+            <span id={`arm-why-${p.id}`} className="pbk-why">
+              {ARM_UNAVAILABLE_REASON}
+            </span>
+          </>
         ) : null}
       </div>
     </div>

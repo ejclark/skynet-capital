@@ -15,6 +15,7 @@ import {
   toggleStudy,
 } from "./chart-studies";
 import { StudyToggles } from "./study-toggle";
+import { SymbolPrompt } from "./symbol-prompt";
 
 /**
  * THE CHART SECTION (#2017 Phase 1 chart build-out, the mount slice + the studies slice) — daily
@@ -115,15 +116,23 @@ function BarsChart({ bars }: { readonly bars: readonly Bar[] }): ReactElement {
   );
 }
 
-/** @category trading */
-export function ChartSection({ symbol }: { readonly symbol: string }): ReactElement {
+/** `onSymbolCommit`, when set, gives the empty pane its own symbol field (`symbol-prompt.tsx`).
+ *  @category trading */
+export function ChartSection({
+  symbol,
+  onSymbolCommit,
+}: {
+  readonly symbol: string;
+  readonly onSymbolCommit?: (symbol: string) => void;
+}): ReactElement {
   const query = useQuery({
     queryKey: ["bars", symbol],
     queryFn: () => fetchBars(symbol),
     enabled: symbol !== "",
   });
 
-  if (symbol === "") return <p className="note">Pick a symbol to see its chart.</p>;
+  if (symbol === "")
+    return <SymbolPrompt ask="Pick a symbol to see its chart." onCommit={onSymbolCommit} />;
   if (query.isPending) return <p className="note">Loading {symbol}…</p>;
   if (query.isError) return <p className="note">The chart for {symbol} is unreachable.</p>;
   const answer = query.data;
