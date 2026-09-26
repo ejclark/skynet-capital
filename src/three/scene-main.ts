@@ -2,13 +2,20 @@ import * as THREE from "three";
 import { createStage, frameLights } from "./kit/env.js";
 import { armContextLoss } from "./kit/fallback.js";
 import { FIRE_TIME } from "./kit/fire-glsl.js";
-import { aimAt, blendGaze, type Gaze, glanceWeight, releaseWeight } from "./kit/glance.js";
+import {
+  aimAt,
+  blendGaze,
+  type Gaze,
+  glanceOver,
+  glanceWeight,
+  releaseWeight,
+} from "./kit/glance.js";
 import { createLoop, FrameStats, fireTime, type TowerStats } from "./kit/loop.js";
 import { EMBER_EMISSIVE } from "./kit/materials.js";
 import { readTowerMessage, type TowerNotice } from "./kit/messages.js";
 import { DEFAULT_PARAMS, resolveTowerParams, type TowerParams } from "./kit/params.js";
 import { fpsMeter, probeLines, wantsProbe } from "./kit/probe.js";
-import { qualityFromSearch } from "./kit/quality.js";
+import { qualityFromSearch, restStillFromSearch } from "./kit/quality.js";
 import { createEmbers } from "./pieces/embers.js";
 import { buildEye, EYE_LIFT, flicker } from "./pieces/eye.js";
 import { buildTower } from "./pieces/tower.js";
@@ -92,6 +99,8 @@ export function start(canvas: HTMLCanvasElement): void {
   // `?quality=presence` (the band crest, slice 3a-2): 30 draws a second, DPR ≤ 1, no shadow map,
   // half the embers — kit/quality.ts says why each.
   const quality = qualityFromSearch(window.location.search);
+  // `?rest=still` (slice 3a-3): one frame at rest, the loop only while a glance or regard plays.
+  const restStill = restStillFromSearch(window.location.search);
   const stage = createStage(canvas, quality);
   const { scene, camera, controls, renderer } = stage;
 
@@ -160,7 +169,7 @@ export function start(canvas: HTMLCanvasElement): void {
   }
   controls.enableZoom = !mode.embed;
   controls.enabled = !mode.frame;
-  controls.autoRotate = !(reduce || mode.frame);
+  controls.autoRotate = !(reduce || mode.frame || restStill);
   controls.autoRotateSpeed = ORBIT_SPEED;
   controls.addEventListener("start", () => {
     controls.autoRotate = false;
@@ -173,7 +182,7 @@ export function start(canvas: HTMLCanvasElement): void {
   // (`glance.ts`) — a hover that lingers is let go after ~1.5 s anyway: noticed, never stared at.
   const clock = new THREE.Clock();
   /** Scene time: advanced by clamped deltas, so a pause never makes the sweep jump on resume. */
-  let t = 0;
+  let t = restStill ? FROZEN_T : 0;
   let glance: { readonly at: number; readonly target: Gaze; releasedAt?: number } | undefined;
   const ray = new THREE.Vector3();
   const lookToward = (x: number, y: number): void => {
@@ -191,7 +200,8 @@ export function start(canvas: HTMLCanvasElement): void {
     const { at, target, releasedAt } = glance;
     const held = glanceWeight(t - at);
     const w = releasedAt === undefined ? held : Math.min(held, releaseWeight(t - releasedAt));
-    if (w <= 0 && t > at) glance = undefined;
+    if (glanceOver(t - at, releasedAt === undefined ? undefined : t - releasedAt))
+      glance = undefined;
     return w > 0 ? blendGaze(sweep, target, w) : sweep;
   };
 
@@ -242,6 +252,8 @@ export function start(canvas: HTMLCanvasElement): void {
       applyTime(t);
       embers.step(dt, t);
       draw();
+      // `rest=still`: the gaze is home — this was the settled frame, so the loop stops on it.
+      if (restStill && !glance) loop.settle();
     },
     still: () => {
       controls.update();
@@ -251,6 +263,7 @@ export function start(canvas: HTMLCanvasElement): void {
     setAnimationLoop: (cb) => renderer.setAnimationLoop(cb),
     // Discard the time spent hidden: the next tick's delta starts from now.
     onResume: () => void clock.getDelta(),
+    restStill,
   });
   // A resize changes the picture: under reduced motion (or while paused) draw the one still again.
   // Deferred a frame so the stage's own resize handler has already refit the renderer.
@@ -300,7 +313,10 @@ export function start(canvas: HTMLCanvasElement): void {
       case "tower:glance":
       case "tower:regard":
         // Under reduced motion the Eye holds still: no glance, no regard.
-        if (!reduce) lookToward(m.x, m.y);
+        if (!reduce) {
+          lookToward(m.x, m.y);
+          loop.wake();
+        }
         return;
       case "tower:release":
         if (glance && glance.releasedAt === undefined) glance.releasedAt = t;

@@ -65,3 +65,18 @@ export function qualityFromSearch(search: string): Quality {
 export function pixelRatioFor(q: Quality, dpr: number): number {
   return Math.min(Number.isFinite(dpr) && dpr > 0 ? dpr : 1, q.pixelRatioCap);
 }
+
+/**
+ * The crest's rest (`?rest=still`, slice 3a-3): at rest the scene draws one frame and stops; a
+ * glance or a regard runs it until the gaze is home again (kit/loop.ts). Slice 3a-2 measured that the
+ * crest's own draw passes its budget but the page's frame interval degrades whenever a frame animates
+ * constantly — so the second option animates only while it is looking at something. Anything else
+ * (`rest=live`, absent) is today's constant sweep.
+ */
+export function restStillFromSearch(search: string): boolean {
+  try {
+    return new URLSearchParams(search).get("rest") === "still";
+  } catch {
+    return false;
+  }
+}

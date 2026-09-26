@@ -1,3 +1,4 @@
+import { GLANCE_SECONDS, glanceOver } from "../../src/three/kit/glance.js";
 import {
   createLoop,
   FIRE_PERIOD,
@@ -142,6 +143,132 @@ describe("the loop under a 30 fps cap (quality=presence, slice 3a-2)", () => {
     h.loop.start();
     h.seconds(3);
     expect(h.draws()).toBe(1);
+  });
+});
+
+/**
+ * `rest=still` (slice 3a-3): the scene's own rule, in miniature — each tick advances scene time and,
+ * once the glance has let go (`glanceOver`), settles the loop on the frame it just drew.
+ */
+function restHarness(fpsCap: number | null = null, hz = 60) {
+  let cb: ((now: number) => void) | null = null;
+  let now = 1000;
+  let t = 0;
+  let glance: { at: number; releasedAt?: number } | undefined;
+  const counts = { ticks: 0, stills: 0 };
+  const loop = createLoop({
+    reduce: false,
+    restStill: true,
+    fpsCap,
+    tick: () => {
+      counts.ticks++;
+      t += 1 / hz;
+      if (glance) {
+        const r = glance.releasedAt === undefined ? undefined : t - glance.releasedAt;
+        if (glanceOver(t - glance.at, r)) glance = undefined;
+      }
+      if (!glance) loop.settle();
+    },
+    still: () => void counts.stills++,
+    setAnimationLoop: (next) => {
+      cb = next;
+    },
+  });
+  const seconds = (s: number): number => {
+    const before = counts.ticks;
+    for (let i = 0; i < Math.round(s * hz); i++) {
+      now += 1000 / hz;
+      cb?.(now);
+    }
+    return counts.ticks - before;
+  };
+  const look = (): void => {
+    glance = { at: t };
+    loop.wake();
+  };
+  const release = (): void => {
+    if (glance) glance.releasedAt = t;
+  };
+  return { loop, counts, seconds, look, release, draws: () => counts.ticks + counts.stills };
+}
+
+describe("the loop at rest=still (slice 3a-3)", () => {
+  it("draws exactly one frame over three seconds at rest, then the loop is off", () => {
+    const h = restHarness();
+    h.loop.start();
+    h.seconds(3);
+    expect(h.draws()).toBe(1);
+    expect(h.loop.running).toBe(false);
+  });
+
+  it("a glance draws for about the glance's length, then stops on the settled frame", () => {
+    const h = restHarness();
+    h.loop.start();
+    h.look();
+    const drawn = h.seconds(5);
+    // ~2.55 s of 60 Hz: the attack, the hold, the release, and the one settled frame.
+    expect(drawn).toBeGreaterThanOrEqual(Math.floor(GLANCE_SECONDS * 60));
+    expect(drawn).toBeLessThanOrEqual(Math.ceil(GLANCE_SECONDS * 60) + 2);
+    expect(h.loop.running).toBe(false);
+    expect(h.seconds(3)).toBe(0);
+  });
+
+  it("a hover let go early stops sooner — the release's own second", () => {
+    const h = restHarness();
+    h.loop.start();
+    h.look();
+    h.seconds(0.5);
+    h.release();
+    const after = h.seconds(3);
+    expect(after).toBeGreaterThanOrEqual(55);
+    expect(after).toBeLessThanOrEqual(62);
+    expect(h.loop.running).toBe(false);
+  });
+
+  it("run(false) still pauses a glance mid-flight, and run(true) finishes it", () => {
+    const h = restHarness();
+    h.loop.start();
+    h.look();
+    h.seconds(0.5);
+    h.loop.run(false);
+    expect(h.seconds(2)).toBe(0);
+    h.loop.run(true);
+    expect(h.seconds(5)).toBeGreaterThan(60);
+    expect(h.loop.running).toBe(false);
+  });
+
+  it("a glance while hidden waits for the page to show the frame", () => {
+    const h = restHarness();
+    h.loop.start();
+    h.loop.run(false);
+    h.look();
+    expect(h.seconds(1)).toBe(0);
+    h.loop.run(true);
+    expect(h.loop.running).toBe(true);
+  });
+
+  it("at rest, a resize or a mood draws one more still", () => {
+    const h = restHarness();
+    h.loop.start();
+    h.loop.invalidate();
+    expect(h.counts.stills).toBe(2);
+  });
+
+  it("reduced motion ignores a wake: still one frame", () => {
+    const r = harness(true);
+    r.loop.start();
+    r.loop.wake();
+    r.seconds(1);
+    expect(r.draws()).toBe(1);
+  });
+
+  it("rest=live ignores wake and settle — today's constant sweep", () => {
+    const h = harness(false);
+    h.loop.start();
+    h.loop.settle();
+    h.loop.wake();
+    h.seconds(1);
+    expect(h.counts.ticks).toBe(60);
   });
 });
 

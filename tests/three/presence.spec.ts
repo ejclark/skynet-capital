@@ -1,11 +1,26 @@
 import { armContextLoss } from "../../src/three/kit/fallback.js";
 import { fpsMeter, probeLines, wantsProbe } from "../../src/three/kit/probe.js";
-import { FULL, PRESENCE, pixelRatioFor, qualityFromSearch } from "../../src/three/kit/quality.js";
+import {
+  FULL,
+  PRESENCE,
+  pixelRatioFor,
+  qualityFromSearch,
+  restStillFromSearch,
+} from "../../src/three/kit/quality.js";
 
 /**
  * The crest's budget (plan #3807 slice 3a-2): the `quality=presence` dial, the `?probe=1` readout,
  * and the context-loss fallback. The frame-rate cap itself is in loop.spec.ts.
  */
+
+describe("the rest dial (slice 3a-3)", () => {
+  it("is still only when the page asks for it; live or absent is today's sweep", () => {
+    expect(restStillFromSearch("?frame=crown&quality=presence&rest=still")).toBe(true);
+    expect(restStillFromSearch("?frame=crown&rest=live")).toBe(false);
+    expect(restStillFromSearch("?frame=crown")).toBe(false);
+    expect(restStillFromSearch("?rest=STILL")).toBe(false);
+  });
+});
 
 describe("the quality dial", () => {
   it("is presence only when the page asks for it", () => {

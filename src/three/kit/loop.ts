@@ -11,6 +11,11 @@
  *   · `fpsCap` (the crest's `quality=presence`, slice 3a-2) skips display frames by timestamp, so a
  *     60 Hz display draws ~30 a second and a 120 Hz one the same — the scene's own clock is real
  *     time, so the motion is no slower, only sampled less often.
+ *   · `restStill` (the crest's `rest=still`, slice 3a-3) → at rest it is the reduced-motion path —
+ *     ONE frame, then the loop is off; `wake()` (a glance or a regard) runs it, and `settle()` (the
+ *     glance has let go) stops it again on the frame just drawn. A frame that animates constantly
+ *     cost the page +66.7 ms p95 on SwiftShader whatever it drew, so the crest animates only while
+ *     it is looking at something.
  */
 
 /** The fire's clock wraps here, on the CPU (docs/art/EYE.md, the real-device addendum): an
@@ -104,6 +109,8 @@ export interface LoopDeps {
   readonly now?: () => number;
   /** Called when a paused loop resumes, before its first tick — re-anchor the clock here. */
   readonly onResume?: () => void;
+  /** `rest=still`: one frame at rest, the loop only between `wake()` and `settle()`. */
+  readonly restStill?: boolean;
 }
 
 export interface Loop {
@@ -115,6 +122,10 @@ export interface Loop {
   invalidate(): void;
   /** Stop for good (a seek takes over the frame). */
   halt(): void;
+  /** `restStill`: something to look at — animate until `settle()`. A no-op otherwise. */
+  wake(): void;
+  /** `restStill`: the gaze is home — stop on the frame the last tick drew. A no-op otherwise. */
+  settle(): void;
   readonly running: boolean;
 }
 
@@ -122,6 +133,8 @@ export function createLoop(deps: LoopDeps): Loop {
   let running = false;
   let wanted = true;
   let halted = false;
+  /** Under `restStill`, whether a glance is playing; otherwise the loop is always live. */
+  let awake = !deps.restStill;
   const gate = deps.fpsCap ? frameGate(deps.fpsCap) : null;
   const clock = deps.now ?? (() => performance.now());
   const frame = gate
@@ -138,27 +151,42 @@ export function createLoop(deps: LoopDeps): Loop {
     gate?.reset();
     deps.setAnimationLoop(frame);
   };
+  /** Run exactly when the page sees the frame and there is motion to show. */
+  const sync = (): void => {
+    const want = !(halted || deps.reduce) && wanted && awake;
+    if (want === running) return;
+    if (want) {
+      deps.onResume?.();
+      go();
+    } else stop();
+  };
   return {
     start() {
-      if (deps.reduce) {
+      if (deps.reduce || !awake) {
         deps.still();
         stop();
       } else go();
     },
     run(on) {
       wanted = on;
-      if (halted || deps.reduce || on === running) return;
-      if (on) {
-        deps.onResume?.();
-        go();
-      } else stop();
+      sync();
     },
     invalidate() {
-      if (!(running || halted) && (deps.reduce || !wanted)) deps.still();
+      if (!(running || halted) && (deps.reduce || !wanted || !awake)) deps.still();
     },
     halt() {
       halted = true;
       stop();
+    },
+    wake() {
+      if (!deps.restStill) return;
+      awake = true;
+      sync();
+    },
+    settle() {
+      if (!deps.restStill) return;
+      awake = false;
+      sync();
     },
     get running() {
       return running;
