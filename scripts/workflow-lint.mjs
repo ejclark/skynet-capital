@@ -38,6 +38,13 @@
 //      told to reach for did not exist. Same failure shape as rules 5 and 6: a workflow naming
 //      something that has to exist elsewhere, where the mismatch is silent at run time. The
 //      reference grammar lives in `workflow-labels.mjs`, split out as script-deps.mjs was for 6.
+//   8. A workflow that re-dispatches ITSELF (`gh workflow run <this file>`) under a token whose
+//      bot actor a `workflow_dispatch`-gated `claude-code-action` job does not name in
+//      `allowed_bots`. Added 2026-09-26 after #2292 moved moneypenny-events.yml's re-dispatch from
+//      GITHUB_TOKEN (actor `github-actions`) to the App token (actor `skynet-envoy`) while
+//      `build-events` still allow-listed only `github-actions`: every leg died in ~3s with
+//      "non-human actor: skynet-envoy", and event research was dark ~41h before a digest said so.
+//      Same silent-mismatch shape as 5–7 — the dispatch and the allow-list live 100 lines apart.
 //
 // Dependency-free on purpose (same doctrine as arch-scan/dupe-scan): a gate that guards CI must not
 // itself depend on a package resolving — the two repo imports rule 7 adds reach only Node builtins.
@@ -219,6 +226,49 @@ export function missingDepsInstall(text, hasDeps) {
   return problems;
 }
 
+// The bot actor each token signs as. The App's actor is its slug (the Skynet Envoy App, minted by
+// `.github/actions/app-token`); GITHUB_TOKEN always acts as `github-actions`.
+const TOKEN_ACTORS = [
+  [/steps\.app-token\.outputs\.token/, "skynet-envoy"],
+  [/secrets\.GITHUB_TOKEN|github\.token/, "github-actions"],
+];
+const SELF_DISPATCH = /\bgh workflow run\s+([\w.-]+\.ya?ml)\b/;
+
+/** Rule 8: `{ job, actor }` for each dispatch-gated claude-code-action job that would refuse this
+ *  file's own re-dispatch. `actor` is null when the dispatching token could not be read — reported
+ *  as UNKNOWN, never passed. */
+export function unlistedDispatchActor(name, text) {
+  const actors = new Set();
+  for (const job of jobs(text)) {
+    for (const step of stepsOf(job.text)) {
+      const m = SELF_DISPATCH.exec(step);
+      if (!m || m[1] !== name) continue;
+      const token = /GH_TOKEN:\s*(.+)/.exec(step)?.[1] ?? "";
+      actors.add(TOKEN_ACTORS.find(([re]) => re.test(token))?.[1] ?? null);
+    }
+  }
+  if (!actors.size) return [];
+  const problems = [];
+  for (const job of jobs(text)) {
+    const header = job.text
+      .split(/\n {4}steps:/)[0]
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("#"))
+      .join("\n");
+    if (!(/workflow_dispatch/.test(header) && /anthropics\/claude-code-action/.test(job.text)))
+      continue;
+    const listed = (/allowed_bots:\s*"?([^"\n]*)"?/.exec(job.text)?.[1] ?? "")
+      .split(",")
+      .map((s) => s.trim());
+    for (const actor of actors) {
+      if (actor === null) problems.push({ job: job.name, actor: null });
+      else if (!(listed.includes(actor) || listed.includes("*")))
+        problems.push({ job: job.name, actor });
+    }
+  }
+  return problems;
+}
+
 export function lintWorkflow(
   name,
   text,
@@ -256,6 +306,13 @@ export function lintWorkflow(
         `${name} references the label \`${label}\`, which \`scripts/moneypenny/labels.mjs\` does ` +
         `not register — the condition would silently never match until someone provisions it by ` +
         `hand (see #892)`,
+    ),
+    ...unlistedDispatchActor(name, text).map((d) =>
+      d.actor === null
+        ? `${name} re-dispatches itself with a token whose bot actor cannot be read — whether job ` +
+          `\`${d.job}\`'s \`allowed_bots\` admits it is UNKNOWN (rule 8)`
+        : `${name} re-dispatches itself as \`${d.actor}\`, but dispatch-gated job \`${d.job}\`'s ` +
+          `\`allowed_bots\` does not name it — claude-code-action refuses the run in ~3s (#2292)`,
     ),
   ];
 }

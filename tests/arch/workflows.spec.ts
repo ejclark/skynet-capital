@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { lintWorkflow } from "../../scripts/workflow-lint.mjs";
+import { lintWorkflow, unlistedDispatchActor } from "../../scripts/workflow-lint.mjs";
 
 // The workflow structure gate. Provenance: on 2026-08-22 an edit left `build-feedback:` defined
 // twice in moneypenny-events.yml (formerly postmaster.yml). Loose YAML loaders keep the last duplicate silently — the local check
@@ -335,5 +335,69 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
     const arm = job.slice(job.indexOf("- name: Arm auto-merge"));
     expect(arm).toContain("steps.hold.outputs.held == 'false'");
     expect(job.indexOf("id: hold")).toBeLessThan(job.indexOf("- name: Arm auto-merge"));
+  });
+});
+
+// Rule 8 (#2292): a self re-dispatch signed by one bot, landing on a claude-code-action job that
+// allow-lists another. Event research died in ~3s per leg for ~41h on exactly this drift.
+describe("workflow lint — a self-dispatch actor the dispatch-gated job does not allow", () => {
+  const selfDispatching = (token: string, allowed: string | null) => `name: Loop
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - id: app-token
+        uses: ./.github/actions/app-token
+      - name: Re-dispatch
+        env:
+          GH_TOKEN: \${{ ${token} }}
+        run: gh workflow run loop.yml -f command=scan
+  build:
+    needs: route
+    # comment lines never count as the gate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          prompt: hi${allowed === null ? "" : `\n          allowed_bots: "${allowed}"`}
+`;
+
+  it("fails the #2292 shape: App-token dispatch, github-actions-only allow-list", () => {
+    const problems = unlistedDispatchActor(
+      "loop.yml",
+      selfDispatching("steps.app-token.outputs.token", "github-actions"),
+    );
+    expect(problems).toEqual([{ job: "build", actor: "skynet-envoy" }]);
+  });
+
+  it("fails a GITHUB_TOKEN dispatch into a job with no allow-list at all", () => {
+    expect(
+      unlistedDispatchActor("loop.yml", selfDispatching("secrets.GITHUB_TOKEN", null)),
+    ).toEqual([{ job: "build", actor: "github-actions" }]);
+  });
+
+  it("passes once the allow-list names the dispatching actor", () => {
+    expect(
+      unlistedDispatchActor(
+        "loop.yml",
+        selfDispatching("steps.app-token.outputs.token", "github-actions,skynet-envoy"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("reports an unreadable token as UNKNOWN, never a pass", () => {
+    expect(unlistedDispatchActor("loop.yml", selfDispatching("secrets.SOME_PAT", "*"))).toEqual([
+      { job: "build", actor: null },
+    ]);
+  });
+
+  it("ignores a dispatch aimed at a different workflow file", () => {
+    const other = selfDispatching("steps.app-token.outputs.token", "github-actions");
+    expect(unlistedDispatchActor("elsewhere.yml", other)).toEqual([]);
   });
 });

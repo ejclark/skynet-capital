@@ -25,3 +25,9 @@ export function lintWorkflow(
   hasScriptDeps?: (scriptRelPath: string) => boolean,
   knownLabels?: string[],
 ): string[];
+/** Rule 8: dispatch-gated claude-code-action jobs whose `allowed_bots` would refuse this file's own
+ *  `gh workflow run` re-dispatch. `actor: null` = the dispatching token's actor could not be read. */
+export function unlistedDispatchActor(
+  name: string,
+  text: string,
+): Array<{ job: string; actor: string | null }>;

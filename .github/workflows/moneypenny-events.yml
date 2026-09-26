@@ -477,12 +477,14 @@ jobs:
           # actually triggers `verify`.
           github_token: ${{ steps.app-token.outputs.token }}
           # This job only ever runs on the `route` job's own re-dispatch (`gh workflow run`, see
-          # above) — no human ever triggers it directly — so the run's actor is `github-actions`,
-          # a bot. claude-code-action refuses to act for a non-human actor by default (2026-08-20:
-          # "Workflow initiated by non-human actor: github-actions (type: Bot)"); this is the one
-          # and only bot that can ever legitimately land here, so it's named explicitly rather than
-          # `*` (allow every bot).
-          allowed_bots: "github-actions"
+          # above) — no human ever triggers it directly — so the run's actor is a bot.
+          # claude-code-action refuses to act for a non-human actor by default (2026-08-20:
+          # "Workflow initiated by non-human actor: github-actions (type: Bot)"). Since #2292 that
+          # re-dispatch signs with the App token, so the actor is `skynet-envoy`; `github-actions`
+          # stays for a GITHUB_TOKEN dispatch. Only the actors that can dispatch here are named,
+          # never `*` — scripts/workflow-lint.mjs rule 8 fails the build when the two drift apart
+          # (the ~41h outage of 2026-09-25/26 was exactly that drift).
+          allowed_bots: "github-actions,skynet-envoy"
           # WebSearch/WebFetch on top of the build lane's list: a pulse check without the adjacency
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
           # --model pins the lane deliberately instead of riding the action default.
