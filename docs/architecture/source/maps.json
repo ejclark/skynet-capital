@@ -546,7 +546,7 @@
           {
             "id": "clients",
             "label": "API clients",
-            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, manage-handoff, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
+            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, horizon-params, held-events, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, manage-handoff, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
             "responsibility": "Typed fetch wrappers over /api/* with same-origin cookies; postJson for every write; desk-events.ts opens the second SSE stream /api/trade/events."
           },
           {
@@ -558,7 +558,7 @@
           {
             "id": "shell",
             "label": "Shell components",
-            "path": "app/src/shell/*.tsx (board-section, positions-*, accounts-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
+            "path": "app/src/shell/*.tsx (board-section, calendar-head, cockpit-clock, held-events-line, positions-*, accounts-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
             "responsibility": "Presentational React components for every section; gates render fog-of-war doors visible, named, disabled and counted."
           },
           {

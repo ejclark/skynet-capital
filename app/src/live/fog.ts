@@ -15,16 +15,21 @@ export interface DayLensFog {
   readonly fogged: boolean;
   /** The door's label — what is behind it and what opens it. Empty when not fogged. */
   readonly reason: string;
+  /** The door's short name — `reason`'s opening words without the why. The VISIBLE line beside a
+   *  fogged chip (dead end 8: a reason only in `title` is invisible on a phone; the crawl's probe
+   *  reads the chip's own box for the reason's first words, so the two must open alike). */
+  readonly door: string;
 }
 
 export function dayLensFog(plays: PlaysIndex | undefined): DayLensFog {
-  if (!(plays && plays.wheels)) return { fogged: false, reason: "" };
+  if (!(plays && plays.wheels)) return { fogged: false, reason: "", door: "" };
   const rung = plays.plays.find(
     (p) => p.code === (DAY_LENS_RUNG as PlaysIndex["plays"][number]["code"]),
   );
-  if (rung?.earned) return { fogged: false, reason: "" };
+  if (rung?.earned) return { fogged: false, reason: "", door: "" };
   return {
     fogged: true,
+    door: `Held until rung ${DAY_LENS_RUNG} (zero-DTE)`,
     reason: rung
       ? `Held until rung ${DAY_LENS_RUNG} (zero-DTE) is earned — the same-day view pays out like a same-day trade.`
       : `Held until rung ${DAY_LENS_RUNG} (zero-DTE) — that rung is not built yet (#1671); wheels off sees through.`,

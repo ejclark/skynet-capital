@@ -1,0 +1,108 @@
+/* The market calendar's head (#3807 slice 2·1): `shell/calendar-head.tsx`, one markup for R&D's
+   rail (where `event-horizon.css` styles the parts — this sheet loads after it on purpose) and
+   the Profile page's cockpit head (`shell/cockpit-clock.tsx`), plus the events-on-what-you-hold
+   line under the net-worth card (`shell/held-events-line.tsx`). */
+
+/* The lens row's box: a reset fieldset holding the pill and the fog line, so a fogged chip's
+   reason is in ITS OWN box (scripts/crawl/probes.mjs reads the enclosing fieldset — dead end 8).
+   Same gap as the `.eh` column, so R&D's rail lays out exactly as before the split. */
+.eh-lens-row {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* In the cockpit head (≥861): one row — label · arrows and range · the lens pill · the fog line. */
+.cal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-width: 0;
+}
+.cockpit-head .cal-head {
+  padding: 8px 0 10px;
+  border-top: 1px solid var(--border);
+}
+.cal-head .rail-label {
+  margin: 0;
+}
+.cal-head .eh-head {
+  padding: 0;
+  gap: 2px;
+}
+.cal-head .eh-month {
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.cal-head .eh-sessions::before {
+  content: "· ";
+  color: var(--muted);
+}
+.cal-head .eh-lens-row {
+  flex: 0 1 320px;
+  min-width: 220px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.cal-head .eh-lenses {
+  flex: 1 1 220px;
+  margin: 0;
+}
+.cal-head .eh-fog {
+  flex: 1 1 100%;
+}
+
+/* The phone row (≤860): directly under the sticky block, never inside it — the stuck chrome
+   stays the topbar's three rows plus the switcher and the section switch. */
+.cockpit > .cal-head {
+  margin: -6px 0 14px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.cockpit > .cal-head .eh-head {
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+.cockpit > .cal-head .eh-lens-row {
+  flex: 1 1 100%;
+}
+
+/* What is dated on what you hold — one line under the net-worth card; each tier a glyph + a word. */
+.held-events {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.held-tier {
+  color: var(--text);
+  font-weight: 600;
+}
+.held-glyph {
+  font-style: normal;
+  font-size: 9px;
+  vertical-align: 1px;
+  margin-right: 1px;
+}
+.held-event {
+  color: var(--text);
+  text-decoration: none;
+}
+a.held-event:hover {
+  text-decoration: underline;
+}
+.held-event-sym {
+  font-family: var(--mono);
+  font-weight: 700;
+}

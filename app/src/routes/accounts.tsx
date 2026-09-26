@@ -18,6 +18,7 @@ import { fetchSettings } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
+import { CockpitClock, usePhoneWidth } from "../shell/cockpit-clock";
 import { useDefaultAccount } from "../shell/default-account";
 import { PageFrame } from "../shell/frame";
 import { HeartbeatChip, HeartbeatSection } from "../shell/heartbeat";
@@ -46,6 +47,10 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * aggregate, so the switcher never triggers a re-fetch. Windows' returns come straight from
  * Alpaca's own portfolio history (flow-adjusted, so a deposit never reads as a gain); the
  * aggregate per window is `Σend / Σbase − 1` across the accounts that reported one.
+ *
+ * THE MARKET CALENDAR'S HEAD (#3807 slice 2·1) is the sticky head's last row at ≥861 and the row
+ * directly under it at ≤860 (`cockpit-clock.tsx` says why); on the Overview, the net-worth card
+ * carries the events on what this book holds in the head's range (`held-events-line.tsx`).
  */
 
 type AccountsSection = "overview" | "activity" | "heartbeat" | "thesis";
@@ -300,6 +305,9 @@ function AccountsBody({
 }): ReactElement {
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
   const { stats, caption } = resolveNetWorth(networth.data, accountId);
+  // The calendar's head rides the sticky block at ≥861 and sits under it at ≤860 — one instance,
+  // placed by the phone's own media query, never a hidden twin (`cockpit-clock.tsx`).
+  const phone = usePhoneWidth();
 
   return (
     <PageFrame rail={<ProfileRail current="accounts" />}>
@@ -328,7 +336,9 @@ function AccountsBody({
             onSelect={onSelectSection}
             variant="horizontal"
           />
+          {phone ? null : <CockpitClock />}
         </div>
+        {phone ? <CockpitClock /> : null}
         <CockpitBody
           section={section}
           deskIds={deskIds}

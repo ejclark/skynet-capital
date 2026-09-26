@@ -4,6 +4,7 @@ import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { DecisionPager } from "./decision-pager";
+import { HeldEventsLine } from "./held-events-line";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
@@ -28,6 +29,10 @@ import { SauronCard } from "./sauron-card";
  * money is" as its bottom row, then what needs a decision); the right is Sauron's character card,
  * the tower standing over the league in one card, spanning both rows. The card comes after the
  * decisions in the DOM so a phone reads worth → decide → card.
+ *
+ * #3807 slice 2·1: under the net-worth card, one line — the events on what this book holds in the
+ * market calendar's range (the burning-day joint, docs/IA.md §6; `held-events-line.tsx`). The
+ * Eye's glance scope widens to the whole `.cockpit`, so the head's lenses and arrows turn it too.
  */
 export function OverviewSection({
   stats,
@@ -85,6 +90,7 @@ export function OverviewSection({
               />
             ) : null}
           </NetWorthCard>
+          {desks ? <HeldEventsLine desks={desks} /> : null}
           {!allAccounts && singleDesk?.allocation ? null : (
             <p className="desk-note">
               {stats.cashKnown ? `cash ${stats.cash} ready to use` : "cash —"} ·{" "}
@@ -109,7 +115,7 @@ export function OverviewSection({
             {...(landmark ? { landmark } : {})}
             ownedIds={owned.map((a) => a.id)}
             meId={owned.find((a) => a.kind === "human")?.id}
-            scope=".networth-detail"
+            scope=".cockpit"
           />
         </div>
       </div>

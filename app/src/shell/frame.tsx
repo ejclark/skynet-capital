@@ -40,6 +40,15 @@ import type { ReactElement, ReactNode } from "react";
  *     a hot mess"): Activity's panes were unrelated shapes with no data flow; a bench's panes share
  *     one symbol. Held as a hypothesis — its falsifier is Eric reading the docked bench as a mess
  *     on the live route, at which point it folds at every width and the switch comes back.
+ *
+ * AN INSTRUMENT'S HEAD IS A ROW OF THE PAGE'S OWN IDENTITY (#3807 slice 2·1; the design panel and
+ * the IA decision, docs/IA.md §8.1, 2026-09-26): an instrument's head (the calendar) is a row of
+ * the page's own identity — the cockpit head — rendered only where a date key drives content; a
+ * dateless page shows no head, never an inert one. Its range is root URL state (`?on=&span=`,
+ * `live/horizon-params.ts`), so the key means one thing on every page it joins. Held as a
+ * hypothesis — its falsifier is Eric reading the head as a second topbar on the live route by
+ * 2026-10-10, at which point the row leaves the head for the stage's first row.
+ *
  * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.
  * @category navigation
  */

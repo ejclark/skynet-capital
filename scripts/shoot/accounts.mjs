@@ -1,7 +1,9 @@
 // Visual harness for /app/accounts (#2321) — the Cockpit: sticky net-worth header + horizontal
 // section switch + scrollable section detail. PHONE FIRST (docs/PICTURES.md → "Trading surfaces
 // shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
-// expanded. JPEG ≤100KB.
+// expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the market calendar's
+// head in the cockpit head with the events on what the book holds; the run also prints the stuck
+// chrome at 390, the number the head's placement is judged by.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
 
 import { join } from "node:path";
@@ -395,7 +397,14 @@ const PLAIN = {
     breakeven: "$172.40",
     best: "unlimited",
     worst: "−$17,240",
-    nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: false, scope: "stock" },
+    // NVDA's Aug 26 print is behind the fixture's date, so the next headline macro print stands in
+    // (`src/domain/market-events/fomc-2026-10-28.json`).
+    nextEvent: {
+      label: "Fed meeting Oct 28",
+      at: "2026-10-28",
+      beforeExpiry: false,
+      scope: "market",
+    },
   },
   AAPL: {
     plainName: "Shares · profits if AAPL rises",
@@ -403,13 +412,8 @@ const PLAIN = {
     breakeven: "$198.50",
     best: "unlimited",
     worst: "−$39,700",
-    // AAPL's own print is past the 60-day share horizon, so the headline macro print stands in
-    nextEvent: {
-      label: "Fed meeting Sep 16",
-      at: "2026-09-16",
-      beforeExpiry: false,
-      scope: "market",
-    },
+    // AAPL's Oct 29 print (`src/domain/earnings-calendar.ts`) is inside the 60-day share horizon.
+    nextEvent: { label: "Earnings Oct 29", at: "2026-10-29", beforeExpiry: false, scope: "stock" },
   },
   NVDA260918C00180000: {
     plainName: "Call option · profits if NVDA rises",
@@ -893,6 +897,37 @@ await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
 
+// The cockpit clock (#3807 slice 2·1): the market calendar's head under the section switch —
+// OUTSIDE the sticky block at 390 — and, under the net-worth card, the events on what this book
+// holds in the head's range: the week of Oct 26 carries AAPL's print (held) and the Fed decision
+// (market-wide). The stuck chrome is measured here because the panel's falsifier is a number: the
+// topbar plus the sticky head, once the page has scrolled, must not grow with the row (>253px).
+await page.goto(`${origin}/app/accounts?on=2026-10-26&span=week`);
+await page.getByText("Net worth · Eric").waitFor();
+await page.locator(".held-events").waitFor();
+await shootCockpit("accounts-head-phone");
+await page.evaluate(() => window.scrollTo(0, 900));
+await page.waitForTimeout(150);
+const stuck = await page.evaluate(() =>
+  Math.round(
+    Math.max(
+      0,
+      ...[".topbar", ".cockpit-head"].map(
+        (s) => document.querySelector(s)?.getBoundingClientRect().bottom ?? 0,
+      ),
+    ),
+  ),
+);
+console.log(`stuck chrome at 390 (topbar + cockpit head, scrolled): ${stuck}px`);
+// The events line under the net-worth card, scrolled into the frame's lower third: on a phone the
+// calendar row is outside the sticky block, so this frame shows the line and the head frame above
+// shows the row — two frames, one surface at 390.
+await page.locator(".held-events").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, 200));
+await page.waitForTimeout(150);
+await shootCockpit("accounts-held-phone");
+await page.evaluate(() => window.scrollTo(0, 0));
+
 // The whole phone Overview in one tall frame (#3689 slice 8, handoff 3b): value and one line,
 // the league as a line, the money card, one decision card, then positions as cards.
 await page.locator(".pos-cards").waitFor();
@@ -934,6 +969,13 @@ await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await page.locator(".decisions").waitFor();
 await shootCockpit("accounts-summary-desktop");
+
+// The cockpit clock at 1280 (#3807 slice 2·1): the head as the sticky block's last row, the
+// events on what this book holds under the net-worth card.
+await page.goto(`${origin}/app/accounts?on=2026-10-26&span=week`);
+await page.getByText("Net worth · Eric").waitFor();
+await page.locator(".held-events").waitFor();
+await shootCockpit("accounts-head-desktop");
 
 // Lot breakdown (#3186 slice 1) in the wide table: the NVDA call's two buys, each with its own
 // Close this buy / Roll actions.

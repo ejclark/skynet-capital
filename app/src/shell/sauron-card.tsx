@@ -18,9 +18,10 @@ import { LeagueCard } from "./league-card";
  * sends no glances, so the card is simply a picture.
  */
 
-/** The page controls that count as "filters" — every toggle chip and the free-text filter box. */
+/** The page controls that count as "filters" — every toggle chip and the free-text filter box,
+ *  and the market calendar's arrows (#3807 slice 2·1): a range is a filter of time. */
 const FILTER_CONTROLS =
-  '[aria-pressed], input[type="search"], input[type="text"], input:not([type]), select';
+  '[aria-pressed], input[type="search"], input[type="text"], input:not([type]), select, button.eh-nav';
 
 const prefersStill = (): boolean => {
   try {

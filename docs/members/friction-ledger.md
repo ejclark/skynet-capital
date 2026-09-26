@@ -6,7 +6,7 @@ _Run 2026-09-26 (run 0 = the baseline before any lift). Written by `scripts/craw
 
 - **73 findings** over 76 steps and 76 frames — high 14 · medium 51 · low 8.
 - **The eight dead ends the plan lists:** found 8/8 (1, 2, 3, 4, 5, 6, 7, 8) — every one, as run 0 must.
-- **Dead ends with a step now passing (`fixed?`):** 9 · #3805 (eric j1 s2 · j3 s1, returning-trader j1 s2 — hand-marked; the next crawl run rewrites this file).
+- **Dead ends with a step now passing (`fixed?`):** 9 · #3805 (eric j1 s2 · j3 s1, returning-trader j1 s2 — hand-marked; the next crawl run rewrites this file); the calendar on the book · #3807 slice 2·1 (eric j1 s3 — hand-marked the same way).
 - Contrast + name/role pass: axe-core ran on every frame (colour-contrast and control-name rules only).
 - By kind: `known gap` 22 · `disabled-reason-hidden` 4 · `dangling-anchor` 2 · `axe:color-contrast` 28 · `promise-no-target` 12 · `disabled-no-reason` 5.
 - Judge: every row reads `pending (grind)` until `docs/grind/journey-judge.instructions.md` runs over the frames.
@@ -27,7 +27,7 @@ _Run 2026-09-26 (run 0 = the baseline before any lift). Written by `scripts/craw
 | eric | j1 the Monday read · s2 (phone · desktop) | fixed? · #3805 — crawl finding 9 — /api/accounts/networth answers 500 on the offline fixture (`h.equity.forEach`, src/server/networth-api-routes.ts:49); the whole Overview — standing, money strip, positions — is replaced by one sentence | src/server/networth-api-routes.ts:49 | high | S | pending (grind) |
 | eric | j3 rebalance · s1 (phone · desktop) | fixed? · #3805 — crawl finding 9 — the money strip is the net-worth card's bottom row (app/src/shell/money-strip.tsx:9) and vanishes with the 500 from src/server/networth-api-routes.ts:49 | app/src/shell/money-strip.tsx:9 | high | S | pending (grind) |
 | eric | j1 the Monday read · s1 (phone · desktop) +6 more steps | Elements must meet minimum color contrast ratio thresholds — .set-switch-default | — | medium | S | pending (grind) |
-| eric | j1 the Monday read · s3 (phone · desktop) | known gap — the calendar (app/src/shell/event-horizon.tsx) exists only as R&D's rail control; the cockpit has no 'when' — the date key never joins the book | app/src/shell/event-horizon.tsx:1 | medium | L | pending (grind) |
+| eric | j1 the Monday read · s3 (phone · desktop) | fixed? · #3807 slice 2·1 — the calendar (app/src/shell/event-horizon.tsx) existed only as R&D's rail control; the cockpit had no 'when' — the date key never joined the book. Now the head is a row of the cockpit head (app/src/shell/cockpit-clock.tsx) and the events on what he holds sit under the net-worth card | app/src/shell/cockpit-clock.tsx:1 | medium | L | pending (grind) |
 | eric | j1 the Monday read · s4 (phone · desktop) +1 more step | "The living board: pick a lens and a span on the horizon, a name, or type a filter — everything below follows. Documents open on their own pages." — names an action with no control in reach | app/src/shell/board-section.tsx:400 | medium | S | pending (grind) |
 | eric | j1 the Monday read · s4 (phone · desktop) +1 more step | Elements must meet minimum color contrast ratio thresholds — .eh-outside.eh-day:nth-child(8) > .eh-num | — | medium | S | pending (grind) |
 | eric | j1 the Monday read · s4 (phone · desktop) +1 more step | Elements must meet minimum color contrast ratio thresholds — .eh-weekend.eh-day:nth-child(20) > .eh-num | — | medium | S | pending (grind) |
