@@ -308,11 +308,14 @@ function roundThreeFindings(source, head, at, registry) {
       const label = (m[1] ?? "").trim();
       // Rule 18 puts the question in the bold headline with fact lines under it, in the backtick
       // markdown-string form: the headline or the whole label ends in ?, markup stripped.
-      const lines = label
-        .replace(/`/g, "")
+      const plain = label.replace(/`/g, "");
+      const headline = /\*\*(.+?)\*\*/s.exec(plain)?.[1]?.trim();
+      const last = plain
         .split(/<br\s*\/?>/i)
-        .map((l) => l.replace(/\*\*/g, "").trim());
-      const asks = lines[0]?.endsWith("?") || lines.at(-1)?.endsWith("?");
+        .at(-1)
+        ?.replace(/\*\*/g, "")
+        .trim();
+      const asks = headline?.endsWith("?") || last?.endsWith("?");
       if (label && !asks) {
         notes.push(
           `${at}: fork "${label}" asks no question — a fork shape ends in ? and its exits carry the answers (docs/PICTURES.md rule 2)`,
