@@ -12,6 +12,11 @@ import { create } from "zustand";
  * per browser, so it survives navigation and reloads, and `?shell=off` clears it. It stamps
  * `data-shell="watchtower"` on <html> so the band's CSS can make room for the crest. Invisible
  * unless asked for: nothing in the app links to it.
+ *
+ * THE CREST'S REST (#3807 slice 3a-3): `?crest=still` beside the flag asks for the second crest
+ * option — one still frame at rest, animating only while the Eye looks at a day or a filter — so
+ * the two can be compared by eye; `?crest=live` goes back to today's constant sweep. Stored the
+ * same way as the flag, so it survives navigation. It changes nothing unless the flag is on.
  */
 
 export type Theme = "dark" | "light";
@@ -20,9 +25,13 @@ export type Density = "comfortable" | "compact";
 const THEME_KEY = "skynet-theme";
 const DENSITY_KEY = "skynet-density";
 const SHELL_KEY = "skynet-shell";
+const CREST_KEY = "skynet-crest";
 
 /** The opt-in shell, or `undefined` for today's. */
 export type Shell = "watchtower" | undefined;
+
+/** The crest at rest: `live` (today's constant sweep) or `still` (one frame, live only on regard). */
+export type Crest = "live" | "still";
 
 function readStored<T extends string>(key: string, allowed: readonly T[]): T | undefined {
   try {
@@ -75,6 +84,35 @@ function initialShell(): Shell {
   return shell;
 }
 
+/** `?crest=still` picks the still crest, `?crest=live` today's; otherwise the stored choice. */
+export function crestFromUrl(search: string, stored: Crest | undefined): Crest {
+  const asked = new URLSearchParams(search).get("crest");
+  if (asked === "still" || asked === "live") return asked;
+  return stored ?? "live";
+}
+
+function initialCrest(): Crest {
+  const stored = readStored(CREST_KEY, ["still"] as const);
+  let search = "";
+  try {
+    search = window.location.search;
+  } catch {
+    /* no location: keep what is stored */
+  }
+  const crest = crestFromUrl(search, stored);
+  if (crest !== (stored ?? "live")) storeCrest(crest);
+  return crest;
+}
+
+function storeCrest(crest: Crest): void {
+  try {
+    if (crest === "still") localStorage.setItem(CREST_KEY, crest);
+    else localStorage.removeItem(CREST_KEY);
+  } catch {
+    /* no storage: the choice lasts this page load */
+  }
+}
+
 function initialTheme(): Theme {
   const stored = readStored(THEME_KEY, ["dark", "light"] as const);
   if (stored) return stored;
@@ -86,6 +124,8 @@ interface PrefsState {
   readonly theme: Theme;
   readonly density: Density;
   readonly shell: Shell;
+  readonly crest: Crest;
+  readonly setCrest: (crest: Crest) => void;
   readonly setTheme: (theme: Theme) => void;
   readonly setDensity: (density: Density) => void;
   readonly setShell: (shell: Shell) => void;
@@ -103,6 +143,11 @@ export const usePrefs = create<PrefsState>((set) => {
     theme,
     density,
     shell,
+    crest: initialCrest(),
+    setCrest: (next) => {
+      storeCrest(next);
+      set({ crest: next });
+    },
     setShell: (next) => {
       storeShell(next);
       stampShell(next);

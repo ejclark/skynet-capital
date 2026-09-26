@@ -7,19 +7,54 @@
     "parent_idle_raf_p95_delta_ms": 4
   },
   "tower": {
-    "submit_ms_p50": 0.9,
-    "submit_ms_p95": 2.2,
-    "frames": 102,
-    "mount_to_ready_ms": 550
+    "live": {
+      "src": "?frame=crown&quality=presence",
+      "submit_ms_p50": 0.7,
+      "submit_ms_p95": 2.1,
+      "frames": {
+        "at_rest": 44,
+        "after_hovers": 98,
+        "at_end": 159
+      },
+      "mount_to_ready_ms": 434
+    },
+    "still": {
+      "src": "?frame=crown&quality=presence&rest=still",
+      "submit_ms_p50": 0.8,
+      "submit_ms_p95": 2.3,
+      "frames": {
+        "at_rest": 3,
+        "after_hovers": 45,
+        "at_end": 102
+      },
+      "mount_to_ready_ms": 1369
+    }
   },
   "parent_raf_interval_ms": {
-    "flag_off_p95": 216.7,
-    "flag_on_p95": 283.4,
-    "delta_p95": 66.7,
-    "flag_off_p50": 16.7,
-    "flag_on_p50": 83.3,
     "idle_ms": 10000,
-    "section_switches": 6
+    "off": {
+      "at_rest_p95": 233.3,
+      "at_rest_p50": 200,
+      "active_p95": 216.7
+    },
+    "live": {
+      "at_rest_p95": 283.4,
+      "at_rest_p50": 266.6,
+      "at_rest_delta_p95": 50.1,
+      "active_p95": 283.3,
+      "active_delta_p95": 66.6,
+      "regard_hovers": 3,
+      "section_switches": 6
+    },
+    "still": {
+      "at_rest_p95": 233.3,
+      "at_rest_p50": 216.6,
+      "at_rest_delta_p95": 0,
+      "active_p95": 283.3,
+      "active_delta_p95": 66.6,
+      "regard_hovers": 3,
+      "section_switches": 6
+    }
   },
   "navigation": {
     "navigations": 20,
@@ -28,9 +63,10 @@
     "same_element": true
   },
   "notes": [
-    "scene: the quality=presence bundle from #3847 (held), app: this PR (the crest loads /tower?frame=crown&quality=presence)",
-    "before, same machine and session (main's scene and app): crest submit p50 0.9 / p95 2.3 ms, 101 frames; parent p50 16.7 -> 83.3 ms, p95 216.7 -> 283.4 (delta 66.7)",
-    "no change on SwiftShader: the crest drew ~102 frames in ~14 s (~7 a second) before and after, so the 30 fps cap never binds there, DPR is already 1 at this viewport, and the shadow map was already drawn once",
-    "the parent's delta tracks the existence of an animating frame, not its draw cost; the next lever is a still at rest, live only on regard/glance. The real-device number is Eric's, via ?probe=1"
+    "scene: #3847 branch bundle at 1ede3864 (quality=presence + rest=still), app: this PR (?crest=still -> &rest=still on the crest src)",
+    "three runs this session, same machine: crest=still at-rest delta p95 -0.1 / 0 / 0 ms (inside the <= +4 ms line); crest=live +83.3 / +50 / +50.1 (fails it). This file is the third run",
+    "the machine was loaded this session: the flag-off page itself ran at rAF p50 ~200 ms (16.7 ms in slice 3a-2), so read the deltas, not the absolute intervals",
+    "while the Eye looks (3 row hovers, 6 section switches that glance) crest=still animates and costs what crest=live costs (active delta +66.6 both); it stops again on its own — 3 frames at rest (the first still + mood/resize redraws) vs ~44 for live",
+    "the Profile fixture draws no calendar day grid, so the regard hovers are blotter rows (same tower:regard); the 20-navigation run ends with crest=still stored"
   ]
 }
