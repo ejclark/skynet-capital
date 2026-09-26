@@ -81,6 +81,8 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 ### Open questions
 ### Slicing sketch
 
+State block: the first comment, edited in place (plan issues only).
+
 </details>
 ```
 
@@ -193,6 +195,57 @@ general prose scores worse on technical text, which is exactly this repo's conte
 "maybe worth a `linguist` pass," never as a defect — same non-blocking doctrine as every other note
 in this section.
 
+## The state block — a plan issue's context store (#3765)
+
+A plan issue is where distributed tasks report *into* and where the next task picks *up from*. Left
+to accumulate, that is a body plus N free-form comments, and the pickup session reads all of them
+or guesses (#3748 after one day: seven comments). So every plan issue carries **one state block**,
+posted as its first comment right after filing, **edited in place** by every report-in, read
+**before anything else** by whoever picks the plan up. The medium is the `stateDiagram-v2` the
+pictures table already names for a lifecycle: a diagram with its current state marked is a state
+store a human reads in ten seconds and a session reads as text. The same object serves the async
+pair (a human+AI pair and an AI+human pair working the same issue at different hours): both edit
+the text, and the diff is the message.
+
+````markdown
+## State block — read this first, then pick up
+
+```mermaid
+stateDiagram-v2
+  state "Done: 1 <slice> · 2 <slice>" as Done
+  state "3 · <the next slice, in plain words>" as S3
+  [*] --> Done
+  Done --> S3: next pickup
+  S3 --> [*]: closes #N
+  classDef current stroke-width:3px
+  class S3 current
+```
+
+**Next pickup: slice 3, <name>. One PR.** <what it builds>. Inputs: <repo-qualified paths>.
+Done when: WHEN <trigger>, the <system> SHALL <response>. Falsifier: <the dated observation>.
+
+**Rules for this block:** edit in place; one dated line below per report-in; no new status comments.
+
+**Log**
+- <date> · <one line: what landed, PR numbers>
+````
+
+Four rules, each the answer to a question the first pickup test asked (#3765, 2026-09-26, a fresh
+agent handed only #3748's block took the right slice but asked two things the thread already held):
+
+| Rule | The question it answers |
+|---|---|
+| The pickup names its **PR granularity** ("one PR", "one PR each") | "is this one PR or two?" |
+| The pickup carries a **done line** in EARS, not only the falsifier | "what does done look like?" |
+| Every path is **repo-qualified** (`scripts/moneypenny/labels.mjs`, never `labels.mjs`) | "I could not locate the file" |
+| **Research inside the slice is named as such** ("read the pinned package, do not guess") | a legitimate unknown, so the block says where its answer lives |
+
+What the block never holds: a decision only Eric can make (rule 7: the `Needs from you` callout,
+above the fold) and a `<details>` fold (the MCP issue read sanitizes markup; a fence and a list
+survive). `issue-lint` notes a `plan`-labelled body that does not point at its block; the note is
+advisory, never a gate. The lanes that pick plans up (`plan-build.md`, `feedback-build.md`,
+`/work-issues`) read the block first and edit it on finish (slice 3 of #3765).
+
 ## Comments — the surface that outnumbers issues 10:1
 
 An issue's body is written once; its comments accumulate forever, and they are what a human actually
@@ -201,6 +254,9 @@ returns to.
 - **Progress comments** (build sessions): one status line, then the delta. `**Slice 1/5 — shipped.**
   Owner link + flag removal merged in #472. Next: `/join` queue.` Logs, command output and diffs go
   in a fold or are omitted — the PR is the record.
+- **On a plan issue, progress is an edit to the state block plus one dated log line under it, never
+  a new status comment** (the section above). The block is what the next task reads; a thread of
+  status comments is what it would otherwise have to read instead.
 - **Review-style comments** carry a Conventional-Comments label so intent is unambiguous:
   `praise:` · `nitpick:` · `suggestion:` · `issue:` · `question:` · `thought:` · `chore:`, with
   `(blocking)` / `(non-blocking)` / `(if-minor)` when it changes what the reader must do.

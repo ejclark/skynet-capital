@@ -54,6 +54,12 @@ that gets a well-shaped issue filed without a second pass.
 9. **Label deliberately.** `feedback` starts a Moneypenny build session on triage; `needs-eric`
    parks it for his flip. Filing alone never authorizes work — that invariant is load-bearing on a
    public repo and this skill never widens it.
+10. **A plan gets its state block as the first comment**, posted right after filing and edited in
+    place from then on: the slices as a `stateDiagram-v2` with the current one marked, a `Next
+    pickup` line (slice · one PR or several · repo-qualified inputs · a done line in EARS · the
+    falsifier), the rules line, a dated log. Shape and the four rules: `docs/ISSUES.md` → *The
+    state block*. The body's Slicing sketch ends with `State block: the first comment, edited in
+    place` so the lint knows one exists.
 
 ## Reshaping an existing wall
 
