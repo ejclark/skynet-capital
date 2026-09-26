@@ -71,7 +71,11 @@ describe("structural graph freshness — honest degradation (seeded fixtures)", 
     const { status, out } = scanFixture((root) => {
       const env = hermeticGitEnv();
       const git = (...args: string[]) =>
-        execFileSync("git", args, { cwd: root, env, encoding: "utf8" }).trim();
+        execFileSync(
+          "git",
+          ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args],
+          { cwd: root, env, encoding: "utf8" },
+        ).trim();
       git("init", "-q");
       git("commit", "-q", "--allow-empty", "-m", "graph built here");
       const sha = git("rev-parse", "--short", "HEAD");
@@ -87,7 +91,11 @@ describe("structural graph freshness — honest degradation (seeded fixtures)", 
     const { status, out } = scanFixture((root) => {
       const env = hermeticGitEnv();
       const git = (...args: string[]) =>
-        execFileSync("git", args, { cwd: root, env, encoding: "utf8" }).trim();
+        execFileSync(
+          "git",
+          ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args],
+          { cwd: root, env, encoding: "utf8" },
+        ).trim();
       git("init", "-q");
       git("commit", "-q", "--allow-empty", "-m", "graph built here");
       writeFileSync(
