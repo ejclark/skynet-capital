@@ -151,6 +151,16 @@ jobs:
     expect(lintWorkflow("sample.yml", NO_DEPS_SCRIPT, [], () => false)).toEqual([]);
   });
 
+  // Degrade honestly (#3769 row 1): a script rule 6 cannot read is UNKNOWN, a problem — not a pass.
+  it("fails as UNKNOWN when a workflow runs a script whose import graph cannot be read", () => {
+    const { code, stderr } = withWorkflow(
+      MISSING_INSTALL.replace("scripts/needs-deps.mjs", "scripts/no-such-script-3769.mjs"),
+    );
+    expect(code).toBe(1);
+    expect(stderr).toContain("scripts/no-such-script-3769.mjs");
+    expect(stderr).toContain("UNKNOWN (rule 6, #890)");
+  });
+
   it("holds for the real workflows in this repo (real script import graphs)", () => {
     expect(() =>
       execFileSync("node", ["scripts/workflow-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),

@@ -20,16 +20,29 @@ const IMPORT_RE = /^\s*import\s+(?:[\s\S]*?\bfrom\s+)?["']([^"']+)["']/gm;
  * to resolve. `read(path) => text` is injectable so specs can hand this a fixture filesystem instead
  * of touching real disk; defaults to `node:fs`'s `readFileSync`. Depth-bounded (these are small repo
  * scripts, not application code) and cycle-safe via `seen`.
+ *
+ * `onUnreadable(path, error)` is how a caller learns the answer is incomplete: an unreadable file
+ * contributes no imports (never a false "needs deps" alarm), but it is named, never swallowed.
  */
-export function bareImportsOf(entryPath, read, resolvePath, depth = 8, seen = new Set()) {
+export function bareImportsOf(
+  entryPath,
+  read,
+  resolvePath,
+  depth = 8,
+  seen = new Set(),
+  onUnreadable = undefined,
+) {
   if (depth < 0 || seen.has(entryPath)) return new Set();
   seen.add(entryPath);
 
   let text;
   try {
     text = read(entryPath);
-  } catch {
-    return new Set(); // unreadable (e.g. path resolved wrong) — silence, never a false alarm
+  } catch (error) {
+    // Unreadable (e.g. a path resolved wrong): the graph below it is UNKNOWN, not empty. The set
+    // stays free of false alarms; the caller is told, and workflow-lint reports it as UNKNOWN.
+    onUnreadable?.(entryPath, error);
+    return new Set();
   }
 
   const bare = new Set();
@@ -38,7 +51,9 @@ export function bareImportsOf(entryPath, read, resolvePath, depth = 8, seen = ne
     if (spec.startsWith("node:")) continue;
     if (spec.startsWith(".")) {
       const next = resolvePath(entryPath, spec);
-      for (const b of bareImportsOf(next, read, resolvePath, depth - 1, seen)) bare.add(b);
+      for (const b of bareImportsOf(next, read, resolvePath, depth - 1, seen, onUnreadable)) {
+        bare.add(b);
+      }
     } else {
       bare.add(spec);
     }
@@ -48,6 +63,6 @@ export function bareImportsOf(entryPath, read, resolvePath, depth = 8, seen = ne
 
 /** True when `entryPath`'s import graph reaches any package outside `node_modules`-free builtins —
  *  i.e. `npm ci` must have run before this script can be required to work. */
-export function needsInstalledDeps(entryPath, read, resolvePath) {
-  return bareImportsOf(entryPath, read, resolvePath).size > 0;
+export function needsInstalledDeps(entryPath, read, resolvePath, onUnreadable) {
+  return bareImportsOf(entryPath, read, resolvePath, 8, new Set(), onUnreadable).size > 0;
 }

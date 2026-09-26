@@ -44,7 +44,7 @@
 // It parses only the block-style, 2-space-indented subset this repo's workflows are written in, and
 // skips block scalars (`run: |`) wholesale, which is where arbitrary shell text lives.
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { needsInstalledDeps } from "./script-deps.mjs";
 import { unknownLabels } from "./workflow-labels.mjs";
@@ -283,6 +283,9 @@ function main(argv) {
   // Real-filesystem answer for rule 6: does `scripts/<x>.mjs`'s import graph reach node_modules?
   // Memoized — the same script is invoked from several workflow files/jobs.
   const cache = new Map();
+  // Rule 6 cannot answer for a script whose import graph it could not fully read: that is an
+  // UNKNOWN problem, never a pass (an unreadable file would otherwise hide its bare imports).
+  const unreadable = new Map();
   const hasScriptDeps = (scriptRelPath) => {
     if (!cache.has(scriptRelPath)) {
       cache.set(
@@ -291,6 +294,7 @@ function main(argv) {
           join(repoRoot, scriptRelPath),
           (p) => readFileSync(p, "utf8"),
           (from, spec) => resolve(dirname(from), spec),
+          (path) => unreadable.set(`${scriptRelPath}\0${path}`, { scriptRelPath, path }),
         ),
       );
     }
@@ -299,6 +303,12 @@ function main(argv) {
   const problems = files.flatMap((f) =>
     lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts, hasScriptDeps, LABEL_NAMES),
   );
+  for (const { scriptRelPath, path } of unreadable.values()) {
+    problems.push(
+      `a workflow runs \`node ${scriptRelPath}\`, but \`${relative(repoRoot, path)}\` in its import ` +
+        "graph could not be read — whether it needs `npm ci` first is UNKNOWN (rule 6, #890)",
+    );
+  }
   for (const p of problems) console.error(`✗ ${p}`);
   if (problems.length) {
     console.error(`\n${problems.length} problem(s) in ${dir} — see docs/LESSONS.md 2026-08-22.`);
