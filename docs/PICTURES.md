@@ -306,6 +306,28 @@ The colours are `BRAND.md` tokens — `--accent` and `--accent-contrast` for *ne
 machine/system signal), `--muted` (light) for *removed*, `--accent` (light) for *changed* — never
 `--pos`/`--neg`, which mean profit and loss and nothing else.
 
+**A second look, verified and not yet promoted: ink mode** (the Claude Design round-3 session,
+2026-09-26, plan #3786; the palette of a sumi-ink frame with one gold). Paper for what exists, gold
+for the one decision, seal red for a defect beside it, the house `removed` unchanged. Every class
+holds ≥ 4.5:1 text on fill and ≥ 3:1 boundary on both GitHub canvases (`tests/ui/mermaid-classdef.spec.ts`
+verifies every snippet on this page); the seal red's stroke is light because its fill and a dark
+stroke both sat under 3:1 against GitHub's dark canvas. A look is a mode, switched whole (rule 11):
+a picture uses the teal snippet or this one, never both. **Until Eric promotes it** (the probe on
+#3778, read on a phone), no PR picture uses it; promotion is one line here and one in `BRAND.md`,
+which today sanctions one warm palette.
+
+```mermaid
+flowchart TD
+    a["what exists"]:::paper ==> b{"the decision?"}:::gold
+    b ==> c["done"]:::paper
+    b --> d["the defect beside it"]:::defect
+    a -.-> e["the old path"]:::removed
+    classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
+    classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
+    classDef defect fill:#B3261E,color:#FFF4EC,stroke:#FFF4EC,stroke-width:3px
+    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
+```
+
 
 ## Screenshots — mechanics that keep pictures alive
 
