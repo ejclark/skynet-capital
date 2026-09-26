@@ -411,8 +411,10 @@ flowchart TD
   never into the tree (Eric, 2026-09-26, on #3760: "the before and after don't need baked into
   source code; github issue would've been adequate"). Attach via SHA-pinned raw URLs from the
   commit that carried them, so a revert of the tree copy leaves the comment intact.
-- **Trading surfaces shoot the phone frame first** (the ticket, the options chain, the milestone
-  strip — CLAUDE.md → *Mobile-first on the trading surfaces*, Eric 2026-09-05): pass
+- **Member surfaces shoot the phone frame first** (the ticket, the options chain, the milestone
+  strip, accounts, research — every information surface; the 3D scene and the `/login` canvas are
+  exempt — CLAUDE.md → *Mobile-first on every information surface*, Eric 2026-09-05, widened
+  2026-09-26): pass
   `viewport: { width: 390, height: 844 }` to the harness for the first frame and the default
   desktop viewport for the second. The phone frame is the one that proves the curation; the
   desktop frame proves it expanded instead of floating.
