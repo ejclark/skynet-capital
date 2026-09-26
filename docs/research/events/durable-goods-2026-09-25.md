@@ -438,3 +438,122 @@ doc goes quiet.
 
 **Last assessed:** 2026-09-24
 <!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","mu-2026-09-30-print","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","russell-quarterly-ipo-review-effective-2026-09-21","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-09-26, D+1).** Macro-print mode carries no `earnings-cycle` / `intraday-edges` run
+— `symbols: []` by design (the cache-bust command was run regardless, per the mandated close-out
+step, and touched nothing this doc uses). The report is scored from freshly re-sourced press data
+and the tape from Yahoo daily bars fetched today, never from memory. **The primary stays blocked as
+it was at initial research**: `durgd.pdf` and `table1a.pdf` were fetched today (HTTP 200, ~1MB) but
+this environment still has no `pdftotext`/`qpdf`/PyPDF2/pdfminer, and the inline zlib-stream decoder
+that worked on the July edition's narrative text returned only raw PDF object/font-dictionary noise
+on this edition — the same limit the initial research recorded, now confirmed to persist across
+editions. Scored instead from **four convergent secondaries reporting the same Census release**:
+Haver Analytics, TheStreet Pro, ActionForex and a Reuters/AP wire carried by CTASC/TheCenterSquare —
+all four agree to the first decimal on every headline figure below, which is a tighter convergence
+bar than this doc's own single-sourced forecast column ever had.
+
+**What printed — a flat headline masking the widest core/headline split scored yet on this
+series.**
+
+| Line | Aug 2026 | Jul 2026 (revised) | Consensus |
+|---|---|---|---|
+| **Headline new orders** | **$338.6B, −0.02%** ("virtually unchanged," −$0.1B) | +0.86% | **−0.3%** (beat) |
+| Ex-transportation | **+0.31%** | +0.70% | none published |
+| Ex-defense | +0.1% | +1.4% | — |
+| Transportation equipment | −0.65% to $114.1B | +1.2% | — |
+| — nondefense aircraft | −4.3% | +12.0% | — |
+| — motor vehicles | −0.6% | — | — |
+| **Core capex orders** (nondefense ex-aircraft, ex-defense) | **+1.59%** | +0.6% | **+0.6%** (beat, ~3×) |
+| **Core capex shipments** (same cut) | **+0.58%** | +1.4% | +0.8% (miss) |
+| Nondefense capital goods, **total** shipments (incl. aircraft — leg 8's actual GDP-input line) | **−1.3% to $95.5B** | — | — |
+| Total durable goods shipments | −0.2% | +0.9% | — |
+| Defense capital goods | −1.5% | — | — |
+| Unfilled orders / backlogs | +0.6% | — | — |
+| Inventories | +0.5% (all-time high) | — | — |
+
+Year-over-year: headline +8.5%, ex-transport +11.2%, core capex orders +14.1% (strongest since
+August 2021), core capex shipments +11.4% (best since February 2022), defense +34.6%. Sources:
+[Haver Analytics](https://www.haver.com/articles/u-s-durable-goods-orders-flat-in-august-on-nondefense-aircraft-weakness),
+[TheStreet Pro](https://pro.thestreet.com/market-commentary/flat-durable-goods-orders-mask-robust-business-capex),
+[ActionForex](https://www.actionforex.com/live-comments/655425-us-durable-goods-stall-on-transport-but-core-capex-orders-accelerate/),
+[CTASC](https://ctasc.com/durable-goods-orders-flat-in-august/), all fetched 2026-09-26. **One
+figure is not reconciled**: Haver counts the unfilled-orders streak at 13 consecutive months,
+TheStreet at 17 (backlogs $1.61T, all-time high) — both agree on direction and the +0.6% size, only
+the streak length differs, and nothing in this doc's stance turns on the count.
+
+**Scoring the reading order — every leg of it landed exactly as prescribed, harder than any prior
+month in the sample.** This is the print leg 3 predicted: read ex-transportation, then the
+capex/shipments lines, and treat the headline as noise. The headline came in at **−0.02%**, indistinguishable
+from flat, while ex-transportation printed **+0.31%** and the narrower core-capex order cut printed
+**+1.59%** — a headline/core gap wider than any of the seven 2026 months tabulated in the initial
+research, and it is precisely the transportation-lottery mechanism leg 3 named: nondefense aircraft's
+**−4.3%** swing (off a **+12.0%** July) dragged the headline while doing nothing to the ex-transport
+core. **Leg 8's actual metric — total nondefense capital-goods shipments including aircraft — fell
+1.3% to $95.5B**, which is a genuine caveat this close-out adds: the GDP-equipment-investment line the
+initial research cited is the *total*, not the ex-aircraft "core capex" cut the press emphasizes, and
+the total fell on the same aircraft volatility that dented the headline. The **ex-aircraft** shipments
+cut (+0.58%, 11th gain in 12 months) is the one press coverage calls "core capex" and it is positive —
+but it is a narrower series than leg 8 named, and this doc's own GDP-transmission claim should read
+against the total, which printed negative this month. Recorded as a correction to leg 8's framing, not
+a stance change (no position was ever licensed on this print either way).
+
+**Kill switches — none fired.**
+
+1. **"An open gap above the 90th percentile with a session wrap naming this release as the
+   cause"** — **did not fire.** Overnight gaps (2026-09-24 close → 2026-09-25 open), scored against
+   each instrument's own trailing two-year distribution (Yahoo daily bars, fetched today, cache
+   busted): SPY **+0.209%** (38.5th percentile, p90 0.990%), QQQ **+0.233%** (31.5th, p90 1.392%),
+   XLI **+0.415%** (60.1st, p90 1.046%), ITA **+0.249%** (34.9th, p90 1.031%), IYT **+0.253%** (33.3rd,
+   p90 1.178%) — every instrument landed in the ordinary middle of its own distribution, nowhere
+   close to the 90th percentile the switch names. Session wraps (CNBC, Yahoo Finance) attribute the
+   day's modest gains — S&P 500 +0.51% to 7,743.41, Nasdaq +0.5% to 27,068.72, Dow +0.93% to
+   51,828.62 — to a Treasury-yield selloff shrugging off and oil prices easing; neither wrap names
+   durable goods. VIX eased **15.67 → 14.87** (−0.80pt), inside the 3-point regime bar.
+2. **"Ex-transportation printing negative"** — **did not fire.** +0.31% extends leg 3's 2026 streak
+   to **8 positive months of 8** (was 7/7 through July).
+3. **"The headline and the core moving together by a similar magnitude"** — **did not fire, and is
+   refuted about as hard as this doc could ask for.** A ~flat headline against a core more than an
+   order of magnitude larger in the same direction is the dispersion split's clearest vindication
+   yet, not a threat to it.
+4. **"Either XLI or ITA gapping past its own 1.030% two-year p90"** — **did not fire** (scored above;
+   this is `FT-durable-goods-2026-09-25-1`'s own kill condition — see below).
+5. **"Census begins publishing semiconductor new orders"** — no evidence found in any of the four
+   secondaries or the session wraps; not independently re-verified against the primary's explanatory
+   notes this session (the same PDF-decode limit as initial research), but nothing in the financial
+   press suggests a methodology change. Treated as not fired.
+
+The two CR-related kill switches were already scored fired/retired in the 09-08 row and are not
+re-litigated here.
+
+**`FT-durable-goods-2026-09-25-1` — PASS.** Neither XLI (+0.415%, 60.1st percentile) nor ITA
+(+0.249%, 34.9th percentile) gapped past its own trailing two-year 90th percentile (1.046% / 1.031%)
+on 2026-09-25 — the registered condition, scored exactly as written. The void clause (an exogenous
+same-morning repricing) does not apply: no instrument came remotely close to a p90 breach, so there
+is nothing an exogenous shock could be blamed for, and both session wraps checked attribute the day's
+tape to yields/oil rather than to any 08:30 print. This is the sample's promised **clean attribution
+window** (leg 6) delivering exactly the null the release-morning study predicted, on the one date this
+series has ever had no other tracked 08:30 print sharing its slot. Scored in
+[`docs/research/forward-tests/durable-goods-2026-09-25.md`](../forward-tests/durable-goods-2026-09-25.md).
+
+**Adjacency.** No new dated event discovered at close-out; nothing proposed. UMich final printed
+**48.1** (~10:00 ET, per the tracked `umich-sentiment-final-2026-09-25` entry) — a four-month low,
+one-year inflation expectations up to 4.6% — but it lands after the 09:30 open this test scores and
+is recorded here as same-day context, not a call input for a `symbols: []` event.
+
+**Honest limits at close-out.** The primary PDFs remain undecodable in this environment (see above);
+scoring rests on four convergent secondaries rather than Census's own wording, a downgrade from the
+initial research's own primary read and recorded as such. The unfilled-orders streak count is
+unreconciled between sources (13 vs. 17 consecutive months); the +0.6% size and all-time-high framing
+are not in dispute. SPY's close-to-close move (+0.54%) and the press-quoted S&P 500 index move
+(+0.51%) carry the ordinary ETF/index tracking wedge this series of ledgers has flagged before
+(TLT's dividend wedge, ism-manufacturing-2026-09-01) and are not reconciled further.
+
+**Verdict.** The reading order this doc built from the primary in the initial research — ignore the
+headline, read ex-transportation and the capex lines, never trade the morning — scored a clean pass
+on the one release this series ever had a clean attribution window for. No kill switch fired, the
+registered forward test passed, and the one correction this close-out banks (leg 8's GDP-shipments
+line is the *total*, which fell on aircraft, not the *ex-aircraft* cut the press calls "core capex,"
+which rose) sharpens the doc's own framework rather than undermining it. Zero capital was deployed or
+licensed at any point in this doc's life. This document is now closed.
