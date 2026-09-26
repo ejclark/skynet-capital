@@ -589,6 +589,24 @@ robust, alpha fragile — is the finding.
   threshold registered against a tenor's own base rate as informative on the pass side; size the
   threshold to what would actually discriminate a real effect from ordinary tail risk.
 
+- **A "noise, but the one metric that leans" registration, scored on the same 5-Year print that
+  killed the sibling above (FT-jpx-market-closure-2026-09-21-2)** — added 2026-09-26 from the
+  [jpx-market-closure-2026-09-21 close-out](events/jpx-market-closure-2026-09-21.md). The test
+  registered that both dark-Tokyo auctions in the 09-21→09-23 block would print bid-to-cover
+  inside their own last-12 range (2-Year ≥2.44, 5-Year ≥2.28) — disclosed at registration as the
+  one metric of five that leaned at t=−1.832, short of significance, against an otherwise-clean
+  auction-null replication (indirect t=+0.855, n=37 across all Japanese-holiday auctions since
+  2016). The 2026-09-22 2-Year (CUSIP 91282CRP8) cleared its floor at 2.63; the 2026-09-23 5-Year
+  (CUSIP 91282CRN3) printed **2.21**, below its own 2.28 floor and a new 12-print low — the same
+  print, independently fetched, that killed `FT-jpx-market-closure-2026-09-23-1` above. **What
+  this does and does not refute:** the parent aggregate null (auction demand is not measurably
+  different when Tokyo is dark) is unaffected — it rests on 37 auctions' worth of replication, not
+  one print's cover ratio — but the one metric flagged as the auction-null's single soft spot at
+  registration is now the one that broke, on the same tenor and the same session both sibling
+  close-outs independently attribute to a +3.1bp tail into the 2026-09-16 FOMC's hawkish 25bp hike
+  rather than to Japanese demand. Do not re-propose a Tokyo-absence auction-demand effect from this
+  print without controlling for the FOMC-surprise confound both sibling ledgers already named.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
