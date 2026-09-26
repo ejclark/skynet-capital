@@ -318,5 +318,72 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
-**Last assessed:** 2026-09-22
-<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":1} -->
+## Outcome
+
+**Close-out (2026-09-26, D+2 — inside the `closeOutWithinDays: 6` window; both registered forward
+tests' score-by dates, 2026-09-25, had arrived).** Macro-print mode runs no symbol-keyed
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` throughout); both caches were busted
+per the lane's standing instruction (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) though nothing here reads them. "Re-run instrument data" means
+fresh Yahoo Finance daily bars (`scripts/research/market-data.mjs`'s `bars()`, the same helper the
+09-08/09-15 rows used) for `^STOXX50E`, `^GDAXI` and `^GSPC`, plus a fresh direct fetch of Issue 6,
+2026 itself — never this doc's memory of the 09-15 pulse's decision-day reading.
+
+**FT-1 (the residual null) passed, and by a wider margin than the decision day it restates.**
+2026-09-24 close-to-close (fresh Yahoo bars, cache busted): `^STOXX50E` **6299.81982 → 6272.5**
+(**−0.4337%**), `^GDAXI` **25410.63086 → 25266.52930** (**−0.5671%**), `^GSPC` **7706.02979 →
+7704.12988** (**−0.0247%**). Euro-minus-SPX residual: **0.409pp** (STOXX50E), **0.542pp** (DAX) —
+both under a third of the registered **1.54pp** kill line, and both below the 0.741pp/0.796pp
+baselines this ledger measured on 09-08. The day carrying the summit, the 7Y new issue, the 20–30Y
+buyback and the Bulletin together moved the euro-specific tape *less* than an ordinary session, same
+conclusion as the 09-10 decision day (0.12×/0.32×) that this edition only restates. Two sibling
+close-outs corroborate the "nothing to attribute" read independently:
+[`trump-xi-summit-2026-09-24`](trump-xi-summit-2026-09-24.md) scored both its registered forward
+tests PASS (visit ran exactly as announced, no chip-relief deliverable), and
+[`treasury-buyback-20y30y-2026-09-24`](treasury-buyback-20y30y-2026-09-24.md) recorded an ordinary
+operation. Nothing on 09-24 needed the Bulletin as an explanation because nothing needed explaining.
+
+**FT-2 (the no-revision test) passed — exact match, every year.** Issue 6, 2026
+(`ecb.europa.eu/press/economic-bulletin/html/eb202606.en.html`, fetched direct 2026-09-26, published
+on the estimated date with no slip) states headline euro area HICP **3.0 / 2.5 / 2.1%** and real GDP
+**0.9 / 1.4 / 1.5%** for 2026/27/28 — identical to the table published **2026-09-10**. The edition's
+own comparison language confirms the mechanism rather than merely the numbers: it benchmarks itself
+against **June** 2026 ("compared to June 2026 projections, headline inflation in 2026 is unchanged,
+while it has been revised up for 2027"), not against September, because September is what it
+restates rather than revises. Leg 4's inference — that the ECB-staff September round publishes in
+full on decision day and the Bulletin fourteen days later carries prose, not numbers — is now
+confirmed rather than inferred.
+
+**The other kill switches, checked rather than assumed silent.** *Channel kill* — same instrument
+read as FT-1; no tracked name (NVDA/AVGO/MRVL/CRWV) needed to be checked because the euro residual
+itself never left the ordinary range, so there was no move for the tape to attribute. *Content
+kill* — same finding as FT-2. *Purpose kill* — did not fire: Issue 6's table of contents (fetched
+direct) lists seven boxes ("Which countries are most vulnerable to the industrial rise of China?",
+Middle East conflict expectations, euro area demographic projections, wholesale gas/electricity
+pass-through, a Macro-Finance FCI perspective, US equity market developments during the AI boom,
+liquidity conditions 6 May–28 July) and two articles (an EU company-law regime, defence spending's
+macro effects) — none engages the terminal-rate question the 09-10 presser left open. *Staleness
+kill* — a targeted search found no Governing Council member giving dated, on-the-record terminal-rate
+guidance between 2026-09-10 and 2026-09-24; Lagarde's own 09-10 presser is on record declining to
+("We are not pre-committing to a particular rate path" — CNBC, 2026-09-10), and nothing surfaced to
+contradict that stance holding through the window, so leg 3's "stale on arrival" claim stands
+unconfirmed-further rather than either strengthened or refuted. *Date kill* — did not fire; the
+edition published on 2026-09-24 exactly as the 10-for-10 non-holiday-Thursday rule predicted.
+
+**The call, scored against the tape.** Stand-aside held throughout — zero capital, `low` impact,
+date `estimate`. Both registered predictions passed, the contaminated-day read was correct (two
+independent close-outs on the same date found nothing to attribute either), and the entry's core
+finding — a comprehensive-edition publication day is imported US beta with a *below*-baseline
+euro-specific residual, because its projection content is a 14-day-old restatement and its
+statistics freeze even earlier — held all the way to the close.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-ecb-economic-bulletin-2026-09-24-1` (residual null) | 2026-09-24 euro-minus-SPX \|residual\| **< 1.54pp** | STOXX50E **0.409pp**, DAX **0.542pp** (fresh Yahoo bars) | **pass** |
+| `FT-ecb-economic-bulletin-2026-09-24-2` (no-revision) | Every headline HICP/GDP figure in Issue 6 matches the 2026-09-10 table | HICP 3.0/2.5/2.1, GDP 0.9/1.4/1.5 — exact match (Issue 6 fetched direct) | **pass** |
+
+**Last assessed:** 2026-09-26 (close-out — this event goes quiet; both registered forward tests are
+now scored, none remain open)
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
