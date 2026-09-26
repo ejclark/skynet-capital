@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  *  (#3623; `c` pointed at the retired Collections section). */
 const SHELL_CHORDS: readonly (readonly [string, string, string, Record<string, string>?])[] = [
   ["p", "/learn", "Profile"],
-  ["a", "/", "Accounts"],
+  ["a", "/accounts", "Accounts"],
   ["t", "/trade", "Trade ticket"],
   ["w", "/activity", "Activity"],
   ["b", "/research", "Playbooks", { section: "playbooks" }],
