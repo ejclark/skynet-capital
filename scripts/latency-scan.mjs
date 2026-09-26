@@ -35,6 +35,8 @@
 // on them. No `--candidate` mode — there is nothing yet for a coach to dispatch against.
 //
 // Loud-failure doctrine: an unreadable GitHub response is an error, never a silent zero.
+// Exit 1 = could not do its job: GitHub unreadable, a malformed --today/--since, or an --explain
+// stdin that could not be read (UNKNOWN — never scored as zero issues).
 import { readFileSync } from "node:fs";
 import { ghRest } from "./moneypenny/gh.mjs";
 import { isReadySignal } from "./moneypenny/plan-claim.mjs";
@@ -223,12 +225,16 @@ function gatherLatencyDeps(sinceDate) {
 }
 
 /** Read a whole stdin stream synchronously — the `--explain` fixture channel, same pattern as
- *  deploy-lag.mjs (see tests/scripts/*.spec.ts for how the specs drive it). */
+ *  deploy-lag.mjs (see tests/scripts/*.spec.ts for how the specs drive it). Required in that mode:
+ *  stdin IS the input, so an unreadable stream is UNKNOWN, never `{}` scored as "0/0 closed". */
 function readStdin() {
   try {
     return readFileSync(0, "utf8");
-  } catch {
-    return "";
+  } catch (err) {
+    console.error(
+      `latency-scan: --explain could not read stdin (${err.code ?? err.message}) — UNKNOWN, not zero issues.`,
+    );
+    process.exit(1);
   }
 }
 

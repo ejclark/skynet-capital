@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process";
+import { closeSync, openSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 // Feedback-to-shipped latency (#896) — driven through the real entrypoint via `--explain`, same
 // pattern as deploy-lag.spec.ts: the state goes in as JSON on stdin instead of hitting GitHub, so
@@ -168,5 +170,28 @@ describe("latency-scan: CLI surface", () => {
         stdio: "pipe",
       }),
     ).toThrow();
+  });
+});
+
+// HONEST DEGRADATION (#3769 row 1): in --explain mode stdin IS the input. An unreadable stream used
+// to become `{}` and print "0/0 closed" with exit 0 — a silent zero, the one thing the header forbids.
+describe("latency-scan: when --explain cannot read its stdin", () => {
+  it("exits 1 and says UNKNOWN instead of reporting zero issues", () => {
+    // A directory handed over as fd 0 makes the read itself throw (EISDIR).
+    const fd = openSync(tmpdir(), "r");
+    try {
+      execFileSync("node", ["scripts/latency-scan.mjs", "--explain", "--today=2026-08-29"], {
+        stdio: [fd, "pipe", "pipe"],
+      });
+      throw new Error("expected a non-zero exit");
+    } catch (err) {
+      const e = err as { status?: number; stdout?: Buffer; stderr?: Buffer };
+      expect(e.status).toBe(1);
+      expect(String(e.stderr)).toContain("could not read stdin");
+      expect(String(e.stderr)).toContain("UNKNOWN");
+      expect(String(e.stdout)).not.toContain("closed");
+    } finally {
+      closeSync(fd);
+    }
   });
 });
