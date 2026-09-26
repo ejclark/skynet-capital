@@ -607,6 +607,44 @@ robust, alpha fragile — is the finding.
   rather than to Japanese demand. Do not re-propose a Tokyo-absence auction-demand effect from this
   print without controlling for the FOMC-surprise confound both sibling ledgers already named.
 
+- **A quarterly NIIP valuation model regressed on two equity returns, scored on its first
+  out-of-sample print (FT-intl-transactions-q2-2026-09-24-2)** — added 2026-09-26 from the
+  [intl-transactions-q2-2026-09-24 close-out](events/intl-transactions-q2-2026-09-24.md). Fit on
+  16 quarters (2022Q2–2026Q1) of FRED `IIPUSNETIQ` decomposed into current-account flow and a
+  valuation residual, `valuation ≈ 18.0 − 161.4×SPX% + 104.0×EFA%` reached R² 0.849 and LOO RMSE
+  $390B, and was registered predicting end-Q2 2026 NIIP in −$22.63T…−$23.41T off SPX +14.87% / EFA
+  +8.64%. The actual print landed at **−$22.42T** — outside the band on the low-magnitude side,
+  $210B short of its own near edge. **What this does and does not refute:** the model's *sign* held
+  (US equities outperforming foreign equities worsens the NIIP, and it did worsen from −$21.27T) —
+  the "improves from −$21.27T" kill switch did not separately fire — but the *magnitude* missed by
+  $578.8B, roughly 1.5× the model's own cross-validated error (implied actual valuation −$905.2B vs
+  predicted −$1,484B). An n=16 in-sample fit with R² 0.849 produced a first live forecast outside
+  its own ±1-RMSE interval — the honest-limits section that registered it flagged exactly this risk
+  ("2026-09-24 is its first real test... medium confidence is doing real work"). Do not re-propose
+  the SPX+EFA two-regressor NIIP valuation model as calibrated without either widening its interval
+  past ±1 LOO RMSE or re-fitting on a sample that includes this miss — one out-of-sample point is
+  not enough to diagnose whether the SPX coefficient is too large, the EFA proxy is too narrow, or
+  both, and the close-out deliberately left Leg 4 unedited (append-only) rather than patch it here.
+
+- **A four-quarter comp trend read as a persisting regime (FT-costco-q4-fy2026-2026-09-24-1)** —
+  added 2026-09-26 from the [costco-q4-fy2026-2026-09-24 close-out](events/costco-q4-fy2026-2026-09-24.md).
+  It predicted Costco's comparable-ticket-minus-traffic inversion — four straight quarters widening,
+  Q4 FY25 −1.1pp → Q1 FY26 +0.1 → Q2 +0.4 → Q3 +4.9pp — would persist into Q4 FY2026 at ≥2.5pp.
+  The 2026-09-24 release (SEC 8-K Exhibit 99.2) printed Total Company adjusted comparable ticket
+  **+3.3%** against adjusted comparable traffic **+3.3%**: spread **0.0pp**, a full reversal past
+  even the Q1/Q2 FY26 baseline the kill switch named as the retreat case. **A four-point monotone
+  run is not a regime.** Nothing about the underlying mechanism was mismeasured — the four prior
+  quarters really did widen, and the widening really did coincide with a margin hit (Q3's −21bps) —
+  but a trend that has run exactly as long as the disclosure history available to test it (Costco
+  began reporting the adjusted split only in FY2025) carries no base rate to size a forecast against.
+  Do not re-propose "quarter N+1 continues quarter N's comp-line trend" for a metric with fewer than
+  ~8 prior observations without first checking whether the trend's own drivers (here, gasoline
+  wedge width and bullion/big-ticket mix, both named as live rivals at registration) reversed
+  in-quarter. **One detail that must travel with the kill:** the parent stance — stand aside on
+  COST, both directions — was never contingent on this read-through and does not change; the kill
+  retires only the `retail-sales-2026-10-15` macro read-through this event existed to supply, not
+  the no-trade verdict on the name itself.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar

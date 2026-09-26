@@ -59,6 +59,33 @@ journey/step · what · where `file:line` · severity · fix size · judge) and 
 `locate.mjs` turns a finding's text into a `file:line` by fixed-string grep over `app/src` and
 `src`.
 
+## Phone checks — `--phone-audit` and `npm run phone`
+
+Mobile-first is the house discipline on every information surface (CLAUDE.md), so the phone frame
+gets four checks of its own (`phone.mjs`), **off by default** — a plain crawl's ledger and maps stay
+byte-comparable with run 0:
+
+```bash
+npm run crawl -- --phone-audit                   # + docs/members/phone-ledger.md (phone viewport only)
+npm run crawl -- --phone-audit --phone-ledger /tmp/p.md
+npm run phone -- /app/trade                      # ONE page, ~3s against a built app/dist
+npm run phone -- /app/accounts --session         # signed in as the crawl member; --strict exits 1 on high/medium; --all lists the advisory rows
+```
+
+| kind | what | severity |
+|---|---|---|
+| `page-sideways-scroll` | the document is wider than the window (+4px tolerance) | high |
+| `overflow` | the outermost element whose content spills past its box with `overflow-x: visible` (the predicate copied from `scripts/layout-resize-scan.mjs`), named by the element inside it that reaches furthest right | medium |
+| `tap-target` | a control under 24×24 CSS px — WCAG 2.2 SC 2.5.8 (AA) with its exceptions: a link inside a sentence, a 24px circle on its centre that touches no other control, an unstyled native checkbox/radio; hidden, disabled, ≤1px and off-canvas elements are skipped | medium |
+| `tap-target-aaa` | every AA-passing control under 44×44 — SC 2.5.5 (AAA), advisory | low |
+| `input-zoom` | a text field, textarea or select under 16px — iPhone Safari zooms the page on focus (`--text-base` is 13px) | medium |
+
+The phone ledger (`phone-ledger.mjs`) has one row per page · finding (page · what · where ·
+severity · fix · the members/steps that hit it). Limits: "a link inside a sentence" is `display: inline` inside a
+`p`/`li`/`td` carrying at least two other words; the user-agent exception trusts `appearance`, so a
+restyled-but-native checkbox counts as native; the overflow culprit is the rightmost descendant,
+which can be content clipped inside an inner scroller.
+
 ## The judge line is not here
 
 "Can this reader tell what to do next in ten seconds?" is a judgment on a rendered frame. The crawl
@@ -90,3 +117,33 @@ makes no model call; every ledger row's judge cell reads `pending (grind)` until
   would change every step's reading at once — a change for its own run, not a fix inside one.
 - **Time.** ~150 steps × (settle + probes + axe) is a coffee, not a CI check; the spec is the gate,
   the crawl is the report. CI wiring for either is a platter item (workflow files are protected).
+
+## Coverage — `npm run crawl:coverage`
+
+Which living screen does a member journey visit at phone width? Eric asked for a comprehensive list
+of journeys to drive the mobile-first audit and ruled that dead screens get no phone work, so
+"comprehensive" is a count: every living page·section is visited by at least one phone step, or its
+triage verdict says nobody needs it. No browser — it reads files:
+
+- **screens** from the code: `app/src/routeTree.gen.ts` (`/u/$id` and `/u/$id/` are one), each
+  route's `{ id, label }` section literals (its own file, plus any file it imports that declares a
+  `PageSection<…>[] = [` list), Milestones' `?chapter=` values, and the server's own pages
+  (hand-listed in `coverage.mjs`, each with the line that serves it, checked every run);
+- **verdicts** from [`docs/members/triage.json`](../../docs/members/triage.json) — keep · fold ·
+  retire · redirect-only · undecided, hand-maintained; retired and redirect-only rows are never gaps;
+- **visits** from the journey files through `steps.mjs`: a step visits the screen its `goto` lands
+  on (the route's default section; with no account, `/accounts` opens Milestones on the Onboarding
+  chapter; a redirect-only row is followed to its target). Trade's sections count only from phone
+  steps — at desktop they dock onto one bench.
+
+```bash
+npm run crawl:coverage                 # writes docs/members/coverage.md; prints the headline and the gaps
+npm run crawl:coverage -- --json       # the joined rows on stdout, writes nothing
+```
+
+It exits 1 when the code has a screen `triage.json` does not (unjudged) or a living verdict names a
+screen that is gone (stale) — a new screen cannot slip in unjudged. Limits: only `goto` counts, never
+where an `act` click lands; the landing is resolved from the fixture (does this member own an
+account?), not by loading the page — the crawl's `{url}` expects are what check the real redirect. A `?section=` is matched against the route's full section list, not the viewer's narrowed one
+(a human account has no Heartbeat), and any path outside the SPA tree — `/login`, `/welcome` — counts
+as the unknown-URL row until server pages get journey steps of their own.

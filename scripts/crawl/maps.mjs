@@ -10,7 +10,7 @@ import { writeFileSync } from "node:fs";
 
 const MAX_NODES = 15;
 
-const routeLabel = (goto) => {
+export const routeLabel = (goto) => {
   const u = new URL(goto, "http://x");
   const section = u.searchParams.get("section");
   const base = u.pathname.replace(/^\/app\/?/, "/") || "/";
