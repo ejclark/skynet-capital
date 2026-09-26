@@ -18,6 +18,17 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **In-app engagement signal for explainers** — the member surface has no telemetry at all, so a
+  diagram shipped to `/research`, the trading course or a bot's decisions page has no falsifier.
+  The minimal instrument: which explainers get opened and for how long, aggregate only (inside the
+  invite gate, never per member), surfaced in the secretary digest beside the landing meter. The
+  yellow-hat half of every 7b learning loop. _(src: Eric ("the end customers of our web app… learning
+  loops", 2026-09-25) · while: #3748 slice 7)_
+- **Render Mermaid exactly as github.com does** — the GitHub-version probe fetched GitHub's own
+  viewscreen render shell and bundle and drove them locally; the same trick would give the lint a
+  render tier that catches what `parse()` cannot (an unknown shape, a missing icon) with GitHub's
+  exact renderer. _(src: Claude · while: the 2026-09-25 GitHub-version probe)_
+
 - **Render Mermaid inside the app** — `/research` (`src/server/research-service.ts`, `marked`) and the
   architecture storybook show diagrams as code blocks in-app; first candidate is static SVG rendered
   by the existing Playwright harness at build time, never a client-side mermaid bundle on a member

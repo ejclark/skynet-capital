@@ -54,6 +54,7 @@
     "issue:lint": "node scripts/issue-lint.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "mermaid:lint": "node scripts/mermaid-lint.mjs",
+    "arch:pages": "node scripts/architecture-pages.mjs",
     "research:week": "tsx src/scripts/week-study.ts",
     "workflow:lint": "node scripts/workflow-lint.mjs",
     "workflow:meta": "node scripts/workflow-meta-scan.mjs",

@@ -516,6 +516,9 @@ is expected and fine; the docs are the memory.
 - **Blameless retro on detected drift** → `/retro`: root cause → a full-stop prevention if
   pragmatic, else a Boy-Scout improvement. Don't over-engineer process — ceremony that taxes flow at
   scale is a net negative.
+- **Architecture storybook:** [`docs/architecture/`](docs/architecture/README.md) — C4 Context, one page
+  per container (its diagram, canonical flow, code roots), each element refuted against the code it
+  cites; read a container's page before touching it, and update it in the same PR.
 - **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify graph of the
   repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify
   extract . --code-only` (free). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).

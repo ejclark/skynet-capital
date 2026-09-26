@@ -1,6 +1,8 @@
 # ADR-0008: Spec surfaces, three-way system parity, and architecture fitness evals
 
-- **Status:** Proposed
+- **Status:** Accepted
+
+> 2026-09-25: §B's system diagrams landed as the storybook under [`docs/architecture/`](../architecture/README.md) — C4 Context, one page per container, every element refuted against the code it cites. The ToC ⇄ Graphify parity script (§B) and the boundary gate follow in #3748 slice 8.
 - **Date:** 2026-07-27
 
 ## Context

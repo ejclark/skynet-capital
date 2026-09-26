@@ -1,0 +1,590 @@
+{
+  "graphify_communities": [
+    {
+      "community": "(snapshot facts) docs/STRUCTURE-graph.md dated 2026-08-28, built from f0bdc1f4 — 4000 nodes, 11034 edges, 193 communities (172 shown); HEAD is 72774db (2026-09-25); f0bdc1f4 is not in this shallow clone (56 commits), graphify CLI is not installed and graphify-out/ is absent, so no live queries were possible — everything below is read from the committed snapshot and verified against `git ls-files` at HEAD",
+      "hubs": [
+        "escapeHtml() 158 edges",
+        "MarketContext 76",
+        "OrderIntent 74",
+        "ParticipantSnapshot 72",
+        "JsonResponse 70",
+        "Portfolio 63",
+        "AlpacaTradingClient 59",
+        "NavContext 50",
+        "Persona 42"
+      ],
+      "mapped_to_container": "n/a — 14 hub files no longer exist at HEAD; app/src (235 files), src/companion, src/autonomous/{bots-state-db,decision-db,decision-replication-client,bot-credentials-client}.ts, src/three/scene-main.ts, scripts/moneypenny/**, every .yml and envelope.json have ZERO nodes in the snapshot"
+    },
+    {
+      "community": "0 MarketContext (46 nodes, cohesion 0.07)",
+      "hubs": ["MarketContext", "OrderIntent", "Portfolio", "BankerPersona", "heldQuantity()"],
+      "mapped_to_container": "shared kernel — runtime:bots (src/personas) ∩ runtime:api (src/domain/types.ts); both maps list src/domain under api and src/personas under bots"
+    },
+    {
+      "community": "1 SafetyController (40, 0.06)",
+      "hubs": [
+        "SafetyController",
+        "AlertBus",
+        "AlertFilter",
+        "InMemoryAlertDismissals",
+        "Subscription"
+      ],
+      "mapped_to_container": "straddles runtime:api (src/alerts → desk-alerts-route, appvol alert-dismissals) and runtime:bots (src/autonomous/safety.ts)"
+    },
+    {
+      "community": "2 participant-snapshot.ts (40, 0.05)",
+      "hubs": ["ParticipantSnapshot", "DashboardData", "findAccountCollisions()", "applyBuy()"],
+      "mapped_to_container": "runtime:api (hub component)"
+    },
+    {
+      "community": "3 ObservatoryHub (35, 0.05)",
+      "hubs": ["ObservatoryHub", "Participant", "ParticipantStore", "createAccountService()"],
+      "mapped_to_container": "runtime:api (hub + stores/participants)"
+    },
+    {
+      "community": "4 Persona (38, 0.07)",
+      "hubs": ["Persona", "AutonomousTrader", "DecisionRecord", "AuditStore", "InMemoryBroker"],
+      "mapped_to_container": "runtime:bots (trader component)"
+    },
+    {
+      "community": "5 insights-listener.ts (43, 0.06)",
+      "hubs": ["BotControls", "BotControlsClient", "CONTROLS_BRIDGE_PATH", "effectiveMode()"],
+      "mapped_to_container": "runtime:api (bridge component) + runtime:bots (clients component) — the 8788 seam is one community; at HEAD the client files (bot-credentials-client, decision-replication-client) are absent from the graph"
+    },
+    {
+      "community": "6 AlpacaTradingClient (35, 0.06)",
+      "hubs": ["AlpacaTradingClient", "AlpacaBrokerAdapter", "AlpacaOptionContract", "greeksOf()"],
+      "mapped_to_container": "shared kernel src/alpaca + src/adapters — listed under BOTH runtime:api (datasource) and runtime:bots (broker)"
+    },
+    {
+      "community": "7 tower.ts (54, 0.06) — largest community",
+      "hubs": ["tower.ts", "createStage()", "attachGodRays()", "attachPost()", "gradeImage()"],
+      "mapped_to_container": "runtime:api (folded into the router's '/tower' description; src/three, 22 files at HEAD) — no box of its own"
+    },
+    {
+      "community": "8 data-source.ts (39, 0.05)",
+      "hubs": [
+        "data-source.ts",
+        "FixtureTradingTransport",
+        "ReplayEventStream",
+        "AlpacaMarketDataStream"
+      ],
+      "mapped_to_container": "runtime:api (datasource) + runtime:tests (the offline seam, ADR-0002)"
+    },
+    {
+      "community": "9 escapeHtml (51, 0.09)",
+      "hubs": ["escapeHtml() 158 edges", "courseCard()", "milestoneRow()", "botControlsBlock()"],
+      "mapped_to_container": "runtime:api residue — the server-rendered HTML layer; 15 importers at HEAD vs 158 edges in the snapshot"
+    },
+    {
+      "community": "10 trade-ticket-route.ts (49, 0.08)",
+      "hubs": ["handleOptionPost()", "renderOptionReviewBody()", "ticketContext()"],
+      "mapped_to_container": "none — file deleted since snapshot; job now runtime:browser (routes/trade.tsx) + runtime:api (desk)"
+    },
+    {
+      "community": "11 session.ts (34, 0.06)",
+      "hubs": ["Authenticator", "completeOAuthCallback()", "isAllowedIdentity()"],
+      "mapped_to_container": "runtime:api (router/auth)"
+    },
+    {
+      "community": "12 outlook.ts (46, 0.08)",
+      "hubs": ["Outlook", "CandidateScore", "expectedMove()", "ChainContract"],
+      "mapped_to_container": "runtime:api (content: position guidance, src/options)"
+    },
+    {
+      "community": "13 positions-view.ts (44, 0.06)",
+      "hubs": ["positions-view.ts", "CANDIDATES", "EXE", "pages"],
+      "mapped_to_container": "none — deleted view; now runtime:browser positions-* + runtime:api desk-json-view. CANDIDATES/EXE/pages are scripts/shoot symbols merged in by the pre-#1504 node-id scheme (same-name collisions)"
+    },
+    {
+      "community": "14 autonomous-live-wiring.ts (31, 0.10)",
+      "hubs": [
+        "Bot",
+        "BotCredentials",
+        "createBotBroker()",
+        "MomentumTracker",
+        "fleetDayOpenEquity()"
+      ],
+      "mapped_to_container": "runtime:bots (boot component)"
+    },
+    {
+      "community": "15 JsonResponse (13, 0.06)",
+      "hubs": ["JsonResponse 70 edges", "FakeTradingTransport", "StubDataTransport", "clientFor()"],
+      "mapped_to_container": "runtime:tests (fakes) + src/http (a directory neither map names)"
+    },
+    {
+      "community": "16 run-eval.ts (28, 0.10)",
+      "hubs": ["assessReadiness()", "evaluatePersona()", "runScenario()", "EvalReport"],
+      "mapped_to_container": "runtime:bots (guards — src/autonomous/readiness.ts imports src/evals) + CLI eval:persona/eval:safety/eval:companion (excluded by RUNTIME scope) + operating:ops_buttons companion-eval"
+    },
+    {
+      "community": "17 dashboard-server.ts (30, 0.10)",
+      "hubs": [
+        "dashboard-server.ts",
+        "NavContext 50 edges",
+        "NavView",
+        "renderAcademyBody()",
+        "ClaimDeps"
+      ],
+      "mapped_to_container": "runtime:api (router) — NavContext/NavView/renderAcademyBody are legacy server-render residue"
+    },
+    {
+      "community": "18 comprehension.ts (31, 0.08)",
+      "hubs": ["COMPREHENSION_CHECKS", "CheckQuestion", "checkFor()"],
+      "mapped_to_container": "runtime:api (progression/desk gates, src/domain/comprehension*)"
+    },
+    {
+      "community": "19 earnings-calendar.ts (34, 0.10)",
+      "hubs": ["EarningsPrint", "PRINT_WINDOWS", "nextPrint()", "printWithin()"],
+      "mapped_to_container": "shared — runtime:bots (guards: S2/E1 print discipline) + runtime:api (content/research)"
+    },
+    {
+      "community": "20 scripts (48, 0.04) + 39 devDependencies + 101 package.json + 54 compilerOptions + 95 knip.json",
+      "hubs": [
+        "package.json scripts table",
+        "devDependencies",
+        "tsconfig compilerOptions",
+        "knip.json"
+      ],
+      "mapped_to_container": "operating:gates / operating:pipeline (manifests, not code) — parity script should skip these by file_type/path rule"
+    },
+    {
+      "community": "21 option-trade-service.ts (27, 0.10)",
+      "hubs": ["AlpacaOptionsClient", "openDesk()", "DeskSubmitResult", "TradingClientFactory"],
+      "mapped_to_container": "runtime:api (desk)"
+    },
+    {
+      "community": "22 activity-store.ts (27, 0.10)",
+      "hubs": ["ActivityStore", "reconcileBrokerActivity()", "backfillParticipantActivity()"],
+      "mapped_to_container": "runtime:api (stores) / runtime:appvol — dual-listed in both containers' code_roots"
+    },
+    {
+      "community": "23 draft-order.ts (38, 0.09)",
+      "hubs": ["DraftOrder", "DraftLeg", "AggregateGreeks", "addLeg()"],
+      "mapped_to_container": "runtime:api (desk, src/trading) — the browser twin app/src/live/draft-order.ts is absent from the graph"
+    },
+    {
+      "community": "24 ticket-view.ts (38, 0.12)",
+      "hubs": ["STARTER_PLAYS", "TradeType", "tradeTypeByCode()", "isLockedPlay()"],
+      "mapped_to_container": "none — deleted view; survivors src/domain/plays.ts + trade-types.ts → runtime:api content"
+    },
+    {
+      "community": "25 standings-view.ts (38, 0.12)",
+      "hubs": ["formatCurrency()", "LEADER_METRICS", "metricValue()"],
+      "mapped_to_container": "runtime:api (hub/content — standings-*.ts still feed board-patch-routes and content-api-routes)"
+    },
+    {
+      "community": "26 feedback-routes.ts (26, 0.10)",
+      "hubs": ["servePublicRoute()", "handleFeedbackCoach()", "BOARD_PATCH_SCRIPT"],
+      "mapped_to_container": "runtime:api (router + feedback)"
+    },
+    {
+      "community": "27 research-service.ts (32, 0.12)",
+      "hubs": ["renderResearchShelfBody()", "ledgerLine()", "CANDIDATES", "EXE", "nav"],
+      "mapped_to_container": "runtime:api (content: research) — polluted by scripts/shoot symbol collisions"
+    },
+    {
+      "community": "28 feedback-coach.ts (31, 0.11)",
+      "hubs": ["createFeedbackCoach()", "CoachTurn", "coachThrottled()"],
+      "mapped_to_container": "runtime:api (companion/coach component) — the companion itself (src/companion/*) has no nodes"
+    },
+    {
+      "community": "29 persona-collections.ts (29, 0.10)",
+      "hubs": ["COLLECTION_PROBES", "AGAINST_THE_CROWD", "BY_THE_BOOK"],
+      "mapped_to_container": "none — deleted (collections surface removed)"
+    },
+    {
+      "community": "30 performance-view.ts (27, 0.12)",
+      "hubs": ["deskLedger()", "fillsFrom()", "longestGreenStreak()", "ACTIVITY_WINDOWS"],
+      "mapped_to_container": "none — deleted view; logic now src/observatory/history-metrics + desk-json-view → runtime:api content"
+    },
+    {
+      "community": "31 render-dashboard.ts (22, 0.16)",
+      "hubs": ["renderShell()", "participantCard()", "activityFeed()"],
+      "mapped_to_container": "none — deleted; participant-card.ts survives (imported by networth-api-routes) → runtime:api content"
+    },
+    {
+      "community": "32 progression-service.ts (27, 0.14)",
+      "hubs": ["Course", "COURSES", "Milestone", "Rank", "rankFor()"],
+      "mapped_to_container": "runtime:api (progression component)"
+    },
+    {
+      "community": "33 playbook-collections.ts (30, 0.10)",
+      "hubs": ["collections", "desks", "scale", "nav"],
+      "mapped_to_container": "none — deleted view; now runtime:browser routes/playbooks.tsx + runtime:api playbooks-api-routes"
+    },
+    {
+      "community": "34 serve-dashboard.ts (18, 0.11)",
+      "hubs": [
+        "CeremonyChannel",
+        "startHistorySampler()",
+        "deriveTransitions()",
+        "createBootActivityStore()"
+      ],
+      "mapped_to_container": "runtime:api (composition root + datasource syncs)"
+    },
+    {
+      "community": "35 trade-review-view.ts (29, 0.11)",
+      "hubs": ["openOrdersPanel()", "cancelForm()", "OPEN_STATUSES"],
+      "mapped_to_container": "none — deleted; now runtime:browser working-orders + runtime:api trade-orders-routes"
+    },
+    {
+      "community": "36 observatory/morning-brief.ts (27, 0.10)",
+      "hubs": ["buildMorningBrief()", "MorningBrief", "personaEntry()"],
+      "mapped_to_container": "none — CLI only (brief:morning; sole importer src/scripts/morning-brief.ts); RUNTIME excluded CLIs by scope, OPERATING does not name it"
+    },
+    {
+      "community": "37 feedback-service.ts (27, 0.13)",
+      "hubs": ["FeedbackSpec", "submitterFor()", "createFollowup()", "opaqueMemberId()"],
+      "mapped_to_container": "runtime:api (feedback) = operating:dashboard"
+    },
+    {
+      "community": "38 option-ticket.ts (25, 0.12)",
+      "hubs": ["payoffSvg()", "premiumByStrikeSvg()", "windowChain()"],
+      "mapped_to_container": "runtime:api (desk, src/trading) — server-side SVG renderers now sit beside browser payoff-chart.tsx; likely residue"
+    },
+    {
+      "community": "40 wire-view.ts (20, 0.12)",
+      "hubs": ["WirePnlRow", "renderFeedbackPulse()", "statusBadge()"],
+      "mapped_to_container": "none — deleted; wire-json-view survives → runtime:api content"
+    },
+    {
+      "community": "41 order-audit-log.ts (13, 0.10)",
+      "hubs": ["JsonlOrderAuditLog", "OrderAuditRecord", "createProgressionService()"],
+      "mapped_to_container": "runtime:api (stores) / runtime:appvol (dual-listed)"
+    },
+    {
+      "community": "42 envelope-scan.mjs (25, 0.12)",
+      "hubs": ["classifyDiff()", "breachOf()", "globToRegExp()", "diffFor()"],
+      "mapped_to_container": "operating:envelope (runtime:ci)"
+    },
+    {
+      "community": "43 structure-risk.ts (24) · 44 probability.ts (28) · 58 pricing.ts (22) · 63 candidate-score.ts (19) · 77 payoff-surface.ts (15)",
+      "hubs": [
+        "describeMechanics()",
+        "probabilityOfProfit()",
+        "impliedVolatility()",
+        "scoreCandidate()",
+        "PayoffSurface"
+      ],
+      "mapped_to_container": "runtime:api (content: options analytics, src/options) — a pure library family; only reached by api guidance and CLIs"
+    },
+    {
+      "community": "45 builders.ts (12, 0.16) · 117 authenticator.spec.ts · 152 comms-scan.spec.ts · 157 dockerignore-research.spec.ts · 162 deploy-lag.spec.ts · 138 dashboard-board-routes.spec.ts",
+      "hubs": [
+        "NewsFaderPersona",
+        "HARDCORE_SAURON_CONFIG",
+        "FakeRes",
+        "signIn()",
+        "serveBoardFrame()"
+      ],
+      "mapped_to_container": "runtime:tests (138 also touches api router: serveBoardFrame is src code named by a test-file hub)"
+    },
+    {
+      "community": "46 research-view.ts (23, 0.12)",
+      "hubs": ["agendaBandPanel()", "BANDS", "callChip()"],
+      "mapped_to_container": "none — deleted view; event-agenda.ts + research-json-view survive → runtime:api content"
+    },
+    {
+      "community": "47 EquitySample (11, 0.17)",
+      "hubs": ["EquitySample", "HistoryStore", "rehydrateHistory()", "seedRealizedPl()"],
+      "mapped_to_container": "runtime:api (datasource/history) + runtime:appvol"
+    },
+    {
+      "community": "48 comms-scan.mjs (27) · 55 config-audit.mjs (25) · 97 incident-scan.mjs (13) · 124 feedback-scan.mjs (9)",
+      "hubs": ["parseLog()", "computeFloorFindings()", "failedMainRuns()", "scoreboard()"],
+      "mapped_to_container": "operating:secretary (ride-along scans) / operating:gates (incident = learning coach)"
+    },
+    {
+      "community": "49 unusual-flow.ts (19) · 69 UnusualFlowScan (6) · 107 unusual-flow-metrics.ts (8)",
+      "hubs": ["assessFlow()", "AlpacaOptionsFlowSource", "UnusualFlowStore", "repeatFlags()"],
+      "mapped_to_container": "none in practice — src/options is claimed by runtime:api but these files are reached only via CLI scan:flow (SKYNET_FLOW_DIR); RUNTIME lists them as undocumented"
+    },
+    {
+      "community": "50 event-scan.mjs (26, 0.13)",
+      "hubs": ["assessmentDue()", "loadCadence()", "loadEvents()"],
+      "mapped_to_container": "operating:mp_events (due oracle) + operating:gates (--validate)"
+    },
+    {
+      "community": "51 feedback-view.ts (18) · 53 day-trophies.ts (25) · 73 dashboard-shell.ts (7) · 94 ticker.ts (12) · 125 play-feedback.ts (7) · 133 confirm-button.ts (6)",
+      "hubs": [
+        "feedbackTally()",
+        "greenStreakBoard()",
+        "NAV/BRAND/SHELL_STYLE",
+        "renderTicker()",
+        "renderPlayFeedbackLog()",
+        "renderConfirmButton()"
+      ],
+      "mapped_to_container": "runtime:api residue — legacy HTML/UI atoms whose only importers at HEAD are tests (dashboard-shell is still imported by dashboard-server + board-patch-routes); neither map names a 'legacy shell' component"
+    },
+    {
+      "community": "52 round-trips.ts (20, 0.12)",
+      "hubs": ["matchRoundTrips()", "Lot", "OpenLot", "holdMs()"],
+      "mapped_to_container": "runtime:api (content: history metrics, src/trading)"
+    },
+    {
+      "community": "56 issue-lint.mjs (24) · 57 research-lint.mjs (25) · 136 journey-scan.mjs (6)",
+      "hubs": ["checkFold()", "checkHorizons()", "REQUIRED_HEADINGS"],
+      "mapped_to_container": "operating:gates (communication format gates)"
+    },
+    {
+      "community": "59 postmaster.mjs (20, 0.22) · 92 postmaster-shipped.mjs (11) · 102 postmaster-labels.mjs (10)",
+      "hubs": [
+        "claimHandoff()",
+        "claimFeedback()",
+        "audit()",
+        "resolveShipped()",
+        "routeSweep()",
+        "dueForResearch()",
+        "LABELS"
+      ],
+      "mapped_to_container": "operating:mp_events — files renamed since snapshot to scripts/moneypenny/{index,claim-lease,audit,shipped,labels,events}.mjs; 'moneypenny' has 0 hits in the graph"
+    },
+    {
+      "community": "60 collections-view.ts (19, 0.18)",
+      "hubs": ["Collection", "CollectionMember", "DeskIndex"],
+      "mapped_to_container": "none — deleted"
+    },
+    {
+      "community": "61 trade-ledgers-view.ts (16, 0.16)",
+      "hubs": ["DecisionContext", "decisionContextFor()", "foldedLedger()"],
+      "mapped_to_container": "none — deleted; decision-context.ts survives → runtime:api content"
+    },
+    {
+      "community": "62 order-ticket.ts (16, 0.16)",
+      "hubs": ["previewOrder()", "previewClose()", "TicketContext", "ROLL_UNAVAILABLE_REASON"],
+      "mapped_to_container": "runtime:api (desk, src/trading)"
+    },
+    {
+      "community": "64 iv-rank.ts (18) · 79 iv-instrument.ts (8) · 83 IvSample (4)",
+      "hubs": [
+        "IvMetric",
+        "IV_WINDOW_DAYS",
+        "recordIvTick()",
+        "solveAtmIv()",
+        "JsonlIvHistoryStore"
+      ],
+      "mapped_to_container": "split — iv-rank reaches runtime:api (guidance-market imports src/research); iv-instrument/IvSample are CLI-only (iv-clock-wiring, week-study) → none"
+    },
+    {
+      "community": "65 providers.ts (9) · 93 resolve-auth.ts (11) · 91 claim-form.ts (13) · 100 controls-form.ts (11) · 114 account-forms.spec.ts (9)",
+      "hubs": [
+        "googleProvider()",
+        "AlpacaConnectProvider",
+        "ownerEmails()",
+        "handleClaim()",
+        "requireOwner()",
+        "AccountAdmin"
+      ],
+      "mapped_to_container": "runtime:api (router/auth + owner gates: invites, claims, Mission Control)"
+    },
+    {
+      "community": "66 shoot-portfolio.mjs (16) · 129 shoot-tower.mjs (5) · 137 shoot-login.mjs (6)",
+      "hubs": ["playwright-core (betweenness 0.059)", "CANDIDATES", "EXE", "shootAt()", "SHOTS"],
+      "mapped_to_container": "none — screenshot tooling, renamed to scripts/shoot/*.mjs (22 files; docs/PICTURES.md); neither map names it; closest is operating:session"
+    },
+    {
+      "community": "67 earnings-cycle.mjs (18, 0.27) · 68 intraday-edges.mjs (17, 0.27)",
+      "hubs": [
+        "controlBaseRate()",
+        "controlFade()",
+        "binomTail()",
+        "reportSegments()",
+        "reportVolatilityProfile()"
+      ],
+      "mapped_to_container": "operating:session (symbol-sweep Workflow) / research protocol; excluded from RUNTIME by scope"
+    },
+    {
+      "community": "70 markdown-preview.ts (9, 0.27)",
+      "hubs": ["renderMarkdownPreview()", "stashFences()"],
+      "mapped_to_container": "runtime:api (content: research docs render, src/ui)"
+    },
+    {
+      "community": "71 market-events.ts (11, 0.20)",
+      "hubs": ["MARKET_EVENTS", "allEvents()", "eventsWithin()", "ImpactTier"],
+      "mapped_to_container": "runtime:api (content) + operating:ledgers (src/domain/market-events/*.json, 1184 files, invisible to a code-only graph) + operating:mp_events (due oracle)"
+    },
+    {
+      "community": "72 JsonlKeyedStore (5) · 131 allowlist-store.ts / secure-envelope (4) · 126 volume-guard.ts (6) · 74 owner-link-store.ts (10)",
+      "hubs": ["JsonlKeyedStore", "seal()/open()/Envelope", "PERSISTED_STORES", "OwnerLinkStore"],
+      "mapped_to_container": "runtime:appvol (src/storage + store files) — also listed under api's 'stores' component"
+    },
+    {
+      "community": "75 beta-scout.ts (9, 0.16)",
+      "hubs": ["LiveCycleRunner", "betaScoutIntents()", "BETA_SCOUT_ID"],
+      "mapped_to_container": "runtime:bots (cycle component)"
+    },
+    {
+      "community": "76 feedback-images.ts (14) · 90 feedback-status.ts (13) · 115 feedback-areas.ts (8)",
+      "hubs": ["ensureAssetBranch()", "setupFeedback()", "createStatusFetcher()", "FEEDBACK_AREAS"],
+      "mapped_to_container": "runtime:api (feedback component + boot wiring)"
+    },
+    {
+      "community": "78 project.ts (11) · 82 empire-skyline.ts (13) · 84 WorldPatchChannel (7) · 99 board-patch-routes.ts (9) · 104 world-patch.ts (11) · 116 world-state.ts (7) · 134 world-patch-apply.ts (7)",
+      "hubs": [
+        "projectEmpire()",
+        "PERSONA_LANDMARK",
+        "renderEmpireSkyline()",
+        "WorldPatchChannel",
+        "streamBoardPatches()",
+        "diffWorld()",
+        "EmpireState",
+        "applyWorldOps()"
+      ],
+      "mapped_to_container": "runtime:api (hub + patch channel) — src/universe is ALSO imported by runtime:browser (app/src/live/board.ts) and src/three/kit/params.ts; no named 'world model' box in either map"
+    },
+    {
+      "community": "80 broker-sync.spec.ts (10) · 87 trade-updates-stream.ts (8)",
+      "hubs": [
+        "BrokerSync",
+        "createBrokerSync()",
+        "AlpacaTradeUpdatesStream",
+        "streamUrlFromBase()"
+      ],
+      "mapped_to_container": "runtime:api (datasource syncs + WSS) — month-return-sync.ts absent from graph"
+    },
+    {
+      "community": "81 cycle-report-store.ts (5, 0.23)",
+      "hubs": ["CycleReport", "JsonlCycleReportStore"],
+      "mapped_to_container": "runtime:bots (offline runner, src/runtime) — unnamed by either map"
+    },
+    {
+      "community": "85 dashboard-self-service-routes.ts (13, 0.32)",
+      "hubs": ["handleAccountSelfServiceRoute()", "resolveOwnedIds()"],
+      "mapped_to_container": "none — deleted; now admin-api-routes / settings-api-routes → runtime:api router"
+    },
+    {
+      "community": "86 ci-medic.mjs (15) · 122 ci-medic-logs.mjs (7)",
+      "hubs": ["gatherFailures()", "issueBody()", "sanitizeLog()", "fetchLog()"],
+      "mapped_to_container": "operating:mp_repair — renamed since snapshot to scripts/moneypenny/repair.mjs + repair-logs.mjs"
+    },
+    {
+      "community": "88 sentiment-tracker.ts (5, 0.19)",
+      "hubs": ["SentimentTracker", "scoreSentiment()", "NewsArticle"],
+      "mapped_to_container": "runtime:bots (trackers) — taco-signal.ts absent from graph"
+    },
+    {
+      "community": "89 research-view.spec.ts (12, 0.24)",
+      "hubs": ["monthGrid()", "navBounds()", "dayCell()"],
+      "mapped_to_container": "none — deleted view; calendar-widget.ts survives with test-only importers"
+    },
+    {
+      "community": "96 deploy-lag.mjs (10) · 98 ship.sh (11, 0.36)",
+      "hubs": [
+        "botsDeployLag()",
+        "scanRunBaselines()",
+        "cmd_open()",
+        "cmd_automerge()",
+        "cmd_checkarm()",
+        "envelope_hits()"
+      ],
+      "mapped_to_container": "operating:ship (runtime:ci) — deploy-lag has a runtime twin in api ops-status-deploy-lag.ts"
+    },
+    {
+      "community": "103 confirm-print-dates.ts (12, 0.23)",
+      "hubs": ["confirm()", "datesAround()", "CALENDAR_FILE"],
+      "mapped_to_container": "none — research CLI (confirm:print-dates) feeding operating:ledgers; excluded by RUNTIME scope"
+    },
+    {
+      "community": "105 doc-rot-scan.mjs (8) · 106 workflow-lint.mjs (9) · 112 spec-gap-scan.mjs · 121 arch-scan.mjs · 123 dupe-scan.mjs · 135 clone-scan.mjs · 141 dead-scan.mjs · 142 dep-graph-scan.mjs",
+      "hubs": [
+        "staleGraphFindings()",
+        "lintWorkflow()",
+        "BUDGET_FILE",
+        "violations",
+        "dupes",
+        "clones",
+        "exportsDebt",
+        "byRule"
+      ],
+      "mapped_to_container": "operating:gates (coaches) — doc-rot's stale-graph check is the one existing consumer of the graph header"
+    },
+    {
+      "community": "108 load-participants.ts (8, 0.30)",
+      "hubs": ["loadParticipants()", "loadBotParticipants()", "timezoneForHuman()"],
+      "mapped_to_container": "runtime:api (stores/participants) + runtime:bots (roster) — shared"
+    },
+    {
+      "community": "110 style · 118 biome.json · 119 rules · 127 includes · 139 noExcessiveCognitiveComplexity · 140 suspicious · 146/147 formatter · 148 options · 149 useFilenamingConvention · 155 source",
+      "hubs": ["biome.json rule tree"],
+      "mapped_to_container": "operating:gates (biome) — config nodes, not code; 11 communities of graph noise"
+    },
+    {
+      "community": "111 design-extract.mjs (9, 0.27)",
+      "hubs": ["findSeedCanvases()", "pickSeedCanvas()", "skillRoots()"],
+      "mapped_to_container": "none — the design-handoff lane (docs/HANDOFFS.md); the OPERATING map itself says it could not ground that lane"
+    },
+    {
+      "community": "113 plays.ts (9, 0.29)",
+      "hubs": ["PLAYS", "PlayLevel", "playsAtLevel()"],
+      "mapped_to_container": "runtime:api (content, src/domain/plays) — browser twin app/src/live/plays.ts absent from graph"
+    },
+    {
+      "community": "120 symbol-sweep.js (7) · 128 context7 (.mcp.json, 7) · 150 fetch-claude-docs.mjs (4)",
+      "hubs": [
+        "DEFAULT_TICKERS",
+        "RESEARCH_SCHEMA",
+        "babylon-mcp",
+        "@playwright/mcp",
+        "queue/urls"
+      ],
+      "mapped_to_container": "operating:session (Workflow scripts, MCP config) — grind.js, settings.json, hooks, skills and agents have no nodes"
+    },
+    {
+      "community": "151 backfill-trade-activity.ts (4, 0.70)",
+      "hubs": ["main()", "mergeRoster()", "createActivityStore()"],
+      "mapped_to_container": "none — ops CLI (backfill:activity); excluded by RUNTIME scope"
+    },
+    {
+      "community": "156 smoke-bots.sh (3, 0.83)",
+      "hubs": ["bridge_armed()", "machine_ok()"],
+      "mapped_to_container": "operating:pipeline (runtime:ci) — with smoke.sh the only pipeline presence; .yml files are not extracted"
+    },
+    {
+      "community": "21 thin communities (<3 nodes) omitted + 705 isolated nodes",
+      "hubs": ["OrderStatus", "BankerConfig", "DayTraderConfig", "FuturistConfig", "GoldBugConfig"],
+      "mapped_to_container": "unknown — config types with ≤1 edge; the parity script should treat them as members of their file's community, not orphans"
+    }
+  ],
+  "containers_with_no_code": [
+    "runtime:browser — ZERO graph presence: app/src (235 files: routes/20, live/50, shell/107, styles/58), .tsx, routeTree.gen.ts, react, lightweight-charts all have 0 hits; the snapshot predates the React shell entirely",
+    "runtime:botvol — ZERO presence: src/autonomous/{bots-state-db,decision-db,decision-db-rows,decision-db-migration,jsonl-audit-store,bots-health-file}.ts have no nodes (0 hits for bots-state-db / decision-db)",
+    "runtime:bots — HALF present: communities 4/14/16/75/88 exist, but src/scripts/run-autonomous.ts, autonomous-data-connections/market-clock/sinks, bot-credentials-client, decision-replication-client, taco-signal have 0 hits",
+    "runtime:api — newest components missing: src/companion/* (0 hits for 'companion' beyond feedback-coach), guidance-route/guidance-pulse/edgar-filings, month-return-sync, networth-api-routes, community-progression, ladder-progress-log, desk-events-route, scene-main.ts all absent",
+    "runtime:ci / operating:pipeline — no workflow nodes: .github/workflows/*.yml, .github/actions/*, envelope.json, fly.toml, Dockerfile are not extracted (code-only graph); presence is only scripts/smoke.sh, smoke-bots.sh, ship.sh, deploy-lag.mjs (bot-relevant.mjs, bots-deploy-preflight.mjs, fly-image-ref.mjs absent)",
+    "operating:claude_lane — none (claude.yml + .github/prompts/interactive.md are YAML/Markdown)",
+    "operating:ops_buttons — none (autonomy-ops.yml, fly-logs.yml, companion-eval.yml)",
+    "operating:ledgers — none by construction: docs/research/events/*.md, docs/digests, docs/LESSONS.md, *-budget.json, src/domain/market-events/*.json (1184 files) are data, not code; only src/domain/market-events.ts (community 71) touches it",
+    "operating:secretary — entrypoint missing: scripts/digest-scan.mjs has 0 hits and SKILL.md is not code; only the ride-along scans (config-audit 55, comms-scan 48, incident-scan 97, feedback-scan 124) are present; doctrine-scan/comment-bloat-scan absent",
+    "operating:session — thin: symbol-sweep.js (120), .mcp.json (128), fetch-claude-docs (150) only; grind.js, .claude/settings.json, hooks, 16 skills, 13 agents have no nodes",
+    "operating:mp_events / operating:mp_repair — present only under STALE names (postmaster*.mjs, ci-medic*.mjs); scripts/moneypenny/** has 0 hits — a path-glob parity check would report both containers as empty against this snapshot",
+    "operating:envelope — envelope-scan.mjs present (42) but envelope.json itself absent (JSON manifests other than package/biome/knip/tsconfig were not extracted)",
+    "operating:graphify — refresh-graph.sh appears only as a thin (omitted) community; doc-rot-scan (105) is its one code hook",
+    "runtime:appvol — thin but real: JsonlKeyedStore (72), secure-envelope (131), volume-guard (126), EquitySample (47), owner-link-store (74) — every file is also listed under api's 'stores' component, so this ContainerDb has no code of its OWN"
+  ],
+  "communities_with_no_container": [
+    "Deleted server-rendered view layer — communities 10, 13, 24, 29, 30, 31, 33, 35, 40, 46, 60, 61, 85, 89 (~430 nodes, incl. the 158-edge escapeHtml god node's consumers): files no longer exist at HEAD; a graph-staleness finding, not a map gap, but any parity run against this snapshot will report them as unowned",
+    "Legacy renderer residue still on disk — communities 9 (escapeHtml), 51 feedback-view, 53 day-trophies, 73 dashboard-shell, 82 empire-skyline, 94 ticker, 125 play-feedback, 133 confirm-button, plus NavContext/renderAcademyBody in 17 and the SVG renderers in 38: importers at HEAD are tests only (dashboard-shell is still wired into dashboard-server/board-patch-routes); neither map names a 'legacy HTML shell' component — mortician/decomposer targets",
+    "Research and ops CLIs — communities 36 morning-brief, 103 confirm-print-dates, 151 backfill-trade-activity, 16 (eval:* half), 67 earnings-cycle, 68 intraday-edges, 79/83 IV instrument, 49/69/107 unusual flow, 81 cycle-report-store: the RUNTIME map excluded 'research CLIs (src/scripts/*, scripts/research)' by scope and the OPERATING map never picked them up (it names earnings-cycle/intraday-edges only via symbol-sweep); ~12 communities land nowhere",
+    "Tower scene — community 7 (54 nodes, the largest in the graph; src/three, 22 files, built by build:scene, served at /tower): folded into api's router description, no container or component",
+    "Universe / world model — communities 78, 82, 84, 104, 116, 134 (src/universe + world-patch): shared by runtime:api (hub) and runtime:browser (app/src/live/board.ts imports src/universe), plus src/three/kit/params.ts; neither map draws it",
+    "Screenshot tooling — communities 66, 129, 137 (now scripts/shoot/*.mjs, 22 files, docs/PICTURES.md): playwright-core is the graph's top cross-community bridge (betweenness 0.059) purely because of this tooling; no container",
+    "Design-handoff lane — community 111 design-extract.mjs (docs/HANDOFFS.md, .github/prompts/design-build.md): the OPERATING map records it could not ground the lane's entrypoint",
+    "Shared kernel — communities 0 (src/domain types), 6 (src/alpaca + adapters), 19 (earnings-calendar), 1 (src/alerts), 15 (src/http), 108 (participants loader): dual-claimed by runtime:api and runtime:bots code_roots; no explicit 'shared' system exists for a deterministic owner",
+    "Toolchain manifests — communities 20, 39, 54, 95, 101 and the 11 biome communities (110, 118, 119, 127, 139, 140, 146–149, 155): config nodes graphify extracts from package.json/tsconfig/knip/biome; gates covers biome+knip conceptually, nothing covers tsconfig/package.json — should be excluded by rule (file_type or path), not mapped",
+    "21 thin communities omitted from the report + 705 isolated nodes (persona *Config types, OrderStatus…): membership unknown from the snapshot; only graph.json can place them"
+  ],
+  "suggested_merges_or_splits": [
+    "PREREQUISITE, not a map change: refresh the graph before any parity run — the snapshot (2026-08-28) predates app/src, src/companion, the bots SQLite stores, the bridge clients, scripts/moneypenny and the deletion of 14 hub files; doc-rot ③'s 30-day rule sits at 28 days and cannot fire in a shallow clone (f0bdc1f4 not present → staleGraphFindings() skips gracefully), so nothing red is protecting this today. Verify graphify's TS extractor covers .tsx before trusting the browser container's count.",
+    "SPLIT runtime:api (19 code roots; ~60% of all code communities map to it) into: (a) 'Tower scene' container — community 7 / src/three, its own build step (build:scene) and static route; (b) 'World model' — src/universe (communities 78/82/84/104/116/134), because it is imported by BOTH api and browser and is the one seam the browser shares with the server besides JSON; (c) an 'Options analytics' library box — communities 12/43/44/58/63/77 (+ 49/69/107 flow, 64/79/83 IV) consumed by api guidance and by CLIs but reached from no route of their own.",
+    "ADD a 'Shared kernel' pseudo-container (src/domain, src/alpaca, src/adapters, src/http, src/ports, src/storage, src/participants) or a declared precedence rule: today src/alpaca and src/adapters appear in both api's and bots' code_roots, so a file-glob parity check would double-count or pick an arbitrary owner. Communities 0, 1, 6, 15, 19, 108 are the evidence.",
+    "MERGE runtime:appvol's code_roots INTO api's 'stores' component and leave the ContainerDb with only the volume + fly.toml paths (same for botvol vs bots' state/decisions components): the 17 store files are listed 1:1 in both places; a ContainerDb should own no code, and the volume-persistence spec already pins the path contract.",
+    "ADD a 'Research and ops CLIs' container to one map (src/scripts/{morning-brief,confirm-print-dates,backfill-*,record-session,capture-option-lifecycle,eval-*,scan-unusual-flow,week-study,iv-clock-wiring,smoke-trade,export-dashboard}.ts + scripts/research/* + scripts/shoot/*): RUNTIME excluded them by scope, OPERATING never claimed them, so ~12 communities are homeless. If they stay out of scope, say so in the system list as an explicit 'excluded' entry so the parity script can tell 'deliberately unmapped' from 'forgotten'.",
+    "SPLIT nothing in operating:gates but tag its two halves in the system list — code-hygiene coaches (arch/dupe/dead/dep-graph/spec-gap/clone, communities 112/121/123/135/141/142) vs communication-format gates (issue-lint/research-lint/journey-scan/digest-scan, 56/57/136) — otherwise gates absorbs ~35 communities and the parity report says nothing useful about it.",
+    "MERGE runtime:tests into a rule, not a container, for parity purposes: tests/<dir> mirrors src/<dir> one-for-one (33 dirs), so every test-file community (15, 45, 80, 89, 114, 117, 138, 152, 157, 162) should be attributed to its src twin; keep 'tests' as a container only for e2e/, fixtures/offline and tests/arch (the gates' spec seam).",
+    "RENAME-PROOF the Moneypenny containers: mp_events/mp_repair are correct as drawn, but the graph knows them as postmaster*/ci-medic*; the parity script must own by path glob (scripts/moneypenny/**) and never by community hub label, and the system list should carry 'aliases' for renamed roots so historical graphs still resolve.",
+    "ADD a 'legacy-shell' entry with kind:'residue' to the system list rather than a container: communities 9/51/53/73/94/125/133 (+ parts of 17/25/38) are test-only or dashboard-server-only importers of the pre-React renderer; naming them lets the parity report route them to the mortician instead of listing them as 'unowned' forever.",
+    "DROP the config-manifest communities from parity by rule (file_type !== 'code' or path ∉ src/**, app/src/**, scripts/**, .claude/workflows/**): 16 of the 172 shown communities are package.json/tsconfig/knip/biome trees and one (20 'scripts', 48 nodes, cohesion 0.04) is the npm script table — pure noise for a system map."
+  ],
+  "parity_script_sketch": "// scripts/system-parity-scan.mjs — ADR-0008 §B: ToC ⇄ Graphify parity (advisory; --strict to fail). Node ESM, house style of doc-rot-scan.mjs.\n// Inputs: graphify-out/graph.json (networkx node-link: nodes[].{id,label,source_file,file_type,community}, links[].{source,target,relation,confidence}, built_at_commit)\n//         graphify-out/.graphify_analysis.json ({communities:{cid:[nodeId]}, cohesion:{cid:float}, gods:[{node,degree}]}) — field names verified in graphifyy 0.9.68 export.py/cli.py\n//         docs/architecture/systems.json — [{id, map:\"runtime\"|\"operating\", kind:\"code\"|\"volume\"|\"external\"|\"excluded\"|\"residue\", code_roots:[glob…], aliases:[glob…]}]\nconst OWNED = 0.6, MIN_NODES = 5, STALE_DAYS = 30\nconst CODE_SURFACE = /^(src|app\\/src|scripts|\\.claude\\/workflows)\\//   // parity ignores tests/**, docs, manifests\n\nmain():\n  g   = readJson(\"graphify-out/graph.json\");  links = g.links ?? g.edges           // legacy key tolerated, as graphify itself does\n  an  = readJson(\"graphify-out/.graphify_analysis.json\")\n  stale = staleness(g.built_at_commit)   // git merge-base --is-ancestor <sha> HEAD && commit age ≤ STALE_DAYS; unknown sha → \"unverifiable\" (shallow clone), never silent\n  systems = readJson(\"docs/architecture/systems.json\")\n  owners  = systems.filter(s => s.kind === \"code\" || s.kind === \"residue\")\n             .map(s => ({...s, rx: [...s.code_roots, ...(s.aliases ?? [])].map(globToRegExp)}))   // reuse envelope-scan.mjs globToRegExp\n  fileOf  = n => n.source_file?.replace(/ L\\d+.*$/, \"\")                                          // repo-relative path, drop line suffix\n  ownerOf = f => { hits = owners.filter(s => s.rx.some(r => r.test(f))).map(s => s.id); return hits[0] ?? \"<none>\", hits.length > 1 ? hits : null }  // first match wins; dual hits logged as \"shared\"\n  codeNodes = g.nodes.filter(n => n.file_type === \"code\" && CODE_SURFACE.test(fileOf(n) ?? \"\"))\n  // 1. every ToC system maps to real code\n  byOwner = groupBy(codeNodes, n => ownerOf(fileOf(n))[0])\n  noCode  = owners.filter(s => s.kind === \"code\" && !(byOwner[s.id]?.length))              // \"system with no code presence\" (browser, botvol today)\n  // 2. every significant community maps to a named system\n  for [cid, members] of Object.entries(an.communities):\n    files = uniq(members.map(id => fileOf(nodeById[id])).filter(f => f && CODE_SURFACE.test(f)))\n    if (files.length < MIN_NODES) continue                                                  // thin/isolated communities never count as orphans\n    tally = countBy(files, f => ownerOf(f)[0]);  [top, share] = argmaxShare(tally)\n    label = hubOf(cid, an.gods, members)                                                    // highest-degree member, mirrors GRAPH_REPORT naming\n    if (top === \"<none>\" && share >= OWNED)  orphans.push({cid, label, cohesion: an.cohesion[cid], sample: files.slice(0, 5)})   // \"community not named in the ToC\"\n    else if (share < OWNED)                  straddlers.push({cid, label, tally, cohesion: an.cohesion[cid]})                     // split/merge candidate (shared kernel, api∪bots)\n  // 3. files no system claims — catches a new directory before it rots into an orphan community\n  unowned = uniq(codeNodes.map(fileOf)).filter(f => ownerOf(f)[0] === \"<none>\")\n  shared  = uniq(codeNodes.map(fileOf)).filter(f => ownerOf(f)[1])                        // dual-claimed roots (src/alpaca, src/adapters) — must be zero once a precedence rule exists\n  report({stale, noCode, orphans, straddlers, unowned, shared})   // markdown tables (fridge rule: counts first); --json for a CI annotation\n  exit(process.argv.includes(\"--strict\") && (noCode.length || orphans.length || stale.expired) ? 1 : 0)   // warn-then-ratchet per ADR-0008 §C; stale graph is exit 2 like doc-rot ③"
+}
