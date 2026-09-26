@@ -2,8 +2,15 @@ name: Projects v2 setup
 
 # One-time (idempotent, safe to re-run), #3818 slice B. Creates the "Skynet Capital —
 # Orchestration" GitHub Project (kanban/backlog/roadmap views on one board) and its four fields,
-# via `gh project`, using the Moneypenny App's installation token — the App's Projects permission
-# is admin (Eric, 2026-09-26 confirmed live), so this needs no new secret and no personal token.
+# via `gh project`.
+#
+# Uses `secrets.PROJECTS_PAT`, Eric's own classic personal access token with `project` scope —
+# NOT the Moneypenny App's installation token. The first live run (2026-09-26, run 36270609136)
+# failed: "GraphQL: skynet-envoy[bot] does not have permission to create projects on ownerId
+# ...(createProjectV2)" — GitHub Apps' Projects permission is org-scoped only (confirmed in
+# GitHub's own REST permissions docs), and this repo's owner (`ejclark`) is a personal User
+# account, which has no App-token path to Projects v2 at all, admin or not. A personal token is
+# the only mechanism GitHub offers for a user-owned project.
 #
 # `workflow_dispatch` only, never a push/issue trigger: this provisions infrastructure, not a
 # per-event action, and it should run exactly when someone means it to.
@@ -25,17 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - id: app-token
-        uses: ./.github/actions/app-token
-        with:
-          client-id: ${{ vars.APP_CLIENT_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI, not mise.toml — see moneypenny-events.yml
 
       - name: create project + fields
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.PROJECTS_PAT }}
         run: node scripts/moneypenny/projects-setup.mjs
