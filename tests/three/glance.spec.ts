@@ -1,4 +1,11 @@
-import { aimAt, blendGaze, GLANCE, GLANCE_CAP, glanceWeight } from "../../src/three/kit/glance.js";
+import {
+  aimAt,
+  blendGaze,
+  GLANCE,
+  GLANCE_CAP,
+  glanceWeight,
+  releaseWeight,
+} from "../../src/three/kit/glance.js";
 
 /**
  * The Eye's glance toward a clicked filter (plan #3725) must stay subtle and short-lived: it eases
@@ -59,5 +66,14 @@ describe("blendGaze", () => {
   it("turns the short way round across ±π", () => {
     const g = blendGaze({ yaw: 3.0, pitch: 0 }, { yaw: -3.0, pitch: 0 }, 1);
     expect(g.yaw).toBeGreaterThan(3.0);
+  });
+});
+
+describe("releaseWeight", () => {
+  it("lets a regard go smoothly from full to nothing over the release", () => {
+    expect(releaseWeight(-0.1)).toBe(1);
+    expect(releaseWeight(0)).toBe(1);
+    expect(releaseWeight(GLANCE.release / 2)).toBeCloseTo(0.5);
+    expect(releaseWeight(GLANCE.release)).toBe(0);
   });
 });
