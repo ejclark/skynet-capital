@@ -19,6 +19,10 @@
 // (docs/TECHNIQUES.md / the plan).
 //
 //   node scripts/config-audit.mjs        # print the proposal report; modify nothing; exit 0
+//
+// Exit codes: 0 report printed · 2 a check could not run (its section says UNKNOWN and why) — e.g.
+// `git grep` failed, so check ① cannot tell a referenced capability from an orphaned one. The rest
+// of the report still prints; 2 only says one section is not an answer.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -65,10 +69,16 @@ function refFiles(term) {
       { cwd: ROOT, encoding: "utf8" },
     );
     return stdout.split("\n").filter(Boolean);
-  } catch {
-    return []; // git grep exits 1 on no match
+  } catch (err) {
+    if (err.status === 1) return []; // git grep exits 1 on no match — a real answer: zero refs
+    // Anything else (not a git repo, git missing) is no answer at all; returning [] here would
+    // report every capability as orphaned. Surface it as UNKNOWN instead (orphanFindings).
+    const why = `${err.stderr ?? ""}`.trim().split("\n")[0] || err.message;
+    throw new Error(`\`git grep\` failed — ${why}`);
   }
 }
+
+let unknownChecks = 0; // sections that could not produce an answer; any → exit 2
 
 // ---- check 1: possibly-orphaned capabilities ------------------------------------------------------
 
@@ -76,10 +86,16 @@ function orphanFindings(caps) {
   const findings = [];
   for (const cap of caps) {
     // Reference forms: the bare name, and the slash form for skills. Exclude the capability's own file.
-    const refs = new Set([
-      ...refFiles(cap.name),
-      ...(cap.kind === "skill" ? refFiles(`/${cap.name}`) : []),
-    ]);
+    let refs;
+    try {
+      refs = new Set([
+        ...refFiles(cap.name),
+        ...(cap.kind === "skill" ? refFiles(`/${cap.name}`) : []),
+      ]);
+    } catch (err) {
+      unknownChecks++;
+      return [`  • UNKNOWN — ${err.message}; cannot tell referenced from orphaned capabilities.`];
+    }
     refs.delete(cap.file);
     // A skill's own dir may hold reference files; drop anything under its own directory.
     const own = cap.kind === "skill" ? `.claude/skills/${cap.name}/` : cap.file;
@@ -243,6 +259,7 @@ function main() {
   console.log(
     `\n${line}\nEvidence-triggered · human-gated · wrote nothing. Approve any proposal by acting on it yourself.\n${line}\n`,
   );
+  if (unknownChecks) process.exitCode = 2;
 }
 
 main();
