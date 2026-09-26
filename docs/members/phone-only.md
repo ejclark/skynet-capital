@@ -1,7 +1,7 @@
 # The phone-only member — every journey at 390×844, with a thumb
 
 _A proto-member: no quotes; the description is the plan's (2026-09-26) and CLAUDE.md → "Mobile-first
-on the trading surfaces" (Eric, 2026-09-05). Twin: `e2e/journeys/phone-only.journey.json`._
+on every information surface" (Eric, 2026-09-05, widened 2026-09-26). Twin: `e2e/journeys/phone-only.journey.json`._
 
 ## 1. Who
 
