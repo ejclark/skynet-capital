@@ -23,6 +23,14 @@ export interface AccountFixture {
  * network — the request/response half of offline mode. Routes by path so a single
  * fixture drives account, positions, orders, and clock reads. Writes (POST) are
  * accepted as no-ops so the offline path never rejects an order for the wrong reason.
+ *
+ * A route matches its own path (plus a query string), never as a prefix of a longer one:
+ * `/v2/account/portfolio/history` and `/v2/account/activities` share `/v2/account`'s first
+ * segment, and a prefix match once answered both with the account payload — numbers as
+ * strings, no `equity` series — which the net-worth route read as a history and threw on
+ * (the crawl's ninth dead end, PR #3801). An endpoint with no fixture answers 404, the same
+ * contract the options endpoints already hold offline, so every caller takes its own honest
+ * "no history yet" path instead of a 500.
  */
 export class FixtureTradingTransport implements AlpacaTradingTransport {
   private readonly fixture: AccountFixture;
@@ -32,10 +40,10 @@ export class FixtureTradingTransport implements AlpacaTradingTransport {
   }
 
   get(path: string): Promise<JsonResponse> {
-    if (path.startsWith("/v2/account")) return ok(this.fixture.account);
-    if (path.startsWith("/v2/positions")) return ok(this.fixture.positions ?? []);
-    if (path.startsWith("/v2/orders")) return ok(this.fixture.orders ?? []);
-    if (path.startsWith("/v2/clock")) return ok(this.fixture.clock ?? { is_open: true });
+    if (isRoute(path, "/v2/account")) return ok(this.fixture.account);
+    if (isRoute(path, "/v2/positions")) return ok(this.fixture.positions ?? []);
+    if (isRoute(path, "/v2/orders")) return ok(this.fixture.orders ?? []);
+    if (isRoute(path, "/v2/clock")) return ok(this.fixture.clock ?? { is_open: true });
     return Promise.resolve({ status: 404, body: null });
   }
 
@@ -46,6 +54,11 @@ export class FixtureTradingTransport implements AlpacaTradingTransport {
   delete(_path: string): Promise<JsonResponse> {
     return Promise.resolve({ status: 204, body: null });
   }
+}
+
+/** `path` is `route` itself or `route` with a query string — never a longer path under it. */
+function isRoute(path: string, route: string): boolean {
+  return path === route || path.startsWith(`${route}?`);
 }
 
 function ok(body: unknown): Promise<JsonResponse> {

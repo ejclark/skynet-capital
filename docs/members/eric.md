@@ -99,10 +99,13 @@ The dead ends he would hit on his own book today (numbers from README → "The e
 
 - **6** — Trade's "← Back to account" goes to the desk, not the cockpit he came from
   (`app/src/routes/trade.tsx:698`); the cockpit never links his own desk.
-- **9 (found by run 0)** — on the offline fixture `/api/accounts/networth` answers 500
-  (`h.equity.forEach`, `src/server/networth-api-routes.ts:49`) and the whole Overview — standing,
-  the money strip, the positions blotter — becomes "Net worth is unreachable right now."; one
-  failed feed blanks the page his Monday read starts on.
+- **9 (found by run 0; fixed)** — on the offline fixture `/api/accounts/networth` answered 500
+  (`h.equity.forEach`, `src/server/networth-api-routes.ts`) and the whole Overview — standing,
+  the money strip, the positions blotter — became "Net worth is unreachable right now."; one
+  failed feed blanked the page his Monday read starts on. Root cause: the fixture transport
+  answered `/v2/account/portfolio/history` with the account payload (a prefix match on
+  `/v2/account`); it now 404s like every unfixtured endpoint, the route degrades to "—"
+  windows, and the step is a passing acceptance test.
 - **8** — a docked Trade with no entry to the Chain; a greyed control whose reason is a tooltip
   he cannot hover on a phone (`app/src/shell/thesis-drawer.tsx:81`, `app/src/routes/playbooks.tsx:42`).
 - **Not one of the eight, and the one that matters most to him:** every decision surface is
@@ -122,17 +125,17 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 1. `/app/accounts` — the cockpit opens on his account: the switcher, Overview · Activity. **WHEN
    the owner opens Profile, the app shall open his own account's cockpit on Overview.** Judge: can
    this reader tell what to do next in ten seconds?
-2. `/app/accounts` — "Net worth is unreachable right now." where standing, the money strip and
-   the blotter should be. **WHEN the owner opens the cockpit, the app shall show the book's
-   standing and what needs a decision above the fold, even when one feed cannot be read.** _known
-   gap — crawl finding 9: `/api/accounts/networth` 500s on the offline fixture
-   (`src/server/networth-api-routes.ts:49`) and the whole Overview is one sentence._ Judge: can this
+2. `/app/accounts` — his standing (Net worth · Eric, the value) and the money strip; the return
+   windows read "—" on desktop (the offline fixture keeps no history) and the phone shows the
+   value's one line. **WHEN the owner opens the cockpit, the app shall show the book's standing
+   and what needs a decision above the fold, even when one feed cannot be read.** Judge: can this
    reader tell what to do next in ten seconds?
 3. `/app/accounts` — no calendar on the book; the week's events are a tab away. **WHEN the owner
    reads the book on a Monday, the app shall show the week's events that touch the tickers held,
    on the same page.** _known gap — the calendar exists only as R&D's rail control; the date key
-   never joins the book._ Judge: does this reader know what is happening this week to what they
-   hold?
+   never joins the book. The check is the calendar's own "Week" lens button, exactly — the
+   blotter's "Expiring within 3 weeks" view tab is not a calendar._ Judge: does this reader know
+   what is happening this week to what they hold?
 4. `/app/research` — the calendar, the board's calls, the day lens fogged behind rung 501. **WHEN
    the owner opens R&D, the app shall show the calendar with the current range and the calls in
    it.** Judge: can this reader tell which events matter to their book?

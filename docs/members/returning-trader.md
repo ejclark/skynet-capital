@@ -39,10 +39,12 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 - **6** — Trade's "← Back to account" goes to the desk `/u/:id`, not the cockpit they came from
   (`app/src/routes/trade.tsx:698`); the desk rail only ever says "← Leaderboard"
   (`app/src/shell/desk-rail.tsx:78`); `/accounts` never links their own desk.
-- **9 (found by run 0)** — `/api/accounts/networth` answers 500 on the offline fixture
-  (`h.equity.forEach`, `src/server/networth-api-routes.ts:49`, when the history read has no
-  equity series); the Overview says "Net worth is unreachable right now." and the positions
-  blotter vanishes with it — one failed feed blanks the whole page.
+- **9 (found by run 0; fixed)** — `/api/accounts/networth` answered 500 on the offline fixture
+  (`h.equity.forEach`, `src/server/networth-api-routes.ts`, when the history read carried no
+  equity series); the Overview said "Net worth is unreachable right now." and the positions
+  blotter vanished with it — one failed feed blanked the whole page. Root cause: the fixture
+  transport answered `/v2/account/portfolio/history` with the account payload; it now 404s and
+  the route degrades to "—" windows with the blotter intact.
 - **8** — a docked Trade has no entry to the standalone Chain (`app/src/routes/trade.tsx:113` lists
   it; the docked bench never renders the switch).
 - **3** — on a phone, the Chain pane says "Pick a symbol on the Ticket…" with no input of its own
@@ -57,11 +59,12 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 1. `/app/accounts` — the cockpit: the account switcher, Overview · Activity. **WHEN a member with
    one linked account opens Profile, the app shall open that account's cockpit on Overview.**
    Judge: can this reader tell what to do next in ten seconds?
-2. `/app/accounts` — "Net worth is unreachable right now." — and the positions blotter is gone
-   with it. **WHEN the member opens Overview, the app shall show the held positions with a way
-   into each one's guidance, even when net worth cannot be read.** _known gap — crawl finding 9
-   (README → the eight dead ends, plus one run 0 found)._ Judge: can this reader tell which
-   position to act on?
+2. `/app/accounts` — the Overview: net worth, then the positions blotter — EEM, Guidance on
+   the row (desktop). **WHEN the member opens Overview, the app shall show the held positions
+   with a way into each one's guidance, even when net worth cannot be read.** On a phone the
+   blotter is one card per position and EEM's card is the way in — it opens the position on
+   Trade, where Guidance is a tab (`s2-phone`). Judge: can this reader tell which position to
+   act on?
 3. `/app/u/human-eric` — the desk's blotter: EEM, Guidance on the row (desktop); the EEM card
    (phone); they click it. **WHEN the member opens their desk, the app shall show each held
    position with a way into its guidance.** Judge: can this reader tell which position to act on?

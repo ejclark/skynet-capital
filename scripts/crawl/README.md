@@ -82,5 +82,11 @@ makes no model call; every ledger row's judge cell reads `pending (grind)` until
   different sweep.
 - **`where` is a grep.** A string built at runtime (a number, a name interpolated in) does not
   locate and the row reads `—`.
+- **A `text` expect takes the first DOM match, visible or not.** `locatorFor(...).first()` then
+  waits for THAT element to be visible; at phone width the positions table is `display: none`
+  and the cards that replace it come later in the DOM, so `{ "text": "EEM" }` reads "not found"
+  on a phone while the card is on screen. A `role` expect skips hidden elements; a phone-only
+  step (`"only": "phone"`) names the phone's own control. Preferring the first *visible* match
+  would change every step's reading at once — a change for its own run, not a fix inside one.
 - **Time.** ~150 steps × (settle + probes + axe) is a coffee, not a CI check; the spec is the gate,
   the crawl is the report. CI wiring for either is a platter item (workflow files are protected).

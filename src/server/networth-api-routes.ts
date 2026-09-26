@@ -40,11 +40,15 @@ function emptyWindows(): Record<NetWorthWindowKey, NetWorthWindowInput> {
   return { "7D": {}, "1M": {}, "3M": {}, "1Y": {} };
 }
 
-/** The highest finite daily equity in a full-history read, with its day (#3689's high line). */
+/** The highest finite daily equity in a full-history read, with its day (#3689's high line). A
+ *  read that resolved to something other than a history payload (a transport answering another
+ *  shape, a proxy's HTML page) carries no series to walk — no high line, never a throw: the header
+ *  above promises one unreadable feed blanks nothing else, and a `TypeError` here once escaped
+ *  that promise as a 500 that emptied the whole Overview (the crawl's ninth dead end, PR #3801). */
 function highestClose(
   h: AlpacaPortfolioHistory | undefined,
 ): { value: number; at: string } | undefined {
-  if (!h) return undefined;
+  if (!(h && Array.isArray(h.equity) && Array.isArray(h.timestamp))) return undefined;
   let best: { value: number; at: string } | undefined;
   h.equity.forEach((v, i) => {
     const ts = h.timestamp[i];
