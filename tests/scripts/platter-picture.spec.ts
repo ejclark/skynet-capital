@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { snippetHexes } from "../../scripts/mermaid-lint.mjs";
 import {
   findLanding,
   landedPicture,
@@ -12,8 +13,8 @@ import {
 // The held PR's two pictures are generated from git (plan #3786 slice 4) so they cannot say a count
 // the ledger does not hold, or a merge commit that never landed (#3754). The open-time picture is
 // the choice; the after-landing picture is the record in whichever ending is true. Every picture
-// must parse under the pinned Mermaid, carry no classDef hex (a generated picture never chooses a
-// look), and name no house noun (docs/PICTURES.md rule 7).
+// must parse under the pinned Mermaid, carry only hexes a checked-in snippet holds (the ink mode,
+// copied whole — a generated picture never chooses a hex), and name no house noun (rule 7).
 const SCRIPT = join(process.cwd(), "scripts/platter-picture.mjs");
 const LINT = join(process.cwd(), "scripts/mermaid-lint.mjs");
 
@@ -40,12 +41,16 @@ const LOG =
   `2222222222222222222222222222222222222222${NUL}0000000000000000000000000000000000000000 3333333333333333333333333333333333333333${NUL}Merge pull request #3712 from ejclark/platter/y${NUL}chore(platter): protected-path changes\n\n${ledger}${SEP}`;
 
 describe("platter picture — the choice at open time", () => {
-  it("names the real count and both buttons, parses, and carries no hex or house noun", () => {
+  it("names the real count and both buttons, parses, wears only snippet hexes, and no house noun", () => {
     const pic = openPicture(3);
     expect(pic).toContain("3 protected");
     expect(pic).toContain("Create a merge commit");
     expect(pic).toContain("Squash and merge");
-    expect(pic).not.toMatch(/#[0-9a-f]{6}/i);
+    const registry = snippetHexes();
+    expect(registry).not.toBeNull();
+    for (const hex of pic.match(/#[0-9a-f]{6}/gi) ?? []) {
+      expect(registry?.has(hex.toUpperCase()), hex).toBe(true);
+    }
     expect(pic).not.toMatch(/\bplatter\b/i);
     const r = lint(pic);
     expect(r.status, r.stdout).toBe(0);

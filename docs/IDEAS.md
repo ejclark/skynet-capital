@@ -54,7 +54,11 @@ Eric-sourced.
   renders 3–5 named shapes of one PR's story side by side (delta flowchart, sequence with
   before/after notes, state machine) for him to react to by eye; the pick comes back as Mermaid
   text into `docs/PICTURES.md` and the pinned lint proves it renders. The picture grammar's own
-  taste forks get judged on a canvas instead of a PR. _(src: Eric ("code through design, and
+  taste forks get judged on a canvas instead of a PR. **First test passed** (2026-09-26): the
+  round-3 Claude Design session returned Mermaid sources, thirteen rules, two colour snippets and
+  renderer facts as text, and they landed as plan #3786 slices 1–5 in under two hours; the live
+  probes on #3778 are the round trip back. What stays open is the taste half (ink mode, the second
+  layer of detail), judged by Eric on the probe. _(src: Eric ("code through design, and
   design in the code", 2026-09-26) · while: #3760)_
 - **In-app engagement signal for explainers** — the member surface has no telemetry at all, so a
   diagram shipped to `/research`, the trading course or a bot's decisions page has no falsifier.

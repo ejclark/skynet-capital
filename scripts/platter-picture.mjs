@@ -13,9 +13,10 @@
 // does to the undo; after landing, the record in whichever ending is true, read from the first-parent
 // log with the same parser scripts/platter-merge-scan.mjs uses to count squashed landings.
 //
-// Plain dress only (no classDef hex): a generated picture never chooses a look; the ink mode, if
-// promoted, is one snippet appended by the caller. Labels say what things do; the house noun stays
-// in this file's name and the ship script.
+// The ink mode dress (docs/PICTURES.md, promoted by Eric 2026-09-26): paper for what exists, gold on
+// the one decision, seal red on the defect. The snippet is copied whole from the page, never a hex
+// chosen here, and the lint's registry check keeps it that way. Labels say what things do; the house
+// noun stays in this file's name and the ship script.
 //
 // Exit codes: 0 printed · 1 bad arguments · 3 the landing for that PR is not in the log (unknown, never
 // an empty picture).
@@ -32,6 +33,10 @@ const CONFIG = `config:
     padding: 10`;
 
 const FONT = "classDef default font-size:20px,font-family:Verdana";
+/** The ink-mode snippet, copied whole from docs/PICTURES.md (rule 11). */
+const INK = `    classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
+    classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
+    classDef defect fill:#B3261E,color:#FFF4EC,stroke:#FFF4EC,stroke-width:3px`;
 
 /** Escape a label for a quoted Mermaid string. */
 const q = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
@@ -76,6 +81,10 @@ flowchart TD
     items ==> pr ==> button{"which button<br/>lands it?"}
     button ==>|Create a merge commit| merged@{ shape: cyl, label: "${merged}" }
     button -->|Squash and merge| squashed@{ shape: cyl, label: "main: one commit,<br/>reverts only<br/>as a block, #3754" }
+    class items,pr,merged paper
+    class button gold
+    class squashed defect
+${INK}
     ${FONT}`;
 }
 
@@ -102,6 +111,9 @@ flowchart TD
 ${nodes}
     end
     held ==>|Squash and merge| main@{ shape: cyl, label: "main: ${n === 1 ? "1" : Array.from({ length: n }, (_, i) => i + 1).join(" + ")}<br/>as one commit,<br/>reverts only<br/>as a block, #3754" }
+    class ${items.map((_, i) => `i${i + 1}`).join(",")} paper
+    class main defect
+${INK}
     ${FONT}`;
   }
   return `---
@@ -113,6 +125,8 @@ flowchart TD
 ${nodes}
     end
     held ==>|Create a merge commit| main@{ shape: cyl, label: "main: one merge commit,<br/>any one item<br/>reverts alone" }
+    class ${items.map((_, i) => `i${i + 1}`).join(",")},main paper
+${INK}
     ${FONT}`;
 }
 

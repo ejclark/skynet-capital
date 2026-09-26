@@ -94,7 +94,11 @@ describe("the checked-in Mermaid classDef snippets — colour that survives both
   });
 
   it("ink mode is one block of four classes — a look switched whole, never mixed with teal", () => {
-    const ink = blocks.findIndex((b) => b.includes("classDef paper"));
+    // The snippet block is the one that defines ink mode and nothing else; the starters above it
+    // copy the classes (rule 11) and carry a font-only `default` beside them.
+    const ink = blocks.findIndex(
+      (b) => b.includes("classDef paper") && !b.includes("classDef default"),
+    );
     expect(ink).toBeGreaterThanOrEqual(0);
     const names = registry
       .filter((c) => c.block === ink)

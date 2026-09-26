@@ -106,15 +106,21 @@ flowchart TD
     door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
     door ==x stop["push refused,<br/>the line and<br/>the token named"]
     body -.-> red["used to go<br/>straight through<br/>to a red parse box<br/>as the opening frame"]
-    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
+    class body,draws,stop paper
+    class door gold
     class red removed
+    classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
+    classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
+    classDef defect fill:#B3261E,color:#FFF4EC,stroke:#FFF4EC,stroke-width:3px
+    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
     classDef default font-size:20px,font-family:Verdana
 ```
 ````
-_The door: the new path thick and declared first (it lands left), the old path one dotted lane
-declared last (it lands right); the fork asks a question, the cross-head says no, the double circle
-says done, the tense lives in the box. No edge labels, no colour: the plain dress of the round-3
-design pick (plan #3786); the ink dress is the same source plus the ink-mode snippet once promoted._
+_The door, in ink mode (promoted by Eric, 2026-09-26: "promote. Phone looks fine"): the new path
+thick and declared first (it lands left), the old path one dotted lane declared last (it lands
+right); the fork asks a question and wears the gold, the cross-head says no, the double circle says
+done, the tense lives in the box. No edge labels. Drop the four `class`/`classDef` colour lines for
+the plain dress; never mix in the teal snippet (rule 11)._
 
 ````markdown
 ```mermaid
@@ -166,6 +172,12 @@ flowchart TD
     items ==> pr ==> button{"which button<br/>lands it?"}
     button ==>|Create a merge commit| merged@{ shape: cyl, label: "main: three commits,<br/>any item<br/>reverts alone" }
     button -->|Squash and merge| squashed@{ shape: cyl, label: "main: one commit,<br/>reverts only<br/>as a block, #3754" }
+    class items,pr,merged paper
+    class button gold
+    class squashed defect
+    classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
+    classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
+    classDef defect fill:#B3261E,color:#FFF4EC,stroke:#FFF4EC,stroke-width:3px
     classDef default font-size:20px,font-family:Verdana
 ```
 ````
@@ -306,15 +318,17 @@ The colours are `BRAND.md` tokens — `--accent` and `--accent-contrast` for *ne
 machine/system signal), `--muted` (light) for *removed*, `--accent` (light) for *changed* — never
 `--pos`/`--neg`, which mean profit and loss and nothing else.
 
-**A second look, verified and not yet promoted: ink mode** (the Claude Design round-3 session,
-2026-09-26, plan #3786; the palette of a sumi-ink frame with one gold). Paper for what exists, gold
-for the one decision, seal red for a defect beside it, the house `removed` unchanged. Every class
-holds ≥ 4.5:1 text on fill and ≥ 3:1 boundary on both GitHub canvases (`tests/ui/mermaid-classdef.spec.ts`
-verifies every snippet on this page); the seal red's stroke is light because its fill and a dark
-stroke both sat under 3:1 against GitHub's dark canvas. A look is a mode, switched whole (rule 11):
-a picture uses the teal snippet or this one, never both. **Until Eric promotes it** (the probe on
-#3778, read on a phone), no PR picture uses it; promotion is one line here and one in `BRAND.md`,
-which today sanctions one warm palette.
+**The second look, promoted: ink mode** (the Claude Design round-3 session, 2026-09-26, plan
+#3786; the palette of a sumi-ink frame with one gold; promoted by Eric the same day, "promote.
+Phone looks fine"). Paper for what exists, gold for the one decision, seal red for a defect beside
+it, the house `removed` unchanged. Every class holds ≥ 4.5:1 text on fill and ≥ 3:1 boundary on
+both GitHub canvases (`tests/ui/mermaid-classdef.spec.ts` verifies every snippet on this page); the
+seal red's stroke is light because its fill and a dark stroke both sat under 3:1 against GitHub's
+dark canvas. **Scope:** decision pictures — a PR's opening frame or a held PR with a fork in it,
+where gold marks the one decision and red marks a defect beside it (rule 12); architecture and
+flow pictures keep the teal. A look is a mode, switched whole (rule 11): a picture uses the teal
+snippet or this one, never both, and the lint refuses any hex outside either. The generated held-PR
+pictures (`scripts/platter-picture.mjs`) wear it.
 
 ```mermaid
 flowchart TD
