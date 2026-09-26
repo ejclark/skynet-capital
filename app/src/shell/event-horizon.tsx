@@ -13,13 +13,18 @@ import { CalendarHead, type DayFog } from "./calendar-head";
 /**
  * THE EVENT HORIZON (#738, rail-controls round — Eric: "view template shift controls to the left
  * rail... research can move the calendar control/filter to the left rail to drive the view").
- * A compact month calendar in the rail: dots mark event days (filled when a ledger exists);
- * clicking a day pins `?on=YYYY-MM-DD` — the rail drives the view, the URL keeps the state, and
- * typing `on:YYYY-MM-DD` into the filter box lands on the same URL (one model, two carriers).
+ * A compact month calendar: dots mark event days (filled when a ledger exists); clicking a day
+ * pins `?on=YYYY-MM-DD` — the calendar drives the view, the URL keeps the state, and typing
+ * `on:YYYY-MM-DD` into the filter box lands on the same URL (one model, two carriers).
  *
- * THE HEAD AND THE LENS ROW live in `calendar-head.tsx` since #3807 slice 2·1 — the same markup
- * renders on the Profile page's cockpit head, without this grid; this file seats the month grid
- * in the head's slot. The range is root URL state (`live/horizon-params.ts`, `?on=&span=`), so
+ * THE BAND HEAD (#3807 slice 2a — the rail left the frame): R&D's calendar leads its stage as one
+ * row — the head and the lens row from `calendar-head.tsx` (the same markup the Profile page's
+ * cockpit head renders) — with the month grid FOLDED beneath it. The IA's target is a popover at
+ * ≥861 and a bottom sheet at ≤860, never in flow; no popover or sheet primitive exists in the shell
+ * yet, so this slice folds the grid into a plain disclosure (`<details>`) at every width, and the
+ * pinned day's "Clear" stays on the row where the fold cannot hide it. Falsifier: a member on the
+ * live route cannot find the grid behind the fold (a crawl step that picks a day fails, or Eric
+ * asks where the calendar went) — then the fold opens by default until the popover lands. The range is root URL state (`live/horizon-params.ts`, `?on=&span=`), so
  * the day picked here is the day the whole app reads. The lens picks the RANGE around the anchor
  * day (shaded on the grid) and the arrows step by that duration (#1704 slice 2). Weekdays the
  * exchange is closed are hatched and struck (never hue alone — docs/BRAND.md → Accessibility)
@@ -171,7 +176,7 @@ export function EventHorizon({
   };
 
   return (
-    <div className="eh">
+    <section className="cal-head rx-band" aria-label="Market calendar">
       <CalendarHead
         lens={lens}
         range={range}
@@ -184,60 +189,64 @@ export function EventHorizon({
         onStep={onStep}
         {...(fiscal ? { fiscal } : {})}
         {...(dayFog ? { dayFog } : {})}
-      >
-        <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
-          {WEEKDAYS.map((d, i) => (
-            <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
-              {d}
-            </span>
-          ))}
-          {monthGrid(month).map((date, i) => {
-            const closure = closedOn.get(date);
-            const outside = date.slice(0, 7) !== month;
-            const className = `${dayClassName({
-              date,
-              column: i % 7,
-              inRange: !blockLens && rangeDays.has(date),
-              rangeDays,
-              today,
-              closure,
-            })}${outside ? " eh-outside" : ""}`;
-            return (
-              <button
-                key={date}
-                type="button"
-                className={className}
-                aria-pressed={pinned && anchor === date}
-                title={titleFor(date)}
-                onClick={() => onPick(date)}
-              >
-                {date.endsWith("-01") ? (
-                  <span className="eh-month-tag" aria-hidden="true">
-                    {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
-                  </span>
-                ) : null}
-                <span className="eh-num">{Number(date.slice(8, 10))}</span>
-                {byDate.has(date) ? (
-                  <i
-                    className={
-                      byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
-                    }
-                  />
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </CalendarHead>
-      <p className="eh-legend">
-        <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
-        <s className="eh-legend-closed num">7</s> closed
-      </p>
+      />
       {pinned ? (
         <button type="button" className="eh-clear" onClick={() => onPick(anchor)}>
           Clear {anchor} ×
         </button>
       ) : null}
-    </div>
+      <details className="eh-fold">
+        <summary className="eh-fold-toggle">Month · pick a day</summary>
+        <div className="eh">
+          <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
+            {WEEKDAYS.map((d, i) => (
+              <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
+                {d}
+              </span>
+            ))}
+            {monthGrid(month).map((date, i) => {
+              const closure = closedOn.get(date);
+              const outside = date.slice(0, 7) !== month;
+              const className = `${dayClassName({
+                date,
+                column: i % 7,
+                inRange: !blockLens && rangeDays.has(date),
+                rangeDays,
+                today,
+                closure,
+              })}${outside ? " eh-outside" : ""}`;
+              return (
+                <button
+                  key={date}
+                  type="button"
+                  className={className}
+                  aria-pressed={pinned && anchor === date}
+                  title={titleFor(date)}
+                  onClick={() => onPick(date)}
+                >
+                  {date.endsWith("-01") ? (
+                    <span className="eh-month-tag" aria-hidden="true">
+                      {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
+                    </span>
+                  ) : null}
+                  <span className="eh-num">{Number(date.slice(8, 10))}</span>
+                  {byDate.has(date) ? (
+                    <i
+                      className={
+                        byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
+                      }
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+          <p className="eh-legend">
+            <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
+            <s className="eh-legend-closed num">7</s> closed
+          </p>
+        </div>
+      </details>
+    </section>
   );
 }

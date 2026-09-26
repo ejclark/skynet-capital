@@ -54,19 +54,19 @@ function PlaybooksPage(): ReactElement {
   const rail = <ProfileRail current="playbooks" />;
   if (playbooks.isPending)
     return (
-      <PageFrame rail={rail}>
+      <PageFrame controls={rail}>
         <p className="note">Opening the playbooks…</p>
       </PageFrame>
     );
   if (playbooks.isError || !playbooks.data)
     return (
-      <PageFrame rail={rail}>
+      <PageFrame controls={rail}>
         <p className="note">Playbooks are unreachable.</p>
       </PageFrame>
     );
   const data = playbooks.data;
   return (
-    <PageFrame rail={rail}>
+    <PageFrame controls={rail}>
       <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">Milestone M·03 · Playbooks · earned automation</div>

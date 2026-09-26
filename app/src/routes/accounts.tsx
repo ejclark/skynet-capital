@@ -155,13 +155,13 @@ function AccountsPage(): ReactElement {
 
   if (settings.isPending)
     return (
-      <PageFrame rail={<ProfileRail current="accounts" />}>
+      <PageFrame controls={<ProfileRail current="accounts" />}>
         <p className="note">Reading your accounts…</p>
       </PageFrame>
     );
   if (settings.isError)
     return (
-      <PageFrame rail={<ProfileRail current="accounts" />}>
+      <PageFrame controls={<ProfileRail current="accounts" />}>
         <p className="note">Accounts are unreachable.</p>
       </PageFrame>
     );
@@ -170,7 +170,7 @@ function AccountsPage(): ReactElement {
   const first = accounts[0];
   if (!first)
     return (
-      <PageFrame rail={<ProfileRail current="accounts" />}>
+      <PageFrame controls={<ProfileRail current="accounts" />}>
         <p className="note">
           Your sign-in doesn't resolve to an account yet — connect one from{" "}
           <a href="/app/onboarding">onboarding</a>.
@@ -310,7 +310,7 @@ function AccountsBody({
   const phone = usePhoneWidth();
 
   return (
-    <PageFrame rail={<ProfileRail current="accounts" />}>
+    <PageFrame controls={<ProfileRail current="accounts" />}>
       <h1 className="visually-hidden">Accounts</h1>
       <div className="cockpit">
         <div className="cockpit-head">

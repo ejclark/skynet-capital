@@ -68,11 +68,11 @@
         {
           "id": "s6",
           "goto": "/app/u/sauron",
-          "sees": "the desk rail: Active · Decisions · Thesis · Pulse · ← Leaderboard — no Activity",
+          "sees": "the desk's link row: Overview · Pulse · Heartbeat · Thesis — no Activity",
           "ears": "WHEN a viewer is on a desk, the app shall offer that account's activity beside its decisions.",
-          "expect": [{ "role": "link", "name": "Activity", "within": "nav.rail" }],
-          "known_gap": "dead end 5 — /u/:id has no Activity view; the desk rail lists Active · Decisions · Thesis · Pulse (app/src/shell/desk-rail.tsx:33-78)",
-          "where": "app/src/shell/desk-rail.tsx:33",
+          "expect": [{ "role": "link", "name": "Activity", "within": "nav.stage-controls" }],
+          "known_gap": "dead end 5 — /u/:id has no Activity view; the desk's link row lists Overview · Pulse · Heartbeat · Thesis (app/src/shell/desk-rail.tsx) — 2d adds it",
+          "where": "app/src/shell/desk-rail.tsx",
           "severity": "low",
           "fix": "M",
           "judge": "can this reader find what the bot actually did?"

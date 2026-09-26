@@ -38,20 +38,20 @@ function TradingLadderPage(): ReactElement {
   const rail = <ProfileRail current="ladder" />;
   if (journey.isPending)
     return (
-      <PageFrame rail={rail}>
+      <PageFrame controls={rail}>
         <p className="note">Opening the ladder…</p>
       </PageFrame>
     );
   if (journey.isError)
     return (
-      <PageFrame rail={rail}>
+      <PageFrame controls={rail}>
         <p className="note">The ladder is unreachable.</p>
       </PageFrame>
     );
   const data = journey.data;
   const ladder = ladderProgress(data);
   return (
-    <PageFrame rail={rail}>
+    <PageFrame controls={rail}>
       <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">Milestone M·02 · Trading progression</div>

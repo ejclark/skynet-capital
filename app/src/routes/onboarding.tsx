@@ -148,13 +148,13 @@ function OnboardingPage(): ReactElement {
   }, [moneypenny, navigate]);
   if (onboarding.isPending)
     return (
-      <PageFrame rail={<ProfileRail current="onboarding" />}>
+      <PageFrame controls={<ProfileRail current="onboarding" />}>
         <p className="note">Opening onboarding…</p>
       </PageFrame>
     );
   if (onboarding.isError || !onboarding.data)
     return (
-      <PageFrame rail={<ProfileRail current="onboarding" />}>
+      <PageFrame controls={<ProfileRail current="onboarding" />}>
         <p className="note">Onboarding is unreachable.</p>
       </PageFrame>
     );
@@ -162,7 +162,7 @@ function OnboardingPage(): ReactElement {
   const name = data.account?.displayName ?? data.viewerName;
   const firstOpen = data.steps.findIndex((s) => !s.done);
   return (
-    <PageFrame rail={<ProfileRail current="onboarding" />}>
+    <PageFrame controls={<ProfileRail current="onboarding" />}>
       <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">

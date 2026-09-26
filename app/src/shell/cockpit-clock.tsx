@@ -36,7 +36,7 @@ import { useMediaQuery } from "./use-media";
  * live route by 2026-10-10 — then it leaves the head for the stage's first row.
  */
 
-/** ≤860px — the phone's shell (`shell.css`, `rail.css`), where the head sits under the sticky block. */
+/** ≤860px — the phone's shell (`shell.css`), where the head sits under the sticky block. */
 export const PHONE_QUERY = "(max-width: 860px)";
 
 export function usePhoneWidth(): boolean {

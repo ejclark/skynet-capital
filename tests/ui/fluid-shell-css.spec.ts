@@ -41,7 +41,11 @@ describe("the fluid shell", () => {
       shell.indexOf("}", shell.indexOf(".frame {")),
     );
     expect(frame).toContain("max-width: var(--shell-max)");
-    expect(frame).toContain("grid-template-columns: var(--rail-w) minmax(0, 1fr)");
+    // One column (#3807 slice 2a): the rail track left the frame, so every non-Settings stage is
+    // full width; Settings lays its own list inside its stage on the token the frame used to read.
+    expect(frame).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(frame).not.toContain("--rail-w");
+    expect(css("settings.css")).toContain("grid-template-columns: var(--rail-w) minmax(0, 1fr)");
     const stage = shell.slice(
       shell.indexOf(".stage {"),
       shell.indexOf("}", shell.indexOf(".stage {")),

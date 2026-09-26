@@ -1,5 +1,5 @@
 /* The market calendar's head (#3807 slice 2·1): `shell/calendar-head.tsx`, one markup for R&D's
-   rail (where `event-horizon.css` styles the parts — this sheet loads after it on purpose) and
+   band head (where `event-horizon.css` styles the parts — this sheet loads after it on purpose) and
    the Profile page's cockpit head (`shell/cockpit-clock.tsx`), plus the events-on-what-you-hold
    line under the net-worth card (`shell/held-events-line.tsx`). */
 
@@ -76,6 +76,36 @@
 }
 .cockpit > .cal-head .eh-lens-row {
   flex: 1 1 100%;
+}
+
+/* R&D's band head (#3807 slice 2a): the same row leads the stage — a rule under it, the pinned
+   day's Clear on the row, the month grid folded beneath (a disclosure until the popover/sheet
+   lands; `event-horizon.tsx` says why). The grid keeps its compact calendar size inside the fold. */
+.rx-band {
+  margin: 0 0 16px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.rx-band .eh-clear {
+  margin: 0;
+}
+.eh-fold {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.eh-fold-toggle {
+  width: max-content;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.eh-fold-toggle:hover {
+  color: var(--text);
+}
+.eh-fold .eh {
+  width: min(100%, 300px);
+  margin-top: 6px;
 }
 
 /* What is dated on what you hold — one line under the net-worth card; each tier a glyph + a word. */

@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route } from "../../src/routes/trade";
 
@@ -100,15 +100,27 @@ describe("/trade validateSearch — section", () => {
 });
 
 describe("/trade section switch", () => {
-  it("defaults to the ticket, with the switch in the rail", async () => {
+  it("defaults to the ticket, with the switch in the stage's controls row", async () => {
     mountTrade("/trade");
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: "Ticket" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Chart" })).toHaveAttribute("aria-pressed", "false");
+    // The rail left the frame (#3807 slice 2a): the folded switch is the row at the top of <main>,
+    // and the rail's "← Back to account" is gone — the topbar's Profile tab is that.
+    const row = screen.getByRole("navigation", { name: "Section" });
+    expect(row).toHaveClass("stage-controls");
+    expect(row.closest("main")).not.toBeNull();
+    expect(within(row).getByRole("button", { name: "Ticket" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(within(row).getByRole("button", { name: "Chart" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.queryByRole("link", { name: /Back to account/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Pick a symbol to see its chart.")).not.toBeInTheDocument();
   });
 

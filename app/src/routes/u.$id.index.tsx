@@ -57,10 +57,10 @@ function DeskPage(): ReactElement {
     );
   const { desk: d, generatedAt, landmark } = desk.data;
 
-  const rail = <DeskRail id={d.id} name={d.name} kind={d.kind} current="active" />;
+  const rail = <DeskRail id={d.id} kind={d.kind} />;
 
   return (
-    <PageFrame rail={rail}>
+    <PageFrame controls={rail}>
       <header className="desk-header">
         <div>
           <h1>{d.name}</h1>

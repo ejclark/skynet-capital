@@ -202,11 +202,11 @@ a {
   margin: 0 auto;
   padding: var(--stage-gap) var(--gutter) 80px;
   display: grid;
-  /* the rail is a control column now (dimensional precedence), not just a link list —
-     sized for a month calendar and control groups with room to breathe; minmax(0, 1fr) so a
-     wide table in the stage scrolls inside its column instead of pushing the rail */
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
-  gap: 32px;
+  /* ONE column (#3807 slice 2a, docs/IA.md §8.1): the rail track left the frame, so every
+     non-Settings stage is full width and constant geometry holds by construction; a page's
+     controls are a row of its own stage (`stage-controls.css`). minmax(0, 1fr) so a wide table
+     scrolls inside the stage instead of widening the page. */
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 .stage {
@@ -218,10 +218,6 @@ a {
 }
 
 @media (max-width: 860px) {
-  .frame {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
   .toggle-group .toggle-text {
     display: none;
   }

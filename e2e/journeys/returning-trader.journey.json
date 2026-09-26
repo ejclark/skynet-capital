@@ -73,11 +73,14 @@
         {
           "id": "s5",
           "goto": "/app/trade?desk=human-eric&symbol=EEM",
-          "sees": "the rail's back link reads '← Back to account' and points at the desk, not the cockpit",
+          "sees": "no back link on the stage — the rail's '← Back to account' (which pointed at the desk, not the cockpit) left with the rail (#3807 slice 2a); the topbar's Profile tab is the way back",
           "ears": "WHEN the member wants to return from Trade to their book, the app shall link back to the cockpit they came from.",
-          "expect": [{ "role": "link", "name": "Back to account", "href": "/app/accounts" }],
-          "known_gap": "dead end 6 — Trade's '← Back to account' goes to the desk /u/:id, not the cockpit (app/src/routes/trade.tsx:698)",
-          "where": "app/src/routes/trade.tsx:698",
+          "expect": [
+            { "role": "link", "name": "Profile", "within": "nav.topnav", "href": "/app/accounts" },
+            { "role": "link", "name": "Back to account", "absent": true }
+          ],
+          "known_gap": "dead end 6 — Trade's wrong-way '← Back to account' left with the rail (#3807 slice 2a), but the topbar's Profile tab reaches /accounts only once onboarding is complete; before that it opens /learn (app/src/routes/__root.tsx ProfileTab)",
+          "where": "app/src/routes/__root.tsx:113",
           "severity": "medium",
           "fix": "S",
           "judge": "does the reader land where they started?"
@@ -146,11 +149,11 @@
         {
           "id": "s2",
           "goto": "/app/u/human-eric",
-          "sees": "the desk: tiles, blotter, New trade; the rail's only way out is '← Leaderboard'",
+          "sees": "the desk: its link row (Overview · Pulse · Settings), tiles, blotter, New trade; nothing on the stage links the cockpit",
           "ears": "WHEN the member is on their own desk, the app shall link back to their cockpit.",
-          "expect": [{ "role": "link", "name": "Accounts", "within": "nav.rail" }],
-          "known_gap": "dead end 6 — the desk rail always says '← Leaderboard' (app/src/shell/desk-rail.tsx:78); no way back to /accounts",
-          "where": "app/src/shell/desk-rail.tsx:78",
+          "expect": [{ "role": "link", "name": "Accounts", "within": "nav.stage-controls" }],
+          "known_gap": "dead end 6 — the desk's link row never links /accounts (app/src/shell/desk-rail.tsx); only the topbar's Profile tab does — 2d gives /u/:id its own head",
+          "where": "app/src/shell/desk-rail.tsx",
           "severity": "medium",
           "fix": "S",
           "judge": "does the reader land where they started?"

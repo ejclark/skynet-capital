@@ -5,23 +5,23 @@ import { liftHorizonTokens } from "../live/horizon-params";
 import { DEFAULT_LENS } from "../live/research";
 import { useBoardView } from "../shell/board-section";
 import { PageFrame } from "../shell/frame";
-import { PlaybooksRail, PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
+import { PlaybooksSection, SubscribeAs, usePlaybooksSection } from "../shell/playbooks-section";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 
 /**
  * RESEARCH (#738 phase 6c; filters-first + rail-controls per Eric's live reviews) — the shelf in
- * the shell. The LEFT RAIL is this view's control column (the topbar owns app navigation, so the
- * rail drives content). The "Board" section (`board-section.tsx`) is the original single-page
+ * the shell. The rail left the frame (#3807 slice 2a): the section switch is the controls row at
+ * the top of the stage, and the Board's calendar is the band head that leads it. The "Board" section (`board-section.tsx`) is the original single-page
  * Research: an event-horizon calendar pins a day into one query model, a text/symbol filter narrows
  * calls/ledgers/studies together. See that file's own doc comment for the lens/range design.
  *
  * SECTIONS (#3333 slice 9; #3623): the same `SectionSwitch`/`sections.ts` mechanism
  * `accounts.tsx`/`activity.tsx`/`settings.tsx`/`trade.tsx` already use, URL-stateful via
  * `?section=`. "Playbooks" (`playbooks-section.tsx`) is the catalog plus subscribe. Each section
- * keeps its own rail content (the event horizon calendar for Board, the "Subscribe as" account list
- * for Playbooks) — the section switch
- * itself always leads the rail, per the frame's "rail drives content" rule. This file stays thin
+ * keeps its own controls in its own head (the market calendar for Board, the "Subscribe as" account
+ * row for Playbooks) — the section switch leads the stage, per the frame's "higher dimensions
+ * steer lower ones" rule. This file stays thin
  * route glue; each section's own markup, queries, and helpers live in its own `shell/*.tsx` file
  * (the arch fitness gate's cap forced the split).
  *
@@ -96,38 +96,30 @@ function ResearchPage(): ReactElement {
       replace: true,
     });
 
-  const sectionRail =
-    section === "board" ? (
-      board.rail
-    ) : section === "playbooks" ? (
-      <PlaybooksRail
-        accounts={playbooks.accounts}
-        currentId={search.account}
-        onSelect={onSelectAccount}
-      />
-    ) : null;
-
+  // THE RAIL LEFT THE FRAME (#3807 slice 2a): the section switch is the controls row at the top of
+  // the stage; the Board's calendar is the band head that leads its content (`board.band`), and
+  // "Subscribe as" sits in the Playbooks section's own head.
   return (
     <PageFrame
-      rail={
-        <>
-          <SectionSwitch sections={SECTIONS} current={section} onSelect={onSelectSection} />
-          {sectionRail ? (
-            <>
-              <hr />
-              {sectionRail}
-            </>
-          ) : null}
-        </>
-      }
+      controls={<SectionSwitch sections={SECTIONS} current={section} onSelect={onSelectSection} />}
     >
       {section === "board" ? (
-        board.body
+        <>
+          {board.band}
+          {board.body}
+        </>
       ) : section === "playbooks" ? (
         <PlaybooksSection
           store={playbooks.store}
           accountId={search.account}
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
+          subscribeAs={
+            <SubscribeAs
+              accounts={playbooks.accounts}
+              currentId={search.account}
+              onSelect={onSelectAccount}
+            />
+          }
         />
       ) : null}
     </PageFrame>

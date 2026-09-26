@@ -83,14 +83,14 @@ import { useBenchWidth } from "../shell/use-bench-width";
  *
  * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds four SHAPES
  * of data for one symbol and one account — the ticket, its daily chart, the options chain and the
- * account's book — so the rail carries the section switch, URL-stateful via `?section=`. "ticket"
+ * account's book — so its controls row carries the section switch, URL-stateful via `?section=`. "ticket"
  * is the default and the untyped state (the param is omitted when it's chosen), so a member who
  * never touches the switch sees exactly the ticket they always have. The chart and the chain read
  * the same `?symbol=` the ticket commits — no second symbol input.
  *
  * THE BENCH (#3407, the Workbench pick; frame.tsx → "ONE COMPOSITION OF SECTIONS"): below the
  * bench width the sections are exclusive, as above. At the bench width (`useBenchWidth`, 1280px)
- * they DOCK — ticket left, chart right, the book across the bottom — the switch leaves the rail,
+ * they DOCK — ticket left, chart right, the book across the bottom — the switch leaves the page,
  * and `?section=` names the pane to scroll to. The panes keep talking through the URL exactly as
  * when folded (`?strike=`, `?exp=`, `?play=`), which is what lets one code path serve both.
  *
@@ -662,50 +662,30 @@ function TradePage(): ReactElement {
     markedStrikes,
     onLegsChange: setDraftLegs,
   };
-  // #784 naming pass: the Trading Outpost link that used to sit below "The ticket" was removed
-  // on the belief its content was superseded by the Playbook Store — #3333's slice-8 audit found
-  // that claim false (different features entirely) and ported the Outpost's actual catalog into
-  // Research's "Plays" section instead. Growing this rail to "critical mass" with real items
-  // (Portfolio, a Backtesting/Strategy Lab placeholder) is #784's own slice 7 — still open; the
-  // ladder itself no longer lives here (see the file's own "THE STRIP IS BACK" doc comment).
-  const rail = (
-    <>
-      <p className="rail-label">Trading</p>
-      <span className="rail-current" aria-current="page">
-        Trade
-      </span>
-      <hr />
-      {/* Docked, every pane is already on the page — the switch would be a control with nothing
-          to choose (frame.tsx: "The section switch renders only when folded"). */}
-      {/* Docked, the switch is hidden, and the guidance and chain panes show only when asked —
-          so the guidance needs its own way in (#3729 review: desktop members could reach it only
-          by typing the URL). */}
-      {docked ? (
-        <>
-          <Link to="/trade" search={(prev) => ({ ...prev, section: "guidance" as const })}>
-            Guidance for this stock
-          </Link>
-          <hr />
-        </>
-      ) : (
-        <>
-          <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
-          <hr />
-        </>
-      )}
-      {activeDesk ? (
-        <Link to="/u/$id" params={{ id: activeDesk }}>
-          ← Back to account
-        </Link>
-      ) : (
-        <Link to="/leaderboard" search={{ by: "equity" }}>
-          ← Leaderboard
-        </Link>
-      )}
-    </>
-  );
+  // THE CONTROLS ROW (#3807 slice 2a — the rail left the frame): folded, the section switch is the
+  // row at the top of the stage. Docked, every pane is already on the page and the switch would be a
+  // control with nothing to choose (frame.tsx: "The section switch renders only when folded"), so
+  // there is no row; the guidance pane shows only when asked, so its link sits beside the milestone
+  // strip instead (#3729 review: desktop members could reach it only by typing the URL). The rail's
+  // "Trading · Trade" label and its "← Back to account" link are gone: the topbar marks Trade, and
+  // its Profile tab is the way back to the book.
+  const guidanceLink = docked ? (
+    <Link
+      className="trade-guidance-link"
+      to="/trade"
+      search={(prev) => ({ ...prev, section: "guidance" as const })}
+    >
+      Guidance for this stock
+    </Link>
+  ) : null;
   return (
-    <PageFrame rail={rail}>
+    <PageFrame
+      controls={
+        docked ? undefined : (
+          <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
+        )
+      }
+    >
       <header className="page-header">
         <h1>Trade</h1>
         <p>
@@ -714,15 +694,20 @@ function TradePage(): ReactElement {
         </p>
       </header>
       {plays.data ? (
-        <MilestoneStrip
-          deskId={activeDesk ?? ""}
-          current={play ?? "101"}
-          plays={plays.data.plays}
-          wheels={plays.data.wheels}
-          gate={plays.data.gate}
-          nextUp={plays.data.nextUp}
-        />
-      ) : null}
+        <div className="trade-strip-row">
+          <MilestoneStrip
+            deskId={activeDesk ?? ""}
+            current={play ?? "101"}
+            plays={plays.data.plays}
+            wheels={plays.data.wheels}
+            gate={plays.data.gate}
+            nextUp={plays.data.nextUp}
+          />
+          {guidanceLink}
+        </div>
+      ) : (
+        guidanceLink
+      )}
       {settings.isLoading ? null : accounts.length === 0 ? (
         <p className="note">No accounts are linked to your session yet.</p>
       ) : activeDesk ? (

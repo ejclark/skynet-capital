@@ -171,3 +171,25 @@
   font-weight: 400;
   color: var(--muted);
 }
+
+/* "Subscribe as" in the Playbooks section's own head (#3807 slice 2a — it left the rail with the
+   rail): a labelled row of chips under the heading, wrapping at a phone's width. */
+.pb-subscribe {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.pb-subscribe .rail-label {
+  margin: 0 8px 0 0;
+  padding: 0;
+  float: left;
+}
+.pb-subscribe .railctl {
+  width: auto;
+  white-space: nowrap;
+}
