@@ -403,3 +403,31 @@ describe("event-material-scan closeFromChart()", () => {
     expect(read.price).toBe(1016.59);
   });
 });
+
+describe("event-material-scan --screen-due — an unreadable due list is UNKNOWN, never empty", () => {
+  it("exits 2 naming stdin when the stream cannot be read, instead of printing an empty stillDue", () => {
+    // A directory on fd 0 makes readFileSync(0) throw (EISDIR) — the stand-in for a broken pipe.
+    let status = 0;
+    let stderr = "";
+    let stdout = "";
+    try {
+      stdout = execFileSync(
+        "bash",
+        ["-c", "node scripts/event-material-scan.mjs --screen-due < /"],
+        {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+    } catch (error) {
+      const e = error as { status?: number; stderr?: string; stdout?: string };
+      status = e.status ?? -1;
+      stderr = e.stderr ?? "";
+      stdout = e.stdout ?? "";
+    }
+    expect(status).toBe(2);
+    expect(stderr).toContain("cannot read stdin");
+    expect(stderr).toContain("UNKNOWN");
+    expect(stdout).not.toContain("stillDue");
+  });
+});
