@@ -18,28 +18,23 @@ import {
  * suite is green while the gaps are real and turns RED the day a gap is fixed. That red is the
  * ratchet: the fix then deletes the `known_gap` line, and the step guards the fix from then on.
  *
- * Gated behind `JOURNEYS=1` (run by `scripts/crawl/run.mjs` and by hand); CI wiring is a platter
- * item, because workflow files are the irreversible class. The server picks ONE auth mode per boot
- * (`playwright.auth.config.ts` explains), so `JOURNEYS_MODE` says which fixtures this boot can
- * serve: `open` (the default config, anonymous fixtures) or `session` (`playwright.journeys.config.ts`,
- * which boots OAuth with the crawl's owner-links fixture and mints the `skynet_session` cookie).
+ * Runs only under `playwright.journeys.config.ts` (`npm run test:e2e:journeys[:open]`, and
+ * `scripts/crawl/run.mjs`); the default config lists it in `testIgnore`, so `npm run test:e2e`
+ * never collects it. CI wiring is a platter item, because workflow files are the irreversible
+ * class. The server picks ONE auth mode per boot (`playwright.auth.config.ts` explains), so
+ * `JOURNEYS_MODE` says which fixtures this boot can serve: `open` (anonymous fixtures) or `session`
+ * (OAuth with the crawl's owner-links fixture; the spec mints the `skynet_session` cookie). A
+ * member whose fixture the boot cannot serve is left out at load time, never collected as a
+ * skipped test — the other mode's run covers it.
  */
-const GATED = !process.env.JOURNEYS;
 const MODE = process.env.JOURNEYS_MODE === "session" ? "session" : "open";
 
 for (const member of loadJourneys()) {
   const wantsSession = member.fixture.kind === "session";
+  if (wantsSession !== (MODE === "session")) continue;
   for (const journey of member.journeys) {
     for (const viewport of viewportsFor(member, journey)) {
       test.describe(`${member.member} · ${journey.name} · ${viewport}`, () => {
-        test.skip(
-          GATED,
-          "set JOURNEYS=1 — run by scripts/crawl and locally; CI wiring is a platter item (workflow files are protected)",
-        );
-        test.skip(
-          wantsSession !== (MODE === "session"),
-          `a ${member.fixture.kind} fixture needs the ${wantsSession ? "session" : "open"} boot (JOURNEYS_MODE=${MODE})`,
-        );
         test.use(VIEWPORTS[viewport]);
         test.beforeEach(async ({ context, baseURL }) => {
           if (wantsSession && baseURL) {

@@ -46,6 +46,30 @@ function normalizeWhat(what) {
     .replace(/\d+/g, "#");
 }
 
+const DEAD_ENDS = [1, 2, 3, 4, 5, 6, 7, 8];
+const deadEndNumbers = (what) =>
+  [...String(what).matchAll(/dead end (\d)/g)].map((m) => Number(m[1]));
+
+/**
+ * Which of the plan's eight dead ends are still open. Only a `known gap` row counts as found — a
+ * `fixed?` row quotes the same `known_gap` text, so counting it would read 8/8 after a lift. A
+ * dead end is `fixed` when some step tagged with it now passes and no step tagged with it still
+ * fails (a dead end pinned on several steps is open until every one of them passes).
+ */
+export function countDeadEnds(rows) {
+  const open = new Set();
+  const passing = new Set();
+  for (const r of rows) {
+    const into = r.kind === "known gap" ? open : r.kind === "fixed?" ? passing : null;
+    if (into) for (const n of deadEndNumbers(r.what)) into.add(n);
+  }
+  return {
+    found: DEAD_ENDS.filter((n) => open.has(n)),
+    missing: DEAD_ENDS.filter((n) => !open.has(n)),
+    fixed: DEAD_ENDS.filter((n) => passing.has(n) && !open.has(n)),
+  };
+}
+
 const cell = (s) =>
   String(s ?? "")
     .replace(/\|/g, "\\|")
@@ -57,15 +81,7 @@ const cell = (s) =>
  */
 export function writeLedger(path, run) {
   const rows = foldRows(run.rows);
-  const deadEnds = new Map();
-  for (const r of rows) {
-    for (const m of r.what.matchAll(/dead end (\d)/g)) {
-      const n = Number(m[1]);
-      if (!deadEnds.has(n)) deadEnds.set(n, `${r.member} ${r.journey} ${r.step}`);
-    }
-  }
-  const found = [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => deadEnds.has(n));
-  const missing = [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => !deadEnds.has(n));
+  const { found, missing, fixed } = countDeadEnds(rows);
   const bySeverity = ["high", "medium", "low"].map(
     (s) => `${s} ${rows.filter((r) => r.severity === s).length}`,
   );
@@ -81,7 +97,8 @@ export function writeLedger(path, run) {
     "## Headline",
     "",
     `- **${rows.length} findings** over ${run.steps} steps and ${run.frames} frames — ${bySeverity.join(" · ")}.`,
-    `- **The eight dead ends the plan lists:** found ${found.length}/8 (${found.join(", ") || "none"})${missing.length ? ` — MISSING ${missing.join(", ")}: the crawl is wrong, not the app` : " — every one, as run 0 must"}.`,
+    `- **The eight dead ends the plan lists:** found ${found.length}/8 (${found.join(", ") || "none"})${missing.length ? ` — MISSING ${missing.join(", ")}: on run 0 the crawl is wrong, not the app; after a lift, check the fixed? list` : " — every one, as run 0 must"}.`,
+    `- **Dead ends with a step now passing (\`fixed?\`):** ${fixed.length ? fixed.join(", ") : "none"}.`,
     `- Contrast + name/role pass: ${run.contrast ? "axe-core ran on every frame (colour-contrast and control-name rules only)" : "NOT RUN — @axe-core/playwright unavailable; no contrast rows below, and that is a gap in this run, not a clean page"}.`,
     `- By kind: ${byKind || "—"}.`,
     "- Judge: every row reads `pending (grind)` until `docs/grind/journey-judge.instructions.md` runs over the frames.",
@@ -103,5 +120,5 @@ export function writeLedger(path, run) {
     "",
   ];
   writeFileSync(path, lines.join("\n"));
-  return { rows, found, missing };
+  return { rows, found, missing, fixed };
 }

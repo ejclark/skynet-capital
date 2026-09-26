@@ -15,8 +15,9 @@ graded alone loses the step before it. `effort: high` because this is a judgment
 rendered page against a rubric (`docs/COMPUTE.md`: anything that judges runs at `high`); the crawl
 itself deliberately makes NO model call, so this chore is the only place the judge line is
 answered. `isolation: worktree` because step 1 checks out its own branch. Fan as wide as the member
-list — one member's rows never overlap another's, and the ledger is rewritten per row, not per file
-(step 5), so two items landing at once do not race.
+list — one member's rows never overlap another's (the ledger sorts rows by member, so each item's
+edits and added rows sit in its own block), and each member's per-journey summary goes in its own
+file (step 5), so two items landing at once touch no shared lines.
 
 ## Goal
 
@@ -47,8 +48,10 @@ against the step's own judge line — and the grades are honest about the frame,
    severity · fix · your grade). A `yes` on a step that has a `known gap` row is a disagreement
    worth one sentence in the PR body, not a silent overwrite — the gap stays, the grade says `yes`.
 5. Edit `docs/members/friction-ledger.md`: replace `pending (grind)` in every row of this member
-   with the grade. Add a `## Judge — <member>` section under "Reading the columns" with one line
-   per journey (`j1 the first ten minutes — yes 2 · partly 1 · no 2`). Touch no other member's rows.
+   with the grade, and insert any row step 4 added inside this member's block (rows are sorted by
+   member, then severity). Touch no other member's rows and no shared line. Write the per-journey
+   summary to its own file, `docs/members/judge/<member>.md` — a `# Judge — <member>` heading, the
+   run date, then one line per journey (`j1 the first ten minutes — yes 2 · partly 1 · no 2`).
 6. `npm run mermaid:lint docs/members/maps.md` (unchanged, but the ledger sits beside it) and
    `npm run lint` by exit status. Commit `docs(members): judge <member>'s crawl frames`, push with
    retries, open the PR with `scripts/ship.sh open` and a waived picture

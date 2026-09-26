@@ -6,6 +6,7 @@ _Run 2026-09-26 (run 0 = the baseline before any lift). Written by `scripts/craw
 
 - **73 findings** over 76 steps and 76 frames — high 14 · medium 51 · low 8.
 - **The eight dead ends the plan lists:** found 8/8 (1, 2, 3, 4, 5, 6, 7, 8) — every one, as run 0 must.
+- **Dead ends with a step now passing (`fixed?`):** none.
 - Contrast + name/role pass: axe-core ran on every frame (colour-contrast and control-name rules only).
 - By kind: `known gap` 22 · `disabled-reason-hidden` 4 · `dangling-anchor` 2 · `axe:color-contrast` 28 · `promise-no-target` 12 · `disabled-no-reason` 5.
 - Judge: every row reads `pending (grind)` until `docs/grind/journey-judge.instructions.md` runs over the frames.

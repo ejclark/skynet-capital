@@ -11,7 +11,9 @@ import { SHARED_CONFIG } from "./e2e/playwright.shared";
 // flow standing in front of every spec.
 export default defineConfig({
   ...SHARED_CONFIG,
-  testIgnore: ["**/login.spec.ts", "**/ct/**"],
+  // journeys.spec.ts has its own config (playwright.journeys.config.ts): it needs frozen fixtures
+  // and, for most members, the session boot — collecting it here would only ever skip it.
+  testIgnore: ["**/login.spec.ts", "**/ct/**", "**/journeys.spec.ts"],
   use: {
     ...SHARED_CONFIG.use,
     baseURL: "http://localhost:8787",

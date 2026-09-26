@@ -38,10 +38,7 @@
           "goto": "/app/u/sauron",
           "sees": "the footer promises 'click a symbol for its fill timeline'; the symbols do not click",
           "ears": "WHEN the desk promises an interaction, the app shall have a target for it.",
-          "expect": [
-            { "text": "click a symbol for its fill timeline" },
-            { "role": "button", "name": "fill timeline", "absent": false }
-          ],
+          "expect": [{ "text": "click a symbol for its fill timeline", "absent": true }],
           "known_gap": "dead end 5 — 'click a symbol for its fill timeline' names a retired accordion (app/src/routes/u.$id.index.tsx:92)",
           "where": "app/src/routes/u.$id.index.tsx:92",
           "severity": "medium",

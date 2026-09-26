@@ -49,7 +49,7 @@ in one is a step in the other, same ids.
           "only": "desktop",                     // optional — a step that exists at one width only
           "sees": "the league, no cue to onboard",                // plain words, what a human sees
           "ears": "WHEN a signed-in member with no linked account opens /app/leaderboard, the app shall show a visible next step to onboarding.",
-          "expect": [ { "url": "/app/leaderboard" }, { "role": "link", "name": "Onboarding" } ],
+          "expect": [ { "role": "link", "name": "Onboarding" } ],   // the EARS outcome, never the defect
           "act": { "click": { "role": "link", "name": "Profile" } },     // optional; performed AFTER expect
           "known_gap": "dead end 1 — lands on the leaderboard with no onboarding cue",  // optional; the step is test.fail() until fixed
           "where": "src/server/auth/oauth-callback.ts:79",             // with known_gap: the ledger's file:line
@@ -76,13 +76,18 @@ holds:
 **`known_gap`** is the ratchet. `e2e/journeys.spec.ts` marks the step `test.fail(true, known_gap)`,
 so the suite is green while the gap is real and turns **red the day the gap is fixed** — the fix
 then deletes the `known_gap` line and the step guards the fix from then on. The crawl reports the
-same event as a `fixed?` row. Never delete a step to make a run green.
+same event as a `fixed?` row. Never delete a step to make a run green. A known-gap step's expects
+assert the OUTCOME its EARS line asks for, never the defect: an expect that requires today's wrong
+URL or today's stale copy fails the natural fix too, so the gap reads as open forever and the
+ratchet never fires (a promise with no target is `{ "text": "<the promise>", "absent": true }`).
 
 ## How the spec and the crawl consume it
 
 - **`e2e/journeys.spec.ts`** reads every journey file at module load: one `describe` per journey ×
-  viewport, one `test` per step titled `<id> — <EARS line>`. Gated behind `JOURNEYS=1` (CI wiring
-  is a platter item — workflow files are protected). The server picks one auth mode per boot, so:
+  viewport, one `test` per step titled `<id> — <EARS line>`. Only its own config collects it
+  (the default `npm run test:e2e` lists it in `testIgnore` — no skipped tests); CI wiring is a
+  platter item, because workflow files are protected. The server picks one auth mode per boot, so
+  each run collects only the members its boot can serve:
   - session fixtures: `npm run test:e2e:journeys` (OAuth with fake credentials +
     `scripts/crawl/fixtures/owner-links.json`; the spec mints the `skynet_session` cookie with
     `scripts/crawl/mint-session.ts`)
@@ -122,8 +127,8 @@ the app** — fix the probe or the step, never the ledger.
 when the history read carries no equity series), and the cockpit's whole Overview — standing, the
 money strip, the positions blotter — becomes one sentence, "Net worth is unreachable right now."
 The route's own header promises "one unreachable account never blanks the rest"; a thrown
-`TypeError` escapes that guard. It is pinned as `known_gap` on the cockpit steps of `eric`,
-`returning-trader` and `phone-only`, and those members reach their guidance through the desk
+`TypeError` escapes that guard. It is pinned as `known_gap` on the cockpit steps of `eric` and
+`returning-trader`, and those members reach their guidance through the desk
 (`/app/u/human-eric`) until it is fixed. A fix in `src/` is outside slice 0 (add-only).
 
 ## How a member edits their own file
@@ -137,5 +142,8 @@ journey you take that is missing: add the steps in plain words and a session tur
 JSON. Nothing in these files is read by the running app; they change what gets built next.
 
 **The rule for a real member:** quote, never paraphrase; date every quote; every inference is a
-hypothesis with a dated, observable falsifier. A member file that states a preference the member
+hypothesis with a dated, observable falsifier. A quote keeps the member's words and their order:
+spelling slips are corrected silently, anything else — a cut (`…`), two messages joined, list
+numbering dropped — is marked. Quote only what the member said to the project (a session, an
+issue, a PR); never a private profile or preference text. A member file that states a preference the member
 never said, as fact, is a defect.

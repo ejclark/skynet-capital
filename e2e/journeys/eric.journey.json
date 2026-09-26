@@ -121,7 +121,7 @@
           "goto": "/app/accounts",
           "sees": "the split, with nothing to compare it to — no target has ever been asked for",
           "ears": "WHEN the owner reads the split, the app shall show it against a target allocation he set once, and name what to trim or add.",
-          "expect": [{ "text": "target", "within": "main" }],
+          "expect": [{ "text": "target allocation", "within": "main" }],
           "known_gap": "no target allocation exists anywhere (app/src/shell/money-strip.tsx shows the split only; app/src/routes/settings.tsx asks for none), so rebalance guidance has nothing to read",
           "where": "app/src/shell/money-strip.tsx:9",
           "severity": "medium",

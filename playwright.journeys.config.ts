@@ -11,10 +11,10 @@ const executablePath = resolveChromium();
 
 // The member journeys (e2e/journeys/*.journey.json → e2e/journeys.spec.ts), one boot per auth
 // mode — the server picks ONE mode per boot (playwright.auth.config.ts says why), so this config
-// runs in whichever mode `JOURNEYS_MODE` names and the spec skips the fixtures the boot cannot serve:
+// runs in whichever mode `JOURNEYS_MODE` names and the spec leaves out the fixtures the boot cannot serve:
 //
-//   JOURNEYS=1 npx playwright test -c playwright.journeys.config.ts                       # session (default)
-//   JOURNEYS=1 JOURNEYS_MODE=open npx playwright test -c playwright.journeys.config.ts    # anonymous
+//   npx playwright test -c playwright.journeys.config.ts                       # session (default)
+//   JOURNEYS_MODE=open npx playwright test -c playwright.journeys.config.ts    # anonymous
 //
 // `session` boots OAuth with the crawl's fake credentials and its owner-links fixture
 // (crawl@example.test → human-eric); the spec mints the `skynet_session` cookie itself
