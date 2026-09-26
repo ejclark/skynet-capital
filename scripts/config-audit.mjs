@@ -216,7 +216,7 @@ function main() {
   const caps = capabilities();
   const orphans = orphanFindings(caps);
   const contradictions = contradictionFindings(caps);
-  const { clusters, correctionCount } = recurringIntents();
+  const { clusters, correctionCount, logPresent, malformed } = recurringIntents();
   const floorFindings = computeFloorFindings(caps);
 
   const line = "─".repeat(90);
@@ -236,18 +236,24 @@ function main() {
   console.log(
     "\n③ Recurring intent themes (candidates to templatize / codify into a skill or rule):",
   );
-  if (clusters.length) {
-    for (const group of clusters.slice(0, 8)) {
-      console.log(`  • ${group.length} similar prompts, e.g.:`);
-      for (const p of group.slice(0, 3)) console.log(`      – "${p}…"`);
-    }
-    if (clusters.length > 8) console.log(`  • …and ${clusters.length - 8} more clusters.`);
+  if (!logPresent) {
+    // Named skip, not "none above threshold": nothing was mined (config-audit-intent-clusters.mjs).
+    console.log("  · data/duel-log.jsonl absent — check ③ skipped (local, git-ignored hook log).");
   } else {
-    console.log("  • none above threshold");
+    if (clusters.length) {
+      for (const group of clusters.slice(0, 8)) {
+        console.log(`  • ${group.length} similar prompts, e.g.:`);
+        for (const p of group.slice(0, 3)) console.log(`      – "${p}…"`);
+      }
+      if (clusters.length > 8) console.log(`  • …and ${clusters.length - 8} more clusters.`);
+    } else {
+      console.log("  • none above threshold");
+    }
+    if (malformed) console.log(`  · ${malformed} malformed duel-log line(s) skipped.`);
+    console.log(
+      `\n  ${correctionCount} intent(s) immediately followed a subagent result — likely corrections against just-produced work (the richest templatization signal).`,
+    );
   }
-  console.log(
-    `\n  ${correctionCount} intent(s) immediately followed a subagent result — likely corrections against just-produced work (the richest templatization signal).`,
-  );
 
   console.log(
     "\n④ Compute-routing floor (model + effort below the docs/COMPUTE.md class floor — the no-shortcuts guard):",
