@@ -1,0 +1,184 @@
+{
+  "member": "returning-trader",
+  "source": "docs/members/returning-trader.md",
+  "fixture": { "kind": "session", "email": "crawl@example.test", "participant": "human-eric" },
+  "viewports": ["phone", "desktop"],
+  "journeys": [
+    {
+      "id": "j1",
+      "name": "sell a covered call on a position I hold",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the cockpit: the account switcher, Overview · Activity",
+          "ears": "WHEN a member with one linked account opens Profile, the app shall open that account's cockpit on Overview.",
+          "expect": [
+            { "url": "/app/accounts" },
+            { "role": "button", "name": "Overview" },
+            { "role": "link", "name": "Add an account" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/accounts",
+          "sees": "'Net worth is unreachable right now.' — and the positions blotter is gone with it",
+          "ears": "WHEN the member opens Overview, the app shall show the held positions with a way into each one's guidance, even when net worth cannot be read.",
+          "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
+          "known_gap": "crawl finding 9 — /api/accounts/networth answers 500 on the offline fixture (`h.equity.forEach`, src/server/networth-api-routes.ts:49, when the history read has no equity series); the Overview then says 'Net worth is unreachable right now.' and hides the positions blotter with it",
+          "where": "src/server/networth-api-routes.ts:49",
+          "severity": "high",
+          "fix": "S",
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s3",
+          "only": "desktop",
+          "goto": "/app/u/human-eric",
+          "sees": "the desk's blotter: EEM, Guidance on the row; they click it",
+          "ears": "WHEN the member opens their desk, the app shall show each held position with a way into its guidance.",
+          "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
+          "act": { "click": { "role": "link", "name": "Guidance" } },
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s3p",
+          "only": "phone",
+          "goto": "/app/u/human-eric",
+          "sees": "the desk's positions as cards; the EEM card is the way into Trade",
+          "ears": "WHEN the desk renders at 390px, the app shall show each position as one tappable card into Trade.",
+          "expect": [{ "role": "link", "name": "EEM" }],
+          "act": { "click": { "role": "link", "name": "EEM" } },
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM&section=guidance",
+          "sees": "Trade, EEM prefilled, the Guidance pane (offline: 'No live quote for EEM — nothing to advise on')",
+          "ears": "WHEN the member follows a position into Trade, the app shall open Trade with that symbol and its guidance pane.",
+          "expect": [
+            { "url": "/app/trade?symbol=EEM" },
+            { "role": "heading", "name": "Trade" },
+            { "text": "Guidance" }
+          ],
+          "judge": "can this reader tell whether to sell the call today?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "the rail's back link reads '← Back to account' and points at the desk, not the cockpit",
+          "ears": "WHEN the member wants to return from Trade to their book, the app shall link back to the cockpit they came from.",
+          "expect": [{ "role": "link", "name": "Back to account", "href": "/app/accounts" }],
+          "known_gap": "dead end 6 — Trade's '← Back to account' goes to the desk /u/:id, not the cockpit (app/src/routes/trade.tsx:698)",
+          "where": "app/src/routes/trade.tsx:698",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does the reader land where they started?"
+        },
+        {
+          "id": "s6",
+          "only": "desktop",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "the docked bench: ticket left, chart right, orders below — no Chain entry",
+          "ears": "WHEN Trade is docked at desktop width, the app shall offer an entry to the standalone options chain.",
+          "expect": [{ "role": "button", "name": "Chain", "within": "main" }],
+          "known_gap": "dead end 8 — docked Trade has no UI entry to the standalone Chain (app/src/routes/trade.tsx:113 lists it; the docked layout never renders the switch)",
+          "where": "app/src/routes/trade.tsx:113",
+          "severity": "medium",
+          "fix": "M",
+          "judge": "can the reader find the chain from here?"
+        }
+      ]
+    },
+    {
+      "id": "j2",
+      "name": "the fill on Activity",
+      "steps": [
+        {
+          "id": "s1",
+          "only": "phone",
+          "goto": "/app/trade?desk=human-eric&section=chain",
+          "sees": "the Chain pane: 'Pick a symbol on the Ticket to browse its options chain.' — no input here",
+          "ears": "WHEN a pane needs a symbol it does not have, the app shall offer the symbol input in that pane.",
+          "expect": [
+            { "text": "Pick a symbol on the Ticket" },
+            { "role": "textbox", "name": "Symbol", "within": "main" }
+          ],
+          "known_gap": "dead end 3 — the Chain / Chart / Guidance panes say 'Pick a symbol on the Ticket…' with no input of their own (app/src/shell/chain-section.tsx:125, chart-section.tsx:126, guidance-section.tsx:112)",
+          "where": "app/src/shell/chain-section.tsx:125",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/activity",
+          "sees": "the activity feed — fills, orders, the kinds chips",
+          "ears": "WHEN the member opens Activity, the app shall show the feed with the newest event first.",
+          "expect": [{ "role": "heading", "name": "Activity" }],
+          "judge": "can the reader find today's fill?"
+        }
+      ]
+    },
+    {
+      "id": "j3",
+      "name": "my own desk, and back",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the cockpit — nothing links to the desk page for this same account",
+          "ears": "WHEN the member is on their cockpit, the app shall link the other view of the same account (the desk) or fold it in.",
+          "expect": [{ "role": "link", "name": "desk", "within": "main" }],
+          "known_gap": "dead end 6 — /accounts never links your own desk; two profile concepts, no bridge (app/src/routes/accounts.tsx; app/src/shell/desk-rail.tsx)",
+          "where": "app/src/routes/accounts.tsx:306",
+          "severity": "low",
+          "fix": "M",
+          "judge": "does the reader know there are two pages for one account?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/u/human-eric",
+          "sees": "the desk: tiles, blotter, New trade; the rail's only way out is '← Leaderboard'",
+          "ears": "WHEN the member is on their own desk, the app shall link back to their cockpit.",
+          "expect": [{ "role": "link", "name": "Accounts", "within": "nav.rail" }],
+          "known_gap": "dead end 6 — the desk rail always says '← Leaderboard' (app/src/shell/desk-rail.tsx:78); no way back to /accounts",
+          "where": "app/src/shell/desk-rail.tsx:78",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does the reader land where they started?"
+        }
+      ]
+    },
+    {
+      "id": "j4",
+      "name": "playbooks, twice",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/playbooks",
+          "sees": "'Prove the play by hand, then arm it' — the WIP chapter, Arm · soon disabled",
+          "ears": "WHEN the member opens the Profile's Playbooks chapter, the app shall relate it to the Playbook Store (one playbook system, not two).",
+          "expect": [
+            { "role": "heading", "name": "Prove the play by hand" },
+            { "role": "link", "name": "Playbook Store", "within": "main" }
+          ],
+          "known_gap": "dead end 7 — two unrelated 'Playbooks': the Profile chapter with a disabled Arm (app/src/routes/playbooks.tsx:41) and R&D's subscribe-able store (app/src/shell/playbooks-section.tsx:84)",
+          "where": "app/src/routes/playbooks.tsx:41",
+          "severity": "medium",
+          "fix": "L",
+          "judge": "does the reader know which Playbooks this is?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/research?section=playbooks",
+          "sees": "the Playbook Store; 'Subscribe as' in the rail at desktop, folded on a phone",
+          "ears": "WHEN the member opens R&D → Playbooks, the app shall show the store with a subscribe-as account picker.",
+          "expect": [{ "role": "heading", "name": "Playbooks" }],
+          "judge": "does the reader know which Playbooks this is?"
+        }
+      ]
+    }
+  ]
+}

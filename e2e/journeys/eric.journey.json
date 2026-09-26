@@ -1,0 +1,194 @@
+{
+  "member": "eric",
+  "source": "docs/members/eric.md",
+  "fixture": { "kind": "session", "email": "crawl@example.test", "participant": "human-eric" },
+  "viewports": ["phone", "desktop"],
+  "journeys": [
+    {
+      "id": "j1",
+      "name": "the Monday read",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the cockpit opens on his account: the switcher, Overview · Activity",
+          "ears": "WHEN the owner opens Profile, the app shall open his own account's cockpit on Overview.",
+          "expect": [
+            { "url": "/app/accounts" },
+            { "role": "button", "name": "Overview" },
+            { "role": "link", "name": "Add an account" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/accounts",
+          "sees": "'Net worth is unreachable right now.' where standing, the money strip and the blotter should be",
+          "ears": "WHEN the owner opens the cockpit, the app shall show the book's standing and what needs a decision above the fold, even when one feed cannot be read.",
+          "expect": [{ "text": "Where your money is" }, { "text": "Return by window" }],
+          "known_gap": "crawl finding 9 — /api/accounts/networth answers 500 on the offline fixture (`h.equity.forEach`, src/server/networth-api-routes.ts:49); the whole Overview — standing, money strip, positions — is replaced by one sentence",
+          "where": "src/server/networth-api-routes.ts:49",
+          "severity": "high",
+          "fix": "S",
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/accounts",
+          "sees": "no calendar on the book — the week's events live on R&D, a tab away",
+          "ears": "WHEN the owner reads the book on a Monday, the app shall show the week's events that touch the tickers held, on the same page.",
+          "expect": [{ "role": "button", "name": "week", "within": "main" }],
+          "known_gap": "the calendar (app/src/shell/event-horizon.tsx) exists only as R&D's rail control; the cockpit has no 'when' — the date key never joins the book",
+          "where": "app/src/shell/event-horizon.tsx:1",
+          "severity": "medium",
+          "fix": "L",
+          "judge": "does this reader know what is happening this week to what they hold?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/research",
+          "sees": "R&D: the calendar, the board's calls, the day lens fogged behind rung 501",
+          "ears": "WHEN the owner opens R&D, the app shall show the calendar with the current range and the calls in it.",
+          "expect": [{ "role": "heading", "name": "R&D" }],
+          "judge": "can this reader tell which events matter to their book?"
+        }
+      ]
+    },
+    {
+      "id": "j2",
+      "name": "take profit or hold",
+      "steps": [
+        {
+          "id": "s1",
+          "only": "desktop",
+          "goto": "/app/u/human-eric",
+          "sees": "the desk's blotter: EEM, Guidance on the row; he clicks it",
+          "ears": "WHEN the owner asks whether to take profit on a position, the app shall offer that position's guidance from the blotter.",
+          "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
+          "act": { "click": { "role": "link", "name": "Guidance" } },
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s1p",
+          "only": "phone",
+          "goto": "/app/u/human-eric",
+          "sees": "the desk's positions as cards; the EEM card is the way in",
+          "ears": "WHEN the desk renders on a phone, the app shall show each position as one tappable card into Trade.",
+          "expect": [{ "role": "link", "name": "EEM" }],
+          "act": { "click": { "role": "link", "name": "EEM" } },
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM&section=guidance",
+          "sees": "the Guidance pane for EEM (offline: 'No live quote for EEM — nothing to advise on'; live: the lever calls — call · confidence · why · what would change this)",
+          "ears": "WHEN the owner opens a position's guidance, the app shall open the guidance pane for that symbol and say when it cannot advise.",
+          "expect": [{ "url": "/app/trade?symbol=EEM" }, { "text": "Guidance" }],
+          "judge": "can this reader tell whether to take profit today?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM&section=guidance",
+          "sees": "a per-position sheet; nothing says what taking profit here does to the whole book",
+          "ears": "WHEN a lever call says take profit, the app shall celebrate the rung beside the explanation of why it was right.",
+          "expect": [{ "text": "Lock in profit", "within": "main" }],
+          "known_gap": "profit-take exists only as a decision-card kind (app/src/shell/decision-pager.tsx:26 'Lock in profit'); no celebration is paired with its explanation on the guidance sheet",
+          "where": "app/src/shell/decision-pager.tsx:26",
+          "severity": "low",
+          "fix": "M",
+          "judge": "does this reader feel the win and know why it was earned?"
+        }
+      ]
+    },
+    {
+      "id": "j3",
+      "name": "rebalance",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the money strip should be here — shares · options · cash as a bar; offline it is one sentence",
+          "ears": "WHEN the owner reads where the money is, the app shall show the split as amounts and shares of the whole.",
+          "expect": [{ "text": "Where your money is" }, { "text": "Cash ready to use" }],
+          "known_gap": "crawl finding 9 — the money strip is the net-worth card's bottom row (app/src/shell/money-strip.tsx:9) and vanishes with the 500 from src/server/networth-api-routes.ts:49",
+          "where": "app/src/shell/money-strip.tsx:9",
+          "severity": "high",
+          "fix": "S",
+          "judge": "can this reader tell what is over- or under-weight?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/accounts",
+          "sees": "the split, with nothing to compare it to — no target has ever been asked for",
+          "ears": "WHEN the owner reads the split, the app shall show it against a target allocation he set once, and name what to trim or add.",
+          "expect": [{ "text": "target", "within": "main" }],
+          "known_gap": "no target allocation exists anywhere (app/src/shell/money-strip.tsx shows the split only; app/src/routes/settings.tsx asks for none), so rebalance guidance has nothing to read",
+          "where": "app/src/shell/money-strip.tsx:9",
+          "severity": "medium",
+          "fix": "L",
+          "judge": "can this reader tell what to trim or add?"
+        }
+      ]
+    },
+    {
+      "id": "j4",
+      "name": "wait",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM&section=guidance",
+          "sees": "the Guidance pane; live, a lever whose call is Wait with what would change it",
+          "ears": "WHEN a lever's call is wait, the app shall say so as a first-class call and name what would change it.",
+          "expect": [{ "text": "Guidance" }, { "text": "EEM" }],
+          "judge": "does this reader know they are waiting on purpose?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/accounts",
+          "sees": "the book — no standing 'wait' anywhere, no date that reopens the question",
+          "ears": "WHEN the owner has decided to wait, the app shall carry the wait on the book with the date that reopens it.",
+          "expect": [{ "text": "Wait until", "within": "main" }],
+          "known_gap": "'wait' is per-position only (src/options/position-guidance-rules.ts:231 CALL_WORDS.WAIT); nothing at book level carries a wait or the date that reopens it, and the calendar's range never reaches /accounts",
+          "where": "src/options/position-guidance-rules.ts:231",
+          "severity": "medium",
+          "fix": "L",
+          "judge": "does this reader know when to look again?"
+        }
+      ]
+    },
+    {
+      "id": "j5",
+      "name": "the phone check",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the cockpit at 390 — the switcher, the section switch as a row",
+          "ears": "WHEN the owner opens the cockpit on a phone, the app shall show the account and the section switch above the fold.",
+          "expect": [
+            { "role": "button", "name": "Overview" },
+            { "role": "link", "name": "Add an account" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM&section=guidance",
+          "sees": "the Guidance pane at 390: one pane, the switch across the top",
+          "ears": "WHEN the guidance renders on a phone, the app shall show the pane alone with the pane switch visible.",
+          "expect": [{ "text": "Guidance" }, { "role": "button", "name": "Ticket" }],
+          "judge": "can this reader tell whether to act, without scrolling?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/research",
+          "sees": "R&D at 390: the calendar in the phone strip, the fog notice beside the day lens",
+          "ears": "WHEN R&D renders on a phone, the app shall keep the range control and its fog notice visible without hover.",
+          "expect": [{ "role": "heading", "name": "R&D" }],
+          "judge": "can this reader change the week from here?"
+        }
+      ]
+    }
+  ]
+}

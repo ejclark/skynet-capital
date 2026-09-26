@@ -1,0 +1,73 @@
+{
+  "member": "phone-only",
+  "source": "docs/members/phone-only.md",
+  "fixture": { "kind": "session", "email": "crawl@example.test", "participant": "human-eric" },
+  "viewports": ["phone"],
+  "journeys": [
+    {
+      "id": "j1",
+      "name": "the whole app, one thumb",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the cockpit at 390: the account switcher, the section switch as a row",
+          "ears": "WHEN the cockpit renders at 390px, the app shall keep every section reachable without horizontal page scroll.",
+          "expect": [
+            { "role": "button", "name": "Overview" },
+            { "role": "link", "name": "Add an account" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/u/human-eric",
+          "sees": "the desk's positions as cards; EEM one tap from Trade",
+          "ears": "WHEN positions render at 390px, the app shall show each position as one tappable card into Trade.",
+          "expect": [{ "role": "link", "name": "EEM" }],
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "the folded bench: one pane, the section switch across the top",
+          "ears": "WHEN Trade renders at 390px, the app shall show one pane at a time with the pane switch visible.",
+          "expect": [{ "role": "heading", "name": "Trade" }, { "role": "button", "name": "Chain" }],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/u/sauron/thesis",
+          "sees": "the Subscribe cluster, greyed; no sentence says why",
+          "ears": "WHEN a disabled control renders on a phone, the app shall show its reason without hover.",
+          "expect": [{ "role": "heading", "name": "thesis" }, { "text": "isn't wired yet" }],
+          "known_gap": "dead end 8 — Thesis Subscribe's reason lives only in title/aria-label; there is no hover on a phone (app/src/shell/thesis-drawer.tsx:81)",
+          "where": "app/src/shell/thesis-drawer.tsx:81",
+          "severity": "high",
+          "fix": "S",
+          "judge": "does this reader know why Subscribe is off?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/playbooks",
+          "sees": "'Arm · soon', greyed; the reason is a title tooltip",
+          "ears": "WHEN a disabled control renders on a phone, the app shall show its reason without hover.",
+          "expect": [{ "text": "Arming opens to human accounts with Season 1" }],
+          "known_gap": "dead end 8 — 'Arm · soon' carries its reason only in title (app/src/routes/playbooks.tsx:42)",
+          "where": "app/src/routes/playbooks.tsx:42",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does this reader know why Arm is off?"
+        },
+        {
+          "id": "s6",
+          "goto": "/app/research",
+          "sees": "R&D with the calendar folded into the phone strip, the day lens fogged",
+          "ears": "WHEN R&D renders at 390px, the app shall keep the calendar's range control reachable and its fog notice readable.",
+          "expect": [{ "role": "heading", "name": "R&D" }],
+          "judge": "can this reader change the week from here?"
+        }
+      ]
+    }
+  ]
+}
