@@ -364,7 +364,7 @@
         "solveAtmIv()",
         "JsonlIvHistoryStore"
       ],
-      "mapped_to_container": "split — iv-rank reaches runtime:api (guidance-market imports src/research); iv-instrument/IvSample are CLI-only (iv-clock-wiring, week-study) → none"
+      "mapped_to_container": "runtime:api — iv-rank via guidance-market (the guidance richness read); iv-instrument/IvSample via the IV clock (iv-clock-wiring → iv-sampler, started by serve-dashboard.ts)"
     },
     {
       "community": "65 providers.ts (9) · 93 resolve-auth.ts (11) · 91 claim-form.ts (13) · 100 controls-form.ts (11) · 114 account-forms.spec.ts (9)",

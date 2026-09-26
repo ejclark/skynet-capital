@@ -366,7 +366,7 @@ C4Dynamic
 | 60 collections-view.ts (19, 0.18) | Collection, CollectionMember, DeskIndex | none — deleted |
 | 61 trade-ledgers-view.ts (16, 0.16) | DecisionContext, decisionContextFor(), foldedLedger() | none — deleted; decision-context.ts survives → runtime:api content |
 | 62 order-ticket.ts (16, 0.16) | previewOrder(), previewClose(), TicketContext | runtime:api (desk, src/trading) |
-| 64 iv-rank.ts (18) · 79 iv-instrument.ts (8) · 83 IvSample (4) | IvMetric, IV_WINDOW_DAYS, recordIvTick() | split — iv-rank reaches runtime:api (guidance-market imports src/research); iv-instrument/IvSample are CLI-only (iv-clock-wiring, week-study) → none |
+| 64 iv-rank.ts (18) · 79 iv-instrument.ts (8) · 83 IvSample (4) | IvMetric, IV_WINDOW_DAYS, recordIvTick() | runtime:api — iv-rank via guidance-market (the guidance richness read); iv-instrument/IvSample via the IV clock (iv-clock-wiring → iv-sampler, started by serve-dashboard.ts) |
 | 65 providers.ts (9) · 93 resolve-auth.ts (11) · 91 claim-form.ts (13) · 100 controls-form.ts (11) · 114 account-forms.spec.ts (9) | googleProvider(), AlpacaConnectProvider, ownerEmails() | runtime:api (router/auth + owner gates: invites, claims, Mission Control) |
 | 66 shoot-portfolio.mjs (16) · 129 shoot-tower.mjs (5) · 137 shoot-login.mjs (6) | playwright-core (betweenness 0.059), CANDIDATES, EXE | none — screenshot tooling, renamed to scripts/shoot/*.mjs (22 files; docs/PICTURES.md); neither map names it; closest is operating:session |
 | 67 earnings-cycle.mjs (18, 0.27) · 68 intraday-edges.mjs (17, 0.27) | controlBaseRate(), controlFade(), binomTail() | operating:session (symbol-sweep Workflow) / research protocol; excluded from RUNTIME by scope |
