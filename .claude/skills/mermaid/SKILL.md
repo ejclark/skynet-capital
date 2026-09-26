@@ -45,8 +45,7 @@ Cross-cutting cards (open one when the question is not "which type" but "how do 
 - `reference/config-configuration.md` — YAML frontmatter config, directives, the secure keys, per-diagram sections
 - `reference/config-layouts.md` — ELK vs dagre, the hand-drawn look, icon packs and which diagrams take icons
 - `reference/config-accessibility.md` — accTitle/accDescr, KaTeX math, and the parse/render API a headless validator uses
-
-Still to land: the CLI, the ecosystem of renderers, and what each validator can and cannot check.
+- `reference/config-mermaidcli.md` — the CLI, the ecosystem of renderers, and what each validator can and cannot check
 
 ## 2. GitHub is the renderer — what it does and does not draw (11.17.2, read 2026-09-25)
 

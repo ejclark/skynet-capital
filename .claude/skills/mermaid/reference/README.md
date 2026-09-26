@@ -40,3 +40,4 @@ oracle.
 | [config-configuration](config-configuration.md) | Mermaid builds a "render config" for each diagram from up to four layers. In order: the schema defaults (config.schema.y |
 | [config-layouts](config-layouts.md) | The two doc pages are short, and the details that matter are in the config schema, the package READMEs, the per-diagram  |
 | [config-accessibility](config-accessibility.md) | Three pages, one job: give each diagram a text alternative, allow math in labels, and validate diagrams in code before a |
+| [config-mermaidcli](config-mermaidcli.md) | The mermaid docs page config/mermaidCLI.md is now a one-line stub ("mermaid CLI has been moved to mermaid-cli. Please re |

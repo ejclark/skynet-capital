@@ -95,8 +95,7 @@ GitHub rendered Mermaid 11.17.2 on 2026-09-25 (read from its production bundle; 
 - The docs' own example HTML has the title 'Big decisions' where the source says 'Big Decisions'. It is illustrative, not a literal output.
 
 ## Examples (Mermaid Chart MCP (validate_and_render_mermaid_diagram) was available and used, one call at a time after one collision. A1 flowchart: valid; SVG has role="graphics-document document", aria-roledescription="flowchart-v2", aria-labelledby and aria-describedby, and <title>/<desc> with the expected text. A2 sequence: valid; the multi-line accDescr came out as a 3-line <desc> (the first attempt's result file was overwritten by A1's because both calls landed in the same millisecond; re-run on its own). A3 stateDiagram-v2 with frontmatter title: valid; aria-roledescription="stateDiagram", <title>/<desc> present. A4 C4Context: valid, but the SVG has only aria-describedby and <desc>; the accTitle text is drawn as a visible <text> title (confirmed in the 11.17.2 grammar: acc_title calls yy.setTitle). M1 flowchart math: valid; renders MathML <math> in foreignObject. M2 sequence math: valid; 2 KaTeX spans. N1 mindmap with accTitle: INVALID, error "There can be only one root. No parent could be found for (\"accDescr: ...\")" (expected). N2 malformed KaTeX: INVALID, error "KaTeX parse error: Unexpected end of input in a macro argument, expected '}' at end of input: \\frac{1}{" (expected). Cross-check against GitHub's version: all eight went through this repo's lintMermaid (mermaid 11.17.2 + jsdom). A1 to A4, M1 and M2 parse; N1 fails with the same mindmap error; N2 PASSES, which proves the gate misses bad KaTeX. Extra local probes on 11.17.2: an accTitle/accDescr matrix across 22 types (results above); detectType throws before registration; suppressErrors makes parse return false; the parse error .hash shape; sanitisation of secure keys and themeVariables; a 75,792-character diagram parses; render in jsdom fails on CSSStyleSheet and then getBBox.)
-```text
-A1 (MCP valid, flowchart-v2; local 11.17.2 lint ok):
+```mermaid
 flowchart LR
   accTitle: Order lifecycle for a paper trade
   accDescr: A bot proposes an order, the risk gate either approves it into the paper book or rejects it with a reason.
@@ -104,10 +103,8 @@ flowchart LR
   G -->|approve| B[Paper book]
   G -->|reject| R[/Rejected with reason/]
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
-```text
-A2 (MCP valid, sequence; <desc> kept the 3 lines; local lint ok):
+```mermaid
 sequenceDiagram
   accTitle: Ship flow for a PR
   accDescr {
@@ -122,10 +119,8 @@ sequenceDiagram
   S->>G: enable auto-merge
   G-->>S: merge webhook
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
-```text
-A3 (MCP valid, stateDiagram; frontmatter title visible plus accTitle as <title>; local lint ok):
+```mermaid
 ---
 title: Plan lifecycle
 ---
@@ -139,10 +134,8 @@ stateDiagram-v2
   Building --> Shipped
   Shipped --> [*]
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
-```text
-A4 (MCP valid, c4, BUT accTitle drawn as the visible title and no <title> emitted; local lint ok):
+```mermaid
 C4Context
   accTitle: System context for the paper-trading app
   accDescr: A trader uses the app; the app reads quotes from a market-data provider and stores the paper book in its database.
@@ -152,20 +145,16 @@ C4Context
   Rel(trader, app, "Uses")
   Rel(app, md, "Reads quotes")
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
-```text
-M1 (MCP valid, flowchart; MathML <math> inside foreignObject; local lint ok):
+```mermaid
 flowchart LR
   accTitle: Put payoff in math labels
   accDescr: A long call payoff node and a short put payoff node both feed the net position node.
   C["$$\max(S_T - K, 0)$$"] --> N["$$\Pi = \sum_i q_i \, p_i$$"]
   P["$$-\max(K - S_T, 0)$$"] --> N
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
-```text
-M2 (MCP valid, sequence; 2 KaTeX spans; local lint ok):
+```mermaid
 sequenceDiagram
   accTitle: Greeks request with math labels
   accDescr: The bot asks the pricer for delta; the pricer answers with the Black-Scholes call delta.
@@ -175,10 +164,8 @@ sequenceDiagram
   P-->>B: $$\Delta = N(d_1)$$
   Note right of P: $$d_1 = \frac{\ln(S/K) + (r + \sigma^2/2)T}{\sigma\sqrt{T}}$$
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
 ```text
-N1 (expected failure, MCP invalid and local lint invalid):
 mindmap
   accTitle: Surfaces that carry a picture
   accDescr: The root is pictures; branches are PR bodies, issue capsules and plans.
@@ -189,12 +176,10 @@ mindmap
 ```
 _(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
-```text
-N2 (parse/render gap: local 11.17.2 parse and repo lint PASS, MCP render FAILS):
+```mermaid
 flowchart LR
   A["$$\frac{1}{$$"] --> B[Net]
 ```
-_(not for GitHub surfaces — mermaid 11.17.2 will not parse it; shown for recognition)_
 
 ## Sources
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/docs/config/accessibility.md
