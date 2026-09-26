@@ -170,9 +170,11 @@ jobs:
           # Without this the lane can DETECT but never REPAIR. A run of this lane is woken by
           # `workflow_run` and inherits the failed run's actor, so a failure that a bot triggered
           # produced a capsule issue and then died here — verified on the lane's first live outing
-          # (2026-08-22, issue #487). Same two names as the feedback lane, same reasoning; the
+          # (2026-08-22, issue #487). Same names as the feedback lane, same reasoning — `skynet-envoy`
+          # added 2026-09-26: an App-dispatched run (event research, since #2292) died here in 3s
+          # (job 107889665923); workflow-lint rule 8 now checks the inherited actor. The
           # triage job's guards already restrict this to failures on the default branch.
-          allowed_bots: "github-actions,claude"
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see above.
           github_token: ${{ steps.app-token.outputs.token }}
@@ -199,7 +201,7 @@ jobs:
           # resolutions, and the one confirmed broken without it.
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
-          allowed_bots: "github-actions,claude"
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
@@ -224,7 +226,7 @@ jobs:
           # can end in a real research write-up, not just a script fix.
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
-          allowed_bots: "github-actions,claude"
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token }}
           # WebSearch/WebFetch on top of the other repair lanes' tool list — diagnosing a stalled
