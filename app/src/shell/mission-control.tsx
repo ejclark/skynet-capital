@@ -21,6 +21,19 @@ function StateChip({ suspended }: { readonly suspended: boolean }): ReactElement
   );
 }
 
+/** The bot account card's "Mission Control ↓" jump (`settings.tsx`). It reads the same
+ *  `["controls"]` query and renders under the same rule as the panel it points at: a bot owner who
+ *  is not a fleet owner gets no panel, so a link to it would land on an empty anchor. */
+export function MissionControlLink(): ReactElement | null {
+  const controls = useQuery({ queryKey: ["controls"], queryFn: fetchControls });
+  if (!controls.data?.owner) return null;
+  return (
+    <div className="set-links">
+      <a href="#mission-control">Mission Control ↓</a>
+    </div>
+  );
+}
+
 /** @category desk */
 export function MissionControl(): ReactElement | null {
   const queryClient = useQueryClient();

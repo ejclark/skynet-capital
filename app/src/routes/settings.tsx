@@ -16,7 +16,7 @@ import { AccountSwitcher } from "../shell/account-switcher";
 import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
-import { MissionControl } from "../shell/mission-control";
+import { MissionControl, MissionControlLink } from "../shell/mission-control";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
@@ -344,11 +344,7 @@ function AccountCard({
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
-          {account.kind === "bot" ? (
-            <div className="set-links">
-              <a href="#mission-control">Mission Control ↓</a>
-            </div>
-          ) : null}
+          {account.kind === "bot" ? <MissionControlLink /> : null}
           <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />
         </>
