@@ -257,6 +257,44 @@ function checkStateBlock(text, labels, notes) {
   );
 }
 
+/** A state block's top half — the lines between its diagram and its `**Log**` — is Eric's: what
+ *  changed and the next pickup, in plain words (docs/ISSUES.md → The state block; Eric, 2026-09-26:
+ *  "the latest plans seem to have a TON of implementation details that drowns out a lot of the
+ *  updates"). The block cannot fold (`<details>` is sanitized away on the MCP read), so the split is
+ *  positional and this is the only thing that notices it slipping. */
+const STATE_TOP_MAX_LINES = 3;
+/** Paths, function names and commands are the builder's, below the Log. Two code spans leave room
+ *  for a label or a PR-granularity word; a third is the implementation detail creeping back up. */
+const STATE_TOP_MAX_CODE_SPANS = 2;
+
+/** Run on the block itself (the comment's text, passed as the body): notes a top half that runs
+ *  long or reads like a build brief. Advisory, never a problem — taste is pointed at, not gated
+ *  (docs/COACHES.md). The rules line is fixed boilerplate, so it never counts against the budget. */
+function checkStateBlockTop(text, notes) {
+  const heading = /^#{1,6}[ \t]+State block\b.*$/im.exec(text);
+  if (!heading) return;
+  let rest = text.slice(heading.index + heading[0].length);
+  const fence = /^[ \t]*`{3,}[ \t]*mermaid\b[\s\S]*?^[ \t]*`{3,}[ \t]*$/m.exec(rest);
+  if (fence) rest = rest.slice(fence.index + fence[0].length);
+  const end = /^(\*\*Log\*\*|#{1,6}[ \t])/m.exec(rest);
+  const top = (end ? rest.slice(0, end.index) : rest)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !/^\*\*Rules for this block:\*\*/.test(l));
+  const where = "the state block's top half (between the diagram and the Log)";
+  if (top.length > STATE_TOP_MAX_LINES) {
+    notes.push(
+      `${where} runs ${top.length} lines — keep it to ${STATE_TOP_MAX_LINES}: what changed and the next pickup, in plain words; inputs, the done line and the falsifier go under \`### For the builder\` below the Log (docs/ISSUES.md → The state block)`,
+    );
+  }
+  const spans = (top.join("\n").match(/`[^`\n]+`/g) ?? []).length;
+  if (spans > STATE_TOP_MAX_CODE_SPANS) {
+    notes.push(
+      `${where} carries ${spans} inline code spans — paths, function names and commands are the builder's; move them under \`### For the builder\` below the Log (docs/ISSUES.md → The state block)`,
+    );
+  }
+}
+
 /** The vocabulary an issue's labels are checked against — one registry, shared with the lanes that
  *  apply them (scripts/moneypenny/labels.mjs `LABELS`). */
 const KNOWN_LABELS = new Set(LABEL_NAMES);
@@ -304,6 +342,7 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   collectNotes(text, notes);
   if (Array.isArray(labels)) checkLabels(labels, notes);
   checkStateBlock(text, labels, notes);
+  checkStateBlockTop(text, notes);
   checkNeedsFromYou(text, labels, problems, notes);
 
   return { problems, notes };

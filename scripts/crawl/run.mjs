@@ -12,6 +12,10 @@
 // anonymous fixtures, once in OAuth mode for the session ones — never both at once. Never sets a
 // feedback token, so nothing here can file a real issue. The judge line is NOT a model call: the
 // ledger's judge cell reads "pending (grind)" until docs/grind/journey-judge.instructions.md runs.
+//
+// `--phone-audit` adds the phone checks (phone.mjs) at the phone viewport only, written to their
+// own ledger (docs/members/phone-ledger.md, or `--phone-ledger <path>`). Off by default, so a plain
+// run's friction ledger and maps stay comparable with run 0 (#3807).
 
 import { mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -22,6 +26,8 @@ import { writeLedger } from "./ledger.mjs";
 import { locate } from "./locate.mjs";
 import { writeMaps } from "./maps.mjs";
 import { mintSession } from "./mint-session.ts";
+import { probePhone } from "./phone.mjs";
+import { writePhoneLedger } from "./phone-ledger.mjs";
 import { linksIntoRedirects, probeDeadEnds, sameOriginLinks } from "./probes.mjs";
 import { bootServer, CRAWL_SECRET } from "./server.mjs";
 import {
@@ -53,6 +59,8 @@ function args(argv) {
     out: get("--out") ?? `docs/shots/crawl-${date}`,
     ledger: get("--ledger") ?? "docs/members/friction-ledger.md",
     maps: get("--maps") ?? "docs/members/maps.md",
+    phoneAudit: argv.includes("--phone-audit"),
+    phoneLedger: get("--phone-ledger") ?? "docs/members/phone-ledger.md",
   };
 }
 
@@ -76,7 +84,17 @@ async function settle(page) {
 }
 
 /** One step: expects → frame → probes → contrast → act. Returns the ledger rows it produced. */
-async function walkStep({ page, member, journey, step, viewport, dir, redirectCache, tally }) {
+async function walkStep({
+  page,
+  member,
+  journey,
+  step,
+  viewport,
+  dir,
+  redirectCache,
+  tally,
+  opts,
+}) {
   const at = {
     member: member.member,
     journey: `${journey.id} ${journey.name}`,
@@ -151,11 +169,25 @@ async function walkStep({ page, member, journey, step, viewport, dir, redirectCa
     );
   }
 
+  if (opts.phoneAudit && viewport === "phone") await phoneAudit(page, at, step, tally.phone);
+
   if (step.act)
     await performAct(page, step.act).catch((err) =>
       console.warn(`crawl: act failed on ${step.goto}: ${err.message}`),
     );
   return rows;
+}
+
+/** The phone checks for one step, into their own tally — never into the friction ledger's rows. */
+async function phoneAudit(page, at, step, phone) {
+  const found = await probePhone(page).catch((err) => {
+    console.warn(`crawl: phone checks failed on ${step.goto}: ${err.message}`);
+    return [];
+  });
+  const where = new URL(page.url()).pathname;
+  phone.steps += 1;
+  phone.pages.add(where);
+  for (const f of found) phone.rows.push({ ...at, page: where, ...f, where: locate(f.snippet) });
 }
 
 async function walkMode(mode, members, opts, tally) {
@@ -202,6 +234,7 @@ async function walkMode(mode, members, opts, tally) {
                   dir,
                   redirectCache,
                   tally,
+                  opts,
                 })),
               );
             } catch (err) {
@@ -234,7 +267,13 @@ async function main() {
   const opts = args(process.argv.slice(2));
   const all = loadJourneys().filter((m) => !opts.members || opts.members.includes(m.member));
   if (all.length === 0) throw new Error("crawl: no journey files matched");
-  const tally = { steps: 0, frames: 0, contrast: false, fixed: [] };
+  const tally = {
+    steps: 0,
+    frames: 0,
+    contrast: false,
+    fixed: [],
+    phone: { rows: [], pages: new Set(), steps: 0 },
+  };
   const rows = [];
   for (const mode of ["open", "session"]) {
     const members = all.filter((m) => (m.fixture.kind === "session") === (mode === "session"));
@@ -259,6 +298,18 @@ async function main() {
   console.log(
     `crawl: dead ends found ${found.join(", ") || "none"}${missing.length ? ` — MISSING ${missing.join(", ")} (fix the probe, not the ledger)` : " — all eight"}`,
   );
+  if (opts.phoneAudit) {
+    const { phone } = tally;
+    const folded = writePhoneLedger(opts.phoneLedger, {
+      date: opts.date,
+      rows: phone.rows,
+      steps: phone.steps,
+      pages: phone.pages.size,
+    });
+    console.log(
+      `crawl: phone checks — ${folded.length} findings over ${phone.pages.size} pages (${phone.steps} phone steps) → ${opts.phoneLedger}${phone.steps === 0 ? " (no phone steps ran — is --viewports missing phone?)" : ""}`,
+    );
+  }
   if (tally.fixed.length)
     console.log(
       `crawl: ${tally.fixed.length} known gap(s) passed — remove their known_gap lines: ${tally.fixed.map(([k]) => k).join(", ")}`,
