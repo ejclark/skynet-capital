@@ -204,6 +204,29 @@ function sidecarFor(pair, lint, opts, mermaidVersion) {
   };
 }
 
+/** Rule 13's number (docs/PICTURES.md): text on a phone is 390 ÷ drawing width × font, the font
+ * being the `classDef default font-size` the diagram sets (Mermaid's own default is 16px). Under
+ * PHONE_FLOOR the second look costs the first read; the shot line flags it. */
+const PHONE_WIDTH = 390;
+const PHONE_FLOOR = 12;
+function phoneFont(side, natural) {
+  if (side?.kind !== "mermaid" || !natural) return null;
+  const font = Number(
+    /classDef default[^\n]*font-size:\s*(\d+(?:\.\d+)?)px/.exec(side.source)?.[1] ?? 16,
+  );
+  // GitHub never scales a drawing up, only down to the column.
+  return Math.round(Math.min(1, PHONE_WIDTH / natural) * font * 10) / 10;
+}
+function phoneLine(pair, natural) {
+  const parts = [];
+  for (const side of ["before", "after"]) {
+    const px = phoneFont(pair[side], natural?.[side]);
+    if (px == null) continue;
+    parts.push(`${side} ${px}px${px < PHONE_FLOOR ? " ⚠ under rule 13's floor" : ""}`);
+  }
+  return parts.length ? ` · phone ${parts.join(", ")}` : "";
+}
+
 /** Every pair in every requested mode — one page per mode, one frame per pair. */
 async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
   for (const mode of MODES[opts.mode]) {
@@ -211,14 +234,21 @@ async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
     for (const [i, pair] of pairs.entries()) {
       const car = sidecars[i];
       const { laid, image } = await shootPair(page, pair, car.lint, mode, opts, mermaidVersion);
-      Object.assign(car, { layout: laid.layout, natural: laid.natural });
+      Object.assign(car, {
+        layout: laid.layout,
+        natural: laid.natural,
+        phone: {
+          before: phoneFont(pair.before, laid.natural?.before),
+          after: phoneFont(pair.after, laid.natural?.after),
+        },
+      });
       car.images.push(image);
       for (const [side, why] of Object.entries(laid.renderErrors))
         car.lint[side] = { ...car.lint[side], ok: false, renderError: why };
       const kb = (image.bytes / 1024).toFixed(1);
       const flag = image.overBudget ? ` ⚠ over ${opts.budget}KB at the quality floor` : "";
       console.log(
-        `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}`,
+        `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}${phoneLine(pair, laid.natural)}`,
       );
     }
     await page.close();

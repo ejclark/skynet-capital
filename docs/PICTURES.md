@@ -101,11 +101,11 @@ config:
     padding: 10
 ---
 flowchart TD
-    body@{ shape: doc, label: "PR body<br/>with a diagram" }
-    body ==> door{"parses like<br/>GitHub?"}
-    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
-    door ==x stop["push refused,<br/>the line and<br/>the token named"]
-    body -.-> red["used to go<br/>straight through<br/>to a red parse box<br/>as the opening frame"]
+    body@{ shape: doc, label: "**PR body, a diagram**<br/>any type GitHub draws" }
+    body ==> door{"`**parses like<br/>GitHub?**<br/>same build, 11.17.2`"}
+    door ==> draws@{ shape: dbl-circ, label: "**GitHub draws it**<br/>light and dark" }
+    door ==x stop["`**push refused**<br/>the line named,<br/>fixed first`"]
+    body -.-> red["`**went straight<br/>through**<br/>a red box<br/>as the frame`"]
     class body,draws,stop paper
     class door gold
     class red removed
@@ -116,11 +116,50 @@ flowchart TD
     classDef default font-size:20px,font-family:Verdana
 ```
 ````
-_The door, in ink mode (promoted by Eric, 2026-09-26: "promote. Phone looks fine"): the new path
-thick and declared first (it lands left), the old path one dotted lane declared last (it lands
-right); the fork asks a question and wears the gold, the cross-head says no, the double circle says
-done, the tense lives in the box. No edge labels. Drop the four `class`/`classDef` colour lines for
-the plain dress; never mix in the teal snippet (rule 11)._
+_The door, in ink mode with its second layer (rules 18 and 11; both Eric's calls, 2026-09-26): the
+new path thick and declared first (it lands left), the old path one dotted lane declared last (it
+lands right); the fork asks a question and wears the gold, the cross-head says no, the double circle
+says done, the tense lives in the box; every node a bold headline and one line of fact, broken by
+hand so the drawing stays as narrow as it was without them (rule 13's number: 15.7 px on a phone
+before the second layer, 15.6 px with it; the first draft with three fact lines measured 10.4 px and
+was reflowed). No edge labels. Drop the four colour lines for the plain dress; never mix in the
+teal snippet._
+
+For a page with room, the same door with boxes of detail beside the spine (rule 18, shape A). It
+measures 9.9 px on a phone (787 px wide), which is why it is a page starter and never a PR frame:
+
+````markdown
+```mermaid
+---
+title: A diagram is parsed before it is pushed, and what the door checks
+config:
+  flowchart:
+    nodeSpacing: 20
+    rankSpacing: 30
+    padding: 8
+---
+flowchart TD
+    body@{ shape: doc, label: "PR body<br/>with a diagram" }
+    body ==> door{"parses like<br/>GitHub?"}
+    subgraph checks ["what the door checks, in order"]
+        direction TB
+        v["the same Mermaid<br/>GitHub runs, 11.17.2"] --> ty["a type GitHub<br/>draws, not 12-only"] --> th["no pinned theme,<br/>both canvases"] --> ic["no icon pack,<br/>it draws a ?"] --> hx["every colour from<br/>a checked-in snippet"]
+    end
+    door -.- checks
+    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    door ==x stop["push refused,<br/>the line and<br/>the token named"]
+    subgraph was ["what it replaced"]
+        direction LR
+        first["check the<br/>first word only"] -.-> red["red parse box<br/>as the opening frame"]
+    end
+    body -.-> was
+    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
+    class first,red removed
+    classDef default font-size:18px,font-family:Verdana
+```
+````
+_Shape A: the checklist stands as a column beside the door (two boxes per rank still holds, rule 3);
+what it replaced sits in its own box. Every added node is a fact the lint enforces._
 
 ````markdown
 ```mermaid
@@ -167,11 +206,11 @@ config:
     padding: 10
 ---
 flowchart TD
-    items@{ shape: docs, label: "three protected<br/>changes,<br/>one commit each" }
-    pr@{ shape: stadium, label: "one held PR,<br/>one click by Eric" }
-    items ==> pr ==> button{"which button<br/>lands it?"}
-    button ==>|Create a merge commit| merged@{ shape: cyl, label: "main: three commits,<br/>any item<br/>reverts alone" }
-    button -->|Squash and merge| squashed@{ shape: cyl, label: "main: one commit,<br/>reverts only<br/>as a block, #3754" }
+    items@{ shape: docs, label: "**three protected changes**<br/>one commit each,<br/>each verified green" }
+    pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
+    items ==> pr ==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
+    button ==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
+    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
     class items,pr,merged paper
     class button gold
     class squashed defect
@@ -272,8 +311,10 @@ dotted, phone direction, and labels a friend with no context reads without stopp
 12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
     accent, at the point where the reader decides or reacts; the one allowed exception is the
     defect beside the decision · three coloured boxes · the fork gets the accent, the rest is paper.
-13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font ·
-    10.6 px effective on a 720 px drawing · lines of about 16 characters,
+13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font,
+    and `npm run shoot:mermaid-pairs` prints that number per side on every shot line (`phone before
+    15.7px, after 15.6px`), flagging anything under 12 px · 10.6 px effective on a 720 px drawing ·
+    lines of about 16 characters,
     `config: flowchart: { nodeSpacing: 24, rankSpacing: 36, padding: 10 }`, and
     `classDef default font-size:20px,font-family:Verdana`, the one font lever that works on
     flowchart and erDiagram (frontmatter `fontSize` is a no-op for flowchart text).
@@ -288,6 +329,18 @@ dotted, phone direction, and labels a friend with no context reads without stopp
 17. **A gitGraph is for branch topology, vertical on a phone.** `gitGraph TB:` with
     `rotateCommitLabel: false` · rotated tags overlapping at 390px · vertical; and never for a story
     about a choice (rule 10).
+18. **The second layer: a spine that reads in ten seconds, then detail that rewards the second
+    look** (Eric, 2026-09-26: "I expected more fine grained elaborate detail"; his pick, "both", by
+    surface). On a PR's opening frame every node carries a bold headline and one line of fact
+    beneath it, no new boxes, and rule 13's number may not drop: the second layer is measured
+    against the spine alone, never eyeballed (the door: 15.7 px → 15.6 px; the first draft with
+    three fact lines fell to 10.4 px and a zero-context reader called the diamond "dense and
+    small"). On a page with room, boxes of detail sit beside the spine (a checklist as a vertical
+    column, what it replaced in its own box). At desk width, both. Every line of detail names
+    something true the reader could act on · a spine that answers no second look, or detail that
+    shrinks the spine below a phone read · the second line first, boxes only where the width
+    allows; a markdown string in a classic label needs the backtick form
+    (`["\`**bold**<br/>fact\`"]`), a `@{ label: }` shape takes it bare.
 
 **Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
@@ -432,6 +485,15 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    held-PR starter drew a merge commit for platters that squashed (#3754) until the design rounds
    redrew it as the choice at open time and the record after landing; where a picture is
    generated from the data beside it, it cannot drift.
+6. **Better is measured, on two axes, before a redraw ships** (Eric, 2026-09-26: "interrogate
+   the decision to objectively measure better or worse"). The mechanical axis is rule 13's number,
+   printed by the pair renderer for the old and the new drawing side by side; the second look may
+   not cost the first read. The reading axis is a blind read: a zero-context reader (a fresh
+   subagent, given only the render and no caption) writes the argument in one sentence, what
+   changed versus what it replaced, and what slowed it; the redraw passes when the sentence
+   matches the line the picture must say and nothing is "cramped" or "cut off". A redraw that
+   wins by eye and loses either axis is reflowed, not shipped; the first rule-18 door lost the
+   number and won the read, and the reflow kept both.
 
 ## Where else this grammar applies
 

@@ -149,6 +149,15 @@ describe("mermaid lint — every block parses under GitHub's Mermaid", () => {
     expect(notes.join(" ")).toContain("is a house noun");
   });
 
+  it("reads the question through rule 18's bold headline and its fact lines", () => {
+    const { notes } = lint(
+      fence(
+        'flowchart TD\n  a --> b{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}\n  b --> c{"`**parses like<br/>GitHub?**<br/>same build`"}',
+      ),
+    );
+    expect(notes.join(" ")).not.toContain("asks no question");
+  });
+
   it("fails a classDef hex outside the checked-in snippets — a look is a mode, switched whole", () => {
     const { code, problems } = lint(
       fence("flowchart TD\n  a --> b\n  classDef hot fill:#FF0000,color:#FFFFFF"),

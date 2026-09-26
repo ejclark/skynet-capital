@@ -306,7 +306,17 @@ function roundThreeFindings(source, head, at, registry) {
   if (/^(flowchart|graph)\b/.test(head)) {
     for (const m of source.matchAll(FORK)) {
       const label = (m[1] ?? "").trim();
-      if (label && !label.endsWith("?")) {
+      // Rule 18 puts the question in the bold headline with fact lines under it, in the backtick
+      // markdown-string form: the headline or the whole label ends in ?, markup stripped.
+      const plain = label.replace(/`/g, "");
+      const headline = /\*\*(.+?)\*\*/s.exec(plain)?.[1]?.trim();
+      const last = plain
+        .split(/<br\s*\/?>/i)
+        .at(-1)
+        ?.replace(/\*\*/g, "")
+        .trim();
+      const asks = headline?.endsWith("?") || last?.endsWith("?");
+      if (label && !asks) {
         notes.push(
           `${at}: fork "${label}" asks no question — a fork shape ends in ? and its exits carry the answers (docs/PICTURES.md rule 2)`,
         );
