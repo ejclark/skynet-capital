@@ -4,6 +4,7 @@
 // as "retry" against every mainstream chat app's own `+` convention, and the copy control is the
 // save-before-wipe affordance NN/g's baseline chatbot guideline calls for).
 // Usage: npm run build --prefix app && npm run shoot:moneypenny [outdir]
+import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const step = (id, title, detail, points, route, done) => ({
@@ -19,13 +20,20 @@ const onboarding = {
   viewerName: "Jordan",
   milestone: { id: "onboarding", code: "M·01", title: "Onboarding", desc: "" },
   steps: [
-    step("connect", "Connect your Alpaca paper account", "", 10, "/app/onboarding", true),
+    step(
+      "connect",
+      "Connect your Alpaca paper account",
+      "",
+      10,
+      "/app/accounts?section=milestones&chapter=onboarding",
+      true,
+    ),
     step(
       "first-message",
       "Say hello to Moneypenny",
       "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
       10,
-      "/app/onboarding?moneypenny=intro",
+      "/app/accounts?section=milestones&chapter=onboarding&moneypenny=intro",
       false,
     ),
     step("first-trade", "Make your first trade", "", 10, "/app/trade?play=101", true),
@@ -53,6 +61,7 @@ const { page, origin, shoot, close } = await openShell({
   quality: 62,
   stubs: {
     "/api/onboarding": onboarding,
+    ...profileStubs([{ id: "human-jordan", name: "Jordan", kind: "human", suspended: false }]),
     "/api/companion": { enabled: false, disclosure: "" },
     "/api/join": { wired: true, canAddBots: false, classes: [], timezones: [] },
     "/api/feedback": {
@@ -64,11 +73,20 @@ const { page, origin, shoot, close } = await openShell({
       recent: [],
     },
     "/api/playbooks": { linked: true, unlocked: 0, total: 4 },
-    "/api/learn": { rank: "Wheeler", points: 120 },
+    "/api/learn": {
+      linked: true,
+      rank: "Wheeler",
+      points: 120,
+      totalPoints: 295,
+      courses: [],
+      celebrating: [],
+      engagementCelebrating: [],
+      pendingChecks: 0,
+    },
   },
 });
 
-await page.goto(`${origin}/app/onboarding`);
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Meet Moneypenny ›" }).click();
 await page.getByText(/^Moneypenny · hi, I'm Moneypenny/).waitFor();
 await page.getByLabel("Message Moneypenny").fill("How am I doing on my account?");

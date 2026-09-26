@@ -61,7 +61,7 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 | | |
 |---|---|
 | **Status** | proposed · waiting on a decision (needs-eric) |
-| **Surface** | `/feedback` |
+| **Surface** | Moneypenny's rail (filings listed at `/app/accounts?section=feedback`) |
 | **Size** | ~2 PRs |
 
 - Talking point — the change, in outcome terms (≤120 chars).

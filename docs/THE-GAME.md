@@ -144,7 +144,7 @@ Three mechanics, no fake multipliers:
 
 ## Education as consequence, not homework
 
-The academy already exists (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `/learn`). The game
+The academy already exists (`src/domain/curriculum.ts`, `src/domain/plays.ts`, the Profile page's Milestones section). The game
 layer makes it *matter*:
 
 - **A degree is a permission, not a badge.** `PLAY_LEVELS` 1–4 gate what your bot may actually trade.
