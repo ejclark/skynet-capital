@@ -74,6 +74,13 @@ const SHOTS = [
   { tag: "crown", w: 248, h: 150, frame: "crown" },
   { tag: "crown-96", w: 160, h: 96, frame: "crown" },
   { tag: "crown-glance", w: 248, h: 150, frame: "crown", glance: [-600, 75] },
+  // The crest as the band actually loads it (#3807 slice 3a-2): `quality=presence` — 30 draws a
+  // second, DPR ≤ 1, no shadow map, half the embers. Beside `crown`, the pair is the budget's
+  // before/after: the picture must read the same at a fraction of the cost.
+  { tag: "crown-presence", w: 248, h: 150, frame: "crown", quality: "presence" },
+  { tag: "crown-presence-96", w: 160, h: 96, frame: "crown", quality: "presence" },
+  // `?probe=1`: the corner readout Eric reads on his own machine (fps · frames · submit p50/p95).
+  { tag: "crown-probe", w: 248, h: 150, frame: "crown", quality: "presence", probe: true },
   // The fire clock's wrap (FIRE_PERIOD = 300 s, kit/loop.ts): the same close pose either side of it.
   // The sweep and flicker keep the unwrapped time, so only the fire's noise phase restarts here.
   { tag: "wrap-before", w: 800, h: 500, beta: 1.5, radius: 70, seek: 299.9 },
@@ -107,7 +114,11 @@ async function main() {
     for (const s of shots) {
       const page = await browser.newPage({ viewport: { width: s.w, height: s.h } });
       const framing = s.card ? "card" : s.frame;
-      const frame = framing ? `&frame=${framing}` : "";
+      const frame = [
+        framing ? `&frame=${framing}` : "",
+        s.quality ? `&quality=${s.quality}` : "",
+        s.probe ? "&probe=1" : "",
+      ].join("");
       const url = `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}${frame}`;
       await page.goto(url, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });

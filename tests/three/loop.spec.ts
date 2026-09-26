@@ -3,6 +3,7 @@ import {
   FIRE_PERIOD,
   FrameStats,
   fireTime,
+  frameGate,
   percentile,
 } from "../../src/three/kit/loop.js";
 import { flicker, gazeAt } from "../../src/three/pieces/eye.js";
@@ -12,11 +13,13 @@ import { flicker, gazeAt } from "../../src/three/pieces/eye.js";
  * it holds the callback and a simulated 60 Hz clock calls it, so "three seconds" is 180 chances to
  * draw — and reduced motion must take exactly one of them.
  */
-function harness(reduce: boolean) {
-  let cb: (() => void) | null = null;
+function harness(reduce: boolean, fpsCap: number | null = null, hz = 60) {
+  let cb: ((now: number) => void) | null = null;
+  let now = 1000;
   const counts = { ticks: 0, stills: 0, resumes: 0 };
   const loop = createLoop({
     reduce,
+    fpsCap,
     tick: () => void counts.ticks++,
     still: () => void counts.stills++,
     setAnimationLoop: (next) => {
@@ -24,8 +27,12 @@ function harness(reduce: boolean) {
     },
     onResume: () => void counts.resumes++,
   });
+  // The display's refresh: each frame's timestamp, with a little jitter the way a real vsync has.
   const seconds = (s: number): void => {
-    for (let i = 0; i < Math.round(s * 60); i++) cb?.();
+    for (let i = 0; i < Math.round(s * hz); i++) {
+      now += 1000 / hz + (i % 2 === 0 ? 0.4 : -0.4);
+      cb?.(now);
+    }
   };
   return { loop, counts, seconds, draws: () => counts.ticks + counts.stills };
 }
@@ -99,6 +106,54 @@ describe("the loop in motion", () => {
     h.loop.run(true);
     h.seconds(1);
     expect(h.counts.ticks).toBe(0);
+  });
+});
+
+describe("the loop under a 30 fps cap (quality=presence, slice 3a-2)", () => {
+  it("draws about 30 times over one second of 60 Hz frames", () => {
+    const h = harness(false, 30, 60);
+    h.loop.start();
+    h.seconds(1);
+    expect(h.counts.ticks).toBeGreaterThanOrEqual(29);
+    expect(h.counts.ticks).toBeLessThanOrEqual(31);
+  });
+
+  it("draws about 30 a second on a 120 Hz display too — the cap is time, not every other frame", () => {
+    const h = harness(false, 30, 120);
+    h.loop.start();
+    h.seconds(2);
+    expect(h.counts.ticks).toBeGreaterThanOrEqual(58);
+    expect(h.counts.ticks).toBeLessThanOrEqual(62);
+  });
+
+  it("draws the first frame after a resume at once, never waiting out the old interval", () => {
+    const h = harness(false, 30, 60);
+    h.loop.start();
+    h.seconds(1);
+    h.loop.run(false);
+    const before = h.counts.ticks;
+    h.loop.run(true);
+    h.seconds(1 / 60);
+    expect(h.counts.ticks).toBe(before + 1);
+  });
+
+  it("leaves reduced motion alone: still one frame", () => {
+    const h = harness(true, 30, 60);
+    h.loop.start();
+    h.seconds(3);
+    expect(h.draws()).toBe(1);
+  });
+});
+
+describe("frameGate", () => {
+  it("is due on the first frame and then once per interval, absorbing a little refresh jitter", () => {
+    const g = frameGate(30);
+    expect(g.due(0)).toBe(true);
+    expect(g.due(16.7)).toBe(false);
+    expect(g.due(32.6)).toBe(true); // 33.3 − 0.7 ms of jitter still counts
+    expect(g.due(49)).toBe(false);
+    g.reset();
+    expect(g.due(50)).toBe(true);
   });
 });
 
