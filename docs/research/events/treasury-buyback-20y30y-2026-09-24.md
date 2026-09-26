@@ -309,6 +309,7 @@ the error.
 | 2026-09-20 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.6pt since last), band unchanged (medium:0+), 49 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-22 |
 | 2026-09-22 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.1pt since last), band unchanged (medium:0+), 49 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-24 |
 | 2026-09-24 | D0 | **Dispatched on the staleness ceiling (three consecutive screens), not a crossed threshold — full session regardless.** The **09-23 announcement is live**: `buybacks_operations` (`operation_date=2026-09-24`, fetched direct) reads `max_par_amt_redeemed` **$6,000,000,000** — the same figure the 10-20Y sibling announced 09-10, not merely a step to sb0607's $4B floor. **Status flips `estimate` → `confirmed`** in this PR on the kill switch written for this case. `buybacks_security_details` for the same operation (35 CUSIPs) confirms leg 3/FT-1 live: longest eligible is **912810UR7 (2056-02-15)**, neither 912810UU0 nor 912810UW6 present — the first-coupon rule held again. `total_par_amt_offered`/`accepted` are still `null` (results not yet posted at fetch time, ahead of the 1:40–2:00pm ET window) — FT-2 stays open for its own 09-25 score-by; FT-1/FT-3 are now resolved by primary data but scoring their Outcome cells is left to tomorrow's close-out (re-run instruments, not this session's live read). **Rates:** par curve 09-23 close 2Y **4.85** · 10Y **5.11** · 20Y **5.45** · 30Y **5.40** vs 09-17 close 4.67/4.94/5.32/5.29 — **2Y +18bp, 10Y +17bp, 20Y +13bp, 30Y +11bp** over six sessions, a bear-flattener that this time reaches the long end (09-08→09-17 barely moved it). Today's own 7Y auction (1:00pm) adds supply ahead of this operation's 1:40pm window. **Volatility:** VIX **15.18** (09-23 bar-close, repo probe) vs **15.44** last full session — inside the 3-point bar, no regime shift. **Geopolitical:** Brent **$101.61** (09-23, press) off **$104.82** (09-17) and the **$107.63** high — the "extending, not reversing" read from 09-18 now reverses, on reported Saudi East-West pipeline restart headlines; still above 09-09's $99.51, so today's curve backup is not simply oil unwinding. **Peers:** n/a (`symbols: []`). **Adjacency:** `--on-date=2026-09-24` — 12 ids on today's date, all already tracked, nothing to propose. Corridor (live probe) 49 → **48** ids — `retail-benchmark-revision-2026-09-28` dropped out, nothing added; `adjacentStrongIds` empty, no confirmed high/critical newly within 5 days. `trump-xi-summit-2026-09-24` (today, high impact) stays `estimate` in its own file, though its own source note logs "STRENGTHENED 2026-09-23" with both governments' primary channels now carrying the visit — not this doc's file to flip. | **Unchanged** — legs 2/3 and FT-1/FT-3's predictions both proven true by today's own primary data; status flipped `estimate`→`confirmed` on the announced-max kill switch. No position; FT-2 and the par-accepted result stay open for tomorrow's close-out | 2026-09-25 (close-out — `event-passed-unscored`, not another interval pulse) |
+| 2026-09-26 | D+2 | **Close-out — see `## Outcome`.** Written inside the 6-day window (`closeOutWithinDays: 6`). Re-verified from primary rather than from D0's memory: `buybacks_operations` (own fetch, `operation_date=2026-09-24`) now carries results — `total_par_amt_offered` **$10,468,000,000**, `total_par_amt_accepted` **$4,078,000,000** (**67.97%** fill, 12 of 35 eligible issues taken), against the confirmed **$6,000,000,000** cap — a **1.75x** cover, matching the 10-20Y sibling's own 09-10 cover almost to the decimal. `buybacks_security_details` (own fetch, same operation, 35 rows) confirms the accepted CUSIPs' longest maturity is **2056-02-15** — FT-1's eligible-list prediction and FT-3's above-$4B prediction both score **pass**, and FT-2's below-$24.0B prediction also scores **pass** on an even narrower offer book than registered. **Rates:** Treasury's daily par curve CSV (own fetch) 09-23 → 09-24 → 09-25 close: 2Y 4.85 → **4.87** → 4.81, 10Y 5.11 → **5.18** → 5.17, 20Y 5.45 → **5.53** → 5.54, 30Y 5.40 → **5.47** → 5.49 — the long end backed up **+7bp** (20Y) and **+9bp** (30Y) from pre-announcement to the latest close, front-end flat-to-lower; no reversal into this close-out. **Volatility:** VIX (Yahoo `^VIX`, own fetch) 15.18 (09-23) → 15.67 (09-24) → **14.87** (09-25) — inside the 3-point band throughout, no regime shift across the operation. **Geopolitical:** Brent (Yahoo `BZ=F`, own fetch) 09-23 → 09-24 → 09-25 bar-close **$103.08 → $106.60 → $104.32** — a same-day pop on the operation's own date that has fully round-tripped by the next close; not attributable to this operation given the shared afternoon (7Y auction, SCOOS, ECB bulletin, Trump-Xi summit). **Peers:** CRWV (own fetch) 09-23→09-25 **$86.90 → $90.13 → $87.59**, no session >5%. **Adjacency:** due-list window ±5 days of 09-24 unchanged from the 09-24 row — no confirmed high/critical event newly inside 5 days; nothing to propose. Full scoring, kill-switch grading and the verdict are in `## Outcome` below. | None — the "read, don't trade" stance closes intact; both open forward tests (FT-2 offer-book read, FT-3 cap-vs-floor read) score pass, confirming rather than revising the base case | — (closed; scanner goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -326,3 +327,101 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-24
 <!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"medium:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-09-26 (D+2), inside the 6-day close-out window.** The `rates` kind carries no
+symbol-keyed `earnings-cycle`/`intraday-edges` study, but both caches were busted anyway per the
+rule (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and every
+figure below is a fresh direct fetch this session, never carried over from the D0 row's memory.
+Primaries: `api.fiscaldata.treasury.gov`'s `buybacks_operations` and `buybacks_security_details`,
+and `home.treasury.gov`'s Daily Treasury Par Yield Curve CSV — all plain `curl`, all HTTP 200.
+VIX and Brent read from Yahoo Finance's chart API (`^VIX`, `BZ=F`), the same source
+`scripts/event-material-scan.mjs` uses for this calendar's own deterministic screens.
+
+### The operation, re-verified from primary — the results D0 could not yet see
+
+`buybacks_operations` (own fetch, `operation_date=2026-09-24`):
+
+| Field | Value |
+|---|---|
+| Max par redeemed (announced cap) | **$6,000,000,000** — unchanged from D0 |
+| Total par offered | **$10,468,000,000** |
+| Total par accepted | **$4,078,000,000** |
+| Issues eligible / accepted | 35 / **12** |
+| Cover (offered ÷ cap) | **1.745x** |
+| Fill rate (accepted ÷ cap) | **67.97%** |
+
+`buybacks_security_details` (own fetch, same operation, 35 rows) confirms the accepted CUSIPs:
+longest-dated is **912810UG1 (2055-02-15)** among the 12 actually taken, and the longest *eligible*
+security across all 35 rows remains **2056-02-15** — neither 912810UU0 (2056-05-15) nor 912810UW6
+(2056-08-15) appears anywhere in the eligible list, confirming the first-coupon rule held a third
+time (08-18, 09-24 preliminary, 09-24 final all agree).
+
+### Kill-switch scoring, against the stance exactly as pre-registered
+
+- **"9/23 announced max prints ≥ $4B"** — **fired 09-24, unchanged here.** $6.0B, matching the
+  10-20Y sibling's own precedent rather than a bare step to the $4B floor. Status stays `confirmed`.
+- **"9/23 eligible list includes 912810UW6"** — **did not fire.** Confirmed a third time from the
+  final 35-CUSIP list, not just the preliminary one D0 read.
+- **"9/24 par accepted lands well under the announced cap"** — **fired.** $4.078B of $6.0B is a
+  **32-point shortfall**, sitting between the 10-20Y sibling's 86.4% (09-10) and the 7Y-10Y
+  bucket's 59.6% (09-17) — a third consecutive partial fill in the post-sb0607 long-end cohort,
+  and the fourth-ever partial fill this bucket has printed since the 2026-03-19 outlier. Read as
+  the switch's own text specifies: **a pricing signal, not a demand signal** — Treasury's
+  relative-value test binding again, not weak appetite for the sector.
+- **"1:40–2:00pm window moves 20-30Y yields >5bp with no auction/Fed/fiscal news"** — **cannot be
+  cleanly evaluated, by construction.** The precondition itself fails: 2026-09-24 carried a 7Y
+  auction (1:00pm), SCOOS (2:00pm), an ECB bulletin, and the Trump-Xi summit in the same session,
+  exactly as leg 7 anticipated. The 20Y/30Y curve did move materially that day (see below), but
+  attributing any part of it to this one operation specifically would be the misread this ledger
+  was built to avoid.
+- **Escalation switches** (updated schedule published, cap raised past $4B/op, sectors/frequency
+  added before 2026-11-04) — not observed; not due until the 11-04 refunding regardless.
+
+### Rates, vol, and oil — re-verified, not recalled
+
+Treasury's par curve (own fetch), 09-23 (pre-announcement) → 09-24 (operation day) → 09-25 (latest
+close):
+
+| Tenor | 09-23 | 09-24 | 09-25 | Net (09-23→09-25) |
+|---|---|---|---|---|
+| 2Y | 4.85 | 4.87 | **4.81** | −4bp |
+| 10Y | 5.11 | 5.18 | **5.17** | +6bp |
+| 20Y | 5.45 | 5.53 | **5.54** | **+9bp** |
+| 30Y | 5.40 | 5.47 | **5.49** | **+9bp** |
+
+The long-end backup the D0 row logged did not reverse into this close-out — 20Y/30Y both extended a
+further 1-2bp past the operation day itself, while the front end eased 4bp. VIX (own fetch) ran
+**15.18 → 15.67 → 14.87** across the same three sessions — inside the 3-point band, no regime
+shift. Brent (own fetch, `BZ=F` bar-close) ran **$103.08 → $106.60 → $104.32** — a pop *on* the
+operation's own date that had round-tripped by the next close, consistent with the afternoon's
+other named events (not this one) driving the day's tape. CRWV (own fetch), the ledger's
+highest-duration peer proxy, ran $86.90 → $90.13 → $87.59 — no session crossed the ±5% materiality
+bar.
+
+### Forward tests — all three score `pass`
+
+Full evidence and the exact scoring text are in
+[`forward-tests/treasury-buyback-20y30y-2026-09-24.md`](../research/forward-tests/treasury-buyback-20y30y-2026-09-24.md),
+never restated here in full. In one line each:
+
+| Test | Score by | Verdict |
+|---|---|---|
+| FT-treasury-buyback-20y30y-2026-09-24-1 (eligible-list ceiling) | 2026-09-24 | **pass** — final list stops at 2056-02-15, third confirmation of the first-coupon rule |
+| FT-treasury-buyback-20y30y-2026-09-24-2 (offers below $24.0B) | 2026-09-25 | **pass** — $10.468B offered, well under the line even before accounting for the cap printing $6B rather than the $4B it was anchored against |
+| FT-treasury-buyback-20y30y-2026-09-24-3 (cap prints above $4.0B) | 2026-09-23 | **pass** — $6.0B, exactly the 10-20Y sibling's own precedent |
+
+### Verdict vs. the stance
+
+**The "read, don't trade" guard closes exactly as registered, and every open question this ledger
+carried into 09-24 is now answered in the same direction.** The cap printed above the bare $4B
+floor (matching the sibling's $6B, not a fresh number); the offer book stayed narrow enough that a
+full fill was never in play (1.75x cover, the same order of magnitude as the 10-20Y sibling's own
+1.75x on 09-10); and the eligible-securities ceiling that this ledger predicted from arithmetic
+alone — not from a published forecast — held a third time. The one leg that could not be tested is
+the one this ledger always said couldn't be tested: whether the operation itself moved the tape,
+against an afternoon carrying four other dated events. Nothing traded, consistent with the stance
+throughout this event's 24-day life.
+
+This doc goes quiet after this entry per the close-out rule.
