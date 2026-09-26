@@ -44,16 +44,28 @@ ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 cd "$ROOT"
 
 MISE_VERSION="2026.9.0"
+# Published SHA-256 of each tarball (SHASUMS256.txt on the release, read 2026-09-26). A download
+# that does not match is refused and named, never installed — a tool binary pulled unverified into
+# every session was the one supply-chain seam left after the workflows' SHA pins (#3769 slice 4).
+# Bumping MISE_VERSION means bumping these from the new release's SHASUMS256.txt.
+MISE_SHA256_x64="9499e503b866130b2f19bb11ec04d87a11ed81acc8d6032b8832ea08d4db7ce8"
+MISE_SHA256_arm64="00714b9c7449a91b8b053f86391fb23f19901250c609920847a56f842c41b810"
 export PATH="$HOME/.local/bin:$PATH"
 if ! command -v mise >/dev/null 2>&1; then
   echo "session-start: installing mise ${MISE_VERSION}…"
   arch="$(uname -m)"; case "$arch" in x86_64) arch=x64 ;; aarch64|arm64) arch=arm64 ;; esac
   mkdir -p "$HOME/.local/bin"
-  if curl -sSL "https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-${arch}.tar.gz" \
-       | tar xz -C /tmp 2>/dev/null && cp /tmp/mise/bin/mise "$HOME/.local/bin/mise"; then
+  tarball="/tmp/mise-v${MISE_VERSION}-linux-${arch}.tar.gz"
+  expected="$(eval "printf '%s' \"\${MISE_SHA256_${arch}:-}\"")"
+  if curl -sSL -o "$tarball" "https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-${arch}.tar.gz" \
+       && [ -n "$expected" ] \
+       && actual="$(sha256sum "$tarball" | cut -d' ' -f1)" \
+       && [ "$actual" = "$expected" ] \
+       && tar xzf "$tarball" -C /tmp 2>/dev/null && cp /tmp/mise/bin/mise "$HOME/.local/bin/mise"; then
     :
   else
-    echo "session-start: mise install failed — continuing under whatever Node is already present"
+    echo "session-start: mise install refused — checksum mismatch or download failed (expected ${expected:-none for $arch}, got ${actual:-nothing}); continuing under whatever Node is already present"
+    rm -f "$tarball"
   fi
 fi
 
