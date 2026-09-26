@@ -12,9 +12,12 @@
 // As of 2026-08-30 this repo has ZERO hits — the point is catching regression into a currently
 // clean state, not retrofitting.
 //
-//   node scripts/test-quality-scan.mjs <branch> [--base main]   # advisory report (exit 0 always)
+//   node scripts/test-quality-scan.mjs <branch> [--base main]   # advisory report
 //
-// Degrades to a clean no-op with no network — never a flaky gate. Pure pattern-matching is
+// Exit codes: 0 scanned (hits or not — advisory, never a gate) · 2 UNKNOWN, the diff it rests on
+// could not be read, so nothing was scanned. ship.sh runs it `|| true`, so exit 2 stays advisory;
+// it exists so "could not look" never reads as "looked and found nothing". A spec file in the diff
+// that is not on disk (deleted by the change) is skipped with a `·` note. Pure pattern-matching is
 // exported and unit-tested offline (tests/arch/test-quality-scan.spec.ts).
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -50,16 +53,26 @@ export function findSmells(text) {
   return hits;
 }
 
+/** The spec files the change touches, or `null` when the diff itself could not be read. */
 function changedSpecFiles(branch, base) {
   try {
     return execFileSync("git", ["diff", "--name-only", `origin/${base}...${branch}`], {
       encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
     })
       .trim()
       .split("\n")
       .filter((f) => /(^|\/)tests\/.*\.spec\.tsx?$/.test(f));
-  } catch {
-    return [];
+  } catch (err) {
+    // Required: the verdict rests on this diff. Without it the scan looked at nothing, which must
+    // never print the same silence as a clean pass.
+    const why = String(err?.stderr || err?.message || err)
+      .trim()
+      .split("\n")[0];
+    console.log(
+      `test-quality-scan: UNKNOWN — could not diff origin/${base}...${branch} (${why}); no spec was scanned.`,
+    );
+    return null;
   }
 }
 
@@ -72,13 +85,20 @@ function main() {
     return;
   }
   const files = changedSpecFiles(branch, base);
+  if (files === null) {
+    process.exitCode = 2;
+    return;
+  }
   let total = 0;
   for (const file of files) {
     let text;
     try {
       text = readFileSync(file, "utf8");
     } catch {
-      continue; // deleted in this diff — nothing to scan
+      // Optional: a spec the change deletes has nothing left to smell. Named, so a run from the
+      // wrong directory (every read missing) cannot pass as a clean scan.
+      console.log(`· test-quality-scan: ${file} not on disk (deleted in this diff?) — skipped`);
+      continue;
     }
     for (const hit of findSmells(text)) {
       total++;
