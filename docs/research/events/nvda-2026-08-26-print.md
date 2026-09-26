@@ -22,6 +22,7 @@ print already fully scored." Date **confirmed** (IR): reported Wed **2026-08-26*
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — "don't buy the pop" is still the live rule.
 - **Don't buy the pop** — the single most reliably losing move of the era (11/14 reaction days red, now 4 straight); still the live rule into today's open.
 - **Sell-premium tilt (pre-print window closed)** — implied (~5–7%) still priced above the realized AH move so far (~4–5%) — consistent with the rich-pricing read, though the definitive D+1 close-to-close comparison (FT-8) awaits today's close.
 - **The whisper-breaker — TRIGGERED** — Q3 guide printed $108B, clearing the ~$100B+ line; the capped-upside expression this doc named for that scenario is now live, not hypothetical.

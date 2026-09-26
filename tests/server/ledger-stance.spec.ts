@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { readLedger } from "../../src/server/ledger-stance.js";
 
-/** Reading a research ledger for the guidance (#3729) — conservative: only an explicit bold "Buy" licenses one. */
+/** Reading a research ledger for the guidance (#3729) — conservative: only the ledger's own `**Buy signal:** yes` licenses one. */
 
 const ledger = (signals: string) => `# X print
 **Kind:** earnings · **Date:** 2026-11-10
@@ -32,10 +32,29 @@ describe("readLedger", () => {
     });
   });
 
-  it("licenses a buy only on a bullet that leads with bold Buy", () => {
-    expect(readLedger(ledger("- **Buy** — S1 window open D-20→D-5."), "CRWV").buySignal).toBe(true);
-    expect(readLedger(ledger("- **Buy/sell** — neither licensed."), "CRWV").buySignal).toBe(false);
-    expect(readLedger(ledger("- prose that says buy somewhere"), "CRWV").buySignal).toBe(false);
+  it("licenses a buy only on the ledger's own Buy signal: yes line", () => {
+    const read = (signals: string) => readLedger(ledger(signals), "CRWV").buySignal;
+    expect(read("- **Buy signal:** yes — S1 window open D-20→D-5.")).toBe(true);
+    expect(read("- **Buy signal:** no — S1 kill-listed.")).toBe(false);
+    // The old reading licensed any bullet that led with a bold "Buy" — prose no longer does.
+    expect(read("- **Buy** — S1 window open D-20→D-5.")).toBe(false);
+    expect(read("- prose that says buy somewhere")).toBe(false);
+  });
+
+  it("reads the line under either heading form the ledgers use", () => {
+    const md = ledger("- **Buy signal:** yes — open.").replace(
+      "**Signals & conditions** — the buy/sell/hold triggers:",
+      "**Signals & conditions.**",
+    );
+    expect(readLedger(md, "CRWV").buySignal).toBe(true);
+  });
+
+  it("reads every earnings ledger in the repo as a decided yes or no", () => {
+    const dir = "docs/research/events";
+    for (const f of readdirSync(dir).filter((n) => n.endsWith("-print.md"))) {
+      const md = readFileSync(`${dir}/${f}`, "utf8");
+      expect(md, f).toMatch(/\*\*Buy signal:\*\* (yes|no)\b/i);
+    }
   });
 });
 

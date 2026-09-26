@@ -29,6 +29,7 @@ sessions inside the run-up window. Everything below inherits the estimate label.
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — the pre-print entry waits on IR confirming the date (none posted as of 2026-09-08).
 - **No confirmation, no entry** — the single hard gate on this play; date-keyed action requires `confirmed`.
 - **Size small, one slot** — the pooled p10 **−3.39%** is the sizing anchor, and GOOG takes the pre-print slot alone or not at all.
 - **Exit at the close of D** — never through the print, whatever the run-up did.

@@ -29,6 +29,7 @@ expected*. Last verified close **$616.77** (09-04), still ~**22% below** the $79
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — no directional position into the print.
 - **Never** — take a directional META position into the print; the measured modern gap deciles are **−10.98% / +16.42%** and nothing pays for them.
 - **Never** — treat punish-capex-then-forgive, the cleared legal overhang, or a model-release pop as a signal; all three are risk observations, not edges.
 - **Never** — compare the 10-28 headline EPS to the ~$6.75 street number without first establishing whether that number carries the ~$3.90/share charge; a mechanical miss is not a fundamental one.

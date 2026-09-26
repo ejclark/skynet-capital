@@ -38,6 +38,7 @@ AVGO's.
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — the print has passed; this ledger is scored, not live.
 - **Never** — hold unhedged AVGO through a print for the gap; the family is kill-listed and this print's evening low was **−7.76%**.
 - **The flat deadline was the 2026-09-02 close, and it held** — the stance is scored, not live.
 - **FT-2 is KILLED, not shelved** — the D-5→D window returned **+3.28%** while the single NVDA-reaction session of **2026-08-27** returned **+4.49%** (137% of it); ex that session the window was **−1.16%**. Never re-propose an "AVGO late-week bid" without a window carrying no peer print inside it.

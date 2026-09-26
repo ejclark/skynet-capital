@@ -22,6 +22,7 @@ widens the flat window, it never licenses an entry. The one live interest is FT-
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — FT-5's long is a zero-size forward test, not a position.
 - **Never** — hold unhedged AAPL shares through the print for the gap (killed: win 50%, p10 −3.39%).
 - **Never** — open a pre-print position off the estimated date; date-keyed action needs `confirmed`.
 - **FT-5 only** — long close D+1 → close D+11, zero size, scored from re-run instrument data.

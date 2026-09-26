@@ -31,6 +31,7 @@ import {
 } from "./page-shell.js";
 import { type ParticipantProgression, playLocked } from "./progression-service.js";
 import { serveQuote } from "./quote-route.js";
+import { serveSpotChecks } from "./spot-checks-route.js";
 import { serveSymbolSearch } from "./symbol-search-route.js";
 
 /** Trade-type codes that ride the OPTION preview/review pipeline. */
@@ -343,6 +344,7 @@ const GET_ROUTES: Readonly<Record<string, GetRoute>> = {
   "/api/trade/bars": serveBars,
   "/api/symbols/search": serveSymbolSearch,
   "/api/trade/guidance": serveGuidance,
+  "/api/trade/guidance/spot-checks": serveSpotChecks,
 };
 
 /** Handle `/api/trade/chain`, `/api/trade/quote`, `/api/trade/bars`, and `/api/trade/option/*`.

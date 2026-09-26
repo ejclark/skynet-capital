@@ -10,6 +10,7 @@ import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
+import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { ClaimDeps } from "./claim-form.js";
@@ -194,6 +195,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The IV clock's daily at-the-money IV history (#3729) — the position guidance reads IV rank off
    *  it. Absent (clock off): richness falls back to implied ÷ realized, capped at medium. */
   readonly ivHistory?: IvHistoryPort;
+  /** One line per fresh guidance read: how often spot and option prices disagree (#3729). Absent:
+   *  not counted, and /api/trade/guidance/spot-checks says the count is off. */
+  readonly spotChecks?: SpotCheckPort;
   /** Stock order data (Open Orders panel, order cancel) via a participant's own credentials. */
   readonly tradingClientFor?: (participantId: string) => AlpacaTradingClient | undefined;
   /**

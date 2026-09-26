@@ -31,7 +31,7 @@ confirmed CPI + China's export-control lapse + a **10Y auction**.
 
 **Signals & conditions** — the buy/sell/hold triggers, from the stance's kill switches:
 
-- **No buy signal exists** — S1 pre-print positioning stays kill-listed; nothing this pulse reopens it.
+- **Buy signal:** no — S1 pre-print positioning stays kill-listed; nothing this pulse reopens it.
 - **The proxy to watch is the neocloud cohort, not the semis** — corr(CRWV, **NBIS**) **0.857** (52 sessions) still holds; 09-23 (CRWV +0.16%, NBIS −4.03%) is the sharpest single-day exception recorded so far, not a reversal. Registered as `FT-crwv-2026-11-10-print-2`.
 - **The rate-duration watch stays retired, and 09-23 is its cleanest disconfirmation yet** — a +16bp single session, the sharpest of this ledger's life, met two of `FT-1`'s three kill legs (10Y, QQQ) and CRWV still closed flat. Watch AI/neocloud tape and the 11-10 export-control lapse, not auction days.
 - **Sell / avoid** — never hold through the print (S2); no directional gap bet either way (kill-list #4); no bleed fade and no chase — FT-3's split score licenses neither.

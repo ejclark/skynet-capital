@@ -29,6 +29,7 @@ import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { createIvHistoryStore } from "../research/iv-sampler.js";
+import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
@@ -110,6 +111,7 @@ async function main(): Promise<void> {
   // can exist a year from now (#3729). Host-configured credentials only — never a member's.
   const ivHistory = createIvHistoryStore(process.env);
   startIvClock(ivHistory, dataSource, envRoster);
+  const spotChecks = createSpotChecks(process.env);
 
   // Autonomous decision audit trail (Phase 2.1) — the same JSONL the runner writes when
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
@@ -317,6 +319,8 @@ async function main(): Promise<void> {
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
+    // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).
+    ...(spotChecks ? { spotChecks } : {}),
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(

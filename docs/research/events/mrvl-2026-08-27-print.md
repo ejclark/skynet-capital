@@ -23,6 +23,7 @@ keynote.
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — no instrumented view here, so nothing licenses a position.
 - **Flat by the 2026-08-27 close** — the IR-reported 1:45pm PT call is after close, so the deadline only tightens.
 - **Never** — hold unhedged MRVL through a ~14% implied print for the gap.
 - **Never** — sell or buy premium here; there is no instrumented view, and that is an honesty stance, not a market view.

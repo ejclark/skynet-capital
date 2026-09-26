@@ -33,6 +33,7 @@ import {
   filingsPulse,
   researchPulse,
   sessionPulse,
+  spotCheckOf,
   spotPulse,
 } from "./guidance-pulse.js";
 import { readLedger } from "./ledger-stance.js";
@@ -180,6 +181,16 @@ async function readMarket(
   const mid =
     quote.bid !== undefined && quote.ask !== undefined ? (quote.bid + quote.ask) / 2 : undefined;
   const ivRank = ivRankOf(ivSamples, symbol, now);
+  const observed = {
+    last: spot,
+    ...(quote.lastAt ? { lastAt: quote.lastAt } : {}),
+    ...(parity !== undefined ? { parity } : {}),
+    ...(mid !== undefined ? { mid } : {}),
+  };
+  // Counted, never gating: a failed write must not cost the member their read.
+  void config.spotChecks
+    ?.save(spotCheckOf(symbol, observed, now, sessionOpen))
+    .catch(() => undefined);
   return {
     symbol,
     now,
@@ -205,16 +216,7 @@ async function readMarket(
         }
       : {}),
     pulse: [
-      spotPulse(
-        {
-          last: spot,
-          ...(quote.lastAt ? { lastAt: quote.lastAt } : {}),
-          ...(parity !== undefined ? { parity } : {}),
-          ...(mid !== undefined ? { mid } : {}),
-        },
-        now,
-        sessionOpen,
-      ),
+      spotPulse(observed, now, sessionOpen),
       chainPulse(stamps, total, now, sessionOpen),
       researchPulse(
         ledger ? { ...ledger.read, source: ledger.source } : undefined,

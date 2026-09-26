@@ -1,5 +1,6 @@
 import { daysBetween, dayText } from "../options/position-guidance-rules.js";
 import type { PulseItem, PulseStatus } from "../options/position-guidance-types.js";
+import type { SpotCheck } from "../research/spot-checks.js";
 
 /**
  * THE PULSE — how fresh each position guidance input is, measured against its live source (#3729;
@@ -62,6 +63,56 @@ export interface SpotObservation {
 
 const gapOf = (a: number, b: number): number => Math.abs(a / b - 1);
 
+/** Which second source spot was held against, how far apart they were, and whether that is a warning. */
+export interface SpotCrossCheck {
+  readonly basis: SpotCheck["basis"];
+  readonly gap?: number;
+  readonly flagged: boolean;
+}
+
+/**
+ * The cross-check itself, shared by the pulse row a member sees and the line `spotCheckOf` records —
+ * so what is counted as "disagreed" can never drift from what was shown as a warning. Parity first;
+ * IEX's own midpoint only in session (after the bell its quote sides are stale).
+ */
+export function crossCheckOf(obs: SpotObservation, open: boolean): SpotCrossCheck {
+  const against = obs.parity ?? (open ? obs.mid : undefined);
+  if (against === undefined) return { basis: "none", flagged: false };
+  const gap = gapOf(obs.last, against);
+  return {
+    basis: obs.parity !== undefined ? "parity" : "mid",
+    gap,
+    flagged: gap > PARITY_TOLERANCE,
+  };
+}
+
+/**
+ * One fresh market read's cross-check, as a durable line (#3729): how often last trade and option
+ * prices legitimately disagree was never measured, so the warning stays a warning until this count
+ * says whether hardening it into a refusal would blank real reads or only catch broken ones. PURE.
+ */
+export function spotCheckOf(
+  symbol: string,
+  obs: SpotObservation,
+  now: string,
+  open: boolean,
+): SpotCheck {
+  const x = crossCheckOf(obs, open);
+  const age = obs.lastAt ? Date.parse(now) - Date.parse(obs.lastAt) : Number.NaN;
+  return {
+    at: now,
+    symbol,
+    open,
+    last: obs.last,
+    ...(Number.isFinite(age) ? { lastAgeMs: age } : {}),
+    ...(obs.parity !== undefined ? { parity: obs.parity } : {}),
+    ...(obs.mid !== undefined ? { mid: obs.mid } : {}),
+    basis: x.basis,
+    ...(x.gap !== undefined ? { gap: x.gap } : {}),
+    flagged: x.flagged,
+  };
+}
+
 /**
  * Spot, cross-checked. A disagreement is a WARNING (aging — confidence capped medium), never an
  * automatic refusal: the option feed is indicative, and how often it legitimately disagrees with
@@ -80,20 +131,16 @@ export function spotPulse(obs: SpotObservation | undefined, now: string, open: b
   const when = `${ageText(age)}${open ? "" : " (as of close)"}`;
   if (aged === "stale") return row("spot", source, "stale", `last trade ${when}`, obs.lastAt);
   const fmt = (x: number) => `$${x.toFixed(2)}`;
-  if (obs.parity !== undefined && gapOf(obs.last, obs.parity) > PARITY_TOLERANCE) {
-    const gap = (gapOf(obs.last, obs.parity) * 100).toFixed(1);
+  const check = crossCheckOf(obs, open);
+  if (check.flagged && obs.parity !== undefined) {
+    const gap = ((check.gap ?? 0) * 100).toFixed(1);
     const note = `last trade ${fmt(obs.last)} vs ${fmt(obs.parity)} implied by option prices (${gap}% apart${open ? "" : ", after hours"})`;
     return {
       ...row("spot", source, "aging", note, obs.lastAt),
       ...(open ? {} : { blocksPricing: true }),
     };
   }
-  if (
-    obs.parity === undefined &&
-    obs.mid !== undefined &&
-    open &&
-    gapOf(obs.last, obs.mid) > PARITY_TOLERANCE
-  ) {
+  if (check.flagged && obs.mid !== undefined) {
     const note = `last trade ${fmt(obs.last)} vs ${fmt(obs.mid)} midway between bid and ask — no matched option prices to settle it`;
     return row("spot", source, "aging", note, obs.lastAt);
   }
