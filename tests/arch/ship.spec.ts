@@ -429,6 +429,27 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
   it("tells Eric to merge with a merge commit — squashing is what loses per-item revert", () => {
     expect(ledger(["--base", base, "--body"])).toContain("never squash");
   });
+
+  // #3754: the merge-method instruction was a Summary bullet and a paragraph below the fold, and it
+  // failed on five of eleven landings. A `> [!WARNING]` is the one thing docs/PICTURES.md reserves
+  // for an irreversible touch, and it sits above `## Summary` where the merge dialog is read.
+  it("carries the merge method as a top-level WARNING, not only as a bullet", () => {
+    const body = ledger(["--base", base, "--body"]);
+    const warning = body.indexOf("> [!WARNING]");
+    expect(warning).toBeGreaterThan(-1);
+    expect(warning).toBeLessThan(body.indexOf("## Summary"));
+    expect(body.slice(warning, warning + 400)).toMatch(/Create a merge commit/);
+    expect(body.slice(warning, warning + 400)).not.toContain("<details>");
+  });
+
+  it("states the revert path that actually exists, for both ways this can land", () => {
+    // An honest ledger names what the revert column is worth BEFORE the merge (branch-only),
+    // after a merge commit (per item), and after a squash (the platter, whole or nothing).
+    const body = ledger(["--base", base, "--body"]);
+    expect(body).toContain("The revert path that actually exists");
+    expect(body).toMatch(/whole platter or nothing/);
+    expect(body).toContain("scripts/platter-merge-scan.mjs");
+  });
 });
 
 describe("ship platter — refusals that keep the platter an assembly point, not a workspace", () => {

@@ -542,6 +542,11 @@ cmd_merge() {
 #   - NO SAME-FILE FENCE. Feast mode's "two items must not touch the same file" comes from PARALLEL
 #     athletes; the platter boards sequentially onto one integration branch, so same-file items are
 #     fine in order — a conflict is just an item that needs to catch up first.
+#
+# The one rule this script CANNOT enforce is the merge method: a PR does not choose how it is merged,
+# and by 2026-09-25 five of eleven landed platters had arrived as squashes, voiding their ledger's
+# revert column. The body now carries a top-level WARNING, and `node scripts/platter-merge-scan.mjs`
+# reads `main` afterwards and names any platter that landed flat (#3754).
 
 # Protected paths among the file names on stdin, space-separated (empty when none). The path-level
 # answer on purpose: envelope-scan's --base mode diffs the CHECKED-OUT HEAD, and the ledger column
@@ -617,6 +622,12 @@ $(platter_ledger_table)
 
 _Caption — the platter ledger, read from the boarded commits: each item, the evidence it was green, and the sha that reverts it alone._
 
+> [!WARNING]
+> **Land this with "Create a merge commit" — the squash button voids every revert sha above.**
+> A squashed platter arrives on \`main\` as one commit: the per-item shas live only on
+> \`$(git rev-parse --abbrev-ref HEAD)\`, which GitHub deletes at merge, so the only revert left is the whole platter at once.
+> This has already happened: as of 2026-09-25, five of the eleven landed platters were squashed. \`node scripts/platter-merge-scan.mjs\` reports the current count.
+
 ## Summary
 
 - One merge clears every protected-path change below; the boundary does not move, only its cost.
@@ -630,6 +641,12 @@ _Caption — the platter ledger, read from the boarded commits: each item, the e
 it collapses the items into one commit and the per-item revert below is lost — the platter would
 then only revert as a whole. The repo's settings already put this PR's title and body (this ledger)
 on the merge commit, so \`main\`'s first-parent history reads as PRs and \`git log main\` reads as items.
+
+**The revert path that actually exists, by how this lands.** Before the merge, every revert sha in
+the table is reachable on \`$(git rev-parse --abbrev-ref HEAD)\` — and only there. Merged as a merge
+commit, they become part of \`main\` and \`git revert <revert sha>\` drops one item. Squashed, the
+branch is deleted and those shas go with it: \`main\` holds one commit, so \`git revert\` takes the
+whole platter or nothing. The ledger's revert column is a promise the merge button keeps or breaks.
 
 **Dropping one item after the merge.** \`git revert <revert sha>\` from the table — no \`-m\`, because
 each item is an ordinary single-parent commit. An item a later item builds on may conflict; that is
