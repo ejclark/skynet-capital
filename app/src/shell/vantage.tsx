@@ -1,6 +1,6 @@
 import { useRouterState } from "@tanstack/react-router";
 import { type ReactElement, type RefObject, useCallback, useEffect, useRef, useState } from "react";
-import { usePrefs } from "./prefs";
+import { type Crest, usePrefs } from "./prefs";
 import {
   replayToVantage,
   setVantageFrame,
@@ -28,6 +28,8 @@ import { useMediaQuery } from "./use-media";
  *   · under reduced motion the scene draws its one still frame and sends nothing else.
  *
  * Presence, not ceremony: the crest is a small still-framed window with the Eye's slow sweep.
+ * `?crest=still` (slice 3a-3, `prefs.ts`) is the second option: the scene's `rest=still`, one
+ * frame at rest and the loop only while a glance or a regard plays — so the two compare by eye.
  */
 
 /** Where the band renders its right cap when the flag is on. */
@@ -38,12 +40,14 @@ export const SLOT_SELECTOR = "[data-tower-slot]";
 export const CREST_SRC = "/tower?frame=crown&quality=presence";
 
 /** The frame's src for a page at `search`: `?probe=1` on the page is forwarded, so the scene shows
- *  its corner readout (fps · frames · submit p50/p95) — the real number, read on a real machine. */
-export function crestSrc(search: string): string {
+ *  its corner readout (fps · frames · submit p50/p95) — the real number, read on a real machine.
+ *  A `still` crest asks the scene for `rest=still` (slice 3a-3); a scene without it ignores it. */
+export function crestSrc(search: string, crest: Crest = "live"): string {
+  const rest = crest === "still" ? `${CREST_SRC}&rest=still` : CREST_SRC;
   try {
-    return new URLSearchParams(search).get("probe") === "1" ? `${CREST_SRC}&probe=1` : CREST_SRC;
+    return new URLSearchParams(search).get("probe") === "1" ? `${rest}&probe=1` : rest;
   } catch {
-    return CREST_SRC;
+    return rest;
   }
 }
 
@@ -146,7 +150,7 @@ export function VantageFrame({
   const [mounted, setMounted] = useState(false);
   // Frozen at first render: a later navigation drops `?probe=1`, and a changed src would reload
   // the scene (a new WebGL context and a shader compile).
-  const [src] = useState(() => crestSrc(window.location.search));
+  const [src] = useState(() => crestSrc(window.location.search, usePrefs.getState().crest));
   if (shown && !mounted) setMounted(true);
 
   const frame = useRef<HTMLIFrameElement | null>(null);

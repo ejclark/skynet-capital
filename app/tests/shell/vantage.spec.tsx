@@ -1,6 +1,6 @@
 import { act, render } from "@testing-library/react";
 import { useRef } from "react";
-import { shellFromUrl, usePrefs } from "../../src/shell/prefs";
+import { crestFromUrl, shellFromUrl, usePrefs } from "../../src/shell/prefs";
 import { CREST_SRC, crestSrc, TowerSlot, VantageFrame } from "../../src/shell/vantage";
 
 /**
@@ -54,6 +54,40 @@ describe("the crest's src (#3807 slice 3a-2)", () => {
   it("forwards ?probe=1 from the page, and nothing else", () => {
     expect(crestSrc("?shell=watchtower&probe=1")).toBe(`${CREST_SRC}&probe=1`);
     expect(crestSrc("?probe=0&power=1")).toBe(CREST_SRC);
+  });
+});
+
+describe("the crest's rest (#3807 slice 3a-3)", () => {
+  it("?crest=still picks the still crest, ?crest=live today's, anything else keeps what is stored", () => {
+    expect(crestFromUrl("?shell=watchtower&crest=still", undefined)).toBe("still");
+    expect(crestFromUrl("?crest=live", "still")).toBe("live");
+    expect(crestFromUrl("?on=2026-09-28", "still")).toBe("still");
+    expect(crestFromUrl("", undefined)).toBe("live");
+    expect(crestFromUrl("?crest=STILL", undefined)).toBe("live");
+  });
+
+  it("a still crest asks the scene for rest=still; live asks for nothing new", () => {
+    expect(crestSrc("", "still")).toBe(`${CREST_SRC}&rest=still`);
+    expect(crestSrc("?probe=1", "still")).toBe(`${CREST_SRC}&rest=still&probe=1`);
+    expect(crestSrc("", "live")).toBe(CREST_SRC);
+  });
+
+  it("the frame the shell mounts carries the viewer's choice, and it survives navigation", async () => {
+    act(() => {
+      usePrefs.getState().setShell("watchtower");
+      usePrefs.getState().setCrest("still");
+    });
+    const view = render(<Shell pathname="/accounts" phone={false} band />);
+    await settle();
+    const still = () => view.container.querySelectorAll(`iframe[src="${CREST_SRC}&rest=still"]`);
+    expect(still()).toHaveLength(1);
+    view.rerender(<Shell pathname="/research" phone={false} band />);
+    await settle();
+    expect(still()).toHaveLength(1);
+    act(() => {
+      usePrefs.getState().setCrest("live");
+      usePrefs.getState().setShell(undefined);
+    });
   });
 });
 
