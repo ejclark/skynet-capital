@@ -313,6 +313,7 @@ the event's **`estimate`** label.
 |---|---|---|---|---|
 | 2026-09-15 | 7 | **Initial research.** Canonical `src/domain/market-events/jpx-market-closure-2026-09-22.json` written from the sole proposal (`.from-treasury-2y-note-2026-09-22`), now shadowed. The 09-21 sibling ledger landed hours earlier and refuted the "Tokyo dark" framing; **re-verified independently, not re-litigated** — JPX's holiday-trading table and its finalized xlsx (serial **46287 = 2026-09-22**, Name **"Holiday"**, Markets **`Open`**) both carry all three days `Open \| Finalized`. **Finding 1 (new) — the 09-22 clock:** `treasury-2y-note-2026-09-22` (`confirmed`, 1:00pm ET) prints **02:00 JST 09-23**, inside the 09-22 holiday **night** session (17:00–06:00 JST); index futures/options quotable across it, **JGB futures / interest-rate futures / securities options ineligible and dark**, cash equity shut. **Finding 2 (new, closes the 09-21 sibling's named highest-value open item) — OSE holiday-session volume is not published:** JPX's trading-day rule folds holiday sessions into the *following* business day, and the daily-report index for 202605 (`daily_report_202605.json`, new to this repo) carries **no `20260504`/`05`/`06` entry** — Golden Week volume sits inside `Daily_Report_OSE_20260507.zip` (4,318,153 B, 11 PDFs, downloaded). Nothing dated 09-21/22/23 will ever appear in JPX daily statistics. **Finding 3 (new) — discovery does NOT relocate into the cash open:** treatment-labelled on the exchange's own file, first `^N225` session back runs \|gap\| **0.748%** (n=39, traded through) vs **0.769%** (n=8, shut), **t=−0.110**; \|intraday\| 0.853% vs 0.769%, t=+0.292; **DiD vs pre-launch netting out ordinary sessions −0.078pp (t=−0.831)** gap, +0.049pp (t=+0.333) intraday — wrong sign both halves. The raw pre/post intraday rise (0.642%→0.715%, t=2.377) is an **era effect on ordinary sessions**, which is why the DiD frame is used. Relocation signature (\|gap\|≥2×\|intraday\|) fires **31% / 34% / 28%** across traded-through / pre-launch / ordinary. **Finding 4 (new) — the auction blackout arm does not cover this case:** longest Tokyo dark run around any of the 15 blackout auctions since 2016 is **4 days**; 09-22's is **5** (Sat 09-19 → Wed 09-23). **Finding 5 (new, taxonomy) —** classifying all 1,067 Cabinet Office holidays by mechanism gives **24 Rule 3(3) citizens' holidays since 1955**, 19 of them May 4 (1981–2006); **only 2009-09-22, 2015-09-22, 2026-09-22 in September**, and the last of any kind was **2019-05-02**, so this is the first in the holiday-trading era — "Holiday" is the only entry of that name among the file's 77. **Replications, credited not claimed:** auction null reproduces exactly (indirect 63.35% n=37 vs 61.88% n=1,072, **t=+0.855**; 2Y 55.22% n=9 vs 55.44% n=162, **t=−0.050**; 3+ dark block 60.57% n=15, t=−0.403); \|c2c\| ladder 1.021%/1.457%/2.061% (n=6,221/268/25) reproduces the 11-23 sibling to three decimals; `Not Open` vs `Open` \|c2c\| 1.503% (n=8) vs 1.404% (n=39) — same conclusion as 11-23 leg 4, smaller `Not Open` arm because this construction requires a finalized label on every closed weekday in the gap. Adjacency — peers: n/a (`symbols: []`); macro: **47** corridor entries incl. `boj-decision-2026-09-18`, `japan-cpi-2026-09-18`, `opex-2026-09-18` (the only *confirmed* high-impact one), the 2Y/5Y/7Y block 09-22→09-24; VIX **17.51** (`^VIX` close 2026-09-15; the 09-21 sibling logged 17.49 from an earlier same-day pull); geopolitical: `trump-xi-summit-2026-09-24`, `unga-81-general-debate-2026-09-22`, nothing dated to the closure; tape: `^N225` 63,492.99 (2026-09-14). Playbook grep `holiday\|jpx\|tokyo\|nikkei\|closure\|silver week\|equinox` → **0 hits in both**. **No proposal:** no untracked JPX holiday in corridor; 2027-09-20 (FY2027 BCP) stays banked out of corridor. Volume-bound extraction from the OSE report PDFs attempted and **abandoned rather than guessed** — recorded in honest limits. No fetch failed; `probe-ref.blocked` empty. | Initial stance set: **stand aside** (structural row only). Registers **FT-jpx-market-closure-2026-09-22-1** and **-2**. | 2026-09-23 (close-out window) |
 | 2026-09-22 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-2.6pt since last), band unchanged (low:0+), 51 adjacent event(s) tracked, new in corridor since last pulse: `apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18`, `eia-weekly-petroleum-status-2026-09-23`, `kb-home-q3-fy2026-2026-09-22`, `us-iip-q2-2026-2026-09-24` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-29 |
+| 2026-09-26 | D+4 | **Close-out — both registered forward tests are scored in full below.** Instrument cache busted per protocol (`rm -rf node_modules/.cache/{earnings-cycle,intraday-edges}`); `symbols: []`, so neither symbol-keyed instrument ever applied — scoring source is a fresh Yahoo Finance `^N225` pull (2026-09-15 → 2026-09-26) and a fresh fetch of JPX's own `daily_report_202609.json`, never memory. **`FT-jpx-market-closure-2026-09-22-1` PASSES** — the first `^N225` session after the Sat 09-19 → Wed 09-23 closure (2026-09-24: open **65,476.44**, prior close [09-18] **65,018.95**) printed an overnight gap of **0.704%**, below the 1.73% kill threshold and close to the traded-through arm's own mean (0.748%, n=39); intraday 0.057%, c2c 0.761%, both inside that arm's distribution. **`FT-jpx-market-closure-2026-09-22-2` PASSES** — `daily_report_202609.json` (JPX `UpdateDate: 2026/09/25 16:31`, re-fetched today) lists TradeDates jumping directly from `20260918` to `20260924`; no `20260921`/`20260922`/`20260923` entry exists anywhere in the file, and `Daily_Report_OSE_20260924.zip` sits at the path the index names — the trading-day rule's *consequence*, not just its text, is now directly confirmed. Neither kill fired. **VIX** 14.87 (09-25 close, fresh Yahoo pull) — unchanged from the D-0 screen's reading, no regime move. Geopolitical/peer channels not independently re-swept this close-out (budget; `symbols: []` gives peers no direct read, and neither test's kill condition depended on either channel). `## Outcome` written below. | Stand-aside stance unchanged — both forward tests scored **pass**, closing both open items this ledger was built to test | — (closed; scanner goes quiet on this event) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -324,5 +325,74 @@ in the same PR — your own file, never another event's canonical one (#1717). C
 `## Outcome` below from re-run instrument data (cache busted first), never from memory — after which
 this doc goes quiet.
 
-**Last assessed:** 2026-09-22
-<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eurostat-hicp-final-2026-09-17","housing-starts-2026-09-17","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":1} -->
+## Outcome
+
+**Close-out (2026-09-26, D+4 — inside the `closeOutWithinDays: 6` deadline; both registered forward
+tests' score-by dates, 2026-09-25 and 2026-09-26, have arrived).** `sector` mode with `symbols: []`:
+no `earnings-cycle`/`intraday-edges` instrument ever applied (the initial research said so), and the
+cache was busted anyway per the lane's standing instruction (`rm -rf node_modules/.cache/{earnings-cycle,intraday-edges}`),
+though nothing here reads it. "Re-run instrument data" means a fresh Yahoo Finance daily-bar pull of
+`^N225` (`query1.finance.yahoo.com/v8/finance/chart`, 2026-09-15 → 2026-09-26) and a fresh fetch of
+JPX's own `automation/markets/statistics-derivatives/daily/json/daily_report_202609.json` — never a
+recall of a prior row's read. Both fetches resolved this session (HTTP 200); nothing below is from
+memory.
+
+### Scored: FT-jpx-market-closure-2026-09-22-1 — PASS
+
+The prediction, registered 2026-09-15: 2026-09-24's `^N225` overnight gap prints **below 1.73%**
+(the traded-through arm's mean + 2sd). A fresh pull confirms the closure shape first — no bar exists
+for 2026-09-19 through 2026-09-23, the five-session dark run leg 6 flagged as untested — and the
+first session back:
+
+| Bar | Value |
+|---|---|
+| 2026-09-18 close (last session before the closure) | **65,018.95** |
+| 2026-09-24 open | **65,476.44** |
+| 2026-09-24 close | **65,513.99** |
+| Overnight gap \|open ÷ prior close − 1\| | **0.704%** |
+| Intraday \|close ÷ open − 1\| | 0.057% |
+| Close-to-close \|close ÷ prior close − 1\| | 0.761% |
+
+**0.704% sits below the 1.73% kill threshold and close to the traded-through arm's own mean
+(0.748%, n=39, se 0.078)** — squarely inside the distribution leg 4 built, not an outlier that
+would have made the null look underpowered. The kill did not fire. Discovery still did not relocate
+into the cash open on the one case this ledger was built to test — a replication, on the calendar's
+first traded-through block outside Golden Week.
+
+### Scored: FT-jpx-market-closure-2026-09-22-2 — PASS
+
+The prediction, registered 2026-09-15: JPX's `daily_report_202609.json` lists no `20260921`,
+`20260922` or `20260923` TradeDate, with `Daily_Report_OSE_20260924.zip` existing instead. A fresh
+fetch of that index (its own `UpdateDate: 2026/09/25 16:31`) confirms it exactly: TradeDates run
+…, `20260918`, then jump directly to `20260924` — no entry of any kind for 09-19 through 09-23 — and
+`Daily_Report_OSE_20260924.zip` sits at the path the index names. The kill did not fire. JPX's
+trading-day rule is now confirmed in its *consequence*, not just its text: the Silver Week holiday
+sessions have no separate report, exactly as Golden Week's didn't (leg 2).
+
+### What this closes
+
+Both structural claims this ledger was built to test now have direct evidence rather than a
+mechanism read off a rules page. The stand-aside stance (2026-09-15) is unchanged — nothing here was
+ever tradeable (`symbols: []`, `impact: low`, `estimate`) — and both open items it inherited from the
+[09-21 sibling](jpx-market-closure-2026-09-21.md) are closed with data rather than argument. No
+amendment to the stance; no new kill switch fired; the four horizon calls all resolve as written —
+**Today** (stand aside) was never tested against a position, **This week**'s execution guards applied
+and cost nothing, **This month**'s call is the one directly scored above (pass), and **This
+quarter**'s "JPX does not publish holiday volume" call is confirmed by the same fetch that scored
+FT-2.
+
+### Honest limits carried forward
+
+Leg 4's traded-through arm is now **n=40** with this observation added; this close-out checked the
+new point against the existing distribution's mean+2sd threshold, exactly as the registered test
+specified, and did not re-run the full 40-observation regression. The volume-*bound* question (leg
+2's honest limit — how far the absorbing trading day's volume exceeds an ordinary one) remains
+unresolved: this session confirmed non-publication of a per-session figure again but did not attempt
+the OSE per-contract PDF extraction the initial research abandoned on purpose. Leg 6's blackout-arm
+gap (longest prior run 4 days vs this run's 5) is now moot for trading purposes — the auction itself
+already scored as a null at initial research — but the run-length question itself stays untested for
+future closures longer than 5 days. No new forward test is registered here: this event is closed and
+the document goes quiet, so a prediction banked in this fragment would never be scored.
+
+**Last assessed:** 2026-09-26 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eurostat-hicp-final-2026-09-17","housing-starts-2026-09-17","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":0} -->
