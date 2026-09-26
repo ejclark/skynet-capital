@@ -7,17 +7,17 @@
     "parent_idle_raf_p95_delta_ms": 4
   },
   "tower": {
-    "submit_ms_p50": 1.3,
-    "submit_ms_p95": 7,
-    "frames": 62,
-    "mount_to_ready_ms": 824
+    "submit_ms_p50": 0.9,
+    "submit_ms_p95": 2.2,
+    "frames": 102,
+    "mount_to_ready_ms": 550
   },
   "parent_raf_interval_ms": {
-    "flag_off_p95": 416.7,
-    "flag_on_p95": 566.7,
-    "delta_p95": 150,
+    "flag_off_p95": 216.7,
+    "flag_on_p95": 283.4,
+    "delta_p95": 66.7,
     "flag_off_p50": 16.7,
-    "flag_on_p50": 133.3,
+    "flag_on_p50": 83.3,
     "idle_ms": 10000,
     "section_switches": 6
   },
@@ -28,7 +28,9 @@
     "same_element": true
   },
   "notes": [
-    "scene: the bundle from #3825 (main's scene has no __towerStats), app: this PR",
-    "SwiftShader rasterises on the same CPU as the page, so the parent's rAF interval absorbs the crest's draw cost here; a GPU moves it off the main thread. Both pass lines fail on SwiftShader — the verdict waits for a real device."
+    "scene: the quality=presence bundle from #3847 (held), app: this PR (the crest loads /tower?frame=crown&quality=presence)",
+    "before, same machine and session (main's scene and app): crest submit p50 0.9 / p95 2.3 ms, 101 frames; parent p50 16.7 -> 83.3 ms, p95 216.7 -> 283.4 (delta 66.7)",
+    "no change on SwiftShader: the crest drew ~102 frames in ~14 s (~7 a second) before and after, so the 30 fps cap never binds there, DPR is already 1 at this viewport, and the shadow map was already drawn once",
+    "the parent's delta tracks the existence of an animating frame, not its draw cost; the next lever is a still at rest, live only on regard/glance. The real-device number is Eric's, via ?probe=1"
   ]
 }
