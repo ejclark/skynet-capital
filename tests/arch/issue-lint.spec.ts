@@ -279,6 +279,22 @@ describe("issue lint — the 'Needs from you' decision callout", () => {
     expect(notes.join("\n")).toContain("needs-eric");
   });
 
+  it("notes a plan-labelled body that never points at its state block", () => {
+    const { problems, notes } = lintWithLabels(withoutCallout, "enhancement,plan");
+    expect(problems).toEqual([]);
+    expect(notes.join("\n")).toContain("state block");
+  });
+
+  it("is silent on the state block when the body points at it, or the label is absent", () => {
+    const pointed = `${withoutCallout}\n\nState block: the first comment, edited in place.\n`;
+    expect(lintWithLabels(pointed, "enhancement,plan").notes.join("\n")).not.toContain(
+      "state block",
+    );
+    expect(lintWithLabels(withoutCallout, "bug,feedback").notes.join("\n")).not.toContain(
+      "state block",
+    );
+  });
+
   it("fails a decision item that runs past one short line", () => {
     const wordy = [
       "**Decide the account-linking retry limit.**",

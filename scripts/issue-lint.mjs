@@ -245,6 +245,18 @@ function checkNeedsFromYou(text, labels, problems, notes) {
   }
 }
 
+/** A plan issue is picked up from its state block, not from its comment thread (docs/ISSUES.md →
+ *  The state block, #3765). The block itself is a comment, so a body can only point at it; a
+ *  `plan`-labelled body with no pointer gets a note, never a problem — the block is a reading
+ *  protocol, not an existence rule. */
+function checkStateBlock(text, labels, notes) {
+  if (!Array.isArray(labels) || !labels.includes("plan")) return;
+  if (/state block/i.test(text)) return;
+  notes.push(
+    "a plan with no state block pointer — post the block as the first comment after filing and end the Slicing sketch with `State block: the first comment, edited in place` (docs/ISSUES.md → The state block)",
+  );
+}
+
 /** The vocabulary an issue's labels are checked against — one registry, shared with the lanes that
  *  apply them (scripts/moneypenny/labels.mjs `LABELS`). */
 const KNOWN_LABELS = new Set(LABEL_NAMES);
@@ -291,6 +303,7 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   checkTitle(title, problems, notes);
   collectNotes(text, notes);
   if (Array.isArray(labels)) checkLabels(labels, notes);
+  checkStateBlock(text, labels, notes);
   checkNeedsFromYou(text, labels, problems, notes);
 
   return { problems, notes };
