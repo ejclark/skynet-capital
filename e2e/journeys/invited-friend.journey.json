@@ -72,7 +72,7 @@
           "ears": "WHEN the invited friend opens Settings, the app shall show only the friend's own accounts and shall not show the fleet controls or the owner's account tools.",
           "expect": [
             { "role": "heading", "name": "Friend" },
-            { "role": "heading", "name": "Eric", "absent": true },
+            { "role": "heading", "name": "Eric", "exact": true, "absent": true },
             { "role": "heading", "name": "Mission Control", "absent": true },
             { "role": "heading", "name": "Unclaimed accounts", "absent": true },
             { "text": "Guest list", "absent": true }

@@ -24,7 +24,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** The invited friend's sign-in — a member (guest list), never an owner (env allowlist). */
-export const FRIEND_EMAIL = "friend@example.test";
+const FRIEND_EMAIL = "friend@example.test";
 
 /** The owner who "invited" the friend — the guest list's audit column; same as server.mjs's CRAWL_EMAIL. */
 const INVITED_BY = "crawl@example.test";
