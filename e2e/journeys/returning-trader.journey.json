@@ -73,16 +73,12 @@
         {
           "id": "s5",
           "goto": "/app/trade?desk=human-eric&symbol=EEM",
-          "sees": "no back link on the stage — the rail's '← Back to account' (which pointed at the desk, not the cockpit) left with the rail (#3807 slice 2a); the topbar's Profile tab is the way back",
+          "sees": "no back link on the stage — the rail's '← Back to account' left with the rail (#3807 slice 2a); the topbar's Profile tab always lands on /accounts now (#3807 slice 2b), the book once onboarding is complete",
           "ears": "WHEN the member wants to return from Trade to their book, the app shall link back to the cockpit they came from.",
           "expect": [
             { "role": "link", "name": "Profile", "within": "nav.topnav", "href": "/app/accounts" },
             { "role": "link", "name": "Back to account", "absent": true }
           ],
-          "known_gap": "dead end 6 — Trade's wrong-way '← Back to account' left with the rail (#3807 slice 2a), but the topbar's Profile tab reaches /accounts only once onboarding is complete; before that it opens /learn (app/src/routes/__root.tsx ProfileTab)",
-          "where": "app/src/routes/__root.tsx:113",
-          "severity": "medium",
-          "fix": "S",
           "judge": "does the reader land where they started?"
         },
         {
@@ -166,15 +162,15 @@
       "steps": [
         {
           "id": "s1",
-          "goto": "/app/playbooks",
+          "goto": "/app/accounts?section=milestones&chapter=playbooks",
           "sees": "'Prove the play by hand, then arm it' — the WIP chapter, Arm · soon disabled",
           "ears": "WHEN the member opens the Profile's Playbooks chapter, the app shall relate it to the Playbook Store (one playbook system, not two).",
           "expect": [
             { "role": "heading", "name": "Prove the play by hand" },
             { "role": "link", "name": "Playbook Store", "within": "main" }
           ],
-          "known_gap": "dead end 7 — two unrelated 'Playbooks': the Profile chapter with a disabled Arm (app/src/routes/playbooks.tsx:41) and R&D's subscribe-able store (app/src/shell/playbooks-section.tsx:84)",
-          "where": "app/src/routes/playbooks.tsx:41",
+          "known_gap": "dead end 7 — two unrelated 'Playbooks': the Profile page's Milestones chapter with a disabled Arm (app/src/shell/playbooks-chapter.tsx:41) and R&D's subscribe-able store (app/src/shell/playbooks-section.tsx:84)",
+          "where": "app/src/shell/playbooks-chapter.tsx:41",
           "severity": "medium",
           "fix": "L",
           "judge": "does the reader know which Playbooks this is?"

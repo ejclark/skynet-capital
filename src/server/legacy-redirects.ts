@@ -27,18 +27,47 @@ function deskTarget(path: string, url: string): string {
   return `/app/u/${id}`;
 }
 
+/** THE PROFILE FOLDS (#3807 slice 2b): Milestones, its three chapters and Feedback became
+ *  viewer-level sections of the Profile page, so every old address — the pre-shell page and the
+ *  shell's own retired route — lands on the FINAL home in one hop, never through a route that is
+ *  itself a redirect now. The target carries its own query, so the request's rides after it. */
+const MILESTONES = "/app/accounts?section=milestones";
+const ONBOARDING = `${MILESTONES}&chapter=onboarding`;
+const PROFILE_FOLDS: ReadonlyMap<string, string> = new Map([
+  // The connect form lives inside onboarding's guide (2026-09-03); /app/join redirects there too.
+  ["/add", ONBOARDING],
+  ["/onboarding", ONBOARDING],
+  ["/app/onboarding", ONBOARDING],
+  ["/learn", MILESTONES],
+  ["/app/learn", MILESTONES],
+  ["/playbooks", `${MILESTONES}&chapter=playbooks`],
+  ["/app/playbooks", `${MILESTONES}&chapter=playbooks`],
+  // Your filings — `/feedback/coach` and `/feedback/preview` are served above this map, never here.
+  ["/feedback", "/app/accounts?section=feedback"],
+  ["/app/feedback", "/app/accounts?section=feedback"],
+]);
+
+/** `/learn/trading` is a path UNDER a fold (`TWINS` is exact-match), so it is its own prefix rule:
+ *  the chapter and anything below it (a trailing slash, an old deep link) open the ladder. */
+function tradingChapter(path: string): string | undefined {
+  const bare = path.replace(/^\/app(?=\/)/, "");
+  return bare === "/learn/trading" || bare.startsWith("/learn/trading/")
+    ? `${MILESTONES}&chapter=trading`
+    : undefined;
+}
+
+/** A fold's target already has a `?`, so the request's own query joins with `&`. */
+const withQuery = (target: string, search: string): string =>
+  search === "" ? target : `${target}&${search.slice(1)}`;
+
 /** The straight renames — one shell page, same meaning, query preserved. */
 const TWINS: ReadonlyMap<string, string> = new Map([
-  // The connect form lives inside onboarding's guide (2026-09-03); /app/join redirects there too.
-  ["/add", "/app/onboarding"],
-  ["/feedback", "/app/feedback"],
   // The owner pages' cards live on app Settings (9e).
   ["/invite", "/app/settings"],
   ["/claim", "/app/settings"],
   // Ops status is the topbar's status pill now (#1296) — present on every app route, so the old
   // page's bookmark lands on the app itself rather than on a Settings section that no longer has it.
   ["/ops-status", "/app/"],
-  ["/learn", "/app/learn"],
   // The ticket (10b): the shell speaks ?play= and ?desk=; other legacy params drop harmlessly
   // in the shell route's validateSearch.
   ["/trade", "/app/trade"],
@@ -79,6 +108,10 @@ export function serveLegacyRedirect(
     res.writeHead(302, { location: "/app/leaderboard" });
   } else if (path === "/compare") {
     res.writeHead(302, { location: `/app/leaderboard${search}` });
+  } else if (PROFILE_FOLDS.has(path)) {
+    res.writeHead(302, { location: withQuery(PROFILE_FOLDS.get(path) as string, search) });
+  } else if (tradingChapter(path)) {
+    res.writeHead(302, { location: withQuery(tradingChapter(path) as string, search) });
   } else if (TWINS.has(path)) {
     res.writeHead(302, { location: `${TWINS.get(path)}${search}` });
   } else if (path === "/collections" || path.startsWith("/collections/")) {

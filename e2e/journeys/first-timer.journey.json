@@ -11,43 +11,44 @@
         {
           "id": "s1",
           "goto": "/app/",
-          "sees": "the league table, ranked rows, no word about where a new member starts",
-          "ears": "WHEN a signed-in member with no linked account opens the app, the app shall land them on a page with a visible next step into onboarding.",
-          "expect": [{ "role": "link", "name": "Onboarding" }],
-          "known_gap": "dead end 1 — first sign-in lands on the leaderboard with no onboarding cue (src/server/auth/oauth-callback.ts:79 → / → app/src/routes/index.tsx:21 → /leaderboard)",
-          "where": "src/server/auth/oauth-callback.ts:79",
-          "severity": "high",
-          "fix": "S",
-          "judge": "can this reader tell what to do next in ten seconds?"
+          "sees": "the league table, ranked rows; the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
+          "ears": "WHEN a signed-in member with no linked account opens the app, the app shall keep a one-tap way into onboarding on screen: the Profile tab, landing on the connect guide.",
+          "expect": [
+            { "role": "link", "name": "Profile", "within": "nav.topnav", "href": "/app/accounts" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?",
+          "act": { "click": { "role": "link", "name": "Profile", "exact": true } }
         },
         {
           "id": "s2",
-          "goto": "/app/learn",
-          "sees": "the milestones page: M·01 Onboarding first, M·02 gated, M·03 WIP",
-          "ears": "WHEN the member opens Profile before onboarding is complete, the app shall show M·01 Onboarding as the next step with one link into it.",
+          "goto": "/app/accounts",
+          "sees": "the Profile page with no account: 'No account linked yet' where the switcher sits, Milestones pressed, the table of contents, and M·01 Onboarding open beneath the cards",
+          "ears": "WHEN a member with no linked account opens Profile, the app shall show the Profile page opened on Milestones with the Onboarding chapter open — never a page that links back to itself.",
           "expect": [
-            { "role": "heading", "name": "milestones" },
-            { "role": "link", "name": "Onboarding" }
+            { "text": "No account linked yet", "within": "main" },
+            { "role": "heading", "name": "Your milestones" },
+            { "role": "heading", "name": "Welcome to the league" },
+            { "text": "Connect your Alpaca paper account" }
           ],
           "judge": "can this reader tell what to do next in ten seconds?"
         },
         {
           "id": "s3",
-          "goto": "/app/learn",
-          "sees": "the M·02 card's gate note says 'unlocks after your first feedback filing'",
+          "goto": "/app/accounts?section=milestones",
+          "sees": "the M·02 card reads 'in progress' with no gate note — a session with no account gets no ladder gate from the server; for a gated member the note now says the server's own sentence",
           "ears": "WHILE the trading ladder is gated, the app shall name the SAME unlock condition everywhere it is named (the server's own line: the moment you say hello to Moneypenny).",
           "expect": [{ "text": "the moment you say hello" }],
-          "known_gap": "dead end 2 — /learn says 'unlocks after your first feedback filing' (app/src/routes/learn.tsx:61) while the server says 'the moment you say hello to Moneypenny' (src/domain/progression.ts:159)",
-          "where": "app/src/routes/learn.tsx:61",
-          "severity": "medium",
+          "known_gap": "dead end 2, half closed — the contradiction is gone (the M·02 card now says the server's 'the moment you say hello to Moneypenny', app/src/shell/milestones-section.tsx LADDER_CARD_GATE_NOTE, #1672's fix restored in #3807 slice 2b, pinned by app/tests/routes/profile-door.spec.tsx), but a session with no account gets no ladder gate from the server, so no page names the unlock condition at all",
+          "where": "app/src/shell/milestones-section.tsx",
+          "severity": "low",
           "fix": "S",
           "judge": "does this reader know what unlocks trading, in one sentence?"
         },
         {
           "id": "s4",
-          "goto": "/app/onboarding",
+          "goto": "/app/accounts?section=milestones&chapter=onboarding",
           "sees": "Welcome to the league — the checklist: connect Alpaca, say hello, first trade",
-          "ears": "WHEN the member opens onboarding, the app shall show the checklist with the first undone step first.",
+          "ears": "WHEN the member opens the Onboarding chapter, the app shall show the checklist with the first undone step first.",
           "expect": [
             { "role": "heading", "name": "Welcome to the league" },
             { "text": "Connect your Alpaca paper account" }
@@ -77,9 +78,9 @@
       "steps": [
         {
           "id": "s1",
-          "goto": "/app/learn/trading",
+          "goto": "/app/accounts?section=milestones&chapter=trading",
           "sees": "One fill unlocks the next rung — the ladder, every rung named, 101 first",
-          "ears": "WHEN the member opens the trading ladder before any fill, the app shall show rung 101 as the next rung and what earns it.",
+          "ears": "WHEN the member opens the Trading chapter before any fill, the app shall show rung 101 as the next rung and what earns it.",
           "expect": [
             { "role": "heading", "name": "One fill unlocks the next rung" },
             { "text": "101" }

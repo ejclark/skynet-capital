@@ -3,8 +3,18 @@ import type { ReactNode } from "react";
 import { RungChip } from "../../src/shell/rung-chip";
 
 rstest.mock("@tanstack/react-router", () => ({
-  Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
-    <a href={to} className={className}>
+  Link: ({
+    to,
+    search,
+    children,
+    className,
+  }: {
+    to: string;
+    search?: Record<string, string>;
+    children: ReactNode;
+    className?: string;
+  }) => (
+    <a href={search ? `${to}?${new URLSearchParams(search)}` : to} className={className}>
       {children}
     </a>
   ),
@@ -18,7 +28,8 @@ const plays = [
 
 /**
  * The rung chip (#3407, Workbench slice 5) — the one line the ticket keeps when the milestone
- * strip moves to /learn/trading: the rung, its state as a WORD, the count, the door to the ladder.
+ * strip moves to the ladder (the Trading chapter of the Profile page's Milestones since #3807 2b): the
+ * rung, its state as a WORD, the count, the door to the ladder.
  */
 describe("RungChip", () => {
   it("names the rung, says its state in a word, counts the earned rungs and links to the ladder", () => {
@@ -29,7 +40,7 @@ describe("RungChip", () => {
     expect(screen.getByText("1 / 3 earned")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Trading ladder →" })).toHaveAttribute(
       "href",
-      "/learn/trading",
+      "/accounts?section=milestones&chapter=trading",
     );
   });
 

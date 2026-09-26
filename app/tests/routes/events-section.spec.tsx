@@ -111,6 +111,10 @@ rstest.mock("../../src/live/desk", () => ({
   fetchDesk: (id: string) => Promise.resolve({ desk: { id, positions: DESKS[id] ?? [] } }),
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
 }));
+// Onboarding complete: the page's default is the Overview (#3807 slice 2b's `defaultSection`).
+rstest.mock("../../src/live/onboarding", () => ({
+  fetchOnboarding: () => Promise.resolve({ complete: true, steps: [], done: 3, total: 3 }),
+}));
 rstest.mock("../../src/live/networth", () => ({
   fetchNetWorth: () => Promise.reject(new Error("not used in this spec")),
 }));

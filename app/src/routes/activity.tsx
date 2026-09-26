@@ -186,7 +186,8 @@ function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
         <p className="note">Feedback isn't switched on yet, so there's nothing to show here.</p>
       ) : wire.feedback.length === 0 ? (
         <p className="note">
-          No feedback filed yet — be the first from <a href="/app/feedback">the feedback form</a>.
+          No feedback filed yet — be the first: tell Moneypenny, and your filings are listed on{" "}
+          <a href="/app/accounts?section=feedback">your Profile</a>.
         </p>
       ) : visible.length === 0 ? (
         <p className="note">Nothing active — flip to "All" to see what's already shipped.</p>

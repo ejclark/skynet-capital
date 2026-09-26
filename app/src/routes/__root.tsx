@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   createRootRoute,
   Link,
@@ -9,7 +8,6 @@ import {
 import type { ReactElement } from "react";
 import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
-import { fetchOnboarding } from "../live/onboarding";
 import { KeyboardChords } from "../shell/keyboard";
 import { MarketSession } from "../shell/market-session";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
@@ -79,17 +77,11 @@ function ExitIcon(): ReactElement {
   );
 }
 
-/** Every route under the Profile rail lights the Profile tab. `/` is a thin redirect to
- *  `/leaderboard` now (#2321), so it no longer belongs to this family. */
-export const PROFILE_PATHS = [
-  "/accounts",
-  "/learn",
-  "/onboarding",
-  "/playbooks",
-  "/feedback",
-  "/settings",
-  "/join",
-] as const;
+/** Every page of the Profile family lights the Profile tab. `/` is a thin redirect to
+ *  `/leaderboard` now (#2321), so it no longer belongs to this family; `/learn`, its chapters,
+ *  `/feedback` and `/join` are redirects into `/accounts` since #3807 slice 2b, so a member is
+ *  never ON them to light anything. */
+export const PROFILE_PATHS = ["/accounts", "/settings"] as const;
 
 export function isProfilePath(pathname: string): boolean {
   const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
@@ -99,21 +91,20 @@ export function isProfilePath(pathname: string): boolean {
 /**
  * THE PROFILE TAB (#1119, the canvas's top bar: Leaderboard · Profile · Trade · Activity ·
  * Research). Profile is a family of routes, not one, so its active state is computed from the
- * location rather than a single route match. It opens on the milestones table of contents while
- * onboarding is still open — the natural next step for a new member — and on Accounts once
- * onboarding is complete (Eric, 2026-09-22: a member who's done onboarding wants their book, not
- * the milestones ToC, and was clicking through Milestones → Accounts every time). Reuses the
- * `["onboarding"]` query the onboarding route itself already runs, so this never fires an extra
- * fetch of its own — it just reads whatever's already in cache (or fetches once, cheaply, on
- * first load).
+ * location rather than a single route match. It ALWAYS lands on the Profile page (#3807 slice 2b):
+ * the page itself opens on Milestones while onboarding is open — the natural next step for a new
+ * member — and on the Overview once onboarding is complete (Eric, 2026-09-22: a member who's done
+ * onboarding wants their book, not the milestones, and was clicking through every time), the same
+ * `["onboarding"]` read this tab used to branch on (`shell/profile-sections.ts` `defaultSection`).
+ * One target means Trade always has a one-tap way back to the book (returning-trader j1 s5), and a
+ * member with no account lands on the connect guide instead of a table of contents (first-timer
+ * j1 s1).
  */
 function ProfileTab(): ReactElement {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onboarding = useQuery({ queryKey: ["onboarding"], queryFn: fetchOnboarding });
-  const to: "/accounts" | "/learn" = onboarding.data?.complete ? "/accounts" : "/learn";
   return (
     <Link
-      to={to}
+      to="/accounts"
       className="topnav-link"
       aria-current={isProfilePath(pathname) ? "page" : undefined}
     >

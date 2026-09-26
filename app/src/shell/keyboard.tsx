@@ -11,9 +11,10 @@ import { useEffect, useRef, useState } from "react";
 
 /** In-shell chord targets (router navigation). An optional 4th element carries search params —
  *  `b` for R&D → Playbooks needs one, since Playbooks is a `/research` section, not its own route
- *  (#3623; `c` pointed at the retired Collections section). */
+ *  (#3623; `c` pointed at the retired Collections section), and so does `p`, the Profile page's
+ *  Milestones section (#3807 slice 2b — `/learn` is a redirect there now). */
 const SHELL_CHORDS: readonly (readonly [string, string, string, Record<string, string>?])[] = [
-  ["p", "/learn", "Profile"],
+  ["p", "/accounts", "Milestones", { section: "milestones" }],
   ["a", "/accounts", "Accounts"],
   ["t", "/trade", "Trade ticket"],
   ["w", "/activity", "Activity"],

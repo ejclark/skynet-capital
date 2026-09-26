@@ -139,3 +139,25 @@
     font-size: 11px;
   }
 }
+
+/* The switcher's row said in words (#3807 slice 2b, `cockpit-head.tsx`): a viewer-level section
+ * open, or no account linked. The label mirrors `.field label`, the line holds the select's own
+ * height, so the sticky head does not jump between sections at 390. */
+.cockpit-head-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--muted);
+}
+.cockpit-head-line {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.cockpit-head-note .set-switch-field {
+  max-width: none;
+}

@@ -18,7 +18,8 @@ import type { PlayInfo, PlaysIndex } from "../live/options";
  *   - **A locked node routes to the milestone, not the ticket** (Eric, 2026-09-06: the rail was
  *     inviting a click straight into a rung that hadn't been earned, which read as "everyone's
  *     unlocked" even with zero fills — worse, `trade-gate.tsx` had no lock check at all behind
- *     that click). A locked rung's circle and code link to `/learn/trading` — more detail on what
+ *     that click). A locked rung's circle and code link to the Trading chapter of the Profile page's
+ *     Milestones (`/accounts?section=milestones&chapter=trading`, #3807 2b) — more detail on what
  *     unlocks it — never to a ticket it can't use yet.
  *   - **Nothing here decides earned or locked.** Both arrive from `/api/trade/plays`; the ✓ is a
  *     real fill the server derived (`progression.ts`). Wheels off, the rail still draws the
@@ -102,7 +103,8 @@ function Rung({
   if (play.locked) {
     return (
       <Link
-        to="/learn/trading"
+        to="/accounts"
+        search={{ section: "milestones", chapter: "trading" }}
         className={className}
         aria-label={`${play.code} ${play.name} — locked, see what unlocks it`}
       >

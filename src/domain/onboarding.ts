@@ -39,7 +39,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     detail:
       "Set up a free Alpaca paper account and link it here in five short steps, detailed below. We read keys only to verify and show your balance — no orders are ever placed on your behalf.",
     points: ONBOARDING_STEP_POINTS,
-    route: "/app/onboarding",
+    route: "/app/accounts?section=milestones&chapter=onboarding",
   },
   {
     id: "first-message",
@@ -48,7 +48,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
       "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
     points: ENGAGEMENT_MILESTONES.find((m) => m.id === "first-message")?.points ?? 0,
     // The rail, not a page: `?moneypenny=intro` opens the right rail with her intro script.
-    route: "/app/onboarding?moneypenny=intro",
+    route: "/app/accounts?section=milestones&chapter=onboarding&moneypenny=intro",
   },
   {
     id: "first-trade",

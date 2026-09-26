@@ -60,7 +60,7 @@ export function AccountSwitcher({
           {isDefault ? "Default" : "Set as default"}
         </button>
       ) : null}
-      <a className="set-switch-add" href="/app/onboarding">
+      <a className="set-switch-add" href="/app/accounts?section=milestones&chapter=onboarding">
         + Add an account
       </a>
     </div>

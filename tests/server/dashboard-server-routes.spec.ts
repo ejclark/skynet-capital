@@ -62,7 +62,7 @@ describe("dashboard-server /feedback", () => {
       // API, tested in feedback-api-routes.spec.ts).
       const form = await fetch(`${base}/feedback`, { redirect: "manual" });
       expect(form.status).toBe(302);
-      expect(form.headers.get("location")).toBe("/app/feedback");
+      expect(form.headers.get("location")).toBe("/app/accounts?section=feedback");
     });
   });
 
@@ -92,7 +92,7 @@ describe("dashboard-server /feedback", () => {
           redirect: "manual",
         });
         expect(authed.status).toBe(302);
-        expect(authed.headers.get("location")).toBe("/app/feedback");
+        expect(authed.headers.get("location")).toBe("/app/accounts?section=feedback");
       },
     );
   });
