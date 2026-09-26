@@ -31,6 +31,23 @@ export function glanceWeight(since: number): number {
   return 1 - smooth((since - attack - hold) / release);
 }
 
+/** The whole glance, attack to release, in seconds. */
+export const GLANCE_SECONDS = GLANCE.attack + GLANCE.hold + GLANCE.release;
+
+/**
+ * Whether a glance has let go entirely — `since` seconds after it began, and `releasedSince`
+ * seconds after an early `tower:release` if there was one. The crest's `rest=still` stops its loop
+ * on the first frame this is true (plan #3807 slice 3a-3).
+ */
+export function glanceOver(since: number, releasedSince?: number): boolean {
+  if (since <= 0) return false;
+  const w =
+    releasedSince === undefined
+      ? glanceWeight(since)
+      : Math.min(glanceWeight(since), releaseWeight(releasedSince));
+  return w <= 0;
+}
+
 /** 1..0: a glance let go early (`tower:release`), `since` seconds after the release. */
 export function releaseWeight(since: number): number {
   if (since < 0) return 1;

@@ -7,7 +7,15 @@
  *     still (the page asked for a picture, not an animation — it used to redraw every frame);
  *   · `run(false)` (the page says the frame is hidden or off-screen) → the loop is off until
  *     `run(true)`; the caller re-anchors its clock on resume so the sweep never jumps;
- *   · every draw is timed (`FrameStats`) — the first frame-time budget this repo has.
+ *   · every draw is timed (`FrameStats`) — the first frame-time budget this repo has;
+ *   · `fpsCap` (the crest's `quality=presence`, slice 3a-2) skips display frames by timestamp, so a
+ *     60 Hz display draws ~30 a second and a 120 Hz one the same — the scene's own clock is real
+ *     time, so the motion is no slower, only sampled less often.
+ *   · `restStill` (the crest's `rest=still`, slice 3a-3) → at rest it is the reduced-motion path —
+ *     ONE frame, then the loop is off; `wake()` (a glance or a regard) runs it, and `settle()` (the
+ *     glance has let go) stops it again on the frame just drawn. A frame that animates constantly
+ *     cost the page +66.7 ms p95 on SwiftShader whatever it drew, so the crest animates only while
+ *     it is looking at something.
  */
 
 /** The fire's clock wraps here, on the CPU (docs/art/EYE.md, the real-device addendum): an
@@ -62,6 +70,30 @@ export class FrameStats {
   }
 }
 
+/** A display frame this close to the cap's interval still counts as due — refresh jitter on a
+ *  60 Hz display lands every second frame at 33.3 ± ~1 ms, which must not read as "too soon". */
+const CAP_SLACK_MS = 2;
+
+/**
+ * The frame gate: `due(now)` says whether the display frame at `now` (ms) should draw under a cap
+ * of `fps` draws a second. The first frame is always due; `reset()` makes the next one due too (a
+ * resume must not wait out a stale interval).
+ */
+export function frameGate(fps: number): { due(now: number): boolean; reset(): void } {
+  const interval = 1000 / fps;
+  let last = Number.NEGATIVE_INFINITY;
+  return {
+    due(now) {
+      if (now - last < interval - CAP_SLACK_MS) return false;
+      last = now;
+      return true;
+    },
+    reset() {
+      last = Number.NEGATIVE_INFINITY;
+    },
+  };
+}
+
 export interface LoopDeps {
   /** Prefers reduced motion: one still, no loop. */
   readonly reduce: boolean;
@@ -69,10 +101,16 @@ export interface LoopDeps {
   readonly tick: () => void;
   /** Draw the current state once, without advancing time. */
   readonly still: () => void;
-  /** The renderer's `setAnimationLoop`. */
-  readonly setAnimationLoop: (cb: (() => void) | null) => void;
+  /** The renderer's `setAnimationLoop` (it hands the callback the frame's timestamp in ms). */
+  readonly setAnimationLoop: (cb: ((now: number) => void) | null) => void;
+  /** Most draws per second (`quality=presence` → 30); omitted or `null` draws every frame. */
+  readonly fpsCap?: number | null;
+  /** The frame's timestamp when the animation loop does not pass one (tests pass their own). */
+  readonly now?: () => number;
   /** Called when a paused loop resumes, before its first tick — re-anchor the clock here. */
   readonly onResume?: () => void;
+  /** `rest=still`: one frame at rest, the loop only between `wake()` and `settle()`. */
+  readonly restStill?: boolean;
 }
 
 export interface Loop {
@@ -84,6 +122,10 @@ export interface Loop {
   invalidate(): void;
   /** Stop for good (a seek takes over the frame). */
   halt(): void;
+  /** `restStill`: something to look at — animate until `settle()`. A no-op otherwise. */
+  wake(): void;
+  /** `restStill`: the gaze is home — stop on the frame the last tick drew. A no-op otherwise. */
+  settle(): void;
   readonly running: boolean;
 }
 
@@ -91,35 +133,60 @@ export function createLoop(deps: LoopDeps): Loop {
   let running = false;
   let wanted = true;
   let halted = false;
+  /** Under `restStill`, whether a glance is playing; otherwise the loop is always live. */
+  let awake = !deps.restStill;
+  const gate = deps.fpsCap ? frameGate(deps.fpsCap) : null;
+  const clock = deps.now ?? (() => performance.now());
+  const frame = gate
+    ? (now?: number): void => {
+        if (gate.due(typeof now === "number" ? now : clock())) deps.tick();
+      }
+    : (): void => deps.tick();
   const stop = (): void => {
     running = false;
     deps.setAnimationLoop(null);
   };
   const go = (): void => {
     running = true;
-    deps.setAnimationLoop(deps.tick);
+    gate?.reset();
+    deps.setAnimationLoop(frame);
+  };
+  /** Run exactly when the page sees the frame and there is motion to show. */
+  const sync = (): void => {
+    const want = !(halted || deps.reduce) && wanted && awake;
+    if (want === running) return;
+    if (want) {
+      deps.onResume?.();
+      go();
+    } else stop();
   };
   return {
     start() {
-      if (deps.reduce) {
+      if (deps.reduce || !awake) {
         deps.still();
         stop();
       } else go();
     },
     run(on) {
       wanted = on;
-      if (halted || deps.reduce || on === running) return;
-      if (on) {
-        deps.onResume?.();
-        go();
-      } else stop();
+      sync();
     },
     invalidate() {
-      if (!(running || halted) && (deps.reduce || !wanted)) deps.still();
+      if (!(running || halted) && (deps.reduce || !wanted || !awake)) deps.still();
     },
     halt() {
       halted = true;
       stop();
+    },
+    wake() {
+      if (!deps.restStill) return;
+      awake = true;
+      sync();
+    },
+    settle() {
+      if (!deps.restStill) return;
+      awake = false;
+      sync();
     },
     get running() {
       return running;

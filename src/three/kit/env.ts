@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { FULL, pixelRatioFor, type Quality } from "./quality.js";
 
 /**
  * The STAGE — renderer, camera, orbit and lights. Straight from the Barad-dûr design handoff's
@@ -12,6 +13,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
  *   2. ACES filmic tone mapping at exposure 1.15 — the fire's HDR values roll off instead of clipping;
  *   3. a cold hemisphere wash over a warm ground bounce, a shadow-casting moon key, and a warm fill
  *      from behind so the silhouette never goes dead black.
+ *
+ * `quality` (kit/quality.ts) caps the pixel ratio and sizes — or drops — the key's shadow map.
  */
 
 export const BACKGROUND = 0x0b0f14;
@@ -24,14 +27,15 @@ export interface Stage {
   readonly key: THREE.DirectionalLight;
 }
 
-export function createStage(canvas: HTMLCanvasElement): Stage {
+export function createStage(canvas: HTMLCanvasElement, quality: Quality = FULL): Stage {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
     preserveDrawingBuffer: true,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(pixelRatioFor(quality, window.devicePixelRatio || 1));
+  const shadows = quality.shadowMapSize > 0;
+  renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
@@ -42,8 +46,8 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
   scene.add(new THREE.HemisphereLight(0x8a9bb4, 0x3a1c0c, 1.5));
 
   const key = new THREE.DirectionalLight(0xc6d0e0, 2.3);
-  key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.castShadow = shadows;
+  if (shadows) key.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
   key.shadow.bias = -0.0002;
   scene.add(key, key.target);
 
@@ -74,6 +78,7 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
 /**
  * Aim the key light and its shadow frustum at the model, and add a ground plane that only catches
  * shadow. Mirrors the reference shell's `setObject`, which derives all of this from the bounds.
+ * With no shadow map (`quality=presence`) there is nothing for the plane to catch, so none is added.
  */
 export function frameLights(stage: Stage, object: THREE.Object3D): THREE.Sphere {
   const sphere = new THREE.Box3().setFromObject(object).getBoundingSphere(new THREE.Sphere());
@@ -88,6 +93,7 @@ export function frameLights(stage: Stage, object: THREE.Object3D): THREE.Sphere 
   cam.left = cam.bottom = -R * 1.4;
   cam.right = cam.top = R * 1.4;
   cam.updateProjectionMatrix();
+  if (!stage.renderer.shadowMap.enabled) return sphere;
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(R * 5, R * 5),
