@@ -306,6 +306,20 @@ describe("event-material-scan parseLedgerHeader() — last occurrence wins", () 
       `\n**Last assessed:** 2026-09-18\n<!-- probe-ref: {"vix":3} -->\n`;
     expect(parseLedgerHeader(three)).toEqual({ lastAssessed: "2026-09-18", probeRef: { vix: 3 } });
   });
+
+  it("names a malformed probe-ref block instead of reading it as a ledger that never had one", () => {
+    const corrupt = `${LEDGER_TEXT.trimEnd()}\n\n**Last assessed:** 2026-09-04\n<!-- probe-ref: {"vix":} -->\n`;
+    expect(parseLedgerHeader(corrupt)).toEqual({
+      lastAssessed: "2026-09-04",
+      probeRef: null,
+      probeRefMalformed: true,
+    });
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-04", probeRef: null, probeRefMalformed: true },
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["malformed-reference-baseline"]);
+  });
 });
 
 // The price read itself (issue #1386). Imported directly rather than driven through the CLI — the

@@ -163,9 +163,12 @@ export function decide(state) {
   const daysOut = daysBetween(today, event.date);
   const band = bandFor(event.impact, daysOut, cadence);
   const probeRef = ledger?.probeRef ?? null;
-  const reasons = probeRef
-    ? tripReasons(event, probeRef, market, strong, band)
-    : ["no-reference-baseline"];
+  // A malformed block is still "no baseline" (material, the safe side) but says so by name, so the
+  // session it buys knows to repair the ledger's probe-ref rather than read it as a fresh ledger.
+  const missing = ledger?.probeRefMalformed
+    ? "malformed-reference-baseline"
+    : "no-reference-baseline";
+  const reasons = probeRef ? tripReasons(event, probeRef, market, strong, band) : [missing];
 
   const verdict = reasons.length ? "material" : "screen";
   const screenStreak = verdict === "screen" ? (probeRef?.screenStreak ?? 0) + 1 : 0;
@@ -302,9 +305,9 @@ export function applyScreen(ledgerText, state, decision) {
  *  the LAST occurrence of each in the file, not the first: since applyScreen (above) only ever
  *  APPENDS a fresh pair rather than rewriting the original header, the most recent state is
  *  whichever one appears latest in the file — the original header for an unscreened doc, or the
- *  newest trailing block for one that has been. A malformed probe-ref block parses as absent (falls
- *  back to `no-reference-baseline`, never a crash) — a hand-edited ledger must degrade safely, not
- *  break the pulse pipeline. */
+ *  newest trailing block for one that has been. A malformed probe-ref block parses as absent with
+ *  `probeRefMalformed: true` (decide() says `malformed-reference-baseline`, never a crash) — a
+ *  hand-edited ledger must degrade safely and by name, not break the pulse pipeline. */
 export function parseLedgerHeader(text) {
   const lastAssessed = [...text.matchAll(/^\*\*Last assessed:\*\*\s*(\S+)/gm)].at(-1)?.[1] ?? null;
   const raw = [...text.matchAll(/^<!-- probe-ref:\s*(\{.*\})\s*-->$/gm)].at(-1)?.[1];
@@ -313,7 +316,9 @@ export function parseLedgerHeader(text) {
     try {
       probeRef = JSON.parse(raw);
     } catch {
-      probeRef = null;
+      // Named, not silent: decide() reports `malformed-reference-baseline` instead of reading
+      // a corrupt block as a ledger that never had one.
+      return { lastAssessed, probeRef: null, probeRefMalformed: true };
     }
   }
   return { lastAssessed, probeRef };
