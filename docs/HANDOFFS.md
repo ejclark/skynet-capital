@@ -11,7 +11,7 @@ to be, and why no directory, no zip and no import script are needed any more.
 ```mermaid
 flowchart LR
   A["/design brief"] --> B["canvas Artifact<br/>artboards live in the page"]
-  B --> C{"mark a board,<br/>Save, tap fire"}
+  B --> C{"board marked,<br/>saved, fired?"}
   C -->|routine API trigger| D["design lane runs"]
   D --> E["Artifact read<br/>design-extract.mjs"]
   E --> F["build, verify, ship"]

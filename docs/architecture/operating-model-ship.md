@@ -2,7 +2,7 @@
 
 **Technology:** Bash, curl against the GitHub REST core bucket, python3 for JSON, git
 
-**Responsibility:** Lands a verified branch as a PR without polling: local npm run verify, incident/plan-closure/test-quality preflights, checkbody fridge-rule lint, push, REST open, one auto-merge arm (checkarm refuses protected diffs), and the platter subcommand that batches irreversible-class items onto one held PR
+**Responsibility:** Lands a verified branch as a PR without polling: local npm run verify, incident/plan-closure/test-quality preflights, checkbody fridge-rule lint, push, REST open, one auto-merge arm (checkarm refuses protected diffs), and the ship.sh platter subcommand that batches irreversible-class items onto one held PR
 
 **Code roots:** `scripts/ship.sh` · `.claude/skills/ship/SKILL.md` · `scripts/deploy-lag.mjs` · `scripts/incident-scan.mjs` · `scripts/plan-closure-scan.mjs` · `scripts/test-quality-scan.mjs`
 

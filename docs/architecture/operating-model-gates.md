@@ -44,7 +44,7 @@ C4Component
     Component(incident, "Learning coach", "scripts/incident-scan.mjs, tests/arch/lessons.spec.ts", "Failed main runs with no docs/LESSONS.md entry; drill retro; also a ship.sh preflight; Moneypenny repair is event-driven, not governor-dispatched")
     Component(docrot, "Doc-rot and comment-bloat", "scripts/doc-rot-scan.mjs, scripts/comment-bloat-scan.mjs", "Dead file refs, missing npm scripts, stale graph age; narration comments")
     Component(wflint, "Workflow contract gates", "scripts/workflow-lint.mjs, workflow-meta-scan.mjs, repair-watchlist-scan.mjs, grind-manifest.mjs", "Blocking: duplicate keys, dangling refs, pure meta literal, repair watchlist, chore tiers")
-    Component(formats, "Communication format gates", "scripts/issue-lint.mjs, research-lint.mjs, digest-scan.mjs --validate, journey-scan.mjs, mermaid-lint.mjs, ship.sh checkbody", "Blocking capsule, call-sheet, digest, mermaid and fridge-rule checks")
+    Component(formats, "Communication format gates", "scripts/issue-lint.mjs, research-lint.mjs, digest-scan.mjs --validate, journey-scan.mjs, mermaid-lint.mjs, ship.sh checkbody", "Blocking issue-shape, call-sheet, digest, mermaid and fridge-rule checks")
     Component(researchgates, "Research and ops eyes", "scripts/forward-test-id-scan.mjs, event-scan.mjs --validate, ci-install-duration-scan.mjs, doctrine-scan.mjs", "Forward-test ids, calendar validity, CI install wall-clock, doctrine due dates")
     Component(governor, "Governor and athletes", ".claude/skills/governor/SKILL.md, .claude/agents decomposer ui-librarian mortician test-backfiller", "WIP one per coach, --candidate picks the target, sonnet athletes in worktrees, one cycle PR")
   }

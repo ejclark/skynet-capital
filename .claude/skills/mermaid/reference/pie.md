@@ -133,7 +133,7 @@ config:
     legendPosition: bottom
     highlightSlice: "executing 9%"
 ---
-pie showData title Capsule backlog by state
+pie showData title Issue backlog by state
     accTitle: Issue capsules by lifecycle state
     accDescr: Snapshot of 23 capsules. Slices run clockwise from 12 o'clock, largest first. The executing slice is pulled out.
     %% source order = clockwise order = legend order; % in each label matches the slice text, so no hue is needed

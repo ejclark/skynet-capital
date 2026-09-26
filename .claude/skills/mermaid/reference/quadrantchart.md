@@ -69,9 +69,9 @@
 
 ## Emphasis without hue (the colourblind rule)
 - Point size: `radius: <int>`. A big dot marks an adopted or important item and a small dot a killed or minor one
-- Hollow ring vs solid dot: `color: #ffffff, stroke-color: #222222, stroke-width: 3px` gives a ring, and `color: #222222` gives a solid disc. This is a luminance and shape-of-fill difference that is safe for red/green colorblind readers (validated in the rich example)
+- Hollow ring vs solid dot: `color: #04302B, stroke-color: #35D0BA, stroke-width: 3px` gives a ring, and `color: #35D0BA` gives a solid disc (house hexes from the teal snippet in docs/PICTURES.md; the lint refuses any other, rule 11). This is a luminance and shape-of-fill difference that is safe for red/green colorblind readers (validated in the rich example)
 - Ring thickness: stroke-width 1px vs 3px vs 5px as a second ordinal channel
-- Fill luminance ladder: #222222 dark / #999999 mid / #ffffff white. Grey steps, never hue
+- Fill ladder: #35D0BA solid / #5A6B7B muted / a #04302B disc with a teal ring. Weight and shape steps, never hue alone, and every hex from the checked-in snippet
 - Put the verdict word in the label itself, in CAPS: `S1 run-up KILLED`, `S3 fade BLOCKED`. The text carries the meaning even with the styling stripped
 - Quadrant labels name the action (`BET if unblocked`, `KILL list`, `RULE everywhere`) so the region reads without a legend
 - Axis end texts carry direction words (`Fragile evidence --> Survived all 8`). The trailing-delimiter form adds a ⟶ glyph
@@ -171,9 +171,9 @@ quadrantChart
     S3 fade BLOCKED:::blocked: [0.64, 0.78]
     S1 run-up KILLED:::killed: [0.20, 0.80]
     S4 overnight KILLED:::killed: [0.30, 0.56]
-    classDef adopt color: #222222, radius: 9
-    classDef blocked color: #ffffff, radius: 9, stroke-color: #222222, stroke-width: 3px
-    classDef killed color: #999999, radius: 4
+    classDef adopt color: #35D0BA, radius: 9
+    classDef blocked color: #04302B, radius: 9, stroke-color: #35D0BA, stroke-width: 3px
+    classDef killed color: #5A6B7B, radius: 4
 ```
 
 ## Sources

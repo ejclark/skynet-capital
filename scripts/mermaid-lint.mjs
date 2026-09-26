@@ -25,6 +25,14 @@
 // use frontmatter), `layout: elk` (GitHub falls back to dagre silently; a state diagram errors instead), `click` (dead on GitHub),
 // a long diagram (the ≤15-node legibility budget is taste — pointed at, never gated).
 //
+// THE ROUND-3 RULES (docs/PICTURES.md → "Rules the design rounds found", plan #3786, 2026-09-26).
+// One is gated because it protects the both-modes colour contract: a `classDef`/`style` hex that is
+// not in a snippet checked in on docs/PICTURES.md (rule 11 — a look is a mode, switched whole; the
+// registry is read from that page at run time, never from memory). Three are notes because they are
+// taste with a ratchet, advisory until they prove they fire only on real defects (docs/COACHES.md):
+// a handle in a label (rule 1: seven or more hex digits in a row), a brace fork whose text is not a
+// question (rule 2), a house noun in a picture (rule 7: platter, boarding, capsule, state block).
+//
 //   node scripts/mermaid-lint.mjs <file.md>...   # lint the mermaid blocks in files (exit 1 on problems)
 //   node scripts/mermaid-lint.mjs --stdin        # lint a body on stdin (ship.sh checkbody, issue-lint)
 //   node scripts/mermaid-lint.mjs --json ...     # findings as JSON {problems, notes, diagrams}
@@ -70,6 +78,40 @@ const ICON_PACK =
  * starter that does not parse is exactly the drift this gate exists to catch. An indented block
  * (inside a list or an HTML comment) is dedented by its fence's indent before parsing.
  */
+/** Rule 7 — the house nouns a picture never carries; the picture says what the thing does. A
+ *  literal command citation (`ship.sh platter`) is a technology label, not a noun, and is skipped. */
+const HOUSE_NOUNS = /(?<!ship\.sh )(?<!ship )\b(platter|boarding|capsule|state block)\b/i;
+/** Rule 1 — a handle (sha, id) is seven or more hex digits in a row, outside a colour. */
+const HANDLE = /(?<![#\w])[0-9a-f]{7,40}(?![\w])/i;
+/** Rule 2 — a flowchart fork: `id{"label"}` (single braces; `{{ }}` is a hexagon, not a fork). */
+const FORK = /\b\w+\{(?!\{)"?([^"{}]*?)"?\}/g;
+/** A six-digit hex colour on a classDef or style line. */
+const HEX = /#[0-9a-f]{6}\b/gi;
+
+/**
+ * Rule 11's registry: every hex on a `classDef` or `style` line inside a mermaid block on
+ * docs/PICTURES.md — the page that holds the checked-in, contrast-verified snippets
+ * (tests/ui/mermaid-classdef.spec.ts holds each to the both-modes bars). Read at run time so the
+ * gate moves with the page. Returns null when the page cannot be read: the check then cannot
+ * answer, and a block that carries a hex is refused with that reason rather than waved through.
+ */
+export function snippetHexes(root = process.cwd()) {
+  let page;
+  try {
+    page = readFileSync(join(root, "docs", "PICTURES.md"), "utf8");
+  } catch {
+    return null;
+  }
+  const hexes = new Set();
+  for (const { source } of mermaidBlocks(page)) {
+    for (const line of source.split("\n")) {
+      if (!/^\s*(classDef|style)\b/.test(line)) continue;
+      for (const h of line.match(HEX) ?? []) hexes.add(h.toUpperCase());
+    }
+  }
+  return hexes;
+}
+
 export function mermaidBlocks(markdown) {
   const blocks = [];
   const re = /^([ \t]*)(`{3,})[ \t]*mermaid\b[^\n]*\n([\s\S]*?)\n[ \t]*\2[ \t]*$/gm;
@@ -128,6 +170,7 @@ export async function lintMermaid(markdown, { where = "" } = {}) {
   const blocks = mermaidBlocks(markdown);
   if (!blocks.length) return { problems, notes, diagrams };
   const mermaid = await loadMermaid();
+  const registry = snippetHexes();
 
   for (const { line, source } of blocks) {
     const at = where ? `${where}:${line}` : `line ${line}`;
@@ -153,7 +196,7 @@ export async function lintMermaid(markdown, { where = "" } = {}) {
 
     const type = result?.diagramType ?? head;
     diagrams.push({ line, type, ok: true });
-    const policy = policyFindings(source, result?.config ?? {}, head, at);
+    const policy = policyFindings(source, result?.config ?? {}, head, at, registry);
     problems.push(...policy.problems);
     notes.push(...policy.notes);
   }
@@ -163,7 +206,7 @@ export async function lintMermaid(markdown, { where = "" } = {}) {
 /** The house policy on a diagram that parses: what GitHub cannot draw or the house declines
  *  (problems), and what merely deserves a pointer (notes). Kept apart from the parse loop so each
  *  rule reads as one line with its reason. */
-function policyFindings(source, config, head, at) {
+function policyFindings(source, config, head, at, registry) {
   const problems = [];
   const notes = [];
   if (DECLINED.has(head)) problems.push(`${at}: ${DECLINED.get(head)}`);
@@ -206,6 +249,69 @@ function policyFindings(source, config, head, at) {
   if (lineCount > LONG_DIAGRAM_LINES) {
     notes.push(
       `${at}: ${lineCount} lines — the legibility budget is ≤15 nodes on a 390px phone (docs/PICTURES.md); split or simplify`,
+    );
+  }
+  const round3 = roundThreeFindings(source, head, at, registry);
+  problems.push(...round3.problems);
+  notes.push(...round3.notes);
+  return { problems, notes };
+}
+
+/** Rule 11, gated: every classDef/style hex in a block is one a checked-in snippet carries. */
+function hexFindings(source, at, registry) {
+  const problems = [];
+  // Rule 11 (gated): every classDef/style hex is one a checked-in snippet carries.
+  const styled = source.split("\n").filter((l) => /^\s*(classDef|style)\b/.test(l));
+  const hexes = new Set(styled.flatMap((l) => (l.match(HEX) ?? []).map((h) => h.toUpperCase())));
+  if (hexes.size) {
+    if (!registry) {
+      problems.push(
+        `${at}: carries classDef colour but docs/PICTURES.md (the snippet registry) could not be read — run from the repo root; a hex the page does not hold is refused (rule 11)`,
+      );
+    } else {
+      const foreign = [...hexes].filter((h) => !registry.has(h));
+      if (foreign.length) {
+        problems.push(
+          `${at}: classDef colour ${foreign.join(", ")} is not in a checked-in snippet — a look is a mode, switched whole: copy the teal or ink-mode snippet from docs/PICTURES.md, never a hex chosen in flight (rule 11)`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
+/** The round-3 rules (docs/PICTURES.md → "Rules the design rounds found"): rule 11 gated, rules
+ *  1, 2 and 7 advisory. Split from policyFindings so each function stays readable. */
+function roundThreeFindings(source, head, at, registry) {
+  const problems = [];
+  const notes = [];
+  problems.push(...hexFindings(source, at, registry));
+  const lines = source.split("\n");
+  // Rules 1, 2, 7 (notes): taste with a ratchet, advisory until they prove they fire on real defects.
+  for (const l of lines) {
+    if (/^\s*(classDef|style|%%)/.test(l)) continue;
+    const h = HANDLE.exec(l);
+    if (h) {
+      notes.push(
+        `${at}: "${h[0]}" reads as a handle — a handle is not a word: the ledger row keeps the sha, the label says what it means (docs/PICTURES.md rule 1)`,
+      );
+      break;
+    }
+  }
+  if (/^(flowchart|graph)\b/.test(head)) {
+    for (const m of source.matchAll(FORK)) {
+      const label = (m[1] ?? "").trim();
+      if (label && !label.endsWith("?")) {
+        notes.push(
+          `${at}: fork "${label}" asks no question — a fork shape ends in ? and its exits carry the answers (docs/PICTURES.md rule 2)`,
+        );
+      }
+    }
+  }
+  const noun = HOUSE_NOUNS.exec(source);
+  if (noun) {
+    notes.push(
+      `${at}: "${noun[0]}" is a house noun — the picture says what the thing does (a held PR, one commit on it, an issue); the noun stays in scripts and docs (docs/PICTURES.md rule 7)`,
     );
   }
   return { problems, notes };

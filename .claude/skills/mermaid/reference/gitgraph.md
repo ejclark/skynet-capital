@@ -140,23 +140,23 @@ Rich (grounded in this repo):
 
 ```mermaid
 ---
-title: Platter PR, one commit per item
+title: A held PR, one commit per item
 config:
   gitGraph:
     rotateCommitLabel: false
 ---
 gitGraph TB:
-  accTitle: Platter PR boards three protected-path items
-  accDescr: Three item commits on the platter branch, one dropped as a revert, verify highlighted, auto-merge into main tagged deploy
+  accTitle: A held PR carries three protected-path items
+  accDescr: Three item commits on the held-PR branch, one dropped as a revert, verify highlighted, auto-merge into main tagged deploy
   commit id: "main head"
-  branch platter
+  branch protected-changes
   commit id: "item 1 pin flyctl"
   commit id: "item 2 raise cap"
   commit id: "item 3 bots list" type: REVERSE tag: "dropped"
   commit id: "verify green" type: HIGHLIGHT
   checkout main
   commit id: "other PR"
-  merge platter id: "auto-merge" tag: "deploy"
+  merge protected-changes id: "auto-merge" tag: "deploy"
   branch hotfix
   cherry-pick id: "item 2 raise cap"
   commit id: "hotfix verify" type: HIGHLIGHT
