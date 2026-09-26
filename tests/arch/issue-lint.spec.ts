@@ -312,3 +312,77 @@ describe("issue lint — the 'Needs from you' decision callout", () => {
     expect(problems.join("\n")).toContain('"Needs from you" item over');
   });
 });
+
+// The state block's top half is Eric's (docs/ISSUES.md → The state block; Eric, 2026-09-26: "the
+// latest plans seem to have a TON of implementation details that drowns out a lot of the updates").
+// The block cannot fold, so the split is positional and the lint only points at it — a note, never
+// a problem.
+describe("issue lint — the state block's top half", () => {
+  const block = (top: string[]) =>
+    [
+      "## State block — read this first, then pick up",
+      "",
+      "```mermaid",
+      "stateDiagram-v2",
+      '  state "Done: 1 capture the note" as Done',
+      '  state "2 · show the note on the trade form" as S2',
+      "  [*] --> Done",
+      "  Done --> S2: next pickup",
+      "  S2 --> [*]: closes #3800",
+      "```",
+      "",
+      ...top,
+      "",
+      "**Rules for this block:** edit in place; one dated line in the Log per report-in; no new status comments.",
+      "",
+      "**Log**",
+      "- 2026-09-26 · slice 1 landed in #3801",
+      "",
+      "### For the builder",
+      "",
+      "Inputs: `src/server/notes.ts`, `app/src/trade/Form.tsx`, `scripts/issue-lint.mjs`.",
+      "Done when: WHEN a member opens the trade form, the form SHALL show the saved note.",
+      "Falsifier: 2026-10-03, a member reports the note missing on a reopened form.",
+    ].join("\n");
+
+  const plain = block([
+    "**What changed:** slice 1 landed; members can now save a note on a position.",
+    "**Next pickup: slice 2, show the saved note on the trade form. One PR.**",
+  ]);
+
+  it("is silent on a plain top half, however much detail sits under For the builder", () => {
+    const { problems, notes } = lint(plain);
+    expect(problems).toEqual([]);
+    expect(notes.join("\n")).not.toContain("top half");
+  });
+
+  it("notes a top half that runs past three lines", () => {
+    const long = block([
+      "**What changed:** slice 1 landed; members can now save a note on a position.",
+      "**Next pickup: slice 2, show the saved note on the trade form. One PR.**",
+      "It reads the note through the same loader the position card uses.",
+      "Done when: WHEN a member opens the trade form, the form SHALL show the saved note.",
+    ]);
+    const { problems, notes } = lint(long);
+    expect(problems).toEqual([]);
+    expect(notes.join("\n")).toContain("top half (between the diagram and the Log) runs 4 lines");
+  });
+
+  it("notes a top half that carries builder detail in code spans", () => {
+    const detailed = block([
+      "**What changed:** slice 1 landed in `src/server/notes.ts`.",
+      "**Next pickup: slice 2.** Wire `loadNote()` into `app/src/trade/Form.tsx`. One PR.",
+    ]);
+    const { problems, notes } = lint(detailed);
+    expect(problems).toEqual([]);
+    expect(notes.join("\n")).toContain("carries 3 inline code spans");
+  });
+
+  it("is silent on the template docs/ISSUES.md tells authors to copy", () => {
+    // Doc and note cannot drift: the published state block template is linted as a spec case.
+    const doc = readFileSync("docs/ISSUES.md", "utf8");
+    const template = /````markdown\n(## State block[\s\S]*?)````/.exec(doc)?.[1];
+    expect(template).toBeTruthy();
+    expect(lint(template as string).notes.join("\n")).not.toContain("top half");
+  });
+});
