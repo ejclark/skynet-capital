@@ -30,6 +30,7 @@ diagram has both, the directive wins. Use frontmatter.
 | `flowchart.curve` | Edge shape (default `basis`) | `curve: linear` |
 | `sequence.mirrorActors` / `showSequenceNumbers` | Actors only on top; numbered messages | `mirrorActors: false` |
 | `gantt.axisFormat` / `displayMode` | Axis date format (quote it); `compact` packs tasks onto shared rows | `axisFormat: "%m-%d"` |
+| Markdown strings (bold, italic, breaks) | In a classic `["…"]` or `{"…"}` label the string needs the backtick form ``["`**bold**`"]``; a v11 `@{ shape, label: "**bold**" }` takes it bare (measured 2026-09-26: the bare form inside `{"…"}` prints the asterisks) | ``stop["`**push refused**<br/>the line named`"]`` |
 | `markdownAutoWrap` | Auto-wraps markdown-string labels | default `true` |
 | KaTeX `$$...$$` | Math in **flowchart and sequence** labels only; one line; flowchart labels quoted. MathML output, so it probably renders on GitHub (unverified there). The lint does **not** catch bad KaTeX | `A["$$x^2$$"]` |
 
