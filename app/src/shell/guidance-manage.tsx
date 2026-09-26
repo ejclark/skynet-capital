@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { DOTS, dayText, pct, usd } from "../../../src/options/position-guidance-rules";
 import type { ManageCall } from "../../../src/options/position-guidance-types";
+import { GlossaryTerm } from "./glossary-term";
 
 /**
  * CALLS YOU'VE SOLD — the guidance for a covered call already open (#3729). A separate section from
@@ -75,7 +76,11 @@ function ManageCard({
         <h3>{contractName(m)}</h3>
         <p>
           <strong className="guidance-call">
-            {MANAGE_WORDS[m.call]}
+            {m.call === "ROLL" ? (
+              <GlossaryTerm term="roll">{MANAGE_WORDS.ROLL}</GlossaryTerm>
+            ) : (
+              MANAGE_WORDS[m.call]
+            )}
             {m.atOpen ? " at the open" : ""}
           </strong>{" "}
           <Confidence m={m} />

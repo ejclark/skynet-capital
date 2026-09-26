@@ -75,6 +75,46 @@ export const GLOSSARY = {
       "Options get pricier before big news like earnings. Right after, that extra price drains away, even if the stock moves your way.",
     jargon: "implied-volatility crush",
   },
+  // The position guidance's own words (#3729 persona review: a first-time trader couldn't decode
+  // "strike", "premium" or "exercised" on the Guidance tab).
+  strike: {
+    label: "Strike",
+    plain:
+      "The price written into the option. A call you sell promises your shares at this price if the stock is above it at expiry.",
+    jargon: "strike price",
+  },
+  premium: {
+    label: "Premium",
+    plain:
+      "The cash you receive for selling the option, paid to you straight away. It's yours whatever happens next.",
+  },
+  exercised: {
+    label: "Exercised",
+    plain:
+      "The buyer uses the option. For a call you sold, your 100 shares are sold at the strike; for a put, you buy 100 at the strike.",
+    jargon: "assigned",
+  },
+  coveredCall: {
+    label: "Covered call",
+    plain:
+      "You sell someone the right to buy 100 of your shares at a set price. You're paid now; you give up any rise above that price.",
+  },
+  cashSecuredPut: {
+    label: "Cash-secured put",
+    plain:
+      "You promise to buy 100 shares at a set price, with the cash set aside. You're paid now; you must buy even if the stock falls further.",
+  },
+  roll: {
+    label: "Roll",
+    plain:
+      "Buy back the call you sold and sell a new one, usually for a later date or a higher price, in one order.",
+  },
+  delta: {
+    label: "Move per $1",
+    plain:
+      "Roughly how much the option's price moves when the stock moves $1. For a call you sell, it's also a rough guide to the chance it ends up exercised.",
+    jargon: "delta (Δ)",
+  },
 } as const satisfies Record<string, GlossaryEntry>;
 
 export type GlossaryKey = keyof typeof GLOSSARY;

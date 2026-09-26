@@ -299,7 +299,7 @@ describe("the headline strike", () => {
     const quoted = b.ladder.find(
       (r) =>
         r.lever === "covered-calls" &&
-        headline.includes(`$${r.strike.toFixed(2)} strike, expires ${dayText(r.expiration)}`),
+        headline.includes(`$${r.strike.toFixed(2)} strike, expiring ${dayText(r.expiration)}`),
     );
     expect(quoted?.dte).toBeGreaterThanOrEqual(21);
     const topYield = Math.max(
@@ -533,7 +533,7 @@ describe("defaults that never act for you (#3729 step 2b)", () => {
   it("leads with money and states both sides of the outcome", () => {
     const cc = positionGuidance(inputs()).calls[1];
     expect(cc?.reasons[0]?.text).toMatch(
-      /^Sell 1 call: .* You receive \$[\d,.]+ now — yours whatever happens/,
+      /^The best fit: 1 call at .* You receive \$[\d,.]+ now — yours whatever happens/,
     );
     expect(cc?.reasons[1]?.text).toMatch(
       /100 of your 400 shares are sold at .* miss any rise above it/,
@@ -636,5 +636,17 @@ describe("calls you've already sold, and premium you've collected", () => {
     expect(plain.some((r) => r.strike < 100)).toBe(false);
     expect(net.some((r) => r.strike >= 89 && r.strike < 100)).toBe(true);
     expect(net.every((r) => r.strike >= 89)).toBe(true);
+  });
+});
+
+// #3740 persona review: "research doesn't support buying" then "sellers are paid well" read as a
+// contradiction. When both hold, the put Wait says how they fit.
+describe("the put Wait says how rich premium and no buy signal fit together", () => {
+  it("ties the two halves when option prices are rich but the research says don't buy", () => {
+    const b = positionGuidance(inputs({ realizedVol: 0.4 }));
+    const csp = b.calls[2];
+    expect(csp?.call).toBe("WAIT");
+    const text = csp?.reasons.map((r) => r.text).join(" ") ?? "";
+    expect(text).toContain("that alone isn't a reason to take on more of a stock");
   });
 });
