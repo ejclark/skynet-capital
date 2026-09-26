@@ -95,7 +95,7 @@ so the routing catches it; the skill never decompiles, scrapes, or copies assets
 - **"Ours today" is read, not remembered.** Cite the file. If the surface doesn't exist yet,
   write "none" — that is a finding, not a gap in the table.
 - **A desktop reference does not license a desktop-first design.** `CLAUDE.md` → _Mobile-first
-  on the trading surfaces_: a wide reference is read for what survives 390px first; what it
+  on every information surface_: a wide reference is read for what survives 390px first; what it
   shows with more room goes in the "desktop adds" column, never into the base.
 - **The teardown never decides the IA.** It informs the plan issue where the decision is
   written (`CLAUDE.md` → _Write the IA decision down before implementing it_). If a study
