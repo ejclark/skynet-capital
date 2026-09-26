@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/experimental-ct-react";
 import { PlayCard } from "../../app/src/shell/play-card";
 
-// The Outpost's trading-card presentation (#3333's orphan-route audit — see outpost-rail.spec.tsx
-// for why /outpost gets CT rather than a route-level pixel snapshot).
+// The Outpost's trading-card presentation (#3333's orphan-route audit gave /outpost component
+// tests rather than a route-level pixel snapshot).
 const CARD = {
   id: "P-014",
   symbol: "NVDA",

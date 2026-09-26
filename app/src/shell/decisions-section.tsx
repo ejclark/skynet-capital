@@ -9,8 +9,9 @@ import {
 } from "../live/desk";
 
 /**
- * ACCOUNTS' DECISIONS SECTION — ported from the retired `/u/:id/decisions` route ("the bot's
- * mind"): the autonomous-trading audit trail, run-row style. Bot-only (Eric: "tied to autonomous
+ * ACCOUNTS' DECISIONS SECTION — ported from the `/u/:id/decisions` route ("the bot's mind"),
+ * which is still live while its content folds into `/accounts` (#3345/#3350/#3687): the
+ * autonomous-trading audit trail, run-row style. Bot-only (Eric: "tied to autonomous
  * trading... folded somewhere within those types of accounts, which is currently only bot
  * accounts") — `AccountsBody` only shows this section in the switch when the selected account's
  * `kind === "bot"`, so this component never has to render the "human account" empty state the

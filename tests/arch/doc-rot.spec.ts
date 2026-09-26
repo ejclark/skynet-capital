@@ -19,7 +19,13 @@ function scanFixture(seed: (root: string) => void): { status: number; out: strin
     writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { verify: "true" } }));
     seed(root);
     try {
-      const out = execFileSync("node", [SCRIPT], { cwd: root, encoding: "utf8" });
+      // The scanner shells out to git too — under `.husky/pre-push` an inherited GIT_DIR would point
+      // it at the real repository instead of this fixture (see tests/support/hermetic-git.ts).
+      const out = execFileSync("node", [SCRIPT], {
+        cwd: root,
+        encoding: "utf8",
+        env: hermeticGitEnv(),
+      });
       return { status: 0, out };
     } catch (err) {
       const e = err as { status: number; stdout?: string; stderr?: string };

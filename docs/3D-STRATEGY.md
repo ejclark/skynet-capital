@@ -1,5 +1,9 @@
 # 3D strategy — deployable gamification patterns for the hero track
 
+> **Engine note (2026-09-26):** the hero scene has been three.js (0.184) since #3718 (2026-09-25),
+> which retired Babylon. The Babylon API names below (`thinInstanceSetBuffer`, `@babylonjs/gui`,
+> `NodeMaterial` and the like) are historical; the patterns still apply, the calls do not.
+
 _A living playbook (src: Eric's brief — "guidance on 3D gamification strategies I can deploy";
 researched and verified by Claude, Aug 2026). Companions: [`THE-GAME.md`](THE-GAME.md) (the rules),
 [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) (the world grammar), [`GAMEBOARD-PLAN.md`](GAMEBOARD-PLAN.md)
