@@ -1012,3 +1012,13 @@ never restated here. In one line: the 2026-09-15 20Y reopening (CUSIP 912810UX4)
 travel to the next long-duration reopening. This section does not reopen the assessment or the
 `## Outcome` verdict above; it exists only so a reader of this file sees the row was resolved without
 opening the fragment. FT-1 (score-by 2026-09-25) is still `_open_` and not yet due.
+
+### Forward-test scoring, post-close-out (2026-09-26, `forward-test-due`)
+
+**FT-treasury-30y-bond-2026-09-10-1 scored `kill`** — the row's own text and the fetch are in
+[`forward-tests/treasury-30y-bond-2026-09-10.md`](../forward-tests/treasury-30y-bond-2026-09-10.md),
+never restated here. In one line: the 2026-09-24 20Y-30Y liquidity-support operation published a
+**$6.0B** maximum (clears the ≥$4.0B half) but accepted only **$4.078B** of **$10.468B** offered —
+short of its own ceiling, so the "accepts less than the published maximum" half of the kill switch
+fires on its own. Both registered forward tests are now scored; this document has no further open
+predictions. This section does not reopen the assessment or the `## Outcome` verdict above.
