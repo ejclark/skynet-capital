@@ -75,6 +75,13 @@ still a receipt).
 0. **Triage first, then comment.** Read the issue with `gh issue view` including every comment —
    the ready-flip may carry inline context — decide, and only then post. A receipt promising a build
    you then decline is worse than none.
+   **A plan issue that carries a state block is picked up from the block, not the thread**
+   (`docs/ISSUES.md` → *The state block*, #3765): the comment headed `## State block` names the
+   slice to take, its repo-qualified inputs, its done line and its falsifier — build that slice; the
+   thread is context, never a second source for what to build. Every way this session ends is an
+   edit to that block (the slice's new state, the next pickup line, one dated log line, via
+   `gh api --method PATCH` on the comment id) plus the receipt; never a new status comment. A plan
+   with no block gets one: read the thread once, post the block, then build.
 1. **Receipt.** One friendly line: a build session has started against this ready-flip.
 2. **Branch `plan/<issue-number>`** off `origin/main`. (Distinct from `feedback/<n>` — this lane's
    own lease is `claim/plan-<n>`, keyed the same way.)
