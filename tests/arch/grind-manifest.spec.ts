@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
   argsFor,
@@ -38,6 +38,25 @@ function manifestOf(source: string, file = "docs/grind/demo.instructions.md"): C
 describe("grind-manifest gate (blocking)", () => {
   it("every checked-in chore declares its own effort and isolation", () => {
     execFileSync("node", [SCRIPT], { cwd: process.cwd(), stdio: "pipe" });
+  });
+
+  // Degrade honestly (#3769 row 1): a named path the CLI cannot read is a failure, never a quiet
+  // scan of every other chore. `-1 + 1` once dropped argv[0], so this passed at exit 0.
+  it("fails a named chore path it cannot read, instead of silently scanning the rest", () => {
+    const r = spawnSync(process.execPath, [SCRIPT, "docs/grind/does-not-exist.instructions.md"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("does-not-exist.instructions.md: cannot be read");
+  });
+
+  it("reads exactly the one path it is given", () => {
+    const out = execFileSync("node", [SCRIPT, "docs/grind/interrogate.instructions.md"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(JSON.parse(out).map((m: { name: string }) => m.name)).toEqual(["interrogate"]);
   });
 });
 
