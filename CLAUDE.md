@@ -365,7 +365,10 @@ already said; a wake with nothing new to report earns silence (re-arm the check-
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
 with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map for
 everything else — then at most 3 short bullets; ALL remaining text below the fold. A wall of text
-above the fold is a defect, not a style choice. The PR template carries the format; grammar guide
+above the fold is a defect, not a style choice. **A plan (plan mode, a `plan` issue) opens the
+same way**: a linted mermaid picture of the sequence first, the prose short beneath it (Eric,
+2026-09-26: "Isn't claude Plans an excellent place to render mermaid charts… tell a higher
+altitude story"). The PR template carries the format; grammar guide
 [`docs/PICTURES.md`](docs/PICTURES.md); screenshots commit small (≤~100KB) under `docs/shots/pr-<n>/`.
 
 **Research leads with the call** (Eric, 2026-08-23). This app exists to make money on the market; a

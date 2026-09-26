@@ -392,8 +392,8 @@
           {
             "id": "datasource",
             "label": "Data source and syncs",
-            "path": "src/runtime/data-source.ts, src/alpaca/*, src/adapters/fixture-trading-transport.ts, src/adapters/replay-event-stream.ts, src/observatory/broker-sync.ts, src/observatory/month-return-sync.ts, src/observatory/history-sampler.ts, src/observatory/history-boot.ts",
-            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; the three timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub."
+            "path": "src/runtime/data-source.ts, src/alpaca/*, src/adapters/fixture-trading-transport.ts, src/adapters/replay-event-stream.ts, src/observatory/broker-sync.ts, src/observatory/month-return-sync.ts, src/observatory/history-sampler.ts, src/observatory/history-boot.ts, src/scripts/iv-clock-wiring.ts, src/research/iv-sampler.ts, src/adapters/alpaca-atm-quotes.ts",
+            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; the timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub, plus the IV clock: one at-the-money implied-volatility sample per tracked name in the session's last half hour, appended under SKYNET_IV_HISTORY_DIR for IV rank."
           },
           {
             "id": "desk",
@@ -404,8 +404,8 @@
           {
             "id": "content",
             "label": "Content JSON APIs and guidance",
-            "path": "src/server/content-api-routes.ts, src/server/desk-json-routes.ts, src/server/wire-routes.ts, src/server/networth-api-routes.ts, src/server/equity-curve-routes.ts, src/server/quote-route.ts, src/server/bars-route.ts, src/server/option-chain-route.ts, src/server/symbol-search-route.ts, src/server/research-service.ts, src/server/learn-api-routes.ts, src/server/plays-api-routes.ts, src/server/playbooks-api-routes.ts, src/server/guidance-route.ts, src/server/guidance-pulse.ts, src/observatory/*-json-view.ts, src/options/position-guidance*.ts",
-            "responsibility": "Read-only JSON twins of every view the shell renders, plus position guidance whose pulse checks live spot/chain/EDGAR freshness."
+            "path": "src/server/content-api-routes.ts, src/server/desk-json-routes.ts, src/server/wire-routes.ts, src/server/networth-api-routes.ts, src/server/equity-curve-routes.ts, src/server/quote-route.ts, src/server/bars-route.ts, src/server/option-chain-route.ts, src/server/symbol-search-route.ts, src/server/research-service.ts, src/server/learn-api-routes.ts, src/server/plays-api-routes.ts, src/server/playbooks-api-routes.ts, src/server/guidance-route.ts, src/server/guidance-pulse.ts, src/server/guidance-market.ts, src/observatory/*-json-view.ts, src/options/position-guidance*.ts",
+            "responsibility": "Read-only JSON twins of every view the shell renders, plus position guidance: /api/trade/guidance returns the market only (quotes, spot, research stance, freshness checks against live spot/chain/EDGAR) and the browser applies the member's stake."
           },
           {
             "id": "companion",
@@ -546,7 +546,7 @@
           {
             "id": "clients",
             "label": "API clients",
-            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
+            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, manage-handoff, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
             "responsibility": "Typed fetch wrappers over /api/* with same-origin cookies; postJson for every write; desk-events.ts opens the second SSE stream /api/trade/events."
           },
           {
