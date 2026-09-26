@@ -21,36 +21,29 @@
           "id": "s2",
           "only": "desktop",
           "goto": "/app/u/sauron",
-          "sees": "Sauron's desk: tiles, the blotter with Close controls on every row, New trade",
-          "ears": "WHEN a viewer opens another account's desk, the app shall render no write control that will refuse them.",
+          "sees": "Sauron's page: its own head (name, BOT, SIM, the section switch), the character card, the blotter with no Close controls, and one line saying why",
+          "ears": "WHEN a viewer opens another account's page, the app shall render no write control that will refuse them.",
           "expect": [
             { "role": "heading", "name": "Sauron" },
-            { "role": "button", "name": "Close", "within": "main", "absent": true }
+            { "role": "button", "name": "Close", "within": "main", "absent": true },
+            { "text": "You can trade only your own accounts" }
           ],
-          "known_gap": "dead end 4 — Close / Close this buy render on another member's desk, then fail at the server (app/src/shell/blotter-row.tsx:290; src/server/account-identity-gate.ts:63)",
-          "where": "app/src/shell/blotter-row.tsx:290",
-          "severity": "high",
-          "fix": "S",
           "judge": "does this reader know what they may do here?"
         },
         {
           "id": "s3",
           "goto": "/app/u/sauron",
-          "sees": "the footer promises 'click a symbol for its fill timeline'; the symbols do not click",
-          "ears": "WHEN the desk promises an interaction, the app shall have a target for it.",
+          "sees": "the footer reads only 'as of <time>' — the retired fill-timeline promise is gone",
+          "ears": "WHEN the page promises an interaction, the app shall have a target for it.",
           "expect": [{ "text": "click a symbol for its fill timeline", "absent": true }],
-          "known_gap": "dead end 5 — 'click a symbol for its fill timeline' names a retired accordion (app/src/routes/u.$id.index.tsx:92)",
-          "where": "app/src/routes/u.$id.index.tsx:92",
-          "severity": "medium",
-          "fix": "S",
           "judge": "can this reader tell what to do next in ten seconds?"
         },
         {
           "id": "s4",
           "goto": "/app/u/sauron/decisions",
-          "sees": "every cycle: what the persona wanted, 'N past the guards', what happened",
-          "ears": "WHEN a viewer reads a bot's decisions, the app shall gloss its own words (intents, guards) where they appear.",
-          "expect": [{ "role": "heading", "name": "decisions" }],
+          "sees": "Heartbeat: is the bot alive, what each playbook concluded on its last pass, the passes that placed no trade",
+          "ears": "WHEN a viewer reads a bot's passes, the app shall name them Heartbeat, as the Profile page does, and gloss its own words where they appear.",
+          "expect": [{ "role": "heading", "name": "Heartbeat", "exact": true }],
           "judge": "does a first-time reader understand 'past the guards'?"
         },
         {
@@ -68,13 +61,12 @@
         {
           "id": "s6",
           "goto": "/app/u/sauron",
-          "sees": "the desk rail: Active · Decisions · Thesis · Pulse · ← Leaderboard — no Activity",
-          "ears": "WHEN a viewer is on a desk, the app shall offer that account's activity beside its decisions.",
-          "expect": [{ "role": "link", "name": "Activity", "within": "nav.rail" }],
-          "known_gap": "dead end 5 — /u/:id has no Activity view; the desk rail lists Active · Decisions · Thesis · Pulse (app/src/shell/desk-rail.tsx:33-78)",
-          "where": "app/src/shell/desk-rail.tsx:33",
-          "severity": "low",
-          "fix": "M",
+          "sees": "the page's head: Overview · Activity · Pulse · Heartbeat · Thesis — the switch, not '← Leaderboard'",
+          "ears": "WHEN a viewer is on an account's page, the app shall offer that account's activity beside its heartbeat.",
+          "expect": [
+            { "role": "link", "name": "Activity", "within": "nav.acct-switch" },
+            { "role": "link", "name": "← Leaderboard", "absent": true }
+          ],
           "judge": "can this reader find what the bot actually did?"
         }
       ]

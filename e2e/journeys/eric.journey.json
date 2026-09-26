@@ -34,7 +34,22 @@
           "sees": "the market calendar's head under the section switch — the week's range, arrows, the lens row — and under the net-worth card the events on what he holds (nothing dated on EEM this week; the market-wide print beside it)",
           "ears": "WHEN the owner reads the book on a Monday, the app shall show the week's events that touch the tickers held, on the same page.",
           "expect": [{ "role": "button", "name": "Week", "exact": true, "within": "main" }],
+          "act": { "click": { "role": "button", "name": "Events", "exact": true } },
           "judge": "does this reader know what is happening this week to what they hold?"
+        },
+        {
+          "id": "s3b",
+          "goto": "/app/accounts?section=events",
+          "sees": "one tap from the Overview, the Events section: the month grid beside the agenda at desktop, beneath it on the phone; the held line says nothing is dated on EEM this week, the market-wide prints are listed by day, each row with one link — to the EEM row when the print is EEM's next event, else to that day on R&D",
+          "ears": "WHEN the owner opens Events on his book, the app shall list the range's events on what he holds and the market-wide prints by day, each row one link to the position it lands on or to that day on R&D, and say so in words when nothing held is dated.",
+          "expect": [
+            { "url": "/app/accounts?section=events" },
+            { "role": "button", "name": "Events", "exact": true, "within": "main" },
+            { "text": "on what you hold", "within": "main" },
+            { "text": "market-wide", "within": "main" },
+            { "role": "link", "name": "The full board on R&D", "within": "main" }
+          ],
+          "judge": "can this reader get from a marked day to the position it touches in two taps?"
         },
         {
           "id": "s4",

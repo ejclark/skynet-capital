@@ -7,8 +7,11 @@
 // screenshot sweep never catches this, because the bug isn't in any single width's layout; it's
 // in what a browser leaves behind across a resize. This script automates the exact repro that
 // found the one known instance: load a route, scroll it, resize without reloading, then check
-// whether anything inside `.rail` (the app shell's second navigation dimension, `frame.tsx`)
-// overflows its own box or spills into `.stage` beside it.
+// whether anything inside a page's controls — the controls row at the top of the stage
+// (`.stage-controls`), R&D's calendar band (`.rx-band`), Settings' in-stage list (`.settings-list`)
+// — overflows its own box or spills into the content beside it, and whether the stage itself
+// leaks past the window. The rail these used to live in left the frame (#3807 slice 2a); a page
+// with none of them is still scanned for the stage's own overflow, never skipped as clean.
 //
 // Deliberately NOT wired into `npm run verify` or CI. This is a comprehensive/periodic sweep, not
 // a per-PR check — the interaction it looks for is real but narrow (docs/LESSONS.md explains why
@@ -60,7 +63,7 @@ const deskStub = {
   },
 };
 
-// One route per rail-bearing `/app/*` page worth watching first — extend as new rails ship.
+// One route per `/app/*` page with controls worth watching first — extend as new rows ship.
 const ROUTES = [
   {
     name: "activity",
@@ -102,46 +105,62 @@ const ROUTES = [
 ];
 
 /**
- * Does `.rail` overflow itself, or overlap `.stage`, at the CURRENT viewport?
+ * Do a page's controls overflow themselves, overlap the content beside them, or push the stage
+ * past the window, at the CURRENT viewport?
  *
  * Only an element whose own computed `overflow-x` is `visible` can leak — `overflow-x: auto`
- * (the rail's own intentional horizontal-scroll row at ≤860px, rail.css) and `hidden` (an
- * accessibility `.visually-hidden` label, deliberately clipped) both CONTAIN their content by
- * design; flagging either would make every run noisy with non-findings from day one.
+ * (the controls row's own intentional horizontal-scroll strip, `stage-controls.css`) and `hidden`
+ * (an accessibility `.visually-hidden` label, deliberately clipped) both CONTAIN their content by
+ * design; flagging either would make every run noisy with non-findings from day one. A route with
+ * no `.stage` at all is a finding (`no-stage`), never an empty list — the old `.rail`-only probe
+ * returned `[]` on every page once the rail left the frame, which read as clean.
  */
-function railFindings(page) {
+function controlsFindings(page) {
   return page.evaluate((tolerance) => {
     const leaks = (el) => {
       const over = el.scrollWidth - el.clientWidth;
       return over > tolerance && getComputedStyle(el).overflowX === "visible";
     };
-    const rail = document.querySelector(".rail");
+    const nameOf = (el) =>
+      el.className && typeof el.className === "string"
+        ? `.${el.className.split(" ")[0]}`
+        : el.tagName.toLowerCase();
     const stage = document.querySelector(".stage");
-    if (!rail) return [];
+    if (!stage) return [{ kind: "no-stage" }];
     const out = [];
-    const railBox = rail.getBoundingClientRect();
-    if (leaks(rail)) {
-      out.push({ kind: "rail-self-overflow", by: rail.scrollWidth - rail.clientWidth });
+    const doc = document.documentElement;
+    if (doc.scrollWidth - doc.clientWidth > tolerance) {
+      out.push({ kind: "page-horizontal-scroll", by: doc.scrollWidth - doc.clientWidth });
     }
-    for (const el of rail.querySelectorAll("*")) {
-      if (leaks(el)) {
-        out.push({
-          kind: "rail-child-overflow",
-          selector: el.className
-            ? `.${String(el.className).split(" ")[0]}`
-            : el.tagName.toLowerCase(),
-          by: el.scrollWidth - el.clientWidth,
-        });
+    if (leaks(stage)) {
+      out.push({ kind: "stage-self-overflow", by: stage.scrollWidth - stage.clientWidth });
+    }
+    for (const box of document.querySelectorAll(".stage-controls, .rx-band, .settings-list")) {
+      const where = nameOf(box);
+      if (leaks(box)) {
+        out.push({ kind: "controls-self-overflow", where, by: box.scrollWidth - box.clientWidth });
+      }
+      for (const el of box.querySelectorAll("*")) {
+        if (leaks(el)) {
+          out.push({
+            kind: "controls-child-overflow",
+            where,
+            selector: nameOf(el),
+            by: el.scrollWidth - el.clientWidth,
+          });
+        }
       }
     }
-    if (stage) {
-      const stageBox = stage.getBoundingClientRect();
-      const overlaps =
-        railBox.right > stageBox.left &&
-        railBox.left < stageBox.right &&
-        railBox.bottom > stageBox.top &&
-        railBox.top < stageBox.bottom;
-      if (overlaps) out.push({ kind: "rail-stage-overlap" });
+    // Settings keeps its list beside its cards inside the stage: the one place a column can still
+    // spill into the content next to it.
+    const list = document.querySelector(".settings-list");
+    const body = document.querySelector(".set-body");
+    if (list && body) {
+      const a = list.getBoundingClientRect();
+      const b = body.getBoundingClientRect();
+      if (a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom) {
+        out.push({ kind: "list-body-overlap" });
+      }
     }
     return out;
   }, OVERFLOW_TOLERANCE_PX);
@@ -160,7 +179,7 @@ async function scanRoute(route) {
     await shell.page.goto(`${shell.origin}${route.path}`);
     await shell.page.waitForLoadState("networkidle").catch(() => undefined);
     await shell.page.waitForTimeout(300);
-    for (const f of await railFindings(shell.page)) {
+    for (const f of await controlsFindings(shell.page)) {
       findings.push({ route: route.name, trigger: "fresh-load", width, ...f });
     }
     await shell.close();
@@ -182,7 +201,7 @@ async function scanRoute(route) {
     await shell.page.waitForTimeout(150);
     await shell.page.setViewportSize({ width, height: TARGET_HEIGHT });
     await shell.page.waitForTimeout(300);
-    for (const f of await railFindings(shell.page)) {
+    for (const f of await controlsFindings(shell.page)) {
       findings.push({ route: route.name, trigger: "rotate-no-reload", width, ...f });
     }
     await shell.close();
@@ -198,7 +217,7 @@ if (process.argv.includes("--json")) {
   process.exit(findings.length > 0 && process.argv.includes("--strict") ? 1 : 0);
 }
 
-console.log("📐 Layout-resize audit — a phone rotation on every rail-bearing route");
+console.log("📐 Layout-resize audit — a phone rotation on every route with controls");
 if (findings.length === 0) {
   console.log(
     `\n✓ 0 findings across ${ROUTES.length} routes × ${TARGET_WIDTHS.length} widths × 2 triggers.`,

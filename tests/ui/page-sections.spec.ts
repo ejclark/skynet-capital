@@ -51,8 +51,35 @@ describe("page sections", () => {
       expect(frame).toContain("a SUB-VIEW is a full view of its own");
     });
 
-    it("says a section switch is the rail's control role, not a new dimension", () => {
+    it("says a section switch is the controls row's control role, not a new dimension", () => {
+      expect(frame).toContain("A section switch is the controls row's CONTROL role");
       expect(frame).toContain("never a new dimension");
+    });
+
+    // The rail left the frame (#3807 slice 2a, docs/IA.md §8.1): two dimensions, a page's controls
+    // as a row of its own stage, constant geometry by construction — each with its falsifier.
+    it("names two dimensions — the topbar and the stage — and the controls row", () => {
+      expect(frame).toContain(
+        "TWO\n * DIMENSIONS — the TOPBAR is the app-level navigation dimension and the STAGE is the page",
+      );
+      expect(frame).toContain("a view's controls are a row of its own stage");
+      expect(frame).toContain('className="stage-controls"');
+      expect(frame).not.toContain('className="rail');
+    });
+
+    it("holds constant geometry by construction, with Settings as the flagged exception", () => {
+      expect(frame).toContain("every non-Settings stage is FULL WIDTH");
+      expect(frame).toContain(
+        "reverses the 2026-08-28\n * constant-geometry call for this transition only (#784's revisit clause, 2026-08-29",
+      );
+      expect(frame).toContain(
+        "the stage's left edge and width identical on /accounts, /activity, /research, /trade, /u/:id",
+      );
+    });
+
+    it("keeps the calendar head's line and its falsifier (#3807 slice 2·1)", () => {
+      expect(frame).toContain("AN INSTRUMENT'S HEAD IS A ROW OF THE PAGE'S OWN IDENTITY");
+      expect(frame).toContain("second topbar");
     });
 
     it("names the bench as a composition of sections that folds, never a fourth word (#3407)", () => {
@@ -85,18 +112,25 @@ describe("page sections", () => {
   });
 
   describe("the shape difference (docs/BRAND.md → Accessibility)", () => {
-    const rail = read("app/src/styles/rail.css");
+    const row = read("app/src/styles/stage-controls.css");
 
-    it("marks the current section with a bar, not hue alone", () => {
-      expect(rail).toMatch(/\.railctl-section\[aria-pressed="true"\]\s*\{[^}]*inset 3px 0 0 0/);
+    it("marks the current section with a bar underneath in the controls row, not hue alone", () => {
+      expect(row).toMatch(
+        /\.railctl-section\[aria-pressed="true"\]\s*\{[^}]*inset 0 -3px 0 0 var\(--accent\)/,
+      );
     });
 
-    it("moves the bar underneath where the rail is a horizontal row", () => {
-      expect(rail).toMatch(/inset 0 -3px 0 0 var\(--accent\)/);
+    it("moves the bar to the left only in Settings' column", () => {
+      expect(row).toMatch(
+        /\.settings-list \.railctl-section\[aria-pressed="true"\]\s*\{[^}]*inset 3px 0 0 0/,
+      );
     });
 
-    it("keeps the group divider visible on a phone, where the labels are hidden", () => {
-      expect(rail).toMatch(/\.rail hr\s*\{[^}]*border-left: 1px solid var\(--border\)/);
+    it("keeps the group divider visible in the row, where the labels are hidden", () => {
+      expect(row).toMatch(/\.settings-list hr\s*\{[^}]*border-left: 1px solid var\(--border\)/);
+      expect(row).toMatch(
+        /\.stage-controls \.rail-label,\s*\.settings-list \.rail-label\s*\{\s*display: none/,
+      );
     });
   });
 
@@ -135,10 +169,13 @@ describe("page sections", () => {
       // one breakpoint, owned by the hook — never a second media query in the route
       expect(trade).toContain("useBenchWidth");
       expect(read("app/src/shell/use-bench-width.ts")).toContain("BENCH_MIN_WIDTH = 1280");
-      // the switch renders only when folded (frame.tsx's doctrine); docked, that branch carries
-      // only the guidance link (#3729 — the one pane with no other way in), never the switch
-      const docked = /docked \? \(([\s\S]*?)\) : \(\s*<>\s*<SectionSwitch/.exec(trade);
+      // the switch renders only when folded (frame.tsx's doctrine) — as the stage's controls row
+      // since the rail left the frame (#3807 slice 2a); docked there is no row, and the guidance
+      // link (#3729 — the one pane with no other way in) rides beside the milestone strip instead
+      expect(trade).toMatch(/controls=\{\s*docked \? undefined : \(\s*<SectionSwitch/);
+      const docked = /const guidanceLink = docked \? \(([\s\S]*?)\) : null;/.exec(trade);
       expect(docked).not.toBeNull();
+      expect(docked?.[1]).toContain("Guidance for this stock");
       expect(docked?.[1]).not.toContain("SectionSwitch");
       // the docked grid is a stylesheet of its own, imported by the index
       expect(read("app/src/styles/index.css")).toContain("./bench.css");

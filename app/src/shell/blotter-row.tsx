@@ -168,11 +168,17 @@ export function BlotterRow({
   position,
   deskId,
   decay,
+  canTrade = true,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
   /** "−$12/day": this holding's time decay from the option book, when the feed quoted it. */
   readonly decay?: string;
+  /** Does the viewer own this account (#3807 slice 2d, dead end 4)? The server refuses an order
+   *  on any account that isn't yours (`account-identity-gate.ts`), so off it Close, Close this buy
+   *  and Roll do not render — the page says why in visible text beside the blotter. Guidance is a
+   *  read and stays. */
+  readonly canTrade?: boolean;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -254,14 +260,16 @@ export function BlotterRow({
               Guidance
             </Link>
           )}
-          <button
-            type="button"
-            className="btn mc-btn close-btn"
-            aria-expanded={closeOpen}
-            onClick={() => setCloseOpen(!closeOpen)}
-          >
-            {position.lots && position.lots.length > 0 ? "Close all" : "Close"}
-          </button>
+          {canTrade ? (
+            <button
+              type="button"
+              className="btn mc-btn close-btn"
+              aria-expanded={closeOpen}
+              onClick={() => setCloseOpen(!closeOpen)}
+            >
+              {position.lots && position.lots.length > 0 ? "Close all" : "Close"}
+            </button>
+          ) : null}
         </td>
       </tr>
       {lotsOpen && position.lots
@@ -281,15 +289,17 @@ export function BlotterRow({
                 returnPct={lot.returnPct}
               />
               <td className="act-col lot-actions">
-                <button
-                  type="button"
-                  className="btn mc-btn close-btn"
-                  aria-expanded={closeLotId === lot.lotId}
-                  onClick={() => setCloseLotId(closeLotId === lot.lotId ? undefined : lot.lotId)}
-                >
-                  Close this buy
-                </button>
-                {position.isOption ? (
+                {canTrade ? (
+                  <button
+                    type="button"
+                    className="btn mc-btn close-btn"
+                    aria-expanded={closeLotId === lot.lotId}
+                    onClick={() => setCloseLotId(closeLotId === lot.lotId ? undefined : lot.lotId)}
+                  >
+                    Close this buy
+                  </button>
+                ) : null}
+                {canTrade && position.isOption ? (
                   <button
                     type="button"
                     className="btn mc-btn"
@@ -304,7 +314,7 @@ export function BlotterRow({
             </tr>
           ))
         : null}
-      {lotsOpen && position.lots
+      {canTrade && lotsOpen && position.lots
         ? position.lots
             .filter((lot) => lot.lotId === closeLotId)
             .map((lot) => (
@@ -345,7 +355,7 @@ export function BlotterRow({
           </td>
         </tr>
       ) : null}
-      {closeOpen ? (
+      {canTrade && closeOpen ? (
         <tr className="row-close">
           <td colSpan={12}>
             <ClosePanel deskId={deskId} position={position} onDone={() => setCloseOpen(false)} />

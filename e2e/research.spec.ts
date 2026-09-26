@@ -14,8 +14,12 @@ test.describe("research", () => {
   test("renders the playbooks section", async ({ page }) => {
     await page.goto("/app/research?section=playbooks");
     await expect(page.getByRole("heading", { level: 1, name: "Playbooks" })).toBeVisible();
-    // The rail's account picker — the store's "subscribe as" moved here from the desk.
-    await expect(page.locator(".rail-label", { hasText: "Subscribe as" })).toBeVisible();
+    // The account picker — the store's "subscribe as" moved here from the desk (#3625), and from
+    // the rail into the Playbooks section's own head when the rail left the frame (#3807 slice 2a).
+    await expect(page.getByRole("group", { name: "Subscribe as" })).toBeVisible();
+    await expect(
+      page.locator("main .pb-subscribe").getByRole("button", { name: "Catalog only" }),
+    ).toBeVisible();
   });
 
   test("matches the known-good page screenshot", async ({ page }) => {

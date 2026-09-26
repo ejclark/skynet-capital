@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useId, useState } from "react";
 import { fetchGuestList } from "../live/admin";
 import {
@@ -357,6 +357,29 @@ function AccountCard({
   );
 }
 
+/** SETTINGS KEEPS ITS LIST (#3807 slice 2a; frame.tsx → CONSTANT GEOMETRY): the one page whose
+ *  sub-nav stays a column — inside its own stage, as a two-column layout (`settings.css`), so the
+ *  frame is identical on every route. The gear icon into this action page is the one transition
+ *  that shifts, flagged in the frame's doctrine; at ≤860 the list is the same row as every page's. */
+function SettingsFrame({
+  list,
+  children,
+}: {
+  readonly list: ReactNode;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <PageFrame>
+      <div className="set-layout">
+        <nav className="settings-list" aria-label="Section">
+          {list}
+        </nav>
+        <div className="set-body">{children}</div>
+      </div>
+    </PageFrame>
+  );
+}
+
 function SettingsPage(): ReactElement {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
@@ -371,15 +394,15 @@ function SettingsPage(): ReactElement {
 
   if (settings.isPending)
     return (
-      <PageFrame rail={<ProfileRail current="settings" />}>
+      <SettingsFrame list={<ProfileRail current="settings" />}>
         <p className="note">Reading your accounts…</p>
-      </PageFrame>
+      </SettingsFrame>
     );
   if (settings.isError)
     return (
-      <PageFrame rail={<ProfileRail current="settings" />}>
+      <SettingsFrame list={<ProfileRail current="settings" />}>
         <p className="note">Settings are unreachable.</p>
-      </PageFrame>
+      </SettingsFrame>
     );
 
   const { authConfigured, adminWired, accounts, timezones } = settings.data;
@@ -392,16 +415,16 @@ function SettingsPage(): ReactElement {
     SETTINGS_SECTIONS.filter((s) => s.id !== "guests" || isOwner),
     asked,
   );
-  const rail = (
-    <>
-      <ProfileRail current="settings" />
-      <hr />
-      <SettingsToc current={section} showGuests={isOwner} onSelect={setSection} />
-    </>
-  );
-
   return (
-    <PageFrame rail={rail}>
+    <SettingsFrame
+      list={
+        <>
+          <ProfileRail current="settings" />
+          <hr />
+          <SettingsToc current={section} showGuests={isOwner} onSelect={setSection} />
+        </>
+      }
+    >
       <header className="page-header">
         <h1>Settings</h1>
         <p>Preferences, your accounts, your rules: profile, timezone, and credential rotation.</p>
@@ -418,7 +441,11 @@ function SettingsPage(): ReactElement {
         ) : !first ? (
           <p className="note">
             Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or
-            add your own from <Link to="/onboarding">onboarding</Link>.
+            add your own from{" "}
+            <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
+              onboarding
+            </Link>
+            .
           </p>
         ) : (
           <>
@@ -441,7 +468,7 @@ function SettingsPage(): ReactElement {
         )
       ) : null}
       {section === "guests" ? <GuestListCard /> : null}
-    </PageFrame>
+    </SettingsFrame>
   );
 }
 

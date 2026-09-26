@@ -58,13 +58,13 @@ describe("MoneyStrip", () => {
     shareCount: 3200,
   };
 
-  it("names every slice in words and points idle cash at the playbooks", async () => {
+  it("names every slice in words and points idle cash at the Playbooks chapter", async () => {
     const rootRoute = createRootRoute({
       component: () => <MoneyStrip accountId="eric" allocation={allocation} hasOptions={false} />,
     });
-    const playbooks = createRoute({ getParentRoute: () => rootRoute, path: "/playbooks" });
+    const profile = createRoute({ getParentRoute: () => rootRoute, path: "/accounts" });
     const router = createRouter({
-      routeTree: rootRoute.addChildren([playbooks]),
+      routeTree: rootRoute.addChildren([profile]),
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(
@@ -77,7 +77,7 @@ describe("MoneyStrip", () => {
     expect(screen.getByText("36.1% of your account")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /See plays that fit your playbooks/ })).toHaveAttribute(
       "href",
-      "/playbooks",
+      "/accounts?section=milestones&chapter=playbooks",
     );
     expect(screen.getByRole("button", { name: "Time decay" })).toBeInTheDocument();
     expect(screen.getByText("none")).toBeInTheDocument();

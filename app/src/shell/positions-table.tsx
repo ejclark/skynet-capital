@@ -6,7 +6,8 @@ import { GlossaryTerm } from "./glossary-term";
 /**
  * The positions blotter (#738 phase 2c, extracted #2321) — shared between a single desk (`/u/:id`)
  * and the unified Accounts view, so both render the exact same table/columns and the exact same
- * inline fill-timeline accordion (`BlotterRow`) rather than two copies drifting apart.
+ * row (`BlotterRow`) rather than two copies drifting apart. `canTrade` is the one difference the
+ * two pages have (#3807 slice 2d): off an account the viewer owns, the rows offer no write.
  *
  * `table-layout: fixed` + the `<colgroup>` below (#3186 slice 3) — under the default `auto`
  * layout, EVERY column's width is recomputed from the max content across ALL currently-rendered
@@ -22,6 +23,7 @@ export function PositionsTable({
   deskId,
   totalCount,
   decayBySymbol,
+  canTrade = true,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
@@ -29,6 +31,8 @@ export function PositionsTable({
   readonly decayBySymbol?: ReadonlyMap<string, string>;
   /** Unfiltered count, for the empty-state copy (0 open vs. 0 matching a filter). */
   readonly totalCount: number;
+  /** Does the viewer own this account? Off it, no row renders a write (`BlotterRow`). */
+  readonly canTrade?: boolean;
 }): ReactElement {
   if (positions.length === 0) {
     return (
@@ -78,7 +82,7 @@ export function PositionsTable({
                 <GlossaryTerm term="bestWorst" />
               </th>
               <th className="col-detail">Next event</th>
-              <th className="act-col" aria-label="Close position" />
+              <th className="act-col" aria-label={canTrade ? "Close position" : "Guidance"} />
             </tr>
           </thead>
           <tbody>
@@ -88,6 +92,7 @@ export function PositionsTable({
                 position={position}
                 deskId={deskId}
                 decay={decayBySymbol?.get(position.symbol)}
+                canTrade={canTrade}
               />
             ))}
           </tbody>

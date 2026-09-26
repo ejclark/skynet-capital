@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -8,105 +8,64 @@ import {
   fetchDesk,
   fetchDeskActivity,
 } from "../live/desk";
-import {
-  type AccountNetWorthView,
-  type AccountsNetWorthView,
-  fetchNetWorth,
-  type NetWorthStatsView,
-} from "../live/networth";
-import { fetchSettings } from "../live/settings";
-import { AccountSwitcher, ALL_ACCOUNTS } from "../shell/account-switcher";
+import { parseOn } from "../live/horizon-params";
+import { meetMoneypenny } from "../live/moneypenny";
+import { fetchNetWorth } from "../live/networth";
+import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { ALL_ACCOUNTS } from "../shell/account-switcher";
 import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
-import { CockpitClock, usePhoneWidth } from "../shell/cockpit-clock";
+import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
+import { EventsSection } from "../shell/events-section";
+import { FeedbackSection } from "../shell/feedback-section";
 import { PageFrame } from "../shell/frame";
-import { HeartbeatChip, HeartbeatSection } from "../shell/heartbeat";
-import { NetWorthCondensed } from "../shell/networth-summary";
+import { HeartbeatSection } from "../shell/heartbeat";
+import type { MilestoneChapter } from "../shell/milestone-card";
+import { MilestonesSection } from "../shell/milestones-section";
 import { parseLens } from "../shell/positions-lens";
-import { ProfileRail } from "../shell/profile-rail";
-import { SectionSwitch } from "../shell/section-switch";
-import { type PageSection, resolveSection } from "../shell/sections";
+import {
+  type AccountsSection,
+  chapterFromSearch,
+  defaultSection,
+  sectionFromSearch,
+  sectionsFor,
+} from "../shell/profile-sections";
+import type { PageSection } from "../shell/sections";
+import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
 
 /**
- * PROFILE > ACCOUNTS (#2321) — the Cockpit: a unified per-account view whose sticky header carries
- * the net-worth at-a-glance (total value, day move, ROI pills) and a horizontal section switch that
- * stay visible while the section detail scrolls below. One owned account or "All accounts"
- * combined, human and bot alike — Alpaca has no such distinction, so this page never branches on
- * `kind` beyond the switcher's own label and which bot-only sections appear.
+ * THE PROFILE PAGE (#2321, the Cockpit): a unified per-account view whose sticky head carries the
+ * net-worth at-a-glance and a horizontal section switch that stay visible while the section
+ * detail scrolls below. One owned account or "All accounts" combined, human and bot alike —
+ * Alpaca has no such distinction, so this page never branches on `kind` beyond the switcher's own
+ * label and which bot-only sections appear. The head is `shell/cockpit-head.tsx`; the section
+ * list, its order and its default are `shell/profile-sections.ts`.
  *
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
- * blotter — Summary and Positions merged into one scroll once it was clear how little Summary
- * carried on its own, Eric live) and **Activity** apply to every account; **Decisions** (the
- * autonomous-trading audit trail) and **Thesis** (a persona's standing call, ported from
- * `/u/:id/thesis`, still live while the desk folds into `/accounts`, #3345/#3350/#3687) are
- * bot-only, added by `sectionsFor` when a single bot account is selected. PROGRESSIVE DISCLOSURE: the sticky {@link NetWorthCondensed} is the always-visible
- * summary layer; the section switch reveals one section's full detail at a time. The net-worth
- * payload is one `/api/accounts/networth` fetch that carries every owned account plus the
- * aggregate, so the switcher never triggers a re-fetch. Windows' returns come straight from
- * Alpaca's own portfolio history (flow-adjusted, so a deposit never reads as a gain); the
- * aggregate per window is `Σend / Σbase − 1` across the accounts that reported one.
+ * blotter), **Activity** and **Events** (#3807 slice 2c — the book's calendar: the grid beside an
+ * agenda of what falls on each day for the tickers held; its grid head is the page's one range
+ * control there, a picked day is `?events=`) apply to every account; **Heartbeat** and **Thesis**
+ * are bot-only (#3345/#3350/#3687). **Milestones** and **Feedback** are the VIEWER's (#3807 slice
+ * 2b, #888): what `/learn` (+ its chapters `/onboarding`, `/learn/trading`, `/playbooks`, now
+ * `?chapter=`) and `/feedback` were, moved as they were — those routes are redirects now, and the
+ * Profile link row is gone from this page because the switch is the map. PROGRESSIVE DISCLOSURE:
+ * the sticky {@link CockpitHead} is the always-visible summary layer; the switch reveals one
+ * section's full detail at a time. The net-worth payload is one `/api/accounts/networth` fetch that
+ * carries every owned account plus the aggregate, so the switcher never triggers a re-fetch.
  *
- * THE MARKET CALENDAR'S HEAD (#3807 slice 2·1) is the sticky head's last row at ≥861 and the row
- * directly under it at ≤860 (`cockpit-clock.tsx` says why); on the Overview, the net-worth card
- * carries the events on what this book holds in the head's range (`held-events-line.tsx`).
+ * THE ZERO-ACCOUNT DOOR (#3807 slice 2b — no fold before its door is written): a member with no
+ * linked account gets this same page, never an early return — the head says "No account linked
+ * yet", and the page opens on Milestones with the Onboarding chapter (the connect guide) open.
+ * The topbar's Profile tab always lands here; the page opens on Milestones while nothing is
+ * linked and on the Overview once an account is (`defaultSection` says why that is narrower).
  */
 
-type AccountsSection = "overview" | "activity" | "heartbeat" | "thesis";
-
-/** Overview merges what were once separate Summary and Positions tabs (Eric: "the summary page
- *  does very little atm... summary and positions should be merged into a single section/view").
- *  The net-worth-at-a-glance stats stay in the sticky header ({@link NetWorthCondensed}); Overview
- *  is everything below it — the cash/considerations/chart detail Summary carried, then the
- *  positions blotter Positions carried, in one scroll. */
-const BASE_SECTIONS: readonly PageSection<AccountsSection>[] = [
-  { id: "overview", label: "Overview" },
-  { id: "activity", label: "Activity" },
-];
-
-/** The full candidate list `validateSearch` accepts from a URL — the *rendered* set narrows this
- *  per account (`sectionsFor` below); an unknown or now-inapplicable value falls back via
- *  `resolveSection`, never strands the reader. A stale `?section=summary` or `?section=positions`
- *  link (from before the Overview merge) resolves the same way — as an unrecognized value that
- *  falls back to the first section, which is Overview. */
-const ALL_SECTIONS: readonly PageSection<AccountsSection>[] = [
-  ...BASE_SECTIONS,
-  { id: "heartbeat", label: "Heartbeat" },
-  { id: "thesis", label: "Thesis" },
-];
-
-/** Heartbeat and Thesis only make sense for one bot account at a time, never the "All accounts"
- *  aggregate or a human account — Heartbeat is the bot loop's liveness plus its passes that placed
- *  nothing (the Decisions tab folded into it and into Activity, #3687; Eric: "tied to autonomous
- *  trading... currently only bot accounts"), and Thesis is a persona's own standing call. */
-function sectionsFor(kind: "human" | "bot" | undefined): readonly PageSection<AccountsSection>[] {
-  return kind === "bot" ? ALL_SECTIONS : BASE_SECTIONS;
-}
+type ProfileSearch = ReturnType<typeof Route.useSearch>;
 
 function fetchDesks(ids: readonly string[]): Promise<DeskSnapshot[]> {
   return Promise.all(ids.map((id) => fetchDesk(id)));
-}
-
-/** Resolve the net-worth stats for the selected account (or the aggregate for "All accounts").
- *  Returns the stats, a caption for the hero label, the roster (non-empty only for "All"), and
- *  whether the aggregate is in view — so {@link AccountsBody} and {@link CockpitBody} share one
- *  resolution path without re-deriving it. */
-function resolveNetWorth(
-  data: AccountsNetWorthView | undefined,
-  accountId: string,
-): {
-  readonly stats: NetWorthStatsView | null;
-  readonly caption: string;
-  readonly roster: readonly AccountNetWorthView[];
-  readonly allAccounts: boolean;
-} {
-  if (!data) return { stats: null, caption: "this account", roster: [], allAccounts: false };
-  const all = accountId === ALL_ACCOUNTS;
-  if (all)
-    return { stats: data.total, caption: "all accounts", roster: data.accounts, allAccounts: true };
-  const row = data.accounts.find((a) => a.id === accountId) ?? null;
-  return { stats: row, caption: row?.name ?? "this account", roster: [], allAccounts: false };
 }
 
 function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): ReactElement {
@@ -118,7 +77,10 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
       merged.sort((a, b) => (a.at < b.at ? 1 : -1));
       return { available: pages.every((p) => p.available), events: merged };
     },
+    enabled: deskIds.length > 0,
   });
+  if (deskIds.length === 0)
+    return <p className="note">No account linked yet — its orders will be listed here.</p>;
   if (activity.isPending) return <p className="note">Reading the ledger…</p>;
   if (activity.isError) return <p className="note">The ledger is unreachable.</p>;
   if (!activity.data.available)
@@ -133,7 +95,9 @@ const asId = (raw: unknown): string | undefined =>
 
 function AccountsPage(): ReactElement {
   const navigate = Route.useNavigate();
-  const { account: asked, section: askedSection, q } = Route.useSearch();
+  const search = Route.useSearch();
+  const { account: asked, q, moneypenny } = search;
+  const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const defaultAccount = useDefaultAccount();
 
@@ -153,60 +117,59 @@ function AccountsPage(): ReactElement {
     }, 300);
   };
 
-  if (settings.isPending)
-    return (
-      <PageFrame rail={<ProfileRail current="accounts" />}>
-        <p className="note">Reading your accounts…</p>
-      </PageFrame>
-    );
-  if (settings.isError)
-    return (
-      <PageFrame rail={<ProfileRail current="accounts" />}>
-        <p className="note">Accounts are unreachable.</p>
-      </PageFrame>
-    );
+  // `?moneypenny=intro` — the deep link every "Meet Moneypenny ›" uses (M·01's step 2, once
+  // `/onboarding`'s): open her rail with the intro, then drop the param so a remount can't refire.
+  useEffect(() => {
+    if (moneypenny !== "intro") return;
+    void meetMoneypenny();
+    void navigate({ search: (prev) => ({ ...prev, moneypenny: undefined }), replace: true });
+  }, [moneypenny, navigate]);
 
-  const { accounts } = settings.data;
-  const first = accounts[0];
-  if (!first)
+  if (settings.isPending || settings.isError)
     return (
-      <PageFrame rail={<ProfileRail current="accounts" />}>
+      <PageFrame>
         <p className="note">
-          Your sign-in doesn't resolve to an account yet — connect one from{" "}
-          <a href="/app/onboarding">onboarding</a>.
+          {settings.isError ? "Accounts are unreachable." : "Reading your accounts…"}
         </p>
       </PageFrame>
     );
 
+  const { accounts } = settings.data;
+  const linked = accounts.length > 0;
   // The default account (shell/default-account.ts) is a viewer-chosen FALLBACK, never trusted
   // once it no longer names an owned account — a removed account can't strand the page.
   const storedDefaultId = defaultAccount.id;
   const fallbackId =
     storedDefaultId !== undefined && accounts.some((a) => a.id === storedDefaultId)
       ? storedDefaultId
-      : first.id;
+      : (accounts[0]?.id ?? "");
   const selected =
-    asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? asked : fallbackId;
-  const deskIds = selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected as string];
+    asked === ALL_ACCOUNTS || accounts.some((a) => a.id === asked) ? (asked as string) : fallbackId;
+  const deskIds = !linked ? [] : selected === ALL_ACCOUNTS ? accounts.map((a) => a.id) : [selected];
   const selectedKind =
     selected === ALL_ACCOUNTS ? undefined : accounts.find((a) => a.id === selected)?.kind;
-  const sections = sectionsFor(selectedKind);
-  const section = resolveSection(sections, askedSection);
+  const sections = sectionsFor(selectedKind, linked);
+  const opening = defaultSection(linked);
+  const section = resolveSection(sections, search.section ?? opening);
+  // The zero-account door opens its Milestones on the connect guide.
+  const chapter =
+    search.chapter ?? (!linked && section === "milestones" ? "onboarding" : undefined);
 
   return (
     <AccountsBody
-      accountId={selected as string}
+      accountId={selected}
       deskIds={deskIds}
       section={section}
       sections={sections}
+      chapter={chapter}
       accounts={accounts}
       query={query}
       onFilterChange={onFilterChange}
-      isDefault={storedDefaultId === selected}
+      isDefault={linked && storedDefaultId === selected}
       onToggleDefault={() =>
         storedDefaultId === selected
           ? defaultAccount.clearDefault()
-          : defaultAccount.setDefault(selected as string)
+          : defaultAccount.setDefault(selected)
       }
       onSelectAccount={(id) =>
         void navigate({
@@ -214,47 +177,100 @@ function AccountsPage(): ReactElement {
           replace: true,
         })
       }
-      onSelectSection={(next) =>
-        void navigate({
-          search: (prev) => ({ ...prev, section: next === "overview" ? undefined : next }),
-          replace: true,
-        })
+      onJoined={() => void queryClient.invalidateQueries({ queryKey: ["settings"] })}
+      pinnedDay={search.events}
+      onPickDay={(day) =>
+        void navigate({ search: (prev) => ({ ...prev, events: day }), replace: true })
       }
+      onSelectSection={(next) => {
+        // Overview's filter means nothing on Events, and a stale one must not resurface on the
+        // way back (the switch spec proves the blotter's count survives the round trip): crossing
+        // into or out of Events drops `q` — the pending debounce too — and the picked day.
+        const crossing = next === "events" || section === "events";
+        if (crossing) {
+          clearTimeout(urlTimer.current);
+          setQuery("");
+        }
+        void navigate({
+          search: (prev: ProfileSearch) => ({
+            ...prev,
+            // The page's own default rides no param — so the default is written out whenever
+            // the member picks anything else, and omitted when they pick it back.
+            section: next === opening ? undefined : next,
+            // A chapter belongs to Milestones; leaving it closes the chapter.
+            chapter: next === "milestones" ? prev.chapter : undefined,
+            ...(crossing ? { q: undefined, events: undefined } : {}),
+          }),
+          replace: true,
+        });
+      }}
     />
   );
 }
 
-/** The scrollable section content — owns the desks query (enabled only off-Summary) and reads the
- *  shared net-worth query for the Summary detail. React Query deduplicates the net-worth fetch that
- *  {@link AccountsBody} already started for the sticky header. */
+/** The scrollable section content — owns the desks query (only the book's sections read it) and
+ *  reads the shared net-worth query for the Overview. React Query deduplicates the net-worth fetch
+ *  that {@link CockpitHead} already started for the sticky head. */
 function CockpitBody({
   section,
   deskIds,
   accountId,
   accounts,
+  chapter,
   query,
   onFilterChange,
+  pinnedDay,
+  onPickDay,
+  onJoined,
 }: {
   readonly section: AccountsSection;
   readonly deskIds: readonly string[];
   readonly accountId: string;
   /** Every account the session owns — the league card highlights all of them (#3689). */
-  readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
+  readonly accounts: readonly OwnedAccount[];
+  readonly chapter: MilestoneChapter | undefined;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly pinnedDay: string | undefined;
+  readonly onPickDay: (day: string | undefined) => void;
+  readonly onJoined: () => void;
 }): ReactElement {
   const desks = useQuery({
     queryKey: ["desks", deskIds.join(",")],
     queryFn: () => fetchDesks(deskIds),
     // Overview needs the desk snapshot both for the considerations rail and for the positions
-    // blotter it now carries, so it always fetches. Decisions and Thesis read their own endpoints,
-    // not the desk, so they skip this fetch entirely.
-    enabled: section === "overview" || section === "activity",
+    // blotter it carries; Heartbeat, Thesis and the viewer's sections read their own endpoints.
+    enabled:
+      deskIds.length > 0 &&
+      (section === "overview" || section === "activity" || section === "events"),
   });
-  const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
+  const networth = useQuery({
+    queryKey: ["accounts-networth"],
+    queryFn: fetchNetWorth,
+    enabled: accounts.length > 0,
+  });
 
+  if (section === "milestones")
+    return (
+      <MilestonesSection
+        chapter={chapter}
+        ladderAccount={accounts.length > 1 ? accounts[0]?.name : undefined}
+        onJoined={onJoined}
+      />
+    );
+  if (section === "feedback") return <FeedbackSection />;
   if (section === "heartbeat") return <HeartbeatSection deskId={accountId} />;
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
+  if (section === "events")
+    return (
+      <EventsSection
+        desks={deskIds.length === 0 ? [] : desks.data}
+        desksLoading={deskIds.length > 0 && desks.isPending}
+        desksError={desks.isError}
+        day={pinnedDay}
+        onPickDay={onPickDay}
+      />
+    );
   if (section === "overview") {
     const { stats, caption, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
     return (
@@ -279,97 +295,54 @@ function CockpitBody({
 }
 
 function AccountsBody({
-  deskIds,
-  accountId,
-  section,
   sections,
-  accounts,
-  query,
-  onFilterChange,
   isDefault,
   onToggleDefault,
   onSelectAccount,
   onSelectSection,
-}: {
-  readonly deskIds: readonly string[];
-  readonly accountId: string;
-  readonly section: AccountsSection;
+  ...body
+}: Parameters<typeof CockpitBody>[0] & {
   readonly sections: readonly PageSection<AccountsSection>[];
-  readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
-  readonly query: string;
-  readonly onFilterChange: (next: string) => void;
   readonly isDefault: boolean;
   readonly onToggleDefault: () => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
-  const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
-  const { stats, caption } = resolveNetWorth(networth.data, accountId);
-  // The calendar's head rides the sticky block at ≥861 and sits under it at ≤860 — one instance,
-  // placed by the phone's own media query, never a hidden twin (`cockpit-clock.tsx`).
-  const phone = usePhoneWidth();
-
   return (
-    <PageFrame rail={<ProfileRail current="accounts" />}>
+    <PageFrame>
       <h1 className="visually-hidden">Accounts</h1>
       <div className="cockpit">
-        <div className="cockpit-head">
-          <AccountSwitcher
-            accounts={accounts}
-            selectedId={accountId}
-            onSelect={onSelectAccount}
-            allowAll
-            isDefault={isDefault}
-            onToggleDefault={onToggleDefault}
-          />
-          {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}
-          {section === "overview" ? null : stats ? (
-            <NetWorthCondensed stats={stats} caption={caption} />
-          ) : (
-            <p className="note">
-              {networth.isError ? "Net worth is unreachable right now." : "Reading your net worth…"}
-            </p>
-          )}
-          <SectionSwitch
-            sections={sections}
-            current={section}
-            onSelect={onSelectSection}
-            variant="horizontal"
-          />
-          {phone ? null : <CockpitClock />}
-        </div>
-        {phone ? <CockpitClock /> : null}
-        <CockpitBody
-          section={section}
-          deskIds={deskIds}
-          accountId={accountId}
-          accounts={accounts}
-          query={query}
-          onFilterChange={onFilterChange}
+        <CockpitHead
+          accounts={body.accounts}
+          accountId={body.accountId}
+          section={body.section}
+          sections={sections}
+          onSelectSection={onSelectSection}
+          onSelectAccount={onSelectAccount}
+          isDefault={isDefault}
+          onToggleDefault={onToggleDefault}
         />
+        <CockpitBody {...body} />
       </div>
     </PageFrame>
   );
-}
-
-/** Decisions folded into Activity and Heartbeat (#3687 slice 4): a saved `?section=decisions`
- *  link lands on Heartbeat, where its no-trade passes now live, never back on Overview. */
-function sectionFromSearch(raw: unknown): { section?: AccountsSection } {
-  const id = raw === "decisions" ? "heartbeat" : raw;
-  return typeof id === "string" && ALL_SECTIONS.some((s) => s.id === id)
-    ? { section: id as AccountsSection }
-    : {};
 }
 
 export const Route = createFileRoute("/accounts")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(asId(search.account) ? { account: asId(search.account) } : {}),
     ...sectionFromSearch(search.section),
+    // The Milestones chapter open beneath the cards (#3807 slice 2b; once its own route, #1119).
+    ...chapterFromSearch(search.chapter),
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 100
       ? { q: search.q }
       : {}),
     // List · Map · Runway (#3689 slice 9): a lens on one positions list, not a route.
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
+    // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
+    ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
+    // Moneypenny's intro deep link (M·01's step 2), consumed on arrival.
+    ...(search.moneypenny === "intro" ? { moneypenny: "intro" as const } : {}),
   }),
   component: AccountsPage,
 });

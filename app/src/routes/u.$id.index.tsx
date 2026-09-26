@@ -3,19 +3,28 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDesk } from "../live/desk";
-import { DeskRail } from "../shell/desk-rail";
+import { fetchSettings } from "../live/settings";
+import { AccountPage, useOwnsAccount } from "../shell/account-head";
 import { DeskTilesGrid } from "../shell/desk-tiles-grid";
 import { PageFrame } from "../shell/frame";
-import { LandmarkHero } from "../shell/landmark-hero";
 import { NewTradeCard, PositionsBlotter } from "../shell/positions-blotter";
+import { SauronCard } from "../shell/sauron-card";
 
 /**
- * THE DESK (#738 phase 2c) — `/u/:id` in the shell: identity header, tabs, tiles, and the blotter
+ * THE ANY-ACCOUNT PAGE'S OVERVIEW (#738 phase 2c; #3807 slice 2d) — `/u/:id` for any account, bot
+ * or human: its own head (`account-head.tsx`), the tiles, the character card, and the blotter
  * behind saved-view tabs (#738 phase 3b, the Projects pattern) and an Issues-style filter bar
  * (chips ⇄ query text, one model) — the blotter itself is `positions-blotter.tsx`, shared with the
- * accounts page (#3407 P0: it used to be pasted here). Tabs the shell doesn't own
- * yet link across to the server-rendered desk, honestly. Responsive disclosure per the round-1
+ * accounts page (#3407 P0: it used to be pasted here). Responsive disclosure per the round-1
  * verdict: detail columns visible on wide viewports, folded behind chevrons only when narrow.
+ *
+ * The page is the Profile page's Overview grid (`overview-grid.css`): the tiles, then the book
+ * (the blotter) in the left column, Sauron's character card top-right from 1200px spanning both —
+ * one component on two pages, with this account's own landmark dials when it is a persona-mapped
+ * bot and the scene's defaults otherwise (the old 21:9 strip retired with this slice). A phone
+ * reads it in DOM order: tiles → book → card, so what this account holds comes before the art.
+ * Ownership decides the writes (dead end 4): off an account the viewer owns, the rows offer no
+ * Close and the New trade card gives way to one plain sentence above the blotter.
  */
 
 function DeskPage(): ReactElement {
@@ -27,6 +36,9 @@ function DeskPage(): ReactElement {
     queryFn: () => fetchDesk(id),
     refetchOnWindowFocus: true,
   });
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const owned = settings.data?.accounts ?? [];
+  const canTrade = useOwnsAccount(id);
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
   // a beat behind (replace, no history spam) — so a refresh or a shared link keeps the filter.
   const [query, setQuery] = useState(q ?? "");
@@ -57,41 +69,40 @@ function DeskPage(): ReactElement {
     );
   const { desk: d, generatedAt, landmark } = desk.data;
 
-  const rail = <DeskRail id={d.id} name={d.name} kind={d.kind} current="active" />;
-
   return (
-    <PageFrame rail={rail}>
-      <header className="desk-header">
-        <div>
-          <h1>{d.name}</h1>
-          <p className="desk-sub">
-            <span className={`chip chip-${d.kind}`}>{d.kind === "bot" ? "BOT" : "HUMAN"}</span>
-            <span className="env-pill">SIM</span>
-          </p>
-        </div>
-      </header>
-
-      {landmark && !d.error ? (
-        <LandmarkHero name={d.name} power={landmark.power} health={landmark.health} />
-      ) : null}
+    <AccountPage desk={d}>
       {d.error ? (
         <p className="note-stop">Account unreachable — positions can't be read right now.</p>
       ) : (
-        <>
-          <DeskTilesGrid tiles={d.tiles} />
-          <PositionsBlotter
-            deskId={d.id}
-            positions={d.positions}
-            query={query}
-            onFilterChange={setFilter}
-          />
-        </>
+        <div className="overview-grid">
+          <div className="overview-worth">
+            <DeskTilesGrid tiles={d.tiles} />
+          </div>
+          <div className="overview-decide acct-book">
+            {canTrade ? null : (
+              <p className="acct-own-note">You can trade only your own accounts.</p>
+            )}
+            <PositionsBlotter
+              deskId={d.id}
+              positions={d.positions}
+              query={query}
+              onFilterChange={setFilter}
+              canTrade={canTrade}
+            />
+            {canTrade ? <NewTradeCard deskId={d.id} /> : null}
+          </div>
+          <div className="overview-card">
+            <SauronCard
+              {...(landmark ? { landmark } : {})}
+              ownedIds={owned.map((a) => a.id)}
+              meId={owned.find((a) => a.kind === "human")?.id}
+              scope=".acct-page"
+            />
+          </div>
+        </div>
       )}
-      {d.error ? null : <NewTradeCard deskId={d.id} />}
-      <footer className="obs-foot num">
-        as of {generatedAt} · click a symbol for its fill timeline
-      </footer>
-    </PageFrame>
+      <footer className="obs-foot num">as of {generatedAt}</footer>
+    </AccountPage>
   );
 }
 

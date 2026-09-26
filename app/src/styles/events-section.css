@@ -1,0 +1,117 @@
+/* The Profile page's Events section (#3807 slice 2c): `shell/events-section.tsx` — the market
+   calendar's grid beside an agenda at ≥861, stacked at ≤860, in the reading track. Each tier is a
+   glyph AND a word; the glyphs sit on --text / --muted, pairs already in theme.css (≥ 3:1 in
+   both palettes), so no colour carries the tier alone. */
+
+.book-events {
+  max-width: var(--col-read);
+  display: grid;
+  gap: 16px 28px;
+  align-items: start;
+}
+@media (min-width: 861px) {
+  .book-events {
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  }
+}
+/* The grid's head leads its own column here, not a stage row: no rule under it. */
+.book-events .rx-band {
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+.book-events .eh-fold .eh {
+  width: min(100%, 320px);
+}
+
+.book-agenda {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.book-agenda .note {
+  margin: 0;
+}
+.book-tiers {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.book-tier {
+  color: var(--text);
+  font-weight: 600;
+}
+.book-glyph {
+  font-style: normal;
+  font-size: 10px;
+  vertical-align: 1px;
+}
+.book-tier-held .book-glyph {
+  color: var(--text);
+}
+.book-tier-market .book-glyph {
+  color: var(--muted);
+}
+
+.agenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.agenda-row {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  gap: 2px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.agenda-row > :not(.agenda-when) {
+  grid-column: 2;
+}
+.agenda-when {
+  grid-row: 1 / span 4;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.agenda-row .book-tier {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.agenda-row[data-tier="held"] .book-tier {
+  color: var(--text);
+}
+.agenda-title {
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.agenda-call {
+  color: var(--muted);
+}
+.agenda-link {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+.agenda-link:hover,
+.agenda-link:focus-visible {
+  text-decoration: underline;
+}
+.agenda-more {
+  color: var(--muted);
+  font-size: 12px;
+}
+.agenda-foot {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.agenda-foot-link {
+  color: var(--accent);
+  white-space: nowrap;
+}

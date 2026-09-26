@@ -129,6 +129,7 @@ export function PositionsBlotter({
   onLensChange,
   allocation,
   decisions = [],
+  canTrade = true,
 }: {
   readonly deskId: string;
   readonly positions: readonly DeskPosition[];
@@ -140,6 +141,8 @@ export function PositionsBlotter({
   /** The Map lens sizes cash from it; without one, Map falls back to List. */
   readonly allocation?: DeskAllocation;
   readonly decisions?: readonly Decision[];
+  /** Does the viewer own this account (#3807 slice 2d)? Off it, the rows offer no write. */
+  readonly canTrade?: boolean;
 }): ReactElement {
   const filter = parseDeskQuery(query);
   const shown = positions.filter((p) => matchesFilter(p, filter));
@@ -176,6 +179,7 @@ export function PositionsBlotter({
             deskId={deskId}
             totalCount={positions.length}
             decayBySymbol={decay}
+            canTrade={canTrade}
           />
           {shown.length > 0 ? (
             <PositionCards positions={shown} deskId={deskId} decayBySymbol={decay} />

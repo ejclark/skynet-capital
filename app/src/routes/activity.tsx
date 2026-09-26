@@ -33,7 +33,7 @@ import { TradeRow } from "../shell/wire-trade-row";
  * filings stay pseudonymous. The GitHub onramp folds behind a disclosure — reference, not front
  * matter.
  *
- * SECTIONS, NOT TABS (#1740): the page holds three different SHAPES of data, so the rail carries a
+ * SECTIONS, NOT TABS (#1740): the page holds three different SHAPES of data, so its controls row carries a
  * section switch above its filter chips (`frame.tsx`'s three-word rule — a section is a boundary,
  * a kind is a qualifier). EXCLUSIVE AT EVERY WIDTH (2026-09-06 — Eric, on the "beside" shape #1749
  * shipped: "'on the page' sections are always visible just place a different section in the
@@ -62,12 +62,12 @@ const SECTIONS: readonly PageSection<ActivitySection>[] = [
   { id: "council", label: "The Council" },
 ];
 
-/** The rail: the page's sections first, then — only while the feed is the current one — its filter
- *  groups, the same one-model qualifiers the bar accepts as text. The rail drives the section
- *  beside it (`frame.tsx`), so a chip that filters a list this page has paged away from would be a
+/** The controls row (#3807 slice 2a — the rail left the frame): the page's sections first, then —
+ *  only while the feed is the current one — its filter groups, the same one-model qualifiers the bar accepts as text. The row drives the section
+ *  below it (`frame.tsx`), so a chip that filters a list this page has paged away from would be a
  *  control with nothing to do; the feed's own bar travels with the feed either way. The `<hr />`
- *  keeps the two roles apart on a phone, where the rail is a row and the group labels are hidden. */
-function WireRail({
+ *  keeps the two roles apart at every width, where the row hides the group labels. */
+function WireControls({
   query,
   onChange,
   section,
@@ -186,7 +186,8 @@ function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
         <p className="note">Feedback isn't switched on yet, so there's nothing to show here.</p>
       ) : wire.feedback.length === 0 ? (
         <p className="note">
-          No feedback filed yet — be the first from <a href="/app/feedback">the feedback form</a>.
+          No feedback filed yet — be the first: tell Moneypenny, and your filings are listed on{" "}
+          <a href="/app/accounts?section=feedback">your Profile</a>.
         </p>
       ) : visible.length === 0 ? (
         <p className="note">Nothing active — flip to "All" to see what's already shipped.</p>
@@ -483,8 +484,8 @@ function WirePage(): ReactElement {
 
   return (
     <PageFrame
-      rail={
-        <WireRail query={query} onChange={setFilter} section={section} onSection={setSection} />
+      controls={
+        <WireControls query={query} onChange={setFilter} section={section} onSection={setSection} />
       }
     >
       <header className="page-header">

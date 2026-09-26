@@ -67,3 +67,23 @@
     grid-column: auto;
   }
 }
+
+/* The milestone strip and, docked, the guidance link beside it (#3807 slice 2a): the rail that held
+   the link left the frame, so the link rides the strip's row — beside it where the width allows, under
+   it where it wraps. */
+.trade-strip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+}
+.trade-strip-row > .ladder-strip {
+  flex: 1 1 480px;
+  min-width: 0;
+}
+.trade-guidance-link {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 13.5px;
+  white-space: nowrap;
+}

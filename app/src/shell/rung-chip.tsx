@@ -4,7 +4,8 @@ import type { PlayInfo } from "../live/options";
 
 /**
  * THE RUNG CHIP (#3407, Workbench slice 5) — what stays on the ticket when the milestone strip
- * moves to `/learn/trading`. Eric's call (2026-09-22, "B — keep"): overturn the strip's PLACEMENT
+ * moves to the ladder (the Trading chapter of the Profile page's Milestones since #3807 2b). Eric's
+ * call (2026-09-22, "B — keep"): overturn the strip's PLACEMENT
  * (#1461 put the rail over the form; the Workbench pick makes the ticket one pane of a bench, and
  * an eight-rung ladder above a bench is a second header), keep its PRINCIPLE — milestones gate,
  * they never drive. So one line names the rung the ticket is on, its state in a WORD (earned ·
@@ -36,7 +37,11 @@ export function RungChip({
       <span className="rung-chip-count num">
         {earned} / {plays.length} earned
       </span>
-      <Link to="/learn/trading" className="rung-chip-link">
+      <Link
+        to="/accounts"
+        search={{ section: "milestones", chapter: "trading" }}
+        className="rung-chip-link"
+      >
         Trading ladder →
       </Link>
     </p>

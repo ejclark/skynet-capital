@@ -529,12 +529,12 @@
             "id": "root",
             "label": "Root shell route",
             "path": "app/src/routes/__root.tsx, app/src/shell/frame.tsx, app/src/shell/status-pill.tsx, app/src/shell/market-session.tsx, app/src/shell/keyboard.tsx",
-            "responsibility": "Topbar view navigation, market clock, fleet-ops status pill, settings/sign-out actions, the Moneypenny rail toggle, keyboard chords, and the Outlet every page renders into."
+            "responsibility": "Topbar view navigation, market clock, fleet-ops status pill, settings/sign-out actions, the Moneypenny rail toggle, keyboard chords, and the Outlet every page renders into. The page frame (shell/frame.tsx) is one full-width stage per route: a page's controls are a row at the top of its own stage, and Settings keeps its list as two columns inside its own stage (#3807 slice 2a)."
           },
           {
             "id": "routes",
             "label": "Page routes",
-            "path": "app/src/routes/accounts.tsx, activity.tsx, trade.tsx, learn.tsx, learn_.trading.tsx, playbooks.tsx, research.tsx, settings.tsx, onboarding.tsx, join.tsx, feedback.tsx, leaderboard.tsx, index.tsx, u.$id.tsx, u.$id.index.tsx, u.$id.decisions.tsx, u.$id.pulse.tsx, u.$id.thesis.tsx, u.$id.playbooks.tsx",
+            "path": "app/src/routes/accounts.tsx, activity.tsx, trade.tsx, learn.tsx, learn_.trading.tsx, playbooks.tsx, research.tsx, settings.tsx, onboarding.tsx, join.tsx, feedback.tsx, leaderboard.tsx, index.tsx, u.$id.tsx, u.$id.index.tsx, u.$id.activity.tsx, u.$id.decisions.tsx, u.$id.pulse.tsx, u.$id.thesis.tsx, u.$id.playbooks.tsx",
             "responsibility": "One TanStack file route per view; each composes shell sections and subscribes to the live layer."
           },
           {

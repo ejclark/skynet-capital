@@ -1,62 +1,57 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { fetchDesk, fetchDeskDecisions } from "../live/desk";
-import { DecisionsSection } from "../shell/decisions-section";
-import { DeskRail } from "../shell/desk-rail";
+import { fetchDesk } from "../live/desk";
+import { AccountPage } from "../shell/account-head";
 import { PageFrame } from "../shell/frame";
+import { HeartbeatSection } from "../shell/heartbeat";
 
 /**
- * THE BOT'S MIND (#738 phase 3a) — the decision-cycle viewer on the Actions-run template, at the
- * standalone `/u/:id/decisions` route. The list itself — fetch, empty states, "load older cycles"
- * pagination (#3608) — lives in `../shell/decisions-section`'s `DecisionsSection`, the same
- * component the accounts view's Decisions tab uses, so this route is just the page chrome
- * (header, rail, the human-account gate) around it, not a second copy of the rendering.
+ * THE ANY-ACCOUNT PAGE'S HEARTBEAT (#3807 slice 2d) — Decisions folded into Heartbeat (#3687): this
+ * route keeps its `/u/:id/decisions` address so every saved link still opens, but it reads what the
+ * Profile page's Heartbeat reads — is the bot alive, what each playbook concluded on its last pass,
+ * and the passes that placed no trade (`heartbeat.tsx`, one component on both pages). The passes
+ * that DID trade open from their row on this page's Activity, as they do on the Profile page. The
+ * route's name is a later IA call; the head's switch calls it Heartbeat.
  */
 
-function DecisionsPage(): ReactElement {
+function HeartbeatPage(): ReactElement {
   const { id } = Route.useParams();
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
-  const decisions = useQuery({
-    queryKey: ["desk-decisions", id],
-    queryFn: () => fetchDeskDecisions(id),
-    refetchOnWindowFocus: true,
-  });
 
-  if (desk.isPending || decisions.isPending)
+  if (desk.isPending)
     return (
       <PageFrame>
-        <p className="note">Reading the audit trail…</p>
+        <p className="note">Listening for the heartbeat…</p>
       </PageFrame>
     );
-  if (desk.isError || decisions.isError)
+  if (desk.isError)
     return (
       <PageFrame>
-        <p className="note">The audit trail is unreachable.</p>
+        <p className="note">This account is unreachable.</p>
       </PageFrame>
     );
 
   const d = desk.data.desk;
-  const trail = decisions.data;
   return (
-    <PageFrame rail={<DeskRail id={d.id} name={d.name} kind={d.kind} current="decisions" />}>
+    <AccountPage desk={d}>
       <header className="page-header">
-        <h1>{d.name} — decisions</h1>
+        <h2>Heartbeat</h2>
         <p>
-          Every autonomous cycle, replayable: what the persona wanted, what the risk guards left
-          standing, and what happened. Reasons are the persona's own words.
+          Is the bot alive, what each playbook concluded on its last pass, and the passes that
+          placed no trade. Reasons are the bot's own words.
         </p>
       </header>
-      {trail.kind !== "bot" ? (
+      {d.kind !== "bot" ? (
         <p className="note">
-          {d.name} is a human account — decision cycles are a bot's audit trail. The fill timeline
-          on the Active view is the human record.
+          {d.name} is a human account — a heartbeat is a bot's record of its passes. This account's
+          orders are on Activity.
         </p>
       ) : (
-        <DecisionsSection deskId={id} />
+        <HeartbeatSection deskId={id} />
       )}
-    </PageFrame>
+    </AccountPage>
   );
 }
 
-export const Route = createFileRoute("/u/$id/decisions")({ component: DecisionsPage });
+export const Route = createFileRoute("/u/$id/decisions")({ component: HeartbeatPage });
