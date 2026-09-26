@@ -33,7 +33,19 @@ import { useMediaQuery } from "./use-media";
 /** Where the band renders its right cap when the flag is on. */
 export const SLOT_SELECTOR = "[data-tower-slot]";
 
-export const CREST_SRC = "/tower?frame=crown";
+/** The crest's scene at `quality=presence` (#3807 slice 3a-2): 30 draws a second, DPR ≤ 1, no
+ *  shadow map, half the embers — a small presence spends like one (`src/three/kit/quality.ts`). */
+export const CREST_SRC = "/tower?frame=crown&quality=presence";
+
+/** The frame's src for a page at `search`: `?probe=1` on the page is forwarded, so the scene shows
+ *  its corner readout (fps · frames · submit p50/p95) — the real number, read on a real machine. */
+export function crestSrc(search: string): string {
+  try {
+    return new URLSearchParams(search).get("probe") === "1" ? `${CREST_SRC}&probe=1` : CREST_SRC;
+  } catch {
+    return CREST_SRC;
+  }
+}
 
 const isSettings = (pathname: string): boolean => {
   const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
@@ -132,6 +144,9 @@ export function VantageFrame({
   const box = useBox(slot);
   const shown = eligible && slot !== null && box !== null;
   const [mounted, setMounted] = useState(false);
+  // Frozen at first render: a later navigation drops `?probe=1`, and a changed src would reload
+  // the scene (a new WebGL context and a shader compile).
+  const [src] = useState(() => crestSrc(window.location.search));
   if (shown && !mounted) setMounted(true);
 
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -162,7 +177,7 @@ export function VantageFrame({
     <iframe
       ref={attach}
       className="vantage"
-      src={CREST_SRC}
+      src={src}
       title="Barad-dûr, Sauron's tower"
       aria-hidden="true"
       tabIndex={-1}

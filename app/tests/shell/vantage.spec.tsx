@@ -1,7 +1,7 @@
 import { act, render } from "@testing-library/react";
 import { useRef } from "react";
 import { shellFromUrl, usePrefs } from "../../src/shell/prefs";
-import { CREST_SRC, TowerSlot, VantageFrame } from "../../src/shell/vantage";
+import { CREST_SRC, crestSrc, TowerSlot, VantageFrame } from "../../src/shell/vantage";
 
 /**
  * The crest's one window (#3807 slice 3a): ONE `/tower?frame=crown` frame for the session, laid over
@@ -42,6 +42,18 @@ describe("the shell flag", () => {
     expect(document.documentElement.getAttribute("data-shell")).toBe("watchtower");
     act(() => usePrefs.getState().setShell(undefined));
     expect(document.documentElement.hasAttribute("data-shell")).toBe(false);
+  });
+});
+
+describe("the crest's src (#3807 slice 3a-2)", () => {
+  it("asks the scene for quality=presence", () => {
+    expect(CREST_SRC).toBe("/tower?frame=crown&quality=presence");
+    expect(crestSrc("")).toBe(CREST_SRC);
+  });
+
+  it("forwards ?probe=1 from the page, and nothing else", () => {
+    expect(crestSrc("?shell=watchtower&probe=1")).toBe(`${CREST_SRC}&probe=1`);
+    expect(crestSrc("?probe=0&power=1")).toBe(CREST_SRC);
   });
 });
 
