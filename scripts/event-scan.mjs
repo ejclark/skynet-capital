@@ -470,9 +470,14 @@ function main() {
 
   assertHorizon(cadence);
   // The due verdict rests on each ledger's `**Last assessed:**`: with no dir every event would read
-  // as never-assessed and buy a session — "broken" must not read as "everything due".
-  if (ledgerDirMissing)
-    throw new Error(`event-scan: cannot read ledger dir ${LEDGER_DIR} — refusing to guess.`);
+  // as never-assessed and buy a session — "broken" must not read as "everything due". The human
+  // report is the other case: a repo with no ledgers yet is a valid thing to look at, so it names
+  // the state and renders (tests/domain/research-horizon.spec.ts seeds `no-ledgers` for it).
+  if (ledgerDirMissing) {
+    if (has("due"))
+      throw new Error(`event-scan: cannot read ledger dir ${LEDGER_DIR} — refusing to guess.`);
+    console.error(`· no ledger dir at ${LEDGER_DIR} — every event reads as never assessed`);
+  }
 
   const rows = tables.all
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))
