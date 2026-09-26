@@ -26,6 +26,15 @@ const run = (args: string[], env: NodeJS.ProcessEnv = {}) => {
   }
 };
 
+describe("ship open — the PR-title contract", () => {
+  it("refuses a title commitlint would reject in CI, before anything is pushed", () => {
+    const long = `fix(eyes): ${"a long title that runs past the hundred-character cap ".repeat(2)}`;
+    const { code, stderr } = run(["open", long]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("PR TITLE fails commitlint");
+  });
+});
+
 describe("ship open — the PR-description contract", () => {
   it("refuses to open a PR with no --body-file", () => {
     const { code, stderr } = run(["open", "test: no body"]);

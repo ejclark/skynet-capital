@@ -211,8 +211,17 @@ supply-chain decision: read them fully before adopting.
 
 ## Defensive roster
 
+**A `✅ live` row is a claim with evidence, never an aspiration:** the eye has a caller (`npm test`
+through `tests/arch/*.spec.ts`, a workflow, or a skill step) *and* a spec, or the row says
+`partial` and names what is missing. Checked 2026-09-26: every ✅ script had two or more callers
+except `config-audit.mjs`, which the secretary ran by hand and nothing else did; it gained its
+caller and row with #3769 slice 2. The rule is zpratt/lousy-agents' "Partial beats false Shipped"
+(its capability matrix counts a thing shipped only with release notes *and* tests), adopted after
+the #3754 platter promise showed what a prose-only status costs.
+
 | Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
 |---|---|---|---|---|
+| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its four sections) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
 | **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. Since #1713 it is the codebase's only size cap and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off, having charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
