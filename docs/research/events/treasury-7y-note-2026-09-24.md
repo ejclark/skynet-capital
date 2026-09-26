@@ -341,12 +341,110 @@ close-out fills `## Outcome` once the print itself exists.
 | 2026-09-20 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.6pt since last), band unchanged (medium:0+), 49 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-22 |
 | 2026-09-22 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.1pt since last), band unchanged (medium:0+), 49 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-24 |
 | 2026-09-24 | D0 | **Adjacency sweep — full session, auction day, pre-stop.** **Event tape (this auction's own facts).** CUSIP now published: `91282CRM5` (Fiscal Data `auctions_query`, fetched direct today); `offering_amt` re-confirms **$44,000,000,000**. `high_yield`, `bid_to_cover_ratio` and every bidder-share field read `null` in the same record — the 1:00pm ET result has not posted as of this pass; nothing about the print itself is known yet. **Peers.** AVGO/NVDA/MRVL/AMD closes through 09-21 (Yahoo, per the sibling `trump-xi-summit` D-4/D-1 rows) continue grinding higher off the 09-16 FOMC selloff lows — tape recovery, no new prints in the window. **Macro / event tape — the named precedent fired.** The **09-23 5-year** tailed **+3.1bp** against this cycle's 0.2–0.9bp recent band, with indirect at a **new multi-auction low** — both of the sibling ledger's own registered horizon-table falsifiers fired on the same print, and its "tails well beyond the recent band with indirect at new multi-auction lows, landing into a hawkish-FOMC aftermath" kill switch fired on every clause, escalating to an explicit same-day caution flag on the long-duration-tech duration-sensitivity guard (`treasury-5y-note-2026-09-23.md`, close-out). The **09-22 2-year** also broke a leg — dealer take-down above its registered 12.1% threshold — though bid-to-cover (2.63) and indirect held inside band (`treasury-2y-note-2026-09-22.md`, close-out). This is the "5Y auction tails badly the day before → raises the bar for a clean 7Y" signal condition this doc has carried since D36's initial research, now an observed result rather than a standing worry: both belly auctions immediately ahead of this one broke at least one leg. **Volatility regime.** VIX **~15.2** (last available reading; +0.3pt vs the 14.87 close this doc last recorded on 09-22), well under the 3-point threshold — no regime shift. **Geopolitical.** Today is the Trump–Xi state-visit day itself — both governments' primary channels (whitehouse.gov, fmprc.gov.cn) confirmed the Rose-Garden/bilateral/state-dinner program per the sibling ledger's 09-21 row; still filed `estimate` on a `CONFIRMED_PREFIX` schema gap, not a research finding. **Event-specific tape.** SCOOS releases 14:00 today, twenty minutes after this auction's 13:00 stop — shares the afternoon tape, cannot move the print. **Corridor.** `event-scan.mjs --on-date=2026-09-24` names all 12 same-date entries already tracked; no new dated adjacency to propose. Date and size confirmed, CUSIP now confirmed; the print itself is tomorrow's finding. | **Refined, not reversed** — stand-aside and watch-only both hold; nothing about this auction's own result is known yet, but the "concession is not enough" kill switch is now armed against a live precedent (both prior belly auctions this week broke a leg) rather than a hypothetical one (Stance section updated) | 2026-09-25 (close-out, `event-passed-unscored`) |
+| 2026-09-26 | D+2 | **Close-out — the auction printed and is scored in full below.** Instrument cache busted per protocol; `symbols: []`, so neither symbol-keyed instrument applies and the scoring source is Treasury's own record (Fiscal Data `auctions_query` + the TreasuryDirect results-release PDF, agreeing field-for-field), re-fetched this session, never memory. Bid-to-cover **2.42** — the 2nd-lowest of the trailing 13 (only 2025-09-25's 2.40 is lower), firing the "under ~2.43, worse than 11 of 12" tier but not the "under 2.40, worse than all 20" one. Indirect **57.20%** and dealer **12.53%** both landed inside this doc's own established trailing-12 bands (3rd-lowest and 9th-of-13 respectively) — neither bidder-composition leg broke, in contrast to both belly auctions immediately ahead of it this week (5Y: both legs broke; 2Y: dealer broke). Direct bidders absorbed the slack at **30.27%**, the series' 3rd-highest. `FT-treasury-7y-note-2026-09-24-1` was already scored **PASS** at D-6 (the announcement, not the print); no second forward test existed to score against today's result, and none is registered now that the event is closed. | **Scored, not reversed.** The "Today" and "This month" falsifiers' bid-to-cover clause fired narrowly; the stricter "This quarter" falsifier (< 2.40 or dealer > 13.1%) did not, so its "Watch" call survives on its own terms. The raised bar the D0 row named broke on the auction's aggregate ratio only — composition (indirect, dealer) held, unlike either belly print ahead of it (Outcome section below) | — (closed; scanner goes quiet on this event) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-26, D+2 — inside the `closeOutWithinDays: 6` deadline).** Rates mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, unchanged since initial
+research); the cache was busted anyway per the lane's standing instruction, though nothing here
+reads it. "Re-run instrument data" means re-fetching the executed auction record itself, never
+recalling a prior row's document read: `api.fiscaldata.treasury.gov`'s `auctions_query` for CUSIP
+**91282CRM5** (fetched direct this session), cross-checked field-for-field against
+TreasuryDirect's own results-release PDF (`R_20260924_3.pdf`, text layer decompressed and read
+direct — the same technique the `missouri-map-tro-expiry-2026-09-22` ledger used), which agree to
+the dollar on every tendered/accepted figure and restate the same bid-to-cover arithmetic in their
+own footnote; the trailing 24-auction 7-Year series from the same API (2024-09-26 → today), to rank
+this print rather than eyeball it; the daily par yield curve CSV (`home.treasury.gov`) for
+09-17/09-24; and Cboe's own VIX daily series (Yahoo `^VIX`). Every fetch resolved this session;
+nothing below is from memory.
+
+**What printed — a soft aggregate ratio, but the composition legs both held.**
+
+| Measure | 2026-09-24 | This doc's own trailing-13 series | Result |
+|---|---|---|---|
+| Offering | **$44,000,000,000** | $44B (13 straight, 2025-09-25→today) | 21st straight quarter unchanged — `FT-...-1`'s PASS is reaffirmed, not re-scored |
+| **High yield** | **5.085%** | — | highest 7Y stop of this doc's life, tracking the belly's post-FOMC repricing |
+| When-issued (secondary — helious.io; Treasury publishes none for this tenor) | ~5.078% | — | implied by helious's own reported 0.7bp tail |
+| **Tail** | **+0.7bp** (helious.io; investinglive.com's dedicated auction page could not be reached this session — 403 direct, no linked article found via WebFetch/search — so this figure is single-sourced, unlike the 5Y/2Y siblings' cross-checked one) | ~0.2–0.9bp (Jun/Jul 2026 prints) | ordinary, not a record |
+| **Bid-to-cover** | **2.42** | 2.40–2.52 (median 2.495); **2nd-lowest of 13** — only 2025-09-25 is lower | **fires the "< 2.43, worse than 11 of 12" tier; does not fire "< 2.40, worse than all 20"** |
+| Competitive accepted | $43,480,804,500 | — | denominator (matches Fiscal Data and the press release exactly) |
+| **Indirect** | **57.20%** ($24,869,544,500) | 56.4–78.4% (median ~60.9%); **3rd-lowest of 13** | near the floor, but not a new low (56.42%, 56.65% both lower) — the stood-down "< 57%" signal does **not** re-arm |
+| **Direct** | **30.27%** ($13,163,710,000) | — | **3rd-highest of 13** (31.62%, 31.58% higher) — the marginal absorber, same shape as this week's 2Y and 5Y prints |
+| **Dealer** | **12.53%** ($5,447,550,000) | 9.3–13.1% (median ~12.3); **9th-of-13**, mid-upper-normal | comfortably inside band, nowhere near the 13.14% ceiling |
+| Allotted at high | 91.11% | — | ordinary |
+
+Bidder shares are computed here from raw accepted dollars over competitive accepted
+($43,480,804,500) and sum to 100.00% exactly, matching the TreasuryDirect press release's own
+tendered/accepted table to the dollar and helious.io's independently-published percentages
+(57.2/30.3/12.5) to the tenth of a point — two independent cross-checks on the primary record, not
+a substitute for it.
+
+**The finding: the 7Y is the one belly auction this week that did not break a composition leg.**
+The named precedent this doc carried since D36 — "a dirty 5Y raises the bar for a clean 7Y" —
+observed both prior belly auctions break at least one bidder-composition leg (the 5Y's indirect at
+a new multi-auction low and its dealer take-down above range; the 2Y's dealer above its own
+threshold). The 7Y's own aggregate bid-to-cover came in on the soft side of that same raised bar —
+2.42, its 2nd-worst reading in the trailing series — but neither indirect nor dealer broke: both sit
+inside this doc's own established bands, with direct bidders (30.27%, the series' 3rd-highest)
+absorbing the slack instead. Read plainly, the ~34bp-through-August concession this doc had been
+pricing since D-6 was enough to keep foreign and dealer participation orderly; what it was not
+enough to do is produce a clean aggregate cover ratio, which is a narrower and less alarming finding
+than "the concession is not enough" would have been had dealers been forced in or indirect collapsed
+the way the 5Y's did one day earlier.
+
+**Scoring the registered forward test.** `FT-treasury-7y-note-2026-09-24-1` (coupon supply is a
+published constant) already scored **PASS** at the 2026-09-18 (D-6) pulse, against the 09-17
+announcement — a claim about supply, not about today's demand, and nothing in today's print
+reopens it; today's `offering_amt` re-confirms the same $44,000,000,000. No second forward test was
+ever registered against this auction's own demand metrics (this doc's own D15 row: "a Treasury
+auction *result* is not a directional equity prediction of the kind that ledger scores"), so there
+is nothing else in [`forward-tests/treasury-7y-note-2026-09-24.md`](../forward-tests/treasury-7y-note-2026-09-24.md)
+to score. No new forward test is registered here either — the event is closed and this document
+goes quiet, so a prediction banked in this fragment now would never be scored.
+
+**Scoring the horizon calls, as written, not harmonized after the fact.**
+
+- **Today (D0) "Stand aside" — call correct; its falsifier fired the weak-cover-ratio branch, not
+  the clean one.** "Bid-to-cover under ~2.43 ... worse than 11 of the last 12 despite the
+  concession" is exactly what printed (2.42, 2nd-lowest of 13); the "or clean at/above ~2.50"
+  branch did not. No position was ever licensed either way, so nothing tradeable turned on which
+  branch fired — but the raised-bar question the row posed is answered: it broke on the ratio, not
+  on composition.
+- **This week "Stand aside — the CPI fork"** was already resolved as the priced base case at the
+  D15/D-6 rows, before this auction printed; nothing here reopens it.
+- **This month "Both loaded events resolved as the priced base case" — its falsifier's letter
+  fired, its intended finding did not.** The falsifier read "bid-to-cover under ~2.43, dealer
+  take-down over 13.1%" as the observation that would say price is not the binding constraint on
+  demand. The bid-to-cover clause fired; the dealer clause (12.53% vs 13.1%) did not, and indirect
+  held near its own floor rather than collapsing through it. Read on the letter, the falsifier
+  fired; read on its own stated intent, the belly's concession did bind — it kept the bidder base
+  orderly, and only the aggregate ratio (with a smaller demand pool this week, per the two dirty
+  prints ahead of it) came in soft.
+- **This quarter "Watch" — call survives on its own narrower terms.** Its falsifier required
+  bid-to-cover **under 2.40** *or* dealer **above 13.1%** — the trailing-12 floor and ceiling, not
+  the recalibrated "worse than 11 of 12" tier the nearer-dated calls used. Neither fired (2.42 >
+  2.40; 12.53% < 13.1%), so the quarter-horizon call is not falsified by this print, even though the
+  nearer-dated calls' looser thresholds were. The distinction is deliberate, not a rescue — This
+  quarter was written to score against the floor/ceiling precisely because it was the call meant to
+  survive an ordinary soft print.
+
+**Honest limits.** The tail/WI figure is single-sourced to helious.io this session — investinglive.com,
+the secondary the 5Y/2Y siblings used to cross-check the same figure, returned 403 on every direct
+fetch and no dedicated article surfaced via WebFetch or web search, so this doc cannot independently
+verify the 0.7bp tail the way its siblings verified theirs; every other figure in the table above is
+primary (Fiscal Data) cross-checked against a second primary source (the TreasuryDirect press
+release PDF), so the tail is the one number here resting on a single non-primary source. No
+adjacency resweep was run this close-out session — `event-passed-unscored` mode does not mandate
+one, and nothing about this event's own outcome depends on it. Geopolitical and peer channels were
+likewise not independently re-swept; `symbols: []` gives peers no direct read on this event and
+nothing incidental surfaced while sourcing the auction record itself.
 
 **Last assessed:** 2026-09-20
 <!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"medium:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":1} -->
@@ -356,3 +454,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-24
 <!-- probe-ref: {"symbols":{},"vix":15.18,"daysBand":"medium:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0} -->
+
+**Last assessed:** 2026-09-26 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0} -->
