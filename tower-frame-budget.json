@@ -1,0 +1,34 @@
+{
+  "measured_on": "swiftshader (relative only; the real number is Eric's Pixel 6)",
+  "date": "2026-09-26",
+  "viewport": "1280x900, DPR 1",
+  "proposed_pass": {
+    "tower_submit_ms_p95": 4,
+    "parent_idle_raf_p95_delta_ms": 4
+  },
+  "tower": {
+    "submit_ms_p50": 1.3,
+    "submit_ms_p95": 7,
+    "frames": 62,
+    "mount_to_ready_ms": 824
+  },
+  "parent_raf_interval_ms": {
+    "flag_off_p95": 416.7,
+    "flag_on_p95": 566.7,
+    "delta_p95": 150,
+    "flag_off_p50": 16.7,
+    "flag_on_p50": 133.3,
+    "idle_ms": 10000,
+    "section_switches": 6
+  },
+  "navigation": {
+    "navigations": 20,
+    "settings_round_trips": 5,
+    "crest_iframes_max": 1,
+    "same_element": true
+  },
+  "notes": [
+    "scene: the bundle from #3825 (main's scene has no __towerStats), app: this PR",
+    "SwiftShader rasterises on the same CPU as the page, so the parent's rAF interval absorbs the crest's draw cost here; a GPU moves it off the main thread. Both pass lines fail on SwiftShader — the verdict waits for a real device."
+  ]
+}

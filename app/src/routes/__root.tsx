@@ -5,13 +5,14 @@ import {
   retainSearchParams,
   useRouterState,
 } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useRef } from "react";
 import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
 import { KeyboardChords } from "../shell/keyboard";
 import { MarketSession } from "../shell/market-session";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
 import { StatusPill } from "../shell/status-pill";
+import { Vantage } from "../shell/vantage";
 
 /**
  * The shell (#738, live-review round; nav reorg follow-up): the topbar carries the APP-LEVEL
@@ -37,6 +38,9 @@ import { StatusPill } from "../shell/status-pill";
  * validated here and retained across client-side navigation (`retainSearchParams`), so the week
  * a member picks on the Profile page is the week R&D and Trade open on. The model, its defaults
  * and its falsifier: `live/horizon-params.ts`.
+ *
+ * The tower's crest (#3807 slice 3a, behind `?shell=watchtower`) is ONE frame mounted here, beside
+ * the page and never inside the topbar, so it survives every navigation (`shell/vantage.tsx`).
  */
 
 function GearIcon(): ReactElement {
@@ -132,9 +136,10 @@ function MoneypennyToggle(): ReactElement {
 }
 
 function RootShell(): ReactElement {
+  const app = useRef<HTMLDivElement>(null);
   return (
     <div className="shell">
-      <div className="shell-app">
+      <div className="shell-app" ref={app}>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
@@ -195,6 +200,7 @@ function RootShell(): ReactElement {
           </div>
         </header>
         <Outlet />
+        <Vantage root={app} />
         <KeyboardChords />
       </div>
       <MoneypennyRail />

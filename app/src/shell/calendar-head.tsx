@@ -7,6 +7,7 @@ import {
   sessionsIn,
 } from "../live/horizon-range";
 import { LENSES, type Lens } from "../live/research";
+import { TowerSlot } from "./vantage";
 
 /**
  * THE MARKET CALENDAR'S HEAD (#3807 slice 2·1) — the range label, the arrows and the session
@@ -35,6 +36,9 @@ import { LENSES, type Lens } from "../live/research";
  * `title` only repeats the longer why. A reason that lived only in `title` was invisible on a
  * phone; `scripts/crawl/probes.mjs` reads the chip's enclosing fieldset for the reason's first
  * words, which is why the line opens with the door's own name.
+ *
+ * THE RIGHT CAP (#3807 slice 3a): under `?shell=watchtower` the head ends in an empty slot the
+ * shell's one tower frame is laid over (`vantage.tsx`); without the flag it renders nothing.
  * @category hero
  */
 
@@ -160,6 +164,7 @@ export function CalendarHead({
           </p>
         ) : null}
       </fieldset>
+      <TowerSlot />
     </>
   );
 }

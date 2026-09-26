@@ -1,0 +1,47 @@
+/* The tower's crest at the market calendar band's RIGHT cap (#3807 slice 3a) — only under
+   `?shell=watchtower`, which stamps `data-shell` on <html> (`shell/prefs.ts`). The band renders an
+   empty slot (`TowerSlot`); the shell's one frame (`shell/vantage.tsx`) is laid over it. */
+
+/* ≥861: the band makes room on its right for a 160×96 crest (the scene's `frame=crown`). The
+   band grows to the crest's height; its row stays one row. */
+[data-shell="watchtower"] .cal-head:has(> .tower-slot) {
+  position: relative;
+  min-height: 96px;
+  padding-right: 176px;
+}
+.tower-slot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 160px;
+  height: 96px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+/* The frame: fixed over the slot, measured by the shell. It never takes a click or a touch — the
+   crest is a picture — and it sits at the sticky head's level, so the topbar covers it on scroll. */
+.vantage {
+  position: fixed;
+  z-index: 4;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--border);
+  background: #0b0f14;
+  pointer-events: none;
+}
+.vantage[data-shown="false"] {
+  visibility: hidden;
+}
+
+/* ≤860, the phone: no crest (no WebGL on the phone until the real-device recheck), so the band is
+   exactly today's. */
+@media (max-width: 860px) {
+  .tower-slot {
+    display: none;
+  }
+  [data-shell="watchtower"] .cal-head:has(> .tower-slot) {
+    min-height: 0;
+    padding-right: 0;
+  }
+}
