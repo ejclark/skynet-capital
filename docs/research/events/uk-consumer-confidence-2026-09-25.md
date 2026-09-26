@@ -303,3 +303,87 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","mu-2026-09-30-print","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-public-sector-finances-2026-09-22","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-09-26, D+1 — inside the `closeOutWithinDays: 6` window; all three registered
+fragment rows carry a 2026-09-26 score-by, already arrived).** Macro-print mode runs no
+symbol-keyed `earnings-cycle`/`intraday-edges` instrument (`symbols: []` throughout, per leg 5);
+both caches were busted per the lane's standing instruction though nothing here reads them. Scored
+from the release itself — NIQ's own September 2026 page
+(`nielseniq.com/global/en/news-center/2026/consumer-confidence-up-one-point-in-september-to-13/`),
+fetched direct today — never from memory or from the secondary wire coverage that also ran this
+week.
+
+**The release, verbatim from the primary.** Headline **−13, up 1 point** from August's −14 —
+NIQ's third consecutive monthly increase, the first such run since summer 2024. Fieldwork
+**"conducted between September 1st and September 14th."** Sample **2,000** (16+, UK). Sub-measures,
+each consistent to the point by arithmetic against the August table already in this doc: personal
+finances past-12m **−3** (+3), personal finances next-12m **+5** (+1), general economy past-12m
+**−36** (+4), general economy next-12m **−22** (+1), major purchase index **−8** (−1), savings
+index **+27** (+5, outside the headline). Neil Bellamy, NIQ's Consumer Insights Director, on the
+cause: **"the return of higher inflation removes one of the strongest positives seen in previous
+months"** — no tax, Budget, Chancellor or fiscal-headroom language anywhere in the release, unlike
+the 2024 and 2025 editions this doc's leg 4 built its mechanism on.
+
+**Leg 1 / FT-…-2 (fieldwork closes before the policy week) — PASS.** The stated window, September
+1–14, ends **on the 14th**, inside the "on or before 2026-09-14" bar this test set from three prior
+Septembers (2023 Sep 1–13, 2024 Aug 30–Sep 13, 2025 Sep 1–11). FOMC (09-16), UK CPI (09-16) and the
+BoE (09-17) are confirmed absent from this print by the release's own stated dates, not by
+inference — the base-rate call this doc led with held exactly.
+
+**Leg 3/4 and FT-…-1 (the September/pre-Budget give-back to −15 or lower) — KILL.** The print
+landed at **−13**, better than August's −14 and two points inside the kill line this test wrote for
+itself ("−14 or better... the September/pre-Budget conditional did not bite, the unconditional
+upward drift won"). The unconditional base rate (+0.55/mo, 61% of months rise) beat the seasonal
+conditional (Aug→Sep mean −2.50, n=4) this time — 2026 becomes a fifth Aug→Sep observation and the
+first **positive** one since 2023, moving that n=4 sample to 2-of-5 negative rather than 3-of-4.
+
+**FT-…-3 (the mechanism test on the forward-economy measure) — KILL.** General economic situation,
+next 12 months printed **−22**, *improving* one point from August's −23 rather than falling below
+it — the exact "unchanged or improved" kill condition this test named. Read together with FT-…-1's
+kill and the release's own inflation-not-fiscal framing, the mechanism test did its job: it is not
+merely that the headline missed the pre-Budget call, it is that the one sub-measure that would carry
+a fiscal-anticipation signal moved the wrong way too, and NIQ's own commentary named a different
+cause. Leg 4's mechanism (2024/2025's pre-Budget chill) is refuted for 2026, not merely undersized —
+33 days out from the Budget, this fieldwork window shows no trace of it, in contrast to both
+precedent years where the chill was already visible at this distance.
+
+**Leg 5 (no market channel) — stance held, untested by construction.** `symbols: []` throughout;
+zero capital was ever keyed to this date, so there is nothing to measure a reaction in and nothing
+to attribute one to. VIX closed **14.87** on 2026-09-25, identical to the sibling `scoos-2026-09-24`
+close-out's same-day reading — no regime move on release day either.
+
+**The call, scored against the tape.** Stand-aside held throughout — `low` impact, `symbols: []`,
+zero capital, no house playbook keyed to foreign consumer sentiment. Two of three registered
+predictions were killed and one passed. The doc's single most confident claim (leg 1, HIGH
+confidence, the pre-policy-week framing) is exactly the one that held; the two MEDIUM-confidence
+predictions built on the thinner n=2 pre-Budget mechanism both missed, and the release's own
+inflation-led commentary is the reason why — the honest-limits section flagged n=2 and the
+against-drift unconditional as the weak points of the call, and that is precisely where it broke.
+Nothing here licensed, or would have rewarded, a position.
+
+**Adjacency at close-out.** No new dated event surfaced in the release. The one proposal already
+filed from this event's 09-15 row — `proposals/uk-consumer-confidence-2026-10-23.from-uk-consumer-confidence-2026-09-25.json`
+— is unaffected; the October 23 edition remains the first to carry the policy week and is now the
+more informative read given this month's mechanism miss. Nothing new proposed this pulse.
+
+**Honest limits at close-out.** The release TIME is still unverified — the September page read this
+session states a publication date but no clock time, same gap as initial research. The
+BRC-KPMG September till read (undated, early October) carries no registered forward test and is not
+chased here; the survey-versus-till tiebreak leg 4 flagged stays open on its own terms. The
+secondary consensus (TradingEconomics, −17) missed by 4 points on the same side it missed the August
+print by 2 — a third straight release where the secondary aggregator ran too pessimistic on this
+series, worth naming but not a registered claim. This doc goes quiet.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-uk-consumer-confidence-2026-09-25-1` | Headline −15 or lower (give-back) | **−13**, up 1 point from August's −14 | **kill** |
+| `FT-uk-consumer-confidence-2026-09-25-2` | Fieldwork window ends on or before 2026-09-14 | **"September 1st and September 14th"**, stated verbatim | **pass** |
+| `FT-uk-consumer-confidence-2026-09-25-3` | General economy, next 12m, prints below −23 | **−22**, up 1 point from August's −23 | **kill** |
+
+**Last assessed:** 2026-09-26 (close-out — this event goes quiet; all three registered forward tests
+are now scored, none remain open)
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-weekly-petroleum-status-2026-09-30","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jolts-2026-09-29","mu-2026-09-30-print","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-tips-1y10y-2026-09-29","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
