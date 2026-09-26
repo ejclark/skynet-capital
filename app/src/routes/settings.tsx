@@ -436,8 +436,8 @@ function SettingsPage(): ReactElement {
           <p className="note">Account management isn't wired in this deployment.</p>
         ) : !first ? (
           <p className="note">
-            Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or
-            add your own from{" "}
+            Your sign-in doesn't resolve to an account yet — ask a league owner to link one to your
+            sign-in, or add your own from{" "}
             <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
               onboarding
             </Link>
