@@ -369,5 +369,100 @@ every row; a dated adjacent event found gets proposed as a new
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-26, D+2 — inside `closeOutWithinDays: 6`).** No macro-print instrument exists
+for this kind (`symbols: []`; `earnings-cycle`/`intraday-edges` do not apply), but the instrument
+cache was busted anyway per the lane's standing instruction (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) before the direct re-fetches
+below. Every figure is a fresh primary pull today — the **actual release itself**
+(`steelp_2608.pdf`, re-fetched, HTTP 200, 658,503 bytes; its content streams inflated and
+text-extracted the same way the 09-08 initial research did), Nasdaq's own historical API for
+NUE/STLD/CLF/XLB (`assetclass=etf` for XLB, per the 09-15 row's own note), and CBOE's own
+`VIX_History.csv` — never the D-0/D-9/D-2 rows' memory of the tape.
+
+**Verdict: every kill switch held, and both mutually exclusive forward tests resolved decisively in
+the direction the seasonal predicted.** The print landed on schedule, moved nothing, and settled the
+one open contest this ledger was carrying.
+
+**The release, verbatim (CB26-156, FT-900A (26-08), released 10:00 AM EDT 2026-09-24):**
+*"preliminary August steel imports were $2.1 billion (2.1 million metric tons) compared to the final
+July totals of $2.0 billion (2.1 million metric tons)... The year-to-date final statistics through
+July 2026 showed steel imports of 12.3 million metric tons compared with 15.3 million metric tons
+through July 2025."* Exhibit 1's own line item, "Total Selected Commodities," carries the underlying
+figure the headline rounds: **2,129,076 metric tons** preliminary August, against **2,059,309**
+July final and **12,317,546** the July-2026 YTD final (Exhibit 2) — reproducing the prose exactly at
+one more digit of precision.
+
+**FT-1 — PASS, on the release's own stated precision.** Registered band **1.8–2.1 Mmt**, explicitly
+"rounded to the release's own 0.1 Mmt precision." The release's own headline sentence states **2.1
+million metric tons** verbatim — the inclusive upper edge of the band, at the exact resolution the
+test named. Stated plainly rather than smoothed over: the Exhibit 1 microdata (2,129,076 t = 2.129
+Mmt) sits a hair above 2.10 Mmt at higher precision than the release itself reports in prose, so a
+reading that ignored the test's own stated unit could call this a narrow miss. The test's registered
+unit was the release's own rounding, not the exhibit's raw tons, so **PASS** is the correct call on
+what was actually predicted — and it is the same edge the July print sat on last month (2.1 Mmt
+prelim, 2.1 Mmt final) without incident.
+
+**FT-2 — PASS.** Registered band **12.1–12.9 Mmt** YTD-through-July, gap **−21% to −16%**. Printed:
+**12,317,546 t = 12.3 Mmt**, gap **−19.6%** ((12.317546−15.319028)/15.319028) — comfortably inside
+the band and matching the **−19%** this ledger's own D-0 row extrapolated three editions early.
+AISI's 09-10 permit-bridge estimate (12.30 Mmt) also lands within rounding of the actual Census
+figure, which is a clean corroboration of that bridge's *level* math even as its *seasonal* forecast
+(FT-3) fails below.
+
+**FT-3 — KILL, decisively.** Registered band **2.15–2.40 Mmt**, explicitly mutually exclusive with
+FT-1 on one number. Printed **2.13 Mmt** (2,129,076 t) sits **below the 2.15 floor** under either
+precision treatment — this one is not a boundary call. Per the test's own pre-written kill clause:
+*"Below 2.15, the permit bridge is dead for this series on its first out-of-sample test and the n=3
+seasonal wins outright."* AISI's SIMA permit tonnage (+8.9% m/m) did not translate into the customs
+print; the n=3 Aug/Jul seasonal (mean 0.920) that predicted a **fall** from July's 2.1 Mmt won
+outright over the permit bridge's predicted **rise**. Moved to the sweep doc's kill list below.
+
+**Kill switch 3 (the tape null) — did not fire, now on a real out-of-sample day rather than the
+historical study.** Nasdaq's own historical bars, 2026-09-24 open→close net of XLB
+(`assetclass=etf`; XLB open **50.14** → close **49.68**, **−0.92%**):
+
+| Name | Open | Close | Raw move | Net of XLB |
+|---|---|---|---|---|
+| NUE | 247.65 | 247.96 | +0.13% | **+1.04%** |
+| STLD | 233.74 | 235.20 | +0.62% | **+1.54%** |
+| CLF | 12.79 | 12.50 | −2.27% | **−1.35%** |
+
+CLF's raw move alone crosses the old, unadjusted 2% line the initial research's leg 2 explicitly
+warned against reading naively — net of sector it is **−1.35%**, and none of the three names clears
+**±2.0%** net of XLB. The measured null this ledger's whole stance rests on held on its own release
+day, not just in the 39-release historical sample.
+
+**Kill switch 4 (regime change) — did not fire.** `trump-xi-summit-2026-09-24` closed out the same
+day (sibling ledger, re-read here rather than re-derived): the sole deliverable was a **truce
+extension to 2026-01-10**, with USTR's Greer on record that semiconductor controls were "not part of
+the preliminary American agenda going in," and no Section 232 steel-schedule change of any kind. The
+tariff schedule this series measures is unchanged.
+
+**Kill switches 1, 2, 5, 6 — did not fire.** 1 and 2 are superseded by FT-1/FT-2 scoring above (both
+inside band). 5 (the lapse branch) is not yet live — the release's own text confirms *"The September
+report is scheduled for release on October 27, 2026,"* i.e. the schedule ran on time and the
+**2026-12-22** edition (the exposed one, per leg 4) remains a live, unaffected date on this session's
+read. 6 did not fire — the print appeared on its confirmed slot, on schedule.
+
+**VIX, for context only (no VIX-linked kill switch on this ledger):** CBOE cash close **15.67**
+(2026-09-24), up from **14.21** (09-22) and **14.87** (09-21, the 09-22 screen row's reading) — a
+mild pop, not a regime shift, consistent with `trump-xi-summit`'s own close-out reading "no regime
+shift."
+
+**Honest limits.** `new-home-sales-2026-09-24` — the same-minute print leg 3 named as the dominant
+attribution risk — has not yet closed out under its own lane at the time of this session; this
+close-out does not read or touch its file, consistent with the one-file-per-owner rule, and the
+attribution rule above is evaluated on price action alone rather than on that ledger's own verdict.
+Exhibit 1's column grouping did not fully resolve under this session's PDF text-stream extraction (the
+header labels interleave in the raw stream), so the closing figures above are read from the release's
+own prose sentence and cross-checked against the one unambiguous "Total Selected Commodities" line
+each exhibit carries, never from a guessed column assignment.
+
+**This document goes quiet from here** — `scripts/event-scan.mjs` will not surface it again unless a
+future forward-test `scoreBy` reopens it (none remain open in this event's fragment) or the proposed
+**2026-12-22** sibling's own research names a reason to revisit this one.
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":1} -->
