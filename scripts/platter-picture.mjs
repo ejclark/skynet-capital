@@ -65,22 +65,22 @@ export function openPicture(count) {
     throw new Error(`open picture needs a count ≥ 1, got ${count}`);
   const changes =
     n === 1
-      ? "one protected<br/>change,<br/>one commit"
-      : `${n} protected<br/>changes,<br/>one commit each`;
+      ? "**one protected change**<br/>one commit,<br/>verified green"
+      : `**${n} protected changes**<br/>one commit each,<br/>each verified green`;
   const merged =
     n === 1
-      ? "main: one commit,<br/>it reverts alone"
-      : `main: ${n} commits,<br/>any item<br/>reverts alone`;
+      ? "**main: one commit**<br/>it reverts alone"
+      : `**main: ${n} commits**<br/>any one item<br/>reverts alone`;
   return `---
 title: "The held PR: the button decides what reverts"
 ${CONFIG}
 ---
 flowchart TD
     items@{ shape: docs, label: "${changes}" }
-    pr@{ shape: stadium, label: "one held PR,<br/>one click by Eric" }
-    items ==> pr ==> button{"which button<br/>lands it?"}
+    pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
+    items ==> pr ==> button{"\`**which button lands it?**<br/>the click decides<br/>what can be undone\`"}
     button ==>|Create a merge commit| merged@{ shape: cyl, label: "${merged}" }
-    button -->|Squash and merge| squashed@{ shape: cyl, label: "main: one commit,<br/>reverts only<br/>as a block, #3754" }
+    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
     class items,pr,merged paper
     class button gold
     class squashed defect

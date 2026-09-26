@@ -101,11 +101,11 @@ config:
     padding: 10
 ---
 flowchart TD
-    body@{ shape: doc, label: "PR body<br/>with a diagram" }
-    body ==> door{"parses like<br/>GitHub?"}
-    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
-    door ==x stop["push refused,<br/>the line and<br/>the token named"]
-    body -.-> red["used to go<br/>straight through<br/>to a red parse box<br/>as the opening frame"]
+    body@{ shape: doc, label: "**PR body with a diagram**<br/>any of the 20 types<br/>GitHub draws" }
+    body ==> door{"`**parses like GitHub?**<br/>same build, 11.17.2;<br/>theme, icons, colour<br/>checked with it`"}
+    door ==> draws@{ shape: dbl-circ, label: "**GitHub draws it**<br/>pushed; light and dark,<br/>phone and desk" }
+    door ==x stop["`**push refused**<br/>the line and the<br/>token named, fixed<br/>before anyone reads it`"]
+    body -.-> red["`**used to go straight through**<br/>first word checked,<br/>red parse box as<br/>the opening frame`"]
     class body,draws,stop paper
     class door gold
     class red removed
@@ -113,14 +113,49 @@ flowchart TD
     classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
     classDef defect fill:#B3261E,color:#FFF4EC,stroke:#FFF4EC,stroke-width:3px
     classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
-    classDef default font-size:20px,font-family:Verdana
+    classDef default font-size:18px,font-family:Verdana
 ```
 ````
-_The door, in ink mode (promoted by Eric, 2026-09-26: "promote. Phone looks fine"): the new path
-thick and declared first (it lands left), the old path one dotted lane declared last (it lands
-right); the fork asks a question and wears the gold, the cross-head says no, the double circle says
-done, the tense lives in the box. No edge labels. Drop the four `class`/`classDef` colour lines for
-the plain dress; never mix in the teal snippet (rule 11)._
+_The door, in ink mode with its second layer (rules 18 and 11; both Eric's calls, 2026-09-26): the
+new path thick and declared first (it lands left), the old path one dotted lane declared last (it
+lands right); the fork asks a question and wears the gold, the cross-head says no, the double circle
+says done, the tense lives in the box; every node a bold headline and one line of fact. No edge
+labels. Drop the four colour lines for the plain dress; never mix in the teal snippet._
+
+For a page with room, the same door with boxes of detail beside the spine (rule 18, shape A):
+
+````markdown
+```mermaid
+---
+title: A diagram is parsed before it is pushed, and what the door checks
+config:
+  flowchart:
+    nodeSpacing: 20
+    rankSpacing: 30
+    padding: 8
+---
+flowchart TD
+    body@{ shape: doc, label: "PR body<br/>with a diagram" }
+    body ==> door{"parses like<br/>GitHub?"}
+    subgraph checks ["what the door checks, in order"]
+        direction TB
+        v["the same Mermaid<br/>GitHub runs, 11.17.2"] --> ty["a type GitHub<br/>draws, not 12-only"] --> th["no pinned theme,<br/>both canvases"] --> ic["no icon pack,<br/>it draws a ?"] --> hx["every colour from<br/>a checked-in snippet"]
+    end
+    door -.- checks
+    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    door ==x stop["push refused,<br/>the line and<br/>the token named"]
+    subgraph was ["what it replaced"]
+        direction LR
+        first["check the<br/>first word only"] -.-> red["red parse box<br/>as the opening frame"]
+    end
+    body -.-> was
+    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
+    class first,red removed
+    classDef default font-size:18px,font-family:Verdana
+```
+````
+_Shape A: the checklist stands as a column beside the door (two boxes per rank still holds, rule 3);
+what it replaced sits in its own box. Every added node is a fact the lint enforces._
 
 ````markdown
 ```mermaid
@@ -167,11 +202,11 @@ config:
     padding: 10
 ---
 flowchart TD
-    items@{ shape: docs, label: "three protected<br/>changes,<br/>one commit each" }
-    pr@{ shape: stadium, label: "one held PR,<br/>one click by Eric" }
-    items ==> pr ==> button{"which button<br/>lands it?"}
-    button ==>|Create a merge commit| merged@{ shape: cyl, label: "main: three commits,<br/>any item<br/>reverts alone" }
-    button -->|Squash and merge| squashed@{ shape: cyl, label: "main: one commit,<br/>reverts only<br/>as a block, #3754" }
+    items@{ shape: docs, label: "**three protected changes**<br/>one commit each,<br/>each verified green" }
+    pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
+    items ==> pr ==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
+    button ==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
+    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
     class items,pr,merged paper
     class button gold
     class squashed defect
@@ -288,6 +323,15 @@ dotted, phone direction, and labels a friend with no context reads without stopp
 17. **A gitGraph is for branch topology, vertical on a phone.** `gitGraph TB:` with
     `rotateCommitLabel: false` · rotated tags overlapping at 390px · vertical; and never for a story
     about a choice (rule 10).
+18. **The second layer: a spine that reads in ten seconds, then detail that rewards the second
+    look** (Eric, 2026-09-26: "I expected more fine grained elaborate detail"; his pick, "both", by
+    surface). On a PR's opening frame every node carries a bold headline and one line of fact
+    beneath it, no new boxes, so the phone width holds. On a page with room, boxes of detail sit
+    beside the spine (a checklist as a vertical column, what it replaced in its own box). At desk
+    width, both. Every line of detail names something true the reader could act on · a spine that
+    answers no second look, or detail that shrinks the spine below a phone read · the second line
+    first, boxes only where the width allows; a markdown string in a classic label needs the
+    backtick form (`["\`**bold**<br/>fact\`"]`), a `@{ label: }` shape takes it bare.
 
 **Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
