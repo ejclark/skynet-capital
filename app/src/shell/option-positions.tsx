@@ -107,7 +107,13 @@ function CloseRow({
 }): ReactElement {
   const rowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (focus) rowRef.current?.scrollIntoView?.({ block: "center" });
+    if (!focus) return;
+    // Next frame: on the docked bench the pane's own scroll-to-pane effect (a parent effect, so
+    // it runs after this one) would otherwise win, leaving the member at the pane's top.
+    const frame = requestAnimationFrame(() =>
+      rowRef.current?.scrollIntoView?.({ block: "center" }),
+    );
+    return () => cancelAnimationFrame(frame);
   }, [focus]);
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
@@ -299,7 +305,13 @@ export function OptionPositionsCard({
       <div className="tkt-close-rows">
         {held.map((position) => (
           <CloseRow
-            key={position.symbol}
+            // Keyed on the hand-off too: docked, this card is already mounted when a new
+            // ?manage=&rollTo= arrives, and only a remount re-seeds the row's Roll state.
+            key={
+              focus && focus.occ === position.symbol
+                ? `${position.symbol}|${focus.rollTo?.expiration ?? ""}:${focus.rollTo?.strike ?? ""}`
+                : position.symbol
+            }
             deskId={deskId}
             position={position}
             statement={rowsBySymbol.get(position.symbol)}

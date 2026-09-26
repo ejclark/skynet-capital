@@ -26,8 +26,17 @@ export function manageSearch<T extends { section?: string; rollTo?: string }>(
 
 export const ROLL_TO = /^(\d{4}-\d{2}-\d{2}):(\d+(?:\.\d+)?)$/;
 
-/** The handed-off contract, from `?manage=` / `?rollTo=` — undefined unless `manage` is set. */
-export function focusFrom(
+let lastFocus: { readonly key: string; readonly value: PositionFocus | undefined } | undefined;
+
+/** The handed-off contract, from `?manage=` / `?rollTo=` — undefined unless `manage` is set. The
+ *  same inputs return the SAME object, so a re-render never re-fires the row's scroll effect. */
+export function focusFrom(manage: string | undefined, rollTo: string | undefined) {
+  const key = `${manage ?? ""}|${rollTo ?? ""}`;
+  if (lastFocus?.key !== key) lastFocus = { key, value: buildFocus(manage, rollTo) };
+  return lastFocus.value;
+}
+
+function buildFocus(
   manage: string | undefined,
   rollTo: string | undefined,
 ): PositionFocus | undefined {

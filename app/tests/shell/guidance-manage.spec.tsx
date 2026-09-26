@@ -113,3 +113,10 @@ describe("the hand-off to the Option positions card", () => {
     expect(focusFrom(next.manage, undefined)).toEqual({ occ: OCC });
   });
 });
+
+describe("the hand-off — stable across re-renders (#3749 UI review)", () => {
+  it("returns the same focus object for the same URL, so the row doesn't re-scroll", () => {
+    expect(focusFrom(OCC, "2026-10-30:100")).toBe(focusFrom(OCC, "2026-10-30:100"));
+    expect(focusFrom(OCC, "2026-10-30:100")).not.toBe(focusFrom(OCC, "2026-11-06:100"));
+  });
+});

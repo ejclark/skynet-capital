@@ -746,8 +746,8 @@ export const Route = createFileRoute("/trade")({
     const exp = normalizeExpiration(search.exp);
     // `?manage=` (#3729): a held contract's OCC symbol, or dropped; `?rollTo=` only its target shape.
     const manage =
-      typeof search.manage === "string" && parseOccSymbol(search.manage)
-        ? search.manage.toUpperCase()
+      typeof search.manage === "string" && parseOccSymbol(search.manage.trim())
+        ? search.manage.trim().toUpperCase()
         : undefined;
     const rollTo =
       manage && typeof search.rollTo === "string" && ROLL_TO.test(search.rollTo)

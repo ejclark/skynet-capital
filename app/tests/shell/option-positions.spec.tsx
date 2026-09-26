@@ -206,3 +206,18 @@ describe("OptionPositionsCard — handed off from the guidance (#3729)", () => {
     expect(screen.getByRole("button", { name: "Roll…", expanded: true })).toBeTruthy();
   });
 });
+
+describe("OptionPositionsCard — a hand-off arriving on an already-mounted card (docked bench)", () => {
+  it("opens the Roll row when the focus changes without a remount of the card", () => {
+    const client = new QueryClient();
+    const card = (focus?: { occ: string; rollTo?: { strike: number; expiration: string } }) => (
+      <QueryClientProvider client={client}>
+        <OptionPositionsCard deskId="human-eric" positions={[held]} {...(focus ? { focus } : {})} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(card());
+    expect(screen.queryByRole("button", { name: "Roll…", expanded: true })).toBeNull();
+    rerender(card({ occ: held.symbol, rollTo: { strike: 430, expiration: "2026-10-16" } }));
+    expect(screen.getByRole("button", { name: "Roll…", expanded: true })).toBeTruthy();
+  });
+});
