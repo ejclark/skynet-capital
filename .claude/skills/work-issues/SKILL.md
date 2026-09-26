@@ -46,25 +46,33 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    something to do.
 
 3. **PICK ONE.** Take the head of the queue.
-4. **ECHO.** Post one issue comment restating the ask in your own words — problem, acceptance
+4. **READ THE STATE BLOCK FIRST, on a `plan` issue.** If the issue carries a state block
+   (`docs/ISSUES.md` → *The state block*, #3765), it names the slice, its inputs, its done line
+   and its falsifier: take that slice and do not re-read the thread to re-derive it. If a `plan`
+   issue has no block, read the whole thread once, post the block as a comment, then continue.
+   ECHO below is for `feedback` issues; a state block already is the echo.
+5. **ECHO.** Post one issue comment restating the ask in your own words — problem, acceptance
    sketch, and the slice you're about to build — before writing any code. This is the confirmation
    loop named as a follow-up in `docs/plans/issue-centric-orchestration.md` (slice 4): it catches a
    misread ask for the cost of one comment instead of a wasted build. If the restated ask feels
    underspecified to act on, label `needs-info` (member) or `needs-eric` (his call) here and skip to
    the next issue — don't guess past real ambiguity just to keep the loop moving.
-5. **BUILD.** Branch off `origin/main` in an isolated worktree (`docs/DELEGATION.md`), dispatch the
+6. **BUILD.** Branch off `origin/main` in an isolated worktree (`docs/DELEGATION.md`), dispatch the
    build via the `Agent` tool (general-purpose, or a named athlete if the work matches one's mandate)
    with the issue's full capsule as its prompt — it has no memory of this session, so the prompt must
    be self-contained. Contract: implement, run `npm run verify`, and land on exactly one of the four
    terminal states the feedback lane already uses: a PR, `next-slice`, `needs-info`, or `needs-eric`.
-6. **LAND.** On a PR outcome: open it with `/ship`, following its merge-policy table verbatim
+7. **LAND.** On a PR outcome: open it with `/ship`, following its merge-policy table verbatim
    (`.claude/skills/governor/SKILL.md` — don't re-derive it here) including the carve-outs
    (workflow files, the irreversible class per `envelope.json`, taste holds). On any other outcome:
    apply the label, comment the reason in one line, and move on — a `needs-eric` item doesn't block
-   the rest of the queue; it just stops competing for the same PR slot.
-7. **REPEAT.** Re-run QUEUE against the new `origin/main` before picking the next issue — same
+   the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
+   outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
+   log line) and never a new status comment; the one-line reason for a non-PR outcome goes in the
+   log line.
+8. **REPEAT.** Re-run QUEUE against the new `origin/main` before picking the next issue — same
    re-derivation discipline as `/governor`'s cycle boundary, so two picks never race the same file.
-8. **STOP** when the queue is empty, when Eric set a cap for this pass and it's reached, or when an
+9. **STOP** when the queue is empty, when Eric set a cap for this pass and it's reached, or when an
    item surfaces that is in the irreversible class (`node scripts/envelope-scan.mjs --check <paths>`)
    — that one pauses the *whole* pass for his call, since it's the one class interrupt economics
    never defers.
