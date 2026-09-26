@@ -645,6 +645,26 @@ robust, alpha fragile — is the finding.
   retires only the `retail-sales-2026-10-15` macro read-through this event existed to supply, not
   the no-trade verdict on the name itself.
 
+- **A same-month import-permit series read as a same-signed bridge to the customs print, killed on
+  its first out-of-sample month (FT-steel-imports-preliminary-2026-09-24-3)** — added 2026-09-26
+  from the
+  [steel-imports-preliminary-2026-09-24 close-out](events/steel-imports-preliminary-2026-09-24.md).
+  AISI's SIMA release of 2026-09-10 put August 2026 import permits at 2,499,000 net tons, **+8.9%**
+  from July's 2,294,000 — rising into the month the n=3 Aug/Jul seasonal (mean ratio 0.920)
+  predicted a **fall**. Two independent bridges (a level bridge off the permit/actual ratio, a
+  growth bridge off the permit growth rate) agreed on a point estimate of **2.25 Mmt**, registered
+  as a band of 2.15–2.40 Mmt explicitly mutually exclusive with the seasonal's own 1.8–2.1 Mmt
+  prediction. The actual print (`steelp_2608.pdf`, CB26-156) came in at **2.13 Mmt** (2,129,076 t)
+  — below the permit bridge's 2.15 floor, and inside the seasonal's band at the release's own 0.1
+  Mmt precision. **What this does and does not refute:** AISI's own YTD permit level corroborated
+  the Census YTD figure closely (12.30 Mmt estimated vs 12.32 Mmt actual) in the same close-out, so
+  the permit series is not worthless as a level indicator — what failed is reading one month's
+  **permit growth rate** as a leading indicator of that same month's **customs tonnage**, exactly
+  the substitution AISI's own explanatory note warns against ("permit tonnages may understate or
+  overstate actual import volumes"). Do not re-propose an AISI permit-growth bridge to a Census
+  customs print without a multi-month calibration first — n=1 killed on its first live test, same
+  shape as the long-end and housing-starts kills above.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
