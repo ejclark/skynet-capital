@@ -8,8 +8,9 @@
 // major parts of our systems in a component library fashion". A storybook that is hand-edited
 // drifts the way the July spec surface did, so the pages are GENERATED from three JSON inputs in
 // docs/architecture/source/ — the two C4 maps derived from the code (runtime, operating model),
-// the 79 refuter verdicts (one per container and relationship, each tried against the paths it
-// cites), and the Graphify parity notes — and a spec regenerates them and fails on drift.
+// the 79 refuter verdicts (one per container and relationship: grounded or not, plus the
+// correction — the evidence transcripts stay at the commit that carried them, 6a900d3), and the
+// Graphify parity notes — and a spec regenerates them and fails on drift.
 //
 // HONESTY RULE (docs/PICTURES.md): a diagram is a claim. Every container page prints its code
 // roots, its grounding evidence and the refuter's verdict; a claim the refuter could not ground
@@ -140,9 +141,11 @@ function indexHeader() {
     "on 2026-09-25, one refuter verdict per claim, the Graphify parity notes); `tests/arch/architecture-pages.spec.ts`",
     "regenerates and fails on drift, and checks every code root exists. Edit the source, not the pages;",
     "read a container's page before touching it, and update the source in the same PR. Provenance:",
-    "`docs/adr/0008` chose Mermaid as the spec surface for exactly this. The narrative package — the",
-    "element table with every correction, the merged undocumented list, the parity sketch, the open",
-    "uncertainties — is [`source/synthesis.md`](source/synthesis.md).",
+    "`docs/adr/0008` chose Mermaid as the spec surface for exactly this. The research package behind",
+    "the source (each refuter's evidence, the narrative synthesis, the parity sketch) is not in the",
+    "tree — it stays at the commit that carried it:",
+    "[`synthesis.md`](https://github.com/ejclark/skynet-capital/blob/6a900d3ea08c9fed1d6ea339d38f0a324db5535c/docs/architecture/source/synthesis.md) ·",
+    "[`verdicts.json`](https://github.com/ejclark/skynet-capital/blob/6a900d3ea08c9fed1d6ea339d38f0a324db5535c/docs/architecture/source/verdicts.json).",
     "",
   ].join("\n");
 }

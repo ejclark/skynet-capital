@@ -8,9 +8,11 @@ neighbours) → **Container** (separately runnable units) → **Component** (the
 on 2026-09-25, one refuter verdict per claim, the Graphify parity notes); `tests/arch/architecture-pages.spec.ts`
 regenerates and fails on drift, and checks every code root exists. Edit the source, not the pages;
 read a container's page before touching it, and update the source in the same PR. Provenance:
-`docs/adr/0008` chose Mermaid as the spec surface for exactly this. The narrative package — the
-element table with every correction, the merged undocumented list, the parity sketch, the open
-uncertainties — is [`source/synthesis.md`](source/synthesis.md).
+`docs/adr/0008` chose Mermaid as the spec surface for exactly this. The research package behind
+the source (each refuter's evidence, the narrative synthesis, the parity sketch) is not in the
+tree — it stays at the commit that carried it:
+[`synthesis.md`](https://github.com/ejclark/skynet-capital/blob/6a900d3ea08c9fed1d6ea339d38f0a324db5535c/docs/architecture/source/synthesis.md) ·
+[`verdicts.json`](https://github.com/ejclark/skynet-capital/blob/6a900d3ea08c9fed1d6ea339d38f0a324db5535c/docs/architecture/source/verdicts.json).
 ## Runtime system — what serves members and runs the bots
 
 ```mermaid
