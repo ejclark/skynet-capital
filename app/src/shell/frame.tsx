@@ -42,7 +42,7 @@ import type { ReactElement, ReactNode } from "react";
  *     (`section-switch.tsx`) in the page's controls row or head, exactly one current, URL-stateful
  *     via a `section` search param. Booked P&L beside a trade feed is a section; "bot trades" is not.
  *   - a SUB-VIEW is a full view of its own — a nested route plus a link row at the top of its
- *     parent's stage (`profile-rail.tsx`, `desk-rail.tsx`). A section that outgrows its page
+ *     parent's stage (`profile-rail.tsx`; the any-account page folded its row into its own head, `account-head.tsx`). A section that outgrows its page
  *     graduates here, the way `?tab=performance` became `/u/$id/pulse`
  *     (`src/server/legacy-redirects.ts`).
  * A section switch is the controls row's CONTROL role, never a new dimension: it drives the content

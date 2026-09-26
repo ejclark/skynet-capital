@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskThesis } from "../../src/live/desk";
 import type { SettingsIndex } from "../../src/live/settings";
 import {
@@ -34,6 +34,27 @@ rstest.mock("../../src/live/desk", () => ({
 
 rstest.mock("../../src/live/settings", () => ({
   fetchSettings: () => Promise.resolve(nextSettings),
+}));
+
+// The fill markers are router Links (#3807 slice 2d); no router here, so render their href.
+rstest.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    params,
+    search,
+    hash,
+  }: {
+    children: ReactNode;
+    to: string;
+    params?: Record<string, string>;
+    search?: Record<string, string>;
+    hash?: string;
+  }) => {
+    const path = params?.id ? to.replace("$id", params.id) : to;
+    const query = search ? `?${new URLSearchParams(search).toString()}` : "";
+    return <a href={`${path}${query}${hash ? `#${hash}` : ""}`}>{children}</a>;
+  },
 }));
 
 rstest.mock("../../src/shell/thesis-chart-mount", () => ({
@@ -249,5 +270,37 @@ describe("ThesisDrawer", () => {
     render(withClient(<ThesisDrawer id="bot-sauron" />));
     await waitFor(() => expect(screen.getByText("1. Buy 20 NVDA")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Why?" })).not.toBeInTheDocument();
+    // On the Profile page the order's row lives on that account's Activity section (dead end 5).
+    expect(screen.getByRole("link", { name: "1. Buy 20 NVDA" })).toHaveAttribute(
+      "href",
+      "/accounts?account=bot-sauron&section=activity#act-ord-1",
+    );
+  });
+
+  it("links a marker to the any-account page's own Activity when rendered there", async () => {
+    nextThesis = {
+      available: true,
+      kind: "bot",
+      thesis: {
+        call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+        health: { measured: false, label: "not yet measured" },
+        equity: [{ t: "2026-09-10T00:00:00Z", value: 100_000 }],
+        markers: [
+          {
+            n: 1,
+            kind: "entry",
+            at: "2026-09-10T14:00:00Z",
+            label: "Buy 20 NVDA",
+            activityAnchor: "act-ord-1",
+          },
+        ],
+      },
+    };
+    render(withClient(<ThesisDrawer id="bot-sauron" activity="page" />));
+    await waitFor(() => expect(screen.getByText("1. Buy 20 NVDA")).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "1. Buy 20 NVDA" })).toHaveAttribute(
+      "href",
+      "/u/bot-sauron/activity#act-ord-1",
+    );
   });
 });

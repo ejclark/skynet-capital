@@ -9,7 +9,7 @@ import {
   type PulseStreakGroupData,
   type PulseWeekData,
 } from "../live/pulse";
-import { DeskRail } from "../shell/desk-rail";
+import { AccountPage } from "../shell/account-head";
 import { PageFrame } from "../shell/frame";
 
 /**
@@ -211,9 +211,9 @@ function PulsePage(): ReactElement {
 
   const d = desk.data.desk;
   return (
-    <PageFrame controls={<DeskRail id={d.id} kind={d.kind} />}>
+    <AccountPage desk={d}>
       <header className="page-header">
-        <h1>{d.name} — pulse</h1>
+        <h2>Pulse</h2>
         <p>
           How the account breathes over time: the recorded equity curve, the runs it strung
           together, realized P/L week by week, and the friendly race to 2×. Nothing here is
@@ -222,7 +222,7 @@ function PulsePage(): ReactElement {
         </p>
       </header>
       <PulseBody pulse={pulse.data} />
-    </PageFrame>
+    </AccountPage>
   );
 }
 

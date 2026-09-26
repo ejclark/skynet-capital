@@ -4,7 +4,7 @@
  * league's panel. No shadows, no motion of its own (the scene inside owns all motion).
  *
  * The scene's two colours have no app-theme twin and are the same in both themes — the tower is
- * always at night — so they live here, like `hero.css`'s night background. */
+ * always at night — so they live here, with the card that uses them. */
 
 .char-card {
   --eye-ember: #ff7a2e;
