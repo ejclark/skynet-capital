@@ -136,6 +136,14 @@ describe("mermaid lint — every block parses under GitHub's Mermaid", () => {
     expect(notes.join(" ")).toContain("legibility budget");
   });
 
+  it("fails elk on a state diagram — GitHub throws at render where a flowchart only re-flows", () => {
+    const { code, problems } = lint(
+      fence("---\nconfig:\n  layout: elk\n---\nstateDiagram-v2\n  [*] --> a"),
+    );
+    expect(code).toBe(1);
+    expect(problems.join(" ")).toContain("no fallback");
+  });
+
   it("finds a block nested in a starter fence or indented in a comment, and dedents it", () => {
     const nested = "````markdown\n```mermaid\nflowchart LR\n    a --> b\n```\n````\n";
     const indented = "<!--\n    ```mermaid\n    flowchart LR\n        a --> b\n    ```\n-->\n";

@@ -36,8 +36,4 @@ oracle.
 
 | Card | What it covers |
 |---|---|
-| [config-theming](config-theming.md) | Themes can be set for a whole site with mermaid.initialize() or for one diagram with frontmatter `config:` (the `%%{init |
-| [config-configuration](config-configuration.md) | Mermaid builds a "render config" for each diagram from up to four layers. In order: the schema defaults (config.schema.y |
-| [config-layouts](config-layouts.md) | The two doc pages are short, and the details that matter are in the config schema, the package READMEs, the per-diagram  |
-| [config-accessibility](config-accessibility.md) | Three pages, one job: give each diagram a text alternative, allow math in labels, and validate diagrams in code before a |
-| [config-mermaidcli](config-mermaidcli.md) | The mermaid docs page config/mermaidCLI.md is now a one-line stub ("mermaid CLI has been moved to mermaid-cli. Please re |
+| [config-on-github](config-on-github.md) | What a diagram may set on GitHub's Mermaid 11.17.2 (frontmatter config, handDrawn, accTitle/accDescr, per-diagram keys, KaTeX), what the house declines and why (theme, ELK, icon packs, click, locked keys), and the validators: the pinned lint is the authority, the MCP runs 11.13.0 |
