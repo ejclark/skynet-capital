@@ -1,0 +1,92 @@
+{
+  "member": "first-timer",
+  "source": "docs/members/first-timer.md",
+  "fixture": { "kind": "session", "email": "newcomer@example.test" },
+  "viewports": ["phone", "desktop"],
+  "journeys": [
+    {
+      "id": "j1",
+      "name": "the first ten minutes",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/",
+          "sees": "the league table, ranked rows, no word about where a new member starts",
+          "ears": "WHEN a signed-in member with no linked account opens the app, the app shall land them on a page with a visible next step into onboarding.",
+          "expect": [{ "url": "/app/leaderboard" }, { "role": "link", "name": "Onboarding" }],
+          "known_gap": "dead end 1 — first sign-in lands on the leaderboard with no onboarding cue (src/server/auth/oauth-callback.ts:79 → / → app/src/routes/index.tsx:21 → /leaderboard)",
+          "where": "src/server/auth/oauth-callback.ts:79",
+          "severity": "high",
+          "fix": "S",
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/learn",
+          "sees": "the milestones page: M·01 Onboarding first, M·02 gated, M·03 WIP",
+          "ears": "WHEN the member opens Profile before onboarding is complete, the app shall show M·01 Onboarding as the next step with one link into it.",
+          "expect": [
+            { "role": "heading", "name": "milestones" },
+            { "role": "link", "name": "Onboarding" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/learn",
+          "sees": "the M·02 card's gate note says 'unlocks after your first feedback filing'",
+          "ears": "WHILE the trading ladder is gated, the app shall name the SAME unlock condition everywhere it is named (the server's own line: the moment you say hello to Moneypenny).",
+          "expect": [{ "text": "the moment you say hello" }],
+          "known_gap": "dead end 2 — /learn says 'unlocks after your first feedback filing' (app/src/routes/learn.tsx:61) while the server says 'the moment you say hello to Moneypenny' (src/domain/progression.ts:159)",
+          "where": "app/src/routes/learn.tsx:61",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does this reader know what unlocks trading, in one sentence?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/onboarding",
+          "sees": "Welcome to the league — the checklist: connect Alpaca, say hello, first trade",
+          "ears": "WHEN the member opens onboarding, the app shall show the checklist with the first undone step first.",
+          "expect": [
+            { "role": "heading", "name": "Welcome to the league" },
+            { "text": "Connect your Alpaca paper account" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/trade",
+          "sees": "'No accounts are linked to your session yet.' — a sentence, no door",
+          "ears": "WHEN a member with no linked account opens Trade, the app shall link the empty state to onboarding.",
+          "expect": [
+            { "text": "No accounts are linked" },
+            { "role": "link", "name": "onboarding", "within": "main" }
+          ],
+          "known_gap": "dead end 3 — 'No accounts are linked to your session yet.' with no link (app/src/routes/trade.tsx:727)",
+          "where": "app/src/routes/trade.tsx:727",
+          "severity": "high",
+          "fix": "S",
+          "judge": "can this reader tell what to do next in ten seconds?"
+        }
+      ]
+    },
+    {
+      "id": "j2",
+      "name": "the first rung, read before it is earned",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/learn/trading",
+          "sees": "One fill unlocks the next rung — the ladder, every rung named, 101 first",
+          "ears": "WHEN the member opens the trading ladder before any fill, the app shall show rung 101 as the next rung and what earns it.",
+          "expect": [
+            { "role": "heading", "name": "One fill unlocks the next rung" },
+            { "text": "101" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        }
+      ]
+    }
+  ]
+}

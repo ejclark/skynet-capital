@@ -164,6 +164,11 @@ prose ("the target below") rather than trying to template inside the instruction
   constraint files it with `/issue` + `bottleneck`; a grind run over the open ones does the
   research so no one's attention (least of all Eric's) is spent re-deriving it. Research, not
   mechanics — its front matter declares `effort: high` on `model: fable` for exactly that reason.
+- [`journey-judge.instructions.md`](journey-judge.instructions.md) — for one member of
+  `docs/members/`, grade the persona crawl's frames on "can this reader tell what to do next in
+  ten seconds?" and fill that member's judge cells in `docs/members/friction-ledger.md`. The
+  judgment half of `scripts/crawl/run.mjs`, which deliberately makes no model call of its own;
+  one item per member, never per frame, so a journey is read as a sequence.
 - [`interrogate.instructions.md`](interrogate.instructions.md) — for one issue carrying a
   process/policy/design directive, steelman it, then red/blue/tiger/yellow the *mechanism* (never
   the outcome) and leave a call sheet — verbatim · amended · reject · status quo — plus a routing

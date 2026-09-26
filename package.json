@@ -88,6 +88,9 @@
     "shoot:thesis": "tsx scripts/shoot/thesis.mjs",
     "test:e2e": "playwright test",
     "test:e2e:auth": "playwright test -c playwright.auth.config.ts",
+    "test:e2e:journeys": "JOURNEYS=1 playwright test -c playwright.journeys.config.ts",
+    "test:e2e:journeys:open": "JOURNEYS=1 JOURNEYS_MODE=open playwright test -c playwright.journeys.config.ts",
+    "crawl": "tsx scripts/crawl/run.mjs",
     "test:e2e:ct": "playwright test -c app/playwright-ct.config.ts",
     "test:e2e:all": "npm run test:e2e && npm run test:e2e:auth && npm run test:e2e:ct",
     "test:e2e:update": "playwright test --update-snapshots",
@@ -97,6 +100,7 @@
     "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@balena/dockerignore": "1.0.2",
     "@biomejs/biome": "2.5.14",
     "@commitlint/cli": "21.2.2",
