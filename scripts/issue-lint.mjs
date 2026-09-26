@@ -250,7 +250,7 @@ function checkNeedsFromYou(text, labels, problems, notes) {
  *  `plan`-labelled body with no pointer gets a note, never a problem — the block is a reading
  *  protocol, not an existence rule. */
 function checkStateBlock(text, labels, notes) {
-  if (!Array.isArray(labels) || !labels.includes("plan")) return;
+  if (!(Array.isArray(labels) && labels.includes("plan"))) return;
   if (/state block/i.test(text)) return;
   notes.push(
     "a plan with no state block pointer — post the block as the first comment after filing and end the Slicing sketch with `State block: the first comment, edited in place` (docs/ISSUES.md → The state block)",
