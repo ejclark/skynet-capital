@@ -28,7 +28,7 @@ full card per type.
 | A behaviour before vs after | `sequenceDiagram` | two `Note over` halves, *Before* / *After*; `autonumber` |
 | A new route / request path | `sequenceDiagram` | `alt`/`else` for the error branch; ≤4 participants |
 | A lifecycle, gate or mode (`SIM`/`LIVE`, draft→ready→done) | `stateDiagram-v2` | a composite state + guard labels on transitions |
-| Branch / merge mechanics (platter, backport, worktrees) | `gitGraph` | one branch per item, `tag:` per step |
+| Branch / merge mechanics (platter, backport, worktrees) | `gitGraph` | vertical (`TB:`), one commit per item tagged with its revert sha, the landing drawn as it lands |
 | A dataflow, pipeline or decision path | `flowchart` (`TD` past ~6 nodes) | the delta grammar: `==>` new, `-.->` removed, a diamond per fork |
 | A number moving over time (a budget ratchet, latency, counts) | `xychart-beta` | bar + line on one axis, the series named in the title |
 | A call sheet or triage (confidence × impact, borrow/adapt/skip) | `quadrantChart` | ≤6 points; never P&L implied (`BRAND.md`) |
@@ -135,17 +135,30 @@ _A lifecycle: the composite state holds the sub-steps; every transition carries 
 
 ````markdown
 ```mermaid
-gitGraph
-    commit id: "main"
+---
+title: "Platter #3711, what actually landed"
+config:
+  gitGraph:
+    rotateCommitLabel: false
+---
+gitGraph TB:
+    commit id: "main, before"
     branch platter
-    commit id: "item 1: fix commitlint"
-    commit id: "item 2: pin flyctl"
+    checkout platter
+    commit id: "claude-code-action 1.0.231" tag: "revert: b0a4c8a"
+    commit id: "upload-artifact 7" tag: "revert: 9d3bfb8"
+    commit id: "cache 6" tag: "revert: e698156"
     checkout main
-    merge platter id: "one merge commit" tag: "revert per item"
+    commit id: "#3711 as one squashed commit" type: HIGHLIGHT tag: "per-item revert lost, #3754"
 ```
 ````
-_Branch mechanics: a platter boards each item as one squashed commit on one integration branch and
-lands with one merge commit, so a bad item still reverts alone (`scripts/ship.sh platter`)._
+_Branch mechanics, drawn as they land: a platter boards each item as one squashed commit on one
+integration branch (`scripts/ship.sh platter`), each tagged with its revert sha. The doctrine
+lands it with one merge commit so a bad item reverts alone; until #3754 is fixed the landing is a
+squash, so the picture draws the squash and names the defect. When the merge is real, the last
+line becomes `merge platter id: "one merge commit" tag: "any item reverts alone"`. Vertical with
+unrotated labels because the reading condition is a phone; the title is quoted because an
+unquoted `#` in YAML frontmatter is a comment._
 
 ````markdown
 ```mermaid
@@ -163,6 +176,19 @@ _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 **The legibility budget:** ≤15 nodes; plain words, not paths (`login canvas`, never
 `src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
 containing special characters. The real reading condition is a phone at 390px.
+
+**Second-draft rules** (found iterating the five #3778 pairs to their third to fifth drafts,
+2026-09-26; each is rule · tell · fix): quote a frontmatter title that contains `#` · the title
+stops short · `title: "Plan #3769…"`. A gitGraph for a phone is vertical with unrotated labels ·
+tags overlap at 390px · `gitGraph TB:` + `config: { gitGraph: { rotateCommitLabel: false } }`. In
+a state diagram the removed path is a note, not an edge · a before that lives only in the caption ·
+`note left of <new state>` reading "was: …", its dashed link is the delta mark. A C4 context puts
+the system's boundary in the middle · relation labels drawn over other boxes · declare the
+boundaries left, centre, right in the order the edges leave the system and use `Rel_L` / `Rel_R` /
+`Rel_U` / `Rel_D`. A composite state takes a `classDef` on 11.17.2 · the docs say it cannot · use
+it. A first draft is the right type with first-draft words; the third draft has fewer nodes, a
+title that states the claim, the old path drawn dotted, phone direction, and labels a friend with
+no context reads without stopping.
 
 **Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
@@ -277,6 +303,10 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    survives email, mobile notifications, and raw-text renderers.
 4. **Proportionality:** gold-standard treatment on a 5-line config change implies something false
    about the diff. Match picture weight to change weight — or waive.
+5. **What lands, not what the doctrine says:** a picture of a mechanism draws what the code and
+   the platform actually do. The platter starter above drew a merge commit for three platters that
+   squashed (#3754) until round 2 of #3778 redrew it; where a picture is generated from the data
+   beside it, it cannot drift.
 
 ## Where else this grammar applies
 
