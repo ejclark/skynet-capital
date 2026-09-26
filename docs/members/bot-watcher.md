@@ -34,15 +34,18 @@ fails costs them more trust than a control that is greyed with a reason.
 
 ## 5. What frustrates them
 
-- **4** — on another member's desk, Close / Close this buy render, then fail at the server
-  (`app/src/shell/blotter-row.tsx:290`; `src/server/account-identity-gate.ts:63`); New trade and
-  Guidance go to `/trade?desk=sauron`, which silently switches to the viewer's own account
-  (`app/src/routes/trade.tsx:628`).
-- **5** — promises that do not exist: "click a symbol for its fill timeline"
-  (`app/src/routes/u.$id.index.tsx:92`); Thesis markers link `#act-<id>` anchors that exist only
-  on `/accounts`; `/u/:id` has no Activity (`app/src/shell/desk-rail.tsx:33`).
-- **6** — the desk rail always says "← Leaderboard" (`app/src/shell/desk-rail.tsx:78`) — fine for
-  this member, wrong for one who came from their cockpit.
+- **4 (fixed in #3807 slice 2d)** — on another member's account, Close / Close this buy rendered,
+  then failed at the server (`src/server/account-identity-gate.ts:63`); New trade and Guidance went
+  to `/trade?desk=sauron`, which silently switched to the viewer's own account. Now the write
+  controls do not render off your own account and the page says "You can trade only your own
+  accounts" beside the blotter (`app/src/shell/blotter-row.tsx`, `canTrade`); Trade says "Showing
+  your account — Sauron is not yours to trade" at the top of the ticket.
+- **5 (fixed in 2d)** — promises that did not exist: "click a symbol for its fill timeline" (gone);
+  Thesis markers linked `#act-<id>` anchors that existed only on `/accounts` (they now open the
+  page's own Activity at the order's row); `/u/:id` had no Activity (it has one now,
+  `app/src/routes/u.$id.activity.tsx`).
+- **6 (fixed in 2a/2d)** — the rail always said "← Leaderboard"; the page now has its own head
+  (`app/src/shell/account-head.tsx`) and the topbar's Leaderboard tab is the way back.
 - **8** — Thesis Subscribe is disabled with its reason only in `title`
   (`app/src/shell/thesis-drawer.tsx:81`); "past the guards" with no gloss
   (`app/src/shell/decisions-section.tsx:133`).

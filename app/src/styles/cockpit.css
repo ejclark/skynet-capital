@@ -161,3 +161,86 @@
 .cockpit-head-note .set-switch-field {
   max-width: none;
 }
+
+/* THE ANY-ACCOUNT PAGE'S HEAD (#3807 slice 2d, `shell/account-head.tsx`): the cockpit head's
+ * shape on `/u/:id` — the name, its kind chip and the SIM pill on line one, the section switch on
+ * line two. The switch is router links (a route per section, so `aria-current="page"` marks the
+ * current one), dressed as the cockpit's buttons. Sticky at ≥861 exactly as above; at ≤860 it
+ * leaves the sticky block and scrolls with the page, so a phone's height goes to the book. */
+.acct-head-id {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.acct-head-id h1 {
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.acct-head-own {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--accent);
+}
+.acct-switch a {
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.acct-switch a:hover {
+  color: var(--text);
+}
+.acct-switch a[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+@media (max-width: 860px) {
+  .acct-head {
+    position: static;
+  }
+}
+/* a section's own heading under the head — the page's h1 is the account's name */
+.acct-page .page-header h2 {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+/* The ownership line (dead end 4): on an account the viewer does not own, the write controls do
+ * not render and this plain sentence says why, beside the blotter — visible text, never a title. */
+.acct-own-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* The book in the Overview grid's left column (`u.$id.index.tsx`): at ≥1200 the character card
+ * takes 384px on the right, so the blotter reads as it does below 1100 — detail columns folded
+ * behind each row's chevron — and the Position column gives up 40px, so the table fits the ~800px
+ * column at 1280 instead of scrolling (the `<col>` widths are inline, hence the !important). */
+@media (min-width: 1200px) {
+  .acct-book col.col-detail,
+  .acct-book th.col-detail,
+  .acct-book td.col-detail {
+    display: none;
+  }
+  .acct-book col.fold-col {
+    display: table-column;
+  }
+  .acct-book th.fold-col,
+  .acct-book td.fold-col {
+    display: table-cell;
+  }
+  .acct-book tr.row-more {
+    display: table-row;
+  }
+  .acct-book .blotter-fixed col:nth-child(2) {
+    width: 180px !important;
+  }
+}

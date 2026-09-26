@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { LadderRow, ManageCall } from "../../../src/options/position-guidance-types";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import { fetchDesk } from "../live/desk";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { normalizeExpiration } from "../live/expiration";
 import { focusFrom, manageSearch, ROLL_TO } from "../live/manage-handoff";
@@ -155,9 +156,13 @@ function DeskTicket({
   incomingLeg,
   onIncomingLegHandled,
   onLegsChange,
+  notYours,
 }: {
   readonly desk: string;
   readonly code: string;
+  /** The name of a `?desk=` the session does not own (#3807 slice 2d, dead end 4) — the ticket
+   *  says so in one line at its top instead of switching accounts silently. */
+  readonly notYours?: string;
   /** The session's own accounts (`/api/settings`); the picker renders only when there is a choice. */
   readonly accounts: readonly OwnedAccount[];
   readonly onDeskChange: (id: string) => void;
@@ -215,6 +220,11 @@ function DeskTicket({
   const rungChip = plays.data ? <RungChip plays={plays.data.plays} code={code} /> : null;
   const headerNoNav = (
     <>
+      {notYours ? (
+        <p className="note ticket-not-yours">
+          Showing your account — {notYours} is not yours to trade
+        </p>
+      ) : null}
       {accountField}
       {rungChip}
     </>
@@ -286,6 +296,8 @@ function DeskTicket({
 
 interface StageProps {
   readonly section: TradeSection;
+  /** A `?desk=` that isn't the session's own, by name — see `DeskTicket`'s `notYours`. */
+  readonly notYours?: string;
   readonly symbol: string;
   readonly play: string;
   readonly strike: string;
@@ -381,6 +393,7 @@ function Pane({
       onExpirationCommit={props.onExpirationCommit}
       accounts={props.accounts}
       onDeskChange={props.onDeskChange}
+      {...(props.notYours ? { notYours: props.notYours } : {})}
       chartSlot={docked && isOptionTicket(props) ? <ChartSection symbol={symbol} /> : undefined}
     />
   );
@@ -626,10 +639,19 @@ function TradePage(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const accounts = settings.data?.accounts ?? [];
   // A bookmarked or shared `?desk=` only sticks if it's still an account the session owns —
-  // otherwise fall back to the first owned account, same as having no `?desk=` at all.
+  // otherwise fall back to the first owned account, same as having no `?desk=` at all. The
+  // fallback is said out loud (#3807 slice 2d, dead end 4): a `?desk=` the settings index does
+  // not list gets one line at the top of the ticket, by that account's name — never a redirect.
   const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
     | string
     | undefined;
+  const foreignId = desk && settings.data && desk !== activeDesk ? desk : undefined;
+  const foreign = useQuery({
+    queryKey: ["desk", foreignId],
+    queryFn: () => fetchDesk(foreignId ?? ""),
+    enabled: foreignId !== undefined,
+  });
+  const notYours = foreignId ? (foreign.data?.desk.name ?? foreignId) : undefined;
   // Same underlying, and same expiration when the pane's committed to one (`?exp=` is "" until a
   // browse writes it) — mirrors `DraftLegForm`'s own marking filter for its inline chain.
   const markedStrikes = isSpread
@@ -639,6 +661,7 @@ function TradePage(): ReactElement {
     : undefined;
   const stageProps: StageProps = {
     section,
+    ...(notYours ? { notYours } : {}),
     symbol: symbol ?? "",
     play: play ?? "101",
     strike: strike ?? "",

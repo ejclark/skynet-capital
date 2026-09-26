@@ -145,13 +145,9 @@
         {
           "id": "s2",
           "goto": "/app/u/human-eric",
-          "sees": "the desk: its link row (Overview · Pulse · Settings), tiles, blotter, New trade; nothing on the stage links the cockpit",
-          "ears": "WHEN the member is on their own desk, the app shall link back to their cockpit.",
-          "expect": [{ "role": "link", "name": "Accounts", "within": "nav.stage-controls" }],
-          "known_gap": "dead end 6 — the desk's link row never links /accounts (app/src/shell/desk-rail.tsx); only the topbar's Profile tab does — 2d gives /u/:id its own head",
-          "where": "app/src/shell/desk-rail.tsx",
-          "severity": "medium",
-          "fix": "S",
+          "sees": "their own account's page: the head (name, HUMAN, SIM, 'Open in your Accounts'), the switch with Settings, tiles, the blotter with Close, New trade",
+          "ears": "WHEN the member is on their own account's page, the app shall link back to the same account on their Profile page.",
+          "expect": [{ "role": "link", "name": "Open in your Accounts", "within": ".acct-head" }],
           "judge": "does the reader land where they started?"
         }
       ]

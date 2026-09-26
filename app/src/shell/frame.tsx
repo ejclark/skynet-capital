@@ -5,8 +5,9 @@ import type { ReactElement, ReactNode } from "react";
  * DIMENSIONS — the TOPBAR is the app-level navigation dimension and the STAGE is the page. The
  * left rail has left the frame. Its two jobs are re-homed, never deleted: a group's sub-nav becomes
  * its home page's section switch (the Profile family's since #3807 slice 2b; the any-account
- * page's link row until 2d folds it), and a view's controls are a row of its own stage — `controls`, rendered as
- * `.stage-controls` at the top of `<main>`, a horizontal row at every width, never a column.
+ * page's into its own head, 2d), and a view's controls are a row of its own stage — `controls`,
+ * rendered as `.stage-controls` at the top of `<main>`, a horizontal row at every width, never a
+ * column.
  *
  * DIMENSIONAL PRECEDENCE (Eric, live review 2026-08-28; amended 2026-09-26, docs/IA.md §8.1): two
  * ordered dimensions and the content — the TOPBAR is the first (app-level navigation), the page's
@@ -42,14 +43,15 @@ import type { ReactElement, ReactNode } from "react";
  *     (`section-switch.tsx`) in the page's controls row or head, exactly one current, URL-stateful
  *     via a `section` search param. Booked P&L beside a trade feed is a section; "bot trades" is not.
  *   - a SUB-VIEW is a full view of its own — a nested route plus a link row at the top of its
- *     parent's stage (`desk-rail.tsx`; Settings' `profile-rail.tsx`). A section that outgrows its
- *     page graduates here, the way `?tab=performance` became `/u/$id/pulse`
- *     (`src/server/legacy-redirects.ts`). AMENDED (#3807 slice 2b, 2026-09-26): a sub-view's
- *     sub-nav may live in the page's section switch when the page is the member's own — the
- *     Profile family's Milestones (its chapters a `?chapter=`, never a second switch) and Feedback
- *     are viewer-level sections of `/accounts` now, not routes behind a link row. Held as a
- *     hypothesis — its falsifier is Eric reading the 5–6-item switch at 390 as a band, at which
- *     point the ladder keeps its own route and the Profile page carries only the strip.
+ *     parent's stage (Settings' `profile-rail.tsx`; the any-account page folded its row into its
+ *     own head, `account-head.tsx`). A section that outgrows its page graduates here, the way
+ *     `?tab=performance` became `/u/$id/pulse` (`src/server/legacy-redirects.ts`). AMENDED
+ *     (#3807 slice 2b, 2026-09-26): a sub-view's sub-nav may live in the page's section switch
+ *     when the page is the member's own — the Profile family's Milestones (its chapters a
+ *     `?chapter=`, never a second switch) and Feedback are viewer-level sections of `/accounts`
+ *     now, not routes behind a link row. Held as a hypothesis — its falsifier is Eric reading the
+ *     5–6-item switch at 390 as a band, at which point the ladder keeps its own route and the
+ *     Profile page carries only the strip.
  * A section switch is the controls row's CONTROL role, never a new dimension: it drives the content
  * below it and adds no app-level destinations. Nothing is both a kind and a section — if a toggle
  * and a section switch would offer the same thing, one of them is noise and gets deleted.
