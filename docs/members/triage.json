@@ -1,0 +1,295 @@
+[
+  {
+    "screen": "/accounts ?section=overview",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with a linked account (hidden with zero accounts)"
+  },
+  {
+    "screen": "/accounts ?section=activity",
+    "verdict": "keep",
+    "mustBeSeenBy": "member (honest empty state with no account)"
+  },
+  {
+    "screen": "/accounts ?section=events",
+    "verdict": "keep",
+    "mustBeSeenBy": "member (honest empty state with no account)"
+  },
+  {
+    "screen": "/accounts ?section=heartbeat",
+    "verdict": "keep",
+    "mustBeSeenBy": "bot owner (only while one bot account is selected)"
+  },
+  {
+    "screen": "/accounts ?section=thesis",
+    "verdict": "keep",
+    "mustBeSeenBy": "bot owner (only while one bot account is selected)"
+  },
+  {
+    "screen": "/accounts ?section=decisions",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=heartbeat"
+  },
+  {
+    "screen": "/accounts ?section=milestones (table of contents)",
+    "verdict": "keep",
+    "mustBeSeenBy": "member incl. no account (default landing with zero accounts)"
+  },
+  {
+    "screen": "/accounts ?section=milestones&chapter=onboarding",
+    "verdict": "keep",
+    "mustBeSeenBy": "no account (the zero-account door and connect form); owner (Add another account)"
+  },
+  {
+    "screen": "/accounts ?section=milestones&chapter=trading",
+    "verdict": "keep",
+    "mustBeSeenBy": "member"
+  },
+  {
+    "screen": "/accounts ?section=milestones&chapter=playbooks",
+    "verdict": "keep",
+    "mustBeSeenBy": "member"
+  },
+  {
+    "screen": "/accounts ?section=feedback",
+    "verdict": "keep",
+    "mustBeSeenBy": "member incl. no account"
+  },
+  {
+    "screen": "/u/$id (Overview)",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in; Settings link and writes only for the owner"
+  },
+  {
+    "screen": "/u/$id/activity",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in (playbook row should be owner-only, see defect 1)"
+  },
+  {
+    "screen": "/u/$id/decisions (Heartbeat)",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in, bot accounts only (playbook ids should be owner-only)"
+  },
+  {
+    "screen": "/u/$id/pulse",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/u/$id/thesis",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in, bot accounts"
+  },
+  {
+    "screen": "/u/$id/playbooks",
+    "verdict": "redirect-only",
+    "target": "/research?section=playbooks&account=$id"
+  },
+  {
+    "screen": "/leaderboard",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/ (SPA index)",
+    "verdict": "redirect-only",
+    "target": "/leaderboard (keeps by/a/b)"
+  },
+  {
+    "screen": "/activity ?section=feed",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/activity ?section=pnl",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/activity ?section=pulse (Feedback pulse)",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/activity ?section=council",
+    "verdict": "undecided",
+    "target": "composer meant for Overview beside the standing (IA); Activity fold into the league page is open",
+    "mustBeSeenBy": "member (composer), anyone (read)"
+  },
+  {
+    "screen": "/research ?section=board",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/research ?section=playbooks (Playbook Store)",
+    "verdict": "keep",
+    "mustBeSeenBy": "member (Subscribe as needs an owned account)"
+  },
+  {
+    "screen": "/trade ?section=ticket",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with an account"
+  },
+  {
+    "screen": "/trade ?section=chart",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with an account"
+  },
+  {
+    "screen": "/trade ?section=chain",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with an account"
+  },
+  {
+    "screen": "/trade ?section=guidance",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with an account"
+  },
+  {
+    "screen": "/trade ?section=orders (working orders + order alerts)",
+    "verdict": "undecided",
+    "target": "stay on Trade vs move to the book's Overview/Activity (IA fork, reverses #674)",
+    "mustBeSeenBy": "member with an account"
+  },
+  {
+    "screen": "/settings ?section=preferences",
+    "verdict": "keep",
+    "mustBeSeenBy": "member"
+  },
+  {
+    "screen": "/settings ?section=account",
+    "verdict": "keep",
+    "mustBeSeenBy": "account owner; Mission Control and Unclaimed accounts only for the fund owner (and hidden for a fund owner with no account)"
+  },
+  {
+    "screen": "/settings ?section=guests",
+    "verdict": "keep",
+    "mustBeSeenBy": "fund owner only (the card returns null otherwise)"
+  },
+  {
+    "screen": "/learn",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=milestones"
+  },
+  {
+    "screen": "/learn/trading",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=milestones&chapter=trading"
+  },
+  {
+    "screen": "/onboarding",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=milestones&chapter=onboarding (keeps moneypenny=intro)"
+  },
+  {
+    "screen": "/join",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=milestones&chapter=onboarding"
+  },
+  {
+    "screen": "/playbooks",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=milestones&chapter=playbooks"
+  },
+  {
+    "screen": "/feedback",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=feedback"
+  },
+  {
+    "screen": "server /login",
+    "verdict": "keep",
+    "mustBeSeenBy": "signed-out visitor"
+  },
+  {
+    "screen": "server /welcome",
+    "verdict": "undecided",
+    "target": "public page the invite email links to; its /learn and /feedback links reach the new sections in one hop",
+    "mustBeSeenBy": "no account / invitee (public)"
+  },
+  {
+    "screen": "server /tower",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone (public 3D scene)"
+  },
+  {
+    "screen": "server /research/<slug>",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in (symbol/<SYM> and some events/<id> links 404, see defects 3 and 4)"
+  },
+  {
+    "screen": "server /feedback/preview",
+    "verdict": "undecided",
+    "target": "no caller in app/src; candidate for removal (/feedback/coach is in use and stays)"
+  },
+  {
+    "screen": "server / and /index.html",
+    "verdict": "redirect-only",
+    "target": "/app/ (then /leaderboard)"
+  },
+  {
+    "screen": "server /add, /onboarding, /app/onboarding",
+    "verdict": "redirect-only",
+    "target": "/app/accounts?section=milestones&chapter=onboarding"
+  },
+  {
+    "screen": "server /learn, /app/learn",
+    "verdict": "redirect-only",
+    "target": "/app/accounts?section=milestones"
+  },
+  {
+    "screen": "server /learn/trading[/…] (with or without /app)",
+    "verdict": "redirect-only",
+    "target": "/app/accounts?section=milestones&chapter=trading"
+  },
+  {
+    "screen": "server /playbooks, /app/playbooks",
+    "verdict": "redirect-only",
+    "target": "/app/accounts?section=milestones&chapter=playbooks"
+  },
+  {
+    "screen": "server /feedback, /app/feedback",
+    "verdict": "redirect-only",
+    "target": "/app/accounts?section=feedback"
+  },
+  {
+    "screen": "server /invite, /claim, /account, /rotate, /controls, /u",
+    "verdict": "redirect-only",
+    "target": "/app/settings (Preferences; should be ?section=guests or ?section=account)"
+  },
+  {
+    "screen": "server /u/<id> (?tab=performance|settings)",
+    "verdict": "redirect-only",
+    "target": "/app/u/<id> | /app/u/<id>/pulse | /app/settings"
+  },
+  {
+    "screen": "server /leaderboard, /bots-vs-humans, /compare",
+    "verdict": "redirect-only",
+    "target": "/app/leaderboard (/leaderboard keeps only by=, drops a/b; /compare keeps the query)"
+  },
+  {
+    "screen": "server /wire, /app/wire",
+    "verdict": "redirect-only",
+    "target": "/app/activity"
+  },
+  {
+    "screen": "server /research (listing), /trade, /ops-status",
+    "verdict": "redirect-only",
+    "target": "/app/research, /app/trade, /app/"
+  },
+  {
+    "screen": "server /collections[/…]",
+    "verdict": "redirect-only",
+    "target": "/app/research?section=playbooks"
+  },
+  {
+    "screen": "server /board/frame (standings patch fragment with the 'Not connected' copy)",
+    "verdict": "undecided",
+    "target": "its guidance copy should move to the zero-account door / AlpacaGuide, then retire it"
+  },
+  {
+    "screen": "unknown URL",
+    "verdict": "undecided",
+    "target": "/app/*: router's default Not Found; other paths: plain-text 404"
+  }
+]
