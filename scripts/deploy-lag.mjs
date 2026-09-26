@@ -5,6 +5,10 @@
 //                                          # baseline = the last SUCCESSFUL DEPLOY, not the last tag
 //   node scripts/deploy-lag.mjs --json     # machine-readable, always exit 0
 //
+// Exit 2 = could not do its job: GitHub's state was unreadable (no `gh`, no auth, API down), or
+// `--explain` got no state on stdin. The verdict is UNKNOWN, never "current". Under `--json` the
+// same state is `{"known": false, "reason": ...}` at exit 0, keeping that mode's contract.
+//
 // WHAT HAPPENED (2026-08-22). The feedback lane built #475 correctly, opened PR #492, CI passed,
 // and native auto-merge merged it. Then nothing. No semantic-release, no Fly deploy, no postmaster
 // tick — the member's fix sat on `main`, unreleased, and the issue stayed open with no receipt.
@@ -160,6 +164,9 @@ function scanRunBaselines() {
   return { released, botsReleased: botsReleased ?? "" };
 }
 
+/** `·` notes naming a skipped input, printed to stderr so `--json` stdout stays parseable. */
+const notes = [];
+
 function readState() {
   const head = JSON.parse(gh(["api", "repos/{owner}/{repo}/commits/main"])).sha;
   let released = "";
@@ -173,9 +180,13 @@ function readState() {
             gh(["api", `repos/{owner}/{repo}/compare/${botsReleased}...${head}`]),
           ).files?.map((f) => f.filename) ?? [])
         : [];
-  } catch {
-    // Fail SOFT on the scan: the dashboard baseline falls back to the pre-split query below, and
-    // the bots half stays absent = "unknown" — a detector that cries wolf is worse than none.
+  } catch (err) {
+    // Optional input: fail SOFT on the scan. The dashboard baseline falls back to the pre-split
+    // query below (it can only err toward "lagging", never toward a false "current"), and the bots
+    // half stays absent = "unknown" — a detector that cries wolf is worse than none. Named, though.
+    notes.push(
+      `· job scan failed (${String(err?.message ?? err).split("\n")[0]}) — dashboard baseline from the last all-green run; bots state UNKNOWN`,
+    );
     botsReleased = undefined;
     botsChanged = undefined;
   }
@@ -206,7 +217,32 @@ function readStdin() {
   try {
     return readFileSync(0, "utf8");
   } catch {
+    // Required input for --explain: an unreadable stdin is "no state", which the caller reports
+    // as UNKNOWN (exit 2) — never parsed as `{}`, which reads as a current deploy.
     return "";
+  }
+}
+
+/** Exit 2 with a named UNKNOWN — or, under --json, the same state as a field at exit 0. */
+function unknown(reason) {
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify({ known: false, reason }, null, 2));
+    process.exit(0);
+  }
+  console.error(`deploy-lag: UNKNOWN — ${reason}`);
+  process.exit(2);
+}
+
+function cliState() {
+  if (process.argv.includes("--explain")) {
+    const raw = readStdin();
+    if (!raw.trim()) unknown("--explain read no state on stdin (pipe the state JSON in)");
+    return JSON.parse(raw);
+  }
+  try {
+    return readState();
+  } catch (err) {
+    return unknown(`could not read GitHub state: ${String(err?.message ?? err).split("\n")[0]}`);
   }
 }
 
@@ -214,7 +250,8 @@ if (process.argv[1]?.endsWith("deploy-lag.mjs")) {
   // `--explain` takes the state as JSON on stdin instead of reading GitHub, so the decision can be
   // specced through the real entrypoint (the house pattern — see tests/scripts/*.spec.ts) without
   // a token. Everything below the read is identical on both paths.
-  const state = process.argv.includes("--explain") ? JSON.parse(readStdin() || "{}") : readState();
+  const state = cliState();
+  for (const note of notes) console.error(note);
   const lag = deployLag(state);
   // The bots half only speaks when the state carries bots fields, so pre-split --explain fixtures
   // keep byte-identical output and the two answers can never be conflated.

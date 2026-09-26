@@ -69,4 +69,19 @@ describe("bareImportsOf / needsInstalledDeps", () => {
     expect(bareImportsOf("/scripts/missing.mjs", read, resolvePath)).toEqual(new Set());
     expect(needsInstalledDeps("/scripts/missing.mjs", read, resolvePath)).toBe(false);
   });
+
+  // Degrade honestly (#3769 row 1): no false alarm, but never a swallowed one either — the caller
+  // is told which file it could not read, entry or transitive, so it can report UNKNOWN.
+  it("names every unreadable file, entry or transitive, through onUnreadable", () => {
+    const { read, resolvePath } = fixtureFs({
+      "/scripts/entry.mjs": `import "./gone.mjs";\nimport "zod";\n`,
+    });
+    const seen: string[] = [];
+    const onUnreadable = (path: string) => seen.push(path);
+    expect(needsInstalledDeps("/scripts/entry.mjs", read, resolvePath, onUnreadable)).toBe(true);
+    expect(seen).toEqual(["/scripts/gone.mjs"]);
+    seen.length = 0;
+    expect(needsInstalledDeps("/scripts/missing.mjs", read, resolvePath, onUnreadable)).toBe(false);
+    expect(seen).toEqual(["/scripts/missing.mjs"]);
+  });
 });

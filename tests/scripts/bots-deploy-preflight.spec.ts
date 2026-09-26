@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -187,6 +187,36 @@ describe("bots-deploy preflight — the volume gate (#1264 aftermath)", () => {
       VOLUMES_JSON: "not json",
     });
     expect(verdict.deploy).toBe(true);
+  });
+
+  // Degrade honestly (#3769 row 1): a fail-open still names what it skipped — one `·` note on
+  // stderr, so the two-line stdout contract pipeline.yml parses with head/tail is untouched.
+  const preflightStderr = (env: Record<string, string>) =>
+    spawnSync(process.execPath, ["scripts/bots-deploy-preflight.mjs"], {
+      encoding: "utf8",
+      env: { ...process.env, FLY_TOML_PATH: cutTomlPath, ...env },
+    });
+
+  it("names the skipped volume check when the listing is unreadable — stdout stays two lines", () => {
+    const r = preflightStderr({
+      ...BASE_ENV,
+      FORCE: "true",
+      BOTS_TOML_PATH: botsTomlPath,
+      VOLUMES_JSON: "not json",
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split("\n")).toEqual(["deploy", "force_bots_deploy dispatch"]);
+    expect(r.stderr).toContain("· volume check skipped (volume listing is not JSON) — UNKNOWN");
+  });
+
+  it("names the skipped volume check when flyctl cannot answer", () => {
+    // PATH points at a dir with no flyctl — the same state as a runner without it installed.
+    const r = preflightStderr({ ...BASE_ENV, FORCE: "true", PATH: tmpToml });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split("\n")[0]).toBe("deploy");
+    expect(r.stderr).toContain(
+      "· volume check skipped (`flyctl volumes list -a skynet-capital-bots` failed)",
+    );
   });
 
   it("never overrides a skip verdict — a missing volume is not consulted when nothing would deploy", () => {

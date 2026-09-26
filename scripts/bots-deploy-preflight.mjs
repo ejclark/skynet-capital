@@ -14,6 +14,8 @@
 // reads env FLY_API_TOKEN, FORCE ('true'/'false'), DEPLOYED_SHA (may be empty), HEAD_SHA, and
 // fly.toml from the cwd; prints exactly two lines (`deploy`/`skip`, then the one-line reason) —
 // same shape as scripts/bot-relevant.mjs, so the workflow step's skip()/go() wiring is unchanged.
+// A check that could not run (the volume gate with no listing to read) is named as one `·` note on
+// stderr — never stdout, which pipeline.yml parses with head/tail — so a fail-open is never quiet.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { classify } from "./bot-relevant.mjs";
@@ -81,6 +83,7 @@ export function cutoverPendingFromToml(tomlText) {
  * name 'skynet_bots_data'") — 16 incidents, 16 repair dispatches, one root cause a preflight could
  * have named in a single line. A missing volume is a `skip` with the exact `fly volume create`
  * command, never a red run; `scripts/deploy-lag.mjs` keeps the bots-lag baseline honest meanwhile.
+ * Returns `null` for an unreadable listing: the answer is unknown, not "nothing missing".
  */
 export function missingVolumes(botsTomlText, volumesJson) {
   const declared = [...botsTomlText.matchAll(/^\s*source\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
@@ -88,7 +91,9 @@ export function missingVolumes(botsTomlText, volumesJson) {
   try {
     present = (JSON.parse(volumesJson || "[]") ?? []).map((v) => v.name ?? v.Name).filter(Boolean);
   } catch {
-    return []; // unreadable listing — fail open, the deploy step reports its own error
+    // Optional input: without a readable listing the gate cannot answer. The CLI fails open (Fly's
+    // own mount check still refuses a missing volume) and names the skip on stderr.
+    return null;
   }
   return declared.filter((name) => !present.includes(name));
 }
@@ -146,6 +151,7 @@ if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
     const botsTomlText = existsSync(botsToml) ? readFileSync(botsToml, "utf8") : "";
     const app = botsAppFromToml(botsTomlText);
     let volumesJson = process.env.VOLUMES_JSON;
+    let skipped = app ? "no volume listing" : `no \`app =\` in ${botsToml}`;
     if (volumesJson === undefined && app) {
       try {
         volumesJson = execFileSync("flyctl", ["volumes", "list", "-a", app, "--json"], {
@@ -153,10 +159,18 @@ if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
           stdio: ["ignore", "pipe", "ignore"],
         });
       } catch {
-        volumesJson = undefined; // flyctl unavailable — fail open, never block on the check itself
+        // Optional input: flyctl unavailable — fail open, never block on the check itself (Fly's
+        // own mount check still refuses a missing volume), but say the gate did not run.
+        volumesJson = undefined;
+        skipped = `\`flyctl volumes list -a ${app}\` failed`;
       }
     }
-    const missing = volumesJson === undefined ? [] : missingVolumes(botsTomlText, volumesJson);
+    let missing = volumesJson === undefined ? null : missingVolumes(botsTomlText, volumesJson);
+    if (missing === null && volumesJson !== undefined) skipped = "volume listing is not JSON";
+    if (missing === null) {
+      console.error(`· volume check skipped (${skipped}) — UNKNOWN, failing open`);
+      missing = [];
+    }
     if (missing.length > 0) {
       verdict = {
         deploy: false,

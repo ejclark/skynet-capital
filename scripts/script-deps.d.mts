@@ -1,6 +1,8 @@
 // Type surface for script-deps.mjs — the scripts/ tree is plain ESM with `allowJs` off, so a spec
 // that imports from it needs this rather than a repo-wide loosening (same arrangement as
 // envelope-scan.d.mts, moneypenny.d.mts, moneypenny-repair-logs.d.mts).
+/** Called with each file the walker could not read — its imports are UNKNOWN, not empty. */
+export type OnUnreadable = (path: string, error: unknown) => void;
 /** Every bare (non-relative, non-`node:`) import specifier reachable from `entryPath` by following
  *  its own relative imports. `read`/`resolvePath` are injectable so specs can stub a fixture
  *  filesystem instead of touching real disk. */
@@ -10,10 +12,12 @@ export function bareImportsOf(
   resolvePath: (from: string, spec: string) => string,
   depth?: number,
   seen?: Set<string>,
+  onUnreadable?: OnUnreadable,
 ): Set<string>;
 /** True when `entryPath`'s import graph reaches any package needing `node_modules`. */
 export function needsInstalledDeps(
   entryPath: string,
   read: (path: string) => string,
   resolvePath: (from: string, spec: string) => string,
+  onUnreadable?: OnUnreadable,
 ): boolean;

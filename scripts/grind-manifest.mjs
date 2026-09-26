@@ -211,9 +211,12 @@ function main(argv) {
   const wantsArgs = argv.includes("--args");
   const itemsAt = argv.indexOf("--items");
   const sourceAt = argv.indexOf("--item-source");
-  const paths = argv
-    .filter((a, i) => !a.startsWith("--") && i !== itemsAt + 1 && i !== sourceAt + 1)
-    .map(toRepoRelative);
+  // A flag's value is skipped only when the flag is present: `indexOf` answers -1 otherwise, and
+  // `-1 + 1` used to drop argv[0] — the first path asked about was never read, and a missing file
+  // passed as "every checked-in chore is fine" instead of reporting "cannot be read".
+  const isFlagValue = (i) =>
+    (itemsAt !== -1 && i === itemsAt + 1) || (sourceAt !== -1 && i === sourceAt + 1);
+  const paths = argv.filter((a, i) => !(a.startsWith("--") || isFlagValue(i))).map(toRepoRelative);
   const files = paths.length ? paths : choreFiles();
 
   const results = files.map((f) => scanChoreFile(f));
