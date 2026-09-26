@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -556,5 +556,54 @@ describe("event-scan contract", () => {
     const dumped = JSON.parse(out);
     expect(dumped.curated).toEqual(JSON.parse(JSON.stringify(MARKET_EVENTS)));
     expect(dumped.derived).toEqual(JSON.parse(JSON.stringify(earningsAsEvents(UPCOMING_PRINTS))));
+  });
+});
+
+// Honest degradation: a missing ledger dir is a named state, never a quiet "everything is
+// never-assessed" (--due) nor a silent pass of the ledger half (--validate).
+describe("event-scan missing ledger dir", () => {
+  const run = (mode: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "event-scan-noledger-"));
+    try {
+      mkdirSync(join(dir, "events", "proposals"), { recursive: true });
+      writeFileSync(
+        join(dir, "events", "alpha.json"),
+        JSON.stringify(entry("alpha", "2026-09-20")),
+      );
+      writeFileSync(
+        join(dir, "earnings-calendar.ts"),
+        "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+      );
+      return spawnSync(
+        "node",
+        [
+          "scripts/event-scan.mjs",
+          mode,
+          "--today=2026-09-15",
+          `--events-dir=${join(dir, "events")}`,
+          `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
+          `--ledger-dir=${join(dir, "no-ledgers")}`,
+          `--forward-tests-dir=${join(dir, "no-forward-tests")}`,
+        ],
+        { cwd: process.cwd(), encoding: "utf8" },
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("--due refuses to guess instead of listing every event as never-assessed", () => {
+    const res = run("--due");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("cannot read ledger dir");
+    expect(res.stdout).not.toContain("never-assessed");
+  });
+
+  it("--validate still checks the tables and prints a note naming the skipped ledger contract", () => {
+    const res = run("--validate");
+    expect(res.status).toBe(0);
+    expect(res.stderr).toMatch(
+      /^· no ledger dir at .*no-ledgers — tables checked, ledger contract skipped$/m,
+    );
   });
 });

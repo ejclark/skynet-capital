@@ -172,6 +172,8 @@ function assertHorizon(cadence) {
  *  path has never otherwise depended on that file. */
 function loadLedgers() {
   const ledgers = new Map();
+  // Empty on a missing dir so `--validate` can still check the tables (tests/arch/event-scan.spec.ts
+  // validateFixture seeds `no-ledgers`); main() names the state, and refuses it in --due/report.
   if (!existsSync(LEDGER_DIR)) return ledgers;
   for (const f of readdirSync(LEDGER_DIR)) {
     if (!f.endsWith(".md") || f === "TEMPLATE.md" || f === "README.md") continue;
@@ -449,7 +451,10 @@ function main() {
     );
     return;
   }
+  const ledgerDirMissing = !existsSync(LEDGER_DIR);
   if (has("validate")) {
+    if (ledgerDirMissing)
+      console.error(`· no ledger dir at ${LEDGER_DIR} — tables checked, ledger contract skipped`);
     runValidate(tables, cadence, ledgers, FORWARD_TESTS_DIR);
     return;
   }
@@ -464,6 +469,10 @@ function main() {
   }
 
   assertHorizon(cadence);
+  // The due verdict rests on each ledger's `**Last assessed:**`: with no dir every event would read
+  // as never-assessed and buy a session — "broken" must not read as "everything due".
+  if (ledgerDirMissing)
+    throw new Error(`event-scan: cannot read ledger dir ${LEDGER_DIR} — refusing to guess.`);
 
   const rows = tables.all
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))
