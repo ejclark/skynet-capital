@@ -1,10 +1,12 @@
-// Visual harness for /app/onboarding — milestone M·01 from the REAL built shell (app/dist) over a
+// Visual harness for the Onboarding chapter of the Profile page's Milestones
+// (/app/accounts?section=milestones&chapter=onboarding, once /app/onboarding, #3807 slice 2b) — milestone M·01 from the REAL built shell (app/dist) over a
 // stub API, four frames: a brand-new member (the five-step guide as accordions, step 1 open), the
 // same member with step 5 opened (the connect form inside it), Moneypenny's rail open with her
 // intro (the whole shell pushed left), and a connected member (step 1 done, steps 2–3 waiting).
 // JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
 // frames are 1100px tall and need it to clear the cap.
 // Usage: npm run build --prefix app && npm run shoot:onboarding [outdir]
+import { JOE, profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const step = (id, title, detail, points, route, done) => ({
@@ -21,7 +23,7 @@ const steps = (connected) => [
     "Connect your Alpaca paper account",
     "Set up a free Alpaca paper account and link it here in five short steps, detailed below. We read keys only to verify and show your balance — no orders are ever placed on your behalf.",
     10,
-    "/app/onboarding",
+    "/app/accounts?section=milestones&chapter=onboarding",
     connected,
   ),
   step(
@@ -29,7 +31,7 @@ const steps = (connected) => [
     "Say hello to Moneypenny",
     "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
     10,
-    "/app/onboarding?moneypenny=intro",
+    "/app/accounts?section=milestones&chapter=onboarding&moneypenny=intro",
     false,
   ),
   step(
@@ -84,7 +86,17 @@ const feedbackIndex = {
   recent: [],
 };
 const playbooks = { linked: true, unlocked: 0, total: 4 };
-const journey = { rank: "Observer", points: 0 };
+// The chapter now sits under the Milestones table of contents, which reads the whole journey.
+const journey = {
+  linked: true,
+  rank: "Observer",
+  points: 0,
+  totalPoints: 295,
+  courses: [],
+  celebrating: [],
+  engagementCelebrating: [],
+  pendingChecks: 0,
+};
 
 // The one endpoint whose answer changes mid-run: the last frame is the SAME member after connecting,
 // so `/api/onboarding` is a function of the current state rather than a fixed body.
@@ -96,6 +108,9 @@ const { page, origin, shoot, close } = await openShell({
   quality: 55,
   stubs: {
     "/api/onboarding": () => state,
+    // The head reads the owned accounts: none until the connect lands, then Uncle Joe's.
+    "/api/settings": () => profileStubs(state === fresh ? [] : [JOE])["/api/settings"],
+    "/api/accounts/networth": profileStubs([JOE])["/api/accounts/networth"],
     "/api/join": joinIndex,
     "/api/feedback": feedbackIndex,
     "/api/playbooks": playbooks,
@@ -103,7 +118,7 @@ const { page, origin, shoot, close } = await openShell({
   },
 });
 
-await page.goto(`${origin}/app/onboarding`);
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Create a free Alpaca account" }).waitFor();
 await shoot("onboarding-fresh");
 
@@ -116,7 +131,7 @@ await page
 await shoot("onboarding-step5-form");
 
 // Moneypenny's rail — step 2's button opens it with her intro; the whole shell moves left
-await page.goto(`${origin}/app/onboarding`);
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Meet Moneypenny ›" }).click();
 await page.getByText(/isn't connected yet/).waitFor();
 await page.getByLabel("Message Moneypenny").fill("yes");
@@ -125,7 +140,7 @@ await page.getByText(/the short path: create a free account/).waitFor();
 await shoot("onboarding-moneypenny-rail");
 
 state = connected;
-await page.goto(`${origin}/app/onboarding`);
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByText("PAPER · LIVE").waitFor();
 await shoot("onboarding-connected");
 

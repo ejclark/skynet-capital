@@ -69,7 +69,7 @@ common and nobody had written down.
 | Where | Fogged capability | Unlock | Status |
 |---|---|---|---|
 | `/trade` option ticket | option opens beyond the earned rung | the previous rung's fill | shipped (#469, #1461) |
-| `/playbooks` store | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
+| R&D → Playbooks store (`/research?section=playbooks`) | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
 | `/trade` multi-leg builder | spread execution | rung 401 | planned (#1671) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | planned (#1671) |
 | `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4) — interim: the rung is not built, and the fog says so |
@@ -85,7 +85,7 @@ is gated today for reasons that are *not* fog, so the noise comes off the emergi
 
 | Surface | Today | Verdict | Route |
 |---|---|---|---|
-| `/trade` option rungs · `/playbooks` store | fogged behind fills | fog — textbook, shipped | ledger above |
+| `/trade` option rungs · R&D → Playbooks store | fogged behind fills | fog — textbook, shipped | ledger above |
 | `/research` day lens | open (the Today row) | fog behind 501 | #1704 |
 | `/trade` multi-leg builder · same-day expiry | open, inexecutable / ungated | fog behind 401 / 501 | #1671 |
 | `/u/:id/playbooks` subscribe (delegating capital to a bot's playbook) | open, no rung | **fog candidate** — Q1 yes (capital), Q2 yes (the thesis stays readable), Q3 yes: the rung the playbook card already names | filed as its own issue |

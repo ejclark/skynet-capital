@@ -57,7 +57,7 @@ is a second visit. They never read a tooltip because they cannot.
 4. `/app/u/sauron/thesis` — the Subscribe cluster, greyed; no sentence says why. **WHEN a disabled
    control renders on a phone, the app shall show its reason without hover.** _known gap — dead
    end 8._ Judge: does this reader know why Subscribe is off?
-5. `/app/playbooks` — "Arm · soon", greyed; the reason is a tooltip. **WHEN a disabled control
+5. `/app/accounts?section=milestones&chapter=playbooks` — "Arm · soon", greyed; the reason is a tooltip. **WHEN a disabled control
    renders on a phone, the app shall show its reason without hover.** _known gap — dead end 8._
    Judge: does this reader know why Arm is off?
 6. `/app/research` — R&D with the calendar in the phone strip, the day lens fogged. **WHEN R&D

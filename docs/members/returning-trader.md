@@ -101,7 +101,7 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ### j4 — playbooks, twice
 
-1. `/app/playbooks` — "Prove the play by hand, then arm it", Arm · soon disabled. **WHEN the member
+1. `/app/accounts?section=milestones&chapter=playbooks` — "Prove the play by hand, then arm it", Arm · soon disabled. **WHEN the member
    opens the Profile's Playbooks chapter, the app shall relate it to the Playbook Store (one
    playbook system, not two).** _known gap — dead end 7._ Judge: does the reader know which
    Playbooks this is?

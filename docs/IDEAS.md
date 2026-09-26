@@ -1027,7 +1027,7 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
 - **Activity's Feedback pulse mixes open and shipped filings in one flat list.** `/app/feedback`
-  already built a real Active/All toggle for exactly this (#1308, #1312: shipped filings hidden by
+  (now the Profile page's Feedback section) already built a real Active/All toggle for exactly this (#1308, #1312: shipped filings hidden by
   default); the condensed widget on Activity never inherited it — needs-info, needs-eric, next-slice
   and three "Shipped" badges all sit side by side with no separation beyond a small pill. Same
   boundary as #784's live section-switch fork, one level down. _(src: Claude · while: researching
