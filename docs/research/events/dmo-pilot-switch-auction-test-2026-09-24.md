@@ -228,6 +228,83 @@ caution and license nothing; none of these commitments is a trade, and none beco
 |---|---|---|---|---|
 | 2026-09-15 | D-9 | Initial research banked (above), on an id that existed only as `proposals/dmo-pilot-switch-auction-test-2026-09-24.from-boe-decision-2026-09-17.json` — read in full first; its correction stands and is carried into the canonical `src/domain/market-events/dmo-pilot-switch-auction-test-2026-09-24.json` written in this PR. **Headline: the operation was de-scoped in writing between May and July, and the current rulebook has no switch-auction rules at all.** `pr290526.pdf` (29 May 2026, **fetched**) §4: *"The DMO will be scheduling a pilot switch auction on 24 September 2026. Feedback nearer the time will determine the source and destination gilts."* `pr170726.pdf` (17 July 2026, **fetched**): *"…will take place as a test… No gilts will be transferred, issued or cancelled as part of this test."* **49 days, and the gilts disappeared.** APF-absorption **REFUTED four ways**: the no-transfer sentence; Operational Notice **1 April 2026** ¶55 (purposes = benchmark supply *"in a low financing environment"* or *"redemption management"*); DMR 2026-27 ¶3.22 (*"promote liquidity … including at benchmark maturities"*); and DMR **Table 3.A**, which budgets **nil** gilt secondary-market purchases in 2026-27 vs £0.1bn in 2025-26 (table reconciles: 137.2 + 140.7 + 0.5 + 0.0 − 5.0 = **£273.4bn** GFR). The *"retire long-dated bonds, replace with shorter maturities"* framing is **unsupported by any primary** and barred by the last published ruleset (Guidebook **Sep 2006** ¶69: source and destination *"fall into the same maturity bracket"*, 0-7 / 5-15 / over-14) — but ¶¶67–74 are **not carried into** the 2026 notice, so it is precedent, not a live rule. ¶54 defers the mechanics entirely, so **no public document states how a 2026 UK switch auction would work** — which is why a familiarisation test exists. Adjacency sweep: **peers** — none, `symbols: []`. **Macro** — no UK print on 09-24; `uk-public-sector-finances-2026-09-22` is the nearest. **Volatility** — VIX **17.52** (09-15 close, Yahoo `^VIX`); baseline, no prior row. **Geopolitical** — `trump-xi-summit-2026-09-24` (high, `estimate`) is the largest same-day item and is not UK-rates-keyed. **Event tape** — coverage dated **2026-09-07**, seven weeks after the de-scoping, still describes 09-24 as a duration-reshaping switch auction; its *"approximately 14.4 years"* average maturity is wrong against DMR ¶A.5 (**13.9y** total, **12.9y** conventional, end-Dec 2025), while its £23bn/~9% long-gilt figure **checks out** (Table 3.A: £23.0bn of £252.1bn = 9.1%). **Adjacency ids:** 38 within 5 days, **0** confirmed high/critical. **No new dated adjacency proposed** — every dated item this sweep surfaced (7-Year note, 20–30Y buyback, Trump–Xi, SCOOS, new home sales, ECB Bulletin, steel imports, UK PSF) is already a tracked event. **Blocked:** all four `dmo.gov.uk` HTML surfaces tried returned a ShieldSquare/perfdrive interstitial or 404 (recorded in `probe-ref.blocked`); only direct `/media/*.pdf` paths resolve, and slugs cannot be guessed. **Three forward tests registered:** FT-1 (no public result document, score by 09-29), FT-2 (no live switch auction before 2027-01-01), FT-3 (the same-bracket rule returns). | — (stance set: stand aside, no position, no play; four analytical commitments — 09-24 moves no gilts, no result document, no live switch auction in calendar 2026, and the same-maturity-bracket rule returns when the mechanics are published) | 2026-09-22 (low, 0+d band: every 7d — which is D-2, the last pulse before the event) |
 | 2026-09-22 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (-2.7pt since last), band unchanged (low:0+), 49 adjacent event(s) tracked, new in corridor since last pulse: `bea-international-transactions-q2-2026-09-24`, `costco-q4-fy2026-2026-09-24`, `dallas-fed-tssos-2026-09-29`, `eia-weekly-petroleum-status-2026-09-23`, `intl-transactions-q2-2026-09-24`, `jpx-market-closure-2026-09-23` +5 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-29 |
+| 2026-09-26 | D+2 | **Close-out — see `## Outcome`.** Written inside the 6-day window (`closeOutWithinDays: 6`). Re-verified from primary, not from initial-research memory: no DMO publication reports a result for the 09-24 test as of today — every `dmo.gov.uk` HTML surface (calendars, events-calendar, press-notices) still 302s into the same ShieldSquare/perfdrive interstitial this ledger already logged, and a targeted web search for a result/regulatory announcement dated 09-24 through 09-26 found nothing — consistent with FT-1's prediction but **not yet scoreable**, since FT-1's own score-by (2026-09-29) has not arrived; left `_open_` for `forward-test-due` to pick up. No coverage attributes any 09-24/09-25 gilt move to the switch-auction test: UK 10Y ran ~5.35–5.40% (TradingEconomics), driven by Middle-East-tension oil prices and BoE Deputy Governor Lombardelli's hawkish remarks, not DMO supply — the attribution guard held through the event itself. **New primary, not read at initial research:** the DMO's own **GEMM Guidebook, 31 July 2025** edition (`dmo.gov.uk/media/eeld14ie/guidebook310725.pdf`, own fetch, HTTP 200, 446,380 bytes, text-extracted locally) — one edition closer to today than the September-2006 edition initial research cited — contains the word "switch" **zero times** anywhere in its auction-bidding sections, corroborating leg 5's "no current published document states how a 2026 UK switch auction would work" with a second, more recent GEMM-facing primary. FT-2 (score by 2027-01-04) and FT-3 (score by 2027-03-31) both fall past the close-out window — structurally beyond `closeOutWithinDays`, left `_open_` by design, not an oversight. The Oct–Dec 2026 gilt operations calendar was searched again this session (targeted queries for the DMO's own Q3-announcement naming pattern) and still not found — the same limit initial research logged, not a new blocker. | None — stand-aside stance closes intact; FT-1 unscored (score-by not yet arrived), FT-2/FT-3 unscored (beyond window) | — (closed; scanner goes quiet except for `forward-test-due` re-dispatch on FT-1/2/3's own score-by dates) |
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":1} -->
+
+## Outcome
+
+**Assessed 2026-09-26 (D+2), inside the 6-day close-out window (`closeOutWithinDays: 6`).** The
+`rates` kind carries no symbol-keyed `earnings-cycle`/`intraday-edges` study for this event
+(`symbols: []`) — there is no cache to bust and nothing for either instrument to read, the same
+honest-limits note initial research logged — but both caches were busted anyway per the rule
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Every claim below
+is a fresh check this session, never carried over from the 09-15 initial research or the 09-22
+screen.
+
+### Leg 1 re-verified — still no gilts moved, and still no result document
+
+Every `dmo.gov.uk` HTML surface tried this session — `/calendars/`, `/calendars/events-calendar/`,
+`/publications/press-notices/` — redirected into the identical
+`validate.perfdrive.com`/ShieldSquare bot-validation interstitial the 09-15 initial research already
+logged (`probe-ref.blocked`); this is a reproduction of the existing blocker, not a new one, and the
+interstitial itself was not followed (it is a CAPTCHA page, not content). Targeted web searches for
+a DMO result, regulatory announcement, or press notice dated 2026-09-24 through 2026-09-26 — the
+form a switch-auction result would take (source/destination amounts, dirty-price ratios, cover) —
+returned nothing: the most recent dated DMO item found anywhere is the **15 September 2026** Treasury
+Gilt 2029 tender result, six days before the test. **No public result document exists as of this
+close-out.** This is exactly what `pr170726.pdf`'s own text predicted (*"Further details… will be
+shared with the GEMMs closer to the date… No gilts will be transferred, issued or cancelled"*), and
+it is FT-1's prediction — but FT-1's own score-by (**2026-09-29**) has not arrived, so the absence
+observed today cannot yet be scored as a `pass`: a result could still post in the three remaining
+days of its window. Recorded as supporting evidence, left formally `_open_`.
+
+### Attribution guard held through the event itself
+
+TradingEconomics' own 09-24/09-25 commentary attributes the UK 10Y move (little changed around
+**5.35–5.40%**, close to 19-year highs) to **Brent-price gains on Middle East tensions** and **BoE
+Deputy Governor Clare Lombardelli's remarks** that rates may need to rise if energy prices stay
+elevated — not to DMO gilt supply of any kind. No coverage found anywhere this session names the
+switch-auction test as a driver of the day's tape. VIX (Yahoo `^VIX`, own fetch) ran **15.18 (09-23)
+→ 15.67 (09-24) → 14.87 (09-25)** — inside the ordinary 3-point band, no regime shift attributable to
+this operation or otherwise. The guard this ledger exists to carry did its job: the crowded same day
+(7-Year note auction, 20–30Y buyback, Trump–Xi summit, SCOOS, ECB Bulletin) had plenty of named
+alternatives, and nothing pinned the tape on a test that transfers, issues or cancels nothing.
+
+### New primary this session — a second, more recent confirmation of leg 5's gap
+
+Initial research's leg 5 ("no current published document states how a 2026 UK switch auction would
+work") rested on the **1 April 2026** Operational Notice and the **September 2006** GEMM Guidebook as
+the only switch-auction precedent. This session found a **31 July 2025** GEMM Guidebook edition
+(`dmo.gov.uk/media/eeld14ie/guidebook310725.pdf`, own fetch, HTTP 200, 446,380 bytes, text-extracted
+locally by the same flate-decompress-and-rebuild method initial research used — no `pdftotext` on
+this runner) that was not read at initial research. It is a GEMM-facing rulebook — exactly the kind
+of document that would carry switch-auction mechanics if any currently existed — and the word
+"switch" appears **zero times** in it, anywhere. This is a second, more recent (14 months closer to
+the test than the 2006 edition) primary corroborating the same gap, not a new finding that changes
+the stance: **as of 31 July 2025 and 1 April 2026 alike, no DMO rulebook has switch-auction rules.**
+FT-3 (whether the same-maturity-bracket rule returns when mechanics are eventually published) stays
+open on this evidence — there is still nothing published to score it against.
+
+### Forward tests — none scoreable at this close-out, all three left open by design
+
+| Test | Score by | Status at this close-out |
+|---|---|---|
+| `FT-dmo-pilot-switch-auction-test-2026-09-24-1` (no result document) | 2026-09-29 | **Not yet due** — inside the close-out window but after today; supporting evidence found (no document exists yet), left `_open_` for `forward-test-due` |
+| `FT-dmo-pilot-switch-auction-test-2026-09-24-2` (no live switch auction before 2027-01-01) | 2027-01-04 | **Beyond the close-out window** (`closeOutWithinDays: 6`) — structural, not a timing gap; left `_open_` by design |
+| `FT-dmo-pilot-switch-auction-test-2026-09-24-3` (same-maturity-bracket rule returns) | 2027-03-31 | **Beyond the close-out window** — same structural reason; left `_open_` by design |
+
+None of the three carries a terminal verdict here — none was due, and forcing one early is the
+falsification pressure this lane's own rules forbid. `scripts/event-scan.mjs` re-dispatches this same
+lane as `forward-test-due` on each test's own score-by date.
+
+### Verdict vs. the stance
+
+**The "stand aside" call closes exactly as registered.** No position, no play, no hedge was ever on
+the table (`estimate`, `impact: low`, `symbols: []`, zero playbook hits), and nothing in this
+close-out changes that. The two things this entry was built to prove — that 09-24 moves no gilts,
+and that the day's tape should not be attributed to it — both held under direct observation of the
+event itself, not just under the DMO's own prior word. The three registered forward tests remain
+open on their own honest schedules; this doc goes quiet until the first of them (FT-1, 2026-09-29)
+reopens it.
