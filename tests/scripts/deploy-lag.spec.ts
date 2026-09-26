@@ -1,4 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // "Is `main` actually deployed?" — driven through the real entrypoint, the way every other script
 // spec here works, so the argument plumbing is covered too and no `.d.ts` is invented for an
@@ -177,5 +180,64 @@ describe("deploy lag", () => {
       // JSON.stringify drops undefined keys, so this exercises the true absent-field path.
       expect(unknown.text).not.toContain("bots app");
     });
+  });
+});
+
+// Degrade honestly (#3769 row 1): a missing input is a named state, never a quiet "current".
+describe("deploy lag — missing inputs", () => {
+  const dir = mkdtempSync(join(tmpdir(), "deploy-lag-"));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const cli = (args: string[], opts: { input?: string; path?: string } = {}) =>
+    spawnSync(process.execPath, ["scripts/deploy-lag.mjs", ...args], {
+      encoding: "utf8",
+      input: opts.input ?? "",
+      env: { ...process.env, ...(opts.path ? { PATH: opts.path } : {}) },
+    });
+
+  it("--explain with nothing on stdin is UNKNOWN at exit 2, not a current deploy", () => {
+    const r = cli(["--explain"]);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("deploy-lag: UNKNOWN — --explain read no state on stdin");
+    expect(r.stdout).not.toContain("deploy is current");
+  });
+
+  it("--json keeps its exit-0 contract and carries the unknown as a field", () => {
+    const r = cli(["--explain", "--json"]);
+    expect(r.status).toBe(0);
+    expect(JSON.parse(r.stdout)).toMatchObject({ known: false });
+  });
+
+  it("an unreadable GitHub (no gh on PATH) is UNKNOWN at exit 2, not a stack trace at exit 1", () => {
+    const empty = join(dir, "empty");
+    mkdirSync(empty);
+    const r = cli([], { path: empty });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("deploy-lag: UNKNOWN — could not read GitHub state");
+  });
+
+  it("names the fallback when the job scan fails — bots state UNKNOWN, dashboard still judged", () => {
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const fake = join(bin, "gh");
+    writeFileSync(
+      fake,
+      [
+        "#!/bin/sh",
+        'case "$*" in',
+        `  *commits/main*) echo '{"sha":"${HEAD}"}' ;;`,
+        '  *per_page=20*) echo "HTTP 502" >&2; exit 1 ;;',
+        `  *status=success*) echo '{"workflow_runs":[{"head_sha":"${HEAD}"}]}' ;;`,
+        "  *) exit 1 ;;",
+        "esac",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(fake, 0o755);
+    const r = cli([], { path: bin });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("deploy is current");
+    expect(r.stdout).toContain("bots app: state unknown");
+    expect(r.stderr).toContain("· job scan failed");
+    expect(r.stderr).toContain("bots state UNKNOWN");
   });
 });
