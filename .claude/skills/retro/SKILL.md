@@ -69,6 +69,12 @@ Rank, best first (this ordering is the doctrine; deviating needs a stated reason
    every future session's context, so it steers the next decision rather than sitting unread.
 3. **A ledger entry alone** — only when mechanizing costs more than the expected damage. Say so.
 
+**A command an agent must never run is rank 1, never rank 3.** Claude Code fires a `PreToolUse`
+hook before every Bash call and exit 2 refuses it with your reason (`docs/vendor/claude-code/hooks.md`
+→ Exit code 2). Add the pattern to `scripts/hooks/guard-bash.mjs`'s `BANNED` table with the
+doctrine line it enforces; the `git stash` ban was ledger-only for a month because "no git hook
+intercepts it" — the hook that does is not git's (#3769 slice 5, 2026-09-26).
+
 Then apply the interrupt-economics test in reverse: if the same slip recurring would be cheap and
 self-correcting, do not build ceremony around it. Process that taxes flow at scale is a net negative
 (`CLAUDE.md` → blameless retro on detected drift).
