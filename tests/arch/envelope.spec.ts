@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -143,5 +143,57 @@ describe("autonomous-lane envelope", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  // Degrade honestly (#3769 row 1): an input the verdict rests on, missing, is a named UNKNOWN at
+  // the gate's own failure exit — never "not a lane" or "no new deps".
+  describe("missing inputs fail closed", () => {
+    const script = join(process.cwd(), "scripts/envelope-scan.mjs");
+    const scanIn = (dir: string, ...args: string[]) =>
+      spawnSync(process.execPath, [script, ...args], {
+        cwd: dir,
+        encoding: "utf8",
+        // Set AFTER the scrub (which drops every GIT_* key): git never climbs out of the temp dir.
+        env: { ...hermeticGitEnv({ GITHUB_HEAD_REF: "" }), GIT_CEILING_DIRECTORIES: tmpdir() },
+      });
+
+    it("an unnameable branch (no --lane, no GITHUB_HEAD_REF, not a git tree) is UNKNOWN, exit 1", () => {
+      const dir = mkdtempSync(join(tmpdir(), "envelope-nogit-"));
+      try {
+        cpSync("envelope.json", join(dir, "envelope.json"));
+        const r = scanIn(dir);
+        expect(r.status).toBe(1);
+        expect(r.stderr).toContain("branch UNKNOWN");
+        expect(r.stdout).not.toContain("not an autonomous lane");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it("an unreadable base package.json is an UNKNOWN dependency breach, exit 1", () => {
+      const dir = mkdtempSync(join(tmpdir(), "envelope-pkg-"));
+      const run = (...args: string[]) =>
+        execFileSync(
+          "git",
+          ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args],
+          { cwd: dir, encoding: "utf8", env: hermeticGitEnv() },
+        );
+      try {
+        run("init", "-q", "-b", "main");
+        cpSync("envelope.json", join(dir, "envelope.json"));
+        run("add", "-A");
+        run("commit", "-q", "-m", "base without package.json");
+        run("checkout", "-q", "-b", "feedback/2");
+        writeFileSync(join(dir, "package.json"), '{"dependencies":{"left-pad":"1.0.0"}}\n');
+        run("add", "-A");
+        run("commit", "-q", "-m", "adds package.json");
+        const r = scanIn(dir, "--lane", "feedback/2", "--base", "main");
+        expect(r.status).toBe(1);
+        expect(r.stderr).toContain("package.json → dependencies");
+        expect(r.stderr).toContain("UNKNOWN — cannot read package.json at the merge base");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
   });
 });
