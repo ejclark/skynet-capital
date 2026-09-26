@@ -20,6 +20,8 @@
 //
 // Enforced in CI via tests/arch/research-lint.spec.ts. Dependency-free (node built-ins).
 // Loud-failure doctrine: an unreadable input is an error, never "fine".
+// Exit codes (the gate): 0 = debt within budget · 1 = debt grew · 2 = UNKNOWN, could not do its
+// job (no ledger dir to read, or no usable research-budget.json to judge the debt against).
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -164,7 +166,9 @@ function checkBlockedSources(md, notes) {
   try {
     ref = JSON.parse(match[1]);
   } catch {
-    return; // malformed probe-ref is event-material-scan's problem, not this gate's
+    // Repairing it is event-material-scan's problem, not this gate's — but name the skipped check.
+    notes.push("note: probe-ref block is malformed — blocked sources not checked");
+    return;
   }
   if (Array.isArray(ref.blocked) && ref.blocked.length > 0) {
     notes.push(
@@ -229,7 +233,12 @@ export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_
 }
 
 function mdFilesIn(dir) {
-  if (!existsSync(dir)) return [];
+  // Reached only for the weekly studies (the ledger dir is checked up front, exit 2). Optional:
+  // the ledger verdict still means what it says without them, so it is named, not failed.
+  if (!existsSync(dir)) {
+    console.error(`· no research dir at ${dir} — its documents were not checked`);
+    return [];
+  }
   return readdirSync(dir)
     .filter((f) => f.endsWith(".md") && !SKIP.has(f))
     .sort();
@@ -273,6 +282,13 @@ if (process.argv.includes("--stdin")) {
   emitJson({ problems, notes }, problems.length ? 1 : 0);
 }
 
+// The ledgers are what this eye exists to read: with no dir, "0 documents, 0 debt" is a pass over
+// nothing.
+if (!existsSync(EVENTS_DIR)) {
+  console.error(`✗ research lint: UNKNOWN — no ledger dir at ${EVENTS_DIR}; nothing was checked.`);
+  process.exit(2);
+}
+
 const results = auditAll();
 const failing = results.filter((r) => r.problems.length > 0);
 const debt = failing.length;
@@ -314,7 +330,15 @@ for (const r of failing.slice(0, 8)) {
 }
 if (failing.length > 8) console.log(`    … and ${failing.length - 8} more.`);
 
-const cap = Number.isFinite(budget.uncalledLedgers) ? budget.uncalledLedgers : debt;
+// No usable budget used to mean cap = debt: a gate that could never fail. --update seeds one.
+if (!Number.isFinite(budget.uncalledLedgers)) {
+  console.error(
+    `\n✗ research lint: UNKNOWN — no usable uncalledLedgers in ${BUDGET_FILE}; debt ${debt} ` +
+      "cannot be judged. Seed it with `node scripts/research-lint.mjs --update`.",
+  );
+  process.exit(2);
+}
+const cap = budget.uncalledLedgers;
 if (debt > cap) {
   console.error(`\n✗ research debt grew: ${debt} > budget ${cap}.`);
   console.error(

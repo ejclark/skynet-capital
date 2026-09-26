@@ -1,4 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 // Research-document contract gate. docs/ISSUES.md measured the rule once already: a surface with a
 // template, a guide AND a gate complies; a surface missing one of the three does not. Event ledgers
@@ -180,5 +183,62 @@ describe("research budget", () => {
     const weeks = audited.results.filter((r) => r.name.startsWith("weeks/"));
     expect(weeks.length).toBeGreaterThan(0);
     expect(weeks.flatMap((r) => r.problems)).toEqual([]);
+  });
+});
+
+// Honest degradation: a missing input is a named state, never a quiet pass. Each case runs the
+// real gate in a seeded temp dir (its ROOT is the cwd).
+describe("research lint — missing inputs are named", () => {
+  const SCRIPT = resolve("scripts/research-lint.mjs");
+  const gate = (seed: { events?: boolean; weeks?: boolean; budget?: string }) => {
+    const dir = mkdtempSync(join(tmpdir(), "research-lint-"));
+    try {
+      if (seed.events) {
+        mkdirSync(join(dir, "docs", "research", "events"), { recursive: true });
+        writeFileSync(join(dir, "docs", "research", "events", "nvda.md"), header(FULL_TABLE));
+      }
+      if (seed.weeks) mkdirSync(join(dir, "docs", "research", "weeks"), { recursive: true });
+      if (seed.budget !== undefined) writeFileSync(join(dir, "research-budget.json"), seed.budget);
+      return spawnSync("node", [SCRIPT], { cwd: dir, encoding: "utf8" });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const BUDGET = '{ "uncalledLedgers": 0 }\n';
+
+  it("passes a seeded checkout with every input present, and prints no note", () => {
+    const res = gate({ events: true, weeks: true, budget: BUDGET });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toBe("");
+  });
+
+  it("exits 2 UNKNOWN when there is no ledger dir, instead of passing zero documents", () => {
+    const res = gate({ weeks: true, budget: BUDGET });
+    expect(res.status).toBe(2);
+    expect(res.stderr).toMatch(/UNKNOWN — no ledger dir at .*events; nothing was checked/);
+  });
+
+  it("exits 2 UNKNOWN when there is no budget, instead of capping the debt at itself", () => {
+    const res = gate({ events: true, weeks: true });
+    expect(res.status).toBe(2);
+    expect(res.stderr).toContain("UNKNOWN — no usable uncalledLedgers");
+  });
+
+  it("treats a budget without uncalledLedgers the same as no budget", () => {
+    const res = gate({ events: true, weeks: true, budget: "{}\n" });
+    expect(res.status).toBe(2);
+  });
+
+  it("still gates the ledgers without a weekly-studies dir, and prints a note naming it", () => {
+    const res = gate({ events: true, budget: BUDGET });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toMatch(/^· no research dir at .*weeks — its documents were not checked$/m);
+  });
+
+  it("notes a malformed probe-ref block instead of skipping the blocked-source check silently", () => {
+    const md = `${header(FULL_TABLE)}\n\n<!-- probe-ref: {"blocked": [} -->\n`;
+    const { problems, notes } = lintResearchDoc(md);
+    expect(problems).toEqual([]);
+    expect(notes).toContain("note: probe-ref block is malformed — blocked sources not checked");
   });
 });
