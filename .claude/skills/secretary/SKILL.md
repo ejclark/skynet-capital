@@ -20,7 +20,11 @@ clock; this skill is the procedure.
 
 **Collect** (facts, not memory): `git log origin/main --oneline --since=<last digest date>`; open
 PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` ledgers and
-`docs/research/*` docs; gate budget diffs; anything parked in plan Q&A queues.
+`docs/research/*` docs; gate budget diffs; anything parked in plan Q&A queues. **For an open
+`plan` issue, read its state block, never its comment thread** (`docs/ISSUES.md` → *The state
+block*, #3765): the block's current state and next-pickup line are the plan's status, and its log
+is the delta since the last digest. A plan with no block is itself a headline (it cannot be picked
+up without re-reading everything).
 
 **Classify into exactly three tiers** (docs/digests/TEMPLATE.md):
 
