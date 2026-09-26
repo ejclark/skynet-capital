@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { DeskPosition } from "../live/desk";
 import {
   fetchOptionPositions,
@@ -84,23 +84,42 @@ type RowState =
   | { readonly step: "done"; readonly result: TicketResult }
   | { readonly step: "error"; readonly message: string };
 
+/** A contract the position guidance handed off (#3729): scroll to it, mark it, and — for a roll —
+ *  open the Roll row with the suggested target. Nothing is reviewed or sent on arrival. */
+export interface PositionFocus {
+  readonly occ: string;
+  readonly rollTo?: { readonly strike: number; readonly expiration: string };
+}
+
 function CloseRow({
   deskId,
   position,
   statement,
   onFilled,
+  focus,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
   /** The row's Position Statement line, once `/api/trade/option-positions` has answered. */
   readonly statement?: OptionPositionRow;
   readonly onFilled: () => void;
+  readonly focus?: PositionFocus;
 }): ReactElement {
+  const rowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focus) return;
+    // Next frame: on the docked bench the pane's own scroll-to-pane effect (a parent effect, so
+    // it runs after this one) would otherwise win, leaving the member at the pane's top.
+    const frame = requestAnimationFrame(() =>
+      rowRef.current?.scrollIntoView?.({ block: "center" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [focus]);
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
   // Roll as one ticket (#3407 P3 slice 3) — a second row under this one, opened on demand.
-  const [rolling, setRolling] = useState(false);
+  const [rolling, setRolling] = useState(focus?.rollTo !== undefined);
   const priceId = useId();
   const parsedLimit = Number(limitPrice.trim());
   const draft: OptionDraft = {
@@ -137,7 +156,11 @@ function CloseRow({
 
   return (
     <>
-      <div className="tkt-close-row">
+      <div
+        ref={rowRef}
+        className={focus ? "tkt-close-row tkt-close-row-focus" : "tkt-close-row"}
+        data-focus={focus ? "true" : undefined}
+      >
         <span className="tkt-close-main">
           {position.display} <small className="num">{position.symbol}</small>
           {statement ? <StatementLine row={statement} /> : null}
@@ -231,7 +254,14 @@ function CloseRow({
           Roll…
         </button>
       </div>
-      {rolling ? <RollRow deskId={deskId} position={position} onFilled={onFilled} /> : null}
+      {rolling ? (
+        <RollRow
+          deskId={deskId}
+          position={position}
+          onFilled={onFilled}
+          {...(focus?.rollTo ? { initialTarget: focus.rollTo } : {})}
+        />
+      ) : null}
     </>
   );
 }
@@ -243,9 +273,11 @@ function CloseRow({
 export function OptionPositionsCard({
   deskId,
   positions,
+  focus,
 }: {
   readonly deskId: string;
   readonly positions: readonly DeskPosition[];
+  readonly focus?: PositionFocus;
 }): ReactElement | null {
   const queryClient = useQueryClient();
   const held = positions.filter((p) => p.isOption);
@@ -273,11 +305,18 @@ export function OptionPositionsCard({
       <div className="tkt-close-rows">
         {held.map((position) => (
           <CloseRow
-            key={position.symbol}
+            // Keyed on the hand-off too: docked, this card is already mounted when a new
+            // ?manage=&rollTo= arrives, and only a remount re-seeds the row's Roll state.
+            key={
+              focus && focus.occ === position.symbol
+                ? `${position.symbol}|${focus.rollTo?.expiration ?? ""}:${focus.rollTo?.strike ?? ""}`
+                : position.symbol
+            }
             deskId={deskId}
             position={position}
             statement={rowsBySymbol.get(position.symbol)}
             onFilled={refresh}
+            {...(focus && focus.occ === position.symbol ? { focus } : {})}
           />
         ))}
       </div>

@@ -8,11 +8,13 @@ import {
 import type {
   GuidanceStake,
   LadderRow,
+  ManageCall,
   PositionGuidance,
   PulseItem,
   PulseStatus,
 } from "../../../src/options/position-guidance-types";
 import { GlanceLine, LeverCard, shortDate } from "./guidance-lever";
+import { GuidanceManage, ManageGlanceLine } from "./guidance-manage";
 import { GuidanceStakeForm } from "./guidance-stake-form";
 
 /**
@@ -109,6 +111,7 @@ export function GuidanceView({
   onStake,
   onRefresh,
   onUse,
+  onManage = () => undefined,
 }: {
   readonly guidance: PositionGuidance;
   readonly stake: GuidanceStake;
@@ -124,6 +127,8 @@ export function GuidanceView({
   readonly onStake: (next: GuidanceStake) => void;
   readonly onRefresh: () => void;
   readonly onUse: (row: LadderRow) => void;
+  /** "Use this" on a call already sold (see `GuidanceManage`). */
+  readonly onManage?: (call: ManageCall) => void;
 }): ReactElement {
   const g = guidance;
   const rowsFor = (lever: string) => g.ladder.filter((r) => r.lever === lever);
@@ -153,7 +158,14 @@ export function GuidanceView({
       <HeldLine held={held} stake={stake} stakeKey={stakeKey} onStake={onStake} />
       <GuidanceStakeForm key={`${g.symbol}:${stakeKey}`} stake={stake} onChange={onStake} />
       <ul className="guidance-glance" aria-label="At a glance">
-        {g.calls.map((c) => (
+        {/* Shares, then the calls already sold, then the new-trade levers — the section order. */}
+        {g.calls.slice(0, 1).map((c) => (
+          <GlanceLine key={c.lever} call={c} rows={rowsFor(c.lever)} />
+        ))}
+        {g.manage.map((m) => (
+          <ManageGlanceLine key={m.occ} m={m} />
+        ))}
+        {g.calls.slice(1).map((c) => (
           <GlanceLine key={c.lever} call={c} rows={rowsFor(c.lever)} />
         ))}
       </ul>
@@ -167,7 +179,11 @@ export function GuidanceView({
           </ul>
         </section>
       ) : null}
-      {g.calls.map((c) => (
+      {g.calls.slice(0, 1).map((c) => (
+        <LeverCard key={c.lever} call={c} rows={rowsFor(c.lever)} symbol={g.symbol} onUse={onUse} />
+      ))}
+      <GuidanceManage manage={g.manage} onManage={onManage} />
+      {g.calls.slice(1).map((c) => (
         <LeverCard key={c.lever} call={c} rows={rowsFor(c.lever)} symbol={g.symbol} onUse={onUse} />
       ))}
       <section className="guidance-waiting" aria-label="Waiting on">

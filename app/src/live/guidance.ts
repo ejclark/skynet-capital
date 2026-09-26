@@ -3,9 +3,11 @@ import type {
   GuidanceMarket,
   GuidanceSnapshot,
   GuidanceStake,
+  OpenCall,
 } from "../../../src/options/position-guidance-types";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskSnapshot } from "./desk";
+import type { OptionPositions } from "./options";
 
 /**
  * POSITION GUIDANCE, CLIENT SIDE (#3729 step 3). The route answers with the MARKET only — quotes,
@@ -113,6 +115,7 @@ const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
 export function heldStake(
   desk: DeskSnapshot | undefined,
   symbol: string,
+  quotes?: OptionPositions,
 ): GuidanceStake | undefined {
   const positions = desk?.desk.positions ?? [];
   const held = positions.find((p) => !p.isOption && p.symbol === symbol);
@@ -128,9 +131,45 @@ export function heldStake(
       return parts?.underlying === symbol && parts.type === "call";
     })
     .reduce((n, p) => n - num(p.quantity), 0);
+  const openCalls = openCallsOf(desk, symbol, quotes);
   return {
     shares,
     ...(costBasis > 0 ? { costBasis } : {}),
     ...(callsSold > 0 ? { callsSold } : {}),
+    ...(openCalls.length ? { openCalls } : {}),
   };
+}
+
+/**
+ * The covered calls already open on `symbol`, for "Calls you've sold" (#3729): the account's short
+ * call positions, joined by OCC symbol to the Option positions card's own quotes (bid/ask per
+ * share). The premium received is the position's average price, which the broker reports PER
+ * CONTRACT for options (src/observatory/position-plain.ts) — so ÷ 100 for per share. A contract
+ * with no quote yet still appears; the engine then says it has no price to buy it back at.
+ */
+export function openCallsOf(
+  desk: DeskSnapshot | undefined,
+  symbol: string,
+  quotes?: OptionPositions,
+): OpenCall[] {
+  const rows = new Map((quotes?.available ? quotes.rows : []).map((r) => [r.symbol, r]));
+  return (desk?.desk.positions ?? []).flatMap((p) => {
+    const parts = p.isOption ? parseOccSymbol(p.symbol) : undefined;
+    const contracts = -num(p.quantity);
+    if (!(parts?.underlying === symbol && parts.type === "call" && contracts > 0)) return [];
+    const premium = num(p.costPerShare) / 100;
+    if (!(premium > 0)) return [];
+    const q = rows.get(p.symbol);
+    return [
+      {
+        occ: p.symbol,
+        strike: parts.strike,
+        expiration: parts.expiration,
+        contracts,
+        premium,
+        ...(q?.bid !== undefined ? { bid: q.bid } : {}),
+        ...(q?.ask !== undefined ? { ask: q.ask } : {}),
+      },
+    ];
+  });
 }
