@@ -215,8 +215,11 @@ function DocList({
 
 /** The top filters — the text query and the symbol chips write the same model: a chip toggles a
  *  `sym:` token (OR scope, a watchlist); an `on:` or `lens:` typed here is lifted into the root
- *  range params by `research.tsx` (one model, two carriers — #3807 slice 2·1). */
-function ResearchFilters({
+ *  range params by `research.tsx` (one model, two carriers — #3807 slice 2·1). A selected chip
+ *  offers no "full page" link: no per-symbol research page exists (the server serves only study
+ *  and ledger slugs, `research-service.ts`), so the link only ever opened a 404 — the scoped board
+ *  the chip just produced IS the symbol's view. Exported for its spec. */
+export function ResearchFilters({
   data,
   query,
   onChange,
@@ -266,11 +269,6 @@ function ResearchFilters({
                     <span className="rx-symbol-next">no dated event</span>
                   )}
                 </button>
-                {selected ? (
-                  <a className="rx-symbol-full" href={entry.href}>
-                    full page →
-                  </a>
-                ) : null}
               </span>
             );
           })}
