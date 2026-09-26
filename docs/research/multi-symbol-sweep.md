@@ -607,6 +607,25 @@ robust, alpha fragile — is the finding.
   rather than to Japanese demand. Do not re-propose a Tokyo-absence auction-demand effect from this
   print without controlling for the FOMC-surprise confound both sibling ledgers already named.
 
+- **A quarterly NIIP valuation model regressed on two equity returns, scored on its first
+  out-of-sample print (FT-intl-transactions-q2-2026-09-24-2)** — added 2026-09-26 from the
+  [intl-transactions-q2-2026-09-24 close-out](events/intl-transactions-q2-2026-09-24.md). Fit on
+  16 quarters (2022Q2–2026Q1) of FRED `IIPUSNETIQ` decomposed into current-account flow and a
+  valuation residual, `valuation ≈ 18.0 − 161.4×SPX% + 104.0×EFA%` reached R² 0.849 and LOO RMSE
+  $390B, and was registered predicting end-Q2 2026 NIIP in −$22.63T…−$23.41T off SPX +14.87% / EFA
+  +8.64%. The actual print landed at **−$22.42T** — outside the band on the low-magnitude side,
+  $210B short of its own near edge. **What this does and does not refute:** the model's *sign* held
+  (US equities outperforming foreign equities worsens the NIIP, and it did worsen from −$21.27T) —
+  the "improves from −$21.27T" kill switch did not separately fire — but the *magnitude* missed by
+  $578.8B, roughly 1.5× the model's own cross-validated error (implied actual valuation −$905.2B vs
+  predicted −$1,484B). An n=16 in-sample fit with R² 0.849 produced a first live forecast outside
+  its own ±1-RMSE interval — the honest-limits section that registered it flagged exactly this risk
+  ("2026-09-24 is its first real test... medium confidence is doing real work"). Do not re-propose
+  the SPX+EFA two-regressor NIIP valuation model as calibrated without either widening its interval
+  past ±1 LOO RMSE or re-fitting on a sample that includes this miss — one out-of-sample point is
+  not enough to diagnose whether the SPX coefficient is too large, the EFA proxy is too narrow, or
+  both, and the close-out deliberately left Leg 4 unedited (append-only) rather than patch it here.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
