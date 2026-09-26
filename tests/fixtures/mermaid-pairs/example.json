@@ -1,0 +1,34 @@
+{
+  "pairs": [
+    {
+      "id": "pr-picture",
+      "title": "The PR picture: a module map → the story of the change",
+      "caption": "Thick arrows are the new path, dotted the path removed, a diamond per fork — the reader sees what changed before reading a word. From `scripts/ship.sh checkbody`.",
+      "before": {
+        "kind": "mermaid",
+        "label": "the fan-in map 8 of 11 PRs drew",
+        "source": "flowchart LR\n  E[earnings calendar] --> P[position-event.ts]\n  M[market events] --> P\n  P --> T[Next event column]\n  P --> C[Earnings chip]\n  P --> D[decision clocks]"
+      },
+      "after": {
+        "kind": "mermaid",
+        "label": "the delta grammar",
+        "source": "flowchart TD\n  body[\"PR body\"] -.-> list[\"type allowlist\"]\n  body ==> parse[\"parse under Mermaid 11.17.2\"]\n  parse ==> ok{\"parses?\"}\n  ok ==>|yes| draws[\"GitHub draws it\"]\n  ok ==>|no| stop[\"push refused — line named\"]"
+      }
+    },
+    {
+      "id": "platter",
+      "title": "Branch mechanics: a ledger table → the gitGraph that is the argument",
+      "caption": "Same platter, drawn as what `ship.sh` does: one integration branch, one commit per item, one merge commit — so a bad item still reverts alone.",
+      "before": {
+        "kind": "markdown",
+        "label": "the ledger",
+        "source": "| # | item | evidence | revert |\n|---|---|---|---|\n| 1 | fix commitlint | verify green 12:51Z | `b0a4c8a` |\n| 2 | pin flyctl | verify green 12:52Z | `9d3bfb8` |"
+      },
+      "after": {
+        "kind": "mermaid",
+        "label": "gitGraph from the same ledger",
+        "source": "gitGraph\n  commit id: \"main\"\n  branch platter\n  commit id: \"item 1: fix commitlint\"\n  commit id: \"item 2: pin flyctl\"\n  checkout main\n  merge platter id: \"one merge commit\" tag: \"revert per item\""
+      }
+    }
+  ]
+}
