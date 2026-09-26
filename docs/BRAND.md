@@ -35,6 +35,11 @@ Design tokens — reuse these; do not invent a parallel palette.
 - **The Eye of Sauron is the one sanctioned warm palette** — a fiery amber→orange→red ramp
   (`#FFF3D6` core, `#FFC24D`, `#FF7A2E`, `#FF9E3D`, into `--neg` red) reserved for that anchor and its
   beam. Warm-white `#EAFFFA` is the "charged/electric" highlight (crowns, VFX, beam nodes).
+  **One placed exception, outside the app** (Eric, 2026-09-26, "promote. Phone looks fine"): the
+  diagram ink mode in `docs/PICTURES.md` — paper `#F4EFE6`, gold `#E0A33A`, seal red `#B3261E` —
+  for decision pictures on GitHub only (a PR's opening frame, a held PR), gold on the one decision,
+  red on a defect beside it, switched whole and never mixed with the teal. It never enters the app's
+  surfaces; there the Eye keeps the warm palette.
 - Neutrals carry a deliberate blue-teal bias — chosen, not defaulted.
 
 ## Type

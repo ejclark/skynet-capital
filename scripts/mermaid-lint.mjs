@@ -43,7 +43,12 @@
 // loads lazily (~1.5s, jsdom + mermaid), so a body with no diagram pays nothing. Loud-failure
 // doctrine: an unreadable input is an error, never "fine".
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/** The repo this script lives in — the registry is read from here, not from the caller's cwd, so
+ *  ship.sh and the specs see the same page wherever they run. */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** What github.com renders — read from its production bundle on 2026-09-25. Move with the pin. */
 export const GITHUB_MERMAID_VERSION = "11.17.2";
@@ -95,7 +100,7 @@ const HEX = /#[0-9a-f]{6}\b/gi;
  * gate moves with the page. Returns null when the page cannot be read: the check then cannot
  * answer, and a block that carries a hex is refused with that reason rather than waved through.
  */
-export function snippetHexes(root = process.cwd()) {
+export function snippetHexes(root = REPO_ROOT) {
   let page;
   try {
     page = readFileSync(join(root, "docs", "PICTURES.md"), "utf8");

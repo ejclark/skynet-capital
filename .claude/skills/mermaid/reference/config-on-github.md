@@ -59,7 +59,7 @@ flowchart TD
 
 | Feature | Why not |
 |---|---|
-| `theme`, `themeVariables`, `themeCSS`, hex fills | GitHub picks light or dark from the page; a pinned theme or hex freezes one mode. The lint **fails** it. The only styling is the contrast-verified `classDef` snippet in `docs/PICTURES.md`, copied whole |
+| `theme`, `themeVariables`, `themeCSS`, hex fills | GitHub picks light or dark from the page; a pinned theme or hex freezes one mode. The lint **fails** it. The only styling is a contrast-verified `classDef` snippet from `docs/PICTURES.md` (the house teal, or ink mode for decision pictures), copied whole; the lint refuses any hex outside them |
 | `layout: elk` (and every non-dagre layout) | ELK is not registered in 11.17.2: flowchart, class, ER and requirement fall back to dagre silently; stateDiagram-v2 throws `Unknown layout algorithm: elk` |
 | iconify / Font Awesome icons | GitHub never registers packs: a pack icon renders a `?` square (inline `fa:fa-x` may render blank). `architecture-beta` gets only its five built-ins (cloud, database, disk, internet, server) |
 | `click` | Dead: authors cannot lift `securityLevel`, and callbacks never run |
