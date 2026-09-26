@@ -7,7 +7,7 @@
  *                                          against what was just produced are the gold for mined evals
  * Appends one compact JSONL event per firing to data/duel-log.jsonl. A mining pass later distills the
  * distribution (winner/loser discriminators, correction deltas) into candidate eval scenarios.
- * MUST never fail or block the session: swallow everything, always exit 0.
+ * MUST never fail or block the session: always exit 0. A dropped event prints one `·` note on stderr.
  */
 import { appendFileSync, mkdirSync } from "node:fs";
 
@@ -39,7 +39,12 @@ try {
   }
   mkdirSync("data", { recursive: true });
   appendFileSync("data/duel-log.jsonl", `${JSON.stringify(event)}\n`);
-} catch {
-  // Logging must never break the loop it observes.
+} catch (err) {
+  // Optional by contract: logging must never break the loop it observes, so a malformed payload or
+  // an unwritable log still exits 0. But a dropped event is a named state, not a silent gap in the
+  // eval corpus — say which one fell out, on stderr (stdout of a UserPromptSubmit hook is context).
+  console.error(
+    `· duel-log: dropped ${kind} event — ${String(err?.message ?? err).split("\n")[0]}`,
+  );
 }
 process.exit(0);
