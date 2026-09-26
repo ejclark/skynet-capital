@@ -1,0 +1,158 @@
+{
+  "member": "invited-friend",
+  "source": "docs/members/invited-friend.md",
+  "fixture": { "kind": "session", "email": "friend@example.test", "participant": "human-friend" },
+  "viewports": ["phone", "desktop"],
+  "journeys": [
+    {
+      "id": "j1",
+      "name": "my own book, not the owner's",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "Profile opens on the friend's own account: Net worth · Friend, the money strip, the switcher offering Friend and The Day Trader; the league card beside it ranks everyone, as the leaderboard does",
+          "ears": "WHEN the invited friend opens Profile, the app shall open the friend's own account and shall not open, name as theirs, or list the positions of the owner's account.",
+          "expect": [
+            { "url": "/app/accounts" },
+            { "role": "region", "name": "Net worth · Friend" },
+            { "role": "region", "name": "Net worth · Eric", "absent": true },
+            { "role": "button", "name": "1 buy for EEM", "absent": true },
+            { "role": "link", "name": "EEM", "absent": true },
+            { "text": "Guest list", "absent": true },
+            { "text": "Mission Control", "absent": true }
+          ],
+          "judge": "can this reader tell this is their own money, in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "only": "desktop",
+          "goto": "/app/accounts",
+          "sees": "the positions blotter: XLE, the friend's one holding, on its row",
+          "ears": "WHEN the invited friend reads their positions, the app shall show the positions of the friend's own accounts.",
+          "expect": [{ "role": "button", "name": "1 buy for XLE" }],
+          "judge": "can this reader find what they hold?"
+        },
+        {
+          "id": "s2p",
+          "only": "phone",
+          "goto": "/app/accounts",
+          "sees": "the positions as cards: XLE, one tap from Trade",
+          "ears": "WHEN the friend's positions render on a phone, the app shall show each of the friend's own positions as one tappable card.",
+          "expect": [{ "role": "link", "name": "XLE" }],
+          "judge": "can this reader find what they hold?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/trade",
+          "sees": "Trade on the friend's account: the trading ladder's rungs point at the friend's desk, the ticket's account picker offers Friend and The Day Trader",
+          "ears": "WHEN the invited friend opens Trade, the app shall put the friend's own account on the ticket and offer only the friend's accounts to trade from.",
+          "expect": [
+            { "role": "link", "name": "101 Buy stock", "href": "/app/trade?desk=human-friend" },
+            { "role": "combobox", "name": "Account" },
+            { "text": "Guest list", "absent": true },
+            { "text": "Mission Control", "absent": true }
+          ],
+          "judge": "can this reader tell which account an order would come from?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/trade?desk=human-eric",
+          "sees": "a link that names the owner's account: Trade says it is showing the friend's own account instead, and the ticket stays on it",
+          "ears": "IF the invited friend opens Trade on another member's account, THEN the app shall keep the ticket on the friend's own account.",
+          "expect": [
+            { "role": "link", "name": "101 Buy stock", "href": "/app/trade?desk=human-friend" }
+          ],
+          "judge": "does this reader know whose account an order would come from?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/settings?section=account",
+          "sees": "Settings → Account: the friend's own account card; no fleet-wide switch, no list of accounts nobody owns",
+          "ears": "WHEN the invited friend opens Settings, the app shall show only the friend's own accounts and shall not show the fleet controls or the owner's account tools.",
+          "expect": [
+            { "role": "heading", "name": "Friend" },
+            { "role": "heading", "name": "Eric", "exact": true, "absent": true },
+            { "role": "heading", "name": "Mission Control", "absent": true },
+            { "role": "heading", "name": "Unclaimed accounts", "absent": true },
+            { "text": "Guest list", "absent": true }
+          ],
+          "judge": "can this reader tell these settings change only their own accounts?"
+        },
+        {
+          "id": "s6",
+          "goto": "/app/settings?section=guests",
+          "sees": "the guest-list address falls back to Preferences; the section list has no Guest list entry",
+          "ears": "IF the invited friend opens the guest list's address, THEN the app shall not show the guest list.",
+          "expect": [
+            { "role": "heading", "name": "Settings", "exact": true },
+            { "role": "heading", "name": "Guest list", "absent": true },
+            { "role": "button", "name": "Guest list", "absent": true }
+          ],
+          "judge": "does this reader land somewhere that makes sense?"
+        }
+      ]
+    },
+    {
+      "id": "j2",
+      "name": "the shared league",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/leaderboard",
+          "sees": "the league: every account ranked, the owner and the friend among them, each a link into its own page",
+          "ears": "WHEN the invited friend opens the leaderboard, the app shall rank every member's accounts, the friend's and the owner's alike.",
+          "expect": [
+            { "role": "link", "name": "Eric", "href": "/app/u/human-eric" },
+            { "role": "link", "name": "Friend", "href": "/app/u/human-friend" },
+            { "role": "link", "name": "Sauron", "href": "/app/u/sauron" }
+          ],
+          "judge": "can this reader find where they stand?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/activity",
+          "sees": "the league's fills, newest first: the friend's XLE buy beside the owner's EEM buy and the bots' orders",
+          "ears": "WHEN the invited friend opens Activity, the app shall show the whole league's fills, other members' included.",
+          "expect": [
+            { "role": "link", "name": "Eric", "exact": true, "href": "/app/u/human-eric" },
+            { "role": "link", "name": "Friend", "exact": true, "href": "/app/u/human-friend" },
+            { "text": "EEM", "exact": true }
+          ],
+          "judge": "can this reader tell who did what today?"
+        }
+      ]
+    },
+    {
+      "id": "j3",
+      "name": "another member's bot, read only",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/u/sauron",
+          "sees": "Sauron's page: tiles, the blotter with Guidance on each row, 'You can trade only your own accounts.' beside it; no Close, no New trade",
+          "ears": "WHEN the invited friend opens another member's bot, the app shall show its book read-only, with no control that would write to it.",
+          "expect": [
+            { "role": "heading", "name": "Sauron", "exact": true },
+            { "text": "You can trade only your own accounts." },
+            { "role": "button", "name": "Close", "absent": true },
+            { "role": "link", "name": "New trade", "absent": true }
+          ],
+          "judge": "can this reader tell they are looking, not trading?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/u/sauron/decisions",
+          "sees": "Heartbeat; offline: 'No decision trail is wired in this deployment.' — so no playbook table renders for anyone here, and these absences read no data, not a withheld column",
+          "ears": "WHEN the invited friend reads another member's bot's heartbeat, the app shall not name the playbooks it runs.",
+          "expect": [
+            { "role": "heading", "name": "Heartbeat", "exact": true },
+            { "role": "columnheader", "name": "Playbook", "absent": true },
+            { "text": "HC-SAURON", "absent": true }
+          ],
+          "judge": "can this reader tell the bot is alive without learning its playbooks?"
+        }
+      ]
+    }
+  ]
+}

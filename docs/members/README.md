@@ -10,7 +10,8 @@ the Day Trader), and "member" is the established plain word for a person who sig
 (`docs/BRAND.md`, `docs/READERS.md`). So the people are **members**, this directory is
 `docs/members/`, and nothing here is ever called a persona. No coined names either (CLAUDE.md →
 "name what the thing does"): each file is titled by who the member is — the first-timer, the
-returning trader, the bot-watcher, the phone-only member, and Eric, the owner.
+returning trader, the bot-watcher, the phone-only member, the invited friend (a member, never the
+owner — the only one who walks the app as someone other than Eric), and Eric, the owner.
 
 ## The anatomy — seven parts, in this order, in every file
 
