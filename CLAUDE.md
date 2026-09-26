@@ -380,8 +380,12 @@ everything else — then at most 3 short bullets; ALL remaining text below the f
 above the fold is a defect, not a style choice. **A plan (plan mode, a `plan` issue) opens the
 same way**: a linted mermaid picture of the sequence first, the prose short beneath it (Eric,
 2026-09-26: "Isn't claude Plans an excellent place to render mermaid charts… tell a higher
-altitude story"). The PR template carries the format; grammar guide
-[`docs/PICTURES.md`](docs/PICTURES.md); screenshots commit small (≤~100KB) under `docs/shots/pr-<n>/`.
+altitude story"). **A plan's top half is his** (Eric, 2026-09-26: "the latest plans seem to have a
+TON of implementation details that drowns out a lot of the updates"): the picture, what changed
+since the last version, the slices in plain words; paths, function names, px values and commands go
+in a builder appendix at the bottom of a plan file, or below the fold / below the state block's Log
+in a plan issue ([`docs/ISSUES.md`](docs/ISSUES.md) → *The state block*). The PR template carries
+the format; grammar guide [`docs/PICTURES.md`](docs/PICTURES.md); screenshots commit small (≤~100KB) under `docs/shots/pr-<n>/`.
 
 **Research leads with the call** (Eric, 2026-08-23). This app exists to make money on the market; a
 research doc that describes a situation without saying **what to do about it** has done half the job.

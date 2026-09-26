@@ -1,0 +1,300 @@
+// Phone checks — four things a 390px screen gets wrong that a desktop frame never shows, run by
+// the persona crawl ONLY behind `--phone-audit` at the phone viewport (so run 0's ledger and maps
+// stay byte-comparable, #3807) and by `npm run phone -- <path>` for one page in a few seconds.
+// Mobile-first is the house discipline on every information surface (CLAUDE.md), and the crawl
+// already walks every member at 390×844 — these are the phone-specific questions it never asked.
+//
+//  - page-sideways-scroll: the document is wider than the window (the thumb finds a sideways drag).
+//  - overflow: an element whose content spills past its own box with `overflow-x: visible` — the
+//    predicate is COPIED from scripts/layout-resize-scan.mjs (`controlsFindings`), not imported,
+//    because that file is another lane's; only the outermost offender per subtree is reported.
+//  - tap-target: a control under 24×24 CSS px (WCAG 2.2 SC 2.5.8, AA) with the SC's exceptions —
+//    inline (a link in a sentence), spacing (a 24px circle on its centre touches no other target
+//    and no other undersized target's circle), user-agent default (an unstyled checkbox), and
+//    hidden / disabled / zero-size skipped. `tap-target-aaa` (low, advisory) is SC 2.5.5's 44×44
+//    for every control that passes AA.
+//  - input-zoom: a text field under 16px — iPhone Safari zooms the whole page when it takes
+//    focus, and the house `--text-base` is 13px (docs/BRAND.md → type scale).
+//
+// The browser side only MEASURES (`snapshot`); every judgement is a pure function over plain data
+// below, which is what tests/scripts/crawl-phone.spec.ts exercises. Findings follow the probe
+// contract (probes.mjs): {kind, what, snippet, severity, fix} — `snippet` is visible text so
+// locate.mjs can name a file:line. The crawl writes them to their own ledger (phone-ledger.mjs).
+
+export const TOLERANCE = 4;
+export const AA_TARGET = 24;
+export const AAA_TARGET = 44;
+export const ZOOM_FONT = 16;
+
+const px = (n) => (Number.isInteger(n) ? `${n}` : n.toFixed(1));
+const clip = (s, n = 40) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** Copied from layout-resize-scan.mjs: only `overflow-x: visible` can leak; auto/hidden contain. */
+export function leaks({ scrollWidth, clientWidth, overflowX }, tolerance = TOLERANCE) {
+  return scrollWidth - clientWidth > tolerance && overflowX === "visible";
+}
+
+/** The leaking boxes with no leaking ancestor — one row per subtree, not one per descendant. */
+export function outermostLeaks(boxes, tolerance = TOLERANCE) {
+  const leaking = new Set(boxes.filter((b) => leaks(b, tolerance)).map((b) => b.i));
+  return boxes.filter((b) => leaking.has(b.i) && !b.ancestors.some((a) => leaking.has(a)));
+}
+
+/** SC 2.5.8 inline exception: an inline link whose p/li/td host carries other words around it. */
+export function isInlineTarget({ display, hostText, ownText }) {
+  if (display !== "inline" || !hostText) return false;
+  const rest = hostText.replace(ownText ?? "", " ");
+  return (rest.match(/\p{L}{2,}/gu) ?? []).length >= 2;
+}
+
+const UA_SIZED = new Set(["checkbox", "radio", "range", "color", "file"]);
+/** SC 2.5.8 user-agent exception: a native control the author has not restyled. */
+export function isUaDefault({ tag, type, appearance }) {
+  return tag === "input" && UA_SIZED.has(type) && appearance !== "none";
+}
+
+/** Does a circle of `radius` centred on `c` overlap the rect (touching is not overlapping)? */
+export function circleHitsRect(c, radius, r) {
+  const dx = Math.max(r.x - c.x, 0, c.x - (r.x + r.width));
+  const dy = Math.max(r.y - c.y, 0, c.y - (r.y + r.height));
+  return dx * dx + dy * dy < radius * radius;
+}
+
+const centre = (r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+const undersized = (r, min) => r.width < min || r.height < min;
+const related = (a, b) => a.ancestors.includes(b.i) || b.ancestors.includes(a.i);
+
+/** SC 2.5.8 spacing exception: false when the 24px circle hits another target or its circle. */
+export function spacedEnough(t, all) {
+  const c = centre(t.rect);
+  const r = AA_TARGET / 2;
+  for (const u of all) {
+    if (u.i === t.i || related(t, u)) continue;
+    if (circleHitsRect(c, r, u.rect)) return false;
+    if (undersized(u.rect, AA_TARGET)) {
+      const cu = centre(u.rect);
+      if (Math.hypot(c.x - cu.x, c.y - cu.y) < AA_TARGET) return false;
+    }
+  }
+  return true;
+}
+
+/** Every tap-target finding for one page's measured targets. */
+export function tapFindings(targets) {
+  const live = targets.filter((t) => t.rect.width > 1 && t.rect.height > 1);
+  const out = [];
+  for (const t of live) {
+    if (isUaDefault(t) || isInlineTarget(t)) continue;
+    const size = `${px(t.rect.width)}×${px(t.rect.height)}px`;
+    const who = `${t.desc}${t.label ? ` "${clip(t.label)}"` : ""}`;
+    if (undersized(t.rect, AA_TARGET) && !spacedEnough(t, live)) {
+      out.push({
+        kind: "tap-target",
+        what: `${who} is ${size} — under 24×24 with another control inside its 24px circle (WCAG 2.2 SC 2.5.8, AA)`,
+        snippet: t.label,
+        severity: "medium",
+        fix: "S",
+      });
+    } else if (undersized(t.rect, AAA_TARGET)) {
+      out.push({
+        kind: "tap-target-aaa",
+        what: `${who} is ${size} — under 44×44 (SC 2.5.5, AAA — advisory)`,
+        snippet: t.label,
+        severity: "low",
+        fix: "S",
+      });
+    }
+  }
+  return out;
+}
+
+const ZOOM_TYPES = new Set(["text", "search", "number", "email", "password", "tel", "url"]);
+/** A text field under 16px: iPhone Safari zooms the page when it is focused. */
+export function zoomFindings(inputs) {
+  return inputs
+    .filter(
+      (f) =>
+        (f.tag === "textarea" || f.tag === "select" || ZOOM_TYPES.has(f.type)) &&
+        f.fontSize < ZOOM_FONT,
+    )
+    .map((f) => ({
+      kind: "input-zoom",
+      what: `${f.desc}${f.label ? ` "${clip(f.label)}"` : ""} renders at ${px(f.fontSize)}px — under 16px, iPhone Safari zooms the page when it takes focus`,
+      snippet: f.label,
+      severity: "medium",
+      fix: "S",
+    }));
+}
+
+/** Identical findings on one page fold into one, with a count in the text. */
+export function dedupe(findings) {
+  const byKey = new Map();
+  for (const f of findings) {
+    const key = `${f.kind}|${f.what}`;
+    const seen = byKey.get(key);
+    if (seen) seen.n += 1;
+    else byKey.set(key, { ...f, n: 1 });
+  }
+  return [...byKey.values()].map(({ n, ...f }) =>
+    n > 1 ? { ...f, what: `${f.what} — ×${n}` } : f,
+  );
+}
+
+/** Every phone finding for one measured page (the pure half of `probePhone`). */
+export function phoneFindings(snap) {
+  const out = [];
+  if (snap.scrollWidth > snap.innerWidth + TOLERANCE) {
+    out.push({
+      kind: "page-sideways-scroll",
+      what: `the page is ${snap.scrollWidth}px wide in a ${snap.innerWidth}px window — it scrolls sideways`,
+      snippet: "",
+      severity: "high",
+      fix: "M",
+    });
+  }
+  for (const b of outermostLeaks(snap.boxes)) {
+    // The outermost box names the subtree; the element reaching furthest right inside it names
+    // the cause (a wide table deep in a page-level wrapper), and its text is what locate greps.
+    const by = b.culprit ? ` — widest inside: ${b.culprit.name}` : "";
+    const text = b.culprit?.text || b.text;
+    out.push({
+      kind: "overflow",
+      what: `${b.name} spills ${b.scrollWidth - b.clientWidth}px past its own box${by}${text ? ` "${clip(text, 60)}"` : ""}`,
+      snippet: text,
+      severity: "medium",
+      fix: "S",
+    });
+  }
+  out.push(...tapFindings(snap.targets), ...zoomFindings(snap.inputs));
+  return dedupe(out);
+}
+
+/** Runs in the browser: measure, never judge. Plain data only — it crosses the evaluate boundary. */
+function snapshot(tolerance) {
+  const text = (el) => (el.innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim();
+  const firstLine = (el) =>
+    (el.innerText ?? "")
+      .split("\n")
+      .map((s) => s.trim())
+      .find((s) => s.length > 0) ?? "";
+  const nameOf = (el) =>
+    el.className && typeof el.className === "string"
+      ? `.${el.className.split(" ")[0]}`
+      : el.tagName.toLowerCase();
+  const describe = (el) => {
+    const tag = el.tagName.toLowerCase();
+    const type = tag === "input" ? ` type=${el.type}` : "";
+    const role = el.getAttribute("role") ? ` role=${el.getAttribute("role")}` : "";
+    const name = nameOf(el);
+    return `<${tag}${type}${role}>${name === tag ? "" : ` ${name}`}`;
+  };
+  // A <select>'s innerText is every option; its name is its label, else what it shows now.
+  const labelOf = (el) =>
+    (el.tagName === "SELECT"
+      ? el.getAttribute("aria-label") ||
+        (el.labels?.[0] ? text(el.labels[0]) : "") ||
+        (el.selectedOptions[0]?.text ?? "")
+      : "") ||
+    text(el) ||
+    el.getAttribute("aria-label") ||
+    el.getAttribute("title") ||
+    (el.labels?.[0] ? text(el.labels[0]) : "") ||
+    el.getAttribute("placeholder") ||
+    (el.tagName === "INPUT" && el.type !== "text" ? el.value : "") ||
+    "";
+  const shown = (el) => {
+    if (el.getClientRects().length === 0) return false;
+    const s = getComputedStyle(el);
+    if (s.visibility === "hidden" || s.opacity === "0") return false;
+    // ≤1px is a visually-hidden label; a box wholly above or left of the page (a skip link
+    // parked off-canvas until focused) is out of a thumb's reach — no scroll gets there.
+    const r = el.getBoundingClientRect();
+    const onCanvas = r.right + window.scrollX > 0 && r.bottom + window.scrollY > 0;
+    return r.width > 1 && r.height > 1 && onCanvas && !el.closest("[inert], [aria-hidden='true']");
+  };
+  const off = (el) => el.matches(":disabled") || el.getAttribute("aria-disabled") === "true";
+  const rectOf = (el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  };
+  const indexed = (els) => {
+    const index = new Map(els.map((el, i) => [el, i]));
+    const ancestors = (el) => {
+      const up = [];
+      for (let p = el.parentElement; p; p = p.parentElement)
+        if (index.has(p)) up.push(index.get(p));
+      return up;
+    };
+    return { ancestors };
+  };
+
+  const doc = document.documentElement;
+  const wide = [...document.querySelectorAll("body *")].filter(
+    (el) => el.scrollWidth - el.clientWidth > tolerance,
+  );
+  const boxTree = indexed(wide);
+  // The descendant reaching furthest right (the deepest on a tie) — only for boxes that can leak.
+  const culpritOf = (el) => {
+    let best = null;
+    let right = el.getBoundingClientRect().right;
+    for (const d of el.querySelectorAll("*")) {
+      const r = d.getBoundingClientRect();
+      if (r.width > 0 && r.right >= right) [best, right] = [d, r.right];
+    }
+    return best && { name: nameOf(best), text: firstLine(best).slice(0, 80) };
+  };
+  const boxes = wide.map((el, i) => {
+    const overflowX = getComputedStyle(el).overflowX;
+    return {
+      i,
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+      overflowX,
+      name: nameOf(el),
+      text: firstLine(el).slice(0, 80),
+      culprit: overflowX === "visible" ? culpritOf(el) : null,
+      ancestors: boxTree.ancestors(el),
+    };
+  });
+
+  const targetEls = [
+    ...document.querySelectorAll(
+      "a, button, input, select, textarea, [role=button], [role=tab], [role=link], summary",
+    ),
+  ].filter((el) => shown(el) && !off(el) && !(el.tagName === "INPUT" && el.type === "hidden"));
+  const targetTree = indexed(targetEls);
+  const targets = targetEls.map((el, i) => {
+    const s = getComputedStyle(el);
+    const host = el.parentElement?.closest("p, li, td");
+    return {
+      i,
+      tag: el.tagName.toLowerCase(),
+      type: el.tagName === "INPUT" ? el.type : "",
+      appearance: s.appearance,
+      display: s.display,
+      hostText: host ? text(host) : "",
+      ownText: text(el),
+      desc: describe(el),
+      label: labelOf(el).slice(0, 80),
+      rect: rectOf(el),
+      ancestors: targetTree.ancestors(el),
+    };
+  });
+
+  const inputs = [...document.querySelectorAll("input, textarea, select")]
+    .filter((el) => shown(el) && !off(el))
+    .map((el) => ({
+      tag: el.tagName.toLowerCase(),
+      type: el.tagName === "INPUT" ? el.type : "",
+      fontSize: Number.parseFloat(getComputedStyle(el).fontSize),
+      desc: describe(el),
+      label: labelOf(el).slice(0, 80),
+    }));
+
+  return { innerWidth: window.innerWidth, scrollWidth: doc.scrollWidth, boxes, targets, inputs };
+}
+
+/** The four phone checks on the page as it stands. Never throws past the page's own errors. */
+export async function probePhone(page) {
+  return phoneFindings(await page.evaluate(snapshot, TOLERANCE));
+}
