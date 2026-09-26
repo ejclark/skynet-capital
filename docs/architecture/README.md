@@ -125,7 +125,7 @@ C4Context
   title Skynet Capital operating model - system context, 2026-09-25
   UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 
-  Person(eric, "Eric", "Owner and the binding constraint. Labels feedback issues (the label starts a build), comments ready on plan issues, merges held platter PRs, approves autonomy-ops runs as required reviewer.")
+  Person(eric, "Eric", "Owner and the binding constraint. Labels feedback issues (the label starts a build), comments ready on plan issues, merges held PRs, approves autonomy-ops runs as required reviewer.")
   Person(member, "Member", "Friends-and-family league player. Files feedback in the app and answers needs-info through the app follow-up form.")
   Person(claude, "Claude interactive session", "Local or cloud Claude Code session loaded with .claude/. Routes Eric's raw thoughts, runs skills and Workflow scripts, ships PRs, dispatches athletes.")
 
@@ -138,7 +138,7 @@ C4Context
   System_Ext(dependabot, "Dependabot", "Opens weekly per-package npm and github-actions bump PRs.")
   System_Ext(anthropic, "Anthropic API", "Metered api.anthropic.com. Called by the deployed product for the feedback coach and companion, and by CI only for companion-eval replays; its model dials are envelope-protected.")
 
-  Rel(eric, ops, "Directs by intent; labels feedback issues, comments ready on plan issues, merges held platters, approves ops runs", "chat and GitHub UI")
+  Rel(eric, ops, "Directs by intent; labels feedback issues, comments ready on plan issues, merges held PRs, approves ops runs", "chat and GitHub UI")
   Rel(member, product, "Uses the observatory; files feedback and needs-info answers", "HTTPS, /api/feedback, /api/feedback/followup")
   Rel(claude, ops, "Runs skills and Workflow scripts, ships PRs, runs governor and secretary", "Claude Code harness")
   Rel(product, github, "Files feedback-labelled issues; the label starts a build", "REST, SKYNET_FEEDBACK_GITHUB_TOKEN")
@@ -163,7 +163,7 @@ _Caption — system context of the operating model, from the code paths named on
 | **Envelope gate** | envelope.json manifest, scripts/envelope-scan.mjs (Node, glob-to-regex path matc | The single mechanical answer to 'is this the irreversible class?': red on feedback/ research/ design/ lane branches via tests/arch/envelope. | `envelope.json`, `scripts/envelope-scan.mjs`, `tests/arch/envelope.spec.ts` | [operating-model-envelope.md](operating-model-envelope.md) |
 | **Pipeline (CI + CD)** | GitHub Actions, actions/setup-node@v7 (Node 24 via .nvmrc), actions/cache@v6, rs | verify (PR title commitlint, typecheck, lint, test in parallel; docs-only PRs skip heavy steps), integration tests (Playwright on PR and on  | `.github/workflows/pipeline.yml`, `scripts/smoke.sh`, `scripts/smoke-bots.sh` | [operating-model-pipeline.md](operating-model-pipeline.md) |
 | **Moneypenny event lane** | GitHub Actions trigger shim, Node ESM router (scripts/moneypenny/index.mjs), gh  | One router for every issue-driven automation: sweeps receipt issues for never-assessed events, claims feedback labels and plan ready-comment | `.github/workflows/moneypenny-events.yml`, `scripts/moneypenny/`, `scripts/event-scan.mjs` | [operating-model-mp-events.md](operating-model-mp-events.md) |
-| **Moneypenny repair lane** | GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneyp | Watches the other lanes: a failed run on main files one ci-failure capsule per signature and dispatches a repair session; workflow_dispatch  | `.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny/repair.mjs`, `scripts/moneypenny/repair-logs.mjs` | [operating-model-mp-repair.md](operating-model-mp-repair.md) |
+| **Moneypenny repair lane** | GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneyp | Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session; workflow_dispatch en | `.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny/repair.mjs`, `scripts/moneypenny/repair-logs.mjs` | [operating-model-mp-repair.md](operating-model-mp-repair.md) |
 | **Human-directed lane** | GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code- | Any comment from a recognised OWNER/MEMBER/COLLABORATOR on an existing thread starts or steers a session under .github/prompts/interactive.m | `.github/workflows/claude.yml`, `.github/prompts/interactive.md` | [operating-model-claude-lane.md](operating-model-claude-lane.md) |
 | **Ops buttons** | GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environ | Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-playbooks, set-bet | `.github/workflows/autonomy-ops.yml`, `.github/workflows/fly-logs.yml`, `.github/workflows/companion-eval.yml` | [operating-model-ops-buttons.md](operating-model-ops-buttons.md) |
 | **Secretary digest loop** | claude.ai Routine (daily 12:00, trig_01KaMC2uR3cFW5XTUL6rzPuS), scripts/digest-s | Protects Eric's attention: when digest-scan says a digest is due (5 commits or 7 days), assemble the three tiers (needs-you, headlines, nois | `.claude/skills/secretary/SKILL.md`, `scripts/digest-scan.mjs`, `scripts/config-audit.mjs` | [operating-model-secretary.md](operating-model-secretary.md) |
@@ -177,7 +177,7 @@ C4Container
   title Skynet Capital operating model - containers, 2026-09-25
   UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="2")
 
-  Person(eric, "Eric", "Owner: feedback labels, ready comments, held-platter merges, ops approvals")
+  Person(eric, "Eric", "Owner: feedback labels, ready comments, held-PR merges, ops approvals")
   Person(member, "Member", "Files feedback in the app, answers needs-info")
 
   System_Ext(github, "GitHub", "Issues, PRs, labels, claim refs, Actions, branch protection, App identity")
@@ -187,12 +187,12 @@ C4Container
 
   System_Boundary(ops, "Skynet Capital operating model") {
     Container(session, "Interactive session toolkit", "Claude Code harness, .claude/", "Orient output style (Focus is the other), SessionStart hooks (commit signing everywhere; mise Node 24 only when CLAUDE_CODE_REMOTE=true), 16 skills, 13 agents (7 sonnet athletes, 3 opus, 3 fable xhigh), grind.js and symbol-sweep.js, duel-log.mjs telemetry hooks")
-    Container(ship, "Ship loop", "Bash, curl REST core bucket, python3; one GraphQL call each to arm auto-merge and promote a held draft", "scripts/ship.sh: local verify plus incident, plan-closure and test-quality preflights, checkbody fridge-rule lint, push, open PR over REST, checkarm via envelope-scan, one auto-merge arm; platter boards the irreversible class onto one held PR")
+    Container(ship, "Ship loop", "Bash, curl REST core bucket, python3; one GraphQL call each to arm auto-merge and promote a held draft", "scripts/ship.sh: local verify plus incident, plan-closure and test-quality preflights, checkbody fridge-rule lint, push, open PR over REST, checkarm via envelope-scan, one auto-merge arm; the held PR (ship.sh platter) carries the irreversible class onto one held PR")
     Container(gates, "Fitness gates and coaches", "Node ESM scans, rstest, Biome, Husky, commitlint, knip, jscpd, dependency-cruiser", "Code-hygiene coaches (arch, dupe, clone, dead, dep-graph, spec-gap, doc-rot, comment-bloat, incident, workflow-lint) each with a budget JSON or arch-grandfather.json; communication-format gates (issue-lint, research-lint, digest, journey, checkbody) block; governor dispatches only the four coaches that have athletes")
     Container(envelope, "Envelope gate", "envelope.json, scripts/envelope-scan.mjs", "Path globs plus a new-runtime-dependency check. --lane mode is red on feedback/, research/ and design/ branches via tests/arch/envelope.spec.ts; --check runs on every PR before arming, filtered on blocking beside the hold-merge check. diffAware was removed 2026-09-17")
     Container(pipeline, "Pipeline", "GitHub Actions, Node 24 from .nvmrc, rstest, Biome, Playwright, commitlint, semantic-release 25, flyctl 0.4.99", "pipeline.yml jobs: verify (PR only; parallel processes on one runner; docs-only skips heavy steps), integration tests (code PRs and push main, against a local offline server), arm-auto-merge, release and deploy, deploy bots")
     Container(mp_events, "Moneypenny event lane", "GitHub Actions trigger shim, scripts/moneypenny/index.mjs, claude-code-action", "Routes push, feedback label, plan ready comment and dependabot PR events into feedback, plan, event-research and dep-warden builds; model tier haiku light, sonnet default, opus escalation, plans on opus; audits stalls and conflicts on every push")
-    Container(mp_repair, "Moneypenny repair lane", "GitHub Actions workflow_run and workflow_dispatch, scripts/moneypenny/repair.mjs, claude-code-action opus", "Watches the five enumerated lanes; files one ci-failure capsule per signature; repairs CI failures, PR conflicts and stalled research; four loop guards")
+    Container(mp_repair, "Moneypenny repair lane", "GitHub Actions workflow_run and workflow_dispatch, scripts/moneypenny/repair.mjs, claude-code-action opus", "Watches the five enumerated lanes; files one ci-failure issue per signature; repairs CI failures, PR conflicts and stalled research; four loop guards")
     Container(claude_lane, "Human-directed lane", "GitHub Actions, claude.yml, claude-code-action opus, max 80 turns", "A member comment on an issue or PR, or a new issue with @claude in its body, starts or steers a session under .github/prompts/interactive.md; inert until CLAUDE_CODE_OAUTH_TOKEN is set")
     Container(ops_buttons, "Ops buttons", "GitHub Actions workflow_dispatch, flyctl", "autonomy-ops.yml and companion-eval.yml gated by the autonomy-ops Environment required reviewers; fly-logs.yml is self-serve and read-only; flyctl pinned 0.4.99 except companion-eval, which installs latest")
     Container(secretary, "Secretary digest loop", "claude.ai Routine daily 12:00, scripts/digest-scan.mjs, secretary skill", "When digest-scan says due (5 commits or 7 days), writes the three-tier digest into docs/digests; rides config-audit, comment-bloat, incident and doctrine scans; comms-scan is the landing-meter table")
@@ -206,7 +206,7 @@ C4Container
   }
 
   Rel(eric, session, "Dumps raw ideas and directives in chat; the session routes act, park, fan, profile, question", "Claude Code")
-  Rel(eric, github, "Applies the feedback label, comments ready on plan issues, merges held platters", "GitHub UI")
+  Rel(eric, github, "Applies the feedback label, comments ready on plan issues, merges held PRs", "GitHub UI")
   Rel(eric, ops_buttons, "Approves as required reviewer and can dispatch autonomy-ops and companion-eval", "autonomy-ops Environment")
   Rel(member, dashboard, "Uses the observatory, files feedback and follow-ups", "HTTPS, OAuth session")
   Rel(dashboard, github, "Files feedback-labelled issues: POST issue, then POST labels", "REST, SKYNET_FEEDBACK_GITHUB_TOKEN")
@@ -229,7 +229,7 @@ C4Container
   Rel(mp_events, mp_repair, "Conflicted PRs (pr_number, up to 3 attempts then needs-eric) and stalled event-research issues (batched issue_number)", "gh workflow run moneypenny-repair.yml")
   Rel(github, mp_repair, "workflow_run completed for the five watched workflows; conclusion and default-branch filters run in repair.mjs", "Actions")
   Rel(mp_repair, ccp, "Repair sessions: CI-failure repair, PR conflict repair, stalled-issue diagnosis", "claude-code-action opus")
-  Rel(mp_repair, github, "Triage files or dedupes the ci-failure capsule with GITHUB_TOKEN; the repair session opens the PR with the App token", "gh")
+  Rel(mp_repair, github, "Triage files or dedupes the ci-failure issue with GITHUB_TOKEN; the repair session opens the PR with the App token", "gh")
   Rel(github, claude_lane, "OWNER, MEMBER or COLLABORATOR comment, new or edited, on an issue or PR thread, or a new issue with @claude", "Actions, cancel-in-progress")
   Rel(claude_lane, ccp, "Interactive session", "claude-code-action")
   Rel(dependabot, github, "Opens weekly bump PRs", "pull_request opened")

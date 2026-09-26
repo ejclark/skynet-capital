@@ -28,7 +28,7 @@ _Started <YYYY-MM-DD>. Status: **open | closed** — <one line: what would close
      Snippet A — the open-forks map (forks as diamonds, what-settles-each on the edges):
      ```mermaid
      flowchart LR
-         Q{<the fork>} -- "<what would settle it>" --> A[<option A>]
+         Q{"<the fork>?"} -- "<what would settle it>" --> A[<option A>]
          Q -- "<what would settle it>" --> B[<option B>]
      ```
 

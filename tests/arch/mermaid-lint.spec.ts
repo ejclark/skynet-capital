@@ -136,6 +136,38 @@ describe("mermaid lint — every block parses under GitHub's Mermaid", () => {
     expect(notes.join(" ")).toContain("legibility budget");
   });
 
+  it("notes the round-3 taste rules — a handle, a fork with no question, a house noun — never fails", () => {
+    const { code, problems, notes } = lint(
+      fence(
+        'flowchart TD\n  a["revert b0a4c8a"] --> b{"parse it the way GitHub does"}\n  b --> c["boards the platter"]',
+      ),
+    );
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+    expect(notes.join(" ")).toContain("reads as a handle");
+    expect(notes.join(" ")).toContain("asks no question");
+    expect(notes.join(" ")).toContain("is a house noun");
+  });
+
+  it("fails a classDef hex outside the checked-in snippets — a look is a mode, switched whole", () => {
+    const { code, problems } = lint(
+      fence("flowchart TD\n  a --> b\n  classDef hot fill:#FF0000,color:#FFFFFF"),
+    );
+    expect(code).toBe(1);
+    expect(problems.join(" ")).toContain("#FF0000");
+    expect(problems.join(" ")).toContain("docs/PICTURES.md");
+  });
+
+  it("accepts a snippet hex copied whole — the house removed class from docs/PICTURES.md", () => {
+    const { code, problems } = lint(
+      fence(
+        "flowchart TD\n  a -.-> b\n  classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4\n  class b removed",
+      ),
+    );
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+  });
+
   it("fails elk on a state diagram — GitHub throws at render where a flowchart only re-flows", () => {
     const { code, problems } = lint(
       fence("---\nconfig:\n  layout: elk\n---\nstateDiagram-v2\n  [*] --> a"),

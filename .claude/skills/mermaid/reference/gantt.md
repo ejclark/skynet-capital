@@ -168,7 +168,7 @@ gantt
     tickInterval 2day
     todayMarker off
     section Proposed
-        DONE capsule filed      :done, cap, 2026-09-14, 1d
+        DONE issue filed      :done, cap, 2026-09-14, 1d
         DONE Eric triage        :done, tri, after cap, 2d
         ready flip              :milestone, rdy, after tri, 0d
     section Executing
