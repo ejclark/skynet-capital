@@ -8,6 +8,9 @@
 //   node scripts/forward-test-id-scan.mjs --candidate # the first duplicated id, as JSON
 //   node scripts/forward-test-id-scan.mjs --contract  # placement contract, BLOCKING (exit 1)
 //
+// Exit 2 (every mode) = UNKNOWN, could not do its job: no fragment dir to read, or (budget mode)
+// no usable forward-test-id-budget.json. Advisory stays advisory — advisoryScan swallows any code.
+//
 // EYE 1 — duplicate ids (advisory). The event-research automation lane runs one concurrent
 // session per due event (moneypenny-events.yml); until 2026-09-04 every session computed "the
 // next FT number" off the shared register's live tip, and two that started close together both
@@ -64,7 +67,6 @@ export function extractIds(md) {
 
 /** [{file, eventId, ids}] for every fragment on disk, sorted by file name. */
 export function readFragments(dir = FRAGMENT_DIR) {
-  if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".md"))
     .sort()
@@ -125,7 +127,20 @@ export function placementProblems({ indexMd, fragments }) {
   return problems;
 }
 
+/** The committed budget, or null when it is absent or carries no number — never "no ceiling". */
+function readBudget() {
+  if (!existsSync(BUDGET_FILE)) return null;
+  const budget = JSON.parse(readFileSync(BUDGET_FILE, "utf8"));
+  return Number.isFinite(budget.duplicateIds) ? budget : null;
+}
+
 function main() {
+  // The fragments are the register this eye exists to read: with no dir, "0 rows, 0 duplicates"
+  // and "0 placement violations" would both be passes over nothing.
+  if (!existsSync(FRAGMENT_DIR)) {
+    console.error(`✗ forward-test-id-scan: UNKNOWN — no fragment dir at ${FRAGMENT_DIR}.`);
+    return 2;
+  }
   const fragments = readFragments();
   const ids = fragments.flatMap((f) => f.ids);
   const dupes = duplicates(ids);
@@ -136,7 +151,10 @@ function main() {
   }
 
   if (flag("--contract")) {
-    const indexMd = existsSync(INDEX_FILE) ? readFileSync(INDEX_FILE, "utf8") : "";
+    // Optional: the rule is "the index carries no rows", which an absent index trivially keeps.
+    const hasIndex = existsSync(INDEX_FILE);
+    if (!hasIndex) console.error(`· no index at ${INDEX_FILE} — no index rows to check`);
+    const indexMd = hasIndex ? readFileSync(INDEX_FILE, "utf8") : "";
     const problems = placementProblems({ indexMd, fragments });
     for (const p of problems) console.error(`✗ ${p}`);
     if (problems.length) {
@@ -152,7 +170,15 @@ function main() {
     return 0;
   }
 
-  const budget = JSON.parse(readFileSync(BUDGET_FILE, "utf8"));
+  const budget = readBudget();
+  if (!budget) {
+    // `dupes.length > undefined` is always false: a missing budget used to be no ceiling at all.
+    console.error(
+      `✗ forward-test-id-scan: UNKNOWN — no usable duplicateIds in ${BUDGET_FILE}; ` +
+        `${dupes.length} duplicate id(s) cannot be judged.`,
+    );
+    return 2;
+  }
   console.log(
     `forward-test-id-scan: ${ids.length} forward-test row(s) across ${fragments.length} fragment(s), ` +
       `${dupes.length} duplicate id(s)`,

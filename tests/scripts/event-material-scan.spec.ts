@@ -306,6 +306,20 @@ describe("event-material-scan parseLedgerHeader() — last occurrence wins", () 
       `\n**Last assessed:** 2026-09-18\n<!-- probe-ref: {"vix":3} -->\n`;
     expect(parseLedgerHeader(three)).toEqual({ lastAssessed: "2026-09-18", probeRef: { vix: 3 } });
   });
+
+  it("names a malformed probe-ref block instead of reading it as a ledger that never had one", () => {
+    const corrupt = `${LEDGER_TEXT.trimEnd()}\n\n**Last assessed:** 2026-09-04\n<!-- probe-ref: {"vix":} -->\n`;
+    expect(parseLedgerHeader(corrupt)).toEqual({
+      lastAssessed: "2026-09-04",
+      probeRef: null,
+      probeRefMalformed: true,
+    });
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-04", probeRef: null, probeRefMalformed: true },
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["malformed-reference-baseline"]);
+  });
 });
 
 // The price read itself (issue #1386). Imported directly rather than driven through the CLI — the
@@ -387,5 +401,33 @@ describe("event-material-scan closeFromChart()", () => {
   it("rounds a meta print to cents, as the bar path already did", () => {
     const read = closeFromChart(muChart({ meta: { regularMarketPrice: 1016.5949 } }), "MU");
     expect(read.price).toBe(1016.59);
+  });
+});
+
+describe("event-material-scan --screen-due — an unreadable due list is UNKNOWN, never empty", () => {
+  it("exits 2 naming stdin when the stream cannot be read, instead of printing an empty stillDue", () => {
+    // A directory on fd 0 makes readFileSync(0) throw (EISDIR) — the stand-in for a broken pipe.
+    let status = 0;
+    let stderr = "";
+    let stdout = "";
+    try {
+      stdout = execFileSync(
+        "bash",
+        ["-c", "node scripts/event-material-scan.mjs --screen-due < /"],
+        {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+    } catch (error) {
+      const e = error as { status?: number; stderr?: string; stdout?: string };
+      status = e.status ?? -1;
+      stderr = e.stderr ?? "";
+      stdout = e.stdout ?? "";
+    }
+    expect(status).toBe(2);
+    expect(stderr).toContain("cannot read stdin");
+    expect(stderr).toContain("UNKNOWN");
+    expect(stdout).not.toContain("stillDue");
   });
 });

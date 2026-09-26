@@ -1,5 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // The feedback lane's scoreboard. Until 2026-08-22 the only number describing this lane was a
 // sentence someone hand-counted by reading GitHub, and it was optimistic — it said "exactly one
@@ -123,5 +125,63 @@ describe("the closing-PR rename", () => {
   it("leaves the pure scorers reading the internal shape, so fixtures stay valid", () => {
     // The rename is absorbed at the edge; `outcomeOf` and `firstAnswerAt` are untouched.
     expect(SOURCE).toMatch(/issue\.closedByPullRequests \?\? \[\]/);
+  });
+});
+
+/**
+ * HONEST DEGRADATION (#3769 row 1: a missing input is a named state, never a quiet pass). Both
+ * skips below are optional — the scoreboard stays a conservative lower bound without them — but
+ * each is named on stderr, so an undercount can be told apart from a real "no answer".
+ */
+describe("when an input the scoreboard reads is missing", () => {
+  let dir = "";
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "feedback-scan-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const issue = (extra: Record<string, unknown>) => ({
+    number: 9,
+    title: "a member ask",
+    state: "CLOSED",
+    createdAt: "2026-09-01T00:00:00Z",
+    closedAt: "2026-09-02T00:00:00Z",
+    labels: [],
+    comments: [],
+    ...extra,
+  });
+
+  it("names a skynet-spec block it could not parse instead of reading it as no rounds", () => {
+    const fixture = join(dir, "issues.json");
+    const body = "```skynet-spec\n{ not json\n```";
+    writeFileSync(fixture, JSON.stringify([issue({ body, closedByPullRequests: [] })]));
+    const res = spawnSync("node", ["scripts/feedback-scan.mjs", "--fixture", fixture, "--json"], {
+      encoding: "utf8",
+    });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toContain("· feedback-scan: #9 skynet-spec block is not valid JSON");
+    expect(JSON.parse(res.stdout).rows[0].rounds).toBeNull();
+  });
+
+  it("names a closing PR it could not read, and still refuses to count it as merged", () => {
+    // Stand-in `gh` (the list) and `curl` (the REST read ghRest makes) on PATH; the read 404s.
+    const listed = [issue({ body: "", closedByPullRequestsReferences: [{ number: 99 }] })];
+    writeFileSync(join(dir, "gh"), `#!/bin/sh\ncat <<'JSON'\n${JSON.stringify(listed)}\nJSON\n`);
+    writeFileSync(
+      join(dir, "curl"),
+      "#!/bin/sh\necho 'curl: (22) The requested URL returned error: 404' >&2\nexit 22\n",
+    );
+    chmodSync(join(dir, "gh"), 0o755);
+    chmodSync(join(dir, "curl"), 0o755);
+    const res = spawnSync("node", ["scripts/feedback-scan.mjs", "--json"], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${dir}:${process.env.PATH}` },
+    });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toContain("· feedback-scan: closing PR #99 unreadable");
+    expect(res.stderr).toContain("counted as not merged");
+    expect(JSON.parse(res.stdout).rows[0].outcome).toBe("closed-without-pr");
   });
 });

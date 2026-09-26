@@ -41,6 +41,8 @@ const daysBetween = (fromDate, toDate) =>
 
 /** Committed digests, newest first — filename IS the date (YYYY-MM-DD.md). */
 export function digestFiles() {
+  // Optional: no directory means no digest yet — status() answers `due: true, reason: "no-digest"`,
+  // which is loud, not a pass. main() names the absent directory when run as a CLI.
   if (!existsSync(DIGEST_DIR)) return [];
   return readdirSync(DIGEST_DIR)
     .filter((f) => f.endsWith(".md") && f !== "TEMPLATE.md" && f !== "README.md")
@@ -115,6 +117,12 @@ function validate() {
 function main() {
   const today = arg("today") ?? new Date().toISOString().slice(0, 10);
   if (!DATE_RE.test(today)) throw new Error("digest-scan: --today must be YYYY-MM-DD.");
+  if (!existsSync(DIGEST_DIR)) {
+    // stderr under --due, whose stdout is the JSON the Routine parses.
+    (has("due") ? console.error : console.log)(
+      "· docs/digests/ absent — no digest yet; nothing to validate, next one is due (no-digest).",
+    );
+  }
 
   if (has("validate")) {
     validate();

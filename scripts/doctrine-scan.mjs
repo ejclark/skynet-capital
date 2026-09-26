@@ -16,7 +16,12 @@
 //
 // Loud-failure doctrine (event-scan.mjs): an unreadable dossier is an error, never an empty
 // result — a scheduled caller must not mistake "broken" for "nothing due". An EMPTY dossiers
-// directory (no bot has a dossier yet) is the one legitimate "nothing to check" case.
+// directory (no bot has a dossier yet) is the one legitimate "nothing to check" case; a MISSING
+// one means the scan is pointed at the wrong place.
+//
+// Exit codes: 0 ok (--explain: due) · 1 --explain: not due / --validate: a contract violation ·
+// 2 could not do its job, verdict UNKNOWN — the dossiers directory does not exist, or --explain got
+// no state on stdin (it used to decide on `{}` and answer "due: never-scored").
 //
 // The budget (doctrine-budget.json) started at 0 — the measured count on 2026-09-22, the day
 // docs/BOTS-SAURON.md was created with its first ledger row not yet due — never a fabricated
@@ -38,19 +43,20 @@ const BUDGET_FILE = join(ROOT, "doctrine-budget.json");
 const TODAY = arg("today") ?? new Date().toISOString().slice(0, 10);
 const DOSSIER_RE = /^BOTS-([A-Z0-9-]+)\.md$/;
 
+/** stdin as text, or `null` when it cannot be read — runExplain() turns both null and "" into an
+ *  UNKNOWN (exit 2), because the verdict rests entirely on the state piped in. */
 function readStdin() {
   try {
     return readFileSync(0, "utf8");
   } catch {
-    return "";
+    return null;
   }
 }
 
 /** Every `docs/BOTS-<PERSONA>.md` dossier on disk, as `{ persona, path }` — sorted for determinism.
- *  An empty/missing directory is a legitimate zero-dossier state, not an error (loud-failure only
- *  applies to a dossier that's SUPPOSED to be there and can't be read). */
+ *  An EMPTY directory is a legitimate zero-dossier state; a missing one throws (main() checks
+ *  first and exits 2), since "no directory" would otherwise read as "nothing due". */
 export function findDossiers(dir = DOSSIERS_DIR) {
-  if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .map((f) => f.match(DOSSIER_RE))
     .filter(Boolean)
@@ -59,7 +65,15 @@ export function findDossiers(dir = DOSSIERS_DIR) {
 }
 
 function runExplain() {
-  const input = JSON.parse(readStdin() || "{}");
+  const raw = readStdin();
+  if (!raw?.trim()) {
+    console.error(
+      "✗ doctrine-scan --explain: no state on stdin — verdict UNKNOWN. Pipe the full state as JSON, " +
+        'e.g. {"today":"YYYY-MM-DD","rows":[]}.',
+    );
+    process.exit(2);
+  }
+  const input = JSON.parse(raw);
   const decision = decide(input);
   console.log(JSON.stringify(decision, null, 2));
   process.exit(decision.due ? 0 : 1);
@@ -78,6 +92,13 @@ function main() {
     return 0; // unreachable — runExplain() always exits
   }
 
+  if (!existsSync(DOSSIERS_DIR)) {
+    console.error(
+      `✗ doctrine-scan: dossiers directory ${DOSSIERS_DIR} does not exist — due state UNKNOWN ` +
+        "(an empty directory is the zero-dossier case; a missing one is a wrong path or cwd).",
+    );
+    return 2;
+  }
   const dossiers = findDossiers();
   const assessed = dossiers.map(assess);
   const due = assessed.filter((a) => a.due);

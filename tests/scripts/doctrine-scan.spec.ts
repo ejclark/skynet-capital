@@ -205,3 +205,34 @@ describe("doctrine-scan.mjs CLI, against a fixture dossiers directory", () => {
     }
   });
 });
+
+// Honest degradation (docs/grind/honest-degradation.instructions.md): a missing input is a named
+// UNKNOWN with exit 2 — never "nothing due" (a missing dir) or "due: never-scored" (no stdin).
+describe("doctrine-scan.mjs — missing inputs are UNKNOWN (exit 2), never a verdict", () => {
+  const fail = (args: string[], input?: string): { code: number; stderr: string } => {
+    try {
+      execFileSync("node", ["scripts/doctrine-scan.mjs", ...args], {
+        input: input ?? "",
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+      return { code: 0, stderr: "" };
+    } catch (error) {
+      const e = error as { status: number; stderr: string };
+      return { code: e.status, stderr: e.stderr };
+    }
+  };
+
+  it("exits 2 naming the path when the dossiers directory does not exist", () => {
+    const missing = join(tmpdir(), "doctrine-scan-no-such-dir");
+    const { code, stderr } = fail([`--dossiers-dir=${missing}`, "--due"]);
+    expect(code).toBe(2);
+    expect(stderr).toContain(`dossiers directory ${missing} does not exist — due state UNKNOWN`);
+  });
+
+  it("exits 2 when --explain gets no state on stdin", () => {
+    const { code, stderr } = fail(["--explain"]);
+    expect(code).toBe(2);
+    expect(stderr).toContain("no state on stdin — verdict UNKNOWN");
+  });
+});

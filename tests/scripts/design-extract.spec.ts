@@ -1,4 +1,6 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { closeSync, openSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 // The design→code pull's resolver, driven through the real entrypoint the way every other script
@@ -96,5 +98,49 @@ describe("when the arguments are incomplete", () => {
     const { code, out } = run(["--to"], { SKYNET_SEED_CANVAS: SCRIPT });
     expect(code).toBe(2);
     expect(out).toContain("usage:");
+  });
+});
+
+// HONEST DEGRADATION (#3769 row 1: a missing input is a named state, never a quiet pass).
+describe("when an input the resolver reads is missing", () => {
+  it("names a temp dir it could not list, and still resolves from what remains", () => {
+    // spawnSync, not run(): a passing run keeps stderr, where the note goes so stdout stays the path.
+    const res = spawnSync("node", [SCRIPT, "--which"], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        TMPDIR: "/nonexistent-design-extract-tmp",
+        SKYNET_SEED_CANVAS: SCRIPT,
+      },
+    });
+    expect(res.status).toBe(0);
+    expect(res.stdout.trim()).toBe(SCRIPT);
+    expect(res.stderr).toContain(
+      "· design-extract: skipped temp dir /nonexistent-design-extract-tmp",
+    );
+  });
+
+  it("names a skills root it could not read, and still ends in not-found", () => {
+    const { code, out } = run(["--which"], { SKYNET_BUNDLED_SKILLS: SCRIPT });
+    expect(code).toBe(1);
+    expect(out).toContain(`· design-extract: skipped ${SCRIPT} (ENOTDIR)`);
+    expect(out).toContain("no seed-canvas.mjs found");
+  });
+
+  it("fails --explain as UNKNOWN when stdin cannot be read, never as 'none'", () => {
+    // A directory handed over as fd 0 makes the read itself throw (EISDIR).
+    const fd = openSync(tmpdir(), "r");
+    try {
+      execFileSync("node", [SCRIPT, "--explain"], { stdio: [fd, "pipe", "pipe"] });
+      throw new Error("expected a non-zero exit");
+    } catch (err) {
+      const e = err as { status?: number; stdout?: Buffer; stderr?: Buffer };
+      expect(e.status).toBe(1);
+      expect(String(e.stderr)).toContain("could not read stdin");
+      expect(String(e.stderr)).toContain("UNKNOWN");
+      expect(String(e.stdout)).not.toContain('"reason"');
+    } finally {
+      closeSync(fd);
+    }
   });
 });

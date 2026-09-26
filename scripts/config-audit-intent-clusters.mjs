@@ -84,15 +84,22 @@ function jaccard(a, b) {
 
 /** Parse the duel-log into genuine (non-harness) intents + a count of corrections against agent output. */
 function parseHumanIntents() {
-  if (!existsSync(DUEL_LOG)) return { intents: [], correctionCount: 0 };
+  // Optional: the log is local and git-ignored (data/), so a fresh checkout or CI has none. The
+  // other audit checks still mean what they say without it; check ③ reports itself skipped
+  // (`logPresent: false`) rather than "none above threshold", which would claim it looked.
+  if (!existsSync(DUEL_LOG)) return { intents: [], correctionCount: 0, logPresent: false };
   const intents = [];
   let lastWasFanin = false;
   let correctionCount = 0;
+  let malformed = 0;
   for (const line of readFileSync(DUEL_LOG, "utf8").split("\n").filter(Boolean)) {
     let ev;
     try {
       ev = JSON.parse(line);
     } catch {
+      // Optional per line: a hook killed mid-append leaves a torn line; the rest still clusters.
+      // Counted, and config-audit prints the count, so a mostly-corrupt log can't read as quiet.
+      malformed++;
       continue;
     }
     if (ev.kind === "fanin") {
@@ -112,7 +119,7 @@ function parseHumanIntents() {
     intents.push({ prompt: prompt.slice(0, 90).replace(/\s+/g, " "), sig: signature(prompt) });
     lastWasFanin = false;
   }
-  return { intents, correctionCount };
+  return { intents, correctionCount, logPresent: true, malformed };
 }
 
 /** Greedy-cluster intents by Jaccard word-overlap >= 0.4 (crude, deterministic); groups of >= 2. */
@@ -138,6 +145,6 @@ function clusterIntents(intents) {
 }
 
 export function recurringIntents() {
-  const { intents, correctionCount } = parseHumanIntents();
-  return { clusters: clusterIntents(intents), correctionCount };
+  const { intents, correctionCount, logPresent, malformed = 0 } = parseHumanIntents();
+  return { clusters: clusterIntents(intents), correctionCount, logPresent, malformed };
 }

@@ -73,7 +73,13 @@ const isUnscored = (text) =>
  *  `--validate` uses it whole to refuse a `supersededBy` that would strand a live prediction
  *  (#3101) — a superseded id never reaches close-out, so nothing downstream would ever score it. */
 export function unscoredForwardTests(eventId, dir) {
+  // A missing REGISTER is not "no tests": every close-out would stop holding and no scoreable row
+  // would ever re-dispatch, silently. Loud, like every other unreadable input (event-scan.mjs).
+  if (!existsSync(dir))
+    throw new Error(`forward-test-pending: cannot read ${dir} — refusing to guess.`);
   const file = join(dir, `${eventId}.md`);
+  // Optional per event: most events register no forward tests, and "none registered" is exactly
+  // what a missing fragment means. Library-only (no CLI), so no note — it would print per event.
   if (!existsSync(file)) return [];
   const unscored = [];
   for (const line of readFileSync(file, "utf8").split("\n")) {

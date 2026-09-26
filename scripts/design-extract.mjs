@@ -3,7 +3,11 @@
 //
 //   node scripts/design-extract.mjs <saved-page.html> --to <fresh-dir>
 //   node scripts/design-extract.mjs --which        # print the seed-canvas.mjs this would use
-//   node scripts/design-extract.mjs --explain      # resolve from JSON on stdin; offline, always exit 0
+//   node scripts/design-extract.mjs --explain      # resolve from JSON on stdin; offline
+//
+// Exit codes: 0 resolved (or extracted) · 1 could not do its job — no extractor found, or
+// `--explain` could not read its stdin (UNKNOWN, never answered as "no candidates") · 2 usage.
+// A temp dir it could not list is skipped with a `·` note on stderr; stdout stays the answer.
 //
 // WHY THIS EXISTS. The `/design` skill ships its own extractor, `seed-canvas.mjs`, which turns a
 // saved canvas page back into `Main.dc.html`, its sibling artboards, `canvas.json` and decoded
@@ -73,8 +77,9 @@ export function pickSeedCanvas(env = {}, candidates = []) {
   };
 }
 
-/** The roots to search: an explicit override, else each `claude-<n>` temp dir's bundled-skills. */
-function skillRoots(env) {
+/** The roots to search: an explicit override, else each `claude-<n>` temp dir's bundled-skills.
+ *  `notes` collects every directory skipped as unreadable, so the CLI can name the state. */
+function skillRoots(env, notes = []) {
   if (env.SKYNET_BUNDLED_SKILLS) return [env.SKYNET_BUNDLED_SKILLS];
   const bases = [...new Set([tmpdir(), "/tmp"])];
   const roots = [];
@@ -82,7 +87,10 @@ function skillRoots(env) {
     let entries = [];
     try {
       entries = readdirSync(base);
-    } catch {
+    } catch (err) {
+      // Optional: one of up to two temp bases. The others are still searched, and if none holds an
+      // extractor the NOT_FOUND exit fires anyway — a skipped base can never read as resolved.
+      notes.push(`skipped temp dir ${base} (${err.code ?? "unreadable"})`);
       continue;
     }
     for (const entry of entries) {
@@ -95,11 +103,11 @@ function skillRoots(env) {
 }
 
 /** Walk `<root>/<version>/<hash>/design/seed-canvas.mjs`. Depth is fixed, so no recursive glob. */
-export function findSeedCanvases(env = process.env) {
+export function findSeedCanvases(env = process.env, notes = []) {
   const found = [];
-  for (const root of skillRoots(env)) {
-    for (const version of safeDirs(root)) {
-      for (const hash of safeDirs(join(root, version))) {
+  for (const root of skillRoots(env, notes)) {
+    for (const version of safeDirs(root, notes)) {
+      for (const hash of safeDirs(join(root, version), notes)) {
         const file = join(root, version, hash, "design", "seed-canvas.mjs");
         if (existsSync(file)) found.push(file);
       }
@@ -108,10 +116,13 @@ export function findSeedCanvases(env = process.env) {
   return found;
 }
 
-function safeDirs(dir) {
+function safeDirs(dir, notes = []) {
   try {
     return readdirSync(dir).filter((d) => statSync(join(dir, d)).isDirectory());
-  } catch {
+  } catch (err) {
+    // Optional: one unreadable version/hash dir only removes its own candidates. Newest-wins still
+    // ranks what remains, and an empty result still ends in NOT_FOUND (exit 1), never a pass.
+    notes.push(`skipped ${dir} (${err.code ?? "unreadable"})`);
     return [];
   }
 }
@@ -128,11 +139,17 @@ export const NOT_FOUND = [
   "extractor goes stale silently and mis-parses a canvas without saying so.",
 ].join("\n");
 
+/** Required for `--explain`: stdin IS its input. An unreadable stream is a named failure, never an
+ *  empty state — `{}` would answer "none", which reads as "no extractor exists" when the truth is
+ *  that nothing was asked. */
 function readStdin() {
   try {
     return readFileSync(0, "utf8");
-  } catch {
-    return "";
+  } catch (err) {
+    console.error(
+      `design-extract: --explain could not read stdin (${err.code ?? err.message}) — UNKNOWN, not "none".`,
+    );
+    process.exit(1);
   }
 }
 
@@ -147,7 +164,9 @@ if (process.argv[1]?.endsWith("design-extract.mjs")) {
     process.exit(0);
   }
 
-  const pick = pickSeedCanvas(process.env, findSeedCanvases());
+  const notes = [];
+  const pick = pickSeedCanvas(process.env, findSeedCanvases(process.env, notes));
+  for (const note of notes) console.error(`· design-extract: ${note}`);
   if (!(pick.resolved && existsSync(pick.resolved))) {
     console.error(NOT_FOUND);
     process.exit(1);

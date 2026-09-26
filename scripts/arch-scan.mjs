@@ -41,6 +41,10 @@
 //   node scripts/arch-scan.mjs             # report + enforce (exit 1 on any new over-cap file)
 //   node scripts/arch-scan.mjs --candidate # emit the next decompose target as JSON
 //   node scripts/arch-scan.mjs --update    # rewrite scripts-grouping-budget.json (ratchet: only lower)
+//
+// Exit codes: 0 within cap · 1 a finding (over-cap file, junk-drawer name, grouping smell grew) ·
+// 2 could not do its job — scripts-grouping-budget.json is missing, so the grouping verdict is
+// UNKNOWN (an absent budget used to read as infinite, which passed any count).
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { lineBreakdown } from "./code-lines.mjs";
@@ -64,8 +68,11 @@ const grandfather = existsSync(GRANDFATHER_FILE)
   ? JSON.parse(readFileSync(GRANDFATHER_FILE, "utf8"))
   : {};
 
+// --candidate prints JSON on stdout; a note there would corrupt it, so notes go to stderr in that mode.
+const JSON_MODE = process.argv.includes("--candidate");
+const note = (msg) => (JSON_MODE ? console.error : console.log)(`· ${msg}`);
+
 function walk(dir, exts, acc = []) {
-  if (!existsSync(dir)) return acc;
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) {
@@ -76,12 +83,18 @@ function walk(dir, exts, acc = []) {
 }
 const rel = (f) => relative(ROOT, f).split("\\").join("/");
 
-const files = TREES.flatMap(({ dir, exts, cap }) =>
-  walk(join(ROOT, dir), exts).map((f) => {
+const files = TREES.flatMap(({ dir, exts, cap }) => {
+  // Optional: each tree is capped independently, so a checkout without one (a fixture, a trimmed
+  // clone) still gets a meaningful verdict on the rest — but the skip is named, never silent.
+  if (!existsSync(join(ROOT, dir))) {
+    note(`${dir}/ absent — not scanned`);
+    return [];
+  }
+  return walk(join(ROOT, dir), exts).map((f) => {
     const { code, comment, physical } = lineBreakdown(readFileSync(f, "utf8"));
     return { file: rel(f), lines: code, comment, physical, cap };
-  }),
-).sort((a, b) => b.lines - b.cap - (a.lines - a.cap)); // ranked by overage, not size: the caps differ
+  });
+}).sort((a, b) => b.lines - b.cap - (a.lines - a.cap)); // ranked by overage, not size: the caps differ
 
 // --candidate: the decomposer agent's next target — the largest file that's over cap AND not
 // already grandfathered with a documented reason (those need a deliberate decision, not a bot).
@@ -170,12 +183,14 @@ function rootScriptGroups() {
 const groups = rootScriptGroups();
 const groupingDebt = groups.length;
 
+// Required for the verdict: an absent budget is UNKNOWN, not infinite (exit 2 below). Only
+// --update may run without it, because seeding it is how the budget comes to exist.
 const groupingBudget = existsSync(GROUPING_BUDGET_FILE)
   ? JSON.parse(readFileSync(GROUPING_BUDGET_FILE, "utf8"))
-  : { groups: Number.POSITIVE_INFINITY };
+  : null;
 
 if (process.argv.includes("--update")) {
-  const prev = Number.isFinite(groupingBudget.groups) ? groupingBudget.groups : groupingDebt;
+  const prev = Number.isFinite(groupingBudget?.groups) ? groupingBudget.groups : groupingDebt;
   const next = { groups: Math.min(prev, groupingDebt) }; // ratchet down only
   writeFileSync(GROUPING_BUDGET_FILE, `${JSON.stringify(next, null, 2)}\n`);
   console.log(`scripts-grouping-budget.json updated — groups=${next.groups} (only lowers).`);
@@ -186,6 +201,13 @@ if (groupingDebt) {
   console.log(`\n📂 scripts/ root grouping smell — ${groupingDebt} prefix group(s):`);
   for (const g of groups)
     console.log(`  ${g.prefix}-* (${g.siblings.length}): ${g.siblings.join(", ")}`);
+}
+if (!groupingBudget) {
+  console.error(
+    "\n✗ scripts-grouping-budget.json missing — grouping verdict UNKNOWN (no budget to compare " +
+      `${groupingDebt} group(s) against). Seed it: \`node scripts/arch-scan.mjs --update\`.`,
+  );
+  process.exit(2);
 }
 const groupingCap = groupingBudget.groups;
 if (groupingDebt > groupingCap) {

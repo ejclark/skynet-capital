@@ -9,7 +9,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 function readJsonDir(dir, prefix) {
-  if (!existsSync(dir)) return [];
+  // Reached only for `proposals/` (readCalendarDir throws on a missing root first). Optional, as in
+  // loadMarketEvents: a calendar with no proposals is still the whole calendar. Named, not silent.
+  if (!existsSync(dir)) {
+    console.error(`· no ${prefix || dir} dir at ${dir} — canonical files only`);
+    return [];
+  }
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .sort()

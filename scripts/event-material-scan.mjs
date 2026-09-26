@@ -219,11 +219,13 @@ async function buildState(id, today, opts = {}) {
   return { state, ledgerPath, ledgerText, priceAsOf };
 }
 
+/** stdin IS the input in both stdin modes (the due list, or the --explain state), so an unreadable
+ *  stream is a probe error (exit 2), never an empty list: `[]` would read as "nothing due". */
 function readStdin() {
   try {
     return readFileSync(0, "utf8");
-  } catch {
-    return "";
+  } catch (err) {
+    throw new Error(`cannot read stdin (${err.code ?? err.message}) — input UNKNOWN, not empty`);
   }
 }
 
