@@ -121,6 +121,18 @@ function richWhy(r: Richness): GuidanceReason {
   return why("RICHNESS", "We can't yet tell whether option prices are high or low for this stock.");
 }
 
+/** The put WAIT's richness line. When the premium IS rich but the research gives no reason to buy,
+ *  say how the two fit — "paid well" beside "don't" read as a contradiction to all three trader
+ *  personas (#3740 review): the pay is real, it just isn't a reason to own more of the stock. */
+function tiedRichWhy(r: Richness, buySignal: boolean): GuidanceReason {
+  const line = richWhy(r);
+  if (buySignal || r.verdict !== "rich") return line;
+  return why(
+    "RICHNESS",
+    `${line.text.replace(/\.$/, "")} — but that alone isn't a reason to take on more of a stock the research says not to buy.`,
+  );
+}
+
 function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
   const end = ctx.input.earnings?.end;
   return lever({
@@ -145,7 +157,7 @@ function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
 const receive = (row: LadderRow, kind: "call" | "put"): GuidanceReason =>
   why(
     "PRICE-AT-BID",
-    `Sell 1 ${kind}: ${usd(row.strike)} strike, expires ${dayText(row.expiration)}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${pct(row.annualizedYield)} a year only if you could repeat it every time).`,
+    `The best fit: 1 ${kind} at the ${usd(row.strike)} strike, expiring ${dayText(row.expiration)}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${pct(row.annualizedYield)} a year only if you could repeat it every time).`,
   );
 
 function notAvailable(
@@ -314,7 +326,7 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
       lever: "cash-secured-puts",
       call: "WAIT",
       confidence: grade,
-      reasons: [buyWhy, ...concentration, richWhy(ctx.richness)],
+      reasons: [buyWhy, ...concentration, tiedRichWhy(ctx.richness, ledger?.buySignal === true)],
       provesWrong: falsifier,
       ...after,
     });

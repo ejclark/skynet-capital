@@ -1,4 +1,4 @@
-import { daysBetween } from "../options/position-guidance-rules.js";
+import { daysBetween, dayText } from "../options/position-guidance-rules.js";
 import type { PulseItem, PulseStatus } from "../options/position-guidance-types.js";
 
 /**
@@ -70,7 +70,7 @@ const gapOf = (a: number, b: number): number => Math.abs(a / b - 1);
  * missing spot, or one too old to be a price, is stale.
  */
 export function spotPulse(obs: SpotObservation | undefined, now: string, open: boolean): PulseItem {
-  const source = "Alpaca IEX last trade × option parity";
+  const source = "last trade (Alpaca IEX), checked against option prices";
   if (!obs) return row("spot", source, "stale", "no spot from the feed");
   if (!obs.lastAt) return row("spot", source, "aging", "the feed gave no trade time");
   // AGE FIRST. A trade too old to be a price is stale whatever the cross-check says — otherwise a
@@ -82,7 +82,7 @@ export function spotPulse(obs: SpotObservation | undefined, now: string, open: b
   const fmt = (x: number) => `$${x.toFixed(2)}`;
   if (obs.parity !== undefined && gapOf(obs.last, obs.parity) > PARITY_TOLERANCE) {
     const gap = (gapOf(obs.last, obs.parity) * 100).toFixed(1);
-    const note = `IEX ${fmt(obs.last)} vs option-implied ${fmt(obs.parity)} (${gap}% apart${open ? "" : ", after hours"})`;
+    const note = `last trade ${fmt(obs.last)} vs ${fmt(obs.parity)} implied by option prices (${gap}% apart${open ? "" : ", after hours"})`;
     return {
       ...row("spot", source, "aging", note, obs.lastAt),
       ...(open ? {} : { blocksPricing: true }),
@@ -94,13 +94,13 @@ export function spotPulse(obs: SpotObservation | undefined, now: string, open: b
     open &&
     gapOf(obs.last, obs.mid) > PARITY_TOLERANCE
   ) {
-    const note = `IEX last ${fmt(obs.last)} vs IEX bid/ask mid ${fmt(obs.mid)} — no tight call/put pair to settle it`;
+    const note = `last trade ${fmt(obs.last)} vs ${fmt(obs.mid)} midway between bid and ask — no matched option prices to settle it`;
     return row("spot", source, "aging", note, obs.lastAt);
   }
   const cross =
     obs.parity !== undefined
-      ? "matches option parity"
-      : "unverified — no tight call/put pair to cross-check";
+      ? "matches the price its options imply"
+      : "not cross-checked — no matched option prices to check it against";
   const graded = aged === "fresh" && obs.parity === undefined ? "aging" : aged;
   return row("spot", source, graded, `${when} · ${cross}`, obs.lastAt);
 }
@@ -114,7 +114,7 @@ export function chainPulse(
   feed: "indicative" | "opra" = "indicative",
 ): PulseItem {
   const source =
-    feed === "indicative" ? "Alpaca indicative option snapshots" : "OPRA option quotes";
+    feed === "indicative" ? "delayed option quotes (Alpaca)" : "full-market option quotes (OPRA)";
   if (quotedAt.length === 0)
     return row("chain", source, "stale", `no quote times on ${total} strikes`);
   const ages = quotedAt.map((t) => Date.parse(now) - Date.parse(t)).sort((a, b) => a - b);
@@ -124,7 +124,7 @@ export function chainPulse(
   // An indicative feed is derived, not the consolidated market: a recent stamp says the estimate is
   // recent, not that anyone will fill at it. It is never graded fresh.
   const status = feed === "indicative" && aged === "fresh" ? "aging" : aged;
-  const kind = feed === "indicative" ? "indicative (not the consolidated market) · " : "";
+  const kind = feed === "indicative" ? "delayed feed, not the full market · " : "";
   return row(
     "chain",
     source,
@@ -170,7 +170,7 @@ export function researchPulse(
         "research",
         obs.source,
         "stale",
-        `the tape moved ${drift > 0 ? "+" : ""}${((drift / obs.probePrice) * 100).toFixed(1)}% since research ($${obs.probePrice.toFixed(2)}) — more than one expected move`,
+        `the stock moved ${drift > 0 ? "+" : ""}${((drift / obs.probePrice) * 100).toFixed(1)}% since the research ($${obs.probePrice.toFixed(2)}) — more than a typical move`,
         obs.assessed,
       );
     }
@@ -191,14 +191,14 @@ export function earningsPulse(
     | undefined,
 ): PulseItem {
   if (!print)
-    return row("earnings-date", "earnings calendar", "aging", "no upcoming print on the calendar");
+    return row("earnings-date", "earnings calendar", "aging", "no earnings report on the calendar");
   return print.status === "confirmed"
-    ? row("earnings-date", print.source, "fresh", `confirmed ${print.date}`)
+    ? row("earnings-date", print.source, "fresh", `confirmed for ${dayText(print.date)}`)
     : row(
         "earnings-date",
         print.source,
         "aging",
-        `estimate ${print.date} — IR hasn't confirmed; DTE cut uses the window start`,
+        `estimated ${dayText(print.date)} — not confirmed by the company yet, so expiry cut-offs use the start of the window`,
       );
 }
 
@@ -215,9 +215,15 @@ export function filingsPulse(
 ): PulseItem {
   const filings = read?.filings;
   const fetchedAt = read?.fetchedAt ?? now;
-  const source = "SEC EDGAR 8-K filings";
+  const source = "company filings (SEC EDGAR)";
   if (!filings)
-    return row("filings", source, "aging", "EDGAR unreachable — new filings unchecked", fetchedAt);
+    return row(
+      "filings",
+      source,
+      "aging",
+      "couldn't reach the SEC — new filings not checked",
+      fetchedAt,
+    );
   if (!since)
     return row(
       "filings",
@@ -229,13 +235,20 @@ export function filingsPulse(
   // ON or after: a filing dated the research day may have landed after the research was written.
   const fresh = filings.filter((f) => f.date >= since);
   if (fresh.length === 0)
-    return row("filings", source, "fresh", `no 8-K since research (${since})`, fetchedAt);
-  const list = fresh.map((f) => `${f.date}${f.items ? ` items ${f.items}` : ""}`).join("; ");
+    return row(
+      "filings",
+      source,
+      "fresh",
+      `no new company filings since the research (${dayText(since)})`,
+      fetchedAt,
+    );
+  // The SEC's item numbers ("2.02") mean nothing on a trade form; the dates say when to look.
+  const list = fresh.map((f) => dayText(f.date)).join(", ");
   return row(
     "filings",
     source,
     "stale",
-    `${fresh.length} 8-K on or after the research date: ${list}`,
+    `${fresh.length} new company filing${fresh.length === 1 ? "" : "s"} since the research (${list})`,
     fetchedAt,
   );
 }

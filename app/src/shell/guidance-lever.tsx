@@ -10,6 +10,7 @@ import {
   usd,
 } from "../../../src/options/position-guidance-rules";
 import type { LadderRow, LeverCall } from "../../../src/options/position-guidance-types";
+import { GlossaryTerm } from "./glossary-term";
 
 /**
  * ONE LEVER OF THE GUIDANCE — its call, the one-line summary above the fold, and (for an option
@@ -25,6 +26,17 @@ import type { LadderRow, LeverCall } from "../../../src/options/position-guidanc
 
 /** One date form on every surface — the engine's own (`dayText`), re-exported for the view. */
 export const shortDate = dayText;
+
+/** A lever's name, tap-to-define where it's trade jargon (the persona review's first-time trader). */
+function LeverName({ lever }: { readonly lever: LeverCall["lever"] }): ReactElement {
+  if (lever === "covered-calls") {
+    return <GlossaryTerm term="coveredCall">{LEVER_NAME[lever]}</GlossaryTerm>;
+  }
+  if (lever === "cash-secured-puts") {
+    return <GlossaryTerm term="cashSecuredPut">{LEVER_NAME[lever]}</GlossaryTerm>;
+  }
+  return <>{LEVER_NAME[lever]}</>;
+}
 
 export const isActionable = (call: LeverCall): boolean =>
   call.call === "WRITE" && actionable(call.confidence);
@@ -60,7 +72,8 @@ export function GlanceLine({
       {top ? (
         <span>
           {usd(top.strike)} {top.lever === "covered-calls" ? "call" : "put"},{" "}
-          {shortDate(top.expiration)} · you receive {usd(top.bid * 100)}
+          {shortDate(top.expiration)} · <GlossaryTerm term="premium">premium</GlossaryTerm>{" "}
+          {usd(top.bid * 100)}
         </span>
       ) : null}
       {call.until ? (
@@ -104,15 +117,15 @@ function StrikeCard({
     <li className="guidance-strike">
       <p className="guidance-strike-head">
         <strong>
-          {usd(row.strike)} {kind}
+          <GlossaryTerm term="strike">{usd(row.strike)}</GlossaryTerm> {kind}
         </strong>{" "}
         <span title={row.expiration}>
           {shortDate(row.expiration)} · {row.dte} days
         </span>
       </p>
       <p className="guidance-quote">
-        bid {usd(row.bid)} · mid {usd(row.mid)} · delta {Math.abs(row.delta).toFixed(2)} · 1
-        contract (you could cover up to {row.maxContracts})
+        bid {usd(row.bid)} · mid {usd(row.mid)} · <GlossaryTerm term="delta">delta</GlossaryTerm>{" "}
+        {Math.abs(row.delta).toFixed(2)} · 1 contract (you could cover up to {row.maxContracts})
       </p>
       {brief ? null : (
         <>
@@ -121,7 +134,8 @@ function StrikeCard({
             {pct(row.annualizedYield)} a year only if repeated).
           </p>
           <p>
-            About a {pct(row.probAssigned)} chance it's exercised; {pct(row.probTouch)} it touches
+            About a {pct(row.probAssigned)} chance it's{" "}
+            <GlossaryTerm term="exercised">exercised</GlossaryTerm>; {pct(row.probTouch)} it touches
             the strike first. {outcome(row)}
           </p>
         </>
@@ -210,7 +224,9 @@ export function LeverCard({
   return (
     <article className="guidance-lever" data-call={call.call}>
       <header className="guidance-lever-head">
-        <h3>{LEVER_NAME[call.lever]}</h3>
+        <h3>
+          <LeverName lever={call.lever} />
+        </h3>
         <p>
           <strong className="guidance-call">{callWord(call)}</strong> <Confidence call={call} />
         </p>
