@@ -138,6 +138,7 @@ export function EventHorizon({
   onStep,
   dayFog,
   fiscal,
+  open = false,
 }: {
   readonly events: readonly ResearchEvent[];
   readonly closures: readonly MarketClosure[];
@@ -156,6 +157,9 @@ export function EventHorizon({
   /** The quarter lens's fiscal identity (#1736) — set only when exactly one symbol is in scope
    *  and has a confirmed fiscal year-end; absent, the quarter lens reads (and is) the calendar. */
   readonly fiscal?: FiscalQuarterLabel;
+  /** Whether the month grid starts unfolded — the Profile page's Events section, where the grid is
+   *  the point (#3807 slice 2c); R&D keeps it folded under its band head. */
+  readonly open?: boolean;
 }): ReactElement | null {
   const month = anchor.slice(0, 7);
   const allLens = lens === "all";
@@ -195,7 +199,7 @@ export function EventHorizon({
           Clear {anchor} ×
         </button>
       ) : null}
-      <details className="eh-fold">
+      <details className="eh-fold" open={open}>
         <summary className="eh-fold-toggle">Month · pick a day</summary>
         <div className="eh">
           <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>

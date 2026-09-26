@@ -137,7 +137,18 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    _Fixed by #3807 slice 2·1 — the head and the held-events line; the grid is phase 3's popover.
    The check is the calendar's own "Week" lens button, exactly — the blotter's "Expiring within
    3 weeks" view tab is not a calendar._ Judge: does this reader know what is happening this
-   week to what they hold?
+   week to what they hold? He taps **Events** in the section switch.
+
+3b. `/app/accounts?section=events` — one tap from the Overview: the month grid beside the agenda
+   (beneath it on the phone); the held line says nothing is dated on EEM this week, the
+   market-wide prints are listed by day, and each row carries one link — to the EEM row when the
+   print is EEM's next event, else to that day on R&D. **WHEN the owner opens Events on his book,
+   the app shall list the range's events on what he holds and the market-wide prints by day, each
+   row one link to the position it lands on or to that day on R&D, and say so in words when
+   nothing held is dated.** _Added by #3807 slice 2c (the co-location); two taps from a marked
+   day to the position row is proved in `app/tests/routes/events-section.spec.tsx`._ Judge: can
+   this reader get from a marked day to the position it touches in two taps?
+
 4. `/app/research` — the calendar, the board's calls, the day lens fogged behind rung 501. **WHEN
    the owner opens R&D, the app shall show the calendar with the current range and the calls in
    it.** Judge: can this reader tell which events matter to their book?

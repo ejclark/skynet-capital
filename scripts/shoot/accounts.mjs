@@ -3,7 +3,8 @@
 // shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
 // expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the market calendar's
 // head in the cockpit head with the events on what the book holds; the run also prints the stuck
-// chrome at 390, the number the head's placement is judged by.
+// chrome at 390, the number the head's placement is judged by. The `events-*` frames (slice 2c)
+// are the Events section: a book with a held event, and one with nothing dated on it.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
 
 import { join } from "node:path";
@@ -843,11 +844,62 @@ const sauronHeartbeat = () => {
   };
 };
 
+// The research calendar the Events section joins to the book (#3807 slice 2c) — October 2026 as
+// the checked-in corpus has it (`src/domain/market-events/*.json`, `earnings-calendar.ts`): the
+// three headline macro prints, AAPL's print and launch (Eric holds AAPL), and two rows that must
+// NOT appear on either book (MRVL is not held; a Treasury auction is not a headline print).
+const researchEvent = (id, title, date, symbols = [], kind = "macro-print") => ({
+  id,
+  title,
+  date,
+  kind,
+  impact: "high",
+  symbols,
+  researched: false,
+});
+const research = {
+  events: [
+    researchEvent("jobs-2026-10-02", "Employment Situation (Sep 2026 data)", "2026-10-02"),
+    researchEvent("mrvl-investor-day-2026-10-06", "MRVL Investor Day (NYC)", "2026-10-06", [
+      "MRVL",
+    ]),
+    researchEvent("cpi-2026-10-14", "CPI release (Sep 2026 data)", "2026-10-14"),
+    researchEvent(
+      "treasury-20y-bond-2026-10-21",
+      "20-Year Treasury Bond auction (reopening)",
+      "2026-10-21",
+      [],
+      "rates",
+    ),
+    researchEvent(
+      "aapl-iphone-duo-launch-2026-10-23",
+      "iPhone Duo goes on sale — Apple's first foldable",
+      "2026-10-23",
+      ["AAPL"],
+      "product-launch",
+    ),
+    researchEvent("fomc-2026-10-28", "FOMC decision (meeting Oct 27–28)", "2026-10-28"),
+    researchEvent(
+      "aapl-2026-10-29-print",
+      "AAPL earnings print",
+      "2026-10-29",
+      ["AAPL"],
+      "earnings",
+    ),
+  ],
+  closures: [],
+  calls: [],
+  symbols: [],
+  studies: [],
+  ledgers: [],
+};
+
 const { page, origin, out, close } = await openShell({
   name: "accounts",
   stubs: {
     "/api/settings": settings,
     "/api/board": board,
+    "/api/research": research,
     // The netted option book the Money strip reads its plain greeks from: the NVDA call, 3 contracts.
     "/api/trade/option-positions": {
       available: true,
@@ -961,8 +1013,32 @@ await page.goto(`${origin}/app/accounts?account=all`);
 await page.getByText("Net worth · all accounts").waitFor();
 await shootCockpit("accounts-all-summary-phone");
 
+// Events (#3807 slice 2c), phone first: October on Eric's book — AAPL's launch and print held,
+// the three headline prints market-wide — then Sauron's, where TSLA and SPY have nothing dated,
+// so the held line says so in words and the market-wide prints still show.
+await page.goto(`${origin}/app/accounts?section=events&on=2026-10-15&span=month`);
+await page.getByText("AAPL earnings print").waitFor();
+// At 390 the agenda sits beneath the grid: the frame ends on its footer so the rows are the picture.
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-held-phone");
+await page.goto(
+  `${origin}/app/accounts?section=events&account=bot-sauron&on=2026-10-15&span=month`,
+);
+await page.getByText("Nothing dated on what you hold").waitFor();
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-empty-phone");
+
 // --- DESKTOP (1280px) ---
 await page.setViewportSize({ width: 1280, height: 900 });
+
+await page.goto(`${origin}/app/accounts?section=events&on=2026-10-15&span=month`);
+await page.getByText("AAPL earnings print").waitFor();
+await shootCockpit("events-held-desktop");
+await page.goto(
+  `${origin}/app/accounts?section=events&account=bot-sauron&on=2026-10-15&span=month`,
+);
+await page.getByText("Nothing dated on what you hold").waitFor();
+await shootCockpit("events-empty-desktop");
 
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();

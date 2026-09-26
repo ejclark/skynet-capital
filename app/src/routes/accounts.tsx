@@ -8,6 +8,7 @@ import {
   fetchDesk,
   fetchDeskActivity,
 } from "../live/desk";
+import { parseOn } from "../live/horizon-params";
 import {
   type AccountNetWorthView,
   type AccountsNetWorthView,
@@ -20,6 +21,7 @@ import { OverviewSection } from "../shell/accounts-overview-section";
 import { ActivityTable } from "../shell/activity-table";
 import { CockpitClock, usePhoneWidth } from "../shell/cockpit-clock";
 import { useDefaultAccount } from "../shell/default-account";
+import { EventsSection } from "../shell/events-section";
 import { PageFrame } from "../shell/frame";
 import { HeartbeatChip, HeartbeatSection } from "../shell/heartbeat";
 import { NetWorthCondensed } from "../shell/networth-summary";
@@ -51,9 +53,13 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * THE MARKET CALENDAR'S HEAD (#3807 slice 2·1) is the sticky head's last row at ≥861 and the row
  * directly under it at ≤860 (`cockpit-clock.tsx` says why); on the Overview, the net-worth card
  * carries the events on what this book holds in the head's range (`held-events-line.tsx`).
+ *
+ * EVENTS (#3807 slice 2c) is the book's calendar as a section: the grid beside an agenda of what
+ * falls on each day for the tickers held (`events-section.tsx`). On it the grid's own head is the
+ * page's one range control, so the cockpit head does not repeat it; a picked day is `?events=`.
  */
 
-type AccountsSection = "overview" | "activity" | "heartbeat" | "thesis";
+type AccountsSection = "overview" | "activity" | "events" | "heartbeat" | "thesis";
 
 /** Overview merges what were once separate Summary and Positions tabs (Eric: "the summary page
  *  does very little atm... summary and positions should be merged into a single section/view").
@@ -63,6 +69,9 @@ type AccountsSection = "overview" | "activity" | "heartbeat" | "thesis";
 const BASE_SECTIONS: readonly PageSection<AccountsSection>[] = [
   { id: "overview", label: "Overview" },
   { id: "activity", label: "Activity" },
+  // #3807 slice 2c — the book's events beside the book (docs/IA.md §8: the wargame's largest
+  // joint, 62 of 86 scenarios, earned the co-location), listed in the switch, not URL-only.
+  { id: "events", label: "Events" },
 ];
 
 /** The full candidate list `validateSearch` accepts from a URL — the *rendered* set narrows this
@@ -133,7 +142,7 @@ const asId = (raw: unknown): string | undefined =>
 
 function AccountsPage(): ReactElement {
   const navigate = Route.useNavigate();
-  const { account: asked, section: askedSection, q } = Route.useSearch();
+  const { account: asked, section: askedSection, q, events: pinnedDay } = Route.useSearch();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const defaultAccount = useDefaultAccount();
 
@@ -214,12 +223,28 @@ function AccountsPage(): ReactElement {
           replace: true,
         })
       }
-      onSelectSection={(next) =>
-        void navigate({
-          search: (prev) => ({ ...prev, section: next === "overview" ? undefined : next }),
-          replace: true,
-        })
+      pinnedDay={pinnedDay}
+      onPickDay={(day) =>
+        void navigate({ search: (prev) => ({ ...prev, events: day }), replace: true })
       }
+      onSelectSection={(next) => {
+        // Overview's filter means nothing on Events, and a stale one must not resurface on the
+        // way back (the switch spec proves the blotter's count survives the round trip): crossing
+        // into or out of Events drops `q` — the pending debounce too — and the picked day.
+        const crossing = next === "events" || section === "events";
+        if (crossing) {
+          clearTimeout(urlTimer.current);
+          setQuery("");
+        }
+        void navigate({
+          search: (prev) => ({
+            ...prev,
+            section: next === "overview" ? undefined : next,
+            ...(crossing ? { q: undefined, events: undefined } : {}),
+          }),
+          replace: true,
+        });
+      }}
     />
   );
 }
@@ -234,6 +259,8 @@ function CockpitBody({
   accounts,
   query,
   onFilterChange,
+  pinnedDay,
+  onPickDay,
 }: {
   readonly section: AccountsSection;
   readonly deskIds: readonly string[];
@@ -242,6 +269,8 @@ function CockpitBody({
   readonly accounts: Parameters<typeof AccountSwitcher>[0]["accounts"];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly pinnedDay: string | undefined;
+  readonly onPickDay: (day: string | undefined) => void;
 }): ReactElement {
   const desks = useQuery({
     queryKey: ["desks", deskIds.join(",")],
@@ -249,12 +278,22 @@ function CockpitBody({
     // Overview needs the desk snapshot both for the considerations rail and for the positions
     // blotter it now carries, so it always fetches. Decisions and Thesis read their own endpoints,
     // not the desk, so they skip this fetch entirely.
-    enabled: section === "overview" || section === "activity",
+    enabled: section === "overview" || section === "activity" || section === "events",
   });
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
 
   if (section === "heartbeat") return <HeartbeatSection deskId={accountId} />;
   if (section === "thesis") return <ThesisDrawer id={accountId} />;
+  if (section === "events")
+    return (
+      <EventsSection
+        desks={desks.data}
+        desksLoading={desks.isPending}
+        desksError={desks.isError}
+        day={pinnedDay}
+        onPickDay={onPickDay}
+      />
+    );
   if (section === "overview") {
     const { stats, caption, allAccounts, roster } = resolveNetWorth(networth.data, accountId);
     return (
@@ -290,6 +329,8 @@ function AccountsBody({
   onToggleDefault,
   onSelectAccount,
   onSelectSection,
+  pinnedDay,
+  onPickDay,
 }: {
   readonly deskIds: readonly string[];
   readonly accountId: string;
@@ -302,12 +343,16 @@ function AccountsBody({
   readonly onToggleDefault: () => void;
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
+  readonly pinnedDay: string | undefined;
+  readonly onPickDay: (day: string | undefined) => void;
 }): ReactElement {
   const networth = useQuery({ queryKey: ["accounts-networth"], queryFn: fetchNetWorth });
   const { stats, caption } = resolveNetWorth(networth.data, accountId);
   // The calendar's head rides the sticky block at ≥861 and sits under it at ≤860 — one instance,
   // placed by the phone's own media query, never a hidden twin (`cockpit-clock.tsx`).
   const phone = usePhoneWidth();
+  // On Events the grid's own head is the one range control (`events-section.tsx`).
+  const clock = section === "events" ? null : <CockpitClock />;
 
   return (
     <PageFrame controls={<ProfileRail current="accounts" />}>
@@ -336,9 +381,9 @@ function AccountsBody({
             onSelect={onSelectSection}
             variant="horizontal"
           />
-          {phone ? null : <CockpitClock />}
+          {phone ? null : clock}
         </div>
-        {phone ? <CockpitClock /> : null}
+        {phone ? clock : null}
         <CockpitBody
           section={section}
           deskIds={deskIds}
@@ -346,6 +391,8 @@ function AccountsBody({
           accounts={accounts}
           query={query}
           onFilterChange={onFilterChange}
+          pinnedDay={pinnedDay}
+          onPickDay={onPickDay}
         />
       </div>
     </PageFrame>
@@ -370,6 +417,8 @@ export const Route = createFileRoute("/accounts")({
       : {}),
     // List · Map · Runway (#3689 slice 9): a lens on one positions list, not a route.
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
+    // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
+    ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
   }),
   component: AccountsPage,
 });
