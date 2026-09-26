@@ -1157,6 +1157,29 @@ await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");
 
+// The tower's crest on a flag (#3807 slice 3a, `?shell=watchtower`). Phone first: no crest at 390,
+// the band exactly today's. Then 1280, the crest at the band's right cap — waited on through the
+// scene's own ready flag, and shot without it (said so) if WebGL never comes up.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/accounts?shell=watchtower`);
+await page.getByText("Net worth · Eric").waitFor();
+await shootCockpit("flag-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.goto(`${origin}/app/accounts?shell=watchtower`);
+await page.getByText("Net worth · Eric").waitFor();
+try {
+  await page.waitForFunction(
+    () => document.querySelector("iframe.vantage")?.contentWindow?.__ready === true,
+    undefined,
+    { timeout: 60000 },
+  );
+  await page.waitForTimeout(1200);
+} catch {
+  console.log("flag-desktop: the crest's scene never reported ready — shot without it");
+}
+await shootCockpit("flag-desktop");
+await page.goto(`${origin}/app/accounts?shell=off`);
+
 // Sauron's character card (#3727, handoff 6a): the tower over the league, top right of the
 // Overview. Phone first (the card follows the decision, full ladder kept), then the wide grid,
 // then the same grid mid-glance after a range chip is clicked.

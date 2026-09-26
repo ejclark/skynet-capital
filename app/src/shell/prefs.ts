@@ -6,6 +6,12 @@ import { create } from "zustand";
  * un-stamped default is DARK (Eric, round 3) — an explicit choice stamps `data-theme` on <html>
  * so the CSS token overrides in theme.css win in both directions, and `data-density` narrows the
  * spacing tokens without any component redefining itself.
+ *
+ * THE SHELL FLAG (#3807 slice 3a): `?shell=watchtower` on any URL opts this viewer into the next
+ * shell — today, the tower's crest at the calendar band's right cap (`vantage.tsx`). It is stored
+ * per browser, so it survives navigation and reloads, and `?shell=off` clears it. It stamps
+ * `data-shell="watchtower"` on <html> so the band's CSS can make room for the crest. Invisible
+ * unless asked for: nothing in the app links to it.
  */
 
 export type Theme = "dark" | "light";
@@ -13,6 +19,10 @@ export type Density = "comfortable" | "compact";
 
 const THEME_KEY = "skynet-theme";
 const DENSITY_KEY = "skynet-density";
+const SHELL_KEY = "skynet-shell";
+
+/** The opt-in shell, or `undefined` for today's. */
+export type Shell = "watchtower" | undefined;
 
 function readStored<T extends string>(key: string, allowed: readonly T[]): T | undefined {
   try {
@@ -30,6 +40,41 @@ function stamp(theme: Theme | undefined, density: Density): void {
   else root.removeAttribute("data-density");
 }
 
+function stampShell(shell: Shell): void {
+  if (shell) document.documentElement.setAttribute("data-shell", shell);
+  else document.documentElement.removeAttribute("data-shell");
+}
+
+function storeShell(shell: Shell): void {
+  try {
+    if (shell) localStorage.setItem(SHELL_KEY, shell);
+    else localStorage.removeItem(SHELL_KEY);
+  } catch {
+    /* no storage: the flag lasts this page load */
+  }
+}
+
+/** `?shell=watchtower` sets the flag, `?shell=off` clears it; otherwise the stored choice. */
+export function shellFromUrl(search: string, stored: Shell): Shell {
+  const asked = new URLSearchParams(search).get("shell");
+  if (asked === "watchtower") return "watchtower";
+  if (asked === "off") return undefined;
+  return stored;
+}
+
+function initialShell(): Shell {
+  const stored = readStored(SHELL_KEY, ["watchtower"] as const);
+  let search = "";
+  try {
+    search = window.location.search;
+  } catch {
+    /* no location: keep what is stored */
+  }
+  const shell = shellFromUrl(search, stored);
+  if (shell !== stored) storeShell(shell);
+  return shell;
+}
+
 function initialTheme(): Theme {
   const stored = readStored(THEME_KEY, ["dark", "light"] as const);
   if (stored) return stored;
@@ -40,8 +85,10 @@ function initialTheme(): Theme {
 interface PrefsState {
   readonly theme: Theme;
   readonly density: Density;
+  readonly shell: Shell;
   readonly setTheme: (theme: Theme) => void;
   readonly setDensity: (density: Density) => void;
+  readonly setShell: (shell: Shell) => void;
 }
 
 export const usePrefs = create<PrefsState>((set) => {
@@ -50,9 +97,17 @@ export const usePrefs = create<PrefsState>((set) => {
   // Stamp only what was explicitly stored so the system-following default keeps following the
   // system; density always stamps (it has no OS equivalent to defer to).
   stamp(readStored(THEME_KEY, ["dark", "light"] as const), density);
+  const shell = initialShell();
+  stampShell(shell);
   return {
     theme,
     density,
+    shell,
+    setShell: (next) => {
+      storeShell(next);
+      stampShell(next);
+      set({ shell: next });
+    },
     setTheme: (next) => {
       try {
         localStorage.setItem(THEME_KEY, next);

@@ -1,5 +1,6 @@
-import { type ReactElement, type RefObject, useEffect, useId, useRef } from "react";
+import { type ReactElement, useId, useRef } from "react";
 import { LeagueCard } from "./league-card";
+import { useTowerGlance, useTowerMood } from "./tower-bus";
 
 /**
  * SAURON'S CHARACTER CARD (plan #3727, design handoff 6a): the league, with Barad-dûr standing
@@ -15,33 +16,10 @@ import { LeagueCard } from "./league-card";
  * a lens, the blotter's filter box) turns the Eye toward it for a moment. Only a point in the
  * frame's own pixels crosses the frame, and only to our own origin; the scene caps and times the
  * turn (`src/three/kit/glance.ts`). Reduced motion: the scene holds a still frame and the page
- * sends no glances, so the card is simply a picture.
+ * sends no glances, so the card is simply a picture. The glance lives in `tower-bus.ts` since
+ * #3807 slice 3a — this card was its first consumer; the band's crest is the second. The card also
+ * lends its landmark's dials to the crest (`useTowerMood`), so both towers burn alike.
  */
-
-/** The page controls that count as "filters" — every toggle chip and the free-text filter box,
- *  and the market calendar's arrows (#3807 slice 2·1): a range is a filter of time. */
-const FILTER_CONTROLS =
-  '[aria-pressed], input[type="search"], input[type="text"], input:not([type]), select, button.eh-nav';
-
-const prefersStill = (): boolean => {
-  try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-};
-
-/** A glance at `control`'s centre, in the frame's own CSS pixels. Exported for the spec. */
-export function glanceMessage(
-  frame: DOMRect,
-  control: DOMRect,
-): { readonly type: "tower:glance"; readonly x: number; readonly y: number } {
-  return {
-    type: "tower:glance",
-    x: control.left + control.width / 2 - frame.left,
-    y: control.top + control.height / 2 - frame.top,
-  };
-}
 
 /** The tower's URL: the card framing, plus the landmark's dials when this account has one. */
 export function towerSrc(landmark?: { readonly power: number; readonly health: number }): string {
@@ -49,25 +27,6 @@ export function towerSrc(landmark?: { readonly power: number; readonly health: n
     ? `&power=${landmark.power.toFixed(3)}&health=${landmark.health.toFixed(3)}`
     : "";
   return `/tower?frame=card${dials}`;
-}
-
-/** Send a glance to `frame` whenever a filter control inside `scope` is clicked. */
-function useGlance(frame: RefObject<HTMLIFrameElement | null>, scope: string): void {
-  useEffect(() => {
-    if (prefersStill()) return;
-    const onClick = (e: MouseEvent): void => {
-      const target = e.target instanceof Element ? e.target : null;
-      const control = target?.closest(FILTER_CONTROLS);
-      const iframe = frame.current;
-      if (!(control && iframe?.contentWindow && control.closest(scope))) return;
-      iframe.contentWindow.postMessage(
-        glanceMessage(iframe.getBoundingClientRect(), control.getBoundingClientRect()),
-        window.location.origin,
-      );
-    };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, [frame, scope]);
 }
 
 /** The shade zone: the forge's ember seat, then mist with an uneven, organic top edge. */
@@ -157,7 +116,8 @@ export function SauronCard({
   readonly scope: string;
 }): ReactElement {
   const frame = useRef<HTMLIFrameElement>(null);
-  useGlance(frame, scope);
+  useTowerGlance(scope, frame);
+  useTowerMood(landmark);
   return (
     <section className="char-card" aria-label="Sauron's tower and the league">
       <div className="char-art">
