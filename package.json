@@ -36,6 +36,7 @@
     "comms:scan": "node scripts/comms-scan.mjs",
     "prepare": "test -n \"$CI\" || husky",
     "arch:scan": "node scripts/arch-scan.mjs",
+    "config:audit": "node scripts/config-audit.mjs",
     "repair-watchlist:scan": "node scripts/repair-watchlist-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
     "comment-bloat:scan": "node scripts/comment-bloat-scan.mjs",

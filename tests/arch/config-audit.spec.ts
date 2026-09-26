@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { advisoryScan } from "../support/advisory-scan.js";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Config audit (scripts/config-audit.mjs) — a read-only, proposals-only report for the secretary
@@ -30,6 +31,15 @@ function auditFixture(seed?: (root: string) => void): { status: number; out: str
     rmSync(root, { recursive: true, force: true });
   }
 }
+
+// The wiring that makes the eye ✅ live in docs/COACHES.md's sense: a caller and a spec. Until
+// 2026-09-26 nothing ran it but a hand step in the secretary digest (#3769 slice 2, the
+// lousy-agents rule "Partial beats false Shipped"). Advisory: it proposes, a human approves.
+describe("config-audit (advisory)", () => {
+  it("prints its proposal report on the real repo without blocking CI", () => {
+    advisoryScan(SCRIPT);
+  });
+});
 
 describe("config-audit — missing inputs are named, never a manufactured finding", () => {
   it("reports zero references as possibly-orphaned when git grep answers (control case)", () => {

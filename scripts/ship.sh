@@ -151,6 +151,14 @@ $mm"
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
+  # PR-title lint, locally: CI's verify job runs commitlint over the PR TITLE (it becomes the
+  # squash subject), and the commit lint further down never sees it — #3774 went red on a 106-char
+  # title after local verify passed (2026-09-26). Same check, before anything is pushed.
+  echo "$title" | npx commitlint >/dev/null 2>&1 || {
+    echo "ship open: PR TITLE fails commitlint (Conventional Commit, lowercase-led, ≤100 chars):" >&2
+    echo "$title" | npx commitlint --verbose >&2 || true
+    exit 1
+  }
   local base="main" bodyfile="" verify=1 hold=0
   while [ $# -gt 0 ]; do case "$1" in
     --base) base="$2"; shift 2 ;;
