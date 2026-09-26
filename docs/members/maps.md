@@ -14,10 +14,7 @@ flowchart LR
   r1 ==> r2
   r2 ==> r3
   r3 ==> r1
-  r1 --x d0["dead end 4: Close / Close this buy render on another…"]
-  r1 --x d1["dead end 5: 'click a symbol for its fill timeline' names a…"]
-  r3 --x d2["dead end 8: Thesis Subscribe's reason lives only in…"]
-  r1 --x d3["dead end 5: /u/:id has no Activity view"]
+  r3 --x d0["dead end 8: Thesis Subscribe's reason lives only in…"]
 ```
 
 _1 journey: what did Sauron do, and why. Source: `docs/members/bot-watcher.md`._
@@ -27,20 +24,19 @@ _1 journey: what did Sauron do, and why. Source: `docs/members/bot-watcher.md`._
 ```mermaid
 flowchart LR
   r0["/accounts"]
-  r1["/research"]
-  r2["/u/human-eric"]
-  r3["/trade · guidance"]
+  r1["/accounts · events"]
+  r2["/research"]
+  r3["/u/human-eric"]
+  r4["/trade · guidance"]
   r0 ==> r1
-  r2 ==> r3
-  r3 ==> r0
-  r0 ==> r3
-  r3 ==> r1
-  r0 --x d0["gap: crawl finding 9 — /api/accounts/networth…"]
-  r0 --x d1["gap: the calendar"]
-  r3 --x d2["gap: profit-take exists only as a decision-card kind"]
-  r0 --x d3["gap: crawl finding 9 — the money strip is the…"]
-  r0 --x d4["gap: no target allocation exists anywhere"]
-  r0 --x d5["gap: 'wait' is per-position only"]
+  r1 ==> r2
+  r3 ==> r4
+  r4 ==> r0
+  r0 ==> r4
+  r4 ==> r2
+  r4 --x d0["gap: profit-take exists only as a decision-card kind"]
+  r0 --x d1["gap: no target allocation exists anywhere"]
+  r0 --x d2["gap: 'wait' is per-position only"]
 ```
 
 _5 journeys: the Monday read · take profit or hold · rebalance · wait · the phone check. Source: `docs/members/eric.md`._
@@ -50,16 +46,14 @@ _5 journeys: the Monday read · take profit or hold · rebalance · wait · the 
 ```mermaid
 flowchart LR
   r0["/"]
-  r1["/learn"]
-  r2["/onboarding"]
+  r1["/accounts"]
+  r2["/accounts · milestones"]
   r3["/trade"]
-  r4["/learn/trading"]
   r0 ==> r1
   r1 ==> r2
   r2 ==> r3
-  r0 --x d0["dead end 1: first sign-in lands on the leaderboard with no…"]
-  r1 --x d1["dead end 2: /learn says 'unlocks after your first feedback…"]
-  r3 --x d2["dead end 3: 'No accounts are linked to your session yet.'…"]
+  r2 --x d0["dead end 2: dead end 2, half closed — the contradiction is…"]
+  r3 --x d1["dead end 3: 'No accounts are linked to your session yet.'…"]
 ```
 
 _2 journeys: the first ten minutes · the first rung, read before it is earned. Source: `docs/members/first-timer.md`._
@@ -72,7 +66,7 @@ flowchart LR
   r1["/u/human-eric"]
   r2["/trade"]
   r3["/u/sauron/thesis"]
-  r4["/playbooks"]
+  r4["/accounts · milestones"]
   r5["/research"]
   r0 ==> r1
   r1 ==> r2
@@ -95,20 +89,17 @@ flowchart LR
   r3["/trade"]
   r4["/trade · chain"]
   r5["/activity"]
-  r6["/playbooks"]
+  r6["/accounts · milestones"]
   r7["/research · playbooks"]
   r0 ==> r1
   r1 ==> r2
   r2 ==> r3
   r4 ==> r5
   r6 ==> r7
-  r0 --x d0["gap: crawl finding 9 — /api/accounts/networth…"]
-  r3 --x d1["dead end 6: Trade's '← Back to account' goes to the desk…"]
-  r3 --x d2["dead end 8: docked Trade has no UI entry to the standalone…"]
-  r4 --x d3["dead end 3: the Chain / Chart / Guidance panes say 'Pick a…"]
-  r0 --x d4["dead end 6: /accounts never links your own desk"]
-  r1 --x d5["dead end 6: the desk rail always says '← Leaderboard'"]
-  r6 --x d6["dead end 7: two unrelated 'Playbooks': the Profile chapter…"]
+  r3 --x d0["dead end 8: docked Trade has no UI entry to the standalone…"]
+  r4 --x d1["dead end 3: the Chain / Chart / Guidance panes say 'Pick a…"]
+  r0 --x d2["dead end 6: /accounts never links your own desk"]
+  r6 --x d3["dead end 7: two unrelated 'Playbooks': the Profile page's…"]
 ```
 
 _4 journeys: sell a covered call on a position I hold · the fill on Activity · my own desk, and back · playbooks, twice. Source: `docs/members/returning-trader.md`._
