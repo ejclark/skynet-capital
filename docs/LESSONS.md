@@ -12,7 +12,9 @@ it. Prevention ranks, best first:
 2. **A doctrine line** in `CLAUDE.md` / `docs/COACHES.md` / `docs/ENGINEERING.md` — loaded into every
    session's context, so it steers the next decision.
 3. **A ledger entry alone** — acceptable only when the cost of mechanizing exceeds the expected
-   damage. Say so explicitly; don't default here because it's the cheapest.
+   damage. Say so explicitly; don't default here because it's the cheapest. A banned *command* is
+   never this rank: `scripts/hooks/guard-bash.mjs` refuses it before it runs (a `PreToolUse` hook,
+   exit 2), so add the pattern there and cite the doctrine line.
 
 **Entry format** (parsed by the gate — keep the field names):
 
