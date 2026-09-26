@@ -47,7 +47,33 @@ function inSymbolScope(
   );
 }
 
-function CallBoard({
+/** A hub is an event id other ledgers name as adjacent — often one nobody has written a ledger
+ *  for yet. Only an id with a ledger (`events/<id>` in the shelf) links to its page; the rest read
+ *  as plain text rather than a link that opens a 404. */
+function HubName({
+  id,
+  ledgerSlugs,
+}: {
+  readonly id: string;
+  readonly ledgerSlugs: ReadonlySet<string>;
+}): ReactElement {
+  const title = "ledgers in range naming this event as adjacent";
+  if (!ledgerSlugs.has(`events/${id}`)) {
+    return (
+      <span className="num" title={`${title} — no ledger of its own yet`}>
+        {id}
+      </span>
+    );
+  }
+  return (
+    <a href={`/research/events/${id}`} className="num" title={title}>
+      {id}
+    </a>
+  );
+}
+
+/** Exported for its spec. */
+export function CallBoard({
   data,
   filter,
   inRangeIds,
@@ -84,6 +110,7 @@ function CallBoard({
   if (data.calls.length === 0) return null;
   const mix = callMix(calls.map(({ row }) => row.call));
   const hubs = hubEvents(calls.map(({ call }) => call.adjacent ?? []));
+  const ledgerSlugs = new Set(data.ledgers.map((doc) => doc.slug));
   // #1711: a blocked/downgraded source is never a silent fallback — the board counts it here from
   // the field (probe-ref.blocked, via the shell payload's sourceBlocked), never from prose.
   const blockedCount = calls.filter(({ call }) => call.sourceBlocked).length;
@@ -110,13 +137,7 @@ function CallBoard({
                 {hubs.map((hub, i) => (
                   <span key={hub.id}>
                     {i > 0 ? ", " : ""}
-                    <a
-                      href={`/research/events/${hub.id}`}
-                      className="num"
-                      title="ledgers in range naming this event as adjacent"
-                    >
-                      {hub.id}
-                    </a>{" "}
+                    <HubName id={hub.id} ledgerSlugs={ledgerSlugs} />{" "}
                     <span className="num">({hub.count})</span>
                   </span>
                 ))}
