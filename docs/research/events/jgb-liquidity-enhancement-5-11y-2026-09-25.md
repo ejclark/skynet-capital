@@ -413,6 +413,7 @@ evidence for or against a coupon preference.
 | 2026-09-09 | D-16 | Initial research banked (above); canonical `src/domain/market-events/jgb-liquidity-enhancement-5-11y-2026-09-25.json` written from the 10-22 lane's proposal, now shadowed. **PROPOSED TO SCORE THE FAMILY'S COUPON READING; ENDS UP CORRECTING IT.** Built the family's first **issue-level panel** — **4,703 issue-auction rows across 48 auctions** (this zone's 32 prints + the **16 prints of the 1-5y zone the family had never read**), each issue matched to coupon, remaining maturity and float from MOF's workbook; SEs **block-bootstrapped by auction** (2,000 reps). **THE COUPON COEFFICIENT'S 95% INTERVAL CONTAINS ZERO IN EVERY SPECIFICATION HERE, INCLUDING UNCONTROLLED** (+0.205, CI **−0.112 to +0.585**; naive OLS t = +1.90 — clustering is what removes it). The only coefficient clearing zero is **log float, NEGATIVE** (−0.687, CI −1.265 to −0.126) → a **scarcity** reading, which is what a facility named "Liquidity Enhancement" is for. **OUT OF SAMPLE THE MONOTONE ORDERING IS REFUTED:** in the 1-5y zone the LOWEST-coupon security (10Y, **0.100%**) is **overweight 1.07× (0.77-1.36)** and the HIGHEST (30Y, **2.507%**) **underweight 0.61×**, with 5Y (0.713%) the most underweight at **0.49× (0.24-0.82)**; observed order 5Y<30Y<2Y<10Y<20Y against the predicted 10Y<5Y<2Y<20Y<30Y. Its aggregate coupon overweight IS positive (+0.296pp, CI +0.149/+0.455, 15/16) but is fully absorbed by **remaining maturity** (+0.672, CI +0.186/+1.136; coupon falls to +0.228, CI spans zero) — the signature of an unidentified summary. **"AUGUST BROKE RANKS" DISSOLVES:** 2026-08-26's ¥401.2bn of 20Y takeup is a step function in remaining maturity — No.136 (5.57y) 1.97×, **0.01×-0.51× across 6.57-8.82y**, then **4.88/1.22/5.55/1.42/1.63/7.64/1.26×** across **9.32-10.82y**, the longest 20Y paper in the band. Low coupon came along because within a sector an older issue is both higher-coupon and shorter-dated — the sibling's own caution, unapplied. **THE PROPOSED KILL SWITCH HAS NO POWER:** the coupon overweight is negative in **13/32** prints (mean +0.158pp, clustered CI +0.011/+0.311, sd 0.451), so "two consecutive negatives" is **~16.5%** on the whole series vs **~0.7%** on the last-12 window quoted — a **24× spread** set only by window choice; P(09-25 negative) ≈ **36%**. **SECTOR ORDERING SURVIVES ONLY IN PART:** 10Y **0.64× (0.43-0.86)** genuinely below 20Y **1.31× (1.11-1.51)**, but 20Y vs 30Y **1.64× (1.10-2.23)** NOT distinguishable at n=32. **THE SIBLING'S CONTROLLED TEST IS NOT CONTROLLED ON FLOAT:** 30Y No.27-34 averages **¥1,719bn/issue** vs 20Y No.161-177's **¥2,557bn** — 1.49× scarcer, same direction as the take; its block levels (¥5.7tn/¥1.6tn) understate by ~8× because the workbook's reopening rows must be summed (10Y No.382 = 3 rows × ~¥1.97tn = **¥5.90tn**, verified), though its **ratios and shares are sound** (60.0/35.8/4.2% vs this session's 58.0/37.0/5.0%). **PROCESS:** the Sep. 25 row carries **no announcement href** on 2026-09-09 while every row through Sep. 10 does — **¥650bn anticipated, not announced**, terms **~2026-09-18**, the 26th consecutive if it holds. **Cadence recount:** mid zone **35/35** months (confirms sibling); **1-5y 18/35** (odd months) and **11-39y 17/35** (even months) — the sibling transposed these, 70 rows either way. **MOF raised the 1-5y zone twice** (¥500 → ¥600 on 2025-09-08 → **¥700bn** from 2025-11-21), so the shift away from the super-long is larger than the 5-11y record alone shows. **CURVE (13,296 sessions from 1974):** 5s10s **+63.8bp = 62.4th pct** of 9,935; 25s30s **−1.3bp = 1.0th** of 5,501; and the level statistic the family had not reported — **30Y par 3.961% = 99.5th percentile of 6,619 sessions** against 5Y 2.258% = 56.3rd of 13,296. **Volatility (Yahoo, secondary):** VIX **15.72** (09-08 close, range 14.32-16.34, no regime change). **Peers:** n/a, `symbols: []`. **Adjacency:** **39** tracked ids within ±5d — `trump-xi-summit-2026-09-24` (high) and `treasury-7y-note-2026-09-24` / `treasury-buyback-20y30y-2026-09-24` at D-1, `durable-goods-2026-09-25` + `umich-sentiment-final-2026-09-25` same-date, `jgb-40y-auction-2026-09-29` at D+4, `government-funding-deadline-2026-09-30` and `pce-2026-09-30` (both high) at D+5. **One new dated event PROPOSED (`estimate`), off MOF's own calendar and announcement:** `jgb-liquidity-enhancement-1-5y-2026-09-10` (¥700bn, terms already published in auct20260903e) — the out-of-sample zone this ledger's leg 2 rests on, printing **15 days before** this auction and scoring `FT-…-4`. The 10-22 lane's `FT-…-2` and `FT-…-4` should still be scored exactly as written; read their outcome as a fact about those statistics, not about a coupon preference. | Initial stance set — **stand aside permanently**; the entry's job is the family's **identification check**, and it downgrades the coupon finding to a description with float, not coupon, as the surviving variable | 2026-09-16 (low band; the 30-day interval lapses into the 7-day band on 2026-09-11, D-14) |
 | 2026-09-16 | D-9 | **THE OUT-OF-SAMPLE CHECK CAME BACK — IT PASSES, AND IT WEAKENS ITS OWN TEST DESIGN.** All MOF pages re-fetched direct today. **`FT-…-4` SCORED PASS:** the 2026-09-10 1-5y "Issues Re-opened" page (`eresul20260910a.htm`, HTTP 200, 23,273 B) did **not** print the monotone coupon order. Recomputed independently from the workbook (¥249.95tn basis, 2-Year No.488 patched in from `eresul20260828.htm` because the workbook still ends at No.487): **2Y 3.87× · 5Y 0.52× · 10Y 0.47× · 20Y 1.27× · 30Y 0.00×**, against the sibling close-out's **3.75 / 0.50 / 0.47 / 1.42 / 0.00** on its ¥323.95tn "corrected" basis — **same ordering, same four FT verdicts, different denominator**; the fork is unreconciled and named below, and nothing in either lane turns on it. **BUT THE KILL SWITCH SURVIVED ONLY BECAUSE THE HIGHEST-COUPON SECURITY TOOK ¥0.0bn**, and the sibling's own `FT-…-4` establishes that the 30-Year cell (No.1-5, **0.46%** of stock, zero take in **5 of 6** ¥700bn prints) is a denominator artefact, not a participant. The three legs that *can* move all went the family's way (20Y over, 10Y and 5Y under). **Leg 2 is therefore re-quoted off the 5Y/10Y evidence, not the 30-Year — an honest downgrade of this ledger's own out-of-sample claim.** **LEG 1 GOT ITS PUBLIC DEMONSTRATION:** the same page's coupon-weighted overweight is **+0.4835pp**, strongly positive, and it is carried by **2-Year No.488 — coupon 1.7%, first issued 2026-09-01, ¥273.7bn = 39.2% of the auction** — the *newest, large-float* bond on the menu. A positive coupon aggregate produced by the youngest paper is the unidentified-summary signature this ledger named, now observed rather than inferred. **NEW, AND IT DATES A FUTURE TEST:** with JGB yields at record highs the newest paper is now the **highest**-coupon paper — 20Y **No.197 auctioned 2026-09-15 carries a 3.7% coupon** (bids ¥2,131.3bn, accepted ¥532.1bn + ¥167.4bn NPC-Ⅰ, cover 4.005, tail 1.3bp) against the 20Y No.130-161 band's 1.273% wtd-avg. As that cohort ages into the 5-11y band the **old-equals-high-coupon collinearity leg 1 rests on reverses sign**, which is what would finally identify coupon. **CURVE — A NEW SERIES HIGH:** merged par curve through 2026-09-15 (13,301 sessions from 1974): **30Y 4.106% = 100.0th percentile of 6,624 sessions** (+14.5bp from 3.961% on 09-08, was 99.5th), 40Y 4.105% = 99.9th; whole curve +8.0 to +14.8bp in five sessions; 5s10s **+69.0bp = 68.6th pct** (was 62.4th), 25s30s **−1.4bp = 1.1th**, still inverted; the band itself ordinary (5Y 2.338% = 56.9th, 10Y 3.028% = 74.8th). **TERMS STILL NOT ANNOUNCED** — the Sep. 25 calendar row carries no announcement href on 2026-09-16 (`2609e.htm`, HTTP 200, 26,450 B, grown from 25,795 B); last href is the Sep. 17 T-bill announced Sep 10, so the ~7-day pattern holds and terms are due **~2026-09-18**. `FT-…-1` unscoreable until then; `FT-…-2` and `FT-…-3` unscoreable until the print. **VIX (Yahoo, secondary):** 15.72 → **17.20** (09-15 close, +1.48, **inside** the 3-point threshold; 12-session range 14.32-17.84). **Peers:** n/a, `symbols: []`. **MACRO:** FOMC decision lands 2026-09-16 after this session; BoJ and Japan CPI both **2026-09-18**, the same day MOF's terms are due. **ADJACENCY:** corridor **39 → 63** ids, only **1 strong** (`pce-2026-09-30`); the additions are calendar churn plus **`jpx-market-closure-2026-09-21/22/23`** — Tokyo cash shut for Silver Week, leaving **Sep 24 as the only full session** between MOF's ~Sep 18 terms and the print. **NO NEW EVENT PROPOSED:** MOF's October slate (`2610e.htm`, HTTP 200) is 10Y Oct 6 · 30Y Oct 8 · 5Y Oct 14 · 20Y Oct 20 · **5-11y LEA Oct 22** · **11-39y LEA Oct 27** · 2Y Oct 29, and every one is already canonical or already proposed — nothing dated was found inside the horizon that this calendar does not hold. **PROCESS, for the next session:** two source paths in this ledger's Method are dead and the working ones are — workbook `policy/jgbs/**auction**/past_auction_results/Auction_Results_for_JGBs.xls` (492,032 B, unchanged, still ends at 2-Year No.487) and curve `mof.go.jp/**jgbs**/reference/interest_rate/{jgbcm.csv, data/jgbcm_all.csv}` (the `/english/policy/` variants now 404). Nothing was blocked; every primary was obtained. | **No stance change — stand aside stands.** Leg 2's *evidence base* narrows (quote 5Y/10Y, never the 30-Year artefact) and leg 1 gains a live demonstration; the conclusion the stance rests on is unmoved | 2026-09-23 (low band, D-2; 7-day interval) |
 | 2026-09-23 | D-2 | **TERMS ANNOUNCED — `FT-…-1` SCORES PASS.** MOF's announcement (`announcement/auct20260918ea.htm`, re-fetched direct 2026-09-23, HTTP 200) names remaining maturities of **5-11 years** — eligible issues 10-Year No.364-382 / 20-Year No.130-161 / 30-Year No.6-26, the exact ranges this panel's own regressions already used — and an offering of **about ¥650bn**, the **26th consecutive** print of that size; issue date 2026-09-28. **TWO CENTRAL BANKS HIKED SINCE THE LAST ROW, AND THE AUCTION'S OWN ISSUER IS ONE OF THEM:** the BoJ raised its policy rate **25bp to 1.25%** on 2026-09-18 (`k260918a.pdf`, HTTP 200), by a **7-2** vote — the two dissents (Asada, Sato) both argued the hike was premature, so the split runs hawkish-vs-cautious, not the reverse — effective **2026-09-24, the session immediately before this auction**; the statement cites underlying CPI "approaching 2 percent" with upside risk and signals further hikes ahead. The FOMC also hiked, **+25bp to 3.75-4.00%**, unanimous 12-0, on 2026-09-16 (federalreserve.gov, re-fetched direct). Neither touches this ledger's no-price-channel premise (still no tracked name with yen-rates exposure, still no rates-keyed playbook), but a same-week hike from the issuer itself, landing the session before eligible issues re-open, is exactly what the adjacency sweep exists to catch. **VIX 17.20 → 14.21** (Yahoo, secondary, 09-22 close vs 09-15), **-2.99pp — just inside** the 3-point regime threshold. **CURVE BLOCKED THIS SESSION:** MOF's par-yield CSV endpoints (`interest_rate/jgbcm.csv`, `.../data/jgbcm_all.csv`) both returned an Incapsula bot-check page rather than data on both a direct fetch and the WebFetch tool, while the HTML calendar/announcement pages on the same domain fetched cleanly — endpoint-specific, not domain-wide. Recorded as blocked, not substituted; the 09-15 reading (30Y 4.106%, 99.95th pct of 6,624) stands as last-known, unrefreshed. **ADJACENCY — corridor re-swept id by id, 63 → 66:** `adjacentStrongIds` gains a **new confirmed-critical entry, `mu-2026-09-30-print`** (MU earnings, D+5) alongside the standing `pce-2026-09-30`; MU carries no yen-rates linkage. No other new confirmed high/critical id appeared 09-20→09-30. **No new dated event proposed** — every id this sweep surfaced is already canonical or an existing proposal. **Peers:** n/a, `symbols: []`. **No tracked-name move attributable to a JGB/yen headline surfaced** — kill switch 1's premise holds. | **No stance change — stand aside stands.** `FT-…-1` scores **PASS** (terms landed exactly as the 25-print prior predicted); the BoJ/Fed hikes are new macro context this ledger notes and does not trade | 2026-09-30 (low band, 7-day interval — the auction itself prints 2026-09-25, which should hand this entry to `event-passed-unscored` before this date arrives) |
+| 2026-09-26 | D+1 | **CLOSE-OUT — detail in `## Outcome` below.** Instrument cache busted first (`rm -rf node_modules/.cache/{earnings-cycle,intraday-edges}`, though this `rates` entry with `symbols: []` uses neither). MOF's result (`eresul20260925.htm`, HTTP 200, 17,852 bytes, re-fetched direct today): bids **¥1,916.4bn**, accepted **¥649.1bn**, cover **2.952**, excess **¥1,267.3bn**, spreads +0.032%/+0.030% (tail **0.2bp**, well under the n=32 mean 4.4bp/median 3.5bp), issue date 2026-09-28, **40** issues reopened (7×10Y + 22×20Y + 11×30Y, `eresul20260925a.htm`, HTTP 200, 23,448 bytes). Eligible-stock denominators re-pulled from `Auction_Results_for_JGBs.xls` (492,032 bytes, unchanged since initial research, saved 2026-08-13) and reproduce the panel's own 58.03/37.00/4.97% sector shares to two decimals — pipeline re-validated. **`FT-…-2` SCORES PASS:** 10-Year (No.364-382) took ¥316.9bn = 48.82% of accepted vs 58.03% eligible = **0.84×**, underweight as predicted; the kill switch (10-Year ≥1.0× while 30-Year <1.0×) cannot fire once 10-Year is under 1.0×. **`FT-…-3` SCORES PASS:** amount-weighted coupon of what was taken **1.6114%** minus of what was eligible **1.0790%** = **+0.5324pp**, inside the predicted −0.74pp to +1.06pp band. **`FT-…-1` and `FT-…-4` stand as already scored PASS** (09-23, 09-16 respectively) — nothing rescored, append-only holds. **Notable, not a kill switch:** 20-Year printed **0.90×**, below its own 32-print 95% CI (1.11–1.51×) and close enough to 10-Year's 0.84× that leg 5's "10-Year genuinely below 20-Year" claim is not distinguishable on this one print (a CI-of-the-mean claim is not refuted by a single noisy draw, but the gap the claim rests on did not show up here). 30-Year printed **3.59×**, the era's largest sector overweight, outside the 32-print CI on the mean (1.10–2.23×) but inside the individual-print range the ledger already flagged (0.00×–7.84×, sd 1.73). Issue-level concentration is bimodal again, same signature the initial research found: 10-Year's top four takes are its three newest/highest-coupon lines (No.382 2.4% · 379 1.5% · 380 1.7%, 8.7–9.5y remaining) **plus** its lowest-coupon line (No.365, 0.1%, just 5.2y remaining) — 43.6% of the whole auction on four lines split between the two ends of the sector's vintage range, not a smooth gradient. 30-Year's overweight concentrates almost entirely in its longest-remaining lines (No.23/24, 9.7–10.0y) — the same "longest-in-band" preference leg 3 found in August's 20-Year print, recurring here in a different sector. **Kill switch 1 (price channel) not triggered:** CRWV **−2.82%** on 09-25 (NVDA +0.22%, AVGO +0.70%, MRVL +1.15%, all under 2%) is attributed by the tape to CEO Michael Intrator's ~$26.7M insider sale and sector-wide "neocloud" selling pressure (IREN, Nebius also down the same session) — no JGB or yen headline named anywhere in the coverage. **Kill switch 6 (clustering objection reversed) not re-tested this close-out** — it has no registered forward test or score-by date, and answering it honestly would mean rebuilding the full 33-auction issue-level panel from scratch, out of proportion for a single-print close-out on a permanently-stand-aside instrument; left standing, unaffected. **Curve blocked again:** `jgbcm.csv` and `jgbcm_all.csv` both returned a plain 404 today (Incapsula bot-check last time) — recorded, not substituted; the 09-15 reading (30Y 4.106%, 99.95th pct of 6,624) stands last-known. **VIX** 14.21 → **14.87** (09-25 close, Yahoo, secondary), **+0.66**, well inside the 3-point threshold, no regime change. **Peers:** n/a, `symbols: []`. **Adjacency re-swept** (`event-scan.mjs --on-date` for 09-24/09-25/09-26): no new confirmed high/critical id inside the corridor beyond the standing `pce-2026-09-30` and `mu-2026-09-30-print` — nothing new proposed. | **No stance change — stand aside stands, and cost nothing.** The four registered forward tests all PASS; the entry's job (downgrading the family's coupon reading to a description, with float/scarcity as the surviving mechanism) is unchanged by this print, though 20Y/30Y's unusual readings are honestly noted above | — (close-out; this doc goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -425,3 +426,143 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-23
 <!-- probe-ref: {"symbols":{},"vix":14.21,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","mu-2026-09-30-print","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","russell-quarterly-ipo-review-effective-2026-09-21","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/jgbcm.csv","status":"404 (Incapsula bot-check page)","at":"2026-09-23"},{"url":"https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/data/jgbcm_all.csv","status":"404 (Incapsula bot-check page)","at":"2026-09-23"}]} -->
+
+## Outcome
+
+**Close-out 2026-09-26 (D+1), well inside the `closeOutWithinDays: 6` window.** The instrument cache was
+busted first per the rule (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`).
+This is a `rates` entry with `symbols: []`, so neither cache holds anything for it — "re-run instrument
+data" means every MOF page re-fetched direct today (never read from this session's memory of the tape),
+plus the four tracked names and VIX re-pulled through Yahoo after the bust.
+
+**Headline: both registered predictions this ledger still owed hold, and the print itself is the most
+extreme single-sector overweight the family has recorded — in the direction scarcity, not coupon,
+predicts.** The auction was ordinary on every headline metric (cover, excess bids, tail all inside or
+near the historical range) and unusual only in its sector split — the 30-Year cell, 4.97% of the eligible
+menu, took nearly 18% of the accepted amount.
+
+### The print, re-verified from primary
+
+| | 2026-09-25 | n=32 prior |
+|---|---|---|
+| Amounts of competitive bids | **¥1,916.4bn** | — |
+| Amounts of bids accepted | **¥649.1bn** | ¥649.2–649.5bn (26 prints at ~¥650bn) |
+| **Cover** | **2.952** | mean 3.067, p10 2.51, median 3.03, p90 3.50 |
+| Excess bids | **¥1,267.3bn** | mean ¥1,291bn |
+| Highest / average accepted spread | +0.032% / +0.030% | — |
+| **Tail** | **0.2bp** | mean 4.4bp, median 3.5bp, max 21.0bp |
+| Issues reopened | **40** (7×10Y, 22×20Y, 11×30Y) | — |
+
+Cover sits between p10 and the median — an ordinary, slightly soft draw. The tail is the tightest
+recorded in this session's reading of the series: pricing at the margin was unusually precise, not
+unusually contested.
+
+### Where the ¥649.1bn went
+
+Parsed issue by issue from `eresul20260925a.htm` (HTTP 200, 23,448 bytes); the 40 line items sum to
+¥649.1bn exactly. Eligible-stock denominators are the same three ranges the announcement named and this
+panel already used (10-Year No.364-382, 20-Year No.130-161, 30-Year No.6-26), re-pulled from
+`Auction_Results_for_JGBs.xls` (492,032 bytes, unchanged since initial research, saved 2026-08-13 — the
+pipeline reproduces its own 58.03/37.00/4.97% eligible shares to two decimals, re-validated rather than
+assumed).
+
+| Sector | Take | Share of accepted | Eligible share | **Overweight** | 32-print 95% CI |
+|---|---|---|---|---|---|
+| 10-Year No.364-382 | ¥316.9bn | 48.82% | 58.03% | **0.84×** | 0.43 – 0.86 |
+| 20-Year No.130-161 | ¥216.2bn | 33.31% | 37.00% | **0.90×** | 1.11 – 1.51 |
+| 30-Year No.6-26 | ¥116.0bn | 17.87% | 4.97% | **3.59×** | 1.10 – 2.23 |
+
+10-Year lands at the very top edge of its own historical band. 20-Year and 30-Year both land **outside**
+their 32-print CIs — 20-Year below, 30-Year far above — though 30-Year's single-print realisations have
+always ranged 0.00×–7.84× (sd 1.73) at this denominator, so one extreme draw is not itself a surprise; a
+CI on the mean is not the same claim as a bound on any one print.
+
+**Issue-level concentration is bimodal, the same signature the initial research found in August.**
+10-Year's four largest lines took 43.6% of the *whole* auction between them, split across the sector's
+two ends:
+
+| Issue | Coupon | Remaining | Taken | % of accepted |
+|---|---|---|---|---|
+| No.382 | 2.4% | 9.48y | ¥92.7bn | 14.28% |
+| No.379 | 1.5% | 8.73y | ¥80.1bn | 12.34% |
+| No.380 | 1.7% | 8.99y | ¥58.4bn | 9.00% |
+| No.365 | **0.1%** | **5.23y** | ¥52.0bn | 8.01% |
+
+The first three are the sector's newest, highest-coupon lines, near the long end of the band; No.365 is
+its oldest, lowest-coupon line, near the short end. A coupon threshold cannot separate them (0.1% vs
+1.5–2.4% span nearly the whole 10-Year coupon range) — this is a vintage/liquidity story, not a coupon
+one, the same reading leg 5 of the initial research already reached.
+
+30-Year's overweight, by contrast, concentrated almost entirely in its **longest**-remaining lines: No.23
+(2.5%, 9.74y, ¥23.0bn) and No.24 (2.5%, 9.99y, ¥20.8bn) together took 6.7% of the whole auction from a
+sector that is under 5% of the eligible menu. That is the same "longest-in-band" preference the initial
+research documented in the 2026-08-26 20-Year print — recurring here in a different sector, on the
+closing print.
+
+### Scoring the two forward tests this ledger still owed
+
+**`FT-jgb-liquidity-enhancement-5-11y-2026-09-25-2` — PASS.** Predicted the 10-Year sector underweight
+(<1.0×); it printed **0.84×**. The kill switch needed 10-Year **at or above** 1.0× while 30-Year printed
+below 1.0× — 10-Year's 0.84× makes that impossible regardless of what 30-Year did. Full detail and
+receipt in [`forward-tests/jgb-liquidity-enhancement-5-11y-2026-09-25.md`](../forward-tests/jgb-liquidity-enhancement-5-11y-2026-09-25.md).
+
+**`FT-jgb-liquidity-enhancement-5-11y-2026-09-25-3` — PASS.** Predicted the coupon-weighted overweight
+(amount-weighted coupon of what was taken minus of what was eligible) inside −0.74pp to +1.06pp. Taken:
+**1.6114%** wtd-avg coupon (¥649.1bn total, matched issue by issue to the workbook). Eligible: **1.0790%**
+wtd-avg coupon (¥205,010.1bn total across the three sectors). Difference: **+0.5324pp** — inside the band,
+on the positive side the whole-series mean already favoured. The statistic behaved exactly as "it is
+noise, do not read it as a verdict" predicted.
+
+**`FT-…-1` and `FT-…-4` were already scored PASS** on 2026-09-23 and 2026-09-16 respectively (the terms
+announcement and the 1-5y out-of-sample check) — both stand unchanged; this close-out does not touch
+those rows again.
+
+### Kill switches not carried by a registered forward test
+
+- **Switch 1 (no-price-channel premise) — did not fire.** CRWV moved **−2.82%** on 2026-09-25 (NVDA
+  +0.22%, AVGO +0.70%, MRVL +1.15%, all under the 2% threshold), but the tape attributes it to CEO
+  Michael Intrator's roughly $26.7M insider sale (Form 4, shares sold 2026-09-22 at $85.57–$88.95) and a
+  sector-wide "neocloud" selloff — IREN and Nebius both fell the same session on a week of research-note
+  pressure. No coverage names a JGB or yen headline. This is exactly the kind of move the sibling ledger's
+  own close-out already flagged as a weak attribution test (CRWV clears 2% on **54%** of its sessions) —
+  recorded as a further instance, not new evidence the test design is sound.
+- **Switch 6 (the clustering objection answered from the other side) — not re-tested.** It carries no
+  forward-test id and no score-by date; answering it honestly would mean rebuilding the full 33-auction
+  issue-level panel (block-bootstrapped SEs, 2,000 reps) from scratch on one additional print, which is
+  out of proportion for a single-print close-out on a permanently-stand-aside instrument. Left standing,
+  unaffected by this close-out — a future session with reason to revisit the family's identification
+  question is the right place for it, not this file (which goes quiet below).
+
+### Adjacency sweep
+
+`node scripts/event-scan.mjs --on-date=2026-09-24|2026-09-25|2026-09-26` re-checked id by id: no new
+confirmed high/critical entry inside the ±5-day corridor beyond the standing `pce-2026-09-30` and
+`mu-2026-09-30-print`. VIX **14.21 → 14.87** (2026-09-22 → 2026-09-25 close, Yahoo, secondary), +0.66,
+inside the 3-point threshold. No peer applies (`symbols: []`). Nothing dated was found that this calendar
+does not already hold — no new event proposed.
+
+### Honest limits on this close-out
+
+- **The curve is still blocked.** `jgbcm.csv` and `jgbcm_all.csv` both returned a plain 404 today
+  (Incapsula's bot-check page last time) — recorded, not substituted. The 2026-09-15 reading (30-year par
+  4.106%, 99.95th percentile of 6,624 sessions) stands last-known and unrefreshed; nothing scored here
+  depends on it.
+- **Eligible stock is still face issued, not float** — BoJ holdings, buy-backs and anything else removed
+  from tradeable supply are not netted out. Heaviest in 10-Year paper, so this print's 10-Year overweight
+  (0.84×) is, if anything, understated in scarcity terms.
+- **One print is one observation.** The 30-Year sector's 3.59× and the 20-Year sector's below-CI 0.90×
+  are notable but are single draws against a small-n (32) prior with a wide individual-print range; the
+  register's own rule is 2–3 prints before any pattern is cited as established, and this instrument has
+  none left to give one — the family's other zones can still supply that.
+- **The status stays `estimate`.** MOF published the result and the size and band both landed exactly as
+  the prior predicted, but `market-events-data.ts`'s confirmed-prefix taxonomy still has no slot for a
+  non-US sovereign debt office, and this lane may not self-confirm.
+- **Switch 6 is left open by choice, not by oversight** — see above. It is not a registered forward test
+  and this close-out does not owe it a verdict, but a reader should not mistake silence on it for a PASS.
+
+This entry's job was never to trade the auction — `symbols: []`, no house playbook is rates-keyed, and
+that premise held again today. Its job was to test whether the family's coupon reading survives contact
+with an issue-level panel and an out-of-sample zone; the initial research found it does not, and every
+prediction that initial research staked on this closing print came back **PASS**. This document goes
+quiet now, with one door back in: a registered forward test whose score-by date has not yet arrived would
+re-open it as `forward-test-due` — none remain unscored here.
