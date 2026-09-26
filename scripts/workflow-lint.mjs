@@ -234,10 +234,9 @@ const TOKEN_ACTORS = [
 ];
 const SELF_DISPATCH = /\bgh workflow run\s+([\w.-]+\.ya?ml)\b/;
 
-/** Rule 8: `{ job, actor }` for each dispatch-gated claude-code-action job that would refuse this
- *  file's own re-dispatch. `actor` is null when the dispatching token could not be read — reported
- *  as UNKNOWN, never passed. */
-export function unlistedDispatchActor(name, text) {
+/** The bot actors this file signs its own `gh workflow run <this file>` re-dispatches as — `null`
+ *  for a token whose actor cannot be read. */
+export function selfDispatchActors(name, text) {
   const actors = new Set();
   for (const job of jobs(text)) {
     for (const step of stepsOf(job.text)) {
@@ -247,19 +246,21 @@ export function unlistedDispatchActor(name, text) {
       actors.add(TOKEN_ACTORS.find(([re]) => re.test(token))?.[1] ?? null);
     }
   }
-  if (!actors.size) return [];
+  return actors;
+}
+
+/** Each claude-code-action step in a job, with the bots its `allowed_bots` names. */
+function actionAllowLists(jobText) {
+  return stepsOf(jobText)
+    .filter((step) => /anthropics\/claude-code-action/.test(step))
+    .map((step) =>
+      (/allowed_bots:\s*"?([^"\n]*)"?/.exec(step)?.[1] ?? "").split(",").map((b) => b.trim()),
+    );
+}
+
+function refusals(job, actors) {
   const problems = [];
-  for (const job of jobs(text)) {
-    const header = job.text
-      .split(/\n {4}steps:/)[0]
-      .split("\n")
-      .filter((l) => !l.trim().startsWith("#"))
-      .join("\n");
-    if (!(/workflow_dispatch/.test(header) && /anthropics\/claude-code-action/.test(job.text)))
-      continue;
-    const listed = (/allowed_bots:\s*"?([^"\n]*)"?/.exec(job.text)?.[1] ?? "")
-      .split(",")
-      .map((s) => s.trim());
+  for (const listed of actionAllowLists(job.text)) {
     for (const actor of actors) {
       if (actor === null) problems.push({ job: job.name, actor: null });
       else if (!(listed.includes(actor) || listed.includes("*")))
@@ -269,12 +270,55 @@ export function unlistedDispatchActor(name, text) {
   return problems;
 }
 
+/** Rule 8: `{ job, actor }` for each dispatch-gated claude-code-action step that would refuse this
+ *  file's own re-dispatch. `actor` is null when the dispatching token could not be read — reported
+ *  as UNKNOWN, never passed. */
+export function unlistedDispatchActor(name, text) {
+  const actors = selfDispatchActors(name, text);
+  if (!actors.size) return [];
+  return jobs(text).flatMap((job) => {
+    const header = job.text
+      .split(/\n {4}steps:/)[0]
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("#"))
+      .join("\n");
+    return /workflow_dispatch/.test(header) ? refusals(job, actors) : [];
+  });
+}
+
+/** The workflow names/paths a `workflow_run` trigger watches (its quoted `workflows:` entries). */
+export function watchedWorkflows(text) {
+  const at = text.search(/^ {2}workflow_run:\s*$/m);
+  if (at === -1) return [];
+  const rest = text.slice(at).split("\n").slice(1);
+  const body = [];
+  for (const line of rest) {
+    if (/^ {0,2}\S/.test(line) && line.trim() && !line.trim().startsWith("#")) break;
+    if (/^ {4}types:/.test(line)) break;
+    body.push(line.replace(/#.*$/, ""));
+  }
+  return [...body.join("\n").matchAll(/"([^"]+)"|'([^']+)'/g)].map((m) => m[1] ?? m[2]);
+}
+
+/** Rule 8, second half: a `workflow_run` run inherits the WATCHED run's actor (moneypenny-repair.yml
+ *  says so itself), so every claude-code-action step in a watcher must admit each actor a watched
+ *  workflow re-dispatches itself as. `actorsByWorkflow` maps a workflow's name and its path to
+ *  those actors. */
+export function unlistedWatchedActor(text, actorsByWorkflow) {
+  const actors = new Set();
+  for (const w of watchedWorkflows(text))
+    for (const a of actorsByWorkflow.get(w) ?? []) actors.add(a);
+  if (!actors.size) return [];
+  return jobs(text).flatMap((job) => refusals(job, actors));
+}
+
 export function lintWorkflow(
   name,
   text,
   prompts = [],
   hasScriptDeps = () => false,
   knownLabels = [],
+  actorsByWorkflow = new Map(),
 ) {
   return [
     ...duplicateKeys(text).map(
@@ -313,6 +357,13 @@ export function lintWorkflow(
           `\`${d.job}\`'s \`allowed_bots\` admits it is UNKNOWN (rule 8)`
         : `${name} re-dispatches itself as \`${d.actor}\`, but dispatch-gated job \`${d.job}\`'s ` +
           `\`allowed_bots\` does not name it — claude-code-action refuses the run in ~3s (#2292)`,
+    ),
+    ...unlistedWatchedActor(text, actorsByWorkflow).map((d) =>
+      d.actor === null
+        ? `${name} job \`${d.job}\` watches a workflow that re-dispatches itself with a token whose ` +
+          "actor cannot be read — whether its `allowed_bots` admits the inherited actor is UNKNOWN (rule 8)"
+        : `${name} job \`${d.job}\` is woken by \`workflow_run\` and inherits the watched run's actor ` +
+          `\`${d.actor}\`, which its \`allowed_bots\` does not name — the repair dies in ~3s, the 2026-09-25 shape`,
     ),
   ];
 }
@@ -357,8 +408,19 @@ function main(argv) {
     }
     return cache.get(scriptRelPath);
   };
+  const texts = new Map(files.map((f) => [f, readFileSync(join(dir, f), "utf8")]));
+  // Rule 8's cross-file half: who each workflow re-dispatches itself as, keyed by BOTH its `name:`
+  // and its path — the two forms a `workflow_run` `workflows:` list may use.
+  const actorsByWorkflow = new Map();
+  for (const [f, text] of texts) {
+    const actors = [...selfDispatchActors(f, text)];
+    if (!actors.length) continue;
+    const wfName = /^name:\s*["']?(.+?)["']?\s*$/m.exec(text)?.[1];
+    if (wfName) actorsByWorkflow.set(wfName, actors);
+    actorsByWorkflow.set(`.github/workflows/${f}`, actors);
+  }
   const problems = files.flatMap((f) =>
-    lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts, hasScriptDeps, LABEL_NAMES),
+    lintWorkflow(f, texts.get(f), prompts, hasScriptDeps, LABEL_NAMES, actorsByWorkflow),
   );
   for (const { scriptRelPath, path } of unreadable.values()) {
     problems.push(

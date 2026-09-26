@@ -2,7 +2,12 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { lintWorkflow, unlistedDispatchActor } from "../../scripts/workflow-lint.mjs";
+import {
+  lintWorkflow,
+  unlistedDispatchActor,
+  unlistedWatchedActor,
+  watchedWorkflows,
+} from "../../scripts/workflow-lint.mjs";
 
 // The workflow structure gate. Provenance: on 2026-08-22 an edit left `build-feedback:` defined
 // twice in moneypenny-events.yml (formerly postmaster.yml). Loose YAML loaders keep the last duplicate silently — the local check
@@ -399,5 +404,43 @@ jobs:
   it("ignores a dispatch aimed at a different workflow file", () => {
     const other = selfDispatching("steps.app-token.outputs.token", "github-actions");
     expect(unlistedDispatchActor("elsewhere.yml", other)).toEqual([]);
+  });
+});
+
+// Rule 8's second half: a `workflow_run` run inherits the watched run's actor. Repair job
+// 107889665923 died in 3s on "non-human actor: skynet-envoy" — the watched lane's own re-dispatch.
+describe("workflow lint — a workflow_run watcher refusing the watched run's inherited actor", () => {
+  const watcher = (allowed: string) => `name: Repair
+on:
+  workflow_run:
+    workflows:
+      ["Loop", ".github/workflows/loop.yml"]
+    types: [completed]
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          allowed_bots: "${allowed}"
+`;
+  const actors = new Map([["Loop", ["skynet-envoy"]]]);
+
+  it("reads the watched names, path forms included", () => {
+    expect(watchedWorkflows(watcher("x"))).toEqual(["Loop", ".github/workflows/loop.yml"]);
+  });
+
+  it("fails a watcher that does not admit the actor the watched workflow dispatches as", () => {
+    expect(unlistedWatchedActor(watcher("github-actions,claude"), actors)).toEqual([
+      { job: "repair", actor: "skynet-envoy" },
+    ]);
+  });
+
+  it("passes once the watcher names it", () => {
+    expect(unlistedWatchedActor(watcher("github-actions,claude,skynet-envoy"), actors)).toEqual([]);
+  });
+
+  it("says nothing about a watched workflow that never re-dispatches itself", () => {
+    expect(unlistedWatchedActor(watcher("github-actions"), new Map())).toEqual([]);
   });
 });
