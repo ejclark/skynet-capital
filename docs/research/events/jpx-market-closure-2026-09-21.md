@@ -283,3 +283,70 @@ every row; a dated adjacent event found gets proposed as a new
 in the same PR — your own file, never another event's canonical one (#1717). Close-out fills
 `## Outcome` below from re-run instrument data (cache busted first), never from memory — after which
 this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-26, D+5 — inside the `closeOutWithinDays: 6` window; held from D+1 until both
+registered forward tests' score-by dates arrived, 2026-09-24 and 2026-09-25, per issue #2988).** No
+symbol-keyed instrument applies (`symbols: []`, macro/sector mode, unchanged since initial
+research); `node_modules/.cache/earnings-cycle` and `.../intraday-edges` were busted per the lane's
+standing instruction, though nothing here reads them. "Re-run instrument data" means fetching fresh:
+Yahoo Finance `^N225` daily bars (`scripts/research/market-data.mjs`'s `bars()`, the same helper the
+initial research's cache-based instruments use) and `api.fiscaldata.treasury.gov`'s `auctions_query`
+for both dark-Tokyo auctions this block covers — independently of, though consistent with, the
+sibling [`jpx-market-closure-2026-09-23`](jpx-market-closure-2026-09-23.md) close-out, which cites
+the same 5-Year CUSIP from its own fetch.
+
+**The premise held on a fresh re-check.** A live re-fetch of
+`jpx.co.jp/english/derivatives/rules/holidaytrading/index.html` (HTTP 200, **48,483 bytes** —
+byte-identical to the initial-research and 09-23-sibling fetches) still carries 2026-09-21, -22 and
+-23 as `Open | Finalized`; no republication to `Not Open` occurred, so the leg-1/leg-2 stability
+kill switch did not fire.
+
+**FT-1 — the gap-compression call passed, on weak evidence as designed.** `^N225` closed
+**65,018.949** on 2026-09-18 (the last cash session before the block) and **65,513.988** on
+2026-09-24 (the first cash session back), a close-to-close move of **0.761%** — well under the
+2.061% bucket-mean kill line, so the registered prediction (prints below 2.061%) **passed**. Per
+the test's own stated design a pass here is weak evidence (60% of the reference bucket already
+prints below its own mean); what the print does close out is the This-month call's "wide-ish"
+attribution-trap warning — six live same-week explanations (FOMC 09-16, BoJ 09-18, Japan CPI
+09-18, quarterly opex 09-18, the Trump-Xi summit and the three-holiday gap itself, all dated
+09-24) had nothing outsized to attribute, because the bar itself was ordinary.
+
+**FT-2 — the auction-cover lean stopped being noise.** Fresh `auctions_query` pulls: the
+2026-09-22 2-Year note (CUSIP 91282CRP8) printed bid-to-cover **2.63** — inside its own last-12
+range (2.44–3.52), no kill on its own. The 2026-09-23 5-Year note (CUSIP 91282CRN3) printed
+bid-to-cover **2.21** — **below** its own last-12 minimum of 2.28 (re-verified against a fresh
+14-auction pull, 2025-10-27 → 2026-08-26, range unchanged), a new 12-print low. The kill switch
+reads "either" auction below its own floor, so this registration **kills**. The same CUSIP and
+print are independently cited by the [`jpx-market-closure-2026-09-23`](jpx-market-closure-2026-09-23.md)
+close-out (its own FT-1, on the indirect-bidder metric, also killed) and by
+[`treasury-5y-note-2026-09-23`](treasury-5y-note-2026-09-23.md)'s close-out, which attributes the
+miss to a **+3.1bp tail into the 2026-09-16 FOMC's hawkish 25bp hike** — not to Tokyo's absence.
+**What this does and does not refute:** the parent stance (auction demand is not measurably
+different when Tokyo is dark — indirect t=+0.855, dealer t=−1.409, 2Y indirect t=−0.050 across the
+aggregate 37-holiday-auction replication) rests on that aggregate, not on any one print's cover
+ratio; a single new 12-print low on a tenor already known to be tailing into a hawkish FOMC
+surprise is exactly the informative branch the test's own registration flagged as the likely one
+(t=−1.832 at registration, short of significance but leaning), and it does not license re-arguing
+the aggregate null. It does mean the one metric this ledger's initial research flagged as the only
+lean is now the one that broke first.
+
+**The call, scored against the tape.** Stand-aside held throughout — zero capital, by design, on a
+`low`-impact `estimate` date. What the row was built to prove — that "Tokyo dark" is false for
+derivatives and that neither the calendar-rarity framing nor the auction-null needs an asterisk
+from *this* block specifically — mostly held: the derivatives-open finding re-confirmed clean, the
+gap-compression call passed (weakly), and the one metric flagged as leaning at registration is now
+a confirmed kill, attributable (per two independent sibling close-outs) to the FOMC surprise rather
+than to Tokyo's absence.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-jpx-market-closure-2026-09-21-1` (gap compression) | 2026-09-24 `^N225` \|close-to-close\| **below 2.061%** | **0.761%** (65,018.949 → 65,513.988, Yahoo daily bars, fetched direct) | **pass** (weak, as designed) |
+| `FT-jpx-market-closure-2026-09-21-2` (auction cover) | Both 2026-09-22 2Y and 2026-09-23 5Y print bid-to-cover inside their own last-12 range (2Y ≥2.44, 5Y ≥2.28) | 2Y **2.63** (inside range); 5Y **2.21** (below the 2.28 floor, new 12-print low) | **kill** |
+
+**Last assessed:** 2026-09-26 (close-out — this event goes quiet; both registered forward tests
+are now scored, none remain open)
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","bund-30y-auction-2026-09-16","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-16","eurostat-hicp-final-2026-09-17","fomc-2026-09-16","google-adtech-opinion-unseal-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","housing-starts-2026-09-17","import-export-prices-2026-09-16","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","nahb-hmi-2026-09-16","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","retail-sales-2026-09-16","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","tic-monthly-2026-09-16","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-cpi-2026-09-16","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16"],"screenStreak":0,"blocked":[]} -->

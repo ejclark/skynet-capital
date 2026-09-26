@@ -316,6 +316,84 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-26, D+2 — inside the close-out window).** Geopolitical mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, as at initial research); the
+instrument cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) though nothing in this ledger reads it. "Re-run instrument data"
+here means a fresh direct fetch of the tracked AI-semis names' daily bars
+(`scripts/research/market-data.mjs`, Yahoo, cache busted) plus fresh primary/press sourcing of the
+summit's own outcome — whitehouse.gov's own wrap-up release, CBS/CNN/Bloomberg/CNBC coverage, and
+USTR's own on-record quote — rather than reading this doc's memory of the 2026-09-23 pass.
+
+**Headline verdict: both registered forward tests PASS, and the parent stance's guard-shaped framing
+was the correct read.** The visit occurred exactly as the 9/18/9/21-announced itinerary described —
+arrival, the Rose Garden military review, bilateral meeting and state dinner on 9/24, tea and a
+National Archives tour on 9/25 (whitehouse.gov's own wrap-up release, "President Trump, First Lady
+Conclude Historic China State Visit," fetched direct 2026-09-26) — with no cancellation, postponement,
+or downgrade at any point, and no DSCA/State Taiwan arms-sale approval was announced before, during,
+or after the visit: the deferral mechanism FT-2 named held all the way through. The chip-relief lever
+stayed exactly where the amended upside-tail flag (2026-09-08) said it would: USTR's Greer stated on
+the record that semiconductor controls "were not part of the preliminary American agenda going in"
+(karmactive, corroborating the White House's own silence on any chip-specific announcement), and no
+Entity List pause, BIS licence-scope expansion, or H200-condition relaxation was announced in the
+48-hour window — the one concrete deliverable was a **two-month extension of the Kuala Lumpur/Busan
+trade truce to 2026-01-10** (Bessent, on record, corroborated by CNBC/Bloomberg/tradingeconomics), a
+trade-mechanics move, not a chip concession.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-trump-xi-summit-2026-09-24-1` (the chip-relief-unavailable test) | No US-side semiconductor export-control deliverable within 48h of the summit | USTR Greer on record: semis "not part of the preliminary American agenda going in"; no Entity List pause, BIS scope change, or H200-condition relaxation announced in the window — the sole deliverable was the truce extension to 2026-01-10, a trade-mechanics move, not an export-control one | **PASS** |
+| `FT-trump-xi-summit-2026-09-24-2` (the summit-survival test) | Xi's state visit occurs substantially as the 9/18 WH itinerary described | whitehouse.gov's own wrap-up release confirms the full 9/23–9/25 program ran as announced (Andrews arrival, Rose Garden/bilateral/state dinner 9/24, tea + National Archives 9/25); no DSCA/State Taiwan arms-sale approval was ever announced, consistent with the deferral mechanism this test named | **PASS** |
+
+**Reading the split honestly.** Both tests scoring PASS is not a coin the parent ledger got lucky on
+— both were written to test whether a *specific, named mechanism* would hold (Beijing's arms-sale red
+line staying unfired because Washington kept deferring the one lever that could trip it; the
+chip-relief lever staying structurally unavailable because the US-side concession was already spent
+in Dec-2025 with zero H200s shipped). Both mechanisms held exactly as named, which is a sharper
+finding than "the summit happened, no deal" — it says *why*: neither government spent a chip on this
+meeting, so the fat-tailed n=2 reaction-function finding this doc's own initial research flagged (leg
+3) never got a third data point sharp enough to narrow it, and correctly stays a coin flip going into
+the 2026-01-10 truce deadline.
+
+**AI-semis reaction, own probe (Yahoo daily bars, direct fetch, cache busted).** NVDA 227.38 (9/21) →
+224.58 (9/24) → 225.07 (9/25), essentially flat; AVGO 362.66 → 350.36 → 352.81, −2.7%/−0.9%; MRVL
+257.38 → 258.95 → 261.94, +0.6%/+1.2%; AMD 615.52 → 629.26 → 630.63, +2.2%/+0.2%. VIX 14.87 (9/21) →
+15.67 (9/24) → 14.87 (9/25) — a one-session pop back to flat, no regime shift. Dispersion within the
+basket, no clean directional read either way — consistent with a summit that delivered neither a
+relief-rally-shaped chip concession nor a selloff-shaped rupture, the guard-shaped outcome the stance
+called for and sized nothing to.
+
+**The call itself, scored against the tape.** "No position keyed to this event" and "treat AI-semis
+exposure as elevated event risk into 9/24" (This month, High confidence) were the two calls this book
+actually sized. Both earned exactly what they were built to earn: nothing lost on a coin-flip event
+that landed as a coin flip (neither tail), and no capital exposed to the fat-tailed reaction-function
+risk the initial research flagged and that neither the 9/2 AVGO print nor the 9/16 FOMC nor this
+summit ever retired. "Avoid new directional bets on trade-headline risk" (This quarter) is not retired
+by this close-out — it carries forward via the 2026-01-10 truce deadline, now the load-bearing date
+the 2026-11-10 one used to be.
+
+**Honest limits.**
+- The date-confirmation schema gap (`CONFIRMED_PREFIX` has no WH/PRC-government slot) is moot for this
+  event specifically — the visit has occurred and this ledger goes quiet — but the underlying taxonomy
+  gap remains open for `us-china-tariff-truce-expiry-2026-11-10` and any future WH/PRC-sourced event;
+  fixing it is not this lane's call.
+- **Not this lane's file, noted for the record only:** the truce extension to 2026-01-10 supersedes
+  the 2026-11-10 expiry date `us-china-tariff-truce-expiry-2026-11-10.json` currently tracks — that
+  file's own next pulse should pick this up; this close-out does not touch another event's canonical
+  file.
+- Market-reaction figures are a single-source (Yahoo) direct fetch, not cross-corroborated against a
+  second venue, consistent with every prior row's own peer-price sourcing in this doc.
+- Some coverage (easternherald) characterized the rare-earths outcome as new "general licenses"; the
+  more corroborated framing (CNBC, Bloomberg, tradingeconomics, multiple outlets) is that existing
+  rare-earth-control suspensions were simply extended alongside the truce, not a new deliverable — the
+  weaker single-source claim is not relied on above.
+
+This document goes quiet from here — `scripts/event-scan.mjs` will not surface it again.
+
 **Last assessed:** 2026-09-20
 <!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"high:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0} -->
 
