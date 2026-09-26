@@ -207,6 +207,14 @@ store a human reads in ten seconds and a session reads as text. The same object 
 pair (a human+AI pair and an AI+human pair working the same issue at different hours): both edit
 the text, and the diff is the message.
 
+**Split by position: the top is Eric's, the bottom is the builder's** (Eric, 2026-09-26: "the latest
+plans seem to have a TON of implementation details that drowns out a lot of the updates"). A fold
+would be the obvious split, and it is the one move the block cannot make (the last paragraph of this
+section says why), so position does the work instead: the top is the picture, what changed since the
+last edit, and the next pickup, in at most three plain lines with no paths, function names or
+commands; then the rules line and the Log; then a **For the builder** heading carrying the inputs,
+the EARS done line and the falsifier. A human stops reading at the Log; a session reads to the end.
+
 ````markdown
 ## State block — read this first, then pick up
 
@@ -221,17 +229,25 @@ stateDiagram-v2
   class S3 current
 ```
 
-**Next pickup: slice 3, <name>. One PR.** <what it builds>. Inputs: <repo-qualified paths>.
-Done when: WHEN <trigger>, the <system> SHALL <response>. Falsifier: <the dated observation>.
+**What changed:** <one plain line: what moved since the last edit, and what it means>.
+**Next pickup: slice 3, <what it builds, in plain words>. One PR.**
 
-**Rules for this block:** edit in place; one dated line below per report-in; no new status comments.
+**Rules for this block:** edit in place; one dated line in the Log per report-in; no new status comments.
 
 **Log**
 - <date> · <one line: what landed, PR numbers>
+
+### For the builder
+
+Inputs: <repo-qualified paths>. Research inside the slice: <what to read, named as such>.
+Done when: WHEN <trigger>, the <system> SHALL <response>.
+Falsifier: <the dated observation>.
 ````
 
 Four rules, each the answer to a question the first pickup test asked (#3765, 2026-09-26, a fresh
-agent handed only #3748's block took the right slice but asked two things the thread already held):
+agent handed only #3748's block took the right slice but asked two things the thread already held).
+They all still hold; the PR granularity stays in the pickup line, and the other three now live under
+**For the builder**:
 
 | Rule | The question it answers |
 |---|---|
@@ -242,8 +258,10 @@ agent handed only #3748's block took the right slice but asked two things the th
 
 What the block never holds: a decision only Eric can make (rule 7: the `Needs from you` callout,
 above the fold) and a `<details>` fold (the MCP issue read sanitizes markup; a fence and a list
-survive). `issue-lint` notes a `plan`-labelled body that does not point at its block; the note is
-advisory, never a gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/prompts/feedback-build.md`,
+survive). `issue-lint` notes a `plan`-labelled body that does not point at its block, and, run on the
+block itself, notes a top half (between the diagram and the Log, the rules line aside) that runs
+past three prose lines or carries more than two inline code spans; both notes are advisory, never a
+gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/prompts/feedback-build.md`,
 `/work-issues`) read the block first and edit it on finish (slice 3 of #3765).
 
 ## Comments — the surface that outnumbers issues 10:1
