@@ -386,3 +386,106 @@ goes quiet.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out written 2026-09-26, D+2 — inside the `closeOutWithinDays: 6` ceiling.** Macro-print mode
+runs no `earnings-cycle`/`intraday-edges` instrument (`symbols: []`, unchanged since initial
+research); the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran and found nothing
+of this event's to bust, and fresh, uncached primary-source and tape pulls were run in its place.
+Nothing below is from memory of the ledger's own prior arithmetic — every BEA figure was re-pulled
+direct this session on two independent BEA primaries: the product page
+(`bea.gov/data/intl-trade-investment/international-transactions`, HTTP 200, 61,540 bytes) and the
+news release itself (`bea.gov/news/2026/us-international-transactions-and-investment-position-2nd-quarter-2026`,
+HTTP 200, 53,942 bytes, embargo line "EMBARGOED UNTIL RELEASE AT 8:30 a.m. EDT, Thursday, September
+24, 2026," release no. **BEA 26–41**) — plus FRED `BOPGSTB` re-pulled direct (fredgraph.csv) and fresh
+Yahoo daily bars for SPY/QQQ/^VIX through 09-25, cache-busted first.
+
+### What printed
+
+| Measure | Q2 2026 (actual) | Q1 2026 (revised, this release) | Q1 2026 (as known at registration) |
+|---|---|---|---|
+| Current-account balance | **−$246.0B** | −$212.6B | −$226.8B |
+| % of GDP | **3.0%** | 2.7% | 2.9% |
+| NIIP (end of quarter) | **−$22.42T** | −$21.27T | −$21.27T |
+| U.S. assets / liabilities | $46.97T / $69.39T | $43.25T / $64.52T | $43.37T / $64.64T |
+
+Both primaries agree verbatim: the deficit "widened by $33.4 billion, or 15.7 percent, to $246.0
+billion in the second quarter of 2026 … The revised first-quarter deficit was $212.6 billion." The
+widening is attributed to "an expanded deficit on goods that was partly offset by reduced deficits on
+primary (earned) income and on secondary income (current transfers)" — the composition Leg 3(a)
+did not anticipate: that leg treated goods-and-services as the known half and the income residual as
+the swing term, but the release's own narrative has goods driving the widening while **both** income
+lines improved. The title, read on both primaries, is the plain quarterly form — **no "Annual
+Update" suffix anywhere** (that phrase appears on the product page only as archive-link text for a
+past, unrelated release, "U.S. International Transactions: First Quarter 2025 and Annual Update").
+
+### `FT-bea-international-transactions-q2-2026-09-24-1` — PASS, near the band's narrow edge
+
+**Prediction:** the print lands in **−$243.5B…−$299.0B**, point estimate **−$268.8B**, and **wider**
+than Q1's registered −$226.8B. **Actual: −$246.0B** — inside the band, but only **$2.5B** above its
+low-magnitude edge, and **$22.8B** short of the point estimate. Wider than the registered −$226.8B
+anchor by **$19.2B** (and wider than the release's own revised −$212.6B by the full **$33.4B**
+headline). **Kill switch did not fire** — the print neither fell outside the band nor narrowed versus
+Q1. Re-deriving the residual with the actual figure: Q2 goods-and-services from FRED `BOPGSTB`
+(Apr **−$52,883M**, May **−$75,752M**, Jun **−$71,182M**, re-pulled direct this session, unrevised
+from initial research) sums to **−$199.817B**, exactly the −$199.8B Leg 3(a) computed — the
+"already published" half held to the dollar. That leaves an income residual of **−$246.0B −
+(−$199.8B) = −$46.2B**, inside the registered 8-quarter band (−$43.7B…−$99.2B) but at its **tight**
+end, close to 2025Q4's −$43.7B rather than the **−$69.0B** median the point estimate used. **PASS on
+its own declared terms** (band + direction), with the honest note that the mechanism was closer to
+"income residual came in unusually narrow" than to the assumed median case.
+
+### `FT-bea-international-transactions-q2-2026-09-24-2` — PASS, on two independent primaries
+
+**Prediction:** the 09-24 release title does **not** contain "Annual Update." Confirmed verbatim on
+both the product page's current-release line ("Current Release: September 24, 2026 … U.S.
+International Transactions and Investment Position, 2nd Quarter") and the news release's own headline
+and release number (BEA 26–41). **Kill switch did not fire.** Leg 3(b)'s vintage-separation mechanism
+holds exactly as registered — the ITA carries no annual revision this edition, unlike the 06-24
+release it followed.
+
+### `FT-bea-international-transactions-q2-2026-09-24-3` — left open, not due at this close-out
+
+Score-by is **2026-10-15**, past the **2026-09-30** close-out ceiling (`event-scan.mjs --due` named
+it in `forwardTestsBeyondWindow`, which is why this close-out dispatched now rather than holding for a
+nearer date). Its row stays `_open_` in
+[the fragment](../forward-tests/bea-international-transactions-q2-2026-09-24.md) rather than being
+scored here. Recorded because the data was in hand and not because it settles anything now: as of
+today, **both** `bea-international-transactions-q2-2026-09-24` and `intl-transactions-q2-2026-09-24`
+remain present as separate ids under `src/domain/market-events/`, and the sibling ledger has not yet
+run its own close-out (no `## Outcome` section as of this session). Naming the duplicate in writing
+has not, on its own, retired it — consistent with the bottleneck this ledger's initial research
+already filed rather than patched.
+
+### Market channel — flat, and nothing to misattribute
+
+Fresh Yahoo daily bars, cache-busted first:
+
+| | 09-23 close | 09-24 close (event date) | 09-25 close |
+|---|---|---|---|
+| SPY | 767.81 | 767.18 (**−0.08%**) | 771.35 |
+| QQQ | 741.21 | 741.10 (**−0.01%**) | 744.50 |
+| VIX | 15.18 | 15.67 (**+0.49**) | 14.87 |
+
+09-24 was essentially flat on both indices, with a sub-half-point VIX tick — no signal to misattribute
+to this print, `trump-xi-summit-2026-09-24`, or the same-day 7Y note and 20y/30y buyback. This is the
+strongest possible confirmation of the "never attribute the 09-24 tape to this print" call: there was
+barely a tape move on the date at all, so the attribution question this call warned against never had
+a candidate move to argue over.
+
+### Verdict vs. the stance
+
+**Stand aside held, and cost nothing to hold.** No entry, exit or hedge was ever keyed to this event
+— `symbols: []`, `estimate` date-on-this-id-by-design, `low` impact meant no house playbook had a
+trigger from the start, and the flat tape confirms none was missed. Both scoreable forward tests
+**PASS**: the print landed in the declared band and the title carried no annual-update suffix, exactly
+as registered. The one place the initial research's story undersold reality is compositional, not
+directional — the income residual landed at the tight end of its own range rather than at the assumed
+median, and BEA's own narrative attributes the quarter's widening to goods (which this ledger treated
+as the known, non-swing half) rather than to income (which it treated as the swing term) — the total
+came out inside the band anyway, but for a different internal reason than Leg 3(a) gave. **The
+duplicate-retirement call (Leg 2) is unresolved at this close-out**: both ids are still live, `-3`
+isn't due until 2026-10-15, and retiring the duplicate remains the surviving id's lane's call, not
+this one's. Scanner goes quiet on this event now.
