@@ -1,8 +1,10 @@
 // Mint the `skynet_session` cookie the crawl and e2e/journeys.spec.ts sign in with. The server
 // verifies only the HMAC and the expiry (src/server/auth/session.ts → verifySession), so a token
 // signed with the same `SKYNET_SESSION_SECRET` the crawl boots the server with IS a signed-in
-// member — no OAuth round trip, no browser. The email must be one the crawl's owner-links fixture
-// maps to a participant (scripts/crawl/fixtures/owner-links.json → human-eric).
+// member — no OAuth round trip, no browser. The cookie carries the journey fixture's own email, so
+// each member signs in as themselves: scripts/crawl/fixtures/owner-links.json maps it to the
+// accounts it owns (crawl@example.test → human-eric; friend@example.test → human-friend + the Day
+// Trader), and an email it does not map owns nothing (the first-timer).
 //
 //   npx tsx scripts/crawl/mint-session.ts [email] [secret]   # prints the cookie value
 //

@@ -5,18 +5,26 @@
 // cookie standing in for a real sign-in). The crawl boots them sequentially, never at once — the
 // two would collide on the port and on the insights bridge.
 //
+// Two tiers sign in to a session boot, as in production: `crawl@example.test` is the OWNER
+// (`SKYNET_ALLOWED_EMAILS`) and `friend@example.test` is an invited MEMBER, listed only in the
+// frozen dir's guest-list store (`SKYNET_ALLOWLIST_STORE`, frozen-fixtures.mjs) — so the friend's
+// journeys see a member's view, never the owner's, and the owner tier stays one email wide.
+//
 // The child is its own process group so `close()` takes tsx AND the node it forks; `SIGTERM` on
 // the group is what an interrupted crawl leaves behind: nothing.
 
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
-import { frozenFixturesDir } from "./frozen-fixtures.mjs";
+import { allowlistPath, frozenFixturesDir } from "./frozen-fixtures.mjs";
 
 export const CRAWL_EMAIL = "crawl@example.test";
 export const CRAWL_SECRET = "e2e-dev-secret";
 
-/** The env each mode adds on top of the offline base. Never a feedback token: a filing would open a real issue. */
-export function envFor(mode) {
+/**
+ * The env each mode adds on top of the offline base. Never a feedback token: a filing would open a
+ * real issue. `fixturesDir` is the frozen dir the boot serves; its guest list is the member tier.
+ */
+export function envFor(mode, fixturesDir) {
   if (mode !== "session") return {};
   return {
     SKYNET_SESSION_SECRET: CRAWL_SECRET,
@@ -25,6 +33,7 @@ export function envFor(mode) {
     SKYNET_GITHUB_CLIENT_ID: "e2e-fake-client",
     SKYNET_GITHUB_CLIENT_SECRET: "e2e-fake-secret",
     SKYNET_ALLOWED_EMAILS: CRAWL_EMAIL,
+    SKYNET_ALLOWLIST_STORE: allowlistPath(fixturesDir),
     SKYNET_OWNER_LINKS_FILE: "scripts/crawl/fixtures/owner-links.json",
   };
 }
@@ -34,13 +43,14 @@ export function envFor(mode) {
  * @returns {Promise<{origin: string, close: () => Promise<void>}>}
  */
 export function bootServer({ mode, port, bridgePort, timeoutMs = 90_000 }) {
+  const fixtures = frozenFixturesDir();
   const env = {
     ...process.env,
     SKYNET_DATA_SOURCE: "offline",
-    SKYNET_OFFLINE_FIXTURES: frozenFixturesDir(),
+    SKYNET_OFFLINE_FIXTURES: fixtures,
     SKYNET_DASHBOARD_PORT: String(port),
     SKYNET_INSIGHTS_BRIDGE_PORT: String(bridgePort),
-    ...envFor(mode),
+    ...envFor(mode, fixtures),
   };
   delete env.SKYNET_FEEDBACK_GITHUB_TOKEN;
   delete env.PORT;

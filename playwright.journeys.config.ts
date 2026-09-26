@@ -17,13 +17,17 @@ const executablePath = resolveChromium();
 //   JOURNEYS_MODE=open npx playwright test -c playwright.journeys.config.ts    # anonymous
 //
 // `session` boots OAuth with the crawl's fake credentials and its owner-links fixture
-// (crawl@example.test → human-eric); the spec mints the `skynet_session` cookie itself
+// (crawl@example.test → human-eric, the owner; friend@example.test → human-friend + the Day
+// Trader, an invited member on the guest list only); the spec mints the `skynet_session` cookie itself
 // (scripts/crawl/mint-session.ts) — no login round trip. Both modes serve a FROZEN copy of the
 // offline fixtures (scripts/crawl/frozen-fixtures.mjs): the roster as committed, no fill replay,
 // so a position a journey expects is there on every step, not only until the replay closes it.
 // Run the two modes one after the other, never at once — and never with a stale server on 8787
 // in the other mode (`reuseExistingServer` would happily use it).
 process.env.JOURNEYS_MODE = process.env.JOURNEYS_MODE === "open" ? "open" : "session";
+// One frozen dir per boot: the roster copy (plus the invited friend) AND the guest list that
+// `envFor` points the session boot at — the friend signs in as a member, never as an owner.
+const fixtures = frozenFixturesDir();
 
 export default defineConfig({
   ...SHARED_CONFIG,
@@ -39,8 +43,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     env: {
-      SKYNET_OFFLINE_FIXTURES: frozenFixturesDir(),
-      ...envFor(process.env.JOURNEYS_MODE),
+      SKYNET_OFFLINE_FIXTURES: fixtures,
+      ...envFor(process.env.JOURNEYS_MODE, fixtures),
     },
   },
 });
