@@ -51,6 +51,57 @@ describe("structural graph freshness (blocking)", () => {
   });
 });
 
+// Check ③ degrades honestly (#3769 slice 1): an unreachable built-from commit is UNKNOWN (exit 3),
+// never a silent pass, and a map more than STALE_COMMITS behind HEAD is stale (exit 2) however
+// recent its date. Both run in seeded git repos, so the real repo's state never leaks in.
+describe("structural graph freshness — honest degradation (seeded fixtures)", () => {
+  const graphDoc = (sha: string) => `# Structural map\n\n- Built from commit: \`${sha}\`\n`;
+
+  it("reports UNKNOWN with exit 3 when the built-from commit is not reachable", () => {
+    const { status, out } = scanFixture((root) => {
+      execFileSync("git", ["init", "-q"], { cwd: root, env: hermeticGitEnv() });
+      writeFileSync(join(root, "docs", "STRUCTURE-graph.md"), graphDoc("deadbeef"));
+      writeFileSync(join(root, "doc-rot-budget.json"), JSON.stringify({ findings: 0 }));
+    });
+    expect(status).toBe(3);
+    expect(out).toContain("UNKNOWN");
+  });
+
+  it("fails with exit 2 on the commit count alone, however recent the map's date", () => {
+    const { status, out } = scanFixture((root) => {
+      const env = hermeticGitEnv();
+      const git = (...args: string[]) =>
+        execFileSync("git", args, { cwd: root, env, encoding: "utf8" }).trim();
+      git("init", "-q");
+      git("commit", "-q", "--allow-empty", "-m", "graph built here");
+      const sha = git("rev-parse", "--short", "HEAD");
+      writeFileSync(join(root, "docs", "STRUCTURE-graph.md"), graphDoc(sha));
+      writeFileSync(join(root, "doc-rot-budget.json"), JSON.stringify({ findings: 0 }));
+      for (let i = 0; i < 51; i += 1) git("commit", "-q", "--allow-empty", "-m", `c${i}`);
+    });
+    expect(status).toBe(2);
+    expect(out).toContain("51 commits");
+  });
+
+  it("passes a map whose commit is reachable and within both thresholds", () => {
+    const { status, out } = scanFixture((root) => {
+      const env = hermeticGitEnv();
+      const git = (...args: string[]) =>
+        execFileSync("git", args, { cwd: root, env, encoding: "utf8" }).trim();
+      git("init", "-q");
+      git("commit", "-q", "--allow-empty", "-m", "graph built here");
+      writeFileSync(
+        join(root, "docs", "STRUCTURE-graph.md"),
+        graphDoc(git("rev-parse", "--short", "HEAD")),
+      );
+      writeFileSync(join(root, "doc-rot-budget.json"), JSON.stringify({ findings: 0 }));
+      git("commit", "-q", "--allow-empty", "-m", "one later commit");
+    });
+    expect(status).toBe(0);
+    expect(out).toContain("structural graph is fresh");
+  });
+});
+
 describe("doc-rot scanner behavior (seeded fixtures)", () => {
   it("flags a doc referencing a repo file that does not exist", () => {
     const { status, out } = scanFixture((root) => {
