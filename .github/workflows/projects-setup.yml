@@ -1,0 +1,41 @@
+name: Projects v2 setup
+
+# One-time (idempotent, safe to re-run), #3818 slice B. Creates the "Skynet Capital —
+# Orchestration" GitHub Project (kanban/backlog/roadmap views on one board) and its four fields,
+# via `gh project`, using the Moneypenny App's installation token — the App's Projects permission
+# is admin (Eric, 2026-09-26 confirmed live), so this needs no new secret and no personal token.
+#
+# `workflow_dispatch` only, never a push/issue trigger: this provisions infrastructure, not a
+# per-event action, and it should run exactly when someone means it to.
+#
+# GraphQL — which `gh project` compiles to — is blocked from interactive Claude Code sessions, so
+# this workflow's real IO could not be exercised while authoring it (see
+# scripts/moneypenny/projects-setup.mjs's header). This run's own job log is the verification.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: create project + fields
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI, not mise.toml — see moneypenny-events.yml
+
+      - name: create project + fields
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/projects-setup.mjs
