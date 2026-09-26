@@ -558,3 +558,10 @@ stand-aside — zero capital, no position sized around this release, this witchi
 decision — stands as the final word on it. `FT-…-4` stays `_open_` in
 [`forward-tests/industrial-production-2026-09-18.md`](../forward-tests/industrial-production-2026-09-18.md)
 until its own 2026-09-25 score-by date; nothing else in this file will be touched again.
+
+**Addendum (2026-09-26, `forward-test-due` — the fragment's own Outcome cell is the record, this is a
+pointer to it).** `FT-…-4` scored **KILLED**: the Atlanta Fed's live GDPNow evolution chart, re-fetched
+direct today, carries a real vintage dated **9/18/2026** attributed solely to `Industrial production`
+(GDPNow moved 5.08% → 4.96%, `−0.12pp`) — a vintage the `PostedUpdates` schedule this doc's Leg 3 relied
+on never listed, then or now. The schedule undercounts actual postings; full detail and sourcing in the
+fragment linked above. No other cell in this document is affected.
