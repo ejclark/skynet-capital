@@ -32,6 +32,8 @@ it twice, one after the other, never at once:
    `e2e-dev-secret`) — the server verifies only the HMAC and the expiry, so a minted cookie IS a
    signed-in member with real gates and real progression. A session fixture with no `participant`
    is a signed-in member who owns nothing (the first-timer).
+   **The invited friend** (`friend@example.test`, on the guest list only) is the one session
+   member who is not the owner — the standing check that a member never sees Eric's book or tools.
 
 Never a feedback token: `SKYNET_FEEDBACK_GITHUB_TOKEN` is deleted from the child's env, so nothing
 the crawl clicks can file a real issue for Moneypenny to build.
