@@ -8,9 +8,12 @@ import { todayCallOf } from "./research-event-calls.js";
  * Pure markdown reading over the ledger contract (`docs/research/events/TEMPLATE.md`) — the same
  * decision header `research-event-calls.ts` parses for the shelf.
  *
- * CONSERVATIVE BY CONSTRUCTION. A buy is licensed only when a Signals & conditions bullet LEADS
- * with a bold "Buy"; "No buy signal", an absent section, or anything unparsed reads as no licence.
- * A reader that guessed a buy out of prose would be inventing a signal the research never gave.
+ * CONSERVATIVE BY CONSTRUCTION. A buy is licensed only by the ledger's own `- **Buy signal:** yes`
+ * bullet under Signals & conditions (TEMPLATE.md) — one line written FOR this reader, visible to a
+ * human reading the ledger too. "no", an absent line, or anything unparsed reads as no licence; the
+ * research lint fails an earnings ledger without the line, so "absent" is drift CI catches, not a
+ * silent no. This replaced reading a buy out of any bullet that led with a bold "Buy" (#3729
+ * critique #12): rewording one bullet could flip every cash-secured put call.
  */
 
 export interface LedgerRead {
@@ -68,13 +71,14 @@ function probePriceOf(md: string, symbol: string): number | undefined {
   }
 }
 
+/** `- **Buy signal:** yes — <trigger>` / `- **Buy signal:** no — <why>`: the same pattern research-lint checks. */
+const BUY_SIGNAL_LINE = /^\s*-\s*\*\*Buy signal:\*\*\s*(yes|no)\b/im;
+
 function buySignalOf(md: string): boolean {
-  const at = md.indexOf("**Signals & conditions**");
+  // "Signals & conditions**" or "…conditions.**" — ledgers write both.
+  const at = md.indexOf("**Signals & conditions");
   if (at === -1) return false;
-  const block = md.slice(at).split(/\n\s*\n(?!\s*-)/)[0] ?? "";
-  return block
-    .split("\n")
-    .some((line) => /^\s*-\s*\*\*Buy\b/i.test(line) && !/^\s*-\s*\*\*Buy\s*\/\s*sell/i.test(line));
+  return BUY_SIGNAL_LINE.exec(md.slice(at))?.[1]?.toLowerCase() === "yes";
 }
 
 export function readLedger(md: string, symbol: string): LedgerRead {

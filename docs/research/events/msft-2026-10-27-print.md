@@ -34,6 +34,7 @@ supporting / 1 against at n=4. No directional change: stand-aside, S2, and S3-bl
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — flat through the print; S3 is on hold.
 - **Never** — hold unhedged MSFT exposure through the print; flat by the **2026-10-26** close and stay flat until confirmation narrows the window.
 - **Never** — read consensus drift above the recast 44–45% cc band as bullish; a higher whisper bar is a caution input.
 - **Always** — score the first standalone Azure dollar print against the **recast** band (44–45% cc), never the old-basis "~45%" the market memorised; the two are published side by side in the 8-K, and the offsetting M365 commercial-cloud guide moved the other way (~15% → ~17% cc) because GitHub cloud, dev cloud, Security Copilot and healthcare landed there.

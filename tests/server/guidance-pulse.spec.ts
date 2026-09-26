@@ -1,10 +1,12 @@
 import {
   chainPulse,
   clockSessionOpen,
+  crossCheckOf,
   earningsPulse,
   filingsPulse,
   researchPulse,
   sessionPulse,
+  spotCheckOf,
   spotPulse,
 } from "../../src/server/guidance-pulse.js";
 
@@ -15,6 +17,41 @@ import {
 
 const NOW = "2026-09-25T18:00:00Z"; // 14:00 ET Friday, in session
 const ago = (ms: number) => new Date(Date.parse(NOW) - ms).toISOString();
+
+describe("the spot cross-check, counted (#3729)", () => {
+  it("counts exactly what the member was warned about — the pulse and the count share one check", () => {
+    for (const [obs, open] of [
+      [{ last: 80, lastAt: ago(1_000), parity: 82 }, true],
+      [{ last: 80, lastAt: ago(1_000), parity: 80.3 }, true],
+      [{ last: 80, lastAt: ago(1_000), mid: 82 }, true],
+      [{ last: 80, lastAt: ago(3_600_000), mid: 82 }, false],
+    ] as const) {
+      const warned = spotPulse(obs, NOW, open).note.includes(" vs ");
+      expect(crossCheckOf(obs, open).flagged).toBe(warned);
+    }
+  });
+
+  it("checks against option prices first, IEX's midpoint only in session, else nothing", () => {
+    expect(crossCheckOf({ last: 80, parity: 80.4, mid: 90 }, true).basis).toBe("parity");
+    expect(crossCheckOf({ last: 80, mid: 80.4 }, true).basis).toBe("mid");
+    expect(crossCheckOf({ last: 80, mid: 80.4 }, false)).toEqual({ basis: "none", flagged: false });
+  });
+
+  it("records a read as symbol, prices and times — never who asked", () => {
+    const line = spotCheckOf("CRWV", { last: 80, lastAt: ago(2_000), parity: 82 }, NOW, true);
+    expect(line).toEqual({
+      at: NOW,
+      symbol: "CRWV",
+      open: true,
+      last: 80,
+      lastAgeMs: 2_000,
+      parity: 82,
+      basis: "parity",
+      gap: Math.abs(80 / 82 - 1),
+      flagged: true,
+    });
+  });
+});
 
 describe("spotPulse — two independent reads of spot", () => {
   it("is fresh when the trade is seconds old and parity agrees", () => {

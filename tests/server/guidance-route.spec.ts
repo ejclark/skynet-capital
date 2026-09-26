@@ -4,6 +4,7 @@ import type { GuidanceMarket } from "../../src/options/position-guidance-types.j
 import { priceOption } from "../../src/options/pricing.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import { InMemoryIvHistory } from "../../src/research/in-memory-iv-history.js";
+import type { SpotCheck } from "../../src/research/spot-checks.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveGuidance } from "../../src/server/guidance-route.js";
 
@@ -103,6 +104,32 @@ const STAKE = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" as cons
 
 /** What the member's browser does with the answer: apply the stake it never sent. */
 const inBrowser = (market: GuidanceMarket) => positionGuidance({ ...market, stake: STAKE });
+
+describe("serveGuidance — the spot cross-check count (#3729)", () => {
+  it("records one line per fresh read, keyed by symbol, with no member id in it", async () => {
+    const saved: SpotCheck[] = [];
+    const spotChecks = {
+      save: (c: SpotCheck) => (saved.push(c), Promise.resolve()),
+      list: () => Promise.resolve(saved),
+    };
+    const config = { ...broker().config, spotChecks } as DashboardServerConfig;
+    await serveGuidance(fakeRes().res, `${URL}&refresh=1`, config, "count-a", deps);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ symbol: "CRWV", at: NOW });
+    expect(JSON.stringify(saved[0])).not.toContain("count-a");
+  });
+
+  it("never costs the member their read when the count can't be written", async () => {
+    const spotChecks = {
+      save: () => Promise.reject(new Error("disk full")),
+      list: () => Promise.resolve([]),
+    };
+    const config = { ...broker().config, spotChecks } as DashboardServerConfig;
+    const r = fakeRes();
+    await serveGuidance(r.res, `${URL}&refresh=1`, config, "count-b", deps);
+    expect(r.json().market.symbol).toBe("CRWV");
+  });
+});
 
 describe("serveGuidance", () => {
   it("400s a non-symbol, and tells an unlinked session the honest note", async () => {

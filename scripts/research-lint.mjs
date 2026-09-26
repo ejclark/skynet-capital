@@ -96,6 +96,27 @@ function checkHeaderLines(md, problems) {
     problems.push("no `**Last assessed:**` line — the scanner's machine contract");
 }
 
+/**
+ * The one line position guidance reads out of a ledger (#3729, src/server/ledger-stance.ts): does
+ * the research license opening a long position, yes or no. An earnings ledger is the one the
+ * guidance reads, so it MUST say — in words a reader sees, not a hidden comment the prose could
+ * contradict. Any ledger that carries the line is held to yes/no.
+ */
+export const BUY_SIGNAL_LINE = /^\s*-\s*\*\*Buy signal:\*\*\s*([A-Za-z]*)/im;
+function checkBuySignal(md, header, problems) {
+  const value = BUY_SIGNAL_LINE.exec(header)?.[1];
+  if (value === undefined) {
+    if (/^\*\*Kind:\*\*\s*earnings/im.test(md))
+      problems.push(
+        "earnings ledger has no `- **Buy signal:** yes|no — <why>` bullet under Signals & " +
+          "conditions — the one line position guidance reads (TEMPLATE.md)",
+      );
+    return;
+  }
+  if (!/^(yes|no)$/i.test(value))
+    problems.push(`\`**Buy signal:**\` says "${value}" — it must be yes or no, then the why`);
+}
+
 /** The five columns a call sheet must offer. Absent ones are the whole finding. */
 function checkColumns(cols, problems) {
   const callAt = cols.includes("call") ? cols.indexOf("call") : cols.indexOf("the call");
@@ -227,6 +248,7 @@ export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_
 
   if (!/signals?\s*&(amp;)?\s*conditions/i.test(header))
     problems.push("decision header has no **Signals & conditions** — the buy/sell/hold triggers");
+  checkBuySignal(md, header, problems);
 
   collectNotes(md, header, notes, maxHeaderChars);
   return { name, problems, notes };

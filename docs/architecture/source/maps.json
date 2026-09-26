@@ -404,8 +404,8 @@
           {
             "id": "content",
             "label": "Content JSON APIs and guidance",
-            "path": "src/server/content-api-routes.ts, src/server/desk-json-routes.ts, src/server/wire-routes.ts, src/server/networth-api-routes.ts, src/server/equity-curve-routes.ts, src/server/quote-route.ts, src/server/bars-route.ts, src/server/option-chain-route.ts, src/server/symbol-search-route.ts, src/server/research-service.ts, src/server/learn-api-routes.ts, src/server/plays-api-routes.ts, src/server/playbooks-api-routes.ts, src/server/guidance-route.ts, src/server/guidance-pulse.ts, src/server/guidance-market.ts, src/observatory/*-json-view.ts, src/options/position-guidance*.ts",
-            "responsibility": "Read-only JSON twins of every view the shell renders, plus position guidance: /api/trade/guidance returns the market only (quotes, spot, research stance, freshness checks against live spot/chain/EDGAR) and the browser applies the member's stake."
+            "path": "src/server/content-api-routes.ts, src/server/desk-json-routes.ts, src/server/wire-routes.ts, src/server/networth-api-routes.ts, src/server/equity-curve-routes.ts, src/server/quote-route.ts, src/server/bars-route.ts, src/server/option-chain-route.ts, src/server/symbol-search-route.ts, src/server/research-service.ts, src/server/learn-api-routes.ts, src/server/plays-api-routes.ts, src/server/playbooks-api-routes.ts, src/server/guidance-route.ts, src/server/guidance-pulse.ts, src/server/guidance-market.ts, src/server/spot-checks-route.ts, src/research/spot-checks.ts, src/observatory/*-json-view.ts, src/options/position-guidance*.ts",
+            "responsibility": "Read-only JSON twins of every view the shell renders, plus position guidance: /api/trade/guidance returns the market only (quotes, spot, research stance, freshness checks against live spot/chain/EDGAR) and the browser applies the member's stake; each fresh read appends one spot cross-check line beside the IV history, summarized at /api/trade/guidance/spot-checks."
           },
           {
             "id": "companion",

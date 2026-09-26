@@ -41,6 +41,7 @@ const header = (table: string, extra = ""): string =>
     "",
     "**Signals & conditions** — the triggers:",
     "",
+    "- **Buy signal:** no — guards only into the print.",
     "- Don't buy the pop.",
     extra,
     "",
@@ -162,6 +163,27 @@ describe("research lint — the decision-header contract", () => {
     ].join("\n");
     const { problems } = lintResearchDoc(header(byName));
     expect(problems.join(" ")).not.toContain("this quarter");
+  });
+});
+
+describe("research lint — the buy line position guidance reads (#3729)", () => {
+  const without = (md: string) => md.replace(/- \*\*Buy signal:\*\*.*\n/, "");
+
+  it("fails an earnings ledger with no Buy signal line — guidance would read silence as no", () => {
+    const { problems } = lintResearchDoc(without(header(FULL_TABLE)));
+    expect(problems.join(" ")).toContain("no `- **Buy signal:** yes|no");
+  });
+
+  it("holds the line to yes or no — a hedge is not a signal the guidance can act on", () => {
+    const hedged = header(FULL_TABLE).replace("**Buy signal:** no", "**Buy signal:** maybe");
+    expect(lintResearchDoc(hedged).problems.join(" ")).toContain('says "maybe"');
+    const yes = header(FULL_TABLE).replace("**Buy signal:** no", "**Buy signal:** Yes");
+    expect(lintResearchDoc(yes).problems).toEqual([]);
+  });
+
+  it("asks nothing of a ledger the guidance never reads", () => {
+    const macro = without(header(FULL_TABLE)).replace("**Kind:** earnings", "**Kind:** macro");
+    expect(lintResearchDoc(macro).problems).toEqual([]);
   });
 });
 

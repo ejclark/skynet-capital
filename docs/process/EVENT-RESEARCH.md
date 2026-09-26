@@ -425,6 +425,7 @@ What it checks, and what it deliberately does not:
 | a **TL;DR.** paragraph and a **Signals & conditions** list | a falsifier naming no date or number |
 | a table with `Call` · `Confidence` · `Proves it wrong` columns | an assessment row past ~1,200 chars |
 | all four horizons present, each with a graded, non-empty call | |
+| an earnings ledger's `**Buy signal:**` bullet, yes or no — the line position guidance reads | |
 
 Structure fails; prose length only informs. That split is on purpose — `docs/IDEAS.md` banks the
 caution to *measure whether long entries actually hurt before gating a capture surface, and never

@@ -69,7 +69,12 @@
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** <yes|no> — <the trigger that licenses a new long position, or why none does>
 - <trigger, one short line>
+
+<!-- The Buy signal bullet is the one line position guidance reads (src/server/ledger-stance.ts):
+     "yes" lets the trade form grade a cash-secured put as a way in; "no" never does. Required on
+     earnings ledgers (research-lint); keep it first, keep it yes/no, keep the why honest. -->
 
 ## Initial research
 

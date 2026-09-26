@@ -23,6 +23,7 @@ conviction changes the reaction function.
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
+- **Buy signal:** no — carry nothing across the print; the S3 lean is a zero-size observation.
 - **Never** — carry unhedged AMZN exposure across the print night for the gap; the tails are ±10% and no edge pays for them.
 - **Watch (dated)** — **ORCL 2026-09-10 AMC**, the next capex/FCF verdict · AMZN IR date ~**10-08**–**10-15** · print **2026-10-29** · FOMC **10-28**, D-1.
 - **Corridor (dated)** — three central banks bracket the print: FOMC **10-28** · ECB **10-29** · BoJ **10-30**, the last landing overnight into the reaction-day open.
