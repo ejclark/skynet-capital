@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { createRootRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Link,
+  Outlet,
+  retainSearchParams,
+  useRouterState,
+} from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
 import { fetchOnboarding } from "../live/onboarding";
 import { KeyboardChords } from "../shell/keyboard";
@@ -27,6 +34,11 @@ import { StatusPill } from "../shell/status-pill";
  *
  * The market clock (#3689) sits between the views and the actions on every route: the time left
  * to trade is shell-level information, not an Accounts feature.
+ *
+ * The market calendar's range (#3807 slice 2·1) is ROOT search state — `?on=YYYY-MM-DD&span=<lens>`,
+ * validated here and retained across client-side navigation (`retainSearchParams`), so the week
+ * a member picks on the Profile page is the week R&D and Trade open on. The model, its defaults
+ * and its falsifier: `live/horizon-params.ts`.
  */
 
 function GearIcon(): ReactElement {
@@ -199,4 +211,8 @@ function RootShell(): ReactElement {
   );
 }
 
-export const Route = createRootRoute({ component: RootShell });
+export const Route = createRootRoute({
+  validateSearch: horizonSearch,
+  search: { middlewares: [retainSearchParams(["on", "span"])] },
+  component: RootShell,
+});

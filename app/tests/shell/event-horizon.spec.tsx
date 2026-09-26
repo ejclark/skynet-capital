@@ -4,7 +4,9 @@ import type { ResearchEvent } from "../../src/live/research";
 import { EventHorizon } from "../../src/shell/event-horizon";
 
 // The rail's lens row, range shading, and closed-day colouring (#1704 slice 2) — asserted the way
-// a member sees them: the head's session count, the pressed lens, the title on a closed day.
+// a member sees them: the head's session count, the pressed lens, the title on a closed day. The
+// head and the lens row are `calendar-head.tsx` since #3807 slice 2·1; this spec keeps proving
+// the grid still renders under them exactly as before.
 const events: ResearchEvent[] = [
   { id: "cpi-2026-09-11", title: "CPI", date: "2026-09-11", symbols: [], researched: true },
 ];
@@ -96,11 +98,15 @@ describe("EventHorizon", () => {
   });
 
   it("draws the day-lens fog as visible, named, disabled and counted", () => {
-    const calls = mount({ dayFog: { reason: "Held until rung 501 (zero-DTE)", held: 3 } });
+    const door = "Held until rung 501 (zero-DTE)";
+    const reason = `${door} is earned — the same-day view.`;
+    const calls = mount({ dayFog: { door, reason, held: 3 } });
     const day = screen.getByRole("button", { name: /^Day/ });
     expect(day).toBeDisabled();
-    expect(day).toHaveAttribute("title", "Held until rung 501 (zero-DTE)");
-    expect(screen.getByText(/Day lens held until rung 501/).textContent).toMatch(
+    expect(day).toHaveAttribute("title", reason);
+    // the reason is visible text in the chip's own fieldset, not only its title (dead end 8)
+    expect(day.closest("fieldset")?.textContent).toContain(door);
+    expect(screen.getByText(/Day lens: Held until rung 501/).textContent).toMatch(
       /3 calls in range behind it/,
     );
     fireEvent.click(day);

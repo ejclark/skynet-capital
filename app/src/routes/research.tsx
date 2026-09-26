@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
+import { liftHorizonTokens } from "../live/horizon-params";
+import { DEFAULT_LENS } from "../live/research";
 import { useBoardView } from "../shell/board-section";
 import { PageFrame } from "../shell/frame";
 import { PlaybooksRail, PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
@@ -22,6 +24,11 @@ import { type PageSection, resolveSection } from "../shell/sections";
  * itself always leads the rail, per the frame's "rail drives content" rule. This file stays thin
  * route glue; each section's own markup, queries, and helpers live in its own `shell/*.tsx` file
  * (the arch fitness gate's cap forced the split).
+ *
+ * THE RANGE IS ROOT URL STATE (#3807 slice 2·1): the calendar's anchor and lens ride `?on=&span=`
+ * on the root route (`live/horizon-params.ts`), not `?q=`, so the week picked here is the week the
+ * Profile page's head shows. One model, two carriers: an `on:` or `lens:` typed into the filter
+ * box is lifted out of `q` into those params below.
  */
 
 type ResearchSection = "board" | "playbooks";
@@ -57,6 +64,25 @@ function ResearchPage(): ReactElement {
       });
     }, 300);
   };
+
+  // ONE MODEL, TWO CARRIERS (#3807 slice 2·1): an `on:` / `lens:` token typed into the box is
+  // lifted out of `?q=` into the root range params the calendar head reads, so a typed token and
+  // a tap on the head land on the same URL — and an older `?q=lens:month` link lifts on arrival.
+  // Keyed on the debounced `q`, never the keystroke, so a half-typed token is left alone.
+  useEffect(() => {
+    const lifted = liftHorizonTokens(search.q ?? "");
+    if (lifted.on === undefined && lifted.lens === undefined) return;
+    setQuery(lifted.rest);
+    void navigate({
+      search: (prev) => ({
+        ...prev,
+        q: lifted.rest === "" ? undefined : lifted.rest,
+        ...(lifted.on ? { on: lifted.on } : {}),
+        ...(lifted.lens ? { span: lifted.lens === DEFAULT_LENS ? undefined : lifted.lens } : {}),
+      }),
+      replace: true,
+    });
+  }, [search.q, navigate]);
 
   const board = useBoardView({ active: section === "board", query, setFilter });
 

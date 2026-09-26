@@ -50,6 +50,8 @@
 @import "./rail.css";
 @import "./research.css";
 @import "./event-horizon.css";
+/* after event-horizon.css on purpose: it re-lays the calendar head's parts out for the cockpit */
+@import "./calendar-head.css";
 @import "./settings.css";
 @import "./shell.css";
 @import "./status.css";

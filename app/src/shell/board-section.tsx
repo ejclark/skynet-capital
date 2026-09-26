@@ -4,14 +4,8 @@ import { useId } from "react";
 import { fiscalQuarterFor, fiscalYearEndFor } from "../../../src/domain/fiscal-calendar";
 import { CALL_CLASS_LABEL, CALL_CLASSES, callMix, classifyCall, hubEvents } from "../live/call-mix";
 import { dayLensFog } from "../live/fog";
-import {
-  type FiscalQuarterLabel,
-  inRange,
-  marketToday,
-  rangeFor,
-  rangeLabel,
-  stepAnchor,
-} from "../live/horizon-range";
+import { useHorizonRange } from "../live/horizon-params";
+import { type FiscalQuarterLabel, inRange, marketToday, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
 import {
   assessmentAge,
@@ -25,9 +19,6 @@ import {
   type ResearchEvent,
   type ResearchFilter,
   type ResearchShelfData,
-  setLens,
-  setOnDate,
-  toggleOnDate,
   toggleSymbolScope,
 } from "../live/research";
 import { EventHorizon } from "./event-horizon";
@@ -223,7 +214,8 @@ function DocList({
 }
 
 /** The top filters — the text query and the symbol chips write the same model: a chip toggles a
- *  `sym:` token (OR scope, a watchlist); `on:` and `lens:` ride along from the rail untouched. */
+ *  `sym:` token (OR scope, a watchlist); an `on:` or `lens:` typed here is lifted into the root
+ *  range params by `research.tsx` (one model, two carriers — #3807 slice 2·1). */
 function ResearchFilters({
   data,
   query,
@@ -308,24 +300,34 @@ export function useBoardView({
     enabled: active,
   });
 
+  const parsed = parseResearchQuery(query);
+  const fog = dayLensFog(plays.data);
+  // The quarter lens snaps to a company's own fiscal quarter (#1736) only when the scope names
+  // EXACTLY one symbol and that symbol has a confirmed fiscal year-end — every other scope (none,
+  // several, or an unconfirmed symbol) stays the honest calendar-quarter fallback.
+  const scopedSymbol = parsed.symbols.length === 1 ? parsed.symbols[0] : undefined;
+  const fiscalYearEnd = scopedSymbol ? fiscalYearEndFor(scopedSymbol) : undefined;
+  // The range is root URL state (`?on=&span=`, live/horizon-params.ts; #3807 slice 2·1): the
+  // calendar's head on the Profile page and this board read the same key, and the `on:`/`lens:`
+  // tokens the box still accepts are lifted into it by research.tsx. A fogged member who asks
+  // for the day lens sees the week — the head says so beside the chip.
+  const horizon = useHorizonRange({
+    fogged: fog.fogged,
+    ...(fiscalYearEnd ? { fiscalYearEndMonth: fiscalYearEnd.fiscalYearEndMonth } : {}),
+  });
+
   if (research.isPending) return { rail: null, body: <p className="note">Opening Research…</p> };
   if (research.isError)
     return { rail: null, body: <p className="note">Research is unreachable.</p> };
 
   const data = research.data;
-  const parsed = parseResearchQuery(query);
-  const fog = dayLensFog(plays.data);
-  // A fogged member who types lens:day sees the week — the fog is honest about it in the rail.
-  const filter: ResearchFilter =
-    fog.fogged && parsed.lens === "day" ? { ...parsed, lens: "week" } : parsed;
-  const today = marketToday();
-  const anchor = filter.on ?? today;
-  // The quarter lens snaps to a company's own fiscal quarter (#1736) only when the scope names
-  // EXACTLY one symbol and that symbol has a confirmed fiscal year-end — every other scope (none,
-  // several, or an unconfirmed symbol) stays the honest calendar-quarter fallback.
-  const scopedSymbol = filter.symbols.length === 1 ? filter.symbols[0] : undefined;
-  const fiscalYearEnd = scopedSymbol ? fiscalYearEndFor(scopedSymbol) : undefined;
-  const range = rangeFor(anchor, filter.lens, fiscalYearEnd?.fiscalYearEndMonth);
+  const { on: _on, lens: _lens, ...facets } = parsed;
+  const filter: ResearchFilter = {
+    ...facets,
+    lens: horizon.lens,
+    ...(horizon.pinned ? { on: horizon.anchor } : {}),
+  };
+  const { anchor, range, today } = horizon;
   const fiscal: FiscalQuarterLabel | undefined =
     fiscalYearEnd && scopedSymbol
       ? (() => {
@@ -377,19 +379,14 @@ export function useBoardView({
         anchor={anchor}
         range={range}
         today={today}
-        pinned={filter.on !== undefined}
-        onPick={(date) => setFilter(toggleOnDate(query, date))}
-        onLens={(lens) => setFilter(setLens(query, lens))}
-        onStep={(direction) =>
-          setFilter(
-            setOnDate(
-              query,
-              stepAnchor(anchor, filter.lens, direction, fiscalYearEnd?.fiscalYearEndMonth),
-            ),
-          )
-        }
+        pinned={horizon.pinned}
+        onPick={(date) => horizon.setOn(horizon.pinned && anchor === date ? undefined : date)}
+        onLens={horizon.setLens}
+        onStep={horizon.step}
         {...(fiscal ? { fiscal } : {})}
-        {...(fog.fogged ? { dayFog: { reason: fog.reason, held: heldDayCalls } } : {})}
+        {...(fog.fogged
+          ? { dayFog: { door: fog.door, reason: fog.reason, held: heldDayCalls } }
+          : {})}
       />
     ),
     body: (

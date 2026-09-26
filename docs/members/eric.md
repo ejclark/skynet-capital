@@ -130,12 +130,14 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    value's one line. **WHEN the owner opens the cockpit, the app shall show the book's standing
    and what needs a decision above the fold, even when one feed cannot be read.** Judge: can this
    reader tell what to do next in ten seconds?
-3. `/app/accounts` — no calendar on the book; the week's events are a tab away. **WHEN the owner
-   reads the book on a Monday, the app shall show the week's events that touch the tickers held,
-   on the same page.** _known gap — the calendar exists only as R&D's rail control; the date key
-   never joins the book. The check is the calendar's own "Week" lens button, exactly — the
-   blotter's "Expiring within 3 weeks" view tab is not a calendar._ Judge: does this reader know
-   what is happening this week to what they hold?
+3. `/app/accounts` — the market calendar's head under the section switch (the week's range, the
+   arrows, the lens row) and, under the net-worth card, the events on what he holds: this week
+   nothing dated on EEM, the market-wide print beside it. **WHEN the owner reads the book on a
+   Monday, the app shall show the week's events that touch the tickers held, on the same page.**
+   _Fixed by #3807 slice 2·1 — the head and the held-events line; the grid is phase 3's popover.
+   The check is the calendar's own "Week" lens button, exactly — the blotter's "Expiring within
+   3 weeks" view tab is not a calendar._ Judge: does this reader know what is happening this
+   week to what they hold?
 4. `/app/research` — the calendar, the board's calls, the day lens fogged behind rung 501. **WHEN
    the owner opens R&D, the app shall show the calendar with the current range and the calls in
    it.** Judge: can this reader tell which events matter to their book?

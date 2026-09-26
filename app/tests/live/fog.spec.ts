@@ -10,10 +10,13 @@ describe("dayLensFog", () => {
     expect(fog.fogged).toBe(true);
     expect(fog.reason).toContain("501");
     expect(fog.reason).toContain("not built yet");
+    // the visible line opens with the same words as the title's reason (dead end 8)
+    expect(fog.door).toBe("Held until rung 501 (zero-DTE)");
+    expect(fog.reason.startsWith(fog.door)).toBe(true);
   });
 
   it("lets a wheels-off member see through", () => {
-    expect(dayLensFog({ ...base, wheels: false })).toEqual({ fogged: false, reason: "" });
+    expect(dayLensFog({ ...base, wheels: false })).toEqual({ fogged: false, reason: "", door: "" });
   });
 
   it("reads unknown as open — a fetch failure never fogs the wrong people", () => {

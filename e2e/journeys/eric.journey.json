@@ -31,13 +31,9 @@
         {
           "id": "s3",
           "goto": "/app/accounts",
-          "sees": "no calendar on the book — the week's events live on R&D, a tab away",
+          "sees": "the market calendar's head under the section switch — the week's range, arrows, the lens row — and under the net-worth card the events on what he holds (nothing dated on EEM this week; the market-wide print beside it)",
           "ears": "WHEN the owner reads the book on a Monday, the app shall show the week's events that touch the tickers held, on the same page.",
           "expect": [{ "role": "button", "name": "Week", "exact": true, "within": "main" }],
-          "known_gap": "the calendar (app/src/shell/event-horizon.tsx) exists only as R&D's rail control; the cockpit has no 'when' — the date key never joins the book (exact: the blotter's 'Expiring within 3 weeks' view tab is not a calendar)",
-          "where": "app/src/shell/event-horizon.tsx:1",
-          "severity": "medium",
-          "fix": "L",
           "judge": "does this reader know what is happening this week to what they hold?"
         },
         {

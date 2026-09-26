@@ -6,48 +6,33 @@ import {
   type FiscalQuarterLabel,
   type MarketClosure,
   rangeLabel,
-  sessionsIn,
 } from "../live/horizon-range";
-import type { ResearchEvent } from "../live/research";
-import { LENSES, type Lens } from "../live/research";
+import type { Lens, ResearchEvent } from "../live/research";
+import { CalendarHead, type DayFog } from "./calendar-head";
 
 /**
  * THE EVENT HORIZON (#738, rail-controls round — Eric: "view template shift controls to the left
  * rail... research can move the calendar control/filter to the left rail to drive the view").
  * A compact month calendar in the rail: dots mark event days (filled when a ledger exists);
- * clicking a day pins `on:YYYY-MM-DD` into the page's ONE query model — the rail drives the
- * view, the URL keeps the state, and typing the same token by hand works identically.
+ * clicking a day pins `?on=YYYY-MM-DD` — the rail drives the view, the URL keeps the state, and
+ * typing `on:YYYY-MM-DD` into the filter box lands on the same URL (one model, two carriers).
  *
- * THE LENS ROW (#1704 slice 2, Eric's brief): four lenses under the grid — day · week · month ·
- * quarter. The lens picks the RANGE around the anchor day (shaded on the grid) and the arrows
- * step by that duration; the head names the range and counts its sessions, so Labor Day week
- * reads "4 sessions" — theta decays an extra day. Weekdays the exchange is closed are hatched and struck (never hue alone — docs/BRAND.md → Accessibility)
+ * THE HEAD AND THE LENS ROW live in `calendar-head.tsx` since #3807 slice 2·1 — the same markup
+ * renders on the Profile page's cockpit head, without this grid; this file seats the month grid
+ * in the head's slot. The range is root URL state (`live/horizon-params.ts`, `?on=&span=`), so
+ * the day picked here is the day the whole app reads. The lens picks the RANGE around the anchor
+ * day (shaded on the grid) and the arrows step by that duration (#1704 slice 2). Weekdays the
+ * exchange is closed are hatched and struck (never hue alone — docs/BRAND.md → Accessibility)
  * and carry the reason. Every day is pickable now: a day with no event is a fine anchor for a
  * week, and a disabled day with nothing behind it was noise, not fog (docs/FOG-OF-WAR.md).
  *
  * THE ALL LENS HAS NO BUTTON: tapping the pressed lens again clears it, and no lens pressed IS
- * `lens:all` — every ledger in view (Eric, 2026-09-06: a fifth pill "getting pushed below has a
+ * `span=all` — every ledger in view (Eric, 2026-09-06: a fifth pill "getting pushed below has a
  * clunky feel. couldn't the toggle cluster… be deselectable which implicitly enable ALL records to
  * show?"). The head names the state — "all research · N events" — so the empty cluster reads.
  */
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
-const LENS_NAME: Record<Lens, string> = {
-  day: "Day",
-  week: "Week",
-  month: "Month",
-  quarter: "Quarter",
-  all: "All",
-};
-/** What one arrow press moves — the lens's span, or the grid's month under the all lens. */
-const STEP_UNIT: Record<Lens, string> = {
-  day: "day",
-  week: "week",
-  month: "month",
-  quarter: "quarter",
-  all: "month",
-};
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -161,8 +146,8 @@ export function EventHorizon({
   readonly onPick: (date: string) => void;
   readonly onLens: (lens: Lens) => void;
   readonly onStep: (direction: 1 | -1) => void;
-  /** The day lens's fog (docs/FOG-OF-WAR.md): the door's label and how many calls sit behind it. */
-  readonly dayFog?: { readonly reason: string; readonly held: number };
+  /** The day lens's fog (docs/FOG-OF-WAR.md): the door, its why, and how many calls sit behind it. */
+  readonly dayFog?: DayFog;
   /** The quarter lens's fiscal identity (#1736) — set only when exactly one symbol is in scope
    *  and has a confirmed fiscal year-end; absent, the quarter lens reads (and is) the calendar. */
   readonly fiscal?: FiscalQuarterLabel;
@@ -175,9 +160,6 @@ export function EventHorizon({
     byDate.set(event.date, [...(byDate.get(event.date) ?? []), event]);
   }
   const closedOn = new Map(closures.map((c) => [c.date, c] as const));
-  // The all lens's range is unbounded: nothing to shade, no sessions to count — the head shows
-  // how many events sit on the shelf instead.
-  const sessions = allLens ? 0 : sessionsIn(range, closures);
   const rangeDays = new Set(allLens ? [] : daysOf(range));
 
   const titleFor = (date: string): string | undefined => {
@@ -190,106 +172,63 @@ export function EventHorizon({
 
   return (
     <div className="eh">
-      <p className="rail-label">Event horizon</p>
-      <div className="eh-head">
-        <button
-          type="button"
-          className="eh-nav"
-          aria-label={`Previous ${STEP_UNIT[lens]}`}
-          onClick={() => onStep(-1)}
-        >
-          ‹
-        </button>
-        <span className="eh-month">
-          <span className="eh-range">{rangeLabel(range, lens, fiscal)}</span>
-          <span className="eh-sessions num">
-            {allLens
-              ? `${String(events.length)} ${events.length === 1 ? "event" : "events"}`
-              : `${String(sessions)} ${sessions === 1 ? "session" : "sessions"}`}
-          </span>
-        </span>
-        <button
-          type="button"
-          className="eh-nav"
-          aria-label={`Next ${STEP_UNIT[lens]}`}
-          onClick={() => onStep(1)}
-        >
-          ›
-        </button>
-      </div>
-      <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
-        {WEEKDAYS.map((d, i) => (
-          <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
-            {d}
-          </span>
-        ))}
-        {monthGrid(month).map((date, i) => {
-          const closure = closedOn.get(date);
-          const outside = date.slice(0, 7) !== month;
-          const className = `${dayClassName({
-            date,
-            column: i % 7,
-            inRange: !blockLens && rangeDays.has(date),
-            rangeDays,
-            today,
-            closure,
-          })}${outside ? " eh-outside" : ""}`;
-          return (
-            <button
-              key={date}
-              type="button"
-              className={className}
-              aria-pressed={pinned && anchor === date}
-              title={titleFor(date)}
-              onClick={() => onPick(date)}
-            >
-              {date.endsWith("-01") ? (
-                <span className="eh-month-tag" aria-hidden="true">
-                  {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
-                </span>
-              ) : null}
-              <span className="eh-num">{Number(date.slice(8, 10))}</span>
-              {byDate.has(date) ? (
-                <i
-                  className={
-                    byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
-                  }
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-      <fieldset className="eh-lenses">
-        <legend className="visually-hidden">Lens</legend>
-        {LENSES.filter((option) => option !== "all").map((option) => {
-          const fogged = option === "day" && dayFog !== undefined;
-          return (
-            <button
-              key={option}
-              type="button"
-              className="eh-lens"
-              aria-pressed={option === lens}
-              disabled={fogged}
-              title={fogged ? dayFog.reason : undefined}
-              onClick={() => onLens(option === lens ? "all" : option)}
-            >
-              {LENS_NAME[option]}
-              {fogged ? (
-                <span className="eh-lens-lock" aria-hidden="true">
-                  ◷
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </fieldset>
-      {dayFog ? (
-        <p className="eh-fog">
-          Day lens held until rung 501 (zero-DTE) — <span className="num">{dayFog.held}</span>{" "}
-          {dayFog.held === 1 ? "call" : "calls"} in range behind it.
-        </p>
-      ) : null}
+      <CalendarHead
+        lens={lens}
+        range={range}
+        closures={closures}
+        all={{
+          name: rangeLabel(range, "all"),
+          count: `${String(events.length)} ${events.length === 1 ? "event" : "events"}`,
+        }}
+        onLens={onLens}
+        onStep={onStep}
+        {...(fiscal ? { fiscal } : {})}
+        {...(dayFog ? { dayFog } : {})}
+      >
+        <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
+          {WEEKDAYS.map((d, i) => (
+            <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
+              {d}
+            </span>
+          ))}
+          {monthGrid(month).map((date, i) => {
+            const closure = closedOn.get(date);
+            const outside = date.slice(0, 7) !== month;
+            const className = `${dayClassName({
+              date,
+              column: i % 7,
+              inRange: !blockLens && rangeDays.has(date),
+              rangeDays,
+              today,
+              closure,
+            })}${outside ? " eh-outside" : ""}`;
+            return (
+              <button
+                key={date}
+                type="button"
+                className={className}
+                aria-pressed={pinned && anchor === date}
+                title={titleFor(date)}
+                onClick={() => onPick(date)}
+              >
+                {date.endsWith("-01") ? (
+                  <span className="eh-month-tag" aria-hidden="true">
+                    {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
+                  </span>
+                ) : null}
+                <span className="eh-num">{Number(date.slice(8, 10))}</span>
+                {byDate.has(date) ? (
+                  <i
+                    className={
+                      byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
+                    }
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </CalendarHead>
       <p className="eh-legend">
         <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
         <s className="eh-legend-closed num">7</s> closed
