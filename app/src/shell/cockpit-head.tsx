@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import {
   type AccountNetWorthView,
@@ -10,6 +11,7 @@ import type { OwnedAccount } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
 import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
 import { HeartbeatChip } from "./heartbeat";
+import { scrollToChapter } from "./milestones-section";
 import { NetWorthCondensed } from "./networth-summary";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
 import { SectionSwitch } from "./section-switch";
@@ -29,7 +31,14 @@ import type { PageSection } from "./sections";
  *   - a member with NO LINKED ACCOUNT gets the same page: the row reads "No account linked yet" in
  *     place of the switcher and the vitals — the Milestones section below opens on the connect
  *     guide, so the old early return's link back to `/onboarding` (a loop once `/onboarding`
- *     redirects here) is gone.
+ *     redirects here) is gone. Its words are the control (#3807 slice 2e — the phase-2 crawl's
+ *     one regression: "connect one in Onboarding below" named an action with nothing in reach):
+ *     "connect one in Onboarding" opens the connect guide and scrolls it under the head, inline in
+ *     the same line, so the row keeps its height at 390.
+ *
+ * ONE ACCOUNT PICKED, the switcher's row also links that account's page as the league sees it
+ * (`/u/:id` — slice 2e, dead end 6: the mirror of that page's "Open in your Accounts"). Never on
+ * All accounts: an aggregate has no page of its own.
  * @category accounts
  */
 
@@ -62,6 +71,23 @@ function HeadNote({ children }: { readonly children: ReactNode }): ReactElement 
         <p className="cockpit-head-line">{children}</p>
       </div>
     </div>
+  );
+}
+
+/** The zero-account door's control: the connect guide, scrolled into view. A Link, so the URL
+ *  names the chapter; the scroll covers the door's own case, where the chapter is already open
+ *  (the page's default) and the section's own anchor has no change to react to. */
+function ConnectLink(): ReactElement {
+  return (
+    <Link
+      to="/accounts"
+      search={{ section: "milestones", chapter: "onboarding" }}
+      resetScroll={false}
+      className="door-link"
+      onClick={() => requestAnimationFrame(() => scrollToChapter("onboarding"))}
+    >
+      connect one in Onboarding
+    </Link>
   );
 }
 
@@ -106,7 +132,11 @@ export function CockpitHead({
     <>
       <div className="cockpit-head">
         {!linked ? (
-          <HeadNote>No account linked yet — connect one in Onboarding below.</HeadNote>
+          <HeadNote>
+            <span>
+              No account linked yet — <ConnectLink />.
+            </span>
+          </HeadNote>
         ) : isViewerSection(section) ? (
           <HeadNote>{VIEWER_LINE[section as "milestones" | "feedback"]}</HeadNote>
         ) : (
@@ -117,6 +147,13 @@ export function CockpitHead({
             allowAll
             isDefault={isDefault}
             onToggleDefault={onToggleDefault}
+            trailing={
+              accountId === ALL_ACCOUNTS || accountId === "" ? undefined : (
+                <Link to="/u/$id" params={{ id: accountId }}>
+                  Open as the league sees it
+                </Link>
+              )
+            }
           />
         )}
         {sections.some((s) => s.id === "heartbeat") ? <HeartbeatChip deskId={accountId} /> : null}

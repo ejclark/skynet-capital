@@ -262,6 +262,17 @@ table.blotter {
   white-space: nowrap;
   flex-shrink: 0;
 }
+/* Roll's reason, said once under the buys it applies to (#3807 slice 2e, dead end 8). */
+.row-lot-why td {
+  background: var(--surface-2);
+  border-left: 3px solid var(--accent);
+}
+.lot-why {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: normal;
+}
 .expand-btn {
   border: 1px solid var(--border);
   background: var(--surface);

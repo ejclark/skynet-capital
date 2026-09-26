@@ -54,12 +54,14 @@ is a second visit. They never read a tooltip because they cannot.
 3. `/app/trade?desk=human-eric&symbol=EEM` — the folded bench: one pane, the switch across the top.
    **WHEN Trade renders at 390px, the app shall show one pane at a time with the pane switch
    visible.** Judge: can this reader tell what to do next in ten seconds?
-4. `/app/u/sauron/thesis` — the Subscribe cluster, greyed; no sentence says why. **WHEN a disabled
-   control renders on a phone, the app shall show its reason without hover.** _known gap — dead
-   end 8._ Judge: does this reader know why Subscribe is off?
-5. `/app/accounts?section=milestones&chapter=playbooks` — "Arm · soon", greyed; the reason is a tooltip. **WHEN a disabled control
-   renders on a phone, the app shall show its reason without hover.** _known gap — dead end 8._
-   Judge: does this reader know why Arm is off?
+4. `/app/u/sauron/thesis` — the Subscribe cluster, greyed, each reason in a sentence under the
+   buttons. **WHEN a disabled control renders on a phone, the app shall show its reason without
+   hover.** _Fixed — #3807 slice 2e._ Judge: does this reader know why Subscribe is off?
+5. `/app/accounts?section=milestones&chapter=playbooks` — the playbook cards; where one is earned,
+   "Arm · soon" is greyed with its reason in a line under it. **WHEN a disabled control renders on
+   a phone, the app shall show its reason without hover.** _known gap — dead end 8: fixed in code
+   (#3807 slice 2e), but this fixture's member has earned no playbook, so Arm never renders and
+   the step cannot see it._ Judge: does this reader know why Arm is off?
 6. `/app/research` — R&D with the calendar in the phone strip, the day lens fogged. **WHEN R&D
    renders at 390px, the app shall keep the calendar's range control reachable and its fog notice
    readable.** Judge: can this reader change the week from here?

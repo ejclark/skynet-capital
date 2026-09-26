@@ -244,3 +244,13 @@
     width: 180px !important;
   }
 }
+
+/* A sentence whose words are the way in (#3807 slice 2e — the zero-account head's "connect one in
+ * Onboarding", Trade's empty state): the accent AND an underline, the shape never the hue alone
+ * (BRAND.md → Accessibility). */
+.door-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

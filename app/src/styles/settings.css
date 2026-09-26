@@ -186,6 +186,24 @@
   max-width: 32ch;
   margin: 0;
 }
+/* A link on the label's line, at the row's right edge (#3807 slice 2e — the Profile page's link to
+ * the picked account's page as the league sees it): the buttons sit on the row's bottom edge, so
+ * the line above them is free at every width and the row keeps its height at 390. */
+.set-switch {
+  position: relative;
+}
+.set-switch-aside {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.set-switch-aside a {
+  color: var(--accent);
+}
 .set-switch-add {
   padding-bottom: 9px;
   font-size: 12.5px;

@@ -144,9 +144,11 @@ describe("/trade section switch", () => {
     );
     expect(screen.getByRole("button", { name: "Chain" })).toHaveAttribute("aria-pressed", "true");
     mountTrade("/trade?section=chain");
+    // Folded, the ticket is off screen: the empty pane asks for the symbol itself (#3807 slice 2e).
     await waitFor(() =>
-      expect(screen.getByText(/Pick a symbol on the Ticket/)).toBeInTheDocument(),
+      expect(screen.getByText("Pick a symbol to browse its options chain.")).toBeInTheDocument(),
     );
+    expect(screen.getByRole("combobox", { name: "Symbol" })).toBeInTheDocument();
   });
 
   it("renders the Orders section — working orders, alerts, positions as one pane (#3407 slice 3)", async () => {

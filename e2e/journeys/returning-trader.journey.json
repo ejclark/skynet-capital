@@ -104,16 +104,12 @@
           "id": "s1",
           "only": "phone",
           "goto": "/app/trade?desk=human-eric&section=chain",
-          "sees": "the Chain pane: 'Pick a symbol on the Ticket to browse its options chain.' — no input here",
+          "sees": "the Chain pane: 'Pick a symbol to browse its options chain.' with the Symbol field in the same note (#3807 slice 2e)",
           "ears": "WHEN a pane needs a symbol it does not have, the app shall offer the symbol input in that pane.",
           "expect": [
-            { "text": "Pick a symbol on the Ticket" },
-            { "role": "textbox", "name": "Symbol", "within": "main" }
+            { "text": "Pick a symbol to browse its options chain" },
+            { "role": "combobox", "name": "Symbol", "within": "main" }
           ],
-          "known_gap": "dead end 3 — the Chain / Chart / Guidance panes say 'Pick a symbol on the Ticket…' with no input of their own (app/src/shell/chain-section.tsx:125, chart-section.tsx:126, guidance-section.tsx:112)",
-          "where": "app/src/shell/chain-section.tsx:125",
-          "severity": "medium",
-          "fix": "S",
           "judge": "can this reader tell what to do next in ten seconds?"
         },
         {
@@ -133,13 +129,16 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the cockpit — nothing links to the desk page for this same account",
-          "ears": "WHEN the member is on their cockpit, the app shall link the other view of the same account (the desk) or fold it in.",
-          "expect": [{ "role": "link", "name": "desk", "within": "main" }],
-          "known_gap": "dead end 6 — /accounts never links your own desk; two profile concepts, no bridge (app/src/routes/accounts.tsx; app/src/shell/desk-rail.tsx)",
-          "where": "app/src/routes/accounts.tsx:306",
-          "severity": "low",
-          "fix": "M",
+          "sees": "the Profile page's head: the switcher, then 'Open as the league sees it' — the same account's page at /u/human-eric (#3807 slice 2e)",
+          "ears": "WHEN the member is on their Profile page with one account picked, the app shall link that account's page as the league sees it (/u/:id).",
+          "expect": [
+            {
+              "role": "link",
+              "name": "Open as the league sees it",
+              "within": ".cockpit-head",
+              "href": "/app/u/human-eric"
+            }
+          ],
           "judge": "does the reader know there are two pages for one account?"
         },
         {

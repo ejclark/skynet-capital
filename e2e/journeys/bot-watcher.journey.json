@@ -49,13 +49,9 @@
         {
           "id": "s5",
           "goto": "/app/u/sauron/thesis",
-          "sees": "the thesis, its markers, and a Subscribe cluster that is disabled",
+          "sees": "the thesis, its markers, and a Subscribe cluster that is disabled, each button's reason in a sentence under it (#3807 slice 2e)",
           "ears": "WHEN a control is disabled, the app shall show its reason as visible text, not only in a title.",
           "expect": [{ "role": "heading", "name": "thesis" }, { "text": "isn't wired yet" }],
-          "known_gap": "dead end 8 — Thesis Subscribe's reason lives only in title/aria-label, invisible on a phone (app/src/shell/thesis-drawer.tsx:81)",
-          "where": "app/src/shell/thesis-drawer.tsx:81",
-          "severity": "high",
-          "fix": "S",
           "judge": "does this reader know why Subscribe is off?"
         },
         {

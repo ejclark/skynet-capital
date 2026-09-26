@@ -95,15 +95,21 @@ function Chapters({
   );
 }
 
-/** Scroll the open chapter under the sticky cockpit head — an anchor, measured rather than a
- *  fixed `scroll-margin`, because the head's height differs at 390 and 1280. */
+/** Scroll a chapter under the sticky cockpit head — an anchor, measured rather than a fixed
+ *  `scroll-margin`, because the head's height differs at 390 and 1280. Also the head's own
+ *  "connect one in Onboarding" (#3807 slice 2e), where the chapter is already open and nothing
+ *  re-renders to fire the anchor below. */
+export function scrollToChapter(chapter: MilestoneChapter, el?: HTMLElement | null): void {
+  const target = el ?? document.getElementById(`chapter-${chapter}`);
+  if (!target || typeof window.scrollTo !== "function") return;
+  const head = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
+  window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - head - 12 });
+}
+
 function useChapterAnchor(chapter: MilestoneChapter | undefined, ready: boolean) {
   const ref = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    const el = ref.current;
-    if (!(chapter && ready && el) || typeof window.scrollTo !== "function") return;
-    const head = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - head - 12 });
+    if (chapter && ready && ref.current) scrollToChapter(chapter, ref.current);
   }, [chapter, ready]);
   return ref;
 }

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition } from "../../src/live/desk";
 import { BlotterRow } from "../../src/shell/blotter-row";
 
@@ -228,9 +229,16 @@ describe("BlotterRow", () => {
       render(inTable(<BlotterRow position={optionLots} deskId="sauron" />));
       fireEvent.click(screen.getByRole("button", { name: /1 buy for NVDA Dec 18 130 Call/ }));
 
-      const rollButtons = screen.getAllByRole("button", { name: /Roll —/ });
+      const rollButtons = screen.getAllByRole("button", { name: "Roll" });
       expect(rollButtons).toHaveLength(1);
-      for (const button of rollButtons) expect(button).toBeDisabled();
+      // Dead end 8 (#3807 slice 2e): the reason is visible text under the buys, and every Roll
+      // is described by it — never a title a phone cannot hover.
+      expect(screen.getByText(ROLL_UNAVAILABLE_REASON)).toBeVisible();
+      for (const button of rollButtons) {
+        expect(button).toBeDisabled();
+        expect(button).toHaveAccessibleDescription(ROLL_UNAVAILABLE_REASON);
+        expect(button).not.toHaveAttribute("title");
+      }
     });
   });
 });

@@ -30,3 +30,12 @@
   font-weight: 700;
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
+
+/* A Trade pane with no symbol yet asks for one itself (#3807 slice 2e, `symbol-prompt.tsx`): the
+   ask and the field in one block, the field no wider than the ticket's own. */
+.symbol-prompt {
+  display: grid;
+  gap: 10px;
+  max-width: 36ch;
+  margin: 14px 0 0;
+}

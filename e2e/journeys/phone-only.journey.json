@@ -38,24 +38,20 @@
         {
           "id": "s4",
           "goto": "/app/u/sauron/thesis",
-          "sees": "the Subscribe cluster, greyed; no sentence says why",
+          "sees": "the Subscribe cluster, greyed, each reason in a sentence under the buttons (#3807 slice 2e)",
           "ears": "WHEN a disabled control renders on a phone, the app shall show its reason without hover.",
           "expect": [{ "role": "heading", "name": "thesis" }, { "text": "isn't wired yet" }],
-          "known_gap": "dead end 8 — Thesis Subscribe's reason lives only in title/aria-label; there is no hover on a phone (app/src/shell/thesis-drawer.tsx:81)",
-          "where": "app/src/shell/thesis-drawer.tsx:81",
-          "severity": "high",
-          "fix": "S",
           "judge": "does this reader know why Subscribe is off?"
         },
         {
           "id": "s5",
           "goto": "/app/accounts?section=milestones&chapter=playbooks",
-          "sees": "'Arm · soon', greyed; the reason is a title tooltip",
+          "sees": "the four playbook cards, every one LOCKED on this fixture — so no 'Arm · soon' renders; where one is earned, its reason is a line under it (#3807 slice 2e)",
           "ears": "WHEN a disabled control renders on a phone, the app shall show its reason without hover.",
           "expect": [{ "text": "Arming opens to human accounts with Season 1" }],
-          "known_gap": "dead end 8 — 'Arm · soon' carries its reason only in title (app/src/shell/playbooks-chapter.tsx:42)",
+          "known_gap": "dead end 8 — the code is fixed (#3807 slice 2e: Arm's reason is visible text under it, aria-describedby, pinned by app/tests/shell/playbooks-chapter.spec.tsx), but the frozen fixture's member has no unlocked playbook, so Arm never renders here and the step cannot see the fix (app/src/shell/playbooks-chapter.tsx:42)",
           "where": "app/src/shell/playbooks-chapter.tsx:42",
-          "severity": "medium",
+          "severity": "low",
           "fix": "S",
           "judge": "does this reader know why Arm is off?"
         },
