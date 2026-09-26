@@ -144,4 +144,6 @@ npm run crawl:coverage -- --json       # the joined rows on stdout, writes nothi
 It exits 1 when the code has a screen `triage.json` does not (unjudged) or a living verdict names a
 screen that is gone (stale) — a new screen cannot slip in unjudged. Limits: only `goto` counts, never
 where an `act` click lands; the landing is resolved from the fixture (does this member own an
-account?), not by loading the page — the crawl's `{url}` expects are what check the real redirect.
+account?), not by loading the page — the crawl's `{url}` expects are what check the real redirect. A `?section=` is matched against the route's full section list, not the viewer's narrowed one
+(a human account has no Heartbeat), and any path outside the SPA tree — `/login`, `/welcome` — counts
+as the unknown-URL row until server pages get journey steps of their own.

@@ -1,6 +1,6 @@
 // Phone checks — four things a 390px screen gets wrong that a desktop frame never shows, run by
 // the persona crawl ONLY behind `--phone-audit` at the phone viewport (so run 0's ledger and maps
-// stay byte-comparable, #3807) and by `npm run phone -- <path>` for one page in ~10 seconds.
+// stay byte-comparable, #3807) and by `npm run phone -- <path>` for one page in a few seconds.
 // Mobile-first is the house discipline on every information surface (CLAUDE.md), and the crawl
 // already walks every member at 390×844 — these are the phone-specific questions it never asked.
 //
