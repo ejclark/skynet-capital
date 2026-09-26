@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 
 // The image-reference resolver behind every rollback path in pipeline.yml. Driven through the real
 // entrypoint (JSON on stdin) the way every script spec here works — no `.d.ts` invented for an
@@ -81,5 +81,21 @@ describe("fly image reference resolver (rollback safety)", () => {
       { encoding: "utf8" },
     ).trim();
     expect(status).toBe("0");
+  });
+
+  // Degrade honestly (#3769 row 1): stdout stays silent for the callers' `$(...)`, but the log
+  // says WHICH empty it was — a first deploy and a flyctl error are different stories.
+  it("names the empty answer on stderr, keeping stdout silent", () => {
+    const note = (input: string) =>
+      spawnSync(process.execPath, ["scripts/fly-image-ref.mjs"], { input, encoding: "utf8" });
+    const empty = note("");
+    expect(empty.status).toBe(0);
+    expect(empty.stdout).toBe("");
+    expect(empty.stderr).toContain("· no image ref: empty payload");
+    const malformed = note("Error: no access token available");
+    expect(malformed.stdout).toBe("");
+    expect(malformed.stderr).toContain("· no image ref: payload names no complete image");
+    const ok = note(JSON.stringify({ Registry: "r", Repository: "p", Tag: "t" }));
+    expect(ok.stderr).toBe("");
   });
 });

@@ -17,7 +17,9 @@
 // So the rule this module exists to hold: a reference is emitted only when every component of it is
 // a real, non-empty string. Anything else prints nothing at all, because "no previous image" is a
 // legitimate, expected state (a first deploy) and its correct rendering is silence — the callers
-// already read empty as "rollback unavailable this run" and skip.
+// already read empty as "rollback unavailable this run" and skip. Silence is on STDOUT only: the CLI
+// names which empty it was as one `·` note on stderr, so a log reader can tell "first deploy" from
+// "flyctl printed an error" without the callers' `$(...)` capture ever seeing it.
 //
 // CLI contract (shell-friendly, ALWAYS exit 0 — this is a lookup, never a gate):
 //   flyctl image show -a <app> --json | node scripts/fly-image-ref.mjs
@@ -57,18 +59,29 @@ export function refFromPayload(text) {
   try {
     parsed = JSON.parse(text);
   } catch {
-    return ""; // flyctl printed an error, or nothing — either way there is no image to name.
+    // Optional input: flyctl printed an error, or nothing — either way there is no image to name,
+    // and "" is the contract's answer for that. The CLI names it on stderr.
+    return "";
   }
   return refFromRecord(Array.isArray(parsed) ? parsed[0] : parsed);
 }
 
 if (process.argv[1]?.endsWith("fly-image-ref.mjs")) {
   let stdin = "";
+  let why = "";
   try {
     stdin = readFileSync(0, "utf8");
   } catch {
-    stdin = ""; // no stdin attached — same answer as an empty one.
+    // Optional input: no stdin attached — same answer as an empty one, but named.
+    stdin = "";
+    why = "no stdin attached";
   }
   const ref = refFromPayload(stdin);
   if (ref) console.log(ref);
+  else {
+    why ||= stdin.trim()
+      ? "payload names no complete image (not JSON, or a null/partial record)"
+      : "empty payload";
+    console.error(`· no image ref: ${why} — rollback unavailable this run`);
+  }
 }
