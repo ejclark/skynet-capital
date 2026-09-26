@@ -16,7 +16,7 @@ import { AccountSwitcher } from "../shell/account-switcher";
 import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
-import { MissionControl } from "../shell/mission-control";
+import { MissionControl, MissionControlLink } from "../shell/mission-control";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
@@ -344,11 +344,7 @@ function AccountCard({
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
-          {account.kind === "bot" ? (
-            <div className="set-links">
-              <a href="#mission-control">Mission Control ↓</a>
-            </div>
-          ) : null}
+          {account.kind === "bot" ? <MissionControlLink /> : null}
           <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />
         </>
@@ -440,8 +436,8 @@ function SettingsPage(): ReactElement {
           <p className="note">Account management isn't wired in this deployment.</p>
         ) : !first ? (
           <p className="note">
-            Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or
-            add your own from{" "}
+            Your sign-in doesn't resolve to an account yet — ask a league owner to link one to your
+            sign-in, or add your own from{" "}
             <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
               onboarding
             </Link>

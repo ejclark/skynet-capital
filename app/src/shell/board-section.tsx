@@ -47,7 +47,33 @@ function inSymbolScope(
   );
 }
 
-function CallBoard({
+/** A hub is an event id other ledgers name as adjacent — often one nobody has written a ledger
+ *  for yet. Only an id with a ledger (`events/<id>` in the shelf) links to its page; the rest read
+ *  as plain text rather than a link that opens a 404. */
+function HubName({
+  id,
+  ledgerSlugs,
+}: {
+  readonly id: string;
+  readonly ledgerSlugs: ReadonlySet<string>;
+}): ReactElement {
+  const title = "ledgers in range naming this event as adjacent";
+  if (!ledgerSlugs.has(`events/${id}`)) {
+    return (
+      <span className="num" title={`${title} — no ledger of its own yet`}>
+        {id}
+      </span>
+    );
+  }
+  return (
+    <a href={`/research/events/${id}`} className="num" title={title}>
+      {id}
+    </a>
+  );
+}
+
+/** Exported for its spec. */
+export function CallBoard({
   data,
   filter,
   inRangeIds,
@@ -84,6 +110,7 @@ function CallBoard({
   if (data.calls.length === 0) return null;
   const mix = callMix(calls.map(({ row }) => row.call));
   const hubs = hubEvents(calls.map(({ call }) => call.adjacent ?? []));
+  const ledgerSlugs = new Set(data.ledgers.map((doc) => doc.slug));
   // #1711: a blocked/downgraded source is never a silent fallback — the board counts it here from
   // the field (probe-ref.blocked, via the shell payload's sourceBlocked), never from prose.
   const blockedCount = calls.filter(({ call }) => call.sourceBlocked).length;
@@ -110,13 +137,7 @@ function CallBoard({
                 {hubs.map((hub, i) => (
                   <span key={hub.id}>
                     {i > 0 ? ", " : ""}
-                    <a
-                      href={`/research/events/${hub.id}`}
-                      className="num"
-                      title="ledgers in range naming this event as adjacent"
-                    >
-                      {hub.id}
-                    </a>{" "}
+                    <HubName id={hub.id} ledgerSlugs={ledgerSlugs} />{" "}
                     <span className="num">({hub.count})</span>
                   </span>
                 ))}
@@ -215,8 +236,11 @@ function DocList({
 
 /** The top filters — the text query and the symbol chips write the same model: a chip toggles a
  *  `sym:` token (OR scope, a watchlist); an `on:` or `lens:` typed here is lifted into the root
- *  range params by `research.tsx` (one model, two carriers — #3807 slice 2·1). */
-function ResearchFilters({
+ *  range params by `research.tsx` (one model, two carriers — #3807 slice 2·1). A selected chip
+ *  offers no "full page" link: no per-symbol research page exists (the server serves only study
+ *  and ledger slugs, `research-service.ts`), so the link only ever opened a 404 — the scoped board
+ *  the chip just produced IS the symbol's view. Exported for its spec. */
+export function ResearchFilters({
   data,
   query,
   onChange,
@@ -266,11 +290,6 @@ function ResearchFilters({
                     <span className="rx-symbol-next">no dated event</span>
                   )}
                 </button>
-                {selected ? (
-                  <a className="rx-symbol-full" href={entry.href}>
-                    full page →
-                  </a>
-                ) : null}
               </span>
             );
           })}

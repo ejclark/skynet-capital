@@ -173,6 +173,12 @@ describe("ParticipantService.addParticipant", () => {
       apiSecret: "s",
     });
     expect(result.ok).toBe(false);
+    // The next step names where it lives now — /rotate and /claim are bare redirects to Settings.
+    if (!result.ok) {
+      expect(result.error).toContain("Settings → Account → Rotate Alpaca credentials");
+      expect(result.error).toContain("a league owner does for you");
+      expect(result.error).not.toMatch(/\/rotate|\/claim/);
+    }
   });
 
   it("refuses an id colliding with an env-configured (roster) account, not just the store", async () => {

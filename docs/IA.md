@@ -382,8 +382,9 @@ never leaves Settings**.
   the suspend → trade → resume path needs the switch reachable from Trade's ticket when
   `?desk=<bot>` — a joint through `AccountField` (`trade.tsx:118`), not a section.
 - ◆ **The #885 flag, sharpened.** "At this time, we do not show what playbooks others are using"
-  is already breached in three places — `decisions-section.tsx:30-35` renders `outcome.playbook ·
-  playbookMode` on any bot's page, `wire-reasoning.ts:63-68` copies the playbook name and mode
+  was breached in three places — `decisions-section.tsx:30-35` rendered `outcome.playbook ·
+  playbookMode` on any bot's page (closed for non-owners, server and client, #3816's defects
+  slice), `wire-reasoning.ts:63-68` copies the playbook name and mode
   into every member's feed under a "#885 attribution" label, and `activity.tsx:331-333` renders the
   council tag to the league. Two non-owner steps need the key now ("was the loss one playbook or
   all of them?"). This is a decision about **house bots' playbooks** (public or not); it goes to

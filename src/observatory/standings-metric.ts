@@ -28,11 +28,19 @@ export function parseLeaderMetric(raw: string | null | undefined): LeaderMetric 
   return raw === "pl" || raw === "return" || raw === "realized" || raw === "month" ? raw : "equity";
 }
 
-/** Whether this participant has a value for the metric. Only "month" can be missing: the 1-month
- *  return arrives from the broker on the sync's slower cadence, and a brand-new account has none. */
+/** Whether this participant has a value for the metric. Two can be missing: the 1-month return
+ *  arrives from the broker on the sync's slower cadence (a brand-new account has none), and
+ *  realized P/L is absent for an account with no booked history read yet — the same accounts
+ *  Activity's Booked P&L leaves out (`buildWirePnlRows`), so the league never ranks them as a
+ *  false $0 either. */
 export function metricKnown(snapshot: ParticipantSnapshot, metric: LeaderMetric): boolean {
-  if (metric !== "month") return true;
-  return typeof snapshot.monthReturnPct === "number" && Number.isFinite(snapshot.monthReturnPct);
+  if (metric === "realized") return isFiniteNumber(snapshot.realizedPl);
+  if (metric === "month") return isFiniteNumber(snapshot.monthReturnPct);
+  return true;
+}
+
+function isFiniteNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 /** Below every real value: an unknown ranks last, never as a false 0%. */

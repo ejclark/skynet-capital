@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchDesk, fetchDeskActivity } from "../live/desk";
-import { AccountPage } from "../shell/account-head";
+import { AccountPage, useOwnsAccount } from "../shell/account-head";
 import { ActivityTable } from "../shell/activity-table";
 import { PageFrame } from "../shell/frame";
 
@@ -11,10 +11,13 @@ import { PageFrame } from "../shell/frame";
  * same `ActivityTable` the Profile page's Activity renders, fed by the same per-account read
  * (`/api/desk/:id/activity`). Each row carries `id="act-<orderId>"`, so the Thesis markers and a
  * bot's "passes that did trade" land on a row that exists. Reads are public inside the invite
- * gate by design; nothing here writes.
+ * gate by design; nothing here writes. One exception: a bot's decision names its playbook only for
+ * the bot's owner (#885: "at this time, we do not show what playbooks others are using") — the
+ * server withholds it from anyone else and the table is told not to draw it.
  */
 function ActivityPage(): ReactElement {
   const { id } = Route.useParams();
+  const isOwn = useOwnsAccount(id);
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
   const activity = useQuery({
     queryKey: ["desk-activity", id],
@@ -51,7 +54,7 @@ function ActivityPage(): ReactElement {
       ) : activity.data.activity.length === 0 ? (
         <p className="note">No recorded orders in the ledger's window.</p>
       ) : (
-        <ActivityTable events={activity.data.activity} />
+        <ActivityTable events={activity.data.activity} showPlaybook={isOwn} />
       )}
     </AccountPage>
   );

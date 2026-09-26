@@ -1,6 +1,12 @@
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
-import { parseLeaderMetric } from "../../src/observatory/standings-metric.js";
+import {
+  metricKnown,
+  metricText,
+  parseLeaderMetric,
+  rankValue,
+  UNKNOWN_RANK,
+} from "../../src/observatory/standings-metric.js";
 import {
   renderStandingsBody,
   renderStandingsContent,
@@ -192,6 +198,42 @@ describe("the field — realized P/L ranking", () => {
     expect(html.indexOf('href="/u/b">Bo ')).toBeLessThan(html.indexOf('href="/u/a">Ann '));
     expect(html).toContain("+$9,000");
     expect(html).toContain("+$500");
+  });
+
+  // Activity's Booked P&L omits an account with no realized figure (`buildWirePnlRows`); the league
+  // must not rank the same account as a booked $0 — it reads "—" and ranks below a real loss.
+  it("ranks an account with no realized figure last and labels it —, never $0", () => {
+    const unknown = {
+      id: "c",
+      displayName: "Cy",
+      kind: "human" as const,
+      cash: 0,
+      equity: 100_000,
+      positions: [],
+    };
+    expect(metricKnown(unknown, "realized")).toBe(false);
+    expect(metricText(unknown, "realized")).toBe("—");
+    expect(rankValue(unknown, "realized")).toBe(UNKNOWN_RANK);
+    const html = renderStandingsBody(
+      data([
+        unknown,
+        {
+          id: "a",
+          displayName: "Ann",
+          kind: "human",
+          cash: 0,
+          equity: 100_000,
+          positions: [],
+          realizedPl: -200,
+        },
+      ]),
+      { metric: "realized" },
+    );
+    expect(html.indexOf('href="/u/a">Ann ')).toBeLessThan(html.indexOf('href="/u/c">Cy '));
+    const at = html.indexOf('href="/u/c">Cy ');
+    const cyRow = html.slice(at, html.indexOf("</li>", at));
+    expect(cyRow).toContain("—");
+    expect(cyRow).not.toContain("$0");
   });
 });
 

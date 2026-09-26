@@ -18,13 +18,17 @@ import type { ActivityReasoning, DeskActivityEvent } from "../live/desk";
  * A bot's rows carry the decision that placed them (#3687 slice 4 — the Decisions tab folded into
  * its trades): a leading chevron opens it directly beneath the row, the blotter's inline row
  * accordion (docs/PATTERNS.md). Unlike the blotter's own fold column it never hides at wide
- * widths — the "why" is not overflow detail.
+ * widths — the "why" is not overflow detail. Its "Playbook" row is the owner's alone (#885: "we do
+ * not show what playbooks others are using"): the server withholds the key from anyone else, and
+ * `showPlaybook={false}` on a page the viewer does not own keeps the row from ever drawing.
  * @category trading
  */
 export function ActivityTable({
   events,
+  showPlaybook = true,
 }: {
   readonly events: readonly DeskActivityEvent[];
+  readonly showPlaybook?: boolean;
 }): ReactElement {
   const withWhy = events.some((event) => event.reasoning);
   return (
@@ -50,7 +54,12 @@ export function ActivityTable({
           </thead>
           <tbody>
             {events.map((event) => (
-              <ActivityRow key={`${event.orderId}-${event.at}`} event={event} withWhy={withWhy} />
+              <ActivityRow
+                key={`${event.orderId}-${event.at}`}
+                event={event}
+                withWhy={withWhy}
+                showPlaybook={showPlaybook}
+              />
             ))}
           </tbody>
         </table>
@@ -59,7 +68,13 @@ export function ActivityTable({
   );
 }
 
-function WhyDetail({ why }: { readonly why: ActivityReasoning }): ReactElement {
+function WhyDetail({
+  why,
+  showPlaybook,
+}: {
+  readonly why: ActivityReasoning;
+  readonly showPlaybook: boolean;
+}): ReactElement {
   return (
     <dl className="more-grid why-grid">
       <div>
@@ -70,7 +85,7 @@ function WhyDetail({ why }: { readonly why: ActivityReasoning }): ReactElement {
         <dt>Decided by</dt>
         <dd>{why.personaId}</dd>
       </div>
-      {why.playbookId ? (
+      {showPlaybook && why.playbookId ? (
         <div>
           <dt>Playbook</dt>
           <dd>
@@ -104,9 +119,11 @@ function WhyDetail({ why }: { readonly why: ActivityReasoning }): ReactElement {
 function ActivityRow({
   event,
   withWhy,
+  showPlaybook,
 }: {
   readonly event: DeskActivityEvent;
   readonly withWhy: boolean;
+  readonly showPlaybook: boolean;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const when = new Date(event.at);
@@ -178,7 +195,7 @@ function ActivityRow({
       {open && event.reasoning ? (
         <tr className="row-why">
           <td colSpan={9}>
-            <WhyDetail why={event.reasoning} />
+            <WhyDetail why={event.reasoning} showPlaybook={showPlaybook} />
           </td>
         </tr>
       ) : null}
