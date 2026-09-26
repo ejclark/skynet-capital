@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Adopting a capability — a written anatomy, not a mega-skill** — the Mermaid program ran a
+  reusable sequence nobody has written down: read the tool's own docs exhaustively → census where we
+  already use it → map the surfaces it touches → ground-truth the runtime it runs in (GitHub's
+  Mermaid version was the load-bearing fact) → gate first → an on-demand reference → slices as
+  learning loops. Graphify (170 commits of drift), dependency-cruiser (one spec) and Claude Design
+  (a handoff loop, no shared spec) were each adopted without the last two steps, which is the
+  falsifiable claim. Shape: a `docs/process/` anatomy in `LEARNING-LOOP.md`'s form plus a thin
+  skill that routes into `/teardown`, `/charter`, `/ears` and the interrogation pass; named by its
+  job, never "assimilate"; first test is the next capability that arrives. _(src: Eric ("is there
+  any merit to an 'assimilate' skill", 2026-09-26) · while: #3760, the before/after gallery)_
+- **The design → code handoff contract can be a diagram** — `docs/HANDOFFS.md` moves artboards;
+  Mermaid is the shared representation both a canvas and a diff read losslessly, for structure and
+  behaviour (never look). A design session emits the `sequenceDiagram` or `stateDiagram-v2`
+  beside the board and the build lane reads it as the spec, checked by #3748 slices 8–9; the
+  storybook under `docs/architecture/` is the round trip back. First test: the next `/design`
+  brief that touches a lifecycle. _(src: Eric ("code through design, and design in the code",
+  2026-09-26) · while: #3760)_
 - **In-app engagement signal for explainers** — the member surface has no telemetry at all, so a
   diagram shipped to `/research`, the trading course or a bot's decisions page has no falsifier.
   The minimal instrument: which explainers get opened and for how long, aggregate only (inside the
