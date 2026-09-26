@@ -18,13 +18,15 @@ diagram has both, the directive wins. Use frontmatter.
 | Key / feature | What it does | Example |
 |---|---|---|
 | frontmatter `title:` | Draws a **visible** title. Not the screen-reader title | `title: Plan lifecycle` |
-| `config.look: handDrawn` | Sketch texture = "proposed, not built". Reaches flowchart and state (verified); C4 ignores it | `look: handDrawn` |
+| `config.look: handDrawn` | Sketch texture = "proposed, not built". Reaches flowchart and state (verified); C4 ignores it. The hatching has no density knob and fights text inside a filled box, so keep it for unfilled pictures | `look: handDrawn` |
 | `config.handDrawnSeed` | Fixed wobble, so re-renders don't churn diffs (0 = random) | `handDrawnSeed: 7` |
 | `accTitle:` | One line; becomes the SVG `<title>` + `aria-labelledby` | `accTitle: Ship loop` |
 | `accDescr:` / `accDescr { }` | Colon for one line, braces and **no** colon for several; becomes `<desc>` | `accDescr: Thick edges are new` |
 | `wrap` (or `sequence.wrap`) | Wraps long labels / messages | `wrap: true` |
 | `htmlLabels` | Set at the root; `flowchart.htmlLabels` is deprecated | `htmlLabels: true` |
-| `fontSize` | Larger text for a 390px phone (default 16) | `fontSize: 18` |
+| `fontSize` | **A no-op for flowchart text** (measured 2026-09-26 on 11.17.2). The lever that works is `classDef default font-size:20px,font-family:Verdana` on flowchart and erDiagram; stateDiagram-v2 rejects `classDef default` | `classDef default font-size:20px,font-family:Verdana` |
+| `flowchart.nodeSpacing` / `rankSpacing` / `padding` | Tighter packing so a phone shows bigger text (`docs/PICTURES.md` rule 13) | `nodeSpacing: 24`, `rankSpacing: 36`, `padding: 10` |
+| v11 shapes `@{ shape: doc \| docs \| stadium \| cyl \| dbl-circ \| person }` and the `==x` cross-head thick edge | All draw on 11.17.2 (measured 2026-09-26); the double circle reads as done, the cross-head as refused | `draws@{ shape: dbl-circ, label: "done" }` |
 | `flowchart.curve` | Edge shape (default `basis`) | `curve: linear` |
 | `sequence.mirrorActors` / `showSequenceNumbers` | Actors only on top; numbered messages | `mirrorActors: false` |
 | `gantt.axisFormat` / `displayMode` | Axis date format (quote it); `compact` packs tasks onto shared rows | `axisFormat: "%m-%d"` |
@@ -60,6 +62,9 @@ flowchart TD
 | `layout: elk` (and every non-dagre layout) | ELK is not registered in 11.17.2: flowchart, class, ER and requirement fall back to dagre silently; stateDiagram-v2 throws `Unknown layout algorithm: elk` |
 | iconify / Font Awesome icons | GitHub never registers packs: a pack icon renders a `?` square (inline `fa:fa-x` may render blank). `architecture-beta` gets only its five built-ins (cloud, database, disk, internet, server) |
 | `click` | Dead: authors cannot lift `securityLevel`, and callbacks never run |
+| `treeView-beta` in dark mode | Draws its labels and lines black on the dark canvas on 11.17.2 (measured 2026-09-26); parses fine, not shippable until GitHub's build themes it |
+| a `<br/>` in a subgraph title | The cluster keeps one line of headroom; the second line lands on the first node. Hand-break node labels instead (`docs/PICTURES.md` rule 4) |
+| relying on markdown-string auto-wrap | The 200 px wrap is skipped at a fractional browser zoom and the label clips mid-word; hand-placed `<br/>` never reaches that path |
 | locked keys (`securityLevel`, `startOnLoad`, `maxTextSize`, `maxEdges`, ...) | Deleted from frontmatter and directives; the 50,000-character and 500-edge defaults hold unless GitHub changed them |
 | `mermaid.initialize()` | There is no site here; GitHub owns that layer |
 | per-type `flowchart.look` / `.theme` / `.layout` | v12 only; 11.17.2 parses it and ignores it |
