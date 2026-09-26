@@ -222,6 +222,15 @@ machine/system signal), `--muted` (light) for *removed*, `--accent` (light) for 
   (`scripts/shoot/feedback.mjs`, ~50 lines), swap the stubs and the frames, add its `shoot:<name>`
   npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
   surface they changed — that is the cost this harness was built to remove (#1327).
+- **Before/after pairs of diagrams: `npm run shoot:mermaid-pairs -- <pairs.json> <outdir>`.** Use
+  it when the argument *is* the comparison — a diagram grammar's before and after, a table redrawn
+  as the diagram it should have been, a showcase contender for a colleague. It renders each pair
+  with the pinned Mermaid (GitHub's version) on GitHub's own light and dark canvases, lints every
+  diagram first (a failure is a "Did not render" panel, never an empty box), crops to the frame
+  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint) to build the
+  gallery comment from. Scale 1 fits the 100KB budget; `--scale 1.5` is the crisp shareable set;
+  `--layout stacked` is the phone read. **The pairs file for a showcase lives on its issue, not in
+  the tree** — the only committed one is the spec fixture, `tests/fixtures/mermaid-pairs/example.json`.
 
 **The fold is not guaranteed to survive even through `ship.sh`/REST — always re-fetch and check.**
 The GitHub **MCP** write tools strip `<details>`/`<summary>` outright while leaving `<img>` and
