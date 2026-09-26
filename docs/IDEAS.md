@@ -32,9 +32,13 @@ Eric-sourced.
   Mermaid is the shared representation both a canvas and a diff read losslessly, for structure and
   behaviour (never look). A design session emits the `sequenceDiagram` or `stateDiagram-v2`
   beside the board and the build lane reads it as the spec, checked by #3748 slices 8–9; the
-  storybook under `docs/architecture/` is the round trip back. First test: the next `/design`
-  brief that touches a lifecycle. _(src: Eric ("code through design, and design in the code",
-  2026-09-26) · while: #3760)_
+  storybook under `docs/architecture/` is the round trip back. First test, named by Eric an hour
+  later ("I could use claude design to improve the mermaid feedback… mind blown"): a canvas that
+  renders 3–5 named shapes of one PR's story side by side (delta flowchart, sequence with
+  before/after notes, state machine) for him to react to by eye; the pick comes back as Mermaid
+  text into `docs/PICTURES.md` and the pinned lint proves it renders. The picture grammar's own
+  taste forks get judged on a canvas instead of a PR. _(src: Eric ("code through design, and
+  design in the code", 2026-09-26) · while: #3760)_
 - **In-app engagement signal for explainers** — the member surface has no telemetry at all, so a
   diagram shipped to `/research`, the trading course or a bot's decisions page has no falsifier.
   The minimal instrument: which explainers get opened and for how long, aggregate only (inside the

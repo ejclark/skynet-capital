@@ -22,7 +22,7 @@
 // theme/themeVariables (freezes one of GitHub's two colour modes — docs/PICTURES.md → dark mode);
 // iconify icon packs (GitHub never loads them, they render as "?"); the `journey` type (a
 // UX-satisfaction chart, the wrong shape for reasoning). Notes: `%%{init}%%` (deprecated upstream,
-// use frontmatter), `layout: elk` (GitHub falls back to dagre silently), `click` (dead on GitHub),
+// use frontmatter), `layout: elk` (GitHub falls back to dagre silently; a state diagram errors instead), `click` (dead on GitHub),
 // a long diagram (the ≤15-node legibility budget is taste — pointed at, never gated).
 //
 //   node scripts/mermaid-lint.mjs <file.md>...   # lint the mermaid blocks in files (exit 1 on problems)
@@ -184,9 +184,18 @@ function policyFindings(source, config, head, at) {
     );
   }
   if (config.layout && config.layout !== "dagre") {
-    notes.push(
-      `${at}: layout "${config.layout}" is not registered on GitHub — it falls back to dagre silently, so the diagram re-flows`,
-    );
+    // ELK is not registered on GitHub's 11.17.2. Flowchart, class, ER and requirement fall back to
+    // dagre; a state diagram has no fallback path and throws "Unknown layout algorithm" at render,
+    // which parse() never sees (reproduced on 11.13, read in the 11.17.2 source — the config card).
+    if (/^stateDiagram/.test(head)) {
+      problems.push(
+        `${at}: layout "${config.layout}" on a state diagram throws at render on GitHub (no fallback) — the opening frame would be an error box; drop the layout key`,
+      );
+    } else {
+      notes.push(
+        `${at}: layout "${config.layout}" is not registered on GitHub — it falls back to dagre silently, so the diagram re-flows`,
+      );
+    }
   }
   if (/^\s*click\s/m.test(source)) {
     notes.push(
