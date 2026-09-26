@@ -476,24 +476,33 @@ cmd_automerge() {
       cmd_merge "$num"
       return
     fi
-    # THE PROXY CASE, and the reason this whole check existed to be wrong (2026-08-26). Some
-    # Claude Code session types serve only a pinned set of PR-review GraphQL operations;
-    # `enablePullRequestAutoMerge` is not among them, so arming from here has NEVER worked in
-    # those sessions — it just said it had. Name it, so the next session reaches for the MCP tool
-    # or a direct merge instead of believing this one.
-    if grep -qi 'not enabled for this session\|pinned set of PR-review' <<<"$gql"; then
-      echo "ship automerge: this session's GraphQL proxy does not serve enablePullRequestAutoMerge." >&2
-      echo "ship automerge: #$num is NOT armed. Use the enable_pr_auto_merge MCP tool, or merge it when green (scripts/ship.sh merge $num)." >&2
+    # THE SESSION ROUTE (2026-09-26). A Claude Code cloud session refuses GraphQL outright and
+    # serves auto-merge at a REST route instead — the same proxy that made #3739 add a REST
+    # fallback for draft→ready. Try it before refusing; the read-back below judges it, as it
+    # judges the mutation, so a route that answers 2xx without arming still says so.
+    local rresp; rresp="$(api PUT "/pulls/$num/ccr/auto_merge" '{"merge_method":"squash"}')"
+    if [[ "$(http_of "$rresp")" == 2* ]]; then
+      echo "ship automerge: GraphQL refused; armed through the session's REST route." >&2
+    else
+      # THE PROXY CASE, and the reason this whole check existed to be wrong (2026-08-26). Some
+      # Claude Code session types serve only a pinned set of PR-review GraphQL operations;
+      # `enablePullRequestAutoMerge` is not among them, so arming from here has NEVER worked in
+      # those sessions — it just said it had. Name it, so the next session reaches for the MCP tool
+      # or a direct merge instead of believing this one.
+      if grep -qi 'not enabled for this session\|pinned set of PR-review' <<<"$gql"; then
+        echo "ship automerge: this session's GraphQL proxy does not serve enablePullRequestAutoMerge." >&2
+        echo "ship automerge: #$num is NOT armed. Use the enable_pr_auto_merge MCP tool, or merge it when green (scripts/ship.sh merge $num)." >&2
+        exit 3
+      fi
+      if grep -qi 'rate limit' <<<"$gql"; then
+        echo "ship automerge: the GraphQL budget is exhausted — arming is impossible until it resets." >&2
+        echo "ship automerge: #$num is NOT armed. Merge it when green (scripts/ship.sh merge $num)." >&2
+        exit 3
+      fi
+      echo "ship automerge: arm refused (Eric web-merges):" >&2
+      printf '%s\n' "$gql" | head -3 >&2
       exit 3
     fi
-    if grep -qi 'rate limit' <<<"$gql"; then
-      echo "ship automerge: the GraphQL budget is exhausted — arming is impossible until it resets." >&2
-      echo "ship automerge: #$num is NOT armed. Merge it when green (scripts/ship.sh merge $num)." >&2
-      exit 3
-    fi
-    echo "ship automerge: arm refused (Eric web-merges):" >&2
-    printf '%s\n' "$gql" | head -3 >&2
-    exit 3
   fi
   # Trust the state, not the absence of an error: read the PR back and confirm GitHub actually
   # queued it. An arm that silently did nothing is how a green PR ends up with nobody to merge it.

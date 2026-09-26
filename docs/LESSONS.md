@@ -2634,6 +2634,6 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
      and succeeds only on GitHub's own `draft:false`; a failure prints "still a DRAFT". Caught
      because the process shipped before the work it protects — the platter was its first test.
 - **SIDE QUESTS:** checked — no other workflow gate reads `github.event.pull_request.labels`.
-  Still open: `ship.sh automerge`'s `enablePullRequestAutoMerge` is GraphQL-only too, so from a
-  cloud session it can only fail; the MCP arm tool is the primary path there, which is why it
-  hasn't bitten.
+  Closed 2026-09-26: `ship.sh automerge` was GraphQL-only too, so from a cloud session it could
+  only fail; it now falls back to the session's `PUT /pulls/{n}/ccr/auto_merge` route before
+  refusing, and the existing read-back still judges the arm.
