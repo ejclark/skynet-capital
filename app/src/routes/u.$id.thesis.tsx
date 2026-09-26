@@ -27,7 +27,7 @@ function ThesisPage(): ReactElement {
 
   const d = desk.data.desk;
   return (
-    <PageFrame rail={<DeskRail id={d.id} name={d.name} kind={d.kind} current="thesis" />}>
+    <PageFrame controls={<DeskRail id={d.id} kind={d.kind} />}>
       <header className="page-header">
         <h1>{d.name} — thesis</h1>
         <p>The standing call, the track record, and an honest health read.</p>

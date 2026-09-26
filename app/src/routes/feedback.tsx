@@ -25,20 +25,20 @@ function FeedbackPage(): ReactElement {
 
   if (index.isPending)
     return (
-      <PageFrame rail={<ProfileRail current="feedback" />}>
+      <PageFrame controls={<ProfileRail current="feedback" />}>
         <p className="note">Opening the mailbox…</p>
       </PageFrame>
     );
   if (index.isError || !index.data)
     return (
-      <PageFrame rail={<ProfileRail current="feedback" />}>
+      <PageFrame controls={<ProfileRail current="feedback" />}>
         <p className="note">Feedback is unreachable.</p>
       </PageFrame>
     );
 
   const data = index.data;
   return (
-    <PageFrame rail={<ProfileRail current="feedback" />}>
+    <PageFrame controls={<ProfileRail current="feedback" />}>
       <header className="page-header">
         <h1>Your feedback</h1>
         <p>

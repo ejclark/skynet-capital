@@ -61,7 +61,7 @@
     height: 570px;
   }
 }
-/* The study toggles — `.railctl` chips (rail.css) laid as a wrapping row under the canvas, the
+/* The study toggles — `.railctl` chips (stage-controls.css) laid as a wrapping row under the canvas, the
    same "any number on" checkbox idiom the activity feed's filters use. Pressed carries a shape as
    well as the accent: a ✓ in a fixed slot, so the label never shifts and the state is never hue
    alone (a standing reader is red/green colourblind). */

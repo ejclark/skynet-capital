@@ -1,0 +1,203 @@
+/* THE CONTROLS ROW (#3807 slice 2a — the rail left the frame; docs/IA.md §8.1): a page's section
+   switch, kinds and sub-nav links as one horizontal row at the top of its own stage
+   (`PageFrame`'s `controls`, `.stage-controls`) — at EVERY width, never a column. These are the
+   ≤860 chip-row rules the rail already wore on a phone (#738), generalised, so the phone reads
+   exactly as before and the desktop gains the column's 280px back for the page itself.
+
+   SETTINGS KEEPS ITS LIST (`.settings-list`, settings.tsx): the one page whose sub-nav stays a
+   column, inside its own stage (`settings.css` lays the two columns). It shares every item rule
+   below and turns back into the same row at ≤860 — the list rules are the ≥861 exception, not the
+   default. */
+
+.stage-controls,
+.settings-list {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.stage-controls {
+  margin: 0 0 14px;
+}
+
+/* the group labels ("On this page", "Side", "Desks") hide in a row — the dividers do their job */
+.rail-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 0 0 6px 12px;
+}
+.stage-controls .rail-label,
+.settings-list .rail-label {
+  display: none;
+}
+
+.stage-controls a,
+.settings-list a {
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.stage-controls a:hover,
+.settings-list a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.stage-controls a[aria-current="page"],
+.settings-list a[aria-current="page"],
+.rail-current {
+  /* NOT display:block — `.rail-item` sets display:flex (the glyph+label row with its 8px gap), and
+     `[aria-current="page"]`'s higher specificity here was silently overriding it, collapsing that
+     gap and narrowing the item the instant it became current. That reflowed every sibling after it
+     in the horizontal row: the actual mechanism behind the reported "icons shift left then right on
+     each click" (scrollbar-gutter and the span/Link remount, both fixed earlier, were real but
+     secondary contributors — this was the main one). */
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  background: var(--surface);
+  color: var(--accent);
+  /* font-weight 500, same as the links — a real weight change (600) measurably widens the label,
+     which in a horizontal row reflows every sibling after it on each navigation. text-shadow fakes
+     the bolder read without touching glyph metrics; the pill background + shadow + the accent
+     border carry the "current" signal on their own (docs/BRAND.md → Accessibility: never color
+     alone). */
+  font-weight: 500;
+  text-shadow: 0 0 0.35px currentColor;
+  box-shadow: var(--elev-base);
+}
+.stage-controls a[aria-current="page"],
+.settings-list a[aria-current="page"] {
+  border-color: var(--accent);
+}
+
+/* control buttons (dimensional precedence): styled like the links, pressed = current */
+.railctl {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 12px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--muted);
+  font-weight: 500;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+.stage-controls .railctl,
+.settings-list .railctl {
+  width: auto;
+  white-space: nowrap;
+}
+
+.railctl:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.railctl[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--elev-base);
+}
+
+/* the SECTION role (#1740) — a radio (exactly one current), where the filter toggles beside it are
+   checkboxes (any number on). The two look identical under `.railctl` alone, and in a row the group
+   labels that told them apart are hidden, so the current section gets an accent bar: a shape
+   difference, not a tone shift (`docs/BRAND.md` → Accessibility). In a row a left bar reads as a
+   divider, so the bar sits underneath; Settings' ≥861 list puts it back on the left. */
+.railctl-section {
+  padding-left: 12px;
+}
+.railctl-section[aria-pressed="true"] {
+  box-shadow:
+    inset 0 -3px 0 0 var(--accent),
+    var(--elev-base);
+}
+
+/* the Profile links (#1119): a glyph per item; the chapters indent only in Settings' column */
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rail-glyph {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.rail-current .rail-glyph {
+  color: var(--accent);
+}
+
+/* the row is where the group labels disappear, so the separator has to do their job: a vertical
+   divider between the section switch and the filter toggles (#1740). */
+.stage-controls hr,
+.settings-list hr {
+  border: none;
+  border-left: 1px solid var(--border);
+  align-self: stretch;
+  margin: 2px 4px;
+  width: 0;
+  flex: 0 0 auto;
+}
+
+/* Settings' list at ≥861 — the one column left (constant geometry's flagged exception, frame.tsx):
+   sticky under the topbar, labels shown, the section bar on the left, chapters indented. */
+@media (min-width: 861px) {
+  .settings-list {
+    position: sticky;
+    top: 64px;
+    flex-direction: column;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+  .settings-list .rail-label {
+    display: block;
+  }
+  .settings-list a {
+    white-space: normal;
+    background: none;
+    border: none;
+  }
+  .settings-list a[aria-current="page"] {
+    background: var(--surface);
+  }
+  .settings-list .railctl {
+    width: 100%;
+    white-space: normal;
+  }
+  /* the bar lives inside the padding, so the label never shifts as the current section changes */
+  .settings-list .railctl-section {
+    padding-left: 15px;
+  }
+  .settings-list .railctl-section[aria-pressed="true"] {
+    box-shadow:
+      inset 3px 0 0 0 var(--accent),
+      var(--elev-base);
+  }
+  .settings-list a.rail-sub {
+    margin-left: 14px;
+  }
+  .settings-list hr {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    margin: 6px 12px;
+    width: auto;
+  }
+}

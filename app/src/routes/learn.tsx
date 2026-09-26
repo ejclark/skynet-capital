@@ -89,13 +89,13 @@ function LearnPage(): ReactElement {
 
   if (journey.isPending)
     return (
-      <PageFrame rail={rail}>
+      <PageFrame controls={rail}>
         <p className="note">Opening the journey…</p>
       </PageFrame>
     );
   if (journey.isError)
     return (
-      <PageFrame rail={rail}>
+      <PageFrame controls={rail}>
         <p className="note">The journey is unreachable.</p>
       </PageFrame>
     );
@@ -104,7 +104,7 @@ function LearnPage(): ReactElement {
   const ob = onboarding.data;
   const pb = playbooks.data;
   return (
-    <PageFrame rail={rail}>
+    <PageFrame controls={rail}>
       <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">Milestones · table of contents</div>

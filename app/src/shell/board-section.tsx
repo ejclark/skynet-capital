@@ -290,7 +290,7 @@ export function useBoardView({
   readonly active: boolean;
   readonly query: string;
   readonly setFilter: (next: string) => void;
-}): { readonly rail: ReactElement | null; readonly body: ReactElement } {
+}): { readonly band: ReactElement | null; readonly body: ReactElement } {
   const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch, enabled: active });
   // The day lens's fog reads the ladder the trade page already fetches (same key, shared cache).
   const plays = useQuery({
@@ -316,9 +316,9 @@ export function useBoardView({
     ...(fiscalYearEnd ? { fiscalYearEndMonth: fiscalYearEnd.fiscalYearEndMonth } : {}),
   });
 
-  if (research.isPending) return { rail: null, body: <p className="note">Opening Research…</p> };
+  if (research.isPending) return { band: null, body: <p className="note">Opening Research…</p> };
   if (research.isError)
-    return { rail: null, body: <p className="note">Research is unreachable.</p> };
+    return { band: null, body: <p className="note">Research is unreachable.</p> };
 
   const data = research.data;
   const { on: _on, lens: _lens, ...facets } = parsed;
@@ -371,7 +371,7 @@ export function useBoardView({
   });
 
   return {
-    rail: (
+    band: (
       <EventHorizon
         events={data.events}
         closures={data.closures}

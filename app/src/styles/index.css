@@ -47,7 +47,7 @@
 @import "./positions-lens.css";
 @import "./profile.css";
 @import "./pulse.css";
-@import "./rail.css";
+@import "./stage-controls.css";
 @import "./research.css";
 @import "./event-horizon.css";
 /* after event-horizon.css on purpose: it re-lays the calendar head's parts out for the cockpit */

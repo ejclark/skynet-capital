@@ -1,5 +1,24 @@
 /* settings (#738 phase 5c) — the catalog's Settings patterns. Tokens only. */
 
+/* SETTINGS KEEPS ITS LIST (#3807 slice 2a): its list and its cards as two columns INSIDE its own
+   stage — the frame is one column on every route now. Same track and gap the frame's rail had, so
+   the page reads as it did; ≤860 the list is the same chip row as every page's controls row. */
+.set-layout {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.set-body {
+  min-width: 0;
+}
+@media (max-width: 860px) {
+  .set-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
 .set-card {
   background: var(--surface);
   border: 1px solid var(--border);

@@ -211,7 +211,7 @@ function PulsePage(): ReactElement {
 
   const d = desk.data.desk;
   return (
-    <PageFrame rail={<DeskRail id={d.id} name={d.name} kind={d.kind} current="pulse" />}>
+    <PageFrame controls={<DeskRail id={d.id} kind={d.kind} />}>
       <header className="page-header">
         <h1>{d.name} — pulse</h1>
         <p>

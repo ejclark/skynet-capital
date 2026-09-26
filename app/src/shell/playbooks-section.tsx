@@ -1,5 +1,5 @@
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { fetchPlaybookStore, type PlaybookStoreView } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { PlaybookCard } from "./playbook-store-cards";
@@ -8,7 +8,8 @@ import { PlaybookCard } from "./playbook-store-cards";
  * R&D → PLAYBOOKS (#3623) — the one home for house playbooks. The Playbook Store (#885) used to
  * live on each account's desk (`/u/$id/playbooks`); Eric retired that placement on 2026-09-23 ("the
  * legacy route should not have the playbook store view"), so the catalog is studied and switched on
- * in one place and the account becomes a parameter of the action, chosen in the rail.
+ * in one place and the account becomes a parameter of the action, chosen under "Subscribe as" —
+ * a row in the section's own head since the rail left the frame (#3807 slice 2a).
  *
  * The picker lists only the viewer's OWN accounts (`/api/settings`, the session's owned ids), and
  * the server re-checks ownership on every read and write — a hand-typed `?account=` for someone
@@ -25,7 +26,7 @@ export function usePlaybooksSection(active: boolean, accountId: string | undefin
   return { accounts: accounts.data?.accounts ?? [], store };
 }
 
-export function PlaybooksRail({
+export function SubscribeAs({
   accounts,
   currentId,
   onSelect,
@@ -35,8 +36,8 @@ export function PlaybooksRail({
   readonly onSelect: (id: string | undefined) => void;
 }): ReactElement {
   return (
-    <>
-      <p className="rail-label">Subscribe as</p>
+    <fieldset className="pb-subscribe">
+      <legend className="rail-label">Subscribe as</legend>
       <button
         type="button"
         className="railctl"
@@ -57,7 +58,7 @@ export function PlaybooksRail({
           <span className="num"> · {account.kind}</span>
         </button>
       ))}
-    </>
+    </fieldset>
   );
 }
 
@@ -65,10 +66,13 @@ export function PlaybooksSection({
   store,
   accountId,
   accountName,
+  subscribeAs,
 }: {
   readonly store: UseQueryResult<PlaybookStoreView>;
   readonly accountId?: string;
   readonly accountName?: string;
+  /** The account picker (`SubscribeAs`), seated in the section's head under its heading. */
+  readonly subscribeAs?: ReactNode;
 }): ReactElement {
   const queryClient = useQueryClient();
   const onChanged = () =>
@@ -88,6 +92,7 @@ export function PlaybooksSection({
           with that account's own capital. A subscription never touches another account's capital.
         </p>
       </header>
+      {subscribeAs}
       {accountId && view.canManage ? (
         <p className="note">
           <b>{accountName ?? accountId}</b> — capital under management across active subscriptions:

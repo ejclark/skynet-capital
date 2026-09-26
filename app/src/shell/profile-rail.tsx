@@ -11,6 +11,11 @@ import type { ReactElement } from "react";
  * component so every profile page shows the same map; `current` marks the page you're on. Every
  * link here is a profile sub-view of the Profile tab (dimensional precedence, `frame.tsx`).
  *
+ * A LINK ROW NOW (#3807 slice 2a — the rail left the frame): on `/accounts`, `/learn`,
+ * `/learn/trading`, `/onboarding`, `/playbooks` and `/feedback` these seven links are a plain row
+ * at the top of the stage (`.stage-controls`; the "Profile" label hides in a row), until 2b folds
+ * the Profile family into sections of the Profile page. Settings keeps them as its in-stage list.
+ *
  * The cross-user standings board moved OUT to its own top-level Leaderboard destination (#2321) —
  * Profile is user-centric, a leaderboard spanning every player/bot is not. "Accounts" here is the
  * unified per-account Summary/Positions/Activity view instead, human and bot alike.

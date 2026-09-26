@@ -39,7 +39,7 @@ function DecisionsPage(): ReactElement {
   const d = desk.data.desk;
   const trail = decisions.data;
   return (
-    <PageFrame rail={<DeskRail id={d.id} name={d.name} kind={d.kind} current="decisions" />}>
+    <PageFrame controls={<DeskRail id={d.id} kind={d.kind} />}>
       <header className="page-header">
         <h1>{d.name} — decisions</h1>
         <p>

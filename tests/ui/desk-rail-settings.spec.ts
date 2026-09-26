@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { ownsAccount, type SettingsIndex } from "../../app/src/live/settings";
 
 /**
- * The desk rail's Settings item is owner-only (#785). Every other item in that rail is scoped to
+ * The desk's link row's Settings item is owner-only (#785). Every other item in that row — the
+ * any-account page's controls row since the rail left the frame (#3807 slice 2a) — is scoped to
  * the OPEN desk, so an item that reads as the desk's but always lands on the viewer's own account
- * is a lie the rail tells by position. Two halves are checked: the ownership predicate's truth
+ * is a lie the row tells by position. Two halves are checked: the ownership predicate's truth
  * table, and that the rail actually gates the link on it (the component itself needs a DOM this
  * suite doesn't have, so the gate is asserted against the source the same way theme-css.spec.ts
  * asserts the palette).
@@ -46,7 +47,7 @@ describe("desk rail settings ownership", () => {
     });
   });
 
-  describe("the rail's link", () => {
+  describe("the row's links", () => {
     it("renders Settings only behind the ownership gate", () => {
       expect(railSource).toContain("ownsAccount");
       expect(railSource).toContain('{isOwnDesk ? <Link to="/settings">Settings</Link> : null}');
@@ -54,6 +55,14 @@ describe("desk rail settings ownership", () => {
 
     it("never links to /settings unconditionally", () => {
       expect(railSource).not.toMatch(/^\s*<Link to="\/settings">/m);
+    });
+
+    it("folds Decisions into Heartbeat and drops the rail's way out (#3807 slice 2a)", () => {
+      expect(railSource).toContain("Overview");
+      expect(railSource).toContain("Heartbeat");
+      expect(railSource).toContain('<Link to="/u/$id/decisions" params={{ id }}>');
+      expect(railSource).not.toContain("← Leaderboard");
+      expect(railSource).not.toContain('className="rail-label"');
     });
   });
 });
