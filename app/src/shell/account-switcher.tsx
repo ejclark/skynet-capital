@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useId } from "react";
 import type { OwnedAccount } from "../live/settings";
 
@@ -20,6 +20,7 @@ export function AccountSwitcher({
   allowAll,
   isDefault,
   onToggleDefault,
+  trailing,
 }: {
   readonly accounts: readonly OwnedAccount[];
   readonly selectedId: string;
@@ -29,6 +30,10 @@ export function AccountSwitcher({
    *  (never render a disabled star) on a page that doesn't carry a default, e.g. Settings. */
   readonly isDefault?: boolean;
   readonly onToggleDefault?: () => void;
+  /** A link that belongs to the picked account, on the label's line at the row's right edge — the
+   *  Profile page's link to that account's page as the league sees it (#3807 slice 2e). The line
+   *  above the buttons is empty at every width, so the row keeps its height at 390. */
+  readonly trailing?: ReactNode;
 }): ReactElement {
   const selectId = useId();
   return (
@@ -63,6 +68,7 @@ export function AccountSwitcher({
       <a className="set-switch-add" href="/app/accounts?section=milestones&chapter=onboarding">
         + Add an account
       </a>
+      {trailing ? <span className="set-switch-aside">{trailing}</span> : null}
     </div>
   );
 }

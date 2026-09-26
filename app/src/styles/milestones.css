@@ -228,6 +228,14 @@
   padding-left: 14px;
   padding-right: 14px;
 }
+/* Arm's reason as text under it (#3807 slice 2e, dead end 8) — a title has no hover on a phone. */
+.pbk-why {
+  max-width: 18ch;
+  font-size: 11.5px;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--muted);
+}
 
 /* the feedback gate (#1119) — the desk and the ladder while wheels are on and nothing is filed */
 .ladder-gate {

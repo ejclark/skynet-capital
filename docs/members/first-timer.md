@@ -62,9 +62,10 @@ and the first button, never the rail. They skip anything that names a concept th
 4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
    Judge: can this reader tell what to do next in ten seconds?
-5. `/app/trade` — "No accounts are linked to your session yet." — a sentence, no door. **WHEN a
-   member with no linked account opens Trade, the app shall link the empty state to onboarding.**
-   _known gap — dead end 3._ Judge: can this reader tell what to do next in ten seconds?
+5. `/app/trade` — "No accounts are linked to your session yet — connect one in Onboarding." — the
+   words are the link to the connect guide. **WHEN a member with no linked account opens Trade, the
+   app shall link the empty state to onboarding.** _Fixed — #3807 slice 2e._ Judge: can this reader
+   tell what to do next in ten seconds?
 
 ### j2 — the first rung, read before it is earned
 

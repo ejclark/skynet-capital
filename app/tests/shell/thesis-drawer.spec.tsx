@@ -185,14 +185,17 @@ describe("ThesisDrawer", () => {
     expect(screen.getByRole("option", { name: "Eric" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Sauron" })).not.toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: /Subscribe/ })).toHaveAttribute(
-      "title",
+    // Dead end 8 (#3807 slice 2e): each reason is visible text the button is described by — a
+    // title has no hover on a phone.
+    expect(screen.getByText(SUBSCRIBE_BOT_UNAVAILABLE_REASON)).toBeVisible();
+    expect(screen.getByText(STEERING_RULES_UNAVAILABLE_REASON)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Subscribe" })).toHaveAccessibleDescription(
       SUBSCRIBE_BOT_UNAVAILABLE_REASON,
     );
-    expect(screen.getByRole("button", { name: /Steering Rules/ })).toHaveAttribute(
-      "title",
+    expect(screen.getByRole("button", { name: "Steering Rules" })).toHaveAccessibleDescription(
       STEERING_RULES_UNAVAILABLE_REASON,
     );
+    expect(screen.getByRole("button", { name: "Subscribe" })).not.toHaveAttribute("title");
   });
 
   it("says plainly when the viewer has no account to subscribe from", async () => {

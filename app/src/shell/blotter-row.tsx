@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition, PositionEvent, PositionLot, Tone } from "../live/desk";
 import { type OptionPreview, reviewOption, submitOption } from "../live/options";
@@ -184,6 +184,8 @@ export function BlotterRow({
   const [closeOpen, setCloseOpen] = useState(false);
   const [lotsOpen, setLotsOpen] = useState(false);
   const [closeLotId, setCloseLotId] = useState<string | undefined>(undefined);
+  const rollWhyId = useId();
+  const showsRoll = canTrade && position.isOption && lotsOpen && (position.lots?.length ?? 0) > 0;
 
   return (
     <>
@@ -304,8 +306,7 @@ export function BlotterRow({
                     type="button"
                     className="btn mc-btn"
                     disabled
-                    title={ROLL_UNAVAILABLE_REASON}
-                    aria-label={`Roll — ${ROLL_UNAVAILABLE_REASON}`}
+                    aria-describedby={rollWhyId}
                   >
                     Roll
                   </button>
@@ -314,6 +315,17 @@ export function BlotterRow({
             </tr>
           ))
         : null}
+      {/* Roll's reason as text, once under the buys (#3807 slice 2e, dead end 8): a title has no
+          hover on a phone. Every Roll above points at it with aria-describedby. */}
+      {showsRoll ? (
+        <tr className="row-lot-why">
+          <td colSpan={12}>
+            <p id={rollWhyId} className="lot-why">
+              {ROLL_UNAVAILABLE_REASON}
+            </p>
+          </td>
+        </tr>
+      ) : null}
       {canTrade && lotsOpen && position.lots
         ? position.lots
             .filter((lot) => lot.lotId === closeLotId)

@@ -165,6 +165,27 @@ describe("the zero-account door", () => {
     expect(document.querySelector('a[href*="/onboarding"]')).toBeNull();
   });
 
+  it("makes the head's words the control: they open the connect guide and scroll it into view", async () => {
+    // #3807 slice 2e — the phase-2 crawl's one regression: "connect one in Onboarding below"
+    // named an action with nothing in reach.
+    const scrollTo = rstest.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const router = mountAccounts("/accounts");
+    const connect = await screen.findByRole("link", { name: "connect one in Onboarding" });
+    expect(connect.getAttribute("href")).toMatch(/section=milestones/);
+    expect(connect.getAttribute("href")).toMatch(/chapter=onboarding/);
+    await screen.findByTestId("connect-guide");
+    scrollTo.mockClear();
+    await userEvent.click(connect);
+    await waitFor(() =>
+      expect(router.state.location.search).toMatchObject({
+        section: "milestones",
+        chapter: "onboarding",
+      }),
+    );
+    await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+    scrollTo.mockRestore();
+  });
+
   it("gives Activity an honest empty state", async () => {
     mountAccounts("/accounts?section=activity");
     expect(await screen.findByText(/No account linked yet — its orders/)).toBeInTheDocument();
@@ -213,6 +234,21 @@ describe("the Profile page's default and its viewer-level sections", () => {
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("chapter"));
     expect(await screen.findByRole("button", { name: "✦ Talk to Moneypenny" })).toBeVisible();
     expect(screen.getByText("Your filings — the same on every account.")).toBeVisible();
+  });
+
+  it("links one picked account's page as the league sees it, never the aggregate's", async () => {
+    // #3807 slice 2e, dead end 6 — the mirror of /u/:id's "Open in your Accounts".
+    accounts = [ERIC];
+    mountAccounts("/accounts");
+    const own = await screen.findByRole("link", { name: "Open as the league sees it" });
+    expect(own.getAttribute("href")).toMatch(/\/u\/human-eric$/);
+  });
+
+  it("offers no league page on All accounts", async () => {
+    accounts = [ERIC];
+    mountAccounts("/accounts?account=all");
+    expect(await screen.findByRole("combobox", { name: "Account" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open as the league sees it" })).toBeNull();
   });
 
   it("says the ladder's gate in the server's words (#1672's fix, regressed, restored)", async () => {

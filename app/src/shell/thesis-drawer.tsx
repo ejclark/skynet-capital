@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { fetchDeskThesis, type ThesisData, type ThesisMarker } from "../live/desk";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { readChartPalette } from "./chart-mount";
@@ -24,7 +24,8 @@ import { mountThesisChart } from "./thesis-chart-mount";
  * loop. Building that mechanism now would mean inventing new capital-routing + risk-guard plumbing
  * with real paper-trading consequences — the same class of decision as the safeguard ladder (slice
  * 4d) — so the control ships visible · disabled · explained (the "Roll" precedent from slice 1's
- * `ROLL_UNAVAILABLE_REASON`), never a fake backend. Steering Rules (part of the same AC'd cluster)
+ * `ROLL_UNAVAILABLE_REASON`), never a fake backend. Each reason is visible text under the buttons,
+ * tied by `aria-describedby` (#3807 slice 2e, dead end 8 — a title has no hover on a phone). Steering Rules (part of the same AC'd cluster)
  * has zero backing anywhere either, so it ships locked alongside it rather than as its own slice.
  */
 
@@ -41,6 +42,7 @@ function BotControls({
 }): ReactElement {
   const [targetAccount, setTargetAccount] = useState(ownAccounts[0]?.id ?? "");
   const [capital, setCapital] = useState(0);
+  const whyId = useId();
   return (
     <fieldset className="thesis-controls" disabled>
       <legend>Subscribe</legend>
@@ -76,23 +78,20 @@ function BotControls({
         <span className="num">${capital.toLocaleString("en-US")}</span>
       </div>
       <div className="thesis-controls-actions">
-        <button
-          type="button"
-          className="btn mc-btn"
-          title={SUBSCRIBE_BOT_UNAVAILABLE_REASON}
-          aria-label={`Subscribe — ${SUBSCRIBE_BOT_UNAVAILABLE_REASON}`}
-        >
+        <button type="button" className="btn mc-btn" aria-describedby={`${whyId}-subscribe`}>
           Subscribe
         </button>
-        <button
-          type="button"
-          className="btn mc-btn"
-          title={STEERING_RULES_UNAVAILABLE_REASON}
-          aria-label={`Steering Rules — ${STEERING_RULES_UNAVAILABLE_REASON}`}
-        >
+        <button type="button" className="btn mc-btn" aria-describedby={`${whyId}-steering`}>
           Steering Rules
         </button>
       </div>
+      {/* Visible, never a title (#3807 slice 2e, dead end 8): a phone has no hover. */}
+      <p id={`${whyId}-subscribe`} className="thesis-controls-why">
+        {SUBSCRIBE_BOT_UNAVAILABLE_REASON}
+      </p>
+      <p id={`${whyId}-steering`} className="thesis-controls-why">
+        {STEERING_RULES_UNAVAILABLE_REASON}
+      </p>
     </fieldset>
   );
 }

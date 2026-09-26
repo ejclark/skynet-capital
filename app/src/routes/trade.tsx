@@ -87,7 +87,9 @@ import { useBenchWidth } from "../shell/use-bench-width";
  * account's book — so its controls row carries the section switch, URL-stateful via `?section=`. "ticket"
  * is the default and the untyped state (the param is omitted when it's chosen), so a member who
  * never touches the switch sees exactly the ticket they always have. The chart and the chain read
- * the same `?symbol=` the ticket commits — no second symbol input.
+ * the same `?symbol=` the ticket commits. Folded, a pane with no symbol yet asks for one itself
+ * (`symbol-prompt.tsx`, #3807 slice 2e — the ticket is off screen there) and writes the same
+ * `?symbol=`; docked, the ticket's own field is beside it, so there is no second input.
  *
  * THE BENCH (#3407, the Workbench pick; frame.tsx → "ONE COMPOSITION OF SECTIONS"): below the
  * bench width the sections are exclusive, as above. At the bench width (`useBenchWidth`, 1280px)
@@ -346,7 +348,9 @@ function Pane({
   readonly props: StageProps;
 }): ReactElement {
   const { symbol, play, strike, expiration, desk, plays } = props;
-  if (id === "chart") return <ChartSection symbol={symbol} />;
+  // Folded, the ticket is off screen: an empty pane asks for the symbol itself (slice 2e).
+  const ask = docked ? undefined : props.onSymbolCommit;
+  if (id === "chart") return <ChartSection symbol={symbol} onSymbolCommit={ask} />;
   if (id === "orders") {
     return <OrdersSection deskId={desk} {...(props.focus ? { focus: props.focus } : {})} />;
   }
@@ -360,6 +364,7 @@ function Pane({
         deskId={desk}
         onUse={props.onGuidanceUse}
         onManage={props.onManage}
+        onSymbolCommit={ask}
       />
     );
   }
@@ -374,6 +379,7 @@ function Pane({
         onExpirationChange={props.onExpirationCommit}
         onPick={props.onChainPick}
         markedStrikes={props.markedStrikes}
+        onSymbolCommit={ask}
       />
     );
   }
@@ -732,7 +738,17 @@ function TradePage(): ReactElement {
         guidanceLink
       )}
       {settings.isLoading ? null : accounts.length === 0 ? (
-        <p className="note">No accounts are linked to your session yet.</p>
+        <p className="note">
+          No accounts are linked to your session yet —{" "}
+          <Link
+            className="door-link"
+            to="/accounts"
+            search={{ section: "milestones", chapter: "onboarding" }}
+          >
+            connect one in Onboarding
+          </Link>
+          .
+        </p>
       ) : activeDesk ? (
         <Bench docked={docked} section={section} asked={askedSection} props={stageProps} />
       ) : null}

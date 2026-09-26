@@ -5,7 +5,8 @@
 // (`locate.mjs`), so a row names a file:line without the probe knowing the code.
 //
 //  - disabled-reason-hidden: a disabled control whose reason exists only in `title`/`aria-label`
-//    — invisible on a phone, where there is no hover (dead end 8).
+//    — invisible on a phone, where there is no hover (dead end 8). A control `aria-describedby`
+//    visible text has its reason in reach, and is never flagged.
 //  - disabled-no-reason: a disabled control with a label and no reason anywhere, outside a form
 //    that is merely waiting for input.
 //  - promise-no-target: a note or footer sentence that tells the reader to click / pick / connect
@@ -34,6 +35,13 @@ export function probeDeadEnds(page) {
     for (const el of controls) {
       const off = el.matches(":disabled") || el.getAttribute("aria-disabled") === "true";
       if (!(off && visible(el))) continue;
+      // The fix dead end 8 asks for (#3807 slice 2e): the reason is visible text the control is
+      // described by — that is a reason in reach, whatever its title says.
+      const described = (el.getAttribute("aria-describedby") || "")
+        .split(/\s+/)
+        .map((id) => (id ? document.getElementById(id) : null))
+        .some((d) => d && visible(d) && text(d).length > 12);
+      if (described) continue;
       const label = text(el) || el.getAttribute("value") || "";
       const reason = (el.getAttribute("title") || el.getAttribute("aria-label") || "")
         .replace(label, "")
