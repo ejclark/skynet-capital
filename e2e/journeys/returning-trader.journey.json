@@ -22,14 +22,20 @@
         },
         {
           "id": "s2",
+          "only": "desktop",
           "goto": "/app/accounts",
-          "sees": "'Net worth is unreachable right now.' — and the positions blotter is gone with it",
+          "sees": "the Overview: net worth, then the positions blotter — EEM, Guidance on the row",
           "ears": "WHEN the member opens Overview, the app shall show the held positions with a way into each one's guidance, even when net worth cannot be read.",
           "expect": [{ "text": "EEM" }, { "role": "link", "name": "Guidance" }],
-          "known_gap": "crawl finding 9 — /api/accounts/networth answers 500 on the offline fixture (`h.equity.forEach`, src/server/networth-api-routes.ts:49, when the history read has no equity series); the Overview then says 'Net worth is unreachable right now.' and hides the positions blotter with it",
-          "where": "src/server/networth-api-routes.ts:49",
-          "severity": "high",
-          "fix": "S",
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s2-phone",
+          "only": "phone",
+          "goto": "/app/accounts",
+          "sees": "the Overview: net worth, then one card per position — EEM's card is the way in (it opens the position on Trade, where Guidance is a tab)",
+          "ears": "WHEN the member opens Overview on a phone, the app shall show each held position as a card that opens it on Trade, even when net worth cannot be read.",
+          "expect": [{ "role": "link", "name": "EEM", "within": ".pos-cards" }],
           "judge": "can this reader tell which position to act on?"
         },
         {

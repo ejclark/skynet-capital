@@ -211,6 +211,41 @@ describe("serveNetWorthJson", () => {
     expect(w7.partial).toBe(true);
   });
 
+  it("answers 200 with '—' windows and no high line when a history read resolves to a non-history shape", async () => {
+    // The offline fixture transport once answered `/v2/account/portfolio/history` with the account
+    // payload (no `equity` series) — `h.equity.forEach` threw, the route 500'd and the whole
+    // Overview became "Net worth is unreachable right now." (the crawl's ninth dead end, PR #3801).
+    // A shape that is not a history is the same honest state as a failed history read.
+    const notAHistory = { id: "sim", cash: "50000", portfolio_value: "101000", status: "ACTIVE" };
+    const client = {
+      getAccount: async () => ({ ...notAHistory, last_equity: "100000" }),
+      getPortfolioHistoryByRange: async () => notAHistory,
+      getPortfolioHistory: async () => notAHistory,
+    } as unknown as AlpacaTradingClient;
+    const { res, out } = fakeRes();
+    await serveNetWorthJson(
+      res,
+      configWith({ resolveOwnerIds: () => ["human-eric"], tradingClientFor: () => client }),
+      session,
+    );
+    expect(out.status).toBe(200);
+    const body = answered(out);
+    const ericRow = must(
+      (
+        body.accounts as {
+          id: string;
+          value: string;
+          allTimeHigh?: unknown;
+          windows: { value: string }[];
+        }[]
+      ).find((a) => a.id === "human-eric"),
+      "eric row",
+    );
+    expect(ericRow.value).toBe("$101,000");
+    expect(ericRow.windows.every((w) => w.value === "—")).toBe(true);
+    expect(ericRow.allTimeHigh).toBeUndefined();
+  });
+
   it("excludes an owned account that isn't on the board yet, surfacing it as an errored row", async () => {
     const { res, out } = fakeRes();
     await serveNetWorthJson(

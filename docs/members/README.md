@@ -66,8 +66,8 @@ holds:
 | entry | holds when |
 |---|---|
 | `{ "url": "/app/trade?symbol=EEM" }` | the path matches exactly and every named query param is present (other params may vary) |
-| `{ "text": "Where your money is" }` | visible text contains it (`"exact": true` for a whole match) |
-| `{ "role": "link", "name": "Guidance" }` | an accessible element of that role whose name contains it, case-insensitive |
+| `{ "text": "Where your money is" }` | visible text contains it (`"exact": true` for a whole match). The FIRST match in the DOM must be visible, hidden or not — at phone width a table the phone hides (`display: none`) can shadow the cards that replace it, so a text the phone renders twice reads "not found"; use `role` there (it skips hidden elements) or a phone-only step |
+| `{ "role": "link", "name": "Guidance" }` | an accessible element of that role whose name contains it, case-insensitive (`"exact": true` for a whole name — the calendar's "Week", never the blotter's "Expiring within 3 weeks"); hidden elements never match |
 | `{ "testid": "…" }` | `data-testid` |
 | `… , "within": "nav.rail"` | scoped to a CSS selector — the desk rail, `main`, never the topbar by accident |
 | `… , "href": "/app/accounts"` | (role link) its `href` starts with this — "goes to the right place", not just "exists" |
@@ -122,14 +122,18 @@ the app** — fix the probe or the step, never the ledger.
 | 7 | two unrelated "Playbooks" (the Profile chapter with a disabled Arm; R&D's store) | `app/src/routes/playbooks.tsx:41` · `app/src/shell/playbooks-section.tsx:84` |
 | 8 | disabled controls whose reason lives only in `title` (Thesis Subscribe, Roll, Arm); "past the guards" with no gloss; docked Trade has no entry to the standalone Chain | `app/src/shell/thesis-drawer.tsx:81` · `app/src/routes/playbooks.tsx:42` · `app/src/shell/decisions-section.tsx:133` |
 
-**Plus one run 0 found that the read-through did not** — **9**: on the offline fixture
-`/api/accounts/networth` answers 500 (`h.equity.forEach`, `src/server/networth-api-routes.ts:49`,
-when the history read carries no equity series), and the cockpit's whole Overview — standing, the
-money strip, the positions blotter — becomes one sentence, "Net worth is unreachable right now."
+**Plus one run 0 found that the read-through did not** — **9 (fixed)**: on the offline fixture
+`/api/accounts/networth` answered 500 (`h.equity.forEach`, `src/server/networth-api-routes.ts`,
+when the history read carried no equity series), and the cockpit's whole Overview — standing, the
+money strip, the positions blotter — became one sentence, "Net worth is unreachable right now."
 The route's own header promises "one unreachable account never blanks the rest"; a thrown
-`TypeError` escapes that guard. It is pinned as `known_gap` on the cockpit steps of `eric` and
-`returning-trader`, and those members reach their guidance through the desk
-(`/app/u/human-eric`) until it is fixed. A fix in `src/` is outside slice 0 (add-only).
+`TypeError` escaped that guard. Root cause: `FixtureTradingTransport` matched `/v2/account` as a
+prefix, so `/v2/account/portfolio/history` was answered with the account payload — no `equity`
+series — and the route walked it as a history. The transport now matches each route exactly
+(sub-paths 404, the contract the options endpoints already held offline), the route treats a
+non-history shape as a failed read ("—" windows, no high line), and the three pinned steps
+(`eric` j1 s2 · j3 s1, `returning-trader` j1 s2) run as passing acceptance tests — the first
+`known_gap` the ratchet released.
 
 ## How a member edits their own file
 

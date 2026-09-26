@@ -23,13 +23,9 @@
         {
           "id": "s2",
           "goto": "/app/accounts",
-          "sees": "'Net worth is unreachable right now.' where standing, the money strip and the blotter should be",
+          "sees": "his standing (Net worth · Eric, the value) and the money strip; the return windows read '—' on desktop (the offline fixture keeps no history) and the phone shows the value's one line",
           "ears": "WHEN the owner opens the cockpit, the app shall show the book's standing and what needs a decision above the fold, even when one feed cannot be read.",
-          "expect": [{ "text": "Where your money is" }, { "text": "Return by window" }],
-          "known_gap": "crawl finding 9 — /api/accounts/networth answers 500 on the offline fixture (`h.equity.forEach`, src/server/networth-api-routes.ts:49); the whole Overview — standing, money strip, positions — is replaced by one sentence",
-          "where": "src/server/networth-api-routes.ts:49",
-          "severity": "high",
-          "fix": "S",
+          "expect": [{ "text": "Net worth ·" }, { "text": "Where your money is" }],
           "judge": "can this reader tell what to do next in ten seconds?"
         },
         {
@@ -37,8 +33,8 @@
           "goto": "/app/accounts",
           "sees": "no calendar on the book — the week's events live on R&D, a tab away",
           "ears": "WHEN the owner reads the book on a Monday, the app shall show the week's events that touch the tickers held, on the same page.",
-          "expect": [{ "role": "button", "name": "week", "within": "main" }],
-          "known_gap": "the calendar (app/src/shell/event-horizon.tsx) exists only as R&D's rail control; the cockpit has no 'when' — the date key never joins the book",
+          "expect": [{ "role": "button", "name": "Week", "exact": true, "within": "main" }],
+          "known_gap": "the calendar (app/src/shell/event-horizon.tsx) exists only as R&D's rail control; the cockpit has no 'when' — the date key never joins the book (exact: the blotter's 'Expiring within 3 weeks' view tab is not a calendar)",
           "where": "app/src/shell/event-horizon.tsx:1",
           "severity": "medium",
           "fix": "L",
@@ -107,13 +103,9 @@
         {
           "id": "s1",
           "goto": "/app/accounts",
-          "sees": "the money strip should be here — shares · options · cash as a bar; offline it is one sentence",
+          "sees": "the money strip — shares · options · cash as a bar, with the cash ready to use",
           "ears": "WHEN the owner reads where the money is, the app shall show the split as amounts and shares of the whole.",
           "expect": [{ "text": "Where your money is" }, { "text": "Cash ready to use" }],
-          "known_gap": "crawl finding 9 — the money strip is the net-worth card's bottom row (app/src/shell/money-strip.tsx:9) and vanishes with the 500 from src/server/networth-api-routes.ts:49",
-          "where": "app/src/shell/money-strip.tsx:9",
-          "severity": "high",
-          "fix": "S",
           "judge": "can this reader tell what is over- or under-weight?"
         },
         {
