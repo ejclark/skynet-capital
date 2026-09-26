@@ -269,10 +269,16 @@ function main(argv) {
   const repoRoot = process.cwd();
   const files = readdirSync(dir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
   let prompts = [];
+  const promptsDir = join(dir, "..", "prompts");
   try {
-    prompts = readdirSync(join(dir, "..", "prompts"));
+    prompts = readdirSync(promptsDir);
   } catch {
-    /* a repo with no prompt files simply has no shims to check */
+    // Optional input: a repo with no prompt files has no shims to check, and rule 5 still means
+    // what it says — with an empty set, any shim that IS referenced is flagged, never passed. Also
+    // the path every single-file fixture in tests/arch/workflows.spec.ts takes (`withWorkflow`).
+    console.log(
+      `· workflow-lint: no prompts directory at ${promptsDir} — any prompt shim reads as dangling`,
+    );
   }
   // Real-filesystem answer for rule 6: does `scripts/<x>.mjs`'s import graph reach node_modules?
   // Memoized — the same script is invoked from several workflow files/jobs.

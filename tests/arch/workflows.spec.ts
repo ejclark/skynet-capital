@@ -283,6 +283,25 @@ jobs:
       execFileSync("node", ["scripts/workflow-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
     ).not.toThrow();
   });
+
+  // Degrade honestly (#3769 row 1): a missing prompts directory is optional (rule 5 then flags any
+  // referenced shim), but the run says it looked and found none rather than passing in silence.
+  it("names a missing prompts directory as a note, and still passes a shim-free file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "wf-noprompts-"));
+    const workflows = join(dir, "workflows");
+    mkdirSync(workflows, { recursive: true });
+    writeFileSync(join(workflows, "sample.yml"), SOUND);
+    const out = execFileSync(
+      "node",
+      [join(process.cwd(), "scripts/workflow-lint.mjs"), workflows],
+      {
+        encoding: "utf8",
+      },
+    );
+    rmSync(dir, { recursive: true, force: true });
+    expect(out).toContain("· workflow-lint: no prompts directory at");
+    expect(out).toContain("structurally sound");
+  });
 });
 
 // #3735 merged while labelled `hold-merge`: the arm job's `if:` reads labels from the event
