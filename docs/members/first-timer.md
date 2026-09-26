@@ -22,7 +22,7 @@ close the tab and ask Eric on the group chat instead.
 
 1. Find out what to do first.
 2. Say hello to Moneypenny (the feedback gate the ladder opens on — `src/domain/progression.ts:159`).
-3. Link a paper key (`/app/onboarding`).
+3. Link a paper key (the Onboarding chapter, `/app/accounts?section=milestones&chapter=onboarding`).
 4. Place rung 101 — their first fill.
 
 Needs, in plain words: *"Where do I start?"* · *"What is locked and why?"* · *"How do I get an
@@ -53,13 +53,13 @@ and the first button, never the rail. They skip anything that names a concept th
    signed-in member with no linked account opens the app, the app shall land them on a page with
    a visible next step into onboarding.** _known gap — dead end 1._ Judge: can this reader tell
    what to do next in ten seconds?
-2. `/app/learn` — the milestones page: M·01 Onboarding first. **WHEN the member opens Profile
+2. `/app/accounts?section=milestones` — the milestones page: M·01 Onboarding first. **WHEN the member opens Profile
    before onboarding is complete, the app shall show M·01 Onboarding as the next step with one
    link into it.** Judge: can this reader tell what to do next in ten seconds?
-3. `/app/learn` — the M·02 card's gate note. **WHILE the trading ladder is gated, the app shall
+3. `/app/accounts?section=milestones` — the M·02 card's gate note. **WHILE the trading ladder is gated, the app shall
    name the SAME unlock condition everywhere it is named.** _known gap — dead end 2._ Judge: does
    this reader know what unlocks trading, in one sentence?
-4. `/app/onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
+4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
    Judge: can this reader tell what to do next in ten seconds?
 5. `/app/trade` — "No accounts are linked to your session yet." — a sentence, no door. **WHEN a
@@ -68,7 +68,7 @@ and the first button, never the rail. They skip anything that names a concept th
 
 ### j2 — the first rung, read before it is earned
 
-1. `/app/learn/trading` — One fill unlocks the next rung; 101 first. **WHEN the member opens the
+1. `/app/accounts?section=milestones&chapter=trading` — One fill unlocks the next rung; 101 first. **WHEN the member opens the
    trading ladder before any fill, the app shall show rung 101 as the next rung and what earns
    it.** Judge: can this reader tell what to do next in ten seconds?
 

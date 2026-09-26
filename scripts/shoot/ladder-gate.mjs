@@ -2,6 +2,7 @@
 // desk and the milestones table of contents as a brand-new member sees them — training wheels on,
 // nothing filed, every rung shut for the one stated reason. JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:ladder-gate [outdir]
+import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const NOTE =
@@ -107,6 +108,7 @@ const { page, origin, shoot, close } = await openShell({
   stubs: {
     "/api/trade/plays": plays,
     "/api/settings": settings,
+    "/api/accounts/networth": profileStubs(settings.accounts)["/api/accounts/networth"],
     "/api/desk/*": desk,
     "/api/learn": learn,
     "/api/onboarding": onboarding,
@@ -117,7 +119,7 @@ const { page, origin, shoot, close } = await openShell({
 await page.goto(`${origin}/app/trade`);
 await page.getByText("The ladder is waiting on you").waitFor();
 await shoot("desk-gated");
-await page.goto(`${origin}/app/learn`);
-await page.getByText("Your account's milestones").waitFor();
+await page.goto(`${origin}/app/accounts?section=milestones`);
+await page.getByText("Your milestones", { exact: true }).waitFor();
 await shoot("toc-gated");
 await close();

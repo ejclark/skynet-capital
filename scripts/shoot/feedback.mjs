@@ -1,4 +1,5 @@
-// Visual harness for /app/feedback — a member's own filings ledger, from the REAL built shell over
+// Visual harness for the Profile page's Feedback section (/app/accounts?section=feedback, once
+// /app/feedback, #3807 slice 2b) — a member's own filings ledger, from the REAL built shell over
 // a stub API. Two frames, because the surface's whole behaviour is the difference between them:
 //   · active — the default view, shipped filings hidden (#1308)
 //   · all    — the toggle flipped, shipped filings revealed with 🚀 and the version stamp (#1312)
@@ -8,6 +9,7 @@
 // filed to remove. The script is fixtures and frames; everything else is scripts/shoot/shell.mjs.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:feedback [outdir]
+import { JOE, profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const filing = (issueNumber, title, kind, filedAt, status) => ({
@@ -55,10 +57,10 @@ const { page, origin, shoot, close } = await openShell({
   // 1000px tall so the "all" frame fits BOTH shipped rows with their version stamps — at the
   // harness default of 900 the second one is clipped, which is the half of the story #1312 built.
   viewport: { width: 1280, height: 1000 },
-  stubs: { "/api/feedback": feedback, "/api/settings": {}, "/api/learn": {} },
+  stubs: { "/api/feedback": feedback, "/api/learn": {}, ...profileStubs([JOE]) },
 });
 
-await page.goto(`${origin}/app/feedback`);
+await page.goto(`${origin}/app/accounts?section=feedback`);
 await page.getByText("Your recent feedback").waitFor();
 await shoot("feedback-active");
 

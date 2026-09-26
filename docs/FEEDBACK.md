@@ -1,7 +1,9 @@
 # In-App Feedback → GitHub Issues
 
-Signed-in league members can file bugs, feature requests, and ideas from inside the app at
-**`/feedback`** — no GitHub account or repo access required. A single server-side bot token files a
+Signed-in league members can file bugs, feature requests, and ideas from inside the app through
+Moneypenny's rail (✦), their filings listed on the Profile page's **Feedback** section
+(`/app/accounts?section=feedback`; `/feedback` redirects there, #3807 slice 2b) — no GitHub
+account or repo access required. A single server-side bot token files a
 labelled issue on `ejclark/skynet-capital`, so friends and family never need collaborator access to
 the private repo.
 
@@ -52,7 +54,7 @@ in code — only as a host secret, exactly like the Alpaca keys.
 
 1. Watch the startup log: with the token set the `Observatory live …` line ends with
    `feedback: on`; without it you'll see the `ℹ️  In-app feedback is off …` warning instead.
-2. Sign in, open `/feedback`, and submit one **Bug**, one **Feature**, and one **Idea**.
+2. Sign in, open Moneypenny's rail (✦), and file one **Bug**, one **Feature**, and one **Idea**.
 3. Confirm three issues appear on `ejclark/skynet-capital` — each with the right labels
    (`bug`/`enhancement`/`idea` + `feedback`), a `[bug]`/`[enhancement]`/`[idea]` title tag, and the
    submitter footer (profile name + opaque id — the id alone if the OAuth profile has no name, and
@@ -61,7 +63,7 @@ in code — only as a host secret, exactly like the Alpaca keys.
    `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
    GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
    the label) can, the same way `author:` would on a normal repo.
-5. Back on `/feedback`, "Your recent feedback" shows a live status badge per filing (In the queue ·
+5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (In the queue ·
    Needs your input · Needs Eric's call · First slice shipped · Shipped) once
    `SKYNET_FEEDBACK_GITHUB_TOKEN` is set — `resolveFeedbackStatus` in `src/server/feedback-status.ts`
    reads it straight off the issue's current state and triage label, so there's nothing local to
@@ -118,7 +120,7 @@ so the coach's question ceiling can be set from the observed distribution.
 
 ### The coach is what makes the wide envelope safe
 
-Members who go through the guided path at `/feedback` are interrogated against a per-kind
+Members who go through the guided path (Moneypenny's rail) are interrogated against a per-kind
 completeness bar before anything is filed, and the issue carries a `curated` label plus a fenced
 ` ```skynet-spec ` block: acceptance criteria, assumptions, explicit out-of-scope, readiness. The
 build session treats that spec as the specification instead of re-litigating what the member meant.
