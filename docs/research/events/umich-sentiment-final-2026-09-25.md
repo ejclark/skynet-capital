@@ -306,3 +306,87 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.81,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-quarterly-national-accounts-2026-09-30","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.wsj.com/market-data/quotes/index/VIX","status":"TOOL_DISALLOWED_DOMAIN","at":"2026-09-22"},{"url":"https://www.marketwatch.com/investing/index/vix","status":"TOOL_DISALLOWED_DOMAIN","at":"2026-09-22"},{"url":"https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX","status":"HTTP_429","at":"2026-09-22"}]} -->
+
+## Outcome
+
+**Close-out (2026-09-26, D+1).** Macro-print mode, `symbols: []` — no `earnings-cycle` /
+`intraday-edges` instrument attaches, so the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) had no target. Every figure
+below was fetched fresh today, never recalled: the publisher's own site (`sca.isr.umich.edu`
+resolved from this session, unlike every prior attempt in this event's `probe-ref.blocked`),
+cross-checked against three independent secondaries (Advisor Perspectives/dshort, tradingeconomics,
+and Reuters-sourced coverage via breitbart/spectrumlocalnews), Yahoo daily bars for S&P/VIX (direct
+`curl`, no 429 this time), and search for the AAA/Brent reads.
+
+### The print — a small upward revision, and a consensus that broke its own precedent
+
+| Field | Sep 2026 final | Sep 2026 prelim | Revision | Aug 2026 final |
+|---|---|---|---|---|
+| Index of Consumer Sentiment | **48.1** | 47.8 | **+0.3** | 51.7 |
+| Current Economic Conditions | 50.9 | 50.9 | 0.0 | 51.9 |
+| Index of Consumer Expectations | 46.3 | 45.8 | +0.5 | 51.5 |
+| Year-ahead inflation expectations | 4.6% | 4.6% | unchanged | 4.0% |
+| Long-run inflation expectations | 3.4% | 3.4% | unchanged | 3.3% |
+
+Director Hsu, quoted verbatim from the primary: *"Consumer sentiment ticked down less than four
+index points in September, reaching the lowest reading in four months and down 15% from January
+2026."* **A final consensus was published this time — 47.6 (Reuters)** — breaking the Aug-2026
+precedent this doc carried all cycle (`forecast = prior print`, i.e. 47.8); the final beat it by
++0.5. That is a new fact for the next final's research, not a re-score of anything here (the
+registered predictions below key on the 47.8 prelim directly, never on a consensus number).
+
+**Same-morning durable goods (Aug data) landed genuinely mixed**, corroborating leg 7's
+unattributable-morning read rather than adding a clean signal: headline **0.0%** beat a **−0.3%**
+consensus, but orders ex-transportation rose only **+0.3%** against a **+0.6%** estimate — a beat on
+one cut, a miss on the other, exactly the kind of morning this doc predicted could never attribute a
+tape move to the sentiment print. **Market context, not scored against anything:** S&P
+**7,704.13 → 7,743.41 (+0.510%)**, VIX **15.67 → 14.87 (−0.80pt)**, Brent settled **~$106.60**
+(+3.4% on the day, oil desks citing a Hormuz-talks headline), AAA regular **$4.4918** (national
+average, still climbing). The +0.510% session move sits almost exactly on 2026's all-day median —
+consistent with leg 4's "finals run quiet" read, but this session is durable-goods-contaminated by
+construction and is never the FT-54 test; that stays reserved for 2026-10-23.
+
+### Scoring the two forward tests due today
+
+**FT-umich-sentiment-final-2026-09-25-1 — `pass`.** Predicted the final prints at or above 47.8 (the
+bad-prelim-mean-reverts-up conditional, n=9, 6-of-9 historical). Actual **48.1 ≥ 47.8**. The
+conditional held on its one new observation, *against* this doc's own stated mechanism expectation
+(a realized 25bp hike, a CPI beat, record pump prices and a cycle-high 10Y all landing inside the
+exclusive collection window argued for a downward revision). Scored as one observation, not a
+promotion — the doc's own registration language is explicit that a pass here buys nothing more than
+that. Filed in
+[`forward-tests/umich-sentiment-final-2026-09-25.md`](../forward-tests/umich-sentiment-final-2026-09-25.md).
+
+**FT-55-umich-sep-revision (legacy) — `kill`.** Predicted `|Δ| ≥ 1.0`, magnitude only. Actual
+`|Δ| = 0.3` — inside the `≤0.8` kill bar, and smaller than every one of the Jun/Jul/Aug
+(+0.6/+0.7/+0.8) cluster this doc's own base case argued would be *exceeded*. The "an event-loaded
+back half produces a bigger revision" mechanism (the 09-16 FOMC hike, CPI, triple-witching, all
+inside the exclusive window) fails its first test outright — the biggest in-window macro corridor
+this event has ever had produced the *smallest* revision on record for a print with any revision at
+all. Filed in [`forward-tests/legacy.md`](../forward-tests/legacy.md) and moved to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.
+
+**FT-54-umich-final — still `_open_`, not due.** Scores on the 2026-10-23 final's S&P close-to-close
+move; its score-by (2026-10-24) falls well past this event's `closeOutWithinDays` ceiling
+(2026-10-01). Left untouched in `forward-tests/legacy.md` — the `forward-test-due` mode re-dispatches
+this same lane when 10-24 arrives.
+
+### Kill-switch resolutions, close-out
+
+Of the four kill switches this doc tracked, all now resolve, none surprising given the scores above:
+the ±0.8pt-revision switch **fires** (same fact as FT-55's kill), the below-47.8 switch **does not
+fire** (same fact as FT-...-1's pass), and the September-final-consensus switch **fires** for the
+first time this cycle (47.6 published, breaking the Aug precedent) — recorded above as a fact for the
+next final's research, not a re-score.
+
+### Scoring the horizon calls
+
+| Horizon call (D-3) | Result |
+|---|---|
+| Today — *stand aside, no measured edge over a coin flip* | **Held.** No trade was ever licensed; nothing to falsify. |
+| This week — *read the 09-16 hike as landed, not a live fork* | **Held.** Nothing reopened the decision before 09-25. |
+| This month — *watch direction; expect the null on magnitude, the 6-of-9 conditional on direction* | **The differentiated half scores `pass` (FT-...-1); the magnitude half scores `kill` (FT-55).** Both were registered as separable claims and both now have honest verdicts. |
+| This quarter — *the clean test is 2026-10-23, not this date* | **Open, unchanged, handed forward** as FT-54. |
+
+**Nothing here was, or becomes, a trade.** `symbols: []`, no house playbook is macro-keyed, and this
+was paper-only research throughout.

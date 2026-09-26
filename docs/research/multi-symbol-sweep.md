@@ -665,6 +665,21 @@ robust, alpha fragile — is the finding.
   customs print without a multi-month calibration first — n=1 killed on its first live test, same
   shape as the long-end and housing-starts kills above.
 
+- **An event-loaded collection window producing a larger UMich prelim→final revision
+  (FT-55-umich-sep-revision)** — added 2026-09-26 from the
+  [umich-sentiment-final-2026-09-25 close-out](events/umich-sentiment-final-2026-09-25.md). The
+  September final's exclusive 09-08 → 09-21 collection window carried PPI, CPI, a 20Y auction, a
+  **realized** 25bp FOMC hike, retail sales and triple-witching opex — the single most event-loaded
+  window this calendar has logged for this print, and the base case (aggregator-grade at n=4)
+  argued it would produce a revision exceeding the +0.6/+0.7/+0.8 Jun/Jul/Aug cluster. The actual
+  revision was **48.1 − 47.8 = +0.3**, smaller than all three, and inside the `|Δ| ≤ 0.8` kill bar.
+  **What this does and does not refute:** the prelim→final revision base rate itself stands (n=24,
+  median `|Δ| = 1.00`, measured directly from mql5's own release table) — what dies is the specific
+  causal claim that a heavier in-window macro corridor mechanically produces a *larger* revision. Do
+  not re-propose "more in-window macro events ⇒ bigger revision" for this or a similar survey
+  without a second confirming instance; n=1 killed on its first test, same shape as the long-end and
+  housing-starts kills above.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
