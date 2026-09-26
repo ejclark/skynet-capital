@@ -25,7 +25,8 @@ const arg = (flag, fallback) => {
 const OUT = arg("--out", join(tmpdir(), "skynet-tower-shots"));
 const POWER = arg("--power", "0.62");
 const HEALTH = arg("--health", "0.15");
-const PORT = 8931;
+// `--port` because another session may already be serving on the default.
+const PORT = Number(arg("--port", "8931"));
 // `--poses hero,eye` narrows the run to named poses. The DEFAULT is still the full suite — this is a
 // speed dial for tight iteration (A/B-ing one fix at a time), never a way to claim a piece is done.
 // Full-angle coverage is the standing bar; see the pose list below and docs/art/EYE.md.
@@ -67,6 +68,16 @@ const SHOTS = [
   // sit) and captures mid-glance, so the turn toward it is visible.
   { tag: "card", w: 384, h: 664, card: true },
   { tag: "card-glance", w: 384, h: 664, card: true, glance: [-420, 330] },
+  // The crest at the calendar band's RIGHT cap (plan #3807 slice 3a): the same still camera framed
+  // on the crown and the Eye. The glance pose posts a point 600px to the LEFT of the frame — where
+  // the calendar's days sit — and captures mid-glance (the panel's F2: legible at this size?).
+  { tag: "crown", w: 248, h: 150, frame: "crown" },
+  { tag: "crown-96", w: 160, h: 96, frame: "crown" },
+  { tag: "crown-glance", w: 248, h: 150, frame: "crown", glance: [-600, 75] },
+  // The fire clock's wrap (FIRE_PERIOD = 300 s, kit/loop.ts): the same close pose either side of it.
+  // The sweep and flicker keep the unwrapped time, so only the fire's noise phase restarts here.
+  { tag: "wrap-before", w: 800, h: 500, beta: 1.5, radius: 70, seek: 299.9 },
+  { tag: "wrap-after", w: 800, h: 500, beta: 1.5, radius: 70, seek: 300.1 },
 ];
 
 async function main() {
@@ -95,7 +106,8 @@ async function main() {
   try {
     for (const s of shots) {
       const page = await browser.newPage({ viewport: { width: s.w, height: s.h } });
-      const frame = s.card ? "&frame=card" : "";
+      const framing = s.card ? "card" : s.frame;
+      const frame = framing ? `&frame=${framing}` : "";
       const url = `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}${frame}`;
       await page.goto(url, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
@@ -113,7 +125,7 @@ async function main() {
         );
         await page.waitForTimeout(900);
       }
-      if (s.card) {
+      if (framing) {
         const file = join(OUT, `tower-${s.tag}.png`);
         await page.screenshot({ path: file, timeout: 30000 });
         console.log(`  ${s.tag.padEnd(12)} → ${file}`);
@@ -130,7 +142,7 @@ async function main() {
         window.__towerPose({ alpha, beta, radius, target });
       }, s);
       // Seek to a fixed moment. `__towerSeek` stops the loop and renders exactly that instant (see scene-main.ts).
-      await page.evaluate((time) => window.__towerSeek?.(time), SEEK_TIME);
+      await page.evaluate((time) => window.__towerSeek?.(time), s.seek ?? SEEK_TIME);
       await page.waitForTimeout(250);
 
       const file = join(OUT, `tower-${s.tag}.png`);
@@ -138,11 +150,33 @@ async function main() {
       console.log(`  ${s.tag.padEnd(12)} → ${file}`);
       await page.close();
     }
+    await checkReducedMotion(browser);
   } finally {
     await browser.close();
     server.kill();
   }
   console.log(`\ntower shots in ${OUT}`);
+}
+
+/**
+ * Reduced motion draws ONE frame and turns the loop off (kit/loop.ts): count the draws three seconds
+ * after ready through the scene's own `__towerStats`. Anything but 1 fails the run.
+ */
+async function checkReducedMotion(browser) {
+  const page = await browser.newPage({
+    viewport: { width: 248, height: 150 },
+    reducedMotion: "reduce",
+  });
+  await page.goto(`http://127.0.0.1:${PORT}/tower.html?frame=crown`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
+  await page.waitForTimeout(3000);
+  const stats = await page.evaluate(() => window.__towerStats?.());
+  await page.close();
+  const frames = stats?.frames;
+  console.log(`  reduced motion: ${String(frames)} frame(s) drawn 3 s after ready`);
+  if (frames !== 1) throw new Error(`reduced motion drew ${String(frames)} frames; expected 1`);
 }
 
 main().catch((e) => {

@@ -11,6 +11,7 @@
          font:11px/1.5 var(--mono); letter-spacing:.14em; color:var(--muted); text-transform:uppercase; }
   .hud b { color:var(--accent); font-weight:600; }
   .embed .hud { display:none; }
+  .embed #c { touch-action:auto; }
 </style>
 <canvas id="c" aria-label="A 3D rendering of the Tower of Sauron" role="img"></canvas>
 <p class="hud"><b>BARAD-DÛR</b> · sauron landmark · drag to orbit · scroll to zoom</p>
@@ -19,8 +20,9 @@
   // The bundle exposes __startTower; keep this shell dumb so all logic stays in the typed kit.
   (() => {
     var canvas = document.getElementById("c");
-    // Embedded (the profile's character card, plan #3727): the page owns the chrome, so no HUD.
-    if (/[?&](embed=1|frame=card)/.test(location.search)) document.body.className = "embed";
+    // Embedded (the character card, plan #3727; the band crest, #3807 3a): the page owns the chrome,
+    // so no HUD, and a touch over the frame scrolls the page instead of orbiting.
+    if (/[?&](embed=1|frame=(card|crown))(&|$)/.test(location.search)) document.body.className = "embed";
     if (window.__startTower) window.__startTower(canvas);
   })();
 </script>

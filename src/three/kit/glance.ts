@@ -31,6 +31,12 @@ export function glanceWeight(since: number): number {
   return 1 - smooth((since - attack - hold) / release);
 }
 
+/** 1..0: a glance let go early (`tower:release`), `since` seconds after the release. */
+export function releaseWeight(since: number): number {
+  if (since < 0) return 1;
+  return 1 - smooth(since / GLANCE.release);
+}
+
 /**
  * Yaw/pitch that point the Eye's +z forward from `from` at `to`, in the Eye's 'YXZ' convention
  * (positive pitch looks down).

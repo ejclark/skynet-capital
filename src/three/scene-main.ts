@@ -1,9 +1,11 @@
 import * as THREE from "three";
 import { createStage, frameLights } from "./kit/env.js";
 import { FIRE_TIME } from "./kit/fire-glsl.js";
-import { aimAt, blendGaze, type Gaze, glanceWeight } from "./kit/glance.js";
+import { aimAt, blendGaze, type Gaze, glanceWeight, releaseWeight } from "./kit/glance.js";
+import { createLoop, FrameStats, fireTime, type TowerStats } from "./kit/loop.js";
 import { EMBER_EMISSIVE } from "./kit/materials.js";
-import { DEFAULT_PARAMS, resolveTowerParams } from "./kit/params.js";
+import { readTowerMessage, type TowerNotice } from "./kit/messages.js";
+import { DEFAULT_PARAMS, resolveTowerParams, type TowerParams } from "./kit/params.js";
 import { createEmbers } from "./pieces/embers.js";
 import { buildEye, EYE_LIFT, flicker } from "./pieces/eye.js";
 import { buildTower } from "./pieces/tower.js";
@@ -39,19 +41,25 @@ export interface Pose {
   readonly target: readonly [number, number, number];
 }
 
+/** The framings a page can ask for with `?frame=`. */
+type Framing = "card" | "crown";
+
 /**
  * How the page embeds us. `frame=card` is the art column of the profile's Sauron character card
  * (plan #3727, design handoff 6a): the camera frames the whole tower to whatever box the page gives
  * it, holds still (no zoom, no drag, no orbit — the card is static), and sets the Eye right of
- * centre. `embed=1` alone just turns zoom off, so a page's scroll wheel scrolls the page.
+ * centre. `frame=crown` (plan #3807 slice 3a) is the crest at the right cap of the calendar band:
+ * the same still camera, framed tight on the crown and the Eye for a ~96–150px-tall box. `embed=1`
+ * alone just turns zoom off, so a page's scroll wheel scrolls the page.
  */
-function embedFromQuery(): { readonly card: boolean; readonly embed: boolean } {
+function embedFromQuery(): { readonly frame: Framing | undefined; readonly embed: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
-    const card = q.get("frame") === "card";
-    return { card, embed: card || q.get("embed") === "1" };
+    const f = q.get("frame");
+    const frame = f === "card" || f === "crown" ? f : undefined;
+    return { frame, embed: frame !== undefined || q.get("embed") === "1" };
   } catch {
-    return { card: false, embed: false };
+    return { frame: undefined, embed: false };
   }
 }
 
@@ -62,18 +70,12 @@ function embedFromQuery(): { readonly card: boolean; readonly embed: boolean } {
  */
 const CARD = { top: 0.03, wall: 0.9, eyeAcross: 0.6, wallY: 30 } as const;
 
-/** A glance request from the embedding page: a point in this frame's CSS pixels (may lie outside). */
-interface GlanceMessage {
-  readonly type: "tower:glance";
-  readonly x: number;
-  readonly y: number;
-}
-const isGlance = (d: unknown): d is GlanceMessage =>
-  typeof d === "object" &&
-  d !== null &&
-  (d as GlanceMessage).type === "tower:glance" &&
-  Number.isFinite((d as GlanceMessage).x) &&
-  Number.isFinite((d as GlanceMessage).y);
+/**
+ * The crest's framing, in the same terms, measured from the Eye: the horn tips (Eye + 42) sit just
+ * under the top, the frame's floor is the crown's shoulders (Eye − 58), and the Eye lands a little
+ * right of centre — the crest is the band's RIGHT cap and its glances go left, toward the page.
+ */
+const CROWN = { top: 0.04, floor: 1, eyeAcross: 0.56, above: 42, below: 58 } as const;
 
 /** The reduced-motion freeze frame — the reference's own choice of instant. */
 const FROZEN_T = 4;
@@ -116,17 +118,22 @@ export function start(canvas: HTMLCanvasElement): void {
     return Math.max(halfH / Math.tan(vf), halfW / Math.tan(hf));
   };
   const H = eyeAt.y + 63;
-  if (mode.card) {
-    // Fit horn tips → fortress wall to CARD.top → CARD.wall of the frame's height, then slide the
-    // view window so the Eye sits CARD.eyeAcross of the way over. A view offset shifts the picture
+  if (mode.frame) {
+    // Fit a top → bottom band of the model to `top` → `bottom` of the frame's height, then slide the
+    // view window so the Eye sits `across` of the way over. A view offset shifts the picture
     // without turning the camera, so the perspective stays the hero's. Re-fit on every resize.
-    const hi = eyeAt.y + 42;
-    const span = (hi - CARD.wallY) / (CARD.wall - CARD.top);
-    const centreY = hi + CARD.top * span - span / 2;
+    const card = mode.frame === "card";
+    const hi = eyeAt.y + (card ? 42 : CROWN.above);
+    const lo = card ? CARD.wallY : eyeAt.y - CROWN.below;
+    const [top, bottom, across] = card
+      ? [CARD.top, CARD.wall, CARD.eyeAcross]
+      : [CROWN.top, CROWN.floor, CROWN.eyeAcross];
+    const span = (hi - lo) / (bottom - top);
+    const centreY = hi + top * span - span / 2;
     const fit = (): void => {
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
-      camera.setViewOffset(w, h, -(CARD.eyeAcross - 0.5) * w, 0, w, h);
+      camera.setViewOffset(w, h, -(across - 0.5) * w, 0, w, h);
       pose({
         alpha: 0.893,
         beta: 1.43,
@@ -146,71 +153,138 @@ export function start(canvas: HTMLCanvasElement): void {
     });
   }
   controls.enableZoom = !mode.embed;
-  controls.enabled = !mode.card;
-  controls.autoRotate = !(reduce || mode.card);
+  controls.enabled = !mode.frame;
+  controls.autoRotate = !(reduce || mode.frame);
   controls.autoRotateSpeed = ORBIT_SPEED;
   controls.addEventListener("start", () => {
     controls.autoRotate = false;
   });
 
-  // ---- The glance (plan #3725): the page tells us where a filter was clicked; the Eye looks ----
-  // Aimed at a point partway from the camera toward the Eye along the ray through the click, so the
-  // Eye looks OUT of the frame toward the control — from behind the page, never across it.
+  // ---- The glance (plan #3725) and the regard (#3807 slice 3a): the page says where to look ----
+  // Aimed at a point partway from the camera toward the Eye along the ray through the point, so the
+  // Eye looks OUT of the frame toward the control — from behind the page, never across it. ONE slot:
+  // a click and a hover share it, the newest wins, and either is capped by the glance's own hold
+  // (`glance.ts`) — a hover that lingers is let go after ~1.5 s anyway: noticed, never stared at.
   const clock = new THREE.Clock();
-  let glance: { readonly at: number; readonly target: Gaze } | undefined;
+  /** Scene time: advanced by clamped deltas, so a pause never makes the sweep jump on resume. */
+  let t = 0;
+  let glance: { readonly at: number; readonly target: Gaze; releasedAt?: number } | undefined;
   const ray = new THREE.Vector3();
-  window.addEventListener("message", (e: MessageEvent) => {
-    if (e.origin !== window.location.origin || reduce || !isGlance(e.data)) return;
+  const lookToward = (x: number, y: number): void => {
     const w = canvas.clientWidth || 1;
     const h = canvas.clientHeight || 1;
-    ray.set((e.data.x / w) * 2 - 1, -((e.data.y / h) * 2 - 1), 0.5).unproject(camera);
+    ray.set((x / w) * 2 - 1, -((y / h) * 2 - 1), 0.5).unproject(camera);
     ray.sub(camera.position).normalize();
     const point = camera.position
       .clone()
       .addScaledVector(ray, camera.position.distanceTo(eyeAt) * 0.45);
-    glance = { at: clock.elapsedTime, target: aimAt(eyeAt.toArray(), point.toArray()) };
-  });
+    glance = { at: t, target: aimAt(eyeAt.toArray(), point.toArray()) };
+  };
   const aim = (sweep: Gaze): Gaze => {
     if (!glance) return sweep;
-    const { at, target } = glance;
-    const w = glanceWeight(clock.elapsedTime - at);
-    if (w <= 0 && clock.elapsedTime > at) glance = undefined;
+    const { at, target, releasedAt } = glance;
+    const held = glanceWeight(t - at);
+    const w = releasedAt === undefined ? held : Math.min(held, releaseWeight(t - releasedAt));
+    if (w <= 0 && t > at) glance = undefined;
     return w > 0 ? blendGaze(sweep, target, w) : sweep;
   };
 
+  // ---- The dials: `?power=&health=` at load, `tower:mood` live. Light only, never geometry ----
+  let dials: TowerParams = params;
+  const setMood = (power: number, health: number): void => {
+    dials = resolveTowerParams({ prominence: power, health });
+    eye.setDials(dials);
+  };
+
   /** Everything time-driven, as a pure function of the clock — so a seek is repeatable. */
-  const applyTime = (t: number): void => {
-    FIRE_TIME.value = t;
-    eye.update(t, camera, aim);
+  const applyTime = (time: number): void => {
+    FIRE_TIME.value = fireTime(time);
+    eye.update(time, camera, aim);
     tower.materials.ember.emissiveIntensity =
-      EMBER_EMISSIVE * params.forgeIntensity * (1 + flicker(t) * 0.08);
+      EMBER_EMISSIVE * dials.forgeIntensity * (1 + flicker(time) * 0.08);
   };
 
-  const frame = (): void => {
-    const dt = Math.min(0.05, clock.getDelta());
-    const now = clock.elapsedTime;
-    controls.update(dt);
-    applyTime(reduce ? FROZEN_T : now);
-    if (!reduce) embers.step(dt, now);
+  // Every draw goes through here, timed: the harness's `__towerStats` and the frame-time budget.
+  const stats = new FrameStats();
+  const draw = (): void => {
+    const t0 = performance.now();
     renderer.render(scene, camera);
+    stats.record(performance.now() - t0);
   };
-  renderer.setAnimationLoop(frame);
 
-  // ---- Hooks for the screenshot harness (scripts/shoot/tower.mjs) ----
+  // The key light is static (bucket.ts, env.ts), so its shadow map is drawn once, on the first frame.
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+
+  const loop = createLoop({
+    reduce,
+    tick: () => {
+      const dt = Math.min(0.05, clock.getDelta());
+      t += dt;
+      controls.update(dt);
+      applyTime(t);
+      embers.step(dt, t);
+      draw();
+    },
+    still: () => {
+      controls.update();
+      applyTime(reduce ? FROZEN_T : t);
+      draw();
+    },
+    setAnimationLoop: (cb) => renderer.setAnimationLoop(cb),
+    // Discard the time spent hidden: the next tick's delta starts from now.
+    onResume: () => void clock.getDelta(),
+  });
+  // A resize changes the picture: under reduced motion (or while paused) draw the one still again.
+  // Deferred a frame so the stage's own resize handler has already refit the renderer.
+  window.addEventListener("resize", () => requestAnimationFrame(() => loop.invalidate()));
+
+  window.addEventListener("message", (e: MessageEvent) => {
+    const m = readTowerMessage(e, { origin: window.location.origin, parent: window.parent });
+    if (!m) return;
+    switch (m.type) {
+      case "tower:glance":
+      case "tower:regard":
+        // Under reduced motion the Eye holds still: no glance, no regard.
+        if (!reduce) lookToward(m.x, m.y);
+        return;
+      case "tower:release":
+        if (glance && glance.releasedAt === undefined) glance.releasedAt = t;
+        return;
+      case "tower:mood":
+        setMood(m.power, m.health);
+        loop.invalidate();
+        return;
+      case "tower:run":
+        loop.run(m.on);
+        return;
+    }
+  });
+  loop.start();
+
+  // ---- Hooks for the screenshot harness (scripts/shoot/tower.mjs) and the probe ----
   window.__towerPose = pose;
-  window.__towerPause = () => renderer.setAnimationLoop(null);
+  window.__towerPause = () => loop.halt();
   // Seek: stop the loop, set the clock, render one frame. Two seeks to the same time are the same
   // picture (embers aside — they are a simulation, not a function of t).
   window.__towerSeek = (time: number) => {
-    renderer.setAnimationLoop(null);
+    loop.halt();
     applyTime(time);
-    renderer.render(scene, camera);
+    draw();
   };
+  window.__towerStats = () => stats.snapshot();
   // The Eye gazes down +z at rest, i.e. toward alpha = π/2 in the pose convention above.
   window.__eye = { x: eyeAt.x, y: eyeAt.y, z: eyeAt.z, facingAlpha: Math.PI / 2 };
   window.__tower = { height: H };
   renderer.compile(scene, camera);
   window.__ready = true;
+  // Ms since this frame's navigation started — load, parse, build and compile.
+  stats.mountToReadyMs = Math.round(performance.now());
+  // Tell the embedding page we can hear it now, so it re-sends its latest mood and run state.
+  if (window.parent !== window) {
+    const ready: TowerNotice = { type: "tower:ready" };
+    window.parent.postMessage(ready, window.location.origin);
+  }
 }
 
 declare global {
@@ -228,6 +302,8 @@ declare global {
     __tower?: { height: number };
     /** Freeze the scene at an exact time and render one frame — deterministic screenshots. */
     __towerSeek?: (time: number) => void;
+    /** Draws so far, CPU submit time p50/p95 (ms) and ms to ready — the frame-time budget's probe. */
+    __towerStats?: () => TowerStats;
   }
 }
 

@@ -55,6 +55,11 @@ export interface EyeBuild {
    * `aim` maps the sweep's gaze to the one actually shown (a glance toward the page, kit/glance.ts).
    */
   update(t: number, camera: THREE.Camera, aim?: (sweep: Gaze) => Gaze): void;
+  /**
+   * Relight from live dials (`tower:mood`, plan #3807 slice 3a) — the Eye's reach, its glow and how
+   * much it gutters. No geometry changes: the beam's length and the storm stay as built.
+   */
+  setDials(params: Pick<TowerParams, "eyeIntensity" | "health">): void;
 }
 
 export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
@@ -130,19 +135,25 @@ export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
   group.add(gaze);
 
   // The Eye lights its own tower: a hot key just in front along the gaze, a softer one behind.
-  const I = params.eyeIntensity;
+  let I = params.eyeIntensity;
   const glow = new THREE.PointLight(0xff7a2e, 16000 * I, 320, 1.6);
   const glowBack = new THREE.PointLight(0xff9e3d, 5000 * I, 160, 1.6);
   group.add(glow, glowBack);
 
   // A bleeding account's Eye still burns — it just gutters less (flicker amplitude follows health).
-  const amp = THREE.MathUtils.lerp(0.7, 1.15, (params.health + 1) / 2);
+  const gutter = (health: number): number => THREE.MathUtils.lerp(0.7, 1.15, (health + 1) / 2);
+  let amp = gutter(params.health);
   const fwd = new THREE.Vector3();
   const side = new THREE.Vector3();
   const camRight = new THREE.Vector3();
 
   return {
     group,
+    setDials(next) {
+      I = next.eyeIntensity;
+      amp = gutter(next.health);
+      coronaU.uReach.value = next.eyeIntensity;
+    },
     update(t, camera, aim) {
       const sweep = gazeAt(t);
       const { yaw, pitch } = aim ? aim(sweep) : sweep;
