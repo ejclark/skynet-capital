@@ -35,6 +35,7 @@
     "digest:scan": "node scripts/digest-scan.mjs",
     "comms:scan": "node scripts/comms-scan.mjs",
     "prepare": "test -n \"$CI\" || husky",
+    "agent-surface:scan": "node scripts/agent-surface-scan.mjs",
     "arch:scan": "node scripts/arch-scan.mjs",
     "config:audit": "node scripts/config-audit.mjs",
     "repair-watchlist:scan": "node scripts/repair-watchlist-scan.mjs",
