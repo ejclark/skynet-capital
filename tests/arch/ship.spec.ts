@@ -607,3 +607,27 @@ describe("ship open --hold — the label is on before the PR is ever ready", () 
     expect(failure.slice(0, 300)).toContain("still a DRAFT");
   });
 });
+
+/**
+ * `ship automerge` from a cloud session (2026-09-26): the session proxy refuses GraphQL and serves
+ * auto-merge at a REST route, so arming from here could only fail. The fallback sits AFTER the
+ * envelope check (a protected diff still never arms) and BEFORE the read-back that judges every arm.
+ */
+describe("ship automerge — the session's REST route when GraphQL is refused", () => {
+  const script = readFileSync("scripts/ship.sh", "utf8");
+  const start = script.indexOf("cmd_automerge()");
+  const fn = script.slice(start, script.indexOf("\n}\n", start));
+
+  it("tries the REST route only after the envelope check and the GraphQL attempt", () => {
+    const checkarm = fn.indexOf("cmd_checkarm");
+    const gql = fn.indexOf("enablePullRequestAutoMerge");
+    const rest = fn.indexOf("/ccr/auto_merge");
+    expect(checkarm).toBeGreaterThan(-1);
+    expect(gql).toBeGreaterThan(checkarm);
+    expect(rest).toBeGreaterThan(gql);
+  });
+
+  it("still reads the PR back before claiming it is armed", () => {
+    expect(fn.indexOf('get("auto_merge")')).toBeGreaterThan(fn.indexOf("/ccr/auto_merge"));
+  });
+});
