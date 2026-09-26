@@ -462,6 +462,11 @@ common routes:
   weakness → capture/enhance → back-test) → the anatomy in
   [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md) — a defined structure every
   custom-catered instance conforms to, not a one-off process re-derived per domain.
+- **"Learn everything about X and fold it into our process"** (a tool's deeper capabilities, a
+  respected practitioner's repo) → the anatomy in
+  [`docs/process/CAPABILITY-ADOPTION.md`](docs/process/CAPABILITY-ADOPTION.md): read exhaustively ·
+  census what we already do · map the surfaces · ground-truth the runtime · gate first · on-demand
+  reference · slices as learning loops on a plan issue with a state block. Instances: #3748, #3769.
 
 **Merge posture** (Eric, 2026-08-20: with Claude authoring ~100% of PRs, a standing pre-merge taste
 gate makes him the constraint on everything — severely softened). Structural, feature, and visual PRs

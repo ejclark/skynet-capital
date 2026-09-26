@@ -243,7 +243,7 @@ agent handed only #3748's block took the right slice but asked two things the th
 What the block never holds: a decision only Eric can make (rule 7: the `Needs from you` callout,
 above the fold) and a `<details>` fold (the MCP issue read sanitizes markup; a fence and a list
 survive). `issue-lint` notes a `plan`-labelled body that does not point at its block; the note is
-advisory, never a gate. The lanes that pick plans up (`plan-build.md`, `feedback-build.md`,
+advisory, never a gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/prompts/feedback-build.md`,
 `/work-issues`) read the block first and edit it on finish (slice 3 of #3765).
 
 ## Comments — the surface that outnumbers issues 10:1
