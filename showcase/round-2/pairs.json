@@ -1,0 +1,84 @@
+{
+ "pairs": [
+  {
+   "id": "pr-picture",
+   "title": "The PR picture: one template for every change \u2192 the story of the change",
+   "caption": "Before: PR #3713, the module map 8 of 11 PRs used whatever they changed. After: the old check is one dotted lane straight to a red box; the new path is a door with a single question, drawn top-down for a phone.",
+   "before": {
+    "kind": "mermaid",
+    "label": "PR #3713 (typical of the census)",
+    "source": "flowchart LR\n  E[earnings calendar] --> P[position-event.ts]\n  M[market events<br/>Fed \u00b7 CPI \u00b7 jobs] --> P\n  P -->|nextEvent| T[Next event column]\n  P --> C[Earnings before expiry chip]\n  P --> D[decision clocks + IV-crush title]"
+   },
+   "after": {
+    "kind": "mermaid",
+    "label": "PR #3747, fifth draft: the door and the bouncer",
+    "source": "---\ntitle: A diagram is parsed before it is pushed\n---\nflowchart TD\n    body[\"PR body with a diagram\"]\n    body -.->|was| first[\"check the first word only\"]\n    first -.-> red[\"red parse box as the opening frame\"]\n    body ==> gate{{\"parse it the way GitHub does\"}}\n    gate ==>|parses| draws[\"GitHub draws it\"]\n    gate ==>|does not| stop[\"push refused, line and token named\"]"
+   },
+   "layout": "stacked"
+  },
+  {
+   "id": "platter",
+   "title": "Branch mechanics: a ledger table \u2192 the gitGraph that is the argument",
+   "caption": "Before: PR #3711's ledger as a table. After: the three items as commits on the platter branch, each tagged with its revert sha, and the honest landing: one squashed commit on main, so the per-item revert the doctrine promises is lost (#3754).",
+   "before": {
+    "kind": "markdown",
+    "label": "PR #3711 \u2014 the ledger",
+    "source": "| # | item | why | verify evidence | revert |\n|---|---|---|---|---|\n| 1 | `dependabot/github_actions/anthropics/claude-code-action-1.0.231` | chore(deps): bump anthropics/claude-code-action from 1.0.217 to 1.0.231 | verify green 2026-09-24T12:51Z \u00b7 `.github/workflows/claude.yml` `.github/workflows/moneypenny-events.yml` `.github/workflows/moneypenny-repair.yml` | `b0a4c8a` |\n| 2 | `dependabot/github_actions/actions/upload-artifact-7` | chore(deps): bump actions/upload-artifact from 4 to 7 | verify green 2026-09-24T12:52Z \u00b7 `.github/workflows/pipeline.yml` | `9d3bfb8` |\n| 3 | `dependabot/github_actions/actions/cache-6` | chore(deps): bump actions/cache from 4 to 6 | verify green 2026-09-24T12:54Z \u00b7 `.github/workflows/pipeline.yml` | `e698156` |"
+   },
+   "after": {
+    "kind": "mermaid",
+    "label": "the same ledger as a gitGraph, drawn honestly",
+    "source": "---\ntitle: \"Platter #3711, what actually landed\"\nconfig:\n  gitGraph:\n    rotateCommitLabel: false\n---\ngitGraph TB:\n    commit id: \"main, before\"\n    branch platter\n    checkout platter\n    commit id: \"claude-code-action 1.0.231\" tag: \"revert: b0a4c8a\"\n    commit id: \"upload-artifact 7\" tag: \"revert: 9d3bfb8\"\n    commit id: \"cache 6\" tag: \"revert: e698156\"\n    checkout main\n    commit id: \"#3711 as one squashed commit\" type: HIGHLIGHT tag: \"per-item revert lost, #3754\""
+   },
+   "layout": "stacked"
+  },
+  {
+   "id": "architecture",
+   "title": "Architecture: a 4,000-node text report \u2192 a C4 storybook, one page per container",
+   "caption": "Before: the structure graph, a 4,000-node text report read by grep. After: three boundaries, the invite gate drawn around the member and the system, the market side and the operating side apart, every relation carrying its technology.",
+   "before": {
+    "kind": "markdown",
+    "label": "docs/STRUCTURE-graph.md (excerpt)",
+    "source": "```text\n<!-- AUTO-GENERATED \u2014 do not hand-edit below the marker.\n     Regenerate: `npm run graph:refresh` (free, no API). Refresh is MANUAL \u2014 run it after material\n     code changes; the doc-rot gate watches this snapshot's age. The live graph lives in\n     graphify-out/ (git-ignored). -->\n\n# Structural map (Graphify)\n\nThe repo's **code** as a knowledge graph \u2014 the durable, navigable structure view, generated from the\nAST. This is the *code-dependency* lens (\"how is it wired / what breaks if I change X\"), distinct from\nthe *product/systems* lens (\"what exists, how mature, where to aim\"). To navigate live, use\n`graphify explain/path/query` \u2014 see the playbook in [`GRAPHIFY.md`](GRAPHIFY.md).\n\n<!-- BEGIN GENERATED REPORT -->\n```"
+   },
+   "after": {
+    "kind": "mermaid",
+    "label": "docs/architecture, fourth draft: the system in the middle, the invite gate drawn",
+    "source": "C4Context\n    title Skynet Capital, who touches it and what it depends on\n    Boundary(market, \"the market side\") {\n        System_Ext(alpaca, \"Alpaca\", \"paper brokerage\")\n        System_Ext(edgar, \"SEC EDGAR\", \"8-K filings\")\n    }\n    Boundary(gate, \"inside the invite gate\", \"authed members only\") {\n        Person(member, \"Member\", \"invited, paper-trading\")\n        System(skynet, \"Skynet Capital\", \"the observatory, the bots, the ledger\")\n        Person(eric, \"Eric\", \"owner, operates it\")\n    }\n    Boundary(ops, \"the operating side\") {\n        System_Ext(fly, \"Fly.io\", \"hosting\")\n        System_Ext(github, \"GitHub\", \"code, issues, CI, login\")\n        System_Ext(google, \"Google\", \"login\")\n        System_Ext(anthropic, \"Anthropic\", \"Claude API\")\n    }\n    Rel_U(eric, skynet, \"operates\", \"browser\")\n    Rel_D(member, skynet, \"trades, watches\", \"browser\")\n    Rel_L(skynet, alpaca, \"orders, fills\", \"REST, paper\")\n    Rel_L(skynet, edgar, \"8-K filings\", \"REST\")\n    Rel_R(skynet, github, \"login, issues\", \"OAuth\")\n    Rel_R(skynet, google, \"login\", \"OAuth\")\n    Rel_R(skynet, anthropic, \"companion turns\", \"API\")\n    Rel_U(github, fly, \"deploys\", \"CI\")\n    UpdateLayoutConfig($c4ShapeInRow=\"1\", $c4BoundaryInRow=\"3\")"
+   },
+   "layout": "stacked"
+  },
+  {
+   "id": "degrade-honestly",
+   "title": "A gate's verdict: a silent pass \u2192 three named states",
+   "caption": "Before: the check as it was, an unreachable commit fell through to fresh. After: three verdicts named by their exit code, the removed silent pass kept in the picture as a note, drawn top-down for a phone.",
+   "before": {
+    "kind": "mermaid",
+    "label": "the check as it was",
+    "source": "flowchart LR\n  A[\"read built-from commit\"] --> B{\"git can resolve it?\"}\n  B -->|no| F[\"\u2713 structural graph is fresh\"]\n  B -->|yes| C{\"more than 30 days old?\"}\n  C -->|no| F\n  C -->|yes| S[\"\u2717 stale, exit 2\"]"
+   },
+   "after": {
+    "kind": "mermaid",
+    "label": "the check now, third draft: verdicts named by exit code",
+    "source": "---\ntitle: The graph-freshness check, three verdicts, no silent pass\n---\nstateDiagram-v2\n  direction TB\n  state \"read the built-from commit\" as Resolve\n  state \"count commits since it\" as Count\n  state \"Unknown, exit 3\" as Unknown\n  state \"Stale, exit 2\" as Stale\n  state \"Fresh, exit 0\" as Fresh\n  [*] --> Resolve\n  Resolve --> Unknown: commit unreachable\n  Resolve --> Count: commit found\n  Count --> Stale: over 50 commits or 30 days\n  Count --> Fresh: within both\n  note left of Unknown\n    was: unreachable fell through to Fresh, silently\n  end note\n  Unknown --> [*]\n  Stale --> [*]\n  Fresh --> [*]\n  classDef new stroke-width:3px\n  class Unknown new"
+   },
+   "layout": "stacked"
+  },
+  {
+   "id": "state-block",
+   "title": "A plan issue as a context store: a comment thread \u2192 one state block",
+   "caption": "Before: seven comments a pickup session had to read or guess from. After: the done slices folded into one state, the slice in flight opened into its steps, and the one gate a human holds drawn dashed, so the ask is visible without reading.",
+   "before": {
+    "kind": "markdown",
+    "label": "what a pickup session had to read",
+    "source": "| # | comment | what it holds |\n|---|---|---|\n| 1 | scope amendment | three additions |\n| 2 | critique top ten | a reorder |\n| 3 | state comment | slices 1\u20136 |\n| 4 | gallery | ten images |\n| 5 | constraint claim | four journeys |\n| 6 | residue audit | two PRs |\n| 7 | pickup test | four questions |"
+   },
+   "after": {
+    "kind": "mermaid",
+    "label": "the state block, third draft: the current slice opened, the human gate dashed",
+    "source": "---\ntitle: \"Plan #3769 on 2026-09-26, where it stood\"\n---\nstateDiagram-v2\n  direction TB\n  state \"Done: slices 1 to 4 and 6\" as Done\n  state \"5: the bash guard, a rank-1 gate\" as S5 {\n    state \"the script, #3781 merged\" as script\n    state \"the wiring, boards platter #3783\" as wiring\n    script --> wiring\n  }\n  state \"waiting on Eric: merge platter #3783\" as Wait\n  [*] --> Done\n  Done --> S5: next pickup\n  S5 --> Wait: the wiring is a protected file\n  Wait --> [*]: his click closes the plan\n  classDef current stroke-width:3px\n  classDef human stroke-dasharray:6 4\n  class S5 current\n  class Wait human"
+   },
+   "layout": "stacked"
+  }
+ ]
+}
