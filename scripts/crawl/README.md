@@ -90,3 +90,31 @@ makes no model call; every ledger row's judge cell reads `pending (grind)` until
   would change every step's reading at once — a change for its own run, not a fix inside one.
 - **Time.** ~150 steps × (settle + probes + axe) is a coffee, not a CI check; the spec is the gate,
   the crawl is the report. CI wiring for either is a platter item (workflow files are protected).
+
+## Coverage — `npm run crawl:coverage`
+
+Which living screen does a member journey visit at phone width? Eric asked for a comprehensive list
+of journeys to drive the mobile-first audit and ruled that dead screens get no phone work, so
+"comprehensive" is a count: every living page·section is visited by at least one phone step, or its
+triage verdict says nobody needs it. No browser — it reads files:
+
+- **screens** from the code: `app/src/routeTree.gen.ts` (`/u/$id` and `/u/$id/` are one), each
+  route's `{ id, label }` section literals (its own file, plus any file it imports that declares a
+  `PageSection<…>[] = [` list), Milestones' `?chapter=` values, and the server's own pages
+  (hand-listed in `coverage.mjs`, each with the line that serves it, checked every run);
+- **verdicts** from [`docs/members/triage.json`](../../docs/members/triage.json) — keep · fold ·
+  retire · redirect-only · undecided, hand-maintained; retired and redirect-only rows are never gaps;
+- **visits** from the journey files through `steps.mjs`: a step visits the screen its `goto` lands
+  on (the route's default section; with no account, `/accounts` opens Milestones on the Onboarding
+  chapter; a redirect-only row is followed to its target). Trade's sections count only from phone
+  steps — at desktop they dock onto one bench.
+
+```bash
+npm run crawl:coverage                 # writes docs/members/coverage.md; prints the headline and the gaps
+npm run crawl:coverage -- --json       # the joined rows on stdout, writes nothing
+```
+
+It exits 1 when the code has a screen `triage.json` does not (unjudged) or a living verdict names a
+screen that is gone (stale) — a new screen cannot slip in unjudged. Limits: only `goto` counts, never
+where an `act` click lands; the landing is resolved from the fixture (does this member own an
+account?), not by loading the page — the crawl's `{url}` expects are what check the real redirect.
