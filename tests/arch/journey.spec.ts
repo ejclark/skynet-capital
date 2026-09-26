@@ -57,4 +57,20 @@ describe("journey scan — the reasoning-record contract", () => {
     expect(code).toBe(1);
     expect(stderr).toContain("kebab-case");
   });
+
+  // Honest degradation (docs/grind/honest-degradation.instructions.md): an absent docs/JOURNEYS/
+  // is optional (zero journeys still satisfy the contract) but named, never a bare pass.
+  it("names an absent docs/JOURNEYS/ instead of passing silently", () => {
+    const dir = mkdtempSync(join(tmpdir(), "journey-spec-"));
+    try {
+      const stdout = execFileSync(
+        "node",
+        [join(process.cwd(), "scripts/journey-scan.mjs"), "--validate"],
+        { cwd: dir, encoding: "utf8" },
+      );
+      expect(stdout).toContain("· docs/JOURNEYS/ absent — no journeys to check.");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

@@ -31,6 +31,8 @@ const KEBAB_RE = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/;
 
 /** Committed journeys — kebab-case topic files, template and readme excluded. */
 function journeyFiles() {
+  // Optional: the contract is "every committed journey has its spine", which still holds with none
+  // committed (lenient by design, see header). main() names the absent directory, never silent.
   if (!existsSync(JOURNEY_DIR)) return [];
   return readdirSync(JOURNEY_DIR)
     .filter((f) => f.endsWith(".md") && f !== "TEMPLATE.md" && f !== "README.md")
@@ -58,6 +60,7 @@ function validate() {
 }
 
 function main() {
+  if (!existsSync(JOURNEY_DIR)) console.log("· docs/JOURNEYS/ absent — no journeys to check.");
   if (process.argv.includes("--validate")) {
     validate();
     return;
