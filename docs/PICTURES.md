@@ -28,7 +28,8 @@ full card per type.
 | A behaviour before vs after | `sequenceDiagram` | two `Note over` halves, *Before* / *After*; `autonumber` |
 | A new route / request path | `sequenceDiagram` | `alt`/`else` for the error branch; ≤4 participants |
 | A lifecycle, gate or mode (`SIM`/`LIVE`, draft→ready→done) | `stateDiagram-v2` | a composite state + guard labels on transitions |
-| Branch / merge mechanics (platter, backport, worktrees) | `gitGraph` | vertical (`TB:`), one commit per item tagged with its revert sha, the landing drawn as it lands |
+| Branch topology with few branches (a backport, worktrees) | `gitGraph` | vertical (`TB:`) on a phone; plain-word branch names; never for the held PR (below) |
+| The held PR for protected changes: the choice, then the record | `flowchart` | at open time the button is the fork; after landing a second picture, generated from the log |
 | A dataflow, pipeline or decision path | `flowchart` (`TD` past ~6 nodes) | the delta grammar: `==>` new, `-.->` removed, a diamond per fork |
 | A number moving over time (a budget ratchet, latency, counts) | `xychart-beta` | bar + line on one axis, the series named in the title |
 | A call sheet or triage (confidence × impact, borrow/adapt/skip) | `quadrantChart` | ≤6 points; never P&L implied (`BRAND.md`) |
@@ -51,7 +52,8 @@ glance it claims to save and trains the reader to skip the slot. Skips stay visi
 **The vocabulary card** — the words that turn "make it richer" into a precise request:
 *sequence with before/after notes · state diagram · gitGraph · delta flowchart · xychart · quadrant
 call sheet · timeline retro · mindmap · kanban snapshot · C4 (context / container / component) ·
-hand-drawn look (proposed, not built)*. Each is a row above and a card in `/mermaid`.
+hand-drawn look (proposed, not built) · the door (a PR's parse gate) · the button is the fork (a held PR)*.
+Each is a row above and a card in `/mermaid`.
 
 **The delta grammar** — how a diagram marks *what changed* for a reader who cannot rely on hue:
 
@@ -90,14 +92,29 @@ the full card per type):
 
 ````markdown
 ```mermaid
+---
+title: A diagram is parsed before it is pushed
+config:
+  flowchart:
+    nodeSpacing: 24
+    rankSpacing: 36
+    padding: 10
+---
 flowchart TD
-    body["PR body"] -.-> list["type allowlist"]
-    body ==> parse["parse under GitHub's Mermaid"] ==> ok{"parses?"}
-    ok ==>|yes| draws["GitHub draws it"]
-    ok ==>|no| stop["push refused"]
+    body@{ shape: doc, label: "PR body<br/>with a diagram" }
+    body ==> door{"parses like<br/>GitHub?"}
+    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    door ==x stop["push refused,<br/>the line and<br/>the token named"]
+    body -.-> red["used to go<br/>straight through<br/>to a red parse box<br/>as the opening frame"]
+    classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
+    class red removed
+    classDef default font-size:20px,font-family:Verdana
 ```
 ````
-_The delta flowchart: dotted = the removed path, thick = the new one, a diamond per fork._
+_The door: the new path thick and declared first (it lands left), the old path one dotted lane
+declared last (it lands right); the fork asks a question, the cross-head says no, the double circle
+says done, the tense lives in the box. No edge labels, no colour: the plain dress of the round-3
+design pick (plan #3786); the ink dress is the same source plus the ink-mode snippet once promoted._
 
 ````markdown
 ```mermaid
@@ -136,29 +153,51 @@ _A lifecycle: the composite state holds the sub-steps; every transition carries 
 ````markdown
 ```mermaid
 ---
-title: "Platter #3711, what actually landed"
+title: "The held PR: the button decides what reverts"
 config:
-  gitGraph:
-    rotateCommitLabel: false
+  flowchart:
+    nodeSpacing: 24
+    rankSpacing: 36
+    padding: 10
 ---
-gitGraph TB:
-    commit id: "main, before"
-    branch platter
-    checkout platter
-    commit id: "claude-code-action 1.0.231" tag: "revert: b0a4c8a"
-    commit id: "upload-artifact 7" tag: "revert: 9d3bfb8"
-    commit id: "cache 6" tag: "revert: e698156"
-    checkout main
-    commit id: "#3711 as one squashed commit" type: HIGHLIGHT tag: "per-item revert lost, #3754"
+flowchart TD
+    items@{ shape: docs, label: "three protected<br/>changes,<br/>one commit each" }
+    pr@{ shape: stadium, label: "one held PR,<br/>one click by Eric" }
+    items ==> pr ==> button{"which button<br/>lands it?"}
+    button ==>|Create a merge commit| merged@{ shape: cyl, label: "main: three commits,<br/>any item<br/>reverts alone" }
+    button -->|Squash and merge| squashed@{ shape: cyl, label: "main: one commit,<br/>reverts only<br/>as a block, #3754" }
+    classDef default font-size:20px,font-family:Verdana
 ```
 ````
-_Branch mechanics, drawn as they land: a platter boards each item as one squashed commit on one
-integration branch (`scripts/ship.sh platter`), each tagged with its revert sha. The doctrine
-lands it with one merge commit so a bad item reverts alone; until #3754 is fixed the landing is a
-squash, so the picture draws the squash and names the defect. When the merge is real, the last
-line becomes `merge platter id: "one merge commit" tag: "any item reverts alone"`. Vertical with
-unrotated labels because the reading condition is a phone; the title is quoted because an
-unquoted `#` in YAML frontmatter is a comment._
+_The held PR at open time (`scripts/ship.sh platter`): the choice Eric holds and what each button
+does to the undo. Thick is the path to take. The edge labels are the buttons themselves, the one
+kind of edge label allowed (rule 9). Drawn for the moment the PR is read, before the click._
+
+````markdown
+```mermaid
+---
+title: "PR #3711: no item reverts alone"
+config:
+  flowchart:
+    nodeSpacing: 24
+    rankSpacing: 36
+    padding: 10
+---
+flowchart TD
+    subgraph held ["the held PR"]
+        i1@{ shape: doc, label: "1 update the<br/>review action" }
+        i2@{ shape: doc, label: "2 update upload-artifact" }
+        i3@{ shape: doc, label: "3 update cache" }
+    end
+    held ==>|Squash and merge| main@{ shape: cyl, label: "main: 1 + 2 + 3<br/>as one commit,<br/>reverts only<br/>as a block, #3754" }
+    classDef default font-size:20px,font-family:Verdana
+```
+````
+_The record after landing, generated from the log and posted as a comment, in whichever ending is
+true: the squash above (today, #3754), or `held ==>|Create a merge commit| main["main: one merge
+commit, any one item reverts alone"]` once the setting is fixed. A gitGraph was tried for this
+story and retired: its commit connectors are a fixed 8 px, it takes no classDef, and plain-word
+branch names overlap its labels; it stays in the table for branch topology only._
 
 ````markdown
 ```mermaid
@@ -177,18 +216,66 @@ _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 `src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
 containing special characters. The real reading condition is a phone at 390px.
 
-**Second-draft rules** (found iterating the five #3778 pairs to their third to fifth drafts,
-2026-09-26; each is rule · tell · fix): quote a frontmatter title that contains `#` · the title
-stops short · `title: "Plan #3769…"`. A gitGraph for a phone is vertical with unrotated labels ·
-tags overlap at 390px · `gitGraph TB:` + `config: { gitGraph: { rotateCommitLabel: false } }`. In
-a state diagram the removed path is a note, not an edge · a before that lives only in the caption ·
-`note left of <new state>` reading "was: …", its dashed link is the delta mark. A C4 context puts
-the system's boundary in the middle · relation labels drawn over other boxes · declare the
-boundaries left, centre, right in the order the edges leave the system and use `Rel_L` / `Rel_R` /
-`Rel_U` / `Rel_D`. A composite state takes a `classDef` on 11.17.2 · the docs say it cannot · use
-it. A first draft is the right type with first-draft words; the third draft has fewer nodes, a
-title that states the claim, the old path drawn dotted, phone direction, and labels a friend with
-no context reads without stopping.
+**Rules the design rounds found** (round 2, iterating the five #3778 pairs, and round 3, the
+Claude Design handoff on plan #3786; each is rule · tell · fix). A first draft is the right type with
+first-draft words; the third draft has fewer nodes, a title that states the claim, the old path drawn
+dotted, phone direction, and labels a friend with no context reads without stopping.
+
+1. **A handle is not a word.** Shas, versions and ids stay in the table beside the picture; a label
+   says what the handle means · `revert: b0a4c8a` tagged on every commit · `reverts alone`, the
+   ledger row keeps the sha.
+2. **A fork shape asks a question.** The text in a diamond ends in `?`; the exits carry the
+   answers · a hexagon stating "parse it the way GitHub does" · `door{"parses like<br/>GitHub?"}`.
+3. **Two boxes per rank on a phone.** In `TD` no rank holds more than two boxes · three side by
+   side, the phone shows the drawing at half size · fold the old path into one box beside the
+   door, or push it a rank.
+4. **Break a long label by hand.** Past about 16 characters a label gets `<br/>` where the sense
+   breaks; the renderer's own wrap fails at a fractional browser zoom and clips mid-word · a
+   clipped word on a phone · hand-placed breaks; never a `<br/>` in a subgraph title, the box does
+   not grow.
+5. **Draw the moment the picture is read.** A PR's opening picture draws what is true when the PR
+   opens; what landed is a second picture, generated after · "what actually landed" in a body
+   written before the merge · two pictures, the choice and the record.
+6. **One chart; the old path is one dotted lane on the right.** Declare the new path first (it
+   lands left), the old path last (it lands right, where a left-to-right reader drops it) · a
+   separate "before" chart forcing a full scan of both · one drawing; a separate before only when
+   the old path shares no node with the new.
+7. **A house noun never enters a label.** Platter, boarding, capsule, state block stay in scripts
+   and docs; the picture says what the thing does · `branch platter` · `"one commit on the held
+   PR"`. This is the no-coined-names rule applied to pictures.
+8. **The title is a line of the drawing.** About 40 characters; longer is the widest thing in the
+   SVG and shrinks everything under it on a phone · a title that wraps · cut to the claim, the
+   rest goes in the caption. Quote it when it contains `#`, which YAML reads as a comment.
+9. **The guiding wind: no overlay, the world points.** An edge label is allowed only when it is
+   the choice itself (a button name), never a hint about the edge · `yes`, `no`, `was` on edges ·
+   the tense in the box ("used to go straight through"), the cross-head says no, the double
+   circle says done.
+10. **One weapon per enemy: the type matches the story.** Flow → flowchart, count → erDiagram,
+    lifecycle → stateDiagram-v2, order in time → sequence, containment → a box with boxes inside
+    · a gitGraph for a story about a button · the decision table above.
+11. **Kurosawa mode: the look is a mode, switched whole.** A picture copies one named snippet
+    whole (house teal, or ink mode once promoted); never a hex chosen in flight, never two modes
+    in one drawing · a one-off fill · the snippet, copied whole; the lint refuses a `classDef` hex
+    outside a checked-in snippet.
+12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
+    accent, at the point where the reader decides or reacts; the one allowed exception is the
+    defect beside the decision · three coloured boxes · the fork gets the accent, the rest is paper.
+13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font ·
+    10.6 px effective on a 720 px drawing · lines of about 16 characters,
+    `config: flowchart: { nodeSpacing: 24, rankSpacing: 36, padding: 10 }`, and
+    `classDef default font-size:20px,font-family:Verdana`, the one font lever that works on
+    flowchart and erDiagram (frontmatter `fontSize` is a no-op for flowchart text).
+14. **In a state diagram the removed path is a note, not an edge.** State diagrams cannot dash a
+    transition · a before that lives only in the caption · `note left of <new state>` reading
+    "was: …"; the note's dashed link is the delta mark.
+15. **A C4 context puts the system's boundary in the middle.** Layout follows declaration order ·
+    relation labels drawn over other boxes · declare the boundaries left, centre, right in the
+    order the edges leave the system; `Rel_L` / `Rel_R` / `Rel_U` / `Rel_D`.
+16. **A composite state takes a classDef on 11.17.2.** The docs say it cannot · none · use it;
+    `class S5 current` on a composite renders the thick stroke.
+17. **A gitGraph is for branch topology, vertical on a phone.** `gitGraph TB:` with
+    `rotateCommitLabel: false` · rotated tags overlapping at 390px · vertical; and never for a story
+    about a choice (rule 10).
 
 **Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
@@ -303,10 +390,12 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    survives email, mobile notifications, and raw-text renderers.
 4. **Proportionality:** gold-standard treatment on a 5-line config change implies something false
    about the diff. Match picture weight to change weight — or waive.
-5. **What lands, not what the doctrine says:** a picture of a mechanism draws what the code and
-   the platform actually do. The platter starter above drew a merge commit for three platters that
-   squashed (#3754) until round 2 of #3778 redrew it; where a picture is generated from the data
-   beside it, it cannot drift.
+5. **What lands, at the moment it is read:** a picture of a mechanism draws what the code and
+   the platform actually do, as of when the reader sees it. A PR's opening picture draws the
+   choice; what landed is a second picture, generated after, in whichever ending is true. The
+   held-PR starter drew a merge commit for platters that squashed (#3754) until the design rounds
+   redrew it as the choice at open time and the record after landing; where a picture is
+   generated from the data beside it, it cannot drift.
 
 ## Where else this grammar applies
 
