@@ -59,10 +59,10 @@ concurrency:
   group: pipeline-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+# Least privilege (2026-09-26, #3769 slice 4, zpratt/lousy-agents: `permissions: {}` at the top,
+# each job granted exactly what its steps write). Before this every job — the verify suite, the
+# flyctl deploys — ran with write on contents, issues and pull requests it never used.
+permissions: {}
 
 jobs:
   verify:
@@ -287,6 +287,8 @@ jobs:
           contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout only — the merge and the label read use the app token minted below
     steps:
       - uses: actions/checkout@v7
         with:
@@ -384,6 +386,10 @@ jobs:
     # half — the bots app — deploys selectively in `deploy-bots` below.
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # semantic-release: tags and the GitHub release
+      issues: write # semantic-release: "released in" comments on closed issues
+      pull-requests: write # semantic-release: the same comments on merged PRs
     outputs:
       # The image this push built and verified, for deploy-bots to reuse — one build per push,
       # the two apps provably on the same bits whenever both roll.
@@ -522,6 +528,8 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy)
       ) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout only — every deploy step authenticates to Fly, not GitHub
     steps:
       - uses: actions/checkout@v7
         with:
