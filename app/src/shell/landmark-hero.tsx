@@ -3,8 +3,8 @@ import { useState } from "react";
 
 /**
  * THE LANDMARK HERO (#738 phase 4c) — 3D embedded where lore earns it. A desk the world
- * projection gives a landmark frames its live Barad-dûr scene (`/tower`, the existing Babylon
- * bundle) with the SAME dials every renderer uses: power from real relative standing, health
+ * projection gives a landmark frames its live Barad-dûr scene (`/tower`, the three.js scene
+ * since #3718) with the SAME dials every renderer uses: power from real relative standing, health
  * from real P/L. The scene is continuous motion, so a reduced-motion viewer gets a doorway
  * card instead of an autoplaying world — the tower is opt-in there, never ambush.
  */
