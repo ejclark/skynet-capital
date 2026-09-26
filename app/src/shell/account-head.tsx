@@ -47,7 +47,7 @@ export function AccountHead({
         <h1>{name}</h1>
         <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
         <span className="env-pill">SIM</span>
-        {kind === "bot" ? <HeartbeatChip deskId={id} /> : null}
+        {kind === "bot" ? <HeartbeatChip deskId={id} showPlaybooks={isOwn} /> : null}
         {isOwn ? (
           <Link to="/accounts" search={{ account: id }} className="acct-head-own">
             Open in your Accounts
