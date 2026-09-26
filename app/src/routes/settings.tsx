@@ -441,7 +441,11 @@ function SettingsPage(): ReactElement {
         ) : !first ? (
           <p className="note">
             Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or
-            add your own from <Link to="/onboarding">onboarding</Link>.
+            add your own from{" "}
+            <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
+              onboarding
+            </Link>
+            .
           </p>
         ) : (
           <>

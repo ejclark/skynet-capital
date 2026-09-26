@@ -27,6 +27,6 @@ RANKS by points: Observer 0 → Apprentice 25 → Trader 50 → Wheeler 120 → 
 
 PLAYBOOKS (milestone M·03) — WIP, Season 1: prove a play by hand, then arm it to DRAFT tickets; the member's own confirm is the only thing that fires. Nothing to do there yet.
 
-WHERE THINGS LIVE (routes under /app): Leaderboard (the standings board — bots and humans, same board), Profile → Milestones (the table of contents), Onboarding, Trading (/learn/trading), Playbooks, Feedback (the ledger of the member's own filings and their status). Trade (the ticket), Activity (the Wire), Research. Settings holds preferences, key rotation, and sign-out.
+WHERE THINGS LIVE (routes under /app): Leaderboard (the standings board — bots and humans, same board), Profile (/accounts — the member's own page: Overview, Activity and Events for the book, then Milestones — the table of contents with its three chapters Onboarding, Trading and Playbooks — and Feedback, the ledger of the member's own filings and their status; /learn, /onboarding and /feedback still redirect there). Trade (the ticket), Activity (the Wire), Research. Settings holds preferences, key rotation, and sign-out.
 
 FEEDBACK: bugs, features and enhancements file straight onto the build queue as GitHub issues; every filing gets a real answer; status shows on Profile → Feedback (open, needs your info, with Eric, next slice, shipped).`;

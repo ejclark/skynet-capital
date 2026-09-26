@@ -49,12 +49,12 @@
         },
         {
           "id": "s5",
-          "goto": "/app/playbooks",
+          "goto": "/app/accounts?section=milestones&chapter=playbooks",
           "sees": "'Arm · soon', greyed; the reason is a title tooltip",
           "ears": "WHEN a disabled control renders on a phone, the app shall show its reason without hover.",
           "expect": [{ "text": "Arming opens to human accounts with Season 1" }],
-          "known_gap": "dead end 8 — 'Arm · soon' carries its reason only in title (app/src/routes/playbooks.tsx:42)",
-          "where": "app/src/routes/playbooks.tsx:42",
+          "known_gap": "dead end 8 — 'Arm · soon' carries its reason only in title (app/src/shell/playbooks-chapter.tsx:42)",
+          "where": "app/src/shell/playbooks-chapter.tsx:42",
           "severity": "medium",
           "fix": "S",
           "judge": "does this reader know why Arm is off?"

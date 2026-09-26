@@ -107,7 +107,15 @@ export function MoneyStrip({
         <span className="money-eyebrow">Cash ready to use</span>
         <span className="money-cash num">{allocation.cash}</span>
         <span className="money-note">{allocation.cashShare} of your account</span>
-        <Link to="/playbooks" className="money-link">
+        <Link
+          to="/accounts"
+          search={(prev) => ({
+            ...prev,
+            section: "milestones" as const,
+            chapter: "playbooks" as const,
+          })}
+          className="money-link"
+        >
           See plays that fit your playbooks ↗
         </Link>
       </div>
