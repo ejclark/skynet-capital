@@ -13,6 +13,10 @@
 //   node scripts/clone-scan.mjs --candidate # emit the biggest clone pair as JSON (two file:line locs)
 //
 // Enforced in CI via tests/arch/clone.spec.ts — runs on every PR, no extra workflow.
+//
+// Exit codes: 0 within budget · 1 clones grew past budget · 2 could not do its job — jscpd wrote
+// no report, or clone-budget.json is missing (an absent budget used to read as infinite, which
+// passed any count), so the verdict is UNKNOWN.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,16 +28,27 @@ const BUDGET_FILE = join(ROOT, "clone-budget.json");
 // Run jscpd (config lives in .jscpd.json: scans src/, ignores specs, min-tokens 50). We own the
 // verdict, so tolerate jscpd's own exit code and read its JSON report from a temp dir.
 const outDir = mkdtempSync(join(tmpdir(), "jscpd-"));
+let jscpdError = null;
 try {
   execFileSync("npx", ["jscpd", "--silent", "--reporters", "json", "--output", outDir], {
     cwd: ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-} catch {
-  // jscpd exits non-zero when its own threshold trips — our budget is the real gate.
+} catch (err) {
+  // jscpd exits non-zero when its own threshold trips — our budget is the real gate. Kept only to
+  // explain a missing report below: a failed run that wrote nothing is UNKNOWN, never zero clones.
+  jscpdError = err;
 }
-const report = JSON.parse(readFileSync(join(outDir, "jscpd-report.json"), "utf8"));
+const REPORT_FILE = join(outDir, "jscpd-report.json");
+if (!existsSync(REPORT_FILE)) {
+  const why = `${jscpdError?.stderr ?? ""}`.trim() || jscpdError?.message || "no error output";
+  console.error(
+    `✗ jscpd wrote no report — clone count UNKNOWN.\n  ${why.split("\n").join("\n  ")}`,
+  );
+  process.exit(2);
+}
+const report = JSON.parse(readFileSync(REPORT_FILE, "utf8"));
 
 const total = report.statistics.total;
 const debt = total.clones; // clone count = pasted block-pairs; the number we ratchet down
@@ -63,12 +78,12 @@ if (process.argv.includes("--candidate")) {
   process.exit(0);
 }
 
-const budget = existsSync(BUDGET_FILE)
-  ? JSON.parse(readFileSync(BUDGET_FILE, "utf8"))
-  : { clones: Number.POSITIVE_INFINITY };
+// Required for the verdict: an absent budget is UNKNOWN, not infinite (exit 2 below). Only
+// --update may run without it, because seeding it is how the budget comes to exist.
+const budget = existsSync(BUDGET_FILE) ? JSON.parse(readFileSync(BUDGET_FILE, "utf8")) : null;
 
 if (process.argv.includes("--update")) {
-  const prev = Number.isFinite(budget.clones) ? budget.clones : debt;
+  const prev = Number.isFinite(budget?.clones) ? budget.clones : debt;
   const next = { clones: Math.min(prev, debt) }; // ratchet down only
   writeFileSync(BUDGET_FILE, `${JSON.stringify(next, null, 2)}\n`);
   console.log(`clone-budget.json updated — clones=${next.clones} (only lowers).`);
@@ -84,6 +99,13 @@ console.log(
   `\n  clone debt (pairs): ${debt}   duplicated lines: ${duplicatedLines} (${percentage.toFixed(2)}%)`,
 );
 
+if (!budget) {
+  console.error(
+    `\n✗ clone-budget.json missing — clone verdict UNKNOWN (no budget to compare ${debt} against). ` +
+      "Seed it: `node scripts/clone-scan.mjs --update`.",
+  );
+  process.exit(2);
+}
 const cap = budget.clones;
 if (debt > cap) {
   console.error(`\n✗ clones grew: ${debt} > budget ${cap}.`);
