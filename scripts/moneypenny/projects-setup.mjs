@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 // PROJECTS V2 SETUP — one-time (idempotent, safe to re-run), #3818 slice B. Creates the
 // "Skynet Capital — Orchestration" project under ejclark and its four fields (Status, Priority,
-// Horizon, Target date) via `gh project`, which the Moneypenny App's installation token can drive
-// now that its Projects permission is admin (Eric, 2026-09-26).
+// Horizon, Target date) via `gh project`.
 //
-// UNVERIFIED LIVE (say so plainly, not "tested"): GraphQL — which `gh project` compiles to — is
-// blocked from interactive Claude Code sessions (confirmed by calling it directly), so this
-// script's real IO could not be exercised while writing it. It prints the raw `gh` output at every
-// step for that reason: if a step's shape is wrong, the run's own log is the diagnostic, and
-// re-running is safe because every step checks for the existing thing first.
+// Needs `GH_TOKEN` to be Eric's own classic personal access token with `project` scope, never the
+// Moneypenny App's installation token. The first live run (2026-09-26, run 36270609136) proved
+// why: "GraphQL: skynet-envoy[bot] does not have permission to create projects on ownerId
+// ...(createProjectV2)" — GitHub Apps' Projects permission is org-scoped only (GitHub's own REST
+// permissions docs), and `ejclark` is a personal User account, which has no App-token path to
+// Projects v2 at all. Run via projects-setup.yml (workflow_dispatch), which reads
+// `secrets.PROJECTS_PAT` — never hand-run with any other token.
 //
-//   GH_TOKEN=<app-installation-token> node scripts/moneypenny/projects-setup.mjs
+// UNVERIFIED-BEYOND-THIS (say so plainly, not "tested"): GraphQL — which `gh project` compiles to
+// — is blocked from interactive Claude Code sessions (confirmed by calling it directly), so this
+// script's real IO could still not be exercised while making this change. It prints the raw `gh`
+// output at every step for that reason: if a step's shape is wrong, the run's own log is the
+// diagnostic, and re-running is safe because every step checks for the existing thing first.
 //
-// Run via projects-setup.yml (workflow_dispatch), which mints that token from the App identity —
-// never with a personal token; the App is what carries the Projects permission.
+//   GH_TOKEN=<eric's classic PAT, project scope> node scripts/moneypenny/projects-setup.mjs
 import { sh, withRetry } from "./gh.mjs";
 import { FIELDS, PROJECT_TITLE } from "./projects.mjs";
 
