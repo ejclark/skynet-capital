@@ -26,7 +26,7 @@ describe("guard-bash — the verdict", () => {
     ]) {
       const v = guardVerdict(bash(cmd));
       expect(v.allow, cmd).toBe(false);
-      expect(v.reason).toContain("CLAUDE.md");
+      if (!v.allow) expect(v.reason).toContain("CLAUDE.md");
     }
   });
 
