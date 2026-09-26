@@ -41,7 +41,6 @@
     "OptionGateStatus": "src/shell/option-preview.tsx",
     "OptionPositionsCard": "src/shell/option-positions.tsx",
     "OptionPreviewBody": "src/shell/option-preview.tsx",
-    "OutpostRail": "src/shell/outpost-rail.tsx",
     "PageFrame": "src/shell/frame.tsx",
     "PlayCard": "src/shell/play-card.tsx",
     "PositionsTable": "src/shell/positions-table.tsx",

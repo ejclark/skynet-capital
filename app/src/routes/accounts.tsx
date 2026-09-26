@@ -38,9 +38,9 @@ import { ThesisDrawer } from "../shell/thesis-drawer";
  * SECTIONS: **Overview** (cash/position note, chart/roster, considerations, then the positions
  * blotter — Summary and Positions merged into one scroll once it was clear how little Summary
  * carried on its own, Eric live) and **Activity** apply to every account; **Decisions** (the
- * autonomous-trading audit trail) and **Thesis** (a persona's standing call, ported from the
- * retired `/u/:id/thesis`) are bot-only, added by `sectionsFor` when a single bot account is
- * selected. PROGRESSIVE DISCLOSURE: the sticky {@link NetWorthCondensed} is the always-visible
+ * autonomous-trading audit trail) and **Thesis** (a persona's standing call, ported from
+ * `/u/:id/thesis`, still live while the desk folds into `/accounts`, #3345/#3350/#3687) are
+ * bot-only, added by `sectionsFor` when a single bot account is selected. PROGRESSIVE DISCLOSURE: the sticky {@link NetWorthCondensed} is the always-visible
  * summary layer; the section switch reveals one section's full detail at a time. The net-worth
  * payload is one `/api/accounts/networth` fetch that carries every owned account plus the
  * aggregate, so the switcher never triggers a re-fetch. Windows' returns come straight from
