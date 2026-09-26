@@ -24,4 +24,21 @@ export function lintWorkflow(
   prompts?: string[],
   hasScriptDeps?: (scriptRelPath: string) => boolean,
   knownLabels?: string[],
+  actorsByWorkflow?: Map<string, Array<string | null>>,
 ): string[];
+/** Rule 8: dispatch-gated claude-code-action jobs whose `allowed_bots` would refuse this file's own
+ *  `gh workflow run` re-dispatch. `actor: null` = the dispatching token's actor could not be read. */
+export function unlistedDispatchActor(
+  name: string,
+  text: string,
+): Array<{ job: string; actor: string | null }>;
+/** The bot actors a workflow signs its own re-dispatches as (`null` = unreadable token). */
+export function selfDispatchActors(name: string, text: string): Set<string | null>;
+/** The names/paths a `workflow_run` trigger's `workflows:` list watches. */
+export function watchedWorkflows(text: string): string[];
+/** Rule 8, cross-file: claude-code-action steps in a `workflow_run` watcher that would refuse the
+ *  actor a watched workflow re-dispatches itself as. */
+export function unlistedWatchedActor(
+  text: string,
+  actorsByWorkflow: Map<string, Array<string | null>>,
+): Array<{ job: string; actor: string | null }>;
