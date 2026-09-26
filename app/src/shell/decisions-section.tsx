@@ -18,21 +18,39 @@ import {
  * original page did.
  */
 
+/** The outcome's playbook, mode appended — never the mode standalone. */
+function PlaybookChip({
+  outcome,
+}: {
+  readonly outcome: DecisionCycle["outcomes"][number];
+}): ReactElement | null {
+  if (!outcome.playbook) return null;
+  return (
+    <span className="chip chip-bot">
+      {outcome.playbook}
+      {outcome.playbookMode ? ` · ${outcome.playbookMode}` : ""}
+    </span>
+  );
+}
+
 /** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
- *  rendering rather than carrying a second, drifting copy. */
-export function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][number] }) {
+ *  rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
+ *  (#885: "we do not show what playbooks others are using") — the server already withholds it
+ *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. */
+export function OutcomeLine({
+  outcome,
+  showPlaybook = true,
+}: {
+  readonly outcome: DecisionCycle["outcomes"][number];
+  readonly showPlaybook?: boolean;
+}) {
   return (
     <li className="cycle-outcome">
       <span className={`cycle-action cycle-action-${outcome.action}`}>{outcome.action}</span>
       <span className="cycle-intent num">
         {outcome.side.toUpperCase()} {outcome.quantity} {outcome.symbol}
       </span>
-      {outcome.playbook ? (
-        <span className="chip chip-bot">
-          {outcome.playbook}
-          {outcome.playbookMode ? ` · ${outcome.playbookMode}` : ""}
-        </span>
-      ) : null}
+      {showPlaybook ? <PlaybookChip outcome={outcome} /> : null}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       {outcome.resultStatus && !outcome.fill ? (
@@ -78,7 +96,13 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
   );
 }
 
-export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
+export function CycleRow({
+  cycle,
+  showPlaybooks = true,
+}: {
+  readonly cycle: DecisionCycle;
+  readonly showPlaybooks?: boolean;
+}): ReactElement {
   // Halted, rejected, and refused cycles arrive open — the reader came for the failure.
   const [open, setOpen] = useState(
     cycle.status === "halted" || cycle.status === "rejected" || cycle.status === "refused",
@@ -140,6 +164,7 @@ export function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactEle
                 <OutcomeLine
                   key={`${outcome.symbol}-${outcome.side}-${outcome.quantity}-${outcome.action}-${outcome.reason}`}
                   outcome={outcome}
+                  showPlaybook={showPlaybooks}
                 />
               ))}
             </ul>
@@ -179,12 +204,15 @@ export function DecisionsSection({
   deskId,
   noTrades = false,
   emptyText = "No recorded cycles yet — the next autonomous run writes the first.",
+  showPlaybooks = true,
 }: {
   readonly deskId: string;
   /** Only the passes that placed nothing (#3687 slice 4) — the Heartbeat tab's log, now that
    *  trades carry their own decisions on Activity. */
   readonly noTrades?: boolean;
   readonly emptyText?: string;
+  /** False on a page the viewer does not own — the playbook chips are the owner's (#885). */
+  readonly showPlaybooks?: boolean;
 }): ReactElement {
   const decisions = useQuery({
     queryKey: ["desk-decisions", deskId, noTrades],
@@ -233,7 +261,7 @@ export function DecisionsSection({
     <>
       <ul className="cycles">
         {cycles.map((cycle) => (
-          <CycleRow key={cycle.at} cycle={cycle} />
+          <CycleRow key={cycle.at} cycle={cycle} showPlaybooks={showPlaybooks} />
         ))}
       </ul>
       {cursor !== undefined ? (

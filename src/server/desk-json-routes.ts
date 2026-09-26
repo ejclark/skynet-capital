@@ -15,23 +15,33 @@ import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder } from "../observatory/wire-reasoning.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
+import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisionsPage } from "./decision-account-view.js";
+import {
+  ownsDesk,
+  withoutCyclePlaybooks,
+  withoutHeartbeatPlaybookIds,
+  withoutReasoningPlaybook,
+} from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
 /** A bot's activity rows each carry the decision that placed them (#3687 slice 4), via the same
- *  exact order-id join the wire feed and the Thesis tab use. Human rows pass through untouched. */
+ *  exact order-id join the wire feed and the Thesis tab use. Human rows pass through untouched.
+ *  A non-owner's copy carries the decision without its playbook (#885, `desk-owner-gate.ts`). */
 function withDecisions<V extends { readonly activity: readonly { readonly orderId: string }[] }>(
   kind: string,
   view: V,
   config: DashboardServerConfig,
+  owner: boolean,
 ): V {
   if (kind !== "bot" || !config.findByOrderId) return view;
   return {
     ...view,
     activity: view.activity.map((event) => {
       const reasoning = reasoningForOrder(event.orderId, config);
-      return reasoning ? { ...event, reasoning } : event;
+      if (!reasoning) return event;
+      return { ...event, reasoning: owner ? reasoning : withoutReasoningPlaybook(reasoning) };
     }),
   };
 }
@@ -50,7 +60,9 @@ async function decisionsPayload(
   before: number | undefined,
   /** `?trades=none` (#3687 slice 4): only the passes that placed nothing — idle, refused, halted,
    *  rejected — which now live on the Heartbeat tab while trades carry their own decisions. */
-  noTrades = false,
+  noTrades: boolean,
+  /** False strips each outcome's playbook chip — a non-owner's copy (#885). */
+  owner: boolean,
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind, cycles: [] };
   const page = await readAccountDecisionsPage(found.id, config, {
@@ -74,7 +86,7 @@ async function decisionsPayload(
   return {
     available: true,
     kind: "bot",
-    cycles: view.cycles,
+    cycles: owner ? view.cycles : withoutCyclePlaybooks(view.cycles),
     ...(nextCursor !== undefined ? { nextCursor } : {}),
     ...(funnel ? { funnel: funnelView(funnel) } : {}),
     ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
@@ -86,23 +98,26 @@ async function decisionsPayload(
 async function heartbeatPayload(
   found: { readonly id: string; readonly kind: string },
   config: DashboardServerConfig,
+  owner: boolean,
 ): Promise<unknown> {
   const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
-  return records
-    ? { available: true, heartbeat: botHeartbeatView(records, new Date(), regularSessionOpen()) }
-    : { available: false, kind: found.kind };
+  if (!records) return { available: false, kind: found.kind };
+  const heartbeat = botHeartbeatView(records, new Date(), regularSessionOpen());
+  return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }
 
 /** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
  *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race).
  *  `/activity` and `/decisions` are keyset-paginated (`per_page`/`before`, PR 5 — issue #2287):
- *  a growing feed replaces its own hardcoded caps rather than truncating silently. */
+ *  a growing feed replaces its own hardcoded caps rather than truncating silently.
+ *  Reads stay open inside the invite gate; a bot's playbook names are its owner's alone (#885). */
 export async function serveDeskJson(
   res: ServerResponse,
   path: string,
   url: string,
   config: DashboardServerConfig,
+  session?: Session,
 ): Promise<void> {
   const rest = decodeURIComponent(path.slice("/api/desk/".length));
   const sub = ["activity", "decisions", "heartbeat", "pulse", "thesis"].find((name) =>
@@ -117,6 +132,7 @@ export async function serveDeskJson(
     return;
   }
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  const owner = ownsDesk(found.id, config, session);
   const params = new URL(url, "http://localhost").searchParams;
   const limit = resolvePageSize(params.get("per_page"));
   const before = params.get("before");
@@ -148,6 +164,7 @@ export async function serveDeskJson(
                   ...(realizedMap ? { realizedByOrder: realizedMap } : {}),
                 }),
                 config,
+                owner,
               ),
             }
           : { available: false, activity: [] },
@@ -156,13 +173,20 @@ export async function serveDeskJson(
     return;
   }
   if (sub === "heartbeat") {
-    res.end(JSON.stringify(await heartbeatPayload(found, config)));
+    res.end(JSON.stringify(await heartbeatPayload(found, config, owner)));
     return;
   }
   if (sub === "decisions") {
     res.end(
       JSON.stringify(
-        await decisionsPayload(found, config, limit, beforeAt, params.get("trades") === "none"),
+        await decisionsPayload(
+          found,
+          config,
+          limit,
+          beforeAt,
+          params.get("trades") === "none",
+          owner,
+        ),
       ),
     );
     return;

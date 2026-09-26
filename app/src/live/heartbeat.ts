@@ -8,7 +8,8 @@ export type HeartbeatState = "beating" | "stale" | "market-closed" | "no-record"
 export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical";
 
 export interface PlaybookHeartbeat {
-  readonly playbookId: string;
+  /** Absent for a viewer who does not own the bot — the server strips it (#885). */
+  readonly playbookId?: string;
   readonly mode: string;
   readonly state: PlaybookVerdictState;
   readonly since: string;

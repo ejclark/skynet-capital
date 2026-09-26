@@ -105,6 +105,17 @@ ratchet never fires (a promise with no target is `{ "text": "<the promise>", "ab
   `scripts/crawl/README.md`. The judge line is graded afterwards by a session running
   `docs/grind/journey-judge.instructions.md` over the frames — never by a model call inside the crawl.
 
+## Which screens the journeys must reach — `triage.json` and `coverage.md`
+
+[`triage.json`](triage.json) holds one verdict per screen (a page, or one `?section=` of it):
+`keep` · `fold` · `retire` · `redirect-only` · `undecided`, with who must see it and, for a
+redirect or an open question, where it goes. It came from the route triage of 2026-09-26,
+refreshed after #3814, and is **hand-maintained** — change a verdict here, never in the report.
+`npm run crawl:coverage` joins it with every screen the code has and every journey step, and writes
+[`coverage.md`](coverage.md): how many living screens a phone step visits, and the gaps. A dead
+screen (`retire`, `redirect-only`) gets no phone work and is never a gap; a new screen with no
+verdict fails the run. How it reads the code: `scripts/crawl/README.md` → *Coverage*.
+
 ## The eight dead ends run 0 must find
 
 Found by reading the code before the crawl existed (the plan, 2026-09-26). Each is pinned as a

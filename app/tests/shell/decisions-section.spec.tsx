@@ -81,6 +81,31 @@ describe("CycleRow", () => {
     expect(screen.getByText("S2-NVDA · aggressive")).toBeInTheDocument();
   });
 
+  // #885: "at this time, we do not show what playbooks others are using".
+  it("draws no playbook chip on a bot the viewer does not own", () => {
+    render(
+      <CycleRow
+        showPlaybooks={false}
+        cycle={cycle({
+          outcomes: [
+            {
+              symbol: "NVDA",
+              side: "buy",
+              quantity: 10,
+              action: "placed",
+              reason: "panic fade",
+              playbook: "S2-NVDA",
+              playbookMode: "aggressive",
+            },
+          ],
+        })}
+      />,
+    );
+    open();
+    expect(screen.getByText("“panic fade”")).toBeInTheDocument();
+    expect(screen.queryByText(/S2-NVDA/)).not.toBeInTheDocument();
+  });
+
   it("renders guardDelta as its own line when the outcome was clamped", () => {
     render(
       <CycleRow

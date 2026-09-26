@@ -426,6 +426,100 @@ describe("serveDeskJson", () => {
     expect((answered(out).cycles as unknown[]).length).toBe(1);
   });
 
+  // #885 (Eric, 2026-08-29): "at this time, we do not show what playbooks others are using". The
+  // `/u/:id` pages read these three payloads for ANY member, so the server withholds the key.
+  describe("playbook names are the bot owner's alone (#885)", () => {
+    const pick = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 1,
+      type: "market" as const,
+      reason: "fade",
+      playbookId: "S1-NVDA",
+      playbookMode: "standard" as const,
+    };
+    const pass = {
+      at: Date.now(),
+      personaId: "sauron",
+      mode: "live" as const,
+      rawIntents: [pick],
+      guardedIntents: [pick],
+      outcomes: [{ intent: pick, action: "placed" as const }],
+      playbookVerdicts: [
+        { playbookId: "S1-NVDA", mode: "standard" as const, state: "long" as const },
+      ],
+    };
+    const fill = {
+      orderId: "ord-1",
+      participantId: "sauron",
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 1,
+      filledQuantity: 1,
+      status: "filled",
+      at: "2026-09-20T15:00:00.000Z",
+      source: "stream" as const,
+    };
+    const session = (email: string) => ({ email, provider: "google" as const, exp: 0 });
+    const gated = configWith({
+      auth: {} as never,
+      resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      readDecisions: () => Promise.resolve([pass]),
+      readTradeActivity: async () => [fill],
+      findByOrderId: (orderId) =>
+        orderId === "ord-1" ? { record: pass, intent: pick } : undefined,
+    });
+    const read = async (sub: string, who: string) => {
+      const { res, out } = fakeRes();
+      const path = `/api/desk/sauron/${sub}`;
+      await serveDeskJson(res, path, path, gated, session(who));
+      return out.body ?? "";
+    };
+
+    it("withholds them from a member who does not own the bot", async () => {
+      const heartbeat = JSON.parse(await read("heartbeat", "guest@x"));
+      expect(heartbeat.heartbeat.playbooks).toEqual([
+        expect.objectContaining({ mode: "standard", state: "long" }),
+      ]);
+      for (const sub of ["heartbeat", "decisions", "activity"]) {
+        const body = await read(sub, "guest@x");
+        expect(body).not.toContain("S1-NVDA");
+        expect(body).not.toContain("playbookMode");
+      }
+      // The rest of the decision still rides — only the playbook's name is withheld.
+      const decisions = JSON.parse(await read("decisions", "guest@x"));
+      expect(decisions.cycles[0].outcomes[0]).toMatchObject({ symbol: "NVDA", action: "placed" });
+      const activity = JSON.parse(await read("activity", "guest@x"));
+      expect(activity.activity[0].reasoning).toMatchObject({ reason: "fade", personaId: "sauron" });
+    });
+
+    it("keeps them for the bot's owner", async () => {
+      const heartbeat = JSON.parse(await read("heartbeat", "owner@x"));
+      expect(heartbeat.heartbeat.playbooks[0].playbookId).toBe("S1-NVDA");
+      const decisions = JSON.parse(await read("decisions", "owner@x"));
+      expect(decisions.cycles[0].outcomes[0]).toMatchObject({
+        playbook: "S1-NVDA",
+        playbookMode: "standard",
+      });
+      const activity = JSON.parse(await read("activity", "owner@x"));
+      expect(activity.activity[0].reasoning.playbookId).toBe("S1-NVDA");
+    });
+
+    it("withholds them from a signed-out read, and keeps them with no sign-in configured", async () => {
+      const { res, out } = fakeRes();
+      await serveDeskJson(res, "/api/desk/sauron/heartbeat", "/api/desk/sauron/heartbeat", gated);
+      expect(out.body).not.toContain("S1-NVDA");
+      const local = fakeRes();
+      await serveDeskJson(
+        local.res,
+        "/api/desk/sauron/heartbeat",
+        "/api/desk/sauron/heartbeat",
+        configWith({ readDecisions: () => Promise.resolve([pass]) }),
+      );
+      expect(local.out.body).toContain("S1-NVDA");
+    });
+  });
+
   it("serves the pulse with each section owning its empty state", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(res, "/api/desk/sauron/pulse", "/api/desk/sauron/pulse", configWith());

@@ -74,6 +74,27 @@ describe("HeartbeatSection", () => {
     expect(screen.getByText("S1-NVDA")).toBeInTheDocument();
   });
 
+  // #885 — a bot the viewer does not own: verdict words, no playbook names, no chips.
+  it("keeps playbook names off a bot the viewer does not own", async () => {
+    next = staleDesk;
+    render(withClient(<HeartbeatSection deskId="sauron" showPlaybooks={false} />));
+    expect(await screen.findByText("waiting for its window")).toBeInTheDocument();
+    expect(screen.queryByText("S1-NVDA")).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Playbook" })).not.toBeInTheDocument();
+  });
+
+  it("drops the Playbook column when the server withheld every id", async () => {
+    // The wire shape a non-owner receives (`desk-owner-gate.ts`): each line without its id.
+    const anonymous = { mode: "standard", state: "no-window", since: "2026-09-22T15:00:00Z" };
+    next = {
+      available: true,
+      heartbeat: { ...staleHeartbeat, playbooks: [{ ...anonymous, sinceIsLowerBound: true }] },
+    } as unknown as DeskHeartbeat;
+    render(withClient(<HeartbeatSection deskId="sauron" />));
+    expect(await screen.findByText("waiting for its window")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Playbook" })).not.toBeInTheDocument();
+  });
+
   it("says plainly when no verdicts have been recorded yet", async () => {
     next = { available: true, heartbeat: { ...staleHeartbeat, playbooks: null } };
     render(withClient(<HeartbeatSection deskId="sauron" />));
