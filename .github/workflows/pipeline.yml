@@ -59,10 +59,10 @@ concurrency:
   group: pipeline-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+# Least privilege (2026-09-26, #3769 slice 4, zpratt/lousy-agents: `permissions: {}` at the top,
+# each job granted exactly what its steps write). Before this every job — the verify suite, the
+# flyctl deploys — ran with write on contents, issues and pull requests it never used.
+permissions: {}
 
 jobs:
   verify:
@@ -79,12 +79,12 @@ jobs:
       # Reused by e2e below so a docs-only PR doesn't pay for a Chromium install/boot too.
       code: ${{ steps.changes.outputs.code }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0            # "Detect non-docs changes" below needs the PR's full commit range
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
@@ -97,7 +97,7 @@ jobs:
       # "mostly warm, small delta" instead of "cold, every package" — this job is the only one that
       # also installs app/, so it hashes both lockfiles.
       - name: Restore npm cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
@@ -116,7 +116,7 @@ jobs:
       # whatever's present on any miss anyway, so only an exact hit is worth restoring.
       - name: Restore node_modules cache
         id: node-modules-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -160,7 +160,7 @@ jobs:
       - name: Restore app/ node_modules cache
         id: app-node-modules-cache
         if: steps.changes.outputs.code == 'true'
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: app/node_modules
           key: node-modules-${{ runner.os }}-app-${{ hashFiles('app/package-lock.json') }}
@@ -226,15 +226,15 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
 
       - name: Restore npm cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
@@ -249,7 +249,7 @@ jobs:
       # Cached by Playwright's own version-keyed path — a hit skips the ~200MB download entirely.
       - name: Restore Playwright browser cache
         id: pw-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -263,7 +263,7 @@ jobs:
 
       - name: Upload Playwright report
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-report
           path: playwright-report/
@@ -287,8 +287,10 @@ jobs:
           contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout only — the merge and the label read use the app token minted below
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -317,14 +319,14 @@ jobs:
           fi
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
       # Same restore-keys fix as `verify` (docs/LESSONS.md, 2026-09-04) — root-only here, but the
       # exact-key-only miss is the same failure mode regardless of which tree.
       - name: Restore npm cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -336,7 +338,7 @@ jobs:
       # unchanged lockfile can skip that rebuild entirely.
       - name: Restore node_modules cache
         id: node-modules-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -384,25 +386,29 @@ jobs:
     # half — the bots app — deploys selectively in `deploy-bots` below.
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # semantic-release: tags and the GitHub release
+      issues: write # semantic-release: "released in" comments on closed issues
+      pull-requests: write # semantic-release: the same comments on merged PRs
     outputs:
       # The image this push built and verified, for deploy-bots to reuse — one build per push,
       # the two apps provably on the same bits whenever both roll.
       image: ${{ steps.released.outputs.image }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
 
       - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
       # Same restore-keys fix as `verify`'s, same key shape (both lockfiles) — see the cache-warm
       # step below for why this job, not verify, is the one that has to carry the shared scope.
       - name: Restore npm cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
@@ -415,7 +421,7 @@ jobs:
       # here saved by an exact key also becomes restorable by any PR whose lockfile matches.
       - name: Restore node_modules cache
         id: node-modules-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -437,7 +443,7 @@ jobs:
       # merge, purely to keep that shared cache warm for every PR opened after it.
       - name: Restore app/ node_modules cache
         id: app-node-modules-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: app/node_modules
           key: node-modules-${{ runner.os }}-app-${{ hashFiles('app/package-lock.json') }}
@@ -452,7 +458,7 @@ jobs:
         run: npx semantic-release
 
       - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
           # releases call that 403s under runner load; a pinned version downloads a fixed asset.
@@ -522,13 +528,15 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy)
       ) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout only — every deploy step authenticates to Fly, not GitHub
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0            # the preflight diffs from the machine's stamped GIT_SHA
 
       - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
           # releases call that 403s under runner load; a pinned version downloads a fixed asset.
