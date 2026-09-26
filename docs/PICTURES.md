@@ -137,17 +137,15 @@ _A lifecycle: the composite state holds the sub-steps; every transition carries 
 ```mermaid
 gitGraph
     commit id: "main"
-    branch item-1
-    commit id: "fix commitlint"
+    branch platter
+    commit id: "item 1: fix commitlint"
+    commit id: "item 2: pin flyctl"
     checkout main
-    merge item-1 tag: "1/2"
-    branch item-2
-    commit id: "pin flyctl"
-    checkout main
-    merge item-2 tag: "2/2"
+    merge platter id: "one merge commit" tag: "revert per item"
 ```
 ````
-_Branch mechanics: a platter merges one commit per item, so a bad item reverts alone._
+_Branch mechanics: a platter boards each item as one squashed commit on one integration branch and
+lands with one merge commit, so a bad item still reverts alone (`scripts/ship.sh platter`)._
 
 ````markdown
 ```mermaid

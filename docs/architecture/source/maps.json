@@ -1,0 +1,1675 @@
+{
+  "runtime": {
+    "scope": "Runtime system of skynet-capital as of 2026-09-25: what runs to serve members and run the bots. Two Fly.io apps built from one Docker image (fly.toml → skynet-capital, process `app` = `npm run serve:dashboard`; fly.bots.toml → skynet-capital-bots, process `bots` = `npm run run:autonomous`), the React shell served from app/dist behind the same auth gate, the two Fly volumes, the GitHub Actions lanes that build/deploy/operate them, and the test suites that consume the same entrypoints. Every element is grounded in a file path, package.json script, workflow, env var or fetched host; the diagrams show what the CODE does, not what docs/LIVING-UNIVERSE.md intends. Excluded as non-runtime: research CLIs (src/scripts/*, scripts/research), spikes/, the Claude Code harness (.claude/, scripts/duel-log.mjs).",
+    "persons": [
+      {
+        "id": "member",
+        "label": "Member",
+        "evidence": "Invited guest on the allowlist: src/server/auth/allowlist-store.ts + SKYNET_ALLOWED_EMAILS/SKYNET_ALLOWED_GITHUB_LOGINS (.env.example); signs in via Google/GitHub OAuth (src/server/auth/providers.ts) with a signed session cookie (SKYNET_SESSION_SECRET, src/server/auth/session.ts); trades a linked Alpaca paper account (src/server/trade-api-routes.ts), chats with Moneypenny (src/server/companion-routes.ts), files feedback (src/server/feedback-api-routes.ts)."
+      },
+      {
+        "id": "eric",
+        "label": "Eric, owner",
+        "evidence": "Owner emails resolved by ownerEmails(process.env) in src/scripts/serve-dashboard.ts; isOwnerOf(config.controls|invite|claim, session) in src/server/dashboard-auth-gate.ts gates Mission Control (src/server/controls-api-routes.ts, bot-controls-store.ts), invites (src/server/invite-form.ts) and claims (src/server/claim-form.ts). Also the only person who runs .github/workflows/autonomy-ops.yml and fly-logs.yml (workflow_dispatch)."
+      }
+    ],
+    "external_systems": [
+      {
+        "id": "alpaca",
+        "label": "Alpaca",
+        "evidence": "Paper trading REST at https://paper-api.alpaca.markets (ALPACA_PAPER_BASE_URL in src/bots/bot.ts, transport src/alpaca/trading-transport.ts → src/http/fetch-json.ts); data host https://data.alpaca.markets (ALPACA_DATA_BASE_URL in src/runtime/data-source.ts; news /v1beta1/news in src/news/alpaca-news-client.ts); market-data websocket wss://stream.data.alpaca.markets/v2/iex (src/alpaca/market-data-stream.ts); per-account trade_updates websocket derived from the paper base (src/alpaca/trade-updates-stream.ts streamUrlFromBase); options endpoints (src/alpaca/alpaca-options-client.ts); OAuth Connect at https://app.alpaca.markets/oauth/authorize + https://api.alpaca.markets/oauth/token (src/server/auth/alpaca-connect.ts)."
+      },
+      {
+        "id": "anthropic",
+        "label": "Anthropic Claude API",
+        "evidence": "https://api.anthropic.com/v1/messages, keyed by ANTHROPIC_API_KEY: companion streaming in src/companion/companion-anthropic-stream.ts + companion-tool-rounds.ts (ANTHROPIC_URL), feedback coach in src/server/feedback-coach.ts; shared response validation src/http/anthropic-reply.ts; boot wiring src/scripts/dashboard-companion.ts and dashboard-feedback.ts. Also reached by CI lanes through anthropics/claude-code-action (claude.yml, moneypenny-events.yml, moneypenny-repair.yml)."
+      },
+      {
+        "id": "github",
+        "label": "GitHub",
+        "evidence": "https://api.github.com/repos/… with SKYNET_FEEDBACK_GITHUB_TOKEN + SKYNET_FEEDBACK_REPO: issue filing src/server/feedback-service.ts + feedback-issue.ts, screenshot commits to the feedback-assets branch src/server/feedback-images.ts, issue-state reads src/server/feedback-status.ts, follow-ups src/server/feedback-followup.ts, Actions-runs reads for deploy lag src/server/ops-status-deploy-lag.ts; headers src/server/github-api.ts. OAuth login https://github.com/login/oauth/* + https://api.github.com/user, /user/emails in src/server/auth/providers.ts. Repo + Actions host the CI lanes under .github/workflows/."
+      },
+      {
+        "id": "google",
+        "label": "Google",
+        "evidence": "OAuth login only: https://accounts.google.com/o/oauth2/v2/auth, https://oauth2.googleapis.com/token, https://openidconnect.googleapis.com/v1/userinfo in src/server/auth/providers.ts; SKYNET_GOOGLE_CLIENT_ID/SECRET (.env.example)."
+      },
+      {
+        "id": "edgar",
+        "label": "SEC EDGAR",
+        "evidence": "https://www.sec.gov/files/company_tickers.json and https://data.sec.gov/submissions/CIK… fetched by src/adapters/edgar-filings.ts (own fetch call with a contactable User-Agent), consumed by src/server/guidance-route.ts for the position-guidance pulse (src/server/guidance-pulse.ts)."
+      },
+      {
+        "id": "fly",
+        "label": "Fly.io",
+        "evidence": "Host for both apps: fly.toml (skynet-capital, ord, volume skynet_data at /data, http_service 8787) and fly.bots.toml (skynet-capital-bots, volume skynet_bots_data, no http_service). Reached only from CI via superfly/flyctl-actions in pipeline.yml (deploy, deploy-bots), autonomy-ops.yml, fly-logs.yml, companion-eval.yml. The runtime never calls the Fly API (src/server/ops-status-deploy-lag.ts header). 6PN hostname app.process.skynet-capital.internal:8788 is the cross-app bridge (fly.bots.toml SKYNET_INSIGHTS_BRIDGE_URL)."
+      }
+    ],
+    "containers": [
+      {
+        "id": "browser",
+        "label": "Browser app",
+        "technology": "React 19, TanStack Router (basepath /app) + TanStack Query, Zustand, lightweight-charts 5.2; built by Rsbuild/Rspack to app/dist (app/rsbuild.config.ts); TypeScript",
+        "responsibility": "The observatory shell every member uses: the standings board over a seq-numbered SSE patch stream, accounts and positions, the trade ticket (shares + options), learn/curriculum, playbooks and the Playbook Store, research shelf, settings, onboarding/join, the Moneypenny rail, Mission Control for the owner. Served as static files at /app behind the server's auth gate.",
+        "code_roots": [
+          "app/src/main.tsx",
+          "app/src/routes",
+          "app/src/live",
+          "app/src/shell",
+          "app/src/styles"
+        ],
+        "entrypoints": [
+          "app/src/main.tsx",
+          "app/package.json: dev/build/preview (rsbuild)",
+          "Dockerfile: cd app && npm ci && npm run build"
+        ],
+        "evidence": "app/package.json dependencies; app/rsbuild.config.ts (assetPrefix /app/, dev proxy to :8787); served by src/server/app-shell-routes.ts (serveAppShell from app/dist); app/src/live/channel.ts (EventSource /events), app/src/live/post.ts (POST /api/*)."
+      },
+      {
+        "id": "api",
+        "label": "Observatory server",
+        "technology": "Node 24 (mise.toml), node:http, TypeScript run via tsx; port 8787 (src/server/resolve-port.ts, PORT/SKYNET_DASHBOARD_PORT) plus an in-process internal listener on 8788; Fly app skynet-capital, process `app`",
+        "responsibility": "Auth gate (Google/GitHub OAuth or legacy password), the in-memory ObservatoryHub folding Alpaca fills/ticks into DashboardData, the SSE board-patch channel, the JSON API families the shell reads, the trading desk (share/option orders, drafts, cancel/replace, order audit), Moneypenny companion + feedback coach (Anthropic), feedback filing (GitHub), progression/ladder gates, ops status, the /tower three.js scene, and the 8788 bridge the bots poll/post to. Owns every durable store on the skynet_data volume.",
+        "code_roots": [
+          "src/scripts/serve-dashboard.ts",
+          "src/scripts/dashboard-*.ts",
+          "src/server",
+          "src/observatory",
+          "src/runtime",
+          "src/alpaca",
+          "src/adapters",
+          "src/companion",
+          "src/options",
+          "src/trading",
+          "src/domain",
+          "src/participants",
+          "src/storage",
+          "src/universe",
+          "src/alerts",
+          "src/subscriptions",
+          "src/discovery",
+          "src/research",
+          "src/three"
+        ],
+        "entrypoints": [
+          "package.json: serve:dashboard → tsx src/scripts/serve-dashboard.ts",
+          "package.json: serve:dashboard:offline (SKYNET_DATA_SOURCE=offline)",
+          "Dockerfile CMD npm run serve:dashboard",
+          "fly.toml [processes] app"
+        ],
+        "evidence": "src/scripts/serve-dashboard.ts builds createDashboardServer(...).listen(PORT); src/server/dashboard-server.ts routes; src/scripts/dashboard-insights-bridge.ts starts createInsightsListener on resolveInsightsBridgePort (8788, src/server/insights-listener.ts); fly.toml http_service internal_port 8787 and the comment that 8788 is deliberately unforwarded."
+      },
+      {
+        "id": "bots",
+        "label": "Bot runtime",
+        "technology": "Node 24, TypeScript via tsx, node:sqlite; no HTTP listener (no createServer/.listen in its import tree; fly.bots.toml has no [http_service]); Fly app skynet-capital-bots, process `bots`",
+        "responsibility": "The autonomous trader loop: one credential feeds the market clock, the 10-symbol universe price stream and a 60s news poll; ticks update momentum, headlines update sentiment; every 15s while the market is open each enabled persona assesses, risk guards + safety + owner suspend filter its intents, and in `live` mode (default `observe`) the broker places paper orders. Persists momentum/sentiment/cooldowns/scout state and a decision journal on its own volume, replicates decisions and insights to the observatory over the 6PN bridge, polls Mission Control controls and rotated credentials.",
+        "code_roots": [
+          "src/scripts/run-autonomous.ts",
+          "src/scripts/autonomous-*.ts",
+          "src/autonomous",
+          "src/bots",
+          "src/personas",
+          "src/playbooks",
+          "src/engine",
+          "src/news",
+          "src/evals/scenarios",
+          "src/alpaca",
+          "src/adapters"
+        ],
+        "entrypoints": [
+          "package.json: run:autonomous → tsx src/scripts/run-autonomous.ts",
+          "package.json: run:autonomous:offline",
+          "fly.bots.toml [processes] bots = npm run run:autonomous"
+        ],
+        "evidence": "src/scripts/run-autonomous.ts (UNIVERSE, LIVE_EVAL_INTERVAL_MS=15000, NEWS_POLL_MS=60000, SafetyController, LiveCycleRunner, marketDataStream.start()); fly.bots.toml env SKYNET_AUTONOMOUS_MODE=observe, SKYNET_AUTONOMOUS_BOTS=sauron, SKYNET_INSIGHTS_BRIDGE_URL, SKYNET_BOTS_DB_PATH, SKYNET_AUDIT_DIR, SKYNET_BOTS_HEALTH_PATH; pipeline.yml deploy-bots gated by scripts/bot-relevant.mjs."
+      },
+      {
+        "id": "appvol",
+        "label": "Observatory volume",
+        "technology": "Fly volume skynet_data mounted at /data; JSON files (src/storage/json-file-store.ts), JSONL per-key stores (src/storage/jsonl-store.ts), AES-256-GCM envelopes keyed by SKYNET_STORE_SECRET (src/storage/secure-envelope.ts), one node:sqlite decisions.db",
+        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json, history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
+        "code_roots": [
+          "src/storage",
+          "src/participants/participant-store.ts",
+          "src/server/auth/allowlist-store.ts",
+          "src/server/bot-controls-store.ts",
+          "src/server/subscription-store.ts",
+          "src/server/council-store.ts",
+          "src/server/feedback-log.ts",
+          "src/server/companion-message-log.ts",
+          "src/server/order-audit-log.ts",
+          "src/server/owner-link-store.ts",
+          "src/server/progression-store.ts",
+          "src/server/ladder-progress-log.ts",
+          "src/observatory/activity-store.ts",
+          "src/observatory/history-store.ts",
+          "src/adapters/jsonl-alert-dismissals.ts",
+          "src/autonomous/jsonl-insight-store.ts",
+          "src/runtime/volume-guard.ts"
+        ],
+        "entrypoints": [
+          "fly.toml [env] SKYNET_*_STORE/_DIR/_FILE → /data/…",
+          "fly.toml [mounts] skynet_data → /data"
+        ],
+        "evidence": "fly.toml pins every store path; src/runtime/volume-guard.ts lists PERSISTED_STORES; tests/arch/volume-persistence.spec.ts fails CI if a new `data/…` default is not pinned (EPHEMERAL exception: SKYNET_COMMUNITY_PROGRESSION_FILE); src/scripts/dashboard-insights-bridge.ts opens join(SKYNET_INSIGHTS_DIR, 'decisions.db')."
+      },
+      {
+        "id": "botvol",
+        "label": "Bots volume",
+        "technology": "Fly volume skynet_bots_data at /data; node:sqlite DatabaseSync (bots-state.db current-state tables + a sibling append-only decision journal via decisionDbPathFrom), JSONL audit, health.json",
+        "responsibility": "What must survive a bots redeploy: momentum and sentiment windows, per-persona cooldown clocks, the beta scout's day state, the decision journal (one row per raw intent, retrospectives, funnel), the JSONL audit backstop under SKYNET_AUDIT_DIR, and the process's own health stamp (running GIT_SHA, bridge verdict, last controls poll).",
+        "code_roots": [
+          "src/autonomous/bots-state-db.ts",
+          "src/autonomous/decision-db.ts",
+          "src/autonomous/decision-db-rows.ts",
+          "src/autonomous/decision-db-migration.ts",
+          "src/autonomous/jsonl-audit-store.ts",
+          "src/autonomous/bots-health-file.ts"
+        ],
+        "entrypoints": [
+          "fly.bots.toml [env] SKYNET_BOTS_DB_PATH=/data/bots-state.db, SKYNET_AUDIT_DIR=/data/audit, SKYNET_BOTS_HEALTH_PATH=/data/health.json",
+          "fly.bots.toml [mounts] skynet_bots_data → /data"
+        ],
+        "evidence": "src/scripts/autonomous-live-wiring.ts seedBotsState/seedDecisionDb (best-effort open), src/scripts/autonomous-sinks.ts auditStore/decisionSink; scripts/smoke-bots.sh reads /data/health.json over flyctl machine exec."
+      },
+      {
+        "id": "ci",
+        "label": "CI and agent lanes",
+        "technology": "GitHub Actions (ubuntu-latest), actions/setup-node from mise.toml, superfly/flyctl-actions, semantic-release (.releaserc.json), anthropics/claude-code-action (pinned v1), scripts/moneypenny/*.mjs, scripts/ship.sh, scripts/smoke.sh + smoke-bots.sh",
+        "responsibility": "pipeline.yml: verify (typecheck/lint/test/commitlint) → integration tests (Playwright e2e over the offline dashboard) → arm-auto-merge (envelope + hold checks); on push to main: semantic-release → flyctl deploy skynet-capital → smoke.sh → rollback on failure → deploy-bots reusing the same image when scripts/bot-relevant.mjs says so, stamping GIT_SHA. claude.yml: human-directed Claude sessions from issue/PR comments. moneypenny-events.yml: event-driven orchestration on every push/label (receipts, feedback builds, plan builds, event research, dep-warden). moneypenny-repair.yml: CI self-healing on failed workflow_run. autonomy-ops.yml / fly-logs.yml / companion-eval.yml: owner-triggered flyctl operations (secrets, mode flip, logs, eval).",
+        "code_roots": [
+          ".github/workflows",
+          ".github/actions",
+          "scripts/moneypenny",
+          "scripts/ship.sh",
+          "scripts/smoke.sh",
+          "scripts/smoke-bots.sh",
+          "scripts/bot-relevant.mjs",
+          "scripts/bots-deploy-preflight.mjs",
+          "scripts/deploy-lag.mjs"
+        ],
+        "entrypoints": [
+          ".github/workflows/pipeline.yml",
+          ".github/workflows/claude.yml",
+          ".github/workflows/moneypenny-events.yml",
+          ".github/workflows/moneypenny-repair.yml",
+          ".github/workflows/autonomy-ops.yml",
+          ".github/workflows/fly-logs.yml",
+          ".github/workflows/companion-eval.yml"
+        ],
+        "evidence": "pipeline.yml jobs verify/e2e/arm-auto-merge/deploy/deploy-bots with `npx semantic-release`, `flyctl deploy --remote-only`, `bash scripts/smoke.sh https://skynet-capital.fly.dev`, `flyctl deploy --config /tmp/fly.bots.deploy.toml --image …`; docs/ROUTINES.md says the only clock is the claude.ai Secretary digest Routine (trig_01KaMC2uR3cFW5XTUL6rzPuS) — no cron in any workflow."
+      },
+      {
+        "id": "tests",
+        "label": "Test suites",
+        "technology": "Rstest 0.12 (rstest.config.ts, tests/**/*.spec.ts, node env) and app/rstest.config.ts with happy-dom + Testing Library; Playwright 1.62 e2e (playwright.config.ts boots `npm run build --prefix app && npm run serve:dashboard:offline` on :8787), playwright.auth.config.ts for /login, Playwright component tests (app/playwright-ct.config.ts → e2e/ct); fast-check",
+        "responsibility": "The consumer that proves the runtime: unit/BDD specs import src modules directly (ports & adapters make every network seam fakeable), architecture gates under tests/arch run the scripts/*-scan.mjs coaches (arch, dupe, dead, spec-gap, envelope, volume-persistence, fly-split, workflows), and the e2e suite drives the real server in offline mode on fixtures/offline (participants.json + events.jsonl) so CI never needs Alpaca keys.",
+        "code_roots": [
+          "tests",
+          "app/tests",
+          "e2e",
+          "fixtures/offline",
+          "rstest.config.ts",
+          "playwright.config.ts",
+          "playwright.auth.config.ts",
+          "app/playwright-ct.config.ts"
+        ],
+        "entrypoints": [
+          "package.json: verify → run-p typecheck lint test typecheck:app test:app",
+          "package.json: test:e2e, test:e2e:auth, test:e2e:ct"
+        ],
+        "evidence": "rstest.config.ts include tests/**/*.spec.ts; playwright.config.ts webServer command; e2e/playwright.shared.ts; tests/arch/volume-persistence.spec.ts reads src/runtime/volume-guard.ts against fly.toml; src/runtime/data-source.ts is the live/offline seam (ADR docs/adr/0002-offline-data-source-mode.md)."
+      }
+    ],
+    "relationships": [
+      {
+        "from": "member",
+        "to": "browser",
+        "label": "Uses the observatory shell",
+        "technology": "HTTPS, session cookie",
+        "evidence": "src/server/dashboard-auth-gate.ts gateRequest → serveAppShell (src/server/app-shell-routes.ts); serveHomePage 302s / to /app/ (src/server/dashboard-server.ts)."
+      },
+      {
+        "from": "eric",
+        "to": "browser",
+        "label": "Mission Control suspend/mode toggles, invites, claims",
+        "technology": "HTTPS",
+        "evidence": "isOwnerOf(config.controls|invite|claim) in src/server/dashboard-auth-gate.ts; app/src/shell/mission-control.tsx → /api/controls (app/src/live/controls.ts); /api/admin/invite, /api/admin/claim (app/src/live/admin.ts, src/server/admin-api-routes.ts)."
+      },
+      {
+        "from": "eric",
+        "to": "ci",
+        "label": "Runs autonomy-ops, fly-logs, companion-eval buttons",
+        "technology": "GitHub workflow_dispatch",
+        "evidence": ".github/workflows/autonomy-ops.yml (flyctl secrets set SKYNET_AUTONOMOUS_MODE/PLAYBOOKS/BETA_FORCING/HARDCORE_BOTS), fly-logs.yml, companion-eval.yml — all `on: workflow_dispatch`."
+      },
+      {
+        "from": "browser",
+        "to": "api",
+        "label": "GET /api/* JSON, POST writes, EventSource /events and /api/trade/events, fetch-streamed POST /api/companion",
+        "technology": "HTTPS JSON, SSE",
+        "evidence": "app/src/live/channel.ts (EventSource `/events?by=metric`, fetchBoard /api/board), app/src/live/post.ts, app/src/live/desk-events.ts, app/src/live/companion.ts; server side src/server/board-patch-routes.ts, content-api-routes.ts, desk-events-route.ts, companion-routes.ts."
+      },
+      {
+        "from": "api",
+        "to": "appvol",
+        "label": "Reads and writes every durable store",
+        "technology": "node:fs JSON/JSONL, AES-256-GCM envelope, node:sqlite",
+        "evidence": "fly.toml [env] paths; src/storage/*; src/scripts/dashboard-insights-bridge.ts openDecisionDb(join(SKYNET_INSIGHTS_DIR,'decisions.db')); src/runtime/volume-guard.ts."
+      },
+      {
+        "from": "bots",
+        "to": "botvol",
+        "label": "Persists momentum/sentiment/cooldowns/scout state, decision journal, JSONL audit, health stamp",
+        "technology": "node:sqlite DatabaseSync, node:fs",
+        "evidence": "src/autonomous/bots-state-db.ts (armMomentumPersistence, persistSentiment, restoreBotsState), decision-db.ts, jsonl-audit-store.ts, bots-health-file.ts; fly.bots.toml [env]."
+      },
+      {
+        "from": "bots",
+        "to": "api",
+        "label": "Polls GET /controls every 30s (carries decisionsCursor + Playbook Store subscriptions), GET /bot-credentials for rotations; POSTs /insights and /decisions batches",
+        "technology": "HTTP over Fly 6PN to app.process.skynet-capital.internal:8788, shared-secret header, 4 MB decisions cap",
+        "evidence": "src/autonomous/bot-controls-client.ts (POLL_MS), bot-credentials-client.ts (SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET), insight-bridge-client.ts, decision-replication-client.ts; listener src/server/insights-listener.ts (CONTROLS_BRIDGE_PATH, BOT_CREDENTIALS_PATH, DECISIONS_PATH, MAX_DECISIONS_BODY_BYTES); fly.bots.toml SKYNET_INSIGHTS_BRIDGE_URL; fly.toml comment that 8788 is not forwarded."
+      },
+      {
+        "from": "api",
+        "to": "alpaca",
+        "label": "Reads accounts/positions/orders/portfolio history, options chains, places member orders; opens per-account trade_updates and a held-symbols market-data websocket",
+        "technology": "REST via src/http/fetch-json.ts, WSS",
+        "evidence": "src/runtime/data-source.ts (clientFactory, optionsClientFactory, startStreams), src/alpaca/alpaca-trading-client.ts, alpaca-options-client.ts, trade-updates-stream.ts, market-data-stream.ts; src/observatory/broker-sync.ts (60s), month-return-sync.ts (10m, portfolio history period=1M); src/server/trade-service.ts, option-trade-service.ts."
+      },
+      {
+        "from": "bots",
+        "to": "alpaca",
+        "label": "Market-data websocket for the 10-symbol universe, market clock, news poll every 60s, paper orders in live mode",
+        "technology": "WSS stream.data.alpaca.markets/v2/iex, REST paper-api + data.alpaca.markets/v1beta1/news",
+        "evidence": "src/scripts/autonomous-data-connections.ts, autonomous-market-clock.ts, src/alpaca/market-data-stream.ts, src/news/alpaca-news-client.ts, src/adapters/alpaca-broker-adapter.ts via src/bots/swappable-bot-broker.ts; run-autonomous.ts NEWS_POLL_MS."
+      },
+      {
+        "from": "api",
+        "to": "anthropic",
+        "label": "Companion tool rounds + streamed reply; feedback coach turns",
+        "technology": "HTTPS JSON, streaming, ANTHROPIC_API_KEY",
+        "evidence": "src/companion/companion-chat.ts, companion-anthropic-stream.ts, companion-tool-rounds.ts (ANTHROPIC_URL = https://api.anthropic.com/v1/messages), src/server/feedback-coach.ts, src/http/anthropic-reply.ts; boot in src/scripts/dashboard-companion.ts, dashboard-feedback.ts."
+      },
+      {
+        "from": "api",
+        "to": "github",
+        "label": "Files feedback issues, commits screenshots to feedback-assets, reads issue state and Actions runs; OAuth login",
+        "technology": "HTTPS REST api.github.com, SKYNET_FEEDBACK_GITHUB_TOKEN; OAuth github.com/login/oauth",
+        "evidence": "src/server/feedback-service.ts, feedback-images.ts, feedback-status.ts, feedback-followup.ts, ops-status-deploy-lag.ts, github-api.ts; src/server/auth/providers.ts githubProvider."
+      },
+      {
+        "from": "api",
+        "to": "google",
+        "label": "OAuth login",
+        "technology": "HTTPS",
+        "evidence": "src/server/auth/providers.ts googleProvider (accounts.google.com, oauth2.googleapis.com, openidconnect.googleapis.com)."
+      },
+      {
+        "from": "api",
+        "to": "edgar",
+        "label": "Reads company_tickers.json and recent 8-K submissions for the guidance pulse",
+        "technology": "HTTPS JSON, cached 24h/5m",
+        "evidence": "src/adapters/edgar-filings.ts (TICKERS_URL, data.sec.gov/submissions), src/server/guidance-route.ts LIVE deps."
+      },
+      {
+        "from": "ci",
+        "to": "fly",
+        "label": "Builds one image, deploys skynet-capital on every push to main, deploys skynet-capital-bots only when bot-relevant, sets secrets, pulls logs",
+        "technology": "flyctl deploy --remote-only / --image, flyctl secrets, flyctl logs",
+        "evidence": ".github/workflows/pipeline.yml deploy + deploy-bots jobs; autonomy-ops.yml; fly-logs.yml; scripts/bot-relevant.mjs, scripts/bots-deploy-preflight.mjs."
+      },
+      {
+        "from": "ci",
+        "to": "github",
+        "label": "Triggered by PRs, pushes, issue/comment events and workflow_run; opens PRs, issues, receipts, comments, releases",
+        "technology": "GitHub Actions, App token (.github/actions/app-token), REST",
+        "evidence": "pipeline.yml `on:` block; moneypenny-events.yml (node scripts/moneypenny/index.mjs); moneypenny-repair.yml (workflow_run); claude.yml; .releaserc.json @semantic-release/github."
+      },
+      {
+        "from": "ci",
+        "to": "anthropic",
+        "label": "Runs Claude Code sessions for the human-directed lane, Moneypenny builds and CI repair",
+        "technology": "anthropics/claude-code-action",
+        "evidence": "claude.yml, moneypenny-events.yml build-events/build-feedback/build-plan/dep-warden, moneypenny-repair.yml repair — all `uses: anthropics/claude-code-action@cfc3eb2…`."
+      },
+      {
+        "from": "ci",
+        "to": "tests",
+        "label": "Runs verify on every PR and e2e in the integration-tests job",
+        "technology": "npm run verify, npm run test:e2e",
+        "evidence": "pipeline.yml verify job and `integration tests` job (Build app/ and run the e2e suite)."
+      },
+      {
+        "from": "tests",
+        "to": "api",
+        "label": "e2e boots the offline dashboard; unit specs import server, observatory, autonomous and companion modules with fake transports",
+        "technology": "child process on :8787, ESM import",
+        "evidence": "playwright.config.ts webServer; tests/** mirror src/** one directory per module; src/adapters/fixture-trading-transport.ts + replay-event-stream.ts."
+      },
+      {
+        "from": "tests",
+        "to": "bots",
+        "label": "Specs the cycle runner, trader, guards, safety, bridge clients and offline runner",
+        "technology": "ESM import, in-memory broker",
+        "evidence": "tests/autonomous/live-cycle.spec.ts (named in run-autonomous.ts), tests/autonomous/*, tests/engine/*, src/adapters/in-memory-broker.ts, src/scripts/autonomous-offline-runner.ts."
+      }
+    ],
+    "c4context_source": "C4Context\n    title Skynet Capital - runtime system context - what the code dials, 2026-09-25\n    Person(member, \"Member\", \"Invited friend or family on the allowlist. Signs in with Google or GitHub, trades a paper account, chats with Moneypenny, files feedback. src/server/auth\")\n    Person(eric, \"Eric, owner\", \"Owner email in SKYNET_ALLOWED_EMAILS (isOwnerOf, applied in dashboard-server.ts). Toggles suspend and the companion model in Mission Control, manages invites and claims on the settings admin cards, approves autonomy-ops runs\")\n    System(skynet, \"Skynet Capital\", \"Paper-trading observatory plus autonomous bot personas. Two Fly apps from one image: skynet-capital and skynet-capital-bots. fly.toml, fly.bots.toml\")\n    System_Ext(alpaca, \"Alpaca\", \"Paper trading REST, options, portfolio history, news, market-data and trade-updates websockets, OAuth Connect. paper-api.alpaca.markets, data.alpaca.markets\")\n    System_Ext(anthropic, \"Anthropic Claude API\", \"Messages API for the Moneypenny companion and the feedback coach (claude-haiku-4-5). api.anthropic.com/v1/messages, ANTHROPIC_API_KEY\")\n    System_Ext(github, \"GitHub\", \"OAuth login, issues and contents REST for feedback, Actions runs for deploy lag, and the CI lanes that build and deploy. api.github.com\")\n    System_Ext(google, \"Google\", \"OAuth login only, env-gated by SKYNET_GOOGLE_CLIENT_ID and SECRET. accounts.google.com, oauth2.googleapis.com\")\n    System_Ext(edgar, \"SEC EDGAR\", \"8-K filings for position guidance freshness. www.sec.gov, data.sec.gov\")\n    System_Ext(fly, \"Fly.io\", \"Host. Two apps in region ord with volumes at /data, private 6PN network between them. Reached only by CI flyctl, never by the runtime\")\n    Rel(member, skynet, \"Uses the observatory\", \"HTTPS, session cookie, SSE\")\n    Rel(eric, skynet, \"Operates Mission Control, invites and claims; approves and dispatches autonomy-ops\", \"HTTPS, GitHub workflow_dispatch\")\n    Rel(skynet, alpaca, \"Reads accounts, places, replaces and cancels paper orders, streams ticks and fills, polls news\", \"REST and WebSocket, live mode only\")\n    Rel(skynet, anthropic, \"Streams companion turns, coaches feedback\", \"HTTPS JSON and SSE\")\n    BiRel(skynet, github, \"OAuth login; files issues, commits screenshots, reads workflow runs; CI deploys\", \"HTTPS REST\")\n    Rel(skynet, google, \"OAuth code exchange and userinfo; the browser is redirected to the authorize URL\", \"HTTPS\")\n    Rel(skynet, edgar, \"Reads company_tickers.json and recent 8-K submissions, cached in memory\", \"HTTPS JSON\")\n    Rel(github, fly, \"flyctl deploy on push to main; secrets and logs by workflow_dispatch. Build-time, not runtime\", \"pipeline.yml, autonomy-ops.yml\")\n    UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")",
+    "c4container_source": "C4Container\n    title Skynet Capital - runtime containers - what actually runs, 2026-09-25\n    Person(member, \"Member\", \"Signed-in guest on the allowlist\")\n    Person(eric, \"Eric, owner\", \"Owner email; Mission Control, invites and claims, autonomy-ops approvals\")\n    System_Boundary(sk, \"Skynet Capital\") {\n        Container(browser, \"Browser app\", \"React 19, TanStack Router and Query, Zustand, lightweight-charts; Rsbuild to app/dist\", \"The observatory shell at /app, static app/dist behind the auth gate. Reads JSON APIs, opens one EventSource per visible metric, posts writes via postJson. app/src/main.tsx\")\n        Container(api, \"Observatory server\", \"Node 24, node:http, TypeScript via tsx, port 8787; Fly app skynet-capital, process app\", \"Auth gate, ObservatoryHub, SSE board patches, trading desk, JSON APIs, Moneypenny companion, feedback, the tower scene at /tower. The same OS process listens on 8788 (SKYNET_INSIGHTS_BRIDGE_PORT) for the bots bridge: GET /controls, GET /bot-credentials, POST /decisions, POST /insights. src/scripts/serve-dashboard.ts\")\n        Container(bots, \"Bot runtime\", \"Node 24, tsx, node:sqlite, no HTTP listener; Fly app skynet-capital-bots, process bots\", \"Trader loop: ticks feed momentum, a 60s news poll feeds sentiment, 15s cycles evaluate personas while the market is open, guards run, then paper orders only when SKYNET_AUTONOMOUS_MODE=live and the persona passes readiness. Observe by default. src/scripts/run-autonomous.ts\")\n        ContainerDb(appvol, \"Observatory volume\", \"Fly volume skynet_data at /data; JSON and JSONL files, AES-256-GCM envelopes, SQLite decisions.db\", \"participants.json and allowlist.json (both envelope-encrypted), bot-controls.json plus sibling council.json, activity, feedback-log, history, order-audit, progression, ladder-progress, subscriptions, iv-history, insights with the replicated decisions.db. community-progression.json is deliberately container-ephemeral and not here. fly.toml env, src/storage\")\n        ContainerDb(botvol, \"Bots volume\", \"Fly volume skynet_bots_data at /data; node:sqlite, JSONL, JSON\", \"bots-state.db (momentum, sentiment, cooldowns, scout_state), decisions.db (append-only journal: decisions, intents, playbook_verdicts, market_signals, retrospectives; the funnel is computed at read time), audit JSONL, health.json. Each store is dark unless its env var is set. fly.bots.toml, src/autonomous\")\n        Container(ci, \"CI and agent lanes\", \"GitHub Actions, actions/setup-node@v7 from .nvmrc, flyctl, semantic-release, anthropics/claude-code-action\", \"pipeline.yml: verify and integration tests on PRs (integration tests also on push main), arm-auto-merge behind hold-merge and the envelope, deploy and deploy-bots on push main. claude.yml. moneypenny-events.yml on push, label, issue_comment. moneypenny-repair.yml. autonomy-ops.yml, fly-logs.yml, companion-eval.yml by dispatch\")\n        Container(tests, \"Test suites\", \"Rstest 0.12 root and 0.11 app suite, Playwright e2e, auth and component tests\", \"tests/** and app/tests run in-process; tests/arch gates call scripts/*-scan.mjs or assert inline (volume-persistence, fly-split); e2e/ boots the offline dashboard on fixtures/offline. rstest.config.ts, playwright.config.ts\")\n    }\n    System_Ext(alpaca, \"Alpaca\", \"Paper trading REST, data and news, websockets, OAuth Connect\")\n    System_Ext(anthropic, \"Anthropic Claude API\", \"Messages API\")\n    System_Ext(github, \"GitHub\", \"OAuth, issues, contents, Actions runs, repo\")\n    System_Ext(google, \"Google\", \"OAuth login\")\n    System_Ext(edgar, \"SEC EDGAR\", \"8-K filings\")\n    System_Ext(fly, \"Fly.io\", \"Host; 6PN private network\")\n    Rel(member, browser, \"Uses the shell once gateRequest passes and serveAuthorizedRoute serves /app\", \"HTTPS, session cookie\")\n    Rel(eric, browser, \"Mission Control suspend, resume and companion model; invites and claims on the settings admin cards\", \"HTTPS\")\n    Rel(eric, ci, \"Approves and dispatches autonomy-ops and companion-eval (required reviewers); fly-logs is self-serve\", \"workflow_dispatch\")\n    Rel(browser, api, \"GET /api/* JSON, POST writes via postJson, EventSource /events?by=metric and /api/trade/events, fetch-streamed POST /api/companion/chat\", \"HTTPS JSON, SSE\")\n    Rel(api, appvol, \"Reads and writes all volume-pinned stores\", \"fs JSON and JSONL, AES-256-GCM envelope, node:sqlite\")\n    Rel(bots, botvol, \"Persists state tables, decision journal, JSONL audit, health stamp\", \"node:sqlite DatabaseSync, fs\")\n    Rel(bots, api, \"Polls GET /controls every 30s carrying decisionsCursor and subscriptions; GET /bot-credentials per persona when credentialsVersion changes; POST /decisions batches of up to 100 (4 MB cap). The insight relay client has no production caller\", \"HTTP over Fly 6PN to app.process.skynet-capital.internal:8788, shared-secret header\")\n    Rel(api, alpaca, \"Accounts, positions, orders (place, replace, cancel), activities, options chains and snapshots, portfolio history; per-account trade_updates and held-symbol market-data websockets. Live mode only\", \"REST, WSS\")\n    Rel(bots, alpaca, \"Market-data websocket for the 10-symbol universe, GET /clock and the 60s news poll on one shared data credential; paper orders per bot in live mode\", \"REST, WSS\")\n    Rel(api, anthropic, \"Companion tool rounds then a streamed reply; feedback coach turns on claude-haiku-4-5\", \"HTTPS JSON and SSE, x-api-key\")\n    Rel(api, github, \"Files feedback issues, labels and follow-up comments, commits screenshots to feedback-assets, searches similar issues, reads issue state, Actions runs, commits and compare; OAuth login\", \"HTTPS REST, SKYNET_FEEDBACK_GITHUB_TOKEN\")\n    Rel(api, google, \"OAuth code exchange and userinfo, env-gated\", \"HTTPS\")\n    Rel(api, edgar, \"company_tickers.json and recent 8-K submissions, in-memory cache\", \"HTTPS JSON\")\n    Rel(ci, fly, \"Push to main: flyctl deploy --remote-only builds on the Fly builder and deploys skynet-capital; deploy-bots reuses that image when bots-deploy-preflight.mjs says so or force_bots_deploy is dispatched\", \"flyctl\")\n    Rel(ci, fly, \"Dispatch: autonomy-ops sets or unsets secrets and reads status and logs; fly-logs pulls logs\", \"flyctl, autonomy-ops Environment\")\n    Rel(ci, github, \"Runs on pull_request, push main, issue and comment events, workflow_run and workflow_dispatch; opens PRs, comments, labels, cuts releases\", \"Actions, App token\")\n    Rel(ci, anthropic, \"Claude Code sessions for claude.yml, Moneypenny builds, dep-warden and CI repair\", \"claude-code-action, CLAUDE_CODE_OAUTH_TOKEN\")\n    Rel(ci, tests, \"verify on every non-draft PR (heavy steps skipped for docs-only); integration tests on code PRs and on push main\", \"npm run verify, npx playwright test\")\n    Rel(tests, api, \"e2e/ boots serve:dashboard:offline on 8787; SKYNET_DATA_SOURCE=offline swaps in FixtureTradingTransport and ReplayEventStream\", \"child process\")\n    Rel(tests, api, \"Unit specs import src modules with adapter fakes, FixtureTradingTransport for the server services\", \"ESM import\")\n    Rel(tests, bots, \"Specs the live cycle runner, AutonomousTrader, safety and breakers, the bridge clients; tests/engine specs guards and the engine; InMemoryBroker is the double. autonomous-offline-runner.ts has no spec\", \"ESM import\")\n    UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")",
+    "c4component_sources": [
+      {
+        "container": "api",
+        "source": "C4Component\n    title Observatory server - components - composition root src/scripts/serve-dashboard.ts\n    Container(browser, \"Browser app\", \"React shell\", \"app/src\")\n    Container(bots, \"Bot runtime\", \"run-autonomous.ts\", \"Sibling Fly app\")\n    Container_Boundary(api, \"Observatory server, ports 8787 and 8788, one OS process\") {\n        Component(router, \"Router and auth gate\", \"node:http, OAuth 2.0, signed session cookie\", \"handleRequest: public routes, gateRequest, then serveAuthorizedRoute for /events, JSON APIs, writes, legacy 302s and the /app shell from app/dist. src/server/dashboard-server.ts, dashboard-auth-gate.ts, auth/*, app-shell-routes.ts\")\n        Component(hub, \"ObservatoryHub and patch channel\", \"in-memory reducer, SSE with seq ids\", \"Folds fills, ticks and snapshots into DashboardData; diffs once per tick and streams patches to every viewer; /board/frame is the gap fallback. src/server/observatory-hub.ts, observatory/reduce.ts, board-patch-routes.ts, sse.ts, universe/patch-channel.ts\")\n        Component(datasource, \"Data source and syncs\", \"Alpaca REST clients, WebSocket streams, setInterval\", \"Live or offline fixtures switch; per-account trade_updates and held-symbol market-data streams; broker re-sync 60s, month return 10m, history sampler 5m. src/runtime/data-source.ts, alpaca/*, observatory/broker-sync.ts, month-return-sync.ts, history-sampler.ts\")\n        Component(desk, \"Trading desk\", \"order and option tickets, guards\", \"Shares and options orders, drafts, cancel and replace, per-order audit, owner identity gate. src/server/trade-service.ts, option-trade-service.ts, draft-trade-service.ts, account-identity-gate.ts, order-audit-log.ts, src/trading/*\")\n        Component(content, \"Content JSON APIs and guidance\", \"JSON views\", \"/api/board, desk, wire, research, learn, plays, playbooks, networth, equity-curve, quote, bars, chain, symbol search; position guidance with the EDGAR pulse. src/server/content-api-routes.ts, desk-json-routes.ts, wire-routes.ts, guidance-route.ts, src/observatory/*-json-view.ts, src/options/position-guidance*.ts\")\n        Component(companion, \"Moneypenny companion and feedback coach\", \"Anthropic Messages API, streaming, closed read-only tool list\", \"Bounded tool rounds then one reply streamed over SSE; never places orders. The coach on claude-haiku-4-5 shapes a filing. src/companion/*, server/companion-routes.ts, feedback-coach.ts\")\n        Component(feedback, \"Feedback filing and ops status\", \"GitHub REST\", \"Files issues with a build spec, labels and follow-ups, commits screenshots to feedback-assets, searches similar issues, reads issue state, reads Actions runs for deploy lag. src/server/feedback-service.ts, feedback-issue.ts, feedback-images.ts, feedback-similar.ts, feedback-status.ts, ops-status-*.ts\")\n        Component(progression, \"Progression and gates\", \"ledger-derived milestones\", \"Training-wheels ladder, community track, onboarding and desk gates, fog-of-war unlocks. src/server/progression-service.ts, ladder-progress-log.ts, community-progression-service.ts, onboarding-gates.ts, desk-gate.ts, src/domain/progression.ts\")\n        Component(bridge, \"Bots bridge listener\", \"node:http on 8788, shared-secret header, 6PN only\", \"GET /controls with decisionsCursor and subscriptions, GET /bot-credentials, POST /insights, POST /decisions. Path constants live in src/autonomous/bot-controls.ts and bot-credentials-wire.ts. src/server/insights-listener.ts, scripts/dashboard-insights-bridge.ts, bot-credentials-gate.ts\")\n        ComponentDb(stores, \"Durable stores\", \"JSON and JSONL files, AES-256-GCM envelope, node:sqlite decisions.db\", \"participant, allowlist, bot-controls, council, subscription, feedback-log, activity, history, order-audit, progression, ladder-progress, iv-history, app-side DecisionDb. src/storage/*, participants/participant-store.ts, server/*-store.ts, observatory/activity-store.ts, history-store.ts\")\n    }\n    System_Ext(alpaca, \"Alpaca\", \"REST and WSS\")\n    System_Ext(anthropic, \"Anthropic Claude API\", \"Messages\")\n    System_Ext(github, \"GitHub\", \"REST and OAuth\")\n    Rel(browser, router, \"HTTPS, cookie, SSE\")\n    Rel(router, hub, \"streams /events, serves /board/frame\")\n    Rel(router, content, \"GET /api/*\")\n    Rel(router, desk, \"POST /api/trade/*\")\n    Rel(router, companion, \"/api/companion/chat, /api/companion/ack, /feedback/coach\")\n    Rel(router, feedback, \"/api/feedback, /api/ops-status\")\n    Rel(router, progression, \"/api/learn, /api/onboarding, gate checks\")\n    Rel(datasource, hub, \"apply events\")\n    Rel(datasource, alpaca, \"REST, WSS\")\n    Rel(desk, datasource, \"clientFor participant\")\n    Rel(desk, stores, \"order audit, activity\")\n    Rel(content, stores, \"reads ledgers\")\n    Rel(progression, stores, \"reads activity and audit, writes ladder rows\")\n    Rel(companion, anthropic, \"HTTPS stream\")\n    Rel(feedback, github, \"HTTPS REST\")\n    Rel(bots, bridge, \"HTTP 8788\")\n    Rel(bridge, stores, \"decisions, controls, subscriptions, insights\")\n    UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")"
+      },
+      {
+        "container": "bots",
+        "source": "C4Component\n    title Bot runtime - components - src/scripts/run-autonomous.ts\n    Container(api, \"Observatory server bridge\", \"port 8788 on 6PN\", \"GET /controls, GET /bot-credentials, POST /decisions, POST /insights\")\n    System_Ext(alpaca, \"Alpaca\", \"paper REST, market-data WSS, news\")\n    Container_Boundary(bots, \"Bot runtime, Fly app skynet-capital-bots\") {\n        Component(boot, \"Boot and live wiring\", \"env roster, readiness gate, collision guard\", \"Loads enabled personas, primes credentials, refuses two bots on one account, pins an unready persona to observe, builds each LiveBot and its broker. src/scripts/run-autonomous.ts, autonomous-live-wiring.ts, autonomous-boot-credentials.ts, autonomous-sinks.ts, bots/bot-registry.ts, bots/account-guard.ts\")\n        Component(data, \"Shared data connections\", \"Alpaca WebSocket, clock, news REST\", \"One credential feeds the market clock, the price stream for the ten-symbol universe, and the 60s news poll; rotation swaps all three; skipped when SKYNET_DATA_SOURCE=offline. src/scripts/autonomous-data-connections.ts, autonomous-market-clock.ts, alpaca/market-data-stream.ts, news/alpaca-news-client.ts\")\n        Component(trackers, \"Momentum and sentiment trackers\", \"rolling windows\", \"Ticks feed momentum; headlines are scored into sentiment; the overlay builds MarketContext. src/autonomous/momentum-tracker.ts, news/sentiment-tracker.ts, sentiment-scorer.ts, taco-signal.ts\")\n        Component(cycle, \"Live cycle runner and beta scout\", \"15s throttle, market-open gate\", \"Runs every trader once per cycle, then the scout may force small labeled picks; after-close staging optional. src/autonomous/live-cycle.ts, playbooks/beta-scout.ts, scripts/autonomous-scout-staging.ts\")\n        Component(trader, \"Autonomous trader\", \"observe or live mode, cooldowns\", \"Asks the persona, applies guards, drops cooled-down symbols, submits in live mode, emits a DecisionRecord. src/autonomous/autonomous-trader.ts\")\n        Component(personas, \"Personas and playbooks\", \"pure strategy functions\", \"sauron, day-trader, futurist, gold-bug, news-fader and more; playbooks layered by SKYNET_PLAYBOOKS and Playbook Store subscriptions. src/personas/*, playbooks/*, autonomous/subscription-sync.ts\")\n        Component(guards, \"Risk guards and safety\", \"position cap, trade discipline, kill switch\", \"applyGuardsWithVerdicts, daily-loss baseline, halt file, owner suspend. src/engine/guards.ts, autonomous/safety.ts, autonomous/readiness.ts, evals/scenarios\")\n        Component(broker, \"Broker adapters\", \"Alpaca Trading REST over fetchJson\", \"SwappableBotBroker over createBotBroker over AlpacaBrokerAdapter, so a rotated key lands without restart. src/bots/swappable-bot-broker.ts, bot-broker.ts, adapters/alpaca-broker-adapter.ts, alpaca/alpaca-trading-client.ts, trading-transport.ts\")\n        Component(clients, \"Bridge clients\", \"HTTP polls, fail-open\", \"Controls poll every 30s carrying cursor and subscriptions, credential rotation on credentialsVersion change, two-leg decision replication piggybacked on the poll. The insight relay client exists but has no production caller. src/autonomous/bot-controls-client.ts, bot-credentials-client.ts, decision-replication-client.ts, insight-bridge-client.ts\")\n        ComponentDb(state, \"Bots state db\", \"node:sqlite bots-state.db\", \"Momentum, sentiment, cooldown and scout_state tables; dark unless SKYNET_BOTS_DB_PATH. src/autonomous/bots-state-db.ts\")\n        ComponentDb(decisions, \"Decision db and audit\", \"node:sqlite decisions.db plus JSONL\", \"One row per raw intent, retrospectives, playbook verdicts, market signals; funnel computed at read time; JSONL backstop under SKYNET_AUDIT_DIR. src/autonomous/decision-db.ts, jsonl-audit-store.ts, decision-record.ts\")\n        Component(health, \"Health stamp\", \"JSON file on the volume\", \"Running commit, bridge verdict, last controls poll, restore result. src/autonomous/bots-health-file.ts\")\n    }\n    Rel(boot, cycle, \"wires traders and scout\")\n    Rel(data, trackers, \"price events, articles\")\n    Rel(data, alpaca, \"WSS ticks, clock, news\")\n    Rel(trackers, cycle, \"MarketContext\")\n    Rel(cycle, trader, \"evaluate per bot\")\n    Rel(trader, personas, \"assess\")\n    Rel(trader, guards, \"guard and halt check\")\n    Rel(trader, broker, \"submit in live mode\")\n    Rel(broker, alpaca, \"paper orders\", \"REST\")\n    Rel(trader, decisions, \"DecisionRecord\")\n    Rel(trader, state, \"cooldowns\")\n    Rel(trackers, state, \"windows\")\n    Rel(clients, api, \"poll and post\", \"HTTP 8788\")\n    Rel(clients, guards, \"owner suspend, mode\")\n    Rel(clients, decisions, \"replicates rows\")\n    Rel(clients, broker, \"rotated credentials\")\n    Rel(boot, health, \"stamps\")\n    UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")"
+      },
+      {
+        "container": "browser",
+        "source": "C4Component\n    title Browser app - components - app/src, served at /app from app/dist\n    Person(member, \"Member\", \"Signed-in viewer\")\n    Container(api, \"Observatory server\", \"port 8787\", \"JSON APIs, SSE, auth\")\n    Container_Boundary(app, \"Browser app, React 19 shell\") {\n        Component(entry, \"Entry and router\", \"TanStack Router basepath /app, React Query client\", \"Creates the router from the generated route tree and mounts the app; Rsbuild emits app/dist with assetPrefix /app/. app/src/main.tsx, routeTree.gen.ts, live/search-params.ts\")\n        Component(root, \"Root shell route\", \"React\", \"Topbar views, market clock, status pill, the Moneypenny rail toggle, keyboard chords. app/src/routes/__root.tsx, shell/frame.tsx, status-pill.tsx, market-session.tsx\")\n        Component(routes, \"Page routes\", \"TanStack file routes\", \"accounts, activity, trade, learn, playbooks, research, settings, onboarding, join, feedback, leaderboard, and /u/:id profile pages with decisions, pulse, thesis, playbooks. app/src/routes/*.tsx\")\n        Component(channel, \"Live board channel\", \"EventSource, React Query cache, Zustand seq\", \"One SSE channel per visible metric; hello, patch and resync events; a seq gap means resnapshot from /api/board. app/src/live/channel.ts, board.ts, connection.ts\")\n        Component(clients, \"API clients\", \"fetch, same-origin cookie, postJson\", \"desk, orders, options, quote, bars, wire, research, learn, settings, join, controls, admin, council, ops-status, playbooks, guidance, alerts, desk-events SSE. app/src/live/*.ts\")\n        Component(moneypenny, \"Moneypenny rail store\", \"Zustand, fetch-streamed SSE\", \"Routes a member message to scripted replies, the coach, or POST /api/companion/chat; holds drafted filings. app/src/live/moneypenny.ts, moneypenny-script.ts, moneypenny-filing.ts, companion.ts, shell/moneypenny-rail.tsx\")\n        Component(shell, \"Shell components\", \"React function components\", \"Board, positions, chain and straddle, draft order builder, guidance, mission control, admin cards, milestones, gates, working orders. app/src/shell/*.tsx\")\n        Component(charts, \"Chart mounts\", \"lightweight-charts\", \"Price, hero, thesis and payoff charts, treemap and sparklines mounted outside the React render. app/src/shell/chart-mount.ts, hero-chart-mount.ts, thesis-chart-mount.ts, treemap.ts, payoff-chart.tsx\")\n        Component(prefs, \"Per-viewer preferences\", \"localStorage\", \"Theme, density, saved views, rail state. app/src/shell/prefs.ts, saved-views.ts, live/moneypenny-storage.ts\")\n        Component(styles, \"Styles\", \"CSS\", \"app/src/styles\")\n    }\n    Rel(member, root, \"clicks, types\")\n    Rel(entry, root, \"renders\")\n    Rel(root, routes, \"Outlet\")\n    Rel(routes, shell, \"compose\")\n    Rel(routes, channel, \"subscribe per metric\")\n    Rel(routes, clients, \"useQuery, mutations\")\n    Rel(shell, charts, \"mount\")\n    Rel(shell, prefs, \"read and write\")\n    Rel(root, moneypenny, \"rail\")\n    Rel(channel, api, \"GET /events?by=metric, GET /api/board\", \"SSE, JSON\")\n    Rel(clients, api, \"GET and POST /api/*, plus /feedback/coach\", \"JSON\")\n    Rel(moneypenny, api, \"GET /api/companion, POST /api/companion/chat, POST /api/companion/ack\", \"SSE over fetch\")\n    UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")"
+      }
+    ],
+    "components_by_container": [
+      {
+        "container": "api",
+        "components": [
+          {
+            "id": "router",
+            "label": "Router and auth gate",
+            "path": "src/server/dashboard-server.ts, src/server/dashboard-auth-gate.ts, src/server/auth/*, src/server/app-shell-routes.ts, src/server/legacy-redirects.ts, src/server/dashboard-board-routes.ts",
+            "responsibility": "createServer handler: public routes (incl. /tower and /three/scene.js), gateRequest (OAuth session or password), then /events, /board/frame, JSON APIs, write APIs, research docs, legacy 302s, the /app SPA fallback, and the / → /app/ redirect."
+          },
+          {
+            "id": "hub",
+            "label": "Observatory hub and patch channel",
+            "path": "src/server/observatory-hub.ts, src/observatory/reduce.ts, src/server/board-patch-routes.ts, src/server/sse.ts, src/universe/patch-channel.ts, src/universe/world-patch.ts, src/observatory/ceremony-channel.ts",
+            "responsibility": "Single in-memory DashboardData folded by a pure reducer; one board diff per hub tick shared by every SSE viewer with seq ids, hello/patch/resync events and Last-Event-ID replay."
+          },
+          {
+            "id": "datasource",
+            "label": "Data source and syncs",
+            "path": "src/runtime/data-source.ts, src/alpaca/*, src/adapters/fixture-trading-transport.ts, src/adapters/replay-event-stream.ts, src/observatory/broker-sync.ts, src/observatory/month-return-sync.ts, src/observatory/history-sampler.ts, src/observatory/history-boot.ts",
+            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; the three timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub."
+          },
+          {
+            "id": "desk",
+            "label": "Trading desk",
+            "path": "src/server/trade-service.ts, src/server/option-trade-service.ts, src/server/draft-trade-service.ts, src/server/trade-api-routes.ts, src/server/trade-orders-routes.ts, src/server/option-api-routes.ts, src/server/draft-order-route.ts, src/server/account-identity-gate.ts, src/server/order-audit-log.ts, src/trading/*, src/scripts/dashboard-desk-wiring.ts",
+            "responsibility": "Member order flow: review/submit/cancel/replace for shares and options, draft builder, per-order audit log, and the identity gate that only lets an owner trade their own linked account."
+          },
+          {
+            "id": "content",
+            "label": "Content JSON APIs and guidance",
+            "path": "src/server/content-api-routes.ts, src/server/desk-json-routes.ts, src/server/wire-routes.ts, src/server/networth-api-routes.ts, src/server/equity-curve-routes.ts, src/server/quote-route.ts, src/server/bars-route.ts, src/server/option-chain-route.ts, src/server/symbol-search-route.ts, src/server/research-service.ts, src/server/learn-api-routes.ts, src/server/plays-api-routes.ts, src/server/playbooks-api-routes.ts, src/server/guidance-route.ts, src/server/guidance-pulse.ts, src/observatory/*-json-view.ts, src/options/position-guidance*.ts",
+            "responsibility": "Read-only JSON twins of every view the shell renders, plus position guidance whose pulse checks live spot/chain/EDGAR freshness."
+          },
+          {
+            "id": "companion",
+            "label": "Moneypenny companion and feedback coach",
+            "path": "src/companion/*, src/server/companion-routes.ts, src/server/companion-message-log.ts, src/server/feedback-coach.ts, src/server/feedback-coach-*.ts, src/http/anthropic-reply.ts, src/scripts/dashboard-companion.ts",
+            "responsibility": "Bounded tool rounds over a closed read-only tool list then one streamed reply over SSE; the coach shapes a filing into a build spec; structurally cannot reach any order-placing function (tests/companion/companion-no-order-path.spec.ts)."
+          },
+          {
+            "id": "feedback",
+            "label": "Feedback filing and ops status",
+            "path": "src/server/feedback-service.ts, feedback-issue.ts, feedback-images.ts, feedback-status.ts, feedback-followup.ts, feedback-log.ts, feedback-api-routes.ts, feedback-routes.ts, github-api.ts, ops-status-service.ts, ops-status-deploy-lag.ts, ops-status-deploy-verdict.ts, ops-status-routes.ts, src/scripts/dashboard-feedback.ts, src/scripts/dashboard-ops-status.ts",
+            "responsibility": "Files GitHub issues with pseudonymous attribution and a build spec, commits screenshots to the feedback-assets branch, reads issue state for 'your recent feedback', and reads Actions runs to answer 'is main deployed' plus the bots-poll liveness signal."
+          },
+          {
+            "id": "progression",
+            "label": "Progression and gates",
+            "path": "src/server/progression-service.ts, progression-store.ts, ladder-progress-log.ts, ladder-activity-detector.ts, community-progression-service.ts, community-progression-store.ts, onboarding-gates.ts, onboarding-api-routes.ts, desk-gate.ts, settings-api-routes.ts, src/domain/progression.ts, src/domain/community-progression.ts, src/domain/onboarding.ts, src/scripts/dashboard-ladder-progress.ts",
+            "responsibility": "Training-wheels ladder and community track derived from the activity/order-audit/feedback ledgers, onboarding gates, and the fog-of-war unlocks the shell renders as visible-named-disabled-counted doors."
+          },
+          {
+            "id": "bridge",
+            "label": "Bots bridge listener",
+            "path": "src/server/insights-listener.ts, src/scripts/dashboard-insights-bridge.ts, src/server/bot-credentials-gate.ts, src/server/bot-controls-store.ts, src/autonomous/bot-controls.ts, src/autonomous/decision-wire.ts, src/autonomous/controls-poll-wire.ts, src/autonomous/subscriptions-wire.ts, src/autonomous/insight-record.ts",
+            "responsibility": "Second node:http server on 8788 (6PN only): GET /controls returns Mission Control state + decisionsCursor + Playbook Store subscriptions and records the poll as liveness; GET /bot-credentials hands a bot its own rotated key; POST /insights and POST /decisions land in the app-side stores."
+          },
+          {
+            "id": "stores",
+            "label": "Durable stores",
+            "path": "src/storage/json-file-store.ts, jsonl-store.ts, secure-envelope.ts, parse-guards.ts, in-memory-keyed-store.ts; src/participants/participant-store.ts; src/server/auth/allowlist-store.ts; src/server/bot-controls-store.ts, subscription-store.ts, council-store.ts, owner-link-store.ts, progression-store.ts, feedback-log.ts, companion-message-log.ts, ladder-progress-log.ts, order-audit-log.ts; src/observatory/activity-store.ts, history-store.ts; src/adapters/jsonl-alert-dismissals.ts; src/autonomous/jsonl-insight-store.ts, decision-db.ts (app-side); src/runtime/volume-guard.ts",
+            "responsibility": "File-backed stores under /data on the skynet_data volume; credentials sealed with AES-256-GCM; every path pinned in fly.toml and gated by tests/arch/volume-persistence.spec.ts."
+          }
+        ]
+      },
+      {
+        "container": "bots",
+        "components": [
+          {
+            "id": "boot",
+            "label": "Boot and live wiring",
+            "path": "src/scripts/run-autonomous.ts, src/scripts/autonomous-live-wiring.ts, src/scripts/autonomous-boot-credentials.ts, src/scripts/autonomous-sinks.ts, src/scripts/autonomous-offline-runner.ts, src/bots/bot-registry.ts, src/bots/bot.ts, src/bots/account-guard.ts",
+            "responsibility": "Resolves the enabled roster (SKYNET_AUTONOMOUS_BOTS, hardcore overrides), primes per-bot Alpaca credentials (env or bridge), refuses account collisions, gates each persona's mode on its readiness pack, and wires every LiveBot; offline mode replays fixtures against in-memory brokers."
+          },
+          {
+            "id": "data",
+            "label": "Shared data connections",
+            "path": "src/scripts/autonomous-data-connections.ts, src/scripts/autonomous-market-clock.ts, src/alpaca/market-data-stream.ts, src/alpaca/market-data-stream-events.ts, src/news/alpaca-news-client.ts",
+            "responsibility": "One credential (bots[0]) feeds the Alpaca clock refresh, the wss://stream.data.alpaca.markets/v2/iex price stream for UNIVERSE, and the 60s news poll; replaceCredentials swaps all three on rotation."
+          },
+          {
+            "id": "trackers",
+            "label": "Momentum and sentiment trackers",
+            "path": "src/autonomous/momentum-tracker.ts, src/news/sentiment-tracker.ts, src/news/sentiment-scorer.ts, src/news/taco-signal.ts, src/indicators/*",
+            "responsibility": "Rolling price window per symbol (SKYNET_MOMENTUM_WINDOW) and scored-headline window (SKYNET_SENTIMENT_WINDOW) overlaid into the MarketContext each cycle reads."
+          },
+          {
+            "id": "cycle",
+            "label": "Live cycle runner and beta scout",
+            "path": "src/autonomous/live-cycle.ts, src/playbooks/beta-scout.ts, src/scripts/autonomous-scout-staging.ts, src/autonomous/equity-watch.ts, src/autonomous/day-open-equity.ts",
+            "responsibility": "Every 15s while the market is open: read equity, run each trader, then let the beta scout force up to N labeled picks when nothing organic traded (SKYNET_BETA_FORCING; '+stage' arms after-close staging)."
+          },
+          {
+            "id": "trader",
+            "label": "Autonomous trader",
+            "path": "src/autonomous/autonomous-trader.ts, src/autonomous/decision-record.ts, src/autonomous/decision-funnel.ts",
+            "responsibility": "Per-persona evaluate(): assess → applyGuardsWithVerdicts → cooldown filter → submit only in live mode; emits one DecisionRecord per cycle; swapRoster lets a Playbook Store change land without restart."
+          },
+          {
+            "id": "personas",
+            "label": "Personas and playbooks",
+            "path": "src/personas/*.ts (sauron, sauron-hardcore, day-trader, futurist, gold-bug, news-fader, retail-investor, rumor-trader, banker, prospector, configured-persona), src/playbooks/playbook.ts, registry.ts, tactical-playbook.ts, with-playbooks.ts, src/autonomous/subscription-sync.ts, src/subscriptions/*",
+            "responsibility": "Pure strategy functions over MarketContext; playbooks enabled by SKYNET_PLAYBOOKS and by member subscriptions arriving on the /controls poll."
+          },
+          {
+            "id": "guards",
+            "label": "Risk guards and safety",
+            "path": "src/engine/guards.ts, src/autonomous/safety.ts, src/autonomous/readiness.ts, src/autonomous/doctrine-effectiveness-breaker.ts, src/evals/scenarios/*, src/domain/earnings-calendar.ts",
+            "responsibility": "Position cap (SKYNET_MAX_POSITION_PCT), S2/E1 trade discipline around prints, daily-loss circuit breaker, halt file kill switch (SKYNET_HALT_FILE), owner suspend from Mission Control, readiness scenarios that pin an unready persona to observe."
+          },
+          {
+            "id": "broker",
+            "label": "Broker adapters",
+            "path": "src/bots/swappable-bot-broker.ts, src/bots/bot-broker.ts, src/adapters/alpaca-broker-adapter.ts, src/alpaca/alpaca-trading-client.ts, src/alpaca/trading-transport.ts, src/ports/broker.ts, src/http/fetch-json.ts",
+            "responsibility": "BrokerPort over Alpaca's paper Trading API; the swappable wrapper lets a rotated credential replace the transport in place."
+          },
+          {
+            "id": "clients",
+            "label": "Bridge clients",
+            "path": "src/autonomous/bot-controls-client.ts, bot-credentials-client.ts, bot-credential-fingerprint.ts, insight-bridge-client.ts, decision-replication-client.ts, controls-poll-wire.ts, decision-wire.ts, subscriptions-wire.ts, insight-record.ts",
+            "responsibility": "Fail-open pollers against SKYNET_INSIGHTS_BRIDGE_URL: controls every 30s (carrying the app's decisionsCursor and subscriptions back), credential rotation, insight relay, and the two-leg decision replication (ascending + newest-rows preview)."
+          },
+          {
+            "id": "state",
+            "label": "Bots state db",
+            "path": "src/autonomous/bots-state-db.ts",
+            "responsibility": "node:sqlite current-state tables (momentum, sentiment, cooldowns, scout day-state) at SKYNET_BOTS_DB_PATH; restored at boot, stamped in health.json."
+          },
+          {
+            "id": "decisions",
+            "label": "Decision db and audit",
+            "path": "src/autonomous/decision-db.ts, decision-db-rows.ts, decision-db-migration.ts, decision-retrospectives.ts, jsonl-audit-store.ts, src/storage/jsonl-store.ts",
+            "responsibility": "Append-only decision journal (one intents row per raw intent, retrospectives, funnel) in a sibling SQLite file; JSONL audit under SKYNET_AUDIT_DIR as the backstop and migration source."
+          },
+          {
+            "id": "health",
+            "label": "Health stamp",
+            "path": "src/autonomous/bots-health-file.ts",
+            "responsibility": "Writes /data/health.json (GIT_SHA, pid, bootedAt, bridge verdict, lastControlsPollAt, restore result) so scripts/smoke-bots.sh can read the process's own word without log lag."
+          }
+        ]
+      },
+      {
+        "container": "browser",
+        "components": [
+          {
+            "id": "entry",
+            "label": "Entry and router",
+            "path": "app/src/main.tsx, app/src/routeTree.gen.ts, app/src/live/search-params.ts, app/rsbuild.config.ts",
+            "responsibility": "QueryClientProvider + RouterProvider with basepath /app and custom search-param codec; Rsbuild emits app/dist with assetPrefix /app/."
+          },
+          {
+            "id": "root",
+            "label": "Root shell route",
+            "path": "app/src/routes/__root.tsx, app/src/shell/frame.tsx, app/src/shell/status-pill.tsx, app/src/shell/market-session.tsx, app/src/shell/keyboard.tsx",
+            "responsibility": "Topbar view navigation, market clock, fleet-ops status pill, settings/sign-out actions, the Moneypenny rail toggle, keyboard chords, and the Outlet every page renders into."
+          },
+          {
+            "id": "routes",
+            "label": "Page routes",
+            "path": "app/src/routes/accounts.tsx, activity.tsx, trade.tsx, learn.tsx, learn_.trading.tsx, playbooks.tsx, research.tsx, settings.tsx, onboarding.tsx, join.tsx, feedback.tsx, leaderboard.tsx, index.tsx, u.$id.tsx, u.$id.index.tsx, u.$id.decisions.tsx, u.$id.pulse.tsx, u.$id.thesis.tsx, u.$id.playbooks.tsx",
+            "responsibility": "One TanStack file route per view; each composes shell sections and subscribes to the live layer."
+          },
+          {
+            "id": "channel",
+            "label": "Live board channel",
+            "path": "app/src/live/channel.ts, app/src/live/board.ts, app/src/live/connection.ts",
+            "responsibility": "One EventSource per visible metric; hello/patch/resync events applied to the React Query cache; Zustand holds connection status + seq; a seq gap triggers a /api/board resnapshot."
+          },
+          {
+            "id": "clients",
+            "label": "API clients",
+            "path": "app/src/live/*.ts (desk, orders, options, quote, quote-query, bars, wire, research, learn, settings, join, controls, council, ops-status, playbooks, playbook-store, plays, guidance, alerts, networth, equity-curve, desk-events, symbol-search, onboarding, admin, feedback, post)",
+            "responsibility": "Typed fetch wrappers over /api/* with same-origin cookies; postJson for every write; desk-events.ts opens the second SSE stream /api/trade/events."
+          },
+          {
+            "id": "moneypenny",
+            "label": "Moneypenny rail store",
+            "path": "app/src/live/moneypenny.ts, moneypenny-script.ts, moneypenny-filing.ts, moneypenny-storage.ts, companion.ts, app/src/shell/moneypenny-rail.tsx",
+            "responsibility": "Decides whether a member message is scripted, goes to the feedback coach, or streams from POST /api/companion; acks messages for the ladder gate; holds drafted filings the member must send."
+          },
+          {
+            "id": "shell",
+            "label": "Shell components",
+            "path": "app/src/shell/*.tsx (board-section, positions-*, accounts-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
+            "responsibility": "Presentational React components for every section; gates render fog-of-war doors visible, named, disabled and counted."
+          },
+          {
+            "id": "charts",
+            "label": "Chart mounts",
+            "path": "app/src/shell/chart-mount.ts, chart-data.ts, chart-studies.ts, hero-chart-mount.ts, hero-chart-data.ts, thesis-chart-mount.ts, treemap.ts, payoff-chart.tsx, roster-sparkline.tsx",
+            "responsibility": "lightweight-charts instances mounted imperatively outside React's render cycle; studies (SMA/EMA/RSI/Bollinger) computed client-side."
+          },
+          {
+            "id": "prefs",
+            "label": "Per-viewer preferences",
+            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, decision-pager.tsx, new-high-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts",
+            "responsibility": "localStorage-backed per-browser conveniences (theme, density, saved views, default account, dismissed ceremonies) — never shared state."
+          },
+          {
+            "id": "styles",
+            "label": "Styles",
+            "path": "app/src/styles",
+            "responsibility": "Global CSS imported from main.tsx (index.css) — brand tokens per docs/BRAND.md."
+          }
+        ]
+      }
+    ],
+    "validation": {
+      "context_ok": true,
+      "container_ok": true,
+      "component_ok": "true for all three: 'Observatory server - C4 Component', 'Bot runtime - C4 Component', 'Browser app - C4 Component' each returned valid=true, diagramType=c4",
+      "errors": "None. All five diagrams returned valid=true (responses were spilled to files and read back with jq: title/valid/diagramType/svg length).",
+      "tool_used": "mcp__Mermaid_Chart__validate_and_render_mermaid_diagram"
+    },
+    "undocumented": [
+      "src/autonomous/decision-replication-client.ts + decision-wire.ts + the POST /decisions route in src/server/insights-listener.ts (the two-leg bots→app decision replication, incl. the 2026-09-23 cursor bug note) — no doc under docs/ mentions 'replication' at all; only code headers and issue #2287 describe it.",
+      "src/observatory/month-return-sync.ts (10-minute Alpaca portfolio-history poll feeding the league's 1M return) — no doc names it or the '1M return' mechanic.",
+      "src/server/networth-api-routes.ts + src/observatory/networth-json-view.ts (/api/accounts/networth) — no doc mentions net worth.",
+      "src/server/community-progression-service.ts / community-progression-store.ts + src/domain/community-progression.ts and SKYNET_COMMUNITY_PROGRESSION_FILE (deliberately ephemeral per tests/arch/volume-persistence.spec.ts) — no doc names the community track's files or its ephemeral-store decision.",
+      "src/server/ladder-progress-log.ts + ladder-activity-detector.ts + src/scripts/dashboard-ladder-progress.ts and SKYNET_LADDER_PROGRESS_DIR (the durable graduated-ladder record) — only fly.toml's comment describes it; no doc under docs/ does.",
+      "src/http/ (fetch-json.ts, the single fetch seam every Alpaca/GitHub/Anthropic call rides; anthropic-reply.ts) — no doc names the directory or fetchJson.",
+      "src/indicators/ (sma, ema, rsi, bollinger) and src/math/num.ts — no doc names either directory.",
+      "src/news/ as a subsystem: sentiment-scorer.ts, sentiment-tracker.ts, taco-signal.ts and SKYNET_TACO_WATCHLIST — the news feed gets one prose mention; the scorer, the TACO signal and its watchlist env var get none.",
+      "src/options/unusual-flow*.ts, in-memory-unusual-flow-store.ts, src/adapters/alpaca-options-flow.ts, src/ports/options-flow.ts and the CLI src/scripts/scan-unusual-flow.ts with SKYNET_FLOW_DIR — no doc mentions unusual flow or the env var.",
+      "src/research/iv-history-store.ts, iv-instrument.ts, iv-rank.ts, iv-record.ts, in-memory-iv-history.ts (IV rank/history instrument) — no doc mentions it.",
+      "src/server/symbol-search-route.ts (/api/symbols/search), quote-route.ts (/api/trade/quote), bars-route.ts (/api/trade/bars) — none named in any doc.",
+      "src/scripts/record-session.ts, capture-option-lifecycle.ts, backfill-trade-activity.ts, backfill-activity-events.ts (package.json scripts record:session, capture:lifecycle, backfill:activity, backfill:activity-events) — no doc names these operational CLIs.",
+      ".github/workflows/companion-eval.yml (its own header says it has never been run end to end) — no doc under docs/ mentions it; docs/ROUTINES.md's 'every scheduled/automation row' table does not list it (it is dispatch-only, so arguably out of that table's scope).",
+      "src/server/desk-events-route.ts + app/src/live/desk-events.ts (the second SSE stream, /api/trade/events, heartbeat ping) — one incidental mention; no doc describes that the app has two SSE streams, not one.",
+      "The app-side replicated decisions.db at SKYNET_INSIGHTS_DIR/decisions.db (src/scripts/dashboard-insights-bridge.ts seedAppDecisionDb) — docs/plans/trade-insights-loop.md describes the JSONL insight relay but not that the observatory now also holds a SQLite copy of the bots' decision journal."
+    ],
+    "uncertainties": [
+      "Fly.io appears in the Context diagram as an external system although the runtime never calls it — only CI does via flyctl (ops-status-deploy-lag.ts explicitly declines the Fly machines API). It is there because the task asked for the deploy host; read the GitHub→Fly relation as build-time, not runtime.",
+      "The 8788 bridge listener is the SAME OS process as the 8787 server (src/scripts/serve-dashboard.ts → dashboard-insights-bridge.ts). I modelled it as a component of the Observatory server, not a separate container; someone drawing deployment units by port would split it.",
+      "To stay ≤15 elements, the Observatory-server component diagram omits Google and SEC EDGAR as drawn boxes (they are named in the router/content descriptions), and the Container diagram folds the three.js tower scene (src/three/scene-main.ts → public/three/scene.js, served at /tower and /three/scene.js by dashboard-board-routes.ts) into the server's description rather than a separate container.",
+      "docs coverage was measured by grep over docs/ excluding docs/STRUCTURE-graph.md (a generated Graphify node list that names almost every file) and docs/digests; the loose prose pass also excluded docs/JOURNEYS and docs/research. An entry in `undocumented` means no doc names the path and no obvious prose synonym hit; a doc could still describe the behaviour under wording I did not search.",
+      "'Bot runtime has no HTTP listener' rests on fly.bots.toml having no [http_service] plus a grep for createServer/.listen( across src/autonomous, src/scripts/run-autonomous.ts, src/scripts/autonomous-*.ts, src/bots, src/engine, src/personas, src/playbooks returning nothing; transitive imports outside those directories were not exhaustively walked.",
+      "The CI lanes' calls to the Anthropic API go through anthropics/claude-code-action, which is a third-party action whose network behaviour I inferred, not read.",
+      "Timer cadences quoted (broker re-sync 60s, month-return 10m, history sampler 5m, controls poll 30s, news poll 60s, live eval throttle 15s) come from defaults in code comments/constants; the deployed value could be overridden where a constructor takes intervalMs.",
+      "The Playwright e2e boot serves the shell fully OPEN (no OAuth env) per playwright.config.ts; the Test-suites container therefore exercises the router's password/auth branches only via playwright.auth.config.ts and unit specs.",
+      "serve-dashboard.ts was reported changed on disk mid-task; `git status`/`git diff` showed it clean, so I treated the earlier read as current."
+    ],
+    "sources": [
+      "/home/user/skynet-capital/package.json",
+      "/home/user/skynet-capital/app/package.json",
+      "/home/user/skynet-capital/mise.toml",
+      "/home/user/skynet-capital/Dockerfile",
+      "/home/user/skynet-capital/fly.toml",
+      "/home/user/skynet-capital/fly.bots.toml",
+      "/home/user/skynet-capital/.env.example",
+      "/home/user/skynet-capital/.releaserc.json",
+      "/home/user/skynet-capital/.gitignore",
+      "/home/user/skynet-capital/src/scripts/serve-dashboard.ts",
+      "/home/user/skynet-capital/src/scripts/run-autonomous.ts",
+      "/home/user/skynet-capital/src/scripts/autonomous-live-wiring.ts",
+      "/home/user/skynet-capital/src/scripts/autonomous-sinks.ts",
+      "/home/user/skynet-capital/src/scripts/autonomous-data-connections.ts",
+      "/home/user/skynet-capital/src/scripts/dashboard-insights-bridge.ts",
+      "/home/user/skynet-capital/src/scripts/dashboard-ops-status.ts",
+      "/home/user/skynet-capital/src/scripts/dashboard-companion.ts",
+      "/home/user/skynet-capital/src/scripts/dashboard-feedback.ts",
+      "/home/user/skynet-capital/src/scripts/dashboard-access.ts",
+      "/home/user/skynet-capital/src/scripts/dashboard-desk-wiring.ts",
+      "/home/user/skynet-capital/src/server/dashboard-server.ts",
+      "/home/user/skynet-capital/src/server/wire-routes.ts",
+      "/home/user/skynet-capital/src/server/content-api-routes.ts",
+      "/home/user/skynet-capital/src/server/insights-listener.ts",
+      "/home/user/skynet-capital/src/server/observatory-hub.ts",
+      "/home/user/skynet-capital/src/server/app-shell-routes.ts",
+      "/home/user/skynet-capital/src/server/github-api.ts",
+      "/home/user/skynet-capital/src/server/feedback-issue.ts",
+      "/home/user/skynet-capital/src/server/feedback-status.ts",
+      "/home/user/skynet-capital/src/server/feedback-images.ts",
+      "/home/user/skynet-capital/src/server/ops-status-deploy-lag.ts",
+      "/home/user/skynet-capital/src/server/guidance-pulse.ts",
+      "/home/user/skynet-capital/src/server/council-store.ts",
+      "/home/user/skynet-capital/src/server/bot-credentials-gate.ts",
+      "/home/user/skynet-capital/src/server/auth/providers.ts",
+      "/home/user/skynet-capital/src/server/auth/alpaca-connect.ts",
+      "/home/user/skynet-capital/src/autonomous/autonomous-trader.ts",
+      "/home/user/skynet-capital/src/autonomous/bots-state-db.ts",
+      "/home/user/skynet-capital/src/autonomous/decision-db.ts",
+      "/home/user/skynet-capital/src/autonomous/decision-replication-client.ts",
+      "/home/user/skynet-capital/src/autonomous/bot-controls-client.ts",
+      "/home/user/skynet-capital/src/autonomous/insight-bridge-client.ts",
+      "/home/user/skynet-capital/src/autonomous/bots-health-file.ts",
+      "/home/user/skynet-capital/src/http/fetch-json.ts",
+      "/home/user/skynet-capital/src/http/anthropic-reply.ts",
+      "/home/user/skynet-capital/src/alpaca/trading-transport.ts",
+      "/home/user/skynet-capital/src/alpaca/market-data-stream.ts",
+      "/home/user/skynet-capital/src/alpaca/trade-updates-stream.ts",
+      "/home/user/skynet-capital/src/adapters/edgar-filings.ts",
+      "/home/user/skynet-capital/src/news/alpaca-news-client.ts",
+      "/home/user/skynet-capital/src/companion/companion-chat.ts",
+      "/home/user/skynet-capital/src/companion/companion-tools.ts",
+      "/home/user/skynet-capital/src/observatory/history-sampler.ts",
+      "/home/user/skynet-capital/src/observatory/broker-sync.ts",
+      "/home/user/skynet-capital/src/observatory/month-return-sync.ts",
+      "/home/user/skynet-capital/src/runtime/run-cycle.ts",
+      "/home/user/skynet-capital/src/runtime/data-source.ts",
+      "/home/user/skynet-capital/src/participants/participant-store.ts",
+      "/home/user/skynet-capital/src/storage/secure-envelope.ts",
+      "/home/user/skynet-capital/src/three/serve-scene.ts",
+      "/home/user/skynet-capital/app/rsbuild.config.ts",
+      "/home/user/skynet-capital/app/src/main.tsx",
+      "/home/user/skynet-capital/app/src/routes/__root.tsx",
+      "/home/user/skynet-capital/app/src/live/channel.ts",
+      "/home/user/skynet-capital/app/src/live/connection.ts",
+      "/home/user/skynet-capital/app/src/live/post.ts",
+      "/home/user/skynet-capital/app/src/live/companion.ts",
+      "/home/user/skynet-capital/.github/workflows/pipeline.yml",
+      "/home/user/skynet-capital/.github/workflows/claude.yml",
+      "/home/user/skynet-capital/.github/workflows/moneypenny-events.yml",
+      "/home/user/skynet-capital/.github/workflows/moneypenny-repair.yml",
+      "/home/user/skynet-capital/.github/workflows/autonomy-ops.yml",
+      "/home/user/skynet-capital/.github/workflows/fly-logs.yml",
+      "/home/user/skynet-capital/.github/workflows/companion-eval.yml",
+      "/home/user/skynet-capital/scripts/smoke.sh",
+      "/home/user/skynet-capital/scripts/duel-log.mjs",
+      "/home/user/skynet-capital/scripts/dev-tower.mjs",
+      "/home/user/skynet-capital/rstest.config.ts",
+      "/home/user/skynet-capital/playwright.config.ts",
+      "/home/user/skynet-capital/app/playwright-ct.config.ts",
+      "/home/user/skynet-capital/e2e/playwright.shared.ts",
+      "/home/user/skynet-capital/tests/arch/volume-persistence.spec.ts",
+      "/home/user/skynet-capital/docs/LIVING-UNIVERSE.md",
+      "/home/user/skynet-capital/docs/ENGINEERING.md",
+      "/home/user/skynet-capital/docs/AUTONOMY-DEPLOY.md",
+      "/home/user/skynet-capital/docs/DEPLOY.md",
+      "/home/user/skynet-capital/docs/DASHBOARD.md",
+      "/home/user/skynet-capital/docs/AUTONOMOUS.md",
+      "/home/user/skynet-capital/docs/ROUTINES.md",
+      "/home/user/skynet-capital/docs/adr"
+    ]
+  },
+  "operating-model": {
+    "scope": "The OPERATING MODEL of skynet-capital as a system: the machinery that runs the repo rather than the trading product itself. Covered: the seven GitHub Actions workflows (.github/workflows/*), the Moneypenny event and repair lanes (docs/MONEYPENNY.md, scripts/moneypenny/*), the fitness gates and coaches (docs/COACHES.md, scripts/*-scan.mjs, tests/arch/*), the ship loop and platter (scripts/ship.sh), the Workflow scripts (.claude/workflows/*.js), skills and agents (.claude/skills, .claude/agents), the one live claude.ai Routine (secretary digest), the event-research protocol (docs/process/EVENT-RESEARCH.md + scripts/event-scan.mjs family), the envelope (envelope.json + scripts/envelope-scan.mjs), and Graphify (scripts/refresh-graph.sh). The two deployed Fly apps appear as containers only because the pipeline deploys them and the dashboard is where member feedback enters the loop. Every element cites a file; the repository was read-only at /home/user/skynet-capital (HEAD 245b952).",
+    "persons": [
+      {
+        "id": "eric",
+        "label": "Eric",
+        "evidence": "CLAUDE.md 'Hard boundaries' (governance and credentials are his); .github/workflows/pipeline.yml arm-auto-merge job honours the hold-merge label he applies; .github/workflows/autonomy-ops.yml 'environment: autonomy-ops' required reviewers; docs/ROUTINES.md 'Arming is Eric's, always'; moneypenny-events.yml 'the label IS the authorization' and the OWNER/MEMBER/COLLABORATOR ready-comment gate (#823)"
+      },
+      {
+        "id": "member",
+        "label": "Member",
+        "evidence": "src/server/feedback-api-routes.ts (POST /api/feedback), src/server/feedback-issue.ts labelsFor() files the feedback label, src/scripts/dashboard-feedback.ts warns when SKYNET_FEEDBACK_GITHUB_TOKEN is unset; .github/prompts/feedback-build.md routes ambiguity to the member via needs-info"
+      },
+      {
+        "id": "claude",
+        "label": "Claude interactive session",
+        "evidence": ".claude/settings.json (outputStyle Orient, SessionStart hooks), .claude/hooks/session-start.sh (CLAUDE_CODE_REMOTE branch), .claude/skills/*/SKILL.md (16 skills), .claude/agents/*.md (13 agents), .claude/workflows/grind.js and symbol-sweep.js, docs/DELEGATION.md; unattended lanes are modelled as containers, not persons"
+      }
+    ],
+    "external_systems": [
+      {
+        "id": "github",
+        "label": "GitHub",
+        "evidence": ".github/workflows/*.yml 'on:' triggers; .github/actions/app-token/action.yml mints an App installation token via actions/create-github-app-token@v3 from vars.APP_CLIENT_ID + secrets.APP_PRIVATE_KEY; scripts/ship.sh calls https://api.github.com over REST; scripts/moneypenny/gh.mjs wraps gh/curl; claim leases are refs/tags/claim/<slug> (scripts/moneypenny/index.mjs claimHandoff); docs/ENGINEERING.md 'Releases and the protected main' (GH006 branch protection)"
+      },
+      {
+        "id": "ccp",
+        "label": "Claude Code platform (claude-code-action, claude.ai Routines, remote sessions)",
+        "evidence": "anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de pinned in moneypenny-events.yml, moneypenny-repair.yml, claude.yml with secrets.CLAUDE_CODE_OAUTH_TOKEN and --model claude-opus-5 / claude-sonnet-5; docs/ROUTINES.md secretary digest Routine trig_01KaMC2uR3cFW5XTUL6rzPuS (daily 12:00, repo-wired); .claude/hooks/session-start.sh; .claude/settings.json allows mcp__Claude_Code_Remote__send_later"
+      },
+      {
+        "id": "fly",
+        "label": "Fly.io (deploy host)",
+        "evidence": "fly.toml app skynet-capital (ord, port 8787, /data volume skynet_data); fly.bots.toml app skynet-capital-bots (observe by default, volume skynet_bots_data); pipeline.yml deploy and deploy-bots jobs run flyctl 0.4.99 with FLY_API_TOKEN / FLY_API_TOKEN_BOTS / FLY_ORG_TOKEN; scripts/smoke.sh probes https://skynet-capital.fly.dev; docs/DEPLOY.md, docs/AUTONOMY-DEPLOY.md"
+      },
+      {
+        "id": "dependabot",
+        "label": "Dependabot",
+        "evidence": ".github/dependabot.yml (weekly npm per-package + github-actions, open-pull-requests-limit 20, playwright group); moneypenny-events.yml dep-warden job fires on pull_request opened by dependabot[bot] and runs .claude/agents/dep-warden.md on claude-sonnet-5"
+      },
+      {
+        "id": "anthropic",
+        "label": "Anthropic API (metered)",
+        "evidence": "src/server/feedback-coach.ts:166 fetches https://api.anthropic.com/v1/messages with ANTHROPIC_API_KEY; src/server/feedback-coach-model.ts and src/companion/companion-model.ts are envelope-protected dials (envelope.json); .github/workflows/companion-eval.yml pulls the key live from the Fly app via flyctl ssh console and masks it"
+      }
+    ],
+    "containers": [
+      {
+        "id": "session",
+        "label": "Interactive session toolkit",
+        "technology": "Claude Code harness (local or cloud), .claude/ config, Markdown skill and agent contracts, Workflow-tool JS",
+        "responsibility": "What a human-steered Claude session loads: Orient output style, SessionStart hooks (mise Node 24 provisioning, commit signing), 16 skills (/ship /governor /secretary /grind /issue /retro ...), 13 agents (sonnet athletes, fable reviewers), and the grind.js / symbol-sweep.js fan-out workflows",
+        "code_roots": [
+          ".claude/settings.json",
+          ".claude/output-styles/orient.md",
+          ".claude/hooks/session-start.sh",
+          ".claude/skills/",
+          ".claude/agents/",
+          ".claude/workflows/",
+          "scripts/setup-commit-signing.sh",
+          "scripts/duel-log.mjs",
+          "scripts/worktree-setup.sh"
+        ],
+        "entrypoints": [
+          ".claude/settings.json",
+          ".claude/hooks/session-start.sh",
+          ".claude/workflows/grind.js",
+          ".claude/workflows/symbol-sweep.js"
+        ],
+        "evidence": ".claude/settings.json sets outputStyle Orient and wires SessionStart/PreToolUse/PostToolUse/UserPromptSubmit hooks to scripts/duel-log.mjs; docs/COMPUTE.md documents model/effort frontmatter; docs/grind/README.md documents grind.js step kinds"
+      },
+      {
+        "id": "ship",
+        "label": "Ship loop",
+        "technology": "Bash, curl against the GitHub REST core bucket, python3 for JSON, git",
+        "responsibility": "Lands a verified branch as a PR without polling: local npm run verify, incident/plan-closure/test-quality preflights, checkbody fridge-rule lint, push, REST open, one auto-merge arm (checkarm refuses protected diffs), and the platter subcommand that batches irreversible-class items onto one held PR",
+        "code_roots": [
+          "scripts/ship.sh",
+          ".claude/skills/ship/SKILL.md",
+          "scripts/deploy-lag.mjs",
+          "scripts/incident-scan.mjs",
+          "scripts/plan-closure-scan.mjs",
+          "scripts/test-quality-scan.mjs"
+        ],
+        "entrypoints": [
+          "scripts/ship.sh open",
+          "scripts/ship.sh automerge",
+          "scripts/ship.sh platter"
+        ],
+        "evidence": "scripts/ship.sh header and cmd_open/cmd_checkbody/cmd_checkarm/cmd_platter functions; tests/arch/ship.spec.ts; .claude/settings.json allow 'Bash(scripts/ship.sh checkbody *)'"
+      },
+      {
+        "id": "gates",
+        "label": "Fitness gates and coaches",
+        "technology": "Node ESM scan scripts, rstest (@rstest/core 0.12), Biome 2.5, Husky 9, knip 6, jscpd 5, dependency-cruiser 18, commitlint 21",
+        "responsibility": "Detect-and-correct loops per quality dimension: each eye is a scan script plus a ratchet-down budget JSON plus a tests/arch spec (advisory for debt, blocking for contracts); drills are skills, athletes are agents dispatched by /governor",
+        "code_roots": [
+          "scripts/*-scan.mjs",
+          "tests/arch/",
+          "tests/support/advisory-scan.ts",
+          "*-budget.json",
+          "arch-grandfather.json",
+          "biome.json",
+          ".husky/",
+          "commitlint.config.js",
+          "knip.json",
+          ".jscpd.json",
+          ".dependency-cruiser.cjs",
+          ".claude/skills/governor/SKILL.md"
+        ],
+        "entrypoints": [
+          "npm run verify",
+          "npm test",
+          "npm run arch:scan / dupe:scan / dead:scan / spec:gap / incident:scan ...",
+          ".husky/pre-push"
+        ],
+        "evidence": "package.json scripts (verify = run-p typecheck lint test typecheck:app test:app); docs/COACHES.md defensive roster table; tests/support/advisory-scan.ts explains the 2026-08-29 advisory demotion"
+      },
+      {
+        "id": "envelope",
+        "label": "Envelope gate",
+        "technology": "envelope.json manifest, scripts/envelope-scan.mjs (Node, glob-to-regex path matching, git diff)",
+        "responsibility": "The single mechanical answer to 'is this the irreversible class?': red on feedback/ research/ design/ lane branches via tests/arch/envelope.spec.ts, consulted by pipeline arm-auto-merge and ship.sh checkarm before any auto-merge is armed",
+        "code_roots": [
+          "envelope.json",
+          "scripts/envelope-scan.mjs",
+          "tests/arch/envelope.spec.ts",
+          "tests/arch/envelope-check-path.spec.ts",
+          "tests/arch/envelope-coach-model.spec.ts",
+          "tests/arch/envelope-desk-gate.spec.ts"
+        ],
+        "entrypoints": [
+          "node scripts/envelope-scan.mjs --check <paths>",
+          "node scripts/envelope-scan.mjs --list"
+        ],
+        "evidence": "envelope.json 'lanes' and 'protected' arrays; pipeline.yml 'Is the diff protected?' step; scripts/ship.sh envelope_hits/cmd_checkarm"
+      },
+      {
+        "id": "pipeline",
+        "label": "Pipeline (CI + CD)",
+        "technology": "GitHub Actions, actions/setup-node@v7 (Node 24 via .nvmrc), actions/cache@v6, rstest, Biome, Playwright 1.62 Chromium, commitlint, semantic-release 25, superfly/flyctl-actions (flyctl 0.4.99)",
+        "responsibility": "verify (PR title commitlint, typecheck, lint, test in parallel; docs-only PRs skip heavy steps), integration tests (Playwright on PR and on push main), arm-auto-merge (App token, live hold-merge re-read, envelope check), release · deploy (semantic-release, flyctl deploy, smoke.sh, rollback), release · deploy bots (bot-relevant preflight, image reuse, smoke-bots.sh, rollback)",
+        "code_roots": [
+          ".github/workflows/pipeline.yml",
+          "scripts/smoke.sh",
+          "scripts/smoke-bots.sh",
+          "scripts/bot-relevant.mjs",
+          "scripts/bots-deploy-preflight.mjs",
+          "scripts/fly-image-ref.mjs",
+          ".releaserc.json",
+          "playwright.config.ts",
+          "e2e/"
+        ],
+        "entrypoints": [".github/workflows/pipeline.yml"],
+        "evidence": "pipeline.yml jobs verify, e2e (display name 'integration tests'), arm-auto-merge, deploy, deploy-bots; .releaserc.json plugins; docs/DEPLOY.md 'Continuous deployment'"
+      },
+      {
+        "id": "mp_events",
+        "label": "Moneypenny event lane",
+        "technology": "GitHub Actions trigger shim, Node ESM router (scripts/moneypenny/index.mjs), gh CLI, claude-code-action sessions (sonnet default, opus escalation; sonnet for research legs)",
+        "responsibility": "One router for every issue-driven automation: sweeps receipt issues for never-assessed events, claims feedback labels and plan ready-comments with a 2h lease, screens quiet pulses deterministically, dispatches capped event-research matrix legs behind a spend circuit breaker, reviews dependabot PRs, audits stalls and conflicts on every push, and closes shipped issues",
+        "code_roots": [
+          ".github/workflows/moneypenny-events.yml",
+          "scripts/moneypenny/",
+          "scripts/event-scan.mjs",
+          "scripts/event-material-scan.mjs",
+          "scripts/event-material-decide.mjs",
+          ".github/prompts/feedback-build.md",
+          ".github/prompts/plan-build.md",
+          ".github/prompts/event-research.md",
+          ".claude/agents/dep-warden.md",
+          ".github/actions/app-token/",
+          ".github/actions/oauth-token-gate/",
+          "research-dispatch-budget.json",
+          "research-circuit-breaker.json",
+          "assessment-cadence.json",
+          "tests/scripts/moneypenny/"
+        ],
+        "entrypoints": [
+          ".github/workflows/moneypenny-events.yml",
+          "node scripts/moneypenny/index.mjs"
+        ],
+        "evidence": "moneypenny-events.yml header ('this file is a trigger shim and nothing else'); scripts/moneypenny/index.mjs CLI flags; docs/MONEYPENNY.md 'Authority'; docs/ROUTINES.md Active table row"
+      },
+      {
+        "id": "mp_repair",
+        "label": "Moneypenny repair lane",
+        "technology": "GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneypenny/repair.mjs), claude-code-action on claude-opus-5",
+        "responsibility": "Watches the other lanes: a failed run on main files one ci-failure capsule per signature and dispatches a repair session; workflow_dispatch entry points repair a conflicted PR (pr_number) or a stalled event-research issue (issue_number); four loop guards keep it from feeding itself",
+        "code_roots": [
+          ".github/workflows/moneypenny-repair.yml",
+          "scripts/moneypenny/repair.mjs",
+          "scripts/moneypenny/repair-logs.mjs",
+          ".github/prompts/moneypenny-ci-repair.md",
+          ".github/prompts/moneypenny-conflict-repair.md",
+          ".github/prompts/moneypenny-event-stall-repair.md",
+          "scripts/repair-watchlist-scan.mjs",
+          "tests/scripts/moneypenny/repair.spec.ts"
+        ],
+        "entrypoints": [
+          ".github/workflows/moneypenny-repair.yml",
+          "node scripts/moneypenny/repair.mjs"
+        ],
+        "evidence": "moneypenny-repair.yml header (loop guards, three entry points); repair.mjs REPAIR_WORKFLOW/routeFailure/signature; docs/COACHES.md 'Unlearned incidents' roster row"
+      },
+      {
+        "id": "claude_lane",
+        "label": "Human-directed lane",
+        "technology": "GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code-action on claude-opus-5 --max-turns 80, concurrency cancel-in-progress",
+        "responsibility": "Any comment from a recognised OWNER/MEMBER/COLLABORATOR on an existing thread starts or steers a session under .github/prompts/interactive.md; a new issue needs an explicit @claude; the session answers, reviews or builds and opens PRs with the App token",
+        "code_roots": [".github/workflows/claude.yml", ".github/prompts/interactive.md"],
+        "entrypoints": [".github/workflows/claude.yml"],
+        "evidence": "claude.yml gate job 'if:' (author_association, not claude[bot], no Claude Code footer) and claude job prompt shim"
+      },
+      {
+        "id": "ops_buttons",
+        "label": "Ops buttons",
+        "technology": "GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environment (required reviewers)",
+        "responsibility": "Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-playbooks, set-beta-forcing, set-hardcore), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)",
+        "code_roots": [
+          ".github/workflows/autonomy-ops.yml",
+          ".github/workflows/fly-logs.yml",
+          ".github/workflows/companion-eval.yml"
+        ],
+        "entrypoints": [
+          ".github/workflows/autonomy-ops.yml",
+          ".github/workflows/fly-logs.yml",
+          ".github/workflows/companion-eval.yml"
+        ],
+        "evidence": "autonomy-ops.yml 'environment: autonomy-ops' and input choices; docs/AUTONOMY-DEPLOY.md provisioning procedure"
+      },
+      {
+        "id": "secretary",
+        "label": "Secretary digest loop",
+        "technology": "claude.ai Routine (daily 12:00, trig_01KaMC2uR3cFW5XTUL6rzPuS), scripts/digest-scan.mjs, /secretary skill, ride-along scans, /ship",
+        "responsibility": "Protects Eric's attention: when digest-scan says a digest is due (5 commits or 7 days), assemble the three tiers (needs-you, headlines, noise absorbed) into docs/digests/<date>.md, fold in config-audit, comment-bloat, incident and doctrine findings, ship it, push-notify the needs-you count",
+        "code_roots": [
+          ".claude/skills/secretary/SKILL.md",
+          "scripts/digest-scan.mjs",
+          "scripts/config-audit.mjs",
+          "scripts/comment-bloat-scan.mjs",
+          "scripts/incident-scan.mjs",
+          "scripts/doctrine-scan.mjs",
+          "scripts/comms-scan.mjs",
+          "docs/digests/",
+          "docs/ROUTINES.md",
+          "docs/plans/secretary.md"
+        ],
+        "entrypoints": [
+          "node scripts/digest-scan.mjs --due",
+          "docs/ROUTINES.md Active table (the Routine row)"
+        ],
+        "evidence": "docs/ROUTINES.md 'Secretary digest' row; scripts/digest-scan.mjs header; docs/digests/2026-09-24.md is the latest artifact"
+      },
+      {
+        "id": "graphify",
+        "label": "Graphify structural map",
+        "technology": "graphifyy (PyPI, tree-sitter code extraction, no LLM), bash wrapper",
+        "responsibility": "Regenerates docs/STRUCTURE-graph.md from graphify-out/ on demand; navigation via graphify explain/affected/path/query; refresh is manual and the doc-rot eye watches the snapshot age",
+        "code_roots": [
+          "scripts/refresh-graph.sh",
+          "docs/STRUCTURE-graph.md",
+          "docs/GRAPHIFY.md",
+          "docs/BCP-GRAPHIFY.md"
+        ],
+        "entrypoints": ["npm run graph:refresh"],
+        "evidence": "scripts/refresh-graph.sh; docs/GRAPHIFY.md 'The committed snapshot is refreshed by hand'"
+      },
+      {
+        "id": "ledgers",
+        "label": "Repo ledgers and budgets (git)",
+        "technology": "git-tracked Markdown and JSON",
+        "responsibility": "The durable operating state every lane reads and writes through PRs: research ledgers (docs/research/events, ~688 files), the market-event calendar (src/domain/market-events/<id>.json), forward-test fragments, digests, docs/LESSONS.md, docs/IDEAS.md, ratchet budgets, assessment cadence",
+        "code_roots": [
+          "docs/research/events/",
+          "docs/research/forward-tests/",
+          "src/domain/market-events/",
+          "docs/digests/",
+          "docs/LESSONS.md",
+          "docs/IDEAS.md",
+          "*-budget.json",
+          "assessment-cadence.json"
+        ],
+        "entrypoints": ["git"],
+        "evidence": "docs/DELEGATION.md rail 5 'Durable state = no record SPOF'; docs/process/EVENT-RESEARCH.md 'One file per event'; scripts/event-scan.mjs header ('Last assessed' machine contract)"
+      },
+      {
+        "id": "dashboard",
+        "label": "Observatory server (skynet-capital)",
+        "technology": "Node 24 slim image, tsx, node:http + SSE, React 19 shell built by rsbuild, Fly volume at /data",
+        "responsibility": "The deployed product half that participates in the operating loop: serves the observatory on 8787 and the private controls/insight bridge on 8788, files member feedback as feedback-labelled GitHub issues, shows deploy lag on ops-status; deploys on every push to main",
+        "code_roots": [
+          "src/scripts/serve-dashboard.ts",
+          "src/server/",
+          "fly.toml",
+          "Dockerfile",
+          "app/"
+        ],
+        "entrypoints": ["npm run serve:dashboard", "fly.toml [processes] app"],
+        "evidence": "fly.toml; Dockerfile CMD; src/server/feedback-api-routes.ts; src/server/ops-status-deploy-lag.ts; src/server/insights-listener.ts"
+      },
+      {
+        "id": "bots",
+        "label": "Bot runner (skynet-capital-bots)",
+        "technology": "Node 24, tsx, same image as the dashboard, Fly volume skynet_bots_data",
+        "responsibility": "The stateful autonomous trader loop, observe mode by default, roster SKYNET_AUTONOMOUS_BOTS=sauron; redeployed only when scripts/bot-relevant.mjs classifies a push as touching the bots runtime, flipped live only through autonomy-ops",
+        "code_roots": [
+          "src/scripts/run-autonomous.ts",
+          "src/autonomous/",
+          "fly.bots.toml",
+          "scripts/bot-relevant.mjs",
+          "scripts/smoke-bots.sh"
+        ],
+        "entrypoints": ["npm run run:autonomous", "fly.bots.toml [processes] bots"],
+        "evidence": "fly.bots.toml; pipeline.yml deploy-bots job; docs/AUTONOMY-DEPLOY.md 'The deploy split'"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "eric",
+        "to": "ops",
+        "label": "Directs by intent; labels feedback/plan issues; comments ready; merges held platters; approves ops runs",
+        "technology": "chat, GitHub UI",
+        "evidence": "CLAUDE.md; moneypenny-events.yml issues:labeled + issue_comment gates; pipeline.yml hold-merge; autonomy-ops.yml environment"
+      },
+      {
+        "from": "member",
+        "to": "ops",
+        "label": "Files feedback that becomes a feedback-labelled issue; answers needs-info",
+        "technology": "app /feedback form, GitHub comments",
+        "evidence": "src/server/feedback-api-routes.ts; src/server/feedback-issue.ts labelsFor(); .github/prompts/feedback-build.md"
+      },
+      {
+        "from": "claude",
+        "to": "ops",
+        "label": "Runs skills and Workflow scripts, ships PRs, runs governor and secretary",
+        "technology": "Claude Code harness",
+        "evidence": ".claude/skills/*/SKILL.md; .claude/workflows/grind.js; scripts/ship.sh"
+      },
+      {
+        "from": "ops",
+        "to": "github",
+        "label": "Opens issues and PRs, claims leases, arms auto-merge, cuts releases",
+        "technology": "REST core bucket, App installation token",
+        "evidence": "scripts/ship.sh api(); .github/actions/app-token/action.yml; scripts/moneypenny/index.mjs claimHandoff (refs/tags); pipeline.yml 'gh pr merge --auto --squash'"
+      },
+      {
+        "from": "github",
+        "to": "ops",
+        "label": "Triggers lanes on push, label, comment, PR and workflow_run events",
+        "technology": "webhooks to Actions",
+        "evidence": "'on:' blocks of pipeline.yml, moneypenny-events.yml, moneypenny-repair.yml, claude.yml"
+      },
+      {
+        "from": "ops",
+        "to": "ccp",
+        "label": "Starts build, research and repair sessions; the digest Routine fires daily",
+        "technology": "claude-code-action, Routine trig_01KaMC2uR3cFW5XTUL6rzPuS",
+        "evidence": "anthropics/claude-code-action@cfc3eb2… uses in three workflows; docs/ROUTINES.md"
+      },
+      {
+        "from": "ops",
+        "to": "fly",
+        "label": "Deploys the verified image, smokes, rolls back, flips bot modes",
+        "technology": "flyctl 0.4.99",
+        "evidence": "pipeline.yml deploy/deploy-bots; autonomy-ops.yml flip-mode"
+      },
+      {
+        "from": "dependabot",
+        "to": "ops",
+        "label": "Opens bump PRs that the dep-warden lane reviews",
+        "technology": "pull_request opened",
+        "evidence": ".github/dependabot.yml; moneypenny-events.yml dep-warden job"
+      },
+      {
+        "from": "ops",
+        "to": "anthropic",
+        "label": "Coach and companion turns from the deployed app; companion-eval replays",
+        "technology": "HTTPS with ANTHROPIC_API_KEY",
+        "evidence": "src/server/feedback-coach.ts:166; companion-eval.yml"
+      },
+      {
+        "from": "eric",
+        "to": "session",
+        "label": "Directs in chat",
+        "technology": "Claude Code",
+        "evidence": "CLAUDE.md 'Idea routing'; .claude/output-styles/orient.md"
+      },
+      {
+        "from": "eric",
+        "to": "ops_buttons",
+        "label": "Approves and runs workflow_dispatch buttons",
+        "technology": "autonomy-ops Environment required reviewers",
+        "evidence": "autonomy-ops.yml 'environment: autonomy-ops'; companion-eval.yml same"
+      },
+      {
+        "from": "member",
+        "to": "dashboard",
+        "label": "Uses the observatory; files feedback",
+        "technology": "HTTPS",
+        "evidence": "src/server/feedback-api-routes.ts; src/server/dashboard-auth-gate.ts"
+      },
+      {
+        "from": "dashboard",
+        "to": "github",
+        "label": "Files feedback-labelled issues",
+        "technology": "REST with SKYNET_FEEDBACK_GITHUB_TOKEN",
+        "evidence": "src/server/feedback-service.ts; src/server/github-api.ts githubHeaders(); src/scripts/dashboard-feedback.ts"
+      },
+      {
+        "from": "session",
+        "to": "ship",
+        "label": "Lands branches",
+        "technology": "/ship skill → scripts/ship.sh",
+        "evidence": ".claude/skills/ship/SKILL.md"
+      },
+      {
+        "from": "session",
+        "to": "gates",
+        "label": "Runs scans and governor cycles",
+        "technology": "npm run verify, --candidate",
+        "evidence": ".claude/skills/governor/SKILL.md; .claude/settings.json permissions allow list"
+      },
+      {
+        "from": "session",
+        "to": "graphify",
+        "label": "Refreshes the structural map",
+        "technology": "npm run graph:refresh",
+        "evidence": "scripts/refresh-graph.sh; docs/GRAPHIFY.md"
+      },
+      {
+        "from": "ship",
+        "to": "envelope",
+        "label": "checkarm refuses to arm a protected diff",
+        "technology": "envelope-scan --check",
+        "evidence": "scripts/ship.sh cmd_checkarm / envelope_hits"
+      },
+      {
+        "from": "ship",
+        "to": "github",
+        "label": "Opens the PR, arms auto-merge, boards platters",
+        "technology": "REST core bucket, one GraphQL arm",
+        "evidence": "scripts/ship.sh cmd_open, cmd_automerge, cmd_platter_board"
+      },
+      {
+        "from": "github",
+        "to": "pipeline",
+        "label": "pull_request and push main events",
+        "technology": "Actions",
+        "evidence": "pipeline.yml on: pull_request types [opened, synchronize, reopened, ready_for_review, edited], push main"
+      },
+      {
+        "from": "pipeline",
+        "to": "gates",
+        "label": "verify job runs the suite",
+        "technology": "npm test, npm run lint, npm run typecheck",
+        "evidence": "pipeline.yml 'Typecheck + lint + test (parallel)' step"
+      },
+      {
+        "from": "pipeline",
+        "to": "envelope",
+        "label": "Arms auto-merge only when the diff is unprotected",
+        "technology": "envelope-scan --check --base",
+        "evidence": "pipeline.yml arm-auto-merge 'Is the diff protected?' step"
+      },
+      {
+        "from": "pipeline",
+        "to": "github",
+        "label": "Arms auto-merge with the App token; semantic-release cuts tag and Release",
+        "technology": "gh pr merge --auto --squash, npx semantic-release",
+        "evidence": "pipeline.yml arm-auto-merge and deploy jobs; .releaserc.json"
+      },
+      {
+        "from": "pipeline",
+        "to": "dashboard",
+        "label": "Deploys every push, smokes, rolls back",
+        "technology": "flyctl deploy --remote-only; scripts/smoke.sh",
+        "evidence": "pipeline.yml deploy job"
+      },
+      {
+        "from": "pipeline",
+        "to": "bots",
+        "label": "Deploys only when bot-relevant, reusing the dashboard image; smokes; rolls back",
+        "technology": "flyctl deploy --config fly.bots.toml --image; scripts/smoke-bots.sh",
+        "evidence": "pipeline.yml deploy-bots job; scripts/bots-deploy-preflight.mjs; scripts/bot-relevant.mjs"
+      },
+      {
+        "from": "github",
+        "to": "mp_events",
+        "label": "push main, issues labeled, issue_comment created, dependabot pull_request opened, workflow_dispatch",
+        "technology": "Actions",
+        "evidence": "moneypenny-events.yml on: block"
+      },
+      {
+        "from": "mp_events",
+        "to": "ccp",
+        "label": "build-feedback, build-plan, build-events matrix legs, dep-warden sessions",
+        "technology": "claude-code-action, CLAUDE_CODE_OAUTH_TOKEN",
+        "evidence": "moneypenny-events.yml jobs build-feedback, build-plan, build-events, dep-warden"
+      },
+      {
+        "from": "mp_events",
+        "to": "github",
+        "label": "Claim leases, receipt issues, labels, screen PRs, re-dispatch",
+        "technology": "gh with App token; refs/tags/claim/<slug>",
+        "evidence": "scripts/moneypenny/index.mjs; scripts/moneypenny/open-screen-pr.mjs; moneypenny-events.yml 'gh workflow run moneypenny-events.yml'"
+      },
+      {
+        "from": "mp_events",
+        "to": "mp_repair",
+        "label": "Hands over conflicted PRs and stalled research issues",
+        "technology": "gh workflow run moneypenny-repair.yml -f pr_number / issue_number",
+        "evidence": "scripts/moneypenny/index.mjs stallRepairDispatch; scripts/moneypenny/audit.mjs CONFLICT_REPAIR_CAP"
+      },
+      {
+        "from": "github",
+        "to": "mp_repair",
+        "label": "workflow_run completed (failure on main) for the five watched workflows",
+        "technology": "Actions",
+        "evidence": "moneypenny-repair.yml workflow_run.workflows list; scripts/repair-watchlist-scan.mjs"
+      },
+      {
+        "from": "mp_repair",
+        "to": "ccp",
+        "label": "Repair sessions",
+        "technology": "claude-code-action --model claude-opus-5",
+        "evidence": "moneypenny-repair.yml repair job (three mutually exclusive steps)"
+      },
+      {
+        "from": "mp_repair",
+        "to": "github",
+        "label": "Files the ci-failure capsule, opens the repair PR",
+        "technology": "gh with App token",
+        "evidence": "scripts/moneypenny/repair.mjs issueBody/signature; moneypenny-repair.yml GH_TOKEN env"
+      },
+      {
+        "from": "github",
+        "to": "claude_lane",
+        "label": "Member comment on an issue or PR",
+        "technology": "Actions issue_comment / pull_request_review_comment",
+        "evidence": "claude.yml gate job"
+      },
+      {
+        "from": "ccp",
+        "to": "secretary",
+        "label": "Fires the daily digest Routine",
+        "technology": "claude.ai Routine trig_01KaMC2uR3cFW5XTUL6rzPuS",
+        "evidence": "docs/ROUTINES.md Active table"
+      },
+      {
+        "from": "secretary",
+        "to": "ledgers",
+        "label": "Writes docs/digests/<date>.md and ships it",
+        "technology": "/ship",
+        "evidence": ".claude/skills/secretary/SKILL.md 'Deliver'; docs/digests/TEMPLATE.md"
+      },
+      {
+        "from": "secretary",
+        "to": "eric",
+        "label": "Push-notifies the needs-you count and top headline",
+        "technology": "claude.ai push notification",
+        "evidence": "docs/ROUTINES.md 'May do' column"
+      },
+      {
+        "from": "mp_events",
+        "to": "ledgers",
+        "label": "Research write-ups and screen rows land via PRs",
+        "technology": "docs/research/events/<id>.md, src/domain/market-events/<id>.json",
+        "evidence": ".github/prompts/event-research.md; moneypenny-events.yml screen step"
+      },
+      {
+        "from": "gates",
+        "to": "ledgers",
+        "label": "Ratchets budgets down after a correction lands",
+        "technology": "--update",
+        "evidence": "docs/COACHES.md 'Budgets only ratchet down'; scripts/dead-scan.mjs etc."
+      },
+      {
+        "from": "bots",
+        "to": "dashboard",
+        "label": "Controls and insight bridge",
+        "technology": "private 6PN http app.process.skynet-capital.internal:8788",
+        "evidence": "fly.bots.toml SKYNET_INSIGHTS_BRIDGE_URL; src/server/insights-listener.ts; src/autonomous/bot-controls-client.ts"
+      },
+      {
+        "from": "ops_buttons",
+        "to": "bots",
+        "label": "flip-mode, set-playbooks, set-hardcore, logs",
+        "technology": "flyctl secrets set -a skynet-capital-bots",
+        "evidence": "autonomy-ops.yml steps"
+      }
+    ],
+    "c4context_source": "C4Context\n  title Skynet Capital operating model - system context, 2026-09-25\n  UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")\n\n  Person(eric, \"Eric\", \"Owner and the binding constraint. Labels feedback issues (the label starts a build), comments ready on plan issues, merges held platter PRs, approves autonomy-ops runs as required reviewer.\")\n  Person(member, \"Member\", \"Friends-and-family league player. Files feedback in the app and answers needs-info through the app follow-up form.\")\n  Person(claude, \"Claude interactive session\", \"Local or cloud Claude Code session loaded with .claude/. Routes Eric's raw thoughts, runs skills and Workflow scripts, ships PRs, dispatches athletes.\")\n\n  System(ops, \"Skynet Capital operating model\", \"GitHub Actions lanes, fitness gates, the envelope, the ship loop, the secretary digest, the research protocol and the Graphify map: the machinery that turns intent into deployed releases.\")\n  System(product, \"Skynet Capital product\", \"The two deployed Fly apps: observatory server (skynet-capital) and bot runner (skynet-capital-bots). Mapped in the runtime C4 set.\")\n\n  System_Ext(github, \"GitHub\", \"Repo, issues, PRs, labels, claim refs, Actions runners, branch protection, the Moneypenny GitHub App identity.\")\n  System_Ext(ccp, \"Claude Code platform\", \"claude-code-action sessions on the flat-rate OAuth token, claude.ai Routines, remote sessions.\")\n  System_Ext(fly, \"Fly.io\", \"Hosts skynet-capital (dashboard plus volume) and skynet-capital-bots (trader loop) in region ord.\")\n  System_Ext(dependabot, \"Dependabot\", \"Opens weekly per-package npm and github-actions bump PRs.\")\n  System_Ext(anthropic, \"Anthropic API\", \"Metered api.anthropic.com. Called by the deployed product for the feedback coach and companion, and by CI only for companion-eval replays; its model dials are envelope-protected.\")\n\n  Rel(eric, ops, \"Directs by intent; labels feedback issues, comments ready on plan issues, merges held platters, approves ops runs\", \"chat and GitHub UI\")\n  Rel(member, product, \"Uses the observatory; files feedback and needs-info answers\", \"HTTPS, /api/feedback, /api/feedback/followup\")\n  Rel(claude, ops, \"Runs skills and Workflow scripts, ships PRs, runs governor and secretary\", \"Claude Code harness\")\n  Rel(product, github, \"Files feedback-labelled issues; the label starts a build\", \"REST, SKYNET_FEEDBACK_GITHUB_TOKEN\")\n  Rel(ops, github, \"Comments on and labels issues, opens PRs, claims leases, arms auto-merge, cuts releases\", \"REST core bucket, App installation token, semantic-release\")\n  Rel(github, ops, \"Triggers lanes on push, label, comment, PR, workflow_run and manual workflow_dispatch events\", \"webhooks to Actions\")\n  Rel(ops, ccp, \"Runs build, research, repair and human-directed sessions, triggered by push, label, comment and dispatch\", \"claude-code-action, CLAUDE_CODE_OAUTH_TOKEN\")\n  Rel(ccp, ops, \"The daily 12:00 secretary digest Routine fires into the repo and ships docs/digests via /ship\", \"claude.ai Routine trig_01KaMC2uR3cFW5XTUL6rzPuS\")\n  Rel(ops, fly, \"Builds the verified commit on the Fly builder and deploys the dashboard, reuses that image for the bots, smokes, rolls back, sets bot mode and roster secrets\", \"flyctl 0.4.99\")\n  Rel(fly, product, \"Hosts\", \"two apps, two volumes, 6PN\")\n  Rel(dependabot, ops, \"Opens bump PRs that the dep-warden lane reviews and merges when green\", \"pull_request opened\")\n  Rel(product, anthropic, \"Feedback-coach and companion turns\", \"HTTPS /v1/messages, ANTHROPIC_API_KEY\")\n  Rel(ops, anthropic, \"companion-eval replays and LLM judge; the key is borrowed from the Fly app secret at run time\", \"companion-eval.yml, workflow_dispatch\")",
+    "c4container_source": "C4Container\n  title Skynet Capital operating model - containers, 2026-09-25\n  UpdateLayoutConfig($c4ShapeInRow=\"4\", $c4BoundaryInRow=\"2\")\n\n  Person(eric, \"Eric\", \"Owner: feedback labels, ready comments, held-platter merges, ops approvals\")\n  Person(member, \"Member\", \"Files feedback in the app, answers needs-info\")\n\n  System_Ext(github, \"GitHub\", \"Issues, PRs, labels, claim refs, Actions, branch protection, App identity\")\n  System_Ext(ccp, \"Claude Code platform\", \"claude-code-action sessions and claude.ai Routines\")\n  System_Ext(dependabot, \"Dependabot\", \"Weekly per-package bump PRs\")\n  System_Ext(anthropic, \"Anthropic API\", \"api.anthropic.com/v1/messages, ANTHROPIC_API_KEY\")\n\n  System_Boundary(ops, \"Skynet Capital operating model\") {\n    Container(session, \"Interactive session toolkit\", \"Claude Code harness, .claude/\", \"Orient output style (Focus is the other), SessionStart hooks (commit signing everywhere; mise Node 24 only when CLAUDE_CODE_REMOTE=true), 16 skills, 13 agents (7 sonnet athletes, 3 opus, 3 fable xhigh), grind.js and symbol-sweep.js, duel-log.mjs telemetry hooks\")\n    Container(ship, \"Ship loop\", \"Bash, curl REST core bucket, python3; one GraphQL call each to arm auto-merge and promote a held draft\", \"scripts/ship.sh: local verify plus incident, plan-closure and test-quality preflights, checkbody fridge-rule lint, push, open PR over REST, checkarm via envelope-scan, one auto-merge arm; platter boards the irreversible class onto one held PR\")\n    Container(gates, \"Fitness gates and coaches\", \"Node ESM scans, rstest, Biome, Husky, commitlint, knip, jscpd, dependency-cruiser\", \"Code-hygiene coaches (arch, dupe, clone, dead, dep-graph, spec-gap, doc-rot, comment-bloat, incident, workflow-lint) each with a budget JSON or arch-grandfather.json; communication-format gates (issue-lint, research-lint, digest, journey, checkbody) block; governor dispatches only the four coaches that have athletes\")\n    Container(envelope, \"Envelope gate\", \"envelope.json, scripts/envelope-scan.mjs\", \"Path globs plus a new-runtime-dependency check. --lane mode is red on feedback/, research/ and design/ branches via tests/arch/envelope.spec.ts; --check runs on every PR before arming, filtered on blocking beside the hold-merge check. diffAware was removed 2026-09-17\")\n    Container(pipeline, \"Pipeline\", \"GitHub Actions, Node 24 from .nvmrc, rstest, Biome, Playwright, commitlint, semantic-release 25, flyctl 0.4.99\", \"pipeline.yml jobs: verify (PR only; parallel processes on one runner; docs-only skips heavy steps), integration tests (code PRs and push main, against a local offline server), arm-auto-merge, release and deploy, deploy bots\")\n    Container(mp_events, \"Moneypenny event lane\", \"GitHub Actions trigger shim, scripts/moneypenny/index.mjs, claude-code-action\", \"Routes push, feedback label, plan ready comment and dependabot PR events into feedback, plan, event-research and dep-warden builds; model tier haiku light, sonnet default, opus escalation, plans on opus; audits stalls and conflicts on every push\")\n    Container(mp_repair, \"Moneypenny repair lane\", \"GitHub Actions workflow_run and workflow_dispatch, scripts/moneypenny/repair.mjs, claude-code-action opus\", \"Watches the five enumerated lanes; files one ci-failure capsule per signature; repairs CI failures, PR conflicts and stalled research; four loop guards\")\n    Container(claude_lane, \"Human-directed lane\", \"GitHub Actions, claude.yml, claude-code-action opus, max 80 turns\", \"A member comment on an issue or PR, or a new issue with @claude in its body, starts or steers a session under .github/prompts/interactive.md; inert until CLAUDE_CODE_OAUTH_TOKEN is set\")\n    Container(ops_buttons, \"Ops buttons\", \"GitHub Actions workflow_dispatch, flyctl\", \"autonomy-ops.yml and companion-eval.yml gated by the autonomy-ops Environment required reviewers; fly-logs.yml is self-serve and read-only; flyctl pinned 0.4.99 except companion-eval, which installs latest\")\n    Container(secretary, \"Secretary digest loop\", \"claude.ai Routine daily 12:00, scripts/digest-scan.mjs, secretary skill\", \"When digest-scan says due (5 commits or 7 days), writes the three-tier digest into docs/digests; rides config-audit, comment-bloat, incident and doctrine scans; comms-scan is the landing-meter table\")\n    Container(graphify, \"Graphify structural map\", \"graphifyy on PyPI, tree-sitter, scripts/refresh-graph.sh\", \"Manual npm run graph:refresh re-extracts the repo into graphify-out and copies GRAPH_REPORT.md into docs/STRUCTURE-graph.md; doc-rot-scan flags a snapshot over 30 days behind HEAD\")\n    ContainerDb(ledgers, \"Repo ledgers and budgets\", \"git, Markdown, JSON\", \"docs/research/events (about 687 ledgers plus TEMPLATE), docs/digests, docs/LESSONS.md, docs/IDEAS.md, CLAUDE.md, root *-budget.json ratchets, assessment-cadence.json, src/domain/market-events/*.json\")\n  }\n\n  Boundary(flyhost, \"Fly.io deploy host\", \"external\") {\n    Container(dashboard, \"Observatory server\", \"Node 24, tsx, node:http and SSE, React shell built by rsbuild, Babylon scene bundle\", \"fly.toml app skynet-capital: serve-dashboard.ts on 8787, private bridge listener on 8788, /data volume; files feedback issues; deploys on every push to main\")\n    Container(bots, \"Bot runner\", \"Node 24, tsx, same image\", \"fly.bots.toml app skynet-capital-bots: run-autonomous.ts, observe by default; volume holds bots-state.db, decisions.db, audit, health.json; deploys when bots-deploy-preflight says so or force_bots_deploy\")\n  }\n\n  Rel(eric, session, \"Dumps raw ideas and directives in chat; the session routes act, park, fan, profile, question\", \"Claude Code\")\n  Rel(eric, github, \"Applies the feedback label, comments ready on plan issues, merges held platters\", \"GitHub UI\")\n  Rel(eric, ops_buttons, \"Approves as required reviewer and can dispatch autonomy-ops and companion-eval\", \"autonomy-ops Environment\")\n  Rel(member, dashboard, \"Uses the observatory, files feedback and follow-ups\", \"HTTPS, OAuth session\")\n  Rel(dashboard, github, \"Files feedback-labelled issues: POST issue, then POST labels\", \"REST, SKYNET_FEEDBACK_GITHUB_TOKEN\")\n  Rel(dashboard, anthropic, \"Feedback-coach turns (feedback-coach.ts) and companion chat turns (companion-tool-rounds.ts)\", \"HTTPS\")\n  Rel(session, ship, \"Lands branches: verify, push, REST PR, arm auto-merge, no polling\", \"ship skill\")\n  Rel(session, gates, \"Runs gate scans for verification and governor target selection; bare scan commands are pre-approved, --candidate is not\", \"npm run verify, node scripts/*-scan.mjs\")\n  Rel(session, graphify, \"Refreshes the map by hand\", \"npm run graph:refresh\")\n  Rel(ship, envelope, \"checkarm refuses to arm a blocking envelope hit, exit 5\", \"envelope-scan --check\")\n  Rel(ship, github, \"REST /pulls open, label and PATCH body plus git push; GraphQL arm, falling back to the MCP arm or ship merge\", \"REST core bucket\")\n  Rel(github, pipeline, \"pull_request to main, push main, workflow_dispatch force_bots_deploy\", \"Actions\")\n  Rel(pipeline, gates, \"verify runs typecheck, biome lint and rstest for root and app; the suite includes the tests/arch gate specs, some advisory\", \"npm test\")\n  Rel(pipeline, envelope, \"Arms only if no changed path is protected and the PR is not held\", \"envelope-scan --check\")\n  Rel(pipeline, github, \"arm-auto-merge: gh pr merge --auto --squash with the App token\", \"PR events\")\n  Rel(pipeline, github, \"deploy: semantic-release with GITHUB_TOKEN cuts the tag and Release\", \"push main\")\n  Rel(pipeline, dashboard, \"Releases and deploys on every push to main, smokes, rolls back to the previous image on smoke failure\", \"flyctl deploy --remote-only\")\n  Rel(pipeline, bots, \"After deploy succeeds, when the preflight says so (bot-relevant diff vs the stamped GIT_SHA, debounced, deploys when unsure), reuses the dashboard image, smokes, rolls back\", \"flyctl deploy --image\")\n  Rel(github, mp_events, \"push main, issues labeled feedback or plan, issue_comment ready, pull_request opened (job-gated to dependabot), workflow_dispatch\", \"Actions\")\n  Rel(mp_events, ccp, \"build-feedback, build-plan, build-events matrix legs fanned per due event via a route re-dispatch, dep-warden\", \"claude-code-action pinned v1, CLAUDE_CODE_OAUTH_TOKEN\")\n  Rel(mp_events, github, \"Claim leases, receipt issues, labels, comments, closes shipped issues, screen PRs, re-dispatch\", \"gh CLI plus REST and GraphQL, App token\")\n  Rel(mp_events, mp_repair, \"Conflicted PRs (pr_number, up to 3 attempts then needs-eric) and stalled event-research issues (batched issue_number)\", \"gh workflow run moneypenny-repair.yml\")\n  Rel(github, mp_repair, \"workflow_run completed for the five watched workflows; conclusion and default-branch filters run in repair.mjs\", \"Actions\")\n  Rel(mp_repair, ccp, \"Repair sessions: CI-failure repair, PR conflict repair, stalled-issue diagnosis\", \"claude-code-action opus\")\n  Rel(mp_repair, github, \"Triage files or dedupes the ci-failure capsule with GITHUB_TOKEN; the repair session opens the PR with the App token\", \"gh\")\n  Rel(github, claude_lane, \"OWNER, MEMBER or COLLABORATOR comment, new or edited, on an issue or PR thread, or a new issue with @claude\", \"Actions, cancel-in-progress\")\n  Rel(claude_lane, ccp, \"Interactive session\", \"claude-code-action\")\n  Rel(dependabot, github, \"Opens weekly bump PRs\", \"pull_request opened\")\n  Rel(ops_buttons, bots, \"flip-mode, set-playbooks, set-beta-forcing, set-hardcore, logs, status, bootstrap; never bot Alpaca credentials\", \"flyctl secrets set and logs through the Fly API\")\n  Rel(ops_buttons, anthropic, \"companion-eval replays and LLM judge; key borrowed from the Fly app at run time\", \"companion-eval.yml\")\n  Rel(ccp, secretary, \"Fires daily 12:00; gated by digest-scan --due\", \"Routine trig_01KaMC2uR3cFW5XTUL6rzPuS\")\n  Rel(secretary, ledgers, \"Writes docs/digests/YYYY-MM-DD.md from TEMPLATE and ships it as an auto-merged docs PR\", \"ship skill\")\n  Rel(secretary, eric, \"Push-notifies the needs-you count and top headline, only when a digest is due\", \"claude.ai push\")\n  Rel(mp_events, ledgers, \"Research sessions on research/ID and the deterministic screen on moneypenny/screen-* land ledger files via auto-merged PRs\", \"docs/research/events, forward-tests\")\n  Rel(gates, ledgers, \"--update after a correction lands writes min(prev, debt) to the budget JSON; CI reads it and fails if debt grew\", \"manual --update, CI read\")\n  Rel(bots, dashboard, \"GET /controls, GET /bot-credentials, POST /decisions (POST /insights is accepted but the client is unwired)\", \"private 6PN http on 8788, shared-secret header\")",
+    "c4component_sources": [
+      {
+        "container": "mp_events",
+        "source": "C4Component\n  title Moneypenny event lane - components\n  UpdateLayoutConfig($c4ShapeInRow=\"4\", $c4BoundaryInRow=\"1\")\n\n  System_Ext(github, \"GitHub\", \"Events in; issues, labels, claim refs and PRs out\")\n  System_Ext(cca, \"claude-code-action\", \"One session per build or matrix leg on the flat-rate OAuth token\")\n  Container(mp_repair, \"Moneypenny repair lane\", \"moneypenny-repair.yml\", \"Takes flag-conflict and flag-stall dispatches\")\n  ContainerDb(ledgers, \"Repo ledgers\", \"git\", \"docs/research/events, src/domain/market-events, research-dispatch-budget.json, research-budget.json\")\n\n  Container_Boundary(lane, \"Moneypenny event lane\") {\n    Component(wf, \"Trigger shim\", \".github/workflows/moneypenny-events.yml\", \"on push main, issues labeled, issue_comment created, pull_request opened, workflow_dispatch scan audit release-claim. Jobs route, build-feedback, build-plan, build-events matrix max 8, dep-warden. App token per job via .github/actions/app-token, oauth-token-gate\")\n    Component(router, \"Router\", \"scripts/moneypenny/index.mjs\", \"route() yields pure intents, execute() touches GitHub; claimHandoff and releaseClaim; flags --claim-feedback --claim-plan --audit --release --guard-feedback-outcome\")\n    Component(events, \"Event-research dispatch\", \"scripts/moneypenny/events.mjs\", \"routeSweep receipt issues, dueForResearch dedupe against open research branches, cap from research-dispatch-budget.json\")\n    Component(audit, \"Stall and conflict audit\", \"scripts/moneypenny/audit.mjs\", \"flag-stall, silent feedback, plan-ready stalls, conflict re-dispatch up to CONFLICT_REPAIR_CAP 3 then needs-eric; memory is the stall-flagged and conflict-flagged labels\")\n    Component(lease, \"Claim lease\", \"scripts/moneypenny/claim-lease.mjs\", \"refs/tags/claim/SLUG compare-and-set via POST git/refs, CLAIM_TTL_MS two hours\")\n    Component(tier, \"Model tier\", \"scripts/moneypenny/model-tier.mjs\", \"haiku light for single-criterion asks, sonnet default, opus escalation from the skynet-spec block; plan issues stay on opus\")\n    Component(planclaim, \"Plan ready-flip\", \"scripts/moneypenny/plan-claim.mjs\", \"Whole-comment ready patterns on plan-labelled issues from OWNER MEMBER COLLABORATOR\")\n    Component(guard, \"Feedback outcome guard\", \"scripts/moneypenny/feedback-guard.mjs\", \"visibleOutcome: a PR, a terminal label or a comment beyond the receipt, else needs-eric; needs-session on a Sliced hand-off\")\n    Component(breaker, \"Spend circuit breaker\", \"scripts/moneypenny/circuit-breaker.mjs\", \"research-circuit-breaker.json window over total_cost_usd; the trip state is a GitHub label\")\n    Component(eventscan, \"Due oracle\", \"scripts/event-scan.mjs\", \"--due over src/domain/market-events/ID.json and ledger Last assessed headers; bands from assessment-cadence.json\")\n    Component(screen, \"Deterministic screen\", \"scripts/event-material-scan.mjs, event-material-decide.mjs, scripts/moneypenny/open-screen-pr.mjs\", \"Quiet interval-elapsed pulses get a ledger row through a screen PR, never a session\")\n    Component(shipped, \"Last-mile closer\", \"scripts/moneypenny/shipped.mjs\", \"Closes feedback and event-research issues whose PR merged\")\n    Component(vocab, \"Vocabulary and gh wrapper\", \"scripts/moneypenny/labels.mjs, scripts/moneypenny/gh.mjs\", \"LABELS registry, FOOTER, ensureVocabulary; sh, withRetry, ghRest\")\n    Component(prompts, \"Lane instruction sets\", \".github/prompts/feedback-build.md, plan-build.md, event-research.md, .claude/agents/dep-warden.md\", \"Envelope-protected orders each session reads first\")\n  }\n\n  Rel(github, wf, \"Delivers the event payload\", \"GITHUB_EVENT_PATH\")\n  Rel(wf, router, \"node scripts/moneypenny/index.mjs\", \"route job\")\n  Rel(router, events, \"push or scan: routeSweep and dueForResearch\")\n  Rel(router, audit, \"--audit on every push\")\n  Rel(router, lease, \"claim and release\")\n  Rel(router, tier, \"--claim-feedback picks the model\")\n  Rel(router, planclaim, \"--claim-plan\")\n  Rel(router, shipped, \"sweepShipped on push\")\n  Rel(router, vocab, \"labels, footer, gh calls\")\n  Rel(wf, breaker, \"checkCircuitBreaker before listing due events\")\n  Rel(wf, eventscan, \"event-scan.mjs --due\")\n  Rel(wf, screen, \"screen-due, then one screen PR\")\n  Rel(wf, cca, \"build-feedback, build-plan, build-events legs, dep-warden\", \"prompt names the lane file\")\n  Rel(cca, prompts, \"Reads its instruction set first\")\n  Rel(wf, guard, \"--guard-feedback-outcome after the build step\")\n  Rel(audit, mp_repair, \"flag-conflict and flag-stall\", \"gh workflow run\")\n  Rel(router, github, \"Issues, labels, claim refs, comments\", \"gh with App token\")\n  Rel(cca, github, \"Pushes the branch, opens the PR\", \"App token\")\n  Rel(cca, ledgers, \"Research write-ups\", \"PR\")\n  Rel(screen, ledgers, \"Ledger rows\", \"screen PR\")\n  Rel(eventscan, ledgers, \"Reads the calendar and ledger headers\")"
+      },
+      {
+        "container": "gates",
+        "source": "C4Component\n  title Fitness gates and coaches - components\n  UpdateLayoutConfig($c4ShapeInRow=\"4\", $c4BoundaryInRow=\"1\")\n\n  Container(pipeline, \"Pipeline verify job\", \"pipeline.yml\", \"Runs commitlint on the PR title, typecheck, lint and the suite on one runner\")\n  Container(session, \"Interactive session\", \"Claude Code, .claude/\", \"Runs scans by hand and governor cycles; husky hooks fire on commit and push\")\n  ContainerDb(budgets, \"Ratchet budgets and ledgers\", \"JSON and Markdown in git\", \"the *-budget.json files, arch-grandfather.json, docs/LESSONS.md\")\n\n  Container_Boundary(gates, \"Fitness gates and coaches\") {\n    Component(verify, \"Verify entry\", \"package.json verify, .husky/pre-push\", \"run-p typecheck lint test typecheck:app test:app, CI parity\")\n    Component(specs, \"Arch spec seam\", \"tests/arch/*.spec.ts, tests/support/advisory-scan.ts\", \"About 48 specs; debt eyes advisory, contract eyes blocking; some assert inline (volume-persistence, fly-split)\")\n    Component(biome, \"Lint and format\", \"biome.json, .husky/pre-commit\", \"Cognitive complexity is a warning; pre-commit auto-formats staged files\")\n    Component(commitlint, \"Commit lint\", \"commitlint.config.js, .husky/commit-msg, scripts/commit-msg-reflow.mjs\", \"Conventional commits; CI lints the PR title only\")\n    Component(size, \"Size coach\", \"scripts/arch-scan.mjs, scripts/code-lines.mjs, arch-grandfather.json\", \"300 code lines in src, 500 in tests, junk-drawer names; exceptions list, not a numbered budget; drill decompose, athlete decomposer\")\n    Component(dupe, \"Duplication and clone coach\", \"scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json\", \"dupe-budget.json and clone-budget.json; drill dedupe, athlete ui-librarian\")\n    Component(dead, \"Dead-code coach\", \"scripts/dead-scan.mjs, knip.json\", \"dead-budget.json; drill bury, athlete mortician\")\n    Component(depgraph, \"Dep-graph coach\", \"scripts/dep-graph-scan.mjs, .dependency-cruiser.cjs\", \"no-circular and hexagonal layering rules; dep-graph-budget.json; no athlete\")\n    Component(specgap, \"Spec-gap coach\", \"scripts/spec-gap-scan.mjs\", \"spec-gap-budget.json; drill backfill, athlete test-backfiller\")\n    Component(incident, \"Learning coach\", \"scripts/incident-scan.mjs, tests/arch/lessons.spec.ts\", \"Failed main runs with no docs/LESSONS.md entry; drill retro; also a ship.sh preflight; Moneypenny repair is event-driven, not governor-dispatched\")\n    Component(docrot, \"Doc-rot and comment-bloat\", \"scripts/doc-rot-scan.mjs, scripts/comment-bloat-scan.mjs\", \"Dead file refs, missing npm scripts, stale graph age; narration comments\")\n    Component(wflint, \"Workflow contract gates\", \"scripts/workflow-lint.mjs, workflow-meta-scan.mjs, repair-watchlist-scan.mjs, grind-manifest.mjs\", \"Blocking: duplicate keys, dangling refs, pure meta literal, repair watchlist, chore tiers\")\n    Component(formats, \"Communication format gates\", \"scripts/issue-lint.mjs, research-lint.mjs, digest-scan.mjs --validate, journey-scan.mjs, mermaid-lint.mjs, ship.sh checkbody\", \"Blocking capsule, call-sheet, digest, mermaid and fridge-rule checks\")\n    Component(researchgates, \"Research and ops eyes\", \"scripts/forward-test-id-scan.mjs, event-scan.mjs --validate, ci-install-duration-scan.mjs, doctrine-scan.mjs\", \"Forward-test ids, calendar validity, CI install wall-clock, doctrine due dates\")\n    Component(governor, \"Governor and athletes\", \".claude/skills/governor/SKILL.md, .claude/agents decomposer ui-librarian mortician test-backfiller\", \"WIP one per coach, --candidate picks the target, sonnet athletes in worktrees, one cycle PR\")\n  }\n\n  Rel(pipeline, verify, \"Runs on every non-draft code PR\", \"npm ci then parallel typecheck lint test\")\n  Rel(session, verify, \"Local gate before anything leaves the machine\", \".husky/pre-push\")\n  Rel(verify, specs, \"npm test\", \"rstest\")\n  Rel(verify, biome, \"npm run lint\")\n  Rel(session, commitlint, \"On every commit\", \".husky/commit-msg\")\n  Rel(specs, size, \"advisory\")\n  Rel(specs, dupe, \"advisory\")\n  Rel(specs, dead, \"advisory\")\n  Rel(specs, depgraph, \"advisory\")\n  Rel(specs, specgap, \"advisory\")\n  Rel(specs, incident, \"offline half\")\n  Rel(specs, docrot, \"advisory\")\n  Rel(specs, wflint, \"blocking\")\n  Rel(specs, formats, \"blocking\")\n  Rel(specs, researchgates, \"mixed\")\n  Rel(governor, size, \"--candidate\")\n  Rel(governor, dupe, \"--candidate\")\n  Rel(governor, dead, \"--candidate\")\n  Rel(governor, specgap, \"--candidate\")\n  Rel(session, governor, \"governor cycle\")\n  Rel(size, budgets, \"reads arch-grandfather.json\")\n  Rel(dead, budgets, \"--update ratchet\")\n  Rel(incident, budgets, \"reads docs/LESSONS.md\")"
+      },
+      {
+        "container": "dynamic:feedback-to-deploy",
+        "source": "C4Dynamic\n  title Canonical flow - feedback issue to deployed release\n  UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")\n\n  Person(member, \"Member\")\n  Container(dashboard, \"Observatory server\", \"skynet-capital on Fly\", \"src/server/feedback-api-routes.ts\")\n  System_Ext(github, \"GitHub\", \"Issues, PRs, checks, auto-merge\")\n  Container(mp_events, \"Moneypenny event lane\", \"moneypenny-events.yml\", \"route job then build-feedback job\")\n  System_Ext(cca, \"claude-code-action\", \"Build session reading feedback-build.md\")\n  Container(pipeline, \"Pipeline\", \"pipeline.yml\", \"verify, integration tests, arm-auto-merge, release and deploy\")\n  Container(envelope, \"Envelope gate\", \"scripts/envelope-scan.mjs\")\n  System_Ext(fly, \"Fly.io\", \"skynet-capital app\")\n\n  RelIndex(1, member, dashboard, \"POST /api/feedback, the coach yields a skynet-spec block\", \"HTTPS\")\n  RelIndex(2, dashboard, github, \"Create the issue, then attach the feedback label in a second call\", \"REST with SKYNET_FEEDBACK_GITHUB_TOKEN\")\n  RelIndex(3, github, mp_events, \"issues labeled feedback\", \"Actions event\")\n  RelIndex(4, mp_events, github, \"Claim refs/tags/claim/feedback-N and pick the model tier\", \"index.mjs --claim-feedback\")\n  RelIndex(5, mp_events, cca, \"build-feedback session\", \"CLAUDE_CODE_OAUTH_TOKEN plus App github_token\")\n  RelIndex(6, cca, github, \"Push the feedback/N branch, open the PR, post the receipt\", \"App token so pull_request.opened fires\")\n  RelIndex(7, mp_events, github, \"guard-feedback-outcome: needs-eric when nothing visible happened\", \"feedback-guard.mjs\")\n  RelIndex(8, github, pipeline, \"pull_request opened\", \"Actions event\")\n  RelIndex(9, pipeline, envelope, \"envelope.spec in --lane mode on the feedback branch, then --check before arming\", \"verify and arm-auto-merge jobs\")\n  RelIndex(10, pipeline, github, \"gh pr merge --auto --squash with the App token\", \"arm-auto-merge job\")\n  RelIndex(11, github, pipeline, \"push main after the squash-merge\", \"Actions event\")\n  RelIndex(12, pipeline, fly, \"semantic-release, flyctl deploy, smoke.sh, rollback on failure\", \"deploy job\")\n  RelIndex(13, github, mp_events, \"push main tick\", \"Actions event\")\n  RelIndex(14, mp_events, github, \"Close the issue as Shipped, naming the PR\", \"shipped.mjs\")"
+      }
+    ],
+    "components_by_container": [
+      {
+        "container": "mp_events",
+        "components": [
+          {
+            "id": "wf",
+            "label": "Trigger shim",
+            "path": ".github/workflows/moneypenny-events.yml",
+            "responsibility": "Declares the triggers (push main, issues labeled, issue_comment created, dependabot pull_request opened, workflow_dispatch scan/audit/release-claim), the per-event concurrency group, and the jobs route, build-feedback, build-plan, build-events (matrix, max-parallel 8, sonnet, --max-turns 150) and dep-warden; mints an App token per job via .github/actions/app-token and gates on CLAUDE_CODE_OAUTH_TOKEN via .github/actions/oauth-token-gate"
+          },
+          {
+            "id": "router",
+            "label": "Router",
+            "path": "scripts/moneypenny/index.mjs",
+            "responsibility": "route() is pure (event + deps → intents); execute()/runIntents() is the only impure half; owns claimHandoff/releaseClaim (refs/tags lease, pinned by tests/arch/lease-namespace.spec.ts), claimFeedback, claimPlan, sweepShipped, stallRepairDispatch and the CLI flags"
+          },
+          {
+            "id": "events",
+            "label": "Event-research dispatch",
+            "path": "scripts/moneypenny/events.mjs",
+            "responsibility": "routeSweep/routeReceipts open one [event-research] receipt issue per never-assessed event; dueForResearch dedupes against open research/* PR heads and caps the batch from research-dispatch-budget.json (close-outs first)"
+          },
+          {
+            "id": "audit",
+            "label": "Stall and conflict audit",
+            "path": "scripts/moneypenny/audit.mjs",
+            "responsibility": "audit() emits flag-stall / silent-feedback / plan-ready-stall / flag-conflict intents with stall-flagged and conflict-flagged labels as memory; CONFLICT_REPAIR_CAP 3 escalates to needs-eric"
+          },
+          {
+            "id": "lease",
+            "label": "Claim lease support",
+            "path": "scripts/moneypenny/claim-lease.mjs",
+            "responsibility": "CLAIM_TTL_MS (2h), claimAgeOf, claimStamp, claimFailureReason for the refs/tags/claim/<slug> compare-and-set"
+          },
+          {
+            "id": "tier",
+            "label": "Model tier",
+            "path": "scripts/moneypenny/model-tier.mjs",
+            "responsibility": "modelTier(body): sonnet default, opus escalation from the issue's skynet-spec block readiness/criteria; plan issues stay on opus"
+          },
+          {
+            "id": "planclaim",
+            "label": "Plan ready-flip",
+            "path": "scripts/moneypenny/plan-claim.mjs",
+            "responsibility": "isReadySignal/hasPlanLabel/planReadyIntent: whole-comment ready patterns on plan-labelled issues (the workflow's if: already checked author_association)"
+          },
+          {
+            "id": "guard",
+            "label": "Feedback outcome guard",
+            "path": "scripts/moneypenny/feedback-guard.mjs",
+            "responsibility": "visibleOutcome(): a feedback/<n> PR, a terminal label or a comment beyond the receipt; otherwise posts needs-eric; interactiveHandoff() applies needs-session on a Sliced hand-off"
+          },
+          {
+            "id": "breaker",
+            "label": "Spend circuit breaker",
+            "path": "scripts/moneypenny/circuit-breaker.mjs",
+            "responsibility": "checkCircuitBreaker(): rolling window over total_cost_usd from run logs against research-circuit-breaker.json; trip state is a label on a tracking issue, cleared by a human"
+          },
+          {
+            "id": "eventscan",
+            "label": "Due oracle",
+            "path": "scripts/event-scan.mjs",
+            "responsibility": "--due lists events owed research (never-assessed, interval-elapsed, event-passed-unscored, forward-test-due) from src/domain/market-events/<id>.json and docs/research/events/<id>.md 'Last assessed' headers, banded by assessment-cadence.json; --validate is a CI gate"
+          },
+          {
+            "id": "screen",
+            "label": "Deterministic screen",
+            "path": "scripts/event-material-scan.mjs, scripts/event-material-decide.mjs, scripts/moneypenny/open-screen-pr.mjs",
+            "responsibility": "For interval-elapsed pulses, probes price/VIX movement; quiet ones get a ledger row committed on a moneypenny/screen-* branch and a screen PR (never a direct push, never a session)"
+          },
+          {
+            "id": "shipped",
+            "label": "Last-mile closer",
+            "path": "scripts/moneypenny/shipped.mjs",
+            "responsibility": "routeShipped/resolveShipped/prIsMerged close feedback and event-research issues whose PR merged, because Closes # links do not fire for bot-authored bot-merged PRs"
+          },
+          {
+            "id": "vocab",
+            "label": "Vocabulary and gh wrapper",
+            "path": "scripts/moneypenny/labels.mjs, scripts/moneypenny/gh.mjs",
+            "responsibility": "LABELS registry (managed vs registered), FOOTER, ensureVocabulary/ensureLabel; sh, isTransientGhError, withRetry, ghRest, ghRestAll"
+          },
+          {
+            "id": "prompts",
+            "label": "Lane instruction sets",
+            "path": ".github/prompts/feedback-build.md, .github/prompts/plan-build.md, .github/prompts/event-research.md, .claude/agents/dep-warden.md",
+            "responsibility": "The complete orders each claude-code-action session reads first; envelope-protected so no lane can rewrite its own instructions"
+          }
+        ]
+      },
+      {
+        "container": "gates",
+        "components": [
+          {
+            "id": "verify",
+            "label": "Verify entry",
+            "path": "package.json (verify), .husky/pre-push",
+            "responsibility": "run-p typecheck lint test typecheck:app test:app — the same gate locally (pre-push) and in CI"
+          },
+          {
+            "id": "specs",
+            "label": "Arch spec seam",
+            "path": "tests/arch/*.spec.ts, tests/support/advisory-scan.ts",
+            "responsibility": "46 rstest specs that invoke the scan scripts; advisoryScan() logs debt-class findings without failing; contract-class specs fail the suite"
+          },
+          {
+            "id": "biome",
+            "label": "Lint and format",
+            "path": "biome.json, .husky/pre-commit",
+            "responsibility": "biome check . ; noExcessiveLinesPerFile off, noExcessiveCognitiveComplexity warn; pre-commit auto-formats staged files"
+          },
+          {
+            "id": "commitlint",
+            "label": "Commit lint",
+            "path": "commitlint.config.js, .husky/commit-msg, scripts/commit-msg-reflow.mjs",
+            "responsibility": "Conventional Commits on every local commit; pipeline lints the PR title (the squash subject) via npx commitlint"
+          },
+          {
+            "id": "size",
+            "label": "Size coach",
+            "path": "scripts/arch-scan.mjs, scripts/code-lines.mjs, arch-grandfather.json, tests/arch/god-file.spec.ts",
+            "responsibility": "300 code lines (src, app/src, scripts) / 500 (tests) and junk-drawer names; advisory; drill /decompose, athlete decomposer"
+          },
+          {
+            "id": "dupe",
+            "label": "Duplication and clone coach",
+            "path": "scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json, dupe-budget.json, clone-budget.json",
+            "responsibility": "Same symbol in N files (dupe) and jscpd token clones; advisory; drill /dedupe, athlete ui-librarian"
+          },
+          {
+            "id": "dead",
+            "label": "Dead-code coach",
+            "path": "scripts/dead-scan.mjs, knip.json, dead-budget.json",
+            "responsibility": "knip-found unused files/exports/types; advisory; drill /bury, athlete mortician"
+          },
+          {
+            "id": "depgraph",
+            "label": "Dep-graph coach",
+            "path": "scripts/dep-graph-scan.mjs, .dependency-cruiser.cjs, dep-graph-budget.json",
+            "responsibility": "no-circular, no-orphans, domain-stays-pure, ports-depend-on-domain-only; advisory; no athlete yet"
+          },
+          {
+            "id": "specgap",
+            "label": "Spec-gap coach",
+            "path": "scripts/spec-gap-scan.mjs, spec-gap-budget.json",
+            "responsibility": "src files no spec imports; advisory; drill /backfill, athlete test-backfiller"
+          },
+          {
+            "id": "incident",
+            "label": "Learning coach",
+            "path": "scripts/incident-scan.mjs, incident-budget.json, tests/arch/lessons.spec.ts, docs/LESSONS.md",
+            "responsibility": "Failed main runs with no LESSONS entry naming the sha; offline ledger integrity spec; drill /retro; also runs inside ship.sh open as a preflight"
+          },
+          {
+            "id": "docrot",
+            "label": "Doc-rot and comment-bloat",
+            "path": "scripts/doc-rot-scan.mjs, scripts/comment-bloat-scan.mjs, doc-rot-budget.json, comment-bloat-budget.json",
+            "responsibility": "Dead file refs, missing npm scripts, stale STRUCTURE-graph age; narration comments; advisory; comment-bloat rides the secretary digest"
+          },
+          {
+            "id": "wflint",
+            "label": "Workflow contract gates",
+            "path": "scripts/workflow-lint.mjs, scripts/workflow-meta-scan.mjs, scripts/repair-watchlist-scan.mjs, scripts/grind-manifest.mjs",
+            "responsibility": "Blocking: duplicate YAML keys, dangling steps/needs refs, prompt shim paths, workflow_run watchlist drift, pure-literal Workflow meta, grind chore front-matter tiers"
+          },
+          {
+            "id": "formats",
+            "label": "Communication format gates",
+            "path": "scripts/issue-lint.mjs, scripts/research-lint.mjs, scripts/digest-scan.mjs --validate, scripts/journey-scan.mjs, scripts/ship.sh checkbody",
+            "responsibility": "Blocking: issue capsule grammar (docs/ISSUES.md), research call sheet (grade + falsifier), digest template, journey headings, PR-body fridge rule with SHA-pinned screenshots"
+          },
+          {
+            "id": "researchgates",
+            "label": "Research and ops eyes",
+            "path": "scripts/forward-test-id-scan.mjs, scripts/event-scan.mjs --validate, scripts/ci-install-duration-scan.mjs, scripts/doctrine-scan.mjs",
+            "responsibility": "Forward-test id collisions (budget) and fragment placement (blocking), calendar file validity, CI install wall-clock budget, persona doctrine due dates (advisory, digest ride-along)"
+          },
+          {
+            "id": "governor",
+            "label": "Governor and athletes",
+            "path": ".claude/skills/governor/SKILL.md, .claude/agents/decomposer.md, ui-librarian.md, mortician.md, test-backfiller.md",
+            "responsibility": "One dispatch cycle: WIP 1 per coach, --candidate target, collision check, sonnet athlete in an isolated worktree (scripts/worktree-setup.sh), one cycle PR with auto-merge per the merge-policy table; feast mode for planned burn-downs"
+          }
+        ]
+      }
+    ],
+    "validation": {
+      "tool_used": "mcp__Mermaid_Chart__validate_and_render_mermaid_diagram (Mermaid Chart MCP)",
+      "context_ok": true,
+      "container_ok": true,
+      "component_ok": "true — both C4Component diagrams (mp_events, gates) and the C4Dynamic feedback-to-deploy diagram returned valid:true, diagramType:c4",
+      "errors": "none; all five results reported valid:true and rendered SVG with no syntax-error text. Note: the tool result JSON embeds the SVG/PNG, so I read only the structured fields (title, valid, diagramType, liveEditUrl, SVG size) via a jq/python extraction, not the SVG bodies"
+    },
+    "undocumented": [
+      "research-dispatch-budget.json — the per-tick research dispatch cap (read by scripts/moneypenny/events.mjs); no doc under docs/ names it",
+      "research-circuit-breaker.json — the spend circuit breaker config (scripts/moneypenny/circuit-breaker.mjs); no doc names it (CLAUDE.md/COACHES mention a 'circuit breaker' only in passing)",
+      "scripts-grouping-budget.json — a budget file at the repo root with no scan script or doc referencing it by name",
+      "scripts/moneypenny/events.mjs — event-research dispatch and the cap; docs/MONEYPENNY.md and COACHES.md cite index.mjs and repair.mjs only",
+      "scripts/moneypenny/plan-claim.mjs — the plan ready-flip decision (#823); no doc names it",
+      "scripts/moneypenny/open-screen-pr.mjs — the deterministic-screen PR opener (#915); no doc names it",
+      "scripts/moneypenny/repair-logs.mjs — the repair lane's log fetch/sanitise; no doc names it",
+      "scripts/commit-msg-reflow.mjs — invoked by .husky/commit-msg; no doc names it",
+      "scripts/proxy-reexec.mjs — re-exec-under-proxy helper used by open-screen-pr.mjs (tests/arch/proxy-reexec.spec.ts exists); no doc names it",
+      "scripts/script-deps.mjs — has a spec (tests/scripts/script-deps.spec.ts) but no doc",
+      "scripts/workflow-labels.mjs — no doc, no spec found",
+      "scripts/issue-lint-audit.mjs — the issue-surface audit; docs/ISSUES.md cites 'issue-lint.mjs --audit' but not this file",
+      "scripts/event-title-overlap.mjs — same-date title-overlap detector cited in EVENT-RESEARCH only as a --validate behaviour, not by file",
+      "scripts/doctrine-decide.mjs — the pure half of doctrine-scan.mjs; only the scan is documented",
+      "scripts/design-cards.mjs — npm run design:cards; no doc names it",
+      "scripts/research/earnings-controls.mjs, intraday-strategies.mjs, session-stats.mjs — research instruments not named by docs/process/EVENT-RESEARCH.md (which names earnings-cycle.mjs and intraday-edges.mjs)",
+      ".github/workflows/companion-eval.yml — the replay-eval button (issue #1672 slice 5); not in docs/ROUTINES.md's table (it is manual, so not a schedule) and no doc names it",
+      ".github/actions/oauth-token-gate/action.yml — the armed? composite action; envelope.json protects .github/actions/** but no doc describes this action (app-token is mentioned in four docs)",
+      ".github/prompts/plan-build.md, .github/prompts/moneypenny-ci-repair.md, .github/prompts/moneypenny-event-stall-repair.md — three of the eight lane instruction sets are named by no doc (feedback-build, interactive, event-research, design-build, moneypenny-conflict-repair are)",
+      "Stale in-code references found while grounding (doc-rot candidates inside scripts, not docs): scripts/smoke.sh header cites .github/workflows/deploy.yml, which no longer exists (the job lives in pipeline.yml); scripts/moneypenny/circuit-breaker.mjs header cites a 'held research-daily-budget.json' that is not in the repo (research-budget.json is); .claude/agents/dep-warden.md says dependabot opens 'grouped' PRs while .github/dependabot.yml moved to per-package PRs (#3315)",
+      "No document under docs/ carries a system-level architecture map of the operating model itself; docs/adr/0008-spec-surfaces-and-architecture-fitness.md and docs/STRUCTURE-graph.md cover code structure, docs/OPERATING-MODEL.md covers the portable process — the C4 set above is the first"
+    ],
+    "uncertainties": [
+      "Actor modelling: the task asks for 'Claude sessions/lanes as actors'. I drew the interactive Claude session as a Person in the Context diagram and as the 'Interactive session toolkit' container in the Container diagram; the unattended lanes (feedback, plan, event-research, repair, human-directed) are containers, not persons, because each is a workflow file with its own entrypoint. If the caller wants lanes as Persons, the Context diagram would need to swap them in.",
+      "Element counts: Context has 9 elements (≤10). Container has 14 containers (≤15) plus 2 persons and 3 external systems drawn around them (19 nodes total). Each Component diagram has 14–15 components inside the boundary plus 3–4 surrounding nodes; I read the ≤15 cap as applying to components within the boundary.",
+      "The secretary digest Routine (trig_01KaMC2uR3cFW5XTUL6rzPuS) is account-level on claude.ai and cannot be verified from the repo; the evidence it fires is docs/ROUTINES.md's row and the digests in docs/digests/ (latest 2026-09-24). Its scan ride-alongs (config-audit, comment-bloat, incident, doctrine) are documented in ROUTINES.md but live only in the Routine's prompt, not in any repo file.",
+      "The design lane: docs/HANDOFFS.md describes a 'design lane' triggered from a canvas Artifact reading .github/prompts/design-build.md, but no file under .github/workflows/ references design-build.md — the lane appears to run outside GitHub Actions (a routine API trigger). I did not draw it as a container because I could not ground its entrypoint in the repo.",
+      "Anthropic API is called by the deployed product (feedback coach, companion), not by the operating machinery; I included it as an external system because envelope.json protects its model dials and companion-eval.yml touches it. The Alpaca broker, Google/GitHub OAuth and market-data hosts are product concerns and deliberately out of scope.",
+      "The fly.toml dashboard app is drawn deploying 'every push'; pipeline.yml deploys on push to main only (never on PRs) — 'every push' means every merge to main.",
+      "Graphify's installed binary (graphifyy on PyPI) is not declared in any manifest; scripts/refresh-graph.sh fails loudly if it is absent. Whether it is present in a given session is environment-dependent.",
+      "The allowed_bots identity 'skynet-envoy' in moneypenny-events.yml build-feedback is Moneypenny's App-token actor (docs/LESSONS.md 2026-09-05); I did not draw it as a separate actor.",
+      "Relationship density: the Container diagram carries 33 relationships. All are grounded, but a reader-facing version may want the audit/repair hand-off and the bots↔dashboard bridge trimmed for legibility.",
+      "Counts quoted in labels (16 skills, 13 agents, 46 tests/arch specs, ~688 research event files) are from directory listings at HEAD 245b952 and will drift."
+    ],
+    "sources": [
+      "/home/user/skynet-capital/CLAUDE.md",
+      "/home/user/skynet-capital/package.json",
+      "/home/user/skynet-capital/app/package.json",
+      "/home/user/skynet-capital/mise.toml",
+      "/home/user/skynet-capital/Dockerfile",
+      "/home/user/skynet-capital/fly.toml",
+      "/home/user/skynet-capital/fly.bots.toml",
+      "/home/user/skynet-capital/.env.example",
+      "/home/user/skynet-capital/envelope.json",
+      "/home/user/skynet-capital/.releaserc.json",
+      "/home/user/skynet-capital/knip.json",
+      "/home/user/skynet-capital/.dependency-cruiser.cjs",
+      "/home/user/skynet-capital/.mcp.json",
+      "/home/user/skynet-capital/.husky/commit-msg",
+      "/home/user/skynet-capital/.husky/pre-commit",
+      "/home/user/skynet-capital/.husky/pre-push",
+      "/home/user/skynet-capital/.github/workflows/pipeline.yml",
+      "/home/user/skynet-capital/.github/workflows/moneypenny-events.yml",
+      "/home/user/skynet-capital/.github/workflows/moneypenny-repair.yml",
+      "/home/user/skynet-capital/.github/workflows/claude.yml",
+      "/home/user/skynet-capital/.github/workflows/autonomy-ops.yml",
+      "/home/user/skynet-capital/.github/workflows/companion-eval.yml",
+      "/home/user/skynet-capital/.github/workflows/fly-logs.yml",
+      "/home/user/skynet-capital/.github/dependabot.yml",
+      "/home/user/skynet-capital/.github/actions/app-token/action.yml",
+      "/home/user/skynet-capital/.github/actions/oauth-token-gate/action.yml",
+      "/home/user/skynet-capital/.github/prompts/feedback-build.md",
+      "/home/user/skynet-capital/.github/prompts/interactive.md",
+      "/home/user/skynet-capital/.github/prompts/event-research.md",
+      "/home/user/skynet-capital/scripts/moneypenny/index.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/events.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/audit.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/repair.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/claim-lease.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/circuit-breaker.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/feedback-guard.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/gh.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/labels.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/model-tier.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/open-screen-pr.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/plan-claim.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/repair-logs.mjs",
+      "/home/user/skynet-capital/scripts/moneypenny/shipped.mjs",
+      "/home/user/skynet-capital/scripts/ship.sh",
+      "/home/user/skynet-capital/scripts/envelope-scan.mjs",
+      "/home/user/skynet-capital/scripts/refresh-graph.sh",
+      "/home/user/skynet-capital/scripts/smoke.sh",
+      "/home/user/skynet-capital/scripts/smoke-bots.sh",
+      "/home/user/skynet-capital/scripts/bot-relevant.mjs",
+      "/home/user/skynet-capital/scripts/bots-deploy-preflight.mjs",
+      "/home/user/skynet-capital/scripts/deploy-lag.mjs",
+      "/home/user/skynet-capital/scripts/digest-scan.mjs",
+      "/home/user/skynet-capital/scripts/config-audit.mjs",
+      "/home/user/skynet-capital/scripts/duel-log.mjs",
+      "/home/user/skynet-capital/scripts/event-scan.mjs",
+      "/home/user/skynet-capital/scripts/event-material-scan.mjs",
+      "/home/user/skynet-capital/scripts/event-material-decide.mjs",
+      "/home/user/skynet-capital/scripts/workflow-lint.mjs",
+      "/home/user/skynet-capital/scripts/workflow-meta-scan.mjs",
+      "/home/user/skynet-capital/scripts/grind-manifest.mjs",
+      "/home/user/skynet-capital/scripts/incident-scan.mjs",
+      "/home/user/skynet-capital/scripts/doctrine-scan.mjs",
+      "/home/user/skynet-capital/scripts/comment-bloat-scan.mjs",
+      "/home/user/skynet-capital/scripts/feedback-scan.mjs",
+      "/home/user/skynet-capital/scripts/latency-scan.mjs",
+      "/home/user/skynet-capital/scripts/plan-closure-scan.mjs",
+      "/home/user/skynet-capital/scripts/repair-watchlist-scan.mjs",
+      "/home/user/skynet-capital/scripts/journey-scan.mjs",
+      "/home/user/skynet-capital/scripts/comms-scan.mjs",
+      "/home/user/skynet-capital/scripts/issue-lint.mjs",
+      "/home/user/skynet-capital/scripts/research-lint.mjs",
+      "/home/user/skynet-capital/scripts/forward-test-pending.mjs",
+      "/home/user/skynet-capital/scripts/fly-image-ref.mjs",
+      "/home/user/skynet-capital/scripts/test-quality-scan.mjs",
+      "/home/user/skynet-capital/scripts/fetch-claude-docs.mjs",
+      "/home/user/skynet-capital/scripts/worktree-setup.sh",
+      "/home/user/skynet-capital/scripts/setup-commit-signing.sh",
+      "/home/user/skynet-capital/tests/arch/ (listing) and tests/arch/envelope.spec.ts, workflows.spec.ts, ship.spec.ts, god-file.spec.ts",
+      "/home/user/skynet-capital/tests/support/advisory-scan.ts",
+      "/home/user/skynet-capital/tests/scripts/ and tests/scripts/moneypenny/ (listings)",
+      "/home/user/skynet-capital/.claude/settings.json",
+      "/home/user/skynet-capital/.claude/hooks/session-start.sh",
+      "/home/user/skynet-capital/.claude/output-styles/orient.md",
+      "/home/user/skynet-capital/.claude/workflows/grind.js",
+      "/home/user/skynet-capital/.claude/workflows/symbol-sweep.js",
+      "/home/user/skynet-capital/.claude/skills/secretary/SKILL.md",
+      "/home/user/skynet-capital/.claude/skills/governor/SKILL.md",
+      "/home/user/skynet-capital/.claude/skills/ship/SKILL.md",
+      "/home/user/skynet-capital/.claude/agents/decomposer.md, mortician.md, ui-librarian.md, test-backfiller.md, dep-warden.md, reviewer.md, red-team.md",
+      "/home/user/skynet-capital/docs/MONEYPENNY.md",
+      "/home/user/skynet-capital/docs/COACHES.md",
+      "/home/user/skynet-capital/docs/ROUTINES.md",
+      "/home/user/skynet-capital/docs/OPERATING-MODEL.md",
+      "/home/user/skynet-capital/docs/DEPLOY.md",
+      "/home/user/skynet-capital/docs/AUTONOMY-DEPLOY.md",
+      "/home/user/skynet-capital/docs/GRAPHIFY.md",
+      "/home/user/skynet-capital/docs/DELEGATION.md",
+      "/home/user/skynet-capital/docs/COMPUTE.md",
+      "/home/user/skynet-capital/docs/HANDOFFS.md",
+      "/home/user/skynet-capital/docs/ISSUES.md",
+      "/home/user/skynet-capital/docs/PICTURES.md",
+      "/home/user/skynet-capital/docs/ENGINEERING.md (Releases section)",
+      "/home/user/skynet-capital/docs/TECHNIQUES.md",
+      "/home/user/skynet-capital/docs/LESSONS.md (skynet-envoy entry)",
+      "/home/user/skynet-capital/docs/process/EVENT-RESEARCH.md",
+      "/home/user/skynet-capital/docs/process/LEARNING-LOOP.md",
+      "/home/user/skynet-capital/docs/plans/secretary.md",
+      "/home/user/skynet-capital/docs/digests/TEMPLATE.md",
+      "/home/user/skynet-capital/src/scripts/serve-dashboard.ts",
+      "/home/user/skynet-capital/src/scripts/run-autonomous.ts",
+      "/home/user/skynet-capital/src/server/feedback-api-routes.ts",
+      "/home/user/skynet-capital/src/server/feedback-issue.ts",
+      "/home/user/skynet-capital/src/server/github-api.ts",
+      "/home/user/skynet-capital/src/server/ops-status-deploy-lag.ts",
+      "/home/user/skynet-capital/src/server/feedback-coach.ts",
+      "/home/user/skynet-capital/src/server/insights-listener.ts",
+      "/home/user/skynet-capital/src/autonomous/bot-controls-client.ts",
+      "https://mermaid.js.org/syntax/c4.html (C4 syntax reference, fetched)"
+    ]
+  },
+  "_provenance": {
+    "derived": "2026-09-25 from the code by two read-only passes",
+    "refuted": "79 claims, one refuter each",
+    "synthesis": "source/synthesis.md carries the corrected sources re-validated, the element table, the merged undocumented list, the parity sketch and the open uncertainties"
+  }
+}
