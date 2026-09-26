@@ -62,43 +62,50 @@ Engine fills (once trading is on) ────────┼─▶ ObservatoryH
 email owns (`Participant.ownerEmail`) with a combined-equity hero above the per-account split. The
 drawer's "Portfolio" link (formerly "You") lands here; each row opens that account's desk.
 
-`/u/:id` is a member's desk. A `?tab=` param picks the view (plain links, no JS, shareable):
+`/u/:id` is the page for **any** account, bot or human — reached from the Leaderboard and Activity,
+and never folded into the Profile page (Eric, #2321: "Profile verbiage is user-centric. Leaderboards
+that include other users belong outside of profile"; #3345/#3350: Accounts is self-scoped). It is a
+shell React route (`app/src/routes/u.$id.*.tsx`) with its own head (`app/src/shell/account-head.tsx`,
+#3807 slice 2d): the account's name, its kind chip and the SIM pill, then a section switch — one
+nested route per section:
 
-| Tab | URL | Question it answers | Goes blank when |
+| Section | URL | Question it answers | Shown for |
 |---|---|---|---|
-| Overview | `/u/:id` | who is this, at a glance | — |
-| Active | `?tab=positions` | what am I in right now? | flat |
-| Performance | `?tab=performance` | how am I doing? | see below — each section answers separately |
+| Overview | `/u/:id` | who is this, at a glance — tiles, the character card, the blotter | every account |
+| Activity | `/u/:id/activity` | what did it actually do? — every order, with its reasons | every account |
+| Pulse | `/u/:id/pulse` | how is it doing over time? — equity curve, streaks, weekly P/L | every account |
+| Heartbeat | `/u/:id/decisions` | is the bot alive, and what did its last passes conclude? | bots |
+| Thesis | `/u/:id/thesis` | what is its standing call, and is it working? | bots |
+| Settings | `/settings` | (the viewer's own account settings) | only your own account |
 
-Performance folds what used to be three separate tabs (History, Analysis, Metrics) into one page,
-but keeps them **honestly separate underneath**: closed round trips, trade-behavior stats, and the
-equity curve are three different inputs that go blank for three different reasons, so each section
-renders its own empty state from its own data — never one blended gate that hides a real equity
-curve just because nothing's closed yet, or vice versa. Round trips are fills matched
-first-in-first-out by `src/trading/round-trips.ts`; the raw order ledger folds away beneath the
-round-trips table as receipts. Design rationale and the platform research behind it:
-[`docs/research/trading-desk-ux.md`](research/trading-desk-ux.md).
+`/u/:id/decisions` keeps its address for saved links; Decisions folded into Heartbeat (#3687), so it
+reads what the Profile page's Heartbeat reads. `/u/:id/playbooks` redirects to R&D → Playbooks.
+Old `?tab=` links redirect to their section (`src/server/legacy-redirects.ts`). The route's name is
+a later IA call; the word "desk" is retired from member-facing copy (#3345).
 
-### Acting on a position (owner-linked accounts only)
+### Acting on a position (your own accounts only)
 
-The Active tab carries a per-row **Sell** (partial or full) and a **New trade** ticket. Both POST to
-`/trade`, which renders a **review screen** — estimated cost/proceeds, cash after, position after —
-and sends nothing until an explicit confirm. The confirm re-reads the live account and re-runs the
-same rules server-side before submitting, so a position that moved between review and confirm is
-refused rather than sent.
+**Ownership decides the write controls** (#3807 slice 2d). Reads are public inside the invite gate
+by design, but the server refuses any order on an account the requester does not own
+(`src/server/account-identity-gate.ts`: "You can only trade your own account."). So on an account
+the viewer does not own, the blotter renders no Close, Close this buy or Roll and no New trade card —
+one plain line, "You can trade only your own accounts", sits beside the blotter; Guidance (a read)
+stays. The check is the viewer's owned list (`app/src/live/settings.ts`, `ownsAccount`), never a
+new server read. A `/trade?desk=<not yours>` link opens the viewer's own account with one line at
+the top of the ticket: "Showing your account — <name> is not yours to trade".
+
+On your own account, Close (partial or full) and the New trade ticket both review before sending —
+estimated cost/proceeds, cash after, position after — and send nothing until an explicit confirm.
+The confirm re-reads the live account and re-runs the same rules server-side, so a position that
+moved between review and confirm is refused rather than sent.
 
 Member-initiated trading needs no switch — it's on the moment OAuth is configured (Eric's ruling,
 2026-08-21, #466: no separate kill switch). Without a signed-in identity there is no account to
 match an order to, so orders are refused; once a member's account carries an owner link
 (`Participant.ownerEmail`, stamped from their session at `/add`), they may trade it.
 
-Rolling renders as a disabled control with its real reason: this account path trades shares, so there
-is no options leg to roll (see the plan for what enabling it would take).
-
-The desk itself now renders as a shell React route (`/app/u/:id`) rather than server-rendered
-HTML — eyeball it by starting the dev server and opening the route in a browser (the shoot-script
-harness this section used to point to was retired whole with the classic desk views in #738 phase
-9f-2).
+Pictures: `npm run build --prefix app && npx tsx scripts/shoot/desk.mjs` (phone then desktop, as
+another member).
 
 ## Design
 

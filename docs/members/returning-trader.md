@@ -36,9 +36,10 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ## 5. What frustrates them
 
-- **6** — Trade's "← Back to account" goes to the desk `/u/:id`, not the cockpit they came from
-  (`app/src/routes/trade.tsx:698`); the desk rail only ever says "← Leaderboard"
-  (`app/src/shell/desk-rail.tsx:78`); `/accounts` never links their own desk.
+- **6 (partly fixed, #3807 slices 2a + 2d)** — Trade's "← Back to account" and the rail's
+  "← Leaderboard" are gone (2a); their own account's page now links the same account on their
+  Profile page ("Open in your Accounts", `app/src/shell/account-head.tsx`). Still open:
+  `/accounts` never links the other page for the same account.
 - **9 (found by run 0; fixed)** — `/api/accounts/networth` answered 500 on the offline fixture
   (`h.equity.forEach`, `src/server/networth-api-routes.ts`, when the history read carried no
   equity series); the Overview said "Net worth is unreachable right now." and the positions

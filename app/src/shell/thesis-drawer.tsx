@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { fetchDeskThesis, type ThesisData, type ThesisMarker } from "../live/desk";
@@ -9,7 +10,7 @@ import { mountThesisChart } from "./thesis-chart-mount";
 /**
  * THE THESIS DRAWER'S SHELL (#3186 slices 4a + 4b) — a bot's standing call, its one-line thesis, a
  * track-record chart, an honest health readout, and a bot-controls cluster. Lives at
- * `/u/:id/thesis`, a sixth `DeskRail` sibling — this codebase has no slide-over/modal pattern
+ * `/u/:id/thesis`, a section of the any-account page — this codebase has no slide-over/modal pattern
  * (`timeline-drawer.tsx` was deliberately de-drawered after live-review feedback that a popup read
  * as too far removed from what opened it), so "Drawer" here is a page, matching every other
  * desk-scoped view.
@@ -127,17 +128,40 @@ function CallBanner({ call }: { readonly call: ThesisData["call"] }): ReactEleme
   );
 }
 
+/** Where a marker's order row lives (#3807 slice 2d, dead end 5): the `#act-<orderId>` anchors exist
+ *  only on an Activity table, so a marker links to the Activity of the page it is on — the
+ *  any-account page's own (`/u/:id/activity`), or the Profile page's for that account. */
+type ActivityHome = "page" | "profile";
+
 /** A fill without a resolved decision renders exactly as before: a plain link, no fake affordance.
  *  One carrying `reasoning` gets a closed-by-default expand — a fill isn't a failure state that
  *  demands to arrive open, unlike `CycleRow`'s halted/rejected cycles. */
-function MarkerRow({ marker }: { readonly marker: ThesisMarker }): ReactElement {
+function MarkerRow({
+  marker,
+  deskId,
+  activity,
+}: {
+  readonly marker: ThesisMarker;
+  readonly deskId: string;
+  readonly activity: ActivityHome;
+}): ReactElement {
   const [open, setOpen] = useState(false);
   return (
     <li className={`thesis-marker thesis-marker-${marker.kind}`}>
       <div className="thesis-marker-row">
-        <a href={`#${marker.activityAnchor}`}>
-          {marker.n}. {marker.label}
-        </a>
+        {activity === "page" ? (
+          <Link to="/u/$id/activity" params={{ id: deskId }} hash={marker.activityAnchor}>
+            {marker.n}. {marker.label}
+          </Link>
+        ) : (
+          <Link
+            to="/accounts"
+            search={{ account: deskId, section: "activity" }}
+            hash={marker.activityAnchor}
+          >
+            {marker.n}. {marker.label}
+          </Link>
+        )}
         {marker.reasoning ? (
           <button
             type="button"
@@ -166,14 +190,23 @@ function MarkerRow({ marker }: { readonly marker: ThesisMarker }): ReactElement 
 
 function MarkerList({
   markers,
+  deskId,
+  activity,
 }: {
   readonly markers: readonly ThesisMarker[];
+  readonly deskId: string;
+  readonly activity: ActivityHome;
 }): ReactElement | null {
   if (markers.length === 0) return null;
   return (
     <ol className="thesis-markers">
       {markers.map((marker) => (
-        <MarkerRow key={marker.activityAnchor} marker={marker} />
+        <MarkerRow
+          key={marker.activityAnchor}
+          marker={marker}
+          deskId={deskId}
+          activity={activity}
+        />
       ))}
     </ol>
   );
@@ -182,9 +215,13 @@ function MarkerList({
 function ThesisChart({
   equity,
   markers,
+  deskId,
+  activity,
 }: {
   readonly equity: ThesisData["equity"];
   readonly markers: readonly ThesisMarker[];
+  readonly deskId: string;
+  readonly activity: ActivityHome;
 }): ReactElement {
   const container = useRef<HTMLDivElement>(null);
 
@@ -199,12 +236,19 @@ function ThesisChart({
   return (
     <>
       <div ref={container} className="thesis-chart-canvas" />
-      <MarkerList markers={markers} />
+      <MarkerList markers={markers} deskId={deskId} activity={activity} />
     </>
   );
 }
 
-export function ThesisDrawer({ id }: { readonly id: string }): ReactElement {
+export function ThesisDrawer({
+  id,
+  activity = "profile",
+}: {
+  readonly id: string;
+  /** Which page's Activity the fill markers open — the one this drawer is rendered on. */
+  readonly activity?: ActivityHome;
+}): ReactElement {
   const thesis = useQuery({ queryKey: ["desk-thesis", id], queryFn: () => fetchDeskThesis(id) });
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const ownAccounts = settings.data?.accounts.filter((a) => a.kind === "human") ?? [];
@@ -240,7 +284,7 @@ export function ThesisDrawer({ id }: { readonly id: string }): ReactElement {
           <span className="thesis-health-detail"> · {data.health.detail}</span>
         ) : null}
       </p>
-      <ThesisChart equity={data.equity} markers={data.markers} />
+      <ThesisChart equity={data.equity} markers={data.markers} deskId={id} activity={activity} />
     </div>
   );
 }
