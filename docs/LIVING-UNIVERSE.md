@@ -19,6 +19,20 @@ as accented detail, so the world visibly grows from everyone's contributions. Sa
 first proof — a persona rendered as a landmark. The experience personalizes and gamifies by making the
 system's state something you can *see and inhabit*.
 
+## Overall goals (Eric, 2026-09-27) — the four the rest of this doc serves
+
+1. **Enable autonomous trading strategies that outperform index funds.** The end-state stated in
+   this file's own header — everything from the judgment axis to the contribution ladder exists to
+   get a bot's strategy there.
+2. **Teach my nephew and brother more about how to make money on the stock market.** Not a metric —
+   the family stays the audience the game loop (`THE-GAME.md`'s weekly Recap, honest wins/losses) is
+   written for.
+3. **Provide a topic of conversation w/family.** The engagement flywheel below isn't abstract growth —
+   it's measured by whether the group is still talking about it.
+4. **Maximize profit trading real money with stocks.** The paper-only/real-cash-standard boundary
+   (`## Boundaries & consent` below) exists to *earn* the right to this goal, not to avoid it —
+   season 3's real-money integration is where 1 and 4 converge.
+
 ## Why it matters — the flywheel
 
 **Fun is the engine, not the wrapper.** The top-line design constraint is _make it fun to play_ — the
@@ -196,6 +210,42 @@ from a desk to a nation. Comparison highlights **commonality** (the same NVDA to
 cities) and **contrast** (one empire's coal-and-rail vs. another's solar-and-silicon) in a single glance.
 The bots-vs-humans nation view is exactly where the aggregate-only metrics belong (cohort average,
 spread, participation) — they *are* the country-scale units.
+
+## The three-era arc (Eric, 2026-09-27) — where the phased roadmap is headed
+
+Eric's first pass at the multi-year shape, offered as a hedge ("I have yet to invest much thought
+on the longer term"), not a spec. Banked here rather than built — nothing below is a slice yet.
+
+**Naming collision worth one line, not a block:** `THE-GAME.md`'s "Season" is the repeating
+**quarterly** renown-reset unit (`docs/THE-GAME.md` line ~120); Eric's "season 1/2/3" here name
+**multi-quarter product eras**, each containing many of those quarterly Seasons. Both are Eric's own
+words (IDEAS.md already uses "season one" this way), so this doc calls them **Era 1/2/3** below to
+keep the two scales apart in writing — rename back if that reads worse out loud than on the page.
+
+- **Era 1 — humans vs. Sauron (and other Eric-account bots); the only autonomous bots in the
+  system.** This *is* the roadmap's phases 1–3 above, already in flight (Sauron autonomous is
+  IDEAS.md's stated season-one premise). New goals from this pass, not yet slices:
+  - **Competition rules, undefined.** What "winning" a quarter means beyond the renown ledger
+    THE-GAME.md already scores — open, not decided here.
+  - **Regular touch points to keep people engaged.** Partly served today by the weekly Friday Recap
+    (`THE-GAME.md`); whether that cadence is enough is untested — no active members yet (#3818).
+  - **Joyful trading UX across stocks, options, and other tradeable commodities.** Today's order
+    path is equities-only market orders (IDEAS.md's Sauron roadmap, steps 2–4); "any other
+    commodities" is new scope, not on that roadmap yet.
+  - **Performance dashboards that answer or nudge, not just report.** No existing doc owns this —
+    closest relative is the judgment axis (phase 3) and the observatory views (`## Scale across the
+    four views` below); a dashboard that *nudges toward the process that answers a question* is a
+    sharper bar than either currently states.
+  - **AI position/opportunity guidance toward maximizing profit**, and **hypothetical-scenario
+    guidance** ("what if I did X"). Both new — nearest existing thread is CLAUDE.md's "position
+    guidance" / the trade form's Guidance tab, which today is UI copy, not an advisory system.
+- **Era 2 — bots vs. bots; members create and configure their own bots' strategies.** This is
+  phase 4 of the roadmap above (**contributable personas**) under a sharper frame: *promoting
+  Sauron's own capabilities to other users*, not just accepting outside contributions. Same
+  mechanism (plugin architecture, tier-gated trading authority via the contribution ladder below).
+- **Era 3 — TBD.** Named open, not decided: real-money account integration for autonomous trading.
+  This is where goals 1 and 4 above converge, and where `## Boundaries & consent` below's
+  real-cash-standard practice is the thing being tested for real.
 
 ## Phased roadmap (each phase a trust stepping stone)
 
