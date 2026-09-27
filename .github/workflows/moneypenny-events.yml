@@ -78,7 +78,11 @@ on:
   push:
     branches: [main]
   issues:
-    types: [labeled]
+    # `labeled` is the plan/feedback claim trigger above; `unlabeled`/`closed`/`reopened` added
+    # 2026-09-27 (#3818 slice B part 2) so `sync-project` (below) sees every state change the
+    # Status sync rule cares about — a `needs-eric` label coming OFF, or an issue closing/reopening,
+    # is exactly as real a Status change as a label landing.
+    types: [labeled, unlabeled, closed, reopened]
   # DEPENDABOT'S OWN PR IS THE TRIGGER (#3315, 2026-09-20) — dep-warden (.claude/agents/dep-warden.md)
   # already reads the real changelog and runs full verify before merging patch/minor bumps, a
   # stronger gate than CI-green alone (the generic dependabot/fetch-metadata auto-merge pattern
@@ -724,3 +728,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/moneypenny/index.mjs --release plan-${{ needs.route.outputs.plan_issue }}
 
+  sync-project:
+    name: sync project status
+    # #3818 slice B part 2. Keeps the "Skynet Capital — Orchestration" Project's Status column
+    # current as issue labels/state change — independent of `route`'s screening, since this reacts
+    # to state, never decides whether to build anything.
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: sync issue status
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_PAT }}
+        run: node scripts/moneypenny/projects-sync.mjs ${{ github.event.issue.number }}
