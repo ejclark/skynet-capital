@@ -1585,3 +1585,13 @@ auto-merge doesn't wait for a same-workflow job that finishes after the required
 sequencing question (maybe `arm-auto-merge`/`deploy` should `needs: e2e` too). Did not touch repo
 settings myself — out of scope for the PR that surfaced it, and settings changes are Eric's call.
 _(src: Claude · while: root-causing PR #3576's failing e2e check)_
+
+## The chat/companion feature will likely change alongside orchestration work
+
+Eric, on why feedback filing is quiet (#3818 open question 4): "no one is really using the app —
+tony was a friend testing some things but has been busy, as have i on other features. The chat
+feature will likely change w/the feature we're building.. probably a topic we'd want to have
+detailed in the backlog somewhere." Not scoped — no shape, no acceptance criteria, no slice. Parked
+here per his own instruction rather than built or planned now. Needs its own interrogation pass
+(what "the feature we're building" changes about it, specifically) before it's a plan issue.
+_(src: Eric · while: #3818 point 3, answering open question 4, 2026-09-27)_
