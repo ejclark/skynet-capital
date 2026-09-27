@@ -6,35 +6,46 @@
 
 ## At a glance
 
-**TL;DR.** **The 5-Year auction does not move the 5-Year — it bends the curve at one point, and
-that is the whole of what this event is.** Measured this session from Treasury's own
-`auctions_query` and daily par yield curve (43 nominal 5Y auctions since 2023-01, 920 sessions):
-on a 5Y auction day the 5Y CMT closes **−0.77bp**, t = **−1.07** — statistically nothing, and
-nothing away from FOMC weeks either (−1.10bp, t = −0.99). What *is* enormous is the **relative**
-move: the 5Y minus the average of the 3Y and 7Y prints **−1.69bp** with t = **−9.84**, against
-**+0.09bp** on 876 non-auction sessions, and it is confined to the auction session itself. So the
-[2Y sibling's](treasury-2y-note-2026-10-26.md) headline **−4.70bp outright rally does not
-generalize down the curve** — and the same relative test run across all seven nominal coupon
-tenors fires on **every one of them** (2Y −4.14 · 3Y −3.09 · 5Y −1.69 · 7Y −1.09 · 10Y −1.60 ·
-20Y −2.00 · 30Y −0.87, t = −3.4 to −15.6, non-auction controls all ≈ 0). Two facts say a large
-part of that is **mechanical, not demand**: the auction's own bid-to-cover explains none of the
-day (corr **−0.038**, t = −0.19, n=28), and a 10Y **reopening** — which creates no new
-on-the-run for Treasury's curve to re-anchor on — shows only **−0.52bp** against a new issue's
-−1.60bp. Second correction, this one to the [09-23 same-tenor sibling](treasury-5y-note-2026-09-23.md):
-its "soft foreign demand" verdict on 2026-08-26 does not survive — indirect and direct shares are
-substitutes at this tenor too (corr **−0.871**, t = −11.38, n=43), and on the residual that is not
-a reclassification, **dealers took 10.05%, the 7th lowest of 43**. That was a strong auction, not
-a weak one. Third: this sale is **not** a quiet FOMC-eve session — the pin the 2Y sibling measured
-is a **D−2** property (2Y non-auction |move| 2.76bp) and **vanishes at D−1**, which is where
-2026-10-27 sits (4.86bp on the 5Y, versus 4.85bp on ordinary far-from-FOMC sessions). Size is
-**$70B**, primary-verified. `symbols: []`, date `estimate`, nothing here is a trade.
+**TL;DR.** **The 5-Year auction does not move the 5-Year — it bends the curve at one point — and
+the yardstick this doc built to grade the print (dealer takedown, not indirect share) just took a
+body blow from the very next auction it was built to grade.** Core finding, unchanged since
+initial research (43 nominal 5Y auctions since 2023-01, 920 sessions): on a 5Y auction day the 5Y
+CMT closes **−0.77bp**, t = **−1.07** — statistically nothing — while the 5Y **relative to the
+average of the 3Y and 7Y** moves **−1.69bp**, t = **−9.84**, against **+0.09bp** on non-auction
+sessions, substantially mechanical (bid-to-cover explains none of the day, corr −0.038) and firing
+on every nominal tenor (2Y −4.14 · 3Y −3.09 · 5Y −1.69 · 7Y −1.09 · 10Y −1.60 · 20Y −2.00 ·
+30Y −0.87). **New this pulse (2026-09-27): the 09-23 predecessor — the auction immediately before
+this one — closed out** (re-verified direct this session from fiscaldata `auctions_query`, CUSIP
+91282CRN3: high yield 5.033%, bid-to-cover 2.210, matching that ledger's close-out field-for-field)
+as the weakest 5Y print of this doc's life on every leg: tail **+3.1bp**, bid-to-cover **2.21**
+(below the entire $70B-era 2.28–2.43 range — **this doc's own kill switch fires**), indirect
+**54.31%** (a new 12-print low), and dealer takedown **15.77%** — not just above the 13.2% p75
+line this doc uses to call a print "weak," but above the *entire* prior 12-print range
+(8.84–15.61%) — **the second registered kill switch also fires**. Both of that sibling's own
+forward tests (dealer, indirect) scored **KILLED**. The 09-22 2Y sibling missed its own
+dealer-takedown threshold too (13.19% vs 12.1%) — two consecutive tenors, two consecutive
+auctions, both breaking on the capacity leg, which its own close-out now reads as a **curve-wide
+capacity problem**, not composition noise. **Practical consequence:** the $70B-era bands this doc
+built to grade 2026-10-27's own print (dealer p25 11.0%/median 12.3%/p75 13.2%, bid-to-cover
+2.28–2.43) are now stale on their own most recent input; `FT-treasury-5y-note-2026-10-27-2` is
+registered this pulse to test whether the weakness repeats on this auction itself. Separately: the
+2026-10-28 FOMC one day after this sale has itself repriced from hold-modal to hike-modal
+(~62–66%, Polymarket/CME, fetched today by the sibling ledger) — reinforcing, not softening, this
+doc's D−1 finding that 2026-10-27 will be a loud tape, not a muted one (the pin the 2Y sibling
+measured is a D−2 property and vanishes at D−1, where the 5Y's mean absolute move is 4.86bp
+against 4.85bp on ordinary far-from-FOMC sessions). VIX **14.87** (09-25 close), +0.34pt since
+initial research — no regime shift. Brent has round-tripped from the mid-September Saudi
+East-West-pipeline spike (~$130.80 FRED / ~$108 press, 09-15/16) back to **$97.44** (09-25) after
+the pipeline resumed pumping 09-22 — the acute geopolitical leg is cooling, not confirmed dead.
+This auction's own terms remain unconfirmed: no 2026-10-22 announcement yet, size still $70B by
+guidance only. `symbols: []`, date `estimate`, nothing here is a trade.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (2026-09-05, D-52) | **Stand aside** | High | Saturday, no session; 09-07 is Labor Day. This auction's CUSIP and demand do not exist until the **2026-10-22** announcement, and `symbols: []` leaves nothing to express a view in. | Nothing dated today for this event; its terms are 47 days away |
-| This week | **Stand aside — and do not read the 09-08…09-10 coupon block as a preview of this one** | High | Those are 3Y/10Y/30Y sales with their own reaction functions; the only diagnostic predecessor for this tenor is the **2026-09-23** 5Y, and it has not happened. | The **2026-09-11** CPI, which moves the policy path this auction only prices — that print, not the coupon block, is the week's belly event |
-| This month | **Re-grade the 09-23 sibling on dealer takedown, not on indirect share** | Medium | Indirect and direct are substitutes at the 5Y (corr −0.871, t = −11.38); their sum is half as noisy (sd 2.76pt vs 5.29pt) and *rose* across the regime break where indirect fell. Dealer takedown is the residual, and it is the only bucket that is not a reclassification of another. | The **2026-09-23** print drawing indirect below ~61% *and* dealer takedown at or under the $70B-era p25 of **11.0%** — a "weak foreign demand" verdict alongside a strong residual would say the two metrics disagree and the correction is doing no work |
-| This quarter | **Expect the 10-27 tape to be loud, not muted — and do not carry the 2Y's FOMC-pin prior across to it** | Medium | The 2Y sibling's quiet-FOMC-eve finding is a D−2 effect; at D−1, where this auction sits, the 5Y's mean absolute move is **4.86bp** against **4.85bp** on ordinary far-from-FOMC sessions — no pin at all. Three data prints and a long-end buyback share the session. | A 5Y CMT mean absolute move of **≤3.0bp on 2026-10-27** — the pin arriving at D−1 after all, which would say the 2Y sibling's mechanism extends further up the curve than measured here |
+| Today (2026-09-27, D-30) | **Stand aside** | High | Terms and size remain unconfirmed until the **2026-10-22** announcement, and `symbols: []` leaves nothing to express a view in regardless. | Nothing dated today for this event; its terms are 25 days away |
+| This week | **Stand aside** | High | No development this event's own terms depend on lands this week; the corridor's binding print (jobs 10-02) sits just outside this ledger's remit. | A 2026-10-22-dated size or schedule change surfacing early — not seen on any primary checked this session |
+| This month | **Watch demand, not the FOMC-eve story — the grading yardstick just broke on its own most recent test** | Medium | The 09-23 predecessor fired both of this doc's registered kill switches (dealer 15.77% > 13.2%, bid-to-cover 2.21 outside 2.28–2.43); the 09-22 2Y missed its own threshold too — two tenors, two auctions, the same capacity break. | This auction's own 2026-10-27 print landing back inside every $70B-era band (dealer ≤13.2%, BTC 2.28–2.43) — registered as `FT-treasury-5y-note-2026-10-27-2` |
+| This quarter | **Expect a loud tape, and now a live demand question too** | Medium | The FOMC-eve pin is a D−2 property that does not reach this D−1 sale (unchanged); the October FOMC has now repriced to hike-modal (~62–66%), reinforcing a loud session — and two straight belly/front auctions have missed their own demand bands, so the print itself is no longer a formality either. | A 5Y CMT mean absolute move ≤3.0bp on 2026-10-27 (the original D−1 falsifier), or a print back inside every $70B-era band (the new one) |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
@@ -50,27 +61,35 @@ is a **D−2** property (2Y non-auction |move| 2.76bp) and **vanishes at D−1**
   (corr −0.038, t = −0.19) and a 10Y reopening shows a third of a new issue's effect — consistent
   with Treasury's par curve re-anchoring on a fresh on-the-run. Do not call it "the auction rallied
   the belly."
-- **The correct yardstick for the print itself — dealer takedown**, $70B era, n=28:
-  min **8.8%** · p25 **11.0%** · median **12.3%** · p75 **13.2%** · max 19.5%. **Weak print** =
-  dealer above **13.2%**. **Strong print** = dealer at or below **11.0%**.
+- **The correct yardstick for the print itself — dealer takedown, and it just broke.** $70B era
+  through 09-23, n=29: min **8.8%** · p25 **11.0%** · median **12.3%** · p75 **13.2%** · **new max
+  15.77% (09-23)**, above the prior max of 15.61%. **Weak print** = dealer above **13.2%** — the
+  09-23 print is now the worst of the era on this metric.
 - **The wrong yardstick, named so it stops being reused** — indirect share against a "~65.7%
-  norm". The live 12-auction mean is **63.4%**, indirect and direct are substitutes
-  (corr −0.871), and 2026-08-26's 61.5% sat alongside the 7th-lowest dealer takedown of 43.
+  norm". The live mean is **63.4%** (43 auctions), indirect and direct are substitutes
+  (corr −0.871); 08-26's 61.5% sat alongside the 7th-lowest dealer takedown of 43, but 09-23's
+  54.31% (a new 12-print low) landed *with* the era's worst dealer print, not against it — the two
+  metrics failed together this time, not in the offsetting pattern the correction relied on.
 - **Percentages are on the competitive base** (indirect + direct + dealer), never `total_accepted`
   — SOMA add-ons ran **$0.3–10.5B** across the $70B era, so the wrong denominator shifts every
   share by up to 13 points.
-- **Bid-to-cover band, $70B era only** (28 auctions, 2024-04-24 → 2026-08-26): mean **2.361**,
-  sd 0.040, min **2.28** · p25 2.337 · median **2.360** · p75 2.393 · max **2.43**. A print
-  outside 2.28–2.43 is the first in the era.
+- **Bid-to-cover band, $70B era** (29 auctions, 2024-04-24 → 2026-09-23): the prior 2.28–2.43 range
+  (28 auctions through 08-26) is now **2.21–2.43** — 09-23 printed a new low, **outside** the
+  range this doc used to grade it, per the registered kill switch (fired, see Stance §).
+- **Kill switches fired this pulse (2026-09-27):** the 09-23 predecessor's dealer takedown
+  (15.77%) and bid-to-cover (2.21) both breached this doc's own registered thresholds.
+  `FT-treasury-5y-note-2026-10-27-2` is registered to test whether 2026-10-27 repeats the miss —
+  see Stance § for the amendment.
 - **Size is settled before it opens — $70B**, verbatim from `sb0590` (2026-08-05), read direct this
   session; a deviation at the **2026-10-22** announcement voids every like-for-like claim above.
 - **Data hygiene, load-bearing:** the fiscaldata row for **2026-01-26** carries
   `original_security_term: 5-Year` and must be **excluded** from any 5Y series, or it injects a
   $69B two-year auction into a $70B five-year one. See leg 6.
-- **Watch (dated)** — CPI **09-11** · FOMC **09-16** · the predecessor 5Y **09-23** · CPI **10-14** ·
+- **Watch (dated)** — ~~CPI 09-11~~ · ~~FOMC 09-16~~ (hiked 25bp to 3.75–4.00%) ·
+  ~~the predecessor 5Y 09-23~~ (weak, closed out — see Stance §) · CPI **10-14** ·
   20Y **10-21** · 5Y TIPS **10-22** · this announcement **10-22** · 2Y **10-26** · this auction
-  **10-27** · the 20-30Y buyback the same afternoon **10-27** · FOMC **10-28** · 7Y **10-29** ·
-  settlement **11-02**.
+  **10-27** · the 20-30Y buyback the same afternoon **10-27** · FOMC **10-28** (now hike-modal,
+  ~62–66%) · GDP/PCE **10-29** · 7Y **10-29** · ECI **10-30** · settlement **11-02**.
 
 ## Initial research
 
@@ -323,6 +342,20 @@ meeting and the data, not to the sale. Grade the print itself on **dealer takedo
 demand" verdict does not survive — dealers took the 7th-lowest share of 43 on that auction. Size is
 $70B, primary-verified. Nothing here is directional and no house playbook applies.
 
+**Amended 2026-09-27 (D-30 pulse).** Two of this stance's own registered kill switches fired on the
+09-23 predecessor's close-out (re-verified direct from fiscaldata `auctions_query`, CUSIP
+91282CRN3): dealer takedown printed **15.77%**, above the 13.2% $70B-era p75 line and above the
+entire prior 12-print range; bid-to-cover printed **2.21**, below the era's 2.28–2.43 range. Per
+this stance's own text, this is "the first evidence the residual metric this doc promotes is
+itself deteriorating" and the $70B-era bands "die… with it the base rate this doc hands the
+November and December 5Ys." Read narrowly: it means the bands built from 28 auctions through
+2026-08-26 no longer describe the two most recent prints (the 09-22 2Y missed its own dealer
+threshold too) — it does **not** touch the mechanical curve-effect finding (legs 3–5), which is
+about relative moves on auction day, not bidder composition. **The call does not change** (still
+watch-only, no play, no symbols), but confidence in "grade the print on dealer takedown, expect it
+to look strong" softens from the 08-26-anchored read to an open question, tested directly by
+`FT-treasury-5y-note-2026-10-27-2` (score by 2026-10-27) against this auction's own print.
+
 **Kill switches (what would change this stance):**
 
 - **The core one — the relative measure failing to fire on 2026-10-27.** If the 5Y CMT change minus
@@ -339,12 +372,11 @@ $70B, primary-verified. Nothing here is directional and no house playbook applie
   settlement rather than at auction.** That kills leg 5's mechanical reading outright and makes the
   D+0 concentration an unexplained flow effect — a much more interesting result, and the single
   cheapest thing the next pulse can check.
-- **The 09-23 predecessor printing dealer takedown above 13.2%** (the $70B-era p75). That would be
-  the first evidence the residual metric this doc promotes is itself deteriorating, making the
-  October sale a demand question rather than a curve-mechanics one, and is worth an off-cadence
-  pulse.
+- **The 09-23 predecessor printing dealer takedown above 13.2%** (the $70B-era p75) — **FIRED
+  2026-09-27**: 15.77%, above the entire prior 12-print range. See the Amendment above.
 - **Bid-to-cover printing outside 2.28–2.43** on 09-23 or 10-27 — the $70B era's full range dies on
-  either side, and with it the base rate this doc hands the November and December 5Ys.
+  either side, and with it the base rate this doc hands the November and December 5Ys —
+  **FIRED 2026-09-27** on the 09-23 leg: 2.21. Still open for 10-27 itself.
 - **The FOMC meeting moving off 2026-10-27/28**, or the auction moving off 10-27 at the
   announcement. The D−1 premise is the whole of leg 8; if the pairing breaks, this event reverts to
   an ordinary month-end belly sale graded on leg 4's far-auction prior, and the forward test still
@@ -358,8 +390,13 @@ $70B, primary-verified. Nothing here is directional and no house playbook applie
 |---|---|---|---|---|
 | 2026-09-05 | D-52 | Initial research banked (doc above); `probe-ref` populated with real readings so this event's first `interval-elapsed` pulse is screenable rather than automatically material. **Event tape (primary).** Terms verified verbatim from home.treasury.gov's Tentative-Auction-Schedule.pdf (HTTP 200, 17,195 bytes, text layer decompressed direct today): announce **Thu 2026-10-22**, auction **Tue 2026-10-27**, settle **Mon 2026-11-02**, no `R` → new issue. Note the weekday: the 5Y sells Wednesday in 20 of its 43 auctions on record and Tuesday here, because the 2-Year FRN takes Wed 10-28 (FOMC decision day) — that one-day shift is what puts this sale at **D−1** to the statement rather than the 2Y's D−2. Entry stays **`estimate`**, consistent with the four other October siblings off the identical PDF. **Size primary-read: $70B.** `sb0590` (2026-08-05) read as text this session — header `2-Year 3-Year 5-Year 7-Year 10-Year 20-Year 30-Year FRN`, **Oct-26 row `69 58 70 44 39 13 22 30`**, 5-Year is column 3; plus verbatim guidance that Treasury "anticipates maintaining nominal coupon and FRN auction sizes for at least the next several quarters." Corroborated by **28 consecutive $70B** 5Y auctions (2024-04-24 → 2026-08-26). **THE LOAD-BEARING FINDING — the 2Y sibling's auction-day effect does NOT generalize to this tenor, and what does generalize is a curve move, not a level move.** All 43 nominal 5Y auctions since 2023-01 (fiscaldata `auctions_query`; TIPS excluded on `index_ratio_on_issue_date`, FRNs on `floating_rate`) against 920 par-curve sessions (2023-01-03 → 2026-09-04, CSVs fetched today): the 5Y closes **−0.77bp** on its own auction day, **t = −1.07** — nothing — and **−1.10bp (t = −0.99)** away from FOMC weeks against +0.05bp on 586 comparable non-auction sessions. Auction days are *quieter* here (\|move\| 3.56 vs 4.98), the opposite of the 2Y's. **What is significant is the relative move:** 5Y minus the average of 3Y and 7Y prints **−1.69bp, t = −9.84**, against **+0.09bp** on 876 non-auction sessions; confined to D+0 (on the 5s10s version: D−1 +0.28, D+0 −1.60 t=−5.23, D+1 +0.30), and surviving every control on the 33 auctions the 2Y does not share (−1.76, t=−4.93; halves −2.13/−1.41; 2025+ −1.43 t=−2.92; non-auction Tue/Wed +0.12 n=344; non-auction last-8-biz-days +0.01 n=313). **It fires on EVERY nominal coupon tenor** (own minus neighbours, own auction day): 2Y **−4.14** (t=−13.14) · 3Y **−3.09** (−15.61) · 5Y **−1.69** (−9.84) · 7Y **−1.09** (−8.87) · 10Y new issue **−1.60** (−8.70) · 20Y **−2.00** (−7.48) · 30Y **−0.87** (−3.39), with non-auction controls +0.03 to +0.17 throughout. **And it is substantially mechanical.** (i) Demand explains none of the day: over the 28-auction $70B era corr(bid-to-cover, same-day 5Y move) **−0.038** (t=−0.19), corr(dealer, move) +0.106 (t=0.54), corr(b/c, 5s10s) −0.070 (t=−0.36) — where the 2Y sibling measured a *significant* −0.388 (t=−2.73), a real cross-tenor asymmetry. (ii) A 10Y **reopening**, which creates no new on-the-run for Treasury's fitted par curve to re-anchor on, shows **−0.52bp** (t=−4.30, n=29) against a new issue's −1.60bp (t=−8.70, n=15). Named as a decomposition with a confound (new issues fall in refunding months), not a proof; the honest description is "the curve re-anchors at the auctioned point," not "the auction rallied the belly." **SECOND FINDING — the 09-23 same-tenor sibling's "soft foreign demand" verdict is refuted.** Its live claim (indirect 61.5% on 2026-08-26 vs a "~65.7% norm" = "the one genuinely weak leg") fails three ways: the live 12-auction mean indirect is **63.4%**, not 65.7%; indirect and direct are near-perfect substitutes at this tenor too (**corr −0.871, t=−11.38, n=43**; −0.936 inside the $70B era), so the split measures submission channel; and their sum is half as noisy (sd **2.76pt** vs **5.29pt**) and **rose** 86.3% → 88.6% across the 2025-04 regime break where indirect fell 68.2% → 64.0% and direct rose 18.1% → 24.6%. On the residual that is not a reclassification, **dealers took 10.05% on 2026-08-26 — the 7th lowest of 43** and inside the strong half of the $70B-era band. That was a strong auction. **THIRD FINDING — the FOMC-eve pin does not reach this date.** The 2Y sibling's "expect a muted tape" prior is a **D−2** property; measured on non-auction sessions, mean \|move\|: 2Y D−1 **5.14** / D−2 **2.76** / far 4.66; 5Y D−1 **4.86** / D−2 3.59 / far **4.85**; 10Y D−1 4.76 / D−2 3.66 / far 4.44. D−1 is fully live at every tenor, and **2026-10-27 is D−1**. The corridor says why: consumer confidence, durable goods, the euro-area bank lending survey and euro-area monetary developments all print that day, MSFT prints that date per the FOMC ledger, and a 20-30Y buyback operates 1:40pm ET. The 5Y's own seven D−1/D−2 auctions moved −1.43bp (t=−0.83) but held the relative effect at −1.36bp (t=−4.48, 5 of 7 ≤ −1.0bp); the exact-D−1 slot is **n=2** (2023-07-25 +2bp, 2026-01-27 −1bp) and is unusable, stated as such. **Data-quality finding, mechanism now named:** the fiscaldata row for **2026-01-26** — which the 2Y sibling could only call "internally inconsistent" — carries `cusip` **91282CGH8**, byte-identical to the **2023-01-25 five-year note's** CUSIP, with that note's `series U-2028`, `int_rate 3.500000` and `maturity 2028-01-31`, while its `offering_amt` is $69B and its `original_cusip` is 91282CPV7 (which appears nowhere else). A genuine reopening would carry `cusip === original_cusip`. The 2026 two-year record inherited its identity fields from a five-year note; **any 5Y series keyed on `original_security_term` must exclude it** or it injects a $69B two-year auction. **Confound flagged for the 2Y sibling:** 10 of 43 2Y auction days are shared with a same-day 5Y sale, and its far-from-FOMC population splits **2Y-only −7.05bp (t=−5.09, n=22)** vs **2Y+5Y same day −1.80bp (t=−0.91, n=5)** — weaker when more supply lands, which is backwards for a concession story. n=5, suggestive only. Five of its seven pre-FOMC D−2 auctions are those same-day stacks; **2026-10-27 is not one** (2Y sells 10-26, 5Y 10-27). **Macro.** Par curve 2026-09-04: 2Y 4.37, 3Y 4.45, **5Y 4.54**, 7Y 4.65, 10Y 4.78, 30Y 5.24; 2s10s **41bp**, 5s30s 70bp. Since the 08-26 5Y auction: 2Y +18, 3Y +16, **5Y +17**, 7Y +14, 10Y +12, 30Y +6bp — front-and-belly-led. 2026 5Y range 3.51–4.55; the 09-04 close of 4.54 is **1bp off the year high**. **Volatility:** VIX **14.53** (09-04 close), a hair above the 14.43 2026 low struck 08-28 — a quiet tape into a coin-flip FOMC. **Peers:** `symbols: []`, none applicable. **Geopolitical:** nothing new touching this tenor beyond the oil-inflation channel the 09-23 sibling recorded. **Corridor:** twelve tracked events within 5 days; [`fomc-2026-10-28`](fomc-2026-10-28.md) prices ~50/50 with no SEP and no forward guidance, loading the news onto the statement. **New dated adjacency proposed (1):** `treasury-buyback-20y30y-2026-10-27` — Liquidity Support, Nominal Coupons 20Y to 30Y, announce 10/26, operate **10/27 1:40–2:00pm ET** (40 minutes after this auction closes), settle 10/28, range 10/28/2046 – 10/27/2056, published cap $2B **superseded** to ≥$4B by `sb0607` through 2026-11-04; buyback PDF fetched direct today (HTTP 200, 125,547 bytes) and still unrevised. **Deliberate non-proposals, recorded:** the **TIPS 1Y-10Y** buyback on 2026-10-21 (six days out, outside the corridor — exactly as `treasury-buyback-10y20y-2026-10-15`'s notes anticipated), and the **2-Year FRN on 2026-10-28** (the 09-22 sibling's rule: a floating-rate note carries no duration or policy-path read). **Forward test registered: FT-treasury-5y-note-2026-10-27-1** — the 5Y-minus-avg(3Y,7Y) move on 10-27 is ≤ −1.0bp; null pass rate stated up front at **97/876 ≈ 11%** on ordinary sessions against **34/43 ≈ 79%** on auction days and 5/7 in the pre-FOMC slot, so it is informative in either direction. | — (stance set) | 2026-09-26 (medium, 31+d band: every 21d) |
 
+| 2026-09-27 | D-30 | **Full pulse (dispatched).** Cadence band transition: 8–30d medium band (7d interval), down from the initial 31+d band (21d) — itself a materiality trigger. **Peer print — the headline finding.** The 09-23 5Y predecessor closed out ([treasury-5y-note-2026-09-23.md](treasury-5y-note-2026-09-23.md); re-verified independently this session from fiscaldata `auctions_query` for CUSIP 91282CRN3, direct fetch: high yield 5.033%, bid-to-cover 2.210, matching that ledger's close-out field-for-field) as the weakest print of that doc's life on every leg: tail +3.1bp, indirect 54.31% (new 12-print low), dealer takedown 15.77% (new high, above the entire prior 8.84–15.61% range). **Two of this event's own registered kill switches fire:** dealer takedown above 13.2% (the $70B-era p75) — FIRED at 15.77%; bid-to-cover outside 2.28–2.43 — FIRED at 2.21. The 09-22 2Y sibling missed its own dealer threshold too (13.19% vs 12.1%), corroborating a curve-wide capacity break rather than a 5Y-specific one. Both of the 09-23 doc's own forward tests scored KILLED. Stance amended (see Stance §): call unchanged (watch-only, no play) but confidence in "grade the print on dealer takedown, expect strength" softens to an open question; **registered `FT-treasury-5y-note-2026-10-27-2`** — this auction's own 2026-10-27 print testing whether dealer takedown again exceeds 13.2% or bid-to-cover again falls outside 2.28–2.43, scored 2026-10-27. **Macro.** The 2026-09-16 FOMC hiked 25bp to 3.75–4.00% exactly as this doc's D-1 premise expected (confirmed from sibling close-outs, not re-fetched). The FY2027 funding cliff resolved via PL 119-103 (signed 09-02, funds through 12-11) — jobs 10-02 and CPI 10-14 print on schedule, per the [funding-deadline sibling's](government-funding-deadline-2026-09-30.md) own close-out. The October 28 FOMC has itself repriced from hold-modal to hike-modal (~62–66%, Polymarket 65%/CME 61.6%, both fetched direct today by the [fomc-2026-10-28](fomc-2026-10-28.md) sibling) — reinforcing, not softening, leg 8's "loud, not muted" D-1 call. **Rates.** Treasury's own par curve (fetched direct this session, home.treasury.gov daily CSV): 09-25 close 2Y 4.81 / 3Y 4.94 / 5Y 4.98 / 7Y 5.06 / 10Y 5.17 / 20Y 5.54 / 30Y 5.49 — the 5Y is +44bp since initial research's 4.54% (09-04), consistent with the hawkish September hike and October's fresh repricing. **Volatility:** VIX 14.87 (09-25 close, Yahoo `^VIX`, fetched direct) vs 14.53 at initial research — +0.34pt, inside the 3pt threshold, no regime shift. **Geopolitical:** Brent (Yahoo `BZ=F`, fetched direct) round-tripped from the mid-September Saudi East-West-pipeline spike (~$130.80 FRED / ~$108 press, 09-15/16, per the 5Y/2Y siblings) to $97.44 (09-25) after the pipeline resumed pumping 09-22 (per the [jobs-2026-10-02](jobs-2026-10-02.md) sibling) — the acute leg is cooling, not confirmed dead. **Adjacency.** `event-scan.mjs --on-date=2026-10-27` returns the same 12 same-date entries already tracked — nothing new to file. The ±5-day corridor densified sharply on calendar churn (12 ids at initial research → 43 today, cross-referenced directly against `src/domain/market-events/*.json`), and now carries **four confirmed high-impact entries**, none of which existed as confirmed-high at initial research: `fomc-2026-10-28` (D+1), `gdp-q3-2026-advance-2026-10-29` (D+2), `pce-2026-10-29` (D+2), `eci-q3-2026-10-30` (D+3) — corroborating leg 9's "any outright move belongs to the data or the meeting" read. **Own terms:** still unconfirmed — no 2026-10-22 announcement yet (25 days out from this pulse), size $70B by guidance only, unchanged. | **Amended** — call unchanged (watch-only, no play, no symbols); the dealer-takedown/bid-to-cover grading framework (leg 7's correction) softens from confident to an open question after the 09-23 predecessor missed both switches. See Stance §. | 2026-10-04 (medium, 8-30d band: every 7d) |
+
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-27
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:8+","adjacentIds":["jgb-liquidity-enhancement-5-11y-2026-10-22","msft-def14a-2026-10-22","treasury-5y-tips-2026-10-22","treasury-coupon-announcement-2026-10-22","aapl-iphone-duo-launch-2026-10-23","uk-retail-sales-2026-10-23","japan-cpi-2026-10-23","uk-consumer-confidence-2026-10-23","mwts-benchmark-revision-2026-10-26","treasury-2y-note-2026-10-26","dallas-fed-mfg-2026-10-26","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","fhfa-hpi-2026-10-27","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","new-home-sales-2026-10-27","treasury-buyback-20y30y-2026-10-27","advance-economic-indicators-2026-10-28","fomc-2026-10-28","housing-vacancies-q3-2026-10-28","treasury-2y-frn-2026-10-28","uk-autumn-budget-2026-10-28","dallas-fed-trimmed-mean-2026-10-29","ecb-decision-2026-10-29","gdp-q3-2026-advance-2026-10-29","jgb-2y-auction-2026-10-29","nar-metro-home-prices-2026-10-29","pce-2026-10-29","treasury-7y-note-2026-10-29","boj-decision-2026-10-30","chicago-pmi-2026-10-30","eci-q3-2026-10-30","ecb-spf-q4-2026-10-30","g20-foreign-ministers-atlanta-2026-10-30","russell-style-month-end-capping-effective-2026-10-30","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","opec-plus-meeting-2026-11-01"],"adjacentStrongIds":["fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30"],"screenStreak":0} -->
