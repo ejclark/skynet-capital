@@ -6,46 +6,53 @@
 
 ## At a glance
 
-**TL;DR.** This print's importance is **entirely conditional on one vote that hasn't happened yet** —
-the House taking up the Senate's CR in early September. If a CR is signed, 10-27 is an ordinary
-second-tier survey landing in a week nobody will be watching it. If funding lapses on 10-01, the
-October survey is the **first Conference Board panel conducted entirely inside a shutdown**, it
-publishes at **10:00 ET on the opening day of the two-day FOMC**, and it becomes the last consumer
-datapoint to reach a committee that will have **no dots, no forward guidance, no October payrolls
-and no October CPI**. The 2025 lapse is the precedent and it is precise: the CCI **published on
-schedule** through the Oct 1 – Nov 12 shutdown (10-28-2025 print, 94.6, lowest since April, with the
-shutdown named a "key concern") while the Conference Board's *other* indices — LEI, ETI, HWOL — were
-delayed, because those ingest federal series and the survey does not. Two honest deflations: the
-Board is **not uniquely surviving** (UMich is private too and prints twice in October), and this
-release's measured base rate is that it does not move the tape — August missed at a seven-month low
-and the S&P closed +0.3%. The date is **estimate**, cadence-derived, not a fetched primary line.
-Nothing here is a trade, and the Oct 27–29 window is one to be **flat into**, not to express a view in.
+**TL;DR.** The branch this doc was built to watch **resolved dead**: H.R. 6500 was signed
+**2026-09-02** as **Public Law 119-103** (own ledger:
+[`government-funding-deadline-2026-09-30`](government-funding-deadline-2026-09-30.md)), funding
+agencies through **2026-12-11** — 28 days before the 09-30 cliff this doc's own kill switch named.
+**Every distinctive leg this doc carried was conditional on that vote failing**, so 2026-10-27 is now
+an **ordinary second-tier survey**: no blackout, no first-panel-inside-a-shutdown read, no
+labor-differential proxy for a deleted payrolls report — jobs prints **10-02** and CPI prints
+**10-14** on schedule. What changed *underneath* the print instead: the **10-28 FOMC it sits one day
+ahead of flipped from hold-modal to hike-modal (~65%)** — Polymarket **65%/34%** (fetched direct
+2026-09-27) and centralbank.watch/CME **61.6%/38.4%** (fetched direct 2026-09-25), climbing from
+**54.2%** just four days earlier (secondary, 09-23), per
+[`fomc-2026-10-28`](fomc-2026-10-28.md)'s own same-day pulse — a live, market-priced decision now,
+not the already-resolved formality this doc's corridor framing assumed at initial research. The
+corridor (MSFT 10-27, this print 10-27, FOMC 10-28 + GOOG/META, GDP + PCE + AMZN/AAPL 10-29, ECI
+10-30) is unchanged in its dates and its discipline: **flat into it**, per that doc's S2/E1 call —
+this print adds nothing to that risk and takes nothing from it. Nothing here was ever a trade in
+either branch, and nothing here is one now.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-59) | Stand aside | High | `symbols: []`, 59 days out, the October survey panel has not opened, and the branch that makes this print matter is undecided. | Nothing dated today; no consensus exists and, per the sibling's finding, none is structurally publishable in advance |
-| This week | Watch the **House CR floor vote**, not this event | High | The House returned **08-31** to take up the Senate CR; that single vote decides whether 10-27 is a promoted read inside a data blackout or a routine survey. | A CR signed before **2026-09-30**, which collapses the blackout branch and drops this print back to second-tier for good |
-| This month | Let the **09-29 sibling** carry the month; nothing here | High | The September print resolves the ~53-point Present-minus-Expectations gap first; October is the follow-on read, and D-59 has no action in it. | The **2026-09-29** print moving both subcomponents the same direction, which retires the divergence framing this doc inherits |
-| This quarter | **Flat into Oct 27–29** — treat this print as information, never a catalyst | High | The FOMC statement, five estimated mega-cap prints, and (added in this PR) Q3 advance GDP + September PCE all land in a 72-hour window; a second-tier survey is the quietest thing in the loudest window of the quarter. | IR-confirmed print dates moving off Oct 27–29, or the **2026-10-28** FOMC arriving with a full data set — either of which decompresses the window |
+| Today (D-30) | Stand aside | High | The blackout branch this doc was filed on is dead — CR signed **2026-09-02**, own ledger — and no live fork remains for this print to resolve; `symbols: []`. | A rescission, impoundment or repeal action reopening FY2027 appropriations before 10-27 — none proposed or dated |
+| This week | Watch the **09-29 Conference Board print** and the **FOMC's own repricing**, not this event | High | The near-term corridor's live items are the September CB print (2 days out) and the October-meeting odds climb the FOMC doc found today; D-30 has no action of its own. | Either print moving hike odds materially, which this pulse would then inherit as context |
+| This month | Let the **09-29 sibling** and the **FOMC repricing** carry the news; nothing here | High | The September print resolves the gap first, and [`fomc-2026-10-28`](fomc-2026-10-28.md)'s 09-27 pulse — hike odds 54.2% → 65% in four days — is the more consequential development this month, and it is not this event's. | The FOMC doc's hike-modal read reverting under 50% before 10-28 |
+| This quarter | **Flat into Oct 27–30** — unchanged discipline, higher-stakes corridor | High | Same four-session compound window, now carrying a live, hike-favored FOMC decision rather than an already-resolved one. | IR-confirmed print dates moving off Oct 27–30, or hike odds collapsing back under 50% |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never a trade on this print.** `symbols: []`, no house playbook is macro-keyed, and the 08-25
   release missed at a seven-month low while the S&P closed **+0.3%** on unrelated drivers.
-- **No CR by 2026-09-30** → this print is promoted: read its **labor differential** as the closest
-  surviving proxy for the deleted 10-02 payrolls, and expect the market to over-weight it accordingly.
-- **A CR signed before 2026-09-30** → demote this doc to routine; the whole blackout leg collapses.
-- **Expectations below 68.2** → the forward-looking leg is still deteriorating into the midterms and
-  the 10-28 FOMC; tightens caution on AMZN/AAPL discretionary exposure, both printing on **10-29**.
+- **The blackout branch is dead — kill switch fired.** CR signed **2026-09-02** (PL 119-103, funds
+  through 12-11), 28 days before the 09-30 cliff. The labor-differential proxy, the
+  first-panel-inside-a-shutdown framing and the political-salience-in-a-blackout angle all retire
+  with it — see the Stance update below.
+- **What replaces it: this print now reads into a live, hike-priced FOMC, not a resolved one.**
+  October-meeting odds climbed 54.2% (09-23) → 61.6% (09-25) → 65% (09-27), per
+  `fomc-2026-10-28`'s own same-day pulse. S2/E1 still forbids sizing off a sentiment survey ahead of
+  that decision — this raises the stakes of the window, not the license to act in it.
+- **Expectations below 68.2** → the forward-looking leg is still deteriorating into the midterms;
+  tightens caution on AMZN/AAPL discretionary exposure, both printing on **10-29**.
 - **Present Situation giving back August's +6.8** → the divergence resolves *downward*, which is the
   more consequential read one week before the **11-03** midterms.
 - **Do not spend sessions hunting a consensus.** Withheld under Conference Board publication
   restrictions — structural, established by the sibling, not a research failure.
-- **Watch (dated):** House CR vote **first week of Sep** (unscheduled) · **FOMC 09-16** · CB print
-  **09-29** · funding deadline **09-30** (estimate) · ISM **10-01** (estimate) · **jobs 10-02** ·
-  **CPI 10-14** · **MSFT print 10-27** (estimate) · **this release 10-27** (estimate) ·
-  **FOMC 10-28** (no SEP) + GOOG/META prints · **Q3 advance GDP + Sep PCE 10-29** (confirmed, added
-  in this PR) + AMZN/AAPL prints · **midterms 11-03** (estimate).
+- **Watch (dated):** CB print **09-29** · jobs **10-02** · CPI **10-14** · **MSFT print 10-27**
+  (estimate) · **this release 10-27** (estimate) · **FOMC 10-28** (confirmed, hike-modal ~65%) +
+  GOOG/META prints · **Q3 advance GDP + Sep PCE 10-29** (confirmed) + AMZN/AAPL prints · **ECI
+  10-30** (confirmed) · **midterms 11-03** (estimate).
 
 ## Initial research
 
@@ -255,11 +262,29 @@ and adds the blackout-branch labor-differential read.
 - **This print visibly moves the tape on 10-27 (S&P ≥0.5% attributable to it)** — leg 7's base rate
   breaks, and the blackout-attention hypothesis scores as SUPPORTED rather than untested.
 
+**Stance update — 2026-09-27 (D-30): the first kill switch fired; the blackout branch is dead.**
+H.R. 6500 was signed **2026-09-02** as **Public Law 119-103** (`government-funding-deadline-2026-09-30`,
+its own 09-05 row), funding agencies through **2026-12-11** — 28 days clear of the 09-30 cliff this
+doc's kill switch named. **Scored against the initial legs:** leg 2 (survey-survives-a-lapse) and leg 3
+(shutdown visible in-survey) retire as untested this cycle — there is no lapse to test them against.
+Leg 4 (first-panel-entirely-inside-a-lapse) cannot occur. Leg 8's political-salience-in-a-blackout
+framing loses its blackout. **What survives unchanged:** leg 5 (the Board is one of several surviving
+consumer reads, not "one of the few"), leg 6's corridor-density finding (still the densest 72-hour
+stretch this calendar tracks, per `fomc-2026-10-28`), leg 7's base rate (this print does not move the
+tape), and leg 9 (thin AAPL/AMZN sensitivity, both printing 10-29). **What's new since initial
+research and not in the original legs:** the FOMC leg of the corridor re-priced from an
+already-resolved hike (hold-modal read at initial research) to a **live, hike-favored decision
+(~65%, Polymarket + centralbank.watch, both fetched direct this week)** — the corridor's risk
+composition shifted, not its dates. Action is unchanged and always was **none** — `symbols: []`, no
+position, no hedge, no sizing change. The stance that carries forward: this print is now routine
+information ahead of a decision that is no longer routine.
+
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-29 | D-59 | Initial research banked (above). **Date stays `estimate`, deliberately:** conference-board.org was fetched today and states verbatim *"The Conference Board publishes the Consumer Confidence Index® at 10 a.m. ET on the last Tuesday of every month"*; 10-27 is that Tuesday (10-31 is a Saturday, checked by arithmetic) — but the page's explicit next-release line names **09-29 only**, so a rule-plus-arithmetic derivation is not the primary line the sibling had when it flipped 09-29 to `confirmed`. **The inherited claim was tested against 2025 and came back narrower:** through the **Oct 1 – Nov 12 2025** lapse the **Consumer Confidence Index published on schedule** (10-28-2025 and 11-25-2025 releases both landed) while the Board carried a notice that *"all further releases for The Conference Board Employment Trends Index™ (ETI), The Conference Board-Lightcast Help Wanted OnLine® Index (HWOL Index), The Conference Board Leading Economic Index® of the US (US LEI) and The Conference Board Global Leading Economic Index® (Global LEI) data may be delayed"* — the CCI is directly collected, the LEI is a composite of federal series; private *publisher* ≠ private *inputs*. That banner is absent from the LEI page today (fetched 2026-08-29; LEI **+0.2% in July 2026 to 99.5**, updated 08-20), evidence it was shutdown-specific. **2025 in-survey effect:** the 10-28-2025 print fell **95.6 → 94.6** (lowest since April) vs consensus **94.2** with the shutdown named a "key concern," and the Board reported **responses collected after the shutdown ended were more positive than those collected during it** — a within-sample effect, so the *window* is the thing to read. Sourcing caveat recorded: the Forbes article carrying those figures **403s** on direct fetch; snippet fidelity only, re-verify before any 2026-vs-2025 comparison. **The sharpest new finding:** with cut-offs running **Jun 23 · Jul 22 · Aug 16**, a lapse beginning 10-01 brackets the entire plausible October window — October 2026's would be the **first CB panel conducted entirely inside a shutdown**, where 2025's October panel opened before the lapse and caught only part of it. **Inherited framing corrected:** the sibling's "one of the few forward-looking consumer reads that survives" overstates it — **UMich is private too**, prints twice monthly, survives identically, and fell to **51 from 55.2** in August; ADP likewise. This calendar omits UMich by explicit choice (`market-events-data.ts`: *"second-order surveys (Michigan sentiment, durable goods) and weekly jobless claims are deliberately omitted as low-impact"*), which does not make it stop existing in a blackout. Honest wording is "one of several." Sibling not edited (rows append-only). Adjacency sweep — **peers:** n/a, `symbols: []`. **Macro surprises:** none new since the sibling's row; Warsh 08-28 (forward guidance abolished, Sep hike odds 35.5% → 59.5%, October pinned ~50%) carried from [`fomc-2026-10-28`](fomc-2026-10-28.md), not re-derived. **Volatility regime:** VIX **14.51** (Yahoo daily close, 2026-08-27) — baseline set, nothing to diff against yet; unchanged from the sibling's reading and at the 2026 low. **Geopolitical:** Brent (BZ=F) **$89.70** on 08-27, S&P 500 **7,730.99** — the de-escalation the sibling documented (~$94 → ~$88 on the Iran–Oman framework and Gulf exports back to 15–16 mb/d) is intact, not reversed. **Event tape:** no October consensus and none publishable in advance (Conference Board publication restrictions — structural, established by the sibling, not re-spent here). **Political salience recorded, not modelled:** 10-27 is the last CB print before the **11-03** midterms; approval as of 08-25/26 reads 36/57 YouGov-Economist (Aug 21–24), 33/65 Reuters-Ipsos, 40/59 Echelon (Aug 13–17), 43/54 Morning Consult (Aug 14–17). An aggregator claim pairing "confidence below 80 → incumbent-party losses" with a figure of **"57 in spring 2026"** contradicts this calendar's own primary series (89.4 Aug / 90.2 Jul) and is **discarded as unverified**, along with the correlation it was bundled with. **New dated adjacencies found → added in this PR, `confirmed` off a primary bea.gov/news/schedule fetch today (`BEA:`, the prefix the calendar's own table sanctions):** **`gdp-q3-2026-advance-2026-10-29`** and **`pce-2026-10-29`**, both 08:30 ET — quoted verbatim from the schedule as *"October 29"* / *"GDP (Advance Estimate), 3rd Quarter 2026"* and *"Personal Income and Outlays, September 2026"*. Both are federal and die in the lapse branch alongside jobs 10-02 and CPI 10-14; both publish the morning **after** the 10-28 statement, so the committee decides without them. Judgement call flagged in Honest limits: the lane's adjacency rule says "always estimate," and `midterm-elections-2026-11-03` took that stricter reading — a two-line revert if intended. **Corridor as it now stands:** MSFT 10-27 (est) · **this print 10-27** (est) · FOMC 10-28 (confirmed, no SEP) + GOOG/META (est) · GDP + PCE 10-29 (confirmed) + AMZN/AAPL (est) · midterms 11-03 (est) — the densest 72 hours this calendar tracks, and per [`fomc-2026-10-28`](fomc-2026-10-28.md) the answer is S2/E1: flat into it. | — (stance set) | 2026-09-19 (medium, ≥31d band: every 21d) |
+| 2026-09-27 | D-30 | **The load-bearing kill switch fired — read that first.** H.R. 6500 was signed **2026-09-02** as **Public Law 119-103** (own source: `government-funding-deadline-2026-09-30`'s 09-05 row, itself sourced to clerk.house.gov roll call 286, whitehouse.gov's signing statement, and govinfo's `BILLS-119hr6500eas`), funding agencies through **2026-12-11** — well clear of the 09-30 cliff. **This retires the entire blackout premise this doc was filed on**: no first-panel-inside-a-lapse read, no labor-differential proxy, no blackout-flavored political-salience angle; jobs 10-02 and CPI 10-14 print normally. Recorded here rather than by editing the initial legs, which stay as history (Stance section carries the full scoring). **Macro surprises — the corridor's other leg moved instead.** The Fed hiked **25bp to 3.75–4.00%** on **09-16** (unanimous 12–0, first hike in three years; September SEP median **4.1%**, up from June's 3.8%). With September resolved, `fomc-2026-10-28`'s own 09-27 pulse finds the first market read on the **October meeting's own conditional**: Polymarket **65% hike / 34% hold** on a **$14.9M** book (fetched direct today, 2026-09-27) and centralbank.watch/CME **61.6%/38.4%** (fetched direct 2026-09-25), climbing from a secondary-sourced **54.2%** just four days earlier (phemex, 09-23) — base case moves from hold-modal to **hike-modal**. Carried from the FOMC doc, not re-derived. **Volatility regime:** VIX **14.87** (Yahoo daily close, 2026-09-25 — the last trading day before this Sunday pulse) vs **14.51** at initial research (08-27): **+0.36**, well inside the 3-point materiality threshold: no regime shift. **Geopolitical:** Brent round-tripped through a **$107.63** cycle peak (09-10) and an Iran-strike spike to **~$108** (09-15) before easing; the `unsc-iran-panel-mandate-expiry-2026-09-26` close-out (09-22 read) puts Hormuz throughput at a **six-month high** with the renewal vote failed **11–2–2** and no new escalation — de-escalating, not reversing, and not attributable to this print. **Cadence band transition:** `medium:31+` → **`medium:8+`** (interval 21d → 7d) as days-out crossed 31 — itself a materiality trigger, consistent with this being the first full pulse since initial research. **Adjacency sweep — structural:** re-verified via `node scripts/event-scan.mjs --on-date=2026-10-27` (12 entries, all already tracked, nothing new) and cross-referenced against `fomc-2026-10-28`'s own same-day corridor sweep (48 ids, zero adds since 09-20). **No new dated adjacency to propose** — every id this sweep touched is already canonical. **Event tape:** no October consensus and none publishable in advance (Conference Board publication restrictions, structural, unchanged). Probe-ref refreshed to today's readings (screenStreak reset to 0 — a full session is never itself a screen). | **YES — the blackout branch dies; the FOMC leg it sits beside gets more dangerous, not less.** See the Stance update above (receipt: this row). Kill switch 1 fired (CR signed 09-02, PL 119-103, funds through 12-11); every leg conditional on a lapse retires. What's new instead: the 10-28 FOMC repriced hold-modal → hike-modal (~65%), so the corridor's risk composition shifted without its dates moving. Action unchanged and always none — `symbols: []`, no position, no hedge, no sizing change. | 2026-10-04 (medium, 8–20d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -268,3 +293,6 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-27
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:8+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","meta-2026-10-28-print","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23"],"adjacentStrongIds":["fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30"],"screenStreak":0} -->
