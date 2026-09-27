@@ -72,3 +72,12 @@ export function statusForIssue({ state = "open", labels = [], hasOpenLinkedPr = 
   if (has("ready")) return "Ready";
   return "Backlog";
 }
+
+// #3818 consolidation pass (2026-09-27): the board's sync job fired on every `issues` event
+// unconditionally, which meant `ci-failure`-labeled issues — the recurring Moneypenny Events
+// research-queue trackers, an operational log, not product backlog — were being added to the
+// orchestration board alongside real work. This is the one label the board should never carry;
+// unlike Status/Horizon it needs no per-issue judgment, so it lives as a mechanical predicate.
+export function isBacklogCandidate({ labels = [] } = {}) {
+  return !labels.includes("ci-failure");
+}
