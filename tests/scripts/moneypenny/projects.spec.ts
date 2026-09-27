@@ -3,8 +3,10 @@ import {
   FIELDS,
   HORIZON_OPTIONS,
   PRIORITY_OPTIONS,
+  STATUS_FIELD_OPTIONS,
   STATUS_OPTIONS,
   statusForIssue,
+  statusOptionsMatch,
 } from "../../../scripts/moneypenny/projects.mjs";
 
 // #3818 slice B: the sync rule as a pure decision, so the mapping is proven without ever calling
@@ -54,5 +56,35 @@ describe("moneypenny projects: field/option constants", () => {
     expect(byName.get("Horizon")?.dataType).toBe("SINGLE_SELECT");
     expect(byName.get("Target date")?.dataType).toBe("DATE");
     expect(byName.get("Target date")?.options).toBeUndefined();
+  });
+});
+
+describe("moneypenny projects: statusOptionsMatch", () => {
+  it("matches the same five names in any order", () => {
+    expect(statusOptionsMatch(["Done", "Backlog", "Blocked", "Ready", "In Progress"])).toBe(true);
+  });
+
+  it("does not match GitHub's own default Status options (Todo/In Progress/Done)", () => {
+    expect(statusOptionsMatch(["Todo", "In Progress", "Done"])).toBe(false);
+  });
+
+  it("does not match a superset or a subset of the five", () => {
+    expect(
+      statusOptionsMatch(["Backlog", "Ready", "In Progress", "Blocked", "Done", "Extra"]),
+    ).toBe(false);
+    expect(statusOptionsMatch(["Backlog", "Ready"])).toBe(false);
+  });
+
+  it("does not match nothing", () => {
+    expect(statusOptionsMatch()).toBe(false);
+    expect(statusOptionsMatch([])).toBe(false);
+  });
+
+  it("STATUS_FIELD_OPTIONS carries the same five names STATUS_OPTIONS does, each with a color", () => {
+    expect(STATUS_FIELD_OPTIONS.map((o) => o.name)).toEqual(STATUS_OPTIONS);
+    for (const option of STATUS_FIELD_OPTIONS) {
+      expect(typeof option.color).toBe("string");
+      expect(option.color.length).toBeGreaterThan(0);
+    }
   });
 });

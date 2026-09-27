@@ -12,6 +12,35 @@ export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 // feature, no code). Order matters — it's the column order gh CLI creates the option list in.
 export const STATUS_OPTIONS = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
 
+// Every new GitHub Project ships with its own default Status field (Todo/In Progress/Done) — the
+// setup script's "field already exists, skip" check meant our 5-value set was never actually
+// applied on first run (#3818 slice B, logged on the plan issue 2026-09-27). Fixing an EXISTING
+// field's options needs `updateProjectV2Field`, which gh CLI has no subcommand for — only a raw
+// GraphQL call does this (verified against GitHub's own schema, github.com/octokit/graphql-schema,
+// since `gh project field-*` and GitHub's rendered docs don't show it). That mutation REPLACES the
+// whole option list when given one, so this carries color/description for every option, not just
+// the new ones. Colors are cosmetic only — docs/BRAND.md's colorblind rule doesn't apply here,
+// since a board column's position and name already carry the meaning, not the color.
+export const STATUS_FIELD_OPTIONS = [
+  { name: "Backlog", color: "GRAY", description: "" },
+  { name: "Ready", color: "BLUE", description: "" },
+  { name: "In Progress", color: "YELLOW", description: "" },
+  { name: "Blocked", color: "RED", description: "" },
+  { name: "Done", color: "GREEN", description: "" },
+];
+
+/**
+ * Does an existing Status field (its current option names, in whatever order the API returned)
+ * already carry our 5-value set? Order-insensitive — GitHub may not preserve the order we sent.
+ * Pure so the setup script's "skip if already correct" decision is unit-tested without a network
+ * call.
+ */
+export function statusOptionsMatch(currentNames = []) {
+  const want = new Set(STATUS_OPTIONS);
+  const have = new Set(currentNames);
+  return want.size === have.size && [...want].every((n) => have.has(n));
+}
+
 // Backlog view: table sorted by Priority. Deliberately not derived from anything below — priority
 // is Eric's judgment call, not mechanical, so nothing here ever sets it automatically.
 export const PRIORITY_OPTIONS = ["P0", "P1", "P2", "P3"];
