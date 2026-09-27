@@ -230,3 +230,89 @@ goes quiet.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","kb-home-q3-fy2026-2026-09-22","missouri-map-tro-expiry-2026-09-22","treasury-2y-note-2026-09-22","uk-public-sector-finances-2026-09-22","unga-81-general-debate-2026-09-22","eia-weekly-petroleum-status-2026-09-23","jpx-market-closure-2026-09-23","meta-connect-2026-09-23","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23","bea-international-transactions-q2-2026-09-24","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","ecb-economic-bulletin-2026-09-24","intl-transactions-q2-2026-09-24","new-home-sales-2026-09-24","scoos-2026-09-24","steel-imports-preliminary-2026-09-24","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","us-iip-q2-2026-2026-09-24","durable-goods-2026-09-25","jgb-liquidity-enhancement-5-11y-2026-09-25","uk-consumer-confidence-2026-09-25","umich-sentiment-final-2026-09-25","census-benchmark-revision-nsa-2026-09-28","dallas-fed-mfg-2026-09-28","retail-benchmark-revision-2026-09-28","unsc-middle-east-2334-2026-09-28","case-shiller-hpi-2026-09-29","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-tssos-2026-09-29","fhfa-hpi-2026-09-29","jgb-40y-auction-2026-09-29","jolts-2026-09-29","openai-devday-2026-09-29","treasury-buyback-tips-1y10y-2026-09-29","unsc-haiti-gsf-mandate-adoption-2026-09-29","adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","chicago-pmi-2026-09-30","dallas-fed-trimmed-mean-2026-09-30","eia-weekly-petroleum-status-2026-09-30","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","jgb-2y-auction-2026-09-30","mu-2026-09-30-print","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","russell-style-quarter-end-capping-effective-2026-09-30","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-expiry-2026-09-30","apple-eu-dma-terms-2026-10-01","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","ism-manufacturing-2026-10-01","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","treasury-buyback-10y20y-2026-10-01","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01"],"adjacentStrongIds":["mu-2026-09-30-print","pce-2026-09-30","ism-manufacturing-2026-10-01"],"screenStreak":0,"blocked":[{"url":"https://www.iaea.org/about/governance/board-of-governors","status":403,"at":"2026-09-15"},{"url":"https://www.fdd.org/analysis/2026/09/10/iaea-refers-irans-nuclear-file-to-un-security-council/","status":403,"at":"2026-09-15"}]} -->
+
+## Outcome
+
+**Close-out (2026-09-27, D+1 — inside the `closeOutWithinDays: 6` window, ceiling 2026-10-02).**
+Geopolitical kind, `symbols: []` throughout, so no `earnings-cycle`/`intraday-edges` instrument ever
+had a target; the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran first regardless.
+"Re-run instrument data" for this event means re-fetching every cited primary direct today, not reading
+this ledger's own memory of the prior rows.
+
+**The mandate lapsed exactly as the sibling vote ledger's 09-17 veto implied it would — nothing on
+the Council's own record moved.** All three UN primaries re-fetched direct today (curl, browser
+header set, all HTTP 200): `main.un.org/.../panel-of-experts/work-and-mandate` is byte-for-byte
+unchanged — *"The Panel comprises up to eight experts. Its current mandate ends on 26 September
+2026"* — carrying no renewal, no technical rollover, no extension. The Reports page still ends at
+**S/2015/401 (2 June 2015)**; nothing has been added since the last pulse or, for that matter, since
+2015. The 1737 Committee page is unchanged: **43 individuals and 78 entities** on the Sanctions
+List, and *"The Chair of the Committee has not yet been elected by the Security Council."* A web
+search for any Council action on this file since the 09-17 vote (Euronews, La Voce di New York, the
+UK's own Explanation of Vote via globalsecurity.org) turns up nothing beyond that vote — the 11–2–2
+veto stands as the file's last word, and no alternative renewal mechanism (a presidential note, a
+consensus decision) has been reported anywhere. The measures the mandate's lapse does **not**
+touch — the re-applied 1696/1737/1747/1803/1835/1929 resolutions — are untouched on the same record.
+
+**The corridor's actual catalyst (Trump–Xi, 09-24) resolved without a new Iran-enforcement escalation.**
+Search corroboration (CNBC, NPR, Al Jazeera): the summit was cordial, Iran/China sanctions were
+discussed (Bessent: Chinese financial authorities "have been very engaged in the process"), and the
+two sides extended their trade truce to January — but no new US sanctions targeting Chinese refiners
+of Iranian crude were announced at or after the summit. This is the null this ledger's leg 5 flagged
+as the variable that actually binds Iranian export volumes, and it stayed a null, consistent with
+declining to read the 09-26 lapse itself as the market's relevant Iran catalyst this month.
+
+**No kill switch fired.** Re-checked against today's readings: **VIX 14.87** (2026-09-25 close, the
+last session before the Saturday lapse, Yahoo direct) is unchanged from the 09-22 row and **5.13pt**
+under the ≥20 trigger. **ITA 213.81** (09-25) sits in the same band as the 09-22 row (214.00), still
+off its 60-session low, not reclaiming a 21-session high. **Brent (BZ=F)** ran **99.25 (09-22) →
+106.60 (09-24, the Trump–Xi session) → 97.44 (09-25)** and **WTI (CL=F) 94.59 → 94.61 → 92.41** over
+the same three sessions — a round trip through the summit, not a lapse-attributable move, and back
+near the post-de-escalation level the 09-22 row already reported. **XLE 62.04** and **SPY 771.35**
+(09-25) are both flat against the last row. No renewal was adopted, no post-2015 Panel report
+surfaced, and no separable Iran-tape move accompanied the lapse itself on the last session the tape
+was open before it.
+
+**Blocked, recorded rather than substituted:** `easternherald.com`'s 09-16 piece on the September
+1737-Committee briefing 403'd on direct fetch (WebFetch) today; the same underlying fact — the
+Council held a 1737 briefing 09-10 without a chair-elected Committee, and China/Russia continue
+blocking the written 90-day report's no-objection circulation for a fourth consecutive quarter — was
+independently corroborated via search (Security Council Report's own "Briefing on the 1737 Sanctions
+Committee" What's-in-Blue) without needing the blocked page. This does not change any call: FT-2
+scores the *report*, not the briefing, and its score-by (2026-10-15) has not arrived.
+
+**Forward tests — none reach their score-by inside this close-out window, and none can be scored
+today regardless of how settled the underlying fact is (the append-only rule forbids scoring ahead
+of a test's own stated window):**
+
+| Test | Prediction | What this session found | Verdict |
+|---|---|---|---|
+| `FT-unsc-iran-panel-mandate-expiry-2026-09-26-1` (no Panel report ever arrives) | No 1737-regime Panel report dated after S/2015/401 appears by 2026-10-31 | Re-fetched direct today: the Reports page is unchanged, still ending at S/2015/401. Trending toward PASS, but the 2026-10-31 score-by is 34 days past this close-out's own ceiling (2026-10-02) — a structural conflict, not a timing one | **`_open_`, not scored — score-by 2026-10-31 falls beyond `closeOutWithinDays: 6`'s ceiling** |
+| `FT-unsc-iran-panel-mandate-expiry-2026-09-26-2` (Committee files its September report while the Panel stays dark) | A 1737 Committee 90-day report covering the September slot is transmitted to the Council on or before 2026-10-15 | The Council held a 1737 briefing 09-10, but the written report's no-objection circulation remains blocked for a fourth straight quarter per today's search — trending toward KILL, but the 2026-10-15 score-by has not arrived and sits past the same ceiling | **`_open_`, not scored — same structural conflict as `FT-…-1`** |
+| `FT-unsc-iran-panel-mandate-expiry-2026-09-26-3` (the weekend-gap null) | CL=F's 2026-09-28 opening gap lands at or below 3.04%, or an excess is not separable from confounds | Today is 2026-09-27 (Sunday) — the Monday reopen this test keys on has not happened yet. Unscoreable today on timing alone, not structure: 2026-09-28 sits inside this close-out's own window | **`_open_`, not scored — the data this test needs does not exist until tomorrow** |
+
+**Reading the split honestly.** `FT-…-1` and `FT-…-2` are structurally unscoreable at any close-out
+of this event — their score-by dates sit past the 6-day ceiling by construction, exactly the
+"structural conflict, not a timing one" `docs/process/EVENT-RESEARCH.md`'s close-out-hold rule
+names — but both remain live: once each date arrives, `scripts/event-scan.mjs`'s `forward-test-due`
+mode (#2884) re-dispatches this same lane to score them from re-run data, unconditional on today's
+close-out having already run. `FT-…-3` differs only in shape: its 2026-09-28 date is inside the
+close-out window, just one day away from today, and the same `forward-test-due` mechanism will pick
+it up the moment it is scoreable. None of the three needed the close-out to be held today — the
+scanner dispatched immediately because `FT-…-1`/`FT-…-2` are beyond the ceiling regardless (see
+`--due`'s `forwardTestsBeyondWindow`), and holding for `FT-…-3` alone would still have left the other
+two unscoreable at the eventual dispatch.
+
+**The call itself, scored against the tape.** The stand-aside was the entire position: `symbols: []`,
+no position, hedge or size ever proposed, and none is proposed now. That call cost nothing and earned
+nothing by design. What the three independent routes this ledger took at initial research — the
+date ambiguity being immaterial, the measures surviving the mandate, and the weekend-gap channel
+being already priced by the war rather than by this deadline — all held through to the lapse itself:
+no renewal, no new sanctions event, no separable market move on the last open session before the
+Saturday date. The corridor's real catalyst was Trump–Xi, not this expiry, and that resolved without
+escalating the Iran-enforcement channel either. No new dated adjacent event was found this session;
+none is proposed.
+
+**Last assessed:** 2026-09-27 (close-out — this document goes quiet, except for the three forward
+tests above, which re-open this lane via `forward-test-due` on or after their own score-by dates)
+<!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-quarterly-ipo-review-effective-2026-09-21","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-quarterly-rebalance-effective-2026-09-21","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-public-sector-finances-2026-09-22","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://easternherald.com/2026/09/16/iran-1737-sanctions-committee-russia-china-security-council/","status":403,"at":"2026-09-27"}]} -->
