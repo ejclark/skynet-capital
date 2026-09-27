@@ -18,6 +18,14 @@ name: Projects v2 setup
 # GraphQL — which `gh project` compiles to — is blocked from interactive Claude Code sessions, so
 # this workflow's real IO could not be exercised while authoring it (see
 # scripts/moneypenny/projects-setup.mjs's header). This run's own job log is the verification.
+#
+# Two live runs (2026-09-26/27) with `secrets.PROJECTS_PAT` set both failed identically:
+# "GraphQL: Resource not accessible by personal access token (user.projectsV2.nodes.0)" — the
+# second run was AFTER Eric added the `project` scope to the token, so the identical failure means
+# something other than a missing scope checkbox. A third blind retry would be a repeat pull for
+# zero new information (CLAUDE.md, "Free diagnostics before gated ones"); the `diagnose` step below
+# is the free one — it prints the token's actual OAuth scopes (never the token itself) so the next
+# run is diagnosis, not another guess.
 
 on:
   workflow_dispatch: {}
@@ -35,6 +43,14 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI, not mise.toml — see moneypenny-events.yml
+
+      - name: diagnose token scopes
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_PAT }}
+        run: |
+          echo "Scopes the token actually presents to GitHub (never the token value itself):"
+          curl -sI -H "Authorization: token $GH_TOKEN" https://api.github.com/user \
+            | grep -i '^x-oauth-scopes:' || echo "no x-oauth-scopes header — token may be invalid or malformed"
 
       - name: create project + fields
         env:
