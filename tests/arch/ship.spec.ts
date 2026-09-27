@@ -631,3 +631,32 @@ describe("ship automerge — the session's REST route when GraphQL is refused", 
     expect(fn.indexOf('get("auto_merge")')).toBeGreaterThan(fn.indexOf("/ccr/auto_merge"));
   });
 });
+
+/**
+ * EVERY REQUEST WITH A BODY DECLARES ITS TYPE (#3907). curl defaults a bare `-d` to
+ * `application/x-www-form-urlencoded`. api.github.com tolerates that and parses the JSON anyway; a
+ * Claude Code session's proxy does not, and answers 415 — so `ship open` could only fail from a
+ * proxied session, which is where most of this lane's PRs are opened from. The header landed in
+ * #3355 as a drive-by inside an unrelated PR, with no test: the invariant held by luck. This pins it
+ * for `api()` specifically and for every other body-sending curl in the file, so a future edit that
+ * drops it goes red here instead of 415-ing the next proxied ship.
+ */
+describe("ship — a curl that sends a body declares it as JSON", () => {
+  const script = readFileSync("scripts/ship.sh", "utf8");
+
+  // Continuations joined, so one logical curl invocation reads as one line whatever the wrapping.
+  const curls = script.replace(/\\\n\s*/g, " ").match(/curl\b[^\n]*/g) ?? [];
+
+  it("sets Content-Type on api()'s request in the same expansion as its body", () => {
+    const start = script.indexOf("api() {");
+    const fn = script.slice(start, script.indexOf("\n}\n", start));
+    // One expansion, not two: a body with no header is not a state this can reach.
+    expect(fn).toContain('${3:+-H "Content-Type: application/json" -d "$3"}');
+  });
+
+  it("finds no body-sending curl anywhere in the script without the header", () => {
+    expect(curls.length).toBeGreaterThan(2); // api(), promote_ready, the automerge mutation
+    const bare = curls.filter((c) => /-d ["']/.test(c) && !c.includes("Content-Type"));
+    expect(bare).toEqual([]);
+  });
+});
