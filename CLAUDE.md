@@ -235,11 +235,14 @@ role of responsible owner/steward — shipping lovable work while protecting the
 
 **Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Route *every*
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
-a task) · **fan out** (→ file it as a `feedback`-labeled issue as a self-contained story capsule, shaped by
-**`/issue`** → [`docs/ISSUES.md`](docs/ISSUES.md) — the
+a task) · **fan out**, split by weight: **build** (→ file it as a `feedback`-labeled issue as a
+self-contained story capsule, shaped by **`/issue`** → [`docs/ISSUES.md`](docs/ISSUES.md) — the
 Moneypenny lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
 buildable asks that should start now but don't belong in *this* session — see
-[`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) ·
+[`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) versus
+**plan** (a tangent that needs its own interrogation before it's buildable — hand it to a fresh
+planning session per [`docs/ISSUES.md`](docs/ISSUES.md) → *Delegating a tangent to a planning
+session*, #3818 slice 1; it lands ready, `needs-eric`, or parked, never a build) ·
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask. *(That
 doubt-rule is about **routing a raw thought in a live session**, where Eric is right there. It is

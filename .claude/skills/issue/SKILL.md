@@ -61,6 +61,13 @@ that gets a well-shaped issue filed without a second pass.
     state block*. The body's Slicing sketch ends with `State block: the first comment, edited in
     place` so the lint knows one exists.
 
+## A tangent that needs its own planning session, not a two-line issue
+
+Hand it off to a fresh session with `create_session` (or `spawn_task` from a plan-mode parent,
+which cannot start a more-permissive child) — the template, the three end states it must land in,
+and the as-of-sha rule: [`docs/ISSUES.md`](../../../docs/ISSUES.md) → *Delegating a tangent to a
+planning session*.
+
 ## Reshaping an existing wall
 
 Same drill, one extra rule: **edit the body, answer in comments.** Rewriting the capsule is fine;

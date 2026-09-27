@@ -129,6 +129,54 @@ both skip it until a human flips it, per `.claude/skills/work-issues/SKILL.md`'s
 draft-marker convention.
 Worked example: #1977.
 
+### Delegating a tangent to a planning session (#3818 slice 1)
+
+A tangent thought that deserves its own planning session — not a two-line question, not ready for
+`/issue` yet — moves out of the live session into a fresh one, so rapid-fire ideas never conflate
+context. The planning session's job is narrow: interrogate the tangent, write the capsule, land it
+in exactly one of three states (below). It never builds.
+
+**From a non-plan session**, hand it off with `create_session`:
+
+```
+create_session({
+  source_url: "https://github.com/ejclark/skynet-capital",
+  source_revision: "<current main sha>",       // e.g. ecbd3bf901e522756cedeada8863ae499e957be0 —
+                                                 // always the sha at hand-off time, never pinned
+  permission_mode: "auto",                      // explicit — a plan-mode parent cannot do this; see below
+  model: "opus",                                 // docs/COMPUTE.md floor table: "complex / ambiguous
+                                                   // / judgment (review, research-to-brief)" → opus, high
+  tags: ["planning-session", "tangent-offload"],
+  title: "<the tangent, in a few words>",
+  append_system_prompt:
+    "You are a planning session, not a build session. You may read code and research, but you " +
+    "MUST NOT call create_session, spawn_task, or write/edit any file outside filing one GitHub " +
+    "issue. Your only deliverable is that issue, landed in exactly one of: ready, needs-eric with " +
+    "one Needs-from-you line, or parked in docs/IDEAS.md. Do not build.",
+  prompt:
+    "Eric's raw words, verbatim:\n\n<quote them exactly>\n\n" +
+    "Up to 10 lines of surrounding thread context, if any.\n\n" +
+    "File this as a plan or feedback issue per docs/ISSUES.md, with a Raw idea (verbatim) section " +
+    "quoting the words above. When you finish, confirm which of the three end states the issue is in.",
+})
+```
+
+**From a plan-mode session**, `create_session` would hand the child MORE permission than the
+parent has — the tool refuses this, by design. Use `spawn_task` instead: it queues a suggested-task
+card in Eric's app that starts, with the same prompt above, only when he clicks it.
+
+**The as-of sha matters** (criterion 8a): a planning session's "Where it stands today" is only as
+fresh as the commit it read at. Recording the hand-off sha lets a later session re-read what
+changed since, instead of trusting a capsule that may have rotted.
+
+**Done when the issue lands in exactly one state** — never left mid-air:
+1. **Ready** — a `plan` or `feedback` issue, buildable now, no open fork.
+2. **`needs-eric`** — a genuine decision only he can make, with one `Needs from you` line.
+3. **Parked** — logged in `docs/IDEAS.md` with its `(src: … · while: …)` tag, no issue filed.
+
+Never a fourth state (an issue with no label, no decision, just sitting) — that is the failure this
+delegation exists to prevent (#3811, the first ad-hoc child, ended with none of the three).
+
 ## Pictures in issues (Eric, 2026-08-21: *"pictures are also ideal"*)
 
 Same decision table, same honesty rules, same waiver right as [`PICTURES.md`](PICTURES.md) — read it
