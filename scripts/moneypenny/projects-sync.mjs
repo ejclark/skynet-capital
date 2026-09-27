@@ -15,8 +15,10 @@
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-sync.mjs <issue-number>
 //
 // Run via moneypenny-events.yml's `sync-project` job, on issue labeled/unlabeled/closed/reopened.
+// `syncIssue` is exported so projects-backfill.mjs (the #3818 consolidation pass) can reuse the
+// same add/Status/Horizon glue across every open issue in one run, instead of re-deriving it.
 import { ghRest, sh, withRetry } from "./gh.mjs";
-import { statusForIssue } from "./projects.mjs";
+import { isBacklogCandidate, statusForIssue } from "./projects.mjs";
 
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
@@ -25,19 +27,32 @@ function ghJson(args) {
   return JSON.parse(withRetry(() => sh("gh", [...args, "--format", "json"])));
 }
 
-function main() {
-  const issueNumber = process.argv[2];
-  if (!issueNumber) {
-    console.error("usage: projects-sync.mjs <issue-number>");
-    process.exit(1);
-  }
+function findField(fieldList, name) {
+  return fieldList.find((f) => f.name === name);
+}
 
+function optionByName(field, name) {
+  return (field.options ?? []).find((o) => o.name === name);
+}
+
+/**
+ * Adds the issue to the board if it isn't there yet, sets Status always, and sets Horizon only
+ * when the caller supplies one — Horizon is a sequencing judgment (same footing as Priority,
+ * which nothing here ever sets automatically either), so a plain per-issue sync call with no
+ * `horizon` leaves it untouched rather than guessing.
+ *
+ * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon}`
+ * otherwise. Throws loudly on any GitHub-side surprise — never a silent partial write.
+ */
+export function syncIssue(issueNumber, { horizon } = {}) {
   const issue = ghRest(`issues/${issueNumber}`);
   const labels = (issue.labels ?? []).map((l) => l.name);
+
+  if (!isBacklogCandidate({ labels })) {
+    return { skipped: true, reason: "not a backlog candidate" };
+  }
+
   const status = statusForIssue({ state: issue.state, labels });
-  console.log(
-    `issue #${issueNumber}: state=${issue.state} labels=[${labels.join(", ")}] -> Status=${status}`,
-  );
 
   const item = ghJson([
     "project",
@@ -59,41 +74,58 @@ function main() {
     "100",
   ]);
   const fieldList = Array.isArray(fields) ? fields : (fields.fields ?? []);
-  const statusField = fieldList.find((f) => f.name === "Status");
-  if (!statusField) {
-    console.error(`no "Status" field found on project #${PROJECT_NUMBER} — has setup run?`);
-    process.exit(1);
-  }
-  const option = (statusField.options ?? []).find((o) => o.name === status);
-  if (!option) {
-    const have = (statusField.options ?? []).map((o) => o.name).join(", ");
-    console.error(
-      `Status field has no "${status}" option (has: ${have}) — run projects-setup.mjs to fix its options`,
-    );
-    process.exit(1);
-  }
 
   const projects = ghJson(["project", "list", "--owner", OWNER, "--limit", "100"]);
   const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
   const project = projectList.find((p) => p.number === PROJECT_NUMBER);
-  if (!project) {
-    console.error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+  if (!project) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+
+  const setSingleSelect = (fieldName, optionName) => {
+    const field = findField(fieldList, fieldName);
+    if (!field)
+      throw new Error(
+        `no "${fieldName}" field found on project #${PROJECT_NUMBER} — has setup run?`,
+      );
+    const option = optionByName(field, optionName);
+    if (!option) {
+      const have = (field.options ?? []).map((o) => o.name).join(", ");
+      throw new Error(`${fieldName} field has no "${optionName}" option (has: ${have})`);
+    }
+    sh("gh", [
+      "project",
+      "item-edit",
+      "--id",
+      item.id,
+      "--field-id",
+      field.id,
+      "--project-id",
+      project.id,
+      "--single-select-option-id",
+      option.id,
+    ]);
+  };
+
+  setSingleSelect("Status", status);
+  if (horizon) setSingleSelect("Horizon", horizon);
+
+  return { status, horizon: horizon ?? null };
+}
+
+function main() {
+  const issueNumber = process.argv[2];
+  if (!issueNumber) {
+    console.error("usage: projects-sync.mjs <issue-number>");
     process.exit(1);
   }
 
-  sh("gh", [
-    "project",
-    "item-edit",
-    "--id",
-    item.id,
-    "--field-id",
-    statusField.id,
-    "--project-id",
-    project.id,
-    "--single-select-option-id",
-    option.id,
-  ]);
-  console.log(`set issue #${issueNumber}'s item to Status="${status}"`);
+  const result = syncIssue(issueNumber);
+  if (result.skipped) {
+    console.log(`issue #${issueNumber}: ${result.reason}, skipping`);
+    return;
+  }
+  console.log(
+    `issue #${issueNumber}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : ""}`,
+  );
 }
 
-main();
+if (import.meta.url === `file://${process.argv[1]}`) main();

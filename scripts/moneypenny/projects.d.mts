@@ -28,3 +28,5 @@ export function statusForIssue(issue?: {
   labels?: string[];
   hasOpenLinkedPr?: boolean;
 }): "Backlog" | "Ready" | "In Progress" | "Blocked" | "Done";
+
+export function isBacklogCandidate(issue?: { labels?: string[] }): boolean;

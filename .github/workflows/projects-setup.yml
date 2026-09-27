@@ -23,6 +23,11 @@ name: Projects v2 setup
 # a diagnostic step (removed here, once it did its job) found the secret held a stale token
 # value; re-saving it with the token's current value fixed it. Project #2 is live:
 # https://github.com/users/ejclark/projects/2
+#
+# `backfill` (#3818 consolidation pass, 2026-09-27) runs after `setup` on every dispatch — adds
+# every open, non-ci-failure issue to the board with Status set and Horizon applied from
+# scripts/moneypenny/projects-horizons.json. Safe to re-run; re-run it whenever that file's
+# triage is updated.
 
 on:
   workflow_dispatch: {}
@@ -45,3 +50,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECTS_PAT }}
         run: node scripts/moneypenny/projects-setup.mjs
+
+  backfill:
+    name: backfill open issues onto the board
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: backfill Status + Horizon onto every open issue
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_PAT }}
+        run: node scripts/moneypenny/projects-backfill.mjs

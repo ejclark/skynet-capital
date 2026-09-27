@@ -2,6 +2,7 @@ import { describe, expect, it } from "@rstest/core";
 import {
   FIELDS,
   HORIZON_OPTIONS,
+  isBacklogCandidate,
   PRIORITY_OPTIONS,
   STATUS_FIELD_OPTIONS,
   STATUS_OPTIONS,
@@ -36,6 +37,18 @@ describe("moneypenny projects: statusForIssue", () => {
   it("an open issue with none of the above reads Backlog", () => {
     expect(statusForIssue({ labels: ["feedback"] })).toBe("Backlog");
     expect(statusForIssue()).toBe("Backlog");
+  });
+});
+
+describe("moneypenny projects: isBacklogCandidate", () => {
+  it("excludes ci-failure trackers — the event-research queue, not product backlog", () => {
+    expect(isBacklogCandidate({ labels: ["ci-failure"] })).toBe(false);
+    expect(isBacklogCandidate({ labels: ["ci-failure", "enhancement"] })).toBe(false);
+  });
+
+  it("admits everything else, including an untagged issue", () => {
+    expect(isBacklogCandidate({ labels: ["enhancement", "plan"] })).toBe(true);
+    expect(isBacklogCandidate()).toBe(true);
   });
 });
 
