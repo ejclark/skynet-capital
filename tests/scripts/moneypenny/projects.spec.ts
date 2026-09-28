@@ -1,13 +1,17 @@
 import { describe, expect, it } from "@rstest/core";
 import { withRetry } from "../../../scripts/moneypenny/gh.mjs";
 import {
+  type BoardItem,
   explainMaskedOwnerFailure,
   FIELDS,
+  findBoardItem,
   HORIZON_OPTIONS,
+  isAlreadyOnBoardError,
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRetryableProjectsGhError,
   PRIORITY_OPTIONS,
+  resolveBoardItem,
   STATUS_FIELD_OPTIONS,
   STATUS_OPTIONS,
   statusForIssue,
@@ -133,6 +137,100 @@ describe("moneypenny projects: explainMaskedOwnerFailure", () => {
     for (const probe of [{ ok: true }, { ok: false, text: "HTTP 401" }, undefined]) {
       expect(explainMaskedOwnerFailure(probe)).toMatch(/^`gh project` failed with `unknown owner/);
     }
+  });
+});
+
+// #3954: `sync project status` went red on `main` because `gh project item-add` is not idempotent —
+// the second `issues` event on an issue already on the board answers
+// `GraphQL: Content already exists in this project`, and the add is only there to learn the item id.
+describe("moneypenny projects: an issue already on the board", () => {
+  const URL = "https://github.com/ejclark/skynet-capital/issues/3953";
+  const EXISTING: BoardItem = { id: "PVTI_existing", content: { type: "Issue", url: URL } };
+  const alreadyExists = () => {
+    throw Object.assign(new Error("Command failed: gh project item-add 2 --owner ejclark"), {
+      stderr: "GraphQL: Content already exists in this project (addProjectV2ItemById)\n",
+    });
+  };
+
+  it("recognizes the already-exists failure, and nothing else", () => {
+    expect(isAlreadyOnBoardError("GraphQL: Content already exists in this project")).toBe(true);
+    expect(isAlreadyOnBoardError("unknown owner type")).toBe(false);
+    expect(isAlreadyOnBoardError(undefined)).toBe(false);
+  });
+
+  it("never retries it — three attempts at a permanent failure is three failures", () => {
+    expect(isRetryableProjectsGhError("Content already exists in this project")).toBe(false);
+  });
+
+  it("matches the board item on content URL, not on a bare number or a draft item", () => {
+    expect(findBoardItem([{ id: "PVTI_draft" }, EXISTING], URL)).toBe(EXISTING);
+    expect(findBoardItem([EXISTING], "https://github.com/ejclark/skynet-capital/issues/1")).toBe(
+      undefined,
+    );
+    expect(findBoardItem([EXISTING], undefined)).toBe(undefined);
+  });
+
+  it("reads the existing item's id back out of item-list instead of failing the job", () => {
+    const resolved = resolveBoardItem({
+      issueUrl: URL,
+      addItem: alreadyExists,
+      listItems: () => ({ items: [EXISTING], totalCount: 1 }),
+    });
+    expect(resolved).toEqual({ item: EXISTING, added: false });
+  });
+
+  it("still reports `added` for an issue that really was new to the board", () => {
+    const fresh: BoardItem = { id: "PVTI_new", content: { url: URL } };
+    expect(
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: () => fresh,
+        listItems: () => {
+          throw new Error("item-list must not be called when the add succeeds");
+        },
+      }),
+    ).toEqual({ item: fresh, added: true });
+  });
+
+  it("passes any other add failure straight through, untouched — only this one string is benign", () => {
+    const masked = Object.assign(new Error("Command failed: gh project item-add"), {
+      stderr: "unknown owner type\n",
+    });
+    let thrown: unknown;
+    try {
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: () => {
+          throw masked;
+        },
+        listItems: () => {
+          throw new Error("item-list must not be called for an unrelated failure");
+        },
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBe(masked);
+  });
+
+  it("fails closed and names truncation when the item list stopped short of the board", () => {
+    expect(() =>
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: alreadyExists,
+        listItems: () => ({ items: [{ id: "PVTI_other" }], totalCount: 40 }),
+      }),
+    ).toThrow(/truncated/);
+  });
+
+  it("fails closed and names the archived case when a complete list still lacks the item", () => {
+    expect(() =>
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: alreadyExists,
+        listItems: () => ({ items: [], totalCount: 0 }),
+      }),
+    ).toThrow(/archived/);
   });
 });
 
