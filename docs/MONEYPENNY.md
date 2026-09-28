@@ -40,6 +40,54 @@ path.** Concretely:
   things she notices and routes to a fix, proactively, not only when asked to audit.
 - She keeps Eric's attention for what only he can decide, and handles everything else herself.
 
+## The picture (Eric, 2026-09-28: "this should be captured by mermaid charts")
+
+```mermaid
+---
+title: Moneypenny's orchestration mandate
+---
+flowchart TD
+    subgraph triggers ["GitHub events"]
+        I("issue labeled / closed / reopened")
+        P("PR opened / pushed")
+        T("scheduled dispatch")
+    end
+    subgraph mp ["Moneypenny's four lanes"]
+        EV[["moneypenny-events.yml<br>mechanical routing"]]
+        GOV[["governor / coach dispatch"]]
+        REP[["moneypenny-repair<br>CI self-healing"]]
+        SEC[["/secretary digests"]]
+    end
+    BOARD[("Orchestration board<br>Status / Horizon")]
+    TRIAGE{"curated filing?"}
+    READY(["ready label"])
+    BUILD["Claude build session"]
+    CI{"CI green?"}
+    ERIC(["Eric — needs-eric / held PR"])
+
+    I ==> EV
+    P ==> EV
+    T ==> EV
+    T ==> REP
+    EV ==> BOARD
+    EV ==> TRIAGE
+    TRIAGE == "yes: self-ready" ==> READY
+    TRIAGE -. "no: stays in Backlog" .-> BOARD
+    READY ==> BUILD
+    GOV ==> BUILD
+    BUILD ==> CI
+    CI == "green" ==> BOARD
+    CI -. "red: recurs" .-> REP
+    REP -. "same signature, no fix landed" .-> ERIC
+    BOARD -.-> SEC
+    SEC -.-> ERIC
+```
+
+_Caption — every trigger funnels through one of Moneypenny's four lanes; the Orchestration board
+(Status × Horizon, #3818 slice B) is the shared state all four read and write. The dotted paths are
+the exception routes: a freeform (non-`curated`) filing waits in Backlog for `ready`, a red CI run
+escalates to repair, and repair's own unresolved recurrences are the live gap #3926 names._
+
 ## Authority — she drives the architecture, within the same fence as everyone else
 
 Eric's own framing: *"the other roles/structures that pre-dated the GitHub App have become sources
