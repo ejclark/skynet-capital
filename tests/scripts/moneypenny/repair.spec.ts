@@ -21,6 +21,42 @@ const dryRun = (fixture: string): Intent[] =>
     ),
   );
 
+/**
+ * The same dry run over a payload written on the spot — for the matrix cases, where the variable
+ * is the JOB NAME and a committed fixture per variant would be a file per assertion.
+ */
+const dryRunPayload = (payload: object): Intent[] => {
+  const dir = mkdtempSync(join(tmpdir(), "repair-payload-"));
+  const file = join(dir, "event.json");
+  writeFileSync(file, JSON.stringify(payload));
+  try {
+    return JSON.parse(
+      execFileSync("node", ["scripts/moneypenny/repair.mjs", "--dry-run", "--event", file], {
+        encoding: "utf8",
+      }),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
+/** A failed run on `main`, with whatever failing jobs the case is about. */
+const failedRun = (jobs: string[], openIssues: Intent["title"][] = []) => ({
+  repository: { default_branch: "main" },
+  workflow_run: {
+    id: 33100000001,
+    name: "Moneypenny Events (event-research automation)",
+    conclusion: "failure",
+    event: "workflow_dispatch",
+    head_branch: "main",
+    html_url: "https://github.com/ejclark/skynet-capital/actions/runs/33100000001",
+  },
+  failures: jobs.map((job) => ({ job, step: "Run claude-code-action" })),
+  deps: {
+    openIssues: openIssues.map((title, i) => ({ number: 900 + i, title, labels: [] })),
+  },
+});
+
 describe("moneypenny repair — routing a failed run", () => {
   it("files one capsule issue for a fresh failure on main, and asks for a repair session", () => {
     const [intent, ...rest] = dryRun("workflow-run-failed.json");
@@ -88,6 +124,99 @@ describe("moneypenny repair — routing a failed run", () => {
     rmSync(dir, { recursive: true, force: true });
 
     expect(JSON.parse(out)).toEqual([]);
+  });
+});
+
+// #3913 gap 1, measured 2026-09-28: `research due events` is ONE failing job, but GitHub reports it
+// once per matrix leg with the leg's values in the name — so the signature was unique per event and
+// one fault filed 19 open `ci-failure` issues (35% of the backlog), 16 of them over the 120-char
+// title ceiling. The leg is evidence; the job is the key.
+describe("moneypenny repair — a matrix job is one fault, not one per leg", () => {
+  const legs = [
+    "research due events (fomc-2026-09-16, event-passed-unscored)",
+    "research due events (uk-cpi-2026-09-16, event-passed-unscored)",
+    "research due events (vix-expiration-2026-09-16, event-passed-unscored)",
+  ];
+  const folded = "[ci] Moneypenny Events (event-research automation) — research due events";
+
+  it("files one issue for a run where three legs of the same job failed", () => {
+    const intents = dryRunPayload(failedRun(legs));
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.type).toBe("open-issue");
+    expect(intents[0]?.title).toBe(folded);
+    expect(intents[0]?.title?.length).toBeLessThanOrEqual(120);
+  });
+
+  it("keeps the other legs as evidence in the fold rather than dropping them", () => {
+    const body = dryRunPayload(failedRun(legs))[0]?.body ?? "";
+
+    expect(body).toContain("**`research due events` failed on `main`");
+    expect(body).toContain("| **Legs failed** | 3 of this job, in this one run |");
+    expect(body).toContain("The other 2 matrix legs that failed in this run:");
+    expect(body).toContain("uk-cpi-2026-09-16");
+    expect(body.indexOf("uk-cpi-2026-09-16")).toBeGreaterThan(body.indexOf("<details>"));
+  });
+
+  it("comments once on the already-open issue, whatever the leg count", () => {
+    const intents = dryRunPayload(failedRun(legs, [folded]));
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.type).toBe("comment");
+    expect(intents[0]?.issue).toBe(900);
+    expect(intents[0]?.body).toContain("3 matrix legs of this job failed in that one run");
+  });
+
+  it("still separates two genuinely different failing jobs", () => {
+    const intents = dryRunPayload(failedRun([legs[0] as string, "route"]));
+
+    expect(intents.map((i) => i.title)).toEqual([
+      folded,
+      "[ci] Moneypenny Events (event-research automation) — route",
+    ]);
+  });
+
+  it("strips only the trailing group, so a job named with a parenthetical keeps it", () => {
+    const [intent] = dryRunPayload(failedRun(["verify (strict) (node-24, ubuntu)"]));
+
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — verify (strict)",
+    );
+  });
+
+  // #3229: GitHub truncates a job name at 100 chars and appends a literal `...`, so the leg's
+  // values arrive with no closing paren — and that issue's title reached 153 chars.
+  it("folds a leg GitHub truncated mid-parenthetical, closing paren and all", () => {
+    const truncated =
+      "research due events (mu-2026-09-30-print, interval-elapsed, staleness-ceiling, 2026-09-16, bar-cl...";
+    const [intent] = dryRunPayload(failedRun([truncated, legs[0] as string]));
+
+    expect(intent?.title).toBe(folded);
+    expect(intent?.body).toContain("| **Legs failed** | 2 of this job, in this one run |");
+  });
+
+  it("clamps the title to issue-lint's fatal ceiling, so the lane passes its own gate", () => {
+    const [intent] = dryRunPayload(failedRun([`deploy ${"the-observatory-bundle-".repeat(5)}`]));
+
+    expect(intent?.title?.length).toBe(120);
+    expect(intent?.title?.endsWith("…")).toBe(true);
+  });
+
+  it("flags a leg that died at a different step — folding must not hide a second fault", () => {
+    const payload = failedRun([legs[0] as string, legs[1] as string]);
+    payload.failures[1] = { job: legs[1] as string, step: "Record this session's cost" };
+    const body = dryRunPayload(payload)[0]?.body ?? "";
+
+    expect(body).toContain("died at `Record this session's cost`");
+    expect(body).toContain("may be a second fault");
+  });
+
+  it("leaves an all-parentheses job name alone — the rejected-workflow shape is not a matrix leg", () => {
+    const [intent] = dryRunPayload(failedRun(["(the workflow never started)"]));
+
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — (the workflow never started)",
+    );
   });
 });
 
