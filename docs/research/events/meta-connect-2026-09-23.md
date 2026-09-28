@@ -286,6 +286,114 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-28, D+5 — inside the `closeOutWithinDays: 6` window).** Instrument cache
+busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); every
+price below is a cold re-fetch of `scripts/research/market-data.mjs`'s split/dividend-adjusted daily
+bars, never read from this ledger's own prior rows. This is a `product-launch` kind, so
+`earnings-cycle.mjs`/`intraday-edges.mjs` have no event list to run against (the same limit the AAPL
+launch close-out recorded) — what was re-run is the market-data layer underneath them, for **META,
+QQQ, SPY, SMH, NVDA, AMD and ^TNX/^VIX**, so the reaction-day move can be checked against the broad
+market, the semis/AI-beta complex, and rates in one pass rather than assumed clean.
+
+### The tape, measured
+
+| Session | META | QQQ | META − QQQ (excess) | SPY | SMH | 10Y yield | VIX |
+|---|---|---|---|---|---|---|---|
+| 09-22 (pre-window close) | $736.60 | $747.46 | — | $773.38 | $607.46 | 4.968 | 14.21 |
+| 09-23 (keynote day, evening slot) | $744.10, +1.02% | $741.21, −0.83% | +1.85pp | $767.81 | $601.41 | 5.114 | 15.18 |
+| **09-24 (reaction day)** | **$777.59, +4.50%** | $741.10, −0.01% | **+4.51pp** | $767.18, −0.08% | $600.52, −0.15% | 5.162 | 15.67 |
+| 09-25 | $751.66, −3.32% | $744.50, +0.46% | −3.78pp | $771.35, +0.55% | $606.56, +1.00% | 5.184 | 14.87 |
+
+Two things this table settles. First, the reaction day is genuinely isolated to META: SPY, SMH and
+NVDA (not shown, −0.41%) were flat-to-down on 09-24, AMD rose a modest +2.38% — nothing near META's
++4.50% same-session move — and the 10Y yield *rose* (5.114% → 5.162%), the opposite of a risk-on
+macro tailwind. Second, the move gave back **−3.32%** the very next session (09-25), which is itself
+informative about durability, not attribution.
+
+### FT-meta-connect-2026-09-23-1, scored
+
+| Field | Value |
+|---|---|
+| Primary metric (as registered) | META 09-22 close ($736.5999755859375) → 09-24 close ($777.5900268554688) excess over QQQ (09-22 $747.4600219726562 → 09-24 $741.0999755859375) |
+| Result | META **+5.5665%**, QQQ **−0.8509%** → excess **+6.4174%** |
+| Band (declared 2026-09-04) | inside −2.42% / +2.54% passes; outside **and separable** from the corridor's confounds kills |
+| Separability audit | **Triple witching (09-18)** — 6 sessions stale, already digested in the D-6/D-4 rows. **FOMC (09-16)** — resolved in-line 8 sessions earlier, already digested in the D-6 row. **Trump–Xi summit (09-24, same day)** — the broad market and the semis/AI-beta complex it would transmit through (SPY −0.08%, SMH −0.15%, NVDA −0.41%) were flat-to-down the same session, and yields rose; no dated reporting ties META's move to the summit. Dated, named reporting instead ties the move to Connect's own content: KeyBanc raised its target **$780 → $900** and Cantor Fitzgerald **$680 → $860**, both dated **09-23** on the Muse-engagement-to-revenue thesis; JPMorgan's Doug Anmuth raised **$820 → $920** dated **09-24**, citing Meta "beginning to prove out its AI returns and leadership beyond its core advertising platform" (Motley Fool 09-24; tradingkey market-movers 09-24; financefeeds 09-24; 24/7 Wall St. 09-24) — reactions to the keynote's own reveals (a **$1,299** Meta VR Glasses line, the **Muse Charm** pendant, Ray-Ban Meta Gen 3), not to the summit |
+| **Verdict** | **kill** — the excess clears the band and is separable from every named confound on both the market-breadth evidence and the dated, named-analyst attribution |
+| Blocked fetch | cnbc.com/2026/09/23/mark-zuckerberg-1299-meta-vr-glasses-ai-agent.html returned **403**; the announcement and reaction are sourced from tradingkey, financefeeds, 24/7 Wall St. and Motley Fool instead, all dated 09-23/09-24 |
+
+**What this does and does not refute.** This is one out-of-sample instance (the study's n=7
+historical keynotes become n=8), not a reversal of the base-rate study itself — the −0.85% mean /
+2-of-7 win rate across 2019–2025 is a re-runnable fact and stands unchanged. What this kills is the
+*registered prediction for 2026's own reaction window*, and the honest reason is visible in the
+tape: this keynote shipped a materially larger, more concrete product slate (a shipping hardware
+line with a stated price, not a rumor-stage reveal) than most of the seven prior years, and named
+analysts moved same-day, same-cause. The generalizable lesson: a keynote's historical no-footprint
+base rate does not license ignoring the *content* of the specific keynote in front of it — size and
+concreteness of the reveal is the variable the n=7 study could not see, because most of those seven
+were incremental.
+
+### FT-meta-connect-2026-09-23-2, scored
+
+| Field | Value |
+|---|---|
+| Primary metric (as registered) | META 09-16 close ($673.3099975585938) → 09-22 close ($736.5999755859375) excess over QQQ (09-16 $704.719970703125 → 09-22 $747.4600219726562) |
+| Result | META **+9.3988%**, QQQ **+6.0647%** → excess **+3.3341%** |
+| Band (declared 2026-09-04) | below +3.99% (p90) passes; above it **and attributed to Connect positioning by dated reporting** kills |
+| Attribution check | The 09-16→09-22 run is the same broad AI/semiconductor rally the 09-23 ledger row already dated (Nasdaq record close, AMD >$1T market cap, Intel +12.2%, Arm +17%, 09-21) plus Muse's #1 App Store rank and the Wells Fargo target raise citing Muse's reception — every dated source names Muse and the rally, Connect only as timing context, never as cause |
+| **Verdict** | **pass** — the excess lands below the registered p90 threshold, and no dated source attributes it to Connect positioning either |
+
+### The kill switches, scored
+
+| Switch (as written) | Resolution | Verdict |
+|---|---|---|
+| **The no-footprint read** — dies on an outside-band, separable move | META +6.42% excess over QQQ, 09-22→09-24, separable on both market-breadth and dated-attribution grounds (above) | **DIED** — this is the same event FT-1 scores; recorded once, not twice |
+| **The attribution read** (leg 3) — dies if reporting ties the 09-01→09-03 run to Connect positioning rather than Muse Spark 1.3 | No such reporting found at any pulse, including this close-out | **STANDS**, across the full D-19 → D+5 run |
+| **The "not a numbers event" read** — dies if Meta issues guidance, capex or a segment figure on stage | The keynote's own content (per Engadget/Gizmodo/CNBC-headline coverage) was hardware and product reveals — VR Glasses, Muse Charm, Ray-Ban Gen 3, a hearing-assist feature, live-sports partnerships — no guidance, capex or segment figure | **STANDS** |
+| **The date leg** | Meta ran the keynote as scheduled, 09-23 evening | **RESOLVED as written** |
+| **"No direct play" on the killed symbol-strategy playbooks (S1/S3/gap-capture)** — reopens only on **≥3 new prints** repricing a killed hypothesis | One product keynote, however large its footprint, is one print — it does not clear the sweep's stated ≥3-print bar | **STANDS unchanged**; this close-out's kill is FT-1's own registered test, not a reopening of S1/S3/gap-capture |
+| **Escalation to Eric** — only if the glasses price ladder is a genuine thesis fork for the Reality-Labs read | A $1,299 VR Glasses line and a $449+ Ray-Ban Gen 3 are now priced facts, not a fork requiring his judgment; they feed the est. 10-28 print ledger as information | **No escalation** |
+
+### Vs. the stance
+
+The stance held **watch-only, no position, no play proposed, at any horizon** across all seven prior
+rows — and, scored on its own terms, the refusal was costly *only* if judged on the reaction day
+alone. The 09-24 session by itself would have paid a directional long **+4.50%** in one day. But:
+
+- **The stance never proposed a directional entry on the keynote** — it explicitly named itself
+  watch-only precisely *because* the historical base rate carried no edge either direction, and the
+  registered forward test existed to check that base rate honestly, not to license a bet on it.
+- **The refusal is what a stand-aside is for.** A process that says "no edge, no position" being
+  proven wrong by one large out-of-sample draw is the expected shape of a well-calibrated null — a
+  fair coin does not become a bad model for reading heads-heavy on one flip. What died is the
+  *specific registered prediction for this specific reaction window*, not the discipline that
+  refused to size a position into a two-sided n=7 distribution.
+- **The 09-25 giveback (−3.32%) is the tell.** Had a position been sized off the 09-24 pop, the very
+  next session would have taken back nearly three-quarters of the excess gain — exactly the kind of
+  single-session volatility this ledger's guard rails (S2, E1) exist to sidestep on this symbol.
+
+### The one lesson worth banking
+
+**A keynote's historical no-footprint base rate is conditional on the keynote's own content, and
+this ledger's n=7 study had no way to see that conditioning.** All seven prior Meta Connects in the
+sample were dominated by iterative hardware (Quest revisions, incremental Ray-Ban updates) landing
+on companies with no comparably-sized AI-agent narrative already in motion. 2026 differed on both
+counts at once — a shipping VR-glasses line at a stated price, plus a live, monetizing AI-agent
+(Muse) the keynote could point to directly — and named analysts moved same-day on that combination.
+The generalizable rule for this calendar's other product-launch and keynote events: a historical
+no-footprint base rate is a prior, not a floor: check what THIS keynote is actually promising to ship
+before defaulting to "keynotes don't move this name," the same discipline the AAPL close-out's
+"converged rumor band is not a narrow distribution" lesson already banked for the *pricing* half of
+a launch. Recorded to the sweep's kill list.
+
+**This document is now closed.** `scripts/event-scan.mjs` goes silent on `meta-connect-2026-09-23`
+forever once this section exists, with one door back in: a registered forward test whose score-by
+has not yet arrived. Both of this event's forward tests are now scored, so none remains. The live
+META questions this event feeds — the Reality-Labs line, the AI-glasses price ladder, Muse
+monetization — belong to the [est. 10-28 print ledger](meta-2026-10-28-print.md), which owns its own
+forward tests and its own instruments.
+
 **Last assessed:** 2026-09-21
 <!-- probe-ref: {"symbols":{"META":665.75},"vix":14.81,"daysBand":"medium:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","census-benchmark-revision-nsa-2026-09-28","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":2} -->
 
