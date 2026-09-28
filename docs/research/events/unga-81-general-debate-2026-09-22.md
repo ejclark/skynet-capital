@@ -383,6 +383,23 @@ today, and not re-litigated here. `FT-…-1/-3/-4` remain open; `-1` will never 
 lane's automation (see above), while `-3` and `-4` are live candidates for a future
 `forward-test-due` dispatch once 09-24/09-25 data exists.
 
+**Forward-test-due addendum (2026-09-28) — `FT-…-3` and `FT-…-4` scored, `FT-…-1` still unscoreable.**
+Dispatched by `scripts/event-scan.mjs --due` on both rows' 2026-09-28 `scoreBy`; no re-assessment, no
+edit to `## Outcome` above. Instrument cache busted first (unused, `symbols: []`); prices re-fetched
+direct (Yahoo chart API, SPY, cross-checked against `^GSPC`). Close-to-close absolute moves, SPY /
+`^GSPC`: 09-16 (FOMC) **0.441%/0.447%**, 09-21 (S&P quarterly rebalance + Russell IPO review effective
+— already in this ledger's own corridor, not a debate session) **1.551%/1.470%**, 09-22 **0.016%/0.001%**,
+09-23 **0.720%/0.755%**, 09-24 **0.082%/0.025%**, 09-25 **0.544%/0.510%**. `FT-…-3` (summit day vs
+debate-open day): |09-24| 0.082% exceeds |09-22| 0.016% in both series — the sibling
+[`trump-xi-summit-2026-09-24`](trump-xi-summit-2026-09-24.md) close-out confirms the visit ran
+exactly on its announced itinerary, so the test is not void — **pass**. `FT-…-4` (FOMC dominance):
+two general-debate sessions, 09-23 and 09-25, both out-move the 09-16 FOMC session in absolute terms
+in both series — the kill switch's literal condition fires regardless of 09-21 (index-rebalance day,
+neither FOMC nor debate) being the single largest move in the block — **kill**. `FT-…-1` remains
+`_open_` and permanently unscoreable by this lane's automation, unchanged from the 2026-09-23
+close-out's own reasoning above. Full figures and reasoning:
+[`forward-tests/unga-81-general-debate-2026-09-22.md`](../forward-tests/unga-81-general-debate-2026-09-22.md).
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eurostat-hicp-final-2026-09-17","housing-starts-2026-09-17","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":1} -->
 
