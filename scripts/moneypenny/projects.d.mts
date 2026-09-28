@@ -30,3 +30,11 @@ export function statusForIssue(issue?: {
 }): "Backlog" | "Ready" | "In Progress" | "Blocked" | "Done";
 
 export function isBacklogCandidate(issue?: { labels?: string[] }): boolean;
+
+export const MASKED_OWNER_FAILURE: RegExp;
+
+export function isMaskedOwnerFailure(text: unknown): boolean;
+
+export function isRetryableProjectsGhError(text: unknown): boolean;
+
+export function explainMaskedOwnerFailure(probe?: { ok?: boolean; text?: string }): string;

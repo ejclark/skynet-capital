@@ -17,14 +17,55 @@
 // Run via moneypenny-events.yml's `sync-project` job, on issue labeled/unlabeled/closed/reopened.
 // `syncIssue` is exported so projects-backfill.mjs (the #3818 consolidation pass) can reuse the
 // same add/Status/Horizon glue across every open issue in one run, instead of re-deriving it.
+//
+// #3914: every `gh project` call here goes through `ghProject`, because gh reports any non-NOT_FOUND
+// owner-lookup failure as the bare string `unknown owner type` — see projects.mjs's block above
+// `MASKED_OWNER_FAILURE` for the reproduction and why that string is never a real classification.
 import { ghRest, sh, withRetry } from "./gh.mjs";
-import { isBacklogCandidate, statusForIssue } from "./projects.mjs";
+import {
+  explainMaskedOwnerFailure,
+  isBacklogCandidate,
+  isMaskedOwnerFailure,
+  isRetryableProjectsGhError,
+  statusForIssue,
+} from "./projects.mjs";
 
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
 
-function ghJson(args) {
-  return JSON.parse(withRetry(() => sh("gh", [...args, "--format", "json"])));
+/**
+ * Asks the credential directly what `gh project` refused to say (#3914). Never throws — its entire
+ * job is turning an opaque failure into a sentence, so a failure here is the answer, not an error.
+ */
+function probeGraphql() {
+  try {
+    return { ok: true, text: sh("gh", ["api", "graphql", "-f", "query=query{viewer{login}}"]) };
+  } catch (err) {
+    return { ok: false, text: `${err?.stderr ?? ""} ${err?.message ?? ""}` };
+  }
+}
+
+/**
+ * EVERY `gh project` call in this module goes through here, so all of them get the same two things
+ * #3914 proved were missing: a retry that can actually see gh's masked transient
+ * (`isRetryableProjectsGhError`), and — when it sticks — an error that names the cause instead of
+ * handing the next repair session `unknown owner type` and a stack trace. `item-edit` had no retry
+ * at all before this; it shells to the same subcommand family and fails the same way.
+ */
+function ghProject(args) {
+  try {
+    return withRetry(() => sh("gh", ["project", ...args]), {
+      isTransient: isRetryableProjectsGhError,
+    });
+  } catch (err) {
+    const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+    if (!isMaskedOwnerFailure(text)) throw err;
+    throw new Error(explainMaskedOwnerFailure(probeGraphql()), { cause: err });
+  }
+}
+
+function ghProjectJson(args) {
+  return JSON.parse(ghProject([...args, "--format", "json"]));
 }
 
 function findField(fieldList, name) {
@@ -54,8 +95,7 @@ export function syncIssue(issueNumber, { horizon } = {}) {
 
   const status = statusForIssue({ state: issue.state, labels });
 
-  const item = ghJson([
-    "project",
+  const item = ghProjectJson([
     "item-add",
     String(PROJECT_NUMBER),
     "--owner",
@@ -64,8 +104,7 @@ export function syncIssue(issueNumber, { horizon } = {}) {
     issue.html_url,
   ]);
 
-  const fields = ghJson([
-    "project",
+  const fields = ghProjectJson([
     "field-list",
     String(PROJECT_NUMBER),
     "--owner",
@@ -75,7 +114,7 @@ export function syncIssue(issueNumber, { horizon } = {}) {
   ]);
   const fieldList = Array.isArray(fields) ? fields : (fields.fields ?? []);
 
-  const projects = ghJson(["project", "list", "--owner", OWNER, "--limit", "100"]);
+  const projects = ghProjectJson(["list", "--owner", OWNER, "--limit", "100"]);
   const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
   const project = projectList.find((p) => p.number === PROJECT_NUMBER);
   if (!project) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
@@ -91,8 +130,7 @@ export function syncIssue(issueNumber, { horizon } = {}) {
       const have = (field.options ?? []).map((o) => o.name).join(", ");
       throw new Error(`${fieldName} field has no "${optionName}" option (has: ${have})`);
     }
-    sh("gh", [
-      "project",
+    ghProject([
       "item-edit",
       "--id",
       item.id,
