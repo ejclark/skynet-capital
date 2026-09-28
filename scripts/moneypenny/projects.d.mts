@@ -38,3 +38,20 @@ export function isMaskedOwnerFailure(text: unknown): boolean;
 export function isRetryableProjectsGhError(text: unknown): boolean;
 
 export function explainMaskedOwnerFailure(probe?: { ok?: boolean; text?: string }): string;
+
+export const ALREADY_ON_BOARD_FAILURE: RegExp;
+
+export function isAlreadyOnBoardError(text: unknown): boolean;
+
+export interface BoardItem {
+  id: string;
+  content?: { type?: string; number?: number; url?: string };
+}
+
+export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
+
+export function resolveBoardItem(deps: {
+  addItem: () => BoardItem;
+  listItems: () => { items?: BoardItem[]; totalCount?: number };
+  issueUrl?: string;
+}): { item: BoardItem; added: boolean };

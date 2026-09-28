@@ -118,6 +118,67 @@ export function isRetryableProjectsGhError(text) {
   return isTransientGhError(text) || isMaskedOwnerFailure(text);
 }
 
+// #3954 — `gh project item-add` IS NOT IDEMPOTENT, and every sync after an issue's first one
+// depends on it being so. `addProjectV2ItemById` answers a second add for the same content with
+// `GraphQL: Content already exists in this project`, so `sync project status` went red on `main`
+// the moment a board issue (#3953) got a second `issues` event. Reproduced locally with a fake `gh`
+// on PATH returning exactly that stderr: the same stack the CI log shows, down to the frame.
+//
+// The add is only there to LEARN THE ITEM ID, so "already exists" is success wearing an error's
+// clothes — the item id is simply in `item-list` instead of the add's response. Deliberately NOT
+// added to `isRetryableProjectsGhError`: retrying it repeats it three times and still fails.
+export const ALREADY_ON_BOARD_FAILURE = /Content already exists in this project/i;
+
+/** Is this `gh project item-add` failure just "the issue is already an item on this board"? */
+export function isAlreadyOnBoardError(text) {
+  return ALREADY_ON_BOARD_FAILURE.test(String(text ?? ""));
+}
+
+/**
+ * The board item for one issue, matched on `content.url` — unambiguous where a bare number is not
+ * (a project can carry items from several repos, and a draft item has no content at all). Pure, so
+ * the match rule is proven without a network call.
+ */
+export function findBoardItem(items = [], issueUrl) {
+  if (!issueUrl) return undefined;
+  return items.find((item) => item?.content?.url === issueUrl);
+}
+
+/**
+ * Get the board item for an issue whether or not it is already on the board: add it, and when
+ * GitHub says it is already there, read its id back out of `item-list`. IO-free itself — the two
+ * `gh` calls arrive as injected functions (projects-sync.mjs supplies the real ones), which is why
+ * this decision lives in the pure module with the rest of the vocabulary.
+ *
+ * `listItems` hands back `{items, totalCount}`. Fail-closed on both ways the lookup can come up
+ * empty — a truncated page, or an item GitHub counts but `item-list` won't show (an ARCHIVED item
+ * is the known case) — because a silent miss here would write Status to nothing at all.
+ */
+export function resolveBoardItem({ addItem, listItems, issueUrl }) {
+  try {
+    return { item: addItem(), added: true };
+  } catch (err) {
+    const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+    if (!isAlreadyOnBoardError(text)) throw err;
+
+    const { items = [], totalCount } = listItems() ?? {};
+    const item = findBoardItem(items, issueUrl);
+    if (item) return { item, added: false };
+
+    const counted = typeof totalCount === "number" ? totalCount : items.length;
+    const truncated = counted > items.length;
+    throw new Error(
+      `GitHub says ${issueUrl} is already on the board, but it is not among the ${items.length} ` +
+        `items listed (${counted} counted). ` +
+        (truncated
+          ? "The item list came back truncated — raise the --limit on item-list."
+          : "An archived item reads this way: un-archive it on the board, or delete it so the " +
+            "next sync can re-add it."),
+      { cause: err },
+    );
+  }
+}
+
 /**
  * The sentence a future repair session should find in the log instead of `unknown owner type`:
  * what `gh api graphql` says about the very same credential, which is the cause gh withheld.

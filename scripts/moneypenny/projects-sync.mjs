@@ -18,6 +18,9 @@
 // `syncIssue` is exported so projects-backfill.mjs (the #3818 consolidation pass) can reuse the
 // same add/Status/Horizon glue across every open issue in one run, instead of re-deriving it.
 //
+// #3954: the board add is add-or-find (`resolveBoardItem`), because `gh project item-add` fails on
+// an issue that is already an item — so every sync after an issue's first one went red until now.
+//
 // #3914: every `gh project` call here goes through `ghProject`, because gh reports any non-NOT_FOUND
 // owner-lookup failure as the bare string `unknown owner type` — see projects.mjs's block above
 // `MASKED_OWNER_FAILURE` for the reproduction and why that string is never a real classification.
@@ -27,11 +30,17 @@ import {
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRetryableProjectsGhError,
+  resolveBoardItem,
   statusForIssue,
 } from "./projects.mjs";
 
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
+
+// `gh project item-list` defaults to 30 rows and the board passed that on its first backfill, so
+// every lookup here asks for far more than the board will plausibly hold; `resolveBoardItem` throws
+// rather than guess if the list ever does come back truncated (#3954).
+const ITEM_LIST_LIMIT = 1000;
 
 /**
  * Asks the credential directly what `gh project` refused to say (#3914). Never throws — its entire
@@ -82,8 +91,9 @@ function optionByName(field, name) {
  * which nothing here ever sets automatically either), so a plain per-issue sync call with no
  * `horizon` leaves it untouched rather than guessing.
  *
- * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon}`
- * otherwise. Throws loudly on any GitHub-side surprise — never a silent partial write.
+ * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon, added}`
+ * otherwise (`added` false = it was already an item). Throws loudly on any GitHub-side surprise —
+ * never a silent partial write.
  */
 export function syncIssue(issueNumber, { horizon } = {}) {
   const issue = ghRest(`issues/${issueNumber}`);
@@ -95,14 +105,32 @@ export function syncIssue(issueNumber, { horizon } = {}) {
 
   const status = statusForIssue({ state: issue.state, labels });
 
-  const item = ghProjectJson([
-    "item-add",
-    String(PROJECT_NUMBER),
-    "--owner",
-    OWNER,
-    "--url",
-    issue.html_url,
-  ]);
+  // Add-or-find, never add-and-hope: `item-add` errors on an issue that is already an item, and
+  // every sync after an issue's first one hits exactly that (#3954).
+  const { item, added } = resolveBoardItem({
+    issueUrl: issue.html_url,
+    addItem: () =>
+      ghProjectJson([
+        "item-add",
+        String(PROJECT_NUMBER),
+        "--owner",
+        OWNER,
+        "--url",
+        issue.html_url,
+      ]),
+    listItems: () => {
+      const raw = ghProjectJson([
+        "item-list",
+        String(PROJECT_NUMBER),
+        "--owner",
+        OWNER,
+        "--limit",
+        String(ITEM_LIST_LIMIT),
+      ]);
+      const items = Array.isArray(raw) ? raw : (raw.items ?? []);
+      return { items, totalCount: raw?.totalCount };
+    },
+  });
 
   const fields = ghProjectJson([
     "field-list",
@@ -146,7 +174,7 @@ export function syncIssue(issueNumber, { horizon } = {}) {
   setSingleSelect("Status", status);
   if (horizon) setSingleSelect("Horizon", horizon);
 
-  return { status, horizon: horizon ?? null };
+  return { status, horizon: horizon ?? null, added };
 }
 
 function main() {
@@ -162,7 +190,8 @@ function main() {
     return;
   }
   console.log(
-    `issue #${issueNumber}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : ""}`,
+    `issue #${issueNumber}: ${result.added ? "added to board" : "already on board"}, ` +
+      `Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : ""}`,
   );
 }
 
