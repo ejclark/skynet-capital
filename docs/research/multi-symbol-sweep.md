@@ -680,6 +680,25 @@ robust, alpha fragile — is the finding.
   without a second confirming instance; n=1 killed on its first test, same shape as the long-end and
   housing-starts kills above.
 
+- **A product-launch keynote's historical no-footprint base rate, applied without conditioning on
+  the specific keynote's own content (FT-meta-connect-2026-09-23-1)** — added 2026-09-28 from the
+  [meta-connect-2026-09-23 close-out](events/meta-connect-2026-09-23.md). The registered prediction
+  (n=7 Meta Connect keynotes, 2019–2025, D-1→D+1 excess vs QQQ **−0.85% mean, win 2/7**, no edge
+  either direction) was that the 2026 reaction day would land inside META's own ordinary **−2.42% /
+  +2.54%** band. It landed at **+6.42% excess**, and the move cleared this ledger's own separability
+  bar: SPY, SMH and NVDA were flat-to-down the same session and the 10Y yield rose (ruling out a
+  broad-market or Trump–Xi-summit read), while KeyBanc, Cantor Fitzgerald and JPMorgan all raised
+  price targets same-day, dated and naming the keynote's own reveals — a shipping **$1,299** VR
+  Glasses line and the **Muse Charm** pendant — as the reason. **What this does and does not
+  refute:** the n=7 historical base rate itself is unchanged and re-runnable; what dies is treating
+  it as a floor rather than a prior. The seven prior keynotes were dominated by iterative hardware
+  (Quest revisions, incremental Ray-Ban updates); 2026 paired a concrete, priced hardware reveal with
+  an already-monetizing AI agent (Muse) the keynote could point to directly — the variable an n=7
+  average of mostly-incremental years could not see. Do not re-propose "keynotes don't move this
+  name" for a future product-launch event without first checking whether that keynote's own slate is
+  incremental or a genuine step-change — the same discipline the AAPL launch close-out's "a converged
+  rumor band is not a narrow distribution" lesson already banked for the *pricing* half of a launch.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
