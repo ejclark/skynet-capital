@@ -164,8 +164,10 @@ Actions tab by hand — docs/LESSONS.md). A failed run on `main` wakes
 step and log tail, then dispatches a repair session whose terminal state is a PR or a
 `needs-eric` comment. Four loop guards keep a self-healing lane from feeding itself: it ignores its
 own failures, acts only on default-branch runs, files once per failure signature (recurrences
-comment), and goes silent on any signature already escalated. Workflow-file repairs may be opened
-but never auto-merged — that carve-out is unchanged.
+comment), and goes silent on any signature already escalated. The signature is the workflow plus the
+job name with a matrix leg's values stripped (#3913): keying on the leg made one failing job file 19
+issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
+opened but never auto-merged — that carve-out is unchanged.
 
 
 Two rules fall out, both paid for the hard way (see the ledger):

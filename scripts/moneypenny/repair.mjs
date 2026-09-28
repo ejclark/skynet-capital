@@ -25,7 +25,8 @@
 //   1. It ignores its own workflow's failures.
 //   2. It only acts on runs against the default branch — a red PR belongs to that PR's author and
 //      its watching session, and repair PRs opened here would otherwise feed themselves.
-//   3. One open issue per failure signature: a recurrence comments, it never files again.
+//   3. One open issue per failure signature: a recurrence comments, it never files again — and a
+//      matrix job's legs fold onto one signature (`normalizeJobName`), so one fault is one issue.
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -46,27 +47,122 @@ const LOG_TAIL_CHARS = 3500;
 const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", ...opts }).trim();
 
-/** `[ci] Postmaster — build feedback issue` — the dedupe key, stable across recurrences. */
+/**
+ * A matrix leg's values, as GitHub appends them to the job name: `research due events` is reported
+ * as `research due events (fomc-2026-09-16, event-passed-unscored)`. Only a TRAILING group is
+ * stripped, so a workflow whose job name legitimately ends in a parenthetical keeps it when it is
+ * not a matrix leg — and a job name that is ENTIRELY parenthesised (`(the workflow never started)`,
+ * `parseFailure`) is left alone rather than normalised to nothing.
+ */
+const MATRIX_SUFFIX = /\s*\([^()]*\)\s*$/;
+/**
+ * The same suffix with its closing paren cut off: GitHub truncates a job name at 100 characters and
+ * appends a literal `...`, so a long leg arrives unterminated — measured on #3229, whose job name
+ * ends `…staleness-ceiling, 2026-09-16, bar-cl...` and whose title ran to 153 chars. Matching only
+ * the closed form would have left exactly that class still filing one issue per leg.
+ */
+const MATRIX_SUFFIX_TRUNCATED = /\s*\([^()]*$/;
+/** `scripts/issue-lint.mjs` MAX_TITLE — the lane obeys the contract it lints humans against. */
+const MAX_TITLE = 120;
+
+/**
+ * One failing job is one fault, whatever the matrix says. Keying on the leg's values made every
+ * event its own "stable" signature: 19 open `ci-failure` issues for ONE failing job, 35% of the
+ * backlog, plus 16 titles over the 120-char lint ceiling (#3913, gap 1 — measured 2026-09-28).
+ * #3280 fixed the same bug on the repair *dispatch* side; this is the issue-filing key.
+ * The leg's own name stays in the body, where it belongs — it is evidence, never the key.
+ */
+export function normalizeJobName(jobName) {
+  const name = String(jobName ?? "");
+  for (const suffix of [MATRIX_SUFFIX, MATRIX_SUFFIX_TRUNCATED]) {
+    const stripped = name.replace(suffix, "").trim();
+    // Empty means the whole name was parenthesised — `(the workflow never started)`, which is
+    // `parseFailure`'s own label, not a leg. Keep it.
+    if (stripped && stripped !== name) return stripped;
+  }
+  return name;
+}
+
+/**
+ * `[ci] Postmaster — build feedback issue` — the dedupe key, stable across recurrences. Clamped to
+ * the lint ceiling: the `[ci] <workflow> — ` prefix alone can run 50+ chars and GitHub allows a
+ * 100-char job name, so an unclamped signature can file a title its own `issue-lint` spec rejects.
+ * Truncation is deterministic, so a clamped signature is still a stable key.
+ */
 export function signature(run, jobName) {
-  return `[ci] ${run.name} — ${jobName}`;
+  const title = `[ci] ${run.name} — ${normalizeJobName(jobName)}`;
+  return title.length <= MAX_TITLE ? title : `${title.slice(0, MAX_TITLE - 1)}…`;
+}
+
+/**
+ * Collapse a run's failing jobs onto one entry per signature. With `fail-fast: false`, one broken
+ * matrix job fails once per leg, so a single fault arrives as N failures in the SAME run — and N
+ * open-issue intents, since the open-issues list cannot yet know about a sibling filed seconds ago.
+ * The representative carries the others as `siblings`, which the body and the recurrence comment
+ * report: the count is the blast radius, and losing it would be the dishonest way to dedupe.
+ */
+export function foldFailures(run, failures = []) {
+  const byTitle = new Map();
+  for (const failure of failures) {
+    const title = signature(run, failure.job);
+    const first = byTitle.get(title);
+    if (first) first.siblings.push({ job: failure.job, step: failure.step });
+    else byTitle.set(title, { ...failure, siblings: [] });
+  }
+  return [...byTitle.values()];
+}
+
+/**
+ * Names the other matrix legs that failed the same way, bounded — a fold is not a log dump. Only
+ * the representative leg's log is quoted above, so a leg that died at a DIFFERENT step says so on
+ * its line: the repair session this issue dispatches gets one body, and a second root cause hidden
+ * behind "same signature" is the one thing folding could honestly lose.
+ */
+const LEGS_SHOWN = 10;
+function legLines(siblings = [], primaryStep) {
+  if (!siblings.length) return [];
+  const shown = siblings.slice(0, LEGS_SHOWN);
+  const rest = siblings.length - shown.length;
+  const elsewhere = siblings.some(({ step }) => step && step !== primaryStep);
+  return [
+    "",
+    `The other ${siblings.length} matrix ${siblings.length === 1 ? "leg" : "legs"} that failed in this run:`,
+    "",
+    ...shown.map(({ job, step }) =>
+      step && step !== primaryStep ? `- \`${job}\` — died at \`${step}\`` : `- \`${job}\``,
+    ),
+    ...(rest ? [`- …and ${rest} more.`] : []),
+    ...(elsewhere
+      ? ["", "A leg that died at a different step may be a second fault — check it before closing."]
+      : []),
+  ];
 }
 
 /**
  * The capsule (docs/ISSUES.md): the ask, a metadata table and the talking points above the fold;
  * the evidence — the failing step and the log tail — inside one `<details>`. A machine-filed issue
  * is still an issue a human reads first, so it obeys the same contract Claude-authored ones do.
+ *
+ * It leads with the JOB, not the leg, so the headline says the same thing the title does; the leg
+ * that produced this log is a row below it, because that is what it is — evidence for one fault.
  */
 export function issueBody(run, failure) {
   const tail = (failure.logTail ?? "").slice(-LOG_TAIL_CHARS).trim();
+  const siblings = failure.siblings ?? [];
+  const job = normalizeJobName(failure.job);
   return [
-    `**\`${failure.job}\` failed on \`main\` and the work it carries is not getting done.**`,
+    `**\`${job}\` failed on \`main\` and the work it carries is not getting done.**`,
     "",
     "| | |",
     "|---|---|",
     `| **Workflow** | ${run.name} |`,
-    `| **Job** | \`${failure.job}\` |`,
+    `| **Job** | \`${job}\` |`,
+    ...(failure.job === job ? [] : [`| **Matrix leg** | \`${failure.job}\` |`]),
     `| **Failing step** | ${failure.step ?? "unknown"} |`,
     `| **Run** | [${run.id}](${run.html_url}) |`,
+    ...(siblings.length
+      ? [`| **Legs failed** | ${siblings.length + 1} of this job, in this one run |`]
+      : []),
     "",
     `- Triggered by \`${run.event}\` on \`${run.head_branch}\`; the run's own conclusion is failure.`,
     "- A repair session is dispatched from this issue — it opens a PR or explains why it cannot.",
@@ -78,6 +174,7 @@ export function issueBody(run, failure) {
     "```text",
     tail || "(no log captured)",
     "```",
+    ...legLines(siblings, failure.step),
     "",
     "</details>",
   ].join("\n");
@@ -99,7 +196,7 @@ export function routeFailure(ctx, deps = {}) {
 
   const open = deps.openIssues ?? [];
   const intents = [];
-  for (const failure of ctx.failures ?? []) {
+  for (const failure of foldFailures(run, ctx.failures ?? [])) {
     const title = signature(run, failure.job);
     const existing = open.find((i) => i.title === title);
     if (!existing) {
@@ -119,7 +216,20 @@ export function routeFailure(ctx, deps = {}) {
     intents.push({
       type: "comment",
       issue: existing.number,
-      body: `Failed again — run [${run.id}](${run.html_url}), step \`${failure.step ?? "unknown"}\`. Same signature, so this is a recurrence, not a new fault.`,
+      body: [
+        `Failed again — run [${run.id}](${run.html_url}), job \`${failure.job}\`, step \`${failure.step ?? "unknown"}\`. Same signature, so this is a recurrence, not a new fault.`,
+        ...(failure.siblings?.length
+          ? [
+              "",
+              `${failure.siblings.length + 1} matrix legs of this job failed in that one run; one fault, so one comment.`,
+              ...failure.siblings
+                .filter(({ step }) => step && step !== failure.step)
+                .map(
+                  ({ job, step }) => `- \`${job}\` died at \`${step}\` — possibly a second fault.`,
+                ),
+            ]
+          : []),
+      ].join("\n"),
     });
   }
   return intents;
