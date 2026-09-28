@@ -132,6 +132,11 @@ export const LABELS = {
   // are today; see the header note on why that is recorded rather than improved in passing.
   idea: { name: "idea", color: "ededed", description: "" },
   feedback: { name: "feedback", color: "ededed", description: "" },
+  // Plan issues get it from an Eric comment (`plan-claim.mjs`'s `planReadyIntent`), feedback
+  // issues from `triageFeedback` (index.mjs) or Eric directly — several writers, no single owner,
+  // so registered here (not managed) purely so `workflow-lint.mjs` can resolve the name the
+  // events workflow's `if:` now keys the feedback build on (#3818 consolidation, 2026-09-28).
+  ready: { name: "ready", color: "ededed", description: "" },
   // GitHub's own defaults. Registering them is exactly why `managed` had to exist: this script has
   // no business rewriting labels it did not create.
   bug: { name: "bug", color: "d73a4a", description: "Something isn't working" },

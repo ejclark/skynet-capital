@@ -6,7 +6,8 @@
 //
 //   node scripts/moneypenny/index.mjs                          # read $GITHUB_EVENT_PATH, act
 //   node scripts/moneypenny/index.mjs --dry-run --event f.json # print the intents, touch nothing
-//   node scripts/moneypenny/index.mjs --claim-feedback         # claim the labelled issue + pick its model
+//   node scripts/moneypenny/index.mjs --triage-feedback        # a fresh feedback issue: self-ready or Backlog
+//   node scripts/moneypenny/index.mjs --claim-feedback         # claim the ready-flipped feedback issue + pick its model
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
@@ -233,10 +234,19 @@ export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS)
  * the body already in the event payload (no `gh issue view`, no second network hop). Appends
  * `number=` / `model=` to $GITHUB_OUTPUT when the claim wins, and narrates on stdout either way —
  * notices on stdout, outputs to the file, so neither can contaminate the other.
+ *
+ * Triggered on the `ready` label now, not `feedback` (#3818 consolidation, 2026-09-28) — see
+ * `triageFeedbackDecision`'s header for why. `ready` is a general board-status label (plan issues
+ * carry it too, flipped by an Eric comment, not a label event), so this guards on `feedback` also
+ * being present rather than trusting the workflow's cheap `if:` alone.
  */
 export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "") {
   const issue = ctx.payload?.issue;
   if (!issue) return { claimed: false, reason: "no issue in the payload" };
+  const labels = (issue.labels ?? []).map((l) => l.name);
+  if (!labels.includes("feedback")) {
+    return { claimed: false, reason: "ready, but not a feedback issue — not this lane's" };
+  }
   const result = claimHandoff(`feedback-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
     console.log(`::notice::not building feedback #${issue.number} — ${result.reason}`);
@@ -248,6 +258,50 @@ export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * THE BACKLOG GATE (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an issue
+ * created that gets prioritized into the backlog"). Filing a `feedback` issue no longer builds
+ * immediately — it only ever reaches `claimFeedback` once something applies `ready`, same status
+ * the Orchestration board already recognizes (`scripts/moneypenny/projects.mjs`'s
+ * `statusForIssue`). This is the one exception: a coach-shaped filing (the guided rail path
+ * already attaches `curated` + a `skynet-spec` block, per docs/FEEDBACK.md's "the coach is what
+ * makes the wide envelope safe") is judged safe enough to self-ready, preserving the old
+ * near-zero-friction default for the common case. Everything else — freeform filings, and
+ * anything already flagged `needs-eric`/`needs-info` — sits in Backlog for an explicit `ready`
+ * (Eric's, or a later triage pass), visible on the board rather than building unseen.
+ *
+ * Pure so the rule is provable without a network call; `curated`/`needs-eric`/`needs-info` are
+ * plain label names, not `LABELS` entries, because none of them is owned/applied by this lane.
+ */
+export function triageFeedbackDecision({ labels = [] } = {}) {
+  const has = (name) => labels.includes(name);
+  if (has("needs-eric") || has("needs-info")) {
+    return { ready: false, reason: "flagged needs-eric/needs-info — stays in Backlog" };
+  }
+  if (has("curated")) {
+    return { ready: true, reason: "coach-shaped filing (curated) — self-readying" };
+  }
+  return { ready: false, reason: "freeform filing — stays in Backlog for an explicit ready" };
+}
+
+/**
+ * The impure half: read the labelled issue straight from the event payload (no `gh issue view`,
+ * same discipline `claimFeedback` already follows), apply `triageFeedbackDecision`'s rule, and
+ * add the `ready` label when it says so. Never claims a lease — that still only happens once
+ * `ready` actually lands, via `claimFeedback` below.
+ */
+export function triageFeedback(ctx) {
+  const issue = ctx.payload?.issue;
+  if (!issue) return { ready: false, reason: "no issue in the payload" };
+  const labels = (issue.labels ?? []).map((l) => l.name);
+  const decision = triageFeedbackDecision({ labels });
+  console.log(`::notice::feedback #${issue.number} triage — ${decision.reason}`);
+  if (decision.ready) {
+    sh("gh", ["issue", "edit", String(issue.number), "--add-label", "ready"]);
+  }
+  return decision;
 }
 
 /**
@@ -828,8 +882,16 @@ function runCliFlag(argv, ctx) {
     return true;
   }
 
-  // The two claim-lease lanes: `feedback` (label event) and `plan` (#823's ready-comment event).
-  // Both delegate to their own specced claim function; this table is just dispatch.
+  // `--triage-feedback`: a freshly-`feedback`-labelled issue, not yet claimed — decide self-ready
+  // or Backlog. Never touches the claim lease; that only starts once `ready` actually lands.
+  if (argv.includes("--triage-feedback")) {
+    triageFeedback(ctx);
+    return true;
+  }
+
+  // The two claim-lease lanes: `feedback` (now the `ready` label event, post-triage) and `plan`
+  // (#823's ready-comment event). Both delegate to their own specced claim function; this table
+  // is just dispatch.
   const claimers = { "--claim-feedback": claimFeedback, "--claim-plan": claimPlan };
   for (const [flag, claim] of Object.entries(claimers)) {
     if (argv.includes(flag)) {

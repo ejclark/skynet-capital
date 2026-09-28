@@ -79,11 +79,21 @@ in code — only as a host secret, exactly like the Alpaca keys.
 
 ## What the lane will build
 
-A `feedback`-labelled issue is picked up by `moneypenny-events.yml` and built end to end in a fresh Claude
-session. **The default is build.** The triage rules live in `.github/prompts/feedback-build.md`;
-what the lane may not touch lives in [`envelope.json`](../envelope.json) and is enforced as a red CI
-check (`scripts/envelope-scan.mjs`) on every `feedback/*` branch — not as prompt text a session can
-reason its way past.
+**The backlog gate (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an issue
+created that gets prioritized into the backlog").** A freshly `feedback`-labelled issue no longer
+builds immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
+`triageFeedbackDecision` in `scripts/moneypenny/index.mjs`) judges it first. A coach-shaped filing
+— the guided rail path already attaches `curated` + a `skynet-spec` block, per the section above —
+self-readies and keeps the old near-zero-friction path for the common case. Everything else,
+including anything already `needs-eric`/`needs-info`, sits in **Backlog** on the Orchestration
+board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
+until something applies `ready`: Eric's own call, or a later triage/backlog-prioritization pass.
+
+Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
+fresh Claude session. The triage rules for *that* build session live in
+`.github/prompts/feedback-build.md`; what the lane may not touch lives in
+[`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
+on every `feedback/*` branch — not as prompt text a session can reason its way past.
 
 Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
 brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { triageFeedbackDecision } from "../../../scripts/moneypenny/index.mjs";
 
 // The event router's routing gate — every branch of scripts/moneypenny/index.mjs (formerly postmaster.mjs) `route()` exercised by
 // feeding fixture event payloads through `--dry-run --event <fixture>` and asserting the INTENTS
@@ -27,6 +28,38 @@ type Intent = {
   issueNumber?: number;
   actor?: string;
 };
+
+// #3818 consolidation (2026-09-28): freshly-filed feedback no longer builds on the `feedback`
+// label alone — it self-readies only when the coach already shaped it (`curated`), else it sits
+// in Backlog for an explicit `ready`. `needs-eric`/`needs-info` always wins, even over `curated`.
+describe("triageFeedbackDecision — the backlog gate for freshly-filed feedback", () => {
+  it("self-readies a coach-shaped (curated) filing", () => {
+    expect(triageFeedbackDecision({ labels: ["feedback", "bug", "curated"] })).toEqual({
+      ready: true,
+      reason: "coach-shaped filing (curated) — self-readying",
+    });
+  });
+
+  it("leaves a freeform filing (no curated) in Backlog", () => {
+    expect(triageFeedbackDecision({ labels: ["feedback", "idea"] })).toEqual({
+      ready: false,
+      reason: "freeform filing — stays in Backlog for an explicit ready",
+    });
+  });
+
+  it("needs-eric/needs-info wins even over a curated label", () => {
+    expect(triageFeedbackDecision({ labels: ["feedback", "curated", "needs-eric"] })).toMatchObject(
+      { ready: false },
+    );
+    expect(triageFeedbackDecision({ labels: ["feedback", "curated", "needs-info"] })).toMatchObject(
+      { ready: false },
+    );
+  });
+
+  it("defaults to Backlog with no labels at all", () => {
+    expect(triageFeedbackDecision()).toMatchObject({ ready: false });
+  });
+});
 
 describe("moneypenny routing", () => {
   it("a push with nothing due routes to nothing — the common, correct outcome", () => {

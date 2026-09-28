@@ -376,19 +376,35 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh workflow run moneypenny-events.yml --ref "$GITHUB_REF_NAME" -f command=scan
 
+      # THE BACKLOG GATE (#3818 consolidation, 2026-09-28 — Eric: "instead of a PR we'd want an
+      # issue created that gets prioritized into the backlog"). A freshly `feedback`-labelled issue
+      # no longer builds immediately — it's triaged: a coach-shaped (`curated`) filing self-readies,
+      # everything else sits in Backlog on the Orchestration board for an explicit `ready`
+      # (`triageFeedbackDecision`'s header has the full rule). Never claims a lease — that's still
+      # only `claimFeedback`'s job, below, once `ready` actually lands.
+      - name: Triage a freshly-filed feedback issue
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/moneypenny/index.mjs --triage-feedback
+
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
-      # assigned to a claude session"). A `feedback` label was applied — applying labels requires
+      # assigned to a claude session"; re-gated on `ready` rather than `feedback` itself, #3818
+      # consolidation 2026-09-28 — see the triage step above). Applying a label requires
       # triage/write permission, so on this public repo the label IS the authorization; issue
-      # CREATION alone never starts AI work (a stranger can open an issue, not label one). The
-      # lease (claim/feedback-<n>) makes a re-label a safe retry, not a second build.
+      # CREATION alone never starts AI work (a stranger can open an issue, not label one). `ready`
+      # is a general board-status label plan issues carry too (flipped by an Eric comment, not a
+      # label event, so no collision), which is why `claimFeedback` itself re-checks for `feedback`
+      # rather than trusting this cheap `if:` alone. The lease (claim/feedback-<n>) makes a re-label
+      # a safe retry, not a second build.
       # Claim the lease AND pick the model tier in one specced call (`claimFeedback`). Both used to
       # be inline bash — the tier heuristic was a `$(… && echo …)` that exits 1 under `set -e`
       # whenever the `&&` short-circuits, so every feedback issue over 600 chars with no code fence
       # killed its own build before Claude was invoked (run 32545818804, #475). Logic that decides
       # anything belongs in the specced script; this file is a trigger shim, per the header.
-      - name: Claim a feedback issue, if one was labelled
+      - name: Claim a feedback issue, if it was marked ready
         id: feedback
-        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'ready'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/moneypenny/index.mjs --claim-feedback
