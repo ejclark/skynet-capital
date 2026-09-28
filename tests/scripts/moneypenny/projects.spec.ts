@@ -1,8 +1,12 @@
 import { describe, expect, it } from "@rstest/core";
+import { withRetry } from "../../../scripts/moneypenny/gh.mjs";
 import {
+  explainMaskedOwnerFailure,
   FIELDS,
   HORIZON_OPTIONS,
   isBacklogCandidate,
+  isMaskedOwnerFailure,
+  isRetryableProjectsGhError,
   PRIORITY_OPTIONS,
   STATUS_FIELD_OPTIONS,
   STATUS_OPTIONS,
@@ -49,6 +53,86 @@ describe("moneypenny projects: isBacklogCandidate", () => {
   it("admits everything else, including an untagged issue", () => {
     expect(isBacklogCandidate({ labels: ["enhancement", "plan"] })).toBe(true);
     expect(isBacklogCandidate()).toBe(true);
+  });
+});
+
+// #3914: `sync project status` went red on `main` with one line — `unknown owner type` — 42 minutes
+// after the same command succeeded 39 times in the backfill run. Reproduced on gh 2.101.0: a bogus
+// GH_TOKEN produces exactly that string from `gh project`, where `gh api graphql` says
+// `Bad credentials (HTTP 401)`. gh discards the cause, so withRetry's status-text classifier was
+// blind to a transient hiding behind it and gave the call a single attempt.
+describe("moneypenny projects: gh's masked owner-lookup failure", () => {
+  it("recognizes the masked string, and nothing else", () => {
+    expect(isMaskedOwnerFailure("unknown owner type\n")).toBe(true);
+    expect(isMaskedOwnerFailure("Unknown owner type")).toBe(true);
+    expect(isMaskedOwnerFailure("gh: HTTP 404: Not Found")).toBe(false);
+    expect(isMaskedOwnerFailure(undefined)).toBe(false);
+  });
+
+  it("treats it as retryable, while still failing fast on a real 4xx", () => {
+    expect(isRetryableProjectsGhError("unknown owner type")).toBe(true);
+    expect(isRetryableProjectsGhError("gh: HTTP 504: Gateway Timeout")).toBe(true);
+    expect(isRetryableProjectsGhError("gh: HTTP 404: Not Found")).toBe(false);
+    expect(isRetryableProjectsGhError("Resource not accessible by personal access token")).toBe(
+      false,
+    );
+  });
+
+  it("gives the masked failure all three attempts, where the default classifier gives it one", () => {
+    const attemptsUnder = (isTransient?: (text: string) => boolean) => {
+      let calls = 0;
+      try {
+        withRetry(
+          () => {
+            calls += 1;
+            throw Object.assign(
+              new Error("Command failed: gh project item-add 2 --owner ejclark"),
+              {
+                stderr: "unknown owner type\n",
+              },
+            );
+          },
+          { isTransient, sleep: () => undefined },
+        );
+      } catch {
+        /* the point is the attempt count, not the throw */
+      }
+      return calls;
+    };
+    expect(attemptsUnder(isRetryableProjectsGhError)).toBe(3);
+    expect(attemptsUnder(undefined)).toBe(1);
+  });
+});
+
+describe("moneypenny projects: explainMaskedOwnerFailure", () => {
+  it("names the credential when a direct GraphQL probe also gets 401'd", () => {
+    const out = explainMaskedOwnerFailure({ ok: false, text: "gh: Bad credentials (HTTP 401)" });
+    expect(out).toMatch(/PROJECTS_PAT/);
+    expect(out).toMatch(/project.*scope/);
+    expect(out).toMatch(/Bad credentials/);
+  });
+
+  it("clears the credential and calls it GitHub-side when the probe succeeds", () => {
+    const out = explainMaskedOwnerFailure({ ok: true, text: '{"data":{"viewer":{"login":"x"}}}' });
+    expect(out).toMatch(/credential is good/);
+    expect(out).toMatch(/re-run/);
+  });
+
+  it("says transient when the probe hit a 5xx too", () => {
+    expect(explainMaskedOwnerFailure({ text: "HTTP 502 Bad Gateway" })).toMatch(/transient/);
+  });
+
+  it("quotes whatever the probe said rather than inventing a cause, even with no probe at all", () => {
+    expect(explainMaskedOwnerFailure({ text: "something new from GitHub" })).toMatch(
+      /something new from GitHub/,
+    );
+    expect(explainMaskedOwnerFailure()).toMatch(/\(nothing\)/);
+  });
+
+  it("always leads with the masked string, so a log search for it lands on the explanation", () => {
+    for (const probe of [{ ok: true }, { ok: false, text: "HTTP 401" }, undefined]) {
+      expect(explainMaskedOwnerFailure(probe)).toMatch(/^`gh project` failed with `unknown owner/);
+    }
   });
 });
 

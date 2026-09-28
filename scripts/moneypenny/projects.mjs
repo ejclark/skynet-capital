@@ -1,10 +1,18 @@
 // THE PROJECTS V2 VOCABULARY — one board, three views (kanban / backlog / roadmap), settled with
 // Eric live in chat 2026-09-26 (#3818 slice B) once the Moneypenny GitHub App's installation was
 // confirmed to carry Projects admin. Mirrors gh.mjs's split: the pure, testable decisions live
-// here; the IO that actually calls `gh project ...` lives in projects-setup.mjs, which this session
-// could not exercise live (GraphQL is blocked from interactive Claude Code sessions — confirmed by
-// calling it directly; only a real GitHub Actions run, using the App's installation token, can).
-// The first `workflow_dispatch` run of projects-setup.yml is this module's real test.
+// here; the IO that actually calls `gh project ...` lives in projects-setup.mjs. The first
+// `workflow_dispatch` run of projects-setup.yml is that IO's real test.
+//
+// CORRECTION (2026-09-28, #3914): this header used to claim "GraphQL is blocked from interactive
+// Claude Code sessions", and that is not true — `gh api graphql -f query='query{viewer{login}}'`
+// answers fine from a session. What is actually blocked is narrower: the App token cannot SEE a
+// personal-account project, so `gh project list --owner ejclark` exits 0 with an empty list. A
+// session can therefore probe and reproduce this module's failures locally (that is how the block
+// below was written); only the writes need Eric's PAT in a workflow. The stale sentence still sits
+// in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
+
+import { isTransientGhError } from "./gh.mjs";
 
 export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
@@ -80,4 +88,61 @@ export function statusForIssue({ state = "open", labels = [], hasOpenLinkedPr = 
 // unlike Status/Horizon it needs no per-issue judgment, so it lives as a mechanical predicate.
 export function isBacklogCandidate({ labels = [] } = {}) {
   return !labels.includes("ci-failure");
+}
+
+// #3914 — `gh project` DESTROYS ITS OWN ERROR, and that is the whole bug this block exists for.
+// Every failure of gh's owner-lookup query that isn't a plain NOT_FOUND comes back as one line,
+// `unknown owner type`, with the cause thrown away. Reproduced locally on gh 2.101.0: a
+// deliberately bogus GH_TOKEN makes `gh project list --owner ejclark` exit 1 with exactly that
+// string, while `gh api graphql` on the same token says `Bad credentials (HTTP 401)`.
+//
+// So the string means "the owner lookup failed, cause withheld" — auth, a 5xx, or a rate limit —
+// and never "ejclark is not a real owner": the owner is a hard-coded constant in projects-sync.mjs,
+// a typo would have failed on day one, and the board's 39-issue backfill run succeeded 42 minutes
+// before the sync failure that filed #3914.
+export const MASKED_OWNER_FAILURE = /unknown owner type/i;
+
+/** Is this `gh` failure text gh's masked owner-lookup failure rather than a real diagnosis? */
+export function isMaskedOwnerFailure(text) {
+  return MASKED_OWNER_FAILURE.test(String(text ?? ""));
+}
+
+/**
+ * Retry gh's masked failure like the transient it usually is. `isTransientGhError` classifies by
+ * HTTP status text — which `gh project` has already discarded — so a GraphQL 504 wearing this
+ * disguise got exactly ONE attempt: the same bug docs/LESSONS.md banked on 2026-09-05, invisible to
+ * the net built for it. An auth failure hides behind the same string and simply loses all three
+ * attempts; ~6s of backoff is the right price for a cause we cannot read from outside.
+ */
+export function isRetryableProjectsGhError(text) {
+  return isTransientGhError(text) || isMaskedOwnerFailure(text);
+}
+
+/**
+ * The sentence a future repair session should find in the log instead of `unknown owner type`:
+ * what `gh api graphql` says about the very same credential, which is the cause gh withheld.
+ * Pure — projects-sync.mjs runs the probe and hands the result here.
+ */
+export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
+  const head = "`gh project` failed with `unknown owner type` — gh hiding the real cause (#3914).";
+  const probe = String(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (ok) {
+    return (
+      `${head} A direct GraphQL call with the same GH_TOKEN succeeded, so the credential is ` +
+      "good: a GitHub-side hiccup outlasted the retries, and re-running the job is the fix."
+    );
+  }
+  if (/Bad credentials|HTTP 401|Resource not accessible|HTTP 403/i.test(probe)) {
+    return (
+      `${head} The same GH_TOKEN also fails a direct GraphQL call: "${probe}". PROJECTS_PAT ` +
+      "can read REST but not Projects v2 — re-save the secret with a classic PAT carrying the " +
+      "`project` scope (the stale-secret failure projects-setup.yml's header already records)."
+    );
+  }
+  if (isTransientGhError(probe)) {
+    return `${head} The same GH_TOKEN hit a GitHub-side failure too: "${probe}" — transient, re-run.`;
+  }
+  return `${head} A direct GraphQL probe with the same GH_TOKEN said: "${probe || "(nothing)"}".`;
 }

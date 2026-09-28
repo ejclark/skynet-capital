@@ -18,6 +18,17 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **"GraphQL is blocked from interactive Claude Code sessions" is false — sweep the claim out of the
+  Projects scripts.** It is asserted in `projects.mjs`, `projects-setup.mjs`,
+  `projects-backfill.mjs` and `projects.spec.ts`, and it is why three Projects v2 PRs shipped with
+  their real IO unverified ("the first `workflow_dispatch` run is the test"). Disproved live while
+  repairing #3914: `gh api graphql -f query='query{viewer{login}}'` returns `skynet-envoy[bot]`, and
+  `gh project list --owner ejclark` exits 0. What is actually blocked is narrower — the App token
+  cannot *see* a personal-account project, so the list comes back empty. The fix is a corrected
+  sentence in all four places plus a note on how far a session CAN verify Projects work locally
+  (owner-lookup and field reads with a PAT; writes still want the workflow). #3914's header block is
+  the corrected version to copy. _(src: Claude · while: root-causing the `unknown owner type`
+  sync failure, 2026-09-28)_
 - **A Ghost of Yōtei lore layer, translated to mechanics** — Eric wants its "vibes" in the
   app's delightfulness. Translate, never copy: the guiding wind → a motion cue that points at the
   next action (the next rung's door, the next slice); sumi-e ink → the hand-drawn look on GitHub
