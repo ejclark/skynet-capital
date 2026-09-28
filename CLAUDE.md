@@ -237,7 +237,10 @@ role of responsible owner/steward — shipping lovable work while protecting the
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
 a task) · **fan out**, split by weight: **build** (→ file it as a `feedback`-labeled issue as a
 self-contained story capsule, shaped by **`/issue`** → [`docs/ISSUES.md`](docs/ISSUES.md) — the
-Moneypenny lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
+Moneypenny lane builds it in its own fresh session once it's `ready`, so rapid-fire ideas never
+conflate context; a clearly small, well-scoped ask self-readies on filing (see
+[`docs/FEEDBACK.md`](docs/FEEDBACK.md) → *What the lane will build*, #3818 consolidation), anything
+bigger sits in the Orchestration board's Backlog for an explicit ready; for
 buildable asks that should start now but don't belong in *this* session — see
 [`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) versus
 **plan** (a tangent that needs its own interrogation before it's buildable — hand it to a fresh

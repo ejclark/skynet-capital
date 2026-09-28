@@ -13,5 +13,10 @@ export interface ShippedRow {
 }
 /** True when a failure is the GraphQL budget running out rather than a wrong answer. */
 export function isRateLimited(err: unknown): boolean;
+/** The backlog gate (#3818 consolidation): self-ready a coach-shaped filing, else stay in Backlog. */
+export function triageFeedbackDecision(issue?: { labels?: string[] }): {
+  ready: boolean;
+  reason: string;
+};
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
