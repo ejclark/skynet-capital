@@ -143,6 +143,11 @@ npm run crawl:coverage                 # writes docs/members/coverage.md; prints
 npm run crawl:coverage -- --json       # the joined rows on stdout, writes nothing
 ```
 
+The gate is `tests/arch/journey-coverage.spec.ts`, in two halves. An unjudged screen fails `npm test`
+(triage is the contract other lanes read). The gap count is an advisory ratchet:
+`node scripts/crawl/coverage-budget.mjs` reports it against `journey-coverage-budget.json` and
+`--update` lowers the budget once a gap closes; it never rises.
+
 It exits 1 when the code has a screen `triage.json` does not (unjudged) or a living verdict names a
 screen that is gone (stale) — a new screen cannot slip in unjudged. Limits: only `goto` counts, never
 where an `act` click lands; the landing is resolved from the fixture (does this member own an
