@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import type { ResearchCall, ResearchShelfData } from "../../src/live/research";
-import { CallBoard, ResearchFilters } from "../../src/shell/board-section";
+import type { DocSymbolMatch, ResearchCall, ResearchShelfData } from "../../src/live/research";
+import { CallBoard, DocList, ResearchFilters, scopedRows } from "../../src/shell/board-section";
 
 /**
  * Research's Board links only to pages that exist. No per-symbol research page is served (only
@@ -65,5 +65,57 @@ describe("CallBoard — the hubs readout", () => {
     expect(screen.getByText("cpi-2026-10-15")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "cpi-2026-10-15" })).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/research/events/cpi-2026-10-15"]')).toBeNull();
+  });
+});
+
+/**
+ * THE `sym:` SCOPE'S MARK AND ORDER (#3962). A study that only mentions a symbol is the whole point
+ * of the corpus search, so it must be visibly distinguishable from the documents the symbol is
+ * actually about — by a WORD, since a standing reader is red/green colourblind and hue may never
+ * carry meaning alone (CLAUDE.md).
+ */
+describe("the doc lists under a symbol scope", () => {
+  const row = (slug: string, match: DocSymbolMatch | null) => ({
+    doc: { slug, title: slug, lastAssessed: null, href: `/research/${slug}` },
+    match,
+  });
+  const named = (...symbols: string[]): DocSymbolMatch => ({ kind: "named", symbols });
+  const mentions = (...symbols: string[]): DocSymbolMatch => ({ kind: "mentions", symbols });
+
+  it("says in words which documents are named for the symbol and which only mention it", () => {
+    render(
+      <DocList
+        title="Studies"
+        rows={[row("supply-chain", mentions("NVDA")), row("nvda-deep-dive", named("NVDA"))]}
+        empty="unused"
+      />,
+    );
+    expect(screen.getByText("mentions NVDA")).toBeInTheDocument();
+    expect(screen.getByText("named for NVDA")).toBeInTheDocument();
+  });
+
+  it("draws no mark at all when nothing is scoped", () => {
+    const { container } = render(
+      <DocList title="Studies" rows={[row("supply-chain", null)]} empty="unused" />,
+    );
+    expect(container.querySelector(".rx-scope")).toBeNull();
+  });
+
+  it("sorts the documents named for the symbol above the ones that only mention it", () => {
+    const sorted = scopedRows(
+      [
+        row("aaa-mentions", mentions("NVDA")),
+        row("zzz-named", named("NVDA")),
+        row("bbb-mentions", mentions("NVDA")),
+      ],
+      ["NVDA"],
+    );
+    expect(sorted.map((r) => r.doc.slug)).toEqual(["zzz-named", "aaa-mentions", "bbb-mentions"]);
+  });
+
+  it("drops the documents neither net caught, and passes everything through with no scope", () => {
+    const rows = [row("in", mentions("NVDA")), row("out", null)];
+    expect(scopedRows(rows, ["NVDA"]).map((r) => r.doc.slug)).toEqual(["in"]);
+    expect(scopedRows(rows, []).map((r) => r.doc.slug)).toEqual(["in", "out"]);
   });
 });
