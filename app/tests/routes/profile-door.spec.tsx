@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { horizonSearch } from "../../src/live/horizon-params";
 import { Route } from "../../src/routes/accounts";
@@ -165,6 +165,17 @@ describe("the zero-account door", () => {
     expect(document.querySelector('a[href*="/onboarding"]')).toBeNull();
   });
 
+  it("tells a member whose account is already on the board not to re-add it or regenerate keys", async () => {
+    // Moved from the old standings board's "Not connected" banner (#3816 slice 7).
+    mountAccounts("/accounts");
+    const note = await screen.findByText(/Already see your account on the leaderboard\?/);
+    const text = note.closest("p")?.textContent ?? "";
+    expect(text).toMatch(/Don't add it again/);
+    expect(text).toMatch(/don't regenerate its keys/);
+    expect(text).toMatch(/Ask the league owner to link your sign-in/);
+    expect(text).not.toMatch(/Rotate/);
+  });
+
   it("makes the head's words the control: they open the connect guide and scroll it into view", async () => {
     // #3807 slice 2e — the phase-2 crawl's one regression: "connect one in Onboarding below"
     // named an action with nothing in reach.
@@ -249,6 +260,25 @@ describe("the Profile page's default and its viewer-level sections", () => {
     mountAccounts("/accounts?account=all");
     expect(await screen.findByRole("combobox", { name: "Account" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open as the league sees it" })).toBeNull();
+  });
+
+  it("names Settings in words in the head's link row, in every head state (#3816 slice 7)", async () => {
+    // Eric, 2026-09-04: a labelled link beside its sibling, not only the topbar's icon-only gear.
+    const settingsHref = () => screen.getByRole("link", { name: "Settings" }).getAttribute("href");
+    mountAccounts("/accounts");
+    await screen.findByText(/No account linked yet/);
+    expect(settingsHref()).toBe("/settings");
+    cleanup();
+
+    accounts = [ERIC];
+    mountAccounts("/accounts");
+    await screen.findByRole("link", { name: "Open as the league sees it" });
+    expect(settingsHref()).toBe("/settings");
+    cleanup();
+
+    mountAccounts("/accounts?section=milestones");
+    await screen.findByText("Your milestones — the same on every account.");
+    expect(settingsHref()).toBe("/settings");
   });
 
   it("says the ladder's gate in the server's words (#1672's fix, regressed, restored)", async () => {

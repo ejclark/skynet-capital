@@ -16,13 +16,20 @@ import type { ServerResponse } from "node:http";
  *    path unchanged); the desk's `?tab=` maps to the shell's routes instead.
  */
 
-/** The legacy desk's tabs, mapped: performance's twin is Pulse; settings moved to /app/settings
- *  (Mission Control, #475 → 8c); overview/active both land on the shell desk. */
+/** The owner pages land on the Settings SECTION that carries their card (#3816 slice 7), never on
+ *  Preferences (the page's default, which carries none of them): Account holds the account cards,
+ *  credential rotation, Mission Control and the unclaimed-accounts link; Guest list holds the
+ *  invites. A non-owner asking for Guest list falls back to Preferences on the page itself. */
+const SETTINGS_ACCOUNT = "/app/settings?section=account";
+const SETTINGS_GUESTS = "/app/settings?section=guests";
+
+/** The legacy desk's tabs, mapped: performance's twin is Pulse; settings moved to Settings →
+ *  Account (Mission Control, #475 → 8c); overview/active both land on the shell desk. */
 function deskTarget(path: string, url: string): string {
   const id = path.slice("/u/".length);
-  if (id === "") return "/app/settings";
+  if (id === "") return SETTINGS_ACCOUNT;
   const tab = new URL(url, "http://localhost").searchParams.get("tab");
-  if (tab === "settings") return "/app/settings";
+  if (tab === "settings") return SETTINGS_ACCOUNT;
   if (tab === "performance") return `/app/u/${id}/pulse`;
   return `/app/u/${id}`;
 }
@@ -56,15 +63,16 @@ function tradingChapter(path: string): string | undefined {
     : undefined;
 }
 
-/** A fold's target already has a `?`, so the request's own query joins with `&`. */
+/** The request's own query rides after the target — joined with `&` when the target already
+ *  carries a `?` of its own (a fold, a Settings section). */
 const withQuery = (target: string, search: string): string =>
-  search === "" ? target : `${target}&${search.slice(1)}`;
+  search === "" ? target : target.includes("?") ? `${target}&${search.slice(1)}` : target + search;
 
 /** The straight renames — one shell page, same meaning, query preserved. */
 const TWINS: ReadonlyMap<string, string> = new Map([
-  // The owner pages' cards live on app Settings (9e).
-  ["/invite", "/app/settings"],
-  ["/claim", "/app/settings"],
+  // The owner pages' cards live on app Settings (9e): the guest list, and the unclaimed accounts.
+  ["/invite", SETTINGS_GUESTS],
+  ["/claim", SETTINGS_ACCOUNT],
   // Ops status is the topbar's status pill now (#1296) — present on every app route, so the old
   // page's bookmark lands on the app itself rather than on a Settings section that no longer has it.
   ["/ops-status", "/app/"],
@@ -76,14 +84,14 @@ const TWINS: ReadonlyMap<string, string> = new Map([
   ["/wire", "/app/activity"],
   ["/app/wire", "/app/activity"],
   ["/research", "/app/research"],
-  // The account pages' shell home is Settings — profile, removal, rotation all live there now.
-  ["/account", "/app/settings"],
-  ["/rotate", "/app/settings"],
-  // The retired Mission Control bookmark — the fleet switchboard lives on app Settings for every
-  // viewer now, so there's no "whose desk" to resolve first.
-  ["/controls", "/app/settings"],
-  // The bare portfolio index listed the session's own accounts — Settings is that list now.
-  ["/u", "/app/settings"],
+  // The account pages' shell home is Settings → Account — profile, removal, rotation live there.
+  ["/account", SETTINGS_ACCOUNT],
+  ["/rotate", SETTINGS_ACCOUNT],
+  // The retired Mission Control bookmark — the fleet switchboard lives on Settings → Account for
+  // every owner now, so there's no "whose desk" to resolve first.
+  ["/controls", SETTINGS_ACCOUNT],
+  // The bare portfolio index listed the session's own accounts — Settings → Account is that list.
+  ["/u", SETTINGS_ACCOUNT],
 ]);
 
 /**
@@ -100,10 +108,17 @@ export function serveLegacyRedirect(
   const search = new URL(url, "http://localhost").search;
 
   // The pre-shell board names land on their shell twin directly (#2321: the board is
-  // `/app/leaderboard` now, not the shell's own front door).
+  // `/app/leaderboard` now, not the shell's own front door). The metric and the head-to-head pair
+  // are the board's own words (`?by=`, `?a=`/`?b=`), so an old compare link still opens the compare.
   if (path === "/leaderboard") {
-    const by = new URL(url, "http://localhost").searchParams.get("by");
-    res.writeHead(302, { location: by ? `/app/leaderboard?by=${by}` : "/app/leaderboard" });
+    const asked = new URL(url, "http://localhost").searchParams;
+    const kept = new URLSearchParams();
+    for (const key of ["by", "a", "b"]) {
+      const value = asked.get(key);
+      if (value) kept.set(key, value);
+    }
+    const query = kept.toString();
+    res.writeHead(302, { location: query ? `/app/leaderboard?${query}` : "/app/leaderboard" });
   } else if (path === "/bots-vs-humans") {
     res.writeHead(302, { location: "/app/leaderboard" });
   } else if (path === "/compare") {
@@ -113,7 +128,7 @@ export function serveLegacyRedirect(
   } else if (tradingChapter(path)) {
     res.writeHead(302, { location: withQuery(tradingChapter(path) as string, search) });
   } else if (TWINS.has(path)) {
-    res.writeHead(302, { location: `${TWINS.get(path)}${search}` });
+    res.writeHead(302, { location: withQuery(TWINS.get(path) as string, search) });
   } else if (path === "/collections" || path.startsWith("/collections/")) {
     // Collections retired into R&D → Playbooks (#3623): every old shelf URL lands there, and its
     // shelf query has nothing left to address, so it drops rather than riding along.

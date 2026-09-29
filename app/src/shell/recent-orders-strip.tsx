@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { type DeskActivityEvent, fetchDeskActivity } from "../live/desk";
-import { EventLine } from "./timeline-drawer";
+import { EventLine } from "./order-event-line";
 
 /**
  * THE RECENT-ORDERS STRIP (#2017 Phase 1 slice 13, task 3a) — a compact, non-modal "here's what
- * you've done" intel strip on the trade ticket itself, reusing `TimelineDrawer`'s exact data path
- * (`["desk-activity", deskId]` / `fetchDeskActivity`) and its exported `EventLine` row component
- * verbatim — no re-derivation of fill-history markup, same DRY discipline the earnings badge
- * followed. Sharing the query key means a desk that has both this strip and the drawer mounted
- * shares one cached fetch instead of duplicating the network call.
+ * you've done" intel strip on the trade ticket itself, reusing the Activity blotter's exact data
+ * path (`["desk-activity", deskId]` / `fetchDeskActivity`) and the shared `EventLine` row
+ * (`order-event-line.tsx`) verbatim — no re-derivation of fill-history markup, same DRY discipline
+ * the earnings badge followed. Sharing the query key means a page that shows both the blotter and
+ * this strip shares one cached fetch instead of duplicating the network call.
  *
  * EXACT-SYMBOL MATCH, NOT UNDERLYING-AWARE: unlike the ticket's own who-else-traded row (`WireRow`,
  * #2017 Phase 1 slice 12; retired 2026-09-22 — see `option-gate.tsx`), which matched by underlying

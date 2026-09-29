@@ -17,11 +17,10 @@ import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../s
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl, MissionControlLink } from "../shell/mission-control";
-import { type Density, type Theme, usePrefs } from "../shell/prefs";
+import { PreferencesCard } from "../shell/preferences-card";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
 import { SETTINGS_SECTIONS, type SettingsSection, SettingsToc } from "../shell/settings-toc";
-import { Toggle } from "../shell/toggle";
 
 /**
  * SETTINGS (#738 phase 5c) — the catalog's Settings patterns on the member's own accounts:
@@ -269,47 +268,6 @@ function DangerZone({
   );
 }
 
-function PreferencesCard(): ReactElement {
-  const theme = usePrefs((s) => s.theme);
-  const density = usePrefs((s) => s.density);
-  const setTheme = usePrefs((s) => s.setTheme);
-  const setDensity = usePrefs((s) => s.setDensity);
-  return (
-    <section className="set-card">
-      <h2 className="set-card-h">Preferences</h2>
-      <p className="set-hint">
-        Display settings for this browser — they apply immediately and aren't tied to any account.
-      </p>
-      <div className="set-fields">
-        <div className="field">
-          <span className="set-pref-label">Density</span>
-          <Toggle<Density>
-            label="Density"
-            value={density}
-            options={[
-              ["comfortable", "Comfortable"],
-              ["compact", "Compact"],
-            ]}
-            onPick={setDensity}
-          />
-        </div>
-        <div className="field">
-          <span className="set-pref-label">Theme</span>
-          <Toggle<Theme>
-            label="Theme"
-            value={theme}
-            options={[
-              ["dark", "Dark"],
-              ["light", "Light"],
-            ]}
-            onPick={setTheme}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function AccountCard({
   account,
   timezones,
@@ -434,28 +392,35 @@ function SettingsPage(): ReactElement {
           </p>
         ) : !adminWired ? (
           <p className="note">Account management isn't wired in this deployment.</p>
-        ) : !first ? (
-          <p className="note">
-            Your sign-in doesn't resolve to an account yet — ask a league owner to link one to your
-            sign-in, or add your own from{" "}
-            <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
-              onboarding
-            </Link>
-            .
-          </p>
         ) : (
           <>
-            <AccountSwitcher
-              accounts={accounts}
-              selectedId={(selected ?? first).id}
-              onSelect={setSelectedId}
-            />
-            <AccountCard
-              account={selected ?? first}
-              timezones={timezones}
-              fleetSuspended={settings.data.fleetSuspended}
-              onChanged={refresh}
-            />
+            {!first ? (
+              <p className="note">
+                Your sign-in doesn't resolve to an account yet — ask a league owner to link one to
+                your sign-in, or add your own from{" "}
+                <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
+                  onboarding
+                </Link>
+                .
+              </p>
+            ) : (
+              <>
+                <AccountSwitcher
+                  accounts={accounts}
+                  selectedId={(selected ?? first).id}
+                  onSelect={setSelectedId}
+                />
+                <AccountCard
+                  account={selected ?? first}
+                  timezones={timezones}
+                  fleetSuspended={settings.data.fleetSuspended}
+                  onChanged={refresh}
+                />
+              </>
+            )}
+            {/* The fleet's cards belong to the fund OWNER, not to an account (#3816 slice 7): an
+                owner who holds no account of their own still runs the fleet and links the
+                unclaimed accounts. Each card renders only on the server's own owner answer. */}
             <div id="mission-control">
               <MissionControl />
             </div>
