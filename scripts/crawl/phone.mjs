@@ -169,6 +169,35 @@ export function phoneFindings(snap) {
   return dedupe(out);
 }
 
+/**
+ * `npm run phone`'s argv, parsed (phone-one.mjs). Pure so the spec can pin it: a flag that takes a
+ * value must be listed in `valued`, or its value — `.status`, a timestamp — reads as the path.
+ *  - `--click <css>`: click it once the page settles, then measure — a popover, a drawer or a menu
+ *    is only in the DOM while open (#3816 slice 5: the status popover hung 98px off the left edge
+ *    of a phone and no closed-page check could see it).
+ *  - `--at <ISO time>`: pin the page's clock before it loads, so a time-driven surface (the market
+ *    clock's open / pre-market / closed rows) is measured in the state you name, not today's.
+ */
+export function phoneArgs(argv) {
+  const get = (flag) => {
+    const i = argv.indexOf(flag);
+    return i >= 0 ? argv[i + 1] : undefined;
+  };
+  const valued = new Set(["--port", "--bridge-port", "--click", "--at"]);
+  const path = argv.find((a, i) => !(a.startsWith("--") || valued.has(argv[i - 1])));
+  return {
+    path: path ?? "/app",
+    session: argv.includes("--session"),
+    strict: argv.includes("--strict"),
+    all: argv.includes("--all"),
+    click: get("--click"),
+    at: get("--at"),
+    // Not the crawl's 8787/8788, so a check can run beside a crawl or a dev server.
+    port: Number(get("--port") ?? 8797),
+    bridgePort: Number(get("--bridge-port") ?? 8798),
+  };
+}
+
 /** Runs in the browser: measure, never judge. Plain data only — it crosses the evaluate boundary. */
 function snapshot(tolerance) {
   const text = (el) => (el.innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim();
@@ -210,6 +239,11 @@ function snapshot(tolerance) {
     // parked off-canvas until focused) is out of a thumb's reach — no scroll gets there.
     const r = el.getBoundingClientRect();
     const onCanvas = r.right + window.scrollX > 0 && r.bottom + window.scrollY > 0;
+    // Inside a closed <details> a control still has a layout box but no thumb can reach it, and
+    // its sentence reads as "" (innerText of hidden content), so the inline exception misfired
+    // on every link in a research page's folds (#3816 slice 5). checkVisibility() is false under
+    // the fold's content-visibility: hidden; the summary itself stays visible.
+    if (el.checkVisibility && !el.checkVisibility()) return false;
     return r.width > 1 && r.height > 1 && onCanvas && !el.closest("[inert], [aria-hidden='true']");
   };
   const off = (el) => el.matches(":disabled") || el.getAttribute("aria-disabled") === "true";
