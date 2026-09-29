@@ -180,3 +180,10 @@
   font-size: 11.5px;
   padding: 6px 12px;
 }
+/* The round a fill's "why" linked to (#3961) — a left rule and a lifted surface, both a step away
+   from a plain row rather than a tint, so the arrival reads without hue carrying it. The row also
+   arrives expanded, which is the louder of the two signals. */
+.cycle-targeted {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}

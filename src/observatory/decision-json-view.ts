@@ -86,10 +86,12 @@ export interface DecisionCycleView {
   readonly rawCount: number;
   readonly guardedCount: number;
   readonly outcomes: readonly CycleOutcomeView[];
-  /** Populated only for `status: "refused"` — every raw intent the persona asked for that the
-   *  guards dropped in full this cycle. Never present alongside a non-empty `outcomes`, so a
-   *  reader can't mistake a partial clamp (already visible in `headline`'s "N clamped by guards")
-   *  for a total refusal. */
+  /** Every idea the guards dropped in full this cycle — the persona's own ask, unfiltered. Present
+   *  on ANY status once the record captured the attributed set (`refusals`), a round that also
+   *  placed something included: #3961's regression was exactly that a traded round's refused ideas
+   *  showed nowhere. For a record written before `refusals` existed the only honest source is the
+   *  bare raw intents, which is safe only when NOTHING survived the guards (`status: "refused"`) —
+   *  on a round that placed, that list would name intents that in fact got placed. */
   readonly refusedIntents?: readonly RefusedIntentView[];
   readonly halted?: string;
   /** Present only on a collapsed quiet run (`groupQuietRuns`, #3608) — the oldest cycle's own
@@ -177,10 +179,34 @@ export interface DecisionCyclesPage {
   readonly nextCursor?: number;
 }
 
+/** The round's refused ideas, honest on any status (#3961). `refusals` is the attributed set
+ *  `applyGuardsWithVerdicts` writes — every entry there is a full refusal, so it reads correctly
+ *  beside outcomes that did get placed. The bare-raw-intents fallback (a record written before that
+ *  field existed) stays gated to a total refusal, where nothing survived to be confused with one. */
+function refusedIntentsFor(
+  record: DecisionRecord,
+  status: CycleStatus,
+): readonly RefusedIntentView[] | undefined {
+  const refusals =
+    record.refusals ??
+    (status === "refused" ? record.rawIntents.map((intent) => ({ intent })) : undefined);
+  if (!refusals || refusals.length === 0) return undefined;
+  return refusals.map((r) => ({
+    symbol: r.intent.symbol,
+    side: r.intent.side,
+    quantity: r.intent.quantity,
+    ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
+    reason: r.intent.reason,
+    ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
+    ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
+  }));
+}
+
 /** Runs `decisionCyclesView`'s per-record shaping — split out so a collapsed quiet run
  *  (`quietRunView` below) can share the page's mapping step without duplicating it. */
 function cycleView(record: DecisionRecord, homePersonaId?: string): DecisionCycleView {
   const status = cycleStatus(record);
+  const refusedIntents = refusedIntentsFor(record, status);
   return {
     at: new Date(record.at).toISOString(),
     mode: record.mode,
@@ -192,24 +218,7 @@ function cycleView(record: DecisionRecord, homePersonaId?: string): DecisionCycl
     ...(homePersonaId !== undefined && record.personaId !== homePersonaId
       ? { authorPersona: record.personaId }
       : {}),
-    ...(status === "refused"
-      ? {
-          // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
-          // record captured it; fall back to the bare raw intents (no guard named) for a
-          // record written before that field existed, or a path that doesn't populate it yet.
-          refusedIntents: (record.refusals ?? record.rawIntents.map((intent) => ({ intent }))).map(
-            (r) => ({
-              symbol: r.intent.symbol,
-              side: r.intent.side,
-              quantity: r.intent.quantity,
-              ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
-              reason: r.intent.reason,
-              ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
-              ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
-            }),
-          ),
-        }
-      : {}),
+    ...(refusedIntents ? { refusedIntents } : {}),
     ...(record.halted ? { halted: record.halted } : {}),
   };
 }

@@ -678,6 +678,11 @@ const scoutFill = (orderId, symbol, quantity, price, sentiment, strength) => ({
     personaId: "beta-scout",
     playbookId: "BETA-SCOUT",
     playbookMode: "conservative",
+    // The round this fill came out of, and its funnel (#3961) — what lets the why name how much
+    // the pass weighed and link to the whole thing on Heartbeat.
+    cycleAt: "2026-09-23T19:02:00.000Z",
+    rawCount: 3,
+    guardedCount: 2,
   },
 });
 const sauronActivity = {
@@ -919,6 +924,60 @@ const sauronNoTrades = {
     },
   ],
 };
+// The same log with the traded rounds included (#3961) — the round behind the MSFT fill above, and
+// the whole reason the toggle exists: one order placed, a sibling the broker rejected, and an idea
+// the position cap refused, none of which had anywhere to render while traded passes were hidden.
+const sauronAllPasses = {
+  available: true,
+  kind: "bot",
+  cycles: [
+    {
+      at: "2026-09-23T19:02:00.000Z",
+      mode: "live",
+      status: "placed",
+      headline: "1 placed · 1 rejected · 1 refused by guards",
+      rawCount: 3,
+      guardedCount: 2,
+      outcomes: [
+        {
+          symbol: "MSFT",
+          side: "buy",
+          quantity: 9,
+          strategy: "beta-scout-forced-pick",
+          reason: "forced pick — highest combined strength of 2 candidates (sentiment 0.60)",
+          action: "placed",
+          fill: "9 @ $428.10",
+          activityAnchor: "act-ord-s3",
+          momentum: -0.001,
+          sentiment: 0.6,
+        },
+        {
+          symbol: "AMZN",
+          side: "buy",
+          quantity: 18,
+          reason: "second forced pick — sentiment 0.50",
+          action: "rejected",
+          resultStatus: "rejected: insufficient buying power",
+        },
+      ],
+      refusedIntents: [
+        {
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 40,
+          strategy: "sauron-panic-claim",
+          reason: "panic -0.82 exhausting, rebound momentum turning",
+          guardReason: "the per-position cap left no room",
+        },
+      ],
+    },
+    ...sauronNoTrades.cycles,
+  ],
+};
+// `stubBody` sees only the pathname, so the trades filter can't be read off the query string here:
+// the frame that pictures the toggle on flips this immediately before ticking the box, and the
+// component's own refetch (a new react-query key) picks up the wider payload.
+let tradedPassesIncluded = false;
 const sauronHeartbeat = () => {
   const lastAgo = sessionOpen ? 22_000 : 16 * 3_600_000;
   return {
@@ -1057,7 +1116,8 @@ const { page, origin, out, close } = await openShell({
     "/api/desk/bot-sauron/pulse": sauronPulse,
     "/api/desk/bot-sauron/activity": sauronActivity,
     "/api/desk/bot-sauron/heartbeat": sauronHeartbeat,
-    "/api/desk/bot-sauron/decisions": sauronNoTrades,
+    "/api/desk/bot-sauron/decisions": () =>
+      tradedPassesIncluded ? sauronAllPasses : sauronNoTrades,
     "/api/accounts/human-eric/equity-curve": ericEquityCurve,
     "/api/accounts/bot-sauron/equity-curve": ericEquityCurve,
     "/api/trade/bars": spyBars,
@@ -1290,6 +1350,16 @@ await shootCockpit("accounts-heartbeat-phone");
 // The no-trade log below the verdicts, scrolled into view (#3687 slice 4).
 await page.locator(".hb-log .cycles").scrollIntoViewIfNeeded();
 await shootCockpit("accounts-heartbeat-log-phone");
+// The same log with the traded rounds included (#3961) — the pass behind a fill, opened: its
+// placed and rejected orders, the idea the guards refused, and the ideas → past-the-guards count.
+tradedPassesIncluded = true;
+await page.getByRole("checkbox", { name: /Include the passes that placed a trade/ }).check();
+await page.locator(".cycle-placed").waitFor();
+await page.locator(".cycle-placed .cycle-row").click();
+await page.locator(".cycle-placed .cycle-body").waitFor();
+await page.locator(".cycle-placed").scrollIntoViewIfNeeded();
+await shootCockpit("accounts-heartbeat-traded-round-phone");
+tradedPassesIncluded = false;
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.locator(".hb-chip").click();
@@ -1305,6 +1375,15 @@ await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-phone");
+// The round behind that fill (#3961), at the foot of the same why: how many ideas the pass raised,
+// how many cleared the guards, and the link to the whole pass on Heartbeat.
+await page.locator(".why-round").scrollIntoViewIfNeeded();
+// Scrolling the row into view also scrolls the blotter sideways at 390 — put the columns back so
+// the frame pictures the why, not a mid-scroll table.
+await page.locator(".blotter-scroll").evaluate((el) => {
+  el.scrollLeft = 0;
+});
+await shootCockpit("accounts-activity-round-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
