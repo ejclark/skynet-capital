@@ -55,6 +55,7 @@
     "forward-test-id:scan": "node scripts/forward-test-id-scan.mjs",
     "doctrine:scan": "node scripts/doctrine-scan.mjs",
     "issue:lint": "node scripts/issue-lint.mjs",
+    "issues": "node scripts/issues.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "mermaid:lint": "node scripts/mermaid-lint.mjs",
     "arch:pages": "node scripts/architecture-pages.mjs",
