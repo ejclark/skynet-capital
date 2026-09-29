@@ -60,7 +60,13 @@ export interface SymbolResearch {
   readonly stance: { readonly html: string; readonly from: ResearchDoc } | null;
 }
 
-const RESEARCH_DIR = (): string => join(process.cwd(), "docs", "research");
+/**
+ * The shelf's root. `SKYNET_RESEARCH_DIR` pins it to a frozen fixture for the integration suite's
+ * R&D screenshot (e2e/fixtures/research): the research lane merges into docs/research/ many times
+ * a day, so a baseline rendered from the live folder broke every open PR within hours (2026-09-29).
+ */
+export const RESEARCH_DIR = (): string =>
+  process.env.SKYNET_RESEARCH_DIR ?? join(process.cwd(), "docs", "research");
 const SKIP = new Set(["TEMPLATE.md", "README.md"]);
 
 const titleOf = (md: string, fallback: string): string =>
