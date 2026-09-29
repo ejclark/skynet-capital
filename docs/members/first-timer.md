@@ -57,8 +57,10 @@ and the first button, never the rail. They skip anything that names a concept th
    before onboarding is complete, the app shall show M·01 Onboarding as the next step with one
    link into it.** Judge: can this reader tell what to do next in ten seconds?
 3. `/app/accounts?section=milestones` — the M·02 card's gate note. **WHILE the trading ladder is gated, the app shall
-   name the SAME unlock condition everywhere it is named.** _known gap — dead end 2._ Judge: does
-   this reader know what unlocks trading, in one sentence?
+   name the SAME unlock condition everywhere it is named.** _Fixed — #3807 slice 3b-4: with no
+   account the card reads "link an account first, then it unlocks the moment you say hello to
+   Moneypenny" — the step before the gate, then the server's words._ Judge: does this reader know
+   what unlocks trading, in one sentence?
 4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
    Judge: can this reader tell what to do next in ten seconds?

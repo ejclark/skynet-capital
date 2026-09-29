@@ -18,6 +18,13 @@ import {
  * original page did.
  */
 
+/** What "the guards" are, in one visible clause (#3807 slice 3b-4; bot-watcher j1 s4) — taken
+ *  from where they are defined, `src/engine/guards.ts`'s `applyGuardsWithVerdicts`: the engine's
+ *  risk checks on every order a persona asks for, which shrink an order to fit or drop it. The
+ *  list is the refusal reasons a reader meets most (`GuardRefusalReason`), in plain words. */
+export const GUARDS_GLOSS =
+  "the risk checks every order must clear before it is placed: a cap on any one position's share of the account, the cash to pay for it, never selling more than is held, and no new buys once the day's loss passes its limit";
+
 /** The outcome's playbook, mode appended — never the mode standalone. */
 function PlaybookChip({
   outcome,
@@ -155,7 +162,11 @@ export function CycleRow({
         <div className="cycle-body">
           <p className="cycle-guards num">
             {cycle.rawCount} intent{cycle.rawCount === 1 ? "" : "s"} from the persona →{" "}
-            {cycle.guardedCount} past the guards
+            {cycle.guardedCount} <dfn>past the guards</dfn>
+            <span className="cycle-guards-gloss">
+              {" — "}
+              {GUARDS_GLOSS}
+            </span>
           </p>
           {cycle.halted ? <p className="cycle-halt">⛔ {cycle.halted}</p> : null}
           {cycle.outcomes.length > 0 ? (

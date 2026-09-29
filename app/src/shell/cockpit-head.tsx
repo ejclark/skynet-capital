@@ -10,8 +10,8 @@ import {
 import type { OwnedAccount } from "../live/settings";
 import { AccountSwitcher, ALL_ACCOUNTS } from "./account-switcher";
 import { CockpitClock, usePhoneWidth } from "./cockpit-clock";
+import { ConnectLink } from "./connect-link";
 import { HeartbeatChip } from "./heartbeat";
-import { scrollToChapter } from "./milestones-section";
 import { NetWorthCondensed } from "./networth-summary";
 import { type AccountsSection, isViewerSection } from "./profile-sections";
 import { SectionSwitch } from "./section-switch";
@@ -71,23 +71,6 @@ function HeadNote({ children }: { readonly children: ReactNode }): ReactElement 
         <p className="cockpit-head-line">{children}</p>
       </div>
     </div>
-  );
-}
-
-/** The zero-account door's control: the connect guide, scrolled into view. A Link, so the URL
- *  names the chapter; the scroll covers the door's own case, where the chapter is already open
- *  (the page's default) and the section's own anchor has no change to react to. */
-function ConnectLink(): ReactElement {
-  return (
-    <Link
-      to="/accounts"
-      search={{ section: "milestones", chapter: "onboarding" }}
-      resetScroll={false}
-      className="door-link"
-      onClick={() => requestAnimationFrame(() => scrollToChapter("onboarding"))}
-    >
-      connect one in Onboarding
-    </Link>
   );
 }
 
