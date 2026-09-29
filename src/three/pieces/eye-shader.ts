@@ -17,7 +17,8 @@
  * the pupil. Outward-flowing warped fbm (`n`) plus radial fibres (`fib`) set the heat `v`; a glow
  * hugs the slit and a hot ring rides the rim. A faint electric undertone — thin iso-lines of a
  * second fbm, gated by a slow flicker and kept to the outer rim — is the "lightning is what it
- * means" line from EYE.md, deliberately quieter than the fire.
+ * means" line from EYE.md, deliberately quieter than the fire. `uLift` (1 at rest) is the flare
+ * (kit/flare.ts): it lifts the fire's own ramp and leaves the electric lines where they were.
  */
 export const BODY = `
   vec2 d = vP.xy; float r = length(d); vec2 dir = d / (r + 1e-4);
@@ -28,7 +29,7 @@ export const BODY = `
   float v = 0.66 - r*0.36 + (n-0.5)*2.0 + (fib-0.5)*0.8;
   v += exp(-abs(vP.x)*12.0)*0.42*(1.0-smoothstep(0.6,1.0,abs(vP.y)));
   v += smoothstep(0.8,0.97,r)*0.45;
-  vec3 col = ramp(clamp(v,0.,0.93)) * 1.25;
+  vec3 col = ramp(clamp(v,0.,0.93)) * 1.25 * uLift;
   float e = fbm(vP*4.5 + vec3(0., uTime*0.35, uTime*0.12));
   float line = 1.0 - smoothstep(0.0, 0.014, abs(e-0.5));
   float flick = smoothstep(0.62, 0.85, vn(vec3(uTime*2.3, 3.1, 0.)));

@@ -10,6 +10,8 @@
  * Pure, no DOM: `readTowerMessage` takes the three fields of a `MessageEvent` it needs.
  */
 
+import { FLARE_KINDS, type FlareKind } from "./flare.js";
+
 /** Page → scene. */
 export type TowerMessage =
   /** A click on a filter: look toward this point (the frame's CSS pixels; may lie outside). */
@@ -21,7 +23,9 @@ export type TowerMessage =
   /** Live dials — relight the forge without a reload. */
   | { readonly type: "tower:mood"; readonly power: number; readonly health: number }
   /** The frame is seen (`true`) or hidden/off-screen (`false`). */
-  | { readonly type: "tower:run"; readonly on: boolean };
+  | { readonly type: "tower:run"; readonly on: boolean }
+  /** Something good just happened (slice 3b-3): the Eye flares once. Unknown kinds are dropped. */
+  | { readonly type: "tower:flare"; readonly kind: FlareKind };
 
 /** Scene → page. */
 export type TowerNotice = { readonly type: "tower:ready" };
@@ -59,6 +63,10 @@ export function readTowerMessage(e: Envelope, here: Here): TowerMessage | undefi
         : undefined;
     case "tower:run":
       return typeof m.on === "boolean" ? { type: "tower:run", on: m.on } : undefined;
+    case "tower:flare":
+      return FLARE_KINDS.includes(m.kind as FlareKind)
+        ? { type: "tower:flare", kind: m.kind as FlareKind }
+        : undefined;
     default:
       return undefined;
   }
