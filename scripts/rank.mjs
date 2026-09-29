@@ -1,33 +1,33 @@
 #!/usr/bin/env node
-// RANK — which open, buildable item should be pulled next, and why (#4064 slice 1).
+// RANK — which open, buildable item should be pulled next, and why (#4064 slices 1–2).
 //
 // WHY. #4056's study found the next build was whatever was newest: 57% of picks came from the newest
 // tenth of the queue and 1% from the oldest, while Priority was never written or read. This is the
 // ordering rule, written down where a lane or a session can read it. It is read-only: it prints and
-// changes nothing, so the first runs can be compared with what Eric actually pulls (#4064's
-// falsifier) before anything reads its output.
+// changes nothing. Its first reader is `/work-issues`, which pulls in this order (slice 2).
 //
 // THE RULE (settled on #4064, from Anderson/Vacanti: classes used sparingly, then first-in-first-out
 // inside committed work). A coarse class with a one-line why; oldest-ready-first inside a class; an
 // item past one delivery unit sorts below the ready units in its class, marked "split first". No
-// numeric score: the signal is too thin to defend one, and a class is overruled in one word. A class
-// Eric sets by hand (`| **Priority** | P1 |` in the body) always wins.
+// numeric score: the signal is too thin to defend one, and a class is overruled in one word. A
+// `P0`–`P3` label always wins: that is Eric's hand, one tap on the phone (he picked labels over the
+// board field on 2026-09-29, because every lane can read a label and none can read the board).
 //
 //   node scripts/rank.mjs          # markdown table
 //   node scripts/rank.mjs --json
 import { readFileSync } from "node:fs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { ghRest, ghRestAll } from "./moneypenny/gh.mjs";
-import { parkedBy } from "./moneypenny/labels.mjs";
+import { PRIORITY_LABELS, parkedBy } from "./moneypenny/labels.mjs";
 
 const H = 3600e3;
 const HORIZONS = new URL("./moneypenny/projects-horizons.json", import.meta.url);
 
 /** The class, its one-line why, and whether a person set it. `blocks` lists the open issue numbers
  *  this one blocks (native dependencies); `horizon` is the board's hand triage, if any. */
-export function classOf({ labels = [], body = "", blocks = [], horizon = null }) {
-  const hand = /^\|\s*\*\*Priority\*\*\s*\|\s*(P[0-3])\b/im.exec(body);
-  if (hand) return { cls: hand[1], why: "set by hand", hand: true };
+export function classOf({ labels = [], blocks = [], horizon = null }) {
+  const hand = PRIORITY_LABELS.find((p) => labels.includes(p));
+  if (hand) return { cls: hand, why: "set by hand", hand: true };
   if (blocks.length) return { cls: "P0", why: `unblocks #${blocks.join(", #")}` };
   if (labels.includes("bottleneck")) return { cls: "P0", why: "a measured constraint on delivery" };
   if (labels.includes("bug")) return { cls: "P1", why: "something is broken" };
@@ -54,7 +54,7 @@ export function rankRow(issue, { readyAt = null, blocks = [], horizon = null, no
   if (subs && subs.total > subs.completed) return null;
   const body = issue.body ?? "";
   const notes = readinessNotes({ title: issue.title, body, labels });
-  const { cls, why, hand = false } = classOf({ labels, body, blocks, horizon });
+  const { cls, why, hand = false } = classOf({ labels, blocks, horizon });
   return {
     number: issue.number,
     title: issue.title,

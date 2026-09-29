@@ -14,13 +14,13 @@ const issue = (number: number, labels: string[], body = "| **Size** | ~2 PRs |")
 });
 
 describe("rank: the class", () => {
-  it("lets a hand-set Priority win over every signal", () => {
-    const body = "| **Priority** | P3 |";
-    expect(classOf({ labels: ["bottleneck"], body, blocks: [7] })).toEqual({
+  it("lets a hand-set P0–P3 label win over every signal, highest first", () => {
+    expect(classOf({ labels: ["bottleneck", "P3"], blocks: [7] })).toEqual({
       cls: "P3",
       why: "set by hand",
       hand: true,
     });
+    expect(classOf({ labels: ["P2", "P1"] }).cls).toBe("P1");
   });
 
   it("puts work that unblocks open issues, then measured constraints, at P0", () => {
