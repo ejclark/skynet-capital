@@ -40,11 +40,13 @@ HOW TO WORK IT:
    remote at your own App token — the ambient credential `actions/checkout` set up is read-only**
    (this job's own `contents: read` permission; #3334, 2026-09-19: a plain `git push` here always
    failed with `403 — Permission denied to github-actions[bot]`, even though a real write-capable
-   token was minted). Run:
+   token was minted). The job's checkout no longer persists that credential, but clear any
+   leftover auth header too — a header beats the token in the URL (#4027, 2026-09-29). Run:
    ```
    git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
    ```
-   then `git push origin HEAD:<pr-branch>` — a merge commit only. **NEVER** `git rebase`,
+   then `git -c http.https://github.com/.extraheader= push origin HEAD:<pr-branch>` (the empty
+   value resets any inherited header list) — a merge commit only. **NEVER** `git rebase`,
    `--amend`, or any `--force` push: this may not be your branch, and rewriting someone else's
    history is never in scope here, regardless of how it would simplify the diff.
 5. Comment on the PR naming what you resolved and how (which files, disjoint-addition judgment)
