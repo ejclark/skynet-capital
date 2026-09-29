@@ -146,6 +146,10 @@ function ghWrite(method, path, payload) {
       "Accept: application/vnd.github+json",
       "-H",
       "User-Agent: skynet-issues",
+      // Without it curl sends `--data-binary` as form-urlencoded and the API answers 415 — the
+      // first real filing through this command hit exactly that (2026-09-29).
+      "-H",
+      "Content-Type: application/json",
       "--data-binary",
       "@-",
       `https://api.github.com/repos/${REPO()}/${path}`,

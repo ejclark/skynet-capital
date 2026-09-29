@@ -23,6 +23,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
+import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
 
@@ -344,6 +345,7 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   checkStateBlock(text, labels, notes);
   checkStateBlockTop(text, notes);
   checkNeedsFromYou(text, labels, problems, notes);
+  notes.push(...readinessNotes({ title, body: text, labels }));
 
   return { problems, notes };
 }
