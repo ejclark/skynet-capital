@@ -14,7 +14,7 @@ import {
   sourceBlockedOf,
   tldrOf,
 } from "./research-event-calls.js";
-import { listResearch } from "./research-service.js";
+import { listResearch, RESEARCH_DIR } from "./research-service.js";
 
 export interface LedgerDigest {
   readonly horizons: HorizonCalls;
@@ -27,10 +27,8 @@ export interface LedgerDigest {
   readonly sourceBlocked: boolean;
 }
 
-const researchDir = (): string => join(process.cwd(), "docs", "research");
-
 /** Ledgers with a decision header, keyed by event id. `root` is injectable for specs. */
-export function ledgerDigests(root: string = researchDir()): ReadonlyMap<string, LedgerDigest> {
+export function ledgerDigests(root: string = RESEARCH_DIR()): ReadonlyMap<string, LedgerDigest> {
   const out = new Map<string, LedgerDigest>();
   for (const doc of listResearch(root).ledgers) {
     const md = readFileSync(join(root, `${doc.slug}.md`), "utf8");
