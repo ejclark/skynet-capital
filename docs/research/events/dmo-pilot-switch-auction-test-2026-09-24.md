@@ -308,3 +308,24 @@ and that the day's tape should not be attributed to it — both held under direc
 event itself, not just under the DMO's own prior word. The three registered forward tests remain
 open on their own honest schedules; this doc goes quiet until the first of them (FT-1, 2026-09-29)
 reopens it.
+
+**Forward-test-due addendum (2026-09-29) — `FT-…-1` scored, `FT-…-2`/`FT-…-3` not yet due.**
+Dispatched by `scripts/event-scan.mjs --due` on `FT-1`'s own `scoreBy` (2026-09-29); no
+re-assessment, no edit to `## Outcome` above, and no instrument re-run (`symbols: []`, nothing for
+`earnings-cycle`/`intraday-edges` to read, same honest-limits note the close-out already logged).
+Re-checked fresh, not from memory of the 09-26 close-out: the DMO's own Operations Results listing
+(`dmo.gov.uk/?page=Gilts/Operations_Results`, own fetch today) enumerates the most recent gilt
+operations — the two 09-22 gilt auctions (£4,250m 4⅞% 2036, £4,750m 4⅝% 2032) and a 09-25 T-bill
+tender/collateral notice — with **no entry for the 24 September pilot switch auction at all**, let
+alone one in switch-auction result form (source/destination gilts, amounts, cover ratio, dirty-price
+ratio). Targeted web searches for any DMO publication or press coverage of a result, dated 09-24
+through today, found nothing. The three HTML surfaces already logged blocked in `probe-ref.blocked`
+(`/calendars/`, `/publications/press-notices/`, `/data/pdfdatareport`) reproduced the identical
+ShieldSquare/perfdrive interstitial again this session — a known, unchanged blocker, not a new gap,
+and the Operations Results page (a different endpoint, not on that blocked list) is what actually
+answers this test. **`FT-dmo-pilot-switch-auction-test-2026-09-24-1` — pass**: the kill switch
+(a dated DMO publication reporting a result) did not fire in its full window (09-24→09-29), and the
+absence is observed directly, not merely absent-from-search. `FT-…-2` (score by 2027-01-04) and
+`FT-…-3` (score by 2027-03-31) remain `_open_` — neither is due, and forcing an early verdict on
+either is exactly the falsification pressure this lane's rules forbid. Full figures and reasoning:
+[`forward-tests/dmo-pilot-switch-auction-test-2026-09-24.md`](../forward-tests/dmo-pilot-switch-auction-test-2026-09-24.md).

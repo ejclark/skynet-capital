@@ -400,6 +400,23 @@ neither FOMC nor debate) being the single largest move in the block — **kill**
 close-out's own reasoning above. Full figures and reasoning:
 [`forward-tests/unga-81-general-debate-2026-09-22.md`](../forward-tests/unga-81-general-debate-2026-09-22.md).
 
+**Forward-test-due addendum (2026-09-29) — `FT-…-1` scored; all four forward tests now closed.**
+Dispatched by `scripts/event-scan.mjs --due` on this row's own 2026-09-29 `scoreBy`; no
+re-assessment, no edit to `## Outcome` above this note. No instrument cache to bust (`symbols: []`,
+no `earnings-cycle`/`intraday-edges` target ever existed for this event). Prices re-fetched direct
+(Yahoo chart API, SPY, cross-checked against `^GSPC`): anchor close 09-21 **773.50/7764.70**, 09-22
+**773.38/7764.64**, 09-28 **765.61/7683.69**. Day-1 absolute move **0.02%/0.0008%**, far under the
+0.49% baseline day-1 median; five-session absolute move (09-21 anchor → 09-28 close)
+**1.02%/1.04%**, under the 1.19% baseline five-session median. The registered kill switch requires
+**both** legs to exceed baseline — neither did — so it does not fire: **pass**. **Correction to the
+record:** the 2026-09-23 close-out and the 2026-09-28 addendum both called this row "permanently
+unscoreable by this lane's automation." That described only the close-out session's own wait-clamp
+(`closeOutWithinDays`) — not a ceiling on the row itself. `docs/process/EVENT-RESEARCH.md`'s
+`forward-test-due` mode (#2884) exists precisely to re-dispatch a closed-out event's own lane once
+such a row's `scoreBy` arrives — the same mechanism that scored `FT-…-3`/`FT-…-4` on 09-28, one day
+earlier. All four of this event's forward tests are now closed: `-1` pass, `-2` pass, `-3` pass, `-4`
+kill. Full figures: [`forward-tests/unga-81-general-debate-2026-09-22.md`](../forward-tests/unga-81-general-debate-2026-09-22.md).
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["apple-dma-gatekeeper-cjeu-appeal-deadline-2026-09-18","bea-international-transactions-q2-2026-09-24","boe-decision-2026-09-17","boj-decision-2026-09-18","bowman-stress-testing-2026-09-18","costco-q4-fy2026-2026-09-24","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eurostat-hicp-final-2026-09-17","housing-starts-2026-09-17","industrial-production-2026-09-18","intl-transactions-q2-2026-09-24","japan-cpi-2026-09-18","jgb-liquidity-enhancement-5-11y-2026-09-25","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","new-home-sales-2026-09-24","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-10y-tips-2026-09-17","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-7y10y-2026-09-17","treasury-coupon-announcement-2026-09-17","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","uk-retail-sales-2026-09-18","umich-sentiment-final-2026-09-25","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-iran-panel-mandate-vote-2026-09-17","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["opex-2026-09-18"],"screenStreak":1} -->
 
