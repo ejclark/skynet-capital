@@ -1,4 +1,9 @@
-import { diffGuidance, positionGuidance, snapshotOf } from "../../src/options/position-guidance.js";
+import {
+  diffGuidance,
+  positionGuidance,
+  snapshotOf,
+  stakeFingerprint,
+} from "../../src/options/position-guidance.js";
 import { buildLadder } from "../../src/options/position-guidance-ladder.js";
 import { guidanceToMarkdown } from "../../src/options/position-guidance-markdown.js";
 import {
@@ -290,6 +295,34 @@ describe("what changed since you last looked", () => {
     expect(lines).toContain("Stock price +5.0% since Sep 25.");
     expect(lines).toContain("Covered calls: Reasonable now (medium) → Wait (low).");
     expect(lines).toContain("Option prices for sellers: paying well → paying poorly.");
+  });
+
+  it("files each look under its stake, so a what-if never reads as a market move", () => {
+    const held = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" as const };
+    expect(stakeFingerprint(held)).toBe(stakeFingerprint({ ...held }));
+    expect(stakeFingerprint({ ...held, shares: 500 })).not.toBe(stakeFingerprint(held));
+    expect(stakeFingerprint({ ...held, goal: "keep-shares" })).not.toBe(stakeFingerprint(held));
+    // What moves with the market is what the diff reports — never part of the stake's identity.
+    const call = {
+      occ: "CRWV261016C00095000",
+      strike: 95,
+      expiration: "2026-10-16",
+      contracts: 2,
+      premium: 2,
+    };
+    expect(
+      stakeFingerprint({
+        ...held,
+        portfolioValue: 90_000,
+        openCalls: [{ ...call, bid: 1.1, ask: 1.2 }],
+      }),
+    ).toBe(
+      stakeFingerprint({
+        ...held,
+        portfolioValue: 95_000,
+        openCalls: [{ ...call, bid: 0.9, ask: 1.0 }],
+      }),
+    );
   });
 });
 

@@ -1,6 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
-import { diffGuidance, positionGuidance, snapshotOf } from "../../../src/options/position-guidance";
+import {
+  diffGuidance,
+  positionGuidance,
+  snapshotOf,
+  stakeFingerprint,
+} from "../../../src/options/position-guidance";
 import type {
   GuidanceStake,
   LadderRow,
@@ -72,8 +77,10 @@ export function GuidanceSection({
   // Calls already open are a fact about the account, not a what-if: they ride on either stake.
   const base = fromAccount ? held : saved;
   const stake = held?.openCalls ? { ...base, openCalls: held.openCalls } : base;
-  // Read once per mount (the caller keys this component by symbol): the PREVIOUS visit's snapshot.
-  const [previous] = useState(() => readSnapshot(symbol));
+  // This stake's PREVIOUS look — read once per symbol + stake, before this render's write lands.
+  // Another stake's snapshot would report the stake's own effect as a market move (#3729).
+  const stakeId = stakeFingerprint(stake);
+  const previous = useMemo(() => readSnapshot(symbol, stakeId), [symbol, stakeId]);
   const [refreshing, setRefreshing] = useState(false);
   // A refresh the server couldn't build: said beside the last good read, never in place of it.
   const [notice, setNotice] = useState<string | undefined>();
@@ -84,8 +91,8 @@ export function GuidanceSection({
     [market, stake],
   );
   useEffect(() => {
-    if (guidance) writeSnapshot(symbol, snapshotOf(guidance));
-  }, [guidance, symbol]);
+    if (guidance) writeSnapshot(symbol, stakeId, snapshotOf(guidance));
+  }, [guidance, symbol, stakeId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
