@@ -7,6 +7,8 @@
 //   npm run phone -- /app/accounts --session    # signed in as the crawl member (human-eric)
 //   npm run phone -- /app/trade --strict        # exit 1 on any high or medium finding
 //   npm run phone -- /app/trade --all           # list the advisory (low) rows too, not just a count
+//   npm run phone -- /app/wire --click .status  # open something first (a popover), then measure
+//   npm run phone -- /app/wire --at 2026-09-26T15:00:00Z   # pin the clock (the market clock's state)
 //
 // Boots the offline dashboard exactly as the crawl does (server.mjs: frozen fixtures, no feedback
 // token) while Chromium launches, opens the path at the crawl's phone viewport in dark mode, runs
@@ -17,27 +19,9 @@ import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
 import { locate } from "./locate.mjs";
 import { mintSession } from "./mint-session.ts";
-import { probePhone } from "./phone.mjs";
+import { phoneArgs, probePhone } from "./phone.mjs";
 import { bootServer, CRAWL_EMAIL, CRAWL_SECRET } from "./server.mjs";
 import { sessionCookie, VIEWPORTS } from "./steps.mjs";
-
-function args(argv) {
-  const get = (flag) => {
-    const i = argv.indexOf(flag);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
-  const valued = new Set(["--port", "--bridge-port"]);
-  const path = argv.find((a, i) => !(a.startsWith("--") || valued.has(argv[i - 1])));
-  return {
-    path: path ?? "/app",
-    session: argv.includes("--session"),
-    strict: argv.includes("--strict"),
-    all: argv.includes("--all"),
-    // Not the crawl's 8787/8788, so a check can run beside a crawl or a dev server.
-    port: Number(get("--port") ?? 8797),
-    bridgePort: Number(get("--bridge-port") ?? 8798),
-  };
-}
 
 /** Enough to render the route; a page holding an SSE open never idles, so idle is best-effort. */
 async function settle(page) {
@@ -78,7 +62,7 @@ function print(path, findings, ms, all) {
 
 async function main() {
   const t0 = Date.now();
-  const opts = args(process.argv.slice(2));
+  const opts = phoneArgs(process.argv.slice(2));
   const exe = resolveChromium();
   const [server, browser] = await Promise.all([
     bootServer({
@@ -104,16 +88,18 @@ async function main() {
       ]);
     }
     const page = await context.newPage();
+    if (opts.at) await page.clock.setFixedTime(new Date(opts.at));
     await page.goto(opts.path, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await settle(page);
+    if (opts.click) {
+      await page.locator(opts.click).first().click();
+      await settle(page);
+    }
     const landed = new URL(page.url()).pathname;
     findings = await probePhone(page);
-    print(
-      landed === opts.path ? opts.path : `${opts.path} → ${landed}`,
-      findings,
-      Date.now() - t0,
-      opts.all,
-    );
+    const where = landed === opts.path ? opts.path : `${opts.path} → ${landed}`;
+    const after = [opts.at && `at ${opts.at}`, opts.click && `after clicking ${opts.click}`];
+    print([where, ...after].filter(Boolean).join(" · "), findings, Date.now() - t0, opts.all);
   } finally {
     await browser.close();
     await server.close();

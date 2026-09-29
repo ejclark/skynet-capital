@@ -72,6 +72,8 @@ npm run crawl -- --phone-audit                   # + docs/members/phone-ledger.m
 npm run crawl -- --phone-audit --phone-ledger /tmp/p.md
 npm run phone -- /app/trade                      # ONE page, ~3s against a built app/dist
 npm run phone -- /app/accounts --session         # signed in as the crawl member; --strict exits 1 on high/medium; --all lists the advisory rows
+npm run phone -- /app/wire --click .status       # open a popover/drawer first — it is only in the DOM while open
+npm run phone -- /app/wire --at 2026-09-26T15:00:00Z   # pin the clock: a time-driven surface in the state you name
 ```
 
 | kind | what | severity |
