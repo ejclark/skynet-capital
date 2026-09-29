@@ -2,9 +2,9 @@ import type { ReactElement } from "react";
 import type { DeskActivityEvent } from "../live/desk";
 
 /**
- * One fill/order event on a desk's activity timeline (#738 phase 2d). Rendered inline inside a
- * blotter row's accordion now (`blotter-row.tsx`, #2321) — the right-rail drawer this component
- * used to render into was retired: Eric's live-review complaint was that the popup read as too
+ * One fill/order event on a desk's activity timeline (#738 phase 2d) — the Activity tab's blotter
+ * and Trade's recent-orders strip (`recent-orders-strip.tsx`) render it. It was born inside a
+ * right-rail "timeline drawer" (this file's old name, renamed #3816 slice 8); that drawer was retired: Eric's live-review complaint was that the popup read as too
  * far removed from the row that opened it, and an inline row keeps the reader in flow. Two
  * provenance seams ride the rows, and they answer different questions: `backfilled` says the
  * ledger recovered the row rather than watching it land; the `*` says the order was placed
