@@ -13,6 +13,7 @@ import { navForPlay, type PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
+import { BenchDoors } from "../shell/bench-doors";
 import {
   type ChainPick,
   ChainSection,
@@ -33,6 +34,7 @@ import { RungChip } from "../shell/rung-chip";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { TicketNav } from "../shell/ticket-nav";
+import { TradeClock } from "../shell/trade-clock";
 import { TradeGate } from "../shell/trade-gate";
 import { useBenchWidth } from "../shell/use-bench-width";
 
@@ -694,19 +696,11 @@ function TradePage(): ReactElement {
   // THE CONTROLS ROW (#3807 slice 2a — the rail left the frame): folded, the section switch is the
   // row at the top of the stage. Docked, every pane is already on the page and the switch would be a
   // control with nothing to choose (frame.tsx: "The section switch renders only when folded"), so
-  // there is no row; the guidance pane shows only when asked, so its link sits beside the milestone
-  // strip instead (#3729 review: desktop members could reach it only by typing the URL). The rail's
-  // "Trading · Trade" label and its "← Back to account" link are gone: the topbar marks Trade, and
-  // its Profile tab is the way back to the book.
-  const guidanceLink = docked ? (
-    <Link
-      className="trade-guidance-link"
-      to="/trade"
-      search={(prev) => ({ ...prev, section: "guidance" as const })}
-    >
-      Guidance for this stock
-    </Link>
-  ) : null;
+  // there is no row; Guidance and the standalone Chain show only when asked, so their links sit
+  // beside the milestone strip instead (`bench-doors.tsx` — #3729 review; dead end 8, slice 3b-2).
+  // The rail's "Trading · Trade" label and its "← Back to account" link are gone: the topbar marks
+  // Trade, and its Profile tab is the way back to the book.
+  const guidanceLink = docked ? <BenchDoors /> : null;
   return (
     <PageFrame
       controls={
@@ -715,6 +709,9 @@ function TradePage(): ReactElement {
         )
       }
     >
+      {/* The market calendar's head leads the stage (#3807 slice 3b-2, `trade-clock.tsx`): a row,
+          its line scoped to the ticket's symbol, the tower's slot at its right cap under the flag. */}
+      <TradeClock symbol={symbol} />
       <header className="page-header">
         <h1>Trade</h1>
         <p>

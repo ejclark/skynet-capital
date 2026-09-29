@@ -87,3 +87,9 @@
   font-size: 13.5px;
   white-space: nowrap;
 }
+/* Docked, the Chain's door rides beside Guidance's (#3807 slice 3b-2, `bench-doors.tsx`). */
+.trade-bench-doors {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
