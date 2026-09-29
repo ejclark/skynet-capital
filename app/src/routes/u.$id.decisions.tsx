@@ -10,9 +10,11 @@ import { HeartbeatSection } from "../shell/heartbeat";
  * THE ANY-ACCOUNT PAGE'S HEARTBEAT (#3807 slice 2d) — Decisions folded into Heartbeat (#3687): this
  * route keeps its `/u/:id/decisions` address so every saved link still opens, but it reads what the
  * Profile page's Heartbeat reads — is the bot alive, what each playbook concluded on its last pass,
- * and the passes that placed no trade (`heartbeat.tsx`, one component on both pages). The passes
- * that DID trade open from their row on this page's Activity, as they do on the Profile page. The
- * route's name is a later IA call; the head's switch calls it Heartbeat.
+ * and the passes it recorded (`heartbeat.tsx`, one component on both pages). The passes that DID
+ * trade are left out of that log until the reader includes them (#3961 — before that they were
+ * hidden with no way in, so a traded round's rejected siblings and refused ideas showed nowhere);
+ * a fill's "why" on Activity links straight to its own round here. The route's name is a later IA
+ * call; the head's switch calls it Heartbeat.
  *
  * Any member can read any bot here, but which playbooks it runs is its owner's (#885, Eric
  * 2026-08-29: "at this time, we do not show what playbooks others are using"; docs/IA.md §5.2):
@@ -43,8 +45,8 @@ function HeartbeatPage(): ReactElement {
       <header className="page-header">
         <h2>Heartbeat</h2>
         <p>
-          Is the bot alive, what each playbook concluded on its last pass, and the passes that
-          placed no trade. Reasons are the bot's own words.
+          Is the bot alive, what each playbook concluded on its last pass, and every pass it
+          recorded — the ones that traded included, on request. Reasons are the bot's own words.
         </p>
       </header>
       {d.kind !== "bot" ? (

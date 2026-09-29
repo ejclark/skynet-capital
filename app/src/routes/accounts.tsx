@@ -86,7 +86,10 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
     return <p className="note">No durable activity ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
-  return <ActivityTable events={activity.data.events} />;
+  // One account linked → each bot fill can link to its round on that account's Heartbeat (#3961).
+  // Several merged → a row carries no account of its own, so the link is honestly left off.
+  const only = deskIds.length === 1 ? deskIds[0] : undefined;
+  return <ActivityTable events={activity.data.events} {...(only ? { deskId: only } : {})} />;
 }
 
 const asId = (raw: unknown): string | undefined =>

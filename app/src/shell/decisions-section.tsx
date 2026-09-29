@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type DecisionCycle,
   type DeskDecisions,
   fetchDeskDecisions,
   type RefusedIntent,
 } from "../live/desk";
+import { cycleAnchor } from "./cycle-anchor";
 
 /**
  * ACCOUNTS' DECISIONS SECTION — ported from the `/u/:id/decisions` route ("the bot's mind"),
@@ -106,14 +107,31 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
 export function CycleRow({
   cycle,
   showPlaybooks = true,
+  openCycle,
 }: {
   readonly cycle: DecisionCycle;
   readonly showPlaybooks?: boolean;
+  /** The anchor a fill's "why" linked to (`cycle-anchor.ts`) — the matching row arrives open and
+   *  scrolls itself into view, so a member who followed the link sees the round, not the top of
+   *  the trail. */
+  readonly openCycle?: string;
 }): ReactElement {
-  // Halted, rejected, and refused cycles arrive open — the reader came for the failure.
+  const anchor = cycleAnchor(cycle.at);
+  const targeted = anchor !== undefined && anchor === openCycle;
+  // Halted, rejected, and refused cycles arrive open — the reader came for the failure. So does
+  // the round a fill linked to: following that link IS the request to see it.
   const [open, setOpen] = useState(
-    cycle.status === "halted" || cycle.status === "rejected" || cycle.status === "refused",
+    targeted ||
+      cycle.status === "halted" ||
+      cycle.status === "rejected" ||
+      cycle.status === "refused",
   );
+  const row = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    // `scrollIntoView` is absent under happy-dom and on an unmounted row — optional-call, never a
+    // guard clause that would hide a real failure to render.
+    if (targeted) row.current?.scrollIntoView?.({ block: "center" });
+  }, [targeted]);
   const when = new Date(cycle.at);
   const stamp = Number.isNaN(when.getTime())
     ? cycle.at
@@ -136,7 +154,11 @@ export function CycleRow({
         })
       : undefined;
   return (
-    <li className={`cycle cycle-${cycle.status}`}>
+    <li
+      className={`cycle cycle-${cycle.status}${targeted ? " cycle-targeted" : ""}`}
+      {...(anchor ? { id: anchor } : {})}
+      ref={row}
+    >
       <button
         type="button"
         className="cycle-row"
@@ -216,6 +238,7 @@ export function DecisionsSection({
   noTrades = false,
   emptyText = "No recorded cycles yet — the next autonomous run writes the first.",
   showPlaybooks = true,
+  openCycle,
 }: {
   readonly deskId: string;
   /** Only the passes that placed nothing (#3687 slice 4) — the Heartbeat tab's log, now that
@@ -224,6 +247,8 @@ export function DecisionsSection({
   readonly emptyText?: string;
   /** False on a page the viewer does not own — the playbook chips are the owner's (#885). */
   readonly showPlaybooks?: boolean;
+  /** The round a fill's "why" linked to (#3961) — that row arrives open, if this page holds it. */
+  readonly openCycle?: string;
 }): ReactElement {
   const decisions = useQuery({
     queryKey: ["desk-decisions", deskId, noTrades],
@@ -272,7 +297,12 @@ export function DecisionsSection({
     <>
       <ul className="cycles">
         {cycles.map((cycle) => (
-          <CycleRow key={cycle.at} cycle={cycle} showPlaybooks={showPlaybooks} />
+          <CycleRow
+            key={cycle.at}
+            cycle={cycle}
+            showPlaybooks={showPlaybooks}
+            {...(openCycle ? { openCycle } : {})}
+          />
         ))}
       </ul>
       {cursor !== undefined ? (
