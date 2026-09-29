@@ -215,7 +215,7 @@
   {
     "screen": "server /research/<slug>",
     "verdict": "keep",
-    "mustBeSeenBy": "anyone signed in (symbol/<SYM> and some events/<id> links 404, see defects 3 and 4)"
+    "mustBeSeenBy": "anyone signed in (some events/<id> links 404, see defect 4; the symbol/<SYM> links are gone, #3816)"
   },
   {
     "screen": "server /feedback/preview",
