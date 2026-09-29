@@ -283,11 +283,6 @@
     "target": "/app/research?section=playbooks"
   },
   {
-    "screen": "server /board/frame (standings patch fragment with the 'Not connected' copy)",
-    "verdict": "undecided",
-    "target": "its guidance copy should move to the zero-account door / AlpacaGuide, then retire it"
-  },
-  {
     "screen": "unknown URL",
     "verdict": "undecided",
     "target": "/app/*: router's default Not Found; other paths: plain-text 404"

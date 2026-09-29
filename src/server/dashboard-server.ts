@@ -1,5 +1,4 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import type { NavContext, NavView } from "../observatory/dashboard-shell.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import { serveAdminApi } from "./admin-api-routes.js";
@@ -9,16 +8,14 @@ import {
   type BoardPatchChannel,
   createBoardChannel,
   driveBoardChannel,
-  serveBoardFrame,
   streamBoardPatches,
 } from "./board-patch-routes.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
 import { serveCouncilApi } from "./council-api-routes.js";
-import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
+import { gateRequest } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
-import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskAlertsApi } from "./desk-alerts-route.js";
 import { serveDeskEventsApi } from "./desk-events-route.js";
@@ -160,33 +157,10 @@ async function serveAuthorizedRoute(
   session: Session | undefined,
   channel: BoardPatchChannel,
 ): Promise<void> {
-  const canAdd = Boolean(config.addParticipant);
-  const authed = Boolean(config.auth);
-  const canControl = isOwnerOf(config.controls, session);
-  const canInvite = isOwnerOf(config.invite, session);
-  const canClaim = isOwnerOf(config.claim, session);
-  const navFor = (active: NavView): NavContext => ({
-    active,
-    currentId: resolveCurrentId(session, config.resolveOwnerId),
-    canAdd,
-    authed,
-    ...(canControl ? { canControl } : {}),
-    ...(canInvite ? { canInvite } : {}),
-    ...(canClaim ? { canClaim } : {}),
-  });
-
   if (path === "/events") {
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
     streamBoardPatches(req, res, channel, metric, parseCompareParams(params));
-    return;
-  }
-  // The patch channel's honest fallback: the same Standings content, whole, for the changes a patch
-  // cannot express (a row appearing, the cohort lead flipping, a seq gap after a reconnect).
-  if (path === "/board/frame") {
-    const params = new URL(url, "http://localhost").searchParams;
-    const metric = parseLeaderMetric(params.get("by"));
-    serveBoardFrame(res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
   if (await serveJsonApi(res, path, url, config, channel, session)) {
