@@ -30,6 +30,16 @@ export interface WireTradeReasoning {
   readonly playbookMode?: string;
   /** Whose decision this was — not always the account's own: beta-scout trades on Sauron's. */
   readonly personaId: string;
+  /** THE ROUND THIS FILL CAME OUT OF (#3961) — the `at` its `DecisionCycle` carries, so a fill can
+   *  link to the whole pass that placed it (the pass's siblings, its refused ideas, its counts)
+   *  instead of ending at this one order's sentence. Absent only for a record with an unreadable
+   *  timestamp, never fabricated. */
+  readonly cycleAt?: string;
+  /** The round's funnel, the pair `CycleRow` renders as "N ideas → M past the guards": how many
+   *  intents the persona raised that pass, and how many survived the risk guards. A fill shows the
+   *  count inline; the whole round stays one link away (`docs/IA.md` §8.1 — one home per fact). */
+  readonly rawCount?: number;
+  readonly guardedCount?: number;
 }
 
 export interface WireTradeWithReasoning extends WireTradeRow {
@@ -61,9 +71,15 @@ export function reasoningForOrder(
   if (!found) return undefined;
   const { record, intent } = found;
   const guardDelta = guardDeltaFor(record, intent);
+  // The round's own id is its timestamp, formatted exactly as `decisionCyclesView` formats it —
+  // the two must match character for character or the link from a fill lands on no row.
+  const cycleAt = Number.isFinite(record.at) ? new Date(record.at).toISOString() : undefined;
   return {
     reason: intent.reason,
     personaId: record.personaId,
+    ...(cycleAt ? { cycleAt } : {}),
+    rawCount: record.rawIntents.length,
+    guardedCount: record.guardedIntents.length,
     ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
     ...(intent.playbookMode ? { playbookMode: intent.playbookMode } : {}),
     ...(intent.strategy ? { strategy: intent.strategy } : {}),

@@ -168,4 +168,21 @@ describe("CycleRow", () => {
     render(<CycleRow cycle={cycle()} />);
     expect(screen.queryByText(/^via /)).not.toBeInTheDocument();
   });
+
+  // #3961: a fill's "why" links to the round that placed it. The row is addressable by that round's
+  // timestamp, and the linked-to row arrives open — following the link IS the ask to see it.
+  it("carries the round's anchor id, and arrives open when that anchor is the one linked to", () => {
+    const at = "2026-09-22T18:59:00Z";
+    const anchor = `cycle-${Date.parse(at)}`;
+    const { container } = render(<CycleRow cycle={cycle({ at })} openCycle={anchor} />);
+    expect(container.querySelector(`#${anchor}`)).not.toBeNull();
+    // "placed" normally arrives collapsed; this one is open without a click.
+    expect(screen.getByText("“panic fade”")).toBeInTheDocument();
+    expect(screen.getByText("1 intent from the persona → 1 past the guards")).toBeInTheDocument();
+  });
+
+  it("leaves a placed round collapsed when a DIFFERENT round is the one linked to", () => {
+    render(<CycleRow cycle={cycle({ at: "2026-09-22T18:59:00Z" })} openCycle="cycle-1" />);
+    expect(screen.queryByText("“panic fade”")).not.toBeInTheDocument();
+  });
 });

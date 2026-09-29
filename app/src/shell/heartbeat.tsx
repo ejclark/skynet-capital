@@ -8,6 +8,7 @@ import {
   sinceText,
   VERDICT_WORDS,
 } from "../live/heartbeat";
+import { targetedCycle } from "./cycle-anchor";
 import { DecisionsSection } from "./decisions-section";
 
 /**
@@ -119,6 +120,12 @@ export function HeartbeatSection({
   readonly showPlaybooks?: boolean;
 }): ReactElement {
   const query = useHeartbeat(deskId);
+  // The round a fill's "why" pointed at, read once as this section mounts (`cycle-anchor.ts`).
+  const [openCycle] = useState(targetedCycle);
+  // #3961: the trail hid every pass that traded, so a traded round's rejected siblings and refused
+  // ideas showed nowhere. The reader includes them here; a member who followed a fill's link is
+  // asking for exactly such a round, so that arrival opens with them already included.
+  const [withTrades, setWithTrades] = useState(openCycle !== undefined);
   if (query.isPending) return <p className="note">Listening for the heartbeat…</p>;
   if (query.isError) return <p className="note">The heartbeat is unreachable right now.</p>;
   if (!query.data.available) {
@@ -143,13 +150,34 @@ export function HeartbeatSection({
         <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />
       </section>
       <section className="hb-log">
-        <h2 className="hb-h">Passes that placed no trade — idle, blocked, halted</h2>
-        <p className="note">Passes that did trade open from their row on Activity.</p>
+        <h2 className="hb-h">
+          {withTrades
+            ? "Every recorded pass"
+            : "Passes that placed no trade — idle, blocked, halted"}
+        </h2>
+        <label className="hb-include">
+          <input
+            type="checkbox"
+            checked={withTrades}
+            onChange={(e) => setWithTrades(e.target.checked)}
+          />
+          Include the passes that placed a trade
+        </label>
+        <p className="note">
+          {withTrades
+            ? "A pass that traded shows its whole round: every order placed, rejected or skipped, the ideas the guards refused, and how many got through."
+            : "Passes that did trade are left out — tick the box to read them here, or open one from its row on Activity."}
+        </p>
         <DecisionsSection
           deskId={deskId}
-          noTrades
-          emptyText="Every recorded pass placed a trade."
+          noTrades={!withTrades}
+          emptyText={
+            withTrades
+              ? "No recorded passes yet — the next autonomous run writes the first."
+              : "Every recorded pass placed a trade — tick the box above to read them."
+          }
           showPlaybooks={showPlaybooks}
+          {...(openCycle ? { openCycle } : {})}
         />
       </section>
     </div>
