@@ -18,6 +18,7 @@ import {
   ownerEmailFor,
   resolveOwnedParticipantIds,
 } from "../server/owner-link-store.js";
+import { createSavedPositionsStore } from "../server/saved-positions-store.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 
 export interface AccessSetup {
@@ -25,6 +26,7 @@ export interface AccessSetup {
   botControls: ReturnType<typeof createBotControlsStore>;
   council: ReturnType<typeof createCouncilStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
+  savedPositions: ReturnType<typeof createSavedPositionsStore>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
   password: string | undefined;
@@ -59,6 +61,10 @@ export function setupAccess(
   // (SKYNET_SUBSCRIPTIONS_FILE → /data/playbook-subscriptions.json in prod). Plain JSON — an
   // account's own playbook picks and capital sub-allocations, not a secret.
   const subscriptions = createSubscriptionStore(env, (m) => console.error(m));
+  // Saved positions (#3968) — a member's own typed-in, real-money-elsewhere positions, on the
+  // volume beside the other member data (SKYNET_SAVED_POSITIONS_FILE → /data/saved-positions.json
+  // in prod). Plain JSON — the same tier as a playbook subscription's capital allocation.
+  const savedPositions = createSavedPositionsStore(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(env, undefined, allowlist);
   const password = env.SKYNET_DASHBOARD_PASSWORD;
@@ -98,6 +104,7 @@ export function setupAccess(
     botControls,
     council,
     subscriptions,
+    savedPositions,
     knownPersonaIds,
     auth,
     password,

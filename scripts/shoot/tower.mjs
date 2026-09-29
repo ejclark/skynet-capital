@@ -42,6 +42,10 @@ const CHROME = resolveChromium();
  * the start of the Eye's sweep, where it looks close to straight ahead — mid-sweep the aperture is
  * foreshortened and the frame can't be judged. */
 const SEEK_TIME = 0.6;
+/** The flare pair's instant: the still crest's own frame (scene-main.ts `FROZEN_T`), and the flare's
+ *  peak half a second after it began there — inside its hold (kit/flare.ts: attack 0.25, hold 0.6). */
+const FLARE_AT = 4;
+const FLARE_PEAK_AFTER = 0.5;
 
 // Poses are EYE-relative (alphaOffset from the angle that looks straight down the gaze) or, with
 // `whole: true`, frame the full tower from its mid-height. Radii are world units at the handoff's
@@ -81,11 +85,26 @@ const SHOTS = [
   { tag: "crown-presence-96", w: 160, h: 96, frame: "crown", quality: "presence" },
   // `?probe=1`: the corner readout Eric reads on his own machine (fps · frames · submit p50/p95).
   { tag: "crown-probe", w: 248, h: 150, frame: "crown", quality: "presence", probe: true },
+  // The flare (#3807 slice 3b-3): each pose writes a PAIR from one page — `-rest` and `-peak` — so
+  // the embers are the same sparks and only the flare differs. At the head's size (the crest as the
+  // band loads it) and at the character card's size.
+  { tag: "crown-flare", w: 248, h: 150, frame: "crown", quality: "presence", flare: true },
+  { tag: "card-flare", w: 384, h: 664, card: true, flare: true },
   // The fire clock's wrap (FIRE_PERIOD = 300 s, kit/loop.ts): the same close pose either side of it.
   // The sweep and flicker keep the unwrapped time, so only the fire's noise phase restarts here.
   { tag: "wrap-before", w: 800, h: 500, beta: 1.5, radius: 70, seek: 299.9 },
   { tag: "wrap-after", w: 800, h: 500, beta: 1.5, radius: 70, seek: 300.1 },
 ];
+
+/** The scene's URL for one pose: the dials, then its framing, quality and probe when it asks. */
+function poseUrl(s, framing) {
+  const frame = [
+    framing ? `&frame=${framing}` : "",
+    s.quality ? `&quality=${s.quality}` : "",
+    s.probe ? "&probe=1" : "",
+  ].join("");
+  return `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}${frame}`;
+}
 
 async function main() {
   const shots = ONLY.length ? SHOTS.filter((s) => ONLY.includes(s.tag)) : SHOTS;
@@ -114,13 +133,7 @@ async function main() {
     for (const s of shots) {
       const page = await browser.newPage({ viewport: { width: s.w, height: s.h } });
       const framing = s.card ? "card" : s.frame;
-      const frame = [
-        framing ? `&frame=${framing}` : "",
-        s.quality ? `&quality=${s.quality}` : "",
-        s.probe ? "&probe=1" : "",
-      ].join("");
-      const url = `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}${frame}`;
-      await page.goto(url, { waitUntil: "domcontentloaded" });
+      await page.goto(poseUrl(s, framing), { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
 
       // Let bloom, SSAO and texture upload settle FIRST, with the scene running freely.
@@ -129,6 +142,10 @@ async function main() {
       // THEN park the camera. Order matters and used to be reversed: posing before the settle let the
       // idle orbit drift alpha by ~0.1 rad during the wait, so the captured angle was never the angle
       // asked for and varied run to run. Pose last, seek immediately, capture — nothing runs in between.
+      if (s.flare) {
+        await shootFlarePair(page, s.tag);
+        continue;
+      }
       if (s.glance) {
         await page.evaluate(
           ([x, y]) => window.postMessage({ type: "tower:glance", x, y }, window.location.origin),
@@ -170,8 +187,34 @@ async function main() {
 }
 
 /**
+ * The flare pair from one page: seek to `FLARE_AT + FLARE_PEAK_AFTER` and shoot (`-rest`), then seek
+ * back to `FLARE_AT`, post a flare (it starts at that scene time), seek forward again and shoot
+ * (`-peak`). Seeks halt the loop, so the embers hold still between the two: only the flare differs.
+ */
+async function shootFlarePair(page, tag) {
+  for (const phase of ["rest", "peak"]) {
+    await page.evaluate(
+      async ([at, after, peak]) => {
+        window.__towerSeek?.(at);
+        if (peak) {
+          window.postMessage({ type: "tower:flare", kind: "new-high" }, window.location.origin);
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        window.__towerSeek?.(at + after);
+      },
+      [FLARE_AT, FLARE_PEAK_AFTER, phase === "peak"],
+    );
+    const file = join(OUT, `tower-${tag}-${phase}.png`);
+    await page.screenshot({ path: file, timeout: 30000 });
+    console.log(`  ${`${tag}-${phase}`.padEnd(12)} → ${file}`);
+  }
+  await page.close();
+}
+
+/**
  * Reduced motion draws ONE frame and turns the loop off (kit/loop.ts): count the draws three seconds
- * after ready through the scene's own `__towerStats`. Anything but 1 fails the run.
+ * after ready through the scene's own `__towerStats`. Anything but 1 fails the run. A flare posted
+ * after ready must not add one (slice 3b-3: under reduced motion the one still frame stays).
  */
 async function checkReducedMotion(browser) {
   const page = await browser.newPage({
@@ -182,11 +225,14 @@ async function checkReducedMotion(browser) {
     waitUntil: "domcontentloaded",
   });
   await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
+  await page.evaluate(() =>
+    window.postMessage({ type: "tower:flare", kind: "new-high" }, window.location.origin),
+  );
   await page.waitForTimeout(3000);
   const stats = await page.evaluate(() => window.__towerStats?.());
   await page.close();
   const frames = stats?.frames;
-  console.log(`  reduced motion: ${String(frames)} frame(s) drawn 3 s after ready`);
+  console.log(`  reduced motion: ${String(frames)} frame(s) drawn 3 s after ready and a flare`);
   if (frames !== 1) throw new Error(`reduced motion drew ${String(frames)} frames; expected 1`);
 }
 

@@ -129,11 +129,7 @@ function main() {
     console.log(`field "${field.name}" already exists, skipping`);
   }
 
-  console.log(
-    `done. Board/Backlog/Roadmap views (grouping, sort, layout) are one-time UI setup on ` +
-      `${project.url} — the API doesn't fully cover view layout, so this is the one manual step ` +
-      `left after this script.`,
-  );
+  console.log(`done: ${project.url} — views are created next by projects-views.mjs`);
 }
 
 main();

@@ -9,6 +9,7 @@ import {
   outermostLeaks,
   phoneArgs,
   phoneFindings,
+  servedFinding,
   spacedEnough,
   tapFindings,
   zoomFindings,
@@ -258,6 +259,7 @@ describe("phoneArgs — npm run phone's flags", () => {
     expect(phoneArgs([])).toEqual({
       path: "/app",
       session: false,
+      authBoot: false,
       strict: false,
       all: false,
       click: undefined,
@@ -279,5 +281,19 @@ describe("phoneArgs — npm run phone's flags", () => {
     expect(a).toMatchObject({ path: "/app/wire", click: ".status", session: true });
     const b = phoneArgs(["--at", "2026-09-26T15:00:00Z", "--strict"]);
     expect(b).toMatchObject({ path: "/app", at: "2026-09-26T15:00:00Z", strict: true });
+  });
+});
+
+describe("the false all-clear — a page that was never measured (#4046)", () => {
+  it("boots /login with sign-in configured even without --session, signed out", () => {
+    expect(phoneArgs(["/login"])).toMatchObject({ path: "/login", authBoot: true, session: false });
+    expect(phoneArgs(["/app/trade"])).toMatchObject({ authBoot: false });
+    expect(phoneArgs(["/app/trade", "--session"])).toMatchObject({ authBoot: true, session: true });
+  });
+
+  it("turns a non-2xx answer into a high finding instead of 0 findings", () => {
+    expect(servedFinding(200, "/login")).toBeNull();
+    expect(servedFinding(404, "/login")).toMatchObject({ kind: "not-the-page", severity: "high" });
+    expect(servedFinding(0, "/x")?.what).toContain("nothing real was measured");
   });
 });
