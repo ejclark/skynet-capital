@@ -69,6 +69,27 @@ describe("readTowerMessage — the shapes", () => {
     }
   });
 
+  it("reads a flare for a new high (slice 3b-3), with nothing but its kind", () => {
+    expect(
+      readTowerMessage(from({ type: "tower:flare", kind: "new-high", value: "$1M" }), here),
+    ).toEqual({ type: "tower:flare", kind: "new-high" });
+  });
+
+  it("ignores a flare of an unknown kind, or with no kind at all", () => {
+    for (const kind of ["new-low", "NEW-HIGH", "", 1, null, undefined]) {
+      expect(readTowerMessage(from({ type: "tower:flare", kind }), here)).toBe(undefined);
+    }
+    expect(readTowerMessage(from({ type: "tower:flare" }), here)).toBe(undefined);
+  });
+
+  it("ignores a flare from another origin or from a window that is not our parent", () => {
+    const flare = { type: "tower:flare", kind: "new-high" };
+    expect(readTowerMessage(from(flare, { origin: "https://evil.test" }), here)).toBe(undefined);
+    expect(readTowerMessage(from(flare, { source: { name: "a sibling frame" } }), here)).toBe(
+      undefined,
+    );
+  });
+
   it("carries nothing across beyond the contract's own keys", () => {
     const m = readTowerMessage(from({ type: "tower:glance", x: 1, y: 2, account: "x" }), here);
     expect(Object.keys(m ?? {}).sort()).toEqual(["type", "x", "y"]);

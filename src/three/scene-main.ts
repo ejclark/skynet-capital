@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { createStage, frameLights } from "./kit/env.js";
 import { armContextLoss } from "./kit/fallback.js";
 import { FIRE_TIME } from "./kit/fire-glsl.js";
+import { createFlare, flareGain } from "./kit/flare.js";
 import {
   aimAt,
   blendGaze,
@@ -205,6 +206,10 @@ export function start(canvas: HTMLCanvasElement): void {
     return w > 0 ? blendGaze(sweep, target, w) : sweep;
   };
 
+  // ---- The flare (slice 3b-3): a new high on the page — the Eye's light rises once and settles.
+  // One slot, ignored under reduced motion (kit/flare.ts); the sweep carries on underneath.
+  const flare = createFlare(reduce);
+
   // ---- The dials: `?power=&health=` at load, `tower:mood` live. Light only, never geometry ----
   let dials: TowerParams = params;
   const setMood = (power: number, health: number): void => {
@@ -215,7 +220,9 @@ export function start(canvas: HTMLCanvasElement): void {
   /** Everything time-driven, as a pure function of the clock — so a seek is repeatable. */
   const applyTime = (time: number): void => {
     FIRE_TIME.value = fireTime(time);
-    eye.update(time, camera, aim);
+    const lift = flare.weight(time);
+    eye.update(time, camera, aim, lift);
+    embers.brighten(flareGain(lift, "embers"));
     tower.materials.ember.emissiveIntensity =
       EMBER_EMISSIVE * dials.forgeIntensity * (1 + flicker(time) * 0.08);
   };
@@ -252,8 +259,8 @@ export function start(canvas: HTMLCanvasElement): void {
       applyTime(t);
       embers.step(dt, t);
       draw();
-      // `rest=still`: the gaze is home — this was the settled frame, so the loop stops on it.
-      if (restStill && !glance) loop.settle();
+      // `rest=still`: the gaze is home and no flare burns — this was the settled frame, so stop on it.
+      if (restStill && !glance && !flare.playing(t)) loop.settle();
     },
     still: () => {
       controls.update();
@@ -328,6 +335,10 @@ export function start(canvas: HTMLCanvasElement): void {
       case "tower:run":
         loop.run(m.on);
         return;
+      case "tower:flare":
+        // Mid-flare, or under reduced motion, this restarts nothing (`start` says so).
+        if (flare.start(t)) loop.wake();
+        return;
     }
   });
   loop.start();
@@ -339,6 +350,7 @@ export function start(canvas: HTMLCanvasElement): void {
   // picture (embers aside — they are a simulation, not a function of t).
   window.__towerSeek = (time: number) => {
     loop.halt();
+    t = time;
     applyTime(time);
     draw();
   };

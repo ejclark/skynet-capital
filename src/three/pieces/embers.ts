@@ -32,6 +32,8 @@ export interface Embers {
   readonly points: THREE.Points;
   /** Advance the simulation by `dt` seconds at wall-clock `now`. */
   step(dt: number, now: number): void;
+  /** Every spark's brightness × `gain` (1 at rest; a flare lifts it, kit/flare.ts). Pure, no step. */
+  brighten(gain: number): void;
 }
 
 export function createEmbers(at: THREE.Vector3, density: number): Embers {
@@ -66,23 +68,24 @@ export function createEmbers(at: THREE.Vector3, density: number): Embers {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  const points = new THREE.Points(
-    geo,
-    new THREE.PointsMaterial({
-      size: 1.3,
-      map: dotTexture(),
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      fog: false,
-    }),
-  );
+  const material = new THREE.PointsMaterial({
+    size: 1.3,
+    map: dotTexture(),
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    fog: false,
+  });
+  const points = new THREE.Points(geo, material);
   points.name = "embers";
   points.frustumCulled = false;
 
   return {
     points,
+    brighten(gain) {
+      material.color.setScalar(gain);
+    },
     step(dt, now) {
       for (let i = 0; i < n; i++) {
         const a = (age[i] ?? 0) + dt;
