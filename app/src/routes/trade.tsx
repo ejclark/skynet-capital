@@ -658,6 +658,8 @@ function TradePage(): ReactElement {
     enabled: foreignId !== undefined,
   });
   const notYours = foreignId ? (foreign.data?.desk.name ?? foreignId) : undefined;
+  // The account this page is trading, by name — the head's link back to it on the Profile page.
+  const tradedAccount = accounts.find((a) => a.id === activeDesk);
   // Same underlying, and same expiration when the pane's committed to one (`?exp=` is "" until a
   // browse writes it) — mirrors `DraftLegForm`'s own marking filter for its inline chain.
   const markedStrikes = isSpread
@@ -696,8 +698,9 @@ function TradePage(): ReactElement {
   // control with nothing to choose (frame.tsx: "The section switch renders only when folded"), so
   // there is no row; the guidance pane shows only when asked, so its link sits beside the milestone
   // strip instead (#3729 review: desktop members could reach it only by typing the URL). The rail's
-  // "Trading · Trade" label and its "← Back to account" link are gone: the topbar marks Trade, and
-  // its Profile tab is the way back to the book.
+  // "Trading · Trade" label is gone (the topbar marks Trade); its "← Back to account" link came back
+  // into the page head (#3816 slice 7): the topbar's Profile tab opens the DEFAULT account, so a
+  // member trading any other one had no one-tap way back to it.
   const guidanceLink = docked ? (
     <Link
       className="trade-guidance-link"
@@ -716,6 +719,11 @@ function TradePage(): ReactElement {
       }
     >
       <header className="page-header">
+        {tradedAccount ? (
+          <Link className="trade-back-link" to="/accounts" search={{ account: tradedAccount.id }}>
+            ← Back to {tradedAccount.name}
+          </Link>
+        ) : null}
         <h1>Trade</h1>
         <p>
           Paper account · the gate reviews every order before anything is sent, and re-checks the

@@ -11,7 +11,7 @@ import { mountThesisChart } from "./thesis-chart-mount";
  * THE THESIS DRAWER'S SHELL (#3186 slices 4a + 4b) — a bot's standing call, its one-line thesis, a
  * track-record chart, an honest health readout, and a bot-controls cluster. Lives at
  * `/u/:id/thesis`, a section of the any-account page — this codebase has no slide-over/modal pattern
- * (`timeline-drawer.tsx` was deliberately de-drawered after live-review feedback that a popup read
+ * (the old timeline drawer, now `order-event-line.tsx`, was deliberately de-drawered after live-review feedback that a popup read
  * as too far removed from what opened it), so "Drawer" here is a page, matching every other
  * desk-scoped view.
  *

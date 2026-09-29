@@ -95,12 +95,6 @@ const SERVER_PAGES = [
     needle: 'path === "/feedback/preview"',
     serves: (path) => path === "/feedback/preview",
   },
-  {
-    screen: "server /board/frame",
-    file: "src/server/dashboard-server.ts",
-    needle: 'path === "/board/frame"',
-    serves: (path) => path === "/board/frame",
-  },
   { screen: "unknown URL" },
 ];
 

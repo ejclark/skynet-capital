@@ -45,7 +45,6 @@ export interface ResearchCall {
 
 export interface ResearchSymbol {
   readonly symbol: string;
-  readonly href: string;
   readonly next?: { readonly title: string; readonly date: string };
 }
 

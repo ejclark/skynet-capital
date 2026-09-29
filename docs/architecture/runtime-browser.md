@@ -10,7 +10,7 @@
 
 **Grounding:** app/package.json dependencies; app/rsbuild.config.ts (assetPrefix /app/, dev proxy to :8787); served by src/server/app-shell-routes.ts (serveAppShell from app/dist); app/src/live/channel.ts (EventSource /events), app/src/live/post.ts (POST /api/*).
 
-**Refuter's verdict:** grounded — Optional refinements: label the stream as "SSE /events?by=<metric> (seq patches; resnapshot via /board/frame on a gap)", and label writes as "JSON POST via postJson (mostly /api/*, plus /feedback/coach)". In dev, Rsbuild
+**Refuter's verdict:** grounded — Optional refinements: label the stream as "SSE /events?by=<metric> (seq patches; resnapshot via /api/board on a gap)", and label writes as "JSON POST via postJson (mostly /api/*, plus /feedback/coach)". In dev, Rsbuild s
 
 ## Where it sits
 
