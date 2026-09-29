@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Backfill IV history so position guidance can grade "high" in weeks, not a year.** Daily IV
+  recording went live 2026-09-25 (#3742, #3746). But IV rank (`src/research/iv-rank.ts`) needs a
+  full, continuous 365-day window, so until ~2027-09 every covered-call or put write stays capped at
+  medium (#3729). The question is whether Alpaca serves historical option prices for CRWV back to
+  its 2025 listing. If it does, a one-off script could solve a ~30-day at-the-money IV per past
+  trading day, with the same tenor and solver the recorder uses, and seed the series. First check,
+  about 30 minutes: request one past date's CRWV option bars and see whether they come back, and
+  whether both sides are there or only a close (a close solved against a later spot is a fabricated
+  IV). _(src: Claude · while: interrogating the position guidance plan, #3729)_
 - **The phone check is blind to a box that spills off the LEFT edge.** `page-sideways-scroll` and
   `overflow` in `scripts/crawl/phone.mjs` measure `scrollWidth` only, which grows rightward. So the
   topbar status popover hung 113px off the left of a 390px screen with 0 findings. It was caught by

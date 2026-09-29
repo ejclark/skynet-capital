@@ -178,6 +178,26 @@ export function phoneFindings(snap) {
  *  - `--at <ISO time>`: pin the page's clock before it loads, so a time-driven surface (the market
  *    clock's open / pre-market / closed rows) is measured in the state you name, not today's.
  */
+/**
+ * Pages the server renders only when sign-in is configured. In an open boot `/login` has no page to
+ * serve, so a check there measured nothing and printed "0 findings" — the false all-clear that let
+ * the login page's sideways scroll ship unseen (#4046, 2026-09-29). These always boot with sign-in
+ * configured; `--session` still decides whether the viewer is signed in.
+ */
+export const AUTH_PAGES = ["/login"];
+
+/** A page that didn't answer 2xx was never measured; say so as a finding instead of "0 findings". */
+export function servedFinding(status, path) {
+  if (status >= 200 && status < 300) return null;
+  return {
+    kind: "not-the-page",
+    what: `the server answered ${status} for ${path} — nothing real was measured (try --session)`,
+    snippet: "",
+    severity: "high",
+    fix: "S",
+  };
+}
+
 export function phoneArgs(argv) {
   const get = (flag) => {
     const i = argv.indexOf(flag);
@@ -188,6 +208,7 @@ export function phoneArgs(argv) {
   return {
     path: path ?? "/app",
     session: argv.includes("--session"),
+    authBoot: argv.includes("--session") || AUTH_PAGES.includes(path ?? "/app"),
     strict: argv.includes("--strict"),
     all: argv.includes("--all"),
     click: get("--click"),

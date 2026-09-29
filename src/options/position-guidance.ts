@@ -21,6 +21,7 @@ import type {
   Confidence,
   GuidanceInputs,
   GuidanceSnapshot,
+  GuidanceStake,
   LeverCall,
   PositionGuidance,
   StakeView,
@@ -168,7 +169,7 @@ function assumptionLines(input: GuidanceInputs, retiredWindow: string | undefine
     input.printEvidence
       ? `Across an earnings report the model understates the move: ${input.printEvidence}.`
       : "Across an earnings report the model can understate the move — an overnight gap is a jump it does not price.",
-    "Trading days skip weekends only; market holidays aren't counted.",
+    "Trading days skip weekends and market holidays, from the exchange calendar.",
     ...(retiredWindow
       ? [
           `The earnings window ${retiredWindow} has passed and no next date is on the calendar, so no expiry is excluded for one.`,
@@ -216,6 +217,29 @@ export function positionGuidance(raw: GuidanceInputs): PositionGuidance {
     manage: manageCalls(ctx),
     disclosure: GUIDANCE_DISCLOSURE,
   };
+}
+
+/**
+ * Which stake a "what changed since you last looked" snapshot belongs to — only the fields that say
+ * WHICH position this is (#3729). A diff across two different stakes would report the stake's
+ * effect as if the market had moved, so each stake keeps its own last look. Live quotes riding on
+ * the stake (an open call's bid/ask, a long option's quote) and `portfolioValue` move with the
+ * market and are left out: they are the thing the diff exists to report.
+ */
+export function stakeFingerprint(stake: GuidanceStake): string {
+  const { shares, costBasis, cash, goal, happyToOwnAt, callsSold, premiumsCollected } = stake;
+  const long = stake.longOption;
+  return JSON.stringify([
+    shares,
+    costBasis,
+    cash,
+    goal,
+    happyToOwnAt,
+    callsSold,
+    premiumsCollected,
+    long ? [long.type, long.strike, long.expiration, long.contracts] : null,
+    (stake.openCalls ?? []).map((c) => `${c.occ}×${c.contracts}`).sort(),
+  ]);
 }
 
 /** The slice of a guidance read a viewer keeps, to diff against next time. */

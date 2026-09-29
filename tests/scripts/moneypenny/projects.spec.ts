@@ -16,6 +16,7 @@ import {
   STATUS_OPTIONS,
   statusForIssue,
   statusOptionsMatch,
+  viewsToCreate,
 } from "../../../scripts/moneypenny/projects.mjs";
 
 // #3818 slice B: the sync rule as a pure decision, so the mapping is proven without ever calling
@@ -367,5 +368,30 @@ describe("moneypenny projects: statusOptionsMatch", () => {
       expect(typeof option.color).toBe("string");
       expect(option.color.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("moneypenny projects: viewsToCreate", () => {
+  const ids = { Status: 1, Priority: 2, Horizon: 3, "Target date": 4 };
+
+  it("builds a kanban on Status, a Priority-sorted backlog and a dateless Horizon roadmap", () => {
+    const [flow, backlog, roadmap] = viewsToCreate([], ids);
+    expect([flow?.name, backlog?.name, roadmap?.name]).toEqual(["Flow", "Backlog", "Roadmap"]);
+    expect(flow?.body).toMatchObject({ layout: "board", vertical_group_by: [1] });
+    expect(backlog?.body).toMatchObject({ layout: "table", sort_by: [[2, "asc"]] });
+    expect(roadmap?.body).toMatchObject({
+      layout: "board",
+      vertical_group_by: [3],
+      group_by: [2],
+    });
+  });
+
+  it("skips views that already exist by name", () => {
+    const names = viewsToCreate(["Flow", "Backlog", "View 1"], ids).map((v) => v.name);
+    expect(names).toEqual(["Roadmap"]);
+  });
+
+  it("fails loudly when a field the views need is missing", () => {
+    expect(() => viewsToCreate([], { Status: 1 })).toThrow(/not found/);
   });
 });

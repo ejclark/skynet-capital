@@ -61,3 +61,17 @@ export function resolveBoardItem(deps: {
   baseMs?: number;
   sleep?: (ms: number) => void;
 }): { item: BoardItem; added: boolean };
+
+export interface ViewSpec {
+  name: string;
+  layout: "board" | "table" | "roadmap";
+  filter?: string;
+  columnsBy?: string;
+  groupBy?: string;
+  sortBy?: string;
+}
+export const VIEWS: ViewSpec[];
+export function viewsToCreate(
+  existingNames?: string[],
+  fieldIds?: Record<string, number>,
+): { name: string; body: Record<string, unknown> }[];

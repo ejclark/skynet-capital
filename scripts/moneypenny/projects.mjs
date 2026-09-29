@@ -258,3 +258,54 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
   }
   return `${head} A direct GraphQL probe with the same GH_TOKEN said: "${probe || "(nothing)"}".`;
 }
+
+// THE THREE VIEWS (2026-09-29). projects-setup.mjs used to end with "views are one-time UI setup"
+// printed to a workflow log nobody read, so the board shipped with only GitHub's default table.
+// GitHub's REST API now creates views (POST /users/{id}/projectsV2/{n}/views — layout, filter,
+// group_by, vertical_group_by, sort_by), so they are provisioned here instead. The API has no
+// update/delete for views, so the rule is create-if-missing by name; the default "View 1" table
+// is left alone (renaming or deleting it stays a UI click).
+//   Flow     — kanban: one column per Status, the work's state at a glance.
+//   Backlog  — table of everything not Done, sorted by Priority.
+//   Roadmap  — a dateless Now / Next / Later board: one column per Horizon, one swimlane per
+//              Priority. Eric, 2026-09-29: the roadmap is a strategic time-horizon view that
+//              informs priority, and nobody will maintain dates. GitHub's roadmap layout only
+//              draws bars from date fields, so it was the wrong tool; a board over Horizon is the
+//              classic Now/Next/Later roadmap. Target date stays on the project, unused.
+export const VIEWS = [
+  { name: "Flow", layout: "board", columnsBy: "Status" },
+  {
+    name: "Backlog",
+    layout: "table",
+    filter: "-status:Done",
+    sortBy: "Priority",
+  },
+  {
+    name: "Roadmap",
+    layout: "board",
+    columnsBy: "Horizon",
+    groupBy: "Priority",
+    filter: "-status:Done",
+  },
+];
+
+/**
+ * Which REST view-create bodies still need sending? Pure: takes the existing view names and a
+ * field-name → numeric-id map, returns `{ name, body }` per missing view. Throws on a missing
+ * field id so a renamed field fails loudly instead of creating an ungrouped view.
+ */
+export function viewsToCreate(existingNames = [], fieldIds = {}) {
+  const have = new Set(existingNames);
+  const id = (name) => {
+    if (!(name in fieldIds)) throw new Error(`field "${name}" not found on the project`);
+    return fieldIds[name];
+  };
+  return VIEWS.filter((v) => !have.has(v.name)).map((v) => {
+    const body = { name: v.name, layout: v.layout };
+    if (v.filter) body.filter = v.filter;
+    if (v.columnsBy) body.vertical_group_by = [id(v.columnsBy)];
+    if (v.groupBy) body.group_by = [id(v.groupBy)];
+    if (v.sortBy) body.sort_by = [[id(v.sortBy), "asc"]];
+    return { name: v.name, body };
+  });
+}

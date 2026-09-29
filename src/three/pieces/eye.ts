@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { fireMaterial } from "../kit/fire-glsl.js";
+import { flareGain } from "../kit/flare.js";
 import type { Gaze } from "../kit/glance.js";
 import type { TowerParams } from "../kit/params.js";
 import { almondify } from "../kit/shapes.js";
@@ -53,8 +54,9 @@ export interface EyeBuild {
   /**
    * Drive the Eye to time `t` (seconds). Pure in `t` — a seek renders the same frame every time.
    * `aim` maps the sweep's gaze to the one actually shown (a glance toward the page, kit/glance.ts).
+   * `flare` (0..1, kit/flare.ts) lifts the fire, its glow lights and the rim's reach; 0 is at rest.
    */
-  update(t: number, camera: THREE.Camera, aim?: (sweep: Gaze) => Gaze): void;
+  update(t: number, camera: THREE.Camera, aim?: (sweep: Gaze) => Gaze, flare?: number): void;
   /**
    * Relight from live dials (`tower:mood`, plan #3807 slice 3a) — the Eye's reach, its glow and how
    * much it gutters. No geometry changes: the beam's length and the storm stay as built.
@@ -70,7 +72,8 @@ export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
   eye.name = "eye";
   eye.position.copy(at);
   eye.rotation.order = "YXZ";
-  const body = new THREE.Mesh(almond(72, true), fireMaterial("eye-fire", BODY));
+  const bodyU = { uLift: { value: 1 } };
+  const body = new THREE.Mesh(almond(72, true), fireMaterial("eye-fire", BODY, {}, bodyU));
   body.name = "eye-fire";
   body.scale.set(EW, EH, ED);
   eye.add(body);
@@ -154,7 +157,7 @@ export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
       amp = gutter(next.health);
       coronaU.uReach.value = next.eyeIntensity;
     },
-    update(t, camera, aim) {
+    update(t, camera, aim, flare = 0) {
       const sweep = gazeAt(t);
       const { yaw, pitch } = aim ? aim(sweep) : sweep;
       eye.rotation.set(pitch, yaw, 0);
@@ -169,11 +172,14 @@ export function buildEye(at: THREE.Vector3, params: TowerParams): EyeBuild {
       side.set(1, 0, 0).applyEuler(eye.rotation);
       camRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
       coronaU.uW.value = Math.hypot(EW * side.dot(camRight), ED * fwd.dot(camRight)) / EW;
+      coronaU.uReach.value = I * flareGain(flare, "reach");
+      bodyU.uLift.value = flareGain(flare, "body");
 
       glow.position.set(at.x + Math.sin(yaw) * 8, at.y, at.z + Math.cos(yaw) * 8);
       glowBack.position.set(at.x - Math.sin(yaw) * 7, at.y + 4, at.z - Math.cos(yaw) * 7);
-      glow.intensity = 16000 * I * (1 + f * 0.14);
-      glowBack.intensity = 5000 * I * (1 - f * 0.1);
+      const lift = flareGain(flare, "glow");
+      glow.intensity = 16000 * I * (1 + f * 0.14) * lift;
+      glowBack.intensity = 5000 * I * (1 - f * 0.1) * lift;
     },
   };
 }

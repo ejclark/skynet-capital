@@ -3,8 +3,8 @@ import {
   actionable,
   DECISION_SESSIONS_BEFORE_PRINT,
   dayText,
+  sessionsBefore,
   usd,
-  weekdaysBefore,
 } from "./position-guidance-rules.js";
 import type { GuidanceInputs, GuidanceReason, LeverCall } from "./position-guidance-types.js";
 
@@ -27,7 +27,7 @@ const TAXABLE = "Selling is a taxable sale — check what it means for you befor
 /** The day the hold-or-sell-before-earnings decision falls due: 5 sessions before the window. */
 export function decisionDate(input: GuidanceInputs): string | undefined {
   return input.earnings
-    ? weekdaysBefore(input.earnings.start, DECISION_SESSIONS_BEFORE_PRINT)
+    ? sessionsBefore(input.earnings.start, DECISION_SESSIONS_BEFORE_PRINT)
     : undefined;
 }
 
