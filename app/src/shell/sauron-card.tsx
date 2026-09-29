@@ -1,6 +1,6 @@
 import { type ReactElement, useId, useRef } from "react";
 import { LeagueCard } from "./league-card";
-import { useTowerGlance, useTowerMood } from "./tower-bus";
+import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
 
 /**
  * SAURON'S CHARACTER CARD (plan #3727, design handoff 6a): the league, with Barad-dûr standing
@@ -18,7 +18,8 @@ import { useTowerGlance, useTowerMood } from "./tower-bus";
  * turn (`src/three/kit/glance.ts`). Reduced motion: the scene holds a still frame and the page
  * sends no glances, so the card is simply a picture. The glance lives in `tower-bus.ts` since
  * #3807 slice 3a — this card was its first consumer; the band's crest is the second. The card also
- * lends its landmark's dials to the crest (`useTowerMood`), so both towers burn alike.
+ * lends its landmark's dials to the crest (`useTowerMood`), so both towers burn alike, and its
+ * frame hears a flare the way the crest does (`useCardFrame`, #3807 slice 3b-3).
  */
 
 /** The tower's URL: the card framing, plus the landmark's dials when this account has one. */
@@ -118,6 +119,7 @@ export function SauronCard({
   const frame = useRef<HTMLIFrameElement>(null);
   useTowerGlance(scope, frame);
   useTowerMood(landmark);
+  useCardFrame(frame);
   return (
     <section className="char-card" aria-label="Sauron's tower and the league">
       <div className="char-art">

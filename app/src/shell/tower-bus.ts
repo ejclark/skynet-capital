@@ -10,10 +10,13 @@ import { create } from "zustand";
  * sender is its parent); a message the scene does not handle yet is ignored there, so the page may
  * speak a little ahead of it.
  *
- * Two frames can listen: the character card's own (`sauron-card.tsx`, passed by ref) and the shell's
- * crest at the calendar band's right cap (`vantage.tsx`, registered here). The hooks default to the
- * crest.
+ * Two frames can listen: the character card's own (`sauron-card.tsx`, passed by ref, and registered
+ * with `useCardFrame` so a flare reaches it) and the shell's crest at the calendar band's right cap
+ * (`vantage.tsx`, registered here). The hooks default to the crest.
  */
+
+/** What a flare is for (the scene's `src/three/kit/flare.ts` knows the same kinds). */
+export type FlareKind = "new-high";
 
 /** Page → scene. */
 export type TowerMessage =
@@ -21,7 +24,8 @@ export type TowerMessage =
   | { readonly type: "tower:regard"; readonly x: number; readonly y: number }
   | { readonly type: "tower:release" }
   | { readonly type: "tower:mood"; readonly power: number; readonly health: number }
-  | { readonly type: "tower:run"; readonly on: boolean };
+  | { readonly type: "tower:run"; readonly on: boolean }
+  | { readonly type: "tower:flare"; readonly kind: FlareKind };
 
 export interface Mood {
   readonly power: number;
@@ -106,6 +110,36 @@ export function replayToVantage(): void {
   const { frame, mood, on } = useTowerBus.getState();
   postTo(frame, { type: "tower:mood", ...mood });
   postTo(frame, { type: "tower:run", on });
+}
+
+/** The character cards' own frames while mounted — every tower on the page hears a flare. */
+const cardFrames = new Set<HTMLIFrameElement>();
+
+/** Register the character card's frame for as long as it is mounted (`sauron-card.tsx`). */
+export function useCardFrame(frame: RefObject<HTMLIFrameElement | null>): void {
+  useEffect(() => {
+    const el = frame.current;
+    if (!el) return;
+    cardFrames.add(el);
+    return () => void cardFrames.delete(el);
+  }, [frame]);
+}
+
+/**
+ * THE FLARE (#3807 slice 3b-3): something good just happened to the member, so every tower on the
+ * page — the head's crest while it runs, and the character card's frame when one is mounted — has
+ * its Eye brighten once and settle. A moment, never a state: nothing here remembers it, so a frame
+ * that loads or wakes later never replays it (`replayToVantage` sends the dials and the run state
+ * only), and a paused crest is skipped rather than handed a flare to play when it is next seen.
+ * Nothing under reduced motion. Returns how many frames were told.
+ */
+export function flareTower(kind: FlareKind): number {
+  if (prefersStill()) return 0;
+  const m: TowerMessage = { type: "tower:flare", kind };
+  const { frame, on } = useTowerBus.getState();
+  let told = on && postTo(frame, m) ? 1 : 0;
+  for (const card of cardFrames) if (postTo(card, m)) told += 1;
+  return told;
 }
 
 /**

@@ -2,12 +2,16 @@ import { renderHook } from "@testing-library/react";
 import { createRef } from "react";
 import {
   DEFAULT_MOOD,
+  flareTower,
   glanceMessage,
   postTo,
   REGARD_TARGETS,
   regardMessage,
+  replayToVantage,
   setVantageFrame,
   type TowerMessage,
+  useCardFrame,
+  useTowerBus,
   useTowerMood,
   useTowerRegard,
   useTowerRun,
@@ -161,5 +165,75 @@ describe("useTowerRun", () => {
       { type: "tower:run", on: true },
     ]);
     hook.unmount();
+  });
+});
+
+describe("flareTower — the Eye brightens once (#3807 slice 3b-3)", () => {
+  const flare = { type: "tower:flare", kind: "new-high" };
+  /** happy-dom has no `matchMedia` (so motion is the default); install one that prefers reduced. */
+  const reduceMotion = () =>
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (q: string) => ({ matches: q.includes("reduce"), media: q }),
+    });
+  afterEach(() => {
+    useTowerBus.setState({ on: false, mood: DEFAULT_MOOD });
+    Reflect.deleteProperty(window, "matchMedia");
+  });
+
+  function cardHook() {
+    const card = fakeFrame(rect(900, 200, 384, 664));
+    const ref = { current: card.frame };
+    return { card, hook: renderHook(() => useCardFrame(ref)) };
+  }
+
+  it("posts once to the running crest and to a mounted character card, to our origin only", () => {
+    const crest = fakeFrame();
+    setVantageFrame(crest.frame);
+    useTowerBus.setState({ on: true });
+    const { card, hook } = cardHook();
+    expect(flareTower("new-high")).toBe(2);
+    expect(crest.sent).toEqual([{ message: flare, origin: window.location.origin }]);
+    expect(card.sent).toEqual([{ message: flare, origin: window.location.origin }]);
+    hook.unmount();
+  });
+
+  it("stops reaching the card once it unmounts", () => {
+    const { card, hook } = cardHook();
+    hook.unmount();
+    expect(flareTower("new-high")).toBe(0);
+    expect(card.sent).toEqual([]);
+  });
+
+  it("skips a paused crest — a flare is a moment, not something to play when next seen", () => {
+    const crest = fakeFrame();
+    setVantageFrame(crest.frame);
+    expect(flareTower("new-high")).toBe(0);
+    expect(crest.sent).toEqual([]);
+  });
+
+  it("sends nothing under reduced motion", () => {
+    reduceMotion();
+    const crest = fakeFrame();
+    setVantageFrame(crest.frame);
+    useTowerBus.setState({ on: true });
+    const { card, hook } = cardHook();
+    expect(flareTower("new-high")).toBe(0);
+    expect(crest.types()).toEqual([]);
+    expect(card.types()).toEqual([]);
+    hook.unmount();
+  });
+
+  it("is never replayed: a frame that says tower:ready gets the dials and the run state only", () => {
+    const crest = fakeFrame();
+    setVantageFrame(crest.frame);
+    useTowerBus.setState({ on: true });
+    flareTower("new-high");
+    const late = fakeFrame();
+    setVantageFrame(late.frame);
+    replayToVantage();
+    expect(late.types()).toEqual(["tower:mood", "tower:run"]);
+    expect(crest.types()).toEqual(["tower:flare"]);
   });
 });
