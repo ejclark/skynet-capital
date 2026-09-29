@@ -53,8 +53,15 @@ describe("flareGain — a bounded multiple of the resting light", () => {
     expect(flareGain(-1, "reach")).toBe(1);
   });
 
-  it("never more than doubles any light", () => {
-    for (const peak of Object.values(FLARE_PEAK)) expect(peak).toBeLessThan(1);
+  it("keeps the Eye's own fire under double, so the pupil stays readable at the peak", () => {
+    expect(FLARE_PEAK.body).toBeLessThan(1);
+  });
+
+  it("carries the energy outward, and bounds it: no light rises past four times itself", () => {
+    for (const light of ["glow", "reach", "embers"] as const) {
+      expect(FLARE_PEAK[light]).toBeGreaterThan(FLARE_PEAK.body);
+    }
+    for (const peak of Object.values(FLARE_PEAK)) expect(peak).toBeLessThanOrEqual(3);
   });
 });
 

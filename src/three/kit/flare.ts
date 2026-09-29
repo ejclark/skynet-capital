@@ -29,8 +29,16 @@ export const FLARE_SECONDS = FLARE.attack + FLARE.hold + FLARE.release;
  * How far each light rises at the peak, as a fraction of its resting self: the Eye's own fire (its
  * warm ramp only — the electric lines stay as quiet as they were), the glow lights that light its
  * crown, the reach of the fire round its rim, and the embers shed off it.
+ *
+ * THE ENERGY GOES OUTWARD, NOT INTO THE CORE (Eric on #3972, 2026-09-29: "There is room to increase
+ * the energy/glow from the eye"). A ladder was rendered and measured (the PR's picture): raising the
+ * Eye's own fire past about ×2 only drives the iris toward white under ACES — the pupil fades, which
+ * is the figure lost to the ground (docs/art/EYE.md) — and the brightest 2% of the crown frame gains
+ * a few levels at most (231 → 249 of 255 from ×1.5 to ×4). What reads as more energy is light that
+ * leaves the Eye: the glow lights on the horns and crown stone, the fire round the rim, the sparks.
+ * So the core stays a modest lift and those three carry the flare.
  */
-export const FLARE_PEAK = { body: 0.5, glow: 0.7, reach: 0.5, embers: 0.8 } as const;
+export const FLARE_PEAK = { body: 0.6, glow: 3.0, reach: 1.8, embers: 3.0 } as const;
 
 const smooth = (x: number): number => {
   const c = Math.min(1, Math.max(0, x));
