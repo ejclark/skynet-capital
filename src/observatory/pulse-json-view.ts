@@ -45,7 +45,16 @@ interface PulseWeek {
   readonly bar: number;
 }
 
+/**
+ * One headline fact. The `key` is the contract a second reader selects on — the net-worth card's
+ * standing line picks `winRate`, `profitFactor` and `maxDrawdown` out of this list so the Profile
+ * page and the Pulse page can never disagree (#3964). Matching on `label` would have made display
+ * copy load-bearing; the key is the stable name, the label is the words.
+ */
+type PulseTileKey = "equity" | "netRealized" | "winRate" | "profitFactor" | "maxDrawdown";
+
 interface PulseTile {
+  readonly key: PulseTileKey;
   readonly label: string;
   readonly value: string;
   readonly note: string;
@@ -162,27 +171,32 @@ export function deskPulseView(
   const drawdown = equityDrawdown(samples);
   const tiles: PulseTile[] = [
     {
+      key: "equity",
       label: "Equity",
       value: formatCurrency(snapshot.equity),
       note: `cash ${formatCurrency(snapshot.cash)}`,
     },
     {
+      key: "netRealized",
       label: "Net realized",
       value: formatSigned(stats.netRealized),
       note: stats.trades === 0 ? "needs a closed trade" : "booked, not on paper",
       ...(stats.trades > 0 ? { tone: plClass(stats.netRealized) } : {}),
     },
     {
+      key: "winRate",
       label: "Win rate",
       value: formatPctOrDash(stats.winRate),
       note: stats.trades === 0 ? "needs a closed trade" : `${stats.wins}W · ${stats.losses}L`,
     },
     {
+      key: "profitFactor",
       label: "Profit factor",
       value: formatRatio(stats.profitFactor, "×"),
       note: stats.profitFactor === null ? "nothing lost yet" : "wins ÷ losses; above 1× is paying",
     },
     {
+      key: "maxDrawdown",
       label: "Max drawdown",
       value: drawdown ? `${drawdown.ddPct.toFixed(2)}%` : "—",
       note: drawdown ? `from peak ${formatCurrency(drawdown.peak)}` : "needs two equity samples",

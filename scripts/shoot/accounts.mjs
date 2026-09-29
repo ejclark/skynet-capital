@@ -719,6 +719,51 @@ const ericEquityCurve = {
   range: "1M",
   points: ericCurve.map((p) => ({ t: p.day.toISOString(), value: p.value })),
 };
+
+// The Pulse payload the net-worth card's standing line reads (#3964). Only the three headline tiles
+// matter to the card, but the shape is the server's whole `DeskPulseView` so the frame proves the
+// selection, not a trimmed stub. Every figure is derived from fixtures already on this page, so the
+// frame can't imply something false: the record counts `ericActivity`'s own seven closes (5W · 2L →
+// 71.4%; $3,105 won ÷ $765 lost → 4.06×) and the drawdown is the gap to the same all-time high the
+// card's meter draws ($3,368 below the $1,051,200 peak → 0.32%).
+const ericPulse = {
+  pulse: {
+    curve: null,
+    weeks: [],
+    race: null,
+    streaks: [],
+    tiles: [
+      {
+        key: "equity",
+        label: "Equity",
+        value: "$1,047,832.14",
+        note: "cash $847,200.00",
+      },
+      {
+        key: "netRealized",
+        label: "Net realized",
+        value: "+$2,340.00",
+        note: "booked, not on paper",
+        tone: "pos",
+      },
+      { key: "winRate", label: "Win rate", value: "71.4%", note: "5W · 2L" },
+      {
+        key: "profitFactor",
+        label: "Profit factor",
+        value: "4.06×",
+        note: "wins ÷ losses; above 1× is paying",
+      },
+      {
+        key: "maxDrawdown",
+        label: "Max drawdown",
+        value: "0.32%",
+        note: "from peak $1,051,200.00",
+        tone: "neg",
+      },
+    ],
+  },
+};
+
 const spyBars = {
   symbol: "SPY",
   bars: spyCurve.map((p) => {
@@ -926,6 +971,7 @@ const { page, origin, out, close } = await openShell({
     "/api/desk/human-eric": ericDesk,
     "/api/desk/bot-sauron": sauronDesk,
     "/api/desk/human-eric/activity": ericActivity,
+    "/api/desk/human-eric/pulse": ericPulse,
     "/api/desk/bot-sauron/activity": sauronActivity,
     "/api/desk/bot-sauron/heartbeat": sauronHeartbeat,
     "/api/desk/bot-sauron/decisions": sauronNoTrades,
@@ -948,6 +994,15 @@ await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
+
+// The standing line (#3964): the member's own record inside the net-worth card — win rate, profit
+// factor, max drawdown, then the link to the rest of this account's Pulse. Its own frame at 390
+// because unlike the card's footer this row does NOT hide at phone width, and that is the claim
+// worth proving by eye.
+await page.locator(".standing-line").scrollIntoViewIfNeeded();
+await page.waitForTimeout(150);
+await shootCockpit("accounts-standing-phone");
+await page.evaluate(() => window.scrollTo(0, 0));
 
 // The cockpit clock (#3807 slice 2·1): the market calendar's head under the section switch —
 // OUTSIDE the sticky block at 390 — and, under the net-worth card, the events on what this book
@@ -1044,6 +1099,7 @@ await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await page.locator(".decisions").waitFor();
+await page.locator(".standing-line").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
 // The cockpit clock at 1280 (#3807 slice 2·1): the head as the sticky block's last row, the

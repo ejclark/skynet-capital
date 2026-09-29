@@ -77,8 +77,23 @@ describe("deskPulseView", () => {
     expect(view.curve).toBeNull(); // still accruing
     expect(view.weeks).toEqual([]); // needs a closed trade
     expect(view.race).toBeNull(); // no founding baseline yet
-    expect(view.tiles.find((t) => t.label === "Equity")?.value).toBe("$120,000");
-    expect(view.tiles.find((t) => t.label === "Net realized")?.note).toBe("needs a closed trade");
+    expect(view.tiles.find((t) => t.key === "equity")?.value).toBe("$120,000");
+    expect(view.tiles.find((t) => t.key === "netRealized")?.note).toBe("needs a closed trade");
+  });
+
+  // #3964: the net-worth card's standing line picks three of these tiles out of the same payload,
+  // so a second surface can show the member's record without a second computation to drift from.
+  // It selects on `key`, which means the key is a contract — renaming a label must stay harmless.
+  it("names each headline fact with a stable key, not just display copy", () => {
+    const view = deskPulseView(snapshot(), []);
+    expect(view.tiles.map((t) => t.key)).toEqual([
+      "equity",
+      "netRealized",
+      "winRate",
+      "profitFactor",
+      "maxDrawdown",
+    ]);
+    for (const tile of view.tiles) expect(tile.label.length).toBeGreaterThan(0);
   });
 
   it("scores the doubling race from the founding baseline and banks a crossed trophy", () => {

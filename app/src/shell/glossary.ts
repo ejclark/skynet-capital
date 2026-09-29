@@ -109,6 +109,24 @@ export const GLOSSARY = {
     plain:
       "Buy back the call you sold and sell a new one, usually for a later date or a higher price, in one order.",
   },
+  // The standing line's three facts (#3964). The labels deliberately match the Pulse page's tiles
+  // word for word: one number on two surfaces must not carry two names, so the teaching happens in
+  // the popover rather than by inventing a friendlier label on one of them.
+  winRate: {
+    label: "Win rate",
+    plain:
+      "Of the trades you've closed, the share that made money. It says nothing about size — a high win rate can still lose overall if the losses are bigger.",
+  },
+  profitFactor: {
+    label: "Profit factor",
+    plain:
+      "Every dollar your winning trades made, divided by every dollar your losers lost. Above 1× means the wins are paying for the losses.",
+  },
+  maxDrawdown: {
+    label: "Max drawdown",
+    plain:
+      "The deepest fall from a peak your account has recorded. It's the drop you'd have had to sit through, not a loss you booked.",
+  },
   delta: {
     label: "Move per $1",
     plain:
