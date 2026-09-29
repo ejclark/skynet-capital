@@ -6,8 +6,9 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { Route } from "../../src/routes/settings";
+import { usePrefs } from "../../src/shell/prefs";
 
 /**
  * Settings' account section speaks in places that exist. `/claim` is a bare redirect to Settings
@@ -63,5 +64,55 @@ describe("Settings → Account with no linked account", () => {
     const line = await screen.findByText(/doesn't resolve to an account yet/);
     expect(line.textContent).toContain("ask a league owner to link one to your sign-in");
     expect(line.textContent).not.toContain("/claim");
+  });
+});
+
+/**
+ * Settings → Preferences → "Tower motion" (#3807 slice 3b-1): the member's own pause for the
+ * tower's ambient motion (WCAG 2.2.2). Moving is the default; the reason is visible text; a device
+ * that asks for reduced motion reads Still, locked, with its own line.
+ */
+describe("Settings → Preferences, the tower's motion", () => {
+  afterEach(() => {
+    act(() => usePrefs.getState().setCrest("live"));
+    Reflect.deleteProperty(window, "matchMedia");
+  });
+
+  it("offers Moving (pressed by default) and Still, with the reason under it; Still takes at once", async () => {
+    mountSettings("/settings?section=preferences");
+    const group = await screen.findByRole("group", { name: "Tower motion" });
+    const moving = within(group).getByRole("button", { name: /Moving/ });
+    const still = within(group).getByRole("button", { name: /Still/ });
+    expect(moving.getAttribute("aria-pressed")).toBe("true");
+    expect(still.getAttribute("aria-pressed")).toBe("false");
+    const reason = screen.getByText(
+      "Still shows one frame and moves only when the Eye looks at something you pick.",
+    );
+    expect(group.getAttribute("aria-describedby")).toBe(reason.id);
+    fireEvent.click(still);
+    expect(usePrefs.getState().crest).toBe("still");
+    expect(still.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("under the device's reduced motion: reads Still, locked, and says why", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+    mountSettings("/settings?section=preferences");
+    const group = await screen.findByRole("group", { name: "Tower motion" });
+    expect(group).toBeDisabled();
+    expect(within(group).getByRole("button", { name: /Still/ }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(
+      screen.getByText("Your device asks for reduced motion, so the tower stays still."),
+    ).toBeInTheDocument();
+    expect(usePrefs.getState().crest).toBe("live");
   });
 });
