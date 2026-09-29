@@ -3,9 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MarketEvent } from "../../src/domain/market-events.js";
 import {
+  docsMentioning,
   eventCalls,
   findResearchDoc,
   listResearch,
+  MENTION_SCOPE_MAX,
   researchedEventIds,
   shelfSymbols,
   symbolResearch,
@@ -318,5 +320,87 @@ describe("findResearchDoc — the forward-test register is composed from per-eve
       'href="/research/events/nvda-2026-08-26-print"',
     );
     expect(listResearch(root).studies.map((d) => d.slug)).not.toContain("forward-tests/legacy");
+  });
+});
+
+/**
+ * THE MENTION SEARCH (#3962) — the board's `sym:` scope used to match a slug only, so a study about
+ * NVDA's suppliers never showed for NVDA. These cases pin the rule that replaced it, and the claim
+ * the fast path rests on: bracketing every ticker-shaped word in one pass is the SAME rule as
+ * testing `\bNVDA\b`, which is what lets one read answer a whole watchlist.
+ */
+describe("docsMentioning", () => {
+  /** A shelf whose text is the point: who names a symbol, who only mentions it, who neither. */
+  function mentionRoot(): string {
+    const root = mkdtempSync(join(tmpdir(), "mentions-"));
+    mkdirSync(join(root, "events"));
+    mkdirSync(join(root, "weeks"));
+    writeFileSync(
+      join(root, "supply-chain.md"),
+      "# The supply chain\n\nNVDA's suppliers (AVGO) ship into it; MU is the memory leg.\n",
+    );
+    writeFileSync(join(root, "quiet-study.md"), "# Quiet\n\nNo tickers named here at all.\n");
+    writeFileSync(
+      join(root, "near-miss.md"),
+      "# Near miss\n\nNVDAX is a fund, NVDA2 a typo, NVDA_X a key, and nvda lowercase.\n",
+    );
+    writeFileSync(join(root, "TEMPLATE.md"), "# Never searched — NVDA\n");
+    writeFileSync(join(root, "events", "nvda-2026-08-26-print.md"), "# NVDA print\n\nBody.\n");
+    writeFileSync(
+      join(root, "events", "cpi-2026-09-11.md"),
+      "# CPI\n\nAVGO reacts; NVDA does not.\n",
+    );
+    writeFileSync(join(root, "weeks", "2026-W37.md"), "# Week 37\n\nMU and AVGO both print.\n");
+    return root;
+  }
+
+  it("finds every shelved doc whose text names the symbol, studies and ledgers alike", () => {
+    const found = docsMentioning(["NVDA"], mentionRoot());
+    expect(found.NVDA).toEqual([
+      "supply-chain",
+      "events/cpi-2026-09-11",
+      "events/nvda-2026-08-26-print",
+    ]);
+  });
+
+  it("answers a whole watchlist from the same pass, each symbol on its own", () => {
+    const found = docsMentioning(["AVGO", "MU"], mentionRoot());
+    expect(found.AVGO).toEqual(["supply-chain", "weeks/2026-W37", "events/cpi-2026-09-11"]);
+    expect(found.MU).toEqual(["supply-chain", "weeks/2026-W37"]);
+  });
+
+  it("returns an empty list — an honest answer — for a symbol nothing mentions", () => {
+    expect(docsMentioning(["ZZZT"], mentionRoot())).toEqual({ ZZZT: [] });
+  });
+
+  it("matches whole words only: a longer ticker, a suffixed one, and lowercase all miss", () => {
+    const found = docsMentioning(["NVDA", "NVDAX"], mentionRoot());
+    expect(found.NVDA).not.toContain("near-miss");
+    expect(found.NVDAX).toEqual(["near-miss"]);
+  });
+
+  it("agrees with the rule symbolResearch reads the same corpus with", () => {
+    const root = mentionRoot();
+    for (const sym of ["NVDA", "AVGO", "MU", "NVDAX", "ZZZT"]) {
+      const viaSearch = docsMentioning([sym], root)[sym] ?? [];
+      const viaSymbolPage = symbolResearch(sym, AS_OF, root, []);
+      const studies = (viaSymbolPage?.studies ?? []).map((d) => d.slug);
+      expect(studies).toEqual(viaSearch.filter((slug) => !slug.startsWith("events/")));
+    }
+  });
+
+  it("normalizes case and whitespace, dedupes, and searches nothing else", () => {
+    const found = docsMentioning([" nvda ", "NVDA", "not-a-symbol", "", "../etc"], mentionRoot());
+    expect(Object.keys(found)).toEqual(["NVDA"]);
+    expect(found.NVDA).toContain("supply-chain");
+  });
+
+  it("caps how many symbols one search will answer for", () => {
+    const many = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG", "HHH", "III", "JJJ"];
+    expect(Object.keys(docsMentioning(many, mentionRoot()))).toHaveLength(MENTION_SCOPE_MAX);
+  });
+
+  it("never searches a template, the same skip rule the shelf listing applies", () => {
+    expect(docsMentioning(["NVDA"], mentionRoot()).NVDA).not.toContain("TEMPLATE");
   });
 });
