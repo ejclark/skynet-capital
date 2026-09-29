@@ -165,6 +165,17 @@ describe("the zero-account door", () => {
     expect(document.querySelector('a[href*="/onboarding"]')).toBeNull();
   });
 
+  it("tells a member whose account is already on the board not to re-add it or regenerate keys", async () => {
+    // Moved from the old standings board's "Not connected" banner (#3816 slice 7).
+    mountAccounts("/accounts");
+    const note = await screen.findByText(/Already see your account on the leaderboard\?/);
+    const text = note.closest("p")?.textContent ?? "";
+    expect(text).toMatch(/Don't add it again/);
+    expect(text).toMatch(/don't regenerate its keys/);
+    expect(text).toMatch(/Ask the league owner to link your sign-in/);
+    expect(text).not.toMatch(/Rotate/);
+  });
+
   it("makes the head's words the control: they open the connect guide and scroll it into view", async () => {
     // #3807 slice 2e — the phase-2 crawl's one regression: "connect one in Onboarding below"
     // named an action with nothing in reach.

@@ -66,6 +66,26 @@ function stepDetail(step: OnboardingStep): string {
     : step.detail;
 }
 
+/**
+ * NOT CONNECTED YET — the two exits a sign-in with no linked account has (moved here from the old
+ * standings board's "Not connected" banner, #3816 slice 7). Brand new is the guide below; but an
+ * account can already be on the leaderboard, syncing, with nothing tying it to this sign-in. The
+ * old vague copy walked that member into a duplicate add and a key regeneration that revoked their
+ * working pair (2026-08-25), so the don'ts are said out loud. The old fix pointed at a Rotate link a
+ * member with no account can't reach — so the one exit named is the league owner, who links a
+ * sign-in to an account without any keys.
+ */
+function AlreadyOnTheBoard(): ReactElement {
+  return (
+    <p className="ob-step-detail ob-step-warn">
+      <b>Already see your account on the leaderboard?</b> It's there and syncing, but nothing ties
+      it to this sign-in yet. Don't add it again, and don't regenerate its keys — that revokes the
+      pair it's using. Ask the league owner to link your sign-in to it; no keys involved. Already
+      regenerated them? Tell the league owner that too.
+    </p>
+  );
+}
+
 function ConnectStep({
   step,
   data,
@@ -87,6 +107,7 @@ function ConnectStep({
         <div className="ob-step-body">
           <div className="ob-step-title">{step.title}</div>
           <div className="ob-step-detail">{step.detail}</div>
+          {step.done ? null : <AlreadyOnTheBoard />}
         </div>
         {step.done && data.account ? (
           <span className="status status-live">
