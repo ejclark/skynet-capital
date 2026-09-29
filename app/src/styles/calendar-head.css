@@ -81,7 +81,8 @@
 /* R&D's band head (#3807 slice 2a): the same row leads the stage — a rule under it, the pinned
    day's Clear on the row, the month grid folded beneath (a disclosure until the popover/sheet
    lands; `event-horizon.tsx` says why). The grid keeps its compact calendar size inside the fold. */
-.rx-band {
+.rx-band,
+.trade-clock {
   margin: 0 0 16px;
   padding: 0 0 10px;
   border-bottom: 1px solid var(--border);
@@ -135,4 +136,21 @@ a.held-event:hover {
 .held-event-sym {
   font-family: var(--mono);
   font-weight: 700;
+}
+
+/* Trade's head (#3807 slice 3b-2, `shell/trade-clock.tsx`): the same row leading the stage, its
+   line — what is dated on the ticket's symbol and market-wide — the row's last line, beside the
+   tower's slot (never under it: the slot's 176px of right padding holds for the whole row). */
+.trade-clock .held-events {
+  flex: 1 1 100%;
+  margin: 0;
+}
+@media (max-width: 860px) {
+  .trade-clock .eh-head {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+  .trade-clock .eh-lens-row {
+    flex: 1 1 100%;
+  }
 }

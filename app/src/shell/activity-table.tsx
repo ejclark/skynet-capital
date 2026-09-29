@@ -1,6 +1,8 @@
+import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import type { ActivityReasoning, DeskActivityEvent } from "../live/desk";
+import { cycleAnchor } from "./cycle-anchor";
 
 /**
  * The activity ledger as a table (#738 — the Cockpit's Activity section). Replaces the old
@@ -26,9 +28,14 @@ import type { ActivityReasoning, DeskActivityEvent } from "../live/desk";
 export function ActivityTable({
   events,
   showPlaybook = true,
+  deskId,
 }: {
   readonly events: readonly DeskActivityEvent[];
   readonly showPlaybook?: boolean;
+  /** Whose ledger this is — needed to link a fill's decision to the whole round on that account's
+   *  Heartbeat (#3961). Omitted where one table merges several accounts' rows, since a row carries
+   *  no account of its own: the count still renders, the link honestly does not. */
+  readonly deskId?: string;
 }): ReactElement {
   const withWhy = events.some((event) => event.reasoning);
   return (
@@ -59,6 +66,7 @@ export function ActivityTable({
                 event={event}
                 withWhy={withWhy}
                 showPlaybook={showPlaybook}
+                {...(deskId ? { deskId } : {})}
               />
             ))}
           </tbody>
@@ -68,12 +76,50 @@ export function ActivityTable({
   );
 }
 
+/** THE REST OF THE ROUND (#3961) — a fill is one decision out of a pass that usually weighed
+ *  several: siblings it rejected or skipped, ideas the risk guards refused outright. The count
+ *  rides here because it is the one number that says how much was weighed; the round itself stays
+ *  one link away on Heartbeat rather than being copied into this row (`docs/IA.md` §8.1 — one home
+ *  per fact, a joint renders as a row or a link). Both halves are absent for a fill whose decision
+ *  predates the round being addressable, never faked. The link wears `door-link` — the house's
+ *  "these words are the way in" style, accent AND underline, never the hue alone (docs/BRAND.md). */
+function RoundLine({
+  why,
+  deskId,
+}: {
+  readonly why: ActivityReasoning;
+  readonly deskId?: string;
+}): ReactElement | null {
+  const anchor = why.cycleAt ? cycleAnchor(why.cycleAt) : undefined;
+  const counted =
+    why.rawCount !== undefined && why.guardedCount !== undefined
+      ? `${why.rawCount} idea${why.rawCount === 1 ? "" : "s"} → ${why.guardedCount} past the guards`
+      : undefined;
+  if (!(counted || (anchor && deskId))) return null;
+  return (
+    <div className="why-round">
+      <dt>The round</dt>
+      <dd>
+        {counted}
+        {counted && anchor && deskId ? " · " : null}
+        {anchor && deskId ? (
+          <Link className="door-link" to="/u/$id/decisions" params={{ id: deskId }} hash={anchor}>
+            the whole pass
+          </Link>
+        ) : null}
+      </dd>
+    </div>
+  );
+}
+
 function WhyDetail({
   why,
   showPlaybook,
+  deskId,
 }: {
   readonly why: ActivityReasoning;
   readonly showPlaybook: boolean;
+  readonly deskId?: string;
 }): ReactElement {
   return (
     <dl className="more-grid why-grid">
@@ -112,6 +158,7 @@ function WhyDetail({
           <dd>{why.guardDelta}</dd>
         </div>
       ) : null}
+      <RoundLine why={why} {...(deskId ? { deskId } : {})} />
     </dl>
   );
 }
@@ -120,10 +167,12 @@ function ActivityRow({
   event,
   withWhy,
   showPlaybook,
+  deskId,
 }: {
   readonly event: DeskActivityEvent;
   readonly withWhy: boolean;
   readonly showPlaybook: boolean;
+  readonly deskId?: string;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const when = new Date(event.at);
@@ -195,7 +244,11 @@ function ActivityRow({
       {open && event.reasoning ? (
         <tr className="row-why">
           <td colSpan={9}>
-            <WhyDetail why={event.reasoning} showPlaybook={showPlaybook} />
+            <WhyDetail
+              why={event.reasoning}
+              showPlaybook={showPlaybook}
+              {...(deskId ? { deskId } : {})}
+            />
           </td>
         </tr>
       ) : null}

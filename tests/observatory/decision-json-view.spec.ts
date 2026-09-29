@@ -112,6 +112,45 @@ describe("decisionCyclesView", () => {
     });
   });
 
+  /** #3961 — a round that placed something also refused ideas, and those showed nowhere: the view
+   *  gated `refusedIntents` to a total refusal, and Heartbeat hid every traded round outright. */
+  it("carries the refused ideas of a round that ALSO placed, once the guards were attributed", () => {
+    const placed = intent({ symbol: "NVDA", quantity: 10 });
+    const blocked = intent({ symbol: "AMD", quantity: 40, reason: "breakout retest" });
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [placed, blocked],
+        guardedIntents: [placed],
+        outcomes: [{ intent: placed, action: "placed" }],
+        refusals: [{ intent: blocked, reason: "position-cap" }],
+      }),
+    ]);
+    expect(view[0]?.status).toBe("placed");
+    expect(view[0]?.refusedIntents).toEqual([
+      {
+        symbol: "AMD",
+        side: "buy",
+        quantity: 40,
+        reason: "breakout retest",
+        guardReason: "the per-position cap left no room",
+      },
+    ]);
+  });
+
+  /** The other half of the same rule: with no attributed `refusals`, the bare raw intents are only
+   *  honest when nothing survived — on a round that placed, they would name the placed intent. */
+  it("names no refused ideas on a placed round whose record predates guard-reason capture", () => {
+    const view = decisionCyclesView([
+      record({
+        rawIntents: [intent(), intent({ symbol: "AMD" })],
+        guardedIntents: [intent()],
+        outcomes: [{ intent: intent(), action: "placed" }],
+      }),
+    ]);
+    expect(view[0]?.status).toBe("placed");
+    expect(view[0]).not.toHaveProperty("refusedIntents");
+  });
+
   it("falls back to an unattributed refusal when the record predates guard-reason capture", () => {
     const view = decisionCyclesView([
       record({

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
 import { Route } from "../../src/routes/trade";
 
 /**
@@ -55,6 +56,13 @@ rstest.mock("../../src/live/alerts", () => ({
   fetchDeskAlerts: () =>
     Promise.resolve({ available: false, reason: "unlinked", alerts: [], dismissable: false }),
   dismissDeskAlert: () => Promise.reject(new Error("not used in this spec")),
+}));
+// The market calendar's head (#3807 slice 3b-2) reads the research corpus; an empty one keeps the
+// tree off the network — its line has its own spec (`tests/shell/trade-clock.spec.tsx`).
+rstest.mock("../../src/live/research", () => ({
+  ...actualResearch,
+  fetchResearch: () =>
+    Promise.resolve({ events: [], closures: [], calls: [], symbols: [], studies: [], ledgers: [] }),
 }));
 rstest.mock("../../src/live/bars", () => ({
   fetchBars: () => Promise.resolve({ barsNote: "Fixture bars note — the chart section is here." }),
@@ -107,8 +115,7 @@ describe("/trade section switch", () => {
         screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
       ).toBeInTheDocument(),
     );
-    // The rail left the frame (#3807 slice 2a): the folded switch is the row at the top of <main>,
-    // and the rail's "← Back to account" is gone — the topbar's Profile tab is that.
+    // The rail left the frame (#3807 slice 2a): the folded switch is the row at the top of <main>.
     const row = screen.getByRole("navigation", { name: "Section" });
     expect(row).toHaveClass("stage-controls");
     expect(row.closest("main")).not.toBeNull();
@@ -120,8 +127,14 @@ describe("/trade section switch", () => {
       "aria-pressed",
       "false",
     );
-    expect(screen.queryByRole("link", { name: /Back to account/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Pick a symbol to see its chart.")).not.toBeInTheDocument();
+  });
+
+  it("links back to the traded account by name, in the page head (#3816 slice 7)", async () => {
+    mountTrade("/trade?desk=human-eric");
+    const back = await screen.findByRole("link", { name: "← Back to Eric" });
+    expect(back.closest("header")).toHaveClass("page-header");
+    expect(back.getAttribute("href")).toBe("/accounts?account=human-eric");
   });
 
   it("renders ChartSection for ?section=chart, reading the committed ?symbol=", async () => {
@@ -267,6 +280,26 @@ describe("/trade the docked bench (#3407, Workbench slice 4b)", () => {
       // no switch: docked, there is nothing exclusive left to choose
       expect(screen.queryByRole("button", { name: "Chart" })).not.toBeInTheDocument();
       expect(screen.queryByText("On this page")).not.toBeInTheDocument();
+    } finally {
+      undock();
+    }
+  });
+
+  it("offers the standalone chain a door when docked — dead end 8 (#3807 slice 3b-2)", async () => {
+    const undock = dock(true);
+    try {
+      mountTrade("/trade?symbol=NVDA");
+      // The door keeps the symbol and names the pane; the case below proves `?section=chain`
+      // docked opens the chain pane. (A click is the journey's job — returning-trader j1 s6 —
+      // happy-dom answers an anchor click with its own navigation before the router's.)
+      expect(await screen.findByRole("link", { name: "Options chain" })).toHaveAttribute(
+        "href",
+        "/trade?symbol=NVDA&section=chain",
+      );
+      expect(screen.getByRole("link", { name: "Guidance for this stock" })).toHaveAttribute(
+        "href",
+        "/trade?symbol=NVDA&section=guidance",
+      );
     } finally {
       undock();
     }

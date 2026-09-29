@@ -81,9 +81,23 @@
   flex: 1 1 480px;
   min-width: 0;
 }
+/* Trade's way back to the account it is trading (#3816 slice 7) — above the title, one line at 390. */
+.trade-back-link {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
 .trade-guidance-link {
   display: inline-block;
   margin-top: 16px;
   font-size: 13.5px;
   white-space: nowrap;
+}
+/* Docked, the Chain's door rides beside Guidance's (#3807 slice 3b-2, `bench-doors.tsx`). */
+.trade-bench-doors {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
 }

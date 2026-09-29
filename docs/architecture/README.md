@@ -354,7 +354,7 @@ C4Dynamic
 | 42 envelope-scan.mjs (25, 0.12) | classifyDiff(), breachOf(), globToRegExp() | operating:envelope (runtime:ci) |
 | 43 structure-risk.ts (24) · 44 probability.ts (28) · 58 pricing.ts (22) · 63 candidate-score.ts (19) · 77 payoff-surface.ts (15) | describeMechanics(), probabilityOfProfit(), impliedVolatility() | runtime:api (content: options analytics, src/options) — a pure library family; only reached by api guidance and CLIs |
 | 45 builders.ts (12, 0.16) · 117 authenticator.spec.ts · 152 comms-scan.spec.ts · 157 dockerignore-research.spec.ts · 162 deploy-lag.spec.ts · 138 dashboard-board-routes.spec.ts | NewsFaderPersona, HARDCORE_SAURON_CONFIG, FakeRes | runtime:tests (138 also touches api router: serveBoardFrame is src code named by a test-file hub) |
-| 46 research-view.ts (23, 0.12) | agendaBandPanel(), BANDS, callChip() | none — deleted view; event-agenda.ts + research-json-view survive → runtime:api content |
+| 46 research-view.ts (23, 0.12) | agendaBandPanel(), BANDS, callChip() | none — deleted view; research-json-view survives → runtime:api content (event-agenda.ts deleted, #3816) |
 | 47 EquitySample (11, 0.17) | EquitySample, HistoryStore, rehydrateHistory() | runtime:api (datasource/history) + runtime:appvol |
 | 48 comms-scan.mjs (27) · 55 config-audit.mjs (25) · 97 incident-scan.mjs (13) · 124 feedback-scan.mjs (9) | parseLog(), computeFloorFindings(), failedMainRuns() | operating:secretary (ride-along scans) / operating:gates (incident = learning coach) |
 | 49 unusual-flow.ts (19) · 69 UnusualFlowScan (6) · 107 unusual-flow-metrics.ts (8) | assessFlow(), AlpacaOptionsFlowSource, UnusualFlowStore | none in practice — src/options is claimed by runtime:api but these files are reached only via CLI scan:flow (SKYNET_FLOW_DIR); RUNTIME lists them as undocumented |
@@ -381,7 +381,7 @@ C4Dynamic
 | 85 dashboard-self-service-routes.ts (13, 0.32) | handleAccountSelfServiceRoute(), resolveOwnedIds() | none — deleted; now admin-api-routes / settings-api-routes → runtime:api router |
 | 86 ci-medic.mjs (15) · 122 ci-medic-logs.mjs (7) | gatherFailures(), issueBody(), sanitizeLog() | operating:mp_repair — renamed since snapshot to scripts/moneypenny/repair.mjs + repair-logs.mjs |
 | 88 sentiment-tracker.ts (5, 0.19) | SentimentTracker, scoreSentiment(), NewsArticle | runtime:bots (trackers) — taco-signal.ts absent from graph |
-| 89 research-view.spec.ts (12, 0.24) | monthGrid(), navBounds(), dayCell() | none — deleted view; calendar-widget.ts survives with test-only importers |
+| 89 research-view.spec.ts (12, 0.24) | monthGrid(), navBounds(), dayCell() | none — deleted view; calendar-widget.ts deleted too (#3816), its job is the app's events-agenda/calendar-head |
 | 96 deploy-lag.mjs (10) · 98 ship.sh (11, 0.36) | botsDeployLag(), scanRunBaselines(), cmd_open() | operating:ship (runtime:ci) — deploy-lag has a runtime twin in api ops-status-deploy-lag.ts |
 | 103 confirm-print-dates.ts (12, 0.23) | confirm(), datesAround(), CALENDAR_FILE | none — research CLI (confirm:print-dates) feeding operating:ledgers; excluded by RUNTIME scope |
 | 105 doc-rot-scan.mjs (8) · 106 workflow-lint.mjs (9) · 112 spec-gap-scan.mjs · 121 arch-scan.mjs · 123 dupe-scan.mjs · 135 clone-scan.mjs · 141 dead-scan.mjs · 142 dep-graph-scan.mjs | staleGraphFindings(), lintWorkflow(), BUDGET_FILE | operating:gates (coaches) — doc-rot's stale-graph check is the one existing consumer of the graph header |

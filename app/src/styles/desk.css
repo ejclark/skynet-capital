@@ -556,3 +556,14 @@ table.blotter {
 .why-grid dd {
   white-space: normal;
 }
+
+/* At phone width the blotter scrolls sideways, so a why panel laid out across the FULL table width
+   leaves its right-hand column off-screen — found while shooting #3961's round row, which landed
+   there. One column, capped to the frame, so the whole why reads at 390 without the reader having
+   to scroll the table sideways to find the rest of it. */
+@media (max-width: 700px) {
+  .why-grid {
+    grid-template-columns: 1fr;
+    max-width: 92vw;
+  }
+}

@@ -12,7 +12,7 @@
 // below was written); only the writes need Eric's PAT in a workflow. The stale sentence still sits
 // in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
 
-import { isTransientGhError } from "./gh.mjs";
+import { isTransientGhError, sleepSync } from "./gh.mjs";
 
 export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
@@ -144,32 +144,83 @@ export function findBoardItem(items = [], issueUrl) {
   return items.find((item) => item?.content?.url === issueUrl);
 }
 
+// #3979 — THE BOARD READS STALE FOR A FEW SECONDS AFTER SOMEONE ELSE'S ADD, and the add-or-find
+// above (#3954) assumed it never did. Filing an issue applies several labels in a same-second
+// burst; each `labeled` add is its own `issues` event and moneypenny-events.yml's concurrency key
+// carries the label name on purpose (#716), so the syncs for one issue run SIDE BY SIDE. Measured
+// on #3977: three runs at 02:06:26Z, one add won, and of the two that got `Content already exists`
+// two seconds later, one found the new item in `item-list` and one did not — same board, same
+// second, same 60-item count. `addProjectV2ItemById` commits before the items query serving a
+// sibling job catches up.
+//
+// So "already exists but not in the list" is a race first and a permanent state second, and the
+// single read could not tell them apart. Re-reading is what separates them: a just-added item
+// appears within seconds, an ARCHIVED one never does. Truncation is not a race and never re-reads.
+export const BOARD_LOOKUP_ATTEMPTS = 3;
+export const BOARD_LOOKUP_BASE_MS = 2000;
+
+/**
+ * Read the board for one issue's item, giving a lagging replica `attempts` tries with exponential
+ * backoff between them. Returns the last page it saw either way, so the caller's fail-closed error
+ * can quote real numbers. Stops early on a truncated page: a short list stays short however long
+ * you wait, so re-reading it only spends six seconds restating a `--limit` bug.
+ */
+function readBoardUntilItemAppears({ listItems, issueUrl, attempts, baseMs, sleep }) {
+  let seen = { items: [], counted: 0, truncated: false, reads: 0 };
+
+  for (let n = 0; n < Math.max(1, attempts); n++) {
+    if (n > 0) sleep(baseMs * 2 ** (n - 1));
+
+    const page = listItems() ?? {};
+    const items = page.items ?? [];
+    const counted = typeof page.totalCount === "number" ? page.totalCount : items.length;
+    seen = { items, counted, truncated: counted > items.length, reads: n + 1 };
+
+    const item = findBoardItem(items, issueUrl);
+    if (item) return { ...seen, item };
+    if (seen.truncated) break;
+  }
+
+  return seen;
+}
+
 /**
  * Get the board item for an issue whether or not it is already on the board: add it, and when
  * GitHub says it is already there, read its id back out of `item-list`. IO-free itself — the two
  * `gh` calls arrive as injected functions (projects-sync.mjs supplies the real ones), which is why
  * this decision lives in the pure module with the rest of the vocabulary.
  *
- * `listItems` hands back `{items, totalCount}`. Fail-closed on both ways the lookup can come up
- * empty — a truncated page, or an item GitHub counts but `item-list` won't show (an ARCHIVED item
- * is the known case) — because a silent miss here would write Status to nothing at all.
+ * `listItems` hands back `{items, totalCount}`, and is re-read with backoff while the item is
+ * missing (#3979, above). Still fails closed once the re-reads are spent — a silent miss here
+ * would write Status to nothing at all — naming the two states that survive a re-read: a truncated
+ * page, or an item GitHub counts but `item-list` won't show (an ARCHIVED item is the known case).
  */
-export function resolveBoardItem({ addItem, listItems, issueUrl }) {
+export function resolveBoardItem({
+  addItem,
+  listItems,
+  issueUrl,
+  attempts = BOARD_LOOKUP_ATTEMPTS,
+  baseMs = BOARD_LOOKUP_BASE_MS,
+  sleep = sleepSync,
+}) {
   try {
     return { item: addItem(), added: true };
   } catch (err) {
     const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
     if (!isAlreadyOnBoardError(text)) throw err;
 
-    const { items = [], totalCount } = listItems() ?? {};
-    const item = findBoardItem(items, issueUrl);
+    const { item, items, counted, truncated, reads } = readBoardUntilItemAppears({
+      listItems,
+      issueUrl,
+      attempts,
+      baseMs,
+      sleep,
+    });
     if (item) return { item, added: false };
 
-    const counted = typeof totalCount === "number" ? totalCount : items.length;
-    const truncated = counted > items.length;
     throw new Error(
       `GitHub says ${issueUrl} is already on the board, but it is not among the ${items.length} ` +
-        `items listed (${counted} counted). ` +
+        `items listed (${counted} counted) after ${reads} read${reads === 1 ? "" : "s"}. ` +
         (truncated
           ? "The item list came back truncated — raise the --limit on item-list."
           : "An archived item reads this way: un-archive it on the board, or delete it so the " +

@@ -57,7 +57,6 @@ interface EventView {
 
 interface SymbolView {
   readonly symbol: string;
-  readonly href: string;
   readonly next?: { readonly title: string; readonly date: string };
 }
 
@@ -123,7 +122,6 @@ export function researchShelfJson(
     })),
     symbols: symbols.map((entry) => ({
       symbol: entry.symbol,
-      href: `/research/symbol/${entry.symbol}`,
       ...(entry.next ? { next: { title: entry.next.title, date: entry.next.date } } : {}),
     })),
     studies: shelf.studies.map(docView),

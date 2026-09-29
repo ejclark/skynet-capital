@@ -12,6 +12,7 @@ import {
   replaceOrder,
 } from "../live/orders";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
+import { ConnectLink } from "./connect-link";
 import { ModifyForm } from "./working-order-modify";
 
 /**
@@ -245,9 +246,14 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
       <h3 className="wr-h">Working orders</h3>
       {!data.available ? (
         <p className="tkt-note">
-          {data.reason === "unlinked"
-            ? "Working orders load through your own connected account, and this session isn't linked to one yet."
-            : "Couldn't reach the broker for your working orders just now — the ticket still works; try again shortly."}
+          {data.reason === "unlinked" ? (
+            <>
+              Working orders load through your own connected account, and this session isn't linked
+              to one yet — <ConnectLink />.
+            </>
+          ) : (
+            "Couldn't reach the broker for your working orders just now — the ticket still works; try again shortly."
+          )}
         </p>
       ) : (
         <>

@@ -103,3 +103,18 @@
   gap: 8px;
   min-width: 0;
 }
+/* The include-the-traded-rounds switch (#3961). A labelled checkbox, not a hue-coded chip: the
+   state reads as a word plus the box itself, never as a colour (docs/BRAND.md → Accessibility). */
+.hb-include {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+.hb-include input {
+  accent-color: var(--accent);
+  margin: 0;
+  flex: none;
+}

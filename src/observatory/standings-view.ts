@@ -38,9 +38,10 @@ import {
  *
  * `renderStandingsContent` renders the whole view ONCE. Live updates no longer replace it: `/events`
  * carries seq-numbered patches and the page rewrites only the keyed nodes below (`data-field-key` +
- * `data-field`), so an in-flight animation, a focused control or a canvas survives every push. The
- * same markup is re-served whole at `/board/frame` for the cases a patch honestly cannot express —
- * a row appearing, the cohort lead flipping, a head-to-head compare on screen.
+ * `data-field`), so an in-flight animation, a focused control or a canvas survives every push. (It
+ * was once re-served whole at `/board/frame` for the cases a patch cannot express; the app re-reads
+ * `/api/board` instead, and that route was removed, #3816 slice 8. The static export still renders
+ * this view.)
  */
 
 export interface StandingsOptions extends DashboardViewOptions {

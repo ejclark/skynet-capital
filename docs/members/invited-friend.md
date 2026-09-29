@@ -38,6 +38,8 @@ everyone's.
 2. Place a trade from their own account, never someone else's.
 3. See where they stand in the league, and what everyone else traded.
 4. Look at a bot that is not theirs out of curiosity, without being able to touch it.
+5. Check on the bot they took over: is it running, and what does it believe right now. _(Added
+   2026-09-29, #3816 slice 9 — the Day Trader is their money too.)_
 
 Needs: *"Show me my accounts."* · *"Don't let me trade from anyone else's."* · *"Show me the
 league."*
@@ -96,6 +98,11 @@ for, and seeing one would read as "I am in the wrong place".
 2. `/app/activity` — the league's fills: the friend's XLE buy beside Eric's EEM buy. **WHEN the
    invited friend opens Activity, the app shall show the whole league's fills, other members'
    included.** Judge: can this reader tell who did what today?
+3. `/app/activity?section=pnl` — Booked P&L: realized P&L per account across the league, each a
+   link into its page (offline nothing is booked yet — the frozen fixture has no closes). **WHEN
+   the invited friend opens Booked P&L, the app shall show realized P&L for every member's
+   accounts, the friend's and the owner's alike.** Judge: can this reader tell where they stand on
+   what has been closed? _(Added 2026-09-29, #3816 slice 9.)_
 
 ### j3 — another member's bot, read only
 
@@ -107,6 +114,21 @@ for, and seeing one would read as "I am in the wrong place".
    deployment." **WHEN the invited friend reads another member's bot's heartbeat, the app shall not
    name the playbooks it runs.** Passes offline on absent data (§5). Judge: can this reader tell
    the bot is alive without learning its playbooks?
+
+### j4 — my bot
+
+_(Added 2026-09-29, #3816 slice 9 — the friend is the only member in these files who owns a bot
+and is not the owner.)_
+
+1. `/app/accounts?account=day-trader&section=heartbeat` — Profile on The Day Trader: the section
+   switch gains Heartbeat · Thesis; Heartbeat says whether the loop is alive (offline: no
+   decision trail is wired). **WHEN the invited friend opens Profile on the bot they own, the app
+   shall offer its Heartbeat and show whether it is alive.** Judge: can this reader tell whether
+   their bot is running?
+2. `/app/accounts?account=day-trader&section=thesis` — Thesis on their own bot: its standing call
+   and the markers behind it. **WHEN the invited friend opens Thesis on the bot they own, the app
+   shall show that bot's standing call.** Judge: can this reader tell what their bot believes
+   right now?
 
 **How the check was proven to bite (2026-09-26).** Pointing the friend's human link at
 `human-eric` turned j1 s1–s5 red at both widths (Eric's net worth, his EEM row, his desk on the

@@ -219,6 +219,7 @@ describe("moneypenny projects: an issue already on the board", () => {
         issueUrl: URL,
         addItem: alreadyExists,
         listItems: () => ({ items: [{ id: "PVTI_other" }], totalCount: 40 }),
+        sleep: () => undefined,
       }),
     ).toThrow(/truncated/);
   });
@@ -229,8 +230,93 @@ describe("moneypenny projects: an issue already on the board", () => {
         issueUrl: URL,
         addItem: alreadyExists,
         listItems: () => ({ items: [], totalCount: 0 }),
+        sleep: () => undefined,
       }),
     ).toThrow(/archived/);
+  });
+});
+
+// #3979: the same failure came back wearing the other half of the race. Filing #3977 applied three
+// labels in one second, moneypenny-events.yml keys concurrency by label name (#716), so three
+// `sync project status` runs raced — and the sibling that lost the add read an `item-list` that did
+// not yet carry the item the winner had just committed. Two of three runs passed; one threw the
+// fail-closed "archived" error at a board that was merely two seconds behind itself.
+describe("moneypenny projects: a board that reads stale right after a sibling's add", () => {
+  const URL = "https://github.com/ejclark/skynet-capital/issues/3977";
+  const ADDED: BoardItem = { id: "PVTI_added", content: { type: "Issue", url: URL } };
+  const alreadyExists = () => {
+    throw Object.assign(new Error("Command failed: gh project item-add 2 --owner ejclark"), {
+      stderr: "GraphQL: Content already exists in this project (addProjectV2ItemById)\n",
+    });
+  };
+
+  it("re-reads the board and finds the item a lagging first read missed", () => {
+    const pages = [
+      { items: [{ id: "PVTI_other" }], totalCount: 1 },
+      { items: [{ id: "PVTI_other" }, ADDED], totalCount: 2 },
+    ];
+    const slept: number[] = [];
+
+    const resolved = resolveBoardItem({
+      issueUrl: URL,
+      addItem: alreadyExists,
+      listItems: () => pages.shift() ?? { items: [], totalCount: 0 },
+      sleep: (ms) => slept.push(ms),
+    });
+
+    expect(resolved).toEqual({ item: ADDED, added: false });
+    expect(slept).toEqual([2000]); // backed off once before the second read, never sooner
+  });
+
+  it("backs off exponentially and spends every attempt before failing closed", () => {
+    const slept: number[] = [];
+    let reads = 0;
+
+    expect(() =>
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: alreadyExists,
+        listItems: () => {
+          reads += 1;
+          return { items: [], totalCount: 0 };
+        },
+        sleep: (ms) => slept.push(ms),
+      }),
+    ).toThrow(/after 3 reads/);
+    expect(reads).toBe(3);
+    expect(slept).toEqual([2000, 4000]);
+  });
+
+  it("never re-reads a truncated page — a short list stays short however long you wait", () => {
+    let reads = 0;
+    expect(() =>
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: alreadyExists,
+        listItems: () => {
+          reads += 1;
+          return { items: [{ id: "PVTI_other" }], totalCount: 40 };
+        },
+        sleep: () => undefined,
+      }),
+    ).toThrow(/truncated/);
+    expect(reads).toBe(1);
+  });
+
+  it("still never calls item-list at all when the add itself succeeds", () => {
+    const fresh: BoardItem = { id: "PVTI_new", content: { url: URL } };
+    expect(
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: () => fresh,
+        listItems: () => {
+          throw new Error("item-list must not be called when the add succeeds");
+        },
+        sleep: () => {
+          throw new Error("a successful add must never sleep");
+        },
+      }),
+    ).toEqual({ item: fresh, added: true });
   });
 });
 

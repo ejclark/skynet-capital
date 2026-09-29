@@ -9,7 +9,6 @@ import {
   fetchDeskActivity,
 } from "../live/desk";
 import { parseOn } from "../live/horizon-params";
-import { meetMoneypenny } from "../live/moneypenny";
 import { fetchNetWorth } from "../live/networth";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { ALL_ACCOUNTS } from "../shell/account-switcher";
@@ -87,7 +86,10 @@ function ActivitySection({ deskIds }: { readonly deskIds: readonly string[] }): 
     return <p className="note">No durable activity ledger is wired in this deployment.</p>;
   if (activity.data.events.length === 0)
     return <p className="note">No recorded orders in the ledger's window.</p>;
-  return <ActivityTable events={activity.data.events} />;
+  // One account linked → each bot fill can link to its round on that account's Heartbeat (#3961).
+  // Several merged → a row carries no account of its own, so the link is honestly left off.
+  const only = deskIds.length === 1 ? deskIds[0] : undefined;
+  return <ActivityTable events={activity.data.events} {...(only ? { deskId: only } : {})} />;
 }
 
 const asId = (raw: unknown): string | undefined =>
@@ -96,7 +98,7 @@ const asId = (raw: unknown): string | undefined =>
 function AccountsPage(): ReactElement {
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
-  const { account: asked, q, moneypenny } = search;
+  const { account: asked, q } = search;
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const defaultAccount = useDefaultAccount();
@@ -116,14 +118,6 @@ function AccountsPage(): ReactElement {
       });
     }, 300);
   };
-
-  // `?moneypenny=intro` — the deep link every "Meet Moneypenny ›" uses (M·01's step 2, once
-  // `/onboarding`'s): open her rail with the intro, then drop the param so a remount can't refire.
-  useEffect(() => {
-    if (moneypenny !== "intro") return;
-    void meetMoneypenny();
-    void navigate({ search: (prev) => ({ ...prev, moneypenny: undefined }), replace: true });
-  }, [moneypenny, navigate]);
 
   if (settings.isPending || settings.isError)
     return (
@@ -341,8 +335,6 @@ export const Route = createFileRoute("/accounts")({
     ...(parseLens(search.lens) && search.lens !== "list" ? { lens: parseLens(search.lens) } : {}),
     // The Events section's picked day (#3807 slice 2c) — its own param, never the range's `?on=`.
     ...(parseOn(search.events) ? { events: parseOn(search.events) } : {}),
-    // Moneypenny's intro deep link (M·01's step 2), consumed on arrival.
-    ...(search.moneypenny === "intro" ? { moneypenny: "intro" as const } : {}),
   }),
   component: AccountsPage,
 });

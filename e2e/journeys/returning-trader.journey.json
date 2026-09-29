@@ -85,13 +85,9 @@
           "id": "s6",
           "only": "desktop",
           "goto": "/app/trade?desk=human-eric&symbol=EEM",
-          "sees": "the docked bench: ticket left, chart right, orders below — no Chain entry",
+          "sees": "the docked bench: ticket left, chart right, orders below — 'Guidance for this stock' and 'Options chain' beside the milestone strip (#3807 slice 3b-2)",
           "ears": "WHEN Trade is docked at desktop width, the app shall offer an entry to the standalone options chain.",
-          "expect": [{ "role": "button", "name": "Chain", "within": "main" }],
-          "known_gap": "dead end 8 — docked Trade has no UI entry to the standalone Chain (app/src/routes/trade.tsx:113 lists it; the docked layout never renders the switch)",
-          "where": "app/src/routes/trade.tsx:113",
-          "severity": "medium",
-          "fix": "M",
+          "expect": [{ "role": "link", "name": "Options chain", "within": "main" }],
           "judge": "can the reader find the chain from here?"
         }
       ]
@@ -119,6 +115,17 @@
           "ears": "WHEN the member opens Activity, the app shall show the feed with the newest event first.",
           "expect": [{ "role": "heading", "name": "Activity" }],
           "judge": "can the reader find today's fill?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/accounts?section=activity",
+          "sees": "Profile → Activity: the orders on their own account, newest first, the EEM buy among them",
+          "ears": "WHEN the member opens their Profile's Activity, the app shall list their own account's orders, newest first.",
+          "expect": [
+            { "url": "/app/accounts?section=activity" },
+            { "role": "button", "name": "Activity", "exact": true, "within": "main" }
+          ],
+          "judge": "can the reader find their own fill?"
         }
       ]
     },

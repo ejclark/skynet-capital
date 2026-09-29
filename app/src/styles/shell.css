@@ -230,6 +230,10 @@ a {
     flex-wrap: wrap;
     padding: 6px 12px;
     row-gap: 2px;
+    /* a size container so the status popover can be exactly as wide as the bar's content
+       (`100cqw`, status.css) — 100vw counts a classic scrollbar's gutter and pushed it to 3px
+       from the edge. Safe here: the bar is already stretched full width by its column. */
+    container-type: inline-size;
   }
   .topnav {
     order: 3;

@@ -59,9 +59,9 @@ is a second visit. They never read a tooltip because they cannot.
    hover.** _Fixed — #3807 slice 2e._ Judge: does this reader know why Subscribe is off?
 5. `/app/accounts?section=milestones&chapter=playbooks` — the playbook cards; where one is earned,
    "Arm · soon" is greyed with its reason in a line under it. **WHEN a disabled control renders on
-   a phone, the app shall show its reason without hover.** _known gap — dead end 8: fixed in code
-   (#3807 slice 2e), but this fixture's member has earned no playbook, so Arm never renders and
-   the step cannot see it._ Judge: does this reader know why Arm is off?
+   a phone, the app shall show its reason without hover.** _Fixed — #3807 slice 2e in code; slice
+   3b-4 gave the frozen fixture a closed XLF round trip (rung 102), so the first playbook is earned
+   and the step sees Arm and its reason._ Judge: does this reader know why Arm is off?
 6. `/app/research` — R&D with the calendar in the phone strip, the day lens fogged. **WHEN R&D
    renders at 390px, the app shall keep the calendar's range control reachable and its fog notice
    readable.** Judge: can this reader change the week from here?

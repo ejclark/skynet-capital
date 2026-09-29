@@ -106,8 +106,9 @@
   },
   {
     "screen": "/activity ?section=pulse (Feedback pulse)",
-    "verdict": "keep",
-    "mustBeSeenBy": "anyone signed in"
+    "verdict": "undecided",
+    "mustBeSeenBy": "anyone signed in",
+    "target": "nobody needs this — no member's job reads other members' filings; your own are on Profile → Feedback (this list's empty state already links there): fold in, or keep a league-wide list?"
   },
   {
     "screen": "/activity ?section=council",
@@ -132,8 +133,9 @@
   },
   {
     "screen": "/trade ?section=chart",
-    "verdict": "keep",
-    "mustBeSeenBy": "member with an account"
+    "verdict": "undecided",
+    "mustBeSeenBy": "member with an account",
+    "target": "nobody needs this — the one member who names the chart skips it (returning-trader §4) and the pane switch is proven by phone-only j1 s3: keep the pane, fold price into Guidance, or drop?"
   },
   {
     "screen": "/trade ?section=chain",
@@ -159,7 +161,7 @@
   {
     "screen": "/settings ?section=account",
     "verdict": "keep",
-    "mustBeSeenBy": "account owner; Mission Control and Unclaimed accounts only for the fund owner (and hidden for a fund owner with no account)"
+    "mustBeSeenBy": "account owner; Mission Control and Unclaimed accounts only for the fund owner (shown even when the owner holds no account)"
   },
   {
     "screen": "/settings ?section=guests",
@@ -179,7 +181,7 @@
   {
     "screen": "/onboarding",
     "verdict": "redirect-only",
-    "target": "/accounts?section=milestones&chapter=onboarding (keeps moneypenny=intro)"
+    "target": "/accounts?section=milestones&chapter=onboarding"
   },
   {
     "screen": "/join",
@@ -209,13 +211,14 @@
   },
   {
     "screen": "server /tower",
-    "verdict": "keep",
-    "mustBeSeenBy": "anyone (public 3D scene)"
+    "verdict": "undecided",
+    "mustBeSeenBy": "anyone (public 3D scene)",
+    "target": "nobody needs this — no page links it; members see the scene only framed inside app pages (the shell's crest, Sauron's card); standalone it is a deploy-eyeball page: off the member list, or retire?"
   },
   {
     "screen": "server /research/<slug>",
     "verdict": "keep",
-    "mustBeSeenBy": "anyone signed in (symbol/<SYM> and some events/<id> links 404, see defects 3 and 4)"
+    "mustBeSeenBy": "anyone signed in (some events/<id> links 404, see defect 4; the symbol/<SYM> links are gone, #3816)"
   },
   {
     "screen": "server /feedback/preview",
@@ -255,17 +258,17 @@
   {
     "screen": "server /invite, /claim, /account, /rotate, /controls, /u",
     "verdict": "redirect-only",
-    "target": "/app/settings (Preferences; should be ?section=guests or ?section=account)"
+    "target": "/app/settings?section=guests (/invite) | /app/settings?section=account (the rest)"
   },
   {
     "screen": "server /u/<id> (?tab=performance|settings)",
     "verdict": "redirect-only",
-    "target": "/app/u/<id> | /app/u/<id>/pulse | /app/settings"
+    "target": "/app/u/<id> | /app/u/<id>/pulse | /app/settings?section=account"
   },
   {
     "screen": "server /leaderboard, /bots-vs-humans, /compare",
     "verdict": "redirect-only",
-    "target": "/app/leaderboard (/leaderboard keeps only by=, drops a/b; /compare keeps the query)"
+    "target": "/app/leaderboard (/leaderboard keeps by=/a=/b=; /compare keeps the query)"
   },
   {
     "screen": "server /wire, /app/wire",
@@ -281,11 +284,6 @@
     "screen": "server /collections[/…]",
     "verdict": "redirect-only",
     "target": "/app/research?section=playbooks"
-  },
-  {
-    "screen": "server /board/frame (standings patch fragment with the 'Not connected' copy)",
-    "verdict": "undecided",
-    "target": "its guidance copy should move to the zero-account door / AlpacaGuide, then retire it"
   },
   {
     "screen": "unknown URL",

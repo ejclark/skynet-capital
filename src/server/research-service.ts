@@ -60,7 +60,13 @@ export interface SymbolResearch {
   readonly stance: { readonly html: string; readonly from: ResearchDoc } | null;
 }
 
-const RESEARCH_DIR = (): string => join(process.cwd(), "docs", "research");
+/**
+ * The shelf's root. `SKYNET_RESEARCH_DIR` pins it to a frozen fixture for the integration suite's
+ * R&D screenshot (e2e/fixtures/research): the research lane merges into docs/research/ many times
+ * a day, so a baseline rendered from the live folder broke every open PR within hours (2026-09-29).
+ */
+export const RESEARCH_DIR = (): string =>
+  process.env.SKYNET_RESEARCH_DIR ?? join(process.cwd(), "docs", "research");
 const SKIP = new Set(["TEMPLATE.md", "README.md"]);
 
 const titleOf = (md: string, fallback: string): string =>
@@ -69,20 +75,25 @@ const titleOf = (md: string, fallback: string): string =>
 const lastAssessedOf = (md: string): string | null =>
   md.match(/^\*\*Last assessed:\*\*\s*(\S+)/m)?.[1] ?? null;
 
-function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
+/**
+ * The markdown files a directory shelves, slug-sorted — the ONE place the shelf's skip rule and
+ * slug shape live, so the listing and the mention search (`docsMentioning`) can never disagree
+ * about what is on the shelf.
+ */
+function shelvedFiles(dir: string, slugPrefix: string): { slug: string; file: string }[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".md") && !SKIP.has(f))
-    .map((f) => {
-      const md = readFileSync(join(dir, f), "utf8");
-      const name = f.replace(/\.md$/, "");
-      return {
-        slug: `${slugPrefix}${name}`,
-        title: titleOf(md, name),
-        lastAssessed: lastAssessedOf(md),
-      };
-    })
+    .map((f) => ({ slug: `${slugPrefix}${f.replace(/\.md$/, "")}`, file: join(dir, f) }))
     .sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
+  return shelvedFiles(dir, slugPrefix).map(({ slug, file }) => {
+    const md = readFileSync(file, "utf8");
+    const name = slug.slice(slugPrefix.length);
+    return { slug, title: titleOf(md, name), lastAssessed: lastAssessedOf(md) };
+  });
 }
 
 /**
@@ -329,9 +340,83 @@ export function shelfSymbols(
 const ledgerIsFor = (doc: ResearchDoc, symbol: string): boolean =>
   doc.slug.startsWith(`events/${symbol.toLowerCase()}-`);
 
+/** A symbol as this module will accept one: the shape `sym:` parses on the board, upper-cased. */
+const SYMBOL_RE = /^[A-Z]{1,6}$/;
+
+/**
+ * MENTION: a symbol appearing as its own word in a doc's text. ONE rule, two shapes, pinned as
+ * equivalent by a spec — get this wrong and the board claims a study says something it doesn't.
+ *
+ * `namesSymbol` is the readable form, and the rule `symbolResearch` has always used. `tickerTokens`
+ * brackets every ticker-shaped word in one pass instead, so searching a watchlist of eight symbols
+ * costs the same read as searching for one. The two agree because `\b` is decided by the SAME
+ * neighbours in both: any word character beside the match (a letter, a digit, an underscore)
+ * suppresses the boundary, so `\bNVDA\b` and a `\b[A-Z]{1,6}\b` token set both reject `NVDAX`,
+ * `NVDA2` and `NVDA_X`, and both accept `NVDA's` and `(NVDA)`.
+ */
+const namesSymbol = (md: string, symbol: string): boolean => new RegExp(`\\b${symbol}\\b`).test(md);
+
+const TICKER_TOKEN = /\b[A-Z]{1,6}\b/g;
+const tickerTokens = (md: string): ReadonlySet<string> => new Set(md.match(TICKER_TOKEN) ?? []);
+
+/**
+ * The most symbols one mention search will answer for.
+ *
+ * It bounds the RESPONSE, not the work: the read is per file, so a symbol costs one set lookup per
+ * document and the corpus is walked once either way. What it stops is a hand-written URL naming
+ * every ticker and getting a slug list per name back. It sits well above the board's own ceiling —
+ * the shelf offers ~21 symbol chips — so a member clicking chips can never reach it; anything the
+ * cap does drop is reported as unsearched rather than silently answered "nothing found", because
+ * the board would otherwise state a fact nobody checked.
+ */
+export const MENTION_SCOPE_MAX = 32;
+
+/**
+ * WHICH SHELVED DOCS NAME EACH SYMBOL IN THEIR TEXT (#3962) — the board's `sym:` scope, answered
+ * here because the text itself never crosses the wire.
+ *
+ * The board can only match a symbol against what the shelf payload carries — a slug, an event's
+ * symbols — so a study about NVDA's suppliers never showed up for NVDA even though it says NVDA on
+ * every page. This runs the search against the symbol the MEMBER asked for, which is why it lives
+ * on the server instead of as a precomputed index: any index would have to guess which uppercase
+ * words in the corpus are tickers, and the guess is wrong in a way that lies on screen — the
+ * directory's `ALL`, `NOW`, `LOW`, `OPEN` and `A` match shouting headings, not Allstate.
+ *
+ * Returns one entry per accepted symbol (an empty list is an honest answer: nothing mentions it);
+ * a symbol the caller asked for and does NOT get a key for is one this never searched — a missing
+ * key and an empty list mean different things, and the board reads the difference. Anything that is
+ * not a `sym:`-shaped symbol is dropped rather than searched for.
+ *
+ * COST: one read of every shelved document per call (~705 files today, ~115ms), unmemoized — the
+ * same shape `/api/research` already has, since git is the CMS and the corpus only changes on
+ * deploy. Worth caching for both together if it ever binds; not worth diverging from here alone.
+ */
+export function docsMentioning(
+  symbols: readonly string[],
+  root: string = RESEARCH_DIR(),
+): Record<string, readonly string[]> {
+  const wanted = [...new Set(symbols.map((s) => s.trim().toUpperCase()))]
+    .filter((s) => SYMBOL_RE.test(s))
+    .slice(0, MENTION_SCOPE_MAX);
+  const found: Record<string, string[]> = Object.fromEntries(wanted.map((s) => [s, []]));
+  if (wanted.length === 0) return found;
+  const shelved = [
+    ...shelvedFiles(root, ""),
+    ...shelvedFiles(join(root, "weeks"), "weeks/"),
+    ...shelvedFiles(join(root, "events"), "events/"),
+  ];
+  for (const { slug, file } of shelved) {
+    const tokens = tickerTokens(readFileSync(file, "utf8"));
+    for (const sym of wanted) if (tokens.has(sym)) found[sym]?.push(slug);
+  }
+  return found;
+}
+
 /**
  * The living symbol page's data: everything symbol-keyed the repo already holds, assembled —
  * no new facts, no summarization, just the join the app never surfaced.
+ * No caller since the symbol page was retired (#3816 slice 8); kept for #3962, which wires this
+ * full-text search into the R&D symbol filter.
  */
 export function symbolResearch(
   symbol: string,
@@ -340,13 +425,12 @@ export function symbolResearch(
   upcoming: readonly MarketEvent[] = allEvents(asOfIso),
 ): SymbolResearch | null {
   const sym = symbol.toUpperCase();
-  if (!/^[A-Z]{1,6}$/.test(sym)) return null;
+  if (!SYMBOL_RE.test(sym)) return null;
   const shelf = listResearch(root);
   const events = upcoming.filter((e) => e.symbols.includes(sym));
   const ledgers = shelf.ledgers.filter((d) => ledgerIsFor(d, sym)).reverse();
-  const mention = new RegExp(`\\b${sym}\\b`);
   const studies = shelf.studies.filter((d) =>
-    mention.test(readFileSync(join(root, `${d.slug}.md`), "utf8")),
+    namesSymbol(readFileSync(join(root, `${d.slug}.md`), "utf8"), sym),
   );
   if (events.length === 0 && ledgers.length === 0 && studies.length === 0) return null;
 

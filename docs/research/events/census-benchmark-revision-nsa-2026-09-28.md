@@ -331,6 +331,75 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 | 2026-09-22 | D-6 | **Nothing structural moved; the one real find is a stale premise in the last row, corrected above.** Both program pages re-fetched direct with a desktop UA: `census.gov/retail` (HTTP 200, 744,257 bytes) and `census.gov/mtis` (HTTP 200, 685,110 bytes — **byte-identical to 09-15**) still carry the intention-to-revise sentence **verbatim unchanged**, quoted and diffed word-for-word this session. `economic-indicators/calendar-listview.html` re-parsed at **179 rows / 91,396 bytes — byte-identical to 09-15**, still zero `revis`/`benchmark`/`annual integrated` hits (re-verified by direct regex, not the earlier grep's spurious count) and still no 09-28 row; September dates on the page run in `Month DD, YYYY` form and neither 09-28 nor 10-26 appears in any form. `census.gov/retail/mrts/www/benchmark/2026/` is **still a 404** (16,008-byte body), unchanged from both prior pulses. **RSAFSNA re-pulled — FRED is back (`fred.stlouisfed.org` HTTP 200, 7,513 bytes; `alfred.stlouisfed.org` still blocked, now HTTP 404 with a JS-challenge body, 17,968 bytes, rather than a timeout — recorded in `blocked`).** 2026-07 reads **$784,603M**, a −$7M / −0.0009% move off the pinned **$784,610M** — nowhere near the **-2** kill switch's ≥0.1% bar, so it does not fire; 2026-08 has since published at **$784,846M**, a routine new month, not a restatement signal. **The load-bearing correction:** the 09-15 row's corridor framing — "FY2026 funds lapse 09-30, so 09-28 is pre-lapse and 10-15 is post-lapse" — was already wrong when it was written. `government-funding-deadline-2026-09-30`'s own ledger (re-checked direct today) puts **PL 119-103 signed 2026-09-02**, funding through **December 11, 2026**, and 10-01 lapse odds at **0.85–1.05%** (Polymarket, 09-10) — thirteen days of margin the 09-15 row didn't have when it built a two-date mapping around a lapse that had already been averted. The "This-month" call above is corrected accordingly; the mapping itself (09-28 basis change → 10-15 surfacing) is untouched, only the lapse contingency is removed. **Duplicate escalation: still unresolved.** Neither this file nor `retail-benchmark-revision-2026-09-28.json` carries a `supersededBy` field today — the two-id situation flagged 09-06 and 09-15 stands exactly as before; this lane still cannot fix it. **Adjacency sweep.** *Peers:* n/a, `symbols: []`. *Macro surprises:* **FOMC hiked 25bp to 3.75–4.00% on 09-16**, unanimous — the modal, already-priced outcome (86.5–91.4% odds the last row recorded), so no surprise to this book; corroborated via `unsc-iran-panel-mandate-expiry-2026-09-26`'s own 09-22 direct read, which used the identical figure. *Volatility:* VIX **17.10 (09-14) → 14.87 (09-21 close, cdn.cboe.com direct)**, **−2.23pt**, under the 3pt regime-shift screen threshold, continuing to fade post-FOMC. *Geopolitical/policy:* nothing new touches a retail restatement specifically; the funding correction above is the one policy item that matters here. *Event tape:* none; no consensus exists to drift. **Playbook re-grep:** `trade-playbooks.md` / `multi-symbol-sweep.md` — the one hit is `multi-symbol-sweep.md`'s own methodology text ("QQQ benchmark, sector-peer controls"), not a macro-keyed playbook; **0** real hits, unchanged. **Corridor:** `node scripts/event-scan.mjs --on-date=2026-09-28` still lists exactly the same four entries as 09-06/09-15 (this event, `dallas-fed-mfg`, `retail-benchmark-revision` duplicate, `unsc-middle-east-2334`); **74** tracked ids within 5 days (up from 62 at D-13, the window narrowing as expected), **adjacentStrongIds unchanged** — `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `pce-2026-09-30` — so nothing here meets the screen's own new-strong-adjacent bar. **Zero events proposed:** every dated item in the corridor is already tracked under its own id; nothing new surfaced this sweep. | **No change — stand aside.** The stance and all four kill-switch-adjacent tests hold; the one substantive move is correcting a stale funding-lapse premise the prior row carried, which strengthens rather than weakens the This-month mapping (one fewer contingency, not a new risk). | 2026-09-29 (`low:0+`, every 7d — falls the day after the event, so the scanner's next look is likely `event-passed-unscored`) |
+| 2026-09-29 | D+1 | **Close-out, inside `closeOutWithinDays: 6` (ceiling 2026-10-04).** `symbols: []`, so the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) had no target — this event never ran `earnings-cycle`/`intraday-edges`. **The release happened, on schedule, exactly as Leg 1 read it.** `census.gov/retail` re-fetched direct today now carries a **past-tense** "Notice of Revision (September 28, 2026)" replacing the "Intention to Revise" wording every prior pulse quoted, verbatim: "Monthly retail estimates were revised based on historical corrections and the results of the 2023 and 2024 Annual Integrated Economic Survey. Revised not adjusted estimates and corresponding adjusted estimates **were released** on September 28, 2026 at 10:00 a.m. EDT." Confirmed on two independent fetches this session. **`FT-…-3` scored — PASS:** fresh Yahoo daily bars for 2026-09-28 read Open **768.35**, High **769.54**, Low **763.72**, Close **765.61** — session range (High−Low)/Open = **0.757%**, well inside the registered ≤1.5% bar (base rate 80.0%/85.9%, stated as weak evidence at registration). **`FT-…-1`, `-2` and `-4` stay `_open_`:** score-by 2026-10-05/10-16/10-05 all sit past this window's 2026-10-04 ceiling (named in `--due`'s `forwardTestsBeyondWindow`), so none is scored here per #2988 — recorded for the next session rather than acted on: today's `census.gov/retail` text (above) already answers `-1`'s question in the program-reading direction, and a fresh FRED `RSAFSNA` pull reads **2026-07 $784,603M / 2026-08 $784,846M**, unchanged from the D-6 row — the vintage FRED serves has not yet ingested the 09-28 revision, which is expected lag, not a signal either way for `-2`. **The duplicate is resolved, by the other lane, not this one:** `retail-benchmark-revision-2026-09-28.json` now carries `"supersededBy": "census-benchmark-revision-nsa-2026-09-28"` (added 2026-09-22, per that file's own ledger), so the two-id collision flagged 09-06/09-15/09-22 needs no further escalation from here. **One unrelated new-intention notice spotted, not proposed:** the same page now carries a fresh "Intention to Revise" for the **July 2026 MSRS release, scheduled 2026-11-16** — a different, later revision cycle; close-out mode runs no adjacency sweep, so this is recorded here for whichever future sweep reaches it and nothing is filed. | **Stand aside holds, confirmed at close.** No entry, exit or hedge was ever keyed to this event; the print landed exactly as Leg 1's program-reading predicted (both NSA and SA on 09-28) and the session was inert (`FT-…-3` PASS at 0.757%, well under the 1.5% bar). Two of four forward tests remain open past this window, per design. | — (closed; `## Outcome` below) |
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","jpx-market-closure-2026-09-23","m3-full-report-2026-10-02","meta-connect-2026-09-23","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://alfred.stlouisfed.org/graph/fredgraph.csv?id=RSAFSNA","status":"HTTP 404, JS-challenge body (17,968 bytes)","at":"2026-09-22"}]} -->
+
+## Outcome
+
+**Close-out (2026-09-29, D+1 — inside `closeOutWithinDays: 6`, ceiling 2026-10-04).** `symbols: []`,
+so the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`)
+had no target of its own — this event never ran `earnings-cycle`/`intraday-edges` at any pulse. Every
+figure below is a fresh fetch this session: two independent re-fetches of `census.gov/retail`, a fresh
+FRED `RSAFSNA` pull, and fresh Yahoo daily bars for SPY and `^VIX`.
+
+### What printed
+
+`census.gov/retail/index.html`, re-fetched direct twice this session, now carries a **Notice of
+Revision** where every prior pulse (09-06, 09-15, 09-22) quoted an **Intention to Revise** — the tense
+change is itself the confirmation the release happened. Verbatim, both fetches agreeing word for word:
+
+> Notice of Revision: Monthly retail estimates were revised based on historical corrections and the
+> results of the 2023 and 2024 Annual Integrated Economic Survey. Revised not adjusted estimates and
+> corresponding adjusted estimates were released on September 28, 2026 at 10:00 a.m. EDT.
+
+**Leg 1's program-reading holds exactly as it read at initial research.** The release covers both
+not-adjusted *and* adjusted retail estimates, on the one date the retail program page always named —
+not the "not-adjusted on 09-28, adjusted on 10-26" split the proposing sweep's literal MTIS reading
+would have predicted. This id's `-nsa-` token remains a misnomer kept only as a branch/ledger/issue
+key; the title has been the accurate description of the release since initial research.
+
+### Forward tests, scored (one of four)
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| `FT-census-benchmark-revision-nsa-2026-09-28-3` | SPY's 2026-09-28 session range is ≤ 1.5% | Open **768.35**, High **769.54**, Low **763.72**, Close **765.61** (Yahoo daily bars, fetched direct) — range (High−Low)/Open = **0.757%** | **PASSED** |
+
+`FT-…-1` (score by 2026-10-05), `FT-…-2` (2026-10-16) and `FT-…-4` (2026-10-05) all sit past this
+window's 2026-10-04 ceiling and are recorded `_open_` in
+[their fragment](../forward-tests/census-benchmark-revision-nsa-2026-09-28.md), per #2988 — the
+scanner re-dispatches this same lane as `forward-test-due` when each one arrives. Two readings are
+noted here for that future session without scoring anything now: today's quoted release text already
+speaks to `-1`'s program-vs-estimate-type question, and a fresh FRED pull reads `RSAFSNA` **2026-07
+$784,603M / 2026-08 $784,846M** — unchanged from the D-6 (09-22) row, meaning the vintage FRED serves
+has not yet ingested the 09-28 revision. That is an expected publication lag, not evidence either way
+for `-2`, and neither figure is scored here.
+
+### The duplicate — resolved, by the other lane
+
+`retail-benchmark-revision-2026-09-28.json` was flagged as a duplicate of this event at initial
+research (09-06), re-flagged at D-13, and still unresolved as of the D-6 row (09-22). It now carries
+`"supersededBy": "census-benchmark-revision-nsa-2026-09-28"`, added by that id's own lane on
+2026-09-22 per its own ledger's retirement row. The escalation this ledger raised three times needed
+no further action from here — it closed itself out on the survivor's own terms, exactly as this
+ledger's stance always recommended.
+
+**One unrelated notice spotted, not proposed.** The same `census.gov/retail` page now also carries a
+fresh Intention to Revise for the **July 2026 MSRS release, scheduled 2026-11-16** — a different,
+later revision cycle with no connection to this event's 2023–2024 AIES restatement. Close-out mode
+runs no adjacency sweep, so nothing is filed against it; noted only so a future sweep does not treat it
+as new.
+
+### Stance — final word
+
+**Stand aside, confirmed at close.** No entry, exit, or hedge was ever keyed to this event —
+`symbols: []` throughout, no macro-keyed house playbook ever existed for it, and a restatement of
+2023–2024 history never carried a consensus number to be surprised against. The one forward test due
+at this close-out passed on its own weak-evidence terms (session range comfortably under the 1.5%
+bar), and the print itself landed exactly as this ledger's Leg 1 read it from the first session: the
+retail benchmark revision entire, not-adjusted and adjusted together, on 09-28 as scheduled.
+
+**This document goes quiet**, with one door back in: `FT-…-1`, `-2` or `-4` reaching its own `Score by`
+date re-dispatches this same lane as `forward-test-due` (#2884) to fill only the Outcome cell of the
+row that came due — never to reopen this section.

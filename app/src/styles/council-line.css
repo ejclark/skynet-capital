@@ -1,0 +1,62 @@
+/* Your council line on the Overview (#3963): `shell/council-line-card.tsx`. The card sits in the
+ * same column as the league standing, so it borrows the league card's frame — same radius, border
+ * and surface — rather than inventing a second card language.
+ *
+ * The composer stacks at EVERY width here, not just on a phone: this column is 384px wide on a
+ * 1400px screen too, so an input-beside-button row would be cramped desktop-first and phone-second.
+ * Tokens only. */
+
+.council-mine {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  min-width: 0;
+}
+.council-mine-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.council-mine-eyebrow {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.council-mine-week {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.council-mine .note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.council-mine .council-compose {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0;
+}
+.council-mine .council-submit {
+  align-self: flex-end;
+}
+.council-mine .council-play-picker {
+  flex-wrap: wrap;
+  margin: 0;
+}
+.council-mine .council-count {
+  margin: 0;
+}
+.council-mine-foot {
+  margin: 0;
+  font-size: 12px;
+}

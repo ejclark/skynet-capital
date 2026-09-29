@@ -64,9 +64,10 @@ describe("/accounts validateSearch — the viewer's sections and ?chapter=", () 
     expect(validateSearch({ chapter: 3 }).chapter).toBeUndefined();
   });
 
-  it("keeps Moneypenny's intro deep link (the old /onboarding?moneypenny=intro) and nothing else", () => {
-    expect(validateSearch({ moneypenny: "intro" })).toMatchObject({ moneypenny: "intro" });
-    expect(validateSearch({ moneypenny: "open" }).moneypenny).toBeUndefined();
+  it("drops the retired ?moneypenny=intro, so an old link still opens the page (#3816 slice 8)", () => {
+    expect(validateSearch({ moneypenny: "intro", section: "milestones" })).toEqual({
+      section: "milestones",
+    });
   });
 });
 

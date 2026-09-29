@@ -79,3 +79,15 @@ export function tapFindings(targets: Target[]): PhoneFinding[];
 export function zoomFindings(inputs: Field[]): PhoneFinding[];
 export function dedupe(findings: PhoneFinding[]): PhoneFinding[];
 export function phoneFindings(snap: Snapshot): PhoneFinding[];
+
+export interface PhoneArgs {
+  path: string;
+  session: boolean;
+  strict: boolean;
+  all: boolean;
+  click: string | undefined;
+  at: string | undefined;
+  port: number;
+  bridgePort: number;
+}
+export function phoneArgs(argv: string[]): PhoneArgs;

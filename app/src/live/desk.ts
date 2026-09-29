@@ -285,6 +285,12 @@ export interface ActivityReasoning {
   readonly guardDelta?: string;
   readonly playbookId?: string;
   readonly playbookMode?: string;
+  /** The round that placed this fill (#3961) — the `at` of its `DecisionCycle`, so the row's why
+   *  can link to the whole pass on Heartbeat rather than stopping at this one order. */
+  readonly cycleAt?: string;
+  /** That round's funnel — intents the persona raised → how many survived the guards. */
+  readonly rawCount?: number;
+  readonly guardedCount?: number;
 }
 
 export interface DeskActivity {

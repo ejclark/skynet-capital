@@ -74,6 +74,22 @@ Layout rules that fall out of it: a field is never wider than its content class 
 4-character strike never gets a third of the panel); an estimate reads as a two-column
 definition list at every width, never a ragged 4 + 3.
 
+**Three named widths** (#3816 slice 10) — the only window widths a layout breaks at, so "phone"
+means one number. Each is where the CSS already broke most often; JS reads them from
+`app/src/shell/widths.ts`. `@media` cannot read a custom property, so stylesheets write the number.
+
+| Width | Edge | Why here |
+|---|---|---|
+| **phone** | ≤ 700px | clears every portrait phone with room; the 16 rules that fold grids to two or one column and drop secondary lines already sat here |
+| **tablet** | ≤ 860px | catches portrait tablets (768 · 820 · 834); the shell wraps here — topbar rows, rails and side-by-side panels stack |
+| **bench** | ≥ 1280px | the narrowest window giving `/trade`'s form and chain ~450px columns each, so its sections dock; below it is ≤ 1279 |
+
+The widening side of an edge is its complement (`min-width: 701px` · `861px`, `max-width:
+1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). One known
+exception: the topbar market clock compacts at ≤ 1280, one pixel off the bench edge — moving it
+to 1279 hides the view links at 1280 with Moneypenny's rail open, because the clock sizes by the
+window while the rail narrows the shell.
+
 ## Voice & tone
 
 - **Confident, specific, honest.** Real tickers, strategy-accurate underlyings, honest labels
