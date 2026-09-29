@@ -1,5 +1,5 @@
+import { cleanStake } from "../../../src/options/guidance-stake-parse";
 import type {
-  GuidanceGoal,
   GuidanceMarket,
   GuidanceSnapshot,
   GuidanceStake,
@@ -51,31 +51,11 @@ export function guidanceQuery(symbol: string) {
 
 const STAKE_KEY = (symbol: string) => `skynet-guidance-stake:${symbol}`;
 const SNAPSHOT_KEY = (symbol: string) => `skynet-guidance-seen:${symbol}`;
-const GOALS: readonly GuidanceGoal[] = ["income", "keep-shares", "exit"];
 
-const positive = (v: unknown): number | undefined =>
-  typeof v === "number" && Number.isFinite(v) && v > 0 ? v : undefined;
-
-/** Only the fields the engine reads, each one a positive finite number — storage is untrusted. */
-export function cleanStake(raw: unknown): GuidanceStake {
-  const r = (raw ?? {}) as Record<string, unknown>;
-  const shares = positive(r.shares);
-  const costBasis = positive(r.costBasis);
-  const cash = positive(r.cash);
-  const happyToOwnAt = positive(r.happyToOwnAt);
-  const callsSold = positive(r.callsSold);
-  const premiumsCollected = positive(r.premiumsCollected);
-  const goal = GOALS.find((g) => g === r.goal);
-  return {
-    ...(shares !== undefined ? { shares: Math.floor(shares) } : {}),
-    ...(costBasis !== undefined ? { costBasis } : {}),
-    ...(cash !== undefined ? { cash } : {}),
-    ...(happyToOwnAt !== undefined ? { happyToOwnAt } : {}),
-    ...(callsSold !== undefined ? { callsSold: Math.floor(callsSold) } : {}),
-    ...(premiumsCollected !== undefined ? { premiumsCollected } : {}),
-    ...(goal ? { goal } : {}),
-  };
-}
+// `cleanStake` moved to src/options/guidance-stake-parse.ts (#3968) so the server can validate a
+// saved position's stake with the exact same rules this browser applies to localStorage — re-export
+// so nothing importing it from here needs to change.
+export { cleanStake };
 
 function readJson(key: string): unknown {
   try {

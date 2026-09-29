@@ -64,6 +64,10 @@ export interface GuidanceStake {
   /** Covered calls already open on this stock, from the member's own account — what "Calls you've
    *  sold" manages. Read in the browser; like the rest of the stake, never sent to the server. */
   readonly openCalls?: readonly OpenCall[];
+  /** A long call or put the member already holds — a position elsewhere, not a covered write
+   *  against these shares. Forward guidance only (#3968): this shapes what's shown, not a new
+   *  buy-back/roll verdict the way `openCalls` gets from "Calls you've sold". */
+  readonly longOption?: HeldLongOption;
 }
 
 /** One covered call the member has already sold and still holds open. */
@@ -77,6 +81,22 @@ export interface OpenCall {
   /** Premium received, per share. */
   readonly premium: number;
   /** The live quote for buying it back (ask) or its bid, per share, when the account had one. */
+  readonly bid?: number;
+  readonly ask?: number;
+}
+
+/** A long call or put the member holds outright — bought, not written. No `occ`: unlike `OpenCall`
+ *  there's no real account to hand a Close/Roll off to (#3968 forward-guidance-only scope), so the
+ *  four contract terms plus what was paid are all the engine needs. */
+export interface HeldLongOption {
+  readonly type: "call" | "put";
+  readonly strike: number;
+  readonly expiration: string;
+  /** Contracts held (positive). */
+  readonly contracts: number;
+  /** Premium paid, per share. */
+  readonly costPerContract: number;
+  /** The live quote for selling it (bid) or buying more (ask), per share, when there was one. */
   readonly bid?: number;
   readonly ask?: number;
 }
