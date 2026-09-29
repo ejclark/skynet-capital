@@ -11,6 +11,7 @@ import type { AccountNetWorthView, NetWorthStatsView } from "../../src/live/netw
 import { NetWorthRoster } from "../../src/shell/networth-summary";
 import { NewHighCeremony } from "../../src/shell/new-high-ceremony";
 import { sparkPath } from "../../src/shell/roster-sparkline";
+import { setVantageFrame, useTowerBus } from "../../src/shell/tower-bus";
 
 const stats = (aboveNow: number): NetWorthStatsView => ({
   value: "$1,051,200",
@@ -89,6 +90,59 @@ describe("NewHighCeremony", () => {
     mount(stats(0.003));
     await screen.findByText((_, el) => el?.tagName === "BODY");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+// The tower hears about it (#3807 slice 3b-3): once, as the member leaves the takeover and the tower
+// is back in view — never while it covers the page, never for a high already seen.
+describe("NewHighCeremony tells the tower", () => {
+  function crest() {
+    const flares: unknown[] = [];
+    const frame = document.createElement("iframe");
+    Object.defineProperty(frame, "contentWindow", {
+      value: { postMessage: (m: { type: string }) => m.type === "tower:flare" && flares.push(m) },
+    });
+    setVantageFrame(frame);
+    useTowerBus.setState({ on: true });
+    return flares;
+  }
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => {
+    setVantageFrame(null);
+    useTowerBus.setState({ on: false });
+    Reflect.deleteProperty(window, "matchMedia");
+  });
+
+  it("flares once as the takeover closes — not while it covers the page", async () => {
+    const flares = crest();
+    mount(stats(0));
+    await screen.findByRole("dialog");
+    expect(flares).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Back to Accounts" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(flares).toEqual([{ type: "tower:flare", kind: "new-high" }]);
+  });
+
+  it("stays dark for a high already seen", async () => {
+    window.localStorage.setItem("skynet.newhigh.seen.eric", "$1,051,200");
+    const flares = crest();
+    mount(stats(0));
+    await screen.findByText((_, el) => el?.tagName === "BODY");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(flares).toEqual([]);
+  });
+
+  it("stays dark under reduced motion — the takeover still shows and closes", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (q: string) => ({ matches: q.includes("reduce"), media: q }),
+    });
+    const flares = crest();
+    mount(stats(0));
+    fireEvent.click(await screen.findByRole("button", { name: "Back to Accounts" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(flares).toEqual([]);
   });
 });
 

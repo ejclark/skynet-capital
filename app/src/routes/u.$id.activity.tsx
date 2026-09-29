@@ -54,7 +54,7 @@ function ActivityPage(): ReactElement {
       ) : activity.data.activity.length === 0 ? (
         <p className="note">No recorded orders in the ledger's window.</p>
       ) : (
-        <ActivityTable events={activity.data.activity} showPlaybook={isOwn} />
+        <ActivityTable events={activity.data.activity} showPlaybook={isOwn} deskId={id} />
       )}
     </AccountPage>
   );

@@ -8,8 +8,13 @@ import {
 } from "@tanstack/react-router";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { LADDER_GATE_NOTE } from "../../../src/domain/progression";
 import { horizonSearch } from "../../src/live/horizon-params";
 import { Route } from "../../src/routes/accounts";
+import {
+  LADDER_CARD_GATE_NOTE,
+  LADDER_CARD_NO_ACCOUNT_NOTE,
+} from "../../src/shell/milestones-section";
 
 /**
  * The Profile page's two viewer-level sections and its zero-account door (#3807 slice 2b). The page
@@ -55,11 +60,13 @@ rstest.mock("../../src/live/onboarding", () => ({
 rstest.mock("../../src/live/learn", () => ({
   fetchJourney: () =>
     Promise.resolve({
-      linked: true,
+      // The server serves no ladder gate without an account (first-timer j1 s3).
+      linked: accounts.length > 0,
       points: 0,
       totalPoints: 200,
       rank: "Observer",
-      gate: { reason: "feedback", note: "Fixture gate sentence." },
+      gate:
+        accounts.length > 0 ? { reason: "feedback", note: "Fixture gate sentence." } : undefined,
       courses: [],
       celebrating: [],
       engagementCelebrating: [],
@@ -195,6 +202,25 @@ describe("the zero-account door", () => {
     );
     await waitFor(() => expect(scrollTo).toHaveBeenCalled());
     scrollTo.mockRestore();
+  });
+
+  it("names the unlock on M·02: link an account first, then the server's own gate (first-timer j1 s3)", async () => {
+    mountAccounts("/accounts?section=milestones");
+    const ladder = await screen.findByRole("link", { name: /M·02/ });
+    expect(ladder).toHaveTextContent("◷ LOCKED");
+    expect(ladder).toHaveTextContent(LADDER_CARD_NO_ACCOUNT_NOTE);
+    // One sentence, the server's words (#1672): the unlock clause is the server's constant's own.
+    const clause = LADDER_CARD_GATE_NOTE.replace(/^unlocks /, "");
+    expect(LADDER_GATE_NOTE).toContain(clause);
+    expect(LADDER_CARD_NO_ACCOUNT_NOTE).toContain(clause);
+  });
+
+  it("gives the Milestones note's 'isn't linked' its control: the connect guide", async () => {
+    mountAccounts("/accounts?section=milestones");
+    expect(await screen.findByText(/this session isn't linked to an/)).toBeInTheDocument();
+    const guide = screen.getByRole("link", { name: "open the connect guide" });
+    expect(guide.getAttribute("href")).toMatch(/section=milestones/);
+    expect(guide.getAttribute("href")).toMatch(/chapter=onboarding/);
   });
 
   it("gives Activity an honest empty state", async () => {

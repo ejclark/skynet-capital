@@ -74,6 +74,7 @@
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
     "shoot:playbook-store": "tsx scripts/shoot/playbook-store.mjs",
     "shoot:research-week": "tsx scripts/shoot/research-week.mjs",
+    "shoot:research-board": "tsx scripts/shoot/research-board.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
     "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",

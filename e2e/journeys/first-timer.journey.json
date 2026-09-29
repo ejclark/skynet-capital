@@ -43,13 +43,9 @@
         {
           "id": "s3",
           "goto": "/app/accounts?section=milestones",
-          "sees": "the M·02 card reads 'in progress' with no gate note — a session with no account gets no ladder gate from the server; for a gated member the note now says the server's own sentence",
+          "sees": "the M·02 card reads LOCKED with one note: 'link an account first, then it unlocks the moment you say hello to Moneypenny' — the step before the gate, then the server's own words (#3807 slice 3b-4)",
           "ears": "WHILE the trading ladder is gated, the app shall name the SAME unlock condition everywhere it is named (the server's own line: the moment you say hello to Moneypenny).",
           "expect": [{ "text": "the moment you say hello" }],
-          "known_gap": "dead end 2, half closed — the contradiction is gone (the M·02 card now says the server's 'the moment you say hello to Moneypenny', app/src/shell/milestones-section.tsx LADDER_CARD_GATE_NOTE, #1672's fix restored in #3807 slice 2b, pinned by app/tests/routes/profile-door.spec.tsx), but a session with no account gets no ladder gate from the server, so no page names the unlock condition at all",
-          "where": "app/src/shell/milestones-section.tsx",
-          "severity": "low",
-          "fix": "S",
           "judge": "does this reader know what unlocks trading, in one sentence?"
         },
         {

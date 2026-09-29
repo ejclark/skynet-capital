@@ -225,6 +225,11 @@ describe("thesisView", () => {
       reason: "momentum continuation above the shelf",
       strategy: "sauron-panic-claim",
       expectation: "expect a bounce",
+      // The round this fill came out of, and its funnel (#3961) — the marker carries the same
+      // address the Activity row's "why" links to.
+      cycleAt: new Date(record().at).toISOString(),
+      rawCount: 1,
+      guardedCount: 1,
     });
   });
 

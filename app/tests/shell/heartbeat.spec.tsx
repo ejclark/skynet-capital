@@ -6,16 +6,20 @@ import { HeartbeatChip, HeartbeatSection } from "../../src/shell/heartbeat";
 
 let next: DeskHeartbeat = { available: false };
 const realFetch = globalThis.fetch;
+/** Every `/decisions` URL this section asked for — how the trades filter is asserted (#3961). */
+const askedForDecisions: string[] = [];
 beforeEach(() => {
-  globalThis.fetch = ((url: string) =>
-    Promise.resolve(
+  askedForDecisions.length = 0;
+  globalThis.fetch = ((url: string) => {
+    const isDecisions = String(url).includes("/decisions");
+    if (isDecisions) askedForDecisions.push(String(url));
+    return Promise.resolve(
       new Response(
-        JSON.stringify(
-          String(url).includes("/decisions") ? { available: true, kind: "bot", cycles: [] } : next,
-        ),
+        JSON.stringify(isDecisions ? { available: true, kind: "bot", cycles: [] } : next),
         { status: 200 },
       ),
-    )) as typeof fetch;
+    );
+  }) as typeof fetch;
 });
 afterEach(() => {
   globalThis.fetch = realFetch;
@@ -99,6 +103,39 @@ describe("HeartbeatSection", () => {
     next = { available: true, heartbeat: { ...staleHeartbeat, playbooks: null } };
     render(withClient(<HeartbeatSection deskId="sauron" />));
     expect(await screen.findByText("No playbook verdicts recorded yet.")).toBeInTheDocument();
+  });
+
+  /** #3961 — before this, the log filtered out every pass that traded with no way to include it,
+   *  so a traded round's rejected siblings, refused ideas and funnel count showed nowhere. */
+  it("includes the passes that traded when the reader asks, and says so in the heading", async () => {
+    next = staleDesk;
+    render(withClient(<HeartbeatSection deskId="sauron" />));
+    await waitFor(() => expect(askedForDecisions.length).toBeGreaterThan(0));
+    expect(askedForDecisions.every((url) => url.includes("trades=none"))).toBe(true);
+    expect(
+      screen.getByText("Passes that placed no trade — idle, blocked, halted"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Include the passes that placed a trade/ }),
+    );
+    await waitFor(() =>
+      expect(askedForDecisions.some((url) => !url.includes("trades=none"))).toBe(true),
+    );
+    expect(screen.getByText("Every recorded pass")).toBeInTheDocument();
+  });
+
+  it("opens with the traded passes already included when a fill's why linked to a round", async () => {
+    next = staleDesk;
+    window.location.hash = "#cycle-1790000000000";
+    try {
+      render(withClient(<HeartbeatSection deskId="sauron" />));
+      await waitFor(() => expect(askedForDecisions.length).toBeGreaterThan(0));
+      expect(askedForDecisions.every((url) => !url.includes("trades=none"))).toBe(true);
+      expect(screen.getByRole("checkbox")).toBeChecked();
+    } finally {
+      window.location.hash = "";
+    }
   });
 
   it("says plainly when no decision trail is wired", async () => {

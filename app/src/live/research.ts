@@ -179,6 +179,110 @@ export function mentionsSymbol(text: string | undefined, symbol: string): boolea
   return text ? new RegExp(`\\b${symbol}\\b`).test(text) : false;
 }
 
+/**
+ * The `sym:` scope's corpus search (#3962) — which shelved documents name each scoped symbol in
+ * their TEXT. The text never crosses the wire (documents stay server-rendered), so the server
+ * answers this for the symbols the member actually asked for; slugs come back, nothing more.
+ */
+export interface ResearchMentions {
+  readonly bySymbol: Readonly<Record<string, readonly string[]>>;
+}
+
+export async function fetchResearchMentions(symbols: readonly string[]): Promise<ResearchMentions> {
+  const sym = encodeURIComponent(symbols.join(","));
+  const res = await fetch(`/api/research/mentions?sym=${sym}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`research mentions ${res.status}`);
+  const raw = (await res.json()) as Partial<ResearchMentions>;
+  // A server from before #3962 serves no such route at all (a 404 throws above); an empty map is
+  // the honest degraded answer — the slug nets still apply, nothing is claimed about the text.
+  return { bySymbol: raw.bySymbol ?? {} };
+}
+
+/**
+ * How a shelved document sits in an active `sym:` scope:
+ *   `named`    — the document IS about the symbol: its slug carries it, or its event does.
+ *   `mentions` — the symbol appears only in the document's text.
+ *   `null`     — out of scope (and, with no scope at all, nothing to mark).
+ *
+ * Named outranks mentions when both hold, so a symbol's own ledger never reads as a passing
+ * reference. `mentioned` is the server's answer for THIS scope; while it is still in flight (or
+ * unreachable) it is empty, which degrades to the slug nets — never to a claim of silence.
+ */
+export interface DocSymbolMatch {
+  readonly kind: "named" | "mentions";
+  /** The scoped symbols this document matched, in the scope's own order. */
+  readonly symbols: readonly string[];
+}
+
+/**
+ * Where the corpus search stands for the current scope — what the board is allowed to SAY when a
+ * list comes back empty depends on it. `partial` is the case where the server accepted some of the
+ * scope and not the rest (its own cap); those symbols were never searched, so nothing may be
+ * claimed about them.
+ */
+export type MentionSearchState = "searching" | "unreachable" | "partial" | "answered";
+
+/** Which of a scope's symbols the server actually searched for, read off its own answer: it keys an
+ *  entry per symbol it accepted, so a missing key means "not searched", never "found nothing". */
+export function unsearchedSymbols(
+  scope: readonly string[],
+  mentioned: Readonly<Record<string, readonly string[]>>,
+): readonly string[] {
+  return scope.filter((sym) => mentioned[sym] === undefined);
+}
+
+/**
+ * What an empty document list says while a symbol is scoped, or null when none is (then the
+ * pre-#3962 copy still applies). Three honesty rules decide the wording: never "nothing mentions
+ * NVDA" on the strength of a search still in flight or never run; never blame "this filter" when
+ * the scope is the only thing narrowing — say the name back to them; and never credit the scope
+ * when another facet is what actually emptied the list (`alsoFiltered`), because "no ledger
+ * mentions NVDA" is false when an NVDA ledger was dropped by `impact:low`.
+ */
+export function scopeEmptyText(
+  noun: "study" | "ledger",
+  where: string,
+  scope: readonly string[],
+  state: MentionSearchState,
+  alsoFiltered = false,
+): string | null {
+  if (scope.length === 0) return null;
+  const names = scope.join(" or ");
+  if (state === "searching") return `Searching every ${noun} for ${names}…`;
+  if (state === "unreachable")
+    return `No ${noun}${where} is named for ${names} — the text search is unreachable, so only slugs and events were checked.`;
+  if (state === "partial")
+    return `No ${noun}${where} matches — only the first few names in this scope were searched, so narrow it to see the rest.`;
+  return alsoFiltered
+    ? `No ${noun}${where} matches this filter.`
+    : `No ${noun}${where} mentions ${names}.`;
+}
+
+/**
+ * Slug segments, upper-cased — the slug read as the words it is built from rather than as one
+ * string. A raw substring test would call `events/russell-style-month-end-ca(PPI)ng-…` "named for
+ * PPI" and `multi-symbol-sweep` "named for MU"; there are 21 such collisions for PPI alone in the
+ * corpus today. Harmless while the test only filtered, a false claim now that it prints a label.
+ */
+const slugWords = (slug: string): readonly string[] =>
+  slug
+    .toUpperCase()
+    .split(/[^A-Z0-9]+/)
+    .filter(Boolean);
+
+export function docSymbolMatch(
+  doc: ResearchDocLink,
+  scope: readonly string[],
+  mentioned: Readonly<Record<string, readonly string[]>>,
+  eventSymbols: readonly string[] = [],
+): DocSymbolMatch | null {
+  const words = slugWords(doc.slug);
+  const named = scope.filter((sym) => words.includes(sym) || eventSymbols.includes(sym));
+  if (named.length > 0) return { kind: "named", symbols: named };
+  const mentions = scope.filter((sym) => (mentioned[sym] ?? []).includes(doc.slug));
+  return mentions.length > 0 ? { kind: "mentions", symbols: mentions } : null;
+}
+
 /** The single-valued facets a slot can set: `kind:` · `impact:` · `call:`. */
 export type Facet = "kind" | "impact" | "call";
 const FACET_RE: Record<Facet, RegExp> = { kind: KIND_RE, impact: IMPACT_RE, call: CALL_RE };

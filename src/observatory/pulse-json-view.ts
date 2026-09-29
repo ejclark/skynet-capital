@@ -45,10 +45,27 @@ interface PulseWeek {
   readonly bar: number;
 }
 
+/**
+ * One headline fact. The `key` is the contract a second reader selects on — the net-worth card's
+ * standing line picks `winRate`, `profitFactor` and `maxDrawdown` out of this list so the Profile
+ * page and the Pulse page can never disagree (#3964). Matching on `label` would have made display
+ * copy load-bearing; the key is the stable name, the label is the words.
+ */
+type PulseTileKey = "equity" | "netRealized" | "winRate" | "profitFactor" | "maxDrawdown";
+
 interface PulseTile {
+  readonly key: PulseTileKey;
   readonly label: string;
   readonly value: string;
   readonly note: string;
+  /**
+   * False when the inputs for this fact do not exist yet — no closed trade, nothing lost, fewer
+   * than two equity samples. The Pulse page prints the tile either way, because its `note` says
+   * what is missing right beside the dash. A reader with less room (the net-worth card's standing
+   * line) needs the flag to decide whether the fact is worth a slot at all, and must not have to
+   * recognize "—" to find out. Same shape as `NetWorthStatsView`'s `valueKnown` / `cashKnown`.
+   */
+  readonly known: boolean;
   readonly tone?: "pos" | "neg" | "flat";
 }
 
@@ -162,30 +179,40 @@ export function deskPulseView(
   const drawdown = equityDrawdown(samples);
   const tiles: PulseTile[] = [
     {
+      key: "equity",
       label: "Equity",
       value: formatCurrency(snapshot.equity),
       note: `cash ${formatCurrency(snapshot.cash)}`,
+      known: true,
     },
     {
+      key: "netRealized",
       label: "Net realized",
       value: formatSigned(stats.netRealized),
       note: stats.trades === 0 ? "needs a closed trade" : "booked, not on paper",
+      known: stats.trades > 0,
       ...(stats.trades > 0 ? { tone: plClass(stats.netRealized) } : {}),
     },
     {
+      key: "winRate",
       label: "Win rate",
       value: formatPctOrDash(stats.winRate),
       note: stats.trades === 0 ? "needs a closed trade" : `${stats.wins}W · ${stats.losses}L`,
+      known: stats.winRate !== null,
     },
     {
+      key: "profitFactor",
       label: "Profit factor",
       value: formatRatio(stats.profitFactor, "×"),
       note: stats.profitFactor === null ? "nothing lost yet" : "wins ÷ losses; above 1× is paying",
+      known: stats.profitFactor !== null,
     },
     {
+      key: "maxDrawdown",
       label: "Max drawdown",
       value: drawdown ? `${drawdown.ddPct.toFixed(2)}%` : "—",
       note: drawdown ? `from peak ${formatCurrency(drawdown.peak)}` : "needs two equity samples",
+      known: drawdown !== null,
       ...(drawdown ? { tone: drawdown.ddPct > 0 ? ("neg" as const) : ("flat" as const) } : {}),
     },
   ];

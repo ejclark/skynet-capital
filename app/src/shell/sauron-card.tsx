@@ -2,7 +2,7 @@ import { type ReactElement, useId, useRef } from "react";
 import { PHONE_QUERY } from "./cockpit-clock";
 import { LeagueCard } from "./league-card";
 import { type CardPick, type Crest, usePrefs } from "./prefs";
-import { useTowerGlance, useTowerMood } from "./tower-bus";
+import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
 import { useMediaQuery } from "./use-media";
 
 /**
@@ -21,7 +21,8 @@ import { useMediaQuery } from "./use-media";
  * turn (`src/three/kit/glance.ts`). Reduced motion: the scene holds a still frame and the page
  * sends no glances, so the card is simply a picture. The glance lives in `tower-bus.ts` since
  * #3807 slice 3a — this card was its first consumer; the band's crest is the second. The card also
- * lends its landmark's dials to the crest (`useTowerMood`), so both towers burn alike.
+ * lends its landmark's dials to the crest (`useTowerMood`), so both towers burn alike, and its
+ * frame hears a flare the way the crest does (`useCardFrame`, #3807 slice 3b-3).
  *
  * THE MEMBER'S MOTION SETTING (#3807 slice 3b-1): "Still" in Settings → Display stills this tower
  * too — the scene's `rest=still` works in any framing (one frame at rest, the loop only while a
@@ -150,6 +151,7 @@ export function SauronCard({
   const art = cardShowsArt({ besideHead, flag, card, phone });
   useTowerGlance(scope, frame);
   useTowerMood(landmark);
+  useCardFrame(frame);
   if (!art)
     return (
       <section className="char-card char-card--league" aria-label="The league">

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { DeskAlerts as DeskAlertsData, DismissResult } from "../../src/live/alerts";
 import { DeskAlerts } from "../../src/shell/desk-alerts";
 
@@ -18,6 +18,24 @@ rstest.mock("../../src/live/alerts", () => ({
     dismissed.push(fingerprint);
     return Promise.resolve(nextDismiss);
   },
+}));
+
+rstest.mock("@tanstack/react-router", () => ({
+  Link: ({
+    to,
+    search,
+    children,
+    className,
+  }: {
+    to: string;
+    search?: Record<string, string>;
+    children: ReactNode;
+    className?: string;
+  }) => (
+    <a href={search ? `${to}?${new URLSearchParams(search)}` : to} className={className}>
+      {children}
+    </a>
+  ),
 }));
 
 function withClient(node: ReactElement) {
@@ -56,6 +74,11 @@ describe("DeskAlerts", () => {
     next = { available: false, reason: "unlinked", alerts: [], dismissable: false };
     render(withClient(<DeskAlerts deskId="human-eric" />));
     await waitFor(() => expect(screen.getByText(/isn't linked/)).toBeInTheDocument());
+    // #3807 slice 3b-4: the note names an action, so it carries the control — the connect guide.
+    expect(screen.getByRole("link", { name: "connect one in Onboarding" })).toHaveAttribute(
+      "href",
+      "/accounts?section=milestones&chapter=onboarding",
+    );
   });
 
   it("renders each alert with its priority word and glyph, and dismisses by fingerprint", async () => {

@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { FormEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import { fetchCouncil, submitThesis } from "../live/council";
+import { fetchCouncil } from "../live/council";
 import {
   fetchWire,
   matchesWire,
@@ -11,6 +11,7 @@ import {
   type WireFeed,
   type WireTrade,
 } from "../live/wire";
+import { CouncilCompose } from "../shell/council-compose";
 import { PageFrame } from "../shell/frame";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
@@ -231,22 +232,14 @@ function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
   );
 }
 
-const COUNCIL_MAX_CHARS = 280;
-
 /** THE COUNCIL (issue #2224 shape 1) — one line per member per week, visible inside the gate
- *  (`docs/THE-GAME.md:117`: "the argument is the product"). Resubmitting replaces this week's own
- *  line, so the composer prefills from `mine` rather than always starting blank — the affordance
- *  is "edit your line," never "post again." */
+ *  (`docs/THE-GAME.md:117`: "the argument is the product"). This is the league's shared view:
+ *  everyone's lines. The composer itself is `shell/council-compose.tsx` since #3963, because the
+ *  member's own line also renders beside their standing on the Profile Overview and it is ONE
+ *  record — same endpoint, same `["council"]` query key, no copy to drift. */
 function CouncilSection(): ReactElement {
   const queryClient = useQueryClient();
   const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
-  const [draft, setDraft] = useState<string | undefined>();
-  // "" means "no play tagged" — undefined means "hasn't touched the selector", so it still
-  // prefills from `mine` after a resubmit the same way the text draft does.
-  const [playDraft, setPlayDraft] = useState<string | undefined>();
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | undefined>();
-  const playSelectId = useId();
 
   if (council.isPending) return <p className="note">Tuning in…</p>;
   if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
@@ -255,29 +248,6 @@ function CouncilSection(): ReactElement {
     return <p className="note">The Council isn't switched on yet in this deployment.</p>;
   }
 
-  const text = draft ?? data.mine?.text ?? "";
-  const play = playDraft ?? data.mine?.playbookId ?? "";
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setNote(undefined);
-    try {
-      const result = await submitThesis(text, play || undefined);
-      if (result.ok) {
-        setDraft(undefined);
-        setPlayDraft(undefined);
-        setNote(undefined);
-        await queryClient.invalidateQueries({ queryKey: ["council"] });
-      } else {
-        setNote(result.error ?? "Couldn't save that.");
-      }
-    } catch (err) {
-      setNote(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <section className="wire-panel">
       <h2 className="wire-h">The Council</h2>
@@ -285,43 +255,10 @@ function CouncilSection(): ReactElement {
         One line, once a week: your thesis and your bot's stance. Visible to the whole league — the
         argument is the product.
       </p>
-      <form className="council-compose" onSubmit={(e) => void submit(e)}>
-        <input
-          type="text"
-          value={text}
-          maxLength={COUNCIL_MAX_CHARS}
-          placeholder="I think NVDA runs, because…"
-          onChange={(e) => setDraft(e.target.value)}
-          disabled={busy}
-        />
-        <button
-          type="submit"
-          className="btn btn-primary council-submit"
-          disabled={busy || text.trim().length === 0}
-        >
-          {busy ? "Saving…" : data.mine ? "Update" : "Commit"}
-        </button>
-      </form>
-      {data.plays.length > 0 ? (
-        <p className="council-play-picker">
-          <label htmlFor={playSelectId}>Tag your bot's play (optional)</label>
-          <select
-            id={playSelectId}
-            value={play}
-            onChange={(e) => setPlayDraft(e.target.value)}
-            disabled={busy}
-          >
-            <option value="">No play tagged</option>
-            {data.plays.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.id} · {p.symbol}
-              </option>
-            ))}
-          </select>
-        </p>
-      ) : null}
-      <p className="council-count num">{COUNCIL_MAX_CHARS - text.length} left</p>
-      {note ? <p className="set-err">{note}</p> : null}
+      <CouncilCompose
+        week={data}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["council"] })}
+      />
       {data.entries.length === 0 ? (
         <p className="note">Nobody's spoken yet this week — be the first.</p>
       ) : (

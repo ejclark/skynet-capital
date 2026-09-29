@@ -43,7 +43,9 @@ roster copied to a temp dir, no `events.jsonl`, `SKYNET_OFFLINE_FIXTURES` pointe
 plain offline server replays the recorded fill script one tick a second from boot; run 0's second
 pass watched Eric's EEM position get closed by the replay between two steps of one journey, so
 "the member holds EEM" flipped with the clock. Frozen, a position a journey expects is there on
-every step. The cost: Activity shows only the fixture's own orders, never replayed fills.
+every step. The cost: Activity shows only the fixture's own orders, never replayed fills. The copy
+also gives the owner one closed XLF round trip (rung 102), so a playbook is earned and the phone
+journey's "Arm · soon" step has a control to read (`frozen-fixtures.mjs` says why).
 
 ## What it does, per step
 

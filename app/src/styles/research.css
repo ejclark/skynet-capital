@@ -177,6 +177,27 @@
   color: var(--muted);
   white-space: nowrap;
 }
+/* The `sym:` scope's mark (#3962) — "named for NVDA" vs "mentions NVDA". The WORDS carry the
+ * meaning; the border shape (solid vs dashed, the same convention .rx-assessed and .rx-blocked use)
+ * and the weight only add emphasis, never a colour change alone. It sits before .rx-assessed so the
+ * assessment stamp keeps the row's right edge, and wraps under the title at phone width. */
+.rx-scope {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.rx-scope-named {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+.rx-scope-mentions {
+  border-style: dashed;
+}
 @media (max-width: 820px) {
   .rx-grid {
     grid-template-columns: 1fr;

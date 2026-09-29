@@ -1,0 +1,68 @@
+/* The standing line (#3964) — `shell/standing-line.tsx`, the member's own record inside the
+ * net-worth card: win rate, profit factor, max drawdown, then one link to the full Pulse. One
+ * wrapped row with the footer's rule above it, deliberately NOT a panel (docs/IA.md §5.1's
+ * falsifier: these facts must not read as "a second net-worth card").
+ *
+ * Unlike `.nw-foot`, this row stays at phone width — a member's record is the card's own answer to
+ * "am I winning", not wide-screen room. It wraps to two lines at 390 instead of hiding.
+ *
+ * No hue carries meaning alone here: each value already says it in words a reader can count (a
+ * drawdown percentage, a factor in ×), and the tone is emphasis on top of that. */
+
+.standing-line {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 10px 20px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  min-width: 0;
+}
+.standing-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.standing-fact {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.standing-k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.standing-v {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.standing-more {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .standing-line {
+    padding: 10px 16px 12px;
+    gap: 6px 12px;
+  }
+  /* At 390 the three facts are the line; "Your record" is what the card already is. */
+  .standing-eyebrow {
+    display: none;
+  }
+  .standing-more {
+    margin-left: 0;
+  }
+}
