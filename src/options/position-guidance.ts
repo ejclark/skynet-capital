@@ -168,7 +168,7 @@ function assumptionLines(input: GuidanceInputs, retiredWindow: string | undefine
     input.printEvidence
       ? `Across an earnings report the model understates the move: ${input.printEvidence}.`
       : "Across an earnings report the model can understate the move — an overnight gap is a jump it does not price.",
-    "Trading days skip weekends only; market holidays aren't counted.",
+    "Trading days skip weekends and market holidays, from the exchange calendar.",
     ...(retiredWindow
       ? [
           `The earnings window ${retiredWindow} has passed and no next date is on the calendar, so no expiry is excluded for one.`,
