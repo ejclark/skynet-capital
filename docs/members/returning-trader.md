@@ -77,9 +77,9 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 5. `/app/trade?desk=human-eric&symbol=EEM` — "← Back to account" points at the desk. **WHEN the
    member wants to return from Trade to their book, the app shall link back to the cockpit they
    came from.** _known gap — dead end 6._ Judge: does the reader land where they started?
-6. desktop only — the docked bench, no Chain entry. **WHEN Trade is docked at desktop width, the
-   app shall offer an entry to the standalone options chain.** _known gap — dead end 8._ Judge: can
-   the reader find the chain from here?
+6. desktop only — the docked bench, "Options chain" beside the milestone strip. **WHEN Trade is
+   docked at desktop width, the app shall offer an entry to the standalone options chain.**
+   _Fixed — #3807 slice 3b-2._ Judge: can the reader find the chain from here?
 
 ### j2 — the fill on Activity
 
