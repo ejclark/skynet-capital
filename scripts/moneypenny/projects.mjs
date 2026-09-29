@@ -267,8 +267,11 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
 // is left alone (renaming or deleting it stays a UI click).
 //   Flow     — kanban: one column per Status, the work's state at a glance.
 //   Backlog  — table of everything not Done, sorted by Priority.
-//   Horizons — roadmap: grouped by Horizon (Now / Next / Later), bars along Target date, the only
-//              date field, which GitHub's roadmap picks up by default.
+//   Roadmap  — a dateless Now / Next / Later board: one column per Horizon, one swimlane per
+//              Priority. Eric, 2026-09-29: the roadmap is a strategic time-horizon view that
+//              informs priority, and nobody will maintain dates. GitHub's roadmap layout only
+//              draws bars from date fields, so it was the wrong tool; a board over Horizon is the
+//              classic Now/Next/Later roadmap. Target date stays on the project, unused.
 export const VIEWS = [
   { name: "Flow", layout: "board", columnsBy: "Status" },
   {
@@ -278,9 +281,10 @@ export const VIEWS = [
     sortBy: "Priority",
   },
   {
-    name: "Horizons",
-    layout: "roadmap",
-    groupBy: "Horizon",
+    name: "Roadmap",
+    layout: "board",
+    columnsBy: "Horizon",
+    groupBy: "Priority",
     filter: "-status:Done",
   },
 ];

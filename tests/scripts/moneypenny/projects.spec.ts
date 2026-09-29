@@ -374,17 +374,21 @@ describe("moneypenny projects: statusOptionsMatch", () => {
 describe("moneypenny projects: viewsToCreate", () => {
   const ids = { Status: 1, Priority: 2, Horizon: 3, "Target date": 4 };
 
-  it("builds a kanban on Status, a Priority-sorted backlog and a Horizon roadmap", () => {
-    const [flow, backlog, horizons] = viewsToCreate([], ids);
-    expect([flow?.name, backlog?.name, horizons?.name]).toEqual(["Flow", "Backlog", "Horizons"]);
+  it("builds a kanban on Status, a Priority-sorted backlog and a dateless Horizon roadmap", () => {
+    const [flow, backlog, roadmap] = viewsToCreate([], ids);
+    expect([flow?.name, backlog?.name, roadmap?.name]).toEqual(["Flow", "Backlog", "Roadmap"]);
     expect(flow?.body).toMatchObject({ layout: "board", vertical_group_by: [1] });
     expect(backlog?.body).toMatchObject({ layout: "table", sort_by: [[2, "asc"]] });
-    expect(horizons?.body).toMatchObject({ layout: "roadmap", group_by: [3] });
+    expect(roadmap?.body).toMatchObject({
+      layout: "board",
+      vertical_group_by: [3],
+      group_by: [2],
+    });
   });
 
   it("skips views that already exist by name", () => {
     const names = viewsToCreate(["Flow", "Backlog", "View 1"], ids).map((v) => v.name);
-    expect(names).toEqual(["Horizons"]);
+    expect(names).toEqual(["Roadmap"]);
   });
 
   it("fails loudly when a field the views need is missing", () => {
