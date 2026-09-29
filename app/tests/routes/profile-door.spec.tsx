@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { horizonSearch } from "../../src/live/horizon-params";
 import { Route } from "../../src/routes/accounts";
@@ -249,6 +249,25 @@ describe("the Profile page's default and its viewer-level sections", () => {
     mountAccounts("/accounts?account=all");
     expect(await screen.findByRole("combobox", { name: "Account" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open as the league sees it" })).toBeNull();
+  });
+
+  it("names Settings in words in the head's link row, in every head state (#3816 slice 7)", async () => {
+    // Eric, 2026-09-04: a labelled link beside its sibling, not only the topbar's icon-only gear.
+    const settingsHref = () => screen.getByRole("link", { name: "Settings" }).getAttribute("href");
+    mountAccounts("/accounts");
+    await screen.findByText(/No account linked yet/);
+    expect(settingsHref()).toBe("/settings");
+    cleanup();
+
+    accounts = [ERIC];
+    mountAccounts("/accounts");
+    await screen.findByRole("link", { name: "Open as the league sees it" });
+    expect(settingsHref()).toBe("/settings");
+    cleanup();
+
+    mountAccounts("/accounts?section=milestones");
+    await screen.findByText("Your milestones — the same on every account.");
+    expect(settingsHref()).toBe("/settings");
   });
 
   it("says the ladder's gate in the server's words (#1672's fix, regressed, restored)", async () => {
