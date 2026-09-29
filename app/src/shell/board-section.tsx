@@ -10,8 +10,12 @@ import { fetchPlays } from "../live/options";
 import {
   assessmentAge,
   callForLens,
+  type DocSymbolMatch,
+  docSymbolMatch,
   fetchResearch,
+  fetchResearchMentions,
   LENS_LABEL,
+  type MentionSearchState,
   mentionsSymbol,
   parseResearchQuery,
   type ResearchCall,
@@ -19,7 +23,9 @@ import {
   type ResearchEvent,
   type ResearchFilter,
   type ResearchShelfData,
+  scopeEmptyText,
   toggleSymbolScope,
+  unsearchedSymbols,
 } from "../live/research";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
@@ -199,30 +205,66 @@ export function CallBoard({
         Calls exactly as authored — confidence drives size, every call carries its dated falsifier
         in the ledger behind it. The mix sorts each call by its opening words; hubs count the
         ledgers in range whose probe-ref names the event as adjacent.
+        {/* #3962: the doc lists below widen on a symbol's text; a call sheet deliberately does not,
+            so a passing reference never dilutes what a call is about. Said out loud, because the
+            two lists otherwise disagree about the same scope for no visible reason. */}
+        {symbols.length > 0
+          ? " Scoped to the names a call is about — a ledger that only mentions one is listed below, not called here."
+          : ""}
       </p>
     </section>
   );
 }
 
-function DocList({
+/** One row of a doc list: the document, plus how it sits in the active `sym:` scope (null when no
+ *  symbol is scoped, which is also when no mark is drawn). */
+interface DocRow {
+  readonly doc: ResearchDocLink;
+  readonly match: DocSymbolMatch | null;
+}
+
+/** The scope's mark (#3962). The WORDS "named for" / "mentions" carry the meaning — the border and
+ *  weight only add emphasis, never a colour change alone (CLAUDE.md: hue never carries meaning
+ *  alone). A mention-only row is the whole point of the search, so it says so rather than hiding
+ *  among the documents the symbol is actually about. */
+function ScopeMark({ match }: { readonly match: DocSymbolMatch }): ReactElement {
+  const names = match.symbols.join(" · ");
+  const named = match.kind === "named";
+  return (
+    <span
+      className={`rx-scope rx-scope-${match.kind}`}
+      title={
+        named
+          ? `this document is about ${names} — its slug or its event names it`
+          : `${names} appears in this document's text, which is not about it`
+      }
+    >
+      {named ? "named for" : "mentions"} {names}
+    </span>
+  );
+}
+
+/** Exported for its spec. */
+export function DocList({
   title,
-  docs,
+  rows,
   empty,
 }: {
   readonly title: string;
-  readonly docs: readonly ResearchDocLink[];
+  readonly rows: readonly DocRow[];
   readonly empty: string;
 }): ReactElement {
   return (
     <section className="rx-panel">
       <h2 className="rx-h">{title}</h2>
-      {docs.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="note">{empty}</p>
       ) : (
         <ul className="rx-docs">
-          {docs.map((doc) => (
+          {rows.map(({ doc, match }) => (
             <li key={doc.slug}>
               <a href={doc.href}>{doc.title}</a>
+              {match ? <ScopeMark match={match} /> : null}
               {doc.lastAssessed ? (
                 <span className="rx-assessed num">last assessed {doc.lastAssessed}</span>
               ) : null}
@@ -232,6 +274,20 @@ function DocList({
       )}
     </section>
   );
+}
+
+/** Rows under an active `sym:` scope: out-of-scope documents drop, and the ones the symbol is NAMED
+ *  in sort above the ones that only mention it — strongest match first, slug order inside each
+ *  group. With no scope every row passes through untouched. Exported for its spec. */
+export function scopedRows(rows: readonly DocRow[], scope: readonly string[]): readonly DocRow[] {
+  if (scope.length === 0) return rows;
+  return rows
+    .filter((row) => row.match)
+    .sort(
+      (a, b) =>
+        Number(a.match?.kind === "mentions") - Number(b.match?.kind === "mentions") ||
+        a.doc.slug.localeCompare(b.doc.slug),
+    );
 }
 
 /** The top filters — the text query and the symbol chips write the same model: a chip toggles a
@@ -320,6 +376,15 @@ export function useBoardView({
   });
 
   const parsed = parseResearchQuery(query);
+  // The `sym:` scope's corpus search (#3962) — keyed on the scope itself, so react-query caches one
+  // answer per watchlist and typing free text never re-asks. Only the doc lists read it: the call
+  // board deliberately stays scoped to the names a call is ABOUT (see the header copy below).
+  const mentions = useQuery({
+    queryKey: ["research-mentions", parsed.symbols.join(",")],
+    queryFn: () => fetchResearchMentions(parsed.symbols),
+    retry: false,
+    enabled: active && parsed.symbols.length > 0,
+  });
   const fog = dayLensFog(plays.data);
   // The quarter lens snaps to a company's own fiscal quarter (#1736) only when the scope names
   // EXACTLY one symbol and that symbol has a confirmed fiscal year-end — every other scope (none,
@@ -369,25 +434,53 @@ export function useBoardView({
     filter.terms.every(
       (term) => doc.title.toLowerCase().includes(term) || doc.slug.toLowerCase().includes(term),
     );
-  const inScope = (doc: ResearchDocLink, eventId?: string) =>
-    filter.symbols.length === 0 ||
-    filter.symbols.some(
-      (sym) =>
-        doc.slug.toUpperCase().includes(sym) ||
-        (eventId ? (eventsById.get(eventId)?.symbols ?? []).includes(sym) : false),
-    );
-  const studies = data.studies.filter((doc) => matchesTerms(doc) && inScope(doc));
-  const ledgers = data.ledgers.filter((doc) => {
-    const eventId = [...inRangeIds].find((id) => doc.slug.endsWith(id));
-    if (!eventId) return false;
-    const event = eventsById.get(eventId);
-    return (
-      matchesTerms(doc) &&
-      inScope(doc, eventId) &&
-      (!filter.kind || event?.kind === filter.kind) &&
-      (!filter.impact || event?.impact === filter.impact)
-    );
+  // The mention answer for the CURRENT scope only — `mentions.data` is keyed on it, so a stale
+  // watchlist's slugs can never leak into this one's marks.
+  const mentioned = mentions.data?.bySymbol ?? {};
+  const rowOf = (doc: ResearchDocLink, eventId?: string): DocRow => ({
+    doc,
+    match: docSymbolMatch(
+      doc,
+      filter.symbols,
+      mentioned,
+      eventId ? (eventsById.get(eventId)?.symbols ?? []) : [],
+    ),
   });
+  const studies = scopedRows(
+    data.studies.filter(matchesTerms).map((doc) => rowOf(doc)),
+    filter.symbols,
+  );
+  const ledgers = scopedRows(
+    data.ledgers.flatMap((doc) => {
+      const eventId = [...inRangeIds].find((id) => doc.slug.endsWith(id));
+      if (!eventId) return [];
+      const event = eventsById.get(eventId);
+      const keep =
+        matchesTerms(doc) &&
+        (!filter.kind || event?.kind === filter.kind) &&
+        (!filter.impact || event?.impact === filter.impact);
+      return keep ? [rowOf(doc, eventId)] : [];
+    }),
+    filter.symbols,
+  );
+  // `answered` is claimed only when the server keyed an entry for EVERY scoped symbol — it caps how
+  // many one search answers for, and a symbol past that cap was never looked at.
+  const searchState: MentionSearchState = mentions.isError
+    ? "unreachable"
+    : !mentions.data
+      ? "searching"
+      : unsearchedSymbols(filter.symbols, mentioned).length > 0
+        ? "partial"
+        : "answered";
+  // Whether anything OTHER than the scope narrowed a list — studies see only the text terms, a
+  // ledger also sees the kind/impact facets. Without this the scope takes credit for a list that
+  // `impact:low` actually emptied, which is the same false claim in the other direction.
+  const alsoFiltered = {
+    study: filter.terms.length > 0,
+    ledger: filter.terms.length > 0 || Boolean(filter.kind) || Boolean(filter.impact),
+  };
+  const scopedEmpty = (noun: "study" | "ledger", where: string) =>
+    scopeEmptyText(noun, where, filter.symbols, searchState, alsoFiltered[noun]);
 
   return {
     band: (
@@ -414,7 +507,8 @@ export function useBoardView({
           <h1>R&amp;D</h1>
           <p>
             The living board: pick a lens and a span on the horizon, a name, or type a filter —
-            everything below follows. Documents open on their own pages.
+            everything below follows. Documents open on their own pages. A name searches their text
+            too, so a study that only mentions it still shows, marked as such.
           </p>
         </header>
         <ResearchFilters data={data} query={query} onChange={setFilter} />
@@ -427,15 +521,21 @@ export function useBoardView({
         <div className="rx-grid">
           <DocList
             title="Event ledgers"
-            docs={ledgers}
-            empty={`No ledger in ${rangeLabel(range, filter.lens, fiscal)}${
-              filter.terms.length > 0 ? " matches this filter." : "."
-            }`}
+            rows={ledgers}
+            empty={
+              scopedEmpty("ledger", ` in ${rangeLabel(range, filter.lens, fiscal)}`) ??
+              `No ledger in ${rangeLabel(range, filter.lens, fiscal)}${
+                filter.terms.length > 0 ? " matches this filter." : "."
+              }`
+            }
           />
           <DocList
             title="Studies"
-            docs={studies}
-            empty={filter.terms.length > 0 ? "No study matches this filter." : "No studies yet."}
+            rows={studies}
+            empty={
+              scopedEmpty("study", "") ??
+              (filter.terms.length > 0 ? "No study matches this filter." : "No studies yet.")
+            }
           />
         </div>
       </>

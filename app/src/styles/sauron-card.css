@@ -168,3 +168,10 @@
     padding: 2px 16px 18px;
   }
 }
+
+/* The compare's `league` pick (#3807 slice 3b-1, only under the flag, only beside the calendar
+ * head's tower at ≥861px): no art, no shade — the league alone keeps the right column. */
+.char-card--league .char-body {
+  margin-top: 0;
+  padding-top: 20px;
+}

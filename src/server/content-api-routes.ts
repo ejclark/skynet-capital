@@ -15,7 +15,7 @@ import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
 import { playbookPerformanceView, selectAccounts } from "./playbook-performance.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
-import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
+import { docsMentioning, eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
 /** Per-playbook trade performance (#2287, #885, #3665) — every closed trip any participant's fills
@@ -77,6 +77,15 @@ export async function serveContentApi(
       ),
     );
   }
+  if (path === "/api/research/mentions") {
+    // The `sym:` scope's second net (#3962). The shelf payload carries slugs and titles, never the
+    // documents' text, so the board alone can only match a symbol against a slug — which is how a
+    // study about NVDA's suppliers stayed invisible under `sym:NVDA`. The search runs here against
+    // the symbol the member actually typed; `docsMentioning` drops anything not `sym:`-shaped and
+    // caps how many it will answer for, so the query string cannot ask for the whole directory.
+    const sym = new URL(url, "http://localhost").searchParams.get("sym") ?? "";
+    return json({ bySymbol: docsMentioning(sym.split(",")) });
+  }
   if (path === "/api/learn") {
     // The viewer's own journey — same resolution as /learn's HTML route.
     const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
@@ -105,7 +114,7 @@ export async function serveContentApi(
   return false;
 }
 
-/** JSON twin of `/board/frame` for the React shell: the same board, as data. The
+/** The board as data for the React shell (the old `/board/frame` HTML twin is gone, #3816). The
  *  client renders this once, then applies `/events` ops verbatim from `seq` — on a gap it comes
  *  back here instead of patching around a hole. Same formatted values, same keys, same auth gate. */
 function serveBoardJson(

@@ -6,6 +6,7 @@ import { useHorizonRange } from "../live/horizon-params";
 import { fetchPlays } from "../live/options";
 import { CalendarHead } from "./calendar-head";
 import { useMediaQuery } from "./use-media";
+import { TABLET_QUERY } from "./widths";
 
 /**
  * THE COCKPIT CLOCK (#3807 slice 2·1; the design panel 2026-09-26, shape 2 — "the calendar head
@@ -36,8 +37,9 @@ import { useMediaQuery } from "./use-media";
  * live route by 2026-10-10 — then it leaves the head for the stage's first row.
  */
 
-/** ≤860px — the phone's shell (`shell.css`), where the head sits under the sticky block. */
-export const PHONE_QUERY = "(max-width: 860px)";
+/** ≤ the tablet width (860, `widths.ts`) — the shell wraps (`shell.css`), phones included, and
+ *  the head sits under the sticky block. */
+export const PHONE_QUERY = TABLET_QUERY;
 
 export function usePhoneWidth(): boolean {
   return useMediaQuery(PHONE_QUERY);

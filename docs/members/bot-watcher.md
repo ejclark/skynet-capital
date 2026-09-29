@@ -74,6 +74,14 @@ fails costs them more trust than a control that is greyed with a reason.
 6. `/app/u/sauron` — the desk rail: Active · Decisions · Thesis · Pulse · ← Leaderboard. **WHEN a
    viewer is on a desk, the app shall offer that account's activity beside its decisions.** _known
    gap — dead end 5._ Judge: can this reader find what the bot actually did?
+7. `/app/u/sauron/activity` — Sauron's Activity: every order it placed, newest first — what, at
+   what price, and why. **WHEN a viewer opens a bot's Activity, the app shall list every order it
+   placed, newest first.** Judge: can this reader find what the bot actually did? _(Added
+   2026-09-29, #3816 slice 9.)_
+8. `/app/u/sauron/pulse` — Sauron's Pulse: the equity curve, streaks, and realized P/L by week —
+   how bad the bad week was. **WHEN a viewer asks how a bot's week went, the app shall show its
+   realized P/L by week.** Judge: can this reader tell how the bot's week went? _(Added
+   2026-09-29, #3816 slice 9.)_
 
 Journey map: [`maps.md`](maps.md#bot-watcher). Findings: [`friction-ledger.md`](friction-ledger.md).
 

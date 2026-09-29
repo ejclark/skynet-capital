@@ -8,7 +8,7 @@ import { RecentOrdersStrip } from "../../src/shell/recent-orders-strip";
  * `RecentOrdersStrip` (#2017 Phase 1 slice 13, task 3a) — the trade ticket's compact "here's what
  * you've done" intel strip: nothing for an uncommitted symbol or desk, nothing while the query
  * hasn't resolved, an honest note when the ledger isn't wired or has no orders for this exact
- * symbol, and up to 3 most-recent events rendered via the timeline drawer's own reused `EventLine`
+ * symbol, and up to 3 most-recent events rendered via the shared `EventLine` (order-event-line.tsx)
  * row (proven here, not just asserted, by checking for the side-pill text `EventLine` renders) with
  * a "+N more" note when a 4th+ exists. The match is exact-symbol (not underlying-aware like
  * `WireRow`) — an event for a different symbol is excluded even when it shares an underlying.
@@ -109,7 +109,7 @@ describe("RecentOrdersStrip", () => {
     };
     render(withClient(<RecentOrdersStrip symbol="NVDA" deskId="desk-1" />));
 
-    // `EventLine`'s own side-pill markup (`.tl-side`) proves this reuses the timeline drawer's
+    // `EventLine`'s own side-pill markup (`.tl-side`) proves this reuses the shared order-fill
     // row rather than a parallel re-implementation.
     await screen.findAllByText("BUY");
     expect(document.querySelectorAll(".tl-side")).toHaveLength(3);

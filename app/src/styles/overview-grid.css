@@ -11,6 +11,12 @@
 .overview-grid > * {
   min-width: 0;
 }
+/* The card column holds two cards since #3963 — the league standing, then your council line. */
+.overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .overview-grid .nw-card,
 .overview-grid .decisions {
   margin: 0;

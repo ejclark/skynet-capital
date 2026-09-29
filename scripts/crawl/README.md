@@ -43,7 +43,9 @@ roster copied to a temp dir, no `events.jsonl`, `SKYNET_OFFLINE_FIXTURES` pointe
 plain offline server replays the recorded fill script one tick a second from boot; run 0's second
 pass watched Eric's EEM position get closed by the replay between two steps of one journey, so
 "the member holds EEM" flipped with the clock. Frozen, a position a journey expects is there on
-every step. The cost: Activity shows only the fixture's own orders, never replayed fills.
+every step. The cost: Activity shows only the fixture's own orders, never replayed fills. The copy
+also gives the owner one closed XLF round trip (rung 102), so a playbook is earned and the phone
+journey's "Arm · soon" step has a control to read (`frozen-fixtures.mjs` says why).
 
 ## What it does, per step
 
@@ -72,6 +74,8 @@ npm run crawl -- --phone-audit                   # + docs/members/phone-ledger.m
 npm run crawl -- --phone-audit --phone-ledger /tmp/p.md
 npm run phone -- /app/trade                      # ONE page, ~3s against a built app/dist
 npm run phone -- /app/accounts --session         # signed in as the crawl member; --strict exits 1 on high/medium; --all lists the advisory rows
+npm run phone -- /app/wire --click .status       # open a popover/drawer first — it is only in the DOM while open
+npm run phone -- /app/wire --at 2026-09-26T15:00:00Z   # pin the clock: a time-driven surface in the state you name
 ```
 
 | kind | what | severity |
@@ -143,9 +147,15 @@ npm run crawl:coverage                 # writes docs/members/coverage.md; prints
 npm run crawl:coverage -- --json       # the joined rows on stdout, writes nothing
 ```
 
+The gate is `tests/arch/journey-coverage.spec.ts`, in two halves. An unjudged screen fails `npm test`
+(triage is the contract other lanes read). The gap count is an advisory ratchet:
+`node scripts/crawl/coverage-budget.mjs` reports it against `journey-coverage-budget.json` and
+`--update` lowers the budget once a gap closes; it never rises.
+
 It exits 1 when the code has a screen `triage.json` does not (unjudged) or a living verdict names a
 screen that is gone (stale) — a new screen cannot slip in unjudged. Limits: only `goto` counts, never
 where an `act` click lands; the landing is resolved from the fixture (does this member own an
 account?), not by loading the page — the crawl's `{url}` expects are what check the real redirect. A `?section=` is matched against the route's full section list, not the viewer's narrowed one
-(a human account has no Heartbeat), and any path outside the SPA tree — `/login`, `/welcome` — counts
-as the unknown-URL row until server pages get journey steps of their own.
+(a human account has no Heartbeat). A `goto` outside `/app` lands on the server page whose
+`serves` test matches it (`/login`, `/research/<slug>` — the same hand list, one predicate each);
+any other path counts as the unknown-URL row.

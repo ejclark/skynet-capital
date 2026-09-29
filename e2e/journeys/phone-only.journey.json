@@ -46,13 +46,12 @@
         {
           "id": "s5",
           "goto": "/app/accounts?section=milestones&chapter=playbooks",
-          "sees": "the four playbook cards, every one LOCKED on this fixture — so no 'Arm · soon' renders; where one is earned, its reason is a line under it (#3807 slice 2e)",
+          "sees": "the four playbook cards, the first EARNED (the frozen fixture's closed XLF round trip earns rung 102) with a greyed 'Arm · soon' and its reason in a line under it (#3807 slices 2e, 3b-4)",
           "ears": "WHEN a disabled control renders on a phone, the app shall show its reason without hover.",
-          "expect": [{ "text": "Arming opens to human accounts with Season 1" }],
-          "known_gap": "dead end 8 — the code is fixed (#3807 slice 2e: Arm's reason is visible text under it, aria-describedby, pinned by app/tests/shell/playbooks-chapter.spec.tsx), but the frozen fixture's member has no unlocked playbook, so Arm never renders here and the step cannot see the fix (app/src/shell/playbooks-chapter.tsx:42)",
-          "where": "app/src/shell/playbooks-chapter.tsx:42",
-          "severity": "low",
-          "fix": "S",
+          "expect": [
+            { "role": "button", "name": "Arm · soon" },
+            { "text": "Arming opens to human accounts with Season 1" }
+          ],
           "judge": "does this reader know why Arm is off?"
         },
         {

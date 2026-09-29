@@ -7,6 +7,7 @@ import {
   dismissDeskAlert,
   fetchDeskAlerts,
 } from "../live/alerts";
+import { ConnectLink } from "./connect-link";
 
 /**
  * THE ALERTS STRIP (#3407 P4 slice 1) — what a member's own option positions are saying right
@@ -97,7 +98,7 @@ export function DeskAlerts({ deskId }: { readonly deskId: string }): ReactElemen
       {!data.available ? (
         <p className="tkt-note">
           Alerts read your own option positions, and this session isn't linked to a trading account
-          yet.
+          yet — <ConnectLink />.
         </p>
       ) : data.alerts.length === 0 ? (
         <p className="tkt-note">
