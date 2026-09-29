@@ -33,6 +33,10 @@ import { SauronCard } from "./sauron-card";
  * #3807 slice 2·1: under the net-worth card, one line — the events on what this book holds in the
  * market calendar's range (the burning-day joint, docs/IA.md §6; `held-events-line.tsx`). The
  * Eye's glance scope widens to the whole `.cockpit`, so the head's lenses and arrows turn it too.
+ *
+ * #3807 slice 3b-1: the card stands `besideHead` here — under the flag the calendar head draws
+ * its own tower, so `?card=league` (Eric's compare) drops the card's art at ≥861px; `/u/:id` has
+ * no calendar head and keeps its art either way.
  */
 export function OverviewSection({
   stats,
@@ -116,6 +120,7 @@ export function OverviewSection({
             ownedIds={owned.map((a) => a.id)}
             meId={owned.find((a) => a.kind === "human")?.id}
             scope=".cockpit"
+            besideHead
           />
         </div>
       </div>

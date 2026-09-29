@@ -240,3 +240,21 @@
   margin-bottom: 5px;
   color: var(--muted);
 }
+
+/* A preference is a word, not a letter (#3807 slice 3b-1): the shell's narrow-width toggle
+ * abbreviation turned Density's "Comfortable" and "Compact" into the same "C", and would turn
+ * "Moving" / "Still" into "M" / "S". The Settings column has room for the words at 390px. */
+.set-fields .toggle-group .toggle-text {
+  display: inline;
+}
+.set-fields .toggle-abbr {
+  display: none;
+}
+/* Locked by the device (reduced motion): the pressed option keeps full contrast — it is the
+ * answer — and the line under it says why; only the unavailable option dims. */
+.set-fields .toggle-group:disabled button {
+  cursor: not-allowed;
+}
+.set-fields .toggle-group:disabled button[aria-pressed="false"] {
+  opacity: 0.55;
+}
