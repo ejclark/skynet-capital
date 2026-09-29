@@ -16,7 +16,12 @@ export const isTransientGhError = (text) =>
     String(text ?? ""),
   );
 
-const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+/**
+ * Block this thread for `ms`. Exported because `withRetry` is not the only thing in this router
+ * that has to wait out GitHub: `resolveBoardItem` re-reads a Projects board that is briefly stale
+ * (#3979), and a second sleep implementation next door would be one more thing to keep in step.
+ */
+export const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 /**
  * Run `fn` up to `attempts` times, sleeping `baseMs * 2^n` between tries, retrying only while
