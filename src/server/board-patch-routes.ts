@@ -1,10 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { DashboardData } from "../observatory/dashboard-data.js";
-import type { NavContext } from "../observatory/dashboard-shell.js";
 import type { LeaderMetric } from "../observatory/standings-metric.js";
 import { type StandingsPatchOptions, standingsFieldOps } from "../observatory/standings-patch.js";
-import { renderStandingsContent, type StandingsOptions } from "../observatory/standings-view.js";
+import type { StandingsOptions } from "../observatory/standings-view.js";
 import type { WorldTransition } from "../observatory/world-transitions.js";
 import { type WorldPatch, WorldPatchChannel } from "../universe/patch-channel.js";
 import { projectWorld } from "../universe/project.js";
@@ -13,8 +12,10 @@ import type { ObservatoryHub } from "./observatory-hub.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
- * THE LIVE BOARD'S TRANSPORT — `/events` as a seq-numbered patch channel, and `/board/frame` as the
- * honest fallback for the changes a patch cannot express.
+ * THE LIVE BOARD'S TRANSPORT — `/events` as a seq-numbered patch channel. The honest fallback for
+ * the changes a patch cannot express is the client re-reading `/api/board` (`content-api-routes.ts`);
+ * the old HTML fragment route, `/board/frame`, had no caller left in the app and was removed
+ * (#3816 slice 8).
  *
  * Before this, `/events` pushed a freshly rendered page body on every hub tick and the client did
  * `root.innerHTML = …`, which destroyed all client state ~4 times a second. Now the hub drives ONE
@@ -144,23 +145,4 @@ export function streamBoardPatches(
 
   const unsubscribe = channel.subscribe((patch) => writePatch(res, patch, opts));
   req.on("close", unsubscribe);
-}
-
-/**
- * `/board/frame` — the same Standings content the page was server-rendered with, re-served whole.
- * The client asks for this only when a patch could not be applied honestly (a row appeared, the
- * cohort lead flipped, a seq gap). Behind the same auth gate as the board itself.
- */
-export function serveBoardFrame(
-  res: ServerResponse,
-  hub: ObservatoryHub,
-  nav: NavContext,
-  metric: LeaderMetric,
-  compare: Pick<StandingsOptions, "aId" | "bId">,
-): void {
-  res.writeHead(200, {
-    "content-type": "text/html; charset=utf-8",
-    "cache-control": "no-store",
-  });
-  res.end(renderStandingsContent(hub.getState(), { nav, metric, ...compare }));
 }

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { DecisionCycle } from "../../src/live/desk";
-import { CycleRow } from "../../src/shell/decisions-section";
+import { CycleRow, GUARDS_GLOSS } from "../../src/shell/decisions-section";
 
 /** `CycleRow`/`OutcomeLine`'s rendering of the context fields `decision-json-view.ts` already
  *  captures (momentum, sentiment, playbook mode, guard delta) — present-only, matching the house
@@ -178,11 +178,26 @@ describe("CycleRow", () => {
     expect(container.querySelector(`#${anchor}`)).not.toBeNull();
     // "placed" normally arrives collapsed; this one is open without a click.
     expect(screen.getByText("“panic fade”")).toBeInTheDocument();
-    expect(screen.getByText("1 intent from the persona → 1 past the guards")).toBeInTheDocument();
+    expect(screen.getByText("past the guards").closest("p")).toHaveTextContent(
+      "1 intent from the persona → 1 past the guards",
+    );
   });
 
   it("leaves a placed round collapsed when a DIFFERENT round is the one linked to", () => {
     render(<CycleRow cycle={cycle({ at: "2026-09-22T18:59:00Z" })} openCycle="cycle-1" />);
     expect(screen.queryByText("“panic fade”")).not.toBeInTheDocument();
+  });
+
+  it("glosses 'past the guards' in visible words beside the term (#3807 slice 3b-4)", () => {
+    render(<CycleRow cycle={cycle({ rawCount: 3, guardedCount: 1 })} />);
+    open();
+    const term = screen.getByText("past the guards");
+    expect(term.tagName).toBe("DFN");
+    const line = term.closest("p");
+    expect(line).toHaveTextContent(
+      "3 intents from the persona → 1 past the guards — the risk checks",
+    );
+    expect(line).toHaveTextContent(GUARDS_GLOSS);
+    expect(screen.getByText(/the risk checks every order must clear/)).toBeVisible();
   });
 });

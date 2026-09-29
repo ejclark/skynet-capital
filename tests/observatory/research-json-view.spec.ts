@@ -128,7 +128,8 @@ describe("researchShelfJson", () => {
     );
     expect(view.symbols[0]?.next).toEqual({ title: "Q2 print", date: "2026-09-02" });
     expect(view.symbols[1]?.next).toBeUndefined();
-    expect(view.symbols[1]?.href).toBe("/research/symbol/AMD");
+    // The living symbol page is retired (#3816 slice 8) — a chip filters R&D, it links nowhere.
+    expect(view.symbols[1]).not.toHaveProperty("href");
   });
 
   it("links docs to their server-rendered pages with the assessment stamp intact", () => {

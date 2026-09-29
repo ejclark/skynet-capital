@@ -313,7 +313,9 @@ taste fork, a load-bearing decision only he can settle) still always stop for hi
 never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
-ready-flip). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
+ready-flip) · `needs-design` (Eric, 2026-09-29: a more prescriptive marker than a bare "not ready" —
+the next step is a Claude Design session, not a build or a decision; carries the `/design` brief to
+fire when there's time, per `docs/HANDOFFS.md`). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
 Moneypenny clearing it from #1318 after a bottleneck-research call sheet found the "decision" was
 already-written policy: "that is fantastic; ideal") — evidence in a comment, the work routed on
 (`feedback` / `next-slice`), the label gone. The queue must stay honest about what actually needs
@@ -378,6 +380,14 @@ alone was right but welcomed a trailing why): `#<N> — <verdict/ask>. <what it 
 obvious>.` — e.g. `#1267 — waiting on you to R+M. Closes the deploy-churn side of "no adverse
 effects on deploy."` Never restate what the PR body, the CI run, or the notification's own payload
 already said; a wake with nothing new to report earns silence (re-arm the check-in), not a recap.
+
+**A finished session asks to archive itself** (Eric, 2026-09-28: "The point is to reduce the pileup
+of open sessions" — and sessions marked finished still "look like they have follow-up actions").
+Done is checked, not assumed: every PR it opened is merged or closed; every follow-up it produced (an
+open question, a parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan
+issue — never only the chat; its plan issue's state block is current; no PR watch or scheduled
+check-in is pending. Then its last message asks **"archive this session?"**, and on yes it archives
+itself as its final action (`archive_session` on its own session id).
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens

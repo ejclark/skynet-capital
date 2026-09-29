@@ -283,7 +283,7 @@
     {
       "community": "46 research-view.ts (23, 0.12)",
       "hubs": ["agendaBandPanel()", "BANDS", "callChip()"],
-      "mapped_to_container": "none — deleted view; event-agenda.ts + research-json-view survive → runtime:api content"
+      "mapped_to_container": "none — deleted view; research-json-view survives → runtime:api content (event-agenda.ts deleted, #3816)"
     },
     {
       "community": "47 EquitySample (11, 0.17)",
@@ -466,7 +466,7 @@
     {
       "community": "89 research-view.spec.ts (12, 0.24)",
       "hubs": ["monthGrid()", "navBounds()", "dayCell()"],
-      "mapped_to_container": "none — deleted view; calendar-widget.ts survives with test-only importers"
+      "mapped_to_container": "none — deleted view; calendar-widget.ts deleted too (#3816), its job is the app's events-agenda/calendar-head"
     },
     {
       "community": "96 deploy-lag.mjs (10) · 98 ship.sh (11, 0.36)",

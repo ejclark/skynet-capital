@@ -22,8 +22,7 @@ const css = readdirSync(cssDir)
 const CARD_CSS = `
   body { padding: 20px; }
   .ds-note { font: 11px/1.5 var(--mono); color: var(--muted); margin: 14px 0 0; }
-  .ds-static .drawer, .ds-static .kbd-scrim, .ds-static .kbd-help { position: static; width: auto; animation: none; }
-  .ds-static .drawer { max-width: 420px; height: auto; border: 1px solid var(--border); border-radius: 12px; }
+  .ds-static .kbd-scrim, .ds-static .kbd-help { position: static; width: auto; animation: none; }
   .ds-static .kbd-scrim { background: none; display: block; }
   .ds-static .hovercard { position: static; animation: none; margin-top: 8px; }
   .ds-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
@@ -74,7 +73,7 @@ const cards = [
         )
         .join("")}
     </div>
-    <p class="ds-note">Five steps toward the eye. Hover lifts exactly one step; the hovercard and the ? map live at overlay; the timeline drawer at sheet.</p>`,
+    <p class="ds-note">Five steps toward the eye. Hover lifts exactly one step; the hovercard and the ? map live at overlay.</p>`,
   },
   {
     file: "foundations/motion.html",
@@ -332,18 +331,15 @@ const cards = [
     <p class="ds-note">? IS the docs. Chords never fire while typing; the g prefix expires after a second; Escape always closes.</p>`,
   },
   {
-    file: "overlays/timeline-drawer.html",
-    group: "Overlays",
-    name: "Timeline drawer",
+    file: "desk/order-fill-rows.html",
+    group: "Desk",
+    name: "Order-fill rows",
     body: `
-    <div class="ds-static"><div class="drawer">
-      <div class="drawer-head"><h2>NVDA — fill timeline</h2><button type="button" class="drawer-close">×</button></div>
-      <div class="drawer-body"><ul class="tl">
-        <li class="tl-event"><span class="tl-side tl-buy">BUY</span><span class="num">80 @ $118.20</span><span class="tl-status">filled</span><span class="tl-when">Jul 24, 14:31</span></li>
-        <li class="tl-event"><span class="tl-side tl-sell">SELL</span><span class="num">40 @ $131.25</span><span class="tl-status">filled</span><span class="tl-backfill">backfilled</span><span class="tl-when">Aug 18, 15:20</span></li>
-      </ul></div>
-    </div></div>
-    <p class="ds-note">Right-edge sheet at elevation: sheet, sliding in on --dur-spatial. Backfilled provenance labeled.</p>`,
+    <ul class="tl">
+      <li class="tl-event"><span class="tl-side tl-buy">BUY</span><span class="num">80 @ $118.20</span><span class="tl-status">filled</span><span class="tl-when">Jul 24, 14:31</span></li>
+      <li class="tl-event"><span class="tl-side tl-sell">SELL</span><span class="num">40 @ $131.25</span><span class="tl-status">filled</span><span class="tl-backfill">backfilled</span><span class="tl-when">Aug 18, 15:20</span></li>
+    </ul>
+    <p class="ds-note">One order or fill per row (EventLine) — the Activity blotter and Trade's recent orders. Backfilled provenance labeled.</p>`,
   },
 ];
 

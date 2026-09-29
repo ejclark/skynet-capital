@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { CancelResult, DeskOrders, ReplaceResult } from "../../src/live/orders";
 import { WorkingOrders } from "../../src/shell/working-orders";
 
@@ -30,6 +30,24 @@ rstest.mock("../../src/live/orders", () => ({
     replaces.push({ id, change });
     return Promise.resolve(nextReplace);
   },
+}));
+
+rstest.mock("@tanstack/react-router", () => ({
+  Link: ({
+    to,
+    search,
+    children,
+    className,
+  }: {
+    to: string;
+    search?: Record<string, string>;
+    children: ReactNode;
+    className?: string;
+  }) => (
+    <a href={search ? `${to}?${new URLSearchParams(search)}` : to} className={className}>
+      {children}
+    </a>
+  ),
 }));
 
 function withClient(node: ReactElement) {
@@ -63,6 +81,11 @@ describe("WorkingOrders", () => {
     render(withClient(<WorkingOrders deskId="human-eric" />));
     await waitFor(() => expect(screen.getByText(/isn't linked/)).toBeInTheDocument());
     expect(screen.queryByText(/No working orders/)).not.toBeInTheDocument();
+    // #3807 slice 3b-4: the note names an action, so it carries the control — the connect guide.
+    expect(screen.getByRole("link", { name: "connect one in Onboarding" })).toHaveAttribute(
+      "href",
+      "/accounts?section=milestones&chapter=onboarding",
+    );
   });
 
   it("renders a working row with its state word, type, price, TIF and a Cancel button", async () => {

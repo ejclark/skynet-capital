@@ -231,6 +231,21 @@ describe("standingsCompareView", () => {
     });
   });
 
+  it("carries realized P/L, and a Realized delta only when both sides know it (#3816 slice 7)", () => {
+    const a = snap({ id: "h1", realizedPl: 1_250 });
+    const b = snap({ id: "h2", realizedPl: -300 });
+    const view = standingsCompareView(a, b);
+    expect(view.a).toMatchObject({ realized: "+$1,250", realizedTone: "pos" });
+    expect(view.b).toMatchObject({ realized: "-$300", realizedTone: "neg" });
+    expect(view.deltas.find((d) => d.label === "Realized")).toMatchObject({
+      lead: "a",
+      amount: "+$1,550",
+    });
+    const unknown = standingsCompareView(a, snap({ id: "h3" }));
+    expect(unknown.b).toMatchObject({ realized: "—", realizedTone: "flat" });
+    expect(unknown.deltas.some((d) => d.label === "Realized")).toBe(false);
+  });
+
   it("calls a dead-even metric a tie, never a lead", () => {
     const a = snap({ id: "h1", equity: 100_000 });
     const b = snap({ id: "h2", equity: 100_000 });
