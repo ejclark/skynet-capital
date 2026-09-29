@@ -388,8 +388,10 @@ of open sessions" — and sessions marked finished still "look like they have fo
 Done is checked, not assumed: every PR it opened is merged or closed; every follow-up it produced (an
 open question, a parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan
 issue — never only the chat; its plan issue's state block is current; no PR watch or scheduled
-check-in is pending. Then its last message asks **"archive this session?"**, and on yes it archives
-itself as its final action (`archive_session` on its own session id).
+check-in is pending. Then it asks **"archive this session?"** as a yes/no form (`AskUserQuestion`),
+the same clickable shape as an approval prompt — not a plain-text question needing a typed reply
+(Eric, 2026-09-29: "makes this process easier to navigate") — and on yes it archives itself as its
+final action (`archive_session` on its own session id).
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
