@@ -154,6 +154,12 @@
     "mustBeSeenBy": "member with an account"
   },
   {
+    "screen": "/saved-positions",
+    "verdict": "undecided",
+    "target": "a deliberate testbed (#3968, Eric 2026-09-29: an encapsulated guidance section, isolated from the blotter, to learn what belongs before deciding placement) — no nav entry yet; becomes a standalone system or folds into another once the shape settles",
+    "mustBeSeenBy": "member, reachable only by URL while the shape settles"
+  },
+  {
     "screen": "/settings ?section=preferences",
     "verdict": "keep",
     "mustBeSeenBy": "member"
