@@ -78,12 +78,36 @@ export const readStake = (symbol: string): GuidanceStake => cleanStake(readJson(
 export const writeStake = (symbol: string, stake: GuidanceStake): void =>
   writeJson(STAKE_KEY(symbol), cleanStake(stake));
 
-export function readSnapshot(symbol: string): GuidanceSnapshot | undefined {
-  const s = readJson(SNAPSHOT_KEY(symbol)) as GuidanceSnapshot | undefined;
-  return s && typeof s.spot === "number" && Array.isArray(s.calls) ? s : undefined;
+/** Stakes remembered per symbol — the saved one, the account's, and a few what-ifs. The form
+ *  commits on blur, so this is a handful of real entries, never one per keystroke. */
+const SEEN_PER_SYMBOL = 5;
+
+const isSnapshot = (s: unknown): s is GuidanceSnapshot =>
+  typeof s === "object" &&
+  s !== null &&
+  typeof (s as GuidanceSnapshot).spot === "number" &&
+  Array.isArray((s as GuidanceSnapshot).calls);
+
+/** Last looks for one symbol, one per stake (`stakeFingerprint`). A pre-#3729 value — one bare
+ *  snapshot for the whole symbol, stake unknown — reads as empty: better no diff than a false one. */
+function readSeen(symbol: string): Record<string, GuidanceSnapshot> {
+  const raw = readJson(SNAPSHOT_KEY(symbol));
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw) || isSnapshot(raw)) return {};
+  return Object.fromEntries(Object.entries(raw).filter(([, s]) => isSnapshot(s)));
 }
-export const writeSnapshot = (symbol: string, snapshot: GuidanceSnapshot): void =>
-  writeJson(SNAPSHOT_KEY(symbol), snapshot);
+
+/** This stake's last look at `symbol` — never another stake's, which would show the stake's own
+ *  effect as if the market had moved. */
+export function readSnapshot(symbol: string, stakeId: string): GuidanceSnapshot | undefined {
+  return readSeen(symbol)[stakeId];
+}
+
+export function writeSnapshot(symbol: string, stakeId: string, snapshot: GuidanceSnapshot): void {
+  const { [stakeId]: _replaced, ...rest } = readSeen(symbol);
+  // Newest last; the oldest stakes fall off the front.
+  const kept = Object.entries(rest).slice(-(SEEN_PER_SYMBOL - 1));
+  writeJson(SNAPSHOT_KEY(symbol), Object.fromEntries([...kept, [stakeId, snapshot]]));
+}
 
 const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
 
