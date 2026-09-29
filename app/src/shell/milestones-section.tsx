@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { fetchJourney, type Journey } from "../live/learn";
 import { fetchOnboarding, type Onboarding } from "../live/onboarding";
 import { fetchPlaybooks, type Playbooks } from "../live/playbooks";
+import { ConnectLink, scrollToChapter } from "./connect-link";
 import { Hud, ladderProgress } from "./course-cards";
 import { LadderChapter } from "./ladder-chapter";
 import { LadderGateCard } from "./ladder-gate";
@@ -30,7 +31,8 @@ import { CheckGateCard, EngagementUnlockBanner, UnlockBanner } from "./unlock-ga
  * @category learning
  */
 
-/** M·02's badge: the feedback gate outranks progress — while it holds, the chapter reads locked. */
+/** M·02's badge: the gate outranks progress — while it holds, or while there is no account to
+ *  fill an order on at all, the chapter reads locked. */
 function ladderState(gated: boolean, done: number, total: number): ChapterState {
   if (gated) return "locked";
   return total > 0 && done === total ? "complete" : "progress";
@@ -41,6 +43,17 @@ function ladderState(gated: boolean, done: number, total: number): ChapterState 
  *  it regressed to "after your first feedback filing"; the hello is the gate, a filing only also
  *  satisfies it. */
 export const LADDER_CARD_GATE_NOTE = "unlocks the moment you say hello to Moneypenny";
+
+/** The same note for a session with no account (#3807 slice 3b-4, first-timer j1 s3): the server
+ *  serves no ladder gate without an account, so the card names the step before the gate, then the
+ *  gate in the server's words — one sentence, never a second phrasing of the unlock (#1672). */
+export const LADDER_CARD_NO_ACCOUNT_NOTE = `link an account first, then it ${LADDER_CARD_GATE_NOTE}`;
+
+/** M·02's note: the server's gate when it serves one; the account step when nothing is linked. */
+function ladderGateNote(data: Journey): string | undefined {
+  if (data.gate) return LADDER_CARD_GATE_NOTE;
+  return data.linked ? undefined : LADDER_CARD_NO_ACCOUNT_NOTE;
+}
 
 function Chapters({
   data,
@@ -71,13 +84,13 @@ function Chapters({
         code="M·02"
         title="Trading progression"
         desc="Climb the ladder one fill at a time — stocks, the Wheel, then directional longs."
-        state={ladderState(data.gate !== undefined, ladder.done, ladder.total)}
+        state={ladderState(data.gate !== undefined || !data.linked, ladder.done, ladder.total)}
         done={ladder.done}
         total={ladder.total}
         points={`+${data.totalPoints} pts`}
         chapter="trading"
         open={open === "trading"}
-        gateNote={data.gate ? LADDER_CARD_GATE_NOTE : undefined}
+        gateNote={ladderGateNote(data)}
       />
       <MilestoneCard
         code="M·03"
@@ -93,17 +106,6 @@ function Chapters({
       />
     </div>
   );
-}
-
-/** Scroll a chapter under the sticky cockpit head — an anchor, measured rather than a fixed
- *  `scroll-margin`, because the head's height differs at 390 and 1280. Also the head's own
- *  "connect one in Onboarding" (#3807 slice 2e), where the chapter is already open and nothing
- *  re-renders to fire the anchor below. */
-export function scrollToChapter(chapter: MilestoneChapter, el?: HTMLElement | null): void {
-  const target = el ?? document.getElementById(`chapter-${chapter}`);
-  if (!target || typeof window.scrollTo !== "function") return;
-  const head = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
-  window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - head - 12 });
 }
 
 function useChapterAnchor(chapter: MilestoneChapter | undefined, ready: boolean) {
@@ -156,7 +158,8 @@ export function MilestonesSection({
       {!data.linked ? (
         <p className="note">
           Milestones light up from orders you fill yourself — this session isn't linked to an
-          account yet, so the journey shows from the start.
+          account yet, so the journey shows from the start —{" "}
+          <ConnectLink>open the connect guide</ConnectLink>.
         </p>
       ) : ladderAccount ? (
         <p className="note">

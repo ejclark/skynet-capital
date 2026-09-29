@@ -18,6 +18,13 @@
 // (`SKYNET_ALLOWED_EMAILS`, src/server/auth/resolve-auth.ts). `scripts/crawl/fixtures/owner-links.json`
 // links the friend's email to that human and to the Day Trader bot; `docs/members/invited-friend.md`
 // is the member, and its journeys are the boundary check.
+//
+// **Plus one closed round trip on Eric's account, in the copy only** (#3807 slice 3b-4). The
+// committed roster gives him one buy (rung 101) and nothing else, so no playbook is earned and the
+// Playbooks chapter never draws "Arm · soon" — the phone journey that checks Arm's reason could not
+// see the control at all. A stock sell earns rung 102 (`src/domain/progression.ts`), which unlocks
+// the first playbook (`src/domain/playbook-catalog.ts`). The trip is in a symbol nobody holds, so
+// every position a journey expects is unchanged; only the fill history grows by two rows.
 
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -59,10 +66,38 @@ const FRIEND_PARTICIPANT = {
   ],
 };
 
+/** The account the crawl's owner signs in as, and the closed trip that earns it a playbook. */
+const OWNER_PARTICIPANT_ID = "human-eric";
+const OWNER_ROUND_TRIP = [
+  { id: "e-rt-buy", side: "buy", price: "38.10", at: "2026-07-08T15:02:00Z" },
+  { id: "e-rt-sell", side: "sell", price: "39.40", at: "2026-07-15T17:41:00Z" },
+].map(({ id, side, price, at }) => ({
+  id,
+  symbol: "XLF",
+  qty: "40",
+  side,
+  status: "filled",
+  filled_qty: "40",
+  filled_avg_price: price,
+  submitted_at: at,
+  filled_at: at.replace(/:00Z$/, ":01Z"),
+}));
+
+/** The roster with the owner's round trip ahead of his own orders (older first). */
+function withOwnerRoundTrip(roster) {
+  return roster.map((p) =>
+    p.id === OWNER_PARTICIPANT_ID
+      ? { ...p, orders: [...OWNER_ROUND_TRIP, ...(p.orders ?? [])] }
+      : p,
+  );
+}
+
 /** @returns {string} a directory holding `participants.json` (+ the friend) and `allowlist.json`. */
 export function frozenFixturesDir(source = join("fixtures", "offline")) {
   const dir = mkdtempSync(join(tmpdir(), "skynet-journeys-fixtures-"));
-  const roster = JSON.parse(readFileSync(join(source, "participants.json"), "utf8"));
+  const roster = withOwnerRoundTrip(
+    JSON.parse(readFileSync(join(source, "participants.json"), "utf8")),
+  );
   writeFileSync(join(dir, "participants.json"), JSON.stringify([...roster, FRIEND_PARTICIPANT]));
   writeFileSync(allowlistPath(dir), JSON.stringify(guestList()));
   return dir;
