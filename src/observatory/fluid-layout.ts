@@ -20,7 +20,7 @@
  * thing that is actually too narrow, and it keeps working when the drawer is toggled shut.
  *
  * Kept in its own module rather than inlined into `dashboard-shell.ts` (which is at its size budget)
- * — the same doctrine as `desk-style.ts` and `calendar-widget.ts`. Injected once by the shared shell,
+ * — the same doctrine as `desk-style.ts`. Injected once by the shared shell,
  * so every view's stylesheet can read the tokens without importing anything.
  */
 export const FLUID_LAYOUT_TOKENS = `:root{

@@ -31,7 +31,7 @@ const steps = (connected) => [
     "Say hello to Moneypenny",
     "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
     10,
-    "/app/accounts?section=milestones&chapter=onboarding&moneypenny=intro",
+    "/app/accounts?section=milestones&chapter=onboarding",
     false,
   ),
   step(

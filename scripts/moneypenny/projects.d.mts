@@ -50,8 +50,14 @@ export interface BoardItem {
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
 
+export const BOARD_LOOKUP_ATTEMPTS: number;
+export const BOARD_LOOKUP_BASE_MS: number;
+
 export function resolveBoardItem(deps: {
   addItem: () => BoardItem;
   listItems: () => { items?: BoardItem[]; totalCount?: number };
   issueUrl?: string;
+  attempts?: number;
+  baseMs?: number;
+  sleep?: (ms: number) => void;
 }): { item: BoardItem; added: boolean };

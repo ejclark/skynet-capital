@@ -1,4 +1,4 @@
-/* one order-fill row (`EventLine`, timeline-drawer.tsx) — rendered by the Activity tab's blotter
+/* one order-fill row (`EventLine`, order-event-line.tsx) — rendered by the Activity tab's blotter
    and `recent-orders-strip.tsx`'s "your recent orders" panel. The blotter row's own inline
    fill-timeline accordion was retired here (#3186 slice 2): it duplicated the Activity tab. */
 .tl-event {

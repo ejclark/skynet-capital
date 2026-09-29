@@ -143,7 +143,33 @@
   .status-text {
     display: none;
   }
+  /* dots only is ~21x17px — sized to the 30px .icon-action beside it, so the row reads as one
+     set of controls and the pill clears the 24px tap floor on its own box (#3816 slice 5) */
   .status {
     padding: 4px 6px;
+    min-width: 30px;
+    min-height: 30px;
+    justify-content: center;
+  }
+  /* The popover hangs from the ACTIONS GROUP, not the pill. Pinned to the pill's right edge it
+     ran 113px off the LEFT of a 390px screen (the pill sits ~120px in from the right, the panel
+     is 360px wide). The group's right edge is the topbar gutter, so `right: 0` plus a width
+     capped at the bar's content box (100cqw — shell.css makes the bar a container) keeps both
+     edges inside the gutters, directly under the pill's row. */
+  .topbar-actions {
+    position: relative;
+  }
+  .status-wrap {
+    position: static;
+  }
+  .ops-pop {
+    width: min(360px, 100cqw);
+  }
+  /* a grid item stretches the full column (311x17px): hug the label and give it the 24px floor */
+  .ops-row a {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
   }
 }

@@ -130,13 +130,6 @@
 .rx-symbol[aria-pressed="true"] .rx-symbol-name {
   color: var(--accent);
 }
-.rx-symbol-full {
-  font-size: 11px;
-  color: var(--accent);
-  font-weight: 600;
-  white-space: nowrap;
-  animation: dot-in var(--dur-quick) var(--ease-spatial) both;
-}
 .rx-symbol:hover {
   transform: translateY(-1px);
   box-shadow: var(--elev-raised);

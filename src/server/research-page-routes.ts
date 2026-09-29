@@ -17,7 +17,10 @@ import { findResearchDoc } from "./research-service.js";
 const STYLE = `*{margin:0;padding:0;box-sizing:border-box}html{color-scheme:dark}
   :root{ ${TOKEN_DECLS} }
   body{ background:var(--bg); color:var(--text); font-family:var(--sans); line-height:1.6; padding:32px clamp(16px,5vw,20px) 80px; }
-  .wrap{ max-width:760px; margin:0 auto; }
+  /* break-word, not anywhere: a long code span or URL (an env var name, a SEC
+     link) breaks instead of widening the page — opening one fold made a phone page 514px wide
+     (#3816 slice 5) — while table cells keep their min-content width and still scroll (below). */
+  .wrap{ max-width:760px; margin:0 auto; overflow-wrap:break-word; }
   .back{ display:inline-block; margin-bottom:22px; font-size:13px; color:var(--muted); text-decoration:none; }
   .back:hover{ color:var(--accent); }
   h1,h2,h3{ font-weight:700; letter-spacing:-.01em; margin:28px 0 12px; }

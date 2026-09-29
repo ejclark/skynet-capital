@@ -409,6 +409,8 @@ export function docsMentioning(
 /**
  * The living symbol page's data: everything symbol-keyed the repo already holds, assembled —
  * no new facts, no summarization, just the join the app never surfaced.
+ * No caller since the symbol page was retired (#3816 slice 8); kept for #3962, which wires this
+ * full-text search into the R&D symbol filter.
  */
 export function symbolResearch(
   symbol: string,

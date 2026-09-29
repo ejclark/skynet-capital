@@ -14,11 +14,14 @@
 @import "./chart-section.css";
 @import "./cockpit.css";
 @import "./compare.css";
+/* after wire.css's `.council-*` rules by specificity, not order: every rule here is scoped under
+ * `.council-mine`, so the alphabetical seat is safe (#3963). */
+@import "./council-line.css";
 @import "./decision-pager.css";
 @import "./decisions.css";
 @import "./desk.css";
 @import "./draft-builder.css";
-@import "./drawer.css";
+@import "./order-event-line.css";
 @import "./feedback.css";
 @import "./form-strip.css";
 @import "./gate.css";

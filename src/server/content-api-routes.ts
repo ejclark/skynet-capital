@@ -114,7 +114,7 @@ export async function serveContentApi(
   return false;
 }
 
-/** JSON twin of `/board/frame` for the React shell: the same board, as data. The
+/** The board as data for the React shell (the old `/board/frame` HTML twin is gone, #3816). The
  *  client renders this once, then applies `/events` ops verbatim from `seq` — on a gap it comes
  *  back here instead of patching around a hole. Same formatted values, same keys, same auth gate. */
 function serveBoardJson(
