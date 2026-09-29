@@ -1,3 +1,4 @@
+import { isMarketClosed } from "../domain/market-calendar.js";
 import { CHEAP_IV_RANK, RICH_IV_RANK } from "./outlook.js";
 import type {
   Confidence,
@@ -78,14 +79,14 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
-/** Step back `sessions` weekdays from `date` (exchange holidays are not modelled — stated, not hidden). */
-export function weekdaysBefore(date: string, sessions: number): string {
+/** Step back `sessions` trading days from `date` — weekends and full-day exchange holidays skipped
+ *  (`market-calendar.ts`); an early close still counts as a session. */
+export function sessionsBefore(date: string, sessions: number): string {
   const at = new Date(`${date}T00:00:00Z`);
   let left = sessions;
   while (left > 0) {
     at.setUTCDate(at.getUTCDate() - 1);
-    const day = at.getUTCDay();
-    if (day !== 0 && day !== 6) left -= 1;
+    if (!isMarketClosed(at.toISOString().slice(0, 10))) left -= 1;
   }
   return at.toISOString().slice(0, 10);
 }
@@ -104,7 +105,7 @@ export function optionsCutoff(
   if (!earnings) return undefined;
   return goal === "keep-shares"
     ? { date: earnings.start, kind: "window" }
-    : { date: weekdaysBefore(earnings.start, DECISION_SESSIONS_BEFORE_PRINT), kind: "decision" };
+    : { date: sessionsBefore(earnings.start, DECISION_SESSIONS_BEFORE_PRINT), kind: "decision" };
 }
 
 /**

@@ -155,6 +155,7 @@ async function main(): Promise<void> {
     botControls,
     council,
     subscriptions,
+    savedPositions,
     knownPersonaIds,
     auth,
     password,
@@ -218,6 +219,7 @@ async function main(): Promise<void> {
     rotateCredentials: (input) => service.rotateCredentials(input),
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
+    savedPositions,
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },

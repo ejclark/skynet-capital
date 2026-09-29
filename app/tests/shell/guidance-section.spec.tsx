@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { stakeFingerprint } from "../../../src/options/position-guidance";
 import type { GuidanceMarket, LadderRow } from "../../../src/options/position-guidance-types";
 import { inputs } from "../../../tests/options/position-guidance-fixture";
 import type { DeskSnapshot } from "../../src/live/desk";
@@ -184,5 +185,34 @@ describe("guidance tab — calls already sold (#3729 step 4b)", () => {
       },
     } as unknown as DeskSnapshot;
     expect(heldStake(desk, "CRWV")).toMatchObject({ shares: 400, costBasis: 70, callsSold: 2 });
+  });
+});
+
+describe("guidance tab — since you last looked, per stake (#3729)", () => {
+  // A last look taken at a much lower price: if it is read, the tab says the stock moved.
+  const EARLIER = { asOf: "2026-09-20T18:00:00Z", spot: 60, calls: [], richness: "rich" };
+  const seen = (book: unknown) =>
+    localStorage.setItem("skynet-guidance-seen:CRWV", JSON.stringify(book));
+
+  it("diffs against this stake's own last look", async () => {
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    seen({ [stakeFingerprint(cleanStake(INCOME))]: EARLIER });
+    mount();
+    expect(await screen.findByLabelText("Since you last looked")).toBeTruthy();
+  });
+
+  it("never diffs against another stake's look — or a pre-stake one — as if the market moved", async () => {
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    seen({ [stakeFingerprint(cleanStake({ ...INCOME, shares: 100 }))]: EARLIER });
+    mount();
+    await screen.findAllByText(/Shares/);
+    expect(screen.queryByLabelText("Since you last looked")).toBeNull();
+
+    localStorage.clear();
+    localStorage.setItem("skynet-guidance-stake:CRWV", JSON.stringify(INCOME));
+    seen(EARLIER);
+    mount();
+    await screen.findAllByText(/Shares/);
+    expect(screen.queryAllByLabelText("Since you last looked")).toHaveLength(0);
   });
 });

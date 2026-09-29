@@ -51,6 +51,10 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # Account playbook subscriptions (issue #885, subscription-store.ts) — which playbooks an
   # account subscribed to and the capital reserved per subscription.
   SKYNET_SUBSCRIPTIONS_FILE = "/data/playbook-subscriptions.json"
+  # Positions a member typed in by hand — real-money holdings Skynet isn't connected to, saved so
+  # guidance on them persists across devices (issue #3968, saved-positions-store.ts). Real member
+  # data, same durability bar as the subscriptions line above it.
+  SKYNET_SAVED_POSITIONS_FILE = "/data/saved-positions.json"
   # The IV clock's daily at-the-money IV series (#3729, research/iv-sampler.ts). Read a year later
   # as IV rank, so a missed day can never be backfilled; the store has NO relative default, so the
   # clock stays off until this line exists rather than recording onto the container's disk.
