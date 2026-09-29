@@ -3,6 +3,7 @@ import type { NetWorthStatsView } from "../live/networth";
 import { FormStrip } from "./form-strip";
 import { GlossaryTerm } from "./glossary-term";
 import { HeroChart } from "./hero-chart";
+import { StandingLine } from "./standing-line";
 
 /**
  * THE NET-WORTH CARD (#3689 slice 3, design handoff 3a): the Overview's first answer, "am I
@@ -10,6 +11,11 @@ import { HeroChart } from "./hero-chart";
  * window's return with how it did against the S&P 500. Right: the equity chart with the all-time
  * high drawn as a dashed line. Footer: the gap to a new high as a meter. The Form strip (last N
  * closed trades) joins the footer in a later slice.
+ *
+ * The standing line (#3964, `docs/IA.md` §5.1) closes the card's own question with the member's
+ * record — win rate, profit factor, max drawdown — and one link to the rest of that account's
+ * Pulse. Only for a single account: a win rate summed across books whose trades never met is not
+ * one record, the same reason the chart and the all-time high sit out "All accounts".
  *
  * On "All accounts" there's no single equity curve or high to draw (a sum of per-account highs set
  * on different days was never the book's high), so the card is the left column alone and the
@@ -36,6 +42,43 @@ function Stat({
     <div className="nw-stat">
       <span className="nw-stat-label">{label}</span>
       <span className={`nw-stat-value num tone-${tone}`}>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * The card's footer: the Form strip, then the gap to a new high in words with the meter as its
+ * picture. Its own component so the card's body stays under the complexity cap (#3964) — this is
+ * the block that branches most, and it branches on two things only: whether one account is in view
+ * and whether its all-time high is known.
+ */
+function CardFoot({
+  accountId,
+  toNewHigh,
+  toHigh,
+}: {
+  readonly accountId: string | undefined;
+  readonly toNewHigh: string | undefined;
+  /** The fill fraction, present only when the all-time high is known. */
+  readonly toHigh: number | undefined;
+}): ReactElement | null {
+  if (!accountId && toHigh === undefined) return null;
+  return (
+    <div className="nw-foot">
+      {accountId ? <FormStrip accountId={accountId} /> : null}
+      {toHigh === undefined ? null : toNewHigh ? (
+        <span className="nw-to-high">
+          To a new high <b className="num">{toNewHigh}</b>
+        </span>
+      ) : (
+        <span className="nw-to-high nw-at-high">At a new high ✦</span>
+      )}
+      {/* the words beside it carry the gap; the meter is its picture */}
+      {toHigh === undefined ? null : (
+        <span className="nw-meter" aria-hidden="true">
+          <span className="nw-meter-fill" style={{ width: `${(toHigh * 100).toFixed(1)}%` }} />
+        </span>
+      )}
     </div>
   );
 }
@@ -126,24 +169,8 @@ export function NetWorthCard({
           <HeroChart accountId={accountId} high={highLine} />
         </div>
       ) : null}
-      {accountId || (high && toHigh !== undefined) ? (
-        <div className="nw-foot">
-          {accountId ? <FormStrip accountId={accountId} /> : null}
-          {!high ? null : stats.toNewHigh ? (
-            <span className="nw-to-high">
-              To a new high <b className="num">{stats.toNewHigh}</b>
-            </span>
-          ) : (
-            <span className="nw-to-high nw-at-high">At a new high ✦</span>
-          )}
-          {/* the words beside it carry the gap; the meter is its picture */}
-          {toHigh !== undefined ? (
-            <span className="nw-meter" aria-hidden="true">
-              <span className="nw-meter-fill" style={{ width: `${(toHigh * 100).toFixed(1)}%` }} />
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      <CardFoot accountId={accountId} toNewHigh={stats.toNewHigh} toHigh={toHigh} />
+      {accountId ? <StandingLine accountId={accountId} /> : null}
       {children}
     </section>
   );

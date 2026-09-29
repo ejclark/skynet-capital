@@ -27,10 +27,16 @@ export interface PulseWeekData {
   readonly bar: number;
 }
 
+/** The stable name of a headline fact — what a second reader selects on, never the display copy. */
+export type PulseTileKey = "equity" | "netRealized" | "winRate" | "profitFactor" | "maxDrawdown";
+
 export interface PulseTileData {
+  readonly key: PulseTileKey;
   readonly label: string;
   readonly value: string;
   readonly note: string;
+  /** False when this fact has no inputs yet — the value is a dash and the note says what's missing. */
+  readonly known: boolean;
   readonly tone?: "pos" | "neg" | "flat";
 }
 
