@@ -84,6 +84,7 @@ describe("serveLegacyRedirect", () => {
     expect(target("/playbooks")).toBe(`${milestones}&chapter=playbooks`);
     expect(target("/app/playbooks")).toBe(`${milestones}&chapter=playbooks`);
     expect(target("/onboarding")).toBe(`${milestones}&chapter=onboarding`);
+    // An old intro link still lands; the Profile page drops the retired param (#3816 slice 8).
     expect(target("/app/onboarding", "/app/onboarding?moneypenny=intro")).toBe(
       `${milestones}&chapter=onboarding&moneypenny=intro`,
     );

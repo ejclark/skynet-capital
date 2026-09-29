@@ -179,7 +179,7 @@
   {
     "screen": "/onboarding",
     "verdict": "redirect-only",
-    "target": "/accounts?section=milestones&chapter=onboarding (keeps moneypenny=intro)"
+    "target": "/accounts?section=milestones&chapter=onboarding"
   },
   {
     "screen": "/join",

@@ -23,8 +23,8 @@ import { MilestonePanel } from "./milestone-panel";
  *      engagement track's own milestone; a filed issue is a separate, harder achievement)
  *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
  *
- * `?moneypenny=intro` (the deep link every "Meet Moneypenny ›" outside this chapter uses) is the
- * Profile page's to honour (`routes/accounts.tsx`). This chapter is the task checklist only —
+ * Step 2's button is the one way into her intro — the old `?moneypenny=intro` deep link had no
+ * producer and was retired (#3816 slice 8). This chapter is the task checklist only —
  * account figures live on the Overview, and ladder/playbook progress on the other two chapters
  * (Eric, 2026-09-17).
  * @category onboarding
