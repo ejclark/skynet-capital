@@ -313,7 +313,9 @@ taste fork, a load-bearing decision only he can settle) still always stop for hi
 never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
-ready-flip). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
+ready-flip) · `needs-design` (Eric, 2026-09-29: a more prescriptive marker than a bare "not ready" —
+the next step is a Claude Design session, not a build or a decision; carries the `/design` brief to
+fire when there's time, per `docs/HANDOFFS.md`). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
 Moneypenny clearing it from #1318 after a bottleneck-research call sheet found the "decision" was
 already-written policy: "that is fantastic; ideal") — evidence in a comment, the work routed on
 (`feedback` / `next-slice`), the label gone. The queue must stay honest about what actually needs
