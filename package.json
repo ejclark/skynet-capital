@@ -57,6 +57,7 @@
     "issue:lint": "node scripts/issue-lint.mjs",
     "issues": "node scripts/issues.mjs",
     "ready:report": "node scripts/ready-report.mjs",
+    "rank": "node scripts/rank.mjs",
     "delivery:score": "node scripts/delivery-score.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "mermaid:lint": "node scripts/mermaid-lint.mjs",
