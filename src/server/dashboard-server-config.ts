@@ -32,6 +32,7 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import type { ProgressionService } from "./progression-service.js";
+import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
@@ -249,6 +250,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * subscribe/unsubscribe action wired.
    */
   readonly subscriptions?: SubscriptionStore;
+  /**
+   * THE SAVED POSITIONS STORE (#3968) — a member's own typed-in, real-money-elsewhere positions,
+   * the encapsulated guidance testbed at `/saved-positions`. Omit to disable (offline mode) — the
+   * section still renders, with saves/loads answering "not wired in this deployment."
+   */
+  readonly savedPositions?: SavedPositionsStore;
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;

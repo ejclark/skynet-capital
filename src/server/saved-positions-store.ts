@@ -15,11 +15,6 @@ import { JsonFileStore } from "../storage/json-file-store.js";
  * subscription's capital allocation), atomic tmp+rename writes, total reads.
  *
  * Keyed by `opaqueMemberId(email)`, never a linked paper-desk id — see `saved-position.ts`.
- *
- * NO ENV-DEFAULTING FACTORY HERE YET, DELIBERATELY: `fly.toml`'s `SKYNET_SAVED_POSITIONS_FILE` pin
- * is on the platter (issue #3968), not yet on `main`. Adding a factory with a relative default
- * before that lands would trip `tests/arch/volume-persistence.spec.ts` on THIS branch. The factory
- * (mirroring `createSubscriptionStore`) and the route wiring follow once the pin merges.
  */
 export class SavedPositionsStore {
   private readonly file: JsonFileStore<SavedPositionsState>;
@@ -99,4 +94,16 @@ export class SavedPositionsStore {
     this.file.write(nextState);
     return nextState;
   }
+}
+
+/** Build the store from the environment (`SKYNET_SAVED_POSITIONS_FILE`, pinned in `fly.toml`;
+ *  default `data/saved-positions.json`) — mirrors `createSubscriptionStore`. */
+export function createSavedPositionsStore(
+  env: NodeJS.ProcessEnv,
+  onReadError?: (message: string) => void,
+): SavedPositionsStore {
+  return new SavedPositionsStore(
+    env.SKYNET_SAVED_POSITIONS_FILE ?? "data/saved-positions.json",
+    onReadError,
+  );
 }

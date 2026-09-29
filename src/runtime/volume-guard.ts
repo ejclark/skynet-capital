@@ -24,6 +24,7 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_LADDER_PROGRESS_DIR: "data/ladder-progress",
   SKYNET_OWNER_LINKS_FILE: "data/owner-links.json",
   SKYNET_SUBSCRIPTIONS_FILE: "data/playbook-subscriptions.json",
+  SKYNET_SAVED_POSITIONS_FILE: "data/saved-positions.json",
 };
 
 /**
