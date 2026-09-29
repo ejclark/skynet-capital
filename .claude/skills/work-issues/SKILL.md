@@ -33,7 +33,12 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
      misses that window — a manual pass during it would otherwise dispatch a duplicate build. The
      check is read-only; it never joins or breaks her claim.
 
-   Order the remainder oldest-first (FIFO) unless Eric names a priority order for this pass.
+   Order the remainder by `npm run rank` (#4064), unless Eric names an order for this pass. The
+   rank sorts by class first. A `P0`–`P3` label is Eric's hand and always wins; otherwise the
+   class is derived, with a one-line why. Within a class it goes oldest-ready-first, and an item
+   past one delivery unit sinks, marked "split first". It also covers `bottleneck` and `bug`
+   issues and ranks a split plan's open sub-issues instead of the parent. Take its top row that
+   survives the exclusions above.
 
    **The `plan`-label authorization gap:** the `feedback` label alone is a settled authorization
    invariant (`docs/plans/issue-centric-orchestration.md`: "the label is the authorization"), but a

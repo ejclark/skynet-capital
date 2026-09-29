@@ -11,12 +11,11 @@ export interface RankRow {
   remainder: boolean;
 }
 export const QUEUE_LABELS: string[];
-export function classOf(input: {
-  labels?: string[];
-  body?: string;
-  blocks?: number[];
-  horizon?: string | null;
-}): { cls: string; why: string; hand?: boolean };
+export function classOf(input: { labels?: string[]; blocks?: number[]; horizon?: string | null }): {
+  cls: string;
+  why: string;
+  hand?: boolean;
+};
 export function rankRow(
   issue: {
     number: number;
