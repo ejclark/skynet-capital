@@ -31,6 +31,7 @@ import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
+import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveSubscriptionsApi } from "./subscriptions-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
@@ -136,6 +137,7 @@ async function serveWriteApis(
   if (await servePlaysApi(req, res, path, config, session)) return true;
   if (await serveSettingsApi(req, res, path, config, session)) return true;
   if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
+  if (await serveSavedPositionsApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await servePlaybooksApi(req, res, path, config, session)) return true;

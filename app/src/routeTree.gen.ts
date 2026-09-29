@@ -19,6 +19,7 @@ import { Route as LearnRouteImport } from './routes/learn'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as ResearchRouteImport } from './routes/research'
+import { Route as SavedPositionsRouteImport } from './routes/saved-positions'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TradeRouteImport } from './routes/trade'
 import { Route as LearnTradingRouteImport } from './routes/learn_.trading'
@@ -78,6 +79,11 @@ const PlaybooksRoute = PlaybooksRouteImport.update({
 const ResearchRoute = ResearchRouteImport.update({
   id: '/research',
   path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SavedPositionsRoute = SavedPositionsRouteImport.update({
+  id: '/saved-positions',
+  path: '/saved-positions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
+  '/saved-positions': typeof SavedPositionsRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
   '/learn/trading': typeof LearnTradingRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
+  '/saved-positions': typeof SavedPositionsRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
   '/learn/trading': typeof LearnTradingRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
+  '/saved-positions': typeof SavedPositionsRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
   '/learn_/trading': typeof LearnTradingRoute
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/playbooks'
     | '/research'
+    | '/saved-positions'
     | '/settings'
     | '/trade'
     | '/learn/trading'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/playbooks'
     | '/research'
+    | '/saved-positions'
     | '/settings'
     | '/trade'
     | '/learn/trading'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/playbooks'
     | '/research'
+    | '/saved-positions'
     | '/settings'
     | '/trade'
     | '/learn_/trading'
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PlaybooksRoute: typeof PlaybooksRoute
   ResearchRoute: typeof ResearchRoute
+  SavedPositionsRoute: typeof SavedPositionsRoute
   SettingsRoute: typeof SettingsRoute
   TradeRoute: typeof TradeRoute
   LearnTradingRoute: typeof LearnTradingRoute
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/research'
       fullPath: '/research'
       preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saved-positions': {
+      id: '/saved-positions'
+      path: '/saved-positions'
+      fullPath: '/saved-positions'
+      preLoaderRoute: typeof SavedPositionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -458,6 +478,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PlaybooksRoute: PlaybooksRoute,
   ResearchRoute: ResearchRoute,
+  SavedPositionsRoute: SavedPositionsRoute,
   SettingsRoute: SettingsRoute,
   TradeRoute: TradeRoute,
   LearnTradingRoute: LearnTradingRoute,

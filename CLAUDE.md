@@ -315,7 +315,9 @@ never idle on ready, in-envelope work, not never ask at all. Label semantics
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
 ready-flip) · `needs-design` (Eric, 2026-09-29: a more prescriptive marker than a bare "not ready" —
 the next step is a Claude Design session, not a build or a decision; carries the `/design` brief to
-fire when there's time, per `docs/HANDOFFS.md`). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
+fire when there's time, per `docs/HANDOFFS.md`). Priority is `P0`–`P3`, a label only Eric sets
+(2026-09-29, #4064: one tap on his phone, readable by every lane); `npm run rank` derives a class for
+everything else and his label always wins. **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
 Moneypenny clearing it from #1318 after a bottleneck-research call sheet found the "decision" was
 already-written policy: "that is fantastic; ideal") — evidence in a comment, the work routed on
 (`feedback` / `next-slice`), the label gone. The queue must stay honest about what actually needs
@@ -386,8 +388,10 @@ of open sessions" — and sessions marked finished still "look like they have fo
 Done is checked, not assumed: every PR it opened is merged or closed; every follow-up it produced (an
 open question, a parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan
 issue — never only the chat; its plan issue's state block is current; no PR watch or scheduled
-check-in is pending. Then its last message asks **"archive this session?"**, and on yes it archives
-itself as its final action (`archive_session` on its own session id).
+check-in is pending. Then it asks **"archive this session?"** as a yes/no form (`AskUserQuestion`),
+the same clickable shape as an approval prompt — not a plain-text question needing a typed reply
+(Eric, 2026-09-29: "makes this process easier to navigate") — and on yes it archives itself as its
+final action (`archive_session` on its own session id).
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens

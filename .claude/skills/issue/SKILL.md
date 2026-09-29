@@ -38,19 +38,18 @@ that gets a well-shaped issue filed without a second pass.
    ([`docs/PICTURES.md`](../../../docs/PICTURES.md) grammar, unchanged).
 6. **Everything else into one `<details>` brief** — where it stands, EARS criteria, constraints,
    settled forks, open questions, slicing sketch. One fold, not five.
-7. **Lint before filing**, always:
+7. **File it with one command** — lint, dedupe, footer and the REST call in one step:
    ```sh
-   node scripts/issue-lint.mjs --title "<title>" /tmp/issue-body.md
+   npm run issues -- create --title "<title>" --body-file /tmp/issue-body.md --labels needs-eric
    ```
-   Problems are fatal (fold, bullet length, duplicate paste, mermaid type, unpinned raw URL, an
-   empty-calorie title). Notes are advisory — read them, then use your judgment.
-8. **File it** with the REST path (cheap bucket), never the GraphQL MCP for bulk work:
-   ```sh
-   curl -sS -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
-     -H "Accept: application/vnd.github+json" \
-     https://api.github.com/repos/ejclark/skynet-capital/issues \
-     -d @issue.json   # {"title":…,"body":…,"labels":[…]}
-   ```
+   It refuses on a lint problem (fold, bullet length, duplicate paste, mermaid, unpinned raw URL,
+   empty-calorie title) and on an open issue with the same ask (`--force` overrides, `--dry-run`
+   checks without filing). Notes are advisory. Prints `#N [Board status] title`.
+8. **Everything after filing uses the same command**, never the GraphQL MCP for bulk work:
+   `update N --add a --remove b --body-file f --comment-file c --close completed`,
+   `search "words" --label x`, `show N`. The board column follows labels (the sync job maps
+   `needs-eric`/`needs-info` → Blocked, `ready` → Ready, closed → Done), so "mark it blocked" is
+   `update N --add needs-eric`. Full usage: the header of `scripts/issues.mjs`.
 9. **Label deliberately.** `feedback` starts a Moneypenny build session on triage; `needs-eric`
    parks it for his flip. Filing alone never authorizes work — that invariant is load-bearing on a
    public repo and this skill never widens it.

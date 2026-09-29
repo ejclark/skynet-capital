@@ -210,6 +210,37 @@ Two issue-specific cautions:
   `main` — that would fire the deploy pipeline) and linked as a SHA-pinned
   `raw.githubusercontent.com` URL, same mechanics as a PR screenshot (src/server/feedback-images.ts).
 
+## Readiness — what committed work carries when it goes `ready` (#4056)
+
+A fresh build session cannot ask a question mid-run, so whatever the issue leaves open gets
+guessed. #4056's predictive study scored 158 built issues on what they carried at handoff against a
+clean first-pass delivery (no follow-up fix, reopen or stall). Two things tracked clean delivery,
+and format did not:
+
+| At handoff | Clean with | Clean without |
+|---|---|---|
+| one delivery unit: declared ≤3 PRs | 84% (76/90) | 68% (17/25) at ≥4 |
+| lint-clean / mermaid / fold | 79% / 78% / 78% | 75% / 79% / 79% |
+
+So a `plan` or `ready` issue gets **readiness notes** from `issue-lint` (and so from
+`npm run issues -- create`), and `npm run ready:report` prints them across the whole ready queue.
+They are advice, never a gate:
+
+- **ready while parked**: `ready` plus any of needs-eric, needs-info, needs-design, hold-merge
+  (`PARKING_LABELS` in `scripts/moneypenny/labels.mjs`). No lane should build it. Say which label is
+  stale; don't auto-fix it, because some flips are Eric's own. Ready + `next-slice` is legal and
+  means "in progress, a remainder pending".
+- **past one delivery unit**: a Size cell declaring more than 3 PRs (or slices). Split the slices
+  into sub-issues that each fit one. Lead every Size cell with `~N PRs` so it can be read at all.
+- **a decision-shaped title with no `Done when`**: *Decide / Investigate / Rethink…* work needs the
+  recorded decision that ends it, or its remainder idles after the first PR.
+- **a protected path with no route**: a named `.github/`, `.claude/` or envelope path with no
+  platter or held-PR step. The lane stops there mid-build otherwise.
+- **a build plan with no WHEN/IF … SHALL**, and **a plan with no as-of sha** (#3818 criterion 8a).
+
+The rubric retires itself if it doesn't earn its place: #4056's call sheet says to drop everything
+except the parked check if flagged and unflagged items deliver within 5pp of each other by 2026-10-31.
+
 ## What is gated, what is taste
 
 Existence and honesty are machine-checked; taste never is (repo doctrine — a comment-only format rule

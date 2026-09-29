@@ -1,4 +1,9 @@
-import { diffGuidance, positionGuidance, snapshotOf } from "../../src/options/position-guidance.js";
+import {
+  diffGuidance,
+  positionGuidance,
+  snapshotOf,
+  stakeFingerprint,
+} from "../../src/options/position-guidance.js";
 import { buildLadder } from "../../src/options/position-guidance-ladder.js";
 import { guidanceToMarkdown } from "../../src/options/position-guidance-markdown.js";
 import {
@@ -7,8 +12,8 @@ import {
   etDateOf,
   MAX_SHORT_DELTA,
   richnessOf,
+  sessionsBefore,
   spanText,
-  weekdaysBefore,
 } from "../../src/options/position-guidance-rules.js";
 import type { GuidanceInputs } from "../../src/options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
@@ -120,7 +125,9 @@ describe("the three calls — the CRWV fixture", () => {
   const { shares, cc, csp } = byLever(positionGuidance(inputs()));
 
   it("HOLDs shares until 5 sessions before the print window, and names the fork", () => {
-    expect(weekdaysBefore("2026-11-09", 5)).toBe("2026-11-02");
+    expect(sessionsBefore("2026-11-09", 5)).toBe("2026-11-02");
+    // Thanksgiving (Nov 26) is no session; the early close the day after still is.
+    expect(sessionsBefore("2026-12-01", 5)).toBe("2026-11-23");
     expect(shares).toMatchObject({
       call: "HOLD",
       confidence: "medium",
@@ -289,6 +296,34 @@ describe("what changed since you last looked", () => {
     expect(lines).toContain("Covered calls: Reasonable now (medium) → Wait (low).");
     expect(lines).toContain("Option prices for sellers: paying well → paying poorly.");
   });
+
+  it("files each look under its stake, so a what-if never reads as a market move", () => {
+    const held = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" as const };
+    expect(stakeFingerprint(held)).toBe(stakeFingerprint({ ...held }));
+    expect(stakeFingerprint({ ...held, shares: 500 })).not.toBe(stakeFingerprint(held));
+    expect(stakeFingerprint({ ...held, goal: "keep-shares" })).not.toBe(stakeFingerprint(held));
+    // What moves with the market is what the diff reports — never part of the stake's identity.
+    const call = {
+      occ: "CRWV261016C00095000",
+      strike: 95,
+      expiration: "2026-10-16",
+      contracts: 2,
+      premium: 2,
+    };
+    expect(
+      stakeFingerprint({
+        ...held,
+        portfolioValue: 90_000,
+        openCalls: [{ ...call, bid: 1.1, ask: 1.2 }],
+      }),
+    ).toBe(
+      stakeFingerprint({
+        ...held,
+        portfolioValue: 95_000,
+        openCalls: [{ ...call, bid: 0.9, ask: 1.0 }],
+      }),
+    );
+  });
 });
 
 describe("the headline strike", () => {
@@ -388,7 +423,7 @@ describe("review regressions — calls a member could act on must never be false
 describe("contradictions found in review (#3729) — the guidance must not argue with itself", () => {
   it("an option never outlives the hold-or-sell decision: income stops at Nov 2", () => {
     const b = positionGuidance(inputs());
-    const decided = weekdaysBefore("2026-11-09", 5);
+    const decided = sessionsBefore("2026-11-09", 5);
     expect(b.ladder.every((r) => r.expiration <= decided)).toBe(true);
     expect(b.dteStrip.find((m) => m.expiration === "2026-11-06")?.verdict).toBe("after-decision");
   });

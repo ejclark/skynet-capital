@@ -19,7 +19,7 @@ import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
 import { locate } from "./locate.mjs";
 import { mintSession } from "./mint-session.ts";
-import { phoneArgs, probePhone } from "./phone.mjs";
+import { phoneArgs, probePhone, servedFinding } from "./phone.mjs";
 import { bootServer, CRAWL_EMAIL, CRAWL_SECRET } from "./server.mjs";
 import { sessionCookie, VIEWPORTS } from "./steps.mjs";
 
@@ -66,7 +66,7 @@ async function main() {
   const exe = resolveChromium();
   const [server, browser] = await Promise.all([
     bootServer({
-      mode: opts.session ? "session" : "open",
+      mode: opts.authBoot ? "session" : "open",
       port: opts.port,
       bridgePort: opts.bridgePort,
     }),
@@ -89,14 +89,15 @@ async function main() {
     }
     const page = await context.newPage();
     if (opts.at) await page.clock.setFixedTime(new Date(opts.at));
-    await page.goto(opts.path, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const response = await page.goto(opts.path, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await settle(page);
     if (opts.click) {
       await page.locator(opts.click).first().click();
       await settle(page);
     }
     const landed = new URL(page.url()).pathname;
-    findings = await probePhone(page);
+    const unserved = servedFinding(response?.status() ?? 0, opts.path);
+    findings = unserved ? [unserved] : await probePhone(page);
     const where = landed === opts.path ? opts.path : `${opts.path} → ${landed}`;
     const after = [opts.at && `at ${opts.at}`, opts.click && `after clicking ${opts.click}`];
     print([where, ...after].filter(Boolean).join(" · "), findings, Date.now() - t0, opts.all);

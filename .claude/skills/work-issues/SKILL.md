@@ -33,12 +33,19 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
      misses that window — a manual pass during it would otherwise dispatch a duplicate build. The
      check is read-only; it never joins or breaks her claim.
 
-   Order the remainder oldest-first (FIFO) unless Eric names a priority order for this pass.
+   Order the remainder by `npm run rank` (#4064), unless Eric names an order for this pass. The
+   rank sorts by class first. A `P0`–`P3` label is Eric's hand and always wins; otherwise the
+   class is derived, with a one-line why. Within a class it goes oldest-ready-first, and an item
+   past one delivery unit sinks, marked "split first". It also covers `bottleneck` and `bug`
+   issues and ranks a split plan's open sub-issues instead of the parent. Take its top row that
+   survives the exclusions above.
 
    **The `plan`-label authorization gap:** the `feedback` label alone is a settled authorization
    invariant (`docs/plans/issue-centric-orchestration.md`: "the label is the authorization"), but a
-   `plan`-labeled issue's readiness historically depended on Eric's own comment/flip, not a distinct
-   label — there is no `ready` label in the registry (`tests/arch/label-vocabulary.spec.ts`). Treat a
+   `plan`-labeled issue's readiness historically depended on Eric's own comment/flip. The `ready`
+   label now exists (registered in `scripts/moneypenny/labels.mjs`, gating feedback builds since
+   #3912), and `npm run ready:report` prints the readiness notes for everything carrying it (#4056).
+   Skip a `ready` issue that the report shows as parked. Treat a
    `plan` issue as buildable under the same rule as `feedback` (open, none of the parking labels
    above) **unless its body still carries an explicit `Status: draft` marker** — that marker means a
    human hasn't flipped it yet, and this skill must not flip it for them. If the queue produces zero
