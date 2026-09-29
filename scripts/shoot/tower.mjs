@@ -134,7 +134,8 @@ async function main() {
       const page = await browser.newPage({ viewport: { width: s.w, height: s.h } });
       const framing = s.card ? "card" : s.frame;
       await page.goto(poseUrl(s, framing), { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
+      // The options are the THIRD argument; the second is the page function's arg.
+      await page.waitForFunction(() => window.__ready === true, undefined, { timeout: 60000 });
 
       // Let bloom, SSAO and texture upload settle FIRST, with the scene running freely.
       await page.waitForTimeout(1200);
@@ -160,17 +161,25 @@ async function main() {
         await page.close();
         continue;
       }
-      await page.evaluate(({ beta, radius, whole, alphaOffset }) => {
-        const eye = window.__eye;
-        if (!(eye && window.__towerPose)) return;
-        const alpha = eye.facingAlpha + (alphaOffset ?? 0);
-        const target = whole
-          ? [0, (window.__tower?.height ?? 395) / 2 - 18, 0]
-          : [eye.x, eye.y, eye.z];
-        window.__towerPose({ alpha, beta, radius, target });
-      }, s);
-      // Seek to a fixed moment. `__towerSeek` stops the loop and renders exactly that instant (see scene-main.ts).
-      await page.evaluate((time) => window.__towerSeek?.(time), s.seek ?? SEEK_TIME);
+      // Halt, pose and seek in ONE evaluate. As two calls, the render loop ticked in the gap — the idle
+      // orbit and the controls' damping moved the camera off the asked-for angle, a different amount
+      // each run. Halting first means nothing moves it between the pose and the frame we capture.
+      await page.evaluate(
+        ({ beta, radius, whole, alphaOffset, time }) => {
+          const eye = window.__eye;
+          window.__towerPause?.();
+          if (eye && window.__towerPose) {
+            const alpha = eye.facingAlpha + (alphaOffset ?? 0);
+            const target = whole
+              ? [0, (window.__tower?.height ?? 395) / 2 - 18, 0]
+              : [eye.x, eye.y, eye.z];
+            window.__towerPose({ alpha, beta, radius, target });
+          }
+          // `__towerSeek` renders exactly that instant with the loop stopped (see scene-main.ts).
+          window.__towerSeek?.(time);
+        },
+        { ...s, time: s.seek ?? SEEK_TIME },
+      );
       await page.waitForTimeout(250);
 
       const file = join(OUT, `tower-${s.tag}.png`);
@@ -224,7 +233,7 @@ async function checkReducedMotion(browser) {
   await page.goto(`http://127.0.0.1:${PORT}/tower.html?frame=crown`, {
     waitUntil: "domcontentloaded",
   });
-  await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
+  await page.waitForFunction(() => window.__ready === true, undefined, { timeout: 60000 });
   await page.evaluate(() =>
     window.postMessage({ type: "tower:flare", kind: "new-high" }, window.location.origin),
   );
