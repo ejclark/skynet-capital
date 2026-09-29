@@ -3,8 +3,11 @@
 // change it. Split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { execFileSync } from "node:child_process";
 
+// maxBuffer: execFileSync's 1 MB default is smaller than one page of 100 PRs with bodies, so any
+// full-page read died with ENOBUFS — latency-scan crashed on it (#4056's L9 study) and the delivery
+// scorer hit it on its first page. 64 MB is ~60 such pages; a caller can still pass its own.
 export const sh = (cmd, args, opts = {}) =>
-  execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", ...opts }).trim();
+  execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20, ...opts }).trim();
 
 /**
  * Is this `gh`/network failure the kind a second try fixes? GitHub's own 5xx (2026-09-05: one
