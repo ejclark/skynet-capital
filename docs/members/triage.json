@@ -159,7 +159,7 @@
   {
     "screen": "/settings ?section=account",
     "verdict": "keep",
-    "mustBeSeenBy": "account owner; Mission Control and Unclaimed accounts only for the fund owner (and hidden for a fund owner with no account)"
+    "mustBeSeenBy": "account owner; Mission Control and Unclaimed accounts only for the fund owner (shown even when the owner holds no account)"
   },
   {
     "screen": "/settings ?section=guests",
