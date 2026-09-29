@@ -2,9 +2,21 @@
   "measured_on": "swiftshader (relative only; the real number is Eric's Pixel 6)",
   "date": "2026-09-26",
   "viewport": "1280x900, DPR 1",
+  "pick": {
+    "date": "2026-09-27",
+    "choice": "live",
+    "by": "Eric, after comparing /app/accounts?shell=watchtower&crest=live|still by eye",
+    "quote": "live - the subtle animation in the background offers opportunities",
+    "result": "moving is the default; still is the member's setting (Settings -> Preferences -> Tower motion), the WCAG 2.2.2 pause for the tower's ambient motion"
+  },
   "proposed_pass": {
     "tower_submit_ms_p95": 4,
     "parent_idle_raf_p95_delta_ms": 4
+  },
+  "reading": {
+    "transfers": "tower.live.submit_ms_p95 (2.1 ms): the scene's own draw, inside the <= 4 ms line",
+    "advisory": "parent_raf_interval_ms: SwiftShader is a CPU rasterizer sharing the page's CPU on a loaded machine (the flag-off page itself ran at rAF p50 ~200 ms), so the +50 ms at-rest delta for live is a relative tripwire, not a verdict",
+    "falsifier": "jank Eric sees with ?probe=1 on his own machine"
   },
   "tower": {
     "live": {
@@ -67,6 +79,7 @@
     "three runs this session, same machine: crest=still at-rest delta p95 -0.1 / 0 / 0 ms (inside the <= +4 ms line); crest=live +83.3 / +50 / +50.1 (fails it). This file is the third run",
     "the machine was loaded this session: the flag-off page itself ran at rAF p50 ~200 ms (16.7 ms in slice 3a-2), so read the deltas, not the absolute intervals",
     "while the Eye looks (3 row hovers, 6 section switches that glance) crest=still animates and costs what crest=live costs (active delta +66.6 both); it stops again on its own — 3 frames at rest (the first still + mood/resize redraws) vs ~44 for live",
-    "the Profile fixture draws no calendar day grid, so the regard hovers are blotter rows (same tower:regard); the 20-navigation run ends with crest=still stored"
+    "the Profile fixture draws no calendar day grid, so the regard hovers are blotter rows (same tower:regard); the 20-navigation run ends with crest=still stored",
+    "2026-09-27: Eric picked live; the parent-page delta above is advisory (SwiftShader, loaded machine) and the scene's own submit p95 is the number that transfers — see pick and reading"
   ]
 }

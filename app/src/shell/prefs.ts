@@ -13,10 +13,19 @@ import { create } from "zustand";
  * `data-shell="watchtower"` on <html> so the band's CSS can make room for the crest. Invisible
  * unless asked for: nothing in the app links to it.
  *
- * THE CREST'S REST (#3807 slice 3a-3): `?crest=still` beside the flag asks for the second crest
- * option — one still frame at rest, animating only while the Eye looks at a day or a filter — so
- * the two can be compared by eye; `?crest=live` goes back to today's constant sweep. Stored the
- * same way as the flag, so it survives navigation. It changes nothing unless the flag is on.
+ * THE TOWER'S MOTION (#3807 slice 3a-3 → 3b-1): `live` (the Eye's constant slow sweep) is the
+ * default by Eric's pick (2026-09-27: "the subtle animation in the background offers
+ * opportunities"); `still` — one frame at rest, animating only while the Eye looks at a day or a
+ * filter the member picks — is the member's own setting, Settings → Display → "Tower motion"
+ * (`setCrest`), the WCAG 2.2.2 pause for the tower's ambient motion. It applies to every tower
+ * view: the calendar head's (`vantage.tsx`) and the character card's (`sauron-card.tsx`).
+ * `?crest=still|live` still sets it from a URL, so a compare link keeps working.
+ *
+ * THE CARD COMPARE (#3807 slice 3b-1, only while the flag is on): with the flag the Profile
+ * page's Overview draws two towers — the head's and the character card's 664px art, which Eric
+ * placed himself (#3725/#3727). Retiring the art is his call, made by eye: `?card=league` shows
+ * the card without its art where the head's tower shows (≥861px), `?card=art` (the default) keeps
+ * it. Stored like the motion, so the pick survives navigation.
  */
 
 export type Theme = "dark" | "light";
@@ -26,12 +35,16 @@ const THEME_KEY = "skynet-theme";
 const DENSITY_KEY = "skynet-density";
 const SHELL_KEY = "skynet-shell";
 const CREST_KEY = "skynet-crest";
+const CARD_KEY = "skynet-card";
 
 /** The opt-in shell, or `undefined` for today's. */
 export type Shell = "watchtower" | undefined;
 
-/** The crest at rest: `live` (today's constant sweep) or `still` (one frame, live only on regard). */
+/** The tower at rest: `live` (the default sweep) or `still` (one frame, live only on regard). */
 export type Crest = "live" | "still";
+
+/** The character card beside the head's tower: its `art` (default) or the `league` alone. */
+export type CardPick = "art" | "league";
 
 function readStored<T extends string>(key: string, allowed: readonly T[]): T | undefined {
   try {
@@ -113,6 +126,35 @@ function storeCrest(crest: Crest): void {
   }
 }
 
+/** `?card=league` picks the art-less card, `?card=art` the default; otherwise the stored choice. */
+export function cardFromUrl(search: string, stored: CardPick | undefined): CardPick {
+  const asked = new URLSearchParams(search).get("card");
+  if (asked === "art" || asked === "league") return asked;
+  return stored ?? "art";
+}
+
+function storeCard(card: CardPick): void {
+  try {
+    if (card === "league") localStorage.setItem(CARD_KEY, card);
+    else localStorage.removeItem(CARD_KEY);
+  } catch {
+    /* no storage: the choice lasts this page load */
+  }
+}
+
+function initialCard(): CardPick {
+  const stored = readStored(CARD_KEY, ["league"] as const);
+  let search = "";
+  try {
+    search = window.location.search;
+  } catch {
+    /* no location: keep what is stored */
+  }
+  const card = cardFromUrl(search, stored);
+  if (card !== (stored ?? "art")) storeCard(card);
+  return card;
+}
+
 function initialTheme(): Theme {
   const stored = readStored(THEME_KEY, ["dark", "light"] as const);
   if (stored) return stored;
@@ -125,7 +167,9 @@ interface PrefsState {
   readonly density: Density;
   readonly shell: Shell;
   readonly crest: Crest;
+  readonly card: CardPick;
   readonly setCrest: (crest: Crest) => void;
+  readonly setCard: (card: CardPick) => void;
   readonly setTheme: (theme: Theme) => void;
   readonly setDensity: (density: Density) => void;
   readonly setShell: (shell: Shell) => void;
@@ -144,9 +188,14 @@ export const usePrefs = create<PrefsState>((set) => {
     density,
     shell,
     crest: initialCrest(),
+    card: initialCard(),
     setCrest: (next) => {
       storeCrest(next);
       set({ crest: next });
+    },
+    setCard: (next) => {
+      storeCard(next);
+      set({ card: next });
     },
     setShell: (next) => {
       storeShell(next);

@@ -19,26 +19,8 @@
 //   npm run build --prefix app && npm run build:scene && npx tsx scripts/probe/watchtower.mjs
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { accountsFixture } from "../shoot/accounts-fixture.mjs";
 import { openShell } from "../shoot/shell.mjs";
-
-/**
- * The Profile page's fixture, borrowed from `scripts/shoot/accounts.mjs` so the probe measures the
- * same page the pictures show: the data block between its imports and its `openShell` call is plain
- * `const` data, evaluated here as a module. Good enough on purpose — an internal instrument; if the
- * shoot script's shape moves, this throws loudly rather than measuring a different page.
- */
-async function accountsFixture() {
-  const src = readFileSync("scripts/shoot/accounts.mjs", "utf8");
-  const from = src.indexOf("const settings = {");
-  const to = src.indexOf("const { page, origin, out, close } = await openShell({");
-  const stubsAt = src.indexOf("stubs: {", to);
-  const stubsEnd = src.indexOf("\n  },\n});", stubsAt);
-  if (from < 0 || to < 0 || stubsAt < 0 || stubsEnd < 0)
-    throw new Error("accounts.mjs fixture moved");
-  const body = `${src.slice(from, to)}\nexport const stubs = {${src.slice(stubsAt + "stubs: {".length, stubsEnd)}\n};`;
-  const mod = await import(`data:text/javascript;base64,${Buffer.from(body).toString("base64")}`);
-  return mod.stubs;
-}
 
 const NOT = "not measured";
 const IDLE_MS = 10_000;
@@ -148,12 +130,27 @@ async function rafRun(mode) {
 
 const delta = (a, b) => (a !== null && b !== null ? Math.round((a - b) * 100) / 100 : NOT);
 
+/** Eric's pick (2026-09-27, live) and how to read these numbers are decisions, not measurements:
+ *  a re-run carries them forward from the file it overwrites, untouched. */
+function priorDecisions() {
+  try {
+    const { pick, reading } = JSON.parse(readFileSync("tower-frame-budget.json", "utf8"));
+    return { ...(pick ? { pick } : {}), ...(reading ? { reading } : {}) };
+  } catch {
+    return {};
+  }
+}
+const { pick, reading } = priorDecisions();
+
 const result = {
   measured_on: "swiftshader (relative only; the real number is Eric's Pixel 6)",
   date: new Date().toISOString().slice(0, 10),
   viewport: "1280x900, DPR 1",
-  // The design panel's proposed lines (plan #3807, §4). A fail sends the crest to the still rung.
+  ...(pick ? { pick } : {}),
+  // The design panel's proposed lines (plan #3807, §4). Since Eric's pick the parent-page delta is
+  // advisory on SwiftShader (`reading`); the scene's own submit p95 is the number that transfers.
   proposed_pass: { tower_submit_ms_p95: 4, parent_idle_raf_p95_delta_ms: 4 },
+  ...(reading ? { reading } : {}),
   tower: { live: NOT, still: NOT },
   parent_raf_interval_ms: { off: NOT, live: NOT, still: NOT },
   navigation: { navigations: NOT, crest_iframes_max: NOT, same_element: NOT },

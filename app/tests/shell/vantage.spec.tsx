@@ -89,6 +89,23 @@ describe("the crest's rest (#3807 slice 3a-3)", () => {
       usePrefs.getState().setShell(undefined);
     });
   });
+
+  it("the member's Settings choice reaches a frame already mounted — same element, new src (slice 3b-1)", async () => {
+    act(() => usePrefs.getState().setShell("watchtower"));
+    const view = render(<Shell pathname="/accounts" phone={false} band />);
+    await settle();
+    const first = frames(view.container)[0];
+    expect(first).toBeDefined();
+    act(() => usePrefs.getState().setCrest("still"));
+    await settle();
+    const now = view.container.querySelectorAll(`iframe[src="${CREST_SRC}&rest=still"]`);
+    expect(now).toHaveLength(1);
+    expect(now[0]).toBe(first);
+    act(() => {
+      usePrefs.getState().setCrest("live");
+      usePrefs.getState().setShell(undefined);
+    });
+  });
 });
 
 describe("VantageFrame", () => {
