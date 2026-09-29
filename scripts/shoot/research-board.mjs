@@ -5,7 +5,7 @@
 // width. One run photographs both states by flipping what `/api/research/mentions` answers: a
 // search that finds nothing is exactly the pre-#3962 world (the slug net alone), a populated one is
 // the fix. Same query, same shelf payload, same build — only the search result differs.
-// Usage: npm run build --prefix app && npm run shoot:research-board [outdir]
+// Usage: npm run build --prefix app && npm run shoot:research-board docs/shots/research-symbol-scope
 import { openShell } from "./shell.mjs";
 
 const doc = (slug, title, lastAssessed = null) => ({
