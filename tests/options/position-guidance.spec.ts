@@ -7,8 +7,8 @@ import {
   etDateOf,
   MAX_SHORT_DELTA,
   richnessOf,
+  sessionsBefore,
   spanText,
-  weekdaysBefore,
 } from "../../src/options/position-guidance-rules.js";
 import type { GuidanceInputs } from "../../src/options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
@@ -120,7 +120,9 @@ describe("the three calls — the CRWV fixture", () => {
   const { shares, cc, csp } = byLever(positionGuidance(inputs()));
 
   it("HOLDs shares until 5 sessions before the print window, and names the fork", () => {
-    expect(weekdaysBefore("2026-11-09", 5)).toBe("2026-11-02");
+    expect(sessionsBefore("2026-11-09", 5)).toBe("2026-11-02");
+    // Thanksgiving (Nov 26) is no session; the early close the day after still is.
+    expect(sessionsBefore("2026-12-01", 5)).toBe("2026-11-23");
     expect(shares).toMatchObject({
       call: "HOLD",
       confidence: "medium",
@@ -388,7 +390,7 @@ describe("review regressions — calls a member could act on must never be false
 describe("contradictions found in review (#3729) — the guidance must not argue with itself", () => {
   it("an option never outlives the hold-or-sell decision: income stops at Nov 2", () => {
     const b = positionGuidance(inputs());
-    const decided = weekdaysBefore("2026-11-09", 5);
+    const decided = sessionsBefore("2026-11-09", 5);
     expect(b.ladder.every((r) => r.expiration <= decided)).toBe(true);
     expect(b.dteStrip.find((m) => m.expiration === "2026-11-06")?.verdict).toBe("after-decision");
   });
