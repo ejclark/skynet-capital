@@ -124,7 +124,10 @@ export function start(canvas: HTMLCanvasElement): void {
       y + p.radius * Math.cos(p.beta),
       z + p.radius * Math.sin(p.alpha) * Math.sin(p.beta),
     );
-    controls.update();
+    // Aim directly rather than through `controls.update()`: that would fold in one idle-orbit step
+    // and the damping left over from the last frame, so the pose landed a little off the angle asked
+    // for — by a different amount each run, which made the harness's frames incomparable.
+    camera.lookAt(x, y, z);
   };
 
   // The throw that fits a `halfH` × `halfW` window at the current aspect — whichever axis is tighter.
