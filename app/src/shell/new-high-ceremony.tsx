@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import type { NetWorthStatsView } from "../live/networth";
 import { RosterSparkline } from "./roster-sparkline";
+import { flareTower } from "./tower-bus";
 
 /**
  * THE NEW-HIGH CEREMONY (#3689 slice 10, handoff 2c): a full takeover the first time you open
@@ -14,6 +15,11 @@ import { RosterSparkline } from "./roster-sparkline";
  *  - The value is in the "charged" highlight. Four tiles: today, locked in, on paper, the month
  *    against the S&P. Then Moneypenny's one line.
  *  - Leaving is one Escape, one click on the backdrop, or the button (focused on open).
+ *  - Leaving is also when the tower hears about it (#3807 slice 3b-3, `flareTower`): the Eye
+ *    brightens once and settles. Not on opening — the takeover's backdrop is opaque from 70% out
+ *    and it opens with the page, before the tower's frame is listening — but the moment the
+ *    tower is back in view, with the high just read. Never for a high already seen (no takeover,
+ *    no leaving), and never under reduced motion.
  *
  * Not here yet, from the design's trigger list: beating the S&P, a profitable close, a streak,
  * passing someone on the league. They'd reuse this component; each needs its own "seen" key.
@@ -58,6 +64,7 @@ export function NewHighCeremony({
   const atHigh = high !== undefined && high.aboveNow === 0;
   const [open, setOpen] = useState(() => atHigh && !alreadySeen(accountId, high?.value ?? ""));
   const back = useRef<HTMLButtonElement>(null);
+  const told = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +81,9 @@ export function NewHighCeremony({
   function close() {
     if (high) markSeen(accountId, high.value);
     setOpen(false);
+    if (told.current) return;
+    told.current = true;
+    flareTower("new-high");
   }
 
   return (
