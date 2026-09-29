@@ -20,6 +20,13 @@ import { GlossaryTerm } from "./glossary-term";
  * room. These three are not — "am I winning" is the card's whole job, and a member's own record is
  * the answer, so the line stays visible on the phone and wraps instead of hiding. §5.1's falsifier
  * is that these facts must not read as *"a second net-worth card"*: one wrapped row, no panel.
+ *
+ * WHY AN UNKNOWN FACT IS DROPPED, NOT DASHED: the Pulse page prints all five tiles whatever their
+ * state, because it has room for each one's note to say what is missing ("needs a closed trade").
+ * This row has no such room, and a member on day one would read three bare dashes as a record
+ * rather than as an absence. So an unknown fact leaves, and a line with nothing left renders
+ * nothing at all — the same call `FormStrip` makes beside it ("an empty strip reads like a losing
+ * record"). The full Pulse, one link away, is where the explanation lives.
  */
 
 /**
@@ -58,7 +65,7 @@ export function StandingLine({ accountId }: { readonly accountId: string }): Rea
   // `key` comes back as the literal from HEADLINE, so the glossary lookup is checked, not asserted.
   const facts: HeadlineTile[] = HEADLINE.flatMap((key) => {
     const tile = byKey.get(key);
-    return tile ? [{ ...tile, key }] : [];
+    return tile?.known ? [{ ...tile, key }] : [];
   });
   if (facts.length === 0) return null;
 

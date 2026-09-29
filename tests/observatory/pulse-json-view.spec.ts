@@ -96,6 +96,22 @@ describe("deskPulseView", () => {
     for (const tile of view.tiles) expect(tile.label.length).toBeGreaterThan(0);
   });
 
+  // The dash and the flag must never disagree: a reader with no room for the note (the net-worth
+  // card's standing line) decides on `known` alone, and would print a bare "—" if it lied.
+  it("flags a fact whose inputs do not exist yet, beside the dash that shows it", () => {
+    const fresh = deskPulseView(snapshot(), []);
+    expect(fresh.tiles.filter((t) => !t.known).map((t) => t.key)).toEqual([
+      "netRealized",
+      "winRate",
+      "profitFactor",
+      "maxDrawdown",
+    ]);
+    for (const tile of fresh.tiles) {
+      if (!tile.known) expect(tile.note.length).toBeGreaterThan(0);
+    }
+    expect(fresh.tiles.find((t) => t.key === "equity")?.known).toBe(true);
+  });
+
   it("scores the doubling race from the founding baseline and banks a crossed trophy", () => {
     const racing = deskPulseView(snapshot({ equity: 150_000 }), [
       sample("2026-08-01T00:00:00Z", 100_000),

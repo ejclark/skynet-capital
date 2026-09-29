@@ -115,7 +115,7 @@ export const GLOSSARY = {
   winRate: {
     label: "Win rate",
     plain:
-      "Of the trades you've closed, the share that made money. It says nothing about size — a high win rate can still lose overall if the losses are bigger.",
+      "Of your closed trades that ended up or down, the share that ended up. One that closed exactly even counts neither way. It says nothing about size — a high win rate can still lose overall if the losses are bigger.",
   },
   profitFactor: {
     label: "Profit factor",

@@ -35,6 +35,8 @@ export interface PulseTileData {
   readonly label: string;
   readonly value: string;
   readonly note: string;
+  /** False when this fact has no inputs yet — the value is a dash and the note says what's missing. */
+  readonly known: boolean;
   readonly tone?: "pos" | "neg" | "flat";
 }
 
