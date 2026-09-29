@@ -21,7 +21,8 @@ export default defineConfig({
   webServer: {
     // Builds the React shell (app/dist) so /app/ resolves, then boots the offline dashboard fully
     // open (no OAuth env vars) so every real route is reachable with no auth flow.
-    command: "npm run build --prefix app && npm run serve:dashboard:offline",
+    command:
+      "npm run build --prefix app && SKYNET_RESEARCH_DIR=e2e/fixtures/research npm run serve:dashboard:offline",
     url: "http://localhost:8787",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
