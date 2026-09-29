@@ -312,6 +312,11 @@ Eric-only governance change) — then `@semantic-release/git` can be added back.
   shape with `var(--col-read)` (forms, prose) or `var(--col-wide)` (grids, lists) from
   `app/src/styles/theme.css`. `tests/ui/fluid-shell-css.spec.ts` fails any `max-width: <n>px` in a
   view stylesheet — a 640px card looks right on a laptop and leaves two-thirds of a monitor empty.
+- **New styles start from the phone and break only at the named widths** — phone ≤ 700 · tablet
+  ≤ 860 · bench ≥ 1280 (`docs/BRAND.md` → *Three named widths*; JS imports them from
+  `app/src/shell/widths.ts`). Write the base rule for 390px and widen with `min-width` at one of
+  those edges; a new number in a media query needs a reason stronger than "it looked right here".
+  Existing off-set widths are not mass-rewritten — `npm run breakpoints:scan` lists them.
 - **Honor `prefers-reduced-motion` for anything animated** — every animated surface needs the
   reduced-motion path, not just the cinematic ones.
 - **`lightweight-charts` throws under `happy-dom`** (`app/rstest.config.ts`'s test environment) —

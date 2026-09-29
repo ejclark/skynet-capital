@@ -379,6 +379,14 @@ obvious>.` — e.g. `#1267 — waiting on you to R+M. Closes the deploy-churn si
 effects on deploy."` Never restate what the PR body, the CI run, or the notification's own payload
 already said; a wake with nothing new to report earns silence (re-arm the check-in), not a recap.
 
+**A finished session asks to archive itself** (Eric, 2026-09-28: "The point is to reduce the pileup
+of open sessions" — and sessions marked finished still "look like they have follow-up actions").
+Done is checked, not assumed: every PR it opened is merged or closed; every follow-up it produced (an
+open question, a parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan
+issue — never only the chat; its plan issue's state block is current; no PR watch or scheduled
+check-in is pending. Then its last message asks **"archive this session?"**, and on yes it archives
+itself as its final action (`archive_session` on its own session id).
+
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
 with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map for

@@ -9,6 +9,7 @@ import {
   useTowerRun,
 } from "./tower-bus";
 import { useMediaQuery } from "./use-media";
+import { TABLET_QUERY } from "./widths";
 
 /**
  * THE CREST (#3807 slice 3a, behind `?shell=watchtower`): the tower, framed on its crown and Eye,
@@ -205,8 +206,8 @@ export function Vantage({
   readonly root: RefObject<HTMLElement | null>;
 }): ReactElement | null {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // ≤860px is the phone shell (`shell.css`, `cockpit-clock.tsx` PHONE_QUERY).
-  const phone = useMediaQuery("(max-width: 860px)");
+  // ≤ the tablet width is where the shell wraps (`shell.css`, `widths.ts`), phones included.
+  const phone = useMediaQuery(TABLET_QUERY);
   return <VantageFrame root={root} pathname={pathname} phone={phone} />;
 }
 
