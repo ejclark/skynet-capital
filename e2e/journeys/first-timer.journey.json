@@ -9,6 +9,14 @@
       "name": "the first ten minutes",
       "steps": [
         {
+          "id": "s0",
+          "goto": "/login",
+          "sees": "the sign-in page: the scene behind it, one button per provider, Continue with Google first (the server serves it the same with or without a session — the crawl's cookie is already set)",
+          "ears": "WHEN an invited visitor opens the sign-in page, the app shall show a way to sign in at every width.",
+          "expect": [{ "url": "/login" }, { "role": "link", "name": "Continue with Google" }],
+          "judge": "can this reader tell how to get in, in ten seconds?"
+        },
+        {
           "id": "s1",
           "goto": "/app/",
           "sees": "the league table, ranked rows; the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
@@ -54,6 +62,18 @@
             { "text": "Connect your Alpaca paper account" }
           ],
           "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s4b",
+          "goto": "/app/accounts?section=feedback",
+          "sees": "Profile → Feedback: what a filing is for, and one button — Talk to Moneypenny — that opens her rail, where hello is said; offline, a line that feedback is not switched on yet",
+          "ears": "WHEN a member with no linked account opens Profile → Feedback, the app shall offer one control that opens Moneypenny.",
+          "expect": [
+            { "url": "/app/accounts?section=feedback" },
+            { "role": "heading", "name": "Your feedback" },
+            { "role": "button", "name": "Talk to Moneypenny" }
+          ],
+          "judge": "can this reader tell how to say hello, in ten seconds?"
         },
         {
           "id": "s5",

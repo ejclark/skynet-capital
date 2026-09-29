@@ -64,6 +64,29 @@
             { "role": "link", "name": "← Leaderboard", "absent": true }
           ],
           "judge": "can this reader find what the bot actually did?"
+        },
+        {
+          "id": "s7",
+          "goto": "/app/u/sauron/activity",
+          "sees": "Sauron's Activity: every order it placed, newest first — what, at what price, and why",
+          "ears": "WHEN a viewer opens a bot's Activity, the app shall list every order it placed, newest first.",
+          "expect": [
+            { "url": "/app/u/sauron/activity" },
+            { "role": "heading", "name": "Activity", "exact": true }
+          ],
+          "judge": "can this reader find what the bot actually did?"
+        },
+        {
+          "id": "s8",
+          "goto": "/app/u/sauron/pulse",
+          "sees": "Sauron's Pulse: the equity curve, streaks, and realized P/L by week — how bad the bad week was",
+          "ears": "WHEN a viewer asks how a bot's week went, the app shall show its realized P/L by week.",
+          "expect": [
+            { "url": "/app/u/sauron/pulse" },
+            { "role": "heading", "name": "Pulse", "exact": true },
+            { "role": "heading", "name": "Realized P/L by week" }
+          ],
+          "judge": "can this reader tell how the bot's week went?"
         }
       ]
     }
