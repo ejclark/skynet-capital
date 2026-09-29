@@ -14,12 +14,20 @@ import { SavedPositionsSection } from "../../src/shell/saved-positions-section";
 const { stake: _fixtureStake, ...MARKET } = inputs();
 
 let positions: unknown[] = [];
+let accounts: unknown[] = [];
+let deskBody: unknown = { generatedAt: "", desk: { positions: [] } };
 const posted: { url: string; body: unknown }[] = [];
 
 function serve(market: GuidanceMarket): void {
   globalThis.fetch = ((url: string, init?: RequestInit) => {
     if (url === "/api/saved-positions") {
       return Promise.resolve(new Response(JSON.stringify({ positions }), { status: 200 }));
+    }
+    if (url === "/api/settings") {
+      return Promise.resolve(new Response(JSON.stringify({ accounts }), { status: 200 }));
+    }
+    if (url.startsWith("/api/desk/")) {
+      return Promise.resolve(new Response(JSON.stringify(deskBody), { status: 200 }));
     }
     if (init?.method === "POST") {
       const body = JSON.parse(String(init.body));
@@ -64,6 +72,8 @@ function mount() {
 
 beforeEach(() => {
   positions = [];
+  accounts = [];
+  deskBody = { generatedAt: "", desk: { positions: [] } };
   posted.length = 0;
   serve(MARKET);
 });
@@ -142,5 +152,37 @@ describe("saved positions — a saved card", () => {
         body: { id: "pos-1", name: "Renamed" },
       }),
     );
+  });
+});
+
+describe("saved positions — pulling an existing paper position in (#3968 slice 3b)", () => {
+  it("has nothing to offer when the member owns no accounts", async () => {
+    mount();
+    await screen.findByText("Nothing saved yet — add a position above.");
+    expect(screen.queryByLabelText("Account")).toBeNull();
+  });
+
+  it("imports a held stock position as an ordinary saved position", async () => {
+    accounts = [
+      { id: "acct-1", name: "acct-1", kind: "human", hostConfigured: false, profile: null },
+    ];
+    deskBody = {
+      generatedAt: "",
+      desk: {
+        positions: [{ symbol: "CRWV", isOption: false, quantity: "150", costPerShare: "$62.10" }],
+      },
+    };
+    mount();
+    await screen.findByText("Nothing saved yet — add a position above.");
+    fireEvent.change(await screen.findByLabelText("Account"), { target: { value: "acct-1" } });
+    await screen.findByRole("option", { name: "CRWV" });
+    fireEvent.change(screen.getByLabelText("Position"), { target: { value: "CRWV" } });
+    fireEvent.click(screen.getByRole("button", { name: "Import position" }));
+
+    await screen.findByText("CRWV");
+    expect(posted[0]).toMatchObject({
+      url: "/api/saved-positions/save",
+      body: { symbol: "CRWV", stake: { shares: 150, costBasis: 62.1 } },
+    });
   });
 });
