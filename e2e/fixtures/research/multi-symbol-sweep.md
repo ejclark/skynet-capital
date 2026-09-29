@@ -1,0 +1,748 @@
+# Eight-symbol sweep — the NVDA playbooks meet the rest of the roster
+
+**Date:** 2026-08-12 · **Symbols:** MRVL, CRWV, AMZN, MSFT, GOOG, META, AVGO, AAPL
+**Instruments:** [`earnings-cycle.mjs`](../../scripts/research/earnings-cycle.mjs) (SEC 8-K dates,
+QQQ benchmark, sector-peer controls) + [`intraday-edges.mjs`](../../scripts/research/intraday-edges.mjs)
+(hourly + 5-min, break-even slippage). Every symbol's study was independently red-teamed —
+multiple-testing exposure, AI-beta confound, regime splits, date alignment, costs, small-n — and a
+red-team kill overrides a researcher "fits." Predecessors: [`nvda-earnings-cycle.md`](nvda-earnings-cycle.md),
+[`intraday-volatility.md`](intraday-volatility.md).
+
+## The headline
+
+**Every alpha-shaped claim across all eight symbols failed or wobbled under attack. Both
+no-alpha claims survived on all eight.** S2 (never hold the print) and E1 (defer entries past the
+open) are universal because they claim no edge — one removes a known-date variance bomb at ~zero
+expected cost, the other avoids the day's most expensive microstructure for zero foregone drift.
+The sweep's deployable set under current constraints is exactly: **two guard rules everywhere, one
+small GOOG long, and a queue of registered zero-size forward-tests.** That hierarchy — risk rules
+robust, alpha fragile — is the finding.
+
+## The matrix — does each playbook travel beyond NVDA?
+
+| Playbook | Travels? | Per-symbol verdicts |
+|---|---|---|
+| **S1** positioning bid (long D-20, flat D-5) | **No — NVDA-only.** | Killed on MRVL, CRWV, AMZN, MSFT, META, AAPL (fails binomial/base-rate/peer controls on each — e.g. AAPL's pre-print window *underperforms* its own base rate, p=0.80). Shape-inverted-but-insignificant on AVGO. Sole partial survivor GOOG needs a different exit (close of D, not D-5). |
+| **S2** never hold the print | **Yes — all eight.** | Every print gap is a fat-tailed coin flip (±8–24% single-night tails). Both "the gap actually pays" objections died under attack (AVGO win 57% vs 56% ordinary-overnight base, p=0.567; META's +4.74% mean is t=1.69-fragile with a −24.3% p10 in the one bear era sampled). On META, label it bought insurance. |
+| **E1** don't trade the open | **Yes — all eight, and QQQ itself.** | First ~hour carries 28–34% of daily volatility at ~zero drift everywhere — market-wide open-auction microstructure, immune to multiple testing because it claims no alpha. **Caveat:** on GOOG and AAPL the first hour carries most/all of the session's *return* — E1 stays a cost rule for non-urgent entries, never a systematic skip-the-open. |
+| **S3** fade the reaction-day open | **Partially — it's a mega-cap software/ads class effect.** | Replicates event-locked on MSFT (59/87 red vs 49.2% base, **p=3.4e-4** — clears the ~0.001 family-corrected bar unaided, red-majority in all four eras, 10/10 red since 2024), GOOG (p=0.0014), META/AMZN (direction only). **Absent** on the semis (MRVL, AVGO) and AAPL. ~1/4 of NVDA's magnitude where it exists. Inert until shorting unblocks. |
+| **S4** overnight-only | **No — beats buy-and-hold nowhere at realistic costs.** | The overnight/session split is the documented market-wide overnight anomaly (QQQ shows ~87% itself), not symbol edge. Fails *before* costs on MSFT; outright value-destroying on GOOG and AAPL (AAPL's overnight edge is exactly zero, t=−0.04). Keep only as structure: prefer close-side executions. Lone conditional case: CRWV ex-print-night carry, gated on MOC/MOO + measured slippage < ~13bps/side. |
+
+## What survived — deployment, ranked
+
+1. **S2 everywhere** (all eight + NVDA) — universal risk policy, not a bet. Removes known-date
+   ±8–24% single-night tails at ~zero EV cost.
+2. **E1 everywhere** — universal execution rule for *non-urgent* entries. On GOOG/AAPL an urgent
+   or alpha-driven entry may still take the open; the rule is about not paying the widest spreads
+   of the day for free.
+3. **GOOG pre-print run-up hold** (long D-20 → **close of D**, still never holding the print) —
+   the sweep's only surviving directional long. Pooled 37/43 prints positive, p=0.0008 vs the
+   measured 63% base (degrading to 0.003–0.012 under overlapping-window base-rate uncertainty);
+   excess and net-of-QQQ positive in all three eras. Deploy **small**: the evidence sits AT the
+   corrected significance bar, not past it; size for the pooled −3.39% p10; attribution is partly
+   mega-cap earnings-season seasonality, so never stack with other pre-print longs.
+4. **Registered zero-size forward-tests** (predictions logged before outcomes): the semi late-week
+   bid (MRVL/AVGO — Aug/Sep prints are observation #1), AAPL post-print drift (start at the Oct
+   print), CRWV's 2026-08-11 print scoring (windows close ~Aug 19–26), META's stand-aside window
+   (~Aug 27). Each carries a pre-stated kill switch.
+5. **The blocked queue for Eric, evidence attached:** shorting unlock → mega-cap S3 fade (MSFT
+   first, sized to the pooled −0.5%/event, not the possibly-lucky modern −1.13%); MOC/MOO +
+   slippage instrumentation → CRWV overnight carry (kill line ~13bps/side realized).
+
+## New playbook candidates (post-red-team status)
+
+- **Mega-cap reaction-day fade** (S3 generalized) — MSFT strongest, GOOG, META/AMZN lean.
+  *Deploy small on MSFT when shorting unblocks.* Genuine independent replication (different print
+  calendars). Regime-bound: inverts pre-2013.
+- **GOOG pre-print run-up hold** — deploy small now (above).
+- **Semi late-week bid** (long close D-5 → close D on MRVL/AVGO — the window S1 declares dead
+  money is where semis pay) — *shelved*: statistically indistinguishable from the battery's
+  expected false positives (MRVL p=0.080, AVGO p=0.161), and on MRVL 8/14 of those windows
+  contain NVDA's print, with NVDA-sympathy gaps supplying ~70% of the return — it is substantially
+  a conditional NVDA-beat sympathy bet. Forward-test only.
+- **Mega-cap post-print digestion vs QQQ** — *shelved as class hypothesis, killed per-symbol*:
+  the apparent 4-symbol replication is illusory (windows overlap the same calendar days; QQQ is
+  weighted in these very names). Requires a new registered overlap-aware study before any trade.
+- **AAPL post-earnings drift** (long close D+1 → close D+11) — *shelved*: positive excess in all
+  four eras but sign-only (p=0.0625 at best). Run the kill switch forward ~6 prints on paper.
+- **CRWV overnight carry, ex-print nights** — *deploy_small when MOC/MOO lands*, paper-only,
+  never represented as an edge over buy-and-hold (superiority is within one standard error);
+  kill at ~13.4bps/side realized.
+
+## Kill list — recorded so they are never re-proposed
+
+- **The disappearing index effect, tested at a single-name threshold set before the additions were
+  known (FT-sp-rebalance-proforma-2026-09-04-1)** — added 2026-09-22 from the
+  [sp-rebalance-proforma-2026-09-04 close-out](events/sp-rebalance-proforma-2026-09-04.md). All
+  three S&P 500 additions named in the 2026-09-04 release (effective at the 2026-09-18 close)
+  cleared the registered ≥+3% excess-vs-SPY trigger over close 2026-09-04 → close 2026-09-18: Bloom
+  Energy (BE) +6.15%, Everpure (P) +5.76%, Illumina (ILMN) +10.91%, against SPY −1.10% over the same
+  window (Yahoo daily bars, raw closes). The close-out itself had already flagged this trigger as
+  miscalibrated — an 83% base rate of at least one of the three clearing +3% on noise alone, measured
+  against their own trailing-year dispersion (BE 113.5% annualized vol) — and registered a calibrated
+  companion, `FT-sp-rebalance-proforma-2026-09-04-2` (equal-weight basket excess vs a +15.81% p90
+  threshold), which **passed** at +7.61%. **What this does and does not refute:** the raw single-name
+  ±3% inclusion trigger is dead as written — sized to Greenwood & Sammon's ~1.0% published average
+  rather than to these three names' own realized volatility, it could not help but fire regardless of
+  whether the index effect held. The calibrated companion is the test that actually speaks to the
+  disappearing-index-effect claim, and it corroborates the null. Do not re-propose a single-name flat
+  ±3% inclusion trigger without scaling it to the named symbols' own realized dispersion first — the
+  generalizable lesson the close-out banked.
+
+- **Long-end demand read as price-elastic off a single reopening, and the test written to check
+  whether that travels to the next long-duration auction (FT-treasury-30y-bond-2026-09-10-2)** —
+  added 2026-09-22 from the
+  [treasury-30y-bond-2026-09-10 close-out](events/treasury-30y-bond-2026-09-10.md). The 09-10
+  reopening of CUSIP 912810UW6 stopped 2.7bp **through** a 5.335% when-issued at bid-to-cover 2.61,
+  indirects 79.33% — the best-demanded 30Y auction of 2026 on every published measure, against a
+  founding leg that read three prior tailed long-end auctions as demand deterioration. The test
+  chose the nearest confound-free long-duration tenor to check whether that reading generalizes:
+  the 2026-09-15 20Y reopening (CUSIP 912810UX4), size fixed at $13.0B two hours before the 09-10
+  auction's own close, so no supply surprise was available to it. It printed bid-to-cover **2.57**
+  (clears the ≥2.45 half) but a **positive tail of 2.0bp** against a ~5.400% when-issued (TreasuryDirect
+  publishes no WI; three independent secondary reports agree on 2.0bp) — the tail half of the kill
+  switch alone is enough to kill it, regardless of the cover reading. Indirect participation fell to
+  ~52%, well below the 09-10 reading and below this ledger's tracked 2026 range. **What this does and
+  does not refute:** the 09-10 auction's own strong print stands as a primary-sourced fact; what dies
+  is the claim that its price-elasticity generalizes to the next long-duration reopening five sessions
+  later. Do not re-propose "one auction's strong indirect bid signals a durable long-end demand shift"
+  without a second confirming instance at a comparably elevated yield level — n=1 killed on its first
+  out-of-sample test, same shape as the housing-starts ladder above.
+
+- **A French flash PMI's own-hours footprint on the CAC-minus-DAX residual, measured as genuinely
+  absent at registration (FT-sp-global-flash-france-pmi-2026-09-23-1)** — added 2026-09-24 from the
+  [sp-global-flash-france-pmi-2026-09-23 close-out](events/sp-global-flash-france-pmi-2026-09-23.md).
+  Registered on a 60-session base finding the residual quiet on three prior flash mornings; scored
+  on 2026-09-23 itself, the residual over 07:00-08:55 UTC ranked **p100** of 58 sessions — the single
+  most extreme reading in sample — killing the "no footprint" prediction on the letter of its own OR
+  kill switch. **What this does and does not refute:** the France-only raw CAC move in its own
+  07:15-07:30 window stayed an ordinary p69, even against the largest French PMI beat in over two
+  years (composite 48.5 to 51.2, crossing above 50 for the first time since its contraction began) —
+  so the extreme residual reading traces to the DAX falling -0.87% (2nd-lowest of 58 sessions) while
+  Germany's own Flash PMI printed a strong beat (composite 53.8, an 11-month high) the same morning,
+  the opposite of what a German-PMI-driven decline would look like. The kill is correct by the test's
+  own letter, but the evidence argues the CAC-minus-DAX construction is contaminated by idiosyncratic,
+  PMI-unrelated single-market noise on mornings when Germany also prints — exactly the CAC-40-is-the-
+  wrong-index limitation the registering document flagged before scoring. Do not re-propose this
+  construction on the CAC 40/DAX pair without switching to an instrument genuinely exposed to French
+  conditions alone (a domestic French mid-cap index, or the OAT-Bund spread) — the generalizable
+  lesson this close-out banked.
+
+- **A positional nowcast "ladder" derived from a post-hoc subdivision of one archive, falsified on
+  its first out-of-sample instance (FT-housing-starts-2026-09-17-1)** — added 2026-09-18 from the
+  [housing-starts-2026-09-17 close-out](events/housing-starts-2026-09-17.md). Leg 2 of that
+  document's initial research (2026-09-06) subdivided the `housing-starts-2026-10-20` sibling's
+  in-quarter/post-quarter GDPNow-contribution split into three positions per nowcast quarter (R1/R2/R3
+  at 0.1020/0.0726/0.0250pp, n=48/47/48, monotone, p=0.038 and p<0.0001) and placed the 2026-09-17
+  vintage on the louder **R2** rung, predicting \|Δ residential\| ≥ 0.0250pp (the R3 rung's own
+  median — registered against the quiet rung, not a flattering one). The actual 2026-09-17 08:30
+  vintage moved residential by **0.01737pp** — below the floor, an R2 vintage landing in the R3 band.
+  **Why this is a clean kill and not bad luck: the test was written to be falsifiable at exactly this
+  bar, and the base rate it was scored against (77.1% of R2-solo vintages clear 0.0250pp) already
+  said roughly 1 in 4 would not — this was that one, on the very first live instance.** The two
+  controls that motivated the ladder (pooled non-starts and construction-spending vintages both
+  "hump" instead of declining monotonically) remain correctly measured; what breaks is the claim that
+  *this specific print* would land on the louder rung. **One detail that must travel with the kill:**
+  the parent stance — *stand aside, `symbols: []`, no instrument* — was never contingent on the
+  ladder and does not change; a killed nowcast-positioning test costs nothing because nothing was
+  risked on it. **What is still open:** `housing-starts-2026-10-20`'s own `FT-…-10-20-1` (scoring
+  2026-10-23) is the corridor's next live test of whether this is one miss or a pattern — the
+  archive it depends on (`GDPTrackingModelDataAndForecasts.xlsx`'s `ContribArchives` sheet) has not
+  extended past 2026-07-28 as of this kill, so that scoring session may hit the same staleness this
+  one worked around via the workbook's live `Contributions` sheet instead.
+
+- **An execution base rate built entirely under one cap, left unrevised once a later forward test
+  in the same document found the mechanism was cover rather than cap identity
+  (FT-treasury-buyback-7y10y-2026-09-17-2)** — added 2026-09-18 from the
+  [treasury-buyback-7y10y-2026-09-17 close-out](events/treasury-buyback-7y10y-2026-09-17.md). Leg 2
+  of that document's initial research (2026-09-08) built its headline finding — "the least-used
+  instrument in the entire program" — on nine operations run entirely under the bucket's **old $2B**
+  cap: zero full fills, mean accepted $414M, median $210M. `FT-…-2`, registered the same day,
+  extrapolated that regularity forward against the **new, doubled $4B** cap sb0607 had just set,
+  correctly re-deriving the percentage bound (30% of $4B = $1.2B) but predicting accepted par would
+  still land under **$1.066B** (the old-cap era's all-time high). The operation accepted **$2.385B —
+  59.6% of cap, 2.24× the prior maximum** — clearing both legs of the kill line by roughly 2x. **The
+  base rate was not wrong; it was never re-priced against a mechanism the same document already
+  had.** Two days after leg 2, at D-7 (2026-09-10), this document registered `FT-…-3`: fill against
+  cap is a step function of **cover** (offered ÷ cap), not of bucket identity, across all 100 nominal
+  liquidity-support operations ever run. Once the cap doubled, this bucket's historical dealer-offer
+  volume (this operation offered $9.74B — its second-highest ever) produces a **lower** cover against
+  the larger denominator, and lower cover was already known, by 09-10, to sit in a much-higher-fill
+  band above 1.5x. **Why this is a clean kill and not bad luck: the same document's own later test
+  supplies the correct joint prediction.** Priced against `FT-…-2`'s history-only frame, $2.385B is
+  an outlier; priced against `FT-…-3`'s cover mechanism (2.435x cover, the 1.5–3x band's own 58.8%
+  historical mean fill), the realized 59.6% fill is close to exactly what the mechanism predicts.
+  **Do not leave a bucket-level execution bound standing once a later test in the same document
+  identifies the real driving variable — re-price the earlier bound jointly, or restate it
+  conditionally** (here: *"under $1.2B if cover stays below 1.5x; a materially larger take if the
+  doubled cap runs at this bucket's historical offer volumes"* would have described 09-17 exactly).
+  **One detail that must travel with the kill:** the parent stance — *read it, do not trade it* —
+  was **correct and cost nothing**, and the eligible-list derivation (legs 4–5) and the cap-parity
+  correction (leg 3) both held. A killed execution test broke the doc's headline framing
+  ("least-used instrument"), not the stance, and not the cover mechanism it also carries — which
+  passed its own first live test in this bucket, in direction, on the same print.
+
+- **A base rate read off one regime, when the sibling forward test in the same document predicts
+  crossing into the other (FT-treasury-buyback-tips-10y30y-2026-09-15-1)** — added 2026-09-16 from
+  the [treasury-buyback-tips-10y30y-2026-09-15 close-out](events/treasury-buyback-tips-10y30y-2026-09-15.md).
+  It held that in long TIPS "the cap is decoration and Treasury's bid is the constraint," and
+  predicted the 2026-09-15 operation would accept **under $250M** of a $500M cap. It accepted
+  **$500M — the full cap**, on **$2,088M** offered: the first cap fill in the label's history and
+  the largest par ever offered into a long-TIPS buyback. **The base rate was not wrong; its
+  universe was.** The claim rested on the four operations under the current `10Y to 30Y` label
+  ($142M/$108M/$110M/$91M, 9.1–14.5% hit rates) with the predecessor `7.5Y to 30Y` history
+  **deliberately excluded** as "not the same instrument." Pool all **15** long-TIPS operations since
+  2024-04-17 and the excluded half carries the regime the test walked into: **every operation with
+  ≥ $1.49B offered filled ≥ 81% of cap (6 of 6, five at 100%); every one with ≤ $1.40B filled ≤ 65%
+  (8 of 8)**. Fill tracks **par offered**, not a fixed Treasury reservation posture. **Why this is a
+  clean kill rather than bad luck: the same document predicted the crossing.** Its sibling
+  FT-…-**2** argued the 110-day gap — the longest in the series — would rebuild offers past **$900M**,
+  and it **passed at $2,088M**. Priced marginally the two are consistent (9.1–14.5% of $900M is
+  $82–130M); priced jointly against the pooled record they are contradictory, because the cap starts
+  binding around $1.4–1.5B. **Do not register an execution base rate from a sub-sample when another
+  test in the same document predicts moving the variable that defines the sub-sample** — when two
+  forward tests share a mechanism, state the joint region (here: *"$60M–$200M if offers stay under
+  ~$1.4B; a cap fill above it"*), which would have described the print exactly. **The tell,
+  generalized:** an honest limit that says *"this history is not pooled here"* is a flag on the
+  live load-bearing assumption, not a disclaimer to be discharged by writing it down — go and check
+  what the excluded data would have predicted before the test is registered. **One detail that must
+  travel with the kill:** the parent stance — *read it, do not trade it* — was **correct and cost
+  nothing**, and the framing leg strengthened (the 2026 long-end selloff is **88% real yield**, the
+  30Y breakeven never left 2.15–2.34%). A killed execution test is not licence to drop the
+  operation type from coverage, and the offer-threshold finding it produced is worth more than the
+  test would have been had it passed.
+
+- **A published elasticity applied to a realized price where the paper's regressor is an
+  *expectation* (FT-umich-sentiment-prelim-2026-09-11-2)** — added 2026-09-15 from the
+  [umich-sentiment-prelim-2026-09-11 close-out](events/umich-sentiment-prelim-2026-09-11.md). It
+  bounded the September UMich year-ahead inflation expectation at **≤4.2%** (an up-move of ≤0.2pp)
+  by multiplying FRBSF Economic Letter **2026-24**'s **+0.24pp per 10pp** coefficient against the
+  **realized** in-window pump move of **+2.2% m/m**. The print was **4.6%** — three times the bound,
+  and past the row's own **≥4.3%** kill line. **The coefficient was not wrong; the input was.** That
+  paper keys to a revision in **expected** gas-price growth, and +0.6pp through it requires a
+  **~25pp** expectational revision — which no realized series in the window approaches (EIA Jul
+  **$3.932** → Aug **$4.058** → AAA at the 09-07 cut-off **$4.1505** is **+5.6%** cumulative; BLS's
+  seasonally-adjusted August gasoline index **+3.9%**) and which the window's *forward-looking* shock
+  supplies easily: **Brent +8.7%** (88.58 on 08-25 → 96.28 on 09-04), US strikes across Iran on
+  09-01, Iran's 09-07 Hormuz headline, a record Labor Day pump average and a record diesel print.
+  **The survey separates the two channels itself, which is why this is a clean kill rather than a
+  near miss:** the **Expectations** sub-index fell **−11.1% m/m** against **−1.9%** for **Current
+  Economic Conditions**, a 5.8x split, and the director's commentary names year-ahead expectations
+  for personal finances and business conditions as what "plunged." A realized-price shock lands on
+  current conditions; this one did not touch it. **Do not re-propose a magnitude bound built from a
+  realized price when the cited coefficient's regressor is an expectation** — read the paper's
+  left- and right-hand variables before sizing anything with it. **The tell, generalized and worth
+  more than the rule:** the parent doc's *prose* had been carrying a war for four rows while its
+  *arithmetic* carried a pump price. When those two disagree inside one document, the arithmetic is
+  the part to re-derive. **One detail that must travel with the kill:** the sibling direction test
+  (`-1`, "year-ahead prints above 4.0%") **passed** on the same print, so the transmission mechanism
+  is intact and only its sizing died — a kill here is not licence to drop the energy→expectations
+  channel from the next UMich ledger.
+
+- **The Gulf shut-in recovery showing up in the IEA's August-month figure
+  (FT-iea-omr-2026-09-11-2)** — added 2026-09-15 from the
+  [iea-omr-2026-09-11 close-out](events/iea-omr-2026-09-11.md). It predicted the September 2026 OMR
+  would put August Middle East production shut in **under 8.3 mb/d**, the July figure, on Goldman's
+  2026-08-28 read that Gulf exports had recovered to 15–16 mb/d (~2/3 of pre-war). The September
+  edition printed **10.1 mb/d below pre-war** — supply **21.9 mb/d**, down 2.0 m/m — and Gulf exports
+  at **~13 mb/d, "nearly half their pre-war level."** Both halves of the thesis died: the shut-in
+  widened and the export recovery reversed. **Do not re-propose a Gulf-supply recovery off a
+  sell-side export estimate while the US–Iran standoff is unresolved** — the IEA deferred full
+  Middle East recovery to 2027 in the same edition, and the EIA's September STEO independently has
+  shut-ins *rising* 4.98 → 6.72 mb/d over the same two months. **One detail that must travel with
+  the kill:** this does not reinstate the unsourced "~10 mb/d" figure that
+  [`opec-plus-meeting-2026-09-06`](events/opec-plus-meeting-2026-09-06.md) carried for **July** —
+  July really was 8.3, and the number reached ~10 a month later by escalation.
+
+- **The 10-Year-over-5-Year sector ordering in JGB 1–5y liquidity-enhancement auctions
+  (FT-jgb-liquidity-enhancement-1-5y-2026-09-10-1)** — added 2026-09-15 from the
+  [jgb-liquidity-enhancement-1-5y-2026-09-10 close-out](events/jgb-liquidity-enhancement-1-5y-2026-09-10.md).
+  It predicted 10-Year overweight above 5-Year on the 2026-09-10 page, on a 5-of-5 ¥700bn-era record
+  (means 1.28× vs 0.27×); the page printed **10-Year 0.468× against 5-Year 0.500×**. **The ordering
+  died, not the arithmetic.** The hypothesis's own defence — that a pairwise ratio is immune to the
+  missing-bond error in the shared ¥321.15tn denominator — held exactly: on the uncorrected basis it
+  reads 0.464× vs 0.496×, the same way. What killed it is that the whole page moved somewhere else.
+  **2-Year No.488 — nine days old, coupon 1.7% — took ¥273.7bn, 39.2% of a ¥697.9bn auction**, so
+  the 10-Year and 5-Year were competing for a residual, and their gap is **¥1.9bn**. Do not
+  re-propose a sector-pair ordering without conditioning on the front-end take: at a 2-Year
+  overweight of 3.75× the remaining four sectors are not being ranked by preference, they are
+  splitting what is left. **Two details that must travel with the kill:** the margin is thin enough
+  that the 5-of-6 record is still 83%, so this is a kill of the *test as written* (a strict
+  inequality with no tolerance band), not a demonstration that the 10-Year is no longer favoured;
+  and the sibling `FT-jgb-liquidity-enhancement-1-5y-2026-11-20-1` registered the same observation
+  from the other side and scores in its own lane, so it is not killed by this row.
+
+- **`corr(pocket, ≥1% coupon share)` as evidence that JGB menu composition drives reopening demand**
+  — added 2026-09-15 from the same close-out, a **self-kill** with no forward-test id: the number was
+  published in that ledger's own initial research six days earlier and did not survive its first
+  out-of-sample print. Across the five ¥700bn prints the "≥1% coupon pocket" slid monotonically
+  **+1.205 → −0.878** and the correlation read **−0.978 (t = −8.04, n = 5)**. 2026-09-10 printed
+  **+1.050** — the second-highest of the era, at the same ¥700bn on a menu identical bar the 2-Year
+  window — and the same code over the same six menus now gives **−0.492 (t = −1.13, n = 6)**. Do not
+  cite a correlation computed on five points as a mechanism, however large the t-statistic; an n = 5
+  fit has one degree of freedom to spare and a single reversal spends it. **What survives and must
+  travel with the kill:** the *size* refutation is untouched (the decay ran at a constant ¥700bn, so
+  "a bigger auction reached deeper into the menu" is still dead), and the composition-contamination
+  claim itself **strengthened** — the +1.050 pocket was **43.0pp 2-Year against 21.9pp 20-Year**, a
+  statistic built for seasoned pre-2012 super-long paper carried by the newest bond on the menu.
+  The ±2sd cover and excess-bid bands from the same n = 5 sample **also both broke on this print**
+  (cover 4.418 against a 2.49–4.37 band), which is the same lesson on a second instrument.
+
+- **An end-horizon projection cell as a standalone terminal-policy test
+  (FT-ecb-decision-2026-09-10-1)** — added 2026-09-15 from the
+  [ecb-decision-2026-09-10 close-out](events/ecb-decision-2026-09-10.md). It predicted the September
+  2026 ECB staff round holding **2028 headline HICP at or below 2.0%**; the round printed **2.1%**,
+  so the ECB raised its own end-horizon path and the row is killed **by one tenth**. **The framing
+  died, not the economics.** A single cell three years out, one tenth wide, cannot carry a
+  terminal-rate verdict: the same round states *"Headline inflation is expected to stabilise close
+  to 2.0% over the medium term, as the contribution from energy inflation is seen to be close to
+  zero"* — 2.1% is a path arriving at target, not a permanent overshoot — and the cell is mechanically
+  anchored by a **backwardated** oil strip (Brent assumptions **$89.5 / $78.0 / $73.6**), so it can
+  read benign while the near horizon is marked sharply higher. Which is exactly what happened:
+  **2027 went to 2.5% from 2.3%** and core to 2.6%, the joint read being "above target through 2027",
+  i.e. the argument **for** more tightening. Do not re-propose an end-horizon projection cell alone;
+  pair it with the near-horizon cell, as `FT-ecb-decision-2026-09-10-3` did — that sibling was
+  registered two days before the print for precisely this confound and **passed**. **One detail that
+  cuts both ways and must travel with the kill:** the timing argument attached to FT-3 was wrong on
+  the facts (the round's cut-off is **19 August 2026**, 22 days, not the ~8 inferred from the
+  March-2026 precedent), so the energy spike sat **outside** the assumptions and the staff marked
+  inflation up anyway — the bad premise made the lane's inference too *dovish*, not too hawkish.
+
+- **A channel kill written as an absolute percent move on a high-beta name
+  (the ECB "tracked name moves >2% in the 08:15–09:30 ET window" test)** — added 2026-09-15 from the
+  same close-out, and this one is a **method** kill with no forward-test id because it never had a
+  chance to be informative either way. Re-run `intraday-edges.mjs` gap distributions:
+  **|overnight gap| > 2% occurs on 19% of NVDA sessions, 20% AVGO, 32% MRVL and 54% CRWV**, whose
+  **median |gap| is 2.19%** — the kill line sat *below* CRWV's median, so "fired" and "did not fire"
+  carried almost the same information. On the event day two names crossed the raw line (MRVL
+  **-2.88%**, CRWV **-5.33%**) and **none** crossed on attribution: against QQQ's own **-1.22%** gap,
+  every beta-adjusted residual landed inside **±1σ** (NVDA +0.54σ, AVGO +0.53σ, MRVL **-0.04σ**,
+  CRWV -0.83σ, n=729 / CRWV n=367). Do not re-propose an absolute-percent event-attribution
+  threshold; use a **beta-adjusted residual in σ against the bench**. **And do not lay the window
+  over another tracked event's release time** — 08:15–09:30 ET contained the **08:30 ET PPI** print
+  (`ppi-2026-09-10`), so the window could not have attributed even a real move to the right cause.
+
+- **"A STEO release hour is quieter than an ordinary noon hour" as a citable base rate (FT-47)** —
+  added 2026-09-10 from the [eia-steo-2026-09-09 close-out](events/eia-steo-2026-09-09.md). The null
+  was built on **n=8 in-sample 2026 release days** (CL=F noon-hour median |move| 0.16% vs 0.27%) and
+  **failed on its first out-of-sample observation**: 2026-09-09's 12:00–13:00 ET bar returned
+  **−1.005%** against a recomputed **p90 of 0.816%** (n=503) — the **94th percentile**. **The
+  publication is not what died; the base rate is.** A ~90%-pass-by-construction null measured
+  in-sample on one war-distorted calendar year, with no significance test, cannot support a "the
+  release window is a non-event" claim — it had one degree of freedom and spent it. Do not
+  re-propose a scheduled-publication release-window null from a single-year in-sample bucket; require
+  an out-of-sample holdout and a confound-dated attribution before citing one. **Two details that
+  cut both ways and must travel with the kill:** only **1 of 4** instruments breached (BZ=F p86.5,
+  USO p80.6, XLE p26.2 all stayed inside), and the move was **fully retraced within two hours** on a
+  day that closed **+3.246%** — so "the hour is not reliably quiet" is the honest claim, not "the
+  STEO moves crude." The sibling tracked-name nulls in
+  [`eia-steo-2026-10-06`](events/eia-steo-2026-10-06.md) and
+  [`eia-steo-2026-11-10`](events/eia-steo-2026-11-10.md) are measured on different instruments and
+  are **not** killed by this — they inherit the caveat, not the verdict.
+
+- **3Y front-end auction demand fenced by a range-of-n band (FT-20)** — added 2026-09-09 from the
+  [treasury-3y-note-2026-09-08 close-out](events/treasury-3y-note-2026-09-08.md). The 2026-09-08 3Y
+  covered **2.72** against a `2.54–2.71` band drawn as the observed range of the eight prior 2026
+  auctions — **outside by one tick, on the strong side**, at the series' highest stop (**4.474%**,
+  +18.3bp through August) on its largest competitive tender. **The mechanism is not what died; the
+  fence is.** A range of n draws is broken by a new max or min with probability **2/(n+1) ≈ 22%** at
+  n=8, so the test carried a ~22% false-kill rate before any economics — and against the 29-auction
+  constant-size era (mean 2.608, σ 0.098, range 2.43–2.85) the print is a routine **+1.1σ**. Do not
+  re-propose a demand test fenced by an observed range; use a dispersion interval on the full
+  constant-size sample, as `FT-treasury-3y-note-2026-10-06-1` already does — it was registered
+  2026-09-05, three days before the kill landed, having written down that FT-20's band *"holds in
+  only 19 of 29 (66%)."* **And do not re-propose bid-to-cover alone as the demand read:** this print
+  covered at a series high while **indirect fell to 62.1%** (below its 63.3% mean) and the
+  stop-through decayed to **−0.1bp**, so the cover and the foreign bid moved in opposite directions
+  — a composition change no cover band of any width can see.
+
+- **A revision-direction test built on revision guidance quoted from an earlier vintage of the same
+  bulletin (FT-uk-labour-market-2026-09-15-2)** — added 2026-09-16 from the
+  [uk-labour-market-2026-09-15 close-out](events/uk-labour-market-2026-09-15.md). It predicted the
+  September ONS bulletin would restate July payrolled employees **better than −94,000**, on the
+  August bulletin's own statement that early-tax-year months *"have received larger-than-average
+  upward revisions in recent years."* July was restated **−101,000**, and the September bulletin now
+  says the opposite in its own words: *"Revisions in recent months have tended to be made downwards,
+  as shown in our LFS quality update: January 2026 article."* **The series was not misread; its
+  guidance had changed under the test.** A statistical agency's revision-bias language is itself a
+  revised quantity, republished monthly, and a one-print directional bet on it is a bet on last
+  month's methodology note. Do not re-propose a revision-direction test without re-reading the
+  publisher's *current* revisions section in the same pass that registers it — and prefer a
+  threshold on the underlying level, which does not decay. **One detail that must travel with the
+  kill:** it killed toward *more* contraction (August provisional **−145,000** y/y), so the loose
+  -labour-market read it was attached to is strengthened, not damaged — a kill here is not licence
+  to soften the payroll story in the next UK ledger.
+
+- **A one-print test on administrative wording, registered off an intent letter
+  (FT-uk-labour-market-2026-09-15-3)** — added 2026-09-16 from the same close-out. It predicted the
+  September bulletin would drop *"in development"* from its LFS-derived outputs, on ONS's
+  **11 August 2026** letter to OSR stating *"LFS and APS derived outputs that are currently official
+  statistics in development will move to official statistics."* The September release repeats that
+  sentence **verbatim and still in the future tense** — the same construction the 18 August bulletin
+  carried a week after the letter. A stated-intent letter is not a publication schedule, and the lag
+  from announcement to flagship-release wording has no published date to key on. Do not re-propose a
+  designation/paperwork change as a single-print test; register it as a standing watch item on the
+  series instead, scored whenever the phrasing moves. **The detail that must travel with the kill:**
+  the substantive read was never at stake — the publisher has stopped defending the LFS series and
+  says so in the same bulletin (*"The ONS will not be seeking reaccreditation"*) — so this kills the
+  **timing** claim only, and the instruction to prefer accredited PAYE RTI over the LFS unemployment
+  rate stands untouched.
+
+- **A single-print earnings-gap-sign bet conditioned on a fundamental regime classification, on a
+  session sharing its close with FOMC and its next open with a macro print
+  (FT-lennar-q3-fy2026-2026-09-16-1)** — added 2026-09-18 from the
+  [lennar-q3-fy2026-2026-09-16 close-out](events/lennar-q3-fy2026-2026-09-16.md). It predicted that if
+  Lennar's Q3 release left its margin-compression regime intact (gross margin ≤16.0% or incentives
+  ≥12.9%), the 2026-09-17 open gap would be **negative** — the direction LEN's own modern-era record
+  (3-up-in-14, p=0.029) implied for a name still compressing. Gross margin printed **15.8%** (regime
+  intact by that clause) and the gap printed **+3.37%** — positive, the single largest modern-era move
+  on record for this name in either direction, and the kill condition named verbatim in the test's own
+  text. **The regime classification was not wrong on its own terms and it still lost, because the gap's
+  actual driver was mostly upstream of it:** LEN's earnings landed after FOMC's same-day close and
+  before `housing-starts-2026-09-17`'s 08:30 print, and every peer plus the broad tape gapped the same
+  direction the same morning (DHI +2.34%, PHM +1.60%, TOL +2.53%, ITB +1.71%, QQQ +1.59%, SPY +1.21%)
+  — a sector/market-wide move LEN's own gap (+3.37%) merely exceeded rather than caused alone. **Do not
+  condition a single-name gap-sign bet on that name's fundamentals alone when the release shares its
+  reaction window with a confirmed high-impact macro corridor** — a fundamentals-only regime read has
+  no term for the beta the session is soaked in, and this calendar already tracks exactly which
+  sessions carry that risk (the adjacency sweep's own corridor table). Score the fundamentals against a
+  peer- or index-adjusted gap next time, not the raw one. **One detail that must travel with the kill:**
+  the sibling test on the same print (`FT-lennar-q3-fy2026-2026-09-16-2`, overnight repricing dominates
+  the reaction day) **passed** — the *shape* of LEN's reaction (front-loaded into the gap, not the
+  session) held even though the *sign* prediction did not, so this kill is about conditioning a
+  direction call on fundamentals inside a confounded window, not about the overnight-vs-intraday
+  finding itself.
+
+- **A no-short-vol posture's premise converted to a realized-volatility test, killed by realized
+  vol landing well under the anchor (FT-fomc-blackout-start-2026-09-05-1)** — added 2026-09-22 from
+  the [fomc-blackout-start-2026-09-05 close-out](events/fomc-blackout-start-2026-09-05.md). The
+  parent doc never took a direction or size across the FOMC communications-blackout corridor
+  (2026-09-05 → 09-17, `symbols: []`), but on 2026-09-05 it converted its "cheap convexity into an
+  unofficiated corridor" argument into a scoreable premise: SPX realized close-to-close annualized
+  volatility over the corridor's eight trading sessions (09-08 → 09-17) would **exceed 14.53**, the
+  VIX close the day before the gate fell. Fresh `^GSPC` daily bars (Yahoo, re-fetched 2026-09-22
+  after the standing cache bust) put realized annualized vol at **~10.4–11.1%** across three
+  conventions (sample-stdev, population-stdev, zero-mean) — 3.5 to 4 points under the line, not a
+  near miss. **Why this is a clean kill and not bad luck:** the corridor's two-sidedness did show up
+  — FedWatch hike odds ran ~68% → ~50% → ~60% pre-gate and the sibling FOMC doc scored the 09-16
+  decision as a near-90/10 hike into the statement — but it showed up in **direction**, not
+  **dispersion**: four of the eight daily closes moved under ±0.5%, and the two largest (09-11
+  +0.86%, 09-17 +1.13%) partly offset instead of compounding. VIX itself did reprice up inside the
+  window (15.84 on 09-11, 17.10 on 09-14, 17.67 intraday on 09-15, per
+  [`fomc-2026-09-16.md`](events/fomc-2026-09-16.md)), so implied vol moved the direction the posture
+  expected — realized vol, the thing actually registered, did not. **One detail that must travel
+  with the kill:** the parent stance was zero-capital and never sized to this premise, so nothing
+  was risked on it directly — but it is a real miss for the mechanism ("closing the speech channel
+  matters because the corridor's prints arrive unofficiated") the doc used to justify raising "this
+  month" Medium → High on 09-05. **What is still open:** nothing — this was the doc's only
+  registered forward test, and the event's own close-out (written 2026-09-06, before the corridor
+  had traded) already stands; the reusable finding it banked — read the Fed's speech archive, not
+  only the Board calendar — is unaffected by this kill.
+
+- **NVDA earnings-gap hold (anti-S2)** — added 2026-08-15 ([`nvda-aug-2026-print.md`](nvda-aug-2026-print.md)):
+  win 9/14 vs the 60% ordinary-overnight base (p=0.486 — indistinguishable from any overnight);
+  the +5.35% mean is carried entirely by four 2023-24 gaps (ex-top-4 +1.72%) against a pooled
+  −5.49% p10; 3 of the last 5 prints gapped down. Third member of the 0-for-3 hold-the-print
+  family (AVGO, META, NVDA) — any future "the gap pays on X" must clear a win-rate test vs the
+  ordinary-overnight base *before* citing a mean. Do not re-propose without ≥3 new prints showing
+  a repriced gap regime.
+- **S1 beyond NVDA** (six symbols killed outright; see matrix).
+- **MRVL "session drag"** — the load-bearing session mean is t=−0.28, pure noise.
+- **CRWV directional gap read** ("gaps are always down") — windowing artifact; the excluded
+  2025-05-14 print gapped green, and the newest print's reaction was positive.
+- **AVGO hold-the-print** (anti-S2) — win rate indistinguishable from an ordinary overnight
+  (p=0.567), mean one-print-carried, and the latest print gapped −14.66%.
+- **AVGO late-week bid** (long close D-5 → close D; FT-2) — added 2026-09-03 from the
+  [avgo-2026-09-02-print close-out](events/avgo-2026-09-02-print.md). The 2026-09-02 print's window
+  returned **+3.28%** and cleared its base rate on paper (+3.58pp vs QQQ, +2.57pp vs the +0.71%
+  non-earnings 5-day baseline) — but **NVDA printed at the window's own open (2026-08-26 AMC)** and
+  the single 08-27 sympathy session returned **+4.49%**, i.e. **137% of the whole window**; ex that
+  session the window is **−1.16%**. The pre-registered sympathy clause fires, harder than the ~70%
+  that gutted the MRVL original. Do not re-propose without a D-5→D window carrying **no peer print
+  inside it** — which, on this calendar's AI-semis cadence, means checking NVDA/MRVL dates first.
+- **META gap-capture** (hold the print, sell D+1 open) — no significance at any cut; contradicts
+  S2 with evidence far too weak to license the exception.
+- **AAPL late run-up** — vanishes net-of-QQQ (t≤0.6); a QQQ bet in an AAPL costume.
+- **MSFT D-10 run-up** — modern era net-of-QQQ is a literal coin flip (7/14); edge decays
+  monotonically to nothing (win 76%→57%→58%→50% by era).
+- **S4 daily round-trip on AMZN/MSFT/GOOG/META/AAPL** — dominated by buy-and-hold at every cost
+  level tested, including 2bps/side.
+- **S3 on MRVL** — absent, not inverted (corrected +0.45%/50% vs an ordinary session's +0.01%/51%).
+
+- **A pipeline-bypass claim read as disruption relief, when the next month's data showed the
+  disruption deepening instead (FT-opec-plus-meeting-2026-09-06-1)** — added 2026-09-22 from the
+  [opec-plus-meeting-2026-09-06 close-out](events/opec-plus-meeting-2026-09-06.md), scored under
+  the `forward-test-due` mode. The ledger's D-0 row found Saudi Arabia's East-West pipeline (~7
+  mb/d to Yanbu) and the UAE's ADCOP line (~1.8 mb/d to Fujairah) both bypass the Strait of Hormuz
+  entirely, and registered the hypothesis that this bypass capacity should be visibly absorbing the
+  chokepoint disruption at the margin — predicting the EIA STEO's August 2026 Middle East shut-in
+  estimate would fall below the 5.5 mb/d it had reported for July. The September STEO (published
+  on schedule 2026-09-09, primary Table 2 read in the sibling
+  [`eia-steo-2026-09-09`](events/eia-steo-2026-09-09.md) close-out) instead reported **6.7 mb/d for
+  August** — shut-ins rose, not fell, even with both bypass routes already live. **One detail that
+  must travel with the kill:** the bypass pipelines are a real capacity fact and the parent
+  stand-aside stance was never contingent on this test — nothing was risked on it. What breaks is
+  the narrower claim that bypass capacity was already showing up as disruption relief in the
+  agency's own monthly read; the next OPEC-adjacent ledger should not re-cite the bypass finding as
+  evidence the chokepoint's bite is easing without checking the shut-in series again.
+
+- **A redaction-branch prediction on a sealed opinion, when neither party actually moved to redact
+  (FT-google-adtech-opinion-unseal-2026-09-16-1)** — added 2026-09-22 from the
+  [google-adtech-opinion-unseal-2026-09-16 close-out](events/google-adtech-opinion-unseal-2026-09-16.md),
+  scored under the `forward-test-due` mode. The registered test predicted at least one party would
+  move for redactions to Judge Brinkema's sealed remedies opinion before the 2026-09-16 deadline,
+  reasoning that the ordered remedies quote bid-level mechanics and pricing terms both sides
+  designated confidential at trial, and that Google specifically gains from delay while appealing
+  liability. Three independent outlets fetched 2026-09-22 (ppc.land, AdExchanger, and a third
+  corroborating report) instead report that **neither party filed a redaction motion**, and the
+  full opinion unsealed automatically, unredacted, exactly on schedule. **One detail that must
+  travel with the kill:** the parent ledger's structural claim — that the reasoning publishes
+  either way, so the fork is completeness/timing rather than existence — survives; what breaks is
+  the *likely branch* called on top of it, that a confidentiality incentive strong enough to act on
+  existed. A future litigation-adjacent ledger should not assume a party with a redaction incentive
+  will act on it without checking the docket first.
+
+- **A 20-Year reopening bid-to-cover floor, broken on the first auction that met the yield extreme
+  the registration itself flagged as the hard case (FT-treasury-coupon-announcement-2026-09-10-3)**
+  — added 2026-09-22 from the
+  [treasury-coupon-announcement-2026-09-10 close-out](events/treasury-coupon-announcement-2026-09-10.md),
+  scored under the `forward-test-due` mode. The ledger's D-0 row split all 20-Year auctions since
+  2025-01-01 by reopening vs new issue and found a clean, non-overlapping separation — 13
+  reopenings covering **2.63–2.86** (avg 2.728), 7 new issues covering **2.36–2.55** (avg
+  2.469), 20 of 20 — and predicted the 2026-09-15 reopening (announced $13B, unrevised) would clear
+  **≥ 2.63**. It covered **2.570**: below the reopening floor, above the new-issue ceiling, a value
+  neither window had ever produced. The registration's own disclosed worst case named the
+  mechanism before the fact — the 20Y entered this auction at a fresh 2026-high yield (par 5.39%
+  pre-auction, cleared even higher at 5.42%) on the eve of an FOMC, and no auction in either
+  sample had faced a fresh-high yield into a live policy decision. **One detail that must travel
+  with the kill:** the parent stance — *a scheduled nil, no position licensed either way,
+  `symbols: []`* — was never contingent on this cover floor and does not change; nothing was
+  risked on it. What breaks is the narrower claim that "the supply leg is settled, so what remains
+  is benign demand" — the next rates ledger reading a 20Y reopening as automatically well-covered
+  should check the pre-auction yield regime first, not assume the reopening/new-issue split holds
+  at a yield extreme.
+
+- **A three-week Brent–WTI-spread lead over US crude exports, killed on its first live
+  out-of-sample test on both of its own legs (FT-eia-weekly-petroleum-status-2026-09-23-2)** —
+  added 2026-09-24 from the
+  [eia-weekly-petroleum-status-2026-09-23 close-out](events/eia-weekly-petroleum-status-2026-09-23.md).
+  Measured against EIA weekly crude exports (`wcrexus2`, 1,857 observations, 2021+), the spread's
+  lead over exports peaked at three weeks (corr +0.417) and, keyed to the week ending 08-28's wide
+  6.21 reading, predicted the 2026-09-23 print would show exports **recovering above 3,417 kb/d**.
+  It printed **3,281 kb/d**, below the floor and 1,550 kb/d under the prior week — the opposite of
+  recovery. Separately, and more decisively, the test's own named early-kill condition — the
+  Brent–WTI front-month spread closing ≥ $5.38, the pre-attack six-month mean — fired the same
+  session: the spread went **4.66 → 10.92** from 2026-09-22 to 2026-09-23, an order of magnitude
+  past the threshold. **Why this is a clean kill and not bad luck:** the test registered both an
+  outcome prediction and an independent falsifier on the mechanism it depended on (a compressed
+  arb), and both broke in the same session — the compression the whole lag structure was built on
+  reversed before the export reading even needed to be checked. **What this does and does not
+  refute:** the underlying correlation (+0.417, ~17% of variance, already disclosed as modest at
+  registration) is not re-estimated here and may still hold on a longer sample; what dies is the
+  specific claim that a narrow-tercile spread reading in mid-September 2026 could be used to predict
+  the direction of exports three weeks out during an active supply-shock regime, where the shock
+  itself (a pipeline outage, reported restarting the same week) can move the spread faster than the
+  three-week lag the correlation was measured on. Do not re-propose this lag structure as a live
+  signal without a fresh registration built on a sample that separates shock-regime weeks from
+  ordinary ones.
+
+- **A weekly-print-is-not-the-price-setter attribution rule, broken on its third observation after
+  two clean mismatches (FT-eia-weekly-petroleum-status-2026-09-23-3)** — added 2026-09-24 from the
+  [eia-weekly-petroleum-status-2026-09-23 close-out](events/eia-weekly-petroleum-status-2026-09-23.md).
+  The rule tested whether the sign of the weekly commercial-crude change matched the sign of WTI
+  front-month's close-to-close move under the textbook convention (draw is bullish, build is
+  bearish) — a mismatch, taken as evidence the print was not the tape's price-setter during the
+  2026 Petroline/Hormuz supply-shock regime. The 2026-09-10 print mismatched (bearish headline,
+  WTI +6.69%) and the 2026-09-16 print mismatched (a draw, WTI −3.21%) — two observations short of
+  the rule's own stated 2–3-print promotion bar. The 2026-09-23 print broke the pattern: a
+  **build** (commercial crude +2.969 Mbbl) paired with WTI **down** (−2.57%, 09-22→09-23) is a
+  **matched**, textbook-consistent pair, exactly the sign the test was pre-registered to treat as a
+  kill. **What this does and does not refute:** the two prior mismatches are not retracted — they
+  remain genuine observations from a regime where other catalysts (a same-day FOMC statement on
+  09-16) were live confounds each time, disclosed at registration. What breaks is the claim, built
+  from n=2, that the print reliably fails to move the tape in this regime; n=3 says it can. A
+  disclosed but unresolved confound travels with this kill: October WTI expired the same session
+  used as the pre-print baseline close, so a front-month contract roll sits inside the window
+  scored — the same continuous-front-month convention scored the two prior (undisputed)
+  observations, so the roll is recorded rather than treated as grounds to discard the result. Do not
+  re-propose this attribution rule without a fresh registration and a design that isolates the roll
+  and same-day-catalyst confounds first.
+
+- **A pass-close-to-the-base-rate registration on a tenor already known to be tailing
+  (FT-jpx-market-closure-2026-09-23-1)** — added 2026-09-24 from the
+  [jpx-market-closure-2026-09-23 close-out](events/jpx-market-closure-2026-09-23.md). The test
+  registered that the 2026-09-23 5-Year note would clear its own last-12-print indirect floor
+  (59.24%) — disclosed at registration as "close to the base rate" (11 of the last 12 prints had
+  cleared it) with the kill, not the pass, carrying the information. It printed **54.31%** indirect,
+  4.93pp under the floor and a new 12-print low, on the highest stop (5.033%), the widest tail
+  (+3.1bp) and the lowest bid-to-cover (2.21) of the tracked series — the sibling
+  [treasury-5y-note-2026-09-23 close-out](events/treasury-5y-note-2026-09-23.md) independently
+  attributes the miss to a +3.1bp tail into the 2026-09-16 FOMC's hawkish 25bp hike. **What this
+  does and does not refute:** nothing about the parent hypothesis — the test existed to check
+  whether a dark Tokyo cash market is an *available explanation* for a soft print, and the parent
+  document's own registered basis for refusing that explanation (zero 5-Year and zero FRN auctions
+  on this holiday class in 16 instances since 2016) is about historical precedent, not about any
+  given print's level, so the kill does not touch it. What the kill does confirm is the test's own
+  disclosed weakness: a floor cleared by 11 of 12 prior prints is a low bar, and this auction's own
+  demand deterioration (already flagged by the sibling ledger across five pulses) was the more
+  likely source of a miss than any genuine new information. Do not re-propose an auction-print
+  threshold registered against a tenor's own base rate as informative on the pass side; size the
+  threshold to what would actually discriminate a real effect from ordinary tail risk.
+
+- **A "noise, but the one metric that leans" registration, scored on the same 5-Year print that
+  killed the sibling above (FT-jpx-market-closure-2026-09-21-2)** — added 2026-09-26 from the
+  [jpx-market-closure-2026-09-21 close-out](events/jpx-market-closure-2026-09-21.md). The test
+  registered that both dark-Tokyo auctions in the 09-21→09-23 block would print bid-to-cover
+  inside their own last-12 range (2-Year ≥2.44, 5-Year ≥2.28) — disclosed at registration as the
+  one metric of five that leaned at t=−1.832, short of significance, against an otherwise-clean
+  auction-null replication (indirect t=+0.855, n=37 across all Japanese-holiday auctions since
+  2016). The 2026-09-22 2-Year (CUSIP 91282CRP8) cleared its floor at 2.63; the 2026-09-23 5-Year
+  (CUSIP 91282CRN3) printed **2.21**, below its own 2.28 floor and a new 12-print low — the same
+  print, independently fetched, that killed `FT-jpx-market-closure-2026-09-23-1` above. **What
+  this does and does not refute:** the parent aggregate null (auction demand is not measurably
+  different when Tokyo is dark) is unaffected — it rests on 37 auctions' worth of replication, not
+  one print's cover ratio — but the one metric flagged as the auction-null's single soft spot at
+  registration is now the one that broke, on the same tenor and the same session both sibling
+  close-outs independently attribute to a +3.1bp tail into the 2026-09-16 FOMC's hawkish 25bp hike
+  rather than to Japanese demand. Do not re-propose a Tokyo-absence auction-demand effect from this
+  print without controlling for the FOMC-surprise confound both sibling ledgers already named.
+
+- **A quarterly NIIP valuation model regressed on two equity returns, scored on its first
+  out-of-sample print (FT-intl-transactions-q2-2026-09-24-2)** — added 2026-09-26 from the
+  [intl-transactions-q2-2026-09-24 close-out](events/intl-transactions-q2-2026-09-24.md). Fit on
+  16 quarters (2022Q2–2026Q1) of FRED `IIPUSNETIQ` decomposed into current-account flow and a
+  valuation residual, `valuation ≈ 18.0 − 161.4×SPX% + 104.0×EFA%` reached R² 0.849 and LOO RMSE
+  $390B, and was registered predicting end-Q2 2026 NIIP in −$22.63T…−$23.41T off SPX +14.87% / EFA
+  +8.64%. The actual print landed at **−$22.42T** — outside the band on the low-magnitude side,
+  $210B short of its own near edge. **What this does and does not refute:** the model's *sign* held
+  (US equities outperforming foreign equities worsens the NIIP, and it did worsen from −$21.27T) —
+  the "improves from −$21.27T" kill switch did not separately fire — but the *magnitude* missed by
+  $578.8B, roughly 1.5× the model's own cross-validated error (implied actual valuation −$905.2B vs
+  predicted −$1,484B). An n=16 in-sample fit with R² 0.849 produced a first live forecast outside
+  its own ±1-RMSE interval — the honest-limits section that registered it flagged exactly this risk
+  ("2026-09-24 is its first real test... medium confidence is doing real work"). Do not re-propose
+  the SPX+EFA two-regressor NIIP valuation model as calibrated without either widening its interval
+  past ±1 LOO RMSE or re-fitting on a sample that includes this miss — one out-of-sample point is
+  not enough to diagnose whether the SPX coefficient is too large, the EFA proxy is too narrow, or
+  both, and the close-out deliberately left Leg 4 unedited (append-only) rather than patch it here.
+
+- **A four-quarter comp trend read as a persisting regime (FT-costco-q4-fy2026-2026-09-24-1)** —
+  added 2026-09-26 from the [costco-q4-fy2026-2026-09-24 close-out](events/costco-q4-fy2026-2026-09-24.md).
+  It predicted Costco's comparable-ticket-minus-traffic inversion — four straight quarters widening,
+  Q4 FY25 −1.1pp → Q1 FY26 +0.1 → Q2 +0.4 → Q3 +4.9pp — would persist into Q4 FY2026 at ≥2.5pp.
+  The 2026-09-24 release (SEC 8-K Exhibit 99.2) printed Total Company adjusted comparable ticket
+  **+3.3%** against adjusted comparable traffic **+3.3%**: spread **0.0pp**, a full reversal past
+  even the Q1/Q2 FY26 baseline the kill switch named as the retreat case. **A four-point monotone
+  run is not a regime.** Nothing about the underlying mechanism was mismeasured — the four prior
+  quarters really did widen, and the widening really did coincide with a margin hit (Q3's −21bps) —
+  but a trend that has run exactly as long as the disclosure history available to test it (Costco
+  began reporting the adjusted split only in FY2025) carries no base rate to size a forecast against.
+  Do not re-propose "quarter N+1 continues quarter N's comp-line trend" for a metric with fewer than
+  ~8 prior observations without first checking whether the trend's own drivers (here, gasoline
+  wedge width and bullion/big-ticket mix, both named as live rivals at registration) reversed
+  in-quarter. **One detail that must travel with the kill:** the parent stance — stand aside on
+  COST, both directions — was never contingent on this read-through and does not change; the kill
+  retires only the `retail-sales-2026-10-15` macro read-through this event existed to supply, not
+  the no-trade verdict on the name itself.
+
+- **A same-month import-permit series read as a same-signed bridge to the customs print, killed on
+  its first out-of-sample month (FT-steel-imports-preliminary-2026-09-24-3)** — added 2026-09-26
+  from the
+  [steel-imports-preliminary-2026-09-24 close-out](events/steel-imports-preliminary-2026-09-24.md).
+  AISI's SIMA release of 2026-09-10 put August 2026 import permits at 2,499,000 net tons, **+8.9%**
+  from July's 2,294,000 — rising into the month the n=3 Aug/Jul seasonal (mean ratio 0.920)
+  predicted a **fall**. Two independent bridges (a level bridge off the permit/actual ratio, a
+  growth bridge off the permit growth rate) agreed on a point estimate of **2.25 Mmt**, registered
+  as a band of 2.15–2.40 Mmt explicitly mutually exclusive with the seasonal's own 1.8–2.1 Mmt
+  prediction. The actual print (`steelp_2608.pdf`, CB26-156) came in at **2.13 Mmt** (2,129,076 t)
+  — below the permit bridge's 2.15 floor, and inside the seasonal's band at the release's own 0.1
+  Mmt precision. **What this does and does not refute:** AISI's own YTD permit level corroborated
+  the Census YTD figure closely (12.30 Mmt estimated vs 12.32 Mmt actual) in the same close-out, so
+  the permit series is not worthless as a level indicator — what failed is reading one month's
+  **permit growth rate** as a leading indicator of that same month's **customs tonnage**, exactly
+  the substitution AISI's own explanatory note warns against ("permit tonnages may understate or
+  overstate actual import volumes"). Do not re-propose an AISI permit-growth bridge to a Census
+  customs print without a multi-month calibration first — n=1 killed on its first live test, same
+  shape as the long-end and housing-starts kills above.
+
+- **An event-loaded collection window producing a larger UMich prelim→final revision
+  (FT-55-umich-sep-revision)** — added 2026-09-26 from the
+  [umich-sentiment-final-2026-09-25 close-out](events/umich-sentiment-final-2026-09-25.md). The
+  September final's exclusive 09-08 → 09-21 collection window carried PPI, CPI, a 20Y auction, a
+  **realized** 25bp FOMC hike, retail sales and triple-witching opex — the single most event-loaded
+  window this calendar has logged for this print, and the base case (aggregator-grade at n=4)
+  argued it would produce a revision exceeding the +0.6/+0.7/+0.8 Jun/Jul/Aug cluster. The actual
+  revision was **48.1 − 47.8 = +0.3**, smaller than all three, and inside the `|Δ| ≤ 0.8` kill bar.
+  **What this does and does not refute:** the prelim→final revision base rate itself stands (n=24,
+  median `|Δ| = 1.00`, measured directly from mql5's own release table) — what dies is the specific
+  causal claim that a heavier in-window macro corridor mechanically produces a *larger* revision. Do
+  not re-propose "more in-window macro events ⇒ bigger revision" for this or a similar survey
+  without a second confirming instance; n=1 killed on its first test, same shape as the long-end and
+  housing-starts kills above.
+
+- **A product-launch keynote's historical no-footprint base rate, applied without conditioning on
+  the specific keynote's own content (FT-meta-connect-2026-09-23-1)** — added 2026-09-28 from the
+  [meta-connect-2026-09-23 close-out](events/meta-connect-2026-09-23.md). The registered prediction
+  (n=7 Meta Connect keynotes, 2019–2025, D-1→D+1 excess vs QQQ **−0.85% mean, win 2/7**, no edge
+  either direction) was that the 2026 reaction day would land inside META's own ordinary **−2.42% /
+  +2.54%** band. It landed at **+6.42% excess**, and the move cleared this ledger's own separability
+  bar: SPY, SMH and NVDA were flat-to-down the same session and the 10Y yield rose (ruling out a
+  broad-market or Trump–Xi-summit read), while KeyBanc, Cantor Fitzgerald and JPMorgan all raised
+  price targets same-day, dated and naming the keynote's own reveals — a shipping **$1,299** VR
+  Glasses line and the **Muse Charm** pendant — as the reason. **What this does and does not
+  refute:** the n=7 historical base rate itself is unchanged and re-runnable; what dies is treating
+  it as a floor rather than a prior. The seven prior keynotes were dominated by iterative hardware
+  (Quest revisions, incremental Ray-Ban updates); 2026 paired a concrete, priced hardware reveal with
+  an already-monetizing AI agent (Muse) the keynote could point to directly — the variable an n=7
+  average of mostly-incremental years could not see. Do not re-propose "keynotes don't move this
+  name" for a future product-launch event without first checking whether that keynote's own slate is
+  incremental or a genuine step-change — the same discipline the AAPL launch close-out's "a converged
+  rumor band is not a narrow distribution" lesson already banked for the *pricing* half of a launch.
+
+## Portfolio-level critique — what no single-symbol view sees
+
+1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
+   is ~0.001. What clears it: MSFT S3 (p=3.4e-4, and pre-registered from NVDA, which blunts the
+   penalty) and GOOG S3 (p=0.0014, at the line). GOOG's run-up sits at the bar. Everything else is
+   indistinguishable from the battery's expected false positives.
+2. **Eight slots, one trade.** Peers rally over each other's pre-print windows in *every* study;
+   QQQ itself ran +3.7% over GOOG's windows. Running multiple S1-family longs is one leveraged
+   AI-beta bet, not diversification.
+3. **Regime concentration.** Every intraday number rests on one 2023–26 bull regime; the n=14
+   modern earnings cells vanish or invert in 2020–22 on symbol after symbol.
+4. **Decay.** Wherever per-event sequences were inspected, edges decay monotonically toward zero
+   (CRWV's fade −11.4→−3.6; MSFT's D-10 run-up by era). Pooled means overstate forward
+   expectation, sometimes ~2×. Size to the most recent era, not the pool.
+5. **Pipeline integrity (instrument debt, must fix before the next sweep).** Two of eight event
+   lists were corrupted: MRVL's quarter-dedup kept a pre-market 8-K and an investor-day filing
+   while dropping two real prints; CRWV's newest print was filed **midday**, breaking the
+   after-close reaction template silently. Separately, the forward-window guard excludes the
+   newest print on five of eight tickers — blinding each study to its freshest out-of-sample
+   point. The red teams caught all three; the instrument did not.
+
+## Time-sensitive (as of 2026-08-12)
+
+- **CRWV printed yesterday** (8-K filed midday 2026-08-11 — not in the study's n=4). Today is the
+  D+1 window where all four *prior* prints were ugly — but the first post-print hours ran green
+  (+2.42%), already against the shelved bleed hypothesis. **Do nothing; score the free
+  out-of-sample experiment** when the D+6/D+11 windows close (~Aug 19 / ~Aug 26).
+- **MRVL** — print est. **2026-08-27** (cadence estimate; confirm vs IR). Today is ~D-11. The
+  shelved late-week window opens ~Aug 20: log it as forward-test observation #1, zero size. Any
+  MRVL position flat by the Aug-26 close per S2.
+- **AVGO** — print est. **2026-09-03**, honest window Aug 27–Sep 10 (83–98-day cadence spread —
+  an estimated D-5 entry could land *after* the real print; confirm the date this week). S2
+  applies with feeling: the last AVGO print gapped −14.66%.
+- **NVDA** — print est. ~Aug 26 (unconfirmed). The peer evidence says part of NVDA's celebrated
+  run-up is sector seasonality: keep existing paper size, do **not** scale up on the cross-ticker
+  "confirmation," flat by D-1 per S2.
+- **AAPL / META** — post-print windows from the late-July prints close ~Aug 14 / ~Aug 27; no
+  action, log outcomes as forward-test data.
+
+## Honest limits
+
+Same as the parent studies, sharpened: n=14 modern-era cells everywhere (n=4 on CRWV — anecdote,
+not evidence); one intraday regime; SEC filing dates stand in for announcement times (and midday
+filings break the template, per the pipeline finding); estimated print dates are estimates. The
+red-team layer caught two corrupted event lists and several researcher overstatements — treat any
+number in this doc that lacks a control clause with suspicion, and prefer the per-symbol journals
+for the full attack transcripts.
