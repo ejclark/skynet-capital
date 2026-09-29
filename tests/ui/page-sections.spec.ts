@@ -171,12 +171,14 @@ describe("page sections", () => {
       expect(read("app/src/shell/use-bench-width.ts")).toContain("BENCH_MIN_WIDTH = 1280");
       // the switch renders only when folded (frame.tsx's doctrine) — as the stage's controls row
       // since the rail left the frame (#3807 slice 2a); docked there is no row, and the guidance
-      // link (#3729 — the one pane with no other way in) rides beside the milestone strip instead
+      // link (#3729) and the standalone chain's (#3807 slice 3b-2, dead end 8) — the two panes that
+      // never dock on their own — ride beside the milestone strip instead, as links, not a switch
       expect(trade).toMatch(/controls=\{\s*docked \? undefined : \(\s*<SectionSwitch/);
-      const docked = /const guidanceLink = docked \? \(([\s\S]*?)\) : null;/.exec(trade);
-      expect(docked).not.toBeNull();
-      expect(docked?.[1]).toContain("Guidance for this stock");
-      expect(docked?.[1]).not.toContain("SectionSwitch");
+      expect(trade).toMatch(/const guidanceLink = docked \? <BenchDoors \/> : null;/);
+      const doors = read("app/src/shell/bench-doors.tsx");
+      expect(doors).toContain("Guidance for this stock");
+      expect(doors).toContain("Options chain");
+      expect(doors).not.toContain("SectionSwitch");
       // the docked grid is a stylesheet of its own, imported by the index
       expect(read("app/src/styles/index.css")).toContain("./bench.css");
     });
