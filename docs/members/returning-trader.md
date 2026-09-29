@@ -89,6 +89,11 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    reader tell what to do next in ten seconds?
 2. `/app/activity` — the feed. **WHEN the member opens Activity, the app shall show the feed with
    the newest event first.** Judge: can the reader find today's fill?
+3. `/app/accounts?section=activity` — Profile → Activity: the orders on their own account, newest
+   first, the EEM buy among them — the fill on their own book, not only in the league's feed.
+   **WHEN the member opens their Profile's Activity, the app shall list their own account's
+   orders, newest first.** Judge: can the reader find their own fill? _(Added 2026-09-29, #3816
+   slice 9.)_
 
 ### j3 — my own desk, and back
 

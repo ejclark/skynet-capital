@@ -47,8 +47,9 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     detail:
       "Moneypenny is our AI agent — your guide for learning the ropes and filing feedback. Send her a message and the trading ladder opens.",
     points: ENGAGEMENT_MILESTONES.find((m) => m.id === "first-message")?.points ?? 0,
-    // The rail, not a page: `?moneypenny=intro` opens the right rail with her intro script.
-    route: "/app/accounts?section=milestones&chapter=onboarding&moneypenny=intro",
+    // The rail, not a page: the chapter's own "Meet Moneypenny ›" button opens her rail with the
+    // intro, so the step points at the chapter it sits in (#3816 slice 8 retired the deep link).
+    route: "/app/accounts?section=milestones&chapter=onboarding",
   },
   {
     id: "first-trade",

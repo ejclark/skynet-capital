@@ -49,6 +49,12 @@ and the first button, never the rail. They skip anything that names a concept th
 
 ### j1 — the first ten minutes
 
+0. `/login` — the sign-in page: the scene behind it, one button per provider, "Continue with
+   Google" first (the server serves it the same with or without a session). **WHEN an invited
+   visitor opens the sign-in page, the app shall show a way to sign in at every width.** Judge:
+   can this reader tell how to get in, in ten seconds? _(Added 2026-09-29, #3816 slice 9 — the
+   first page this member ever saw; a spectacle surface, so the phone frame checks its honest
+   fallback, not a curated layout.)_
 1. `/app/` — the league table, ranked rows, no word about where a new member starts. **WHEN a
    signed-in member with no linked account opens the app, the app shall land them on a page with
    a visible next step into onboarding.** _known gap — dead end 1._ Judge: can this reader tell
@@ -57,11 +63,20 @@ and the first button, never the rail. They skip anything that names a concept th
    before onboarding is complete, the app shall show M·01 Onboarding as the next step with one
    link into it.** Judge: can this reader tell what to do next in ten seconds?
 3. `/app/accounts?section=milestones` — the M·02 card's gate note. **WHILE the trading ladder is gated, the app shall
-   name the SAME unlock condition everywhere it is named.** _known gap — dead end 2._ Judge: does
-   this reader know what unlocks trading, in one sentence?
+   name the SAME unlock condition everywhere it is named.** _Fixed — #3807 slice 3b-4: with no
+   account the card reads "link an account first, then it unlocks the moment you say hello to
+   Moneypenny" — the step before the gate, then the server's words._ Judge: does this reader know
+   what unlocks trading, in one sentence?
 4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
    Judge: can this reader tell what to do next in ten seconds?
+
+4b. `/app/accounts?section=feedback` — Profile → Feedback: what a filing is for, and one button,
+   "Talk to Moneypenny", that opens her rail — where hello is said (goal 2); offline, a line that
+   feedback is not switched on yet. **WHEN a member with no linked account opens Profile →
+   Feedback, the app shall offer one control that opens Moneypenny.** Judge: can this reader tell
+   how to say hello, in ten seconds? _(Added 2026-09-29, #3816 slice 9.)_
+
 5. `/app/trade` — "No accounts are linked to your session yet — connect one in Onboarding." — the
    words are the link to the connect guide. **WHEN a member with no linked account opens Trade, the
    app shall link the empty state to onboarding.** _Fixed — #3807 slice 2e._ Judge: can this reader

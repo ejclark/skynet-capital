@@ -166,7 +166,7 @@ describe("dashboard-server desk settings (#475)", () => {
         redirect: "manual",
       });
       expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/app/settings");
+      expect(res.headers.get("location")).toBe("/app/settings?section=account");
     });
   });
 
@@ -178,7 +178,7 @@ describe("dashboard-server desk settings (#475)", () => {
       });
       expect(res.status).toBe(302);
       // Identical to the owner's answer; whether the card exists is decided by /api/controls.
-      expect(res.headers.get("location")).toBe("/app/settings");
+      expect(res.headers.get("location")).toBe("/app/settings?section=account");
     });
   });
 
@@ -192,7 +192,7 @@ describe("dashboard-server desk settings (#475)", () => {
         redirect: "manual",
       });
       expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/app/settings");
+      expect(res.headers.get("location")).toBe("/app/settings?section=account");
     });
   });
 });
@@ -229,7 +229,7 @@ describe("dashboard-server /rotate identity resolution (2026-08-25)", () => {
         redirect: "manual",
       });
       expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/app/settings?id=sauron");
+      expect(res.headers.get("location")).toBe("/app/settings?section=account&id=sauron");
     });
   });
 });

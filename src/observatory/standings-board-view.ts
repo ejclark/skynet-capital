@@ -108,6 +108,10 @@ interface CompareSide {
   readonly invested: string;
   readonly unrealized: string;
   readonly unrealizedTone: FieldTone;
+  /** Cumulative realized P/L — "—" (flat) when the snapshot carries none: a pure Alpaca read
+   *  doesn't return it, and an unknown is never shown as a zero. */
+  readonly realized: string;
+  readonly realizedTone: FieldTone;
   readonly returnPct: string;
   readonly returnTone: FieldTone;
 }
@@ -147,6 +151,8 @@ function compareSide(snapshot: ParticipantSnapshot): CompareSide {
     invested: formatCurrency(participantInvested(snapshot)),
     unrealized: formatSigned(pl),
     unrealizedTone: plClass(pl),
+    realized: snapshot.realizedPl === undefined ? "—" : formatSigned(snapshot.realizedPl),
+    realizedTone: plClass(snapshot.realizedPl ?? 0),
     returnPct: pct(returned),
     returnTone: plClass(returned),
   };
@@ -176,6 +182,10 @@ export function standingsCompareView(
     deltas: [
       compareDelta("Equity", a.equity, b.equity, formatCurrency),
       compareDelta("Unrealized", participantUnrealized(a), participantUnrealized(b), formatSigned),
+      // Only when both sides know it — a lead over an unknown would be invented.
+      ...(a.realizedPl === undefined || b.realizedPl === undefined
+        ? []
+        : [compareDelta("Realized", a.realizedPl, b.realizedPl, formatSigned)]),
       compareDelta("Return", participantReturnPct(a), participantReturnPct(b), pct),
     ],
     holdings: holdingsUnion(a, b).map(({ symbol, aValue: av, bValue: bv }) => ({

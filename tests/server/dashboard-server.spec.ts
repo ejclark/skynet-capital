@@ -201,7 +201,7 @@ describe("dashboard-server OAuth gate", () => {
           redirect: "manual",
         });
         expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("/app/settings");
+        expect(res.headers.get("location")).toBe("/app/settings?section=account");
       },
     );
   });
@@ -257,11 +257,10 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
     });
   });
 
-  it("serves the patch fallback frame with the connection's own ?by= applied", async () => {
+  it("no longer serves the old /board/frame fragment (#3816 slice 8)", async () => {
     await withServer({ hub: new ObservatoryHub(livingBoard()) }, async (base) => {
-      const frame = await fetch(`${base}/board/frame?by=return`);
-      expect(frame.status).toBe(200);
-      expect(await frame.text()).toContain('class="msel active" href="/?by=return"');
+      const frame = await fetch(`${base}/board/frame?by=return`, { redirect: "manual" });
+      expect(frame.status).not.toBe(200);
     });
   });
 
@@ -292,8 +291,13 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
         reason: "head-to-head compare keeps the full-render path",
       });
 
-      const frame = await fetch(`${base}/board/frame?a=p1&b=p2`);
-      expect(await frame.text()).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+      // The client's whole-frame read is `/api/board`, carrying the same pair.
+      const frame = await fetch(`${base}/api/board?a=p1&b=p2`);
+      const body = (await frame.json()) as {
+        compare?: { a: { name: string }; b: { name: string } };
+      };
+      expect(body.compare?.a.name).toBe("Alice");
+      expect(body.compare?.b.name).toBe("Bob");
     });
   });
 });

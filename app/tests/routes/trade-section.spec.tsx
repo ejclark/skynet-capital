@@ -115,8 +115,7 @@ describe("/trade section switch", () => {
         screen.getByRole("heading", { name: /The ladder is waiting on you/ }),
       ).toBeInTheDocument(),
     );
-    // The rail left the frame (#3807 slice 2a): the folded switch is the row at the top of <main>,
-    // and the rail's "← Back to account" is gone — the topbar's Profile tab is that.
+    // The rail left the frame (#3807 slice 2a): the folded switch is the row at the top of <main>.
     const row = screen.getByRole("navigation", { name: "Section" });
     expect(row).toHaveClass("stage-controls");
     expect(row.closest("main")).not.toBeNull();
@@ -128,8 +127,14 @@ describe("/trade section switch", () => {
       "aria-pressed",
       "false",
     );
-    expect(screen.queryByRole("link", { name: /Back to account/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Pick a symbol to see its chart.")).not.toBeInTheDocument();
+  });
+
+  it("links back to the traded account by name, in the page head (#3816 slice 7)", async () => {
+    mountTrade("/trade?desk=human-eric");
+    const back = await screen.findByRole("link", { name: "← Back to Eric" });
+    expect(back.closest("header")).toHaveClass("page-header");
+    expect(back.getAttribute("href")).toBe("/accounts?account=human-eric");
   });
 
   it("renders ChartSection for ?section=chart, reading the committed ?symbol=", async () => {

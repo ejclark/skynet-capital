@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { DecisionCycle } from "../../src/live/desk";
-import { CycleRow } from "../../src/shell/decisions-section";
+import { CycleRow, GUARDS_GLOSS } from "../../src/shell/decisions-section";
 
 /** `CycleRow`/`OutcomeLine`'s rendering of the context fields `decision-json-view.ts` already
  *  captures (momentum, sentiment, playbook mode, guard delta) — present-only, matching the house
@@ -167,5 +167,18 @@ describe("CycleRow", () => {
   it("renders no persona badge for the account's own cycles — the ordinary case", () => {
     render(<CycleRow cycle={cycle()} />);
     expect(screen.queryByText(/^via /)).not.toBeInTheDocument();
+  });
+
+  it("glosses 'past the guards' in visible words beside the term (#3807 slice 3b-4)", () => {
+    render(<CycleRow cycle={cycle({ rawCount: 3, guardedCount: 1 })} />);
+    open();
+    const term = screen.getByText("past the guards");
+    expect(term.tagName).toBe("DFN");
+    const line = term.closest("p");
+    expect(line).toHaveTextContent(
+      "3 intents from the persona → 1 past the guards — the risk checks",
+    );
+    expect(line).toHaveTextContent(GUARDS_GLOSS);
+    expect(screen.getByText(/the risk checks every order must clear/)).toBeVisible();
   });
 });

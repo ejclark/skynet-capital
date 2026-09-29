@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The phone check is blind to a box that spills off the LEFT edge.** `page-sideways-scroll` and
+  `overflow` in `scripts/crawl/phone.mjs` measure `scrollWidth` only, which grows rightward. So the
+  topbar status popover hung 113px off the left of a 390px screen with 0 findings. It was caught by
+  reading the code, and `--click .status` then measured its rect. A candidate `offscreen-left` kind:
+  a shown box whose `getBoundingClientRect().left < -TOLERANCE` and that is not inside a horizontal
+  scroller. It needs the same skips the tap check has (a skip link parked at -999px, a fully
+  off-canvas drawer). The noise has to be measured over one `--phone-audit` crawl before this
+  becomes a new severity. _(src: Claude · while: #3816 slice 5, fixing the status popover)_
 - **"GraphQL is blocked from interactive Claude Code sessions" is false — sweep the claim out of the
   Projects scripts.** It is asserted in `projects.mjs`, `projects-setup.mjs`,
   `projects-backfill.mjs` and `projects.spec.ts`, and it is why three Projects v2 PRs shipped with

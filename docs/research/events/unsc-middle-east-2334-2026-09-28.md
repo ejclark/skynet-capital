@@ -239,5 +239,88 @@ gets proposed as a new `src/domain/market-events/proposals/<id>.from-<this-event
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
-**Last assessed:** 2026-09-22
+## Outcome
+
+**Close-out (2026-09-29, D+1 — inside the `closeOutWithinDays: 6` deadline, ceiling 2026-10-04).**
+Geopolitical kind, `symbols: []` throughout, so no `earnings-cycle`/`intraday-edges` instrument ever
+had a target for this event; the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) ran first regardless, per this lane's cache-discipline rule.
+"Re-run instrument data" here means fresh Yahoo daily bars pulled live this session via
+`scripts/research/market-data.mjs`'s `bars()` (cache busted, so nothing cached was reused) plus a
+fresh web sweep — not this ledger's own memory of the D-13/D-6 rows.
+
+**The briefing happened, on the estimated date, exactly the shape leg 2 and leg 3 predicted.**
+`securitycouncilreport.org`'s own preview (`whatsinblue/2026/09/the-middle-east-including-the-
+palestinian-question-briefing-and-consultations-26.php`, published 2026-09-25, fetched direct this
+session) named **Monday 28 September**, an open briefing plus closed consultations, briefers **Ramiz
+Alakbarov** (Acting Special Coordinator/Resident Coordinator, UNSCO) and two civil-society
+representatives. Arab News (fetched direct, dated 2026-09-28 — same-day reporting, not a preview)
+confirms the briefing occurred as scheduled: Alakbarov delivered the **39th Secretary-General report
+on 2334 implementation**, covering **13 June – 18 September**, reporting Israeli authorities approved
+**8,085 settlement units** in the West Bank/East Jerusalem over the period and stating *"I strongly
+condemn the relentless expansion of Israeli settlements in the West Bank"* — the read flag (leg 4's
+39th-report circulation) fired exactly as expected, corroborating the date independently of the
+programme-of-work primary this ledger already held. **No resolution and no presidential statement
+was adopted** — neither source records one, consistent with the "briefing, not vote" frame leg 2
+rested on; the Council's US-blocked posture from June 2026 held through this session. Direct fetches
+of press.un.org's own meeting-record pages for this specific session returned only navigation/
+metadata (no full text) or resolved to adjacent meetings (26 August, 29 June) rather than 28
+September — logged as a limitation, not silently papered over; this is the same `press.un.org`
+blind spot this ledger's D-13 row already banked (`probe-ref.blocked`), so the close-out leans on the
+same cross-corroborated-press standard the D-13 initial research and the sibling
+`unsc-iran-panel-mandate-vote-2026-09-17` close-out both used.
+
+**The market read: EIS moved more than the 11-briefing median, but nowhere near the sample
+ceiling — and the size of the move ties to the Iran-war tape, not the Council.** Fresh Yahoo daily
+bars, 2026-09-25 close → 2026-09-28 close: **EIS 122.98 → 121.35, −1.33%** absolute — above the
+11-briefing median (0.63%) but comfortably under the **1.97% sample maximum** `FT-…-1` is keyed to,
+and under its own 0.82% baseline by less than the width of one ordinary day. **SPY 771.35 → 765.61,
+−0.74%**; **ITA 213.81 → 209.26, −2.13%**; **XAR 239.46 → 234.19, −2.20%** — both defense names moved
+roughly 1.6-1.7× EIS's magnitude, the opposite of a settlements-driven channel (a Council-sourced
+move would be expected to hit EIS hardest, the Israel-specific instrument, not the broader defense
+complex). **VIX 14.87 → 16.07 (+1.20pt, +8.1%)** — still 3.93pt under the ≥20 kill switch. A same-day
+web sweep (globalsecurity.org's Iran War tracker, Reuters/AP wire summaries via search) found the
+period's live driver unchanged from the D-6 row: Iran's Hormuz-reopening offer was read by the US
+side as *"a pretty cynical attempt"* (Ambassador Waltz) and rejected, hardening rather than resolving
+the stand-off, which reads as the more parsimonious explanation for a broad, direction-consistent
+pullback across EIS/ITA/XAR/SPY than a quarterly UN report that named no new sanction, no vote and no
+outcome document. Nothing in the press sweep ties any part of the 09-28 move to the Council session
+specifically.
+
+**Forward tests scored:**
+
+| Test | Prediction | Real-world finding this session | Verdict |
+|---|---|---|---|
+| `FT-unsc-middle-east-2334-2026-09-28-1` (the EIS null) | EIS's 09-28 absolute move lands at or below 1.97% (the 11-briefing sample maximum), or if it exceeds it, the move is not separable from strikes/Hormuz/macro | EIS moved **1.33%**, comfortably under the 1.97% ceiling — the prediction's primary bound is met on size alone, with no separability argument even needed. The briefing occurred on 09-28 per leg 4/read-flag confirmation (39th report circulated), so the void condition (briefing not occurring) does not apply | **pass** |
+| `FT-unsc-middle-east-2334-2026-09-28-2` (the FOMC-collision correction, scored on the 2026 non-colliding instance) | SPY's 09-28 move ≤ 1.65% (ex-FOMC sample max) **and** below both its own 09-30 (PCE) and 10-02 (jobs) moves | SPY's 09-28 move (**0.74%**) is already known and under the 1.65% ceiling, but the comparison leg (09-30 PCE, 10-02 jobs) has not printed yet as of this close-out | **`_open_`, not scored — score-by 2026-10-05 sits past this event's `closeOutWithinDays: 6` ceiling (2026-10-04), the structural conflict the close-out-hold rule names, not a timing one; it will be picked up by a future `forward-test-due` dispatch once the fragment shows it past its date** |
+| `FT-unsc-middle-east-2334-2026-09-28-3` (no Council decision this quarter) | No resolution or presidential statement on settlements/West Bank/annexation adopted on or before 2026-12-31 | This session's own briefing produced no adoption (see above), consistent with the prediction so far, but the registered window runs three more months past this close-out | **`_open_`, not scored — score-by 2026-12-31 is far past the `closeOutWithinDays: 6` ceiling; same structural conflict, will be picked up by a future `forward-test-due` dispatch** |
+
+**Reading the split honestly.** `FT-…-1` scores today because its own registered score-by
+(2026-09-29) falls inside this event's `closeOutWithinDays: 6` window (ceiling 2026-10-04) — the
+close-out-hold rule in `docs/process/EVENT-RESEARCH.md` dispatches immediately rather than holding
+when a test's score-by has already arrived, and this is that case. `FT-…-2` and `FT-…-3` are the
+opposite case — `--due` named both in `forwardTestsBeyondWindow` before this session started, exactly
+the structural (not timing) conflict the rule anticipates: their score-by dates outlive the window in
+which this lane's automation will ever look at this file again. Both stay `_open_` in their fragment;
+neither is falsified by writing a verdict early.
+
+**The call itself, scored against the tape.** The stand-aside was the entire position: `symbols: []`,
+no size, hedge or entry ever proposed or implied. That call cost nothing and earned nothing by
+design — the value was analytical, and it held. No kill switch fired: no adoption, EIS stayed under
+its own sample ceiling, VIX stayed well under 20, and ITA/XAR fell rather than reclaimed highs. The
+corridor's real content was, as flagged at D-13, the quarter-end macro block (PCE 09-30, ISM 10-01,
+jobs 10-02) rather than this briefing — those ledgers carry their own close-outs.
+
+**Honest limits, closing.** `press.un.org`'s own meeting-record pages did not yield readable full
+text this session (metadata-only or wrong-date pages) — the date and content rest on
+`securitycouncilreport.org`'s preview plus Arab News's same-day report, both fetched direct and
+cross-corroborating each other on date, briefer and format, rather than a UN meeting-coverage
+primary. `CONFIRMED_PREFIX` still carries no UN/diplomatic slot, so this event was never eligible to
+become `confirmed` on this lane's own schema regardless of source quality, and it closes out still
+`estimate`-dated. `FT-…-2` and `FT-…-3` remain open and outside this lane's future reach by
+construction (their score-by dates postdate the point at which this document goes quiet) — a human
+or a future manual read after those dates could still write the verdicts in by hand.
+
+**Last assessed:** 2026-09-29
+<!-- probe-ref: {"symbols":{},"vix":16.07,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0,"blocked":[{"url":"press.un.org meeting-record pages for the 2026-09-28 session","status":"METADATA_ONLY_OR_WRONG_DATE","at":"2026-09-29"}]} -->
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","jpx-market-closure-2026-09-23","m3-full-report-2026-10-02","meta-connect-2026-09-23","mu-2026-09-30-print","new-home-sales-2026-09-24","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-2y-frn-2026-09-23","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["pce-2026-09-30","mu-2026-09-30-print","ism-manufacturing-2026-10-01","jobs-2026-10-02"],"screenStreak":0,"blocked":[{"url":"unsco.unmissions.org/security-council-briefings-0","status":"404","at":"2026-09-22"}]} -->

@@ -13,7 +13,7 @@ const shelf = (over: Partial<ResearchShelfData> = {}): ResearchShelfData => ({
   events: [],
   closures: [],
   calls: [],
-  symbols: [{ symbol: "NVDA", href: "/research/symbol/NVDA" }],
+  symbols: [{ symbol: "NVDA" }],
   studies: [],
   ledgers: [],
   ...over,

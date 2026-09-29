@@ -392,28 +392,35 @@ function SettingsPage(): ReactElement {
           </p>
         ) : !adminWired ? (
           <p className="note">Account management isn't wired in this deployment.</p>
-        ) : !first ? (
-          <p className="note">
-            Your sign-in doesn't resolve to an account yet — ask a league owner to link one to your
-            sign-in, or add your own from{" "}
-            <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
-              onboarding
-            </Link>
-            .
-          </p>
         ) : (
           <>
-            <AccountSwitcher
-              accounts={accounts}
-              selectedId={(selected ?? first).id}
-              onSelect={setSelectedId}
-            />
-            <AccountCard
-              account={selected ?? first}
-              timezones={timezones}
-              fleetSuspended={settings.data.fleetSuspended}
-              onChanged={refresh}
-            />
+            {!first ? (
+              <p className="note">
+                Your sign-in doesn't resolve to an account yet — ask a league owner to link one to
+                your sign-in, or add your own from{" "}
+                <Link to="/accounts" search={{ section: "milestones", chapter: "onboarding" }}>
+                  onboarding
+                </Link>
+                .
+              </p>
+            ) : (
+              <>
+                <AccountSwitcher
+                  accounts={accounts}
+                  selectedId={(selected ?? first).id}
+                  onSelect={setSelectedId}
+                />
+                <AccountCard
+                  account={selected ?? first}
+                  timezones={timezones}
+                  fleetSuspended={settings.data.fleetSuspended}
+                  onChanged={refresh}
+                />
+              </>
+            )}
+            {/* The fleet's cards belong to the fund OWNER, not to an account (#3816 slice 7): an
+                owner who holds no account of their own still runs the fleet and links the
+                unclaimed accounts. Each card renders only on the server's own owner answer. */}
             <div id="mission-control">
               <MissionControl />
             </div>

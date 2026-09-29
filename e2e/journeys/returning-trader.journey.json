@@ -115,6 +115,17 @@
           "ears": "WHEN the member opens Activity, the app shall show the feed with the newest event first.",
           "expect": [{ "role": "heading", "name": "Activity" }],
           "judge": "can the reader find today's fill?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/accounts?section=activity",
+          "sees": "Profile → Activity: the orders on their own account, newest first, the EEM buy among them",
+          "ears": "WHEN the member opens their Profile's Activity, the app shall list their own account's orders, newest first.",
+          "expect": [
+            { "url": "/app/accounts?section=activity" },
+            { "role": "button", "name": "Activity", "exact": true, "within": "main" }
+          ],
+          "judge": "can the reader find their own fill?"
         }
       ]
     },
