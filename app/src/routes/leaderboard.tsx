@@ -154,6 +154,10 @@ function CompareSection({
                 <dd className={`num tone-${side.unrealizedTone}`}>{side.unrealized}</dd>
               </div>
               <div>
+                <dt>Realized</dt>
+                <dd className={`num tone-${side.realizedTone}`}>{side.realized}</dd>
+              </div>
+              <div>
                 <dt>Return</dt>
                 <dd className={`num tone-${side.returnTone}`}>{side.returnPct}</dd>
               </div>

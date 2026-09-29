@@ -9,6 +9,7 @@ import {
   useTowerRun,
 } from "./tower-bus";
 import { useMediaQuery } from "./use-media";
+import { TABLET_QUERY } from "./widths";
 
 /**
  * THE CREST (#3807 slice 3a, behind `?shell=watchtower`): the tower, framed on its crown and Eye,
@@ -28,8 +29,11 @@ import { useMediaQuery } from "./use-media";
  *   · under reduced motion the scene draws its one still frame and sends nothing else.
  *
  * Presence, not ceremony: the crest is a small still-framed window with the Eye's slow sweep.
- * `?crest=still` (slice 3a-3, `prefs.ts`) is the second option: the scene's `rest=still`, one
- * frame at rest and the loop only while a glance or a regard plays — so the two compare by eye.
+ * MOVING IS THE DEFAULT, by Eric's pick after comparing the two by eye (2026-09-27: "live - the
+ * subtle animation in the background offers opportunities"). STILL IS THE MEMBER'S SETTING —
+ * Settings → Display → "Tower motion" (slice 3b-1, `prefs.ts`), the WCAG 2.2.2 pause for motion
+ * that runs beside content: the scene's `rest=still`, one frame at rest and the loop only while a
+ * glance or a regard plays. `?crest=still|live` still sets it from a URL.
  */
 
 /** Where the band renders its right cap when the flag is on. */
@@ -148,9 +152,12 @@ export function VantageFrame({
   const box = useBox(slot);
   const shown = eligible && slot !== null && box !== null;
   const [mounted, setMounted] = useState(false);
-  // Frozen at first render: a later navigation drops `?probe=1`, and a changed src would reload
-  // the scene (a new WebGL context and a shader compile).
-  const [src] = useState(() => crestSrc(window.location.search, usePrefs.getState().crest));
+  // The page's search is frozen at first render: a later navigation drops `?probe=1`, and a
+  // changed src reloads the scene (a new WebGL context and a shader compile). Only the member's
+  // own motion setting changes it — a deliberate, rare reload, so the setting applies at once.
+  const [search] = useState(() => window.location.search);
+  const crest = usePrefs((s) => s.crest);
+  const src = crestSrc(search, crest);
   if (shown && !mounted) setMounted(true);
 
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -199,8 +206,8 @@ export function Vantage({
   readonly root: RefObject<HTMLElement | null>;
 }): ReactElement | null {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // ≤860px is the phone shell (`shell.css`, `cockpit-clock.tsx` PHONE_QUERY).
-  const phone = useMediaQuery("(max-width: 860px)");
+  // ≤ the tablet width is where the shell wraps (`shell.css`, `widths.ts`), phones included.
+  const phone = useMediaQuery(TABLET_QUERY);
   return <VantageFrame root={root} pathname={pathname} phone={phone} />;
 }
 

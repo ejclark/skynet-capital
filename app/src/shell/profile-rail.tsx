@@ -9,7 +9,8 @@ import type { ReactElement } from "react";
  * the page you're on.
  *
  * WHY ONLY TWO: the Profile page's section switch is the map now (docs/IA.md §8 — a group's sub-nav
- * becomes its home page's section switch), so `/accounts` renders no link row at all, and
+ * becomes its home page's section switch), so `/accounts` carries no rail — only a labelled
+ * Settings link in its head's link row (`cockpit-head.tsx`, #3816 slice 7) — and
  * Milestones · its three chapters · Feedback are `?section=`/`?chapter=` of that page, their old
  * routes redirects. Settings keeps this list inside its own stage (Eric's carve-out, #3807 2a).
  *

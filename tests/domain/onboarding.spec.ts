@@ -60,11 +60,11 @@ describe("onboarding milestone (M·01)", () => {
 
   it("points every step at the shell route that completes it", () => {
     // Step 1's form lives inside the onboarding chapter's guide (the Profile page's Milestones,
-    // #3807 slice 2b); step 2 opens Moneypenny's rail
-    // with her intro (the 2026-09-03 handoff) rather than a feedback page.
+    // #3807 slice 2b); step 2 sits in that chapter too — its button opens Moneypenny's rail with
+    // her intro (the 2026-09-03 handoff) rather than a feedback page.
     expect(ONBOARDING_STEPS.map((s) => s.route)).toEqual([
       "/app/accounts?section=milestones&chapter=onboarding",
-      "/app/accounts?section=milestones&chapter=onboarding&moneypenny=intro",
+      "/app/accounts?section=milestones&chapter=onboarding",
       "/app/trade?play=101",
     ]);
   });

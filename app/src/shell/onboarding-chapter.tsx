@@ -23,8 +23,8 @@ import { MilestonePanel } from "./milestone-panel";
  *      engagement track's own milestone; a filed issue is a separate, harder achievement)
  *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
  *
- * `?moneypenny=intro` (the deep link every "Meet Moneypenny ›" outside this chapter uses) is the
- * Profile page's to honour (`routes/accounts.tsx`). This chapter is the task checklist only —
+ * Step 2's button is the one way into her intro — the old `?moneypenny=intro` deep link had no
+ * producer and was retired (#3816 slice 8). This chapter is the task checklist only —
  * account figures live on the Overview, and ladder/playbook progress on the other two chapters
  * (Eric, 2026-09-17).
  * @category onboarding
@@ -66,6 +66,26 @@ function stepDetail(step: OnboardingStep): string {
     : step.detail;
 }
 
+/**
+ * NOT CONNECTED YET — the two exits a sign-in with no linked account has (moved here from the old
+ * standings board's "Not connected" banner, #3816 slice 7). Brand new is the guide below; but an
+ * account can already be on the leaderboard, syncing, with nothing tying it to this sign-in. The
+ * old vague copy walked that member into a duplicate add and a key regeneration that revoked their
+ * working pair (2026-08-25), so the don'ts are said out loud. The old fix pointed at a Rotate link a
+ * member with no account can't reach — so the one exit named is the league owner, who links a
+ * sign-in to an account without any keys.
+ */
+function AlreadyOnTheBoard(): ReactElement {
+  return (
+    <p className="ob-step-detail ob-step-warn">
+      <b>Already see your account on the leaderboard?</b> It's there and syncing, but nothing ties
+      it to this sign-in yet. Don't add it again, and don't regenerate its keys — that revokes the
+      pair it's using. Ask the league owner to link your sign-in to it; no keys involved. Already
+      regenerated them? Tell the league owner that too.
+    </p>
+  );
+}
+
 function ConnectStep({
   step,
   data,
@@ -87,6 +107,7 @@ function ConnectStep({
         <div className="ob-step-body">
           <div className="ob-step-title">{step.title}</div>
           <div className="ob-step-detail">{step.detail}</div>
+          {step.done ? null : <AlreadyOnTheBoard />}
         </div>
         {step.done && data.account ? (
           <span className="status status-live">

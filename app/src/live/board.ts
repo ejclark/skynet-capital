@@ -55,6 +55,9 @@ export interface CompareSide {
   readonly invested: string;
   readonly unrealized: string;
   readonly unrealizedTone: FieldTone;
+  /** Cumulative realized P/L, or "—" when the server has none for this account. */
+  readonly realized: string;
+  readonly realizedTone: FieldTone;
   readonly returnPct: string;
   readonly returnTone: FieldTone;
 }

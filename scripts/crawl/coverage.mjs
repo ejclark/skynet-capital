@@ -62,37 +62,38 @@ const DEFAULTS = {
 const DOCKED = new Set(["/trade"]);
 
 /** The server's own pages — not in the SPA's route tree, so listed by hand; each names the line
- *  that serves it, checked on every run so a removed page cannot linger here. */
+ *  that serves it, checked on every run so a removed page cannot linger here, and `serves` — the
+ *  same test on a path, so a journey step whose `goto` is outside `/app` lands on its row. */
 const SERVER_PAGES = [
   {
     screen: "server /login",
     file: "src/server/dashboard-auth-gate.ts",
     needle: 'path === "/login"',
+    serves: (path) => path === "/login",
   },
   {
     screen: "server /welcome",
     file: "src/server/dashboard-board-routes.ts",
     needle: 'path === "/welcome"',
+    serves: (path) => path === "/welcome",
   },
   {
     screen: "server /tower",
     file: "src/server/dashboard-board-routes.ts",
     needle: 'path === "/tower"',
+    serves: (path) => path === "/tower",
   },
   {
     screen: "server /research/<slug>",
     file: "src/server/research-page-routes.ts",
     needle: 'path.startsWith("/research/")',
+    serves: (path) => path.startsWith("/research/"),
   },
   {
     screen: "server /feedback/preview",
     file: "src/server/dashboard-server.ts",
     needle: 'path === "/feedback/preview"',
-  },
-  {
-    screen: "server /board/frame",
-    file: "src/server/dashboard-server.ts",
-    needle: 'path === "/board/frame"',
+    serves: (path) => path === "/feedback/preview",
   },
   { screen: "unknown URL" },
 ];
@@ -219,6 +220,8 @@ export function matchRoute(pathname, routePaths) {
  * followed to its target (one hop at a time, three at most).
  */
 export function landingOf(goto, { linked, routePaths, sections, triage }, hops = 0) {
+  const server = serverPageOf(new URL(goto, "http://x").pathname);
+  if (server !== undefined) return [server];
   const [pathname, asked] = routeLabel(goto).split(" · ");
   const route = matchRoute(pathname, routePaths);
   if (route === undefined) return ["unknown URL"];
@@ -239,6 +242,13 @@ export function landingOf(goto, { linked, routePaths, sections, triage }, hops =
     if (chapter) keys.push(keyFor(route, section, chapter));
   }
   return keys;
+}
+
+/** A path outside the SPA that one of the server's own pages serves → that page's row key. */
+function serverPageOf(pathname) {
+  if (/^\/app(\/|$)/.test(pathname)) return undefined;
+  const page = SERVER_PAGES.find((p) => p.serves?.(pathname));
+  return page ? screenKey(page.screen) : undefined;
 }
 
 function follow(key, ctx, hops) {
