@@ -25,6 +25,7 @@ import {
   type ResearchShelfData,
   scopeEmptyText,
   toggleSymbolScope,
+  unsearchedSymbols,
 } from "../live/research";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
@@ -462,13 +463,24 @@ export function useBoardView({
     }),
     filter.symbols,
   );
+  // `answered` is claimed only when the server keyed an entry for EVERY scoped symbol — it caps how
+  // many one search answers for, and a symbol past that cap was never looked at.
   const searchState: MentionSearchState = mentions.isError
     ? "unreachable"
-    : mentions.data
-      ? "answered"
-      : "searching";
+    : !mentions.data
+      ? "searching"
+      : unsearchedSymbols(filter.symbols, mentioned).length > 0
+        ? "partial"
+        : "answered";
+  // Whether anything OTHER than the scope narrowed a list — studies see only the text terms, a
+  // ledger also sees the kind/impact facets. Without this the scope takes credit for a list that
+  // `impact:low` actually emptied, which is the same false claim in the other direction.
+  const alsoFiltered = {
+    study: filter.terms.length > 0,
+    ledger: filter.terms.length > 0 || Boolean(filter.kind) || Boolean(filter.impact),
+  };
   const scopedEmpty = (noun: "study" | "ledger", where: string) =>
-    scopeEmptyText(noun, where, filter.symbols, searchState);
+    scopeEmptyText(noun, where, filter.symbols, searchState, alsoFiltered[noun]);
 
   return {
     band: (

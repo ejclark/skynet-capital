@@ -354,10 +354,16 @@ const TICKER_TOKEN = /\b[A-Z]{1,6}\b/g;
 const tickerTokens = (md: string): ReadonlySet<string> => new Set(md.match(TICKER_TOKEN) ?? []);
 
 /**
- * The most symbols one mention search will answer for. The board's `sym:` scope is a watchlist,
- * not a corpus dump; the cap is what keeps a hand-written URL from asking for every ticker at once.
+ * The most symbols one mention search will answer for.
+ *
+ * It bounds the RESPONSE, not the work: the read is per file, so a symbol costs one set lookup per
+ * document and the corpus is walked once either way. What it stops is a hand-written URL naming
+ * every ticker and getting a slug list per name back. It sits well above the board's own ceiling —
+ * the shelf offers ~21 symbol chips — so a member clicking chips can never reach it; anything the
+ * cap does drop is reported as unsearched rather than silently answered "nothing found", because
+ * the board would otherwise state a fact nobody checked.
  */
-export const MENTION_SCOPE_MAX = 8;
+export const MENTION_SCOPE_MAX = 32;
 
 /**
  * WHICH SHELVED DOCS NAME EACH SYMBOL IN THEIR TEXT (#3962) — the board's `sym:` scope, answered
@@ -370,8 +376,14 @@ export const MENTION_SCOPE_MAX = 8;
  * words in the corpus are tickers, and the guess is wrong in a way that lies on screen — the
  * directory's `ALL`, `NOW`, `LOW`, `OPEN` and `A` match shouting headings, not Allstate.
  *
- * Returns one entry per accepted symbol (an empty list is an honest answer: nothing mentions it).
- * Anything that is not a `sym:`-shaped symbol is dropped rather than searched for.
+ * Returns one entry per accepted symbol (an empty list is an honest answer: nothing mentions it);
+ * a symbol the caller asked for and does NOT get a key for is one this never searched — a missing
+ * key and an empty list mean different things, and the board reads the difference. Anything that is
+ * not a `sym:`-shaped symbol is dropped rather than searched for.
+ *
+ * COST: one read of every shelved document per call (~705 files today, ~115ms), unmemoized — the
+ * same shape `/api/research` already has, since git is the CMS and the corpus only changes on
+ * deploy. Worth caching for both together if it ever binds; not worth diverging from here alone.
  */
 export function docsMentioning(
   symbols: readonly string[],

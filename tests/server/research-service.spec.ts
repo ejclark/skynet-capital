@@ -395,9 +395,22 @@ describe("docsMentioning", () => {
     expect(found.NVDA).toContain("supply-chain");
   });
 
-  it("caps how many symbols one search will answer for", () => {
-    const many = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG", "HHH", "III", "JJJ"];
-    expect(Object.keys(docsMentioning(many, mentionRoot()))).toHaveLength(MENTION_SCOPE_MAX);
+  it("caps how many symbols one search will answer for, keying only the ones it searched", () => {
+    const letter = (n: number) => String.fromCharCode(65 + n);
+    const many = Array.from(
+      { length: MENTION_SCOPE_MAX + 4 },
+      (_, i) => `Z${letter(Math.floor(i / 26))}${letter(i % 26)}`,
+    );
+    const found = docsMentioning(many, mentionRoot());
+    expect(Object.keys(found)).toHaveLength(MENTION_SCOPE_MAX);
+    // The dropped ones carry NO key — a caller must be able to tell "not searched" from "found
+    // nothing", because the board says something different for each.
+    expect(found[many[MENTION_SCOPE_MAX] ?? ""]).toBeUndefined();
+    expect(found[many[0] ?? ""]).toEqual([]);
+  });
+
+  it("sits above the shelf's own symbol-chip count, so clicking chips never reaches it", () => {
+    expect(MENTION_SCOPE_MAX).toBeGreaterThan(shelfSymbols(AS_OF).length);
   });
 
   it("never searches a template, the same skip rule the shelf listing applies", () => {

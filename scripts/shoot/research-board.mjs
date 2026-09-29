@@ -2,8 +2,9 @@
 // `sym:` filter, from the REAL built shell over stub APIs. PHONE FIRST (docs/PICTURES.md): the
 // 390px frames are where the change has to read, because the scoped doc lists are the whole point
 // and a study that only mentions the name has to be distinguishable from one the name owns at that
-// width. One run photographs both states by flipping what `/api/research/mentions` answers: an
-// empty map is exactly the pre-#3962 world (slug matching only), a populated one is the fix.
+// width. One run photographs both states by flipping what `/api/research/mentions` answers: a
+// search that finds nothing is exactly the pre-#3962 world (the slug net alone), a populated one is
+// the fix. Same query, same shelf payload, same build — only the search result differs.
 // Usage: npm run build --prefix app && npm run shoot:research-board [outdir]
 import { openShell } from "./shell.mjs";
 
@@ -90,8 +91,10 @@ const research = {
 };
 
 // What the corpus search finds for NVDA: three studies and two ledgers that say NVDA without being
-// about it. Empty for the BEFORE frames — the state the board was in before this endpoint existed.
-const MENTIONS = {
+// about it. The real endpoint always KEYS every symbol it searched — an empty list means "searched,
+// found nothing", a missing key means "never searched" — so every stub below keys its symbol too,
+// or the board would (correctly) report the answer as partial.
+const FOUND_NVDA = {
   bySymbol: {
     NVDA: [
       "ai-supply-chain",
@@ -103,7 +106,9 @@ const MENTIONS = {
   },
 };
 
-let searchWired = false;
+// The pre-#3962 world, faithfully: the search runs and matches nothing, so the board falls back to
+// the slug net alone. That is exactly what the old filter could see.
+let mentionsBody = { bySymbol: { NVDA: [] } };
 
 const { page, origin, shoot, close } = await openShell({
   name: "research-board",
@@ -111,7 +116,7 @@ const { page, origin, shoot, close } = await openShell({
   quality: 64,
   stubs: {
     "/api/research": research,
-    "/api/research/mentions": () => (searchWired ? MENTIONS : { bySymbol: {} }),
+    "/api/research/mentions": () => mentionsBody,
     "/api/plays": { plays: [] },
   },
 });
@@ -133,7 +138,7 @@ await shoot("research-board-scope-before-desktop");
 
 // AFTER — the corpus search answers, so those studies appear, each marked "mentions NVDA" beneath
 // the one marked "named for NVDA". Same query, same payload; only the search is wired.
-searchWired = true;
+mentionsBody = FOUND_NVDA;
 await page.setViewportSize({ width: 390, height: 1200 });
 await openScopedBoard();
 await shoot("research-board-scope-after-phone");
@@ -141,6 +146,7 @@ await page.setViewportSize({ width: 1280, height: 1100 });
 await shoot("research-board-scope-after-desktop");
 
 // The empty state says the name back rather than blaming "this filter" — the second EARS criterion.
+mentionsBody = { bySymbol: { ZZZT: [] } };
 await page.setViewportSize({ width: 390, height: 1200 });
 await page.goto(`${origin}/app/research?q=sym%3AZZZT&span=all`);
 await page.getByRole("heading", { name: "Studies" }).waitFor();
