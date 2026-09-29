@@ -18,7 +18,7 @@ import { type CouncilWeek, submitThesis } from "../live/council";
  * always starting blank — the affordance is "edit your line," never "post again."
  */
 
-export const COUNCIL_MAX_CHARS = 280;
+const COUNCIL_MAX_CHARS = 280;
 
 export function CouncilCompose({
   week,
