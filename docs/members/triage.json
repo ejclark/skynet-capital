@@ -106,8 +106,9 @@
   },
   {
     "screen": "/activity ?section=pulse (Feedback pulse)",
-    "verdict": "keep",
-    "mustBeSeenBy": "anyone signed in"
+    "verdict": "undecided",
+    "mustBeSeenBy": "anyone signed in",
+    "target": "nobody needs this — no member's job reads other members' filings; your own are on Profile → Feedback (this list's empty state already links there): fold in, or keep a league-wide list?"
   },
   {
     "screen": "/activity ?section=council",
@@ -132,8 +133,9 @@
   },
   {
     "screen": "/trade ?section=chart",
-    "verdict": "keep",
-    "mustBeSeenBy": "member with an account"
+    "verdict": "undecided",
+    "mustBeSeenBy": "member with an account",
+    "target": "nobody needs this — the one member who names the chart skips it (returning-trader §4) and the pane switch is proven by phone-only j1 s3: keep the pane, fold price into Guidance, or drop?"
   },
   {
     "screen": "/trade ?section=chain",
@@ -209,8 +211,9 @@
   },
   {
     "screen": "server /tower",
-    "verdict": "keep",
-    "mustBeSeenBy": "anyone (public 3D scene)"
+    "verdict": "undecided",
+    "mustBeSeenBy": "anyone (public 3D scene)",
+    "target": "nobody needs this — no page links it; members see the scene only framed inside app pages (the shell's crest, Sauron's card); standalone it is a deploy-eyeball page: off the member list, or retire?"
   },
   {
     "screen": "server /research/<slug>",

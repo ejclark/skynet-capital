@@ -215,6 +215,17 @@ describe("landingOf", () => {
     expect(landingOf("/app/u/sauron/thesis", ctx(true))).toEqual(["/u/$id/thesis"]);
     expect(landingOf("/app/nowhere", ctx(true))).toEqual(["unknown URL"]);
   });
+
+  it("lands a path outside /app on the server page that serves it, else on the Not Found row", () => {
+    expect(landingOf("/login", ctx(false))).toEqual(["server /login"]);
+    expect(landingOf("/research/nvda-aug-2026-print", ctx(true))).toEqual([
+      "server /research/<slug>",
+    ]);
+    expect(landingOf("/research/events/x?lens=week", ctx(true))).toEqual([
+      "server /research/<slug>",
+    ]);
+    expect(landingOf("/nowhere", ctx(true))).toEqual(["unknown URL"]);
+  });
 });
 
 describe("coverage", () => {
