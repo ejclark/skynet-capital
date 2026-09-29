@@ -255,17 +255,17 @@
   {
     "screen": "server /invite, /claim, /account, /rotate, /controls, /u",
     "verdict": "redirect-only",
-    "target": "/app/settings (Preferences; should be ?section=guests or ?section=account)"
+    "target": "/app/settings?section=guests (/invite) | /app/settings?section=account (the rest)"
   },
   {
     "screen": "server /u/<id> (?tab=performance|settings)",
     "verdict": "redirect-only",
-    "target": "/app/u/<id> | /app/u/<id>/pulse | /app/settings"
+    "target": "/app/u/<id> | /app/u/<id>/pulse | /app/settings?section=account"
   },
   {
     "screen": "server /leaderboard, /bots-vs-humans, /compare",
     "verdict": "redirect-only",
-    "target": "/app/leaderboard (/leaderboard keeps only by=, drops a/b; /compare keeps the query)"
+    "target": "/app/leaderboard (/leaderboard keeps by=/a=/b=; /compare keeps the query)"
   },
   {
     "screen": "server /wire, /app/wire",

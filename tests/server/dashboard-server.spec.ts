@@ -201,7 +201,7 @@ describe("dashboard-server OAuth gate", () => {
           redirect: "manual",
         });
         expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("/app/settings");
+        expect(res.headers.get("location")).toBe("/app/settings?section=account");
       },
     );
   });

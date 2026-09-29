@@ -32,7 +32,8 @@ describe("serveLegacyRedirect", () => {
     expect(target("/u/sauron", "/u/sauron?tab=active")).toBe("/app/u/sauron");
     // Performance's twin is Pulse; the settings tab moved to app Settings (Mission Control).
     expect(target("/u/sauron", "/u/sauron?tab=performance")).toBe("/app/u/sauron/pulse");
-    expect(target("/u/sauron", "/u/sauron?tab=settings")).toBe("/app/settings");
+    expect(target("/u/sauron", "/u/sauron?tab=settings")).toBe("/app/settings?section=account");
+    expect(target("/u/")).toBe("/app/settings?section=account");
   });
 
   it("renames the twinned pages, queries riding along", () => {
@@ -45,23 +46,26 @@ describe("serveLegacyRedirect", () => {
     expect(target("/collections/wheel-desks", "/collections/wheel-desks?x=1")).toBe(
       "/app/research?section=playbooks",
     );
-    expect(target("/account")).toBe("/app/settings");
+    expect(target("/account")).toBe("/app/settings?section=account");
     expect(target("/add", "/add?key=abc")).toBe(
       "/app/accounts?section=milestones&chapter=onboarding&key=abc",
     );
     expect(target("/feedback")).toBe("/app/accounts?section=feedback");
-    // The owner pages' cards live on app Settings (9e).
-    expect(target("/invite")).toBe("/app/settings");
-    expect(target("/claim")).toBe("/app/settings");
+    // The owner pages land on the Settings section that carries their card (#3816 slice 7), never
+    // on Preferences: the guest list, and the unclaimed accounts on Account.
+    expect(target("/invite")).toBe("/app/settings?section=guests");
+    expect(target("/claim")).toBe("/app/settings?section=account");
     // Ops status is the topbar pill now (#1296), on every route — so the bookmark lands on the app.
     expect(target("/ops-status")).toBe("/app/");
     // The retired Mission Control bookmark — the fleet switchboard for every viewer now.
-    expect(target("/controls")).toBe("/app/settings");
+    expect(target("/controls")).toBe("/app/settings?section=account");
     // The coach and preview are shared JSON endpoints, not pages — they keep serving.
     expect(target("/feedback/coach")).toBeUndefined();
     expect(target("/feedback/preview")).toBeUndefined();
-    expect(target("/rotate", "/rotate?id=bot-sauron")).toBe("/app/settings?id=bot-sauron");
-    expect(target("/u")).toBe("/app/settings");
+    expect(target("/rotate", "/rotate?id=bot-sauron")).toBe(
+      "/app/settings?section=account&id=bot-sauron",
+    );
+    expect(target("/u")).toBe("/app/settings?section=account");
     // The ticket joined in 10b — the shell gate speaks ?play=, so the learn links land preset.
     expect(target("/trade", "/trade?play=201")).toBe("/app/trade?play=201");
   });
@@ -91,6 +95,11 @@ describe("serveLegacyRedirect", () => {
 
   it("keeps the pre-shell board folds working", () => {
     expect(target("/leaderboard", "/leaderboard?by=cash")).toBe("/app/leaderboard?by=cash");
+    expect(target("/leaderboard")).toBe("/app/leaderboard");
+    // An old compare link keeps its head-to-head pair (#3816 slice 7); anything else drops.
+    expect(target("/leaderboard", "/leaderboard?a=x&b=y&by=return&tab=z")).toBe(
+      "/app/leaderboard?by=return&a=x&b=y",
+    );
     expect(target("/bots-vs-humans")).toBe("/app/leaderboard");
     expect(target("/compare", "/compare?a=x&b=y")).toBe("/app/leaderboard?a=x&b=y");
   });
