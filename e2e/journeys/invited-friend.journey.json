@@ -120,6 +120,17 @@
             { "text": "EEM", "exact": true }
           ],
           "judge": "can this reader tell who did what today?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/activity?section=pnl",
+          "sees": "Activity → Booked P&L: realized P&L per account across the league, each a link into its page; offline nothing is booked yet (the frozen fixture has no closes)",
+          "ears": "WHEN the invited friend opens Booked P&L, the app shall show realized P&L for every member's accounts, the friend's and the owner's alike.",
+          "expect": [
+            { "url": "/app/activity?section=pnl" },
+            { "role": "heading", "name": "Booked P&L" }
+          ],
+          "judge": "can this reader tell where they stand on what has been closed?"
         }
       ]
     },
@@ -151,6 +162,34 @@
             { "text": "HC-SAURON", "absent": true }
           ],
           "judge": "can this reader tell the bot is alive without learning its playbooks?"
+        }
+      ]
+    },
+    {
+      "id": "j4",
+      "name": "my bot",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts?account=day-trader&section=heartbeat",
+          "sees": "Profile on The Day Trader, the bot the friend owns: the switch gains Heartbeat · Thesis; Heartbeat says whether the loop is alive (offline: no decision trail is wired)",
+          "ears": "WHEN the invited friend opens Profile on the bot they own, the app shall offer its Heartbeat and show whether it is alive.",
+          "expect": [
+            { "url": "/app/accounts?account=day-trader&section=heartbeat" },
+            { "role": "button", "name": "Heartbeat", "exact": true, "within": "main" }
+          ],
+          "judge": "can this reader tell whether their bot is running?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/accounts?account=day-trader&section=thesis",
+          "sees": "Thesis on the friend's own bot: its standing call and the markers behind it",
+          "ears": "WHEN the invited friend opens Thesis on the bot they own, the app shall show that bot's standing call.",
+          "expect": [
+            { "url": "/app/accounts?account=day-trader&section=thesis" },
+            { "role": "button", "name": "Thesis", "exact": true, "within": "main" }
+          ],
+          "judge": "can this reader tell what their bot believes right now?"
         }
       ]
     }

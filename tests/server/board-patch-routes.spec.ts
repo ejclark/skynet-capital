@@ -5,7 +5,6 @@ import type { ParticipantSnapshot } from "../../src/observatory/participant-snap
 import {
   createBoardChannel,
   driveBoardChannel,
-  serveBoardFrame,
   streamBoardPatches,
 } from "../../src/server/board-patch-routes.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
@@ -200,16 +199,5 @@ describe("streamBoardPatches", () => {
     const { res, out } = fakeResponse();
     streamBoardPatches(request({ "last-event-id": "42" }), res, channel, "equity", {});
     expect(frames(out.chunks)[0]).toEqual({ event: "resync", data: { seq: 0 } });
-  });
-});
-
-describe("serveBoardFrame", () => {
-  it("re-serves the standings content whole, uncached, for the patch fallback", () => {
-    const hub = new ObservatoryHub(data(snap()));
-    const { res, out } = fakeResponse();
-    serveBoardFrame(res, hub, { active: "board", canAdd: false, authed: true }, "equity", {});
-    expect(out.status).toBe(200);
-    expect(out.headers).toMatchObject({ "cache-control": "no-store" });
-    expect(out.chunks.join("")).toContain('data-field-key="human-eric"');
   });
 });

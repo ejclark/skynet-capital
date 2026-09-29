@@ -116,6 +116,10 @@ Rules that make it work, in priority order:
    describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the
    closing slice in the sketch (`"slice 3 closes this"`), and that slice's PR body carries `Closes
    #N` — `scripts/plan-closure-scan.mjs` flags a merged branch that referenced the issue without one.
+10. **A plan for a member-facing page carries an `At 390, in order:` line under Constraints** — the
+   ranked list of what the page shows first at phone width (`At 390, in order: balance · open
+   positions · the trade button`). The PR's first phone screenshot is checked against it
+   (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
 
 ### An optional block: capturing a raw idea before it's a plan
 

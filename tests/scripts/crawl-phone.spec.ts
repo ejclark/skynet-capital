@@ -7,6 +7,7 @@ import {
   isUaDefault,
   leaks,
   outermostLeaks,
+  phoneArgs,
   phoneFindings,
   spacedEnough,
   tapFindings,
@@ -249,5 +250,34 @@ describe("foldPhoneRows", () => {
       ["eric", ["J1·s1", "J2·s3"]],
       ["phone-only", ["J1·s1"]],
     ]);
+  });
+});
+
+describe("phoneArgs — npm run phone's flags", () => {
+  it("defaults to /app, open boot, the side-by-side ports", () => {
+    expect(phoneArgs([])).toEqual({
+      path: "/app",
+      session: false,
+      strict: false,
+      all: false,
+      click: undefined,
+      at: undefined,
+      port: 8797,
+      bridgePort: 8798,
+    });
+  });
+
+  it("takes a server page's path as readily as an /app one", () => {
+    expect(phoneArgs(["/research/nvda-aug-2026-print", "--all"]).path).toBe(
+      "/research/nvda-aug-2026-print",
+    );
+    expect(phoneArgs(["--session", "/login"]).path).toBe("/login");
+  });
+
+  it("never mistakes --click's selector or --at's time for the path, before or after it", () => {
+    const a = phoneArgs(["--click", ".status", "/app/wire", "--session"]);
+    expect(a).toMatchObject({ path: "/app/wire", click: ".status", session: true });
+    const b = phoneArgs(["--at", "2026-09-26T15:00:00Z", "--strict"]);
+    expect(b).toMatchObject({ path: "/app", at: "2026-09-26T15:00:00Z", strict: true });
   });
 });

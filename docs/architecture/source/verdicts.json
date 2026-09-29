@@ -3,7 +3,7 @@
     "label": "refute:runtime:0",
     "element": "Browser app container (React 19 observatory shell at /app)",
     "grounded": true,
-    "correction": "Optional refinements: label the stream as \"SSE /events?by=<metric> (seq patches; resnapshot via /board/frame on a gap)\", and label writes as \"JSON POST via postJson (mostly /api/*, plus /feedback/coach)\". In dev, Rsbuild serves at :5174 and proxies to the node server at :8787. In production, the node server serves app/dist."
+    "correction": "Optional refinements: label the stream as \"SSE /events?by=<metric> (seq patches; resnapshot via /api/board on a gap)\", and label writes as \"JSON POST via postJson (mostly /api/*, plus /feedback/coach)\". In dev, Rsbuild serves at :5174 and proxies to the node server at :8787. In production, the node server serves app/dist."
   },
   {
     "label": "refute:runtime:1",

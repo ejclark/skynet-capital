@@ -10,15 +10,7 @@ import { SHELL_STYLE } from "./shell-style.js";
  */
 
 /** Which top-level view is active, for the shared nav. */
-export type NavView =
-  | "board"
-  | "wire"
-  | "trade"
-  | "research"
-  | "you"
-  | "add"
-  | "learn"
-  | "feedback";
+type NavView = "board" | "wire" | "trade" | "research" | "you" | "add" | "learn" | "feedback";
 
 export interface NavContext {
   readonly active: NavView;

@@ -62,15 +62,43 @@ export function resolveNetWorth(
   return { stats: row, caption: row?.name ?? "this account", roster: [], allAccounts: false };
 }
 
-/** The switcher's row, said in words — the same label and the same height as the control. */
-function HeadNote({ children }: { readonly children: ReactNode }): ReactElement {
+/** The switcher's row, said in words — the same label and the same height as the control, and
+ *  the same link row at its right edge. */
+function HeadNote({
+  children,
+  trailing,
+}: {
+  readonly children: ReactNode;
+  readonly trailing: ReactNode;
+}): ReactElement {
   return (
     <div className="set-switch cockpit-head-note">
       <div className="field set-switch-field">
         <span className="cockpit-head-label">Account</span>
         <p className="cockpit-head-line">{children}</p>
       </div>
+      <span className="set-switch-aside">{trailing}</span>
     </div>
+  );
+}
+
+/** The head's link row: the picked account's page as the league sees it (when one account is
+ *  picked), then Settings in words (#3816 slice 7 — Eric, 2026-09-04, asked for a labelled link
+ *  beside its sibling; the topbar's icon-only gear stays as the global fast path). Present in every
+ *  head state, so a member with no account or on a viewer section still reads where Settings is. */
+function HeadLinks({ accountId }: { readonly accountId?: string }): ReactElement {
+  return (
+    <>
+      {accountId ? (
+        <>
+          <Link to="/u/$id" params={{ id: accountId }}>
+            Open as the league sees it
+          </Link>
+          {" · "}
+        </>
+      ) : null}
+      <Link to="/settings">Settings</Link>
+    </>
   );
 }
 
@@ -132,13 +160,15 @@ export function CockpitHead({
     <>
       <div className="cockpit-head">
         {!linked ? (
-          <HeadNote>
+          <HeadNote trailing={<HeadLinks />}>
             <span>
               No account linked yet — <ConnectLink />.
             </span>
           </HeadNote>
         ) : isViewerSection(section) ? (
-          <HeadNote>{VIEWER_LINE[section as "milestones" | "feedback"]}</HeadNote>
+          <HeadNote trailing={<HeadLinks />}>
+            {VIEWER_LINE[section as "milestones" | "feedback"]}
+          </HeadNote>
         ) : (
           <AccountSwitcher
             accounts={accounts}
@@ -148,11 +178,9 @@ export function CockpitHead({
             isDefault={isDefault}
             onToggleDefault={onToggleDefault}
             trailing={
-              accountId === ALL_ACCOUNTS || accountId === "" ? undefined : (
-                <Link to="/u/$id" params={{ id: accountId }}>
-                  Open as the league sees it
-                </Link>
-              )
+              <HeadLinks
+                {...(accountId === ALL_ACCOUNTS || accountId === "" ? {} : { accountId })}
+              />
             }
           />
         )}

@@ -168,7 +168,9 @@ describe("page sections", () => {
       const trade = read("app/src/routes/trade.tsx");
       // one breakpoint, owned by the hook — never a second media query in the route
       expect(trade).toContain("useBenchWidth");
-      expect(read("app/src/shell/use-bench-width.ts")).toContain("BENCH_MIN_WIDTH = 1280");
+      expect(read("app/src/shell/use-bench-width.ts")).toContain("useMediaQuery(BENCH_QUERY)");
+      // the width is the named bench edge (docs/BRAND.md → Three named widths)
+      expect(read("app/src/shell/widths.ts")).toContain("bench: 1280");
       // the switch renders only when folded (frame.tsx's doctrine) — as the stage's controls row
       // since the rail left the frame (#3807 slice 2a); docked there is no row, and the guidance
       // link (#3729 — the one pane with no other way in) rides beside the milestone strip instead
