@@ -83,6 +83,8 @@ export function phoneFindings(snap: Snapshot): PhoneFinding[];
 export interface PhoneArgs {
   path: string;
   session: boolean;
+  /** Boot with sign-in configured: `--session`, or a page only served then (`AUTH_PAGES`). */
+  authBoot: boolean;
   strict: boolean;
   all: boolean;
   click: string | undefined;
@@ -91,3 +93,5 @@ export interface PhoneArgs {
   bridgePort: number;
 }
 export function phoneArgs(argv: string[]): PhoneArgs;
+export const AUTH_PAGES: string[];
+export function servedFinding(status: number, path: string): PhoneFinding | null;
