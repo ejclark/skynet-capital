@@ -186,10 +186,12 @@ export class Authenticator {
     background:radial-gradient(120% 90% at 50% 40%, transparent 45%, color-mix(in srgb,var(--bg) 82%,transparent) 100%); }
   /* Film grain: a fine fractal-noise texture over the whole scene (blended in) that unifies the
      composition and adds a filmic / rendered level-of-detail — subtle, never a spectacle. */
-  .grain{ position:fixed; inset:-60%; z-index:3; pointer-events:none; opacity:.06; mix-blend-mode:overlay;
+  /* inset:0, not an oversized box: a box 220% of the screen made the page pan sideways on phones
+     (658px wide at 390, #4046). The jitter now moves the texture, never the box. */
+  .grain{ position:fixed; inset:0; z-index:3; pointer-events:none; opacity:.06; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size:150px 150px; animation:grain 1.1s steps(3) infinite; will-change:transform; }
-  @keyframes grain{ 0%{transform:translate(0,0);} 33%{transform:translate(-5%,4%);} 66%{transform:translate(4%,-5%);} 100%{transform:translate(-3%,3%);} }
+    background-size:150px 150px; animation:grain 1.1s steps(3) infinite; }
+  @keyframes grain{ 0%{background-position:0 0;} 33%{background-position:-19px 15px;} 66%{background-position:15px -19px;} 100%{background-position:-11px 11px;} }
 
   @keyframes beam{ 0%{ transform:translateY(-40%); opacity:0; } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ transform:translateY(240%); opacity:0; } }
 
@@ -221,11 +223,13 @@ export class Authenticator {
   /* PLAY: subtle affordance — a low-key dotted underline that lights on hover/focus/open, so it
      invites without shouting "menu" and doesn't break the calm triad read. */
   .mode.call, .mode.learn{ pointer-events:auto; cursor:pointer; color:var(--muted); position:relative;
-    border-bottom:1px dotted color-mix(in srgb,var(--muted) 60%,transparent);
-    transition:color .2s ease, border-color .2s ease, text-shadow .2s ease; }
+    text-decoration:underline dotted 1px; text-underline-offset:3px;
+    text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent);
+    padding:7px 4px; margin:-7px -4px;   /* a >=24px tap area (WCAG 2.5.8) that looks unchanged */
+    transition:color .2s ease, text-decoration-color .2s ease, text-shadow .2s ease; }
   .mode.call:hover, .mode.call:focus-visible, .modes.open .mode.call,
   .mode.learn:hover, .mode.learn:focus-visible, .learn[aria-expanded="true"]{
-    color:var(--accent); border-bottom-color:var(--accent);
+    color:var(--accent); text-decoration-color:var(--accent);
     text-shadow:0 0 12px color-mix(in srgb,var(--accent) 55%,transparent); }
   .mode.call:focus-visible, .mode.learn:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
   /* Playbook popover — compact mono list of callable plays; hidden until PLAY invites it. */
@@ -302,7 +306,7 @@ export class Authenticator {
   /* Single toggle — dead-centered on the RING (fixed width, so the label never shifts it), and
      static when toggling: the button stays put, only the chevron flips (up = enter, down = close). */
   .beacon{ position:fixed; z-index:6; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
-    width:56px; display:flex; flex-direction:column; align-items:center; cursor:pointer;
+    width:13rem; display:flex; flex-direction:column; align-items:center; cursor:pointer;   /* fits "Enter the sandbox"; ring stays centred */
     background:none; border:0; color:var(--text); font-family:var(--sans); }
   .beacon-label{ position:absolute; top:100%; left:50%; transform:translateX(-50%); margin-top:12px; white-space:nowrap;
     font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); transition:color .2s ease; }
