@@ -104,7 +104,7 @@ finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
 | Bot doctrine checks | Does each bot's written doctrine still match its code? | #2287 | running | its dossier ledger (`docs/BOTS-SAURON.md`), flagged by the same scan |
 | Mobile-first bet | Is expanding a curated phone view faster than retrofitting a desktop one? | `CLAUDE.md` → Mobile-first | running | 2026-10-31 — wrong if the next three phone-first surfaces each needed a desktop re-layout PR |
 | Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run and post on #4061; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
-| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? | #4062 | piloting | 2026-10-21 — first recurrence report |
+| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-10-21 — re-run and post on #4062; baseline 2026-09-30: gate or script 6 of 55 recurred (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
 | Bottleneck before/after | Does each `bottleneck` fix move the number it named? First instance: #3926, retries per CI run | #4063 | piloting | 2026-10-21 — #3926's before and after numbers recorded |
 | Readiness rubric | Do items the rubric flags deliver worse than unflagged ones? | #4056 | running | 2026-10-31 — kill everything but the parked check if flagged and unflagged land within 5pp |
 | Issue-centric orchestration | Do #3818's dated falsifiers hold? | #3818 | running | 2026-10-10 — first falsifier; the second is 2026-10-31 |

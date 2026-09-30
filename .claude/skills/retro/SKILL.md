@@ -93,6 +93,11 @@ Append an entry to `docs/LESSONS.md` in the documented format (title, `SHA`, `DA
 `SIGNAL`, `ROOT CAUSE`, `PREVENTION`, `SIDE QUESTS`). The gate parses these field names, so keep
 them exact, and never leave `STATUS: open` — an open entry fails the build by design.
 
+**Same class as an earlier entry?** Then that entry's fix did not hold. Add
+`- **RECURS:** <the earlier entry's exact title>` under your `SHA`/`DATE` line, and run
+`npm run lessons:held` — it lists unlearned runs on the same workflow as earlier lessons, as leads,
+and scores whether gate-type preventions recur less than doctrine-only ones.
+
 ## 7. Verify and ratchet
 
 ```bash

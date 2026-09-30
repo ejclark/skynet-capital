@@ -62,6 +62,7 @@
     "delivery:score": "node scripts/delivery-score.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "research:scorecard": "node scripts/research-scorecard.mjs",
+    "lessons:held": "node scripts/fix-held.mjs",
     "mermaid:lint": "node scripts/mermaid-lint.mjs",
     "arch:pages": "node scripts/architecture-pages.mjs",
     "research:week": "tsx src/scripts/week-study.ts",
