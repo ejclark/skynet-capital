@@ -905,15 +905,15 @@ market events — **potentially _the brand itself_**, the addictive hook. **Fun 
 (engagement → legibility/trust → capital → autonomy). Reflects portfolio positions, news, economy, and
 politics; domain-themed empires; construction = maturing bets; a judgment axis (good bet vs. hype vs.
 legal risk) held to an honest, data-sourced standard. Phased:
-- **P1 Landmarks from personas** — personas as skyline structures beyond the Eye (display-only). _(src: Eric)_
-- **P2 "Your city"** — logged-in cityscape driven by `ParticipantSnapshot` (positions→towers, P/L→health); needs two-modes (#54) + history layer. _(src: Eric)_
-- **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_
-- **P4 Contributable personas** — users add bot personas that join the universe (plugin behind the persona-lore seam). _(src: Eric)_
-- **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_
+- **P1 Landmarks from personas** — personas as skyline structures beyond the Eye (display-only). _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P2 "Your city"** — logged-in cityscape driven by `ParticipantSnapshot` (positions→towers, P/L→health); needs two-modes (#54) + history layer. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P4 Contributable personas** — users add bot personas that join the universe (plugin behind the persona-lore seam). _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
+- **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31; canonical home [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md) → Phased roadmap)_
 - **Scale across the four views** — the sim-city grammar renders at different zoom: individual = a city,
   comparison = two cities (commonality + contrast), leaderboard = a region/map, bots-vs-humans = country
   vs country where the *units of measure change* (buildings fall off; GDP/territory/development emerge).
-  A per-view rendering spec over the existing routes. _(src: Eric)_
+  A per-view rendering spec over the existing routes. _(src: Eric)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when the leaderboard gets a zoomed-out aggregate view; the four routes now fold into `/app/leaderboard` (#552, #553, #827))_
 
 ### Living Universe — event ceremonies, the founding & player agency (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
 - **The founding + "key to the city" ceremony** — starting/uninvested capital renders as a landmark
@@ -996,7 +996,7 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
   (surfaced at signup / `/welcome`) so the basis for data-sharing is on record. Eric to define the
-  wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_
+  wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when someone outside the founding group is invited)_
 - **Issue-driven distributed development (Eric, 2026-08-11):** "enable Claude to pick up and work
   GitHub issues… lets humans create issues that get serviced, as well as orchestration for bots to
   manage their work." Two consumers, one mechanism — humans file work, and bots file their *own*
@@ -1007,20 +1007,15 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   starting one; (b) the **trust ladder** below, deciding which issue classes may be serviced
   unattended; (c) a **concurrency/ownership rule** so two agents never take the same issue. Worth
   scoping as its own plan; the credentialed step (granting the trigger write access) stays Eric's.
-- **Autonomous GitHub-issue contribution system** — autonomously pick up & act on issues, starting
-  narrow (tier 1: additive, display-only persona/landmark integrations) and widening by a progressive-
-  trust ladder. Rails-first, mantra **Detect · Correct · Maintain**: brand + Graphify `affected` +
-  tests + alignment review gate every change; drift blocks/reverts. Sensitive steps (granting
-  autonomy, credentials, **real-money trading**) always Eric's. Framework in `LIVING-UNIVERSE.md`. _(src: Eric)_
 
 ### Larger tasks (need dedicated focus)
 - **Login terminal drawer + backstory** — convert the canvas play-panel into a terminal-style DOM
-  drawer that opens with a preamble/backstory. (tasks #68/#72; canvas→DOM migration; best done live.)
+  drawer that opens with a preamble/backstory. (tasks #68/#72; canvas→DOM migration; best done live.) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login play panel (`drawTerminal` in `src/server/auth/authenticator.ts`))_
 - **Two modes** — intro `/login` = fast preview (gist, gloss details); logged-in = slow, controllable,
-  studyable inspection. (task #54)
+  studyable inspection. (task #54) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when the logged-in shell gets a playcall surface)_
 - **Decoupled playcall drawer** — a left collapsible drawer housing Signal→Play→profit, decoupled from
   the trend chart, carried into the logged-in view; move the playcall recap into it with a connector
-  line to its chart position. (tasks #49 + #51-remainder)
+  line to its chart position. (tasks #49 + #51-remainder) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login play panel; `authenticator.ts` still keeps the drawer helpers for task #49)_
 - **/add as the character sheet — persona field = character class** — the persona-id input on `/add` is
   really the CLASS slot of a character sheet; redesign the flow around that: bot setup presents the
   roster as selectable class cards (name, thesis, lore line, risk read from its eval report), Human is
@@ -1050,12 +1045,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   pieces scene-graph refactor** (uniform piece contract) and feeds **contributable personas (P4)** +
   bot-creation. Big — needs dedicated focus; Barad-dûr is the first worked example to extract the template
   from. _(src: Eric · while: detailing the Sauron tower — wanting hero fidelity to be systematic + generable)_
-- **North-star autonomous pipeline** — recycle the playbook artifact as a systems-level pipeline
-  toward autonomous deployment (recognize signal → recommend → trade, with safeguards). (task #41)
 - **Lore universe (mixed multiverse)** — give each persona a character card (name, archetype,
   allegiance, one-line legend) surfaced on `/u/:id` and woven into trade narration + cityscape + copy;
   keep the system extensible to adopt others' ideas. Confirm the pantheon direction with Eric before
-  broad rollout. (task #79; Sauron + the Eye of Sauron are the first thread.)
+  broad rollout. (task #79; Sauron + the Eye of Sauron are the first thread.) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a persona character card or the `/add` class picker ships)_
   - **Real name + character alias (identity duality).** Real names are ideal for accountability —
     within the invite gate, people should know who represents what (consistent with the consensual
     shared-universe boundary). *On top of that*, the gamification warrants a **character alias** people
@@ -1071,7 +1064,7 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   as accepting/proposing side quests could organically pique interest. v1 shipped (the `/feedback`
   "idea" kind is now a 🗺️ Side quest). Deeper version: a light quest board — proposed side quests
   visible, upvotable, with playful status (open → accepted → shipped), tied into the lore universe.
-  _(src: Eric · while: extending the Claude side-quest idea system)_
+  _(src: Eric · while: extending the Claude side-quest idea system)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when member filings resume at ≥2/week; the v1 label is now "🗺️ Enhancement" (#982))_
 - **Timed play events + bounties** — a time-boxed group event where everyone's play is measured over a
   window, with a **bounty** as the prize; adds a fun competitive beat (and pairs with human-vs-own-bot).
   Two constraints to design around: (1) **everyone needs powder to participate** — solve in-app by
@@ -1155,51 +1148,19 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   OAuth-connected bot ("Connect with Alpaca", Round B) would auth with a blank key/secret instead of its
   Bearer token. Latent today (no OAuth bots yet); real fix before Round B ships. A `.todo` in
   `tests/bots/bot-broker.spec.ts` documents it. _(src: Claude · while: backfilling bot-broker specs)_
-- **Empire skyline on the comparison view** — render two empire skylines side by side on `/compare`
-  (the "two cities" from the scale ladder: commonality = shared towers, contrast = coal/rail vs.
-  solar/silicon silhouettes). Reuses `renderEmpireSkyline`; the next natural P2 slice.
-  _(src: Claude · while: building the empire skyline)_
 - **Sector map from a data source** — `SECTOR_BY_TICKER` is a curated table; as holdings diversify,
-  drive it from a real sector feed (or derive) so any ticker themes correctly. _(src: Claude · while: building the empire skyline)_
-- **Refine energy/gold/broad silhouettes** — the non-tech sector shapes are basic; give each the
-  exquisite-detail treatment once those sectors actually appear in holdings. _(src: Claude · while: building the empire skyline)_
-- **Skyline label collision at high position counts** — ticker labels crowd past ~6 holdings; needs the
-  same collision handling as the canvas labels (#47). _(src: Claude · while: building the empire skyline)_
-- **Machine-checkable brand cohesion (`brand.json`)** — emit tokens + anchor→node bindings + per-scope
-  rules so BCP's *Enforce* step can lint deliverables against the brand automatically (per community
-  scope). The deeper half of the BCP × Graphify integration. _(src: Claude · while: running Graphify)_
-- **Refactor candidates from the graph** — Graphify flags low-cohesion communities (`MarketContext`,
-  `dashboard-data.ts`, `data-source.ts`) as split opportunities. Not urgent; run `affected` first on
-  any target. _(src: Claude · while: reading the structural map)_
-- **Dead-code sweep from isolated nodes** — 126 weakly-connected nodes flagged; most are config keys
-  (noise), but some may be genuinely unused exports. Verify carefully (entry points / test-only aren't
-  dead) before removing. _(src: Claude · while: reading the structural map)_
-- **Install Graphify as a native `/graphify` skill** — `graphify install --platform claude` would make
-  the commands first-class in-session; env is ephemeral so it doesn't persist, but worth it if a
-  durable place to store the skill emerges. _(src: Claude · while: exploring Graphify's command surface)_
-- **Eye searchlight sweep + drifting embers** — at rest, a slow narrow beam from the Eye scans the
-  skyline, and embers drift up from the tower; deepens the lore anchor without stealing focus.
-  _(src: Claude · while: making the Eye of Sauron more pronounced)_
+  drive it from a real sector feed (or derive) so any ticker themes correctly. _(src: Claude · while: building the empire skyline)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a live board projection sends a held symbol to the `market` fallback in `src/universe/sectors.ts`)_
 - **Tie billboard ticker prices to the real sim market** — the marquee prices are independent seeded
   walks; driving them from the actual sim tape (or the `/pulse` cohort data) would make the city
-  cohere with the trend it sits under. _(src: Claude · while: adding ticker billboards)_
+  cohere with the trend it sits under. _(src: Claude · while: adding ticker billboards)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches `drawBillboards` in `src/server/auth/authenticator.ts`)_
 - **Reduced-motion "distant flash"** — under `prefers-reduced-motion` the storm never fires lightning
   (rainT never reaches the threshold); render one static distant flash so the frozen frame still reads
-  as a storm. _(src: Claude · while: adding the rain + lightning storm)_
-- **Verify + polish the 3-bot board** — with Sauron added, sanity-check the leaderboard /
-  bots-vs-humans / compare views with three bots (ordering, cohort aggregates, spacing). The offline
-  server render got interrupted and was never confirmed. _(src: Claude · while: adding the Sauron persona)_
+  as a storm. _(src: Claude · while: adding the rain + lightning storm)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login storm (`drawWeather`, reduced-motion branch))_
 - **Login canvas frame-budget audit** — the login now stacks rain + weather + Eye + city + beams +
   playcall; a quick perf pass (frame cap, offscreen work, DPR cost) would protect the "lovable" feel
-  on weaker devices. _(src: Claude · while: layering cityscape effects)_
-- **Persona WATCHING richness parity** — the playcall's WATCHING/fear-greed panel is rich; the six
-  older personas have plain one-line theses. A light pass could give each a signature "watches"
-  signal, feeding the future lore cards. _(src: Claude · while: adding the Sauron persona)_
+  on weaker devices. _(src: Claude · while: layering cityscape effects)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a phone or low-end device report shows the login canvas stuttering)_
 
 ### Eric's governance calls (do not build unattended)
-- **Feedback triage / auto-fix automation** on the issues the in-app funnel now creates. (task #74)
-- **Self-service "request feedback access"** collaborator flow — largely *superseded* by the in-app
-  feedback funnel (PR #80); likely closeable. (task #76)
 - **History / persistence backend** — shipped and recording; consumption tracked in
   [`plans/history-layer.md`](plans/history-layer.md). Still Eric's to settle: retention (keep
   forever vs prune), and whether to add an off-machine backup export beyond Fly's default snapshots.
@@ -1218,6 +1179,16 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## Shipped (recent)
 
+- **IDEAS.md sweep, 2026-09-30** (#4056 slice 5): 14 of the 30 oldest entries retired. The evidence
+  per entry is in the sweep PR's table.
+  - Shipped: feedback triage/auto-fix automation and the autonomous issue system (Moneypenny's
+    build lane, `moneypenny-events.yml`, #912, with `envelope.json` as the rails); the north-star
+    pipeline (`src/autonomous`, #184, `docs/AUTONOMY-PLAN.md`); the Eye's searchlight and embers (#146, #3718).
+  - Superseded: "request feedback access" (#80, `/app/join` #777); the 3-bot board check and WATCHING
+    parity (views folded in #552/#553, WATCHING panel dissolved in #146); graph refactor and dead-code
+    sweeps (the arch and knip gates plus the decomposer and mortician); `brand.json` (open question in
+    `docs/BCP-GRAPHIFY.md`); the `/graphify` skill (`docs/GRAPHIFY.md`; not installed in session containers).
+  - Dead: the three empire-skyline ideas. No page has rendered the skyline since #827; #4201 deletes it.
 - `integration tests` is a required merge check, beside `verify` (Eric, 2026-09-30, one
   branch-protection call). Since 09-22 it had been advisory: auto-merge fired on `verify` alone,
   and a red e2e rode 10+ merges unnoticed. _(src: Claude · while: root-causing PR #3576)_
