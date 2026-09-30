@@ -379,17 +379,21 @@ export class AlpacaOptionsClient {
    * successful answer meaning the feed has nothing for this symbol/window (a brand-new or halted
    * ticker). The two are never conflated. Takes explicit `start`/`end` so it stays a thin, testable
    * wrapper; the lookback-window arithmetic and its clamp belong to the route that builds the URL.
+   *
+   * `adjustment` stays `raw` for the chart (it prints what traded); a returns calculation such as
+   * beta (#4327) asks for `all`, so a split or a dividend is not read as a price move.
    */
   async getBars(
     symbol: string,
     start: string,
     end: string,
     limit = 1000,
+    adjustment: "raw" | "split" | "all" = "raw",
   ): Promise<Bar[] | undefined> {
     if (!this.data) return undefined;
     try {
       const response = await this.data.get(
-        `/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&start=${start}&end=${end}&limit=${limit}&feed=iex&adjustment=raw`,
+        `/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&start=${start}&end=${end}&limit=${limit}&feed=iex&adjustment=${adjustment}`,
       );
       if (response.status < 200 || response.status >= 300) return undefined;
       const body = response.body as { bars?: Record<string, unknown>[] } | null;

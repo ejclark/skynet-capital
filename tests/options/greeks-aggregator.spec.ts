@@ -1,5 +1,6 @@
 import {
   aggregateGreeks,
+  betaWeightDelta,
   type ContractGreeks,
   isRepresentative,
 } from "../../src/options/greeks-aggregator.js";
@@ -69,37 +70,78 @@ describe("portfolio greeks — the arithmetic", () => {
   });
 });
 
-describe("portfolio greeks — beta weighting", () => {
-  const betas = (u: string): number | undefined => ({ NVDA: 2, KO: 0.5 })[u];
+describe("portfolio greeks — beta weighting to SPY", () => {
+  const betas = (u: string) =>
+    ({ NVDA: { beta: 2, asOf: "2026-09-29" }, KO: { beta: 0.5, asOf: "2026-09-29" } })[u];
+  const prices = (u: string): number | undefined => ({ NVDA: 180, KO: 70 })[u];
+  const book = aggregateGreeks(
+    [
+      { symbol: NVDA_CALL, quantity: 1 },
+      { symbol: KO_CALL, quantity: 1 },
+    ],
+    lookup,
+  );
 
-  it("re-expresses delta against the benchmark so unlike underlyings become additive", () => {
-    // NVDA call: 100 × 0.5 × 2 = 100. KO call: 100 × 0.6 × 0.5 = 30.
-    const agg = aggregateGreeks(
+  it("keeps the raw delta raw and each underlying's delta apart", () => {
+    expect(book.delta).toBeCloseTo(110, 9); // 50 + 60 share-equivalents
+    expect(book.deltaByUnderlying).toEqual({ NVDA: 50, KO: 60 });
+  });
+
+  it("re-expresses delta as SPY shares with the price ratio, so unlike names become additive", () => {
+    // NVDA: 50 × 2 × $180 = $18,000. KO: 60 × 0.5 × $70 = $2,100. $20,100 ÷ $600 = 33.5 SPY.
+    const w = betaWeightDelta(book.deltaByUnderlying, betas, prices, "SPY", 600);
+    expect(w?.dollarDelta).toBeCloseTo(20_100, 9);
+    expect(w?.delta).toBeCloseTo(33.5, 9);
+    expect(w?.benchmark).toBe("SPY");
+    expect(Object.keys(w?.weighted ?? {})).toEqual(["NVDA", "KO"]);
+  });
+
+  it("nets a covered call's stock against its short call before weighting", () => {
+    const covered = aggregateGreeks(
       [
-        { symbol: NVDA_CALL, quantity: 1 },
-        { symbol: KO_CALL, quantity: 1 },
+        { symbol: "NVDA", quantity: 100 },
+        { symbol: NVDA_CALL, quantity: -1 },
       ],
       lookup,
-      betas,
-      "SPY",
     );
-    expect(agg.delta).toBeCloseTo(130, 9);
-    expect(agg.weightedTo).toBe("SPY");
+    const w = betaWeightDelta(covered.deltaByUnderlying, betas, prices, "SPY", 600);
+    expect(w?.dollarDelta).toBeCloseTo(50 * 2 * 180, 9);
   });
 
-  it("weights DELTA only — a beta-scaled gamma would look additive and mean nothing", () => {
+  it("leaves a name with no measured beta out of the sum and names it, never assuming 1.0", () => {
+    const w = betaWeightDelta(
+      book.deltaByUnderlying,
+      (u) => (u === "NVDA" ? { beta: 2, asOf: "2026-09-29" } : undefined),
+      prices,
+      "SPY",
+      600,
+    );
+    expect(w?.dollarDelta).toBeCloseTo(18_000, 9);
+    expect(w?.unweighted).toEqual({ KO: 60 });
+  });
+
+  it("leaves a name with no price un-weighted too — a beta alone can't be turned into dollars", () => {
+    const w = betaWeightDelta(
+      book.deltaByUnderlying,
+      betas,
+      (u) => (u === "KO" ? 70 : undefined),
+      "SPY",
+      600,
+    );
+    expect(w?.unweighted).toEqual({ NVDA: 50 });
+  });
+
+  it("weights nothing when the benchmark has no price", () => {
+    expect(
+      betaWeightDelta(book.deltaByUnderlying, betas, prices, "SPY", undefined),
+    ).toBeUndefined();
+    expect(betaWeightDelta(book.deltaByUnderlying, betas, prices, "SPY", 0)).toBeUndefined();
+  });
+
+  it("weights DELTA only — gamma, theta and vega are untouched by it", () => {
     const raw = aggregateGreeks([{ symbol: NVDA_CALL, quantity: 1 }], lookup);
-    const weighted = aggregateGreeks([{ symbol: NVDA_CALL, quantity: 1 }], lookup, betas, "SPY");
-    expect(weighted.delta).toBeCloseTo(raw.delta * 2, 9);
-    expect(weighted.gamma).toBeCloseTo(raw.gamma, 9);
-    expect(weighted.theta).toBeCloseTo(raw.theta, 9);
-    expect(weighted.vega).toBeCloseTo(raw.vega, 9);
-  });
-
-  it("leaves an underlying with no beta unweighted rather than assuming 1.0 silently", () => {
-    const agg = aggregateGreeks([{ symbol: KO_CALL, quantity: 1 }], lookup, () => undefined, "SPY");
-    expect(agg.delta).toBeCloseTo(60, 9); // raw, unscaled
-    expect(agg.weightedTo).toBeUndefined(); // and it does not claim to be benchmarked
+    expect(raw.gamma).toBeCloseTo(1, 9);
+    expect(raw.theta).toBeCloseTo(-20, 9);
   });
 });
 

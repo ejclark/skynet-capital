@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { DeskPosition } from "../live/desk";
 import {
+  type BetaWeightedBook,
   fetchOptionPositions,
   type OptionBookGreeks,
   type OptionDraft,
@@ -31,6 +32,10 @@ import { RollRow } from "./roll-row";
  * holding, from `/api/trade/option-positions`; the card's foot nets the book and says how much of
  * it the number speaks for. A contract the feed didn't quote shows "greeks —" and is named in the
  * book line — absent, never zero (`greeks-aggregator.ts`).
+ *
+ * BETA-WEIGHTED (#4327): under the raw book line, the book's delta in SPY terms — SPY shares,
+ * dollars, and dollars per 1% SPY move — with the benchmark named in words and each beta's source
+ * and as-of beside it. A name with no measured beta is listed un-weighted with its raw delta.
  */
 
 /** "Δ −31 · Γ 2.1 · Θ −6.0 · V 14" — the holding's exposure, or "—" per greek the feed lacked. */
@@ -74,6 +79,52 @@ function BookLine({
           : `Book greeks over ${book.covered} of ${book.total} contracts: ${figures} — not quoted: ${book.uncovered.join(", ")}.`}
     </p>
   );
+}
+
+const signed = (n: number, digits = 0): string =>
+  `${n < 0 ? "−" : "+"}${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits })}`;
+/** "−$549", sign glued to the figure (U+2060) so a wrap never strands the minus. */
+const dollars = (n: number): string =>
+  `${n < 0 ? "−" : "+"}\u2060$${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+
+/** "Sep 29" from YYYY-MM-DD, read as a calendar day (no timezone shift). */
+function shortDay(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** The book's delta weighted to SPY, the betas behind it, and any name left un-weighted. */
+export function betaWeightedLines(
+  weighted: BetaWeightedBook | undefined,
+  representative: boolean,
+): readonly string[] {
+  if (!weighted) {
+    return ["Not weighted to SPY — SPY's price couldn't be read, so these names stay un-weighted."];
+  }
+  const lines: string[] = [];
+  const names = Object.entries(weighted.weighted);
+  if (names.length > 0) {
+    const asOfs = [...new Set(names.map(([, b]) => b.asOf))].sort();
+    const asOf =
+      asOfs.length === 1
+        ? shortDay(asOfs[0] ?? "")
+        : `${shortDay(asOfs[0] ?? "")}–${shortDay(asOfs.at(-1) ?? "")}`;
+    lines.push(
+      `${representative ? "" : "Quoted contracts only. "}Weighted to SPY (the S&P 500 fund): ${signed(weighted.delta, 1)} SPY shares ≈\u00a0${dollars(weighted.dollarDelta)} of SPY — about ${dollars(weighted.dollarDelta / 100)} per 1% SPY move.`,
+      `Beta vs SPY from a year of daily closes, as of ${asOf}: ${names.map(([u, b]) => `${u} ${b.beta.toFixed(2)}`).join(", ")}.`,
+    );
+  }
+  const raw = Object.entries(weighted.unweighted);
+  if (raw.length > 0) {
+    lines.push(
+      `Not weighted — no measured beta: ${raw.map(([u, d]) => `${u} (raw Δ ${signed(d)})`).join(", ")}.`,
+    );
+  }
+  return lines;
 }
 
 type RowState =
@@ -321,7 +372,18 @@ export function OptionPositionsCard({
         ))}
       </div>
       {statement.data?.available ? (
-        <BookLine book={statement.data.book} representative={statement.data.representative} />
+        <>
+          <BookLine book={statement.data.book} representative={statement.data.representative} />
+          {statement.data.book.covered > 0
+            ? betaWeightedLines(statement.data.betaWeighted, statement.data.representative).map(
+                (line) => (
+                  <p key={line} className="tkt-note tkt-book tkt-book-beta">
+                    {line}
+                  </p>
+                ),
+              )
+            : null}
+        </>
       ) : null}
     </section>
   );

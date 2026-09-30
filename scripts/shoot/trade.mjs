@@ -519,6 +519,15 @@ const optionPositions = {
     },
   ],
   book: { delta: -124, gamma: 3.6, theta: -42, vega: 68, covered: 1, total: 1, uncovered: [] },
+  // The book's delta weighted to SPY (#4327): MSFT's measured beta × its price ÷ SPY's.
+  betaWeighted: {
+    benchmark: "SPY",
+    benchmarkPrice: 598.4,
+    delta: -91.8, // −124 × 1.08 × $410.20 = −$54,934 ÷ $598.40
+    dollarDelta: -54_934,
+    weighted: { MSFT: { beta: 1.08, asOf: "2026-09-29" } },
+    unweighted: {},
+  },
 };
 const currentOptionPositions = optionPositions;
 // The alerts the held positions imply (#3407 P4 slice 1) — the same MSFT put a month-rung
@@ -1317,12 +1326,21 @@ await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNe
 const shootLimitClose = shooter(page, resolve("docs/shots/limit-close"));
 await shootLimitClose("limit-close-phone");
 // The same card with its Position Statement line and book foot (#3407 P2 slice 3).
-await page.getByText(/DTE/).waitFor();
+await page.getByText("18 DTE").waitFor();
 const shootOptionPositions = shooter(page, resolve("docs/shots/option-positions"));
 await shootOptionPositions("option-positions-phone");
+// The book foot weighted to SPY, with the beta's source and as-of beside it (#4327). PHONE FIRST.
+const shootBeta = shooter(page, resolve("docs/shots/beta-weighted-book"));
+await page.getByText(/Weighted to SPY/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, 160));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+await shootBeta("beta-weighted-book-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
 await shootLimitClose("limit-close-desktop");
+await page.getByText(/Weighted to SPY/).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, 160));
+await shootBeta("beta-weighted-book-desktop");
 
 // The alerts strip (#3407 P4 slice 1): what the held positions are saying — a critical
 // assignment-risk row, a week-out expiry warning, a month-out FYI; the badge word and glyph carry
