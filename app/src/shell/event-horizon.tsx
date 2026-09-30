@@ -140,6 +140,7 @@ export function EventHorizon({
   onStep,
   dayFog,
   fiscal,
+  decideDays,
   open = false,
 }: {
   readonly events: readonly ResearchEvent[];
@@ -159,6 +160,10 @@ export function EventHorizon({
   /** The quarter lens's fiscal identity (#1736) — set only when exactly one symbol is in scope
    *  and has a confirmed fiscal year-end; absent, the quarter lens reads (and is) the calendar. */
   readonly fiscal?: FiscalQuarterLabel;
+  /** Days a "Needs a decision" card is due (#3977 slice 4) — the Profile page's Events section
+   *  passes them; each gets a ▲ in its cell and the legend names it, so the mark is a shape and a
+   *  word, never a hue. R&D's market board passes none: a member's decisions are not its data. */
+  readonly decideDays?: ReadonlySet<string>;
   /** Whether the month grid starts unfolded — the Profile page's Events section, where the grid is
    *  the point (#3807 slice 2c); R&D keeps it folded under its band head. */
   readonly open?: boolean;
@@ -241,6 +246,11 @@ export function EventHorizon({
                 </span>
               ) : null}
               <span className="eh-num">{Number(date.slice(8, 10))}</span>
+              {decideDays?.has(date) ? (
+                <i className="eh-decide" aria-hidden="true">
+                  ▲
+                </i>
+              ) : null}
               {byDate.has(date) ? (
                 <i
                   className={
@@ -255,6 +265,12 @@ export function EventHorizon({
       <p className="eh-legend">
         <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
         <s className="eh-legend-closed num">7</s> closed
+        {decideDays && decideDays.size > 0 ? (
+          <>
+            {" "}
+            · <i className="eh-decide eh-decide-key">▲</i> decide by
+          </>
+        ) : null}
       </p>
     </div>
   );
