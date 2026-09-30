@@ -1,0 +1,63 @@
+/* The Profile page's tower column (#3977): `shell/tower-column.tsx`. From the bench width (1280,
+ * `widths.ts`) the page is two columns — the head and the section on the left, the big tower on
+ * the right from just under the navbar — and the character card stands open: no border, no frame,
+ * no vignette, the art's edges fading into the page on every side so the Eye's light is not boxed
+ * in (Eric, 2026-09-30: "remove the section outline around the tower… less contained"). */
+
+.cockpit--tower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 384px;
+  column-gap: 24px;
+  align-items: start;
+}
+.cockpit-main {
+  min-width: 0;
+}
+.tower-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* The Overview's grid gives up its card column when the page carries the tower (#3977). */
+.overview-grid.overview-grid--solo {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "worth"
+    "decide";
+}
+
+/* ---- the open card ---- */
+.char-card--open {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+/* The same fade on the art and on the grain over it — an unmasked grain draws the box's edges back
+ * in as a faint rectangle. */
+.char-card--open .char-art-clip,
+.char-card--open .char-grain {
+  /* Two fades intersected: the sides and the top reach fully transparent at the box's edge, so no
+   * edge survives; the bottom is the shade's (the mist into the league). */
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent),
+    linear-gradient(180deg, transparent, #000 14%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent),
+    linear-gradient(180deg, transparent, #000 14%);
+  mask-composite: intersect;
+}
+.char-card--open .char-art-clip {
+  background: transparent;
+}
+.char-card--open .char-frame,
+.char-card--open .char-vignette {
+  display: none;
+}
+/* The league keeps its panel under the tower; only its lower corners round off now that the card
+ * around it is gone. */
+.char-card--open .char-body {
+  border-radius: 0 0 14px 14px;
+}

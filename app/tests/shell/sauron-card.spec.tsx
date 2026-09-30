@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { usePrefs } from "../../src/shell/prefs";
-import { cardShowsArt, SauronCard, towerSrc } from "../../src/shell/sauron-card";
+import { SauronCard, towerSrc } from "../../src/shell/sauron-card";
 
 // The league reads the board over the network; these cases are about the art column only.
 rstest.mock("../../src/shell/league-card", () => ({
@@ -28,82 +28,26 @@ describe("towerSrc", () => {
   });
 });
 
-/** `useMediaQuery` reads `matchMedia`; happy-dom has none (a wide, motion-allowing default). */
-function phoneWidth(matches: boolean): () => void {
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    writable: true,
-    value: (query: string) => ({
-      matches: matches && query.includes("max-width: 860px"),
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    }),
-  });
-  return () => Reflect.deleteProperty(window, "matchMedia");
-}
+describe("the open card, in the Profile page's tower column (#3977)", () => {
+  afterEach(() => act(() => usePrefs.getState().setCrest("live")));
 
-const card = (besideHead: boolean) => (
-  <SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" besideHead={besideHead} />
-);
-
-describe("the card compare (#3807 slice 3b-1: ?card=art|league, under the flag)", () => {
-  afterEach(() =>
-    act(() => {
-      usePrefs.getState().setShell(undefined);
-      usePrefs.getState().setCard("art");
-      usePrefs.getState().setCrest("live");
-    }),
-  );
-
-  it("draws the art only where a second tower would not stand beside the head's", () => {
-    const at = { besideHead: true, flag: true, card: "league", phone: false } as const;
-    expect(cardShowsArt(at)).toBe(false);
-    expect(cardShowsArt({ ...at, phone: true })).toBe(true);
-    expect(cardShowsArt({ ...at, flag: false })).toBe(true);
-    expect(cardShowsArt({ ...at, card: "art" })).toBe(true);
-    expect(cardShowsArt({ ...at, besideHead: false })).toBe(true);
-  });
-
-  it("league, on the Overview, wider than a phone: the league alone, no second tower frame", () => {
-    act(() => {
-      usePrefs.getState().setShell("watchtower");
-      usePrefs.getState().setCard("league");
-    });
-    const { container } = render(card(true));
-    expect(container.querySelector("iframe")).toBeNull();
-    expect(screen.getByRole("region", { name: "The league" })).toBeInTheDocument();
+  it("stands unboxed: the open class, the live tower, the league under it", () => {
+    const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" open />);
+    const card = screen.getByRole("region", { name: "Sauron's tower and the league" });
+    expect(card).toHaveClass("char-card--open");
+    expect(container.querySelector("iframe")?.getAttribute("src")).toBe("/tower?frame=card");
     expect(screen.getByText("the league")).toBeInTheDocument();
   });
 
-  it("league on a phone keeps the art — the head's tower is hidden there", () => {
-    const restore = phoneWidth(true);
-    try {
-      act(() => {
-        usePrefs.getState().setShell("watchtower");
-        usePrefs.getState().setCard("league");
-      });
-      const { container } = render(card(true));
-      expect(container.querySelector("iframe")?.getAttribute("src")).toBe("/tower?frame=card");
-    } finally {
-      restore();
-    }
+  it("stays boxed everywhere else (/u/:id, the Overview below the bench width)", () => {
+    render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" />);
+    const card = screen.getByRole("region", { name: "Sauron's tower and the league" });
+    expect(card).not.toHaveClass("char-card--open");
   });
 
-  it("an account's own page (/u/:id, no calendar head) keeps its art whatever the pick", () => {
-    act(() => {
-      usePrefs.getState().setShell("watchtower");
-      usePrefs.getState().setCard("league");
-    });
-    const { container } = render(card(false));
-    expect(container.querySelector("iframe")?.getAttribute("src")).toBe("/tower?frame=card");
-  });
-
-  it("art (the default) keeps the art on the Overview, and the member's Still reaches it", () => {
-    act(() => {
-      usePrefs.getState().setShell("watchtower");
-      usePrefs.getState().setCrest("still");
-    });
-    const { container } = render(card(true));
+  it("carries the member's Still to the open tower too", () => {
+    act(() => usePrefs.getState().setCrest("still"));
+    const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" open />);
     expect(container.querySelector("iframe")?.getAttribute("src")).toBe(
       "/tower?frame=card&rest=still",
     );
