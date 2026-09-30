@@ -24,6 +24,7 @@
 // Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
 import { readFileSync } from "node:fs";
 import { lintIssue } from "./issue-lint.mjs";
+import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
 import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
 import { statusForIssue } from "./moneypenny/projects.mjs";
@@ -99,7 +100,15 @@ const labelNames = (issue) => (issue.labels ?? []).map((l) => (typeof l === "str
 
 /** The board column statusForIssue() yields — what projects-sync.mjs will set on its next run. */
 export const boardStatus = (issue) =>
-  statusForIssue({ state: issue.state, labels: labelNames(issue) });
+  statusForIssue({
+    state: issue.state,
+    labels: labelNames(issue),
+    decisionCalloutMissing: missingDecisionCallout({
+      labels: labelNames(issue),
+      body: issue.body,
+      author: issue.user?.login,
+    }),
+  });
 
 /** One scan-able line per issue: `#N [Status] title (labels)`. */
 export function row(issue) {
@@ -178,6 +187,17 @@ function lintOrDie({ title, body, labels }) {
   }
 }
 
+/** A label-only update never re-lints the whole body (old issues predate the capsule), but adding
+ *  `needs-eric` still must not create an ask with no callout (#3913 slice 2). */
+function calloutOrDie(issue) {
+  if (!missingDecisionCallout(issue)) return;
+  console.error(
+    "problem: `needs-eric` with no `Needs from you` callout above the fold — pass --body-file with the callout (docs/ISSUES.md rule 7)",
+  );
+  console.error("issues: refused — the label promises Eric a decision the body never states.");
+  process.exit(1);
+}
+
 function create({ flags }) {
   const title = flags.title;
   if (!(title && flags["body-file"])) throw new Error("create needs --title and --body-file");
@@ -204,16 +224,15 @@ function update({ positional, flags }) {
   const current = ghRest(`issues/${n}`);
   const patch = {};
   if (flags.title) patch.title = flags.title;
+  // #3913 slice 2: lint against the labels the issue will HAVE, not the ones it had — a body
+  // written alongside `--add needs-eric` must carry the callout the new label promises.
+  const labels = nextLabels(labelNames(current), csv(flags.add), csv(flags.remove));
+  if (flags.add || flags.remove) patch.labels = labels;
   if (flags["body-file"]) {
     patch.body = withFooter(readBody(flags["body-file"]));
-    lintOrDie({
-      title: flags.title ?? current.title,
-      body: patch.body,
-      labels: labelNames(current),
-    });
-  }
-  if (flags.add || flags.remove) {
-    patch.labels = nextLabels(labelNames(current), csv(flags.add), csv(flags.remove));
+    lintOrDie({ title: flags.title ?? current.title, body: patch.body, labels });
+  } else if (csv(flags.add).includes("needs-eric")) {
+    calloutOrDie({ labels, body: current.body, author: current.user?.login });
   }
   if (flags.close) Object.assign(patch, { state: "closed", state_reason: flags.close });
   if (flags.reopen) patch.state = "open";

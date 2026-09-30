@@ -79,10 +79,17 @@ export const FIELDS = [
  * it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in for a
  * caller that can see one.
  */
-export function statusForIssue({ state = "open", labels = [], hasOpenLinkedPr = false } = {}) {
+export function statusForIssue({
+  state = "open",
+  labels = [],
+  hasOpenLinkedPr = false,
+  decisionCalloutMissing = false,
+} = {}) {
   if (state === "closed") return "Done";
   const has = (name) => labels.includes(name);
-  if (has("needs-eric") || has("needs-info")) return "Blocked";
+  // #3913 slice 2: a `needs-eric` with no `Needs from you` callout (decision-callout.mjs) is not
+  // shown as waiting on Eric — it falls through to its ordinary column until the ask is written.
+  if (has("needs-info") || (has("needs-eric") && !decisionCalloutMissing)) return "Blocked";
   if (has("in-progress") || hasOpenLinkedPr) return "In Progress";
   if (has("ready")) return "Ready";
   return "Backlog";
