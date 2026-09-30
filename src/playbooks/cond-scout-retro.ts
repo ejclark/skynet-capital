@@ -18,6 +18,7 @@ import type { ConditionReading } from "./cond-scout.js";
 import type { ShadowClose, ShadowSnapshot } from "./cond-scout-ledger.js";
 
 const DAY_MS = 86_400_000;
+const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
 /** A hypothetical exit at one moment inside the hold. */
 export interface ExitCheckpoint {
@@ -57,6 +58,41 @@ export interface ProbeRetro {
   readonly entryPrice: number;
   /** Hypothetical exits BEYOND the close (slice 5) — pending until their date has passed. */
   readonly laterExits: readonly LaterExit[];
+  /**
+   * The market over the same days (slice 6), filled once the close day's bar exists. For a long
+   * probe, "buy and hold the same name over the same window" IS the probe, so the honest benchmark
+   * for the entry signal is being in the market instead: did the bet beat SPY while it was open?
+   */
+  readonly market?: MarketBenchmark;
+}
+
+export interface MarketBenchmark {
+  readonly symbol: string;
+  /** Close-to-close over the probe's sessions (open day's close → close day's close). */
+  readonly roi: number;
+  /** probe ROI − market ROI. */
+  readonly excess: number;
+}
+
+export const BENCHMARK_SYMBOL = "SPY";
+
+/**
+ * Price the benchmark from daily bars: the open day's session close to the close day's. A probe
+ * opened and closed the same session reads 0 for the market — an approximation stated here, not
+ * hidden: daily bars can't split a session. Undefined until both sessions' bars exist.
+ */
+export function marketBenchmark(
+  retro: ProbeRetro,
+  bars: readonly { readonly t: string; readonly c: number }[],
+  symbol = BENCHMARK_SYMBOL,
+): MarketBenchmark | undefined {
+  const openDay = dayOf(retro.openedAt);
+  const closeDay = dayOf(retro.closedAt);
+  const start = bars.find((b) => b.t.slice(0, 10) >= openDay);
+  const end = [...bars].reverse().find((b) => b.t.slice(0, 10) <= closeDay);
+  if (!(start && end && start.c > 0) || end.t.slice(0, 10) < closeDay) return undefined;
+  const roi = end.c / start.c - 1;
+  return { symbol, roi, excess: retro.roi - roi };
 }
 
 /**
@@ -95,8 +131,6 @@ function ladderLabel(days: number): string {
   const months = Math.round(days / 30);
   return `${months} month${months === 1 ? "" : "s"}`;
 }
-
-const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
 /**
  * Fill every checkpoint whose date has passed from daily bars (oldest first, `t` an ISO date or
