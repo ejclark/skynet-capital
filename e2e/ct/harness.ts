@@ -10,9 +10,8 @@ import { expect } from "@playwright/experimental-ct-react";
  */
 
 /**
- * Near-zero on purpose, and tighter than the route suite's `FROZEN_DIFF_PIXELS` can afford to be
- * (a ratio is safe here: a component's frame never grows with page content). A route screenshot
- * freezes a live page's stochastic inputs, while a mounted component has
+ * Near-zero on purpose, and lower than the route suite's `FROZEN_DIFF_RATIO` (0.002) can afford to
+ * be: a route screenshot freezes a live page's stochastic inputs, while a mounted component has
  * none to freeze — the props are literals in the spec. There is no legitimate source of drift here,
  * so anything above antialiasing noise is a real change.
  */
@@ -24,7 +23,5 @@ const CT_DIFF_RATIO = 0.001;
  * route suite, which must first wait out in-flight queries.
  */
 export async function expectComponentShot(component: Locator, name: string): Promise<void> {
-  await expect(component).toHaveScreenshot(name, {
-    maxDiffPixelRatio: CT_DIFF_RATIO,
-  });
+  await expect(component).toHaveScreenshot(name, { maxDiffPixelRatio: CT_DIFF_RATIO });
 }

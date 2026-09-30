@@ -25,8 +25,7 @@ import { expect, type Page } from "@playwright/test";
  * WHAT THIS DOES — replaces the two irreproducible inputs with fixed ones, entirely from the test
  * side: a seeded PRNG stands in for `Math.random`, and the clock is pinned. Nothing in `src/`
  * changes, so the page a member loads is untouched, and the canvases stay IN the frame instead of
- * being hidden out of it. Measured result: three consecutive clean runs (at a 0.002 ratio then;
- * the bar is FROZEN_DIFF_PIXELS now).
+ * being hidden out of it. Measured result: three consecutive clean runs at a 0.002 tolerance.
  *
  * REJECTED ALTERNATIVES, and why they are worse — both were built and measured, not reasoned about:
  *
@@ -72,8 +71,8 @@ const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
  * topbar pill began reading `live · seq N` there instead of `connecting…` — and N is however many
  * hub ticks the offline server had run before the capture (measured 2, 3, 5, 6, 8, 10 across local
  * runs of one commit). The label's width slides the market clock beside it, so the same commit drew
- * a different topbar per run: ~940–1,130 pixels per shot, about a third of the shortest page's old
- * ratio budget spent on noise. Refusing the stream holds every page at `connecting…`,
+ * a different topbar per run: ~940–1,130 pixels per shot, about a third of the shortest page's
+ * FROZEN_DIFF_RATIO budget spent on noise. Refusing the stream holds every page at `connecting…`,
  * the state every baseline has always captured; the board snapshot the league card draws from is a
  * plain fetch and still lands.
  */
@@ -87,23 +86,26 @@ export async function freezePage(page: Page): Promise<void> {
 }
 
 /**
- * Tolerance for a frozen screenshot, in PIXELS — a fixed count, never a ratio of the frame. Near-zero
- * on purpose: once the stochastic inputs are pinned the render is stable across runs, so anything
- * above noise is a real change. Named rather than inlined so raising it is a visible, arguable edit
- * instead of a number quietly nudged upward until the test stops complaining — the drift that makes
- * a visual suite decorative.
- *
- * WHY PIXELS, NOT A RATIO (#4094, measured 2026-09-30). Whole-frame shots are resized to content
- * height, so a ratio budget grows with the page: at the old 0.002 it ran from 1,843 px (a 720-tall
- * frame) to 6,215 px (learn/trading, 2,428 tall). The topbar is the same size on every page, and a
- * wrong market state there (the frozen clock moved to Saturday: OPEN → "MARKET CLOSED · opens Mon")
- * differs by 1,257 px locally, ~2,200 px on CI — under every page's ratio budget. All seven route
- * shots passed it; learn, onboarding and playbooks really did ship CLOSED baselines that way (#4087).
- * A fixed count holds one bar whatever the height. The same seven shots at zero tolerance showed
- * 0 differing pixels across three consecutive runs, so 200 is headroom for antialiasing, not a
- * noise budget, and still a sixth of the smallest real topbar change.
+ * Tolerance for a frozen screenshot. Near-zero on purpose: once the stochastic inputs are pinned
+ * the render is stable across runs, so anything above noise is a real change. Named rather than
+ * inlined so raising it is a visible, arguable edit instead of a number quietly nudged upward until
+ * the test stops complaining — the drift that makes a visual suite decorative.
  */
-export const FROZEN_DIFF_PIXELS = 200;
+export const FROZEN_DIFF_RATIO = 0.002;
+
+/**
+ * The topbar market clock, asserted on its own at a FIXED size on every whole-frame page (#4094).
+ *
+ * WHY (measured 2026-09-30). The whole-frame ratio above scales with page height (resized to content,
+ * 1,843–6,215 px of budget across the suite), while a wrong market state is a fixed-size change in
+ * the topbar: 1,257 px locally with the clock moved to a Saturday, and all seven route shots passed
+ * it. A fixed PIXEL budget on the whole frame is no fix either: CI runners disagree on glyph
+ * antialiasing by up to 1,846 px per frame (run 36684412259, the same commit on retry), which lands
+ * on top of the market-state signal. Inside this element the same CI images differ by 0 px, so the
+ * clock gets its own shot and a small fixed budget, and the frame keeps its ratio for text noise.
+ */
+const MARKET_CLOCK = ".market-session";
+const MARKET_CLOCK_DIFF_PIXELS = 50;
 
 /**
  * Resize the viewport to the page's actual content height, then screenshot the (now full-content)
@@ -133,12 +135,16 @@ export async function resizeToContentHeight(page: Page, width = 1280): Promise<v
  * what's rendered), resize to content height (see resizeToContentHeight), then assert the shot.
  * Call `freezePage(page)` before `page.goto`, and wait for the page's own content marker to be
  * visible, before calling this — it only owns the settle → resize → screenshot tail every route
- * spec shares.
+ * spec shares, plus the fixed-size market clock assertion (MARKET_CLOCK above).
  */
 export async function captureWholeFrame(page: Page, name: string): Promise<void> {
   await page.waitForLoadState("networkidle");
   await resizeToContentHeight(page);
-  await expect(page).toHaveScreenshot(name, {
-    maxDiffPixels: FROZEN_DIFF_PIXELS,
-  });
+  await expect(page).toHaveScreenshot(name, { maxDiffPixelRatio: FROZEN_DIFF_RATIO });
+  await expect(page.locator(MARKET_CLOCK)).toHaveScreenshot(
+    name.replace(/\.png$/, "-market-clock.png"),
+    {
+      maxDiffPixels: MARKET_CLOCK_DIFF_PIXELS,
+    },
+  );
 }

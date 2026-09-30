@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { FROZEN_DIFF_PIXELS, freezePage } from "./determinism";
+import { FROZEN_DIFF_RATIO, freezePage } from "./determinism";
 
 // Smoke coverage for the cinematic /login page — the one unauthenticated surface every visitor
 // hits, and the first slice of real-browser regression detection (no Playwright suite existed
@@ -38,7 +38,7 @@ test.describe("login page", () => {
     await expect(page.locator("#herosub")).toBeVisible();
 
     await expect(page).toHaveScreenshot("login-page.png", {
-      maxDiffPixels: FROZEN_DIFF_PIXELS,
+      maxDiffPixelRatio: FROZEN_DIFF_RATIO,
     });
   });
 });
