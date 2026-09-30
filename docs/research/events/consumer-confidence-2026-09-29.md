@@ -328,6 +328,89 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-09-30, D+1).** Macro-print mode carries no `earnings-cycle` / `intraday-edges`
+instrument (`symbols: []` by design) — the instrument cache was busted per the lane's contract
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) but has no target
+here, so the release and the tape are both re-fetched fresh rather than re-run. Primary: the
+Conference Board's own release, distributed via PRNewswire ("US Consumer Confidence Fell in
+September," 302892867) and mirrored on conference-board.org/topics/consumer-confidence, both
+fetched 2026-09-30; cross-checked against CNBC, Axios, qz.com and PYMNTS same-day coverage.
+
+**What printed — a much sharper break than the base case, and the divergence framing's own kill
+switch fires.** Headline **81.9**, down **6.7** from August — but August itself is revised to
+**88.6** here (from the 89.4 this ledger has carried since initial research), the same
+downward-revision pattern leg 3 already flagged as a standing risk. **Present Situation 109.3**,
+down **7.9** from a revised **117.2** (the first-published August figure this doc's FT-1 anchors
+on was 121.2). **Expectations 63.6**, down **5.9** from a revised **69.5** (first-published 68.2)
+— its **third consecutive monthly decline**. Jobs-plentiful **23.6%** minus hard-to-get **21.9%** =
+**+1.7pp**, a collapse from August's +7.5pp differential. 12-month inflation expectations:
+**average 6.1%** (from a revised 5.8%) and, reported for the first time in this release's own
+distribution, **median 5.1%** (from a revised 4.8%). Dana Peterson: *"The Consumer Confidence
+Index deteriorated notably in September, following two prior months of softening. The Present
+Situation Index fell sharply, while the Expectations Index slipped further into negative
+territory."* Same-day coverage adds a marker this doc had not seen in any prior print: *"Consumer
+appraisals of current business conditions became negative for the first time since September
+2024"* (CNBC). Widely reported as a **12-year low**. Reuters-polled economists had forecast
+**89.2**, Dow Jones-polled economists **~89** — both cited in same-day wire coverage and both shown
+as investing.com's pre-populated "Forecast" column for this release — so a genuine street consensus
+existed and was knowable in advance; the actual missed it by **~7 points**, the largest miss this
+ledger has recorded.
+
+**The doc's central thesis retires on its own kill switch.** This ledger was built on a
+**divergence** — August's Present Situation rose while Expectations fell, and every row since
+treated "does the gap converge or widen" as the one question this print exists to answer. The
+standing kill switch **"the two subcomponents move the same direction on 2026-09-29 … the print
+reverts to an ordinary headline read" FIRED**: both legs fell together (PS −7.9, Expectations
+−5.9). September was not a continuation of August's divergence — it was a **broad-based**
+deterioration, the shape this ledger explicitly said it was not treating as a timing signal until
+now. **"Expectations back above 80"** did not fire (63.6, well clear). **"Expectations below
+~62"** (another 6-point leg down from 68.2) did **not** fire either, but only barely — 63.6 sits
+1.6 points above that line, closer to the accelerating-deterioration switch than any prior row.
+
+**Forward tests, scored from the release above (full receipt in
+[`forward-tests/consumer-confidence-2026-09-29.md`](../forward-tests/consumer-confidence-2026-09-29.md)):**
+**FT-1 passes on its stated numeric criteria** — Present Situation 109.3 is below both the
+first-published 121.2 and the revised 117.2, and the gap (45.7) is below both the first-published
+53.0 and the revised 47.7 — but **the registered mechanism is not what happened**: the hypothesis
+argued Expectations was "already floored" and PS would revert toward it; instead Expectations
+extended its own decline (a third straight month) and the gap only narrowed because PS fell even
+further. A numeric pass riding a wrong narrative, recorded as such rather than smoothed over.
+**FT-2 passes cleanly** — 12-month inflation expectations printed at 6.1% (average) / 5.1%
+(median), both above the registered ~5.8% line, consistent with the pass-through mechanism this
+ledger tracked from Brent through retail gasoline (AAA **$4.456** on 09-29, still elevated against
+the $4.08 a month prior) straight through to the survey.
+
+**A correction to a finding repeated across five prior rows.** Every pulse from 2026-08-29 onward
+recorded "no September consensus published — structural, per fxstreet's own Conference Board
+publication-restriction disclaimer" and stopped there. That disclaimer is real but was read too
+broadly: **a genuine street consensus existed the whole time**, sourced from Reuters/Dow Jones
+economist polls and visible on investing.com's own forecast column (89.2) — a different aggregator
+than the one checked. The standing rows are not edited (append-only); the correction lives here,
+and the process lesson is to check a poll-sourced calendar (investing.com, tradingeconomics)
+alongside fxstreet before calling a consensus structurally absent.
+
+**Market reaction — muted relative to a 12-year-low miss, and the closing tape does not reconcile
+across sources.** Same-day coverage attributes the session's softness to "persistent pressure from
+elevated Treasury yields and volatile energy markets," not to the confidence print specifically —
+consistent with leg 6's base rate (now three observations: two misses with muted reactions, plus
+this one). But the closing levels themselves conflict and are recorded rather than reconciled, per
+this ledger's own house style: the S&P 500 is reported both **7,670.84 (−0.16%)** and **7,683.69
+(−0.8%)**; the Nasdaq Composite **26,797.54 (−0.09%)**; VIX both **16.07 (+8.1%)** and **15.90
+(−1.1%)**. No AMZN/AAPL-specific reaction tied to this print was found in same-day coverage.
+
+**Verdict.** Base-case direction was right in sign but wrong in magnitude and in mechanism: the
+headline did not "stay in the high-80s" (81.9, a 12-year low and the sharpest street-consensus miss
+this ledger has seen), and the convergence was not the Present-Situation-side reversion the base
+case and FT-1 both argued for — it was a broad-based decline that happens to have hit Present
+Situation harder in points. The doc's own primary kill switch (the two legs moving together) fired
+for the first time in this event's life, retiring the divergence framing that organized every prior
+row. Both registered forward tests pass on their stated numeric terms; FT-1's passing mechanism is
+wrong and is recorded as such rather than as confirmation. **The action is unchanged and remains
+zero** — no position was opened, closed or sized off this release at any point in its life, and
+`symbols: []` licenses none now.
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
 
