@@ -279,9 +279,13 @@ jobs:
     # instead (already provisioned: vars.APP_CLIENT_ID, same as claude.yml/moneypenny-events.yml/moneypenny-repair.yml).
     # A session (or Eric) that wants a specific PR held despite being green applies the `hold-merge`
     # label — that's the one signal this job can't derive from the diff itself.
+    # `!cancelled()` is load-bearing (2026-09-30): `e2e` is skipped on a docs-only PR, and a job whose
+    # `needs:` include a skipped job is skipped too unless its `if:` calls a status function, so the
+    # `skipped` branch below never ran and docs PRs were never armed (#4167). The explicit
+    # `needs.verify.result == 'success'` keeps the implicit gate this removes.
     needs: [verify, e2e]
     if: >-
-      ${{ github.event_name == 'pull_request' && needs.verify.result == 'success' &&
+      ${{ !cancelled() && github.event_name == 'pull_request' && needs.verify.result == 'success' &&
           (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
           github.event.pull_request.draft == false &&
           contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
