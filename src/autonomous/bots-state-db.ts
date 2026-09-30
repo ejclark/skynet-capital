@@ -212,6 +212,7 @@ export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | un
     loadOpen: () => db.loadShadowProbes(),
     saveOpen: (probe) => db.saveShadowProbe(probe),
     close: (close) => db.closeShadowProbe(close),
+    recentCloses: (limit) => db.listShadowCloses(limit),
   };
 }
 

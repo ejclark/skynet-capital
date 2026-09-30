@@ -1,5 +1,5 @@
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { applyGuardsWithVerdicts, type RiskConfig } from "../engine/guards.js";
+import { applyGuardsWithVerdicts, type GuardRefusal, type RiskConfig } from "../engine/guards.js";
 import { COND_SCOUT_ID, type CondScoutConfig, scanConditions } from "../playbooks/cond-scout.js";
 import {
   checkShadowExit,
@@ -34,7 +34,11 @@ export interface CondScoutStore {
   saveOpen(probe: ShadowProbe): void;
   /** Removes the probe from the open set and keeps the close. */
   close(close: ShadowClose): void;
+  /** The newest closes first — how a restart rebuilds today's latches from the ledger itself. */
+  recentCloses(limit: number): readonly ShadowClose[];
 }
+
+const isoDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
 export interface CondScoutDeps {
   readonly universe: readonly string[];
@@ -92,13 +96,26 @@ export class CondScoutRunner {
 
   async runPass(context: MarketContext, sessionDay = context.asOf.slice(0, 10)): Promise<void> {
     const at = (this.deps.now ?? Date.now)();
-    if (this.closedDay !== sessionDay) {
-      this.closedDay = sessionDay;
-      this.closedToday.clear();
-    }
+    if (this.closedDay !== sessionDay) this.startSession(sessionDay);
     this.closeDue(context, at);
     if (this.openedDay === sessionDay || this.deps.blockedReason()) return;
     await this.openNew(context, sessionDay, at);
+  }
+
+  /**
+   * A new session day — or the first pass after a restart. Both latches are rebuilt from the
+   * stored ledger, never assumed empty: a mid-session restart must not open a second batch, nor
+   * re-open a symbol stopped out earlier that day.
+   */
+  private startSession(sessionDay: string): void {
+    this.closedDay = sessionDay;
+    this.closedToday.clear();
+    const recent = this.deps.store?.recentCloses(100) ?? [];
+    for (const close of recent) {
+      if (isoDay(close.closedAt) === sessionDay) this.closedToday.add(close.probe.symbol);
+    }
+    const probes = [...this.open.values(), ...recent.map((c) => c.probe)];
+    if (probes.some((p) => isoDay(p.openedAt) === sessionDay)) this.openedDay = sessionDay;
   }
 
   private closeDue(context: MarketContext, at: number): void {
@@ -154,36 +171,44 @@ export class CondScoutRunner {
     });
     if (candidates.length === 0) return;
 
-    const intents = candidates.map((c) => c.intent);
-    const verdicts = applyGuardsWithVerdicts(
-      intents,
-      this.shadowPortfolio(),
-      context,
-      this.deps.risk,
-    );
-    // The guards may clamp a buy's size as well as refuse it: a probe opens at the quantity the
-    // guards approved, never the one it asked for.
-    const approvedQty = new Map(verdicts.approved.map((i) => [i.symbol, i.quantity]));
-    for (const { probe } of candidates) {
-      const quantity = approvedQty.get(probe.symbol);
-      if (quantity === undefined || quantity < 1) continue;
+    // One probe at a time, each judged against the book as the previous one left it — so the
+    // guards' own cash clamp holds the experiment to its shadow capital, exactly as a broker
+    // would hold a real account to its cash. Anything that no longer fits is refused as
+    // `insufficient-cash`, keeping the record's raw − approved = refused invariant.
+    const approved: OrderIntent[] = [];
+    const refused: GuardRefusal[] = [];
+    for (const { probe, intent } of candidates) {
+      const verdict = applyGuardsWithVerdicts(
+        [intent],
+        this.shadowPortfolio(),
+        context,
+        this.deps.risk,
+      );
+      refused.push(...verdict.refused);
+      const ok = verdict.approved[0];
+      if (!ok) continue;
+      approved.push(ok);
+      // The guards may clamp the size: a probe opens at the approved quantity, never the asked one.
       const opened =
-        quantity === probe.quantity
+        ok.quantity === probe.quantity
           ? probe
-          : { ...probe, quantity, notional: probe.entryPrice * quantity };
+          : { ...probe, quantity: ok.quantity, notional: probe.entryPrice * ok.quantity };
       this.open.set(opened.symbol, opened);
       this.deps.store?.saveOpen(opened);
     }
-    if (approvedQty.size > 0) this.openedDay = sessionDay;
+    // A scan that produced candidates spends the session whether or not any survived: a book the
+    // guards refuse now would refuse identically every pass for the rest of the day.
+    this.openedDay = sessionDay;
+    const intents = candidates.map((c) => c.intent);
     this.deps.onDecision?.({
       at,
       personaId: COND_SCOUT_PERSONA_ID,
       mode: "observe",
       rawIntents: intents,
-      guardedIntents: verdicts.approved,
-      outcomes: verdicts.approved.map((intent) => ({ intent, action: "observed" })),
+      guardedIntents: approved,
+      outcomes: approved.map((intent) => ({ intent, action: "observed" })),
       context,
-      ...(verdicts.refused.length > 0 ? { refusals: verdicts.refused } : {}),
+      ...(refused.length > 0 ? { refusals: refused } : {}),
     });
   }
 

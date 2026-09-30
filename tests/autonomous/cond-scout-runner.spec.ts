@@ -21,6 +21,7 @@ function memoryStore(): CondScoutStore & { opened: ShadowProbe[]; closed: Shadow
     loadOpen: () => opened.filter((p) => !closed.some((c) => c.probe.id === p.id)),
     saveOpen: (probe) => opened.push(probe),
     close: (close) => closed.push(close),
+    recentCloses: (limit) => [...closed].reverse().slice(0, limit),
   };
 }
 
@@ -107,5 +108,60 @@ describe("CondScoutRunner", () => {
     await first.runner.runPass(at(80));
     const second = setup({ store });
     expect(second.runner.openProbes().map((p) => p.symbol)).toEqual(["AMD"]);
+  });
+
+  describe("review regressions (2026-09-30)", () => {
+    const twoNames = (capital: number) => {
+      const decisions: DecisionRecord[] = [];
+      const runner = new CondScoutRunner({
+        universe: ["AMD", "MU"],
+        closesFor: () => Promise.resolve({ AMD: SLIDE, MU: SLIDE }),
+        risk: { maxPositionPct: 1 },
+        blockedReason: () => null,
+        shadowCapital: capital,
+        now: () => T0,
+        onDecision: (r) => decisions.push(r),
+      });
+      const context = aContext({ AMD: { last: 80 }, MU: { last: 70 } });
+      return { runner, decisions, context };
+    };
+
+    it("never commits more than the shadow capital across probes opened in one pass", async () => {
+      const { runner, decisions, context } = twoNames(6_000);
+      await runner.runPass(context);
+      const committed = runner.openProbes().reduce((sum, p) => sum + p.notional, 0);
+      expect(committed).toBeLessThanOrEqual(6_000);
+      const [record] = decisions;
+      expect((record?.rawIntents.length ?? 0) - (record?.guardedIntents.length ?? 0)).toBe(
+        record?.refusals?.length ?? 0,
+      );
+    });
+
+    it("spends the session on a scan the guards refused outright — one record, not one per pass", async () => {
+      const { runner, decisions, context } = twoNames(10);
+      await runner.runPass(context);
+      await runner.runPass(context);
+      expect(runner.openProbes()).toEqual([]);
+      expect(decisions).toHaveLength(1);
+      expect(decisions[0]?.refusals?.map((r) => r.reason)).toEqual([
+        "insufficient-cash",
+        "insufficient-cash",
+      ]);
+    });
+
+    it("keeps both day latches across a mid-session restart", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const first = setup({ store, clock });
+      await first.runner.runPass(at(80));
+      clock.t = T0 + 3_600_000;
+      await first.runner.runPass(at(70)); // stopped out, same session
+      expect(store.closed).toHaveLength(1);
+
+      const restarted = setup({ store, clock });
+      await restarted.runner.runPass(at(80)); // still oversold — but opened and closed today
+      expect(restarted.runner.openProbes()).toEqual([]);
+      expect(restarted.decisions).toEqual([]);
+    });
   });
 });
