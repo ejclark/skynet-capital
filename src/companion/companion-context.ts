@@ -28,6 +28,9 @@ export interface MemberContextInput {
   /** Where they asked from, already reduced to fixed words by `describePage` (#2224 shape 2) —
    *  never the raw path the client sent. */
   readonly page?: string;
+  /** Their own holding on the page's symbol, from their desk (`describeHolding`, #2224 shape 2
+   *  slice 2) — broker facts, never client text. */
+  readonly holding?: string;
 }
 
 const MAX_FILINGS_NAMED = 3;
@@ -88,6 +91,7 @@ export function memberContext(input: MemberContextInput): string {
           `Page: they sent this from ${input.page}. Read "this", "here" or "this strike" as that page unless they say otherwise.`,
         ]
       : []),
+    ...(input.holding ? [`Position: ${input.holding}.`] : []),
     `Onboarding (M·01, ${onboarding.done} of ${onboarding.total} done) — ${steps}.`,
     `${account}${graduation}`,
     feedback,

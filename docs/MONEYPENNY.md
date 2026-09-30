@@ -19,7 +19,8 @@ rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and 
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
 same key the feedback coach uses, with four read-only tools over the member's own desk, their live
 onboarding/filing state injected every turn (`companion-context.ts`) along with the page they
-asked from, reduced to fixed words (`companion-page.ts`, #2224), and a cached help desk
+asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own holding on that
+page's symbol (`companion-holding.ts`), and a cached help desk
 (`companion-help.ts`) so "how do I…" answers come from this app's facts. She cannot place an
 order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`). Filing is hers to
 draft: `draft_feedback` hands the rail a draft built from the whole thread and files nothing; the

@@ -1,12 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CompanionMessage } from "../companion/companion-chat.js";
 import { memberContext } from "../companion/companion-context.js";
+import { describeHolding } from "../companion/companion-holding.js";
 import {
   COMPANION_MODEL_CALLS_MAX,
   COMPANION_THROTTLE_MAX,
   COMPANION_THROTTLE_WINDOW_MS,
 } from "../companion/companion-limits.js";
-import { describePage } from "../companion/companion-page.js";
+import { describePage, pageSymbol } from "../companion/companion-page.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
@@ -111,6 +112,7 @@ async function memberContextFor(
   config: DashboardServerConfig,
   session: Session,
   page?: string,
+  holding?: string,
 ): Promise<string | undefined> {
   try {
     const [onboarding, filings] = await Promise.all([
@@ -125,6 +127,7 @@ async function memberContextFor(
         .map((f) => ({ issueNumber: f.issueNumber, title: f.title, filedAt: f.filedAt })),
       marketOpen: regularSessionOpen(),
       ...(page ? { page } : {}),
+      ...(holding ? { holding } : {}),
     });
   } catch {
     return undefined;
@@ -159,7 +162,13 @@ async function serveChat(
   const participantId = resolveCurrentId(session, config.resolveOwnerId);
   // The page they asked from (#2224 shape 2), mapped onto fixed words — the raw path never
   // reaches the prompt (`companion-page.ts`).
-  const context = await memberContextFor(config, session, describePage(body?.page));
+  // …and, when that page names a symbol, what they hold on it — read from the same desk snapshot
+  // her `get_my_positions` tool reads, for the session's own participant only (slice 2).
+  const desk = participantId
+    ? config.hub.getState().participants.find((p) => p.id === participantId)
+    : undefined;
+  const holding = describeHolding(pageSymbol(body?.page), desk);
+  const context = await memberContextFor(config, session, describePage(body?.page), holding);
 
   openSseStream(res);
   let seq = 0;

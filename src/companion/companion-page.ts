@@ -19,8 +19,8 @@ import {
  * page's own section ids). Anything else — an unknown page, a malformed symbol, a hand-typed
  * section — adds nothing, never a guess.
  *
- * Deliberately left out: `?desk=` (an account id she can't name without a lookup — the position
- * slice brings account + holding together) and `/u/$id`'s id (whose profile it is stays off the
+ * Deliberately left out: `?desk=` (an account id she can't name without a lookup; the holding
+ * line reads the session's own desk instead, `companion-holding.ts`) and `/u/$id`'s id (whose profile it is stays off the
  * prompt; "a member's profile" is enough to answer from).
  */
 
@@ -81,9 +81,9 @@ function describeTrade(params: URLSearchParams): string {
   return withSection(parts.join(" "), TRADE_SECTIONS, params.get("section"));
 }
 
-/** A fixed-vocabulary description of the page the member asked from, or undefined when the value
- *  isn't a known in-app page. Pure; never echoes an unchecked character of `page`. */
-export function describePage(page: unknown): string | undefined {
+/** The page as an in-app URL, or undefined for anything that isn't one (over-long, external,
+ *  protocol-relative, unparseable). */
+function parsePage(page: unknown): { path: string; params: URLSearchParams } | undefined {
   if (typeof page !== "string" || page.length > MAX_PAGE_CHARS || !page.startsWith("/")) {
     return undefined;
   }
@@ -94,8 +94,27 @@ export function describePage(page: unknown): string | undefined {
   } catch {
     return undefined;
   }
-  const path = url.pathname.replace(/\/+$/, "") || "/";
-  const params = url.searchParams;
+  return { path: url.pathname.replace(/\/+$/, "") || "/", params: url.searchParams };
+}
+
+/** The underlying the trade ticket is on — its `?symbol=`, else a managed contract's underlying —
+ *  only once it passes `UNDERLYING_PATTERN`. Undefined off the ticket or for anything malformed.
+ *  The position slice (#2224 shape 2, slice 2) keys the member's holding off this. */
+export function pageSymbol(page: unknown): string | undefined {
+  const parsed = parsePage(page);
+  if (!parsed || parsed.path !== "/trade") return undefined;
+  const symbol = parsed.params.get("symbol")?.trim().toUpperCase();
+  if (symbol && UNDERLYING_PATTERN.test(symbol)) return symbol;
+  const managed = parseOccSymbol(parsed.params.get("manage")?.trim().toUpperCase() ?? "");
+  return managed && UNDERLYING_PATTERN.test(managed.underlying) ? managed.underlying : undefined;
+}
+
+/** A fixed-vocabulary description of the page the member asked from, or undefined when the value
+ *  isn't a known in-app page. Pure; never echoes an unchecked character of `page`. */
+export function describePage(page: unknown): string | undefined {
+  const parsed = parsePage(page);
+  if (!parsed) return undefined;
+  const { path, params } = parsed;
   if (path === "/trade") return describeTrade(params);
   if (path === "/activity")
     return withSection("the Activity page", ACTIVITY_SECTIONS, params.get("section"));

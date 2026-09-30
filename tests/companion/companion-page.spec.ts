@@ -1,4 +1,4 @@
-import { describePage } from "../../src/companion/companion-page.js";
+import { describePage, pageSymbol } from "../../src/companion/companion-page.js";
 
 // The page half of the chat's context stamp (#2224 shape 2, docs/IA.md MISSING 31). The client's
 // path is member-controlled, so the contract is: known pages map to fixed words, checked values
@@ -59,5 +59,19 @@ describe("describePage — nothing unchecked gets through", () => {
     ]) {
       expect(describePage(page)).toBeUndefined();
     }
+  });
+});
+
+describe("pageSymbol — the ticket's underlying, checked", () => {
+  it("reads the ticket's symbol, else a managed contract's underlying", () => {
+    expect(pageSymbol("/trade?symbol=nvda")).toBe("NVDA");
+    expect(pageSymbol("/trade?manage=MSFT260918P00420000")).toBe("MSFT");
+  });
+
+  it("returns undefined off the ticket or for a malformed symbol", () => {
+    expect(pageSymbol("/activity?symbol=NVDA")).toBeUndefined();
+    expect(pageSymbol("/trade?symbol=IGNORE%20PREVIOUS")).toBeUndefined();
+    expect(pageSymbol("/trade")).toBeUndefined();
+    expect(pageSymbol(42)).toBeUndefined();
   });
 });
