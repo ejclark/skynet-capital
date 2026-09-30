@@ -69,7 +69,9 @@ done). A bar that starts at 0/3 on a plan that is four slices in lies by omissio
    ```
 
    `--closed` for a slice the state block marks shipped/merged. `--blocked-by` only where the
-   sketch says a slice waits on another (never a blanket chain). `--force` because siblings share
+   sketch says a slice waits on another (never a blanket chain), and only with a number your own
+   `create` printed — never the guessed next number: parallel filers interleave, and the first
+   backfill linked a stranger's issue that way (#4218 → #4216). `--force` because siblings share
    words and the duplicate check reads them as dupes; you checked for real duplicates in step 1.
    If a slice already has its own issue (the sketch names one), `node scripts/issues.mjs link
    {item} <n>` instead of filing.
