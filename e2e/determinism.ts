@@ -65,10 +65,24 @@ const SEEDED_RANDOM = `
  */
 const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
 
+/**
+ * The board's live channel (`/events?by=…`, app/src/live/channel.ts) is the third irreproducible
+ * input. Once the league card joined the tower column on every Profile section (#4133, #4143), the
+ * topbar pill began reading `live · seq N` there instead of `connecting…` — and N is however many
+ * hub ticks the offline server had run before the capture (measured 2, 3, 5, 6, 8, 10 across local
+ * runs of one commit). The label's width slides the market clock beside it, so the same commit drew
+ * a different topbar per run: ~940–1,130 pixels per shot, about a third of the shortest page's
+ * FROZEN_DIFF_RATIO budget spent on noise. Refusing the stream holds every page at `connecting…`,
+ * the state every baseline has always captured; the board snapshot the league card draws from is a
+ * plain fetch and still lands.
+ */
+const isBoardChannel = (url: URL): boolean => url.pathname === "/events";
+
 export async function freezePage(page: Page): Promise<void> {
   await page.clock.setFixedTime(FIXED_CLOCK);
   await page.addInitScript(SEEDED_RANDOM);
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route(isBoardChannel, (route) => route.abort());
 }
 
 /**
