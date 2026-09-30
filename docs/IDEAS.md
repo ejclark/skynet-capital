@@ -18,6 +18,19 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The Profile screenshot fixture crashes on Milestones and Feedback.** `scripts/shoot/accounts-fixture.mjs`
+  stubs the book's endpoints but not the viewer-level sections', so `/app/accounts?section=milestones`
+  renders "Something went wrong" ("Cannot read properties of undefined (reading 'length')") on `main`
+  as well. Trade's fixture had the same class of gap (an unstubbed `/api/research`), fixed in #4143.
+  First step, about 20 minutes: log the `/api/*` paths the section requests, then stub each with an
+  honest empty payload. _(src: Claude · while: shooting the tower column, #3977)_
+- **Dependabot will offer `mermaid` 12 again.** `scripts/mermaid-lint.mjs` pins `mermaid` to
+  github.com's renderer (11.17.2) on purpose, and #4025 bumped it to 12, so the lint was checking
+  against the wrong version until the pin was restored. An `ignore` rule for `mermaid` majors in
+  `.github/dependabot.yml` stops the re-offer. That file is protected, so it goes on the platter.
+  Until then, the dependency reviewer escalates majors rather than merging them.
+  _(src: Claude · while: clearing the Dependabot backlog, #4053)_
+
 - **Backfill IV history so position guidance can grade "high" in weeks, not a year.** Daily IV
   recording went live 2026-09-25 (#3742, #3746). But IV rank (`src/research/iv-rank.ts`) needs a
   full, continuous 365-day window, so until ~2027-09 every covered-call or put write stays capped at
