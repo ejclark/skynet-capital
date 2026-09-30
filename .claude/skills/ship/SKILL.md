@@ -36,7 +36,8 @@ drained it. See `docs/COACHES.md` → *Resource cost is a fitness dimension*.
    PR opens pre-empts that wait: native auto-merge honours only *required* checks, and only
    `verify` is required, so #4151, #4155 and #4158 merged mid-integration-tests on 2026-09-30 and
    two of those runs went red (#4094, `docs/LESSONS.md`). `ship open` also runs `npm run test:e2e`
-   locally now, so a red screenshot is caught before a PR exists. `scripts/ship.sh automerge <n>`
+   locally when the pinned Chromium build is installed (cloud sessions ship a different build and
+   must not re-download it — there, it says so and CI is the gate). `scripts/ship.sh automerge <n>`
    stays as the fallback for a PR the pipeline job can't reach (a re-push, where `opened` won't
    fire again) — and it refuses until integration tests passed or were skipped.
 4. **STOP. Do not poll.** No `list_pull_requests`, no `pull_request_read`, no status check-ins. The

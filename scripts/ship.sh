@@ -259,10 +259,18 @@ EOF_SHOTS
     # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
     # red. Same classification as CI's "Detect non-docs changes": a docs-only diff skips it there,
     # so it skips here. Chromium is preinstalled in cloud sessions (PLAYWRIGHT_BROWSERS_PATH).
+    # Only when the PINNED browser build is on disk: screenshots are baselined on CI's exact Chromium,
+    # and a cloud session ships a different build (2026-09-30: 1194 on disk vs 1234 pinned) that it
+    # must not re-download — a mismatched run is false-red, not signal. Then the pipeline's arm job
+    # is the gate (it waits for `integration tests`), and this says so rather than passing silently.
     if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
-      echo "ship: local integration tests (npm run test:e2e)…"
-      npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
-      echo "ship: integration tests green."
+      if node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
+        echo "ship: local integration tests (npm run test:e2e)…"
+        npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
+        echo "ship: integration tests green."
+      else
+        echo "ship: ⚠ local integration tests NOT run — the pinned Chromium build isn't installed here. CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
+      fi
     fi
   fi
 

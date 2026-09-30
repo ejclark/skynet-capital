@@ -2655,7 +2655,9 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   gate we had. The session also shipped on local `npm run verify`, which has no Playwright step.
 - **PREVENTION:**
   1. **Fix (not protected, this PR):** `ship open` runs `npm run test:e2e` locally on a non-docs diff
-     and refuses to push on red; it no longer tells anyone to arm. `ship automerge` (the fallback
+     and refuses to push on red — only when the pinned Chromium build is on disk (its first run found
+     a cloud session has build 1194 against the pinned 1234, which would be false-red, so there it
+     prints that CI is the gate instead); it no longer tells anyone to arm. `ship automerge` (the fallback
      for a PR the pipeline job can't reach) refuses unless the head's `integration tests` run
      passed or was skipped. The skill, CLAUDE.md, CONTRIBUTING, COACHES, retro and dep-warden stop
      saying "arm". Pinned by `tests/arch/ship.spec.ts` → "ship — integration tests gate every merge
