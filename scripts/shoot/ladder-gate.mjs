@@ -113,6 +113,7 @@ const { page, origin, shoot, close } = await openShell({
     "/api/learn": learn,
     "/api/onboarding": onboarding,
     "/api/playbooks": playbooks,
+    "/api/research": { events: [], closures: [], calls: [], symbols: [], studies: [], ledgers: [] },
   },
 });
 
@@ -123,3 +124,48 @@ await page.goto(`${origin}/app/accounts?section=milestones`);
 await page.getByText("Your milestones", { exact: true }).waitFor();
 await shoot("toc-gated");
 await close();
+
+// The locked rung at phone width (#469), past the message gate: 101 earned, 102 open, 201 locked —
+// the panel renders the server's own refusal sentence, naming the fill that opens it.
+const climbing = {
+  linked: true,
+  wheels: true,
+  nextUp: "102",
+  plays: plays.plays.map((p) =>
+    p.code === "101"
+      ? { ...p, locked: false, earned: true }
+      : p.code === "102"
+        ? { ...p, locked: false, earned: false }
+        : {
+            ...p,
+            earned: false,
+            lockedReason:
+              p.code === "201"
+                ? "Training wheels are on, and course 201 hasn't been unlocked yet — it opens after your first filled 102 (Sell stock)."
+                : undefined,
+          },
+  ),
+};
+const phone = await openShell({
+  name: "ladder-gate",
+  viewport: { width: 390, height: 844 },
+  stubs: {
+    "/api/trade/plays": climbing,
+    "/api/settings": settings,
+    "/api/accounts/networth": profileStubs(settings.accounts)["/api/accounts/networth"],
+    "/api/desk/*": desk,
+    "/api/learn": learn,
+    "/api/onboarding": onboarding,
+    "/api/playbooks": playbooks,
+    "/api/research": { events: [], closures: [], calls: [], symbols: [], studies: [], ledgers: [] },
+  },
+});
+await phone.page.goto(`${phone.origin}/app/trade?play=201`);
+await phone.page.getByLabel("Locked play").waitFor();
+// Frame the ladder strip (what's earned, what's next) with the panel's reason beneath it.
+await phone.page
+  .getByText("Next up", { exact: false })
+  .first()
+  .evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 120));
+await phone.shoot("locked-rung-phone");
+await phone.close();

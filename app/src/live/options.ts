@@ -26,6 +26,8 @@ export interface PlayInfo {
   /** Proven by a real fill (#1461) — the rail's ✓; the server derives it, the client only draws it. */
   readonly earned: boolean;
   readonly opensAfter?: { readonly code: string; readonly name: string };
+  /** Present when locked: the server's own refusal reason, naming the path out (#469). */
+  readonly lockedReason?: string;
 }
 
 export interface PlaysIndex {

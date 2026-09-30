@@ -6,6 +6,8 @@ import {
   type LadderFill,
   type LadderTag,
   ladderGated,
+  ladderLockedReason,
+  ladderRefusal,
   milestoneForCode,
   nextUp,
   unlockedCodes,
@@ -187,5 +189,33 @@ describe("the message gate on the ladder (#1119, lowered 2026-09-03)", () => {
   it("names the remedy in one sentence a member can act on", () => {
     expect(LADDER_GATE_NOTE).toContain("hello to Moneypenny");
     expect(LADDER_GATE_MILESTONE).toBe("first-message");
+  });
+});
+
+describe("the one locked-rung sentence (#469)", () => {
+  it("names the rung below as the path out", () => {
+    expect(ladderLockedReason("201", false)).toBe(
+      "Training wheels are on, and course 201 hasn't been unlocked yet — it opens after your first filled 102 (Sell stock).",
+    );
+  });
+
+  it("names the say-hello gate, not the rung below, while the gate holds", () => {
+    const reason = ladderLockedReason("201", true);
+    expect(reason).toContain(LADDER_GATE_NOTE);
+    expect(reason).not.toContain("first filled");
+  });
+
+  it("never offers a door the server refuses — no self-serve wheels-off (#1671)", () => {
+    for (const code of ["101", "102", "201", "202", "301", "302", "401", "501"] as const) {
+      for (const gated of [true, false]) {
+        expect(ladderRefusal(code, gated)).not.toMatch(/wheels off/i);
+      }
+    }
+  });
+
+  it("a refusal is the reason plus the fact that nothing reached the broker", () => {
+    expect(ladderRefusal("401", false)).toBe(
+      `${ladderLockedReason("401", false)} Nothing was sent.`,
+    );
   });
 });

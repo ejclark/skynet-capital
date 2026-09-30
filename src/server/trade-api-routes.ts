@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
+import { ladderRefusal } from "../domain/progression.js";
 import {
   previewOrder,
   type TicketOrderType,
@@ -43,18 +43,6 @@ interface TradeApiBody {
 }
 
 const TRADE_BODY_CAP_BYTES = 8_192;
-
-/**
- * Course 101 hasn't been unlocked yet — cannot happen in practice (rung 0 is always open per
- * `unlockedCodes`), but a locked rung earns a real sentence rather than a silent fallback either
- * way.
- */
-function stockLockedSentence(code: "101" | "102"): string {
-  const prev = ladderNeighbor(code, -1);
-  return `Training wheels are on, and course ${code} hasn't been unlocked yet${
-    prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
-  }. Nothing was sent.`;
-}
 
 function parsePositivePrice(raw: unknown): number | undefined {
   const value = typeof raw === "number" ? raw : Number.NaN;
@@ -138,10 +126,10 @@ async function resolveStockRefusal(
         )
       : undefined;
   if (action === "buy" && progression?.ladderGate) {
-    return `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`;
+    return ladderRefusal("101", true);
   }
   const code: "101" | "102" = action === "buy" ? "101" : "102";
-  return playLocked(code, progression) ? stockLockedSentence(code) : undefined;
+  return playLocked(code, progression) ? ladderRefusal(code, false) : undefined;
 }
 
 /** Handle `/api/trade/*`. Returns true when the request was answered. */

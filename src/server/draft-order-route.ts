@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
+import { ladderRefusal } from "../domain/progression.js";
 import type { DraftLeg, DraftOrder, DraftVerdict, NewLeg } from "../trading/draft-order.js";
 import {
   addLeg,
@@ -167,16 +167,10 @@ function parseRequest(raw: string): DraftRequestBody | undefined {
 /** The rung this whole route gates — every action here builds toward one 401 order. */
 const MULTI_LEG_CODE = "401";
 
-/** The same "training wheels" sentence the single-leg tickets use, for the one rung this route
- *  gates (#1671) — mirrors `trade-api-routes.ts`'s `stockLockedSentence`. */
+/** The same locked-rung sentence the single-leg tickets use (#469), for the one rung this route
+ *  gates (#1671); the feedback gate (#1119) outranks the rung below while it holds. */
 function draftLockedSentence(progression: ParticipantProgression | undefined): string {
-  if (progression?.ladderGate) {
-    return `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`;
-  }
-  const prev = ladderNeighbor(MULTI_LEG_CODE, -1);
-  return `Training wheels are on, and course ${MULTI_LEG_CODE} hasn't been unlocked yet${
-    prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
-  }. Nothing was sent.`;
+  return ladderRefusal(MULTI_LEG_CODE, Boolean(progression?.ladderGate));
 }
 
 /** Apply exactly one transition — the same functions #635/#861 already ship and test. Add/remove/
