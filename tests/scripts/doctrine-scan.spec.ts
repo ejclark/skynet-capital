@@ -145,10 +145,20 @@ describe("doctrine-scan.mjs --explain", () => {
 
 // --due / --candidate / --validate against a real fixture directory — no network, dependency-free.
 describe("doctrine-scan.mjs CLI, against a fixture dossiers directory", () => {
+  // Pinned to a loop-list fixture with no list, so these stay about dossiers whatever the real
+  // docs/process/LEARNING-LOOP.md carries (the loop list has its own spec).
+  const noLoops = join(mkdtempSync(join(tmpdir(), "doctrine-scan-loops-")), "LEARNING-LOOP.md");
+  writeFileSync(noLoops, "# Learning loops\n");
   const run = (dir: string, ...flags: string[]) =>
     execFileSync(
       "node",
-      ["scripts/doctrine-scan.mjs", `--dossiers-dir=${dir}`, "--today=2026-09-22", ...flags],
+      [
+        "scripts/doctrine-scan.mjs",
+        `--dossiers-dir=${dir}`,
+        `--loops-file=${noLoops}`,
+        "--today=2026-09-22",
+        ...flags,
+      ],
       {
         encoding: "utf8",
       },

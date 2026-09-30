@@ -11,6 +11,7 @@ export interface LedgerRow {
 }
 
 export function cells(line: string): string[];
+export function leadingDate(cell: string): string | null;
 export function parseLedgerRows(md: string): LedgerRow[];
 export function readDossier(path: string): string;
 export const DEFAULT_REVIEW_DAYS: number;
