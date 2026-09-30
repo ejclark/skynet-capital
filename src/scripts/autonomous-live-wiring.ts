@@ -301,7 +301,10 @@ export function tradingRoster(
     // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
     // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS or a
     // Playbook Store subscription names them.
-    persona: withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS),
+    // `console` is the live runtime's log sink: an opted-in playbook's mixed-signals readings
+    // (#3194 step 5b-i) land beside the `[playbooks]`/`[gate]` lines. Observe-only — the sink
+    // never feeds back into a decision.
+    persona: withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS, [], console),
     risk: {
       ...baseRisk,
       subscriptions: roster.subscriptions,

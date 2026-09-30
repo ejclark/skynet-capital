@@ -71,6 +71,11 @@ export async function serveChain(
     // Quote coverage (#3407 P2): how many strikes the data host actually quoted, so the chain
     // can say "greeks from the indicative feed · 38 of 41 strikes" instead of a silent "—".
     const quoted = chain.filter((row) => row.quoteSource !== undefined).length;
+    // The as-of stamp (#4327): `asOf` is when THIS server read the feed (no cache sits between —
+    // every request fetches), `quotedAt` is when the feed says its quotes were made. They differ:
+    // the indicative feed is delayed, so the chain can be fetched a second ago and quoted minutes
+    // ago. Median, not newest — one fresh strike must not make a stale chain read fresh.
+    const quotedAt = medianStamp(chain.map((row) => row.quotedAt));
     sendJson(res, 200, {
       symbol,
       optionType: type,
@@ -83,6 +88,7 @@ export async function serveChain(
         quoted,
         total: chain.length,
         asOf: new Date().toISOString(),
+        ...(quotedAt ? { quotedAt } : {}),
       },
       rows: chain.map((row) => {
         const premium = rowPremium(row);
@@ -107,4 +113,14 @@ export async function serveChain(
       reason: "failed",
     });
   }
+}
+
+/** The middle feed quote time across the rows that carry one; undefined when none do. */
+export function medianStamp(stamps: readonly (string | undefined)[]): string | undefined {
+  const times = stamps
+    .map((t) => (t === undefined ? Number.NaN : Date.parse(t)))
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  const mid = times[Math.floor(times.length / 2)];
+  return mid === undefined ? undefined : new Date(mid).toISOString();
 }

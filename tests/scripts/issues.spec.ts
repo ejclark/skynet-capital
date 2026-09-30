@@ -3,6 +3,7 @@ import {
   boardStatus,
   csv,
   findDuplicates,
+  followUps,
   matches,
   nextLabels,
   parseArgs,
@@ -102,5 +103,25 @@ describe("issues cli: edits", () => {
     expect(matches(issue, "dependabot deploy")).toBe(false);
     expect(matches(issue, "", { label: "needs-eric" })).toBe(true);
     expect(matches(issue, "", { label: "ready" })).toBe(false);
+  });
+});
+
+describe("issues cli: followUps (slices as sub-issues)", () => {
+  const child = { id: 9001, number: 42 };
+
+  it("links to the parent, adds each blocker, then closes a shipped slice — in that order", () => {
+    const ops = followUps({ child, parentNumber: 7, blockers: [{ id: 11 }], closed: true });
+    expect(ops.map((o) => `${o.method} ${o.path}`)).toEqual([
+      "POST issues/7/sub_issues",
+      "POST issues/42/dependencies/blocked_by",
+      "PATCH issues/42",
+    ]);
+    expect(ops[0]?.payload).toEqual({ sub_issue_id: 9001 });
+    expect(ops[1]?.payload).toEqual({ issue_id: 11 });
+    expect(ops[2]?.payload).toEqual({ state: "closed", state_reason: "completed" });
+  });
+
+  it("writes nothing for a plain filing", () => {
+    expect(followUps({ child })).toEqual([]);
   });
 });
