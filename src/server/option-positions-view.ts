@@ -1,8 +1,11 @@
 import {
   type AggregateGreeks,
   aggregateGreeks,
+  type BetaWeightedDelta,
+  betaWeightDelta,
   type ContractGreeks,
   isRepresentative,
+  type UnderlyingBeta,
 } from "../options/greeks-aggregator.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
@@ -17,7 +20,19 @@ import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.
  * Pure: the caller hands in the desk's positions, the snapshots it fetched by contract, the spots
  * it fetched by underlying, and the clock. Absent means absent — a contract the feed didn't
  * quote has no greeks row and is named in `book.uncovered`, never counted as zero.
+ *
+ * BETA-WEIGHTED (#4327): the book's delta is also re-expressed in SPY shares and dollars, from
+ * betas the caller MEASURED (`beta.ts`) — a name with no beta is left raw and named, never 1.0.
  */
+
+/** The benchmark the book's delta is weighted to — the S&P 500 ETF, the industry default. */
+export const BENCHMARK = "SPY";
+
+/** What the caller knows for weighting: measured betas by underlying, and the benchmark's price. */
+export interface BetaInputs {
+  readonly betas: ReadonlyMap<string, UnderlyingBeta>;
+  readonly benchmarkPrice?: number;
+}
 
 export interface ContractSnapshot {
   readonly bid?: number;
@@ -61,6 +76,8 @@ export interface OptionPositionsView {
   readonly book: AggregateGreeks;
   /** True only when every option position had greeks — the book figure speaks for the whole. */
   readonly representative: boolean;
+  /** The book's delta in SPY terms; absent when SPY had no price (nothing could be weighted). */
+  readonly betaWeighted?: BetaWeightedDelta;
 }
 
 const SHARES_PER_CONTRACT = 100;
@@ -84,6 +101,7 @@ export function optionPositionsView(
   snapshots: ReadonlyMap<string, ContractSnapshot>,
   spots: ReadonlyMap<string, number>,
   now: Date,
+  beta: BetaInputs = { betas: new Map() },
 ): OptionPositionsView {
   const rows: OptionPositionRow[] = [];
   for (const position of positions) {
@@ -118,5 +136,17 @@ export function optionPositionsView(
     rows.map((row) => ({ symbol: row.symbol, quantity: row.contracts })),
     (occ) => snapshots.get(occ)?.greeks,
   );
-  return { rows, book, representative: isRepresentative(book) };
+  const betaWeighted = betaWeightDelta(
+    book.deltaByUnderlying,
+    (u) => beta.betas.get(u),
+    (u) => spots.get(u),
+    BENCHMARK,
+    beta.benchmarkPrice,
+  );
+  return {
+    rows,
+    book,
+    representative: isRepresentative(book),
+    ...(betaWeighted ? { betaWeighted } : {}),
+  };
 }

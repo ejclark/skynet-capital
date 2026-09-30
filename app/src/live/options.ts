@@ -208,6 +208,20 @@ export interface OptionBookGreeks {
   readonly uncovered: readonly string[];
 }
 
+/** The book's delta re-expressed in SPY (#4327) — mirrors `BetaWeightedDelta` on the server. */
+export interface BetaWeightedBook {
+  readonly benchmark: string;
+  readonly benchmarkPrice: number;
+  /** SPY-share equivalents over the weighted names. */
+  readonly delta: number;
+  /** The same exposure as dollars of SPY; a 1% SPY move ≈ 1% of this. */
+  readonly dollarDelta: number;
+  /** Weighted names with the measured beta and the last close it was fitted through. */
+  readonly weighted: Readonly<Record<string, { readonly beta: number; readonly asOf: string }>>;
+  /** Names with no measured beta or price, and their RAW delta. */
+  readonly unweighted: Readonly<Record<string, number>>;
+}
+
 export type OptionPositions =
   | {
       readonly available: true;
@@ -215,6 +229,8 @@ export type OptionPositions =
       readonly rows: readonly OptionPositionRow[];
       readonly book: OptionBookGreeks;
       readonly representative: boolean;
+      /** Absent when SPY's price couldn't be read — nothing could be weighted. */
+      readonly betaWeighted?: BetaWeightedBook;
     }
   | { readonly available: false; readonly reason: "unlinked"; readonly rows: readonly [] };
 
