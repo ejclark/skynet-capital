@@ -52,6 +52,11 @@ export function isDuplicateQueueNote(
   comments: ReadonlyArray<{ body?: string }> | undefined,
   reason: string,
 ): boolean;
+/** Open issues carrying `label`, oldest first, over REST; PRs dropped. */
+export function readOpenIssues(
+  label: string,
+  exec?: (cmd: string, args: string[]) => string,
+): Array<Required<Pick<AdmissionIssue, "number" | "body" | "labels">> & AdmissionIssue>;
 /** Open issues carrying `in-progress`, over REST; PRs dropped. */
 export function readInFlight(
   exec?: (cmd: string, args: string[]) => string,

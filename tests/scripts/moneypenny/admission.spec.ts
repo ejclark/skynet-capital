@@ -8,6 +8,7 @@ import {
   readInFlight,
   surfaceOf,
 } from "../../../scripts/moneypenny/admission.mjs";
+import { type ClaimCtx, claimNext } from "../../../scripts/moneypenny/index.mjs";
 
 // THE ADMISSION GATE (#3960 criteria 1, 2, 7). Between "ready" and "a build session starts":
 // halt refuses everything, conserve refuses all but fast-track, the in-flight cap refuses all but
@@ -296,5 +297,59 @@ describe("gateAdmission — the impure call, reads injected", () => {
     });
     expect(gateAdmission(me, deps)).toEqual({ admit: false, reason: "work-mode is halt" });
     expect(lines.some((l) => l.startsWith("::warning::could not post"))).toBe(true);
+  });
+});
+
+describe("claimNext — the retry sweep hands the pick to its own lane's claim", () => {
+  const setup = (ready: ReturnType<typeof issue>[], inFlight: ReturnType<typeof issue>[] = []) => {
+    const called: Array<{ lane: string; ctx: unknown }> = [];
+    const fake = (lane: string) => (ctx: ClaimCtx) => {
+      called.push({ lane, ctx });
+      return { claimed: true, reason: "claimed", number: ctx.payload?.issue?.number };
+    };
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => ready,
+      readInFlight: () => inFlight,
+      claims: { plan: fake("plan"), feedback: fake("feedback") },
+    };
+    return { deps, called };
+  };
+  const at = (i: ReturnType<typeof issue>, createdAt: string) => ({ ...i, createdAt });
+
+  it("claims the oldest admissible ready issue through its lane, as a labeled:ready event", () => {
+    const { deps, called } = setup([
+      at(issue(8, "a", ["ready", "feedback"]), "2026-09-29T00:00:00Z"),
+      at(issue(6, "b", ["ready", "plan"]), "2026-09-28T00:00:00Z"),
+    ]);
+    const r = claimNext(0, "abc", deps);
+    expect(r).toMatchObject({ claimed: true, lane: "plan", number: 6 });
+    expect(called).toHaveLength(1);
+    expect(called[0]?.ctx).toMatchObject({
+      payload: { action: "labeled", label: { name: "ready" } },
+    });
+  });
+
+  it("routes a feedback issue to the feedback lane", () => {
+    const { deps, called } = setup([issue(8, "a", ["ready", "feedback"])]);
+    expect(claimNext(0, "abc", deps).lane).toBe("feedback");
+    expect(called[0]?.lane).toBe("feedback");
+  });
+
+  it("ignores ready issues that belong to neither lane", () => {
+    const { deps, called } = setup([issue(8, "a", ["ready", "enhancement"])]);
+    expect(claimNext(0, "abc", deps).claimed).toBe(false);
+    expect(called).toEqual([]);
+  });
+
+  it("claims nothing when the cap is full", () => {
+    const { deps, called } = setup(
+      [issue(8, "z", ["ready", "plan"])],
+      [issue(1, "a"), issue(2, "b"), issue(3, "c")],
+    );
+    const r = claimNext(0, "abc", deps);
+    expect(r.claimed).toBe(false);
+    expect(r.reason).toContain("1 ready, 3 in flight, work-mode=normal");
+    expect(called).toEqual([]);
   });
 });

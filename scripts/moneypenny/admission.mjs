@@ -133,22 +133,32 @@ export function isDuplicateQueueNote(comments = [], reason) {
 }
 
 /**
- * Every open issue carrying `in-progress`, over REST (the core bucket — gh.mjs's header). One page:
- * the cap is single digits, so 100 rows is already far past any legitimate state. PRs are dropped
- * (the issues endpoint returns them too).
+ * Open issues carrying `label`, OLDEST FIRST, over REST (the core bucket — gh.mjs's header). One
+ * page of 100: for `in-progress` the cap is single digits, so 100 is far past any legitimate state;
+ * for `ready` the sweep wants the oldest, which is exactly what the first ascending page holds.
+ * PRs are dropped (the issues endpoint returns them too). A non-list answer throws — never "none".
  */
-export function readInFlight(exec = sh) {
+export function readOpenIssues(label, exec = sh) {
   const rows = JSON.parse(
     exec("gh", [
       "api",
-      `repos/{owner}/{repo}/issues?state=open&labels=${LABELS.inProgress.name}&per_page=100`,
+      `repos/{owner}/{repo}/issues?state=open&labels=${label}&sort=created&direction=asc&per_page=100`,
     ]) || "[]",
   );
-  if (!Array.isArray(rows)) throw new Error("the in-flight read did not return a list");
+  if (!Array.isArray(rows)) throw new Error(`the open \`${label}\` read did not return a list`);
   return rows
     .filter((r) => !r.pull_request)
-    .map((r) => ({ number: r.number, body: r.body ?? "", labels: r.labels ?? [] }));
+    .map((r) => ({
+      number: r.number,
+      state: r.state ?? "open",
+      body: r.body ?? "",
+      labels: r.labels ?? [],
+      createdAt: r.created_at,
+    }));
 }
+
+/** Every open issue carrying `in-progress` — the list the cap and the fence count. */
+export const readInFlight = (exec = sh) => readOpenIssues(LABELS.inProgress.name, exec);
 
 const readComments = (n) =>
   JSON.parse(sh("gh", ["issue", "view", String(n), "--json", "comments"]) || "{}").comments ?? [];

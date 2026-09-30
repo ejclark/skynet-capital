@@ -9,6 +9,7 @@
 //   node scripts/moneypenny/index.mjs --triage-feedback        # a fresh feedback issue: self-ready or Backlog
 //   node scripts/moneypenny/index.mjs --claim-feedback         # claim the ready-flipped feedback issue + pick its model
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
+//   node scripts/moneypenny/index.mjs --claim-next              # retry sweep: oldest admissible ready issue (#3960)
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
@@ -50,7 +51,7 @@
 // its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { gateAdmission } from "./admission.mjs";
+import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./admission.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
@@ -61,12 +62,14 @@ import {
   ensureVocabulary,
   issueNumberFromSlug,
   LABELS,
+  labelNames,
   MANAGED_LABELS,
   setInProgress,
 } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
+import { readWorkMode } from "./work-mode.mjs";
 
 // Named re-exports, not `export … from` — this router keeps substantial logic of its own (the
 // noBarrelFile rule is right to ban a file that's pure re-exports; this one just isn't that).
@@ -379,6 +382,42 @@ export function claimPlan(
   setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * THE RETRY SWEEP'S ONE STEP (#3960). A refused claim leaves its issue `ready`, lease-free and
+ * label-free; this is what picks it back up on a later tick. Reads the dial, the in-flight list and
+ * the open `ready` issues ONCE, asks `nextAdmissible` for the one to try (fast-track, then oldest),
+ * and hands it to its own lane's claim as a synthetic `labeled: ready` event — so the sweep runs
+ * exactly the checks a live label event would, lease included. One claim per call: admitting it
+ * changes what the next pick may see. Writes `lane=` beside the claim's own `number=`/`model=`.
+ * An unreadable list throws (a red tick), never "nothing to do".
+ */
+export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "", deps = {}) {
+  const {
+    readMode = () => readWorkMode(),
+    readReady = () => readOpenIssues(LABELS.ready.name),
+    readInFlight: inFlightOf = () => readInFlight(),
+    claims = { plan: claimPlan, feedback: claimFeedback },
+    ...admission
+  } = deps;
+  const mode = readMode();
+  const inFlight = inFlightOf();
+  const lanes = [LABELS.plan.name, LABELS.feedback.name];
+  const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
+  const pick = nextAdmissible(ready, inFlight, mode);
+  if (!pick) {
+    const why = `nothing admissible (${ready.length} ready, ${inFlight.length} in flight, work-mode=${mode.position})`;
+    console.log(`::notice::retry sweep — ${why}`);
+    return { claimed: false, reason: why };
+  }
+  const lane = labelNames(pick.labels).includes(LABELS.plan.name) ? "plan" : "feedback";
+  const ctx = { payload: { action: "labeled", label: { name: LABELS.ready.name }, issue: pick } };
+  const gateDeps = { readMode: () => mode, readInFlight: () => inFlight, ...admission };
+  const result = claims[lane](ctx, nowMs, sha, gateDeps);
+  const out = process.env.GITHUB_OUTPUT;
+  if (result.claimed && out) appendFileSync(out, `lane=${lane}\n`);
+  return { ...result, lane };
 }
 
 // ── the impure half ───────────────────────────────────────────────────────────
@@ -959,7 +998,12 @@ function runCliFlag(argv, ctx) {
   // The two claim-lease lanes: `feedback` (now the `ready` label event, post-triage) and `plan`
   // (#823's ready-comment event). Both delegate to their own specced claim function; this table
   // is just dispatch.
-  const claimers = { "--claim-feedback": claimFeedback, "--claim-plan": claimPlan };
+  // `--claim-next` is the #3960 retry sweep: the oldest admissible `ready` issue, either lane.
+  const claimers = {
+    "--claim-feedback": claimFeedback,
+    "--claim-plan": claimPlan,
+    "--claim-next": () => claimNext(),
+  };
   for (const [flag, claim] of Object.entries(claimers)) {
     if (argv.includes(flag)) {
       claim(ctx);
