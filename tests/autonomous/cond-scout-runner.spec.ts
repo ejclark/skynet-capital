@@ -1,7 +1,11 @@
 import { CondScoutRunner, type CondScoutStore } from "../../src/autonomous/cond-scout-runner.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { MarketContext } from "../../src/domain/types.js";
-import type { ShadowClose, ShadowProbe } from "../../src/playbooks/cond-scout-ledger.js";
+import type {
+  ShadowClose,
+  ShadowProbe,
+  ShadowSnapshot,
+} from "../../src/playbooks/cond-scout-ledger.js";
 import { aContext } from "../support/builders.js";
 
 const DAY = 86_400_000;
@@ -12,12 +16,19 @@ const SLIDE = [
   ...Array.from({ length: 15 }, (_, i) => 99 - i * 1.3),
 ];
 
-function memoryStore(): CondScoutStore & { opened: ShadowProbe[]; closed: ShadowClose[] } {
+function memoryStore(): CondScoutStore & {
+  opened: ShadowProbe[];
+  closed: ShadowClose[];
+  snapshots: ShadowSnapshot[];
+} {
   const opened: ShadowProbe[] = [];
   const closed: ShadowClose[] = [];
+  const snapshots: ShadowSnapshot[] = [];
   return {
     opened,
     closed,
+    snapshots,
+    saveSnapshot: (snapshot) => snapshots.push(snapshot),
     loadOpen: () => opened.filter((p) => !closed.some((c) => c.probe.id === p.id)),
     saveOpen: (probe) => opened.push(probe),
     close: (close) => closed.push(close),
@@ -162,6 +173,43 @@ describe("CondScoutRunner", () => {
       await restarted.runner.runPass(at(80)); // still oversold — but opened and closed today
       expect(restarted.runner.openProbes()).toEqual([]);
       expect(restarted.decisions).toEqual([]);
+    });
+  });
+
+  describe("in-flight snapshots (slice 3)", () => {
+    it("snapshots at open with the scanner's reading, then hourly — never on every pass", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const { runner } = setup({ store, clock });
+      await runner.runPass(at(80));
+      expect(store.snapshots).toHaveLength(1);
+      expect(store.snapshots[0]?.reading?.rsi).toBeDefined();
+
+      clock.t = T0 + 30 * 60_000;
+      await runner.runPass(at(81));
+      expect(store.snapshots).toHaveLength(1);
+
+      clock.t = T0 + 61 * 60_000;
+      await runner.runPass(at(82));
+      expect(store.snapshots).toHaveLength(2);
+      const [open] = runner.openProbes();
+      expect(store.snapshots[1]?.markRoi).toBeCloseTo(
+        (81.95 - (open?.entryPrice ?? 0)) / (open?.entryPrice ?? 1),
+        6,
+      );
+    });
+
+    it("stops snapshotting a probe once it closes", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const { runner } = setup({ store, clock });
+      await runner.runPass(at(80));
+      clock.t = T0 + 2 * 3_600_000;
+      await runner.runPass(at(70)); // stopped out
+      const count = store.snapshots.length;
+      clock.t = T0 + 4 * 3_600_000;
+      await runner.runPass(at(70));
+      expect(store.snapshots).toHaveLength(count);
     });
   });
 });

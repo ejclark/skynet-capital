@@ -154,6 +154,22 @@ describe("BotsStateDb — COND-SCOUT shadow ledger", () => {
     expect(second.listShadowCloses(10)).toEqual([close]);
     second.close();
   });
+
+  it("keeps a probe's snapshots in time order", () => {
+    const db = openBotsStateDb(join(dir, "bots.db"));
+    const snap = (at: number) => ({
+      probeId: probe.id,
+      symbol: "AMD",
+      at,
+      quote: { bid: 99, ask: 99.1, last: 99, asOf: "2026-09-30T15:00:00Z" },
+      markRoi: -0.01,
+    });
+    db.saveShadowSnapshot(snap(3000));
+    db.saveShadowSnapshot(snap(2000));
+    expect(db.listShadowSnapshots(probe.id).map((s) => s.at)).toEqual([2000, 3000]);
+    expect(db.listShadowSnapshots("other")).toEqual([]);
+    db.close();
+  });
 });
 
 describe("restoreBotsState", () => {
