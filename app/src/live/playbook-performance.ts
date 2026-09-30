@@ -30,10 +30,10 @@ export interface PlaybookPerformanceView {
   readonly accounts: readonly string[];
 }
 
-export async function fetchPlaybookPerformance(account: string): Promise<PlaybookPerformanceView> {
-  const res = await fetch(`/api/outpost/performance?accounts=${encodeURIComponent(account)}`, {
-    credentials: "same-origin",
-  });
+/** With no account (catalog-only), `mine` covers every owned account — callers render only `house`. */
+export async function fetchPlaybookPerformance(account?: string): Promise<PlaybookPerformanceView> {
+  const query = account ? `?accounts=${encodeURIComponent(account)}` : "";
+  const res = await fetch(`/api/outpost/performance${query}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`playbook-performance ${res.status}`);
   return (await res.json()) as PlaybookPerformanceView;
 }
