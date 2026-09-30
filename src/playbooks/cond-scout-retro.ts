@@ -53,6 +53,83 @@ export interface ProbeRetro {
   readonly earlierExits: readonly ExitCheckpoint[];
   /** True when some earlier exit (held ≥ 1 day) beat the actual exit's ROI per day. */
   readonly soonerWasBetter: boolean;
+  /** Entry fill, kept so the later-exit backfill can price a checkpoint without the probe row. */
+  readonly entryPrice: number;
+  /** Hypothetical exits BEYOND the close (slice 5) — pending until their date has passed. */
+  readonly laterExits: readonly LaterExit[];
+}
+
+/**
+ * A hypothetical exit after the actual close, at a horizon scaled to the hold (Eric, 2026-09-24:
+ * "A position held for 2 days has too short of a life span… carrying the thought to a week, a few
+ * weeks, a month… A position held for a month, playing out hypotheticals for 2 months, 6 months,
+ * 10 months"). Never estimated ahead of time: `roi` stays absent until that date's bar exists.
+ */
+export interface LaterExit {
+  readonly label: string;
+  /** Hold length from the OPEN this checkpoint prices, in days. */
+  readonly horizonDays: number;
+  readonly dueAt: number;
+  readonly roi?: number;
+  readonly roiPerDay?: number;
+  /** Daily bars carry no bid/ask: priced at that session's close, no spread charged — an
+   *  estimate, stated as one, unlike the actual and earlier exits which pay the spread. */
+  readonly priceBasis?: "daily close";
+  readonly filledAt?: number;
+}
+
+/**
+ * The checkpoint ladder, in days from the open. Holds under a week get week-scale horizons, holds
+ * up to ~6 weeks month-scale ones (the two ladders Eric named); anything longer scales with
+ * itself at 2×/6×/10×.
+ */
+export function laterExitLadder(daysHeld: number): readonly number[] {
+  if (daysHeld < 7) return [7, 21, 30];
+  if (daysHeld < 45) return [60, 180, 300];
+  return [2, 6, 10].map((m) => Math.round(daysHeld * m));
+}
+
+function ladderLabel(days: number): string {
+  if (days < 30)
+    return days % 7 === 0 ? `${days / 7} week${days === 7 ? "" : "s"}` : `${days} days`;
+  const months = Math.round(days / 30);
+  return `${months} month${months === 1 ? "" : "s"}`;
+}
+
+const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * Fill every checkpoint whose date has passed from daily bars (oldest first, `t` an ISO date or
+ * timestamp). A checkpoint takes the first session on or after its due date — a weekend or holiday
+ * due date rolls to the next open. Returns the same object when nothing changed.
+ */
+export function fillLaterExits(
+  retro: ProbeRetro,
+  bars: readonly { readonly t: string; readonly c: number }[],
+  now: number,
+): ProbeRetro {
+  let changed = false;
+  const laterExits = retro.laterExits.map((exit) => {
+    if (exit.roi !== undefined || exit.dueAt > now) return exit;
+    const bar = bars.find((b) => b.t.slice(0, 10) >= dayOf(exit.dueAt));
+    if (!(bar && bar.c > 0)) return exit;
+    changed = true;
+    const roi = (bar.c - retro.entryPrice) / retro.entryPrice;
+    return {
+      ...exit,
+      roi,
+      roiPerDay: roi / exit.horizonDays,
+      priceBasis: "daily close" as const,
+      filledAt: now,
+    };
+  });
+  return changed ? { ...retro, laterExits } : retro;
+}
+
+/** The earliest due date still waiting on a price, or undefined when every checkpoint is filled. */
+export function nextLaterExitDue(retro: ProbeRetro): number | undefined {
+  const pending = retro.laterExits.filter((e) => e.roi === undefined).map((e) => e.dueAt);
+  return pending.length > 0 ? Math.min(...pending) : undefined;
 }
 
 function checkpoint(
@@ -138,5 +215,11 @@ export function probeRetro(close: ShadowClose, snapshots: readonly ShadowSnapsho
     snapshotCount: all.length,
     earlierExits,
     soonerWasBetter: paced !== undefined && paced.roiPerDay > close.roiPerDay,
+    entryPrice: probe.entryPrice,
+    laterExits: laterExitLadder(close.daysHeld).map((days) => ({
+      label: ladderLabel(days),
+      horizonDays: days,
+      dueAt: probe.openedAt + days * DAY_MS,
+    })),
   };
 }

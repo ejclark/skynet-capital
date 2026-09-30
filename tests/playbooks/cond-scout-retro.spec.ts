@@ -3,7 +3,12 @@ import type {
   ShadowProbe,
   ShadowSnapshot,
 } from "../../src/playbooks/cond-scout-ledger.js";
-import { probeRetro } from "../../src/playbooks/cond-scout-retro.js";
+import {
+  fillLaterExits,
+  laterExitLadder,
+  nextLaterExitDue,
+  probeRetro,
+} from "../../src/playbooks/cond-scout-retro.js";
 
 const DAY = 86_400_000;
 const T0 = Date.UTC(2026, 8, 30, 14, 0);
@@ -115,5 +120,54 @@ describe("probeRetro", () => {
       path,
     );
     expect(lost.directionRight).toBe(false);
+  });
+});
+
+describe("later exits (slice 5)", () => {
+  it("scales the ladder to the hold, the way Eric described it", () => {
+    expect(laterExitLadder(2)).toEqual([7, 21, 30]);
+    expect(laterExitLadder(14)).toEqual([60, 180, 300]);
+    expect(laterExitLadder(60)).toEqual([120, 360, 600]);
+  });
+
+  it("sets the checkpoints pending at close, dated from the open", () => {
+    const retro = probeRetro(close, path); // an 8-day hold → month-scale ladder
+    expect(retro.laterExits.map((e) => [e.label, e.dueAt])).toEqual([
+      ["2 months", T0 + 60 * DAY],
+      ["6 months", T0 + 180 * DAY],
+      ["10 months", T0 + 300 * DAY],
+    ]);
+    expect(retro.laterExits.every((e) => e.roi === undefined)).toBe(true);
+    expect(nextLaterExitDue(retro)).toBe(T0 + 60 * DAY);
+  });
+
+  const short = probeRetro({ ...close, closedAt: T0 + 2 * DAY, daysHeld: 2 }, []);
+  const due7 = new Date(T0 + 7 * DAY).toISOString().slice(0, 10);
+
+  it("never prices a checkpoint before its date has passed", () => {
+    const bars = [{ t: `${due7}T04:00:00Z`, c: 110 }];
+    expect(fillLaterExits(short, bars, T0 + 6 * DAY)).toBe(short);
+  });
+
+  it("prices a due checkpoint at that session's close, labelled as such", () => {
+    const filled = fillLaterExits(short, [{ t: `${due7}T04:00:00Z`, c: 110 }], T0 + 8 * DAY);
+    const week = filled.laterExits[0];
+    expect(week).toMatchObject({ label: "1 week", priceBasis: "daily close" });
+    expect(week?.roi).toBeCloseTo(0.1, 6);
+    expect(week?.roiPerDay).toBeCloseTo(0.1 / 7, 6);
+    expect(filled.laterExits[1]?.roi).toBeUndefined(); // 3 weeks isn't due yet
+    expect(nextLaterExitDue(filled)).toBe(T0 + 21 * DAY);
+  });
+
+  it("rolls a weekend or holiday due date to the next session, and waits when there is none yet", () => {
+    const monday = new Date(T0 + 9 * DAY).toISOString().slice(0, 10);
+    const rolled = fillLaterExits(short, [{ t: monday, c: 104 }], T0 + 9 * DAY);
+    expect(rolled.laterExits[0]?.roi).toBeCloseTo(0.04, 6);
+    expect(fillLaterExits(short, [], T0 + 9 * DAY)).toBe(short);
+  });
+
+  it("never refills a checkpoint that already has its price", () => {
+    const once = fillLaterExits(short, [{ t: due7, c: 110 }], T0 + 8 * DAY);
+    expect(fillLaterExits(once, [{ t: due7, c: 50 }], T0 + 8 * DAY)).toBe(once);
   });
 });

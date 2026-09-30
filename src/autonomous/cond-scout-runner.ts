@@ -15,7 +15,12 @@ import {
   type ShadowSnapshot,
   snapshotProbe,
 } from "../playbooks/cond-scout-ledger.js";
-import { type ProbeRetro, probeRetro } from "../playbooks/cond-scout-retro.js";
+import {
+  fillLaterExits,
+  nextLaterExitDue,
+  type ProbeRetro,
+  probeRetro,
+} from "../playbooks/cond-scout-retro.js";
 import type { DecisionRecord } from "./decision-record.js";
 
 /**
@@ -52,7 +57,16 @@ export interface CondScoutStore {
   /** One probe's snapshots — how a close after a restart still sees the whole path. */
   snapshotsFor(probeId: string): readonly ShadowSnapshot[];
   saveRetro(retro: ProbeRetro): void;
+  /** The newest retros first — the later-exit backfill's worklist. */
+  recentRetros(limit: number): readonly ProbeRetro[];
 }
+
+/** Daily bars between two ISO dates, oldest first — the later-exit backfill's price source. */
+export type DailyBars = (
+  symbol: string,
+  start: string,
+  end: string,
+) => Promise<readonly { readonly t: string; readonly c: number }[] | undefined>;
 
 const isoDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
@@ -73,6 +87,8 @@ export interface CondScoutDeps {
   readonly onClose?: (close: ShadowClose) => void;
   readonly onSnapshot?: (snapshot: ShadowSnapshot) => void;
   readonly onRetro?: (retro: ProbeRetro) => void;
+  /** Absent = the later-exit backfill stays dark (the checkpoints simply wait). */
+  readonly barsFor?: DailyBars;
 }
 
 function exitIntent(close: ShadowClose): OrderIntent {
@@ -105,6 +121,7 @@ export class CondScoutRunner {
   private readonly lastSnapshotAt = new Map<string, number>();
   /** This process's snapshots per open probe — the retro's source when no store is wired. */
   private readonly snapshots = new Map<string, ShadowSnapshot[]>();
+  private backfilledDay = "";
 
   constructor(deps: CondScoutDeps) {
     this.deps = deps;
@@ -121,6 +138,7 @@ export class CondScoutRunner {
     if (this.closedDay !== sessionDay) this.startSession(sessionDay);
     this.closeDue(context, at);
     await this.snapshotDue(context, sessionDay, at);
+    if (this.backfilledDay !== sessionDay) await this.backfillLaterExits(sessionDay, at);
     if (this.openedDay === sessionDay || this.deps.blockedReason()) return;
     await this.openNew(context, sessionDay, at);
   }
@@ -240,6 +258,30 @@ export class CondScoutRunner {
       context,
       ...(refused.length > 0 ? { refusals: refused } : {}),
     });
+  }
+
+  /**
+   * Once a session: price every later-exit checkpoint whose date has passed (#3651 slice 5). The
+   * latch is set only after the whole sweep succeeds, so a failed bars read retries next pass;
+   * the work itself is idempotent (a filled checkpoint is never refilled).
+   */
+  private async backfillLaterExits(sessionDay: string, at: number): Promise<void> {
+    const { store, barsFor } = this.deps;
+    if (!(store && barsFor)) {
+      this.backfilledDay = sessionDay;
+      return;
+    }
+    for (const retro of store.recentRetros(500)) {
+      const due = nextLaterExitDue(retro);
+      if (due === undefined || due > at) continue;
+      const bars = await barsFor(retro.symbol, isoDay(due), isoDay(at));
+      if (!bars) continue;
+      const filled = fillLaterExits(retro, bars, at);
+      if (filled === retro) continue;
+      store.saveRetro(filled);
+      this.deps.onRetro?.(filled);
+    }
+    this.backfilledDay = sessionDay;
   }
 
   /** Daily closes change once a session: fetched on the first pass that needs them, reused after. */
