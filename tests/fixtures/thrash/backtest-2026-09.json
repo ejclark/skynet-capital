@@ -1,0 +1,6273 @@
+{
+  "_about": "Real extract, 2026-09-30, for #3939 slice 1 backtest: [event-research] filings 09-01..09-09 (T3), #3720 comments (T1), and the research/jobs-2026-10-02 pulse PRs (negative control — `branch` is carried for the assertion only; the scanner never reads it).",
+  "issues": [
+    {
+      "number": 1073,
+      "title": "[event-research] waller-economic-outlook-2026-09-03",
+      "labels": [],
+      "createdAt": "2026-09-01T03:26:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1074,
+      "title": "[event-research] scoos-2026-09-24",
+      "labels": [],
+      "createdAt": "2026-09-01T03:26:33Z",
+      "isPr": false
+    },
+    {
+      "number": 1077,
+      "title": "[event-research] dallas-fed-mfg-2026-09-28",
+      "labels": [],
+      "createdAt": "2026-09-01T03:27:59Z",
+      "isPr": false
+    },
+    {
+      "number": 1078,
+      "title": "[event-research] retail-sales-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-01T03:28:35Z",
+      "isPr": false
+    },
+    {
+      "number": 1085,
+      "title": "[event-research] hammack-remarks-2026-09-03",
+      "labels": [],
+      "createdAt": "2026-09-01T03:44:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1087,
+      "title": "[event-research] retail-sales-2026-11-17",
+      "labels": [],
+      "createdAt": "2026-09-01T03:45:22Z",
+      "isPr": false
+    },
+    {
+      "number": 1088,
+      "title": "[event-research] durable-goods-2026-09-25",
+      "labels": [],
+      "createdAt": "2026-09-01T03:49:46Z",
+      "isPr": false
+    },
+    {
+      "number": 1113,
+      "title": "[event-research] ism-manufacturing-2026-12-01",
+      "labels": [],
+      "createdAt": "2026-09-02T05:18:28Z",
+      "isPr": false
+    },
+    {
+      "number": 1114,
+      "title": "[event-research] ism-services-2026-12-03",
+      "labels": [],
+      "createdAt": "2026-09-02T05:18:29Z",
+      "isPr": false
+    },
+    {
+      "number": 1116,
+      "title": "[event-research] eia-steo-2026-09-09",
+      "labels": [],
+      "createdAt": "2026-09-02T05:19:13Z",
+      "isPr": false
+    },
+    {
+      "number": 1117,
+      "title": "[event-research] government-funding-deadline-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-02T05:19:14Z",
+      "isPr": false
+    },
+    {
+      "number": 1120,
+      "title": "[event-research] treasury-2y-note-2026-09-22",
+      "labels": [],
+      "createdAt": "2026-09-02T05:20:05Z",
+      "isPr": false
+    },
+    {
+      "number": 1121,
+      "title": "[event-research] apple-eu-dma-terms-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-02T05:20:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1122,
+      "title": "[event-research] cr-expiry-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-02T05:20:07Z",
+      "isPr": false
+    },
+    {
+      "number": 1124,
+      "title": "[event-research] treasury-buyback-20y30y-2026-09-24",
+      "labels": [],
+      "createdAt": "2026-09-02T05:26:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1130,
+      "title": "[event-research] apple-eu-dma-terms-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-02T05:37:29Z",
+      "isPr": false
+    },
+    {
+      "number": 1135,
+      "title": "[event-research] cr-expiry-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-02T05:39:51Z",
+      "isPr": false
+    },
+    {
+      "number": 1136,
+      "title": "[event-research] ism-manufacturing-2026-12-01",
+      "labels": [],
+      "createdAt": "2026-09-02T05:40:34Z",
+      "isPr": false
+    },
+    {
+      "number": 1137,
+      "title": "[event-research] government-funding-deadline-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-02T05:40:35Z",
+      "isPr": false
+    },
+    {
+      "number": 1139,
+      "title": "[event-research] ercot-data-center-audit-filing-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-02T05:44:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1140,
+      "title": "[event-research] ism-services-2026-10-05",
+      "labels": [],
+      "createdAt": "2026-09-02T05:45:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1146,
+      "title": "[event-research] puct-batch-zero-report-open-meeting-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-02T06:06:28Z",
+      "isPr": false
+    },
+    {
+      "number": 1160,
+      "title": "[event-research] adp-employment-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-03T04:43:13Z",
+      "isPr": false
+    },
+    {
+      "number": 1161,
+      "title": "[event-research] mts-august-2026-09-11",
+      "labels": [],
+      "createdAt": "2026-09-03T04:43:54Z",
+      "isPr": false
+    },
+    {
+      "number": 1164,
+      "title": "[event-research] adp-employment-2026-11-04",
+      "labels": [],
+      "createdAt": "2026-09-03T05:01:31Z",
+      "isPr": false
+    },
+    {
+      "number": 1167,
+      "title": "[event-research] adp-employment-2026-12-02",
+      "labels": [],
+      "createdAt": "2026-09-03T05:18:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1198,
+      "title": "[event-research] umich-sentiment-prelim-2026-09-11",
+      "labels": [],
+      "createdAt": "2026-09-04T02:51:35Z",
+      "isPr": false
+    },
+    {
+      "number": 1199,
+      "title": "[event-research] us-china-tariff-truce-expiry-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-04T02:53:19Z",
+      "isPr": false
+    },
+    {
+      "number": 1207,
+      "title": "[event-research] umich-sentiment-final-2026-09-25",
+      "labels": [],
+      "createdAt": "2026-09-04T03:20:22Z",
+      "isPr": false
+    },
+    {
+      "number": 1208,
+      "title": "[event-research] apec-leaders-shenzhen-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-04T03:26:13Z",
+      "isPr": false
+    },
+    {
+      "number": 1209,
+      "title": "[event-research] china-retaliation-suspension-expiry-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-04T03:26:15Z",
+      "isPr": false
+    },
+    {
+      "number": 1215,
+      "title": "[event-research] g20-miami-2026-12-14",
+      "labels": [],
+      "createdAt": "2026-09-04T03:57:42Z",
+      "isPr": false
+    },
+    {
+      "number": 1218,
+      "title": "[event-research] g20-summit-doral-2026-12-14",
+      "labels": [],
+      "createdAt": "2026-09-04T04:02:36Z",
+      "isPr": false
+    },
+    {
+      "number": 1221,
+      "title": "[event-research] g20-fmcbg-bangkok-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-04T04:16:54Z",
+      "isPr": false
+    },
+    {
+      "number": 1225,
+      "title": "[event-research] g20-sherpa-iv-miami-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-04T04:29:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1234,
+      "title": "[event-research] g20-trade-ministerial-milwaukee-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-04T11:33:57Z",
+      "isPr": false
+    },
+    {
+      "number": 1235,
+      "title": "[event-research] imf-world-bank-annual-meetings-2026-10-12",
+      "labels": [],
+      "createdAt": "2026-09-04T11:33:58Z",
+      "isPr": false
+    },
+    {
+      "number": 1240,
+      "title": "[event-research] g20-energy-abundance-ministerial-houston-2026-09-14",
+      "labels": [],
+      "createdAt": "2026-09-04T11:51:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1242,
+      "title": "[event-research] gastech-2026-09-14",
+      "labels": [],
+      "createdAt": "2026-09-04T12:06:18Z",
+      "isPr": false
+    },
+    {
+      "number": 1245,
+      "title": "[event-research] nerc-computational-load-standards-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-04T12:20:47Z",
+      "isPr": false
+    },
+    {
+      "number": 1248,
+      "title": "[event-research] nerc-computational-load-phase-ii-workplan-2027-03-01",
+      "labels": [],
+      "createdAt": "2026-09-04T12:43:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1253,
+      "title": "[event-research] ssa-cola-2027-2026-10-14",
+      "labels": [],
+      "createdAt": "2026-09-04T15:47:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1256,
+      "title": "[event-research] unsc-iran-panel-mandate-vote-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-04T16:17:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1259,
+      "title": "[event-research] unsc-iran-panel-mandate-expiry-2026-09-26",
+      "labels": [],
+      "createdAt": "2026-09-04T16:34:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1262,
+      "title": "[event-research] umich-sentiment-final-2026-09-25",
+      "labels": [],
+      "createdAt": "2026-09-04T16:52:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1263,
+      "title": "[event-research] unga-81-general-debate-2026-09-22",
+      "labels": [],
+      "createdAt": "2026-09-04T16:53:26Z",
+      "isPr": false
+    },
+    {
+      "number": 1271,
+      "title": "[event-research] meta-connect-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-04T18:25:36Z",
+      "isPr": false
+    },
+    {
+      "number": 1272,
+      "title": "[event-research] sp-rebalance-proforma-2026-09-04",
+      "labels": [],
+      "createdAt": "2026-09-04T18:31:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1273,
+      "title": "[event-research] vix-expiration-2026-09-16",
+      "labels": [],
+      "createdAt": "2026-09-04T18:31:42Z",
+      "isPr": false
+    },
+    {
+      "number": 1275,
+      "title": "[event-research] durable-goods-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-04T18:37:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1281,
+      "title": "[event-research] buyback-blackout-start-2026-09-12",
+      "labels": [],
+      "createdAt": "2026-09-04T18:50:11Z",
+      "isPr": false
+    },
+    {
+      "number": 1285,
+      "title": "[event-research] sp-rebalance-proforma-capped-2026-09-11",
+      "labels": [],
+      "createdAt": "2026-09-04T19:00:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1291,
+      "title": "[event-research] sp-select-sector-secondary-reweight-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-04T19:18:18Z",
+      "isPr": false
+    },
+    {
+      "number": 1292,
+      "title": "[event-research] retail-sales-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-04T19:27:26Z",
+      "isPr": false
+    },
+    {
+      "number": 1381,
+      "title": "[event-research] mts-october-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-05T00:42:47Z",
+      "isPr": false
+    },
+    {
+      "number": 1392,
+      "title": "[event-research] ecb-decision-2026-09-10",
+      "labels": [],
+      "createdAt": "2026-09-05T00:45:19Z",
+      "isPr": false
+    },
+    {
+      "number": 1393,
+      "title": "[event-research] treasury-coupon-announcement-2026-09-10",
+      "labels": [],
+      "createdAt": "2026-09-05T00:45:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1397,
+      "title": "[event-research] ecb-account-2026-10-08",
+      "labels": [],
+      "createdAt": "2026-09-05T01:20:38Z",
+      "isPr": false
+    },
+    {
+      "number": 1398,
+      "title": "[event-research] ecb-decision-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-05T01:20:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1399,
+      "title": "[event-research] treasury-coupon-announcement-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-05T01:24:52Z",
+      "isPr": false
+    },
+    {
+      "number": 1407,
+      "title": "[event-research] ecb-quiet-period-start-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-05T01:40:55Z",
+      "isPr": false
+    },
+    {
+      "number": 1408,
+      "title": "[event-research] ecb-decision-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-05T01:44:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1411,
+      "title": "[event-research] treasury-coupon-announcement-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-05T01:51:05Z",
+      "isPr": false
+    },
+    {
+      "number": 1412,
+      "title": "[event-research] treasury-buyback-10y20y-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-05T01:51:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1413,
+      "title": "[event-research] treasury-20y-bond-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-05T01:51:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1414,
+      "title": "[event-research] treasury-5y-tips-2026-10-22",
+      "labels": [],
+      "createdAt": "2026-09-05T01:51:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1416,
+      "title": "[event-research] ecb-quiet-period-start-2026-12-09",
+      "labels": [],
+      "createdAt": "2026-09-05T01:59:07Z",
+      "isPr": false
+    },
+    {
+      "number": 1418,
+      "title": "[event-research] ecb-bank-lending-survey-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-05T02:03:34Z",
+      "isPr": false
+    },
+    {
+      "number": 1422,
+      "title": "[event-research] treasury-3y-note-2026-10-06",
+      "labels": [],
+      "createdAt": "2026-09-05T02:15:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1423,
+      "title": "[event-research] treasury-10y-note-2026-10-07",
+      "labels": [],
+      "createdAt": "2026-09-05T02:15:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1424,
+      "title": "[event-research] treasury-30y-bond-2026-10-08",
+      "labels": [],
+      "createdAt": "2026-09-05T02:15:04Z",
+      "isPr": false
+    },
+    {
+      "number": 1425,
+      "title": "[event-research] treasury-2y-note-2026-10-26",
+      "labels": [],
+      "createdAt": "2026-09-05T02:15:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1430,
+      "title": "[event-research] ecb-monetary-developments-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-05T02:37:12Z",
+      "isPr": false
+    },
+    {
+      "number": 1435,
+      "title": "[event-research] treasury-buyback-20y30y-2026-10-08",
+      "labels": [],
+      "createdAt": "2026-09-05T02:42:49Z",
+      "isPr": false
+    },
+    {
+      "number": 1436,
+      "title": "[event-research] treasury-30y-bond-2026-10-08",
+      "labels": [],
+      "createdAt": "2026-09-05T02:43:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1437,
+      "title": "[event-research] treasury-buyback-10y20y-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-05T02:43:25Z",
+      "isPr": false
+    },
+    {
+      "number": 1438,
+      "title": "[event-research] treasury-5y-note-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-05T02:45:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1439,
+      "title": "[event-research] treasury-7y-note-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-05T02:45:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1440,
+      "title": "[event-research] treasury-buyback-2y3y-2026-10-06",
+      "labels": [],
+      "createdAt": "2026-09-05T02:48:30Z",
+      "isPr": false
+    },
+    {
+      "number": 1452,
+      "title": "[event-research] treasury-buyback-20y30y-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-05T13:27:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1453,
+      "title": "[event-research] treasury-buyback-20y30y-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-05T13:27:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1454,
+      "title": "[event-research] missouri-map-ballot-deadline-2026-09-08",
+      "labels": [],
+      "createdAt": "2026-09-05T13:27:59Z",
+      "isPr": false
+    },
+    {
+      "number": 1455,
+      "title": "[event-research] treasury-coupon-announcement-2026-10-22",
+      "labels": [],
+      "createdAt": "2026-09-05T13:28:00Z",
+      "isPr": false
+    },
+    {
+      "number": 1457,
+      "title": "[event-research] chicago-pmi-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-05T13:28:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1456,
+      "title": "[event-research] advance-economic-indicators-2026-10-28",
+      "labels": [],
+      "createdAt": "2026-09-05T13:28:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1458,
+      "title": "[event-research] eci-q3-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-05T13:28:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1459,
+      "title": "[event-research] durable-goods-2026-12-23",
+      "labels": [],
+      "createdAt": "2026-09-05T13:28:38Z",
+      "isPr": false
+    },
+    {
+      "number": 1460,
+      "title": "[event-research] boj-decision-2026-09-18",
+      "labels": [],
+      "createdAt": "2026-09-05T13:29:17Z",
+      "isPr": false
+    },
+    {
+      "number": 1467,
+      "title": "[event-research] chicago-pmi-2026-11-30",
+      "labels": [],
+      "createdAt": "2026-09-05T14:05:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1468,
+      "title": "[event-research] missouri-uocava-ballot-mailing-2026-09-19",
+      "labels": [],
+      "createdAt": "2026-09-05T14:05:37Z",
+      "isPr": false
+    },
+    {
+      "number": 1473,
+      "title": "[event-research] boj-decision-2026-09-18",
+      "labels": [],
+      "createdAt": "2026-09-05T14:08:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1475,
+      "title": "[event-research] productivity-costs-q3-2026-11-05",
+      "labels": [],
+      "createdAt": "2026-09-05T14:08:21Z",
+      "isPr": false
+    },
+    {
+      "number": 1474,
+      "title": "[event-research] advance-economic-indicators-2026-10-28",
+      "labels": [],
+      "createdAt": "2026-09-05T14:08:21Z",
+      "isPr": false
+    },
+    {
+      "number": 1477,
+      "title": "[event-research] advance-economic-indicators-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-05T14:09:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1478,
+      "title": "[event-research] boj-decision-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-05T14:09:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1479,
+      "title": "[event-research] advance-economic-indicators-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-05T14:09:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1480,
+      "title": "[event-research] treasury-2y-frn-2026-10-28",
+      "labels": [],
+      "createdAt": "2026-09-05T14:10:14Z",
+      "isPr": false
+    },
+    {
+      "number": 1488,
+      "title": "[event-research] boj-decision-2026-12-18",
+      "labels": [],
+      "createdAt": "2026-09-05T14:23:24Z",
+      "isPr": false
+    },
+    {
+      "number": 1489,
+      "title": "[event-research] advance-economic-indicators-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-05T14:23:56Z",
+      "isPr": false
+    },
+    {
+      "number": 1490,
+      "title": "[event-research] boj-decision-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-05T14:23:57Z",
+      "isPr": false
+    },
+    {
+      "number": 1491,
+      "title": "[event-research] intl-trade-full-report-2026-10-06",
+      "labels": [],
+      "createdAt": "2026-09-05T14:24:19Z",
+      "isPr": false
+    },
+    {
+      "number": 1492,
+      "title": "[event-research] dallas-fed-mfg-2026-11-30",
+      "labels": [],
+      "createdAt": "2026-09-05T14:25:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1493,
+      "title": "[event-research] jolts-2026-12-01",
+      "labels": [],
+      "createdAt": "2026-09-05T14:25:10Z",
+      "isPr": false
+    },
+    {
+      "number": 1494,
+      "title": "[event-research] productivity-costs-q3-revised-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-05T14:25:12Z",
+      "isPr": false
+    },
+    {
+      "number": 1497,
+      "title": "[event-research] treasury-2y-frn-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-05T14:40:15Z",
+      "isPr": false
+    },
+    {
+      "number": 1498,
+      "title": "[event-research] treasury-2y-frn-2026-10-28",
+      "labels": [],
+      "createdAt": "2026-09-05T14:40:29Z",
+      "isPr": false
+    },
+    {
+      "number": 1501,
+      "title": "[event-research] jolts-2026-11-03",
+      "labels": [],
+      "createdAt": "2026-09-05T14:52:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1505,
+      "title": "[event-research] gdp-q3-2026-second-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-05T14:54:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1508,
+      "title": "[event-research] dallas-fed-tssos-2026-12-01",
+      "labels": [],
+      "createdAt": "2026-09-05T14:55:46Z",
+      "isPr": false
+    },
+    {
+      "number": 1510,
+      "title": "[event-research] intl-trade-full-report-2026-11-04",
+      "labels": [],
+      "createdAt": "2026-09-05T14:56:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1511,
+      "title": "[event-research] boj-decision-2027-01-22",
+      "labels": [],
+      "createdAt": "2026-09-05T14:57:41Z",
+      "isPr": false
+    },
+    {
+      "number": 1515,
+      "title": "[event-research] jolts-2026-11-03",
+      "labels": [],
+      "createdAt": "2026-09-05T15:08:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1517,
+      "title": "[event-research] gdp-q3-2026-third-2026-12-23",
+      "labels": [],
+      "createdAt": "2026-09-05T15:08:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1516,
+      "title": "[event-research] intl-trade-full-report-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-05T15:08:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1519,
+      "title": "[event-research] treasury-coupon-announcement-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-05T15:11:58Z",
+      "isPr": false
+    },
+    {
+      "number": 1525,
+      "title": "[event-research] intl-transactions-q3-2026-12-18",
+      "labels": [],
+      "createdAt": "2026-09-05T15:33:38Z",
+      "isPr": false
+    },
+    {
+      "number": 1529,
+      "title": "[event-research] intl-trade-full-report-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-05T15:41:18Z",
+      "isPr": false
+    },
+    {
+      "number": 1530,
+      "title": "[event-research] japan-cpi-2027-01-22",
+      "labels": [],
+      "createdAt": "2026-09-05T15:41:19Z",
+      "isPr": false
+    },
+    {
+      "number": 1531,
+      "title": "[event-research] boj-decision-2027-03-18",
+      "labels": [],
+      "createdAt": "2026-09-05T15:41:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1532,
+      "title": "[event-research] japan-food-tax-cut-2027-04-01",
+      "labels": [],
+      "createdAt": "2026-09-05T15:41:21Z",
+      "isPr": false
+    },
+    {
+      "number": 1533,
+      "title": "[event-research] boj-decision-2027-04-28",
+      "labels": [],
+      "createdAt": "2026-09-05T15:41:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1536,
+      "title": "[event-research] fomc-2027-03-17",
+      "labels": [],
+      "createdAt": "2026-09-05T16:13:21Z",
+      "isPr": false
+    },
+    {
+      "number": 1537,
+      "title": "[event-research] japan-cpi-2027-03-19",
+      "labels": [],
+      "createdAt": "2026-09-05T16:13:22Z",
+      "isPr": false
+    },
+    {
+      "number": 1538,
+      "title": "[event-research] opex-2027-03-19",
+      "labels": [],
+      "createdAt": "2026-09-05T16:13:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1541,
+      "title": "[event-research] japan-cpi-2027-01-22",
+      "labels": [],
+      "createdAt": "2026-09-05T16:17:57Z",
+      "isPr": false
+    },
+    {
+      "number": 1543,
+      "title": "[event-research] japan-cpi-2026-12-18",
+      "labels": [],
+      "createdAt": "2026-09-05T16:18:46Z",
+      "isPr": false
+    },
+    {
+      "number": 1544,
+      "title": "[event-research] japan-cpi-tokyo-flash-2026-12-25",
+      "labels": [],
+      "createdAt": "2026-09-05T16:18:47Z",
+      "isPr": false
+    },
+    {
+      "number": 1545,
+      "title": "[event-research] japan-cpi-2026-12-18",
+      "labels": [],
+      "createdAt": "2026-09-05T16:18:49Z",
+      "isPr": false
+    },
+    {
+      "number": 1546,
+      "title": "[event-research] japan-cpi-tokyo-flash-2026-12-25",
+      "labels": [],
+      "createdAt": "2026-09-05T16:18:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1547,
+      "title": "[event-research] fomc-2027-04-28",
+      "labels": [],
+      "createdAt": "2026-09-05T16:19:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1548,
+      "title": "[event-research] boj-decision-2027-06-11",
+      "labels": [],
+      "createdAt": "2026-09-05T16:19:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1550,
+      "title": "[event-research] sp-rebalance-reference-close-2027-03-12",
+      "labels": [],
+      "createdAt": "2026-09-05T16:32:49Z",
+      "isPr": false
+    },
+    {
+      "number": 1551,
+      "title": "[event-research] vix-expiration-2027-03-17",
+      "labels": [],
+      "createdAt": "2026-09-05T16:32:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1552,
+      "title": "[event-research] good-friday-market-closure-2027-03-26",
+      "labels": [],
+      "createdAt": "2026-09-05T16:32:51Z",
+      "isPr": false
+    },
+    {
+      "number": 1555,
+      "title": "[event-research] japan-cpi-tokyo-flash-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-05T16:34:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1559,
+      "title": "[event-research] japan-cpi-tokyo-flash-2027-02-26",
+      "labels": [],
+      "createdAt": "2026-09-05T16:35:53Z",
+      "isPr": false
+    },
+    {
+      "number": 1558,
+      "title": "[event-research] japan-cpi-2027-02-19",
+      "labels": [],
+      "createdAt": "2026-09-05T16:35:53Z",
+      "isPr": false
+    },
+    {
+      "number": 1560,
+      "title": "[event-research] japan-cpi-tokyo-flash-2027-03-26",
+      "labels": [],
+      "createdAt": "2026-09-05T16:35:54Z",
+      "isPr": false
+    },
+    {
+      "number": 1562,
+      "title": "[event-research] fomc-blackout-start-2027-03-06",
+      "labels": [],
+      "createdAt": "2026-09-05T16:37:22Z",
+      "isPr": false
+    },
+    {
+      "number": 1567,
+      "title": "[event-research] sifma-bond-early-close-2027-03-25",
+      "labels": [],
+      "createdAt": "2026-09-05T16:51:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1568,
+      "title": "[event-research] boj-decision-2027-06-11",
+      "labels": [],
+      "createdAt": "2026-09-05T16:51:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1570,
+      "title": "[event-research] japan-cpi-tokyo-flash-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-05T16:52:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1571,
+      "title": "[event-research] fomc-2027-06-09",
+      "labels": [],
+      "createdAt": "2026-09-05T16:52:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1574,
+      "title": "[event-research] japan-cpi-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-05T16:53:05Z",
+      "isPr": false
+    },
+    {
+      "number": 1575,
+      "title": "[event-research] thanksgiving-half-day-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-05T16:53:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1576,
+      "title": "[event-research] japan-cpi-tokyo-flash-2027-01-29",
+      "labels": [],
+      "createdAt": "2026-09-05T16:53:07Z",
+      "isPr": false
+    },
+    {
+      "number": 1577,
+      "title": "[event-research] vix-expiration-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-05T16:53:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1578,
+      "title": "[event-research] opex-2027-02-19",
+      "labels": [],
+      "createdAt": "2026-09-05T16:53:10Z",
+      "isPr": false
+    },
+    {
+      "number": 1579,
+      "title": "[event-research] japan-cpi-tokyo-flash-2027-03-26",
+      "labels": [],
+      "createdAt": "2026-09-05T16:54:11Z",
+      "isPr": false
+    },
+    {
+      "number": 1580,
+      "title": "[event-research] sp-select-sector-secondary-reweight-2027-03-31",
+      "labels": [],
+      "createdAt": "2026-09-05T16:54:12Z",
+      "isPr": false
+    },
+    {
+      "number": 1582,
+      "title": "[event-research] boj-summary-of-opinions-2027-03-29",
+      "labels": [],
+      "createdAt": "2026-09-05T16:55:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1583,
+      "title": "[event-research] opex-2027-04-16",
+      "labels": [],
+      "createdAt": "2026-09-05T16:56:11Z",
+      "isPr": false
+    },
+    {
+      "number": 1585,
+      "title": "[event-research] fomc-blackout-start-2027-04-17",
+      "labels": [],
+      "createdAt": "2026-09-05T16:58:36Z",
+      "isPr": false
+    },
+    {
+      "number": 1588,
+      "title": "[event-research] christmas-eve-half-day-2026-12-24",
+      "labels": [],
+      "createdAt": "2026-09-05T17:09:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1592,
+      "title": "[event-research] washingtons-birthday-market-closure-2027-02-15",
+      "labels": [],
+      "createdAt": "2026-09-05T17:10:47Z",
+      "isPr": false
+    },
+    {
+      "number": 1595,
+      "title": "[event-research] opex-2027-02-19",
+      "labels": [],
+      "createdAt": "2026-09-05T17:11:48Z",
+      "isPr": false
+    },
+    {
+      "number": 1596,
+      "title": "[event-research] vix-expiration-2027-04-21",
+      "labels": [],
+      "createdAt": "2026-09-05T17:11:49Z",
+      "isPr": false
+    },
+    {
+      "number": 1598,
+      "title": "[event-research] presidents-day-market-closure-2027-02-15",
+      "labels": [],
+      "createdAt": "2026-09-05T17:12:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1599,
+      "title": "[event-research] boj-summary-of-opinions-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-05T17:13:52Z",
+      "isPr": false
+    },
+    {
+      "number": 1601,
+      "title": "[event-research] boj-minutes-2027-03-24",
+      "labels": [],
+      "createdAt": "2026-09-05T17:14:54Z",
+      "isPr": false
+    },
+    {
+      "number": 1603,
+      "title": "[event-research] boj-summary-of-opinions-2027-02-01",
+      "labels": [],
+      "createdAt": "2026-09-05T17:16:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1605,
+      "title": "[event-research] sp-select-sector-secondary-reweight-2027-03-31",
+      "labels": [],
+      "createdAt": "2026-09-05T17:17:15Z",
+      "isPr": false
+    },
+    {
+      "number": 1606,
+      "title": "[event-research] fomc-blackout-start-2027-05-29",
+      "labels": [],
+      "createdAt": "2026-09-05T17:17:55Z",
+      "isPr": false
+    },
+    {
+      "number": 1607,
+      "title": "[event-research] juneteenth-market-closure-2027-06-18",
+      "labels": [],
+      "createdAt": "2026-09-05T17:17:56Z",
+      "isPr": false
+    },
+    {
+      "number": 1615,
+      "title": "[event-research] boj-summary-of-opinions-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-05T17:33:19Z",
+      "isPr": false
+    },
+    {
+      "number": 1616,
+      "title": "[event-research] sifma-bond-early-close-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-05T17:33:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1618,
+      "title": "[event-research] boj-minutes-2026-12-23",
+      "labels": [],
+      "createdAt": "2026-09-05T17:34:14Z",
+      "isPr": false
+    },
+    {
+      "number": 1620,
+      "title": "[event-research] ism-manufacturing-2027-02-01",
+      "labels": [],
+      "createdAt": "2026-09-05T17:35:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1621,
+      "title": "[event-research] jpx-market-closure-2027-03-22",
+      "labels": [],
+      "createdAt": "2026-09-05T17:35:04Z",
+      "isPr": false
+    },
+    {
+      "number": 1624,
+      "title": "[event-research] jpx-market-closure-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-05T17:48:17Z",
+      "isPr": false
+    },
+    {
+      "number": 1627,
+      "title": "[event-research] ism-services-2027-02-03",
+      "labels": [],
+      "createdAt": "2026-09-05T17:50:13Z",
+      "isPr": false
+    },
+    {
+      "number": 1629,
+      "title": "[event-research] vix-expiration-2027-05-18",
+      "labels": [],
+      "createdAt": "2026-09-05T17:51:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1630,
+      "title": "[event-research] opex-2027-06-17",
+      "labels": [],
+      "createdAt": "2026-09-05T17:51:33Z",
+      "isPr": false
+    },
+    {
+      "number": 1631,
+      "title": "[event-research] boj-minutes-2026-11-05",
+      "labels": [],
+      "createdAt": "2026-09-05T17:52:22Z",
+      "isPr": false
+    },
+    {
+      "number": 1632,
+      "title": "[event-research] boj-summary-of-opinions-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-05T17:52:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1634,
+      "title": "[event-research] sifma-bond-early-close-2027-05-28",
+      "labels": [],
+      "createdAt": "2026-09-05T17:57:04Z",
+      "isPr": false
+    },
+    {
+      "number": 1635,
+      "title": "[event-research] memorial-day-market-closure-2027-05-31",
+      "labels": [],
+      "createdAt": "2026-09-05T17:57:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1639,
+      "title": "[event-research] sifma-japan-early-close-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-05T18:11:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1640,
+      "title": "[event-research] ism-services-2027-01-07",
+      "labels": [],
+      "createdAt": "2026-09-05T18:11:59Z",
+      "isPr": false
+    },
+    {
+      "number": 1643,
+      "title": "[event-research] boj-summary-of-opinions-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-05T18:14:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1644,
+      "title": "[event-research] sifma-bond-market-closure-2026-11-11",
+      "labels": [],
+      "createdAt": "2026-09-05T18:15:30Z",
+      "isPr": false
+    },
+    {
+      "number": 1648,
+      "title": "[event-research] sifma-bond-market-closure-2026-10-12",
+      "labels": [],
+      "createdAt": "2026-09-05T18:29:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1651,
+      "title": "[event-research] ism-manufacturing-2027-01-05",
+      "labels": [],
+      "createdAt": "2026-09-05T18:32:51Z",
+      "isPr": false
+    },
+    {
+      "number": 1653,
+      "title": "[event-research] sifma-uk-bond-market-closure-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-05T18:36:59Z",
+      "isPr": false
+    },
+    {
+      "number": 1654,
+      "title": "[event-research] sifma-japan-early-close-2027-03-29",
+      "labels": [],
+      "createdAt": "2026-09-05T18:37:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1656,
+      "title": "[event-research] boj-tankan-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-05T18:40:07Z",
+      "isPr": false
+    },
+    {
+      "number": 1661,
+      "title": "[event-research] ism-manufacturing-2027-01-05",
+      "labels": [],
+      "createdAt": "2026-09-05T18:55:55Z",
+      "isPr": false
+    },
+    {
+      "number": 1662,
+      "title": "[event-research] sifma-uk-bond-market-closure-2027-03-29",
+      "labels": [],
+      "createdAt": "2026-09-05T18:56:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1664,
+      "title": "[event-research] boj-tankan-2026-12-14",
+      "labels": [],
+      "createdAt": "2026-09-05T19:14:55Z",
+      "isPr": false
+    },
+    {
+      "number": 1667,
+      "title": "[event-research] japan-cgpi-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-05T19:52:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1669,
+      "title": "[event-research] japan-balance-of-payments-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-05T20:20:13Z",
+      "isPr": false
+    },
+    {
+      "number": 1683,
+      "title": "[event-research] iea-omr-2026-09-11",
+      "labels": [],
+      "createdAt": "2026-09-06T03:01:00Z",
+      "isPr": false
+    },
+    {
+      "number": 1684,
+      "title": "[event-research] treasury-buyback-10y20y-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-06T03:01:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1685,
+      "title": "[event-research] treasury-buyback-10y20y-2026-11-04",
+      "labels": [],
+      "createdAt": "2026-09-06T03:01:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1688,
+      "title": "[event-research] labor-day-market-closure-2026-09-07",
+      "labels": [],
+      "createdAt": "2026-09-06T03:02:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1689,
+      "title": "[event-research] msft-ignite-2026-11-17",
+      "labels": [],
+      "createdAt": "2026-09-06T03:02:05Z",
+      "isPr": false
+    },
+    {
+      "number": 1692,
+      "title": "[event-research] norway-gpfg-bond-expert-group-2027-01-25",
+      "labels": [],
+      "createdAt": "2026-09-06T03:03:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1698,
+      "title": "[event-research] opec-momr-2026-09-10",
+      "labels": [],
+      "createdAt": "2026-09-06T03:16:25Z",
+      "isPr": false
+    },
+    {
+      "number": 1699,
+      "title": "[event-research] iea-omr-2026-09-11",
+      "labels": [],
+      "createdAt": "2026-09-06T03:16:26Z",
+      "isPr": false
+    },
+    {
+      "number": 1701,
+      "title": "[event-research] norway-gpfg-ethics-committee-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-06T03:30:23Z",
+      "isPr": false
+    },
+    {
+      "number": 1723,
+      "title": "[event-research] thanksgiving-half-day-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-06T05:42:56Z",
+      "isPr": false
+    },
+    {
+      "number": 1724,
+      "title": "[event-research] sifma-uk-bond-market-closure-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-06T05:42:57Z",
+      "isPr": false
+    },
+    {
+      "number": 1725,
+      "title": "[event-research] durable-goods-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-06T05:43:35Z",
+      "isPr": false
+    },
+    {
+      "number": 1726,
+      "title": "[event-research] advance-economic-indicators-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-06T05:43:36Z",
+      "isPr": false
+    },
+    {
+      "number": 1733,
+      "title": "[event-research] durable-goods-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-06T05:58:53Z",
+      "isPr": false
+    },
+    {
+      "number": 1734,
+      "title": "[event-research] wholesale-trade-2026-12-09",
+      "labels": [],
+      "createdAt": "2026-09-06T05:59:24Z",
+      "isPr": false
+    },
+    {
+      "number": 1746,
+      "title": "[event-research] mwts-benchmark-revision-2026-10-26",
+      "labels": [],
+      "createdAt": "2026-09-06T06:40:30Z",
+      "isPr": false
+    },
+    {
+      "number": 1747,
+      "title": "[event-research] existing-home-sales-2026-12-09",
+      "labels": [],
+      "createdAt": "2026-09-06T06:40:31Z",
+      "isPr": false
+    },
+    {
+      "number": 1748,
+      "title": "[event-research] mtis-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-06T06:40:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1760,
+      "title": "[event-research] census-benchmark-revision-nsa-2026-09-28",
+      "labels": [],
+      "createdAt": "2026-09-06T07:01:58Z",
+      "isPr": false
+    },
+    {
+      "number": 1761,
+      "title": "[event-research] m3-full-report-2026-12-03",
+      "labels": [],
+      "createdAt": "2026-09-06T07:01:59Z",
+      "isPr": false
+    },
+    {
+      "number": 1762,
+      "title": "[event-research] housing-starts-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-06T07:02:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1766,
+      "title": "[event-research] existing-home-sales-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-06T07:09:46Z",
+      "isPr": false
+    },
+    {
+      "number": 1767,
+      "title": "[event-research] pending-home-sales-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-06T07:09:47Z",
+      "isPr": false
+    },
+    {
+      "number": 1769,
+      "title": "[event-research] retail-benchmark-revision-2026-09-28",
+      "labels": [],
+      "createdAt": "2026-09-06T07:27:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1770,
+      "title": "[event-research] mtis-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-06T07:27:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1771,
+      "title": "[event-research] mtis-2026-11-17",
+      "labels": [],
+      "createdAt": "2026-09-06T07:27:03Z",
+      "isPr": false
+    },
+    {
+      "number": 1775,
+      "title": "[event-research] construction-spending-2026-12-01",
+      "labels": [],
+      "createdAt": "2026-09-06T08:03:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1779,
+      "title": "[event-research] m3-full-report-2026-11-03",
+      "labels": [],
+      "createdAt": "2026-09-06T08:28:26Z",
+      "isPr": false
+    },
+    {
+      "number": 1781,
+      "title": "[event-research] industrial-production-2026-11-17",
+      "labels": [],
+      "createdAt": "2026-09-06T08:28:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1780,
+      "title": "[event-research] wholesale-trade-2026-11-09",
+      "labels": [],
+      "createdAt": "2026-09-06T08:28:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1784,
+      "title": "[event-research] construction-spending-2026-11-02",
+      "labels": [],
+      "createdAt": "2026-09-06T08:51:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1785,
+      "title": "[event-research] m3-full-report-2026-10-02",
+      "labels": [],
+      "createdAt": "2026-09-06T08:52:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1786,
+      "title": "[event-research] wholesale-trade-2026-10-08",
+      "labels": [],
+      "createdAt": "2026-09-06T08:52:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1789,
+      "title": "[event-research] advance-services-q3-2026-11-19",
+      "labels": [],
+      "createdAt": "2026-09-06T08:57:01Z",
+      "isPr": false
+    },
+    {
+      "number": 1791,
+      "title": "[event-research] industrial-production-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-06T08:58:34Z",
+      "isPr": false
+    },
+    {
+      "number": 1792,
+      "title": "[event-research] new-home-sales-2026-12-23",
+      "labels": [],
+      "createdAt": "2026-09-06T09:00:19Z",
+      "isPr": false
+    },
+    {
+      "number": 1794,
+      "title": "[event-research] new-home-sales-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-06T09:03:18Z",
+      "isPr": false
+    },
+    {
+      "number": 1797,
+      "title": "[event-research] housing-starts-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-06T09:08:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1801,
+      "title": "[event-research] construction-spending-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-06T09:29:37Z",
+      "isPr": false
+    },
+    {
+      "number": 1802,
+      "title": "[event-research] m3-full-report-2026-10-02",
+      "labels": [],
+      "createdAt": "2026-09-06T09:30:42Z",
+      "isPr": false
+    },
+    {
+      "number": 1803,
+      "title": "[event-research] qss-q3-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-06T09:30:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1806,
+      "title": "[event-research] fhfa-hpi-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-06T09:33:04Z",
+      "isPr": false
+    },
+    {
+      "number": 1808,
+      "title": "[event-research] housing-starts-2026-10-20",
+      "labels": [],
+      "createdAt": "2026-09-06T09:34:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1809,
+      "title": "[event-research] new-home-sales-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-06T09:34:10Z",
+      "isPr": false
+    },
+    {
+      "number": 1812,
+      "title": "[event-research] qss-q2-2026-09-09",
+      "labels": [],
+      "createdAt": "2026-09-06T10:00:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1818,
+      "title": "[event-research] fhfa-hpi-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-06T10:09:31Z",
+      "isPr": false
+    },
+    {
+      "number": 1819,
+      "title": "[event-research] housing-vacancies-q3-2026-10-28",
+      "labels": [],
+      "createdAt": "2026-09-06T10:09:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1820,
+      "title": "[event-research] housing-starts-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-06T10:09:34Z",
+      "isPr": false
+    },
+    {
+      "number": 1822,
+      "title": "[event-research] construction-spending-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-06T10:10:42Z",
+      "isPr": false
+    },
+    {
+      "number": 1823,
+      "title": "[event-research] nahb-hmi-2026-11-17",
+      "labels": [],
+      "createdAt": "2026-09-06T10:10:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1824,
+      "title": "[event-research] housing-starts-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-06T10:11:36Z",
+      "isPr": false
+    },
+    {
+      "number": 1825,
+      "title": "[event-research] new-home-sales-2026-09-24",
+      "labels": [],
+      "createdAt": "2026-09-06T10:11:37Z",
+      "isPr": false
+    },
+    {
+      "number": 1826,
+      "title": "[event-research] consumer-confidence-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-06T10:12:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1827,
+      "title": "[event-research] fhfa-hpi-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-06T10:12:28Z",
+      "isPr": false
+    },
+    {
+      "number": 1831,
+      "title": "[event-research] nahb-hmi-2026-10-19",
+      "labels": [],
+      "createdAt": "2026-09-06T10:45:04Z",
+      "isPr": false
+    },
+    {
+      "number": 1832,
+      "title": "[event-research] nahb-hmi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-06T10:45:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1835,
+      "title": "[event-research] nahb-hmi-2026-09-16",
+      "labels": [],
+      "createdAt": "2026-09-06T11:02:12Z",
+      "isPr": false
+    },
+    {
+      "number": 1837,
+      "title": "[event-research] consumer-confidence-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-06T11:03:38Z",
+      "isPr": false
+    },
+    {
+      "number": 1838,
+      "title": "[event-research] fhfa-hpi-2026-09-29",
+      "labels": [],
+      "createdAt": "2026-09-06T11:04:33Z",
+      "isPr": false
+    },
+    {
+      "number": 1841,
+      "title": "[event-research] housing-starts-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-06T11:09:53Z",
+      "isPr": false
+    },
+    {
+      "number": 1842,
+      "title": "[event-research] consumer-confidence-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-06T11:11:13Z",
+      "isPr": false
+    },
+    {
+      "number": 1843,
+      "title": "[event-research] fhfa-hpi-2027-01-26",
+      "labels": [],
+      "createdAt": "2026-09-06T11:11:14Z",
+      "isPr": false
+    },
+    {
+      "number": 1850,
+      "title": "[event-research] nahb-hmi-2026-10-19",
+      "labels": [],
+      "createdAt": "2026-09-06T11:31:57Z",
+      "isPr": false
+    },
+    {
+      "number": 1851,
+      "title": "[event-research] industrial-production-2026-09-18",
+      "labels": [],
+      "createdAt": "2026-09-06T11:32:38Z",
+      "isPr": false
+    },
+    {
+      "number": 1852,
+      "title": "[event-research] industrial-production-2026-10-16",
+      "labels": [],
+      "createdAt": "2026-09-06T11:32:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1857,
+      "title": "[event-research] industrial-production-2026-10-16",
+      "labels": [],
+      "createdAt": "2026-09-06T12:04:25Z",
+      "isPr": false
+    },
+    {
+      "number": 1858,
+      "title": "[event-research] consumer-confidence-2027-01-26",
+      "labels": [],
+      "createdAt": "2026-09-06T12:05:05Z",
+      "isPr": false
+    },
+    {
+      "number": 1859,
+      "title": "[event-research] fhfa-hpi-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-06T12:05:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1862,
+      "title": "[event-research] consumer-confidence-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-06T12:39:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1866,
+      "title": "[event-research] consumer-confidence-2027-03-30",
+      "labels": [],
+      "createdAt": "2026-09-06T13:01:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1869,
+      "title": "[event-research] consumer-confidence-2027-04-27",
+      "labels": [],
+      "createdAt": "2026-09-06T13:17:07Z",
+      "isPr": false
+    },
+    {
+      "number": 1875,
+      "title": "[event-research] consumer-confidence-2027-05-25",
+      "labels": [],
+      "createdAt": "2026-09-06T13:48:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1877,
+      "title": "[event-research] opex-2027-05-21",
+      "labels": [],
+      "createdAt": "2026-09-06T14:11:31Z",
+      "isPr": false
+    },
+    {
+      "number": 1878,
+      "title": "[event-research] consumer-confidence-2027-06-29",
+      "labels": [],
+      "createdAt": "2026-09-06T14:11:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1883,
+      "title": "[event-research] opex-2027-01-15",
+      "labels": [],
+      "createdAt": "2026-09-06T14:27:56Z",
+      "isPr": false
+    },
+    {
+      "number": 1885,
+      "title": "[event-research] fomc-minutes-2027-06-30",
+      "labels": [],
+      "createdAt": "2026-09-06T14:32:00Z",
+      "isPr": false
+    },
+    {
+      "number": 1886,
+      "title": "[event-research] consumer-confidence-2027-07-27",
+      "labels": [],
+      "createdAt": "2026-09-06T14:32:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1890,
+      "title": "[event-research] vix-expiration-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-06T14:48:37Z",
+      "isPr": false
+    },
+    {
+      "number": 1894,
+      "title": "[event-research] sp-select-sector-secondary-reweight-2027-06-30",
+      "labels": [],
+      "createdAt": "2026-09-06T15:01:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1896,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-06T15:10:07Z",
+      "isPr": false
+    },
+    {
+      "number": 1897,
+      "title": "[event-research] fomc-2027-07-28",
+      "labels": [],
+      "createdAt": "2026-09-06T15:10:09Z",
+      "isPr": false
+    },
+    {
+      "number": 1898,
+      "title": "[event-research] consumer-confidence-2027-08-31",
+      "labels": [],
+      "createdAt": "2026-09-06T15:10:10Z",
+      "isPr": false
+    },
+    {
+      "number": 1903,
+      "title": "[event-research] mlk-market-closure-2027-01-18",
+      "labels": [],
+      "createdAt": "2026-09-06T15:22:40Z",
+      "isPr": false
+    },
+    {
+      "number": 1906,
+      "title": "[event-research] russell-reconstitution-2027-06-25",
+      "labels": [],
+      "createdAt": "2026-09-06T15:25:11Z",
+      "isPr": false
+    },
+    {
+      "number": 1908,
+      "title": "[event-research] wef-davos-annual-meeting-2027-01-18",
+      "labels": [],
+      "createdAt": "2026-09-06T15:37:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1910,
+      "title": "[event-research] fomc-minutes-2027-08-18",
+      "labels": [],
+      "createdAt": "2026-09-06T15:42:31Z",
+      "isPr": false
+    },
+    {
+      "number": 1913,
+      "title": "[event-research] fhfa-hpi-2027-08-31",
+      "labels": [],
+      "createdAt": "2026-09-06T15:47:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1914,
+      "title": "[event-research] consumer-confidence-2027-09-28",
+      "labels": [],
+      "createdAt": "2026-09-06T15:47:45Z",
+      "isPr": false
+    },
+    {
+      "number": 1918,
+      "title": "[event-research] russell-reconstitution-2027-06-25",
+      "labels": [],
+      "createdAt": "2026-09-06T16:03:31Z",
+      "isPr": false
+    },
+    {
+      "number": 1919,
+      "title": "[event-research] russell-reconstitution-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-06T16:04:15Z",
+      "isPr": false
+    },
+    {
+      "number": 1920,
+      "title": "[event-research] russell-recon-preliminary-2027-05-21",
+      "labels": [],
+      "createdAt": "2026-09-06T16:04:16Z",
+      "isPr": false
+    },
+    {
+      "number": 1923,
+      "title": "[event-research] consumer-confidence-2027-09-28",
+      "labels": [],
+      "createdAt": "2026-09-06T16:25:45Z",
+      "isPr": false
+    },
+    {
+      "number": 1924,
+      "title": "[event-research] fomc-blackout-start-2027-09-04",
+      "labels": [],
+      "createdAt": "2026-09-06T16:25:49Z",
+      "isPr": false
+    },
+    {
+      "number": 1925,
+      "title": "[event-research] fomc-2027-09-15",
+      "labels": [],
+      "createdAt": "2026-09-06T16:25:50Z",
+      "isPr": false
+    },
+    {
+      "number": 1926,
+      "title": "[event-research] fhfa-hpi-2027-09-28",
+      "labels": [],
+      "createdAt": "2026-09-06T16:25:51Z",
+      "isPr": false
+    },
+    {
+      "number": 1927,
+      "title": "[event-research] consumer-confidence-2027-10-26",
+      "labels": [],
+      "createdAt": "2026-09-06T16:25:52Z",
+      "isPr": false
+    },
+    {
+      "number": 1929,
+      "title": "[event-research] russell-recon-preliminary-2026-11-13",
+      "labels": [],
+      "createdAt": "2026-09-06T16:41:25Z",
+      "isPr": false
+    },
+    {
+      "number": 1931,
+      "title": "[event-research] russell-recon-lockdown-2027-06-07",
+      "labels": [],
+      "createdAt": "2026-09-06T16:43:35Z",
+      "isPr": false
+    },
+    {
+      "number": 1935,
+      "title": "[event-research] labor-day-market-closure-2027-09-06",
+      "labels": [],
+      "createdAt": "2026-09-06T17:04:26Z",
+      "isPr": false
+    },
+    {
+      "number": 1936,
+      "title": "[event-research] vix-expiration-2027-09-15",
+      "labels": [],
+      "createdAt": "2026-09-06T17:06:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1937,
+      "title": "[event-research] opex-2027-09-17",
+      "labels": [],
+      "createdAt": "2026-09-06T17:06:10Z",
+      "isPr": false
+    },
+    {
+      "number": 1938,
+      "title": "[event-research] fomc-minutes-2027-10-06",
+      "labels": [],
+      "createdAt": "2026-09-06T17:06:11Z",
+      "isPr": false
+    },
+    {
+      "number": 1941,
+      "title": "[event-research] fomc-blackout-start-2027-10-16",
+      "labels": [],
+      "createdAt": "2026-09-06T17:23:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1942,
+      "title": "[event-research] fhfa-hpi-2027-10-26",
+      "labels": [],
+      "createdAt": "2026-09-06T17:23:41Z",
+      "isPr": false
+    },
+    {
+      "number": 1943,
+      "title": "[event-research] fomc-2027-10-26",
+      "labels": [],
+      "createdAt": "2026-09-06T17:23:42Z",
+      "isPr": false
+    },
+    {
+      "number": 1944,
+      "title": "[event-research] consumer-confidence-2027-11-30",
+      "labels": [],
+      "createdAt": "2026-09-06T17:23:43Z",
+      "isPr": false
+    },
+    {
+      "number": 1948,
+      "title": "[event-research] russell-recon-lockdown-2026-11-30",
+      "labels": [],
+      "createdAt": "2026-09-06T17:38:59Z",
+      "isPr": false
+    },
+    {
+      "number": 1953,
+      "title": "[event-research] fomc-2027-10-27",
+      "labels": [],
+      "createdAt": "2026-09-06T17:54:02Z",
+      "isPr": false
+    },
+    {
+      "number": 1957,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2026-09-21",
+      "labels": [],
+      "createdAt": "2026-09-06T18:13:21Z",
+      "isPr": false
+    },
+    {
+      "number": 1959,
+      "title": "[event-research] opex-2027-10-15",
+      "labels": [],
+      "createdAt": "2026-09-06T18:14:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1960,
+      "title": "[event-research] vix-expiration-2027-10-20",
+      "labels": [],
+      "createdAt": "2026-09-06T18:14:33Z",
+      "isPr": false
+    },
+    {
+      "number": 1961,
+      "title": "[event-research] fomc-minutes-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-06T18:14:35Z",
+      "isPr": false
+    },
+    {
+      "number": 1962,
+      "title": "[event-research] fhfa-hpi-2027-10-26",
+      "labels": [],
+      "createdAt": "2026-09-06T18:15:32Z",
+      "isPr": false
+    },
+    {
+      "number": 1963,
+      "title": "[event-research] fomc-2027-12-08",
+      "labels": [],
+      "createdAt": "2026-09-06T18:15:33Z",
+      "isPr": false
+    },
+    {
+      "number": 1964,
+      "title": "[event-research] fhfa-hpi-2027-11-30",
+      "labels": [],
+      "createdAt": "2026-09-06T18:16:39Z",
+      "isPr": false
+    },
+    {
+      "number": 1965,
+      "title": "[event-research] fhfa-hpi-2027-12-28",
+      "labels": [],
+      "createdAt": "2026-09-06T18:16:41Z",
+      "isPr": false
+    },
+    {
+      "number": 1967,
+      "title": "[event-research] fomc-blackout-start-2027-11-27",
+      "labels": [],
+      "createdAt": "2026-09-06T18:34:05Z",
+      "isPr": false
+    },
+    {
+      "number": 1968,
+      "title": "[event-research] consumer-confidence-2027-12-22",
+      "labels": [],
+      "createdAt": "2026-09-06T18:34:06Z",
+      "isPr": false
+    },
+    {
+      "number": 1972,
+      "title": "[event-research] russell-style-quarter-end-capping-effective-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-06T18:51:22Z",
+      "isPr": false
+    },
+    {
+      "number": 1975,
+      "title": "[event-research] opex-2027-10-15",
+      "labels": [],
+      "createdAt": "2026-09-06T18:53:08Z",
+      "isPr": false
+    },
+    {
+      "number": 1976,
+      "title": "[event-research] sifma-bond-holiday-close-2027-10-11",
+      "labels": [],
+      "createdAt": "2026-09-06T18:53:27Z",
+      "isPr": false
+    },
+    {
+      "number": 1981,
+      "title": "[event-research] opec-plus-meeting-2026-10-04",
+      "labels": [],
+      "createdAt": "2026-09-08T01:52:41Z",
+      "isPr": false
+    },
+    {
+      "number": 1992,
+      "title": "[event-research] ecb-economic-bulletin-2026-09-24",
+      "labels": [],
+      "createdAt": "2026-09-08T11:53:44Z",
+      "isPr": false
+    },
+    {
+      "number": 1993,
+      "title": "[event-research] treasury-buyback-tips-10y30y-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-08T11:56:20Z",
+      "isPr": false
+    },
+    {
+      "number": 1994,
+      "title": "[event-research] treasury-buyback-7y10y-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-08T11:56:22Z",
+      "isPr": false
+    },
+    {
+      "number": 2000,
+      "title": "[event-research] treasury-coupon-announcement-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-08T12:07:05Z",
+      "isPr": false
+    },
+    {
+      "number": 2001,
+      "title": "[event-research] jgb-20y-auction-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-08T12:09:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2003,
+      "title": "[event-research] eurostat-hicp-final-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-08T12:15:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2006,
+      "title": "[event-research] mts-november-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-08T12:20:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2009,
+      "title": "[event-research] treasury-buyback-cash-mgmt-2026-09-09",
+      "labels": [],
+      "createdAt": "2026-09-08T12:26:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2012,
+      "title": "[event-research] existing-home-sales-2026-09-10",
+      "labels": [],
+      "createdAt": "2026-09-08T12:31:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2013,
+      "title": "[event-research] pending-home-sales-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-08T12:31:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2015,
+      "title": "[event-research] consumer-credit-2026-10-07",
+      "labels": [],
+      "createdAt": "2026-09-08T12:33:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2018,
+      "title": "[event-research] tic-monthly-2026-09-16",
+      "labels": [],
+      "createdAt": "2026-09-08T12:37:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2021,
+      "title": "[event-research] sp-quarterly-rebalance-effective-2026-09-21",
+      "labels": [],
+      "createdAt": "2026-09-08T12:39:49Z",
+      "isPr": false
+    },
+    {
+      "number": 2025,
+      "title": "[event-research] steel-imports-preliminary-2026-09-24",
+      "labels": [],
+      "createdAt": "2026-09-08T12:46:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2030,
+      "title": "[event-research] russell-style-quarter-end-capping-effective-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-08T12:58:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2031,
+      "title": "[event-research] sp-select-sector-secondary-reweight-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-08T12:58:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2034,
+      "title": "[event-research] opec-plus-meeting-2026-10-04",
+      "labels": [],
+      "createdAt": "2026-09-08T13:02:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2035,
+      "title": "[event-research] empire-state-mfg-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-08T13:03:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2038,
+      "title": "[event-research] eia-steo-2026-10-06",
+      "labels": [],
+      "createdAt": "2026-09-08T13:06:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2040,
+      "title": "[event-research] google-adtech-opinion-unseal-2026-09-16",
+      "labels": [],
+      "createdAt": "2026-09-08T13:09:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2041,
+      "title": "[event-research] google-adtech-final-judgment-2026-10-02",
+      "labels": [],
+      "createdAt": "2026-09-08T13:09:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2049,
+      "title": "[event-research] pjm-reliability-backstop-procurement-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-08T13:26:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2050,
+      "title": "[event-research] pjm-reliability-backstop-results-2026-12-02",
+      "labels": [],
+      "createdAt": "2026-09-08T13:26:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2054,
+      "title": "[event-research] vix-expiration-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-08T13:42:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2055,
+      "title": "[event-research] opex-2027-11-19",
+      "labels": [],
+      "createdAt": "2026-09-08T13:42:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2056,
+      "title": "[event-research] thanksgiving-market-closure-2027-11-25",
+      "labels": [],
+      "createdAt": "2026-09-08T13:42:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2058,
+      "title": "[event-research] thanksgiving-half-day-2027-11-26",
+      "labels": [],
+      "createdAt": "2026-09-08T13:44:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2059,
+      "title": "[event-research] fomc-minutes-2027-12-29",
+      "labels": [],
+      "createdAt": "2026-09-08T13:44:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2062,
+      "title": "[event-research] fhfa-hpi-2027-03-30",
+      "labels": [],
+      "createdAt": "2026-09-08T13:56:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2063,
+      "title": "[event-research] fhfa-hpi-2027-04-27",
+      "labels": [],
+      "createdAt": "2026-09-08T13:56:05Z",
+      "isPr": false
+    },
+    {
+      "number": 2064,
+      "title": "[event-research] fhfa-hpi-2027-05-25",
+      "labels": [],
+      "createdAt": "2026-09-08T13:56:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2065,
+      "title": "[event-research] fhfa-hpi-2027-06-29",
+      "labels": [],
+      "createdAt": "2026-09-08T13:56:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2066,
+      "title": "[event-research] fhfa-hpi-2027-07-27",
+      "labels": [],
+      "createdAt": "2026-09-08T13:56:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2068,
+      "title": "[event-research] opex-2027-12-17",
+      "labels": [],
+      "createdAt": "2026-09-08T14:00:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2069,
+      "title": "[event-research] christmas-market-closure-2027-12-24",
+      "labels": [],
+      "createdAt": "2026-09-08T14:00:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2077,
+      "title": "[event-research] jgb-40y-auction-2026-09-29",
+      "labels": [],
+      "createdAt": "2026-09-08T14:27:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2079,
+      "title": "[event-research] treasury-buyback-tips-1y10y-2026-09-29",
+      "labels": [],
+      "createdAt": "2026-09-08T14:30:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2080,
+      "title": "[event-research] treasury-buyback-tips-1y10y-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-08T14:30:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2083,
+      "title": "[event-research] existing-home-sales-2026-10-13",
+      "labels": [],
+      "createdAt": "2026-09-08T14:33:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2086,
+      "title": "[event-research] tic-monthly-2026-10-16",
+      "labels": [],
+      "createdAt": "2026-09-08T14:45:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2088,
+      "title": "[event-research] treasury-buyback-1mo2y-2026-11-05",
+      "labels": [],
+      "createdAt": "2026-09-08T14:49:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2090,
+      "title": "[event-research] pending-home-sales-2026-10-20",
+      "labels": [],
+      "createdAt": "2026-09-08T14:52:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2091,
+      "title": "[event-research] nar-metro-home-prices-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-08T14:52:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2092,
+      "title": "[event-research] pending-home-sales-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-08T14:52:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2093,
+      "title": "[event-research] pending-home-sales-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-08T14:53:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2102,
+      "title": "[event-research] sp-rebalance-proforma-2026-12-04",
+      "labels": [],
+      "createdAt": "2026-09-08T18:10:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2106,
+      "title": "[event-research] jgb-30y-auction-2026-10-08",
+      "labels": [],
+      "createdAt": "2026-09-08T18:19:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2107,
+      "title": "[event-research] google-adtech-final-judgment-2026-10-02",
+      "labels": [],
+      "createdAt": "2026-09-08T18:20:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2111,
+      "title": "[event-research] eia-steo-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-08T18:31:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2112,
+      "title": "[event-research] eia-steo-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-08T18:31:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2116,
+      "title": "[event-research] philly-fed-mfg-2026-10-15",
+      "labels": [],
+      "createdAt": "2026-09-08T18:38:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2121,
+      "title": "[event-research] tic-monthly-2026-10-16",
+      "labels": [],
+      "createdAt": "2026-09-08T18:54:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2122,
+      "title": "[event-research] case-shiller-hpi-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-08T18:54:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2123,
+      "title": "[event-research] tic-monthly-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-08T18:55:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2124,
+      "title": "[event-research] tic-monthly-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-08T18:55:53Z",
+      "isPr": false
+    },
+    {
+      "number": 2129,
+      "title": "[event-research] treasury-30y-bond-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-08T19:09:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2130,
+      "title": "[event-research] treasury-20y-bond-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-08T19:09:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2131,
+      "title": "[event-research] treasury-10y-tips-2026-11-19",
+      "labels": [],
+      "createdAt": "2026-09-08T19:09:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2137,
+      "title": "[event-research] russell-style-month-end-capping-effective-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-08T19:28:21Z",
+      "isPr": false
+    },
+    {
+      "number": 2138,
+      "title": "[event-research] russell-style-month-end-capping-effective-2026-11-30",
+      "labels": [],
+      "createdAt": "2026-09-08T19:28:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2140,
+      "title": "[event-research] sp-rebalance-reference-close-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-08T19:30:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2141,
+      "title": "[event-research] christmas-market-closure-2026-12-25",
+      "labels": [],
+      "createdAt": "2026-09-08T19:30:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2145,
+      "title": "[event-research] case-shiller-hpi-2027-03-30",
+      "labels": [],
+      "createdAt": "2026-09-08T19:48:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2149,
+      "title": "[event-research] fomc-minutes-2027-05-19",
+      "labels": [],
+      "createdAt": "2026-09-08T19:53:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2150,
+      "title": "[event-research] fhfa-hpi-2027-06-29",
+      "labels": [],
+      "createdAt": "2026-09-08T19:53:21Z",
+      "isPr": false
+    },
+    {
+      "number": 2151,
+      "title": "[event-research] fhfa-hpi-2027-04-27",
+      "labels": [],
+      "createdAt": "2026-09-08T19:54:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2152,
+      "title": "[event-research] russell-style-quarter-end-capping-effective-2027-06-30",
+      "labels": [],
+      "createdAt": "2026-09-08T19:54:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2157,
+      "title": "[event-research] sifma-bond-market-closure-2027-11-11",
+      "labels": [],
+      "createdAt": "2026-09-08T20:13:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2158,
+      "title": "[event-research] sifma-bond-early-close-2027-11-26",
+      "labels": [],
+      "createdAt": "2026-09-08T20:13:21Z",
+      "isPr": false
+    },
+    {
+      "number": 2161,
+      "title": "[event-research] bond-market-early-close-2027-12-23",
+      "labels": [],
+      "createdAt": "2026-09-08T20:23:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2165,
+      "title": "[event-research] opex-2027-12-17",
+      "labels": [],
+      "createdAt": "2026-09-08T20:27:07Z",
+      "isPr": false
+    },
+    {
+      "number": 2166,
+      "title": "[event-research] sifma-bond-early-close-2027-12-23",
+      "labels": [],
+      "createdAt": "2026-09-08T20:27:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2167,
+      "title": "[event-research] sifma-bond-early-close-2027-12-31",
+      "labels": [],
+      "createdAt": "2026-09-08T20:27:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2168,
+      "title": "[event-research] sp-quarterly-rebalance-effective-2027-12-20",
+      "labels": [],
+      "createdAt": "2026-09-08T20:28:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2169,
+      "title": "[event-research] vix-expiration-2027-12-22",
+      "labels": [],
+      "createdAt": "2026-09-08T20:28:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2172,
+      "title": "[event-research] vix-expiration-2027-12-15",
+      "labels": [],
+      "createdAt": "2026-09-08T20:52:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2173,
+      "title": "[event-research] fed-board-closure-2027-12-31",
+      "labels": [],
+      "createdAt": "2026-09-08T20:52:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2174,
+      "title": "[event-research] fomc-2028-01-26",
+      "labels": [],
+      "createdAt": "2026-09-08T20:52:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2177,
+      "title": "[event-research] philly-fed-mfg-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-08T21:06:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2180,
+      "title": "[event-research] jgb-20y-auction-2026-10-20",
+      "labels": [],
+      "createdAt": "2026-09-08T21:14:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2181,
+      "title": "[event-research] jgb-liquidity-enhancement-11-39y-2026-10-27",
+      "labels": [],
+      "createdAt": "2026-09-08T21:14:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2182,
+      "title": "[event-research] case-shiller-hpi-2026-09-29",
+      "labels": [],
+      "createdAt": "2026-09-08T21:15:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2185,
+      "title": "[event-research] eia-steo-2027-10-13",
+      "labels": [],
+      "createdAt": "2026-09-08T21:20:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2187,
+      "title": "[event-research] tic-monthly-2027-01-19",
+      "labels": [],
+      "createdAt": "2026-09-08T21:30:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2190,
+      "title": "[event-research] treasury-2y-note-2026-11-23",
+      "labels": [],
+      "createdAt": "2026-09-08T21:33:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2192,
+      "title": "[event-research] treasury-3y-note-2026-11-09",
+      "labels": [],
+      "createdAt": "2026-09-08T21:35:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2193,
+      "title": "[event-research] treasury-10y-note-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-08T21:35:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2194,
+      "title": "[event-research] treasury-coupon-announcement-2026-11-19",
+      "labels": [],
+      "createdAt": "2026-09-08T21:37:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2195,
+      "title": "[event-research] treasury-10y-tips-2027-01-21",
+      "labels": [],
+      "createdAt": "2026-09-08T21:37:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2198,
+      "title": "[event-research] eia-steo-2027-01-12",
+      "labels": [],
+      "createdAt": "2026-09-08T21:47:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2200,
+      "title": "[event-research] sp-quarterly-rebalance-effective-2026-12-21",
+      "labels": [],
+      "createdAt": "2026-09-08T21:52:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2204,
+      "title": "[event-research] thanksgiving-market-closure-2026-11-26",
+      "labels": [],
+      "createdAt": "2026-09-08T22:03:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2205,
+      "title": "[event-research] new-years-day-market-closure-2027-01-01",
+      "labels": [],
+      "createdAt": "2026-09-08T22:03:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2207,
+      "title": "[event-research] case-shiller-hpi-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-08T22:09:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2209,
+      "title": "[event-research] beige-book-2027-05-26",
+      "labels": [],
+      "createdAt": "2026-09-08T22:11:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2213,
+      "title": "[event-research] russell-style-quarter-end-capping-effective-2027-03-31",
+      "labels": [],
+      "createdAt": "2026-09-08T22:23:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2214,
+      "title": "[event-research] russell-style-month-end-capping-effective-2027-05-28",
+      "labels": [],
+      "createdAt": "2026-09-08T22:23:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2215,
+      "title": "[event-research] sifma-bond-early-close-2027-07-02",
+      "labels": [],
+      "createdAt": "2026-09-08T22:23:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2216,
+      "title": "[event-research] independence-day-market-closure-2027-07-05",
+      "labels": [],
+      "createdAt": "2026-09-08T22:23:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2218,
+      "title": "[event-research] sp-quarterly-rebalance-effective-2027-12-20",
+      "labels": [],
+      "createdAt": "2026-09-08T22:28:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2219,
+      "title": "[event-research] ndx-annual-reconstitution-announcement-2027-12-10",
+      "labels": [],
+      "createdAt": "2026-09-08T22:28:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2220,
+      "title": "[event-research] sp-rebalance-reference-close-2027-12-10",
+      "labels": [],
+      "createdAt": "2026-09-08T22:28:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2227,
+      "title": "[event-research] missouri-map-tro-expiry-2026-09-22",
+      "labels": [],
+      "createdAt": "2026-09-09T00:13:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2232,
+      "title": "[event-research] eurostat-hicp-flash-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-09T00:29:04Z",
+      "isPr": false
+    },
+    {
+      "number": 2236,
+      "title": "[event-research] boe-decision-2026-09-17",
+      "labels": [],
+      "createdAt": "2026-09-09T00:41:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2237,
+      "title": "[event-research] retail-ecommerce-q3-2026-11-19",
+      "labels": [],
+      "createdAt": "2026-09-09T00:43:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2240,
+      "title": "[event-research] empire-state-mfg-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-09T00:47:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2241,
+      "title": "[event-research] bund-30y-auction-2026-09-16",
+      "labels": [],
+      "createdAt": "2026-09-09T00:49:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2246,
+      "title": "[event-research] bloomberg-agg-index-rebalance-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T00:59:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2251,
+      "title": "[event-research] case-shiller-hpi-2026-09-29",
+      "labels": [],
+      "createdAt": "2026-09-09T01:14:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2252,
+      "title": "[event-research] sp-global-services-pmi-2026-10-05",
+      "labels": [],
+      "createdAt": "2026-09-09T01:14:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2254,
+      "title": "[event-research] vix-expiration-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-09T01:17:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2257,
+      "title": "[event-research] msft-annual-meeting-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-09T01:27:34Z",
+      "isPr": false
+    },
+    {
+      "number": 2258,
+      "title": "[event-research] opec-plus-meeting-2026-11-01",
+      "labels": [],
+      "createdAt": "2026-09-09T01:29:07Z",
+      "isPr": false
+    },
+    {
+      "number": 2260,
+      "title": "[event-research] jgb-liquidity-enhancement-5-11y-2026-10-22",
+      "labels": [],
+      "createdAt": "2026-09-09T01:31:51Z",
+      "isPr": false
+    },
+    {
+      "number": 2262,
+      "title": "[event-research] jgb-20y-auction-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-09T01:35:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2263,
+      "title": "[event-research] jgb-40y-auction-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T01:35:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2265,
+      "title": "[event-research] treasury-3y-note-2026-12-07",
+      "labels": [],
+      "createdAt": "2026-09-09T01:43:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2268,
+      "title": "[event-research] treasury-coupon-announcement-2026-11-19",
+      "labels": [],
+      "createdAt": "2026-09-09T01:47:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2270,
+      "title": "[event-research] treasury-2y-frn-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T01:48:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2271,
+      "title": "[event-research] treasury-5y-note-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T01:48:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2272,
+      "title": "[event-research] treasury-7y-note-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T01:48:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2273,
+      "title": "[event-research] vix-expiration-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-09T01:50:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2275,
+      "title": "[event-research] cyber-monday-2026-11-30",
+      "labels": [],
+      "createdAt": "2026-09-09T01:58:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2277,
+      "title": "[event-research] sifma-bond-early-close-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-09T02:01:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2280,
+      "title": "[event-research] ndx-annual-reconstitution-announcement-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-09T02:05:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2282,
+      "title": "[event-research] sifma-uk-bond-market-closure-2027-01-01",
+      "labels": [],
+      "createdAt": "2026-09-09T02:12:22Z",
+      "isPr": false
+    },
+    {
+      "number": 2284,
+      "title": "[event-research] eia-steo-2027-02-09",
+      "labels": [],
+      "createdAt": "2026-09-09T02:18:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2288,
+      "title": "[event-research] treasury-coupon-announcement-2027-01-14",
+      "labels": [],
+      "createdAt": "2026-09-09T02:27:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2289,
+      "title": "[event-research] treasury-coupon-announcement-2027-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T02:27:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2295,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2027-03-22",
+      "labels": [],
+      "createdAt": "2026-09-09T02:36:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2296,
+      "title": "[event-research] sp-quarterly-rebalance-effective-2027-03-22",
+      "labels": [],
+      "createdAt": "2026-09-09T02:36:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2300,
+      "title": "[event-research] tic-monthly-2027-02-18",
+      "labels": [],
+      "createdAt": "2026-09-09T02:40:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2301,
+      "title": "[event-research] tic-annual-survey-prelim-2027-02-26",
+      "labels": [],
+      "createdAt": "2026-09-09T02:40:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2303,
+      "title": "[event-research] jobs-2027-07-02",
+      "labels": [],
+      "createdAt": "2026-09-09T02:50:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2307,
+      "title": "[event-research] russell-style-month-end-capping-effective-2027-04-30",
+      "labels": [],
+      "createdAt": "2026-09-09T02:53:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2312,
+      "title": "[event-research] sp-select-sector-secondary-reweight-2027-12-31",
+      "labels": [],
+      "createdAt": "2026-09-09T03:08:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2319,
+      "title": "[event-research] bond-market-early-close-2027-12-23",
+      "labels": [],
+      "createdAt": "2026-09-09T03:25:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2323,
+      "title": "[event-research] fed-board-closure-2028-11-10",
+      "labels": [],
+      "createdAt": "2026-09-09T03:33:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2327,
+      "title": "[event-research] fomc-blackout-start-2028-01-15",
+      "labels": [],
+      "createdAt": "2026-09-09T03:44:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2328,
+      "title": "[event-research] fomc-minutes-2028-02-16",
+      "labels": [],
+      "createdAt": "2026-09-09T03:44:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2332,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-09T03:55:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2337,
+      "title": "[event-research] uk-labour-market-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-09T03:58:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2338,
+      "title": "[event-research] uk-cpi-2026-09-16",
+      "labels": [],
+      "createdAt": "2026-09-09T03:58:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2339,
+      "title": "[event-research] uk-autumn-budget-2026-10-28",
+      "labels": [],
+      "createdAt": "2026-09-09T03:58:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2340,
+      "title": "[event-research] boe-decision-2026-11-05",
+      "labels": [],
+      "createdAt": "2026-09-09T03:58:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2341,
+      "title": "[event-research] usmca-joint-review-2027-07-01",
+      "labels": [],
+      "createdAt": "2026-09-09T03:58:34Z",
+      "isPr": false
+    },
+    {
+      "number": 2344,
+      "title": "[event-research] empire-state-mfg-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-09T04:01:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2345,
+      "title": "[event-research] bund-30y-auction-2026-10-14",
+      "labels": [],
+      "createdAt": "2026-09-09T04:01:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2347,
+      "title": "[event-research] empire-state-mfg-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T04:03:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2352,
+      "title": "[event-research] sp-global-flash-us-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T04:12:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2353,
+      "title": "[event-research] sp-global-manufacturing-pmi-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-09T04:12:36Z",
+      "isPr": false
+    },
+    {
+      "number": 2354,
+      "title": "[event-research] vix-expiration-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-09T04:12:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2357,
+      "title": "[event-research] jgb-liquidity-enhancement-5-11y-2026-09-25",
+      "labels": [],
+      "createdAt": "2026-09-09T04:16:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2358,
+      "title": "[event-research] jgb-liquidity-enhancement-5-11y-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-09T04:16:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2361,
+      "title": "[event-research] jgb-30y-auction-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-09T04:19:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2362,
+      "title": "[event-research] jgb-liquidity-enhancement-1-5y-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T04:19:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2363,
+      "title": "[event-research] treasury-2y-frn-2026-12-23",
+      "labels": [],
+      "createdAt": "2026-09-09T04:21:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2368,
+      "title": "[event-research] sifma-bond-early-close-2026-11-27",
+      "labels": [],
+      "createdAt": "2026-09-09T04:27:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2371,
+      "title": "[event-research] jgb-40y-auction-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T04:29:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2373,
+      "title": "[event-research] jpx-market-closure-2026-11-23",
+      "labels": [],
+      "createdAt": "2026-09-09T04:30:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2375,
+      "title": "[event-research] msft-def14a-2026-10-22",
+      "labels": [],
+      "createdAt": "2026-09-09T04:32:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2376,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-24",
+      "labels": [],
+      "createdAt": "2026-09-09T04:32:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2377,
+      "title": "[event-research] treasury-7y-note-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T04:32:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2383,
+      "title": "[event-research] treasury-10y-note-2026-12-08",
+      "labels": [],
+      "createdAt": "2026-09-09T04:41:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2382,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-03",
+      "labels": [],
+      "createdAt": "2026-09-09T04:41:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2385,
+      "title": "[event-research] treasury-30y-bond-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-09T04:41:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2387,
+      "title": "[event-research] treasury-20y-bond-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T04:44:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2388,
+      "title": "[event-research] eia-steo-2027-03-09",
+      "labels": [],
+      "createdAt": "2026-09-09T04:44:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2392,
+      "title": "[event-research] treasury-2y-note-2027-01-25",
+      "labels": [],
+      "createdAt": "2026-09-09T04:47:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2393,
+      "title": "[event-research] treasury-5y-note-2027-01-26",
+      "labels": [],
+      "createdAt": "2026-09-09T04:47:59Z",
+      "isPr": false
+    },
+    {
+      "number": 2394,
+      "title": "[event-research] treasury-2y-frn-2027-01-27",
+      "labels": [],
+      "createdAt": "2026-09-09T04:48:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2395,
+      "title": "[event-research] treasury-7y-note-2027-01-28",
+      "labels": [],
+      "createdAt": "2026-09-09T04:48:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2396,
+      "title": "[event-research] tic-monthly-2027-03-18",
+      "labels": [],
+      "createdAt": "2026-09-09T04:49:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2397,
+      "title": "[event-research] tic-annual-survey-final-2027-04-30",
+      "labels": [],
+      "createdAt": "2026-09-09T04:49:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2402,
+      "title": "[event-research] jobs-2027-08-06",
+      "labels": [],
+      "createdAt": "2026-09-09T04:56:59Z",
+      "isPr": false
+    },
+    {
+      "number": 2404,
+      "title": "[event-research] tic-quarterly-external-debt-2027-06-30",
+      "labels": [],
+      "createdAt": "2026-09-09T04:58:36Z",
+      "isPr": false
+    },
+    {
+      "number": 2405,
+      "title": "[event-research] russell-style-quarter-end-capping-effective-2027-12-31",
+      "labels": [],
+      "createdAt": "2026-09-09T05:00:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2408,
+      "title": "[event-research] sp-rebalance-proforma-2027-03-05",
+      "labels": [],
+      "createdAt": "2026-09-09T05:03:51Z",
+      "isPr": false
+    },
+    {
+      "number": 2410,
+      "title": "[event-research] presidential-election-2028-11-07",
+      "labels": [],
+      "createdAt": "2026-09-09T05:06:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2416,
+      "title": "[event-research] uk-labour-market-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-09T05:18:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2418,
+      "title": "[event-research] sp-global-flash-us-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T05:19:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2419,
+      "title": "[event-research] uk-electricity-vat-zero-rate-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-09T05:19:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2420,
+      "title": "[event-research] boe-dmp-2026-10-02",
+      "labels": [],
+      "createdAt": "2026-09-09T05:19:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2421,
+      "title": "[event-research] uk-labour-market-2026-10-20",
+      "labels": [],
+      "createdAt": "2026-09-09T05:19:59Z",
+      "isPr": false
+    },
+    {
+      "number": 2422,
+      "title": "[event-research] uk-cpi-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-09T05:20:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2423,
+      "title": "[event-research] sp-global-investment-manager-index-2026-09-15",
+      "labels": [],
+      "createdAt": "2026-09-09T05:21:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2424,
+      "title": "[event-research] sp-global-flash-eurozone-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T05:22:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2425,
+      "title": "[event-research] sp-global-pmi-commodity-price-supply-2026-10-01",
+      "labels": [],
+      "createdAt": "2026-09-09T05:22:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2427,
+      "title": "[event-research] jgb-liquidity-enhancement-1-5y-2026-09-10",
+      "labels": [],
+      "createdAt": "2026-09-09T05:25:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2429,
+      "title": "[event-research] bund-30y-auction-2026-11-11",
+      "labels": [],
+      "createdAt": "2026-09-09T05:28:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2432,
+      "title": "[event-research] boe-decision-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-09T05:31:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2436,
+      "title": "[event-research] jgb-10y-auction-2026-11-05",
+      "labels": [],
+      "createdAt": "2026-09-09T05:37:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2439,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-03",
+      "labels": [],
+      "createdAt": "2026-09-09T05:42:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2441,
+      "title": "[event-research] philly-fed-mfg-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-09T05:46:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2444,
+      "title": "[event-research] treasury-30y-bond-2026-12-10",
+      "labels": [],
+      "createdAt": "2026-09-09T05:49:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2445,
+      "title": "[event-research] treasury-10y-note-2027-01-12",
+      "labels": [],
+      "createdAt": "2026-09-09T05:49:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2448,
+      "title": "[event-research] treasury-30y-bond-2027-01-13",
+      "labels": [],
+      "createdAt": "2026-09-09T05:51:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2450,
+      "title": "[event-research] treasury-2y-note-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-09T05:53:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2451,
+      "title": "[event-research] treasury-5y-note-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-09T05:53:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2453,
+      "title": "[event-research] treasury-5y-tips-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T05:56:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2454,
+      "title": "[event-research] treasury-20y-bond-2026-12-23",
+      "labels": [],
+      "createdAt": "2026-09-09T05:56:49Z",
+      "isPr": false
+    },
+    {
+      "number": 2455,
+      "title": "[event-research] treasury-20y-bond-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T05:56:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2461,
+      "title": "[event-research] treasury-7y-note-2027-01-28",
+      "labels": [],
+      "createdAt": "2026-09-09T06:07:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2463,
+      "title": "[event-research] eia-steo-2027-04-06",
+      "labels": [],
+      "createdAt": "2026-09-09T06:09:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2465,
+      "title": "[event-research] tic-quarterly-external-debt-2027-03-31",
+      "labels": [],
+      "createdAt": "2026-09-09T06:17:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2466,
+      "title": "[event-research] tic-monthly-2027-04-15",
+      "labels": [],
+      "createdAt": "2026-09-09T06:17:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2470,
+      "title": "[event-research] jobs-2027-09-03",
+      "labels": [],
+      "createdAt": "2026-09-09T06:23:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2474,
+      "title": "[event-research] tic-annual-survey-final-2027-04-30",
+      "labels": [],
+      "createdAt": "2026-09-09T06:25:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2475,
+      "title": "[event-research] russell-style-quarter-end-capping-effective-2027-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T06:25:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2476,
+      "title": "[event-research] russell-reconstitution-2027-12-10",
+      "labels": [],
+      "createdAt": "2026-09-09T06:25:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2477,
+      "title": "[event-research] treasury-borrowing-estimates-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T06:27:39Z",
+      "isPr": false
+    },
+    {
+      "number": 2478,
+      "title": "[event-research] treasury-refunding-2027-05-05",
+      "labels": [],
+      "createdAt": "2026-09-09T06:27:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2479,
+      "title": "[event-research] mlk-market-closure-2028-01-17",
+      "labels": [],
+      "createdAt": "2026-09-09T06:27:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2480,
+      "title": "[event-research] vix-expiration-2028-02-16",
+      "labels": [],
+      "createdAt": "2026-09-09T06:27:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2481,
+      "title": "[event-research] opex-2028-02-18",
+      "labels": [],
+      "createdAt": "2026-09-09T06:27:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2482,
+      "title": "[event-research] presidents-day-market-closure-2028-02-21",
+      "labels": [],
+      "createdAt": "2026-09-09T06:27:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2484,
+      "title": "[event-research] tic-quarterly-external-debt-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T06:41:49Z",
+      "isPr": false
+    },
+    {
+      "number": 2493,
+      "title": "[event-research] uk-labour-market-2026-10-20",
+      "labels": [],
+      "createdAt": "2026-09-09T06:56:04Z",
+      "isPr": false
+    },
+    {
+      "number": 2494,
+      "title": "[event-research] uk-cpi-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-09T06:56:05Z",
+      "isPr": false
+    },
+    {
+      "number": 2495,
+      "title": "[event-research] uk-electricity-vat-reversion-2027-04-01",
+      "labels": [],
+      "createdAt": "2026-09-09T06:56:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2496,
+      "title": "[event-research] sp-global-flash-eurozone-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T06:57:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2497,
+      "title": "[event-research] sp-global-investment-manager-index-2026-10-13",
+      "labels": [],
+      "createdAt": "2026-09-09T06:57:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2498,
+      "title": "[event-research] uk-public-sector-finances-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-09T06:57:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2499,
+      "title": "[event-research] uk-labour-market-2026-11-17",
+      "labels": [],
+      "createdAt": "2026-09-09T06:57:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2500,
+      "title": "[event-research] sp-global-flash-france-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T06:59:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2501,
+      "title": "[event-research] sp-global-flash-germany-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T06:59:07Z",
+      "isPr": false
+    },
+    {
+      "number": 2507,
+      "title": "[event-research] ofgem-price-cap-announcement-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T12:16:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2508,
+      "title": "[event-research] uk-fuel-duty-rise-2027-01-01",
+      "labels": [],
+      "createdAt": "2026-09-09T12:16:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2512,
+      "title": "[event-research] uk-public-sector-finances-2026-09-22",
+      "labels": [],
+      "createdAt": "2026-09-09T12:18:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2513,
+      "title": "[event-research] sp-global-flash-france-pmi-2026-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T12:18:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2514,
+      "title": "[event-research] uk-public-sector-finances-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T12:18:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2516,
+      "title": "[event-research] jgb-2y-auction-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T12:21:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2517,
+      "title": "[event-research] sp-global-investment-manager-index-2026-10-13",
+      "labels": [],
+      "createdAt": "2026-09-09T12:21:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2518,
+      "title": "[event-research] sp-global-investment-manager-index-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-09T12:23:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2521,
+      "title": "[event-research] uk-labour-market-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T12:28:34Z",
+      "isPr": false
+    },
+    {
+      "number": 2522,
+      "title": "[event-research] uk-ppi-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-09T12:30:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2523,
+      "title": "[event-research] uk-cpi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T12:30:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2529,
+      "title": "[event-research] jgb-5y-auction-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-09T12:35:59Z",
+      "isPr": false
+    },
+    {
+      "number": 2530,
+      "title": "[event-research] philly-fed-price-inflation-expectations-q4-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T12:37:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2533,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-09T12:42:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2539,
+      "title": "[event-research] dallas-fed-mfg-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-09T12:54:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2540,
+      "title": "[event-research] case-shiller-hpi-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T12:54:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2541,
+      "title": "[event-research] dallas-fed-tssos-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T12:54:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2543,
+      "title": "[event-research] tic-quarterly-external-debt-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-09T12:56:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2544,
+      "title": "[event-research] treasury-coupon-announcement-2027-01-07",
+      "labels": [],
+      "createdAt": "2026-09-09T12:56:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2545,
+      "title": "[event-research] treasury-3y-note-2027-01-11",
+      "labels": [],
+      "createdAt": "2026-09-09T12:56:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2547,
+      "title": "[event-research] tic-quarterly-external-debt-2027-03-31",
+      "labels": [],
+      "createdAt": "2026-09-09T12:58:07Z",
+      "isPr": false
+    },
+    {
+      "number": 2548,
+      "title": "[event-research] boe-decision-2027-04-29",
+      "labels": [],
+      "createdAt": "2026-09-09T12:59:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2549,
+      "title": "[event-research] uk-cpi-2027-05-19",
+      "labels": [],
+      "createdAt": "2026-09-09T12:59:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2550,
+      "title": "[event-research] uk-cpi-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-09T12:59:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2553,
+      "title": "[event-research] treasury-refunding-2027-02-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:09:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2560,
+      "title": "[event-research] vix-expiration-2028-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T13:12:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2561,
+      "title": "[event-research] opex-2028-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T13:12:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2563,
+      "title": "[event-research] eia-steo-2027-04-06",
+      "labels": [],
+      "createdAt": "2026-09-09T13:14:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2564,
+      "title": "[event-research] jobs-2027-10-08",
+      "labels": [],
+      "createdAt": "2026-09-09T13:14:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2565,
+      "title": "[event-research] ism-manufacturing-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:16:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2566,
+      "title": "[event-research] sloos-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:16:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2567,
+      "title": "[event-research] jobs-2027-05-07",
+      "labels": [],
+      "createdAt": "2026-09-09T13:16:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2568,
+      "title": "[event-research] tic-monthly-2027-05-18",
+      "labels": [],
+      "createdAt": "2026-09-09T13:16:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2569,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T13:16:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2572,
+      "title": "[event-research] vix-expiration-2028-02-16",
+      "labels": [],
+      "createdAt": "2026-09-09T13:23:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2573,
+      "title": "[event-research] thanksgiving-market-closure-2028-11-23",
+      "labels": [],
+      "createdAt": "2026-09-09T13:23:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2574,
+      "title": "[event-research] thanksgiving-half-day-2028-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T13:23:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2579,
+      "title": "[event-research] uk-public-sector-finances-2026-09-22",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2580,
+      "title": "[event-research] jgb-2y-auction-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2581,
+      "title": "[event-research] sp-global-investment-manager-index-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2582,
+      "title": "[event-research] jgb-5y-auction-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2583,
+      "title": "[event-research] uk-ppi-2026-11-18",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2584,
+      "title": "[event-research] uk-public-sector-finances-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2585,
+      "title": "[event-research] ofgem-price-cap-announcement-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2586,
+      "title": "[event-research] philly-fed-price-inflation-expectations-q4-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2587,
+      "title": "[event-research] uk-labour-market-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:21Z",
+      "isPr": false
+    },
+    {
+      "number": 2588,
+      "title": "[event-research] uk-cpi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2589,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2590,
+      "title": "[event-research] dallas-fed-mfg-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2591,
+      "title": "[event-research] case-shiller-hpi-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2592,
+      "title": "[event-research] dallas-fed-tssos-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2593,
+      "title": "[event-research] tic-quarterly-external-debt-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2594,
+      "title": "[event-research] uk-fuel-duty-rise-2027-01-01",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2595,
+      "title": "[event-research] treasury-coupon-announcement-2027-01-07",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2596,
+      "title": "[event-research] treasury-3y-note-2027-01-11",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:36Z",
+      "isPr": false
+    },
+    {
+      "number": 2597,
+      "title": "[event-research] treasury-refunding-2027-02-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2598,
+      "title": "[event-research] boe-decision-2027-04-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2599,
+      "title": "[event-research] ism-manufacturing-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2600,
+      "title": "[event-research] sloos-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2601,
+      "title": "[event-research] jobs-2027-05-07",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2602,
+      "title": "[event-research] tic-monthly-2027-05-18",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2603,
+      "title": "[event-research] uk-cpi-2027-05-19",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2604,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:49Z",
+      "isPr": false
+    },
+    {
+      "number": 2605,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:51Z",
+      "isPr": false
+    },
+    {
+      "number": 2606,
+      "title": "[event-research] jobs-2027-10-08",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:53Z",
+      "isPr": false
+    },
+    {
+      "number": 2607,
+      "title": "[event-research] uk-cpi-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2608,
+      "title": "[event-research] vix-expiration-2028-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2609,
+      "title": "[event-research] opex-2028-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T13:40:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2610,
+      "title": "[event-research] thanksgiving-market-closure-2028-11-23",
+      "labels": [],
+      "createdAt": "2026-09-09T13:41:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2611,
+      "title": "[event-research] thanksgiving-half-day-2028-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T13:41:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2616,
+      "title": "[event-research] uk-cpi-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:43:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2617,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-09T13:43:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2618,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-05-26",
+      "labels": [],
+      "createdAt": "2026-09-09T13:43:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2620,
+      "title": "[event-research] uk-public-sector-finances-2026-09-22",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2621,
+      "title": "[event-research] jgb-2y-auction-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2622,
+      "title": "[event-research] uk-ppi-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:21Z",
+      "isPr": false
+    },
+    {
+      "number": 2623,
+      "title": "[event-research] sp-global-investment-manager-index-2026-11-10",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:22Z",
+      "isPr": false
+    },
+    {
+      "number": 2624,
+      "title": "[event-research] jgb-5y-auction-2026-11-12",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:24Z",
+      "isPr": false
+    },
+    {
+      "number": 2625,
+      "title": "[event-research] philly-fed-price-inflation-expectations-q4-2026-11-25",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2626,
+      "title": "[event-research] uk-labour-market-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2627,
+      "title": "[event-research] uk-cpi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2628,
+      "title": "[event-research] uk-ppi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2629,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2630,
+      "title": "[event-research] uk-public-sector-finances-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2631,
+      "title": "[event-research] dallas-fed-mfg-2026-12-28",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:34Z",
+      "isPr": false
+    },
+    {
+      "number": 2632,
+      "title": "[event-research] case-shiller-hpi-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:36Z",
+      "isPr": false
+    },
+    {
+      "number": 2633,
+      "title": "[event-research] dallas-fed-tssos-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2634,
+      "title": "[event-research] tic-quarterly-external-debt-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2635,
+      "title": "[event-research] uk-fuel-duty-rise-2027-01-01",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2636,
+      "title": "[event-research] treasury-coupon-announcement-2027-01-07",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2637,
+      "title": "[event-research] treasury-3y-note-2027-01-11",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2638,
+      "title": "[event-research] treasury-refunding-2027-02-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2639,
+      "title": "[event-research] uk-cpi-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2640,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2641,
+      "title": "[event-research] boe-decision-2027-04-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:49Z",
+      "isPr": false
+    },
+    {
+      "number": 2642,
+      "title": "[event-research] ism-manufacturing-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2643,
+      "title": "[event-research] sloos-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2644,
+      "title": "[event-research] jobs-2027-05-07",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2645,
+      "title": "[event-research] tic-monthly-2027-05-18",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2646,
+      "title": "[event-research] uk-cpi-2027-05-19",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2647,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-05-26",
+      "labels": [],
+      "createdAt": "2026-09-09T13:45:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2648,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2649,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2650,
+      "title": "[event-research] jobs-2027-10-08",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2651,
+      "title": "[event-research] uk-cpi-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:05Z",
+      "isPr": false
+    },
+    {
+      "number": 2652,
+      "title": "[event-research] vix-expiration-2028-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2653,
+      "title": "[event-research] opex-2028-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2654,
+      "title": "[event-research] thanksgiving-market-closure-2028-11-23",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2655,
+      "title": "[event-research] thanksgiving-half-day-2028-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T13:46:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2656,
+      "title": "[event-research] uk-quarterly-national-accounts-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T13:48:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2657,
+      "title": "[event-research] jgb-2y-auction-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-09T13:48:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2658,
+      "title": "[event-research] sp-global-investment-manager-index-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T13:48:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2661,
+      "title": "[event-research] jgb-climate-transition-5y-auction-2026-11-02",
+      "labels": [],
+      "createdAt": "2026-09-09T13:52:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2662,
+      "title": "[event-research] uk-labour-market-2027-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T13:54:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2666,
+      "title": "[event-research] survey-of-professional-forecasters-q4-2026-11-16",
+      "labels": [],
+      "createdAt": "2026-09-09T13:59:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2667,
+      "title": "[event-research] aruoba-inflation-term-structure-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T13:59:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2668,
+      "title": "[event-research] livingston-survey-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-09T13:59:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2670,
+      "title": "[event-research] uk-cpi-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:00:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2671,
+      "title": "[event-research] uk-quarterly-national-accounts-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2672,
+      "title": "[event-research] uk-ppi-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:36Z",
+      "isPr": false
+    },
+    {
+      "number": 2673,
+      "title": "[event-research] jgb-2y-auction-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2674,
+      "title": "[event-research] jgb-climate-transition-5y-auction-2026-11-02",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:39Z",
+      "isPr": false
+    },
+    {
+      "number": 2675,
+      "title": "[event-research] survey-of-professional-forecasters-q4-2026-11-16",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2676,
+      "title": "[event-research] aruoba-inflation-term-structure-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2677,
+      "title": "[event-research] livingston-survey-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2678,
+      "title": "[event-research] sp-global-investment-manager-index-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2679,
+      "title": "[event-research] uk-ppi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2680,
+      "title": "[event-research] treasury-coupon-announcement-2026-12-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:47Z",
+      "isPr": false
+    },
+    {
+      "number": 2681,
+      "title": "[event-research] uk-public-sector-finances-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:49Z",
+      "isPr": false
+    },
+    {
+      "number": 2683,
+      "title": "[event-research] case-shiller-hpi-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2684,
+      "title": "[event-research] tic-quarterly-external-debt-2026-12-31",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:51Z",
+      "isPr": false
+    },
+    {
+      "number": 2685,
+      "title": "[event-research] uk-fuel-duty-rise-2027-01-01",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2686,
+      "title": "[event-research] treasury-coupon-announcement-2027-01-07",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2687,
+      "title": "[event-research] treasury-3y-note-2027-01-11",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2688,
+      "title": "[event-research] uk-labour-market-2027-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2689,
+      "title": "[event-research] uk-cpi-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2690,
+      "title": "[event-research] treasury-refunding-2027-02-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:02:59Z",
+      "isPr": false
+    },
+    {
+      "number": 2691,
+      "title": "[event-research] uk-cpi-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2692,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2693,
+      "title": "[event-research] boe-decision-2027-04-29",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2694,
+      "title": "[event-research] ism-manufacturing-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:04Z",
+      "isPr": false
+    },
+    {
+      "number": 2695,
+      "title": "[event-research] sloos-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2696,
+      "title": "[event-research] jobs-2027-05-07",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:07Z",
+      "isPr": false
+    },
+    {
+      "number": 2697,
+      "title": "[event-research] tic-monthly-2027-05-18",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2698,
+      "title": "[event-research] uk-cpi-2027-05-19",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2699,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-05-26",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2700,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2701,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2702,
+      "title": "[event-research] jobs-2027-10-08",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2703,
+      "title": "[event-research] uk-cpi-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2704,
+      "title": "[event-research] vix-expiration-2028-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2705,
+      "title": "[event-research] opex-2028-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2706,
+      "title": "[event-research] thanksgiving-market-closure-2028-11-23",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:18Z",
+      "isPr": false
+    },
+    {
+      "number": 2707,
+      "title": "[event-research] thanksgiving-half-day-2028-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T14:03:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2709,
+      "title": "[event-research] uk-fuel-duty-rise-2027-03-01",
+      "labels": [],
+      "createdAt": "2026-09-09T14:06:34Z",
+      "isPr": false
+    },
+    {
+      "number": 2711,
+      "title": "[event-research] case-shiller-hpi-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T14:09:05Z",
+      "isPr": false
+    },
+    {
+      "number": 2715,
+      "title": "[event-research] jobs-2027-02-05",
+      "labels": [],
+      "createdAt": "2026-09-09T14:14:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2717,
+      "title": "[event-research] uk-cpi-2027-04-21",
+      "labels": [],
+      "createdAt": "2026-09-09T14:17:01Z",
+      "isPr": false
+    },
+    {
+      "number": 2718,
+      "title": "[event-research] boe-decision-2027-06-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:17:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2719,
+      "title": "[event-research] jobs-2027-01-08",
+      "labels": [],
+      "createdAt": "2026-09-09T14:18:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2720,
+      "title": "[event-research] tic-quarterly-external-debt-2027-12-30",
+      "labels": [],
+      "createdAt": "2026-09-09T14:18:53Z",
+      "isPr": false
+    },
+    {
+      "number": 2724,
+      "title": "[event-research] uk-quarterly-national-accounts-2026-09-30",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2725,
+      "title": "[event-research] uk-ppi-2026-10-21",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2726,
+      "title": "[event-research] jgb-2y-auction-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2727,
+      "title": "[event-research] jgb-climate-transition-5y-auction-2026-11-02",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2728,
+      "title": "[event-research] survey-of-professional-forecasters-q4-2026-11-16",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:39Z",
+      "isPr": false
+    },
+    {
+      "number": 2729,
+      "title": "[event-research] aruoba-inflation-term-structure-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2730,
+      "title": "[event-research] case-shiller-hpi-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2731,
+      "title": "[event-research] livingston-survey-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2732,
+      "title": "[event-research] sp-global-investment-manager-index-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2733,
+      "title": "[event-research] uk-ppi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2734,
+      "title": "[event-research] uk-public-sector-finances-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2735,
+      "title": "[event-research] jobs-2027-01-08",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2736,
+      "title": "[event-research] uk-labour-market-2027-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2737,
+      "title": "[event-research] uk-cpi-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2738,
+      "title": "[event-research] jobs-2027-02-05",
+      "labels": [],
+      "createdAt": "2026-09-09T14:22:58Z",
+      "isPr": false
+    },
+    {
+      "number": 2739,
+      "title": "[event-research] uk-cpi-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2740,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2741,
+      "title": "[event-research] uk-fuel-duty-rise-2027-03-01",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:04Z",
+      "isPr": false
+    },
+    {
+      "number": 2743,
+      "title": "[event-research] uk-cpi-2027-04-21",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2744,
+      "title": "[event-research] ism-manufacturing-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2745,
+      "title": "[event-research] sloos-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2746,
+      "title": "[event-research] jobs-2027-05-07",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2747,
+      "title": "[event-research] tic-monthly-2027-05-18",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2748,
+      "title": "[event-research] uk-cpi-2027-05-19",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:15Z",
+      "isPr": false
+    },
+    {
+      "number": 2749,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-05-26",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2750,
+      "title": "[event-research] boe-decision-2027-06-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2751,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2752,
+      "title": "[event-research] russell-quarterly-ipo-review-effective-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:22Z",
+      "isPr": false
+    },
+    {
+      "number": 2753,
+      "title": "[event-research] jobs-2027-10-08",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2754,
+      "title": "[event-research] uk-cpi-2027-11-17",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2755,
+      "title": "[event-research] tic-quarterly-external-debt-2027-12-30",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2756,
+      "title": "[event-research] vix-expiration-2028-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2757,
+      "title": "[event-research] opex-2028-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2758,
+      "title": "[event-research] thanksgiving-market-closure-2028-11-23",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2759,
+      "title": "[event-research] thanksgiving-half-day-2028-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T14:23:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2760,
+      "title": "[event-research] construction-spending-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:25:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2761,
+      "title": "[event-research] ism-services-2027-05-05",
+      "labels": [],
+      "createdAt": "2026-09-09T14:25:03Z",
+      "isPr": false
+    },
+    {
+      "number": 2762,
+      "title": "[event-research] jobs-2027-06-04",
+      "labels": [],
+      "createdAt": "2026-09-09T14:25:05Z",
+      "isPr": false
+    },
+    {
+      "number": 2763,
+      "title": "[event-research] sloos-2027-02-01",
+      "labels": [],
+      "createdAt": "2026-09-09T14:27:10Z",
+      "isPr": false
+    },
+    {
+      "number": 2764,
+      "title": "[event-research] sloos-2027-08-02",
+      "labels": [],
+      "createdAt": "2026-09-09T14:27:12Z",
+      "isPr": false
+    },
+    {
+      "number": 2769,
+      "title": "[event-research] jpx-market-closure-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:34:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2770,
+      "title": "[event-research] jpx-market-closure-2027-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T14:34:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2774,
+      "title": "[event-research] uk-cpi-2027-10-20",
+      "labels": [],
+      "createdAt": "2026-09-09T14:36:37Z",
+      "isPr": false
+    },
+    {
+      "number": 2775,
+      "title": "[event-research] boe-decision-2027-11-04",
+      "labels": [],
+      "createdAt": "2026-09-09T14:36:39Z",
+      "isPr": false
+    },
+    {
+      "number": 2776,
+      "title": "[event-research] tic-monthly-2027-06-16",
+      "labels": [],
+      "createdAt": "2026-09-09T14:38:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2777,
+      "title": "[event-research] jobs-2027-11-05",
+      "labels": [],
+      "createdAt": "2026-09-09T14:38:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2778,
+      "title": "[event-research] christmas-market-closure-2028-12-25",
+      "labels": [],
+      "createdAt": "2026-09-09T14:40:40Z",
+      "isPr": false
+    },
+    {
+      "number": 2780,
+      "title": "[event-research] independence-day-half-day-2028-07-03",
+      "labels": [],
+      "createdAt": "2026-09-09T14:46:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2786,
+      "title": "[event-research] uk-blue-book-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-09T15:03:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2787,
+      "title": "[event-research] uk-quarterly-national-accounts-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T15:03:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2790,
+      "title": "[event-research] uk-retail-sales-2026-10-23",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2791,
+      "title": "[event-research] jgb-2y-auction-2026-10-29",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:45Z",
+      "isPr": false
+    },
+    {
+      "number": 2792,
+      "title": "[event-research] uk-blue-book-2026-10-30",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:46Z",
+      "isPr": false
+    },
+    {
+      "number": 2793,
+      "title": "[event-research] jgb-climate-transition-5y-auction-2026-11-02",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:48Z",
+      "isPr": false
+    },
+    {
+      "number": 2794,
+      "title": "[event-research] survey-of-professional-forecasters-q4-2026-11-16",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2795,
+      "title": "[event-research] aruoba-inflation-term-structure-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2796,
+      "title": "[event-research] case-shiller-hpi-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:54Z",
+      "isPr": false
+    },
+    {
+      "number": 2797,
+      "title": "[event-research] livingston-survey-2026-12-11",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:55Z",
+      "isPr": false
+    },
+    {
+      "number": 2798,
+      "title": "[event-research] sp-global-investment-manager-index-2026-12-15",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:57Z",
+      "isPr": false
+    },
+    {
+      "number": 2799,
+      "title": "[event-research] uk-ppi-2026-12-16",
+      "labels": [],
+      "createdAt": "2026-09-09T15:05:59Z",
+      "isPr": false
+    },
+    {
+      "number": 2800,
+      "title": "[event-research] uk-public-sector-finances-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:00Z",
+      "isPr": false
+    },
+    {
+      "number": 2801,
+      "title": "[event-research] uk-quarterly-national-accounts-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:02Z",
+      "isPr": false
+    },
+    {
+      "number": 2802,
+      "title": "[event-research] jobs-2027-01-08",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:04Z",
+      "isPr": false
+    },
+    {
+      "number": 2803,
+      "title": "[event-research] uk-labour-market-2027-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:06Z",
+      "isPr": false
+    },
+    {
+      "number": 2804,
+      "title": "[event-research] uk-cpi-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:08Z",
+      "isPr": false
+    },
+    {
+      "number": 2806,
+      "title": "[event-research] sloos-2027-02-01",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:09Z",
+      "isPr": false
+    },
+    {
+      "number": 2807,
+      "title": "[event-research] jobs-2027-02-05",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:11Z",
+      "isPr": false
+    },
+    {
+      "number": 2808,
+      "title": "[event-research] uk-cpi-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:13Z",
+      "isPr": false
+    },
+    {
+      "number": 2809,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-02-23",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:14Z",
+      "isPr": false
+    },
+    {
+      "number": 2810,
+      "title": "[event-research] uk-fuel-duty-rise-2027-03-01",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:16Z",
+      "isPr": false
+    },
+    {
+      "number": 2811,
+      "title": "[event-research] uk-cpi-2027-04-21",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:17Z",
+      "isPr": false
+    },
+    {
+      "number": 2812,
+      "title": "[event-research] construction-spending-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2813,
+      "title": "[event-research] ism-services-2027-05-05",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:20Z",
+      "isPr": false
+    },
+    {
+      "number": 2814,
+      "title": "[event-research] ofgem-price-cap-announcement-2027-05-26",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:22Z",
+      "isPr": false
+    },
+    {
+      "number": 2815,
+      "title": "[event-research] jobs-2027-06-04",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2816,
+      "title": "[event-research] tic-monthly-2027-06-16",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2817,
+      "title": "[event-research] boe-decision-2027-06-17",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2818,
+      "title": "[event-research] fomc-blackout-start-2027-07-17",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2819,
+      "title": "[event-research] sloos-2027-08-02",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2820,
+      "title": "[event-research] jpx-market-closure-2027-09-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2821,
+      "title": "[event-research] jpx-market-closure-2027-09-23",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:32Z",
+      "isPr": false
+    },
+    {
+      "number": 2822,
+      "title": "[event-research] uk-cpi-2027-10-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2823,
+      "title": "[event-research] boe-decision-2027-11-04",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2824,
+      "title": "[event-research] jobs-2027-11-05",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:36Z",
+      "isPr": false
+    },
+    {
+      "number": 2825,
+      "title": "[event-research] tic-quarterly-external-debt-2027-12-30",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:38Z",
+      "isPr": false
+    },
+    {
+      "number": 2826,
+      "title": "[event-research] opex-2028-01-21",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:39Z",
+      "isPr": false
+    },
+    {
+      "number": 2827,
+      "title": "[event-research] independence-day-half-day-2028-07-03",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2828,
+      "title": "[event-research] christmas-market-closure-2028-12-25",
+      "labels": [],
+      "createdAt": "2026-09-09T15:06:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2830,
+      "title": "[event-research] philly-fed-mfg-2026-11-19",
+      "labels": [],
+      "createdAt": "2026-09-09T15:08:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2831,
+      "title": "[event-research] survey-of-professional-forecasters-q1-2027-02-12",
+      "labels": [],
+      "createdAt": "2026-09-09T15:08:42Z",
+      "isPr": false
+    },
+    {
+      "number": 2832,
+      "title": "[event-research] jgb-5y-auction-2026-10-14",
+      "labels": [],
+      "createdAt": "2026-09-09T15:10:25Z",
+      "isPr": false
+    },
+    {
+      "number": 2833,
+      "title": "[event-research] case-shiller-hpi-2026-11-24",
+      "labels": [],
+      "createdAt": "2026-09-09T15:10:26Z",
+      "isPr": false
+    },
+    {
+      "number": 2834,
+      "title": "[event-research] jgb-2y-auction-2026-11-30",
+      "labels": [],
+      "createdAt": "2026-09-09T15:10:27Z",
+      "isPr": false
+    },
+    {
+      "number": 2835,
+      "title": "[event-research] umich-sentiment-final-2026-11-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:12:19Z",
+      "isPr": false
+    },
+    {
+      "number": 2838,
+      "title": "[event-research] uk-ppi-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:17:56Z",
+      "isPr": false
+    },
+    {
+      "number": 2841,
+      "title": "[event-research] tracking issues duplicate on every merge tick — 4 for one id in 66 minutes",
+      "labels": [],
+      "createdAt": "2026-09-09T15:19:22Z",
+      "isPr": false
+    },
+    {
+      "number": 2844,
+      "title": "[event-research] aruoba-inflation-term-structure-2026-12-29",
+      "labels": [],
+      "createdAt": "2026-09-09T15:21:29Z",
+      "isPr": false
+    },
+    {
+      "number": 2845,
+      "title": "[event-research] uk-cpi-2027-01-20",
+      "labels": [],
+      "createdAt": "2026-09-09T15:21:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2846,
+      "title": "[event-research] uk-retail-sales-2026-12-18",
+      "labels": [],
+      "createdAt": "2026-09-09T15:23:28Z",
+      "isPr": false
+    },
+    {
+      "number": 2847,
+      "title": "[event-research] uk-balance-of-payments-2026-12-22",
+      "labels": [],
+      "createdAt": "2026-09-09T15:23:30Z",
+      "isPr": false
+    },
+    {
+      "number": 2848,
+      "title": "[event-research] uk-gdp-monthly-2027-01-15",
+      "labels": [],
+      "createdAt": "2026-09-09T15:23:31Z",
+      "isPr": false
+    },
+    {
+      "number": 2849,
+      "title": "[event-research] uk-labour-market-2027-01-19",
+      "labels": [],
+      "createdAt": "2026-09-09T15:23:33Z",
+      "isPr": false
+    },
+    {
+      "number": 2850,
+      "title": "[event-research] boe-decision-2027-02-04",
+      "labels": [],
+      "createdAt": "2026-09-09T15:23:35Z",
+      "isPr": false
+    },
+    {
+      "number": 2852,
+      "title": "[event-research] uk-labour-market-2027-02-16",
+      "labels": [],
+      "createdAt": "2026-09-09T15:25:41Z",
+      "isPr": false
+    },
+    {
+      "number": 2853,
+      "title": "[event-research] uk-labour-market-2027-03-16",
+      "labels": [],
+      "createdAt": "2026-09-09T15:25:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2854,
+      "title": "[event-research] boe-decision-2027-03-18",
+      "labels": [],
+      "createdAt": "2026-09-09T15:25:44Z",
+      "isPr": false
+    },
+    {
+      "number": 2855,
+      "title": "[event-research] treasury-borrowing-estimates-2027-02-01",
+      "labels": [],
+      "createdAt": "2026-09-09T15:27:43Z",
+      "isPr": false
+    },
+    {
+      "number": 2858,
+      "title": "[event-research] jobs-2027-03-05",
+      "labels": [],
+      "createdAt": "2026-09-09T15:30:50Z",
+      "isPr": false
+    },
+    {
+      "number": 2859,
+      "title": "[event-research] jobs-2027-04-02",
+      "labels": [],
+      "createdAt": "2026-09-09T15:30:52Z",
+      "isPr": false
+    },
+    {
+      "number": 2864,
+      "title": "[event-research] fomc-minutes-2027-02-17",
+      "labels": [],
+      "createdAt": "2026-09-09T15:34:21Z",
+      "isPr": false
+    },
+    {
+      "number": 2865,
+      "title": "[event-research] uk-cpi-2027-03-24",
+      "labels": [],
+      "createdAt": "2026-09-09T15:34:23Z",
+      "isPr": false
+    },
+    {
+      "number": 2867,
+      "title": "[event-research] construction-spending-2027-05-03",
+      "labels": [],
+      "createdAt": "2026-09-09T15:40:16Z",
+      "isPr": false
+    },
+    {
+      "number": 3918,
+      "title": "docs(research): jobs-2026-10-02 d-4 pulse — MU earnings enters the corridor",
+      "labels": ["released"],
+      "createdAt": "2026-09-28T00:48:44Z",
+      "isPr": true,
+      "mergedAt": "2026-09-28T00:49:05Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 3895,
+      "title": "docs(research): jobs 2026-10-02 d-5 pulse — quiet markets, iran rejection logged",
+      "labels": ["released"],
+      "createdAt": "2026-09-27T14:25:15Z",
+      "isPr": true,
+      "mergedAt": "2026-09-27T14:25:49Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 3865,
+      "title": "docs(research): jobs sep-2026 print d-6 pulse — quiet, cadence to daily",
+      "labels": ["released"],
+      "createdAt": "2026-09-26T19:42:28Z",
+      "isPr": true,
+      "mergedAt": "2026-09-26T19:42:53Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 3660,
+      "title": "docs(research): jobs-2026-10-02 pulse — hot PMI reheats the tape, pipeline switch fires",
+      "labels": ["released"],
+      "createdAt": "2026-09-24T03:31:02Z",
+      "isPr": true,
+      "mergedAt": "2026-09-24T03:31:33Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 3400,
+      "title": "docs(research): jobs-2026-10-02 pulse — quiet, Fed pricing +4pt, no kill fires",
+      "labels": ["released"],
+      "createdAt": "2026-09-21T00:55:19Z",
+      "isPr": true,
+      "mergedAt": "2026-09-21T00:55:47Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 3305,
+      "title": "docs(research): jobs 10-02 d-14 — fomc hiked hawkish, count book +31pts pre-print",
+      "labels": ["released"],
+      "createdAt": "2026-09-18T04:58:05Z",
+      "isPr": true,
+      "mergedAt": "2026-09-18T04:58:42Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 3016,
+      "title": "docs(research): jobs 10-02 d-17 — the \"hike by\" book saturated, oct 28 is a live second-hike vote",
+      "labels": ["released"],
+      "createdAt": "2026-09-15T16:01:25Z",
+      "isPr": true,
+      "mergedAt": "2026-09-15T16:02:42Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 2248,
+      "title": "docs(research): jobs 2026-10-02 D-23 — the hold-vs-cut switch fired and closed",
+      "labels": ["released"],
+      "createdAt": "2026-09-09T01:08:04Z",
+      "isPr": true,
+      "mergedAt": "2026-09-09T01:09:36Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 1106,
+      "title": "docs(research): jobs 10-02 d-30 pulse — the print survives, the regime stops being two-sided",
+      "labels": ["released"],
+      "createdAt": "2026-09-02T05:17:07Z",
+      "isPr": true,
+      "mergedAt": "2026-09-02T05:18:35Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    },
+    {
+      "number": 656,
+      "title": "docs(events): pulse-check september jobs — no consensus yet",
+      "labels": ["released"],
+      "createdAt": "2026-08-26T12:43:34Z",
+      "isPr": true,
+      "mergedAt": "2026-08-26T13:08:08Z",
+      "refs": [],
+      "branch": "research/jobs-2026-10-02"
+    }
+  ],
+  "comments": [
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36080359819](https://github.com/ejclark/skynet-capital/actions/runs/36080359819), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T01:05:12Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36090614808](https://github.com/ejclark/skynet-capital/actions/runs/36090614808), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T03:31:56Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36175890914](https://github.com/ejclark/skynet-capital/actions/runs/36175890914), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T18:51:29Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36178528265](https://github.com/ejclark/skynet-capital/actions/runs/36178528265), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T19:16:23Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36185901222](https://github.com/ejclark/skynet-capital/actions/runs/36185901222), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T20:29:03Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36187125381](https://github.com/ejclark/skynet-capital/actions/runs/36187125381), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T20:41:41Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36190399002](https://github.com/ejclark/skynet-capital/actions/runs/36190399002), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T21:15:40Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36191520918](https://github.com/ejclark/skynet-capital/actions/runs/36191520918), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T21:27:33Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36192011062](https://github.com/ejclark/skynet-capital/actions/runs/36192011062), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T21:33:18Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36193843457](https://github.com/ejclark/skynet-capital/actions/runs/36193843457), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T21:55:15Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36196221541](https://github.com/ejclark/skynet-capital/actions/runs/36196221541), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T22:22:28Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36196914536](https://github.com/ejclark/skynet-capital/actions/runs/36196914536), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T22:30:39Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36197453944](https://github.com/ejclark/skynet-capital/actions/runs/36197453944), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T22:39:47Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36198206777](https://github.com/ejclark/skynet-capital/actions/runs/36198206777), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T22:47:43Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36198413706](https://github.com/ejclark/skynet-capital/actions/runs/36198413706), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T22:50:33Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36198669029](https://github.com/ejclark/skynet-capital/actions/runs/36198669029), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T22:53:41Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36199131445](https://github.com/ejclark/skynet-capital/actions/runs/36199131445), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:01:00Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36199506010](https://github.com/ejclark/skynet-capital/actions/runs/36199506010), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:06:05Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36200704728](https://github.com/ejclark/skynet-capital/actions/runs/36200704728), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:23:59Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36201067350](https://github.com/ejclark/skynet-capital/actions/runs/36201067350), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:29:13Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36201758359](https://github.com/ejclark/skynet-capital/actions/runs/36201758359), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:39:47Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36202168529](https://github.com/ejclark/skynet-capital/actions/runs/36202168529), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:46:31Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36202328450](https://github.com/ejclark/skynet-capital/actions/runs/36202328450), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:49:15Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36202703480](https://github.com/ejclark/skynet-capital/actions/runs/36202703480), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-25T23:54:42Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36203062627](https://github.com/ejclark/skynet-capital/actions/runs/36203062627), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:01:03Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36203395621](https://github.com/ejclark/skynet-capital/actions/runs/36203395621), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:06:01Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36203887617](https://github.com/ejclark/skynet-capital/actions/runs/36203887617), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:13:44Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36204011150](https://github.com/ejclark/skynet-capital/actions/runs/36204011150), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:15:37Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36205124285](https://github.com/ejclark/skynet-capital/actions/runs/36205124285), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:33:05Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36205321180](https://github.com/ejclark/skynet-capital/actions/runs/36205321180), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:36:28Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36205429322](https://github.com/ejclark/skynet-capital/actions/runs/36205429322), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:38:45Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36205852331](https://github.com/ejclark/skynet-capital/actions/runs/36205852331), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:44:57Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36206333776](https://github.com/ejclark/skynet-capital/actions/runs/36206333776), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T00:53:52Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36207443459](https://github.com/ejclark/skynet-capital/actions/runs/36207443459), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T01:11:23Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36207682543](https://github.com/ejclark/skynet-capital/actions/runs/36207682543), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T01:15:49Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36208126952](https://github.com/ejclark/skynet-capital/actions/runs/36208126952), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T01:23:21Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36208919451](https://github.com/ejclark/skynet-capital/actions/runs/36208919451), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T01:37:20Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36210719264](https://github.com/ejclark/skynet-capital/actions/runs/36210719264), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:10:28Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36211274132](https://github.com/ejclark/skynet-capital/actions/runs/36211274132), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:21:03Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36211414880](https://github.com/ejclark/skynet-capital/actions/runs/36211414880), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:23:32Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36211686335](https://github.com/ejclark/skynet-capital/actions/runs/36211686335), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:29:08Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36212052177](https://github.com/ejclark/skynet-capital/actions/runs/36212052177), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:35:26Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36212374622](https://github.com/ejclark/skynet-capital/actions/runs/36212374622), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:41:32Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36212720660](https://github.com/ejclark/skynet-capital/actions/runs/36212720660), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:48:34Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36213319688](https://github.com/ejclark/skynet-capital/actions/runs/36213319688), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T02:59:35Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36213480483](https://github.com/ejclark/skynet-capital/actions/runs/36213480483), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T03:03:11Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36213903617](https://github.com/ejclark/skynet-capital/actions/runs/36213903617), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T03:11:07Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36214132294](https://github.com/ejclark/skynet-capital/actions/runs/36214132294), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T03:15:42Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36214555302](https://github.com/ejclark/skynet-capital/actions/runs/36214555302), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T03:23:23Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36216626839](https://github.com/ejclark/skynet-capital/actions/runs/36216626839), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T04:04:20Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36223428844](https://github.com/ejclark/skynet-capital/actions/runs/36223428844), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T06:21:38Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36225073973](https://github.com/ejclark/skynet-capital/actions/runs/36225073973), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T06:54:54Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36225496838](https://github.com/ejclark/skynet-capital/actions/runs/36225496838), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T07:03:04Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36226051924](https://github.com/ejclark/skynet-capital/actions/runs/36226051924), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T07:13:22Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36226593504](https://github.com/ejclark/skynet-capital/actions/runs/36226593504), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T07:24:43Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36227063559](https://github.com/ejclark/skynet-capital/actions/runs/36227063559), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T07:33:43Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36227636583](https://github.com/ejclark/skynet-capital/actions/runs/36227636583), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T07:44:52Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36228203851](https://github.com/ejclark/skynet-capital/actions/runs/36228203851), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T07:56:36Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36228608731](https://github.com/ejclark/skynet-capital/actions/runs/36228608731), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T08:05:00Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36228674827](https://github.com/ejclark/skynet-capital/actions/runs/36228674827), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T08:06:26Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36228923386](https://github.com/ejclark/skynet-capital/actions/runs/36228923386), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T08:11:19Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36229878421](https://github.com/ejclark/skynet-capital/actions/runs/36229878421), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T08:30:20Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36232725154](https://github.com/ejclark/skynet-capital/actions/runs/36232725154), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T09:27:30Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36233556773](https://github.com/ejclark/skynet-capital/actions/runs/36233556773), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T09:44:07Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36234131508](https://github.com/ejclark/skynet-capital/actions/runs/36234131508), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T09:55:21Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36234300148](https://github.com/ejclark/skynet-capital/actions/runs/36234300148), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T09:59:18Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36235106476](https://github.com/ejclark/skynet-capital/actions/runs/36235106476), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T10:15:19Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36241543054](https://github.com/ejclark/skynet-capital/actions/runs/36241543054), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T12:20:53Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36243647050](https://github.com/ejclark/skynet-capital/actions/runs/36243647050), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T13:00:31Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36248888371](https://github.com/ejclark/skynet-capital/actions/runs/36248888371), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T14:34:48Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36252541873](https://github.com/ejclark/skynet-capital/actions/runs/36252541873), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T15:38:39Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36253721182](https://github.com/ejclark/skynet-capital/actions/runs/36253721182), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T15:58:32Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36254741458](https://github.com/ejclark/skynet-capital/actions/runs/36254741458), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T16:15:52Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36256345719](https://github.com/ejclark/skynet-capital/actions/runs/36256345719), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T16:43:09Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36258229257](https://github.com/ejclark/skynet-capital/actions/runs/36258229257), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T17:14:46Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36259112092](https://github.com/ejclark/skynet-capital/actions/runs/36259112092), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T17:29:48Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36259839156](https://github.com/ejclark/skynet-capital/actions/runs/36259839156), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T17:42:41Z"
+    },
+    {
+      "issue": 3720,
+      "author": "github-actions[bot]",
+      "body": "Failed again — run [36261232598](https://github.com/ejclark/skynet-capital/actions/runs/36261232598), step `Run anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de`. Same signature, so this is a recurrence, not a new fault.",
+      "createdAt": "2026-09-26T18:06:15Z"
+    },
+    {
+      "issue": 3720,
+      "author": "skynet-envoy[bot]",
+      "body": "Closed as a duplicate of #3756 — the same failing job (`research due events`), a different matrix leg. One job is one fault now: #3957 keys the repair lane's signature on the job name with the leg's values stripped, so this issue and 17 siblings were one issue all along. Reopen if this leg turns out to be its own fault.\n\n— Moneypenny\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n",
+      "createdAt": "2026-09-28T03:32:20Z"
+    }
+  ],
+  "events": []
+}
