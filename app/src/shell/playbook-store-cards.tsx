@@ -257,6 +257,13 @@ function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): Reac
   );
 }
 
+/** "No subscribers yet" · "1 subscriber" · "3 subscribers" — a count of accounts, never which
+ *  ones (#3970). Words carry it; no colour means anything here. */
+function subscriberLine(count: number): string {
+  if (count === 0) return "No subscribers yet";
+  return `${count} ${count === 1 ? "subscriber" : "subscribers"}`;
+}
+
 export function PlaybookCard({
   accountId,
   card,
@@ -284,6 +291,9 @@ export function PlaybookCard({
         <span className="pb-card-id">{card.id}</span>{" "}
         <span className="num pb-card-symbols">{card.symbols.join(" · ")}</span>
       </h2>
+      {card.subscribers !== undefined ? (
+        <p className="pb-card-subscribers">{subscriberLine(card.subscribers)}</p>
+      ) : null}
       <p className="pb-card-description">{card.description}</p>
       <PlaybookFacts card={card} />
       <dl className="pb-card-triggers">

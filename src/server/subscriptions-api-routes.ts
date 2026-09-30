@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { DELEGATION_LOCKED_NOTE, delegationLocked } from "../domain/playbook-delegation.js";
 import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -137,6 +138,23 @@ async function viewerDelegationLocked(
   return delegationLocked(progression);
 }
 
+/**
+ * THE SUBSCRIBER COUNT (#3970) — enabled subscriptions per playbook across every account, as a bare
+ * number and nothing else. One pass over the whole store; the account ids are the keys walked and
+ * are dropped right here, so nothing that names a subscriber can reach the response (#885's "no
+ * cross-account visibility", and #3834's rule that a playbook's owner is never revealed). A paused
+ * subscription is not counted: it delegates nothing, so it would overstate who is using the playbook.
+ */
+function subscriberCounts(state: SubscriptionsState): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const subs of Object.values(state)) {
+    for (const sub of subs) {
+      if (sub.enabled) counts.set(sub.playbookId, (counts.get(sub.playbookId) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 async function serveStoreIndex(
   req: IncomingMessage,
   res: ServerResponse,
@@ -148,12 +166,20 @@ async function serveStoreIndex(
   const owns = Boolean(id) && config.auth && resolveOwnedIds(session, config).includes(id ?? "");
   // The store omits an account until its first subscribe, so an owned account with no entry yet is
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
-  const subscriptions =
-    owns && id && config.subscriptions ? (config.subscriptions.load()[id] ?? []) : undefined;
+  const state = config.subscriptions?.load();
+  const subscriptions = owns && id && state ? (state[id] ?? []) : undefined;
+  const view = playbookStoreView(subscriptions, await viewerDelegationLocked(config, session));
+  // Unwired store → no count at all, rather than a false "No subscribers yet".
+  const counts = state ? subscriberCounts(state) : undefined;
   sendJson(
     res,
     200,
-    playbookStoreView(subscriptions, await viewerDelegationLocked(config, session)),
+    counts
+      ? {
+          ...view,
+          cards: view.cards.map((card) => ({ ...card, subscribers: counts.get(card.id) ?? 0 })),
+        }
+      : view,
   );
 }
 
