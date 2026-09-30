@@ -15,6 +15,11 @@
 //     `show`/`search` print the column that rule yields, so a session can check without GraphQL.
 //
 //   node scripts/issues.mjs create --title "…" --body-file b.md [--labels a,b] [--force] [--dry-run]
+//                                  [--parent N] [--blocked-by a,b] [--closed]
+//     (--parent files it as a native sub-issue of #N; --blocked-by adds native blocked-by links;
+//      --closed closes it as completed at once — a slice that already shipped, so the parent's
+//      progress bar counts it. docs/ISSUES.md → Slices as sub-issues.)
+//   node scripts/issues.mjs link <parent> <child…>   (attach existing issues as sub-issues)
 //   node scripts/issues.mjs update 123 [--body-file b.md] [--title "…"] [--add a,b] [--remove c]
 //                                      [--close completed|not_planned] [--reopen] [--comment-file c.md]
 //   node scripts/issues.mjs search "words" [--label x] [--state open|closed|all] [--limit 20] [--json]
@@ -45,6 +50,8 @@ const VALUE_FLAGS = new Set([
   "--label",
   "--state",
   "--limit",
+  "--parent",
+  "--blocked-by",
 ]);
 
 /** argv → { cmd, positional, flags }. Value flags take the next arg; the rest are booleans. */
@@ -139,6 +146,37 @@ export function matches(issue, words, { label } = {}) {
     .every((w) => hay.includes(w));
 }
 
+/**
+ * The REST writes that follow a filing, in order: link to the parent, add each blocked-by edge,
+ * then close a slice that already shipped. Ids, not numbers — both endpoints take the issue's
+ * database id. Pure so the order is specced: closing before linking would leave the bar short.
+ */
+export function followUps({ child, parentNumber, blockers = [], closed = false }) {
+  const ops = [];
+  if (parentNumber) {
+    ops.push({
+      method: "POST",
+      path: `issues/${parentNumber}/sub_issues`,
+      payload: { sub_issue_id: child.id },
+    });
+  }
+  for (const b of blockers) {
+    ops.push({
+      method: "POST",
+      path: `issues/${child.number}/dependencies/blocked_by`,
+      payload: { issue_id: b.id },
+    });
+  }
+  if (closed) {
+    ops.push({
+      method: "PATCH",
+      path: `issues/${child.number}`,
+      payload: { state: "closed", state_reason: "completed" },
+    });
+  }
+  return ops;
+}
+
 // ─── IO (REST core bucket, curl so HTTPS_PROXY is honoured — see gh.mjs's ghRest header) ──────────
 
 function ghWrite(method, path, payload) {
@@ -215,7 +253,28 @@ function create({ flags }) {
   }
   if (flags["dry-run"]) return console.log(`dry-run ok: would file "${title}" [${labels}]`);
   const issue = ghWrite("POST", "issues", { title, body, labels });
-  console.log(`${row(issue)}  ${issue.html_url}`);
+  const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  const ops = followUps({
+    child: issue,
+    parentNumber: Number(flags.parent) || 0,
+    blockers,
+    closed: Boolean(flags.closed),
+  });
+  let last = issue;
+  for (const op of ops) last = ghWrite(op.method, op.path, op.payload) ?? last;
+  console.log(`${row(flags.closed ? last : issue)}  ${issue.html_url}`);
+}
+
+function link({ positional }) {
+  const [parent, ...children] = positional.map(Number);
+  if (!(parent && children.length)) throw new Error("link needs <parent> <child…>");
+  for (const n of children) {
+    const child = ghRest(`issues/${n}`);
+    for (const op of followUps({ child, parentNumber: parent })) {
+      ghWrite(op.method, op.path, op.payload);
+    }
+    console.log(`#${n} → sub-issue of #${parent}`);
+  }
 }
 
 function update({ positional, flags }) {
@@ -260,13 +319,15 @@ function show({ positional, flags }) {
   console.log(`${row(issue)}  ${issue.html_url}`);
 }
 
-const COMMANDS = { create, update, search, show };
+const COMMANDS = { create, update, search, show, link };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = parseArgs(process.argv.slice(2));
   const run = COMMANDS[args.cmd];
   if (!run) {
-    console.error("usage: node scripts/issues.mjs <create|update|search|show> … (see file header)");
+    console.error(
+      "usage: node scripts/issues.mjs <create|update|search|show|link> … (see file header)",
+    );
     process.exit(2);
   }
   try {
