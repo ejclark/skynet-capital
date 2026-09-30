@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 import { captureWholeFrame, freezePage } from "./determinism";
 
 // R&D (renamed from "Research" in #3625; the URL path stays /research) — the Board section reads
-// docs/research/*.md straight off disk (src/server/research-service.ts), already fully
-// deterministic offline with no fixture/mock needed.
+// research markdown off disk (src/server/research-service.ts). The e2e server points
+// SKYNET_RESEARCH_DIR at the frozen shelf in e2e/fixtures/research (playwright.config.ts, #4047),
+// never the live docs/research/, so a new research doc cannot move research-page.png.
 test.describe("research", () => {
   test("renders the R&D board", async ({ page }) => {
     await page.goto("/app/research");

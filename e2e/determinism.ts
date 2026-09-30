@@ -54,11 +54,16 @@ const SEEDED_RANDOM = `
 `;
 
 /**
- * 10:00 America/New_York — deliberately inside regular trading hours, so the skyline renders at
- * full `marketLife()` liveliness. Pinning it to a quiet overnight hour would bake a dimmed city
- * into the baseline and quietly drop the lit-window detail out of visual regression.
+ * Friday 2026-09-18, 10:00 America/New_York — a regular-session weekday (not in
+ * `MARKET_CLOSURES`, src/domain/market-calendar.ts), 30 minutes after the open. Two surfaces read
+ * this: the login skyline renders at full `marketLife()` liveliness, and the topbar market clock
+ * (#3690) draws its open-session state. The instant was 2026-09-19 until #3690 exposed that it was
+ * a Saturday — every baseline had quietly captured "MARKET CLOSED · opens Mon 9:30". A weekend or
+ * holiday bakes the closed state in; so would an overnight hour (and a dimmed city). If this ever
+ * moves, keep it a weekday session hour and check the calendar — `isMarketClosed(date)` must be
+ * false. Friday also keeps the research fixture's ledgers (e2e/fixtures/research) in the same week.
  */
-const FIXED_CLOCK = new Date("2026-09-19T14:00:00Z");
+const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
 
 export async function freezePage(page: Page): Promise<void> {
   await page.clock.setFixedTime(FIXED_CLOCK);
