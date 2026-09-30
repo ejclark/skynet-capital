@@ -25,6 +25,7 @@
 // not collide (a missed fence costs a merge conflict, which the conflict sweep already catches); a
 // looser match would queue unrelated work (a false fence costs throughput, silently). Tighten it
 // only with measured misses in hand.
+import { classOf } from "../rank.mjs";
 import { sh } from "./gh.mjs";
 import { FOOTER, isBuildable, LABELS, labelNames } from "./labels.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
@@ -91,20 +92,31 @@ const createdMs = (i) => {
   return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
 };
 
+/** The rank class (`P0`–`P3`) and bug-expedite flag `npm run rank` gives an issue, from its labels. */
+const rankOf = (i) => classOf({ labels: labelNames(i.labels) });
+
 /**
  * For the retry sweep: the one ready issue to try next, or null. Skips anything already in flight
- * or parked; `fast-track` goes first (it is urgent by definition), then oldest by `createdAt`,
- * then lowest number. One per call — admitting it changes the in-flight list the next pick sees.
+ * or parked; `fast-track` goes first (it is urgent by definition), then the same order
+ * `npm run rank` shows — class (a hand-set `P0`–`P3` wins), an expedited bug first inside its class
+ * (Eric, 2026-09-30: bugs found mid-build are the next pull) — then oldest by `createdAt`, then
+ * lowest number. Oldest-first alone picked a P3 idea (#784) over P0 work on the sweep's first live
+ * tick. One per call — admitting it changes the in-flight list the next pick sees.
  */
 export function nextAdmissible(readyIssues = [], inFlight = [], mode) {
   const candidates = (readyIssues ?? [])
     .filter((i) => i && !hasLabel(i, LABELS.inProgress.name) && isBuildable(i.labels))
+    .map((i) => ({ i, r: rankOf(i) }))
     .sort(
       (a, b) =>
-        Number(hasLabel(b, LABELS.fastTrack.name)) - Number(hasLabel(a, LABELS.fastTrack.name)) ||
-        createdMs(a) - createdMs(b) ||
-        (a.number ?? 0) - (b.number ?? 0),
-    );
+        Number(hasLabel(b.i, LABELS.fastTrack.name)) -
+          Number(hasLabel(a.i, LABELS.fastTrack.name)) ||
+        a.r.cls.localeCompare(b.r.cls) ||
+        Number(Boolean(b.r.expedite)) - Number(Boolean(a.r.expedite)) ||
+        createdMs(a.i) - createdMs(b.i) ||
+        (a.i.number ?? 0) - (b.i.number ?? 0),
+    )
+    .map(({ i }) => i);
   return candidates.find((issue) => admitBuild({ issue, inFlight, mode }).admit) ?? null;
 }
 

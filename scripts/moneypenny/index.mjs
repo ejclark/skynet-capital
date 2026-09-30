@@ -9,7 +9,8 @@
 //   node scripts/moneypenny/index.mjs --triage-feedback        # a fresh feedback issue: self-ready or Backlog
 //   node scripts/moneypenny/index.mjs --claim-feedback         # claim the ready-flipped feedback issue + pick its model
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
-//   node scripts/moneypenny/index.mjs --claim-next              # retry sweep: oldest admissible ready issue (#3960)
+//   node scripts/moneypenny/index.mjs --claim-next              # retry sweep: top-ranked admissible ready issue (#3960)
+//   node scripts/moneypenny/index.mjs --peek-next               # dry run: has_next=true|false, claims nothing (push pass)
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
@@ -387,12 +388,38 @@ export function claimPlan(
 /**
  * THE RETRY SWEEP'S ONE STEP (#3960). A refused claim leaves its issue `ready`, lease-free and
  * label-free; this is what picks it back up on a later tick. Reads the dial, the in-flight list and
- * the open `ready` issues ONCE, asks `nextAdmissible` for the one to try (fast-track, then oldest),
+ * the open `ready` issues ONCE, asks `nextAdmissible` for the one to try (fast-track, then rank order),
  * and hands it to its own lane's claim as a synthetic `labeled: ready` event — so the sweep runs
  * exactly the checks a live label event would, lease included. One claim per call: admitting it
  * changes what the next pick may see. Writes `lane=` beside the claim's own `number=`/`model=`.
  * An unreadable list throws (a red tick), never "nothing to do".
  */
+/**
+ * THE SWEEP'S DRY RUN (#3818 slice 3 follow-up). `claude-code-action` rejects a `push` event, so a
+ * claim made on a push tick can never build (the sweep's first live ticks, 2026-09-30: "Unsupported
+ * event type: push", claim taken and released every merge). The push pass only asks whether there
+ * is anything to claim, writes `has_next=`, and the workflow re-fires itself as a `workflow_dispatch`
+ * — the same re-dispatch event research uses — where `--claim-next` claims and the build can run.
+ * Same reads and same pick as `claimNext`; never takes a lease or writes a label.
+ */
+export function peekNext(deps = {}) {
+  const {
+    readMode = () => readWorkMode(),
+    readReady = () => readOpenIssues(LABELS.ready.name),
+    readInFlight: inFlightOf = () => readInFlight(),
+  } = deps;
+  const mode = readMode();
+  const lanes = [LABELS.plan.name, LABELS.feedback.name];
+  const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
+  const pick = nextAdmissible(ready, inFlightOf(), mode);
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
+  console.log(
+    `::notice::retry sweep peek — ${pick ? `#${pick.number} is admissible` : "nothing admissible"}`,
+  );
+  return pick;
+}
+
 export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "", deps = {}) {
   const {
     readMode = () => readWorkMode(),
@@ -998,11 +1025,13 @@ function runCliFlag(argv, ctx) {
   // The two claim-lease lanes: `feedback` (now the `ready` label event, post-triage) and `plan`
   // (#823's ready-comment event). Both delegate to their own specced claim function; this table
   // is just dispatch.
-  // `--claim-next` is the #3960 retry sweep: the oldest admissible `ready` issue, either lane.
+  // `--claim-next` is the #3960 retry sweep: the top-ranked admissible `ready` issue, either lane;
+  // `--peek-next` is its dry run for the push pass (claims nothing — see `peekNext`).
   const claimers = {
     "--claim-feedback": claimFeedback,
     "--claim-plan": claimPlan,
     "--claim-next": () => claimNext(),
+    "--peek-next": () => peekNext(),
   };
   for (const [flag, claim] of Object.entries(claimers)) {
     if (argv.includes(flag)) {
