@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
+import { LADDER_GATE_NOTE, ladderLockedReason, ladderNeighbor } from "../domain/progression.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
@@ -63,6 +63,9 @@ async function servePlays(
         // (#1461). No progression (no service, no linked desk) earns nothing, honestly.
         earned: progression?.earnedByCode?.has(t.code) ?? false,
         ...(prev ? { opensAfter: { code: prev.code, name: prev.name } } : {}),
+        // The exact reason the server refuses this rung with (#469) — the ticket shows the same
+        // sentence it would get back on submit, gate-aware, so the path out is always named.
+        ...(locked ? { lockedReason: ladderLockedReason(t.code, Boolean(gate)) } : {}),
       };
     }),
   });

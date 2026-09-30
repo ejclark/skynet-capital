@@ -956,8 +956,8 @@ scenarios asked; 33–36 were added by the red passes.
 34. ◆ **The training-wheels preference as a visible control** — `PlaysIndex.wheels` +
     `POST /api/trade/wheels` (`plays-api-routes.ts:100-137`) is a per-account record two fogs read
     (the day lens, `fog.ts:21-23`; the store's delegation gate, `playbook-store.ts:47-53`) and no
-    control renders; the zero-DTE refusal still says "Turn the wheels off to open the full catalog"
-    (`option-api-routes.ts:227-233`); `FOG-OF-WAR.md:75` still says the day lens lifts "or wheels
+    control renders; every ladder refusal now reads one sentence (`ladderLockedReason`,
+    `progression.ts`) that no longer offers "turn the wheels off" (#469); `FOG-OF-WAR.md:75` still says the day lens lifts "or wheels
     off", which #1870 removed.
 35. ◆ **A rung on the lever call** — `LeverCall` (`position-guidance-types.ts:196-208`) carries lever
     · call · confidence · reasons · provesWrong · until · atOpen and no `unlocksAfter`/`locked`,
