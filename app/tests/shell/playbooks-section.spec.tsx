@@ -133,21 +133,34 @@ describe("PlaybooksSection metric blocks", () => {
 describe("PlaybooksSection subscriber count", () => {
   it("shows the bare count in plain words, even in catalog-only mode", async () => {
     mount(undefined);
-    expect(await screen.findByText("3 subscribers")).toBeInTheDocument();
-    expect(cardOf("S1-NVDA").getByText("3 subscribers")).toBeInTheDocument();
-    expect(cardOf("E1-AMD").getByText("1 subscriber")).toBeInTheDocument();
-    expect(cardOf("HC-SAURON").getByText("No subscribers yet")).toBeInTheDocument();
+    expect(await screen.findByText("3 active subscribers")).toBeInTheDocument();
+    expect(cardOf("S1-NVDA").getByText("3 active subscribers")).toBeInTheDocument();
+    expect(cardOf("E1-AMD").getByText("1 active subscriber")).toBeInTheDocument();
+    expect(cardOf("HC-SAURON").getByText("No active subscribers yet")).toBeInTheDocument();
   });
 
   it("shows the same count when an account is selected", async () => {
     mount("human-joe");
-    await screen.findByText("3 subscribers");
-    expect(cardOf("S1-NVDA").getByText("3 subscribers")).toBeInTheDocument();
+    await screen.findByText("3 active subscribers");
+    expect(cardOf("S1-NVDA").getByText("3 active subscribers")).toBeInTheDocument();
   });
 
   it("draws no count at all when the server sent none — never a false zero", async () => {
     mount(undefined);
-    await screen.findByText("3 subscribers");
+    await screen.findByText("3 active subscribers");
     expect(cardOf("G1-NONE").queryByText(/subscriber/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * The label names the measure. The server counts ENABLED subscriptions only, so a card claiming a
+   * plain "N subscribers" would be wider than its own number — an account that paused is a
+   * subscriber and is not in it. Falsifier: any card wording the count without "active".
+   */
+  it("says 'active' on every count, because a paused subscriber is not in the number", async () => {
+    mount(undefined);
+    await screen.findByText("3 active subscribers");
+    for (const line of screen.getAllByText(/subscriber/)) {
+      expect(line.textContent).toMatch(/active subscriber/);
+    }
   });
 });

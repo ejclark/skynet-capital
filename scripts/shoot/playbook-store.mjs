@@ -209,7 +209,7 @@ await frame(
 await frame(
   "phone-subscriber-count",
   false,
-  "3 subscribers",
+  "3 active subscribers",
   PHONE,
   undefined,
   "/app/research?section=playbooks",
@@ -217,9 +217,9 @@ await frame(
 await frame(
   "phone-subscriber-none",
   false,
-  "No subscribers yet",
+  "No active subscribers yet",
   PHONE,
-  "No subscribers yet",
+  "No active subscribers yet",
   "/app/research?section=playbooks",
 );
 await frame("phone-delegation-earned", false, "Capital to delegate", PHONE);
