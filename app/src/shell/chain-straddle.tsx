@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { type ChainData, fetchChain } from "../live/options";
+import { ChainAsOf } from "./chain-as-of";
 import { type PickSide, StraddleView } from "./straddle-view";
 
 /**
@@ -21,6 +22,7 @@ export function ChainStraddle({
   expirationField,
   heldBadges,
   pending,
+  onRefresh,
 }: {
   readonly chainSym: string;
   readonly optionType: "call" | "put";
@@ -42,6 +44,9 @@ export function ChainStraddle({
    *  component's own "other side" fetch below, since either one refetching on an expiration
    *  change is "the table you're looking at is a beat stale," not just one side of it. */
   readonly pending?: boolean;
+  /** Re-read the caller's chain (#4327) — the as-of stamp's Refresh button. This component
+   *  refetches its own other side alongside, so both halves of the table carry one stamp's age. */
+  readonly onRefresh?: () => void;
 }): ReactElement {
   const otherType = optionType === "call" ? "put" : "call";
   const other = useQuery({
@@ -52,6 +57,7 @@ export function ChainStraddle({
     // though this component's job is specifically to keep both sides showing real numbers.
     placeholderData: keepPreviousData,
   });
+  const refreshing = pending || other.isFetching;
   const otherRows = other.data && !("chainNote" in other.data) ? other.data.rows : [];
   return (
     <StraddleView
@@ -66,8 +72,24 @@ export function ChainStraddle({
       onPickSide={onPickSide}
       quotes={chainData.quotes}
       expirationField={expirationField}
+      asOf={
+        chainData.quotes ? (
+          <ChainAsOf
+            quotes={chainData.quotes}
+            refreshing={refreshing}
+            onRefresh={
+              onRefresh
+                ? () => {
+                    onRefresh();
+                    void other.refetch();
+                  }
+                : undefined
+            }
+          />
+        ) : undefined
+      }
       heldBadges={heldBadges}
-      pending={pending || other.isFetching}
+      pending={refreshing}
     />
   );
 }

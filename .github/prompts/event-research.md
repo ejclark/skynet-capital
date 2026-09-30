@@ -106,11 +106,9 @@ The three rules that have actually fired here:
 - **body** lines ≤100 characters each — wrap your prose; a paragraph copy-pasted from your own
   analysis will usually run long.
 
-Push, open the PR with `gh pr create`, then arm auto-merge with `bash scripts/ship.sh automerge
-<pr-number>` — never hand-roll `gh pr merge --auto --squash`, which has none of the script's
-safeguards (a PR going green before you arm it, a GraphQL proxy that won't serve the arm mutation,
-rate-limit exhaustion, a read-back check that the arm actually took — see #659 and the 16 research
-PRs stalled by the clean-status race on 2026-08-26). Research-ledger docs auto-merge per the
+Push and open the PR with `gh pr create`. Do not arm auto-merge by hand — `pipeline.yml`'s
+`arm auto-merge` job arms it once `verify` and `integration tests` pass (skipped counts as passed on a
+docs-only ledger PR), on open and on every later push (#4094). Research-ledger docs auto-merge per the
 governor's merge policy. The PR body follows `.github/pull_request_template.md`: open with
 `## The picture` — for a ledger row the honest picture is usually the line `Picture: waived —
 automated research ledger` (never a decorative diagram); Summary bullets ≤120 chars

@@ -28,6 +28,12 @@ export const S1_NVDA: Playbook = {
   thesis: "pre-print positioning bid, exited before the dead final week",
   evidence: "docs/research/nvda-earnings-cycle.md F1-F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+  // #3194 step 5b-i: the first opt-in to the mixed-signals detector, OBSERVE-ONLY — a reading is
+  // logged and never reaches this playbook's intents. S1 is a trend-with-the-bid play (news and
+  // price should agree into the print), so a disagreement is a warning for it, not the signal;
+  // it also carries the strongest evidence line of the roster. Pausing entries on a reading is
+  // step 5b-ii, gated on the detector's falsifier (30 observations or 2026-11-30).
+  mixedSignals: { action: "observe" },
   desiredState(asOfIso, calendar) {
     if (recentPrint("NVDA", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat";

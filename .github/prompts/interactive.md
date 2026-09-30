@@ -45,19 +45,13 @@ signature line above the Claude Code attribution footer.
 
 ## Merging — auto-merge on green, same as every other lane
 
-**Arm auto-merge (`bash scripts/ship.sh automerge <pr-number>`) unless a carve-out below applies.**
-Never hand-roll `gh pr merge --auto --squash` — the script already handles what a bare `gh` call
-doesn't: the PR going green before you arm it (merges directly instead of erroring — this race
-stalled 16 research PRs on 2026-08-26), a GraphQL proxy that won't serve the arm mutation in some
-session types, rate-limit exhaustion, and a read-back check that GitHub actually queued the arm (a
-bare mutation call can report success on one that silently did nothing — #659). This lane used
-to hold *every* PR it opened, with no scope test. That blanket rule outlived the ruling it came from
-(`CLAUDE.md`, 2026-08-20: *features and visual work auto-merge too* — a standing pre-merge taste
-gate makes Eric the constraint on everything). It held a pure-CSS PR for sixteen hours, and held
-another after Eric had already said "who cares" in the same thread. Holding by inheritance is a
-throughput bug, not caution.
+**Do not arm auto-merge by hand.** `pipeline.yml`'s `arm auto-merge` job arms every PR once `verify`
+**and** `integration tests` pass, on open and on every later push; hold one with the `hold-merge`
+label instead (#4094: arming by hand let three PRs merge mid-integration-tests, because native
+auto-merge honours only required checks).
 
-Hold — open the PR, do **not** arm auto-merge, and say on the PR why — only when:
+Hold — open the PR with `hold-merge` (`scripts/ship.sh open --hold`, so the arm job skips it) and say on
+the PR why — only when:
 
 - the diff touches a path `envelope-scan --check` calls protected (workflow files, auth,
   credentials, money-moving logic, guards, playbooks), **or**

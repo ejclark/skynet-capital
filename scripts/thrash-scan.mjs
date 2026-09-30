@@ -14,6 +14,9 @@
 //   ... --since=YYYY-MM-DD                         # window start (default: 30 days before --today)
 //   ... --today=YYYY-MM-DD                         # deterministic "now" (window end, exclusive+1d)
 //   ... --explain                                  # state as JSON on stdin instead of GitHub (specs)
+//   node scripts/thrash-scan.mjs --digest          # digest lines + snapshot marker (slice 2)
+//   ... --digest --file                            # …and file the two-scan repeats as `bottleneck`
+//   ... --prev=<digest.md>|none                    # previous scan (default: newest committed digest)
 //
 // SIGNALS (#3939's table; T6 from the OWNER comment of 2026-09-29):
 //   T1  same author, ≥5 near-identical comments on one issue/PR
@@ -27,7 +30,20 @@
 // constraint). No schedule of its own: /secretary runs it when a digest is due.
 // Loud-failure doctrine: an unreadable GitHub response is an error (exit 1), never a silent zero.
 import { readFileSync } from "node:fs";
-import { ghRest, ghRestAll } from "./moneypenny/gh.mjs";
+import { join } from "node:path";
+import { digestFiles } from "./digest-scan.mjs";
+import { lintIssue } from "./issue-lint.mjs";
+import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
+import {
+  alreadyFiled,
+  bottleneckIssue,
+  digestLines,
+  filingUnits,
+  MAX_FILES_PER_RUN,
+  parseSnapshot,
+  repeatUnits,
+  snapshotMarker,
+} from "./thrash/digest.mjs";
 import { addDays, renderReport, scan, summarize, T3_BASELINE_DAYS } from "./thrash/signals.mjs";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -122,6 +138,97 @@ function readStdin() {
   }
 }
 
+/** The previous scan: `--prev=<file>`, else the newest committed digest that is not today's (so a
+ *  re-run on the day a digest was written still diffs against the one before it). */
+function previousDigest(today) {
+  const path =
+    arg("prev") ??
+    digestFiles()
+      .filter((f) => f.slice(0, 10) < today)
+      .map((f) => join(process.cwd(), "docs", "digests", f))[0];
+  if (!path || path === "none") return { prev: null, lastDigest: null };
+  const date = /(\d{4}-\d{2}-\d{2})\.md$/.exec(path)?.[1] ?? null;
+  return { prev: parseSnapshot(readFileSync(path, "utf8")), lastDigest: date };
+}
+
+/** Create one issue over REST. Linted first: a body issue-lint refuses is a bug here, never filed. */
+function fileIssue({ title, body, labels }) {
+  const { problems } = lintIssue({ title, body, labels });
+  if (problems.length)
+    throw new Error(`thrash-scan: refusing to file "${title}": ${problems.join("; ")}`);
+  const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "";
+  const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
+  const out = sh(
+    "curl",
+    [
+      "-sS",
+      "--fail",
+      "-X",
+      "POST",
+      "-H",
+      `Authorization: Bearer ${token}`,
+      "-H",
+      "Accept: application/vnd.github+json",
+      "-H",
+      "User-Agent: skynet-thrash-scan",
+      `https://api.github.com/repos/${repo}/issues`,
+      "--data-binary",
+      "@-",
+    ],
+    { input: JSON.stringify({ title, body, labels }) },
+  );
+  return JSON.parse(out).number;
+}
+
+/** Slice 2: the digest block, and — with `--file`, never under `--explain` — the filings. */
+function digest(hits, state, win, explain) {
+  const units = filingUnits(hits);
+  const { prev, lastDigest } = previousDigest(win.today);
+  const repeats = repeatUnits(units, prev);
+  const bottlenecks = explain
+    ? (state.bottlenecks ?? [])
+    : ghRestAll("issues?labels=bottleneck&state=all", { maxPages: 20 });
+  const due = repeats.filter((u) => !alreadyFiled(u, bottlenecks));
+  const filed = [];
+  const skipped =
+    due.length > MAX_FILES_PER_RUN
+      ? [`${due.length - MAX_FILES_PER_RUN} over the ${MAX_FILES_PER_RUN}-per-run cap, next digest`]
+      : [];
+  const drafts = due
+    .slice(0, MAX_FILES_PER_RUN)
+    .map((u) => ({ unit: u, ...bottleneckIssue(u, win) }));
+  if (has("file") && !explain) {
+    for (const d of drafts)
+      filed.push({ number: fileIssue(d), signal: d.unit.signal, key: d.unit.key });
+  } else if (drafts.length) {
+    skipped.push(`${drafts.length} would file without --file`);
+  }
+  const lines = digestLines(hits, units, { ...win, lastDigest, filed, skipped });
+  return {
+    ...lines,
+    marker: snapshotMarker(units),
+    baseline: !prev,
+    repeats: repeats.length,
+    drafts,
+    filed,
+  };
+}
+
+function renderDigest(d) {
+  return [
+    "## Needs you",
+    ...(d.needsYou.length ? d.needsYou.map((l, n) => `${n + 1}. ${l}`) : ["(no thrash burst)"]),
+    "",
+    "## Noise absorbed",
+    ...d.noise.map((l) => (l.startsWith("  ") ? l : `- ${l}`)),
+    ...(d.baseline
+      ? ["- Thrash snapshot: baseline set; the next digest can auto-file repeats."]
+      : []),
+    "",
+    d.marker,
+  ].join("\n");
+}
+
 const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const has = (name) => process.argv.includes(`--${name}`);
 
@@ -136,6 +243,11 @@ function main() {
   const state = explain ? JSON.parse(readStdin() || "{}") : gatherState(since);
   const hits = scan(state, win, explain ? {} : { lookup: lookupPr });
 
+  if (has("digest")) {
+    const d = digest(hits, state, win, explain);
+    console.log(has("json") ? JSON.stringify(d, null, 2) : renderDigest(d));
+    return;
+  }
   if (has("json")) {
     console.log(JSON.stringify({ since, today, summary: summarize(hits, win), hits }, null, 2));
     return;
