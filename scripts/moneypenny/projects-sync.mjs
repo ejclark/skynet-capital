@@ -41,6 +41,7 @@ import {
   isMaskedOwnerFailure,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
+  isRetryableRestError,
   resolveBoardItem,
   statusForIssue,
 } from "./projects.mjs";
@@ -193,6 +194,20 @@ export function createBoardContext({
 }
 
 /**
+ * The issue's own REST read, with the same bounded backoff every `gh project` call here already has
+ * (#4182). `ghRest` shells to curl, whose 5xx wording `isTransientGhError` never matched, so a single
+ * GitHub 502 on this read failed the issue outright — once in the events lane, a dozen times in one
+ * backfill. 5xx and network blips only: a rate-limit 403/429 still fails at once, by design.
+ * `read`/`sleep` are injected so the retry is provable without a network call.
+ */
+export function readIssue(issueNumber, { read = ghRest, sleep } = {}) {
+  return withRetry(() => read(`issues/${issueNumber}`), {
+    isTransient: isRetryableRestError,
+    ...(sleep ? { sleep } : {}),
+  });
+}
+
+/**
  * Adds the issue to the board if it isn't there yet, sets Status always, and sets Horizon only
  * when the caller supplies one — Horizon is a sequencing judgment (same footing as Priority,
  * which nothing here ever sets automatically either), so a plain per-issue sync call with no
@@ -206,7 +221,7 @@ export function createBoardContext({
  * makes its own, which is the one-issue `sync project status` job's behaviour unchanged.
  */
 export function syncIssue(issueNumber, { horizon, board = createBoardContext() } = {}) {
-  const issue = ghRest(`issues/${issueNumber}`);
+  const issue = readIssue(issueNumber);
   const labels = (issue.labels ?? []).map((l) => l.name);
 
   if (!isBacklogCandidate({ labels })) {

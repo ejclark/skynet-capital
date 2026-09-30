@@ -4,11 +4,12 @@ import {
   explainRateLimitExhausted,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
+  isRetryableRestError,
   planBoardSweep,
   resolveBoardItem,
   SWEEP_MIN_GRAPHQL_POINTS,
 } from "../../../scripts/moneypenny/projects.mjs";
-import { createBoardContext } from "../../../scripts/moneypenny/projects-sync.mjs";
+import { createBoardContext, readIssue } from "../../../scripts/moneypenny/projects-sync.mjs";
 
 // #4183 — THE BOARD SYNC'S GRAPHQL BILL. `projects-setup.yml`'s backfill called `syncIssue` once per
 // open issue on 2026-09-30, and each call re-read the board's whole item list plus the project and
@@ -247,5 +248,76 @@ describe("moneypenny projects: the free pre-flight on a whole-backlog sweep (#41
     expect(planBoardSweep({ issueCount: 90 }).ok).toBe(true);
     expect(planBoardSweep({ remaining: Number.NaN }).ok).toBe(true);
     expect(planBoardSweep({}).reason).toContain("proceeding");
+  });
+});
+
+// #4182 — THE ISSUE READ GETS THE SAME BACKOFF THE BOARD CALLS ALREADY HAVE. 12 of the 2026-09-30
+// backfill's 20 failures were GitHub 5xx. `syncIssue`'s REST read goes through curl, which words a
+// 502 as `returned error: 502` — a form the shared transient classifier never matched, so that read
+// got one attempt. The curl strings below are verbatim from curl 8.5 against a local 502/504/403.
+describe("moneypenny projects: the issue read retries GitHub's 5xx, never a rate limit (#4182)", () => {
+  const curlFail = (code: number) =>
+    Object.assign(new Error("Command failed: curl"), {
+      stderr: `curl: (22) The requested URL returned error: ${code}`,
+    });
+
+  it("recognises curl's own 5xx wording as retryable", () => {
+    expect(isRetryableRestError("curl: (22) The requested URL returned error: 502")).toBe(true);
+    expect(isRetryableRestError("curl: (22) The requested URL returned error: 504")).toBe(true);
+    expect(isRetryableRestError("HTTP 503: Service Unavailable")).toBe(true);
+  });
+
+  it("does not retry a 4xx — a rate-limit 403/429 or a missing issue only repeats", () => {
+    expect(isRetryableRestError("curl: (22) The requested URL returned error: 403")).toBe(false);
+    expect(isRetryableRestError("curl: (22) The requested URL returned error: 429")).toBe(false);
+    expect(isRetryableRestError("curl: (22) The requested URL returned error: 404")).toBe(false);
+    expect(isRetryableRestError("API rate limit exceeded for user ID 3472134")).toBe(false);
+  });
+
+  it("rides out a 502 with backoff and returns the issue", () => {
+    const waits: number[] = [];
+    let calls = 0;
+    const issue = readIssue("4182", {
+      read: (path) => {
+        calls += 1;
+        expect(path).toBe("issues/4182");
+        if (calls < 3) throw curlFail(502);
+        return { number: 4182, state: "open" };
+      },
+      sleep: (ms) => waits.push(ms),
+    });
+
+    expect(issue).toEqual({ number: 4182, state: "open" });
+    expect(calls).toBe(3);
+    expect(waits).toEqual([2000, 4000]);
+  });
+
+  it("is bounded — a 5xx that persists fails the issue after three tries", () => {
+    let calls = 0;
+    expect(() =>
+      readIssue("4182", {
+        read: () => {
+          calls += 1;
+          throw curlFail(504);
+        },
+        sleep: () => undefined,
+      }),
+    ).toThrow("Command failed: curl");
+    expect(calls).toBe(3);
+  });
+
+  it("fails a rate-limited read at once, spending nothing on a window that is hourly", () => {
+    let calls = 0;
+    const waits: number[] = [];
+    expect(() =>
+      readIssue("4182", {
+        read: () => {
+          calls += 1;
+          throw curlFail(403);
+        },
+        sleep: (ms) => waits.push(ms),
+      }),
+    ).toThrow();
+    expect([calls, waits.length]).toEqual([1, 0]);
   });
 });

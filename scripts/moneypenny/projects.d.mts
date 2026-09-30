@@ -38,6 +38,10 @@ export function isMaskedOwnerFailure(text: unknown): boolean;
 
 export function isRetryableProjectsGhError(text: unknown): boolean;
 
+export const CURL_SERVER_ERROR: RegExp;
+
+export function isRetryableRestError(text: unknown): boolean;
+
 export function explainMaskedOwnerFailure(probe?: { ok?: boolean; text?: string }): string;
 
 export const ALREADY_ON_BOARD_FAILURE: RegExp;
