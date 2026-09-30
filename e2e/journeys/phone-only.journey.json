@@ -57,9 +57,12 @@
         {
           "id": "s6",
           "goto": "/app/research",
-          "sees": "R&D with the calendar folded into the phone strip, the day lens fogged",
+          "sees": "R&D with the calendar folded into one chip that names the range and opens it in a sheet, the day lens fogged inside",
           "ears": "WHEN R&D renders at 390px, the app shall keep the calendar's range control reachable and its fog notice readable.",
-          "expect": [{ "role": "heading", "name": "R&D" }],
+          "expect": [
+            { "role": "heading", "name": "R&D" },
+            { "role": "button", "name": "Market calendar:" }
+          ],
           "judge": "can this reader change the week from here?"
         }
       ]

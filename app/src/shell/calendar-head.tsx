@@ -66,6 +66,30 @@ export interface DayFog {
   readonly held?: number;
 }
 
+/** What the head's row reads — the range in words and its session count, or the caller's words
+ *  under the all lens. The phone's chip (`calendar-sheet.tsx`) reads the same two, so the closed
+ *  sheet names exactly the range the open one shows. */
+export function headLine({
+  lens,
+  range,
+  closures,
+  all,
+  fiscal,
+}: {
+  readonly lens: Lens;
+  readonly range: DayRange;
+  readonly closures: readonly MarketClosure[];
+  readonly all: { readonly name: string; readonly count: string };
+  readonly fiscal?: FiscalQuarterLabel;
+}): { readonly name: string; readonly count: string } {
+  if (lens === "all") return all;
+  const sessions = sessionsIn(range, closures);
+  return {
+    name: rangeLabel(range, lens, fiscal),
+    count: `${String(sessions)} ${sessions === 1 ? "session" : "sessions"}`,
+  };
+}
+
 export function CalendarHead({
   lens,
   range,
@@ -92,8 +116,7 @@ export function CalendarHead({
   readonly children?: ReactNode;
 }): ReactElement {
   const fogId = useId();
-  const allLens = lens === "all";
-  const sessions = allLens ? 0 : sessionsIn(range, closures);
+  const line = headLine({ lens, range, closures, all, ...(fiscal ? { fiscal } : {}) });
   return (
     <>
       <p className="rail-label">Market calendar</p>
@@ -107,10 +130,8 @@ export function CalendarHead({
           ‹
         </button>
         <span className="eh-month">
-          <span className="eh-range">{allLens ? all.name : rangeLabel(range, lens, fiscal)}</span>
-          <span className="eh-sessions num">
-            {allLens ? all.count : `${String(sessions)} ${sessions === 1 ? "session" : "sessions"}`}
-          </span>
+          <span className="eh-range">{line.name}</span>
+          <span className="eh-sessions num">{line.count}</span>
         </span>
         <button
           type="button"
