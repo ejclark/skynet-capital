@@ -7,7 +7,8 @@ import { type DayRange, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
 import { fetchResearch } from "../live/research";
 import { describeSymbolEvent, type SymbolEvent, symbolEventsIn } from "../live/symbol-events";
-import { CalendarHead } from "./calendar-head";
+import { CalendarHead, headLine } from "./calendar-head";
+import { CalendarSheet } from "./calendar-sheet";
 
 /**
  * THE MARKET CALENDAR'S HEAD ON TRADE (#3807 slice 3b-2): the same row the Profile page's head is
@@ -112,25 +113,36 @@ export function TradeClock({ symbol = "" }: { readonly symbol?: string }): React
   // Under the all lens a ticket reads what is ahead: history is R&D's, not the order form's.
   const all = horizon.lens === "all";
   const range = all ? { ...horizon.range, start: horizon.today } : horizon.range;
+  const head = {
+    name: "any date",
+    count: symbol ? `everything ahead on ${symbol}` : "everything ahead market-wide",
+  };
   return (
-    <section className="cal-head trade-clock" aria-label="Market calendar">
+    <CalendarSheet
+      className="cal-head trade-clock"
+      line={headLine({
+        lens: horizon.lens,
+        range: horizon.range,
+        closures: MARKET_CLOSURES,
+        all: head,
+      })}
+      below={
+        <SymbolEventsLine
+          symbol={symbol}
+          range={range}
+          when={all ? "from today on" : rangeLabel(horizon.range, horizon.lens)}
+        />
+      }
+    >
       <CalendarHead
         lens={horizon.lens}
         range={horizon.range}
         closures={MARKET_CLOSURES}
-        all={{
-          name: "any date",
-          count: symbol ? `everything ahead on ${symbol}` : "everything ahead market-wide",
-        }}
+        all={head}
         onLens={horizon.setLens}
         onStep={horizon.step}
         {...(fog.fogged ? { dayFog: { door: fog.door, reason: fog.reason } } : {})}
       />
-      <SymbolEventsLine
-        symbol={symbol}
-        range={range}
-        when={all ? "from today on" : rangeLabel(horizon.range, horizon.lens)}
-      />
-    </section>
+    </CalendarSheet>
   );
 }

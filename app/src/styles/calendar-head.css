@@ -154,3 +154,144 @@ a.held-event:hover {
     flex: 1 1 100%;
   }
 }
+
+/* ---- The phone face (#3977, `shell/calendar-sheet.tsx`): at ≤860 the head folds into one bottom
+   sheet and the page keeps a chip naming the range — one row where the head was ~150px. ---- */
+.cal-head--chip {
+  gap: 8px;
+}
+.cockpit > .cal-head--chip {
+  margin: -6px 0 12px;
+  padding: 0 0 10px;
+}
+.cal-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cal-chip:hover {
+  border-color: var(--accent);
+}
+.cal-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.cal-chip-glyph {
+  color: var(--accent);
+  font-size: 12px;
+}
+.cal-chip-range {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-chip-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cal-chip-count::before {
+  content: "· ";
+}
+.cal-chip-open {
+  color: var(--muted);
+  font-size: 10px;
+}
+.cal-head--chip .held-events {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+/* The sheet: a native modal dialog pinned to the bottom edge. No padding on the dialog's own box,
+   so a tap that lands on it (not a child) is the backdrop — the one tap that closes it. */
+.cal-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85dvh;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--bg);
+  color: var(--text);
+  overflow: auto;
+}
+.cal-sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+.cal-sheet::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.cal-sheet-grip {
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 2px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.cal-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 16px 12px;
+}
+/* The sheet sits inside the `.cal-head` section, so the row's flex sizing would read as heights
+   in this column (the lens row's 320px basis); every part takes its own height here instead. */
+.cal-head .cal-sheet-body > * {
+  flex: none;
+}
+.cal-head .cal-sheet-body .eh-lens-row {
+  min-width: 0;
+}
+.cal-head .cal-sheet-body .eh-head {
+  justify-content: space-between;
+}
+.cal-head .cal-sheet-body .eh-month {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+.cal-head .cal-sheet-body .eh-sessions::before {
+  content: "· ";
+  color: var(--muted);
+}
+.cal-head .cal-sheet-body .eh {
+  width: min(100%, 340px);
+  align-self: center;
+}
+.cal-sheet-done {
+  margin: 0 16px calc(16px + env(safe-area-inset-bottom));
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cal-sheet[open] {
+    animation: cal-sheet-rise 180ms ease-out;
+  }
+}
+@keyframes cal-sheet-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
