@@ -46,6 +46,10 @@ export function claimNext(
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
   },
 ): ClaimResult & { lane?: "plan" | "feedback" };
+/** The sweep's dry run for the push pass: the issue `claimNext` would pick, or null. Claims nothing. */
+export function peekNext(
+  deps?: AdmissionDeps & { readReady?: () => AdmissionIssue[] },
+): AdmissionIssue | null;
 /** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
 export function claimPlan(
   ctx: ClaimCtx,

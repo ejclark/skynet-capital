@@ -8,7 +8,7 @@ import {
   readInFlight,
   surfaceOf,
 } from "../../../scripts/moneypenny/admission.mjs";
-import { type ClaimCtx, claimNext } from "../../../scripts/moneypenny/index.mjs";
+import { type ClaimCtx, claimNext, peekNext } from "../../../scripts/moneypenny/index.mjs";
 
 // THE ADMISSION GATE (#3960 criteria 1, 2, 7). Between "ready" and "a build session starts":
 // halt refuses everything, conserve refuses all but fast-track, the in-flight cap refuses all but
@@ -147,7 +147,7 @@ describe("nextAdmissible — the retry sweep's pick", () => {
     createdAt,
   });
 
-  it("picks the oldest admissible ready issue", () => {
+  it("picks the oldest admissible ready issue within one rank class", () => {
     const ready = [dated(5, "2026-09-29T00:00:00Z"), dated(4, "2026-09-28T00:00:00Z")];
     expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(4);
   });
@@ -176,6 +176,23 @@ describe("nextAdmissible — the retry sweep's pick", () => {
     ];
     expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(9);
     expect(nextAdmissible(ready.slice(0, 1), [], mode("conserve", 1))).toBeNull();
+  });
+
+  // The sweep's first live tick (2026-09-30) took #784, a P3 idea, because it was the oldest.
+  it("follows npm run rank: a bug before older P2 work, a P3 idea last, a hand P-label wins", () => {
+    const ready = [
+      dated(784, "2026-08-20T00:00:00Z", ["idea"]),
+      dated(900, "2026-09-01T00:00:00Z"),
+      dated(950, "2026-09-29T00:00:00Z", ["bug"]),
+    ];
+    expect(nextAdmissible(ready, [], mode("normal"))?.number).toBe(950);
+    expect(nextAdmissible(ready.slice(0, 2), [], mode("normal"))?.number).toBe(900);
+    // Eric's P1 on the idea lifts it over the derived P2 — his label always wins.
+    const hand = [
+      dated(784, "2026-08-20T00:00:00Z", ["idea", "P1"]),
+      dated(900, "2026-08-01T00:00:00Z"),
+    ];
+    expect(nextAdmissible(hand, [], mode("normal"))?.number).toBe(784);
   });
 
   it("is null at the cap, under halt, or with nothing ready", () => {
@@ -351,5 +368,23 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
     expect(r.claimed).toBe(false);
     expect(r.reason).toContain("1 ready, 3 in flight, work-mode=normal");
     expect(called).toEqual([]);
+  });
+});
+
+describe("peekNext — the push pass asks, and claims nothing", () => {
+  const deps = (ready: ReturnType<typeof issue>[]) => ({
+    readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+    readReady: () => ready,
+    readInFlight: () => [],
+  });
+
+  it("returns the pick claimNext would take, without taking a lease", () => {
+    const pick = peekNext(deps([issue(8, "a", ["ready", "plan"])]));
+    expect(pick?.number).toBe(8);
+  });
+
+  it("returns null when nothing in either lane is admissible", () => {
+    expect(peekNext(deps([issue(8, "a", ["ready", "enhancement"])]))).toBeNull();
+    expect(peekNext(deps([]))).toBeNull();
   });
 });
