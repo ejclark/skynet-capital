@@ -157,6 +157,9 @@ prose ("the target below") rather than trying to template inside the instruction
   flagged by `scripts/doc-rot-scan.mjs`.
 - [`triage-comment-bloat.instructions.md`](triage-comment-bloat.instructions.md) — triage one
   file's worth of narration-only comments flagged by `scripts/comment-bloat-scan.mjs`.
+- [`split-into-sub-issues.instructions.md`](split-into-sub-issues.instructions.md) — split one
+  open plan's slices into native sub-issues (shipped ones filed closed) so the board draws an
+  honest progress bar; the backfill behind `docs/ISSUES.md` → *Slices as sub-issues*.
 - [`research-bottleneck.instructions.md`](research-bottleneck.instructions.md) — for one
   `bottleneck`-labelled issue, find the superior *existing* solution, battle-test the candidates
   against primary sources and `envelope.json`, and leave a call sheet + routing label on the
