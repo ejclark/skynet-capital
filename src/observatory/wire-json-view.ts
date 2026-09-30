@@ -41,6 +41,8 @@ interface WirePnlView {
 }
 
 interface WireFeedbackView {
+  /** The filing's issue number — the key its in-app comments hang off (issue #2224 shape 3). */
+  readonly issueNumber: number;
   readonly icon: string;
   readonly title: string;
   readonly url: string;
@@ -93,6 +95,7 @@ export function wireJsonView(
       .map((entry) => {
         const status = statuses?.get(entry.issueNumber);
         return {
+          issueNumber: entry.issueNumber,
           icon: FEEDBACK_KIND_ICON[entry.kind],
           title: entry.title,
           url: entry.url,
