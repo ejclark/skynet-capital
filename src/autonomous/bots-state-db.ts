@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import type { SentimentTracker } from "../news/sentiment-tracker.js";
 import type { ShadowClose, ShadowProbe, ShadowSnapshot } from "../playbooks/cond-scout-ledger.js";
+import type { ProbeRetro } from "../playbooks/cond-scout-retro.js";
 import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
 
@@ -41,6 +42,9 @@ export interface BotsStateDb {
   saveShadowSnapshot(snapshot: ShadowSnapshot): void;
   /** One probe's in-flight snapshots, oldest first. */
   listShadowSnapshots(probeId: string): ShadowSnapshot[];
+  saveShadowRetro(retro: ProbeRetro): void;
+  /** The newest retros first. */
+  listShadowRetros(limit: number): ProbeRetro[];
   close(): void;
 }
 
@@ -90,6 +94,11 @@ export function openBotsStateDb(path: string): BotsStateDb {
       snapshot_json TEXT NOT NULL,
       PRIMARY KEY (probe_id, at)
     );
+    CREATE TABLE IF NOT EXISTS cond_scout_retros (
+      probe_id TEXT PRIMARY KEY,
+      closed_at INTEGER NOT NULL,
+      retro_json TEXT NOT NULL
+    );
   `);
   const upsertScoutState = db.prepare(
     "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
@@ -110,6 +119,9 @@ export function openBotsStateDb(path: string): BotsStateDb {
   );
   const upsertSnapshot = db.prepare(
     "INSERT INTO cond_scout_snapshots (probe_id, at, snapshot_json) VALUES (?, ?, ?) ON CONFLICT(probe_id, at) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+  );
+  const upsertRetro = db.prepare(
+    "INSERT INTO cond_scout_retros (probe_id, closed_at, retro_json) VALUES (?, ?, ?) ON CONFLICT(probe_id) DO UPDATE SET retro_json = excluded.retro_json",
   );
   const closeProbe = db.prepare(
     "UPDATE cond_scout_probes SET closed_at = ?, close_json = ? WHERE id = ?",
@@ -149,6 +161,16 @@ export function openBotsStateDb(path: string): BotsStateDb {
           .prepare("SELECT snapshot_json FROM cond_scout_snapshots WHERE probe_id = ? ORDER BY at")
           .all(probeId) as { snapshot_json: string }[]
       ).map((row) => JSON.parse(row.snapshot_json));
+    },
+    saveShadowRetro(retro) {
+      upsertRetro.run(retro.probeId, retro.closedAt, JSON.stringify(retro));
+    },
+    listShadowRetros(limit): ProbeRetro[] {
+      return (
+        db
+          .prepare("SELECT retro_json FROM cond_scout_retros ORDER BY closed_at DESC LIMIT ?")
+          .all(limit) as { retro_json: string }[]
+      ).map((row) => JSON.parse(row.retro_json));
     },
     loadMomentum(): Record<string, number[]> {
       const out: Record<string, number[]> = {};
@@ -236,6 +258,8 @@ export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | un
     close: (close) => db.closeShadowProbe(close),
     recentCloses: (limit) => db.listShadowCloses(limit),
     saveSnapshot: (snapshot) => db.saveShadowSnapshot(snapshot),
+    snapshotsFor: (probeId) => db.listShadowSnapshots(probeId),
+    saveRetro: (retro) => db.saveShadowRetro(retro),
   };
 }
 

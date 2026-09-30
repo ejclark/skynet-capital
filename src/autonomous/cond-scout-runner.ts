@@ -15,6 +15,7 @@ import {
   type ShadowSnapshot,
   snapshotProbe,
 } from "../playbooks/cond-scout-ledger.js";
+import { type ProbeRetro, probeRetro } from "../playbooks/cond-scout-retro.js";
 import type { DecisionRecord } from "./decision-record.js";
 
 /**
@@ -48,6 +49,9 @@ export interface CondScoutStore {
   /** The newest closes first — how a restart rebuilds today's latches from the ledger itself. */
   recentCloses(limit: number): readonly ShadowClose[];
   saveSnapshot(snapshot: ShadowSnapshot): void;
+  /** One probe's snapshots — how a close after a restart still sees the whole path. */
+  snapshotsFor(probeId: string): readonly ShadowSnapshot[];
+  saveRetro(retro: ProbeRetro): void;
 }
 
 const isoDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
@@ -68,6 +72,7 @@ export interface CondScoutDeps {
   readonly onDecision?: (record: DecisionRecord) => void;
   readonly onClose?: (close: ShadowClose) => void;
   readonly onSnapshot?: (snapshot: ShadowSnapshot) => void;
+  readonly onRetro?: (retro: ProbeRetro) => void;
 }
 
 function exitIntent(close: ShadowClose): OrderIntent {
@@ -98,6 +103,8 @@ export class CondScoutRunner {
   private closes: Readonly<Record<string, readonly number[]>> = {};
   /** Last snapshot per probe id. Not persisted: a restart takes one extra snapshot, never misses. */
   private readonly lastSnapshotAt = new Map<string, number>();
+  /** This process's snapshots per open probe — the retro's source when no store is wired. */
+  private readonly snapshots = new Map<string, ShadowSnapshot[]>();
 
   constructor(deps: CondScoutDeps) {
     this.deps = deps;
@@ -149,6 +156,13 @@ export class CondScoutRunner {
       this.closedToday.add(close.probe.symbol);
       this.deps.store?.close(close);
       this.deps.onClose?.(close);
+      const retro = probeRetro(
+        close,
+        this.deps.store?.snapshotsFor(close.probe.id) ?? this.snapshots.get(close.probe.id) ?? [],
+      );
+      this.snapshots.delete(close.probe.id);
+      this.deps.store?.saveRetro(retro);
+      this.deps.onRetro?.(retro);
     }
     const intents = closed.map(exitIntent);
     this.deps.onDecision?.({
@@ -252,6 +266,10 @@ export class CondScoutRunner {
 
   private recordSnapshot(snapshot: ShadowSnapshot): void {
     this.lastSnapshotAt.set(snapshot.probeId, snapshot.at);
+    this.snapshots.set(snapshot.probeId, [
+      ...(this.snapshots.get(snapshot.probeId) ?? []),
+      snapshot,
+    ]);
     this.deps.store?.saveSnapshot(snapshot);
     this.deps.onSnapshot?.(snapshot);
   }

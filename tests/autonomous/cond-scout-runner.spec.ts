@@ -6,6 +6,7 @@ import type {
   ShadowProbe,
   ShadowSnapshot,
 } from "../../src/playbooks/cond-scout-ledger.js";
+import type { ProbeRetro } from "../../src/playbooks/cond-scout-retro.js";
 import { aContext } from "../support/builders.js";
 
 const DAY = 86_400_000;
@@ -20,15 +21,20 @@ function memoryStore(): CondScoutStore & {
   opened: ShadowProbe[];
   closed: ShadowClose[];
   snapshots: ShadowSnapshot[];
+  retros: ProbeRetro[];
 } {
   const opened: ShadowProbe[] = [];
   const closed: ShadowClose[] = [];
   const snapshots: ShadowSnapshot[] = [];
+  const retros: ProbeRetro[] = [];
   return {
+    retros,
     opened,
     closed,
     snapshots,
     saveSnapshot: (snapshot) => snapshots.push(snapshot),
+    snapshotsFor: (probeId) => snapshots.filter((x) => x.probeId === probeId),
+    saveRetro: (retro) => retros.push(retro),
     loadOpen: () => opened.filter((p) => !closed.some((c) => c.probe.id === p.id)),
     saveOpen: (probe) => opened.push(probe),
     close: (close) => closed.push(close),
@@ -210,6 +216,44 @@ describe("CondScoutRunner", () => {
       clock.t = T0 + 4 * 3_600_000;
       await runner.runPass(at(70));
       expect(store.snapshots).toHaveLength(count);
+    });
+  });
+
+  describe("the retro at close (slice 4)", () => {
+    it("writes a retro from the probe's snapshots when it closes", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const { runner } = setup({ store, clock });
+      await runner.runPass(at(80));
+      clock.t = T0 + 2 * 3_600_000;
+      await runner.runPass(at(81));
+      clock.t = T0 + 4 * 3_600_000;
+      await runner.runPass(at(70)); // stopped out
+      expect(store.retros).toHaveLength(1);
+      expect(store.retros[0]).toMatchObject({
+        symbol: "AMD",
+        reason: "invalidated",
+        directionRight: false,
+      });
+      expect(store.retros[0]?.snapshotCount).toBe(store.snapshots.length);
+    });
+
+    it("still writes one from this process's snapshots when no store is wired", async () => {
+      const retros: unknown[] = [];
+      const clock = { t: T0 };
+      const runner = new CondScoutRunner({
+        universe: ["AMD"],
+        closesFor: () => Promise.resolve({ AMD: SLIDE }),
+        risk: { maxPositionPct: 0.2 },
+        blockedReason: () => null,
+        now: () => clock.t,
+        onRetro: (r) => retros.push(r),
+      });
+      await runner.runPass(at(80));
+      clock.t = T0 + 3_600_000;
+      await runner.runPass(at(70));
+      expect(retros).toHaveLength(1);
+      expect(retros[0]).toMatchObject({ snapshotCount: 1 });
     });
   });
 });
