@@ -260,6 +260,7 @@ export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | un
     saveSnapshot: (snapshot) => db.saveShadowSnapshot(snapshot),
     snapshotsFor: (probeId) => db.listShadowSnapshots(probeId),
     saveRetro: (retro) => db.saveShadowRetro(retro),
+    recentRetros: (limit) => db.listShadowRetros(limit),
   };
 }
 

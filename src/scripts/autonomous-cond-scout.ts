@@ -11,7 +11,11 @@ import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { type BotsStateDb, condScoutStore } from "../autonomous/bots-state-db.js";
-import { type CondScoutDeps, CondScoutRunner } from "../autonomous/cond-scout-runner.js";
+import {
+  type CondScoutDeps,
+  CondScoutRunner,
+  type DailyBars,
+} from "../autonomous/cond-scout-runner.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import type { MarketContext } from "../domain/types.js";
@@ -45,6 +49,21 @@ export function condScoutUniverse(
   return wanted.filter((s) => carried.has(s));
 }
 
+function barsClient(creds: AlpacaCredentials): AlpacaOptionsClient {
+  return new AlpacaOptionsClient(
+    new FetchAlpacaTradingTransport({ ...creds, baseUrl: ALPACA_PAPER_BASE_URL }),
+    new FetchAlpacaTradingTransport({ ...creds, baseUrl: ALPACA_DATA_BASE_URL }),
+  );
+}
+
+/** Dated daily closes for the later-exit backfill (#3651 slice 5); undefined on a failed read. */
+export function alpacaDailyBars(credentials: () => AlpacaCredentials): DailyBars {
+  return async (symbol, start, end) => {
+    const bars = await barsClient(credentials()).getBars(symbol, start, end);
+    return bars?.map((b) => ({ t: b.t, c: b.c }));
+  };
+}
+
 /**
  * Daily closes from Alpaca's bars endpoint, ending yesterday so no partial session leaks into
  * RSI/SMA. Credentials are read per call, so a rotated key is picked up without a restart. A
@@ -56,11 +75,7 @@ export function alpacaDailyCloses(
   log: Log = console,
 ): (symbols: readonly string[]) => Promise<Readonly<Record<string, readonly number[]>>> {
   return async (symbols) => {
-    const creds = credentials();
-    const client = new AlpacaOptionsClient(
-      new FetchAlpacaTradingTransport({ ...creds, baseUrl: ALPACA_PAPER_BASE_URL }),
-      new FetchAlpacaTradingTransport({ ...creds, baseUrl: ALPACA_DATA_BASE_URL }),
-    );
+    const client = barsClient(credentials());
     const today = now().getTime();
     const start = new Date(today - LOOKBACK_DAYS * DAY_MS).toISOString().slice(0, 10);
     const end = new Date(today - DAY_MS).toISOString().slice(0, 10);
@@ -86,6 +101,7 @@ export interface CondScoutWiring {
   readonly log?: Log;
   /** Replaces the Alpaca bars reader — specs only; production always reads Alpaca. */
   readonly closesFor?: CondScoutDeps["closesFor"];
+  readonly barsFor?: DailyBars;
 }
 
 /** The armed runner, or undefined when the knob is unset or names nothing the stream carries. */
@@ -110,6 +126,7 @@ function buildCondScout(
   return new CondScoutRunner({
     universe,
     closesFor: wiring.closesFor ?? alpacaDailyCloses(wiring.credentials, undefined, log),
+    barsFor: wiring.barsFor ?? alpacaDailyBars(wiring.credentials),
     risk: wiring.risk,
     blockedReason: wiring.blockedReason,
     ...(store ? { store } : {}),
