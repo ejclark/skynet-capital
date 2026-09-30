@@ -21,6 +21,17 @@ export function createBoardContext(readers?: {
   readProject?: () => { id: string; number: number };
 }): BoardContext;
 
+export function readIssue(
+  issueNumber: string,
+  deps?: { read?: (path: string) => unknown; sleep?: (ms: number) => void },
+): {
+  labels?: { name: string }[];
+  state?: string;
+  body?: string;
+  html_url?: string;
+  user?: { login?: string };
+};
+
 export function syncIssue(
   issueNumber: string,
   opts?: { horizon?: string; board?: BoardContext },

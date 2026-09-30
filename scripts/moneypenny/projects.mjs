@@ -132,6 +132,19 @@ export function isRetryableProjectsGhError(text) {
   return isTransientGhError(text) || isMaskedOwnerFailure(text);
 }
 
+// #4182 — CURL SAYS "5xx" IN ITS OWN WORDS. `syncIssue`'s one REST read (`ghRest`, curl `--fail`)
+// reports a GitHub 502 as `curl: (22) The requested URL returned error: 502` — reproduced against a
+// local server returning 502/504/403 with curl 8.5. `isTransientGhError` matches gh's `HTTP 502`
+// form, not this one, so the issue read got exactly one attempt; 12 of the 2026-09-30 backfill's 20
+// failures were GitHub 5xx. Only 5xx: curl's 403/429 is a rate limit or auth, and an hourly window
+// does not reopen in six seconds (see `isRateLimitExhausted`, below).
+export const CURL_SERVER_ERROR = /returned error: 5\d\d\b/i;
+
+/** Is this `ghRest` (curl) failure a GitHub-side 5xx or network blip that a second try can fix? */
+export function isRetryableRestError(text) {
+  return isTransientGhError(text) || CURL_SERVER_ERROR.test(String(text ?? ""));
+}
+
 // #3954 — `gh project item-add` IS NOT IDEMPOTENT, and every sync after an issue's first one
 // depends on it being so. `addProjectV2ItemById` answers a second add for the same content with
 // `GraphQL: Content already exists in this project`, so `sync project status` went red on `main`

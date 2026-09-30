@@ -25,6 +25,9 @@
 //   3. ABORT on exhaustion, never grind on. The old loop caught every error per issue and kept
 //      going, so one drained quota produced fifty identical "FAILED — API rate limit exceeded"
 //      lines and spent two more points apiece proving it.
+//   4. (#4182) A GitHub 5xx is retried with bounded backoff on EVERY call `syncIssue` makes — the
+//      board calls always were; the issue's own REST read was not (`readIssue`), and 12 of that
+//      run's 20 failures were 5xx. An exhausted quota still aborts at once (3), never retries.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-backfill.mjs
 import { readFileSync } from "node:fs";
