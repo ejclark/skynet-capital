@@ -200,6 +200,23 @@ $mm"
   echo "ship checkbody: ✓ body passes the picture/format contract."
 }
 
+# pinshots <bodyfile> <sha> — print the body with every docs/shots/ raw URL pinned to <sha>.
+# The ref is everything between owner/repo/ and /docs/shots/ (non-greedy, no whitespace/quotes),
+# so slashed branches (feat/x) pin too — a one-segment ref group missed them (#4193). Refs that
+# are already a 40-hex SHA pass through untouched. Pure (no git), so the spec drives it directly.
+cmd_pinshots() {
+  python3 - "$1" "$2" <<'PY'
+import re, sys
+body = open(sys.argv[1]).read()
+sha = sys.argv[2]
+def pin(m):
+    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
+        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
+sys.stdout.write(re.sub(
+    r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^\s)\"'<>]+?)/docs/shots/", pin, body))
+PY
+}
+
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
@@ -240,16 +257,8 @@ cmd_open() {
 
   # SHA-pin docs/shots/ raw URLs to HEAD (the commit about to be pushed — tree is clean, so HEAD
   # is exactly what ships). Branch-form URLs 404 at squash-merge; already-pinned SHAs pass through.
-  local sha pinned; sha="$(git rev-parse HEAD)"; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
-  python3 - "$bodyfile" "$sha" > "$pinned" <<'PY'
-import re, sys
-body = open(sys.argv[1]).read()
-sha = sys.argv[2]
-def pin(m):
-    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
-        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
-sys.stdout.write(re.sub(r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^/\s)]+)/docs/shots/", pin, body))
-PY
+  local pinned; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
+  cmd_pinshots "$bodyfile" "$(git rev-parse HEAD)" > "$pinned"
   bodyfile="$pinned"
 
   # The picture/format contract — fail fast, before spending verify or a push.
@@ -945,8 +954,9 @@ case "${1:-}" in
   merge) shift; cmd_merge "$@" ;;
   automerge) shift; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
+  pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
   checkverify) shift; cmd_checkverify "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | checkarm <path...> | checkverify < check-runs.json | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
 esac
