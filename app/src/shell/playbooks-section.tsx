@@ -1,7 +1,9 @@
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
+import { fetchPlaybookPerformance } from "../live/playbook-performance";
 import { fetchPlaybookStore, type PlaybookStoreView } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import type { AccountMetricsScope } from "./playbook-metrics";
 import { PlaybookCard } from "./playbook-store-cards";
 
 /**
@@ -77,6 +79,21 @@ export function PlaybooksSection({
   const queryClient = useQueryClient();
   const onChanged = () =>
     void queryClient.invalidateQueries({ queryKey: ["playbook-store", accountId ?? ""] });
+  // The selected account's own closed trades per playbook (#3665 slice 3) — only for an account the
+  // viewer manages; the server re-scopes `?accounts=` to owned ids regardless.
+  const manages = Boolean(accountId && store.data?.canManage);
+  const performance = useQuery({
+    queryKey: ["playbook-performance", accountId ?? ""],
+    queryFn: () => fetchPlaybookPerformance(accountId ?? ""),
+    enabled: manages,
+  });
+  const metricsFor = (playbookId: string): AccountMetricsScope | undefined => {
+    if (!manages || performance.isPending) return undefined;
+    const mine = performance.data?.mine;
+    if (!mine) return { kind: "unreadable" };
+    const row = mine.find((r) => r.playbookId === playbookId);
+    return row ? { kind: "read", row } : { kind: "read" };
+  };
 
   if (store.isPending) return <p className="note">Opening the playbooks…</p>;
   if (store.isError) return <p className="note">The playbooks are unreachable.</p>;
@@ -114,6 +131,8 @@ export function PlaybooksSection({
             canManage={Boolean(accountId) && view.canManage}
             delegation={view.delegation}
             onChanged={onChanged}
+            accountName={accountName ?? accountId ?? ""}
+            metrics={metricsFor(card.id)}
           />
         ))}
       </div>

@@ -1,0 +1,39 @@
+/**
+ * PLAYBOOK TRADE METRICS' client model (#3665) — mirrors `PlaybookPerformanceView` in
+ * `src/server/playbook-performance.ts` and the slice of `PlaybookStats` (`src/trading/trade-
+ * stats.ts`) the cards render. The server computes every number and owns the scope: `?accounts=`
+ * can only narrow the viewer's own accounts, so the client never decides whose trips count.
+ */
+
+export interface PlaybookMetricsView {
+  readonly playbookId: string;
+  readonly trades: number;
+  readonly wins: number;
+  readonly losses: number;
+  /** Null with no decided trades — never a 0% win rate. */
+  readonly winRate: number | null;
+  readonly netRealized: number;
+  /** Capital-weighted: netRealized ÷ capitalCommitted. Null with nothing committed. */
+  readonly returnPct: number | null;
+  readonly capitalCommitted: number;
+  readonly avgHoldMs: number | null;
+  readonly longestHold: { readonly holdMs: number } | null;
+  readonly shortestHold: { readonly holdMs: number } | null;
+  readonly byDirection: { readonly long: number; readonly short: number };
+  readonly byInstrument: { readonly stock: number; readonly call: number; readonly put: number };
+}
+
+export interface PlaybookPerformanceView {
+  readonly house: readonly PlaybookMetricsView[];
+  /** Null when none of the requested accounts is readable — an absence, not zero trades. */
+  readonly mine: readonly PlaybookMetricsView[] | null;
+  readonly accounts: readonly string[];
+}
+
+export async function fetchPlaybookPerformance(account: string): Promise<PlaybookPerformanceView> {
+  const res = await fetch(`/api/outpost/performance?accounts=${encodeURIComponent(account)}`, {
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`playbook-performance ${res.status}`);
+  return (await res.json()) as PlaybookPerformanceView;
+}
