@@ -1,5 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import type { SentimentTracker } from "../news/sentiment-tracker.js";
+import type { ShadowClose, ShadowProbe } from "../playbooks/cond-scout-ledger.js";
+import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
 
 /**
@@ -29,6 +31,13 @@ export interface BotsStateDb {
   /** The beta scout's day-state (`live-cycle.ts`), or undefined before its first save. */
   loadScoutState(): ScoutState | undefined;
   saveScoutState(state: ScoutState): void;
+  /** COND-SCOUT's shadow ledger (#3651): the probes still open, oldest first. */
+  loadShadowProbes(): ShadowProbe[];
+  saveShadowProbe(probe: ShadowProbe): void;
+  /** Marks the probe closed and keeps the close beside it — the retro's raw material. */
+  closeShadowProbe(close: ShadowClose): void;
+  /** The newest closes first. */
+  listShadowCloses(limit: number): ShadowClose[];
   close(): void;
 }
 
@@ -65,6 +74,13 @@ export function openBotsStateDb(path: string): BotsStateDb {
       fired_organically_today INTEGER NOT NULL,
       owned_json TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS cond_scout_probes (
+      id TEXT PRIMARY KEY,
+      opened_at INTEGER NOT NULL,
+      probe_json TEXT NOT NULL,
+      closed_at INTEGER,
+      close_json TEXT
+    );
   `);
   const upsertScoutState = db.prepare(
     "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
@@ -80,7 +96,38 @@ export function openBotsStateDb(path: string): BotsStateDb {
     "INSERT INTO cooldowns (persona_id, symbol, at) VALUES (?, ?, ?) ON CONFLICT(persona_id, symbol) DO UPDATE SET at = excluded.at",
   );
 
+  const upsertProbe = db.prepare(
+    "INSERT INTO cond_scout_probes (id, opened_at, probe_json) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET probe_json = excluded.probe_json",
+  );
+  const closeProbe = db.prepare(
+    "UPDATE cond_scout_probes SET closed_at = ?, close_json = ? WHERE id = ?",
+  );
+
   return {
+    loadShadowProbes(): ShadowProbe[] {
+      return (
+        db
+          .prepare(
+            "SELECT probe_json FROM cond_scout_probes WHERE close_json IS NULL ORDER BY opened_at",
+          )
+          .all() as { probe_json: string }[]
+      ).map((row) => JSON.parse(row.probe_json));
+    },
+    saveShadowProbe(probe) {
+      upsertProbe.run(probe.id, probe.openedAt, JSON.stringify(probe));
+    },
+    closeShadowProbe(close) {
+      closeProbe.run(close.closedAt, JSON.stringify(close), close.probe.id);
+    },
+    listShadowCloses(limit): ShadowClose[] {
+      return (
+        db
+          .prepare(
+            "SELECT close_json FROM cond_scout_probes WHERE close_json IS NOT NULL ORDER BY closed_at DESC LIMIT ?",
+          )
+          .all(limit) as { close_json: string }[]
+      ).map((row) => JSON.parse(row.close_json));
+    },
     loadMomentum(): Record<string, number[]> {
       const out: Record<string, number[]> = {};
       for (const row of db.prepare("SELECT symbol, prices_json FROM momentum").all() as {
@@ -156,6 +203,16 @@ export function scoutStateStore(
 ): { load(): ScoutState | undefined; save(state: ScoutState): void } | undefined {
   if (!db) return undefined;
   return { load: () => db.loadScoutState(), save: (state) => db.saveScoutState(state) };
+}
+
+/** The `CondScoutRunner` store, bound to a DB — undefined when durability is dark. */
+export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | undefined {
+  if (!db) return undefined;
+  return {
+    loadOpen: () => db.loadShadowProbes(),
+    saveOpen: (probe) => db.saveShadowProbe(probe),
+    close: (close) => db.closeShadowProbe(close),
+  };
 }
 
 // --- best-effort restore/persist glue for the two in-memory trackers, kept alongside the DB
