@@ -546,6 +546,7 @@ Forward tests registered from this stance:
 
 | 2026-09-22 | D-7 | **The panel's live fork resolved, and it resolved hawkish — leg 15's "widens rather than sharpens" now has an answer.** The **09-16 FOMC delivered exactly the modal outcome named in the last row**: 25bp hike to **3.75%–4.00%, 12-0 unanimous**, the first hike since 2023 (federalreserve.gov `monetary20260916a.htm`, cross-corroborated by [`consumer-confidence-2026-09-29`](consumer-confidence-2026-09-29.md)'s own 09-22 row and [`fomc-2026-09-16`](fomc-2026-09-16.md)'s close-out). **The kill switch tied to this — "FOMC lands outside hike-25" — did NOT fire.** The SEP printed hawkish of the market's own pre-meeting pricing: 2026 median **4.1%** (up from June's 3.8), **16 of 18 participants see another hike, 4 of those two more**, year-end range **4.1%–4.4%** (`fomc-2026-09-16` close-out: `FT-fomc-2026-09-16-4` killed on this exact reading). Respondents answering Sep 17–23 — most of this survey's own field window — are pricing a **known, hawkish outcome**, not a probabilistic one; the mid-window split leg 15 flagged is now a mid-window resolution instead. **Field window closes tomorrow (09-23)** — the print itself remains uncollected as of this row. **VIX round-tripped and the front-of-curve inversion leg 14 flagged is gone:** **14.87** (Cboe, 09-21 close) vs **17.28** last row (**−2.41pt**, under the 3pt material screen on its own), and **VIX9D 13.14 < VIX 14.87 < VIX3M 18.08** — clean contango restored, replacing the VIX9D-above-VIX inversion this doc logged at D-14. Path was not monotonic: VIX **17.71** on decision day itself (09-16), the Dow fell **631pts (−1.21%)** that session, then equities round-tripped **higher** — SPY **754.05 (09-16) → 773.50 (09-21)**, a fresh multi-day high, as the initial hawkish flinch unwound (own Cboe/Yahoo pull). **Curve extended the bear-flattening leg 14 logged, front-loaded:** Treasury's own daily CSV, 09-14 → 09-21: 2Y **4.65% → 4.76% (+11bp)**, 10Y **4.97% → 4.96% (−1bp)**, 30Y **5.34% → 5.29% (−5bp)**, 2s10s **32bp → 20bp** — the front end is now pricing the hawkish SEP's "more hikes coming" path while the long end caps, not the pre-meeting uncertainty premium. **Oil reversed hard, undercutting the hike's own inflation alibi just as it landed:** Brent **$100.06** (tradingeconomics, 09-21, −3.67% d/d, **−7.6% in six days** from the $108.35 this doc's D-14 row cited) as Saudi Aramco restores roughly half the East–West pipeline's capacity "within days" (Bloomberg 09-16, full capacity ~6 weeks out); a live intraday pull today shows Brent near **$96.84**, continuing the slide (unconfirmed close, cited as texture only). Retail gasoline has not followed yet — AAA's own page reads **$4.4786** national average as of 09-21, still a fresh high per `consumer-confidence-2026-09-29`'s same-day row — so the pass-through this survey's prices-lines would pick up is still in the pipe, not the tank. **A national peer read, not a Texas one:** August retail sales (09-16) beat sharply, **+1.2% m/m vs 0.8% consensus**, control-group **+1.4%**, the strongest since Sept 2024 — texture against a no-growth-scare backdrop, but leg 7's regional mean-reversion base rate (n=45, Texas-specific) is not overridden by a national print. **Peer prints:** n/a, `symbols: []`, unchanged. **New dated adjacency, and it corrects an undercount in leg 16:** `mu-2026-09-30-print` is now `confirmed`/`critical` (IR: investors.micron.com, Sep 30 2026 4:30pm ET AMC) and was **not in this doc's own adjacentIds at D-14** — it lands the evening after this survey, extending the crowded 09-29→09-30 corridor into the evening, and MU is this book's **tenth** tracked earnings name, which leg 16's "none of the nine tracked names" undercounted by one (the roster is NVDA/MRVL/AVGO/CRWV/MSFT/GOOG/META/AAPL/AMZN/**MU**); noted here, not fixed in the frozen leg. `jobs-2026-10-02` (`confirmed`/`high`) also newly entered the 5-day corridor (D-3 from this event) and joins `ism-manufacturing-2026-10-01` and `pce-2026-09-30` as `adjacentStrongIds`. Nothing new **undated** was found. **Geopolitical:** the UNSC entries in the 09-28/09-29/09-30 corridor (2334, Haiti GSF adoption/expiry) are unchanged, still `estimate`; not re-checked in depth given `symbols: []` and `low` impact. **The event's own canonical status has moved and this row is the first to record it:** `src/domain/market-events/dallas-fed-tssos-2026-09-29.json` reads **`status: "confirmed"`**, promoted 2026-09-20 by #3358's new `FRB:` source prefix — the schema gap this doc's D-14 row and leg 1 named as the *only* thing holding the date at `estimate` is now closed, on the same two primaries already quoted, never on new doubt about the date. This document's own header line (above) still reads the pre-promotion `estimate` text and is left as written at initial research, matching the sibling [`dallas-fed-mfg-2026-09-28`](dallas-fed-mfg-2026-09-28.md) doc's identical header staleness after the same promotion — the live status lives in the canonical JSON and in this row, not in frozen initial-research prose. | **No** — the never-a-trade refusal is unweakened and the mechanism (a larger 10:00 ET print half an hour ahead) is untouched; what moved is the *inputs* the eventual print will land against (a settled hawkish hike rather than a coin flip, oil reversing, VIX back to calm contango), which sharpens the read for the eventual close-out without changing today's stand-aside. Status flip to `confirmed` is schema, not research, per #3358. | 2026-09-29 per the `low:0+` band (every 7d) — the event's own date; in practice the next session is the close-out |
 | 2026-09-29 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.1 (+1.2pt since last), band unchanged (low:0+), 66 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-06 |
+| 2026-09-30 | D+1 | **Close-out.** Cache busted first (`earnings-cycle`/`intraday-edges`); `symbols: []` gives neither instrument a target, unchanged since initial research — "re-run instrument data" means re-fetching every cited surface direct. **September report fetched direct:** `dallasfed.org/research/surveys/tssos/2026/2609` (desktop-UA curl, **HTTP 200, 68,567 bytes**). **Data were collected Sept. 15–23**, verbatim, both edges exact — the sourced 2020-twin field window this doc derived at D-14 held. Full print in `## Outcome` below. **`FT-…-3` KILLED:** SPY's 09-29 open→close (own Cboe delayed-quote pull, open 766.95 → close 764.20, **−0.359%**) ranks **60th percentile** against its own trailing-60 \|open→close\| distribution — short of the registered **≥72nd** floor (QQQ ranks lower still, **27th**, actually below the kill switch's own 50th-percentile line on that name). The six-sourced-Septembers pattern does not extend to a seventh. **`FT-…-4` PASSES:** both co-prints released on schedule at 10:00 ET — Conference Board's own page (fetched direct) reads *"Latest Press Release Updated: Tuesday, September 29, 2026"* (Index **−6.7 to 81.9** from 88.6); JOLTS's August reading is now the BLS API's own `"latest": "true"` observation (**7,079k, preliminary**, `api.bls.gov/publicAPI/v2`, fetched direct), confirming the release posted at the unmoved 10:00 ET slot. Neither print rescheduled. **`FT-…-1` and `FT-…-2` are NOT scored this session — deferred by design**, per `event-scan.mjs --due`'s `forwardTestsBeyondWindow` flag: both carry `Score by: 2026-10-06`, past this event's `closeOutWithinDays: 6` ceiling, and EVENT-RESEARCH.md is explicit that scoring before a test's own registered window closes is falsification. Recorded for the record only, not scored: the report's wages & benefits index printed **15.1** and employment printed **4.1** — both readable against FT-1's 15.4 and FT-2's 5.66 lines already, but the verdict waits for the `forward-test-due` dispatch on/after 2026-10-06. **Adjacency, light:** `event-scan.mjs --on-date=2026-09-29` shows the same 10 tracked entries every prior row recorded — nothing untracked on this event's own date; `computeAdjacentIds` corridor **65 → 66** (ordinary churn as the window rolls forward), `adjacentStrongIds` unchanged (`ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `mu-2026-09-30-print`, `pce-2026-09-30`). No adjacency proposal this close-out — nothing dated and untracked surfaced (the sweep is not mandatory at close-out). VIX **16.04** (Cboe, 09-29 close) vs 16.07 last row, essentially flat. **Never traded**, consistent with the stance's permanent refusal: `low` impact, `symbols: []`, `confirmed` date. `## Outcome` written below — this document goes quiet except for the door FT-1/-2 leave open. | Mixed: FT-3 (the tape-magnitude leg) killed, FT-4 (the attribution mechanism) passed — the never-a-trade refusal is unweakened either way, since the mechanism claim was always about WHO gets credit for a move, not how large one would be. FT-1/-2 remain open, deferred to their own score-by. | — (closed; FT-1/-2 reopen this event as `forward-test-due` once 2026-10-06 arrives) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -562,3 +563,108 @@ this doc goes quiet.
 
 **Last assessed:** 2026-09-29
 <!-- probe-ref: {"symbols":{},"vix":16.07,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-09-30, D+1 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode
+carries no `earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, unchanged since
+initial research); the cache-bust command was run regardless, per the lane's standing instruction —
+nothing here uses it. "Re-run instrument data" means the Dallas Fed's own September TSSOS release,
+fetched direct this session — `dallasfed.org/research/surveys/tssos/2026/2609`, desktop-UA curl,
+**HTTP 200, 68,567 bytes** — never recalled from memory or copied from a prior row.
+
+### What printed
+
+| Line | Sep (this print) | Aug | Change |
+|---|---|---|---|
+| General business activity (headline) | **−1.8** | ~4.2 | −6 |
+| Revenue | **−0.9** | ~7.1 | −8 |
+| Wages and benefits | **15.1** | 18.8 | −4 |
+| Employment | **4.1** | 0.8 | +3 |
+| Hours worked | 0.1 | ~6.1 | −6 |
+| Input prices | **42.1** | 35.1 | +7 (highest since Dec-2022) |
+| Selling prices | 14.9 | 8.9 | +6 |
+| Company outlook | −3.2 | 3.0 | — |
+| Outlook uncertainty | 21.4 | ~12.4 | +9 (series avg 14.1) |
+| Future revenue | 38.2 | 35.9 | — |
+| Future general business activity | 10.7 | ~18.7 | −8 |
+
+Dallas Fed's own words (fetched 2026-09-30): *"Data were collected Sept. 15–23, and 234 of the 342
+Texas service sector business executives surveyed submitted responses."* Both edges exact against
+the field window this doc derived at D-14 and sourced from 2020's own report. The report also
+states *"Next release: October 27, 2026"* — the date the already-filed
+`dallas-fed-tssos-2026-10-27` proposal names; no correction needed. (Aug comparison values above
+are back-solved from the release's own "rose/fell N points" prose against the Sep level, so carry
+±0.1–0.2 rounding; they were not independently re-pulled from the August report this session.)
+
+### Forward tests, scored
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-…-3 (SPY \|open→close\| ≥ 72nd pctile, own trailing-60) | ≥72nd, registered Medium | SPY open **766.95** → close **764.20**, **−0.359%**, ranks **60th** pctile (36/60 sessions moved less); QQQ open 740.18 → close 737.93, −0.304%, ranks **27th** | **KILLED** |
+| FT-…-4 (Consumer Confidence AND JOLTS both release at 10:00 ET on 09-29) | both at 10:00 ET, registered as the structural claim behind FT-3 | Both released on schedule, neither moved off 10:00 ET | **PASSED** |
+
+**FT-4 passes cleanly, and it is the mechanism claim, not the magnitude one.** Conference Board's
+own page (conference-board.org/topics/consumer-confidence, fetched direct 2026-09-30) reads *"US
+Consumer Confidence Fell in September... Latest Press Release Updated: Tuesday, September 29,
+2026"* — Index **−6.7 to 81.9** from 88.6, Present Situation −7.9 to 109.3 (turned negative for the
+first time since Sept-2024, per the release's own words), Expectations −5.9 to 63.6 (a third
+straight monthly decline). JOLTS's August reading is now the BLS public API's own `"latest":
+"true"` observation — **7,079k, preliminary** (`api.bls.gov/publicAPI/v2/timeseries/data/JTS000000000000000JOL`,
+fetched direct), continuing down from July's 7,335k, confirming the release posted at the same
+10:00 ET slot every prior pulse recorded and none ever logged moving.
+
+**FT-3 is a genuine miss, and it is the more consequential of the two.** The registered prediction
+needed SPY to clear the 72nd-percentile floor five of the six historical Septembers cleared; it
+reached only the 60th, and QQQ — not itself the registered instrument, but the same trailing-60
+method — reached only the 27th, actually below the kill switch's own 50th-percentile line on that
+name. **This is the honest way n=6→n=7 was always going to go some of the time:** two genuinely
+soft co-prints stacked at 10:00 (a 6.7-point Consumer Confidence drop, a second straight JOLTS
+downtick) and the tape still moved *less* than its own recent-history median, not more. The
+structural claim FT-4 registers — that whatever moves on 09-29 belongs to the 10:00 print, never to
+this survey at 10:30 — is untouched either way: nothing about a quiet session changes who gets
+credit for it. What the miss actually retires is the *magnitude* leg's confidence: a median
+79.2nd-percentile on n=6 read as a real, replicable pattern (p ≈ 0.008 under a uniform null); one
+more observation at the 60th (SPY) / 27th (QQQ) pulls the sourced sample's own median down and is
+exactly the kind of single new data point a six-observation claim should be sized to move.
+
+### Forward tests, deferred by design
+
+**`FT-…-1` (wages ≥ 15.4) and `FT-…-2` (employment < 5.66) are NOT scored this session.** Both
+carry `Score by: 2026-10-06`, past this event's `closeOutWithinDays: 6` ceiling; `event-scan.mjs
+--due` names them in `forwardTestsBeyondWindow` rather than holding the close-out for them, per
+EVENT-RESEARCH.md's `event-passed-unscored` mode (#2884/#2988) — scoring a prediction before its own
+registered window closes is falsification, so this close-out records them **unscoreable on
+purpose**, not for lack of data. For the record only, since the September report already reads
+publicly above: wages printed **15.1** (below FT-1's 15.4 line) and employment printed **4.1**
+(below FT-2's 5.66 line). Neither reading is scored here — the verdict waits for the
+`forward-test-due` dispatch this event's own fragment reopens on or after 2026-10-06, from
+re-run instrument data at that time, never from this paragraph.
+
+### Adjacency, light
+
+`event-scan.mjs --on-date=2026-09-29` shows the same 10 tracked entries every prior row recorded —
+nothing untracked on this event's own date. `computeAdjacentIds` corridor **65 → 66** (ordinary
+churn as the ±5-day window rolls forward), `adjacentStrongIds` unchanged: `ism-manufacturing-2026-10-01`,
+`jobs-2026-10-02`, `mu-2026-09-30-print`, `pce-2026-09-30`. No adjacency proposal from this
+close-out — nothing dated and untracked surfaced, and the sweep is not mandatory at close-out per
+[`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md). VIX **16.04** (Cboe, 09-29 close) vs 16.07
+at the last row — flat, well under the 3-point regime screen.
+
+### Honest accounting
+
+Of the two forward tests this close-out could score, one passed and one was killed — the pass is
+the structural claim this doc leaned on hardest (the attribution mechanism), the kill is the
+magnitude claim it was more tentative about from the start (registered Medium, explicitly flagged
+at initial research as resting on n=6 with one 100th-percentile outlier). That is the honest
+outcome for a doc whose whole finding was "this tape is real but it belongs to someone else": the
+tape this year was quiet rather than loud, which does not contradict the attribution argument, it
+just gives the magnitude argument a data point against it. The stance's structural refusal — never
+trade this print, `low` impact, `symbols: []` — was never at risk here and holds again; nothing was
+sized either way. `## Outcome` now exists for the tests this window could score — per
+`event-scan.mjs`'s `hasOutcome` check this document goes quiet on the `event-passed-unscored` door,
+with exactly one door back in: `FT-…-1` and `FT-…-2` reopen it as `forward-test-due` once
+2026-10-06 arrives.
