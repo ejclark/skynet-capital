@@ -133,6 +133,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # #3334's real root cause (Moneypenny on #4027, 2026-09-29): a persisted checkout leaves an
+          # `http.https://github.com/.extraheader` holding this job's read-only GITHUB_TOKEN, and that
+          # header beats the App token the session puts in the remote URL — so pushes 403'd as
+          # `github-actions[bot]` whichever token the session held. The App already has write (it
+          # pushed `bd111d34` once the header was cleared by hand). Nothing in this job needs the
+          # ambient credential after checkout; every push goes through the App token.
+          persist-credentials: false
 
       # The App identity, so the repair PR emits `pull_request.opened` and `verify` actually runs.
       # Same reasoning as moneypenny-events.yml's header — a PR with zero checks is worse than a red one.
