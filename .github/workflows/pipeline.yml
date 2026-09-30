@@ -295,6 +295,7 @@ jobs:
           contains(fromJSON('["opened","reopened","ready_for_review","synchronize"]'), github.event.action) &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 50 # room for two capped rate-limit waits (#4351)
     permissions:
       contents: read # checkout only — the merge and the label read use the app token minted below
     steps:
@@ -313,13 +314,35 @@ jobs:
       # snapshot (ship.sh --hold used to label just after `opened`, which is how #3735 merged
       # unreviewed — docs/LESSONS.md) is invisible to it. Re-read the LIVE labels right before
       # arming; a failed read fails the job, so nothing arms unchecked.
+      # #4351 (2026-09-30): a burst of ~120 issue writes spent the App's hourly budget and both of
+      # this job's API calls 403'd — two green PRs sat unarmed with nothing to re-arm them. Each call
+      # below goes through this wrapper: on a rate-limit error it waits for the reset (capped at 15
+      # min, 3 tries) instead of failing. Any other error still fails at once, unchanged.
+      - name: Rate-limit retry helper
+        run: |
+          cat > "$RUNNER_TEMP/gh-retry.sh" <<'EOF'
+          #!/usr/bin/env bash
+          set -uo pipefail
+          for i in 1 2 3; do
+            if out=$("$@" 2>&1); then printf '%s\n' "$out"; exit 0; fi
+            printf '%s\n' "$out" >&2
+            grep -qiE 'rate limit|HTTP 429' <<<"$out" || exit 1
+            [ "$i" = 3 ] && exit 1
+            reset=$(gh api rate_limit --jq '[.resources.core.reset, .resources.graphql.reset] | max' 2>/dev/null || echo 0)
+            wait=$(( reset - $(date +%s) + 5 )); [ "$wait" -lt 30 ] && wait=30; [ "$wait" -gt 900 ] && wait=900
+            echo "rate-limited (try $i/3) — waiting ${wait}s for the reset" >&2
+            sleep "$wait"
+          done
+          EOF
+          chmod +x "$RUNNER_TEMP/gh-retry.sh"
+
       - name: Still unheld? (live labels, not the event snapshot)
         id: hold
         if: ${{ steps.app-token.outputs.token != '' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          LABELS=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
+          LABELS=$("$RUNNER_TEMP/gh-retry.sh" gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
           if printf '%s\n' "$LABELS" | grep -qx 'hold-merge'; then
             echo "hold-merge is on the PR now — not arming"; echo "held=true" >> "$GITHUB_OUTPUT"
           else
@@ -374,11 +397,11 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           PR="${{ github.event.pull_request.number }}"
-          if ! OUT=$(gh pr merge --auto --squash "$PR" 2>&1); then
+          if ! OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --auto --squash "$PR" 2>&1); then
             if echo "$OUT" | grep -qi "clean status"; then
               echo "$OUT"
               echo "already green — merging directly instead of arming"
-              gh pr merge --squash "$PR"
+              "$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR"
             else
               echo "$OUT" >&2
               exit 1

@@ -345,6 +345,18 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
     expect(condition).toContain("needs.e2e.result == 'skipped'");
   });
 
+  // #4351 (2026-09-30): a burst of issue writes spent the App's budget; both API calls 403'd and
+  // two green PRs sat unarmed. Every call the job makes waits out a rate limit instead of failing.
+  it("routes every GitHub call through the rate-limit retry helper", () => {
+    expect(job).toContain("- name: Rate-limit retry helper");
+    const calls =
+      job.match(/(?:\$\(|^\s+)(?:"\$RUNNER_TEMP\/gh-retry\.sh" )?gh (?:api|pr merge)[^\n]*/gm) ??
+      [];
+    const outsideHelper = calls.filter((c) => !c.includes("rate_limit"));
+    expect(outsideHelper.length).toBeGreaterThanOrEqual(3);
+    for (const call of outsideHelper) expect(call).toContain('"$RUNNER_TEMP/gh-retry.sh" gh');
+  });
+
   it("arms only when that live read said unheld", () => {
     const arm = job.slice(job.indexOf("- name: Arm auto-merge"));
     expect(arm).toContain("steps.hold.outputs.held == 'false'");
