@@ -93,6 +93,7 @@ npm run typecheck
 - Moneypenny — the GitHub App orchestrating issues/PRs across the whole repo: [`docs/MONEYPENNY.md`](docs/MONEYPENNY.md)
 - Fitness gates & the governor dispatch cycle that pays down debt automatically: [`docs/COACHES.md`](docs/COACHES.md)
 - How issues, PRs and the backlog are shaped so both humans and AI sessions can pick them up cold: [`docs/ISSUES.md`](docs/ISSUES.md)
+- How we run small experiments that get better each cycle, and the list of loops running now: [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md)
 - Our working conventions, portable to any repo: [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md)
 - The brand & identity system (what makes it feel like Skynet): [`docs/BRAND.md`](docs/BRAND.md)
 - Feeding a code-graph (Graphify) into brand cohesion: [`docs/BCP-GRAPHIFY.md`](docs/BCP-GRAPHIFY.md)
