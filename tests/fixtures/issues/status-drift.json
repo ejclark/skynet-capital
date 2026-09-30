@@ -1,0 +1,32 @@
+[
+  {
+    "number": 1,
+    "title": "stale ready row",
+    "body": "**One-line ask.**\n\n| | |\n|---|---|\n| **Status** | Ready · plan |\n\n- A talking point.\n",
+    "labels": [
+      {
+        "name": "plan"
+      }
+    ]
+  },
+  {
+    "number": 2,
+    "title": "agreeing row",
+    "body": "**One-line ask.**\n\n| | |\n|---|---|\n| **Status** | Blocked · a decision |\n\n- A talking point.\n",
+    "labels": [
+      {
+        "name": "needs-info"
+      }
+    ]
+  },
+  {
+    "number": 3,
+    "title": "free-text row",
+    "body": "**One-line ask.**\n\n| | |\n|---|---|\n| **Status** | proposed |\n\n- A talking point.\n",
+    "labels": [
+      {
+        "name": "idea"
+      }
+    ]
+  }
+]
