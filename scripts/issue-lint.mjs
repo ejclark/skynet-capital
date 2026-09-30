@@ -216,12 +216,20 @@ function collectNotes(text, notes) {
   }
 }
 
+/** The decision callout (docs/ISSUES.md rule 7): a `> [!IMPORTANT]` alert above the fold that
+ *  says "Needs from you". Exported because the rule is also checked AFTER filing — the label
+ *  usually lands later, from another lane (#3913 slice 2, scripts/moneypenny/decision-callout.mjs). */
+export function hasDecisionCallout(body = "") {
+  const top = aboveFold(body ?? "");
+  return /^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top);
+}
+
 /** `needs-eric` promises Eric a decision; this is where the decision is required to live —
  *  above the fold, in its own callout, never folded in with build-only "Open questions"
- *  (docs/ISSUES.md rule 6, Eric 2026-08-30: issues buried the action-required item behind a fold). */
+ *  (docs/ISSUES.md rule 7, Eric 2026-08-30: issues buried the action-required item behind a fold). */
 function checkNeedsFromYou(text, labels, problems, notes) {
   const top = aboveFold(text);
-  const hasCallout = /^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top);
+  const hasCallout = hasDecisionCallout(text);
 
   if (Array.isArray(labels) && labels.includes("needs-eric") && !hasCallout) {
     problems.push(

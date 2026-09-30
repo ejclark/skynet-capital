@@ -27,6 +27,7 @@ export function statusForIssue(issue?: {
   state?: "open" | "closed";
   labels?: string[];
   hasOpenLinkedPr?: boolean;
+  decisionCalloutMissing?: boolean;
 }): "Backlog" | "Ready" | "In Progress" | "Blocked" | "Done";
 
 export function isBacklogCandidate(issue?: { labels?: string[] }): boolean;

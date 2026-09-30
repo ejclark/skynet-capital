@@ -27,6 +27,7 @@
 // #3914: every `gh project` call here goes through `ghProject`, because gh reports any non-NOT_FOUND
 // owner-lookup failure as the bare string `unknown owner type` — see projects.mjs's block above
 // `MASKED_OWNER_FAILURE` for the reproduction and why that string is never a real classification.
+import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRest, sh, withRetry } from "./gh.mjs";
 import {
   explainMaskedOwnerFailure,
@@ -106,7 +107,12 @@ export function syncIssue(issueNumber, { horizon } = {}) {
     return { skipped: true, reason: "not a backlog candidate" };
   }
 
-  const status = statusForIssue({ state: issue.state, labels });
+  const decisionCalloutMissing = missingDecisionCallout({
+    labels,
+    body: issue.body,
+    author: issue.user?.login,
+  });
+  const status = statusForIssue({ state: issue.state, labels, decisionCalloutMissing });
 
   // Add-or-find, never add-and-hope: `item-add` errors on an issue that is already an item, and
   // every sync after an issue's first one hits exactly that (#3954).
@@ -177,7 +183,7 @@ export function syncIssue(issueNumber, { horizon } = {}) {
   setSingleSelect("Status", status);
   if (horizon) setSingleSelect("Horizon", horizon);
 
-  return { status, horizon: horizon ?? null, added };
+  return { status, horizon: horizon ?? null, added, decisionCalloutMissing };
 }
 
 function main() {
@@ -196,6 +202,11 @@ function main() {
     `issue #${issueNumber}: ${result.added ? "added to board" : "already on board"}, ` +
       `Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : ""}`,
   );
+  if (result.decisionCalloutMissing) {
+    console.log(
+      `issue #${issueNumber}: labelled needs-eric with no "Needs from you" callout — kept out of Blocked (#3913)`,
+    );
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main();

@@ -106,7 +106,10 @@ Rules that make it work, in priority order:
    a member or open build forks — questions nobody is blocked on. Mixing the two is how a decision
    Eric alone can make ends up 3/4 of the way down an accordion, which is the defect this rule
    exists to prevent (Eric, 2026-08-30: issues bury the action-required item behind a fold instead
-   of surfacing it below the context).
+   of surfacing it below the context). The rule holds **after filing too**: the label usually
+   lands later, from another lane, so `issues.mjs update --add needs-eric` refuses a body with no
+   callout, and the board keeps such an issue out of Blocked until the callout exists
+   (`scripts/moneypenny/decision-callout.mjs`, #3913). Eric's own issues are exempt.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
    after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
