@@ -52,3 +52,8 @@ export const submitThesis = (
   playbookId?: string,
 ): Promise<{ readonly ok: boolean; readonly error?: string }> =>
   postJson("/api/council", { text, ...(playbookId ? { playbookId } : {}) });
+
+/** Take back your own line for this week (issue #2224 slice 4). The server derives whose line from
+ *  the session, never from this body — there is no way to name someone else's. */
+export const retractThesis = (): Promise<{ readonly ok: boolean; readonly error?: string }> =>
+  postJson("/api/council", { retract: true });

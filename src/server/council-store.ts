@@ -115,6 +115,23 @@ export class CouncilStore {
     this.file.write(next);
     return next;
   }
+
+  /** Take back one member's line for one week (issue #2224 slice 4 — author-retract, the only
+   *  removal shape 1 has: nobody moderates anyone else's line). A week left empty is dropped so
+   *  the file never carries hollow keys; retracting a line that isn't there is a no-op, not an
+   *  error — a double-tap or a stale tab lands in the same state. */
+  retract(week: string, opaqueMemberId: string): CouncilState {
+    const state = this.load();
+    const members = state.weeks[week];
+    if (!(members && opaqueMemberId in members)) return state;
+    const { [opaqueMemberId]: _gone, ...rest } = members;
+    const { [week]: _week, ...otherWeeks } = state.weeks;
+    const next: CouncilState = {
+      weeks: Object.keys(rest).length > 0 ? { ...otherWeeks, [week]: rest } : otherWeeks,
+    };
+    this.file.write(next);
+    return next;
+  }
 }
 
 /** Derives the council file as a sibling of the already-pinned controls file — no new env var, no
