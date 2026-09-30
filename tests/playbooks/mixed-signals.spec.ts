@@ -112,8 +112,11 @@ describe("detectMixedSignals: opt-in, off by default", () => {
     expect(detectMixedSignals([on(play("P", ["NVDA"]))], context)).toEqual([]);
   });
 
-  it("finds no house playbook opted in today", () => {
-    for (const p of [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON]) {
+  it("opts in exactly one house playbook, S1-NVDA, and only to observe", () => {
+    expect(S1_NVDA.mixedSignals).toEqual({ action: "observe" });
+    // HC-SAURON trades this very disagreement (contrarian); TACO-DJT has no news feed; G1-GOOG
+    // is the runner-up, left dark so the falsifier reads one playbook's tape.
+    for (const p of [G1_GOOG, TACO_DJT, HC_SAURON]) {
       expect(p.mixedSignals).toBeUndefined();
     }
     const context = aContext({
@@ -122,7 +125,9 @@ describe("detectMixedSignals: opt-in, off by default", () => {
       DJT: { momentum: 0.1, sentiment: -0.9 },
     });
     const all = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON].map(on);
-    expect(detectMixedSignals(all, context)).toEqual([]);
+    expect(detectMixedSignals(all, context).map((o) => `${o.playbookId}/${o.symbol}`)).toEqual([
+      "S1-NVDA/NVDA",
+    ]);
   });
 });
 
@@ -197,5 +202,51 @@ describe("withPlaybooks + mixed signals: no order is placed, changed or suppress
       log: (l) => lines.push(l),
     }).decide(context, portfolio);
     expect(lines).toEqual([]);
+  });
+});
+
+describe("S1-NVDA in the live composition (#3194 step 5b-i)", () => {
+  // Inside S1's entry window: a confirmed print 10 days out, so desiredState says "long".
+  const calendar: readonly EarningsPrint[] = [
+    { symbol: "NVDA", date: "2026-10-10", status: "confirmed", source: "test fixture" },
+  ];
+  const base: Persona = {
+    id: "base",
+    name: "Base",
+    thesis: "test",
+    decide: (): OrderIntent[] => [
+      { symbol: "AAPL", side: "buy", quantity: 5, type: "market", reason: "reflex" },
+      { symbol: "NVDA", side: "sell", quantity: 1, type: "market", reason: "reflex" },
+    ],
+  };
+  const mixed = aContext(
+    { NVDA: { last: 100, momentum: 0.05, sentiment: -0.5 }, AAPL: { last: 100 } },
+    "2026-09-30T14:30:00Z",
+  );
+  const portfolio = aPortfolio({ cash: 10_000 });
+  const { mixedSignals: _dial, ...withoutDetector } = S1_NVDA;
+
+  it("logs the mixed reading for S1-NVDA on a mixed-signal fixture", () => {
+    const lines: string[] = [];
+    withPlaybooks(base, [on(S1_NVDA)], calendar, [], { log: (l) => lines.push(l) }).decide(
+      mixed,
+      portfolio,
+    );
+    expect(lines).toEqual([
+      "[mixed-signals] S1-NVDA NVDA @ 2026-09-30T14:30:00Z: momentum 5.0% vs news sentiment " +
+        "-0.50 (observe-only — no order placed, changed or held back)",
+    ]);
+  });
+
+  it("returns byte-identical intents with and without the detector", () => {
+    const lines: string[] = [];
+    const withDial = withPlaybooks(base, [on(S1_NVDA)], calendar, [], {
+      log: (l) => lines.push(l),
+    }).decide(mixed, portfolio);
+    const without = withPlaybooks(base, [on(withoutDetector)], calendar).decide(mixed, portfolio);
+    expect(JSON.stringify(withDial)).toBe(JSON.stringify(without));
+    // The entry still fires on the mixed cycle — observing never holds it back.
+    expect(withDial.some((i) => i.symbol === "NVDA" && i.side === "buy")).toBe(true);
+    expect(lines).toHaveLength(1);
   });
 });
