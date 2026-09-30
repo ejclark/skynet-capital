@@ -978,6 +978,96 @@ const sauronAllPasses = {
 // the frame that pictures the toggle on flips this immediately before ticking the box, and the
 // component's own refetch (a new react-query key) picks up the wider payload.
 let tradedPassesIncluded = false;
+// COND-SCOUT's shadow probes on the Heartbeat (#3651 slice 7b) — illustrative ledger: one bet with
+// enough closes for a verdict (its band spans zero), one still unproven, two probes open.
+const probesNow = Date.now();
+const probeDay = 86_400_000;
+const sauronProbes = {
+  available: true,
+  simulated: true,
+  at: probesNow,
+  open: [
+    {
+      id: "NVDA@1",
+      symbol: "NVDA",
+      hypothesis: "trend-continuation",
+      openedAt: probesNow - 2.1 * probeDay,
+      expiresAt: probesNow + 11.9 * probeDay,
+      entryPrice: 182.4,
+      stopPrice: 173.28,
+      notional: 1459.2,
+      markRoi: 0.018,
+    },
+    {
+      id: "MSFT@2",
+      symbol: "MSFT",
+      hypothesis: "oversold-rebound",
+      openedAt: probesNow - 1.2 * probeDay,
+      expiresAt: probesNow + 3.8 * probeDay,
+      entryPrice: 468.1,
+      stopPrice: 444.7,
+      notional: 1404.3,
+      markRoi: -0.006,
+    },
+  ],
+  retros: [
+    {
+      probeId: "GOOGL@3",
+      symbol: "GOOGL",
+      hypothesis: "oversold-rebound",
+      reason: "horizon",
+      closedAt: probesNow - 1 * probeDay,
+      daysHeld: 5,
+      roi: 0.024,
+      roiPerDay: 0.0048,
+      directionRight: true,
+      soonerWasBetter: true,
+      earlierExits: [],
+      laterExits: [{ label: "1 week", roi: 0.031 }, { label: "3 weeks" }, { label: "1 month" }],
+      market: { symbol: "SPY", roi: 0.013, excess: 0.011 },
+    },
+    {
+      probeId: "TSLA@4",
+      symbol: "TSLA",
+      hypothesis: "trend-continuation",
+      reason: "invalidated",
+      closedAt: probesNow - 3 * probeDay,
+      daysHeld: 3.4,
+      roi: -0.052,
+      roiPerDay: -0.0153,
+      directionRight: false,
+      soonerWasBetter: false,
+      earlierExits: [],
+      laterExits: [{ label: "2 months" }, { label: "6 months" }, { label: "10 months" }],
+      market: { symbol: "SPY", roi: 0.008, excess: -0.06 },
+    },
+  ],
+  verdicts: [
+    {
+      hypothesis: "oversold-rebound",
+      closes: 11,
+      winRate: 0.636,
+      meanRoi: 0.009,
+      band: { ci: { low: -0.6, high: 2.3 } },
+      meanExcessVsMarket: 0.004,
+      outliers: [],
+      call: "no edge shown",
+      callWithoutOutliers: "no edge shown",
+    },
+    {
+      hypothesis: "trend-continuation",
+      closes: 3,
+      winRate: 0.333,
+      meanRoi: -0.011,
+      band: { ci: null },
+      meanExcessVsMarket: -0.019,
+      outliers: [],
+      call: "unproven",
+      callWithoutOutliers: "unproven",
+    },
+  ],
+};
+
 const sauronHeartbeat = () => {
   const lastAgo = sessionOpen ? 22_000 : 16 * 3_600_000;
   return {
@@ -1116,6 +1206,7 @@ const { page, origin, out, close } = await openShell({
     "/api/desk/bot-sauron/pulse": sauronPulse,
     "/api/desk/bot-sauron/activity": sauronActivity,
     "/api/desk/bot-sauron/heartbeat": sauronHeartbeat,
+    "/api/desk/bot-sauron/probes": sauronProbes,
     "/api/desk/bot-sauron/decisions": () =>
       tradedPassesIncluded ? sauronAllPasses : sauronNoTrades,
     "/api/accounts/human-eric/equity-curve": ericEquityCurve,
@@ -1347,6 +1438,14 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
 await page.locator(".hb-section").waitFor();
 await shootCockpit("accounts-heartbeat-phone");
+// COND-SCOUT's shadow probes (#3651 slice 7b), scrolled so the card's title and its "Simulated"
+// banner clear the sticky header — the banner is the claim this frame has to prove.
+await page.evaluate(() => {
+  const card = document.querySelector(".sp-card");
+  const sticky = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
+  if (card) window.scrollBy(0, card.getBoundingClientRect().top - sticky - 8);
+});
+await shootCockpit("accounts-heartbeat-probes-phone");
 // The no-trade log below the verdicts, scrolled into view (#3687 slice 4).
 await page.locator(".hb-log .cycles").scrollIntoViewIfNeeded();
 await shootCockpit("accounts-heartbeat-log-phone");
@@ -1368,6 +1467,8 @@ await shootCockpit("accounts-heartbeat-chip-desktop");
 await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
 await page.locator(".hb-log .cycles").waitFor();
 await shootCockpit("accounts-heartbeat-log-desktop");
+await page.locator(".sp-card").scrollIntoViewIfNeeded();
+await shootCockpit("accounts-heartbeat-probes-desktop");
 
 // Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
 await page.setViewportSize({ width: 390, height: 844 });
