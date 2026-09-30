@@ -59,9 +59,11 @@ import {
   ensureLabel,
   ensureVocabulary,
   isBuildable,
+  issueNumberFromSlug,
   LABELS,
   MANAGED_LABELS,
   parkedReason,
+  setInProgress,
 } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -207,6 +209,18 @@ export function releaseClaim(slug) {
 }
 
 /**
+ * Release a lease AND take the issue's `in-progress` label back off (#3960) — what both release
+ * paths (`--release`, the `release-claim` dispatch) mean by "this is no longer being built". A
+ * wrapper, not an edit to `releaseClaim`: tests/arch/lease-namespace.spec.ts pins that function's
+ * source text. The label comes off even when no lease was held — a build that died still ended.
+ */
+export function releaseBuild(slug) {
+  const freed = releaseClaim(slug);
+  setInProgress(issueNumberFromSlug(slug), false);
+  return freed;
+}
+
+/**
  * READ-ONLY peek at a lease — never claims, never reclaims a stale one, never writes anything.
  * Exists so a caller that only wants to SKIP work Moneypenny already holds (e.g. `/work-issues`,
  * which checks for an open PR but had no visibility into a claim taken before any PR exists) can
@@ -269,6 +283,8 @@ export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
+  // #3960: the board's In Progress column reads this label; the release path takes it back off.
+  setInProgress(issue.number, true);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
@@ -341,6 +357,7 @@ export function claimPlan(ctx, nowMs = Date.now(), sha = process.env.GITHUB_SHA 
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
+  setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
@@ -691,6 +708,18 @@ function commentAndFlagConflictCap(i) {
 }
 
 /**
+ * #3960 — take a stale `in-progress` label off, then say so once. Label FIRST and strict (unlike the
+ * claim paths' best-effort `setInProgress`): the label's absence is the audit's only memory, so a
+ * removal that failed must fail the intent and leave no comment behind — otherwise every push would
+ * post the same comment again. A comment lost after a good removal costs one line, never a storm.
+ */
+function clearStaleInProgress(i) {
+  if (!i.issueNumber) return;
+  sh("gh", ["issue", "edit", String(i.issueNumber), "--remove-label", LABELS.inProgress.name]);
+  sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+}
+
+/**
  * The decision half of the event-research repair dispatch: every `flag-stall` in ONE audit run
  * becomes ONE `gh workflow run` carrying the whole list, not one run per issue.
  *
@@ -796,7 +825,7 @@ function executeOne(i, stallRepairs = []) {
     return `commented on #${i.issueNumber}`;
   }
   if (i.kind === "release-claim") {
-    const freed = releaseClaim(i.slug);
+    const freed = releaseBuild(i.slug);
     console.log(
       `::notice::claim/${i.slug} ${freed ? "released" : "was not held"} (by @${i.actor})`,
     );
@@ -850,6 +879,11 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::warning::merge conflict — #${i.prNumber} \`${i.title}\` (attempt ${i.attempt})`);
     return `⚠️ conflict flagged — \`${i.title}\` (commented on #${i.prNumber}, attempt ${i.attempt})`;
   }
+  if (i.kind === "clear-in-progress") {
+    clearStaleInProgress(i);
+    console.log(`::notice::cleared in-progress on #${i.issueNumber} — quiet ${i.hoursQuiet}h`);
+    return `🧹 cleared \`in-progress\` — \`${i.title}\` quiet ${i.hoursQuiet}h (#${i.issueNumber})`;
+  }
   if (i.kind === "flag-conflict-cap") {
     commentAndFlagConflictCap(i);
     console.log(`::warning::conflict repair cap reached — #${i.prNumber} \`${i.title}\``);
@@ -879,7 +913,7 @@ function runCliFlag(argv, ctx) {
   if (relIdx >= 0 && argv[relIdx + 1]) {
     const slug = slugify(argv[relIdx + 1]);
     console.log(
-      releaseClaim(slug)
+      releaseBuild(slug)
         ? `::notice::released the lease for ${slug}`
         : `::notice::no lease held for ${slug} — nothing to release`,
     );

@@ -40,16 +40,24 @@ export interface AlreadyFlaggedPR {
   sha: string | null;
   attempt: number;
 }
+/** An open issue carrying `in-progress`, and how long it has been quiet (#3960). */
+export interface InProgressIssue {
+  title: string;
+  number: number;
+  hoursQuiet: number;
+}
 export interface AuditDeps {
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
   conflictedPRs?: ConflictedPR[];
+  staleInProgress?: InProgressIssue[];
   alreadyFlagged?: number[];
   alreadyFlaggedPRs?: (number | AlreadyFlaggedPR)[];
   staleAfterDays?: number;
   silentAfterHours?: number;
   planStallAfterHours?: number;
+  inProgressStaleAfterHours?: number;
 }
 export interface AuditIntent {
   kind: string;
@@ -60,6 +68,8 @@ export interface AuditIntent {
   quietDays?: number;
   hoursSinceFiled?: number;
   hoursSinceReady?: number;
+  /** How long a `clear-in-progress` intent's issue had been quiet (#3960). */
+  hoursQuiet?: number;
   /** Which re-dispatch this is for a `flag-conflict`/`flag-conflict-cap` intent (#1403). */
   attempt?: number;
 }

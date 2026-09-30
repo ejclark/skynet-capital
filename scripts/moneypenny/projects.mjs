@@ -70,13 +70,20 @@ export const FIELDS = [
  *
  * Precedence, most authoritative first: closed always wins (an issue can't be both Done and
  * Blocked); needs-eric/needs-info next, because a blocked item should read as blocked even if a
- * PR happens to be open against it; then an open linked PR; then ready; else it sits in Backlog.
+ * PR happens to be open against it; then `in-progress` (or an open linked PR); then ready; else
+ * it sits in Backlog.
+ *
+ * #3960 (2026-09-30): the `in-progress` label is what fills "In Progress" now. The column keyed
+ * only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions auto-merge
+ * within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit to 3 and
+ * it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in for a
+ * caller that can see one.
  */
 export function statusForIssue({ state = "open", labels = [], hasOpenLinkedPr = false } = {}) {
   if (state === "closed") return "Done";
   const has = (name) => labels.includes(name);
   if (has("needs-eric") || has("needs-info")) return "Blocked";
-  if (hasOpenLinkedPr) return "In Progress";
+  if (has("in-progress") || hasOpenLinkedPr) return "In Progress";
   if (has("ready")) return "Ready";
   return "Backlog";
 }

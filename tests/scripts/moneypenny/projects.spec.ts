@@ -39,6 +39,18 @@ describe("moneypenny projects: statusForIssue", () => {
     expect(statusForIssue({ labels: ["ready"], hasOpenLinkedPr: true })).toBe("In Progress");
   });
 
+  // #3960: the label is the in-flight signal — the sync never passes `hasOpenLinkedPr`, and live
+  // sessions auto-merge before an open PR could be seen, so without it the column read 0 forever.
+  it("the in-progress label reads In Progress ahead of ready, with no linked PR needed", () => {
+    expect(statusForIssue({ labels: ["feedback", "ready", "in-progress"] })).toBe("In Progress");
+  });
+
+  it("in-progress still yields to Blocked and to Done", () => {
+    expect(statusForIssue({ labels: ["in-progress", "needs-info"] })).toBe("Blocked");
+    expect(statusForIssue({ labels: ["in-progress", "needs-eric"] })).toBe("Blocked");
+    expect(statusForIssue({ state: "closed", labels: ["in-progress"] })).toBe("Done");
+  });
+
   it("ready with no linked PR reads Ready", () => {
     expect(statusForIssue({ labels: ["ready"] })).toBe("Ready");
   });
