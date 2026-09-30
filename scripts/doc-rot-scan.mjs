@@ -19,16 +19,24 @@
 // ① and ② share one ratcheted budget and are advisory in CI (since 2026-08-29, Eric — see
 // tests/arch/doc-rot.spec.ts) — pure doc-hygiene debt, the same class as arch-scan/dupe-scan/
 // dead-scan. ③ is checked and reported SEPARATELY, on its own exit code, and never enters that
-// ratchet or budget: a stale structural map means every blast-radius query (`graphify affected`,
-// governor's own file-fence reasoning) answers from outdated structure — a correctness risk, not a
-// hygiene one — so it stays a real, always-enforced gate rather than folding into the advisory debt
-// count. A binary "is it stale right now" fact also doesn't suit a ratchet that only ever lowers.
+// ratchet (a binary "is it stale right now" fact doesn't suit a ratchet that only ever lowers).
+// ③ was blocking until 2026-09-30 (#4074) on the claim that a stale map poisons blast-radius
+// queries — false: `graphify affected` reads the live, git-ignored `graphify-out/`, never this
+// committed snapshot. It failed on an ambient property of `main` (~50 commits/day), so it turned
+// unrelated PRs red almost daily. Now advisory, like every other debt dimension (docs/COACHES.md →
+// "A gate is a momentum breaker unless it protects a constraint"); exit codes 2/3 stay so the
+// fixtures pin behavior.
+//
+// Squash-merge orphans the stamp: `graph:refresh` runs on a PR branch and stamps that branch's
+// sha, which squash-merging drops. When the stamp is unreachable on a FULL clone, measure from the
+// commit that landed the snapshot (`git log -1 -- docs/STRUCTURE-graph.md`). On a shallow clone
+// that commit may be the graft boundary, so it stays UNKNOWN rather than undercount.
 //
 //   node scripts/doc-rot-scan.mjs             # report + enforce ①②(exit 1)/③(exit 2; exit 3 = unknown)
 //   node scripts/doc-rot-scan.mjs --update    # rewrite doc-rot-budget.json for ①② (ratchet: only lower)
 //   node scripts/doc-rot-scan.mjs --candidate # highest-leverage ①②finding as JSON (governor eye)
 //
-// ①② enforced (advisory) in CI via tests/arch/doc-rot.spec.ts; ③ enforced (blocking) there too.
+// ①② and ③ are all reported (advisory) in CI via tests/arch/doc-rot.spec.ts.
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -154,9 +162,16 @@ function staleGraphFindings() {
       return null;
     }
   };
-  const builtAt = git("show", "-s", "--format=%ct", m[1]);
+  // A squash-merged refresh leaves an orphaned stamp (see header): fall back to the commit that
+  // landed the snapshot, but only on a full clone.
+  let from = m[1];
+  const reachable = git("cat-file", "-e", `${from}^{commit}`) !== null;
+  if (!reachable && git("rev-parse", "--is-shallow-repository") === "false") {
+    from = git("log", "-1", "--format=%h", "--", "docs/STRUCTURE-graph.md") || from;
+  }
+  const builtAt = git("show", "-s", "--format=%ct", from);
   const headAt = git("show", "-s", "--format=%ct", "HEAD");
-  const commits = git("rev-list", "--count", `${m[1]}..HEAD`);
+  const commits = git("rev-list", "--count", `${from}..HEAD`);
   if (!(builtAt && headAt && commits !== null)) {
     // Degrade honestly: not a repo, or a commit this checkout cannot see (shallow fetch, rewritten
     // history). That is not "fresh" — it is unknown, and it gets its own exit code so a shallow CI
@@ -176,7 +191,7 @@ function staleGraphFindings() {
     {
       kind: "stale-graph",
       doc: "docs/STRUCTURE-graph.md",
-      detail: `built from ${m[1]}, ${behind} commits and ${Math.floor(days)}d behind HEAD (max ${STALE_COMMITS} commits / ${STALE_DAYS}d) — refresh is manual`,
+      detail: `built from ${m[1]}${from === m[1] ? "" : ` (landed in ${from})`}, ${behind} commits and ${Math.floor(days)}d behind HEAD (max ${STALE_COMMITS} commits / ${STALE_DAYS}d) — refresh is manual`,
     },
   ];
 }
@@ -217,9 +232,8 @@ for (const f of findings.slice(0, 15)) console.log(`  ${f.kind.padEnd(12)} ${f.d
 if (debt > 15) console.log(`  … and ${debt - 15} more`);
 console.log(`\n  findings: ${debt} across ${files.length} docs`);
 
-// Check ③, separately and always-enforced — see the header comment for why this doesn't join ①②'s
-// ratcheted, advisory budget. Distinct exit code (2) so CI can tell "the graph is stale" apart from
-// "doc-hygiene debt grew" without parsing stderr text.
+// Check ③, separately — see the header comment for why this doesn't join ①②'s ratchet. Distinct
+// exit codes (2 stale, 3 unknown) so callers can tell it apart from "doc-hygiene debt grew".
 const staleGraph = staleGraphFindings();
 if (staleGraph.length > 0) {
   const [f] = staleGraph;

@@ -142,6 +142,18 @@ collisions this fix did not cause and wasn't scoped to repair. `forward-test-id-
 at that measured `7`, not a fabricated `0` — the honest number, ratcheted down as those rows get
 renumbered, exactly as `clone-budget.json` starts non-zero rather than claiming clean.
 
+**Second instance — the code-map freshness check (2026-09-30, #4074).** The last blocking piece of
+the doc-rot coach, "structural graph freshness", failed any PR once `main` ran 50 commits past the
+`docs/STRUCTURE-graph.md` snapshot — an ambient property of `main`, not of the diff, and `main` now
+moves ~50 commits a day, so 3 of one session's 5 PRs carried an unrelated ~1,000-line refresh
+(#3830, #3984, #4070). Its "correctness, not hygiene" claim didn't survive a read: blast-radius
+queries (`graphify affected`) read the live, git-ignored `graphify-out/`, never the committed
+snapshot, so a stale map is navigation debt. Demoted to advisory (still printed on every `npm test`).
+The same read found the measurement broken: `graph:refresh` stamps the PR branch's sha, which
+squash-merge drops, so on `main` the check read UNKNOWN; it now measures from the commit that landed
+the snapshot. Falsifier: the map ≥ 500 commits behind and unrefreshed by 2026-10-31 → give the
+refresh an owner (a scheduled refresh is envelope-class, Eric's call), not a red.
+
 **Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
 dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
 templates, the `/feedback` form) stays **plain-language** for non-technical friends & family — triage
