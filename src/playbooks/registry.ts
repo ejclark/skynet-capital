@@ -9,12 +9,13 @@ import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
-import { type EnabledPlaybook, type Playbook, printWindow } from "./playbook.js";
+import {
+  type EnabledPlaybook,
+  type Playbook,
+  POST_PRINT_FLAT_DAYS,
+  printWindow,
+} from "./playbook.js";
 import type { TacticalRule } from "./tactical-playbook.js";
-
-/** Post-print hygiene shared by every date-keyed play: a position that somehow survived its
- *  print (missed exit, process restart) is exited on the first cycle after — never carried. */
-const POST_PRINT_FLAT_DAYS = 3;
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol

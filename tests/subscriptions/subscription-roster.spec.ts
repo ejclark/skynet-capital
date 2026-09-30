@@ -1,4 +1,5 @@
 import type { PlaybookSubscription } from "../../src/domain/types.js";
+import { authoredRoster } from "../../src/playbooks/authored-play.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
 import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 import { mergeRosters, subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
@@ -46,6 +47,55 @@ describe("subscriptionRoster", () => {
 
   it("is empty for an empty subscription list", () => {
     expect(subscriptionRoster([])).toEqual({ enabled: [], rejected: [] });
+  });
+});
+
+/**
+ * The own-account rule (#809 slice 2), checked rather than asserted in prose: an authored play is
+ * reachable only from a subscription belonging to the account it was compiled for.
+ */
+describe("subscriptionRoster with an authored play", () => {
+  const authored = authoredRoster(
+    [
+      {
+        slug: "earnings-runup",
+        authorAccountId: "bot-1",
+        authorDisplayName: "Ada",
+        symbols: ["NVDA"],
+        thesis: "long the pre-print drift, out before the dead final week",
+        trigger: { kind: "pre-print-window", enterDaysBefore: 20, exitDaysBefore: 6 },
+        size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+      },
+    ],
+    "bot-1",
+  );
+  const authoredSub = sub({ playbookId: "U-bot-1-earnings-runup" });
+
+  it("resolves the author's own subscription to their compiled play", () => {
+    const { enabled, rejected } = subscriptionRoster([authoredSub], authored);
+    expect(enabled).toEqual([{ playbook: authored.plays[0], mode: "standard" }]);
+    expect(rejected).toEqual([]);
+  });
+
+  it("refuses another account's subscription to the same play — it never reaches their book", () => {
+    const { enabled, rejected } = subscriptionRoster(
+      [sub({ accountId: "bot-2", playbookId: "U-bot-1-earnings-runup" })],
+      authored,
+    );
+    expect(enabled).toEqual([]);
+    expect(rejected).toEqual(["U-bot-1-earnings-runup"]);
+  });
+
+  it("still resolves house plays alongside it", () => {
+    const { enabled } = subscriptionRoster([sub(), authoredSub], authored);
+    expect(enabled).toEqual([
+      { playbook: S1_NVDA, mode: "standard" },
+      { playbook: authored.plays[0], mode: "standard" },
+    ]);
+  });
+
+  it("rejects an authored id when no authored roster was supplied — today's every caller", () => {
+    expect(subscriptionRoster([authoredSub]).rejected).toEqual(["U-bot-1-earnings-runup"]);
   });
 });
 
