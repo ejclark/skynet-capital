@@ -1390,37 +1390,16 @@ await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");
 
-// The tower's crest on a flag (#3807 slice 3a, `?shell=watchtower`). Phone first: no crest at 390,
-// the band exactly today's. Then 1280, the crest at the band's right cap — waited on through the
-// scene's own ready flag, and shot without it (said so) if WebGL never comes up.
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?shell=watchtower`);
-await page.getByText("Net worth · Eric").waitFor();
-await shootCockpit("flag-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?shell=watchtower`);
-await page.getByText("Net worth · Eric").waitFor();
-try {
+// Sauron's character card (#3727, handoff 6a): the tower over the league. Phone first (the card
+// follows the decision, full ladder kept), then the wide page — the tower in the frame's own
+// column (#3977) — then the same page mid-glance after a range chip is clicked.
+// From the bench width the tower is the page frame's one frame over its column (#3977,
+// `iframe.vantage`); below it, the boxed card's own (`.char-art iframe`).
+const cardReady = async (frame = ".char-art iframe") => {
+  await page.locator(frame).waitFor();
   await page.waitForFunction(
-    () => document.querySelector("iframe.vantage")?.contentWindow?.__ready === true,
-    undefined,
-    { timeout: 60000 },
-  );
-  await page.waitForTimeout(1200);
-} catch {
-  console.log("flag-desktop: the crest's scene never reported ready — shot without it");
-}
-await shootCockpit("flag-desktop");
-await page.goto(`${origin}/app/accounts?shell=off`);
-
-// Sauron's character card (#3727, handoff 6a): the tower over the league, top right of the
-// Overview. Phone first (the card follows the decision, full ladder kept), then the wide grid,
-// then the same grid mid-glance after a range chip is clicked.
-const cardReady = async () => {
-  await page.locator(".char-art iframe").waitFor();
-  await page.waitForFunction(
-    () => document.querySelector(".char-art iframe")?.contentWindow?.__ready === true,
-    undefined,
+    (sel) => document.querySelector(sel)?.contentWindow?.__ready === true,
+    frame,
     { timeout: 60000 },
   );
   await page.waitForTimeout(1200);
@@ -1439,7 +1418,7 @@ await page.locator(".char-card").screenshot({
 console.log(`shot ${join(out, "accounts-card-phone.jpg")}`);
 await page.setViewportSize({ width: 1650, height: 1100 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
-await cardReady();
+await cardReady("iframe.vantage");
 await shootCockpit("accounts-card-desktop");
 await page.getByRole("button", { name: "3M", exact: true }).click();
 await page.waitForTimeout(900);

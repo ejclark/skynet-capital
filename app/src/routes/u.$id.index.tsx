@@ -9,6 +9,7 @@ import { DeskTilesGrid } from "../shell/desk-tiles-grid";
 import { PageFrame } from "../shell/frame";
 import { NewTradeCard, PositionsBlotter } from "../shell/positions-blotter";
 import { SauronCard } from "../shell/sauron-card";
+import { useTowerColumn } from "../shell/use-tower-column";
 
 /**
  * THE ANY-ACCOUNT PAGE'S OVERVIEW (#738 phase 2c; #3807 slice 2d) — `/u/:id` for any account, bot
@@ -23,6 +24,8 @@ import { SauronCard } from "../shell/sauron-card";
  * one component on two pages, with this account's own landmark dials when it is a persona-mapped
  * bot and the scene's defaults otherwise (the old 21:9 strip retired with this slice). A phone
  * reads it in DOM order: tiles → book → card, so what this account holds comes before the art.
+ * From the bench width the card gives up its art to the page frame's tower column (#3977) and its
+ * league stands under the tower there (`SauronCard` `under`), so the page draws one tower.
  * Ownership decides the writes (dead end 4): off an account the viewer owns, the rows offer no
  * Close and the New trade card gives way to one plain sentence above the blotter.
  */
@@ -39,6 +42,7 @@ function DeskPage(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const owned = settings.data?.accounts ?? [];
   const canTrade = useOwnsAccount(id);
+  const towerColumn = useTowerColumn();
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
   // a beat behind (replace, no history spam) — so a refresh or a shared link keeps the filter.
   const [query, setQuery] = useState(q ?? "");
@@ -68,13 +72,22 @@ function DeskPage(): ReactElement {
       </PageFrame>
     );
   const { desk: d, generatedAt, landmark } = desk.data;
+  const card = (under: boolean) => (
+    <SauronCard
+      {...(landmark ? { landmark } : {})}
+      ownedIds={owned.map((a) => a.id)}
+      meId={owned.find((a) => a.kind === "human")?.id}
+      scope=".acct-page"
+      under={under}
+    />
+  );
 
   return (
-    <AccountPage desk={d}>
+    <AccountPage desk={d} tower={card(true)}>
       {d.error ? (
         <p className="note-stop">Account unreachable — positions can't be read right now.</p>
       ) : (
-        <div className="overview-grid">
+        <div className={`overview-grid${towerColumn ? " overview-grid--solo" : ""}`}>
           <div className="overview-worth">
             <DeskTilesGrid tiles={d.tiles} />
           </div>
@@ -91,14 +104,7 @@ function DeskPage(): ReactElement {
             />
             {canTrade ? <NewTradeCard deskId={d.id} /> : null}
           </div>
-          <div className="overview-card">
-            <SauronCard
-              {...(landmark ? { landmark } : {})}
-              ownedIds={owned.map((a) => a.id)}
-              meId={owned.find((a) => a.kind === "human")?.id}
-              scope=".acct-page"
-            />
-          </div>
+          {towerColumn ? null : <div className="overview-card">{card(false)}</div>}
         </div>
       )}
       <footer className="obs-foot num">as of {generatedAt}</footer>

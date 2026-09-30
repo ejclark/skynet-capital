@@ -12,7 +12,7 @@ import { NetWorthRoster } from "./networth-summary";
 import { NewHighCeremony } from "./new-high-ceremony";
 import { useLens } from "./positions-lens";
 import { SauronCard } from "./sauron-card";
-import { useTowerColumn } from "./tower-column";
+import { useTowerColumn } from "./use-tower-column";
 
 /**
  * ACCOUNTS' OVERVIEW SECTION — Summary's old cash/position detail and per-account roster, then the

@@ -6,7 +6,7 @@ import { useHorizonRange } from "../live/horizon-params";
 import { fetchPlays } from "../live/options";
 import { CalendarHead } from "./calendar-head";
 import { useMediaQuery } from "./use-media";
-import { BENCH_QUERY, TABLET_QUERY } from "./widths";
+import { TABLET_QUERY } from "./widths";
 
 /**
  * THE COCKPIT CLOCK (#3807 slice 2·1; the design panel 2026-09-26, shape 2 — "the calendar head
@@ -50,8 +50,6 @@ export function CockpitClock(): ReactElement {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays, retry: false });
   const fog = dayLensFog(plays.data);
   const horizon = useHorizonRange({ fogged: fog.fogged });
-  // Where the Profile page gives the big tower its own column, the crest never caps this row (#3977).
-  const towerColumn = useMediaQuery(BENCH_QUERY); // `useTowerColumn` (tower-column.tsx)
   return (
     <section className="cal-head" aria-label="Market calendar">
       <CalendarHead
@@ -61,7 +59,6 @@ export function CockpitClock(): ReactElement {
         all={{ name: "any date", count: "everything dated on your book" }}
         onLens={horizon.setLens}
         onStep={horizon.step}
-        towerSlot={!towerColumn}
         {...(fog.fogged ? { dayFog: { door: fog.door, reason: fog.reason } } : {})}
       />
     </section>

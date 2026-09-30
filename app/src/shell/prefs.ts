@@ -7,22 +7,19 @@ import { create } from "zustand";
  * so the CSS token overrides in theme.css win in both directions, and `data-density` narrows the
  * spacing tokens without any component redefining itself.
  *
- * THE SHELL FLAG (#3807 slice 3a): `?shell=watchtower` on any URL opts this viewer into the next
- * shell — today, the tower's crest at the calendar band's right cap (`vantage.tsx`). It is stored
- * per browser, so it survives navigation and reloads, and `?shell=off` clears it. It stamps
- * `data-shell="watchtower"` on <html> so the band's CSS can make room for the crest. Invisible
- * unless asked for: nothing in the app links to it.
+ * THE SHELL FLAG (`?shell=watchtower`, #3807 slice 3a) is retired (#3977, 2026-09-30): the tower
+ * left the calendar head for the page frame's own column, for everyone (`vantage.tsx`).
  *
  * THE TOWER'S MOTION (#3807 slice 3a-3 → 3b-1): `live` (the Eye's constant slow sweep) is the
  * default by Eric's pick (2026-09-27: "the subtle animation in the background offers
  * opportunities"); `still` — one frame at rest, animating only while the Eye looks at a day or a
  * filter the member picks — is the member's own setting, Settings → Display → "Tower motion"
  * (`setCrest`), the WCAG 2.2.2 pause for the tower's ambient motion. It applies to every tower
- * view: the calendar head's (`vantage.tsx`) and the character card's (`sauron-card.tsx`).
+ * view: the page frame's column (`vantage.tsx`) and the boxed character card's (`sauron-card.tsx`).
  * `?crest=still|live` still sets it from a URL, so a compare link keeps working.
  *
  * THE CARD COMPARE (`?card=art|league`, #3807 slice 3b-1) is retired (#3977, 2026-09-30): Eric
- * picked neither — one big tower in the Profile page's own column (`sauron-card.tsx`, `open`).
+ * picked neither — one big tower in the page frame's own column (`frame.tsx`, `vantage.tsx`).
  */
 
 export type Theme = "dark" | "light";
@@ -30,11 +27,7 @@ export type Density = "comfortable" | "compact";
 
 const THEME_KEY = "skynet-theme";
 const DENSITY_KEY = "skynet-density";
-const SHELL_KEY = "skynet-shell";
 const CREST_KEY = "skynet-crest";
-
-/** The opt-in shell, or `undefined` for today's. */
-export type Shell = "watchtower" | undefined;
 
 /** The tower at rest: `live` (the default sweep) or `still` (one frame, live only on regard). */
 export type Crest = "live" | "still";
@@ -53,41 +46,6 @@ function stamp(theme: Theme | undefined, density: Density): void {
   if (theme) root.setAttribute("data-theme", theme);
   if (density === "compact") root.setAttribute("data-density", "compact");
   else root.removeAttribute("data-density");
-}
-
-function stampShell(shell: Shell): void {
-  if (shell) document.documentElement.setAttribute("data-shell", shell);
-  else document.documentElement.removeAttribute("data-shell");
-}
-
-function storeShell(shell: Shell): void {
-  try {
-    if (shell) localStorage.setItem(SHELL_KEY, shell);
-    else localStorage.removeItem(SHELL_KEY);
-  } catch {
-    /* no storage: the flag lasts this page load */
-  }
-}
-
-/** `?shell=watchtower` sets the flag, `?shell=off` clears it; otherwise the stored choice. */
-export function shellFromUrl(search: string, stored: Shell): Shell {
-  const asked = new URLSearchParams(search).get("shell");
-  if (asked === "watchtower") return "watchtower";
-  if (asked === "off") return undefined;
-  return stored;
-}
-
-function initialShell(): Shell {
-  const stored = readStored(SHELL_KEY, ["watchtower"] as const);
-  let search = "";
-  try {
-    search = window.location.search;
-  } catch {
-    /* no location: keep what is stored */
-  }
-  const shell = shellFromUrl(search, stored);
-  if (shell !== stored) storeShell(shell);
-  return shell;
 }
 
 /** `?crest=still` picks the still crest, `?crest=live` today's; otherwise the stored choice. */
@@ -129,12 +87,10 @@ function initialTheme(): Theme {
 interface PrefsState {
   readonly theme: Theme;
   readonly density: Density;
-  readonly shell: Shell;
   readonly crest: Crest;
   readonly setCrest: (crest: Crest) => void;
   readonly setTheme: (theme: Theme) => void;
   readonly setDensity: (density: Density) => void;
-  readonly setShell: (shell: Shell) => void;
 }
 
 export const usePrefs = create<PrefsState>((set) => {
@@ -143,21 +99,13 @@ export const usePrefs = create<PrefsState>((set) => {
   // Stamp only what was explicitly stored so the system-following default keeps following the
   // system; density always stamps (it has no OS equivalent to defer to).
   stamp(readStored(THEME_KEY, ["dark", "light"] as const), density);
-  const shell = initialShell();
-  stampShell(shell);
   return {
     theme,
     density,
-    shell,
     crest: initialCrest(),
     setCrest: (next) => {
       storeCrest(next);
       set({ crest: next });
-    },
-    setShell: (next) => {
-      storeShell(next);
-      stampShell(next);
-      set({ shell: next });
     },
     setTheme: (next) => {
       try {

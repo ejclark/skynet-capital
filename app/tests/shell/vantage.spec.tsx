@@ -1,163 +1,132 @@
 import { act, render } from "@testing-library/react";
 import { useRef } from "react";
-import { crestFromUrl, shellFromUrl, usePrefs } from "../../src/shell/prefs";
-import { CREST_SRC, crestSrc, TowerSlot, VantageFrame } from "../../src/shell/vantage";
+import { crestFromUrl, usePrefs } from "../../src/shell/prefs";
+import { COLUMN_SRC, columnSrc, TowerSlot, VantageFrame } from "../../src/shell/vantage";
 
 /**
- * The crest's one window (#3807 slice 3a): ONE `/tower?frame=crown` frame for the session, laid over
- * the band's slot — the same element across navigations, hidden (never unmounted) where it does not
- * belong, and absent entirely until the flag asks for it.
+ * The page's tower (#3977): ONE `/tower?frame=card` frame for the session, laid over the page
+ * frame's tower column — the same element across navigations, hidden (never unmounted) where there
+ * is no column, and never mounted below the bench width.
  */
-function Shell({ pathname, phone, band }: { pathname: string; phone: boolean; band: boolean }) {
+function Shell({ pathname, wide, column }: { pathname: string; wide: boolean; column: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   return (
     <div ref={root}>
-      {band ? (
-        <section className="cal-head">
+      {column ? (
+        <aside className="tower-column">
           <TowerSlot />
-        </section>
+        </aside>
       ) : null}
-      <VantageFrame root={root} pathname={pathname} phone={phone} />
+      <VantageFrame root={root} pathname={pathname} wide={wide} />
     </div>
   );
 }
 
-const frames = (c: HTMLElement) => c.querySelectorAll(`iframe[src="${CREST_SRC}"]`);
+const frames = (c: HTMLElement) => c.querySelectorAll(`iframe[src="${COLUMN_SRC}"]`);
 const settle = async (): Promise<void> => {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 40));
   });
 };
 
-describe("the shell flag", () => {
-  it("?shell=watchtower sets it, ?shell=off clears it, anything else keeps what is stored", () => {
-    expect(shellFromUrl("?shell=watchtower", undefined)).toBe("watchtower");
-    expect(shellFromUrl("?shell=off", "watchtower")).toBe(undefined);
-    expect(shellFromUrl("?on=2026-09-28", "watchtower")).toBe("watchtower");
-    expect(shellFromUrl("", undefined)).toBe(undefined);
-  });
-
-  it("stamps data-shell on the page root while on", () => {
-    act(() => usePrefs.getState().setShell("watchtower"));
-    expect(document.documentElement.getAttribute("data-shell")).toBe("watchtower");
-    act(() => usePrefs.getState().setShell(undefined));
-    expect(document.documentElement.hasAttribute("data-shell")).toBe(false);
-  });
-});
-
-describe("the crest's src (#3807 slice 3a-2)", () => {
-  it("asks the scene for quality=presence", () => {
-    expect(CREST_SRC).toBe("/tower?frame=crown&quality=presence");
-    expect(crestSrc("")).toBe(CREST_SRC);
+describe("the tower's src", () => {
+  it("frames the scene for the column, at its full quality", () => {
+    expect(COLUMN_SRC).toBe("/tower?frame=card");
+    expect(columnSrc("")).toBe(COLUMN_SRC);
   });
 
   it("forwards ?probe=1 from the page, and nothing else", () => {
-    expect(crestSrc("?shell=watchtower&probe=1")).toBe(`${CREST_SRC}&probe=1`);
-    expect(crestSrc("?probe=0&power=1")).toBe(CREST_SRC);
+    expect(columnSrc("?probe=1")).toBe(`${COLUMN_SRC}&probe=1`);
+    expect(columnSrc("?probe=0&power=1")).toBe(COLUMN_SRC);
   });
 });
 
-describe("the crest's rest (#3807 slice 3a-3)", () => {
-  it("?crest=still picks the still crest, ?crest=live today's, anything else keeps what is stored", () => {
-    expect(crestFromUrl("?shell=watchtower&crest=still", undefined)).toBe("still");
+describe("the tower's rest (#3807 slice 3a-3)", () => {
+  it("?crest=still picks the still tower, ?crest=live today's, anything else keeps what is stored", () => {
+    expect(crestFromUrl("?crest=still", undefined)).toBe("still");
     expect(crestFromUrl("?crest=live", "still")).toBe("live");
     expect(crestFromUrl("?on=2026-09-28", "still")).toBe("still");
     expect(crestFromUrl("", undefined)).toBe("live");
     expect(crestFromUrl("?crest=STILL", undefined)).toBe("live");
   });
 
-  it("a still crest asks the scene for rest=still; live asks for nothing new", () => {
-    expect(crestSrc("", "still")).toBe(`${CREST_SRC}&rest=still`);
-    expect(crestSrc("?probe=1", "still")).toBe(`${CREST_SRC}&rest=still&probe=1`);
-    expect(crestSrc("", "live")).toBe(CREST_SRC);
+  it("a still tower asks the scene for rest=still; live asks for nothing new", () => {
+    expect(columnSrc("", "still")).toBe(`${COLUMN_SRC}&rest=still`);
+    expect(columnSrc("?probe=1", "still")).toBe(`${COLUMN_SRC}&rest=still&probe=1`);
+    expect(columnSrc("", "live")).toBe(COLUMN_SRC);
   });
 
   it("the frame the shell mounts carries the viewer's choice, and it survives navigation", async () => {
-    act(() => {
-      usePrefs.getState().setShell("watchtower");
-      usePrefs.getState().setCrest("still");
-    });
-    const view = render(<Shell pathname="/accounts" phone={false} band />);
+    act(() => usePrefs.getState().setCrest("still"));
+    const view = render(<Shell pathname="/accounts" wide column />);
     await settle();
-    const still = () => view.container.querySelectorAll(`iframe[src="${CREST_SRC}&rest=still"]`);
+    const still = () => view.container.querySelectorAll(`iframe[src="${COLUMN_SRC}&rest=still"]`);
     expect(still()).toHaveLength(1);
-    view.rerender(<Shell pathname="/research" phone={false} band />);
+    view.rerender(<Shell pathname="/trade" wide column />);
     await settle();
     expect(still()).toHaveLength(1);
-    act(() => {
-      usePrefs.getState().setCrest("live");
-      usePrefs.getState().setShell(undefined);
-    });
+    act(() => usePrefs.getState().setCrest("live"));
   });
 
-  it("the member's Settings choice reaches a frame already mounted — same element, new src (slice 3b-1)", async () => {
-    act(() => usePrefs.getState().setShell("watchtower"));
-    const view = render(<Shell pathname="/accounts" phone={false} band />);
+  it("the member's Settings choice reaches a frame already mounted — same element, new src", async () => {
+    const view = render(<Shell pathname="/accounts" wide column />);
     await settle();
     const first = frames(view.container)[0];
     expect(first).toBeDefined();
     act(() => usePrefs.getState().setCrest("still"));
     await settle();
-    const now = view.container.querySelectorAll(`iframe[src="${CREST_SRC}&rest=still"]`);
+    const now = view.container.querySelectorAll(`iframe[src="${COLUMN_SRC}&rest=still"]`);
     expect(now).toHaveLength(1);
     expect(now[0]).toBe(first);
-    act(() => {
-      usePrefs.getState().setCrest("live");
-      usePrefs.getState().setShell(undefined);
-    });
+    act(() => usePrefs.getState().setCrest("live"));
   });
 });
 
 describe("VantageFrame", () => {
-  afterEach(() => act(() => usePrefs.getState().setShell(undefined)));
-
-  it("renders nothing, and the band no slot, with the flag off", async () => {
-    const { container } = render(<Shell pathname="/accounts" phone={false} band />);
-    await settle();
-    expect(frames(container)).toHaveLength(0);
-    expect(container.querySelector("[data-tower-slot]")).toBeNull();
-  });
-
-  it("keeps ONE frame — the same element — across navigations, hidden where there is no band", async () => {
-    act(() => usePrefs.getState().setShell("watchtower"));
-    const view = render(<Shell pathname="/accounts" phone={false} band />);
+  it("keeps ONE frame — the same element — across navigations, so the tower never reloads", async () => {
+    const view = render(<Shell pathname="/accounts" wide column />);
     await settle();
     const first = frames(view.container)[0];
     expect(frames(view.container)).toHaveLength(1);
     expect(first?.getAttribute("data-shown")).toBe("true");
 
-    view.rerender(<Shell pathname="/leaderboard" phone={false} band={false} />);
-    await settle();
-    expect(frames(view.container)).toHaveLength(1);
-    expect(frames(view.container)[0]).toBe(first);
-    expect(first?.getAttribute("data-shown")).toBe("false");
-
-    view.rerender(<Shell pathname="/research" phone={false} band />);
+    view.rerender(<Shell pathname="/trade" wide column />);
     await settle();
     expect(frames(view.container)).toHaveLength(1);
     expect(frames(view.container)[0]).toBe(first);
     expect(first?.getAttribute("data-shown")).toBe("true");
+
+    view.rerender(<Shell pathname="/research" wide column />);
+    await settle();
+    expect(frames(view.container)[0]).toBe(first);
   });
 
-  it("hides on Settings even if a band were there", async () => {
-    act(() => usePrefs.getState().setShell("watchtower"));
-    const view = render(<Shell pathname="/accounts" phone={false} band />);
+  it("hides, never unmounts, where a page draws no column (Settings)", async () => {
+    const view = render(<Shell pathname="/accounts" wide column />);
     await settle();
-    view.rerender(<Shell pathname="/settings" phone={false} band />);
+    const first = frames(view.container)[0];
+    view.rerender(<Shell pathname="/settings" wide column={false} />);
+    await settle();
+    expect(frames(view.container)[0]).toBe(first);
+    expect(first?.getAttribute("data-shown")).toBe("false");
+  });
+
+  it("hides on Settings even if a column were there", async () => {
+    const view = render(<Shell pathname="/accounts" wide column />);
+    await settle();
+    view.rerender(<Shell pathname="/settings" wide column />);
     await settle();
     expect(frames(view.container)[0]?.getAttribute("data-shown")).toBe("false");
   });
 
-  it("never mounts a frame at ≤860px — no WebGL on the phone", async () => {
-    act(() => usePrefs.getState().setShell("watchtower"));
-    const view = render(<Shell pathname="/accounts" phone band />);
+  it("never mounts a frame below the bench width — the boxed card draws its own tower there", async () => {
+    const view = render(<Shell pathname="/accounts" wide={false} column />);
     await settle();
     expect(frames(view.container)).toHaveLength(0);
   });
 
   it("is decorative: out of the tab order and hidden from assistive tech", async () => {
-    act(() => usePrefs.getState().setShell("watchtower"));
-    const view = render(<Shell pathname="/accounts" phone={false} band />);
+    const view = render(<Shell pathname="/accounts" wide column />);
     await settle();
     const f = frames(view.container)[0] as HTMLIFrameElement;
     expect(f.tabIndex).toBe(-1);

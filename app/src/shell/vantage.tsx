@@ -8,46 +8,48 @@ import {
   useTowerRegard,
   useTowerRun,
 } from "./tower-bus";
-import { useMediaQuery } from "./use-media";
-import { TABLET_QUERY } from "./widths";
+import { useTowerColumn } from "./use-tower-column";
 
 /**
- * THE CREST (#3807 slice 3a, behind `?shell=watchtower`): the tower, framed on its crown and Eye,
- * as the RIGHT cap of the market calendar's band (Eric's third review, 2026-09-26: top-right is
- * "out of the way", and the right column is already identity and standing). The Eye glances LEFT,
- * toward the day or filter a member picks.
+ * THE PAGE'S TOWER (#3977, Eric 2026-09-30, picked by eye from a mock): one big tower, unboxed, in
+ * the page frame's own column from just under the navbar, on every non-Settings page at the bench
+ * width and wider (`frame.tsx`, `tower-column.tsx`) — "I never intended to have 2 towers… show the
+ * big tower across all screens… remove the section outline around the tower [so the] light from
+ * the eye [is] less contained." It was the crest at the calendar head's right cap behind
+ * `?shell=watchtower` (#3807 slice 3a); the flag, the crest's framing and its slot are retired.
  *
- * ONE WINDOW FOR THE SESSION. A single `/tower?frame=crown` iframe, mounted here in the shell as a
- * sibling of the page (never inside the topbar), laid over the band's slot (`TowerSlot`) with fixed
- * positioning that a ResizeObserver and the scroll keep in step — never re-parented, never
+ * ONE WINDOW FOR THE SESSION. A single `/tower?frame=card` iframe, mounted here in the shell as a
+ * sibling of the page (never inside the topbar), laid over the column's slot (`TowerSlot`) with
+ * fixed positioning that a ResizeObserver and the scroll keep in step — never re-parented, never
  * unmounted across navigation, because every mount is a new WebGL context and a shader compile.
- * It mounts the first time a slot is visible and then only hides:
+ * Moving from the Profile page to Trade keeps the same tower. It mounts the first time a slot is
+ * visible and then only hides:
  *
- *   · hidden and paused (`tower:run {on:false}`) at ≤860px (no WebGL on the phone until the real-
- *     device recheck, docs/art/EYE.md), on Settings, and on any page with no band;
+ *   · hidden and paused (`tower:run {on:false}`) below the bench width, where no page draws the
+ *     column (the Profile page's Overview and an account's page keep their boxed card instead, with
+ *     its own frame), and on any page without a slot (Settings);
  *   · paused, still in place, while scrolled off screen or in a background tab;
  *   · under reduced motion the scene draws its one still frame and sends nothing else.
  *
- * Presence, not ceremony: the crest is a small still-framed window with the Eye's slow sweep.
  * MOVING IS THE DEFAULT, by Eric's pick after comparing the two by eye (2026-09-27: "live - the
  * subtle animation in the background offers opportunities"). STILL IS THE MEMBER'S SETTING —
- * Settings → Display → "Tower motion" (slice 3b-1, `prefs.ts`), the WCAG 2.2.2 pause for motion
- * that runs beside content: the scene's `rest=still`, one frame at rest and the loop only while a
- * glance or a regard plays. `?crest=still|live` still sets it from a URL.
+ * Settings → Display → "Tower motion" (`prefs.ts`), the WCAG 2.2.2 pause for motion that runs
+ * beside content: the scene's `rest=still`, one frame at rest and the loop only while a glance or
+ * a regard plays. `?crest=still|live` still sets it from a URL.
  */
 
-/** Where the band renders its right cap when the flag is on. */
+/** Where the page frame's column asks for the tower. */
 export const SLOT_SELECTOR = "[data-tower-slot]";
 
-/** The crest's scene at `quality=presence` (#3807 slice 3a-2): 30 draws a second, DPR ≤ 1, no
- *  shadow map, half the embers — a small presence spends like one (`src/three/kit/quality.ts`). */
-export const CREST_SRC = "/tower?frame=crown&quality=presence";
+/** The scene framed for the column (the character card's framing: horns near the top, the Eye
+ *  ~60% across), at the scene's full quality — the same frame the Profile page's card drew. */
+export const COLUMN_SRC = "/tower?frame=card";
 
 /** The frame's src for a page at `search`: `?probe=1` on the page is forwarded, so the scene shows
  *  its corner readout (fps · frames · submit p50/p95) — the real number, read on a real machine.
- *  A `still` crest asks the scene for `rest=still` (slice 3a-3); a scene without it ignores it. */
-export function crestSrc(search: string, crest: Crest = "live"): string {
-  const rest = crest === "still" ? `${CREST_SRC}&rest=still` : CREST_SRC;
+ *  A `still` tower asks the scene for `rest=still` (slice 3a-3); a scene without it ignores it. */
+export function columnSrc(search: string, crest: Crest = "live"): string {
+  const rest = crest === "still" ? `${COLUMN_SRC}&rest=still` : COLUMN_SRC;
   try {
     return new URLSearchParams(search).get("probe") === "1" ? `${rest}&probe=1` : rest;
   } catch {
@@ -139,15 +141,15 @@ function useBox(slot: Element | null): Box | null {
 export function VantageFrame({
   root,
   pathname,
-  phone,
+  wide,
 }: {
   /** The app column: where the slot and the regard targets live. */
   readonly root: RefObject<HTMLElement | null>;
   readonly pathname: string;
-  readonly phone: boolean;
+  /** At the bench width or wider — where the page frame draws the tower column. */
+  readonly wide: boolean;
 }): ReactElement | null {
-  const flag = usePrefs((s) => s.shell) === "watchtower";
-  const eligible = flag && !phone && !isSettings(pathname);
+  const eligible = wide && !isSettings(pathname);
   const slot = useSlot(root, eligible, pathname);
   const box = useBox(slot);
   const shown = eligible && slot !== null && box !== null;
@@ -157,7 +159,7 @@ export function VantageFrame({
   // own motion setting changes it — a deliberate, rare reload, so the setting applies at once.
   const [search] = useState(() => window.location.search);
   const crest = usePrefs((s) => s.crest);
-  const src = crestSrc(search, crest);
+  const src = columnSrc(search, crest);
   if (shown && !mounted) setMounted(true);
 
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -182,7 +184,7 @@ export function VantageFrame({
   useTowerRegard(root, shown);
   useTowerGlance("main, .cockpit");
 
-  if (!(flag && mounted)) return null;
+  if (!mounted) return null;
   const last = box ?? { top: 0, left: 0, width: 0, height: 0 };
   return (
     <iframe
@@ -206,13 +208,12 @@ export function Vantage({
   readonly root: RefObject<HTMLElement | null>;
 }): ReactElement | null {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // ≤ the tablet width is where the shell wraps (`shell.css`, `widths.ts`), phones included.
-  const phone = useMediaQuery(TABLET_QUERY);
-  return <VantageFrame root={root} pathname={pathname} phone={phone} />;
+  // Where the page frame gives the tower its column (`use-tower-column.ts`).
+  const wide = useTowerColumn();
+  return <VantageFrame root={root} pathname={pathname} wide={wide} />;
 }
 
-/** The band's right cap: an empty, sized box the crest is laid over. Renders only under the flag. */
-export function TowerSlot(): ReactElement | null {
-  const flag = usePrefs((s) => s.shell) === "watchtower";
-  return flag ? <span className="tower-slot" data-tower-slot="" aria-hidden="true" /> : null;
+/** The column's art box: an empty, sized box the page's one tower frame is laid over. */
+export function TowerSlot(): ReactElement {
+  return <span className="tower-slot" data-tower-slot="" aria-hidden="true" />;
 }
