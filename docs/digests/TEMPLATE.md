@@ -31,5 +31,7 @@
 
 -
 - <`npm run rank -- --digest` line 1: "Rank since …: N moved up · M retired · K new.">
+- <`npm run thrash:scan -- --digest --file` Noise lines, verbatim; its Needs-you lines go above.>
 
 <!-- `npm run rank -- --digest` line 2 goes here, verbatim: the rank snapshot the next digest diffs against. -->
+<!-- `npm run thrash:scan -- --digest` marker goes here, verbatim: the thrash scan the next digest's two-scan rule reads. -->
