@@ -11,8 +11,8 @@ import { CalendarHead } from "./calendar-head";
 
 /**
  * THE MARKET CALENDAR'S HEAD ON TRADE (#3807 slice 3b-2): the same row the Profile page's head is
- * (`cockpit-clock.tsx` — range · arrows · lens row · fog line, the tower's slot at its right cap
- * under `?shell=watchtower`), leading Trade's stage the way R&D's band head leads its board. Its
+ * (`cockpit-clock.tsx` — range · arrows · lens row · fog line), leading Trade's stage the way R&D's
+ * band head leads its board. Its
  * range is the ROOT `?on=&span=` (`live/horizon-params.ts`), so a week picked on the Profile page
  * is the week Trade opens on, and a step here follows you back.
  *
@@ -27,9 +27,8 @@ import { CalendarHead } from "./calendar-head";
  * press moves the calendar's range and nothing on the ticket.
  *
  * A ROW, NEVER A COLUMN. The Bench docks at 1280 by the window's width (`use-bench-width.ts`), and
- * this head spends height, never width — `scripts/shoot/trade-band.mjs` prints the docked Bench's
- * width with Moneypenny's rail open, with and without the tower, which is the falsifier for the
- * tower's top-right placement.
+ * this head spends height, never width. From 1280 the page frame's tower column (#3977) takes its
+ * width beside the whole stage, not from this row.
  * @category trading
  */
 

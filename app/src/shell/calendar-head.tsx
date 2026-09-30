@@ -7,7 +7,6 @@ import {
   sessionsIn,
 } from "../live/horizon-range";
 import { LENSES, type Lens } from "../live/research";
-import { TowerSlot } from "./vantage";
 
 /**
  * THE MARKET CALENDAR'S HEAD (#3807 slice 2·1) — the range label, the arrows and the session
@@ -37,8 +36,8 @@ import { TowerSlot } from "./vantage";
  * phone; `scripts/crawl/probes.mjs` reads the chip's enclosing fieldset for the reason's first
  * words, which is why the line opens with the door's own name.
  *
- * THE RIGHT CAP (#3807 slice 3a): under `?shell=watchtower` the head ends in an empty slot the
- * shell's one tower frame is laid over (`vantage.tsx`); without the flag it renders nothing.
+ * NO RIGHT CAP (#3977): the crest that capped this row under `?shell=watchtower` (#3807 slice 3a) is
+ * retired — the tower stands in the page frame's own column now (`tower-column.tsx`).
  * @category hero
  */
 
@@ -77,7 +76,6 @@ export function CalendarHead({
   onLens,
   onStep,
   children,
-  towerSlot = true,
 }: {
   readonly lens: Lens;
   readonly range: DayRange;
@@ -92,8 +90,6 @@ export function CalendarHead({
   readonly onStep: (direction: 1 | -1) => void;
   /** Seated between the head row and the lens row — R&D's month grid. */
   readonly children?: ReactNode;
-  /** The crest's right cap. Off where the page stands the big tower in its own column (#3977). */
-  readonly towerSlot?: boolean;
 }): ReactElement {
   const fogId = useId();
   const allLens = lens === "all";
@@ -167,7 +163,6 @@ export function CalendarHead({
           </p>
         ) : null}
       </fieldset>
-      {towerSlot ? <TowerSlot /> : null}
     </>
   );
 }

@@ -1,4 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
+import { TowerColumn } from "./tower-column";
+import { useTowerColumn } from "./use-tower-column";
 
 /**
  * The page frame (#738; the IA decision, docs/IA.md §8, #3807 slice 2a, 2026-09-26): TWO
@@ -75,20 +77,36 @@ import type { ReactElement, ReactNode } from "react";
  * Held as a hypothesis — its falsifier is Eric reading the head as a second topbar on the live
  * route by 2026-10-10, at which point the row leaves the head for the stage's first row.
  *
+ * THE TOWER'S COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock): from the bench width the
+ * frame is TWO columns on every page but Settings — the stage, and the tower's own column from just
+ * under the topbar (`tower-column.tsx`), unboxed. A frame-level column, not a page's, because of
+ * CONSTANT GEOMETRY above: the stage's left edge and width stay identical across /accounts,
+ * /activity, /research, /trade and /u/:id. It is not a rail: it holds no navigation and no
+ * controls — the tower, and only what a page stands under it (the league on the Profile page).
+ * Below the bench width the frame is one column again.
+ *
  * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.
  * @category navigation
  */
 export function PageFrame({
   controls,
+  tower,
+  towerless = false,
   children,
 }: {
   /** The page's controls row — its section switch, kinds or sub-nav links — at the top of the
    *  stage. A row, never a column; absent, the stage opens on its own content. */
   readonly controls?: ReactNode;
+  /** What the page stands under the tower in its column (#3977) — the league on the Profile page. */
+  readonly tower?: ReactNode;
+  /** Settings keeps its own two-column layout and no tower (its transition was already allowed to
+   *  shift, see CONSTANT GEOMETRY above). */
+  readonly towerless?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
+  const column = useTowerColumn() && !towerless;
   return (
-    <div className="frame">
+    <div className={column ? "frame frame--tower" : "frame"}>
       <main id="main" className="stage">
         {controls ? (
           <nav className="stage-controls" aria-label="Section">
@@ -97,6 +115,7 @@ export function PageFrame({
         ) : null}
         {children}
       </main>
+      {column ? <TowerColumn>{tower}</TowerColumn> : null}
     </div>
   );
 }

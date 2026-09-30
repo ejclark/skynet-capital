@@ -26,12 +26,12 @@ import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
  * too — the scene's `rest=still` works in any framing (one frame at rest, the loop only while a
  * glance plays.
  *
- * OPEN, IN THE PROFILE PAGE'S TOWER COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock):
- * "I never intended to have 2 towers… show the big tower… so it sits below the navbar… remove the
- * section outline around the tower [so the] light from the eye [is] less contained." `open` drops
- * the card's border, background, accent frame and vignette, and fades the art's edges into the page
- * on every side. It replaces the `?card=art|league` compare (#3807 slice 3b-1), retired unused:
- * neither option was the intent.
+ * UNDER THE PAGE'S TOWER (#3977, Eric 2026-09-30, picked by eye from a mock): at the bench width
+ * the tower stands unboxed in the page frame's own column (`tower-column.tsx`, drawn by the shell's
+ * one frame, `vantage.tsx`), and this card gives up its art to it — `under` is the same card from
+ * the shade down: the mist the tower's foot melts into, then the league. Its landmark's dials still
+ * reach the tower (`useTowerMood`). It replaces the `?card=art|league` compare (#3807 slice 3b-1),
+ * retired unused: neither option was the intent.
  */
 
 /** The tower's URL: the card framing, the landmark's dials when this account has one, and the
@@ -124,7 +124,7 @@ export function SauronCard({
   ownedIds,
   meId,
   scope,
-  open = false,
+  under = false,
 }: {
   /** The selected account's landmark dials, when it has one (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
@@ -132,19 +132,29 @@ export function SauronCard({
   readonly meId?: string;
   /** CSS selector for the region whose filter clicks the Eye glances at. */
   readonly scope: string;
-  /** Unboxed, for the page's tower column: no border or frame, the art's edges fade into the page. */
-  readonly open?: boolean;
+  /** In the tower column, under the page's tower: the shade and the league, no art of its own. */
+  readonly under?: boolean;
 }): ReactElement {
   const frame = useRef<HTMLIFrameElement>(null);
   const crest = usePrefs((s) => s.crest);
+  // Under the column's tower no frame mounts here (the ref stays empty), so this hook sends
+  // nothing; the page's one frame hears the glance itself (`vantage.tsx`).
   useTowerGlance(scope, frame);
   useTowerMood(landmark);
   useCardFrame(frame);
+  if (under)
+    return (
+      <section className="char-card char-card--under" aria-label="The league">
+        <div className="char-blend">
+          <Shade />
+          <div className="char-body">
+            <LeagueCard ownedIds={ownedIds} meId={meId} />
+          </div>
+        </div>
+      </section>
+    );
   return (
-    <section
-      className={open ? "char-card char-card--open" : "char-card"}
-      aria-label="Sauron's tower and the league"
-    >
+    <section className="char-card" aria-label="Sauron's tower and the league">
       <div className="char-art">
         <div className="char-art-clip">
           <iframe

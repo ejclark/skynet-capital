@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-// THE FRAME-TIME BUDGET PROBE for the tower's crest (#3807 slice 3a; the design panel's §4) — the
-// first frame-time budget this repo has. Boots the built app shell (fixture data, no network) with
-// `?shell=watchtower` and measures:
+// THE FRAME-TIME BUDGET PROBE for the page's tower (#3807 slice 3a's crest; since #3977 the big
+// tower in the page frame's own column) — the first frame-time budget this repo has. Boots the built
+// app shell (fixture data, no network) at 1280, where the column stands, and measures:
 //
-//   · the crest's own draw cost — `__towerStats()` inside the frame: CPU submit ms p50/p95, frames,
+//   · the tower's own draw cost — `__towerStats()` inside the frame: CPU submit ms p50/p95, frames,
 //     ms from navigation to ready;
-//   · the parent page's requestAnimationFrame interval p95 with the flag OFF and with it ON in both
-//     crest options — `crest=live` (the constant sweep) and `crest=still` (slice 3a-3: one frame at
-//     rest, live only on regard) — over 10 s idle (the "at rest" number), then 4 regard
-//     hovers, a 3 s settle and 6 section switches on the Profile page (the "active" number);
-//   · how many `/tower?frame=crown` iframes exist across 20 client-side navigations (must be 1),
-//     including 5 Settings round trips, and whether it is the SAME element throughout.
+//   · the parent page's requestAnimationFrame interval p95 with the tower OFF (its scene refused,
+//     so no WebGL runs) and ON in both motion options — `crest=live` (the constant sweep) and
+//     `crest=still` (slice 3a-3: one frame at rest, live only on regard) — over 10 s idle (the "at
+//     rest" number), then 4 regard hovers, a 3 s settle and 6 section switches on the Profile page
+//     (the "active" number);
+//   · how many tower iframes exist across 20 client-side navigations (must be 1), including 5
+//     Settings round trips, and whether it is the SAME element throughout.
 //
 // Writes `tower-frame-budget.json` at the repo root. SwiftShader is a software rasterizer: these
 // numbers are a RELATIVE tripwire only — the real number is Eric's Pixel 6 (docs/art/EYE.md, the
@@ -24,7 +25,7 @@ import { openShell } from "../shoot/shell.mjs";
 
 const NOT = "not measured";
 const IDLE_MS = 10_000;
-const CREST = 'iframe[src^="/tower?frame=crown"]';
+const CREST = "iframe.vantage";
 /** What the Eye regards on hover (`tower-bus.ts` REGARD_TARGETS). */
 const REGARD = '.eh-day, tr[id^="pos-"]';
 
@@ -40,11 +41,11 @@ const { page, origin, close } = await openShell({
   viewport: { width: 1280, height: 900 },
 });
 
-/** The crest's frame, once its scene says it is ready (or null within the timeout). */
+/** The tower's frame, once its scene says it is ready (or null within the timeout). */
 async function crestFrame(timeout = 60_000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
-    const f = page.frames().find((x) => x.url().includes("/tower?frame=crown"));
+    const f = page.frames().find((x) => x.url().includes("/tower?frame=card"));
     if (f) {
       const ready = await f.evaluate(() => window.__ready === true).catch(() => false);
       if (ready) return f;
@@ -54,12 +55,18 @@ async function crestFrame(timeout = 60_000) {
   return null;
 }
 
-/** The page's URL for a run: the flag off, or on with the crest `live` or `still`. */
-const runUrl = (mode) =>
-  `${origin}/app/accounts?${mode === "off" ? "shell=off" : `shell=watchtower&crest=${mode}`}`;
+/** The page's URL for a run: the tower `live` or `still` (off is the same page, its scene refused). */
+const runUrl = (mode) => `${origin}/app/accounts?crest=${mode === "still" ? "still" : "live"}`;
+
+/** Refuse the tower's scene for the OFF run, so the frame mounts but no WebGL ever runs. */
+async function towerOff(off) {
+  if (off) await page.route("**/tower?**", (route) => route.abort());
+  else await page.unroute("**/tower?**");
+}
 
 /** rAF intervals on the parent page: `IDLE_MS` idle, then day hovers and 6 section switches. */
 async function rafRun(mode) {
+  await towerOff(mode === "off");
   await page.goto(runUrl(mode));
   await page.locator(".cal-head").first().waitFor({ timeout: 20_000 });
   const frame = mode === "off" ? null : await crestFrame();
@@ -179,7 +186,7 @@ try {
       section_switches: on.switches,
     };
     if (!on.frame)
-      result.notes.push(`${mode}: the crest's scene never reported ready — tower not measured`);
+      result.notes.push(`${mode}: the tower's scene never reported ready — tower not measured`);
     else if (!on.stats)
       result.notes.push(`${mode}: the scene has no __towerStats — tower numbers not measured`);
     else
@@ -197,7 +204,8 @@ try {
 
 try {
   // 20 client-side navigations through the topbar, 5 of them Settings round trips.
-  await page.goto(`${origin}/app/accounts?shell=watchtower`);
+  await towerOff(false);
+  await page.goto(`${origin}/app/accounts`);
   await page.locator(".cal-head").first().waitFor({ timeout: 20_000 });
   await crestFrame();
   await page.evaluate((sel) => {
