@@ -373,8 +373,22 @@ jobs:
       # lived, across every event that ever failed inside it. The App token is a real,
       # non-suppressed identity — same fix already applied to every PR-opening step in this file, for
       # the same underlying mechanism (see the header).
-      - name: Re-dispatch for event research (claude-code-action can't see `push`)
-        if: github.event_name == 'push' && steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]'
+      # THE RETRY SWEEP'S PUSH HALF (#4359, 2026-09-30). The sweep used to CLAIM on push and hand
+      # the pick to `build-plan`/`build-feedback` in the same run — which then died on "Unsupported
+      # event type: push", the same wall event research hit. On push it now only asks whether
+      # anything is claimable (no lease, no label); the re-dispatch below carries it to the
+      # `workflow_dispatch` pass, where `--claim-next` claims and the build can run.
+      - name: Is a ready issue claimable? (dry run — claims nothing)
+        id: peek
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --peek-next
+
+      - name: Re-dispatch for event research or a claimable ready issue (claude-code-action can't see `push`)
+        if: >-
+          github.event_name == 'push' &&
+          ((steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]') || steps.peek.outputs.has_next == 'true')
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh workflow run moneypenny-events.yml --ref "$GITHUB_REF_NAME" -f command=scan
@@ -439,11 +453,12 @@ jobs:
         run: node scripts/moneypenny/index.mjs --claim-plan
 
       # THE RETRY SWEEP (#3960 slice 3). An issue queued by the admission gate keeps `ready`; every
-      # push tick claims the oldest one that is now admissible, so a freed slot fills without anyone
-      # re-labelling. At most one claim per tick — the cap, not the sweep, sets the pace.
+      # push tick re-dispatches (above) and this pass claims the top-ranked one now admissible, so a
+      # freed slot fills without anyone re-labelling. At most one claim per tick — the cap, not the
+      # sweep, sets the pace. NEVER on `push` (#4359): the build jobs it feeds can't run there.
       - name: Claim the next admissible ready issue
         id: next
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
+        if: github.event_name == 'workflow_dispatch' && inputs.command == 'scan'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --claim-next

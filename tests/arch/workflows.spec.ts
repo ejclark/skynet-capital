@@ -465,3 +465,29 @@ jobs:
     expect(unlistedWatchedActor(watcher("github-actions"), new Map())).toEqual([]);
   });
 });
+
+// #4359 (2026-09-30): the retry sweep claimed on `push` and handed the pick to a build job that
+// `claude-code-action` refuses to run there ("Unsupported event type: push"). On push the route job
+// may only ASK (`--peek-next`) and re-dispatch; the claim runs on the `workflow_dispatch` pass.
+describe("moneypenny-events — the retry sweep never claims on push", () => {
+  const file = readFileSync(".github/workflows/moneypenny-events.yml", "utf8");
+  const step = (name: string) => {
+    const at = file.indexOf(`- name: ${name}`);
+    return file.slice(at, file.indexOf("\n      - name:", at + 1));
+  };
+
+  it("claims only on the workflow_dispatch scan pass", () => {
+    const claim = step("Claim the next admissible ready issue");
+    expect(claim).toContain("--claim-next");
+    const condition = claim.slice(claim.indexOf("if:"), claim.indexOf("env:"));
+    expect(condition).toContain("workflow_dispatch");
+    expect(condition).not.toContain("'push'");
+  });
+
+  it("peeks on push and re-dispatches when something is claimable", () => {
+    expect(step("Is a ready issue claimable?")).toContain("--peek-next");
+    const redispatch = step("Re-dispatch for event research or a claimable ready issue");
+    expect(redispatch).toContain("steps.peek.outputs.has_next == 'true'");
+    expect(redispatch).toContain("gh workflow run moneypenny-events.yml");
+  });
+});
