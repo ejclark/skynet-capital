@@ -33,6 +33,9 @@ export interface PlaybookStoreCardView {
   readonly exitCutLosses: string;
   readonly hold: string;
   readonly metrics: readonly never[];
+  /** Enabled subscriptions to this playbook across every account (#3970) — a bare count, never
+   *  who. Absent when the deployment has no subscription store wired. */
+  readonly subscribers?: number;
   readonly subscription?: {
     readonly mode: PlaybookMode;
     readonly capitalAllocated: number;
