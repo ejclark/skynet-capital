@@ -2637,3 +2637,32 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   Closed 2026-09-26: `ship.sh automerge` was GraphQL-only too, so from a cloud session it could
   only fail; it now falls back to the session's `PUT /pulls/{n}/ccr/auto_merge` route before
   refusing, and the existing read-back still judges the arm.
+
+### Three PRs merged mid-integration-tests — `/ship` told every session to arm auto-merge the moment a PR opened
+
+- **SHA:** (this PR)   **DATE:** 2026-09-30   **STATUS:** partly closed — the required check is Eric's
+- **SIGNAL:** Eric, looking at #4158's pipeline mid-run: "I take it integration tests don't really
+  matter?" — then: "If a quality gate matters, you'd enforce it." #4151, #4155 and #4158 had each
+  merged ~2–3 minutes after opening, on `verify` alone, while `integration tests` was still running.
+  #4151's and #4155's runs ended red (6 screenshot mismatches, runs 36666883548 and 36668165417).
+  Detection lag: ~50 minutes, and only because Eric looked. Cost this time: none — the red was
+  stale baselines from another session's #4143, re-baselined by #4157 — but the mechanism would
+  have landed a real regression the same way.
+- **ROOT CAUSE:** two mouths. (1) Branch protection requires only `verify`, and native auto-merge
+  waits on required checks only (#4094 item 1). (2) Ours: `/ship` and `ship.sh open` told the
+  session to make "one `enable_pr_auto_merge` call" right after opening. `pipeline.yml`'s own
+  `arm auto-merge` job already waits for `verify` AND `e2e` — arming by hand pre-empted the one
+  gate we had. The session also shipped on local `npm run verify`, which has no Playwright step.
+- **PREVENTION:**
+  1. **Fix (not protected, this PR):** `ship open` runs `npm run test:e2e` locally on a non-docs diff
+     and refuses to push on red; it no longer tells anyone to arm. `ship automerge` (the fallback
+     for a PR the pipeline job can't reach) refuses unless the head's `integration tests` run
+     passed or was skipped. The skill, CLAUDE.md, CONTRIBUTING, COACHES, retro and dep-warden stop
+     saying "arm". Pinned by `tests/arch/ship.spec.ts` → "ship — integration tests gate every merge
+     path".
+  2. **The hard stop (Eric's, governance):** add `integration tests` to `main`'s required checks.
+     Until then an arm by any other route (MCP tool, UI) still merges past it — so this is closed
+     only when #4094 item 1 is.
+- **SIDE QUESTS:** dep-warden arms dependabot PRs by hand too; it now waits for `integration
+  tests` first. The Moneypenny build prompts (`.github/prompts/*-build.md`, protected) should be
+  checked for the same instruction on the next held PR.

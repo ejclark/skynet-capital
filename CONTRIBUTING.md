@@ -101,7 +101,8 @@ The workflow is built so a Claude session never blocks on a PR and never reworks
 
 - **Branch from the latest `main`.** `git fetch origin main && git checkout -B <branch> origin/main`.
   Don't branch off a stale local `main` or off another feature branch.
-- **Enable auto-merge, then keep working forward.** Once a PR is up with auto-merge armed, the
+- **Open it, then keep working forward.** The pipeline arms auto-merge once integration tests pass
+  (never arm by hand — #4094). Once a PR is up, the
   session is free to start the next unit of work — it should not idle waiting for the merge.
 - **A merged PR is done — do not reuse it.** Follow-up work is a *fresh* branch cut from the new
   `main`, and a *new* PR. Never stack new commits on an already-merged branch or try to reopen a

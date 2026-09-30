@@ -100,5 +100,5 @@ npm run verify                      # typecheck · lint · test (the ledger gate
 node scripts/incident-scan.mjs      # every incident on main now has a lesson
 ```
 
-Land it with `/ship` (verify → REST open → one auto-merge call → stop). If the prevention was a new
+Land it with `/ship` (verify + integration tests → REST open → stop; the pipeline arms). If the prevention was a new
 gate, that gate's own budget starts at today's number and ratchets down from there.

@@ -34,8 +34,9 @@ major.
 4. **Verify by exit status**, never by tailing output: `npm run typecheck && npm run lint && npm test`.
    If the PR bundles multiple packages (dependabot's dev-dependency group), all must pass together — do
    not cherry-pick which packages in a grouped PR to trust.
-5. **On green + patch/minor + no breaking note:** merge via native GitHub auto-merge if not already
-   enabled (`enable_pr_auto_merge`, SQUASH) — dependabot PRs don't get this by default. Comment briefly
+5. **On green + patch/minor + no breaking note, and only once the PR's `integration tests` check has
+   passed** (#4094 — auto-merge waits on required checks only, and only `verify` is required): merge
+   via native GitHub auto-merge if not already enabled (`enable_pr_auto_merge`, SQUASH) — dependabot PRs don't get this by default. Comment briefly
    on what you checked (the changelog claim, the verify result) so the merge has a paper trail.
    **First run `node scripts/envelope-scan.mjs --check <the PR's changed files>`**: a blocking path
    (every `github-actions` bump edits `.github/workflows/**`) is never armed, whatever its semver

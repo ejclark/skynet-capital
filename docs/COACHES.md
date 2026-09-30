@@ -63,7 +63,7 @@ Worked example (the one that motivated this): landing a PR via the GitHub **MCP*
 by the thousands (one create+auto-merge+read cycle measured ~6,000 points; status-*polling* is worse),
 while the same outcome over `git` + repo-scoped **REST** runs on your machine and the plentiful 15k/hr
 **core** bucket. The fix was codified as `scripts/ship.sh` + the `/ship` skill: verify locally → push →
-open over REST → one auto-merge call → **stop, trust the webhook, never poll**. Reach for the script;
+open over REST → **stop** (the pipeline arms auto-merge after integration tests) → **trust the webhook, never poll**. Reach for the script;
 grow the roster of scripts as recurring costs surface. When a finite resource starts binding, that's a
 *measured* constraint the offensive coordinator elevates — never optimize a resource speculatively.
 

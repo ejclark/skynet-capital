@@ -555,13 +555,15 @@ is expected and fine; the docs are the memory.
   means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
   focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
   rejects a capitalized first word — even "PRs"/"Barad-dûr").
-- Open PRs with **`/ship`** (local verify → push → REST open → one auto-merge arm → stop; wraps
+- Open PRs with **`/ship`** (local verify + integration tests → push → REST open → stop; the pipeline arms; wraps
   `scripts/ship.sh`). The ship skill also owns the landing mechanics and traps: PR bodies over REST
   (the GitHub MCP write tools silently strip `<details>`), draft promotion, whose-token-arms-the-merge,
   and `deploy-lag.mjs`.
 - **Auto-merge (SQUASH by native GitHub auto-merge) is the default at open** — opt-*out*, not opt-in;
   hold only for Eric's ask or the carve-outs. **Draft is a harness artifact, never a judgment:
-  promote and arm in the same breath.** A lingering draft is a throughput bug — drafts can't
+  promote it at once.** `pipeline.yml`'s `arm auto-merge` job arms it after `verify` **and**
+  `integration tests` pass; never arm by hand (#4094: three PRs merged mid-integration-tests,
+  2026-09-30). A lingering draft is a throughput bug — drafts can't
   auto-merge AND skip `verify` (`docs/LESSONS.md`, 2026-08-14).
 - **Commits & PRs are documents** ([`docs/ENGINEERING.md`](docs/ENGINEERING.md) → _Change
   communication_): plain-language **Summary** + **Why**, weeds below the fold, mirroring
