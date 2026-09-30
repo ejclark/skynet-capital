@@ -23,6 +23,12 @@ import {
   type ProbeRetro,
   probeRetro,
 } from "../playbooks/cond-scout-retro.js";
+import {
+  COND_SCOUT_KIND,
+  type CondScoutSnapshot,
+  MAX_OPEN_PROBES,
+  MAX_RETROS,
+} from "./cond-scout-wire.js";
 import type { DecisionRecord } from "./decision-record.js";
 
 /**
@@ -124,10 +130,44 @@ export class CondScoutRunner {
   /** This process's snapshots per open probe — the retro's source when no store is wired. */
   private readonly snapshots = new Map<string, ShadowSnapshot[]>();
   private backfilledDay = "";
+  /** This process's newest retros — the snapshot's source when no store is wired. */
+  private memoryRetros: ProbeRetro[] = [];
 
   constructor(deps: CondScoutDeps) {
     this.deps = deps;
     for (const probe of deps.store?.loadOpen() ?? []) this.open.set(probe.symbol, probe);
+  }
+
+  /**
+   * The ledger as the app's Heartbeat draws it (#3651 slice 7a) — open probes with their latest
+   * mark, and the newest retros. Bounded to the wire's own limits, so a send can never be refused
+   * for size.
+   */
+  snapshot(hostPersonaId: string, at: number): CondScoutSnapshot {
+    const open = [...this.open.values()].slice(0, MAX_OPEN_PROBES).map((p) => {
+      const markRoi = this.snapshots.get(p.id)?.at(-1)?.markRoi;
+      return {
+        id: p.id,
+        symbol: p.symbol,
+        hypothesis: p.hypothesis,
+        condition: p.condition,
+        openedAt: p.openedAt,
+        expiresAt: p.expiresAt,
+        entryPrice: p.entryPrice,
+        stopPrice: p.stopPrice,
+        notional: p.notional,
+        ...(markRoi !== undefined ? { markRoi } : {}),
+      };
+    });
+    const retros = this.deps.store?.recentRetros(MAX_RETROS) ?? this.memoryRetros;
+    return { kind: COND_SCOUT_KIND, hostPersonaId, at, open, retros: retros.slice(0, MAX_RETROS) };
+  }
+
+  private rememberRetro(retro: ProbeRetro): void {
+    this.memoryRetros = [
+      retro,
+      ...this.memoryRetros.filter((r) => r.probeId !== retro.probeId),
+    ].slice(0, MAX_RETROS);
   }
 
   /** Open probes, keyed by symbol — read-only view for health reporting. */
@@ -182,6 +222,7 @@ export class CondScoutRunner {
       );
       this.snapshots.delete(close.probe.id);
       this.deps.store?.saveRetro(retro);
+      this.rememberRetro(retro);
       this.deps.onRetro?.(retro);
     }
     const intents = closed.map(exitIntent);
@@ -288,6 +329,7 @@ export class CondScoutRunner {
       }
       if (next === retro) continue;
       store.saveRetro(next);
+      this.rememberRetro(next);
       this.deps.onRetro?.(next);
     }
     this.backfilledDay = sessionDay;

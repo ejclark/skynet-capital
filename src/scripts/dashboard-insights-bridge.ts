@@ -7,8 +7,10 @@
  * for the full reasoning + what was verified. Pulled out of `serve-dashboard.ts` to keep that
  * file's own complexity budget (`scripts/arch-scan.mjs`'s sibling lint gate).
  */
+
 import { join } from "node:path";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
+import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import {
   type DecisionDb,
@@ -77,6 +79,8 @@ export interface InsightsBridgeHandle {
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
    *  same dark-when-unset posture. */
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
+  /** COND-SCOUT's latest snapshot (#3651 slice 7a) — memory only, refilled by the next poll. */
+  readonly readCondScout: () => CondScoutSnapshot | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -106,8 +110,14 @@ export function startInsightsBridge(
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
+  let condScout: CondScoutSnapshot | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
+    condScout: {
+      accept: (snapshot) => {
+        condScout = snapshot;
+      },
+    },
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),
@@ -149,6 +159,7 @@ export function startInsightsBridge(
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
+    readCondScout: () => condScout,
     ...(decisionDb
       ? {
           readDecisions: async (personaId, page) =>
