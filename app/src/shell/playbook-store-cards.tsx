@@ -257,11 +257,18 @@ function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): Reac
   );
 }
 
-/** "No subscribers yet" · "1 subscriber" · "3 subscribers" — a count of accounts, never which
- *  ones (#3970). Words carry it; no colour means anything here. */
+/**
+ * "No active subscribers yet" · "1 active subscriber" · "3 active subscribers" — a count of
+ * accounts, never which ones (#3970). Words carry it; no colour means anything here.
+ *
+ * "active" is load-bearing, not decoration. The server counts ENABLED subscriptions only
+ * (`subscriberCounts`, deliberately — a paused subscription delegates nothing), so a card that
+ * said plain "subscribers" would be narrower than its own word: an account that paused is still a
+ * subscriber, and it is not in this number. The label names the measure it is actually reporting.
+ */
 function subscriberLine(count: number): string {
-  if (count === 0) return "No subscribers yet";
-  return `${count} ${count === 1 ? "subscriber" : "subscribers"}`;
+  if (count === 0) return "No active subscribers yet";
+  return `${count} active ${count === 1 ? "subscriber" : "subscribers"}`;
 }
 
 export function PlaybookCard({
