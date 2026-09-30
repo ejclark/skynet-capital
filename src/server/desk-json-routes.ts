@@ -14,6 +14,7 @@ import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder } from "../observatory/wire-reasoning.js";
+import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -106,6 +107,25 @@ async function heartbeatPayload(
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }
 
+/**
+ * `/api/desk/:id/probes` (#3651 slice 7a) — COND-SCOUT's shadow ledger, only on the bot account
+ * the scout runs beside: open probes, recent retros, and a verdict per hypothesis. Every number
+ * here is simulated (no order was ever sent); the Heartbeat labels it so. Absent snapshot, or a
+ * different desk, says so plainly rather than showing an empty ledger.
+ */
+function probesPayload(found: { readonly id: string }, config: DashboardServerConfig): unknown {
+  const snapshot = config.readCondScout?.();
+  if (!snapshot || snapshot.hostPersonaId !== found.id) return { available: false };
+  return {
+    available: true,
+    simulated: true,
+    at: snapshot.at,
+    open: snapshot.open,
+    retros: snapshot.retros,
+    verdicts: hypothesisVerdicts(snapshot.retros),
+  };
+}
+
 /** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
  *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race).
@@ -120,7 +140,7 @@ export async function serveDeskJson(
   session?: Session,
 ): Promise<void> {
   const rest = decodeURIComponent(path.slice("/api/desk/".length));
-  const sub = ["activity", "decisions", "heartbeat", "pulse", "thesis"].find((name) =>
+  const sub = ["activity", "decisions", "heartbeat", "probes", "pulse", "thesis"].find((name) =>
     rest.endsWith(`/${name}`),
   );
   const id = sub ? rest.slice(0, -(sub.length + 1)) : rest;
@@ -172,8 +192,14 @@ export async function serveDeskJson(
     );
     return;
   }
-  if (sub === "heartbeat") {
-    res.end(JSON.stringify(await heartbeatPayload(found, config, owner)));
+  // The bot's health panels — one lookup, so a new panel never adds a branch here.
+  const panels: Record<string, () => Promise<unknown>> = {
+    heartbeat: () => heartbeatPayload(found, config, owner),
+    probes: () => Promise.resolve(probesPayload(found, config)),
+  };
+  const panel = panels[String(sub)];
+  if (panel) {
+    res.end(JSON.stringify(await panel()));
     return;
   }
   if (sub === "decisions") {

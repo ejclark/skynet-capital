@@ -1,5 +1,6 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
@@ -143,6 +144,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section absent, same dark-when-unset posture as `funnelFor`.
    */
   readonly listRetrospectives?: (participantId: string) => readonly RetrospectiveRecord[];
+  /**
+   * COND-SCOUT's latest ledger snapshot (#3651 slice 7a), replicated whole on every bots poll —
+   * feeds `/api/desk/:id/probes`. Omit and that panel reports itself unavailable.
+   */
+  readonly readCondScout?: () => CondScoutSnapshot | undefined;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they

@@ -58,8 +58,18 @@ export interface ConditionReading {
 /** The named conditions the v1 scanner recognizes. `unclassified` is a real answer: the reading
  *  didn't match any condition the scout holds a view on. */
 export type ScoutCondition = "oversold" | "uptrend" | "downtrend" | "unclassified";
+export const SCOUT_CONDITIONS: readonly ScoutCondition[] = [
+  "oversold",
+  "uptrend",
+  "downtrend",
+  "unclassified",
+];
 
 export type ScoutHypothesisId = "oversold-rebound" | "trend-continuation";
+export const SCOUT_HYPOTHESES: readonly ScoutHypothesisId[] = [
+  "oversold-rebound",
+  "trend-continuation",
+];
 
 export interface ConditionHypothesis {
   readonly symbol: string;
