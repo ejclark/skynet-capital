@@ -1,12 +1,19 @@
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import { applyGuardsWithVerdicts, type GuardRefusal, type RiskConfig } from "../engine/guards.js";
-import { COND_SCOUT_ID, type CondScoutConfig, scanConditions } from "../playbooks/cond-scout.js";
+import {
+  COND_SCOUT_ID,
+  type CondScoutConfig,
+  readConditions,
+  scanConditions,
+} from "../playbooks/cond-scout.js";
 import {
   checkShadowExit,
   openShadowProbe,
   probeIntent,
   type ShadowClose,
   type ShadowProbe,
+  type ShadowSnapshot,
+  snapshotProbe,
 } from "../playbooks/cond-scout-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
 
@@ -29,6 +36,10 @@ export const COND_SCOUT_PERSONA_ID = "cond-scout";
  *  measures each probe against a book the size of the experiment, not a real account. */
 const DEFAULT_SHADOW_CAPITAL = 50_000;
 
+/** In-flight snapshot cadence (#3651 slice 3, settled 2026-09-24): hourly, not every ~15s pass —
+ *  a 5-to-14-day thesis needs its shape over time, not a tick tape, and the bots volume is small. */
+export const SNAPSHOT_EVERY_MS = 3_600_000;
+
 export interface CondScoutStore {
   loadOpen(): readonly ShadowProbe[];
   saveOpen(probe: ShadowProbe): void;
@@ -36,6 +47,7 @@ export interface CondScoutStore {
   close(close: ShadowClose): void;
   /** The newest closes first — how a restart rebuilds today's latches from the ledger itself. */
   recentCloses(limit: number): readonly ShadowClose[];
+  saveSnapshot(snapshot: ShadowSnapshot): void;
 }
 
 const isoDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
@@ -55,6 +67,7 @@ export interface CondScoutDeps {
   readonly now?: () => number;
   readonly onDecision?: (record: DecisionRecord) => void;
   readonly onClose?: (close: ShadowClose) => void;
+  readonly onSnapshot?: (snapshot: ShadowSnapshot) => void;
 }
 
 function exitIntent(close: ShadowClose): OrderIntent {
@@ -83,6 +96,8 @@ export class CondScoutRunner {
   private readonly closedToday = new Set<string>();
   private closesDay = "";
   private closes: Readonly<Record<string, readonly number[]>> = {};
+  /** Last snapshot per probe id. Not persisted: a restart takes one extra snapshot, never misses. */
+  private readonly lastSnapshotAt = new Map<string, number>();
 
   constructor(deps: CondScoutDeps) {
     this.deps = deps;
@@ -98,6 +113,7 @@ export class CondScoutRunner {
     const at = (this.deps.now ?? Date.now)();
     if (this.closedDay !== sessionDay) this.startSession(sessionDay);
     this.closeDue(context, at);
+    await this.snapshotDue(context, sessionDay, at);
     if (this.openedDay === sessionDay || this.deps.blockedReason()) return;
     await this.openNew(context, sessionDay, at);
   }
@@ -129,6 +145,7 @@ export class CondScoutRunner {
     if (closed.length === 0) return;
     for (const close of closed) {
       this.open.delete(close.probe.symbol);
+      this.lastSnapshotAt.delete(close.probe.id);
       this.closedToday.add(close.probe.symbol);
       this.deps.store?.close(close);
       this.deps.onClose?.(close);
@@ -146,11 +163,7 @@ export class CondScoutRunner {
   }
 
   private async openNew(context: MarketContext, sessionDay: string, at: number): Promise<void> {
-    // Daily closes change once a session: fetched on the first pass of the day, reused after.
-    if (this.closesDay !== sessionDay) {
-      this.closes = await this.deps.closesFor(this.deps.universe);
-      this.closesDay = sessionDay;
-    }
+    await this.ensureCloses(sessionDay);
     const config = this.deps.config ?? {};
     const hypotheses = scanConditions(
       context,
@@ -195,6 +208,9 @@ export class CondScoutRunner {
           : { ...probe, quantity: ok.quantity, notional: probe.entryPrice * ok.quantity };
       this.open.set(opened.symbol, opened);
       this.deps.store?.saveOpen(opened);
+      const quote = context.quotes[opened.symbol];
+      const hypothesis = hypotheses.find((h) => h.symbol === opened.symbol);
+      if (quote) this.recordSnapshot(snapshotProbe(opened, quote, at, hypothesis?.reading));
     }
     // A scan that produced candidates spends the session whether or not any survived: a book the
     // guards refuse now would refuse identically every pass for the rest of the day.
@@ -210,6 +226,34 @@ export class CondScoutRunner {
       context,
       ...(refused.length > 0 ? { refusals: refused } : {}),
     });
+  }
+
+  /** Daily closes change once a session: fetched on the first pass that needs them, reused after. */
+  private async ensureCloses(sessionDay: string): Promise<void> {
+    if (this.closesDay === sessionDay) return;
+    this.closes = await this.deps.closesFor(this.deps.universe);
+    this.closesDay = sessionDay;
+  }
+
+  /** Every open probe whose last snapshot is an hour old gets another: quote, conditions, mark. */
+  private async snapshotDue(context: MarketContext, sessionDay: string, at: number): Promise<void> {
+    const due = [...this.open.values()].filter(
+      (p) => at - (this.lastSnapshotAt.get(p.id) ?? Number.NEGATIVE_INFINITY) >= SNAPSHOT_EVERY_MS,
+    );
+    if (due.length === 0) return;
+    await this.ensureCloses(sessionDay);
+    for (const probe of due) {
+      const quote = context.quotes[probe.symbol];
+      if (!quote) continue; // no quote, no honest mark — try again next pass
+      const reading = readConditions(context, probe.symbol, this.closes[probe.symbol] ?? []);
+      this.recordSnapshot(snapshotProbe(probe, quote, at, reading));
+    }
+  }
+
+  private recordSnapshot(snapshot: ShadowSnapshot): void {
+    this.lastSnapshotAt.set(snapshot.probeId, snapshot.at);
+    this.deps.store?.saveSnapshot(snapshot);
+    this.deps.onSnapshot?.(snapshot);
   }
 
   /** The book the guards judge a probe against: shadow capital less what open probes tie up. */

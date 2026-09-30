@@ -16,7 +16,7 @@
  * the live-cycle wiring are slice 2b's; guards run there, on the intent `probeIntent` builds.
  */
 import type { OrderIntent, Quote } from "../domain/types.js";
-import { COND_SCOUT_ID, type ConditionHypothesis } from "./cond-scout.js";
+import { COND_SCOUT_ID, type ConditionHypothesis, type ConditionReading } from "./cond-scout.js";
 
 const DAY_MS = 86_400_000;
 
@@ -153,5 +153,37 @@ export function probeIntent(hypothesis: ConditionHypothesis, quantity: number): 
     reason:
       `COND-SCOUT SHADOW PROBE — simulated fill at the ask, no order sent. ` +
       `${hypothesis.condition} → ${hypothesis.hypothesis}: ${hypothesis.triggers.join("; ")}.`,
+  };
+}
+
+/**
+ * One in-flight reading of an open probe (#3651 slice 3): what the conditions and the mark looked
+ * like at a moment between open and close. The retro reads the series to see how the thesis
+ * evolved — and the earlier-exit sweep prices "what if we'd closed here" off each one's bid.
+ */
+export interface ShadowSnapshot {
+  readonly probeId: string;
+  readonly symbol: string;
+  readonly at: number;
+  readonly quote: FillQuote;
+  /** The scanner's reading at this moment — fields present only where computable. */
+  readonly reading?: ConditionReading;
+  /** Return if closed now, at the bid — the same fill rule a real exit uses. */
+  readonly markRoi: number;
+}
+
+export function snapshotProbe(
+  probe: ShadowProbe,
+  quote: Quote,
+  at: number,
+  reading?: ConditionReading,
+): ShadowSnapshot {
+  return {
+    probeId: probe.id,
+    symbol: probe.symbol,
+    at,
+    quote: fillQuote(quote),
+    ...(reading ? { reading } : {}),
+    markRoi: (quote.bid - probe.entryPrice) / probe.entryPrice,
   };
 }

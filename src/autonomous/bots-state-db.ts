@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import type { SentimentTracker } from "../news/sentiment-tracker.js";
-import type { ShadowClose, ShadowProbe } from "../playbooks/cond-scout-ledger.js";
+import type { ShadowClose, ShadowProbe, ShadowSnapshot } from "../playbooks/cond-scout-ledger.js";
 import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
 
@@ -38,6 +38,9 @@ export interface BotsStateDb {
   closeShadowProbe(close: ShadowClose): void;
   /** The newest closes first. */
   listShadowCloses(limit: number): ShadowClose[];
+  saveShadowSnapshot(snapshot: ShadowSnapshot): void;
+  /** One probe's in-flight snapshots, oldest first. */
+  listShadowSnapshots(probeId: string): ShadowSnapshot[];
   close(): void;
 }
 
@@ -81,6 +84,12 @@ export function openBotsStateDb(path: string): BotsStateDb {
       closed_at INTEGER,
       close_json TEXT
     );
+    CREATE TABLE IF NOT EXISTS cond_scout_snapshots (
+      probe_id TEXT NOT NULL,
+      at INTEGER NOT NULL,
+      snapshot_json TEXT NOT NULL,
+      PRIMARY KEY (probe_id, at)
+    );
   `);
   const upsertScoutState = db.prepare(
     "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
@@ -98,6 +107,9 @@ export function openBotsStateDb(path: string): BotsStateDb {
 
   const upsertProbe = db.prepare(
     "INSERT INTO cond_scout_probes (id, opened_at, probe_json) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET probe_json = excluded.probe_json",
+  );
+  const upsertSnapshot = db.prepare(
+    "INSERT INTO cond_scout_snapshots (probe_id, at, snapshot_json) VALUES (?, ?, ?) ON CONFLICT(probe_id, at) DO UPDATE SET snapshot_json = excluded.snapshot_json",
   );
   const closeProbe = db.prepare(
     "UPDATE cond_scout_probes SET closed_at = ?, close_json = ? WHERE id = ?",
@@ -127,6 +139,16 @@ export function openBotsStateDb(path: string): BotsStateDb {
           )
           .all(limit) as { close_json: string }[]
       ).map((row) => JSON.parse(row.close_json));
+    },
+    saveShadowSnapshot(snapshot) {
+      upsertSnapshot.run(snapshot.probeId, snapshot.at, JSON.stringify(snapshot));
+    },
+    listShadowSnapshots(probeId): ShadowSnapshot[] {
+      return (
+        db
+          .prepare("SELECT snapshot_json FROM cond_scout_snapshots WHERE probe_id = ? ORDER BY at")
+          .all(probeId) as { snapshot_json: string }[]
+      ).map((row) => JSON.parse(row.snapshot_json));
     },
     loadMomentum(): Record<string, number[]> {
       const out: Record<string, number[]> = {};
@@ -213,6 +235,7 @@ export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | un
     saveOpen: (probe) => db.saveShadowProbe(probe),
     close: (close) => db.closeShadowProbe(close),
     recentCloses: (limit) => db.listShadowCloses(limit),
+    saveSnapshot: (snapshot) => db.saveShadowSnapshot(snapshot),
   };
 }
 
