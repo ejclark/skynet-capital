@@ -25,13 +25,27 @@ straight confounded session by construction: **FOMC 10-28 · PCE + GDP-advance 1
 08:30 (high, BLS-confirmed) · MSFT/GOOG/META/AAPL/AMZN 10-27→10-29 · midterms 11-03**. Two things
 about October *are* new. The **ISM lead compresses to one business day** (Fri 10-30 → Mon 11-02),
 the shortest it gets — no session in between to digest it. And the October **field period is the
-pre-midterm run-up**, so a soft headline is as likely to be election uncertainty as demand. Still
+pre-midterm run-up**, so a soft headline is as likely to be election uncertainty as demand.
+
+**This pulse's own correction (D-30): the FOMC leg of that corridor is no longer an already-decided
+formality.** The initial session read October's own hike conditional near 15–20% because the quoted
+59–62% figures were cumulative *"hike-at-or-before-October"* contracts, with the move expected to
+land in September. It did — the Fed hiked 25bp to 3.75–4.00% on 09-16, hawkish (SEP 2026 median
+4.1%) — but the market has since re-priced the **10-28 meeting's own conditional directly**: three
+venues now quote it hike-favored (Polymarket 65%, CME/centralbank.watch 61.6%, Kalshi ~66%, all per
+the [fomc-2026-10-28 sibling](fomc-2026-10-28.md)'s 09-27 pulse), not resolved. The corridor is denser
+too — MSFT/GOOG/META/AAPL/AMZN's prints are now canonical `critical`-impact entries rather than
+anticipated ones, and a same-day BoJ Outlook-Report decision (`boj-decision-2026-10-30`, medium,
+estimate) has since been proposed and canonicalized. None of it is a channel to this print — it was
+never trading on the Fed's decision — and the September number this doc's October base case waits on
+**still has not printed** (the [09-30 sibling](chicago-pmi-2026-09-30.md)'s own same-day pulse:
+seventh consecutive confirmation of no figure, no consensus, as of its last check today). Still
 never a trade: medium impact, `estimate` date, no macro-keyed house playbook.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-55) | Stand aside | High | A medium-impact regional survey 55 days out on an `estimate` date, with no October consensus published and none expected before late October, and no house playbook macro-keyed (S1/S2/E1/S3/S4 + G1 are all symbol/earnings-keyed). | Nothing dated today; no October consensus exists and the date is still not primary-confirmed |
-| This week | Watch **CPI 2026-09-11**, not this print | High | Waller made the September FOMC call explicitly conditional on August CPI on 09-03; the [FOMC 10-28 sibling](fomc-2026-10-28.md) puts *October's own* hike conditional near **15–20%** because the hike most likely lands in September. The rate question resolves seven weeks before this print. | The **09-11** CPI moving September hike odds less than ~5pts, which would push the live fork out to 10-28 and back into this print's corridor |
+| Today (D-30) | Stand aside | High | Unchanged since D-55: a medium-impact regional survey on an `estimate` date (MNI calendar re-fetched today, unchanged — October 30, 09:45 ET), no October consensus published (tradingeconomics re-checked today: still only the Q3 extrapolation, 46.90, not a monthly forecast), no house playbook macro-keyed. | Nothing dated today; no October consensus exists and the date is still not primary-confirmed |
+| This week | Watch the **September Chicago print** (own sibling, not yet landed), not this one | High | The CPI 09-11 and FOMC 09-16 forks this row originally tracked have both resolved (Fed hiked 25bp, hawkish SEP). The live question now is whether September's print — due today per the [09-30 sibling](chicago-pmi-2026-09-30.md), unprinted as of its own last pulse — breaks that doc's mean-reversion call before October's base case can even be framed. **Correction carried from the TL;DR:** October's own FOMC conditional is no longer ~15–20% — three venues now quote the 10-28 meeting itself hike-favored (~62–66%, [fomc-2026-10-28 sibling](fomc-2026-10-28.md), 09-27) — a corridor-risk correction, not a change to this print's own no-trade stance. | September's own print landing sub-50, making it two-of-two consecutive sub-50 reads and forcing this doc's October threshold call to be re-derived rather than repeated |
 | This month | Register **no October level view** until the **09-30** sibling prints | High | This is a refusal, and it is the honest one: the whole October base case is a function of whether September's mean-reversion held, and that datum arrives 30 days before this print. Pre-committing to a level now would be fitting a story to a number that does not exist. | MNI failing to publish the September headline by **2026-10-02**, which would make the October print the first read in two months and force an unconditional stance |
 | This quarter | **The 10-30 print leaves no identifiable footprint in its own 09:45–09:50 window** | Medium | Measured, not asserted: across the three release days in Yahoo's 60-session reach the release-containing 5-min bar sits at the 2nd/72nd/43rd (SPY), 0th/63rd/35th (QQQ), 58th/5th/48th (TLT) percentile of the same instrument's 2026 09:45-bar distribution, with the year's biggest miss at the 43rd. Graded **Medium**, not High, for one reason: **n = 3**. | A **2026-10-30** 09:45–09:50 bar above the **75th percentile** of SPY's own trailing-60-session 09:45-bar distribution *and* the same on QQQ — this survey would have earned a measured standalone impact for the first time |
 
@@ -41,8 +55,11 @@ never a trade: medium impact, `estimate` date, no macro-keyed house playbook.
   playbook is macro-keyed. It is an input to a reading, not an event to position around.
 - **Read Prices Paid before the headline**, for as long as this Fed's case is pinned to inflation —
   the standing instruction inherited from the [09-30 sibling](chicago-pmi-2026-09-30.md), which
-  promoted "Prices Paid holds or rises" to a base case on an energy/metal premise that has not
-  unwound (Brent **89.31 → 96.28**, +7.8%, 08-28→09-04; copper **6.56 → 6.60**, +0.6%).
+  promoted "Prices Paid holds or rises" to a base case on an energy/metal premise that has still not
+  unwound as of today (Brent **89.31 → 96.54**, +7.6%, 08-28→09-30, per the sibling's own D-0 fetch;
+  copper **6.56 → 6.58**, +0.3%, same span) — even after the US rejected a phased Hormuz-reopening
+  proposal on 09-29, the diplomatic settlement track the doc's kill switch depends on, closer on
+  price but further on mechanism, per the same sibling.
 - **The 09:45–09:50 bar is where this release's impact lives, if it has any.** Do not read the
   session; read the five minutes that contain it. Everything else on 10-30 belongs to ECI at 08:30.
 - **A second look at the ISM lead is cheap this month** — Fri 10-30 → Mon 11-02 is a **one**-business-day
@@ -52,15 +69,23 @@ never a trade: medium impact, `estimate` date, no macro-keyed house playbook.
   midterms, whose live economic issue (data-center power-cost allocation, tariffs) hits Chicagoland
   manufacturers' input costs directly — a diffusion survey measures sentiment, and sentiment in that
   window is not the same thing as orders.
-- **Watch (dated):** CPI **2026-09-11** (the live fork) · FOMC **2026-09-16** · **Chicago PMI
-  2026-09-30** (estimate — the sibling print that sets this one's base case) · ISM Manufacturing
-  **2026-10-01** (estimate) · CPI **2026-10-14** · MSFT **2026-10-27** · Conference Board consumer
-  confidence + durable goods **2026-10-27** · GOOG + META **2026-10-28** · **FOMC 2026-10-28** ·
-  PCE + GDP-advance + AAPL + AMZN **2026-10-29** · **ECI 2026-10-30 08:30 (confirmed, BLS)** ·
-  **this print 2026-10-30 09:45** (estimate) · ISM Manufacturing **2026-11-02** (estimate — the
-  national print this survey leads by one business day) · **midterms 2026-11-03** · jobs
-  **2026-11-06** · **Chicago PMI 2026-11-30** (estimate, proposed in this PR) · CR expiry
-  **2026-12-11**.
+- **The corridor got denser and livelier since D-55, not just closer — none of it is a channel to
+  this print.** MSFT/GOOG/META/AAPL/AMZN's 10-27→10-29 prints are now canonical `critical`-impact
+  calendar entries rather than anticipated ones; a same-day BoJ Outlook-Report decision
+  (`boj-decision-2026-10-30`, medium, estimate) has since been proposed and canonicalized; and the
+  FOMC 10-28 decision's own conditional is now hike-favored (~62–66%) rather than an
+  already-resolved formality (see the TL;DR and "This week" row above).
+- **Watch (dated):** **Chicago PMI 2026-09-30** (estimate — today, the sibling print that sets this
+  one's base case, not yet landed) · ISM Manufacturing **2026-10-01** (confirmed, high) · jobs
+  **2026-10-02** (confirmed, high) · CPI **2026-10-14** · MSFT **2026-10-27** (estimate, critical) ·
+  Conference Board consumer confidence + durable goods **2026-10-27** · GOOG + META **2026-10-28**
+  (estimate, critical) · **FOMC 2026-10-28** (confirmed, high — now hike-favored ~62–66%) · PCE +
+  GDP-advance **2026-10-29** (confirmed, high) + AAPL + AMZN **2026-10-29** (estimate, critical) ·
+  **BoJ decision 2026-10-30** (estimate, medium — same morning) · **ECI 2026-10-30 08:30 (confirmed,
+  BLS, high)** · **this print 2026-10-30 09:45** (estimate) · ISM Manufacturing **2026-11-02**
+  (confirmed, high — the national print this survey leads by one business day) · **midterms
+  2026-11-03** (estimate, high) · jobs **2026-11-06** · **Chicago PMI 2026-11-30** (estimate,
+  proposed at initial research) · CR expiry **2026-12-11**.
 
 ## Initial research
 
@@ -295,10 +320,24 @@ the predecessor:
 3. **Carried and sharpened — the headline is a probe on the national ISM, not a forecast.** In
    October the lead is **one** business day (Fri 10-30 → Mon 11-02), the tightest of the year.
 
+**Stance change (2026-09-30, D-30) — a correction to the corridor's Fed leg, not to this event's own
+stance.** The receipt is the D-30 ledger row below. Item 2's cost-channel numbers still hold
+directionally on a fresher fetch (Brent **89.31 → 96.54**, +7.6%, 08-28→09-30; copper **6.56 → 6.58**,
++0.3%, same span — both per the [09-30 sibling](chicago-pmi-2026-09-30.md)'s own D-0 pulse, read
+rather than re-derived). The one thing that actually moved: this doc's own leg 4 read October's FOMC
+conditional near 15–20% at D-55, on the premise that the hike "most likely lands in September." It
+did — 25bp, hawkish, 09-16 — but the market has since quoted the **10-28 meeting's own** conditional
+directly, and it is hike-favored (~62–66% across three venues, per the
+[fomc-2026-10-28 sibling](fomc-2026-10-28.md)'s 09-27 pulse), not an already-resolved formality. This
+event was never trading on that decision and still is not; the correction only sharpens how a reader
+should weigh the corridor table in leg 4, and is recorded here rather than by editing that leg's own
+prose, which the "Honest limits" and ledger sections both treat as a historical record.
+
 **No level view is registered for the October headline.** The base case is threshold-only (≥50), on
 the 2026 base rate of 7-of-8 and a national ISM in month eight of expansion — deliberately not a
 point forecast, because trailing σ is **7.59**. The September print on **2026-09-30** is the input
-that will set the real October stance, and this document refuses to pre-empt it.
+that will set the real October stance, and — per the [09-30 sibling](chicago-pmi-2026-09-30.md)'s own
+D-0 pulse — it has not yet printed as of today, so this document continues to refuse to pre-empt it.
 
 **Forward tests registered (3):** `FT-chicago-pmi-2026-10-30-1` (the 09:45-window attribution null,
 with a pre-stated percentile threshold), `-2` (the ≥50 threshold call), `-3` (the one-business-day
@@ -320,10 +359,17 @@ ISM lead — direction agreement with the 11-02 national print). See
   one-business-day lead with no intervening session, a directional disagreement is the strongest
   available evidence against the 68%-correlation claim this event's place in the calendar rests on.
 - **Brent closing below ~$87 before 2026-10-30** on a genuine Hormuz settlement — removes the cost
-  mechanism the carried Prices Paid instruction depends on. Live; Brent closed **96.28** on 09-04.
-- **The 09-11 CPI resolving the FOMC question toward hold-or-cut** — would restore the headline's
-  primacy over Prices Paid, since the reading order exists only while this Fed is inflation-anchored.
-  Live and dated; Waller made the September call explicitly conditional on that print on 09-03.
+  mechanism the carried Prices Paid instruction depends on. **Live; closer on price, further on
+  mechanism.** Brent closed **96.54** on 09-30 (per the [09-30 sibling](chicago-pmi-2026-09-30.md)'s
+  own D-0 fetch), ~11% above the trigger and the closest yet — but the US rejected a phased
+  Hormuz-reopening proposal by 09-29 (Trump, same sibling), the diplomatic settlement track this
+  switch was written for. Does not fire.
+- **Resolved, did not fire (2026-09-16): the September FOMC resolving toward hold-or-cut.** Waller's
+  conditional was explicitly on a hawkish outcome (09-03), and the meeting delivered one — 25bp hike,
+  hawkish SEP (2026 median 4.1%). The reading order (Prices Paid before the headline) stands.
+  **Successor, live and dated:** CPI **2026-10-14** — still capable of flipping the reading order back
+  toward the headline if it surprises sharply to the downside, and the last CPI print before this
+  event's own window.
 - **A primary-tier source for the MNI release schedule becoming citable**, or the source-prefix table
   gaining an MNI/ISM-Chicago prefix — the date could then leave `estimate`. **Live and now narrower:**
   this session established that ISM-Chicago's own report page is auth-walled (302 → SSO), so no better
@@ -334,9 +380,13 @@ ISM lead — direction agreement with the 11-02 national print). See
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-05 | D-55 | Initial research banked (above). **Headline finding: the attribution question both sibling instances shelved is answered, and the answer is a measured null.** SPY/QQQ/TLT **5-minute** bars fetched this session (Yahoo, `range=60d`, 4,681 bars, 2026-06-11 → 09-04, 60 complete 09:45 ET sessions) isolate the bar that *contains* the 09:45 release. Across all three Chicago prints in reach the release bar lands at the **2nd / 72nd / 43rd** percentile (SPY), **0th / 63rd / 35th** (QQQ), **58th / 5th / 48th** (TLT) of that instrument's own 2026 09:45-bar \|return\| distribution — six of nine at or below the 48th, none above the 72nd — and the year's **largest miss** (08-28: **47.1**, −10.5pt, >10pt vs consensus) printed a **43rd-percentile** SPY bar. The 07-31 SPY outlier (72nd) is disciplined by its own 09:40 placebo (−0.138%, *larger* than the 09:45 bar's −0.111%): the move preceded the release. Unconditional baselines: SPY mean \|ret\| **0.085%**, median 0.063%, p90 0.192%; QQQ mean 0.160%; TLT mean 0.046%. **n = 3 is the binding limit** and caps the derived call at Medium. **Second finding: the confounding is structural.** MNI publishes 09:45 ET on the **last business day**; BEA/BLS schedule month-end releases at 08:30 the same day — 08-28 (Warsh), 09-30 (PCE + GDP + quarter-end), 10-30 (ECI) are three-for-three by construction, so waiting for a clean session waits forever. **Adjacency sweep — peers:** five of the nine tracked names report inside this print's corridor (**MSFT 10-27 · GOOG + META 10-28 · AAPL + AMZN 10-29**); none is a Chicagoland manufacturer and no channel runs from this survey to them, but they own the week's tape. **Macro:** the corridor carries **21** other tracked events within 5 days — load-bearing are **FOMC 10-28 14:00 (confirmed)**, **PCE + GDP Q3-advance 10-29 08:30 (both confirmed, high)**, **ECI Q3 2026-10-30 08:30 (confirmed, BLS, high)** landing **75 minutes before** this print, **ISM Manufacturing 11-02** and the **11-03 midterms**. Per the [FOMC sibling](fomc-2026-10-28.md), October's *own* hike conditional is ~**15–20%** (the quoted 59–62% are cumulative "at-or-before-October" contracts; the hike most likely lands in September), so this is the second consecutive Chicago print to inherit a decided regime. One confounder is *removed* versus September: 10-30 is month-end but **not** quarter-end, so no index-rebalance flows. **Volatility regime:** **VIX 14.43 (08-28) → 14.53 (09-04)**, Δ +0.10, round-tripping a **16.34** spike on 09-01 — no regime change; S&P 7,711.76 → 7,718.60. Baseline established for this event; nothing to diff against yet. **Geopolitical:** the energy/metal premise behind the carried Prices-Paid instruction has not unwound — **Brent 89.31 → 96.28, +7.8%**; **copper 6.56 → 6.60, +0.6%** (own Yahoo daily bars, 08-28 → 09-04). *Divergence named, not reconciled:* the [09-30 sibling](chicago-pmi-2026-09-30.md) records **95.83** / **6.67** for the same session — settlement-vs-last-price most plausibly; direction identical, but the copper leg is materially weaker on these bars and that caution is carried forward. **Event tape:** no October consensus at D-55 and none expected before late October. MNI's 2025/26 calendar re-fetched today gives `"October 30" | "09:45"` verbatim, with the full 2026 schedule (Jan 30 · Feb 27 · Mar 31 · Apr 30 · May 29 · Jun 30 · Jul 31 · Aug 28 · Sep 30 · **Oct 30** · Nov 30 · Dec 30) and no schedule-change footnote. **Schema gap re-tested and narrowed:** `chicago.ismworld.org/news-publications/reports/research-survey/` **302s to `ecommerce.ismworld.org/SSO/Login.aspx`** — the same auth wall the ISM sibling records for the national ROB calendar — so MNI is the only public publisher-primary route and the `estimate` label can only be lifted by a source-prefix change, not by better sourcing. **Two October-specific findings:** (a) the ISM lead **compresses to one business day** (Fri 10-30 → Mon 11-02, the shortest of the year, no intervening session) — the tightest test of the 68% correlation the pair will offer; (b) the October **field period runs into the 11-03 midterms**, whose live economic issue (data-center power-cost allocation, H.R. 9340 out of committee 52-0; tariffs) hits Chicagoland input costs — so a soft headline is as consistent with election uncertainty as with falling orders, and the two are inseparable in a diffusion index. **Forward tests registered (3):** `FT-chicago-pmi-2026-10-30-1` (09:45-window null, pre-stated 75th-percentile threshold), `-2` (headline ≥50), `-3` (direction agreement with ISM 11-02). **New dated adjacency found → proposed in this PR:** **`chicago-pmi-2026-11-30`** — MNI's own calendar lists **November 30 at 09:45** (a Monday, the last business day of November) and this calendar would otherwise carry only Sep and Oct, where every comparable recurring series here carries 3–4 forward entries (ISM Mfg 09-01/10-01/11-02/12-01, CPI, jobs, ADP, ISM Services). It is the **first post-midterm** manufacturing sentiment read and it lands inside the run-up to the **12-09** FOMC. `status: estimate`, `NEWS:`. | — (stance set) | 2026-09-26 (medium, ≥31d band: every 21d — moving to every 7d once inside 30 days out) |
+| 2026-09-30 | D-30 | **Cadence band transition (the reason this pulse reached a session): `medium:31+` → `medium:8+`** — daysUntil crossed from 55 to 30, moving the reassessment interval from every 21 days to every 7. **Source re-verification, unchanged:** MNI's live calendar re-fetched today still reads `"October 30" | "09:45"` verbatim (second confirmation); tradingeconomics re-checked: still no October consensus, its own Q3 extrapolation unchanged at **46.90** (not substituted as a monthly forecast), and its most-recent-actual field still shows **August (47.10)** — no September figure visible from this source as of today's fetch. **Adjacency sweep — peers:** unchanged; `symbols: []`, no direct channel. The five tracked megacaps' 10-27→10-29 prints, only anticipated at D-55, are now canonical `critical`-impact calendar entries (`msft-2026-10-27-print`, `goog-2026-10-28-print`, `meta-2026-10-28-print`, `aapl-2026-10-29-print`, `amzn-2026-10-29-print`, all `estimate`) — confirmation of the D-55 read, not new information. **Macro — the one genuine correction this pulse carries:** the September 16 FOMC hiked **25bp to 3.75–4.00%** (unanimous 12–0, first hike in three years), SEP 2026 median **4.1%** (June: 3.8%) — this doc's own leg 4 anticipated the hike landing in September, and it did. But the market has since gone further: per the [fomc-2026-10-28 sibling](fomc-2026-10-28.md)'s own 2026-09-27 pulse, three venues now quote the **October 28 meeting's own conditional directly** — Polymarket **65%/34%** ($14.9M book, direct 09-27), CME/centralbank.watch **61.6%/38.4%** (direct 09-25), Kalshi **~66%** (secondary) — hike-favored, up from a 54.2% CME read just four days earlier (09-23). This doc's D-55 leg 4 read of "~15–20%, a decided regime" is therefore **corrected, not confirmed**: the FOMC leg of the corridor is live, not resolved. Does not change this event's own no-trade stance (see "Stance change" above); it does change how a reader should weigh the corridor table. **New same-day adjacency, already canonical, not previously in this event's own probe-ref:** `boj-decision-2026-10-30` (medium, estimate) — a quarterly Outlook Report meeting, proposed by a sibling the same day as this doc's own initial research (2026-09-05) and therefore missing from this event's first `adjacentIds` snapshot until now; channel to tracked names is yen funding/global term premium, second-order and already owned by the FOMC ledger, no channel to this event's own stance. **Corridor sweep, full ±5 days:** `node scripts/event-scan.mjs --on-date` run for every date 2026-10-25 → 2026-11-04 returns 8 entries on 10-30 itself (`boj-decision-2026-10-30`, `ecb-spf-q4-2026-10-30`, `eci-q3-2026-10-30`, `g20-foreign-ministers-atlanta-2026-10-30`, `russell-style-month-end-capping-effective-2026-10-30`, `uk-blue-book-2026-10-30`, `uk-pink-book-2026-10-30`, plus this event) and 40 more across the rest of the window — all already tracked or sibling-owned (routine Treasury/JGB auctions, regional Fed surveys, the megacap prints named above); **nothing new to propose.** **Volatility regime:** VIX **14.53 (09-05 baseline) → 16.04** close 2026-09-29 (own Yahoo fetch; cross-checked against the [09-30 sibling](chicago-pmi-2026-09-30.md)'s independently-fetched identical reading for the same session), **Δ +1.51pt / +10.4%**, under the 3-point material band on its own but consistent with the sibling-recorded Iran/Hormuz-driven single-session **+8.1%** spike on 09-29 — no regime change declared. **Geopolitical:** carried from the [09-30 sibling](chicago-pmi-2026-09-30.md)'s own same-day fetch rather than re-derived (per this doc's stated sourcing order) — Brent **96.54** on 09-30, still **+7.6%** above the 89.31 baseline this doc's Prices-Paid instruction depends on, despite the US rejecting a phased Hormuz-reopening proposal by 09-29 (Trump; officials reportedly weighing tighter sanctions instead) — supply-side mechanics kept price elevated even as the settlement track the kill switch was written for closed off; copper **6.58**, +0.3%, flat. Kill switch receipts updated above; neither fires. **Event tape — the load-bearing item:** per the [09-30 sibling](chicago-pmi-2026-09-30.md)'s own D-0 pulse, **the September Chicago print had not landed as of that pulse today** — seventh consecutive confirmation of no figure, no consensus. This doc's own refusal ("no October level view until the 09-30 sibling prints") therefore stands exactly as filed; nothing to update on the level side. **Forward tests:** `FT-chicago-pmi-2026-10-30-1/-2/-3` remain `_open_`, correctly — none scores before 10-30/10-31/11-02. | **No, and the one correction sharpens rather than reverses.** Never-a-trade, stand-aside, no-position and the reading order (Prices Paid before the headline) all hold. The FOMC-conditional correction (D-55's ~15–20% → today's ~62–66% hike-favored) changes the corridor's own risk composition, not this print's stance — it was never trading on the Fed's decision. Neither kill switch fires. | 2026-10-07 (medium, 8+ band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
 (`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:8+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30"],"adjacentStrongIds":["fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","ism-services-2026-11-04"],"screenStreak":0} -->
