@@ -136,7 +136,8 @@ describe("the label registry", () => {
   it("upserts only what it applies — registering a label never makes this script its owner", () => {
     const managed = [...declared()].sort();
 
-    // Exactly the fifteen this file applies (the five #3960 work-spigot labels joined the ten). `bug`/`enhancement` are GitHub's own defaults and
+    // Exactly the sixteen this file applies (the five #3960 work-spigot labels joined the ten, then
+    // #3960's `in-progress` in-flight signal). `bug`/`enhancement` are GitHub's own defaults and
     // `idea`/`feedback` are the intake form's: upserting those would silently revert a recolor
     // made in the UI on the next push to main, with nothing anywhere saying why it changed back.
     expect(managed).toEqual([
@@ -145,6 +146,7 @@ describe("the label registry", () => {
       "event-research",
       "fast-track",
       "hold-merge",
+      "in-progress",
       "needs-eric",
       "needs-info",
       "needs-session",

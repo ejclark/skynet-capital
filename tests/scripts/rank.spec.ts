@@ -21,6 +21,21 @@ describe("rank: the class", () => {
       hand: true,
     });
     expect(classOf({ labels: ["P2", "P1"] }).cls).toBe("P1");
+    expect(classOf({ labels: ["bug", "P2"] })).toEqual({
+      cls: "P2",
+      why: "set by hand",
+      hand: true,
+    });
+  });
+
+  // Eric, 2026-09-30: a bug found during development is expedited ahead of the queue and new WIP.
+  it("puts a bug at P0, expedited, ahead of the other derived P0 reasons", () => {
+    expect(classOf({ labels: ["bug"] })).toEqual({
+      cls: "P0",
+      why: "something is broken — expedite",
+      expedite: true,
+    });
+    expect(classOf({ labels: ["bug", "bottleneck"], blocks: [7] }).expedite).toBe(true);
   });
 
   it("puts work that unblocks open issues, then measured constraints, at P0", () => {
@@ -28,8 +43,7 @@ describe("rank: the class", () => {
     expect(classOf({ labels: ["bottleneck"] }).cls).toBe("P0");
   });
 
-  it("puts broken things and member asks at P1, ideas and Later at P3, the rest at P2", () => {
-    expect(classOf({ labels: ["bug"] }).cls).toBe("P1");
+  it("puts member asks at P1, ideas and Later at P3, the rest at P2", () => {
     expect(classOf({ labels: ["feedback", "member-d7037b4107"] }).cls).toBe("P1");
     expect(classOf({ labels: ["idea"] }).cls).toBe("P3");
     expect(classOf({ labels: ["plan"], horizon: "Later" }).cls).toBe("P3");
@@ -79,6 +93,16 @@ describe("rank: the order", () => {
       row(14, ["bottleneck"], null),
     ].filter((r) => r !== null);
     expect(rankOrder(rows).map((r) => r.number)).toEqual([14, 12, 11, 13, 10]);
+  });
+
+  it("leads P0 with an expedited bug, even an older ready bottleneck or unblocker behind it", () => {
+    const rows = [
+      row(20, ["bottleneck", "ready"], now - 90 * H),
+      rankRow(issue(21, ["plan", "ready"]), { readyAt: now - 80 * H, blocks: [4], now }),
+      row(22, ["bug"], null),
+      row(23, ["bug", "ready"], now - 1 * H),
+    ].filter((r) => r !== null);
+    expect(rankOrder(rows).map((r) => r.number)).toEqual([23, 22, 20, 21]);
   });
 
   it("renders a count line and one row per item, read-only", () => {

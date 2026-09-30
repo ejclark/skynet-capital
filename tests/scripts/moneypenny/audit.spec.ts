@@ -166,3 +166,42 @@ describe("audit() — the plan-stall threshold and memory", () => {
     ]);
   });
 });
+
+// #3960 — the board's In Progress column reads the `in-progress` label, so a build that died
+// without its terminal step would leave a ghost counting against the WIP limit of 3. The audit
+// takes a label quiet past 6h back off, with one comment; the label's absence is the memory.
+describe("audit() — clearing a stale in-progress label", () => {
+  const w = (number: number, hoursQuiet: number) => ({
+    number,
+    title: `Build ${number}`,
+    hoursQuiet,
+  });
+
+  it("clears a label quiet for 6h or more, with the one plain comment", () => {
+    const intents = audit({ staleInProgress: [w(4200, 6), w(4201, 30)] });
+    expect(intents.map((i) => [i.kind, i.issueNumber])).toEqual([
+      ["clear-in-progress", 4200],
+      ["clear-in-progress", 4201],
+    ]);
+    expect(intents[0]?.body).toContain(
+      "Cleared `in-progress`: no activity for 6h. Re-apply it when work resumes.",
+    );
+  });
+
+  it("leaves a label alone inside the 6h window — the build may simply be running", () => {
+    expect(audit({ staleInProgress: [w(4202, 5)] })).toHaveLength(0);
+  });
+
+  it("respects a custom inProgressStaleAfterHours threshold", () => {
+    const deps = { staleInProgress: [w(4203, 3)] };
+    expect(audit(deps)).toHaveLength(0);
+    expect(audit({ ...deps, inProgressStaleAfterHours: 2 })).toHaveLength(1);
+  });
+
+  it("does not read the stall-flagged memory — removing the label is its own", () => {
+    // A stall-flagged issue can still carry a ghost label; the one-ping rule for stall comments
+    // must not keep the column lying.
+    const intents = audit({ staleInProgress: [w(4204, 12)], alreadyFlagged: [4204] });
+    expect(intents).toHaveLength(1);
+  });
+});

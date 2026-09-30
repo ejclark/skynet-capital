@@ -350,6 +350,12 @@ self-correctable → fix on the fly (overlapping nets catch the rest). Irreversi
 always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
 cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
+**A bug found mid-build is the next pull** (Eric, 2026-09-30: "bug resolution opportunities discovered
+during development should be weighted with higher priority to expedite to completion compared to other
+work in queue and/or WIP"). Fix-now-if-cheap still comes first; otherwise file it `bug` + `fast-track`
+(builds even under conserve, #3960) and pull it next, ahead of the queue and of any new WIP (`npm run
+rank` leads P0 with it). Finish the current green step first — a half-done branch is new WIP, not less.
+
 **A gate is a momentum breaker unless it protects a constraint** (Eric, 2026-09-06: "process like
 the 300-line cap may be a smell now… deprecate these [possibly now antiquated] safety layers…
 that removes a momentum breaker which allows for compounding momentum"). Blocking is for
