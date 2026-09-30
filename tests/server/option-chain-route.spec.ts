@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { serveChain } from "../../src/server/option-chain-route.js";
+import { medianStamp, serveChain } from "../../src/server/option-chain-route.js";
 
 /**
  * The options ticket's chain data, degrading exactly as the legacy `ticketData` degraded: a bad
@@ -129,6 +129,56 @@ describe("serveChain", () => {
     for (const key of ["volume", "delta", "gamma", "theta", "vega"]) {
       expect(bare).not.toHaveProperty(key);
     }
+  });
+
+  it("stamps the fetch time AND the feed's median quote time, never inventing one (#4327)", async () => {
+    const before = Date.now();
+    const client = {
+      getExpirations: () => Promise.resolve(["2026-10-16"]),
+      getChain: () =>
+        Promise.resolve([
+          {
+            occSymbol: "A",
+            strike: 100,
+            quoteSource: "indicative",
+            quotedAt: "2026-09-30T14:00:00Z",
+          },
+          {
+            occSymbol: "B",
+            strike: 105,
+            quoteSource: "indicative",
+            quotedAt: "2026-09-30T14:10:00Z",
+          },
+          {
+            occSymbol: "C",
+            strike: 110,
+            quoteSource: "indicative",
+            quotedAt: "2026-09-30T13:00:00Z",
+          },
+          { occSymbol: "D", strike: 115 },
+        ]),
+      getUnderlyingPrice: () => Promise.resolve(105),
+      getUnderlyingQuote: () => Promise.resolve(undefined),
+    };
+    const first = fakeRes();
+    await serveChain(first.res, "/x?symbol=NVDA&type=put", config(client), "human-ann");
+    const quotes = JSON.parse(first.out.body ?? "{}").quotes;
+    expect(quotes.quotedAt).toBe("2026-09-30T14:00:00.000Z");
+    expect(Date.parse(quotes.asOf)).toBeGreaterThanOrEqual(before);
+
+    const unstamped = {
+      ...client,
+      getChain: () => Promise.resolve([{ occSymbol: "A", strike: 1 }]),
+    };
+    const second = fakeRes();
+    await serveChain(second.res, "/x?symbol=NVDA&type=put", config(unstamped), "human-ann");
+    expect(JSON.parse(second.out.body ?? "{}").quotes).not.toHaveProperty("quotedAt");
+  });
+
+  it("takes the middle stamp and skips unusable ones", () => {
+    expect(medianStamp([])).toBeUndefined();
+    expect(medianStamp([undefined, "garbage"])).toBeUndefined();
+    expect(medianStamp(["2026-09-30T14:00:00Z", undefined])).toBe("2026-09-30T14:00:00.000Z");
   });
 
   it("reports quote coverage — how many strikes the feed quoted, or unavailable (#3407 P2)", async () => {
