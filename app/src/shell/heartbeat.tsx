@@ -10,6 +10,7 @@ import {
 } from "../live/heartbeat";
 import { targetedCycle } from "./cycle-anchor";
 import { DecisionsSection } from "./decisions-section";
+import { ShadowProbes } from "./shadow-probes";
 
 /**
  * THE BOT HEARTBEAT (#3687 slice 3, shapes A + B — Eric's pick 2026-09-24): a chip in the account
@@ -149,6 +150,7 @@ export function HeartbeatSection({
         <h2 className="hb-h">What each playbook concluded on the last pass</h2>
         <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />
       </section>
+      <ShadowProbes deskId={deskId} />
       <section className="hb-log">
         <h2 className="hb-h">
           {withTrades

@@ -1,0 +1,75 @@
+/* COND-SCOUT's shadow probes on the Heartbeat (#3651 slice 7b): `shell/shadow-probes.tsx`. Rides
+ * the `.hb-card` / `.hb-table` look. The verdict's meaning is carried by its glyph and word, and by
+ * border weight/dash — never hue alone (docs/BRAND.md → Accessibility). Existing tokens only. */
+
+.sp-sim {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+  border-left: 2px dashed var(--border);
+  padding-left: 8px;
+}
+.sp-sub {
+  margin: 6px 0 0;
+  font: 10.5px / 1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sp-verdicts,
+.sp-closes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-verdict {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+/* The shape carries the call: a solid heavy edge for an edge, dashed for unproven, dotted for no
+   edge shown, a double rule for losing — legible with no colour at all. */
+.sp-verdict[data-call="edge"] {
+  border-width: 2px;
+  border-color: var(--text);
+}
+.sp-verdict[data-call="unproven"] {
+  border-style: dashed;
+}
+.sp-verdict[data-call="no edge shown"] {
+  border-style: dotted;
+}
+.sp-verdict[data-call="losing"] {
+  border-style: double;
+  border-width: 3px;
+}
+.sp-glyph {
+  font: 16px / 1.2 var(--mono);
+  text-align: center;
+}
+.sp-name {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.sp-line {
+  margin: 2px 0 0;
+  font: 11.5px / 1.45 var(--mono);
+  color: var(--muted);
+}
+.sp-closes li {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  padding-bottom: 6px;
+}
+/* At phone width the bet column wraps rather than clip. */
+.sp-table td:nth-child(2) {
+  white-space: normal;
+}
