@@ -6,6 +6,7 @@ import type {
 import {
   fillLaterExits,
   laterExitLadder,
+  marketBenchmark,
   nextLaterExitDue,
   probeRetro,
 } from "../../src/playbooks/cond-scout-retro.js";
@@ -169,5 +170,19 @@ describe("later exits (slice 5)", () => {
   it("never refills a checkpoint that already has its price", () => {
     const once = fillLaterExits(short, [{ t: due7, c: 110 }], T0 + 8 * DAY);
     expect(fillLaterExits(once, [{ t: due7, c: 50 }], T0 + 8 * DAY)).toBe(once);
+  });
+});
+
+describe("marketBenchmark (slice 6)", () => {
+  it("prices SPY from the open day's close to the close day's, and waits for the close day's bar", () => {
+    const retro = probeRetro(close, path); // opened 2026-09-30, closed 2026-10-08
+    const bars = [
+      { t: "2026-09-30T04:00:00Z", c: 500 },
+      { t: "2026-10-08T04:00:00Z", c: 510 },
+    ];
+    const market = marketBenchmark(retro, bars);
+    expect(market?.roi).toBeCloseTo(0.02, 6);
+    expect(market?.excess).toBeCloseTo(0, 6); // the probe also made +2%
+    expect(marketBenchmark(retro, bars.slice(0, 1))).toBeUndefined();
   });
 });

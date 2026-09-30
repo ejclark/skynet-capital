@@ -289,11 +289,48 @@ describe("CondScoutRunner", () => {
       const later = new CondScoutRunner(deps(T0 + 8 * DAY));
       await later.runPass(at(90, "2026-10-08T14:00:00Z"));
       await later.runPass(at(90, "2026-10-08T15:00:00Z"));
-      expect(barCalls).toHaveLength(1);
+      // One read per source per session: the probe's own name for the later exit, SPY for the
+      // market benchmark (slice 6). The second pass of the same session reads nothing.
+      expect(barCalls.map((c) => c.split("@")[0])).toEqual(["AMD", "SPY"]);
       const [week, threeWeeks] = store.retros[0]?.laterExits ?? [];
       expect(week?.priceBasis).toBe("daily close");
       expect(week?.roi).toBeGreaterThan(0);
       expect(threeWeeks?.roi).toBeUndefined();
+    });
+  });
+
+  describe("market benchmark (slice 6)", () => {
+    it("fills SPY over the probe's own sessions once the close day's bar exists", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const first = setup({ store, clock });
+      await first.runner.runPass(at(80));
+      clock.t = T0 + 2 * DAY;
+      await first.runner.runPass(at(70, "2026-10-02T14:00:00Z"));
+
+      const runner = new CondScoutRunner({
+        universe: ["AMD"],
+        closesFor: () => Promise.resolve({ AMD: SLIDE }),
+        risk: { maxPositionPct: 0.2 },
+        blockedReason: () => "halted",
+        store,
+        now: () => T0 + 3 * DAY,
+        barsFor: (symbol: string) =>
+          Promise.resolve(
+            symbol === "SPY"
+              ? [
+                  { t: "2026-09-30", c: 500 },
+                  { t: "2026-10-01", c: 505 },
+                  { t: "2026-10-02", c: 510 },
+                ]
+              : [],
+          ),
+      });
+      await runner.runPass(at(90, "2026-10-03T14:00:00Z"));
+      const retro = store.retros[0];
+      expect(retro?.market?.symbol).toBe("SPY");
+      expect(retro?.market?.roi).toBeCloseTo(0.02, 6);
+      expect(retro?.market?.excess).toBeCloseTo((retro?.roi ?? 0) - 0.02, 6);
     });
   });
 });
