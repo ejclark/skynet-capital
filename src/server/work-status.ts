@@ -145,6 +145,18 @@ function statusWords(issue: IssueJson, labels: readonly string[], refs: PullRefs
   return FEEDBACK_STATUS_LABEL[status];
 }
 
+function stateOf(issue: IssueJson): "open" | "closed" | "merged" {
+  if (issue.pull_request && typeof issue.pull_request.merged_at === "string") return "merged";
+  return issue.state === "closed" ? "closed" : "open";
+}
+
+/** The title as a quoted string — or withheld, when a stranger opened the issue. */
+function titleOf(issue: IssueJson): string {
+  return trustedAuthor(issue)
+    ? JSON.stringify(excerpt(issue.title, 120))
+    : "(withheld — opened by someone outside the project)";
+}
+
 function threadOf(issue: IssueJson, comments: readonly unknown[]): ThreadExcerpt {
   const typed = comments as readonly (GitHubUserish & {
     body?: unknown;
@@ -180,6 +192,17 @@ export function createWorkStatusReader(
     return res.status === 200 && Array.isArray(res.body) ? res.body : undefined;
   };
 
+  const readTimeline = async (n: number): Promise<readonly unknown[]> => {
+    const timeline: unknown[] = [];
+    for (let page = 1; page <= TIMELINE_PAGES; page++) {
+      const events = await getList(`${base}/${n}/timeline?per_page=100&page=${page}`);
+      if (!events) break;
+      timeline.push(...events);
+      if (events.length < 100) break;
+    }
+    return timeline;
+  };
+
   const readOne = async (n: number): Promise<WorkStatus> => {
     const res = await doFetch("GET", `${base}/${n}`, headers);
     if (res.status === 404 || res.status === 410) return { number: n, found: false };
@@ -190,13 +213,7 @@ export function createWorkStatusReader(
     // The newest page of comments — the thread's latest word is what "where does it stand" needs.
     const count = typeof issue.comments === "number" ? issue.comments : 0;
     const lastPage = Math.max(1, Math.ceil(count / 100));
-    const timeline: unknown[] = [];
-    for (let page = 1; page <= TIMELINE_PAGES; page++) {
-      const events = await getList(`${base}/${n}/timeline?per_page=100&page=${page}`);
-      if (!events) break;
-      timeline.push(...events);
-      if (events.length < 100) break;
-    }
+    const timeline = await readTimeline(n);
     const comments =
       count > 0
         ? ((await getList(`${base}/${n}/comments?per_page=100&page=${lastPage}`)) ?? [])
@@ -210,16 +227,9 @@ export function createWorkStatusReader(
       number: n,
       found: true,
       kind: issue.pull_request ? "pull request" : "issue",
-      state:
-        issue.pull_request && typeof issue.pull_request.merged_at === "string"
-          ? "merged"
-          : issue.state === "closed"
-            ? "closed"
-            : "open",
+      state: stateOf(issue),
       status: statusWords(issue, labels, refs),
-      title: trustedAuthor(issue)
-        ? JSON.stringify(excerpt(issue.title, 120))
-        : "(withheld — opened by someone outside the project)",
+      title: titleOf(issue),
       labels,
       openPullRequests: refs.open,
       mergedPullRequests: refs.merged,
