@@ -36,7 +36,8 @@ export function ShadowProbes({ deskId }: { readonly deskId: string }): ReactElem
   const data = query.data;
   // A payload missing its lists is a broken reply, not an empty ledger — say nothing rather than
   // take the rest of the Heartbeat down with it.
-  if (!data?.available || !isList(data.verdicts) || !isList(data.open)) return null;
+  if (!data?.available) return null;
+  if (!(isList(data.verdicts) && isList(data.open))) return null;
   const { verdicts, open, at: now } = data;
   const retros = isList(data.retros) ? data.retros : [];
   return (
