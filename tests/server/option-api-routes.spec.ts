@@ -322,6 +322,8 @@ describe("serveOptionApi chain", () => {
     );
     expect(parsed.preview.refusals[0]).toContain("hello to Moneypenny");
     expect(parsed.preview.refusals[0]).not.toContain("first filled");
+    // #1671 removed self-serve wheels-off; a refusal must never offer that door (#469).
+    expect(parsed.preview.refusals[0]).not.toMatch(/wheels off/i);
   });
 });
 
@@ -346,6 +348,7 @@ describe("the zero-DTE gate (#1671) — 501 is checked independently of the play
     expect(parsed.preview.refusals[0]).toContain("expires today");
     expect(parsed.preview.refusals[0]).toContain("course 501 hasn't been unlocked yet");
     expect(parsed.preview.refusals[0]).toContain("401");
+    expect(parsed.preview.refusals[0]).not.toMatch(/wheels off/i);
   });
 
   it("leaves a future expiration alone — 201 is open and it isn't today", async () => {
