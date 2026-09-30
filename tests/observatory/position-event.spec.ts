@@ -1,7 +1,7 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import type { MarketEvent } from "../../src/domain/market-events.js";
 import { decisionsFor } from "../../src/observatory/decisions-view.js";
-import { nextEventFor } from "../../src/observatory/position-event.js";
+import { nextEventFor, nextPrintFor } from "../../src/observatory/position-event.js";
 import { plainPosition } from "../../src/observatory/position-plain.js";
 
 /**
@@ -87,5 +87,68 @@ describe("the IV-crush decision", () => {
     expect(d?.clocks).toContain("Earnings Oct 27");
     expect(d?.why).toMatch(/iv crush/);
     expect(d?.learn).toEqual({ term: "ivCrush", label: "What is IV crush?" });
+    // "decide before the print" — so the print, not the expiry, is the day it's due
+    expect(d?.due).toEqual({
+      at: "2026-10-27",
+      reason: "event",
+      label: "Earnings Oct 27",
+      estimated: true,
+    });
+  });
+});
+
+describe("nextPrintFor (#3977 slice 4)", () => {
+  const book: EarningsPrint[] = [
+    { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "IR: fixture" },
+    { symbol: "NVDA", date: "2026-11-18", status: "confirmed", source: "IR: fixture" },
+    {
+      symbol: "CRWV",
+      date: "2026-11-10",
+      status: "estimate",
+      source: "8-K cadence",
+      window: { start: "2026-11-09", end: "2026-11-16" },
+    },
+    { symbol: "MU", date: "2026-09-23", status: "confirmed", source: "IR: fixture" },
+  ];
+
+  it("names the next confirmed print, skipping one that already happened", () => {
+    expect(nextPrintFor("NVDA", asOf, book)).toEqual({
+      status: "confirmed",
+      at: "2026-11-18",
+      label: "Earnings Nov 18",
+    });
+  });
+
+  it("says an estimate is an estimate, and keeps its bounded window", () => {
+    expect(nextPrintFor("CRWV", asOf, book)).toEqual({
+      status: "estimate",
+      at: "2026-11-10",
+      label: "Earnings Nov 10 (estimated)",
+      window: { start: "2026-11-09", end: "2026-11-16" },
+    });
+  });
+
+  it("counts a print today as upcoming — it lands after the close", () => {
+    expect(nextPrintFor("MU", asOf, book)).toMatchObject({ at: "2026-09-23" });
+  });
+
+  it("never guesses a date for a symbol with no print on file", () => {
+    expect(nextPrintFor("SPY", asOf, book)).toEqual({
+      status: "unknown",
+      label: "No earnings date on file",
+    });
+  });
+
+  it("rides on every position, even an option whose print lands after it expires", () => {
+    // the real calendar: MSFT prints Oct 27 (estimate); an Oct 17 call expires first, so its
+    // nextEvent falls back to a macro print, while nextPrint still names the print
+    const p = { symbol: "MSFT261017C00500000", quantity: 1, avgPrice: 500, marketValue: 400 };
+    const plain = plainPosition(p, new Date(asOf));
+    expect(plain.nextEvent?.scope).toBe("market");
+    expect(plain.nextPrint).toEqual({
+      status: "estimate",
+      at: "2026-10-27",
+      label: "Earnings Oct 27 (estimated)",
+    });
   });
 });
