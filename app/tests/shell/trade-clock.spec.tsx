@@ -12,7 +12,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { horizonSearch } from "../../src/live/horizon-params";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
-import type { ResearchShelfData } from "../../src/live/research";
+import type { ResearchCalendarData } from "../../src/live/research";
 import { CockpitClock } from "../../src/shell/cockpit-clock";
 import { TradeClock } from "../../src/shell/trade-clock";
 
@@ -33,7 +33,7 @@ const event = (id: string, title: string, date: string, symbols: string[] = [], 
   researched: false,
   ...(kind ? { kind } : {}),
 });
-const RESEARCH: ResearchShelfData = {
+const RESEARCH: ResearchCalendarData = {
   events: [
     event("jobs-2026-10-02", "Employment Situation (September)", "2026-10-02"),
     event("treasury-20y-bond-2026-10-21", "20-year bond reopening", "2026-10-21"),
@@ -43,9 +43,6 @@ const RESEARCH: ResearchShelfData = {
   ],
   closures: [],
   calls: [],
-  symbols: [],
-  studies: [],
-  ledgers: [],
 };
 
 rstest.mock("../../src/live/options", () => ({
@@ -53,7 +50,9 @@ rstest.mock("../../src/live/options", () => ({
 }));
 rstest.mock("../../src/live/research", () => ({
   ...actualResearch,
-  fetchResearch: () => Promise.resolve(RESEARCH),
+  // The calendar reads its slice (#3977 slice 5); the whole shelf is R&D's board's alone.
+  fetchResearch: () => Promise.reject(new Error("the calendar never reads the whole shelf")),
+  fetchResearchCalendar: () => Promise.resolve(RESEARCH),
 }));
 
 function mount(initialPath: string) {

@@ -12,7 +12,7 @@ import * as actualDesk from "../../src/live/desk" with { rstest: "importActual" 
 import type { DeskPosition, PositionEvent } from "../../src/live/desk";
 import { horizonSearch } from "../../src/live/horizon-params";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
-import type { ResearchShelfData } from "../../src/live/research";
+import type { ResearchCalendarData } from "../../src/live/research";
 import { Route } from "../../src/routes/accounts";
 
 /**
@@ -65,7 +65,7 @@ const event = (id: string, title: string, date: string, symbols: string[] = []) 
   symbols,
   researched: false,
 });
-const RESEARCH: ResearchShelfData = {
+const RESEARCH: ResearchCalendarData = {
   events: [
     event("jobs-2026-10-02", "Employment Situation (September)", "2026-10-02"),
     event("mrvl-investor-day-2026-10-06", "MRVL Investor Day (NYC)", "2026-10-06", ["MRVL"]),
@@ -88,9 +88,6 @@ const RESEARCH: ResearchShelfData = {
       },
     },
   ],
-  symbols: [],
-  studies: [],
-  ledgers: [],
 };
 
 let plays: unknown = { linked: true, wheels: false, plays: [] };
@@ -119,7 +116,9 @@ rstest.mock("../../src/live/options", () => ({
 }));
 rstest.mock("../../src/live/research", () => ({
   ...actualResearch,
-  fetchResearch: () => Promise.resolve(RESEARCH),
+  // The calendar reads its slice (#3977 slice 5); the whole shelf is R&D's board's alone.
+  fetchResearch: () => Promise.reject(new Error("the calendar never reads the whole shelf")),
+  fetchResearchCalendar: () => Promise.resolve(RESEARCH),
 }));
 rstest.mock("../../src/shell/heartbeat", () => ({
   HeartbeatChip: () => null,

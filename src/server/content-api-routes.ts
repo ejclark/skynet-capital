@@ -2,7 +2,8 @@ import type { ServerResponse } from "node:http";
 import { marketClosures } from "../domain/market-calendar.js";
 import { everyEvent } from "../domain/market-events.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
-import { researchShelfJson } from "../observatory/research-json-view.js";
+import { researchCalendarJson } from "../observatory/research-calendar-json-view.js";
+import { type ResearchShelfJson, researchShelfJson } from "../observatory/research-json-view.js";
 import { standingsBoardView, standingsCompareView } from "../observatory/standings-board-view.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { Session } from "./auth/session.js";
@@ -39,6 +40,24 @@ function outpostPerformanceView(
   );
 }
 
+/** The research shelf as data. It keeps history (everyEvent) — a closed-out call is a receipt worth
+ *  stepping back to — and carries the exchange closures across that whole span, so the rail can
+ *  colour a closed weekday and count a week's sessions without a broker credential. */
+function shelfJson(): ResearchShelfJson {
+  const asOf = new Date().toISOString();
+  const events = everyEvent();
+  const first = events[0]?.date ?? asOf.slice(0, 10);
+  const last = events[events.length - 1]?.date ?? first;
+  return researchShelfJson(
+    listResearch(),
+    shelfSymbols(asOf),
+    eventCalls(),
+    events,
+    ledgerDigests(),
+    marketClosures(first < asOf.slice(0, 10) ? first : asOf.slice(0, 10), last),
+  );
+}
+
 /** The shell's content JSON family: the wire, the research shelf, the
  *  journey, the discovery shelves, and fleet ops status — read-only twins of their server-rendered
  *  views, one producer each. Returns true when the request was answered. */
@@ -58,25 +77,10 @@ export async function serveContentApi(
     await serveWireJson(res, url, config, Boolean(config.submitFeedback));
     return true;
   }
-  if (path === "/api/research") {
-    const asOf = new Date().toISOString();
-    // The shelf's calendar keeps history (everyEvent) — a closed-out call is a receipt worth
-    // stepping back to — and carries the exchange closures across that whole span, so the rail
-    // can colour a closed weekday and count a week's sessions without a broker credential.
-    const events = everyEvent();
-    const first = events[0]?.date ?? asOf.slice(0, 10);
-    const last = events[events.length - 1]?.date ?? first;
-    return json(
-      researchShelfJson(
-        listResearch(),
-        shelfSymbols(asOf),
-        eventCalls(),
-        events,
-        ledgerDigests(),
-        marketClosures(first < asOf.slice(0, 10) ? first : asOf.slice(0, 10), last),
-      ),
-    );
-  }
+  if (path === "/api/research") return json(shelfJson());
+  // The calendar's slice (#3977 slice 5): the three surfaces that draw the market calendar read
+  // this ~8% projection of the same view instead of the whole shelf. Same dispatcher, same gate.
+  if (path === "/api/research/calendar") return json(researchCalendarJson(shelfJson()));
   if (path === "/api/research/mentions") {
     // The `sym:` scope's second net (#3962). The shelf payload carries slugs and titles, never the
     // documents' text, so the board alone can only match a symbol against a slug — which is how a
