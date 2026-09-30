@@ -94,6 +94,20 @@ export async function freezePage(page: Page): Promise<void> {
 export const FROZEN_DIFF_RATIO = 0.002;
 
 /**
+ * The topbar market clock, asserted on its own at a FIXED size on every whole-frame page (#4094).
+ *
+ * WHY (measured 2026-09-30). The whole-frame ratio above scales with page height (resized to content,
+ * 1,843–6,215 px of budget across the suite), while a wrong market state is a fixed-size change in
+ * the topbar: 1,257 px locally with the clock moved to a Saturday, and all seven route shots passed
+ * it. A fixed PIXEL budget on the whole frame is no fix either: CI runners disagree on glyph
+ * antialiasing by up to 1,846 px per frame (run 36684412259, the same commit on retry), which lands
+ * on top of the market-state signal. Inside this element the same CI images differ by 0 px, so the
+ * clock gets its own shot and a small fixed budget, and the frame keeps its ratio for text noise.
+ */
+const MARKET_CLOCK = ".market-session";
+const MARKET_CLOCK_DIFF_PIXELS = 50;
+
+/**
  * Resize the viewport to the page's actual content height, then screenshot the (now full-content)
  * viewport instead of using `fullPage: true`.
  *
@@ -121,10 +135,16 @@ export async function resizeToContentHeight(page: Page, width = 1280): Promise<v
  * what's rendered), resize to content height (see resizeToContentHeight), then assert the shot.
  * Call `freezePage(page)` before `page.goto`, and wait for the page's own content marker to be
  * visible, before calling this — it only owns the settle → resize → screenshot tail every route
- * spec shares.
+ * spec shares, plus the fixed-size market clock assertion (MARKET_CLOCK above).
  */
 export async function captureWholeFrame(page: Page, name: string): Promise<void> {
   await page.waitForLoadState("networkidle");
   await resizeToContentHeight(page);
   await expect(page).toHaveScreenshot(name, { maxDiffPixelRatio: FROZEN_DIFF_RATIO });
+  await expect(page.locator(MARKET_CLOCK)).toHaveScreenshot(
+    name.replace(/\.png$/, "-market-clock.png"),
+    {
+      maxDiffPixels: MARKET_CLOCK_DIFF_PIXELS,
+    },
+  );
 }
