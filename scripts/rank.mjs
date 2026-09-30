@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// RANK — which open, buildable item should be pulled next, and why (#4064 slices 1–2).
+// RANK — which open, buildable item should be pulled next, and why (#4064).
 //
 // WHY. #4056's study found the next build was whatever was newest: 57% of picks came from the newest
 // tenth of the queue and 1% from the oldest, while Priority was never written or read. This is the
@@ -13,9 +13,18 @@
 // `P0`–`P3` label always wins: that is Eric's hand, one tap on the phone (he picked labels over the
 // board field on 2026-09-29, because every lane can read a label and none can read the board).
 //
+// RE-RANK ON EVENTS (slice 3). The rank is derived live on every read and stores nothing, so a merge
+// that closes a dependency, lands a slice or retires an item is already in the next read — there is
+// no stale score for a merge tick to refresh, and no workflow to add. What a merge does change is
+// the ORDER, and that is what `--digest` reports: the current rank diffed against the snapshot the
+// previous digest embedded, as one line ("N moved up · M retired") plus the snapshot to embed next.
+//
 //   node scripts/rank.mjs          # markdown table
 //   node scripts/rank.mjs --json
+//   node scripts/rank.mjs --digest # the digest's moved/retired line + the snapshot marker to embed
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { digestFiles } from "./digest-scan.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { ghRest, ghRestAll } from "./moneypenny/gh.mjs";
 import { PRIORITY_LABELS, parkedBy } from "./moneypenny/labels.mjs";
@@ -118,9 +127,51 @@ export function renderRank(rows) {
   return lines.join("\n");
 }
 
+// ─── The digest delta (slice 3) ──────────────────────────────────────────────────────────────────
+
+const SNAPSHOT_RE = /<!-- rank-snapshot: ([\d,]*) -->/;
+
+/** The ranked issue numbers as an invisible marker a digest carries to the next one. */
+export const snapshotMarker = (numbers) => `<!-- rank-snapshot: ${numbers.join(",")} -->`;
+
+/** The ranked numbers a digest embedded, or null when it carries none (every digest before this). */
+export function parseSnapshot(text) {
+  const m = SNAPSHOT_RE.exec(text ?? "");
+  return m ? m[1].split(",").filter(Boolean).map(Number) : null;
+}
+
+/** What changed between two ranks. "Moved up" means an item overtook one it used to sit below and
+ *  that is still ranked — a retirement shifting everyone below it up a row is not a move, or every
+ *  closed issue would report the whole tail as risers. "Retired" left the rank: closed, parked, or
+ *  replaced by its sub-issues. "Added" is new since the snapshot. */
+export function rankDelta(prev, curr) {
+  const was = new Map(prev.map((n, i) => [n, i]));
+  const now = new Map(curr.map((n, i) => [n, i]));
+  const kept = curr.filter((n) => was.has(n));
+  const movedUp = kept.filter((n) =>
+    kept.some((m) => m !== n && was.get(m) < was.get(n) && now.get(m) > now.get(n)),
+  );
+  return {
+    movedUp,
+    retired: prev.filter((n) => !now.has(n)),
+    added: curr.filter((n) => !was.has(n)),
+  };
+}
+
+/** The digest line. With no prior snapshot it says so plainly instead of reporting a false zero. */
+export function digestLine(prev, curr, since) {
+  if (!prev) return `Rank: ${curr.length} items — baseline set; the next digest reports movement.`;
+  const { movedUp, retired, added } = rankDelta(prev, curr);
+  const ids = (ns) => (ns.length ? ` (#${ns.join(", #")})` : "");
+  return (
+    `Rank since ${since}: ${movedUp.length} moved up${ids(movedUp)} · ${retired.length} retired` +
+    `${ids(retired)} · ${added.length} new.`
+  );
+}
+
 // ─── IO (REST core bucket) ───────────────────────────────────────────────────────────────────────
 
-function main() {
+function liveRows() {
   const now = Date.now();
   // A local file, not the API: the board is unreadable from sessions (#4056's L2 study), and this
   // hand triage is the only Horizon data a script can see.
@@ -150,6 +201,26 @@ function main() {
       now,
     });
     if (row) rows.push(row);
+  }
+  return rows;
+}
+
+/** The newest committed digest's snapshot and date — the "since" every digest line reads from. */
+function lastSnapshot() {
+  const [latest] = digestFiles();
+  if (!latest) return { prev: null, since: null };
+  const text = readFileSync(join(process.cwd(), "docs", "digests", latest), "utf8");
+  return { prev: parseSnapshot(text), since: latest.slice(0, 10) };
+}
+
+function main() {
+  const rows = liveRows();
+  if (process.argv.includes("--digest")) {
+    const curr = rankOrder(rows).map((r) => r.number);
+    const { prev, since } = lastSnapshot();
+    console.log(digestLine(prev, curr, since));
+    console.log(snapshotMarker(curr));
+    return;
   }
   console.log(
     process.argv.includes("--json") ? JSON.stringify(rankOrder(rows), null, 2) : renderRank(rows),
