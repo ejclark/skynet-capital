@@ -175,6 +175,7 @@ export function ChainSection({
         markedStrikes={markedStrikes}
         expirationField={expirationField}
         pending={chain.isFetching}
+        onRefresh={() => void chain.refetch()}
         onPickStrike={(value) =>
           onPick({ strike: value, side: optionType, expiration: answer.expiration })
         }

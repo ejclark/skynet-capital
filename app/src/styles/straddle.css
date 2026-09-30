@@ -276,3 +276,41 @@
   color: var(--muted);
   max-width: 70ch;
 }
+
+/* The chain's as-of stamp (#4327, `shell/chain-as-of.tsx`). Theme tokens only; the state is a
+ * glyph + a word, and stale — the one state that must stand out — also gets weight and a left
+ * rule, a shape rather than a tone (docs/BRAND.md → Accessibility). Wraps at 390px. */
+.chain-as-of {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.chain-as-of p {
+  margin: 0;
+  flex: 1 1 16rem;
+}
+.chain-as-of[data-state="stale"] p {
+  font-weight: 700;
+  border-left: 3px solid var(--text);
+  padding-left: 8px;
+}
+.chain-as-of-refresh {
+  width: auto;
+  padding: 3px 10px;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chain-as-of-refresh:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

@@ -65,7 +65,11 @@ export interface ChainQuoteCoverage {
   readonly source: "indicative" | "unavailable";
   readonly quoted: number;
   readonly total: number;
+  /** When the server read the feed for this answer — the chain's fetch time, not a render time. */
   readonly asOf: string;
+  /** The median time the feed says its quotes were made (#4327) — older than `asOf` on a delayed
+   *  feed. Absent when no strike carried a quote stamp, or from a server that predates it. */
+  readonly quotedAt?: string;
 }
 
 export interface ChainData {

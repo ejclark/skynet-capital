@@ -26,7 +26,7 @@ const row = (playbookId: string, trades: number, netRealized: number): PlaybookM
   byInstrument: { stock: trades, call: 0, put: 0 },
 });
 
-const card = (id: string) => ({
+const card = (id: string, subscribers?: number) => ({
   id,
   symbol: "NVDA",
   symbols: ["NVDA"],
@@ -38,6 +38,7 @@ const card = (id: string) => ({
   exitCutLosses: "cut",
   hold: "hold",
   metrics: [],
+  ...(subscribers === undefined ? {} : { subscribers }),
 });
 
 const requested: (string | undefined)[] = [];
@@ -45,7 +46,7 @@ const requested: (string | undefined)[] = [];
 rstest.mock("../../src/live/playbook-store", () => ({
   fetchPlaybookStore: (accountId: string) =>
     Promise.resolve({
-      cards: [card("S1-NVDA"), card("HC-SAURON")],
+      cards: [card("S1-NVDA", 3), card("HC-SAURON", 0), card("E1-AMD", 1), card("G1-NONE")],
       capitalUnderManagement: 0,
       canManage: accountId !== "",
       delegation: { locked: true, unlocksAfter: "102", unlocksAfterName: "Sell stock", note: "" },
@@ -103,7 +104,7 @@ describe("PlaybooksSection metric blocks", () => {
     expect(within(houseBlock).getByText("+$900.00")).toBeInTheDocument();
     expect(nvda.queryByText("+$1,000.00")).not.toBeInTheDocument();
     expect(nvda.queryByText("9")).not.toBeInTheDocument();
-    expect(house).toHaveLength(2);
+    expect(house).toHaveLength(4);
     expect(requested).toEqual(["human-joe"]);
   });
 
@@ -122,5 +123,44 @@ describe("PlaybooksSection metric blocks", () => {
     expect(
       cardOf("HC-SAURON").getByText(/No account has closed a trade on this playbook yet/),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * The subscriber count (#3970). The card SHALL show the number of enabled subscriptions across all
+ * accounts — words, never which accounts — and SHALL show it where no account is selected.
+ */
+describe("PlaybooksSection subscriber count", () => {
+  it("shows the bare count in plain words, even in catalog-only mode", async () => {
+    mount(undefined);
+    expect(await screen.findByText("3 active subscribers")).toBeInTheDocument();
+    expect(cardOf("S1-NVDA").getByText("3 active subscribers")).toBeInTheDocument();
+    expect(cardOf("E1-AMD").getByText("1 active subscriber")).toBeInTheDocument();
+    expect(cardOf("HC-SAURON").getByText("No active subscribers yet")).toBeInTheDocument();
+  });
+
+  it("shows the same count when an account is selected", async () => {
+    mount("human-joe");
+    await screen.findByText("3 active subscribers");
+    expect(cardOf("S1-NVDA").getByText("3 active subscribers")).toBeInTheDocument();
+  });
+
+  it("draws no count at all when the server sent none — never a false zero", async () => {
+    mount(undefined);
+    await screen.findByText("3 active subscribers");
+    expect(cardOf("G1-NONE").queryByText(/subscriber/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * The label names the measure. The server counts ENABLED subscriptions only, so a card claiming a
+   * plain "N subscribers" would be wider than its own number — an account that paused is a
+   * subscriber and is not in it. Falsifier: any card wording the count without "active".
+   */
+  it("says 'active' on every count, because a paused subscriber is not in the number", async () => {
+    mount(undefined);
+    await screen.findByText("3 active subscribers");
+    for (const line of screen.getAllByText(/subscriber/)) {
+      expect(line.textContent).toMatch(/active subscriber/);
+    }
   });
 });
