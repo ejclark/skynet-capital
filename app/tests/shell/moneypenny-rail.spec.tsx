@@ -276,6 +276,7 @@ describe("MoneypennyRail — live answers", () => {
         );
       return Promise.resolve(new Response("{}", { status: 404 }));
     }) as typeof globalThis.fetch;
+    window.history.replaceState(null, "", "/trade?symbol=NVDA");
     mount();
     await act(() => useMoneypenny.getState().openRail());
     const box = screen.getByLabelText("Message Moneypenny");
@@ -287,9 +288,12 @@ describe("MoneypennyRail — live answers", () => {
       ),
     ).toHaveClass("mp-mp");
     const turn = sent.find((c) => c.url === "/api/companion/chat");
+    // The page rides along (#2224 shape 2); the server reduces it to fixed words.
     expect(turn?.body).toEqual({
       messages: [{ role: "user", content: "what's a covered call?" }],
+      page: "/trade?symbol=NVDA",
     });
+    window.history.replaceState(null, "", "/");
   });
 
   it("falls back to the scripted nudge when the chat isn't switched on", async () => {
