@@ -206,6 +206,12 @@
   border-radius: 8px;
 }
 
+/* The house-wide block (#3665 slice 4): dashed, so "every account" differs from "this account" by
+   shape and by its heading's words — never by hue alone (a standing reader is red/green colorblind). */
+.pb-metrics-house {
+  border-style: dashed;
+}
+
 .pb-metrics-h {
   display: flex;
   align-items: center;
