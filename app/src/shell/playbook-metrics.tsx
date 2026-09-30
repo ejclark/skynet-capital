@@ -4,11 +4,11 @@ import { money } from "../live/ticket";
 import { signedMoney } from "./option-preview";
 
 /**
- * YOUR ACCOUNT ON THIS PLAYBOOK (#3665 slice 3) — the selected account's own closed trades on one
- * playbook, on that playbook's R&D card. Placement: R&D → Playbooks is the one home for playbooks
- * (#3623), and #3970 already puts per-account metrics on the card; the house-wide collective lands
- * beside this in slice 4 as its own block, never summed into this one (the issue's core rule: "how
- * everyone did" must never blend into "how I did").
+ * YOUR ACCOUNT ON THIS PLAYBOOK (#3665 slice 3) and THE HOUSE ON THIS PLAYBOOK (slice 4) — two
+ * blocks on each R&D → Playbooks card (#3623 placement), drawn from the same server response but
+ * never summed: the issue's core rule is that "how everyone did" must never blend into "how I did".
+ * So each block has its own heading naming whose trades it counts, its own border (the house one
+ * dashed — a shape, not a hue), and the shared tile grid below renders one row, never two.
  *
  * Phone-first ranking (CLAUDE.md): the four numbers that answer "is this working for me" — trades,
  * net P/L (dollars and percent of capital), win rate, capital committed — then hold time. Every
@@ -16,7 +16,7 @@ import { signedMoney } from "./option-preview";
  * never 0 (`trade-stats.ts`'s honesty invariant), and zero closed trades says so in words.
  */
 
-export type AccountMetricsScope =
+export type MetricsScope =
   | { readonly kind: "unreadable" }
   | { readonly kind: "read"; readonly row?: PlaybookMetricsView };
 
@@ -86,7 +86,7 @@ export function AccountPlaybookMetrics({
   scope,
 }: {
   readonly accountName: string;
-  readonly scope: AccountMetricsScope;
+  readonly scope: MetricsScope;
 }): ReactElement {
   return (
     <section className="pb-metrics" aria-label={`${accountName} on this playbook`}>
@@ -100,6 +100,27 @@ export function AccountPlaybookMetrics({
       ) : (
         <p className="pb-metrics-empty">
           No closed trades on this playbook yet — nothing to measure.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** The house-wide collective on one playbook — every participant's attributed closed trips,
+ *  shown to any member (even in catalog-only mode), always beside and never inside the account's. */
+export function HousePlaybookMetrics({ scope }: { readonly scope: MetricsScope }): ReactElement {
+  return (
+    <section className="pb-metrics pb-metrics-house" aria-label="House — every account">
+      <h3 className="pb-metrics-h">
+        House — every account <span className="env-pill">SIM</span>
+      </h3>
+      {scope.kind === "unreadable" ? (
+        <p className="pb-metrics-empty">The house-wide trade history isn't readable right now.</p>
+      ) : scope.row ? (
+        <Metrics row={scope.row} />
+      ) : (
+        <p className="pb-metrics-empty">
+          No account has closed a trade on this playbook yet — nothing to measure.
         </p>
       )}
     </section>

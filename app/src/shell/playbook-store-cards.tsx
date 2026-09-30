@@ -8,7 +8,11 @@ import {
   subscribeRequest,
   unsubscribeRequest,
 } from "../live/playbook-store";
-import { type AccountMetricsScope, AccountPlaybookMetrics } from "./playbook-metrics";
+import {
+  AccountPlaybookMetrics,
+  HousePlaybookMetrics,
+  type MetricsScope,
+} from "./playbook-metrics";
 
 /**
  * THE PLAYBOOK STORE's cards (issue #885), moved here whole from the retired desk route
@@ -261,6 +265,7 @@ export function PlaybookCard({
   onChanged,
   accountName,
   metrics,
+  house,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
@@ -269,7 +274,9 @@ export function PlaybookCard({
   readonly onChanged: () => void;
   readonly accountName: string;
   /** The selected account's own numbers on this playbook (#3665) — absent when none is managed. */
-  readonly metrics?: AccountMetricsScope;
+  readonly metrics?: MetricsScope;
+  /** Every account's numbers on this playbook (#3665 slice 4) — a separate block, never summed. */
+  readonly house?: MetricsScope;
 }): ReactElement {
   return (
     <section className="pb-card">
@@ -294,6 +301,7 @@ export function PlaybookCard({
         {card.evidenceHref ? <a href={card.evidenceHref}>the study behind it →</a> : null}
       </footer>
       {metrics ? <AccountPlaybookMetrics accountName={accountName} scope={metrics} /> : null}
+      {house ? <HousePlaybookMetrics scope={house} /> : null}
       {canManage ? (
         card.subscription ? (
           // An existing subscription keeps every control it had — pausing and leaving are exits.

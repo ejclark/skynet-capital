@@ -229,6 +229,38 @@ describe("ship checkbody — the picture/format contract", () => {
     expect(code).toBe(0);
   });
 
+  // `ship open` pins docs/shots/ URLs to HEAD before checkbody runs. The ref group once matched a
+  // single path segment, so a slashed branch (feat/x) slipped through unpinned and `open` refused
+  // its own body (#4193, hit on #4192). The pin must cover every ref shape a branch can take.
+  describe("pinshots — the auto-pin `ship open` applies before checkbody", () => {
+    const sha = "b".repeat(40);
+    const shot = (ref: string) =>
+      `## The picture\n\n<img src="https://raw.githubusercontent.com/o/r/${ref}/docs/shots/pr-9/x.jpg">\n\n_Caption — before/after of /login, npm run shoot:login_\n\n## Summary\n\n- x\n`;
+    const pin = (content: string) => run(["pinshots", body(content), sha]);
+
+    it.each(["my-branch", "feat/3665-account-playbook-metrics", "a/b/c"])(
+      "pins a %s ref to the HEAD SHA, and the result passes checkbody",
+      (ref) => {
+        const { code, stdout } = pin(shot(ref));
+        expect(code).toBe(0);
+        expect(stdout).toContain(`raw.githubusercontent.com/o/r/${sha}/docs/shots/pr-9/x.jpg`);
+        expect(stdout).not.toContain(ref);
+        expect(run(["checkbody", body(stdout)]).code).toBe(0);
+      },
+    );
+
+    it("passes an already-pinned 40-hex SHA through untouched", () => {
+      const already = "c".repeat(40);
+      expect(pin(shot(already)).stdout).toBe(shot(already));
+    });
+
+    it("pins each URL on its own — two shots on one line never merge into one match", () => {
+      const line = `![a](https://raw.githubusercontent.com/o/r/feat/x/docs/shots/a.jpg) ![b](https://raw.githubusercontent.com/o/r/feat/x/docs/shots/b.jpg)`;
+      const { stdout } = pin(line);
+      expect(stdout).toBe(line.replaceAll("feat/x", sha));
+    });
+  });
+
   it("refuses Summary bullets over 120 chars — one short line each (Eric, 2026-08-19)", () => {
     const long = `- ${"narrates every mechanical step ".repeat(5)}`;
     const { code, stderr } = run([

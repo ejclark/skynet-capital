@@ -1,6 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import type { PlaybookMetricsView } from "../../src/live/playbook-performance";
-import { AccountPlaybookMetrics, holdLabel, mixLabel } from "../../src/shell/playbook-metrics";
+import {
+  AccountPlaybookMetrics,
+  HousePlaybookMetrics,
+  holdLabel,
+  mixLabel,
+} from "../../src/shell/playbook-metrics";
 
 /**
  * The selected account's own numbers on a playbook card (#3665 slice 3). The server does the
@@ -63,6 +68,28 @@ describe("AccountPlaybookMetrics", () => {
     render(<AccountPlaybookMetrics accountName="Joe" scope={{ kind: "unreadable" }} />);
     expect(screen.getByText(/isn't readable right now/)).toBeInTheDocument();
     expect(screen.queryByText(/No closed trades/)).not.toBeInTheDocument();
+  });
+});
+
+describe("HousePlaybookMetrics", () => {
+  it("names every account as its scope and marks the numbers as simulated", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "read", row }} />);
+    expect(screen.getByRole("heading", { name: /House — every account/ })).toBeInTheDocument();
+    expect(screen.getByText("SIM")).toBeInTheDocument();
+    expect(screen.getByText("+$420.00")).toBeInTheDocument();
+  });
+
+  it("says in words when no account has closed a trade on the playbook", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "read" }} />);
+    expect(
+      screen.getByText(/No account has closed a trade on this playbook yet/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Closed trades")).not.toBeInTheDocument();
+  });
+
+  it("says the house history is unreadable rather than showing zero trades", () => {
+    render(<HousePlaybookMetrics scope={{ kind: "unreadable" }} />);
+    expect(screen.getByText(/house-wide trade history isn't readable/)).toBeInTheDocument();
   });
 });
 
