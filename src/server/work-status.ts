@@ -108,7 +108,7 @@ function pullRefsOf(events: readonly unknown[], repo: string): PullRefs {
     const src = ev.source?.issue;
     if (ev.event !== "cross-referenced" || !src || !src.pull_request) continue;
     const fullName = (src.repository as { full_name?: unknown } | undefined)?.full_name;
-    if (fullName !== undefined && fullName !== repo) continue;
+    if (fullName !== repo) continue; // fail closed: no repository named, no PR named
     if (!trustedAuthor(src) || typeof src.number !== "number") continue;
     const mergedAt = (src.pull_request as { merged_at?: unknown }).merged_at;
     if (src.state === "open") open.add(src.number);
