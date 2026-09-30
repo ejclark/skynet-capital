@@ -151,6 +151,7 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | Market closure | `ResearchClosure` `app/src/live/research.ts:65` / `MarketClosure` `horizon-range.ts:27` (`src/domain/market-calendar.ts:27`) | rides `GET /api/research` only (`content-api-routes.ts:66-78`) | date | hatched on the grid; counts sessions | `EventHorizon` `event-horizon.tsx:138` | — |
 | Market session clock | `MarketSessionView` `app/src/live/market-session.ts:18` | none — client clock | date | — | `MarketSession` `app/src/shell/market-session.tsx:26` (`__root.tsx:176`, every route) | — |
 | Council line (this week) | `CouncilEntry` / `CouncilWeek` `app/src/live/council.ts:8,21` | `GET/POST /api/council` `src/server/council-api-routes.ts:9` | member (`mine`) · date (`week`) · playbook (`playbookId`) | `plays[]` = playbook id + symbol | `CouncilSection` `app/src/routes/activity.tsx:239` | `enabled` |
+| Comment on a filing (another member's) | `FilingComment` / `FilingComments` `app/src/live/filing-comments.ts` | `GET/POST /api/feedback/comments` `src/server/filing-comments-api-routes.ts` — the app's own store, never the GitHub thread (#2224 shape 3) | filing (`issueNumber`) · member (`mine`, `ownFilings`) | — | `FilingComments` on each Feedback-pulse card `app/src/shell/filing-comments.tsx` | `enabled`; the filer gets Follow up instead |
 
 ### 2d. The progression group — the member's rungs (member-keyed, never account-keyed)
 

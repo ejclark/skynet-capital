@@ -57,6 +57,8 @@ export interface WirePnl {
 }
 
 export interface WireFeedbackItem {
+  /** Keys the filing's in-app comments (`/api/feedback/comments`, issue #2224 shape 3). */
+  readonly issueNumber: number;
   readonly icon: string;
   readonly title: string;
   readonly url: string;

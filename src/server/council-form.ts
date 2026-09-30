@@ -1,5 +1,6 @@
 import { findPlaybook, playbookRoster } from "../playbooks/registry.js";
 import { type CouncilState, MAX_COUNCIL_TEXT_LENGTH, weekKey } from "./council-store.js";
+import { toMemberLine } from "./member-line.js";
 
 /**
  * THE COUNCIL's action + read authority — the shared logic `council-api-routes.ts` calls, kept
@@ -77,13 +78,8 @@ export function submitThesis(
   deps: CouncilDeps,
   playbookId?: string,
 ): SubmitThesisResult {
-  // Everyone in the gate reads this line (#2224 shape 3 red-team, H2): bidi overrides/isolates
-  // could visually reorder the play tag beside it, and control characters (a newline from a pasted
-  // block) break "one line". Overrides go; controls collapse to a space. Emoji joiners stay.
-  const trimmed = text
-    .replace(/[\u202A-\u202E\u2066-\u2069]/g, "")
-    .replace(/\p{Cc}+/gu, " ")
-    .trim();
+  // Everyone in the gate reads this line — `toMemberLine` owns why (#2224 shape 3 red-team, H2).
+  const trimmed = toMemberLine(text);
   if (trimmed.length === 0) {
     return { ok: false, error: "Say something — even one line." };
   }
