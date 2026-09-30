@@ -16,7 +16,9 @@ import {
   snapshotProbe,
 } from "../playbooks/cond-scout-ledger.js";
 import {
+  BENCHMARK_SYMBOL,
   fillLaterExits,
+  marketBenchmark,
   nextLaterExitDue,
   type ProbeRetro,
   probeRetro,
@@ -272,14 +274,21 @@ export class CondScoutRunner {
       return;
     }
     for (const retro of store.recentRetros(500)) {
-      const due = nextLaterExitDue(retro);
-      if (due === undefined || due > at) continue;
-      const bars = await barsFor(retro.symbol, isoDay(due), isoDay(at));
-      if (!bars) continue;
-      const filled = fillLaterExits(retro, bars, at);
-      if (filled === retro) continue;
-      store.saveRetro(filled);
-      this.deps.onRetro?.(filled);
+      let next = retro;
+      const due = nextLaterExitDue(next);
+      if (due !== undefined && due <= at) {
+        const bars = await barsFor(next.symbol, isoDay(due), isoDay(at));
+        if (bars) next = fillLaterExits(next, bars, at);
+      }
+      // The market over the probe's own days (slice 6) — once the close day's bar exists.
+      if (!next.market && isoDay(next.closedAt) < sessionDay) {
+        const bars = await barsFor(BENCHMARK_SYMBOL, isoDay(next.openedAt), isoDay(next.closedAt));
+        const market = bars ? marketBenchmark(next, bars) : undefined;
+        if (market) next = { ...next, market };
+      }
+      if (next === retro) continue;
+      store.saveRetro(next);
+      this.deps.onRetro?.(next);
     }
     this.backfilledDay = sessionDay;
   }

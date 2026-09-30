@@ -88,7 +88,9 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   statement from Eric in the prompt, of the shape *"we need to conserve tokens to ensure we have
   tokens to develop until the reset on Tuesday."* Under that signal, and only then, cut in this
   order: waste first (`docs/process/TOKEN-EFFICIENCY.md`), then fan-out width (fewer parallel
-  items, not cheaper ones), then effort, then model — and say which cut was made.
+  items, not cheaper ones), then effort, then model — and say which cut was made. The durable
+  carrier for that signal is the `work-mode:*` label on #4153, read by
+  `scripts/moneypenny/work-mode.mjs`; it is wired to the lanes in #3960 slices 2–3.
 - **Cost-first defaults are bugs.** A default that exists "to be cheap" rather than because a
   higher tier wouldn't change the outcome contradicts this doc; `scripts/config-audit.mjs` checks
   agents against the floor table, and the same rubric applies to `docs/grind/*.instructions.md`
