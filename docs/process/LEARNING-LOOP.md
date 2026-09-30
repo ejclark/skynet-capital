@@ -12,30 +12,42 @@ Five moves, repeating: **thin slice → pressure test → find the weakness → 
 enhance the process → back-test.** A loop is "done" for now when the back-test closes clean; it
 reopens the next time the domain needs re-validating, at whatever cadence that domain calls for.
 
-## The anatomy — ten fields, six custom, four fixed
+## The anatomy — thirteen fields, nine custom, four fixed
 
-The first six are **custom-catered per instance** — they are the actual subject matter, different
-every time. The last four are **fixed mechanism** — every instance reuses the same two artifacts
-for capture, which is what makes this a *loop* (compounding across instances) rather than an ad hoc
-one-off process reinvented each time.
+The first nine are **custom-catered per instance** — they are the actual subject matter, different
+every time. The last four are **fixed mechanism** — every instance reuses the same artifacts for
+capture and scheduling, which is what makes this a *loop* (compounding across instances) rather than
+an ad hoc one-off process reinvented each time.
 
 | # | Field | What it answers | Custom or fixed |
 |---|---|---|---|
-| 1 | **Name** | A short slug identifying this instance. | Custom |
-| 2 | **Domain** | The real question the loop exists to answer. | Custom |
-| 3 | **Thin slice** | The smallest real trial that can surface a real weakness — never the full batch first. | Custom |
-| 4 | **Pressure test** | The specific, named dimensions being measured, stated *before* running — a loop that decides what counts as a pass after seeing the result isn't testing anything. | Custom |
-| 5 | **Ground truth / oracle** | What a result is compared against, and how that oracle was obtained. | Custom |
-| 6 | **Cycle gate** | The explicit condition that must hold before scaling from thin slice to the full run. | Custom |
-| 7 | **Owning issue** | The GitHub plan issue tracking the loop's state across cycles — one loop, one issue, reused every cycle. | Fixed |
-| 8 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
-| 9 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
-| 10 | **Status** | Where the instance currently sits: `piloting` / `blocked-on-fix` / `scaling` / `closed`. Lives on the owning issue, not in this doc. | Fixed (location), custom (value) |
+| 1 | **Name** | A short slug identifying this instance — the `Loop` cell in the list below. | Custom |
+| 2 | **Aim** | The real question, stated as a number that moves: what is measured, in which direction, by when. "Does X work?" is a domain, not an aim. | Custom |
+| 3 | **Baseline** | That number measured *now*, before the first run — without it no result can say "better". | Custom |
+| 4 | **Prediction** | What you expect the thin slice to show, written before it runs. A result that surprises you is the lesson; one you never predicted can't. | Custom |
+| 5 | **Thin slice** | The smallest real trial that can surface a real weakness — never the full batch first. | Custom |
+| 6 | **Pressure test** | The specific, named dimensions being measured, stated *before* running — a loop that decides what counts as a pass after seeing the result isn't testing anything. | Custom |
+| 7 | **Ground truth / oracle** | What a result is compared against, how that oracle was obtained, and how it was itself checked before being trusted. | Custom |
+| 8 | **Cycle gate** | The explicit condition that must hold before scaling from thin slice to the full run. | Custom |
+| 9 | **Kill rule** | The dated observation that ends or pivots the loop — `closed` is not the only way out, and a loop with no way to die runs on as ceremony. | Custom |
+| 10 | **Owning issue** | The GitHub plan issue tracking the loop's state across cycles — one loop, one issue, reused every cycle. Its state block holds the current status. | Fixed |
+| 11 | **Next check** | A date the next result will be visible, kept in the list below, where the daily digest flags it once it arrives. | Fixed (location), custom (date) |
+| 12 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
+| 13 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
 
-**Why 8 and 9 are fixed, not a choice per loop:** a lesson with nowhere durable to live gets
-re-learned; a procedure re-typed from memory each cycle drifts and wastes tokens re-deriving what a
-prior cycle already worked out — exactly the inefficiency Eric named as the reason to codify in the
-first place. Every future domain reuses these same two mechanisms; only what goes *in* them differs.
+**Why 11–13 are fixed, not a choice per loop:** a check with no date is never made; a lesson with
+nowhere durable to live gets re-learned; a procedure re-typed from memory each cycle drifts and
+wastes tokens re-deriving what a prior cycle already worked out — exactly the inefficiency Eric
+named as the reason to codify in the first place. Every future domain reuses these same mechanisms;
+only what goes *in* them differs.
+
+**State** is not a field of the template — it lives on the owning issue and in the list's `State`
+column: `piloting` · `running` · `blocked-on-fix` · `scaling`, or ended as `closed` · `killed` ·
+`pivoted` (the pivot is a new row) · `replaced`.
+
+**The double-loop question, asked at every close or kill:** *was the aim, the cycle gate or the
+oracle itself wrong?* Single-loop learning fixes the run; this asks whether the run was pointed at
+the right thing (Argyris). Answer it in the owning issue's log line, one sentence.
 
 ## Worked example — the first instance
 
@@ -45,30 +57,36 @@ from, not designed in the abstract first. Field by field:
 | Field | This instance |
 |---|---|
 | Name | `haiku-eval-replay` |
-| Domain | Can Haiku/Sonnet do Layer 1 (data collection) research without quality loss vs. Opus? |
+| Aim | Can Haiku/Sonnet do Layer 1 (data collection) research without quality loss vs. Opus? — written before this template asked for a number; today it would read "same stance on ≥ N of 30 events" |
+| Baseline | *(not recorded — the gap this field now closes)* |
+| Prediction | *(not recorded)* |
 | Thin slice | 4 replays (2 events × 2 models), not the full 30-event sample |
 | Pressure test | Stated in advance, from #2946's S5 spec: same stance reached · no invented position where Opus stood aside · a dated, checkable falsifier present |
 | Ground truth / oracle | Each event's original first-commit content in `docs/research/events/*.md` — the Opus-era verdict before any pulse or close-out touched it |
-| Cycle gate | Full 30-event batch blocked until the hindsight-leak methodology flaw (found by the pilot itself) is fixed — date-cutoff search or prospective testing, not yet chosen |
+| Cycle gate | Full 30-event batch blocked until the hindsight-leak methodology flaw (found by the pilot itself) is fixed — date-cutoff search or prospective testing |
+| Kill rule | *(not recorded)* — in effect it fired on 2026-09-18: the blind replay could not be made leak-free, so the loop pivoted to prospective-only testing (#3300) |
 | Owning issue | #3264 |
 | Weakness capture | `docs/LESSONS.md` — "A blind-replay eval design leaked hindsight through the search tool, not the corpus file it guarded against" |
 | Process artifact | `docs/grind/haiku-eval-replay.instructions.md` |
-| Status | `blocked-on-fix` (as of 2026-09-18) |
+| Next check | none — ended; no prospective results exist yet to check |
+| State | `pivoted` (#3300, 2026-09-18) — was `blocked-on-fix`, which went stale when the loop quietly stopped. That staleness is why fields 4, 9 and 11 exist |
 
 ## Starting a new loop
 
-1. Fill fields 1-6 before running anything — if the pressure test or the oracle can't be stated up
-   front, the domain isn't ready for a loop yet; go research it first (see `orient.md`'s
-   Complex-domain routing).
-2. Open or reuse a plan issue (field 7) in the house capsule format (`docs/ISSUES.md`) — the loop's
-   status lives there, in the `Status` table row, not duplicated into this doc.
+1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
+   oracle or kill rule can't be stated up front, the domain isn't ready for a loop yet; go research
+   it first (see `orient.md`'s Complex-domain routing).
+2. Open or reuse a plan issue (field 10) in the house capsule format (`docs/ISSUES.md`) — the
+   loop's status lives in its state block. Add a row to the list below with a dated `Next check`.
 3. Run the thin slice. When it surfaces a weakness (it usually will — that's what a thin slice is
    for), `/retro` it into `docs/LESSONS.md` before doing anything else with the finding.
 4. Fold the fix into a `docs/grind/*.instructions.md` chore (or the nearest equivalent for a
    non-grind domain — a reusable spec file either way) so the next cycle starts ahead of this one,
    not from scratch.
 5. Re-check the cycle gate. Still open → repeat from step 3 with a revised thin slice. Closed →
-   scale, per whatever width the domain's full run actually needs.
+   scale, per whatever width the domain's full run actually needs. Either way, move the row's
+   `Next check` forward. Kill rule fired → set the row's State to `killed` or `pivoted`, and answer
+   the double-loop question.
 
 ## Loops running now
 
@@ -76,10 +94,21 @@ One row per loop. The daily digest (`node scripts/doctrine-scan.mjs --due`, run 
 secretary-digest Routine) lists any row whose **Next check** date has arrived while its **State**
 is still live, under Needs-you. Settle a check by doing it, then moving the date forward — or by
 ending the loop (`closed` · `killed` · `pivoted` · `replaced`). A cell that isn't a date is never
-flagged, so point it at the loop's own scanner when one already exists rather than double-flag.
-The list is seeded here (#4060); #4059 fills in the rest.
+flagged, so point it at the loop's own scanner when one already exists rather than double-flag, or
+name the event that triggers the check. A row is never deleted — an ended loop keeps its row with an
+ended State (same rule as `docs/READERS.md`). Keep the column names: `scripts/loop-list-decide.mjs`
+finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
 
 | Loop | The question | Owning issue | State | Next check |
 |---|---|---|---|---|
 | Bot doctrine checks | Does each bot's written doctrine still match its code? | #2287 | running | its dossier ledger (`docs/BOTS-SAURON.md`), flagged by the same scan |
 | Mobile-first bet | Is expanding a curated phone view faster than retrofitting a desktop one? | `CLAUDE.md` → Mobile-first | running | 2026-10-31 — wrong if the next three phone-first surfaces each needed a desktop re-layout PR |
+| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) | #4061 | piloting | 2026-10-14 — first report posted on #4061 |
+| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? | #4062 | piloting | 2026-10-21 — first recurrence report |
+| Bottleneck before/after | Does each `bottleneck` fix move the number it named? First instance: #3926, retries per CI run | #4063 | piloting | 2026-10-21 — #3926's before and after numbers recorded |
+| Readiness rubric | Do items the rubric flags deliver worse than unflagged ones? | #4056 | running | 2026-10-31 — kill everything but the parked check if flagged and unflagged land within 5pp |
+| Issue-centric orchestration | Do #3818's dated falsifiers hold? | #3818 | running | 2026-10-10 — first falsifier; the second is 2026-10-31 |
+| Research kill list | Does each killed hypothesis stay dead? (`docs/research/multi-symbol-sweep.md`) | #3955 | running | on each sweep Eric names tickers for — a kill reopens only on its stated condition |
+| Capability adoption | Does a full-adoption pass cost what we predicted? (#3748, #3769 differed 13× in tokens) | #3769 | running | before the next run — write its predicted token cost first |
+| Bot readiness evals | Does each bot pass its fixed scenario set? (`src/evals/`) | README phase 6 | blocked-on-fix | when the evals are live-verified — the bot learning loop's own plan owns it |
+| Haiku eval replay | Can Haiku/Sonnet do Layer 1 research as well as Opus? | #3264 | pivoted (#3300) | none — ended; worked example above |
