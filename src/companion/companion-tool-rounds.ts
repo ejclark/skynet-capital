@@ -74,7 +74,9 @@ export type ToolRoundOutcome =
 function toolsFor(participantId: string | undefined): readonly unknown[] {
   return participantId
     ? COMPANION_TOOL_DEFS
-    : COMPANION_TOOL_DEFS.filter((t) => t.name === "draft_feedback");
+    : COMPANION_TOOL_DEFS.filter(
+        (t) => t.name === "draft_feedback" || t.name === "get_work_status",
+      );
 }
 
 /** Up to `MAX_TOOL_ROUNDS` non-streaming round trips letting the model call read-only tools.

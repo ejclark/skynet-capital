@@ -7,13 +7,14 @@ import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
+import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of five read-only lookups plus one
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of six read-only lookups plus one
  * hand-off (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
  * to send), and nothing else. This is the structural half of the "never fires an order" invariant (the other
- * half is the system prompt): `runCompanionTool` is a `switch` over five literal string cases
+ * half is the system prompt): `runCompanionTool` is a `switch` over seven literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
  * function. This file does not import `trade-service.ts`, `option-trade-service.ts`,
@@ -28,6 +29,12 @@ import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
  * Every tool answers from data the member already owns (their own desk, their own progress, the
  * public play catalog, a chain read through their own linked account) — never another member's
  * account, never a write.
+ *
+ * The one exception to "the member's own": `get_work_status` (#3952) is the FIRST tool that reads
+ * SHARED WORK RECORDS — any issue or PR on the public repo, not this member's account. It is
+ * still read-only, still inside the invite gate (the chat route is authed-only), and the thread
+ * text it returns is filtered to trusted authors and quoted as data in `server/work-status.ts`,
+ * because on a public repo anyone on the internet can write a comment.
  */
 
 export const COMPANION_TOOL_NAMES = [
@@ -36,6 +43,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_my_curriculum_progress",
   "get_play_catalog",
   "get_structures_for_outlook",
+  "get_work_status",
   "draft_feedback",
 ] as const;
 
@@ -147,6 +155,22 @@ export const COMPANION_TOOL_DEFS = [
     },
   },
   {
+    name: "get_work_status",
+    description:
+      "Where any issue or pull request on the Skynet Capital build queue stands: state, the member-facing status (the same words as the Feedback badge, or 'Being built — PR #N open'), open and merged PRs that reference it, its quoted title, and a short excerpt of the thread from project members only. For 'where's my feedback?', pass the issue numbers from the MEMBER CONTEXT filings line. Read-only; up to 5 numbers per call.",
+    input_schema: {
+      type: "object",
+      properties: {
+        issues: {
+          type: "array",
+          items: { type: "integer" },
+          description: "Issue or PR numbers, e.g. [3952]. At most 5.",
+        },
+      },
+      required: ["issues"],
+    },
+  },
+  {
     name: "draft_feedback",
     description:
       "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed to report something; then ask them exactly one clarifying question, or tell them to reply 'send' if nothing is missing.",
@@ -185,6 +209,9 @@ export interface CompanionDeskDeps {
    *  fresh draft looks like it duplicates. Optional, like every other capability here — without it
    *  `draft_feedback` behaves exactly as before (no `similar` field at all), never a blocker. */
   readonly findSimilarFeedback?: FindSimilarFeedback;
+  /** #3952: where any issue stands, read off the public repo with the feedback lane's token.
+   *  Optional — without it `get_work_status` says "not available", never guesses. */
+  readonly readWorkStatus?: ReadWorkStatus;
 }
 
 export type CompanionToolResult =
@@ -290,14 +317,43 @@ async function structuresResult(
   return { ok: true, result: recommendation };
 }
 
+/** The model's issue list, bounded and typed: positive integers only, at most five. */
+export function parseIssueNumbers(input: unknown): readonly number[] | { readonly error: string } {
+  const raw = (input as { issues?: unknown } | null | undefined)?.issues;
+  const list = Array.isArray(raw) ? raw : typeof raw === "number" ? [raw] : [];
+  const numbers = list.filter((n): n is number => Number.isInteger(n) && n > 0 && n < 1e7);
+  if (numbers.length === 0) {
+    return {
+      error:
+        "name at least one issue number — for the member's own filings, use the numbers in the MEMBER CONTEXT",
+    };
+  }
+  return [...new Set(numbers)].slice(0, MAX_ISSUES_PER_LOOKUP);
+}
+
+async function workStatusResult(
+  read: ReadWorkStatus | undefined,
+  input: unknown,
+): Promise<CompanionToolResult> {
+  const parsed = parseIssueNumbers(input);
+  if ("error" in parsed) return { ok: false, error: parsed.error };
+  if (!read) {
+    return {
+      ok: false,
+      error: "issue status isn't available on this deployment — say so plainly, never guess one",
+    };
+  }
+  return { ok: true, result: { issues: await read(parsed) } };
+}
+
 /**
- * Run ONE of the five allow-listed tools. Any other name — including anything a compromised or
+ * Run ONE of the seven allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
  * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
- * then refuse honestly, and only `draft_feedback` — which reads no member data, only the public
- * open-issue queue for its advisory dedup check — still answers.
+ * then refuse honestly, and only `draft_feedback` and `get_work_status` — which read no member
+ * data, only the public issue queue — still answer.
  */
 export async function runCompanionTool(
   name: string,
@@ -341,6 +397,8 @@ export async function runCompanionTool(
       );
     case "get_structures_for_outlook":
       return structuresResult(deps.rankFor, participantId, input);
+    case "get_work_status":
+      return workStatusResult(deps.readWorkStatus, input);
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized
       // name (a typo, a hallucination, an adversarial member steering the model) lands here and
