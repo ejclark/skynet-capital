@@ -17,7 +17,8 @@ import { formatCurrency, formatSigned, plClass } from "./render-atoms.js";
  *  - one primary action that only ever DRAFTS: it opens the contract on Trade for review. Nothing is
  *    placed from the Overview,
  *  - for a single-leg option, the numbers the outcome-range bar needs (type, strike, breakeven).
- *    The client adds the live spot from the option book it already reads.
+ *    The client adds the live spot from the option book it already reads,
+ *  - when it has one, the day it's due (#3977 slice 4), so the market calendar can mark it.
  *
  * Ordered by money at stake (the position's market value), so the card most worth a member's
  * attention comes first. Pure: the clock and the desk id are passed in.
@@ -64,6 +65,29 @@ export interface Decision {
   /** The one idea this card leans on, as a glossary term the card opens in place ("What is IV
    *  crush?"). The term is a key in `app/src/shell/glossary.ts`; the client drops one it lacks. */
   readonly learn?: DecisionLearn;
+  /** The day to decide by, when the position has one of its own. Absent means no such day — a
+   *  share with no dated event, or an idea (its window is relative to a print, not a day). */
+  readonly due?: DecisionDue;
+}
+
+/**
+ * WHEN A DECISION IS DUE (#3977 slice 4). The first dated thing that is this position's own:
+ *  - its stock's own event (an earnings print, a named event) while it can still move it — before
+ *    expiry for an option, inside the 60-day share horizon for shares. The IV-crush card's
+ *    "decide before the print, not after" is this case,
+ *  - else the option's expiry.
+ * A macro print (the Fed, CPI, jobs) is a clock on the card but never its due date: it moves
+ * every position, so it can't say when THIS one needs deciding. The dates are the ones the
+ * clocks already print, as structured data rather than prose.
+ */
+export interface DecisionDue {
+  /** YYYY-MM-DD. */
+  readonly at: string;
+  readonly reason: "event" | "expiry";
+  /** "Earnings Oct 28", "Expires Oct 17" — the same words as the card's clock. */
+  readonly label: string;
+  /** The event's date is a cadence estimate, not a confirmed date. */
+  readonly estimated?: true;
 }
 
 interface DecisionLearn {
@@ -185,6 +209,25 @@ function copyFor(
   };
 }
 
+function dueFor(p: Held): DecisionDue | undefined {
+  const occ = parseOccSymbol(p.symbol);
+  const event = p.plain.nextEvent;
+  if (event?.scope === "stock" && (occ ? event.beforeExpiry : true)) {
+    const print = p.plain.nextPrint;
+    const estimated =
+      event.label.startsWith("Earnings") && print.status === "estimate" && print.at === event.at;
+    return {
+      at: event.at,
+      reason: "event",
+      label: event.label,
+      ...(estimated ? { estimated: true as const } : {}),
+    };
+  }
+  if (occ)
+    return { at: occ.expiration, reason: "expiry", label: `Expires ${expiryDay(occ.expiration)}` };
+  return undefined;
+}
+
 function tradeHref(deskId: string, symbol: string): string {
   const desk = encodeURIComponent(deskId);
   const occ = parseOccSymbol(symbol);
@@ -202,6 +245,7 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
   const kind = classify(ret, option);
   if (!kind) return undefined;
   const { captionShort, range } = facts(p);
+  const due = dueFor(p);
   return {
     id: `${kind}-${p.symbol}`,
     kind,
@@ -218,6 +262,7 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
     secondary: { label: "Show in table", href: `#pos-${encodeURIComponent(p.symbol)}` },
     stakeRaw: Math.abs(p.marketValue),
     ...(range ? { range } : {}),
+    ...(due ? { due } : {}),
   };
 }
 
