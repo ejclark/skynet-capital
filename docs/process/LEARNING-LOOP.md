@@ -69,3 +69,17 @@ from, not designed in the abstract first. Field by field:
    not from scratch.
 5. Re-check the cycle gate. Still open → repeat from step 3 with a revised thin slice. Closed →
    scale, per whatever width the domain's full run actually needs.
+
+## Loops running now
+
+One row per loop. The daily digest (`node scripts/doctrine-scan.mjs --due`, run by the
+secretary-digest Routine) lists any row whose **Next check** date has arrived while its **State**
+is still live, under Needs-you. Settle a check by doing it, then moving the date forward — or by
+ending the loop (`closed` · `killed` · `pivoted` · `replaced`). A cell that isn't a date is never
+flagged, so point it at the loop's own scanner when one already exists rather than double-flag.
+The list is seeded here (#4060); #4059 fills in the rest.
+
+| Loop | The question | Owning issue | State | Next check |
+|---|---|---|---|---|
+| Bot doctrine checks | Does each bot's written doctrine still match its code? | #2287 | running | its dossier ledger (`docs/BOTS-SAURON.md`), flagged by the same scan |
+| Mobile-first bet | Is expanding a curated phone view faster than retrofitting a desktop one? | `CLAUDE.md` → Mobile-first | running | 2026-10-31 — wrong if the next three phone-first surfaces each needed a desktop re-layout PR |

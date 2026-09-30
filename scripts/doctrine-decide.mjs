@@ -39,7 +39,7 @@ const HEADING = "## Adaptation ledger";
  *  to a human and is the house convention for calling out a due date in prose — same allowance
  *  forward-test-pending.mjs's `isUnscored()` makes for leading `**`/`_`/`(` before its own markers).
  *  `null` when the cell doesn't lead with a date at all — never guessed at. */
-function leadingDate(cell) {
+export function leadingDate(cell) {
   const stripped = cell.replace(/^[*_\s]+/, "");
   return DATE_RE.test(stripped) ? stripped.match(DATE_RE)[1] : null;
 }
