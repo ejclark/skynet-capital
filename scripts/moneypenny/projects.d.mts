@@ -59,6 +59,33 @@ export function explainRateLimitExhausted(detail?: {
   now?: number;
 }): string;
 
+export const THROTTLE_BUDGET_FLOOR: number;
+export const THROTTLE_ATTEMPTS: number;
+export const THROTTLE_BASE_MS: number;
+
+export function classifyRateLimitRefusal(budget?: {
+  remaining?: number;
+  floor?: number;
+}): "spent" | "throttled";
+
+export function explainThrottled(detail?: {
+  call?: string;
+  remaining?: number;
+  attempts?: number;
+  baseMs?: number;
+}): string;
+
+export function runThroughRateLimit<T>(opts: {
+  call?: string;
+  run: () => T;
+  firstError?: unknown;
+  readBudget: () => Record<string, { limit?: number; remaining?: number; reset?: number }>;
+  sleep?: (ms: number) => void;
+  attempts?: number;
+  baseMs?: number;
+  now?: number;
+}): T;
+
 export const SWEEP_MIN_GRAPHQL_POINTS: number;
 
 export function planBoardSweep(budget?: {
