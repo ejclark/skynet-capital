@@ -92,6 +92,7 @@
     "capture:lifecycle": "tsx src/scripts/capture-option-lifecycle.ts",
     "feedback:scan": "node scripts/feedback-scan.mjs",
     "latency:scan": "node scripts/latency-scan.mjs",
+    "thrash:scan": "node scripts/thrash-scan.mjs",
     "design:cards": "node scripts/design-cards.mjs",
     "shoot:activity": "tsx scripts/shoot/activity.mjs",
     "shoot:mission-control": "tsx scripts/shoot/mission-control.mjs",
