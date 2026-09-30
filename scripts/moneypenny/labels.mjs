@@ -191,7 +191,7 @@ export const PARKING_LABELS = [
 ];
 
 /** Label names from either shape a caller holds: plain strings, or a payload's `[{ name }]`. */
-const labelNames = (labels = []) =>
+export const labelNames = (labels = []) =>
   (labels ?? []).map((l) => (typeof l === "string" ? l : l?.name)).filter(Boolean);
 
 /** The parking labels present on an issue (empty when it is free to build). */

@@ -1,12 +1,9 @@
 // THE LAST MILE — closing feedback and event-research issues whose work has already merged. Split
 // out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { ghRest } from "./gh.mjs";
-import { FOOTER, LABELS } from "./labels.mjs";
+import { FOOTER, LABELS, labelNames } from "./labels.mjs";
 
 const NEXT_SLICE = LABELS.nextSlice.name;
-/** `gh` hands labels back as `[{ name }]`; a fixture may use plain strings. */
-const labelNames = (labels = []) =>
-  (labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
 
 /**
  * THE LAST MILE. An issue whose work has MERGED but which is still open.
