@@ -60,7 +60,7 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 
 | | |
 |---|---|
-| **Status** | proposed · waiting on a decision (needs-eric) |
+| **Status** | Blocked · waiting on a decision (needs-eric) |
 | **Surface** | Moneypenny's rail (filings listed at `/app/accounts?section=feedback`) |
 | **Size** | ~2 PRs |
 
@@ -123,6 +123,13 @@ Rules that make it work, in priority order:
    ranked list of what the page shows first at phone width (`At 390, in order: balance · open
    positions · the trade button`). The PR's first phone screenshot is checked against it
    (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
+11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready · In
+   Progress · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`), then a `·`
+   and whatever a reader needs: `Ready · plan, no decision needed`. The labels and the board move
+   after filing; the row is typed once, and #3748 and #3407 were found saying `ready` and
+   `needs-eric` with neither label on them. `issue-lint --labels` notes a first word the labels
+   contradict (#3913) — a note, not a failure. When the state changes, the row's first word
+   changes with it; free text that does not lead with a board word is left alone.
 
 ### An optional block: capturing a raw idea before it's a plan
 

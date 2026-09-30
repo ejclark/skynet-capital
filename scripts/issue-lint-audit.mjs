@@ -1,7 +1,7 @@
 // Live-corpus audit — split out of issue-lint.mjs because it is a distinct concern (measuring
 // GitHub's actual issue corpus against the capsule contract) from linting one body in isolation.
 // See issue-lint.mjs for the contract itself (`lintIssue`) and docs/ISSUES.md for the grammar.
-import { lintIssue } from "./issue-lint.mjs";
+import { lintIssue, statusRowClaim } from "./issue-lint.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 /** Issues this contract does not judge: machine-filed, machine-read (the event-research lane). */
@@ -19,18 +19,24 @@ export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}
   const pct = (n) => `${Math.round((100 * n) / issues.length)}%`;
   const count = (f) => issues.filter((i) => f(i.body ?? "")).length;
   const human = issues.filter((i) => !AUTOMATION_TAG.test(i.title ?? ""));
-  const failing = human
-    .map((i) => ({
-      issue: i,
-      // GitHub returns label objects; lintIssue's label rules compare names. Passed raw, every
-      // label-conditional rule (needs-eric callout, bottleneck baseline) silently never fired.
-      ...lintIssue({
-        title: i.title ?? "",
-        body: i.body ?? "",
-        labels: i.labels?.map((l) => (typeof l === "string" ? l : l.name)),
-      }),
-    }))
-    .filter((r) => r.problems.length);
+  const linted = human.map((i) => ({
+    issue: i,
+    // GitHub returns label objects; lintIssue's label rules compare names. Passed raw, every
+    // label-conditional rule (needs-eric callout, bottleneck baseline) silently never fired.
+    ...lintIssue({
+      title: i.title ?? "",
+      body: i.body ?? "",
+      labels: i.labels?.map((l) => (typeof l === "string" ? l : l.name)),
+    }),
+  }));
+  const failing = linted.filter((r) => r.problems.length);
+  // #3913 criterion 5's hit rate: how many rows speak the board's vocabulary, and how many of
+  // those the labels contradict. The number that decides whether the projects sync should rewrite
+  // the row itself (the plan's deferred open question).
+  const claiming = human.filter((i) => statusRowClaim(i.body ?? "")).length;
+  const drifting = linted.filter((r) =>
+    r.notes.some((n) => n.startsWith("Status row says")),
+  ).length;
 
   const lines = [
     `issue corpus: ${issues.length} issues on ${repo} (${human.length} human-facing)`,
@@ -39,6 +45,7 @@ export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}
     `  picture   ${pct(count((b) => /!\[|<img |```mermaid/.test(b)))}`,
     `  table     ${pct(count((b) => /^\|.+\|$/m.test(b)))}`,
     `  headings  ${pct(count((b) => /^#{2,3} /m.test(b)))}`,
+    `  status    ${claiming}/${human.length} rows lead with a board Status · ${drifting} contradict their labels`,
     "",
     `  ${failing.length}/${human.length} human-facing issues fail the capsule contract (docs/ISSUES.md).`,
   ];
@@ -60,6 +67,9 @@ export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}
   return lines;
 }
 
+/** Open issues only: the capsule contract is about the queue a reader scans today. Counting closed
+ *  issues meant closing duplicates never moved the numbers (#3913 slice 1 closed 18 and the audit
+ *  still named one of them), and a closed issue's Status row is history, not drift. */
 export async function audit(repo, { limit = AUDIT_LIST_LIMIT } = {}) {
   reexecWithProxy();
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -72,7 +82,7 @@ export async function audit(repo, { limit = AUDIT_LIST_LIMIT } = {}) {
   const rows = [];
   for (let page = 1; page <= 10; page++) {
     const res = await fetch(
-      `https://api.github.com/repos/${repo}/issues?state=all&per_page=100&page=${page}`,
+      `https://api.github.com/repos/${repo}/issues?state=open&per_page=100&page=${page}`,
       { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } },
     );
     if (!res.ok) {
