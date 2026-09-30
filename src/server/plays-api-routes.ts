@@ -64,8 +64,11 @@ async function servePlays(
         earned: progression?.earnedByCode?.has(t.code) ?? false,
         ...(prev ? { opensAfter: { code: prev.code, name: prev.name } } : {}),
         // The exact reason the server refuses this rung with (#469) — the ticket shows the same
-        // sentence it would get back on submit, gate-aware, so the path out is always named.
-        ...(locked ? { lockedReason: ladderLockedReason(t.code, Boolean(gate)) } : {}),
+        // sentence it would get back on submit, so the path out is always named. A sell (102) is
+        // an exit the message gate never holds (`trade-api-routes.ts`), so its reason is the rung's.
+        ...(locked
+          ? { lockedReason: ladderLockedReason(t.code, Boolean(gate) && t.code !== "102") }
+          : {}),
       };
     }),
   });

@@ -233,11 +233,12 @@ describe("servePlaysApi wheels", () => {
     expect(body.gate.note).toContain("hello to Moneypenny");
     expect(body.plays.every((p: { locked: boolean }) => p.locked)).toBe(true);
     expect(body.plays.some((p: { opensAfter?: unknown }) => p.opensAfter)).toBe(false);
-    // …and every locked rung's reason names the remedy that holds: saying hello (#469).
-    expect(
-      body.plays.every((p: { lockedReason?: string }) =>
-        p.lockedReason?.includes("hello to Moneypenny"),
-      ),
-    ).toBe(true);
+    // …and every locked rung's reason is the one the server refuses with (#469): saying hello,
+    // except a sell (102) — an exit the gate never holds, so it names the rung below instead.
+    const reasons = body.plays as { code: string; lockedReason?: string }[];
+    for (const p of reasons.filter((r) => r.code !== "102")) {
+      expect(p.lockedReason).toContain("hello to Moneypenny");
+    }
+    expect(reasons.find((r) => r.code === "102")?.lockedReason).toContain("first filled 101");
   });
 });
