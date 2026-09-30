@@ -27,12 +27,19 @@
 // #3914: every `gh project` call here goes through `ghProject`, because gh reports any non-NOT_FOUND
 // owner-lookup failure as the bare string `unknown owner type` — see projects.mjs's block above
 // `MASKED_OWNER_FAILURE` for the reproduction and why that string is never a real classification.
+//
+// #4183: the three board-wide reads are per-RUN constants, not per-issue ones — see
+// `createBoardContext`. They used to run once per `syncIssue` call, which was free for the
+// one-issue job this file is named for and a 9,000-point bill when projects-backfill.mjs calls it
+// ninety times in five minutes.
 import { missingDecisionCallout } from "./decision-callout.mjs";
-import { ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
 import {
   explainMaskedOwnerFailure,
+  explainRateLimitExhausted,
   isBacklogCandidate,
   isMaskedOwnerFailure,
+  isRateLimitExhausted,
   isRetryableProjectsGhError,
   resolveBoardItem,
   statusForIssue,
@@ -72,6 +79,21 @@ function ghProject(args) {
     });
   } catch (err) {
     const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+    // #4183: an exhausted hourly budget used to surface as a raw `child_process` stack trace, and
+    // the repair session it dispatched spent its first ten minutes working out that "GraphQL: API
+    // rate limit exceeded for user ID 3472134" was a quota, not a bug. `ghRateLimit` is free, so
+    // asking GitHub for the reset stamp on the way out costs nothing and answers that in one line.
+    if (isRateLimitExhausted(text)) {
+      const { graphql } = ghRateLimit();
+      throw new Error(
+        explainRateLimitExhausted({
+          call: `\`gh project ${args[0]}\``,
+          remaining: graphql?.remaining,
+          reset: graphql?.reset,
+        }),
+        { cause: err },
+      );
+    }
     if (!isMaskedOwnerFailure(text)) throw err;
     throw new Error(explainMaskedOwnerFailure(probeGraphql()), { cause: err });
   }
@@ -89,6 +111,87 @@ function optionByName(field, name) {
   return (field.options ?? []).find((o) => o.name === name);
 }
 
+function readItemsFromGh() {
+  const raw = ghProjectJson([
+    "item-list",
+    String(PROJECT_NUMBER),
+    "--owner",
+    OWNER,
+    "--limit",
+    String(ITEM_LIST_LIMIT),
+  ]);
+  const items = Array.isArray(raw) ? raw : (raw.items ?? []);
+  return { items, totalCount: raw?.totalCount };
+}
+
+function readFieldsFromGh() {
+  const fields = ghProjectJson([
+    "field-list",
+    String(PROJECT_NUMBER),
+    "--owner",
+    OWNER,
+    "--limit",
+    "100",
+  ]);
+  return Array.isArray(fields) ? fields : (fields.fields ?? []);
+}
+
+function readProjectFromGh() {
+  const projects = ghProjectJson(["list", "--owner", OWNER, "--limit", "100"]);
+  const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
+  const project = projectList.find((p) => p.number === PROJECT_NUMBER);
+  if (!project) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+  return project;
+}
+
+/**
+ * THE PER-RUN CONSTANTS, READ ONCE. #4183: the project's id, its field/option ids, and the board's
+ * item list are the same for every issue a single process syncs — nothing but our own adds changes
+ * them mid-run, and `noteAdded` folds those in. `syncIssue` re-read all three on every call, which
+ * cost nothing noticeable for the one-issue `sync project status` job but spent Eric's entire
+ * 5,000-point GraphQL hour when projects-backfill.mjs called it once per open issue (the item-list
+ * page alone is priced at ~100 points by node count).
+ *
+ * LAZY ON PURPOSE. A sync that exits before it needs the board — a `ci-failure` tracker is not a
+ * backlog candidate — must still spend zero GraphQL, which it cannot do if the constructor reads.
+ *
+ * The three readers are injected so the memoization is provable without a network call; the defaults
+ * are the real `gh project` calls. A caller that wants today's per-issue behaviour simply builds a
+ * fresh context per issue — the default when `syncIssue` is given no `board`.
+ */
+export function createBoardContext({
+  readItems = readItemsFromGh,
+  readFields = readFieldsFromGh,
+  readProject = readProjectFromGh,
+} = {}) {
+  let items;
+  let fields;
+  let project;
+
+  return {
+    items({ refresh = false } = {}) {
+      if (refresh || !items) items = readItems();
+      return items;
+    },
+    fields() {
+      fields ??= readFields();
+      return fields;
+    },
+    project() {
+      project ??= readProject();
+      return project;
+    },
+    /**
+     * Fold an item this process just added into the cached list, so the board we hold stays true
+     * without paying for another `item-list`. A no-op before the list has been read — there is no
+     * cache to keep honest yet, and inventing one would hide a later read's real answer.
+     */
+    noteAdded(item) {
+      if (items && item) items.items = [...(items.items ?? []), item];
+    },
+  };
+}
+
 /**
  * Adds the issue to the board if it isn't there yet, sets Status always, and sets Horizon only
  * when the caller supplies one — Horizon is a sequencing judgment (same footing as Priority,
@@ -98,8 +201,11 @@ function optionByName(field, name) {
  * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon, added}`
  * otherwise (`added` false = it was already an item). Throws loudly on any GitHub-side surprise —
  * never a silent partial write.
+ *
+ * `board` is a `createBoardContext()` the caller may share across many issues (#4183); left out, it
+ * makes its own, which is the one-issue `sync project status` job's behaviour unchanged.
  */
-export function syncIssue(issueNumber, { horizon } = {}) {
+export function syncIssue(issueNumber, { horizon, board = createBoardContext() } = {}) {
   const issue = ghRest(`issues/${issueNumber}`);
   const labels = (issue.labels ?? []).map((l) => l.name);
 
@@ -115,9 +221,11 @@ export function syncIssue(issueNumber, { horizon } = {}) {
   const status = statusForIssue({ state: issue.state, labels, decisionCalloutMissing });
 
   // Add-or-find, never add-and-hope: `item-add` errors on an issue that is already an item, and
-  // every sync after an issue's first one hits exactly that (#3954).
+  // every sync after an issue's first one hits exactly that (#3954). The board list we already hold
+  // answers that common case for free (#4183), and only a miss pays for the add.
   const { item, added } = resolveBoardItem({
     issueUrl: issue.html_url,
+    cachedItems: board.items().items,
     addItem: () =>
       ghProjectJson([
         "item-add",
@@ -127,34 +235,12 @@ export function syncIssue(issueNumber, { horizon } = {}) {
         "--url",
         issue.html_url,
       ]),
-    listItems: () => {
-      const raw = ghProjectJson([
-        "item-list",
-        String(PROJECT_NUMBER),
-        "--owner",
-        OWNER,
-        "--limit",
-        String(ITEM_LIST_LIMIT),
-      ]);
-      const items = Array.isArray(raw) ? raw : (raw.items ?? []);
-      return { items, totalCount: raw?.totalCount };
-    },
+    listItems: () => board.items({ refresh: true }),
   });
+  if (added) board.noteAdded(item);
 
-  const fields = ghProjectJson([
-    "field-list",
-    String(PROJECT_NUMBER),
-    "--owner",
-    OWNER,
-    "--limit",
-    "100",
-  ]);
-  const fieldList = Array.isArray(fields) ? fields : (fields.fields ?? []);
-
-  const projects = ghProjectJson(["list", "--owner", OWNER, "--limit", "100"]);
-  const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
-  const project = projectList.find((p) => p.number === PROJECT_NUMBER);
-  if (!project) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+  const fieldList = board.fields();
+  const project = board.project();
 
   const setSingleSelect = (fieldName, optionName) => {
     const field = findField(fieldList, fieldName);

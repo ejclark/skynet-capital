@@ -44,6 +44,27 @@ export const ALREADY_ON_BOARD_FAILURE: RegExp;
 
 export function isAlreadyOnBoardError(text: unknown): boolean;
 
+export const RATE_LIMIT_EXHAUSTED: RegExp;
+
+export function isRateLimitExhausted(text: unknown): boolean;
+
+export function explainRateLimitExhausted(detail?: {
+  call?: string;
+  remaining?: number;
+  reset?: number;
+  now?: number;
+}): string;
+
+export const SWEEP_MIN_GRAPHQL_POINTS: number;
+
+export function planBoardSweep(budget?: {
+  issueCount?: number;
+  remaining?: number;
+  reset?: number;
+  now?: number;
+  minPoints?: number;
+}): { ok: boolean; reason: string };
+
 export interface BoardItem {
   id: string;
   content?: { type?: string; number?: number; url?: string };
@@ -58,6 +79,7 @@ export function resolveBoardItem(deps: {
   addItem: () => BoardItem;
   listItems: () => { items?: BoardItem[]; totalCount?: number };
   issueUrl?: string;
+  cachedItems?: BoardItem[];
   attempts?: number;
   baseMs?: number;
   sleep?: (ms: number) => void;
