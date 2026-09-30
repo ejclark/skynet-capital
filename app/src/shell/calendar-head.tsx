@@ -77,6 +77,7 @@ export function CalendarHead({
   onLens,
   onStep,
   children,
+  towerSlot = true,
 }: {
   readonly lens: Lens;
   readonly range: DayRange;
@@ -91,6 +92,8 @@ export function CalendarHead({
   readonly onStep: (direction: 1 | -1) => void;
   /** Seated between the head row and the lens row — R&D's month grid. */
   readonly children?: ReactNode;
+  /** The crest's right cap. Off where the page stands the big tower in its own column (#3977). */
+  readonly towerSlot?: boolean;
 }): ReactElement {
   const fogId = useId();
   const allLens = lens === "all";
@@ -164,7 +167,7 @@ export function CalendarHead({
           </p>
         ) : null}
       </fieldset>
-      <TowerSlot />
+      {towerSlot ? <TowerSlot /> : null}
     </>
   );
 }

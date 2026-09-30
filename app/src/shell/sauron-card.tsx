@@ -1,9 +1,7 @@
 import { type ReactElement, useId, useRef } from "react";
-import { PHONE_QUERY } from "./cockpit-clock";
 import { LeagueCard } from "./league-card";
-import { type CardPick, type Crest, usePrefs } from "./prefs";
+import { type Crest, usePrefs } from "./prefs";
 import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
-import { useMediaQuery } from "./use-media";
 
 /**
  * SAURON'S CHARACTER CARD (plan #3727, design handoff 6a): the league, with Barad-dûr standing
@@ -26,9 +24,14 @@ import { useMediaQuery } from "./use-media";
  *
  * THE MEMBER'S MOTION SETTING (#3807 slice 3b-1): "Still" in Settings → Display stills this tower
  * too — the scene's `rest=still` works in any framing (one frame at rest, the loop only while a
- * glance plays). THE COMPARE (same slice, only under `?shell=watchtower`): beside the calendar
- * head's tower, `?card=league` drops the art at ≥861px so the page draws one tower, not two; on a
- * phone the head's tower is hidden, so the card keeps its art there. Eric picks by eye.
+ * glance plays.
+ *
+ * OPEN, IN THE PROFILE PAGE'S TOWER COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock):
+ * "I never intended to have 2 towers… show the big tower… so it sits below the navbar… remove the
+ * section outline around the tower [so the] light from the eye [is] less contained." `open` drops
+ * the card's border, background, accent frame and vignette, and fades the art's edges into the page
+ * on every side. It replaces the `?card=art|league` compare (#3807 slice 3b-1), retired unused:
+ * neither option was the intent.
  */
 
 /** The tower's URL: the card framing, the landmark's dials when this account has one, and the
@@ -41,17 +44,6 @@ export function towerSrc(
     ? `&power=${landmark.power.toFixed(3)}&health=${landmark.health.toFixed(3)}`
     : "";
   return `/tower?frame=card${dials}${crest === "still" ? "&rest=still" : ""}`;
-}
-
-/** Whether the card draws its art: always, except the `league` pick beside the head's tower, on
- *  the flag, wider than a phone — the only place a second tower would stand next to the first. */
-export function cardShowsArt(where: {
-  readonly besideHead: boolean;
-  readonly flag: boolean;
-  readonly card: CardPick;
-  readonly phone: boolean;
-}): boolean {
-  return !(where.besideHead && where.flag && where.card === "league" && !where.phone);
 }
 
 /** The shade zone: the forge's ember seat, then mist with an uneven, organic top edge. */
@@ -132,7 +124,7 @@ export function SauronCard({
   ownedIds,
   meId,
   scope,
-  besideHead = false,
+  open = false,
 }: {
   /** The selected account's landmark dials, when it has one (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
@@ -140,28 +132,19 @@ export function SauronCard({
   readonly meId?: string;
   /** CSS selector for the region whose filter clicks the Eye glances at. */
   readonly scope: string;
-  /** The page also shows the calendar head's tower (the Profile page's Overview). */
-  readonly besideHead?: boolean;
+  /** Unboxed, for the page's tower column: no border or frame, the art's edges fade into the page. */
+  readonly open?: boolean;
 }): ReactElement {
   const frame = useRef<HTMLIFrameElement>(null);
   const crest = usePrefs((s) => s.crest);
-  const flag = usePrefs((s) => s.shell) === "watchtower";
-  const card = usePrefs((s) => s.card);
-  const phone = useMediaQuery(PHONE_QUERY);
-  const art = cardShowsArt({ besideHead, flag, card, phone });
   useTowerGlance(scope, frame);
   useTowerMood(landmark);
   useCardFrame(frame);
-  if (!art)
-    return (
-      <section className="char-card char-card--league" aria-label="The league">
-        <div className="char-body">
-          <LeagueCard ownedIds={ownedIds} meId={meId} />
-        </div>
-      </section>
-    );
   return (
-    <section className="char-card" aria-label="Sauron's tower and the league">
+    <section
+      className={open ? "char-card char-card--open" : "char-card"}
+      aria-label="Sauron's tower and the league"
+    >
       <div className="char-art">
         <div className="char-art-clip">
           <iframe
