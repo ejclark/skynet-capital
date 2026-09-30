@@ -13,7 +13,7 @@ describe("describePage — known pages map to fixed words", () => {
 
   it("names a held contract being managed, in plain words", () => {
     expect(describePage("/trade?symbol=MSFT&manage=MSFT260918P00420000")).toBe(
-      "the trade ticket for MSFT managing their held MSFT $420 PUT · 18 SEP 26",
+      "the trade ticket for MSFT on the manage view for MSFT $420 PUT · 18 SEP 26",
     );
   });
 
@@ -43,6 +43,16 @@ describe("describePage — nothing unchecked gets through", () => {
     expect(describePage("/trade?symbol=DROP%20TABLE&play=999&section=secret&manage=junk")).toBe(
       "the trade ticket",
     );
+  });
+
+  it("never answers from the prototype chain (#2224 shape 3 red-team, C1)", () => {
+    expect(describePage("/trade?symbol=NVDA&section=constructor")).toBe(
+      "the trade ticket for NVDA",
+    );
+    expect(describePage("/activity?section=__proto__")).toBe("the Activity page");
+    expect(describePage("/research?section=toString")).toBe("the research page");
+    expect(describePage("/u/acct-42/constructor")).toBeUndefined();
+    expect(describePage("/constructor")).toBeUndefined();
   });
 
   it("returns undefined for anything that is not a known in-app page", () => {
