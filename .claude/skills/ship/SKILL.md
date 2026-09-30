@@ -96,6 +96,11 @@ scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body),
   `pipeline.yml`'s arm job skips) and the diff is protected (which `checkarm` refuses, exit 5).
 - **`--hold` now labels.** Any held PR, platter or not, gets `hold-merge` — so "what is waiting on
   Eric?" is a label query rather than a guess.
+- **`--hold` waits ~20s after promoting, then checks `verify` once** (#4168). The draft's own run can
+  cancel the real `verify` and leave a skipped check, which branch protection reads as a pass. If
+  the latest `verify` is skipped or cancelled, ship adds a marker to the PR body. That edit fires an
+  `edited` event, which starts a real run. The output says when it did this. `SHIP_REVERIFY_WAIT`
+  sets the wait.
 
 ## Mechanics & traps (moved here from CLAUDE.md, 2026-08-28 — this skill owns the landing detail)
 
