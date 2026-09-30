@@ -1362,7 +1362,7 @@
             "id": "planclaim",
             "label": "Plan ready-flip",
             "path": "scripts/moneypenny/plan-claim.mjs",
-            "responsibility": "isReadySignal/hasPlanLabel/planReadyIntent: whole-comment ready patterns on plan-labelled issues (the workflow's if: already checked author_association)"
+            "responsibility": "isReadySignal/hasPlanLabel/planReadyIntent: whole-comment ready patterns on plan-labelled issues (the workflow's if: already checked author_association); refuses a plan carrying a parking label (isBuildable, labels.mjs), and a Claude-footed comment counts only when its first line is CLAUDE_READY_LINE"
           },
           {
             "id": "guard",
@@ -1392,7 +1392,7 @@
             "id": "shipped",
             "label": "Last-mile closer",
             "path": "scripts/moneypenny/shipped.mjs",
-            "responsibility": "routeShipped/resolveShipped/prIsMerged close feedback and event-research issues whose PR merged, because Closes # links do not fire for bot-authored bot-merged PRs"
+            "responsibility": "routeShipped/resolveShipped/prIsMerged close feedback and event-research issues whose PR merged, because Closes # links do not fire for bot-authored bot-merged PRs; never closes an issue still carrying next-slice"
           },
           {
             "id": "vocab",

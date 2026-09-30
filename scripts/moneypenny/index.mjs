@@ -55,7 +55,14 @@ import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./clai
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
-import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
+import {
+  ensureLabel,
+  ensureVocabulary,
+  isBuildable,
+  LABELS,
+  MANAGED_LABELS,
+  parkedReason,
+} from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
@@ -246,6 +253,12 @@ export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_
   const labels = (issue.labels ?? []).map((l) => l.name);
   if (!labels.includes("feedback")) {
     return { claimed: false, reason: "ready, but not a feedback issue — not this lane's" };
+  }
+  // #3818 slice 2, criterion 5: ready + parked is never built (#3194 sat ready + needs-eric 9 days).
+  if (!isBuildable(labels)) {
+    const reason = parkedReason(issue.number, labels);
+    console.log(`::notice::not building feedback #${issue.number} — ${reason}`);
+    return { claimed: false, reason };
   }
   const result = claimHandoff(`feedback-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
@@ -466,7 +479,8 @@ function gatherDeps(ctx) {
           // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
           // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
           // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
-          "number,title,closedByPullRequestsReferences",
+          // `labels` so `resolveShipped` can leave a `next-slice` issue open (#3818 slice 2).
+          "number,title,labels,closedByPullRequestsReferences",
         ]),
       {
         isMerged: prIsMerged,
