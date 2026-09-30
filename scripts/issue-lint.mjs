@@ -22,6 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readBaseline } from "./bottleneck-baseline.mjs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
@@ -254,6 +255,18 @@ function checkNeedsFromYou(text, labels, problems, notes) {
   }
 }
 
+/** A `bottleneck` issue names a measured constraint, so it carries the number its fix should move
+ *  (docs/ISSUES.md → Bottleneck issues, #4063): a `**Before:**` line with a measurement, or
+ *  `unmeasured — <why>`. Without it the before/after loop (docs/process/LEARNING-LOOP.md) has
+ *  nothing to compare the fix against — 35 issues were filed that way before this rule. */
+function checkBottleneckBaseline(text, labels, problems) {
+  if (!(Array.isArray(labels) && labels.includes("bottleneck"))) return;
+  if (readBaseline(text).before) return;
+  problems.push(
+    "labelled `bottleneck` but no `**Before:**` line with a number — write the measured value, its date and how it was counted, or `unmeasured — <why>` (docs/ISSUES.md → Bottleneck issues)",
+  );
+}
+
 /** A plan issue is picked up from its state block, not from its comment thread (docs/ISSUES.md →
  *  The state block, #3765). The block itself is a comment, so a body can only point at it; a
  *  `plan`-labelled body with no pointer gets a note, never a problem — the block is a reading
@@ -351,6 +364,7 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   collectNotes(text, notes);
   if (Array.isArray(labels)) checkLabels(labels, notes);
   checkStateBlock(text, labels, notes);
+  checkBottleneckBaseline(text, labels, problems);
   checkStateBlockTop(text, notes);
   checkNeedsFromYou(text, labels, problems, notes);
   notes.push(...readinessNotes({ title, body: text, labels }));

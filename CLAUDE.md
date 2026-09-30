@@ -490,7 +490,7 @@ common routes:
   integrate superior solutions") — ToC's own corollary: elevate one constraint and the next binds.
   The moment a constraint is *measured* (a rate limit hit, a WIP throttle blocking a batch, a shared
   file every lane races, a manual step every session repeats), file it with **`/issue`** + the
-  **`bottleneck`** label — a capsule with the evidence, not a hunch — and let
+  **`bottleneck`** label — a capsule with the evidence and its `**Before:**` number, not a hunch — and let
   `docs/grind/research-bottleneck.instructions.md` pursue it: a grind run over the open
   `bottleneck` issues finds the superior *existing* solution first (bespoke last), battle-tests it,
   and leaves a call sheet + routing label (`feedback` / `needs-eric` / `next-slice`) on the issue.
