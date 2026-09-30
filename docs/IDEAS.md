@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **NYSE Day Trader's Alpaca keys are rejected** — prod logs `NYSE Day Trader: unauthorized` on
+  every boot since #4159, so that bot gets no fill updates until its keys are rotated (a credential
+  step, Eric's). The 2026-09-30 outage was this rejection looping. _(src: Claude · while: #4159)_
+- **The board's `/events` stream sends no heartbeat.** `streamBoardPatches`
+  (`src/server/board-patch-routes.ts`) writes only on a patch, so with the market closed a stream
+  whose client vanished is never noticed; `desk-events-route.ts` already pings every
+  `HEARTBEAT_MS`. Mirror it plus a fake-timer spec. Latent, not an outage cause; #4143 doubled the
+  streams per page (the league card). _(src: Claude · while: root-causing the 2026-09-30 outage)_
 - **The Profile screenshot fixture crashes on Milestones and Feedback.** `scripts/shoot/accounts-fixture.mjs`
   stubs the book's endpoints but not the viewer-level sections', so `/app/accounts?section=milestones`
   renders "Something went wrong" ("Cannot read properties of undefined (reading 'length')") on `main`
