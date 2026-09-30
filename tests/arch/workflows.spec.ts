@@ -336,13 +336,25 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
     expect(job).toContain("grep -qx 'hold-merge'");
   });
 
-  // 2026-09-30: `e2e` is skipped on a docs-only PR, and a job whose `needs:` include a skipped job
-  // is itself skipped unless its `if:` calls a status function. Without `!cancelled()` the
-  // `needs.e2e.result == 'skipped'` branch below never ran, so no docs PR was ever armed (#4167).
+  // 2026-09-30 (found by #4169): `e2e` is skipped on a docs-only PR, and a job whose `needs:` include
+  // a skipped job is itself skipped unless its `if:` calls a status function. Without `!cancelled()`
+  // the `needs.e2e.result == 'skipped'` branch never ran, so no docs PR was ever armed.
   it("still evaluates its condition when integration tests were skipped", () => {
     const condition = job.slice(job.indexOf("if: >-"), job.indexOf("runs-on:"));
     expect(condition).toContain("!cancelled()");
     expect(condition).toContain("needs.e2e.result == 'skipped'");
+  });
+
+  // #4351 (2026-09-30): a burst of issue writes spent the App's budget; both API calls 403'd and
+  // two green PRs sat unarmed. Every call the job makes waits out a rate limit instead of failing.
+  it("routes every GitHub call through the rate-limit retry helper", () => {
+    expect(job).toContain("- name: Rate-limit retry helper");
+    const calls =
+      job.match(/(?:\$\(|^\s+)(?:"\$RUNNER_TEMP\/gh-retry\.sh" )?gh (?:api|pr merge)[^\n]*/gm) ??
+      [];
+    const outsideHelper = calls.filter((c) => !c.includes("rate_limit"));
+    expect(outsideHelper.length).toBeGreaterThanOrEqual(3);
+    for (const call of outsideHelper) expect(call).toContain('"$RUNNER_TEMP/gh-retry.sh" gh');
   });
 
   it("arms only when that live read said unheld", () => {

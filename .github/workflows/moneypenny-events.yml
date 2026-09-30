@@ -176,10 +176,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       due_events: ${{ steps.screen.outputs.due }}
-      feedback_issue: ${{ steps.feedback.outputs.number }}
-      feedback_model: ${{ steps.feedback.outputs.model }}
-      plan_issue: ${{ steps.plan.outputs.number }}
-      plan_model: ${{ steps.plan.outputs.model }}
+      # #3960 slice 3: the retry sweep (`next`) fills a lane when no event-driven claim did.
+      feedback_issue: ${{ steps.feedback.outputs.number || (steps.next.outputs.lane == 'feedback' && steps.next.outputs.number) || '' }}
+      feedback_model: ${{ steps.feedback.outputs.model || (steps.next.outputs.lane == 'feedback' && steps.next.outputs.model) || '' }}
+      plan_issue: ${{ steps.plan.outputs.number || (steps.next.outputs.lane == 'plan' && steps.next.outputs.number) || '' }}
+      plan_model: ${{ steps.plan.outputs.model || (steps.next.outputs.lane == 'plan' && steps.next.outputs.model) || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -220,8 +221,10 @@ jobs:
       # step — repair (merging main in and resolving it) is a later slice, not this one.
       - name: Audit for stalls & conflicts
         if: github.event_name == 'push'
+        # App token, not GITHUB_TOKEN (#3818 slice 3): a GITHUB_TOKEN label write starts no workflow
+        # run, so a triage-applied `ready` never fired the claim and an `in-progress` never synced.
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --audit
 
       # Which events owe research right now. Filtered against open research/<id> PR heads
@@ -384,8 +387,10 @@ jobs:
       # only `claimFeedback`'s job, below, once `ready` actually lands.
       - name: Triage a freshly-filed feedback issue
         if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
+        # App token, not GITHUB_TOKEN (#3818 slice 3): a GITHUB_TOKEN label write starts no workflow
+        # run, so a triage-applied `ready` never fired the claim and an `in-progress` never synced.
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --triage-feedback
 
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
@@ -404,9 +409,13 @@ jobs:
       # anything belongs in the specced script; this file is a trigger shim, per the header.
       - name: Claim a feedback issue, if it was marked ready
         id: feedback
-        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'ready'
+        # #3960 slice 3: also on a parking label coming off a still-`ready` issue (the unpark path).
+        # The admission gate (scripts/moneypenny/admission.mjs) runs inside the claim: work-mode,
+        # the in-flight cap and the surface fence can all queue it instead.
+        if: >-
+          github.event_name == 'issues' && ((github.event.action == 'labeled' && github.event.label.name == 'ready') || (github.event.action == 'unlabeled' && contains(fromJSON('["needs-eric","needs-info","needs-design","hold-merge"]'), github.event.label.name)))
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --claim-feedback
 
       # THE PLAN LANE'S GATE (#823) — mirrors the feedback gate immediately above, one authorization
@@ -419,12 +428,25 @@ jobs:
       # carries the cheap, github-context-only filters, same division as the feedback gate.
       - name: Claim a plan issue, if the owner said ready
         id: plan
+        # #3818 slice 3: the `ready` LABEL (and an unpark) wakes the plan lane too, not only a comment.
+        # Both claim steps may run on one label event; each re-checks its own lane label.
         if: >-
-          github.event_name == 'issue_comment' && github.event.action == 'created' &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+          (github.event_name == 'issue_comment' && github.event.action == 'created' &&
+           contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+          (github.event_name == 'issues' && ((github.event.action == 'labeled' && github.event.label.name == 'ready') || (github.event.action == 'unlabeled' && contains(fromJSON('["needs-eric","needs-info","needs-design","hold-merge"]'), github.event.label.name))))
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --claim-plan
+
+      # THE RETRY SWEEP (#3960 slice 3). An issue queued by the admission gate keeps `ready`; every
+      # push tick claims the oldest one that is now admissible, so a freed slot fills without anyone
+      # re-labelling. At most one claim per tick — the cap, not the sweep, sets the pace.
+      - name: Claim the next admissible ready issue
+        id: next
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/index.mjs --claim-next
 
   # ═══ THE EVENT-RESEARCH LANE (2026-08-19) ═══
   # Replaces the daily claude.ai event-scan Routine, which fired for three days into fresh sessions
@@ -689,7 +711,7 @@ jobs:
       # Freeing it here makes a retry immediate; the claim itself still prevents double-builds.
       - if: failure() && needs.route.outputs.feedback_issue != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
 
   # ═══ THE PLAN LANE (#823) ═══
@@ -741,7 +763,7 @@ jobs:
       # claimed for the full 2h TTL while looking "in progress" with nothing running.
       - if: failure() && needs.route.outputs.plan_issue != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release plan-${{ needs.route.outputs.plan_issue }}
 
   sync-project:
