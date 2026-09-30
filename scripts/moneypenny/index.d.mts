@@ -18,5 +18,13 @@ export function triageFeedbackDecision(issue?: { labels?: string[] }): {
   ready: boolean;
   reason: string;
 };
+/** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2). */
+export function claimFeedback(
+  ctx: {
+    payload?: { issue?: { number?: number; body?: string; labels?: Array<{ name?: string }> } };
+  },
+  nowMs?: number,
+  sha?: string,
+): { claimed: boolean; reason: string; number?: number; model?: string };
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];

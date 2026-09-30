@@ -18,10 +18,10 @@
 // unflagged clean rates within 5pp.
 import { readFileSync } from "node:fs";
 import { breachOf } from "./envelope-scan.mjs";
-import { PARKING_LABELS, parkedBy } from "./moneypenny/labels.mjs";
+import { isBuildable, PARKING_LABELS, parkedBy } from "./moneypenny/labels.mjs";
 
 // Re-exported so a caller that only needs "is this parked?" imports the readiness surface alone.
-export { PARKING_LABELS, parkedBy };
+export { isBuildable, PARKING_LABELS, parkedBy };
 
 /** Above this many declared PRs an issue is a program, not one delivery unit (#4056). */
 export const MAX_UNIT_PRS = 3;

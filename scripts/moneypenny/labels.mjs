@@ -190,8 +190,27 @@ export const PARKING_LABELS = [
   LABELS.holdMerge.name,
 ];
 
+/** Label names from either shape a caller holds: plain strings, or a payload's `[{ name }]`. */
+const labelNames = (labels = []) =>
+  (labels ?? []).map((l) => (typeof l === "string" ? l : l?.name)).filter(Boolean);
+
 /** The parking labels present on an issue (empty when it is free to build). */
-export const parkedBy = (labels = []) => PARKING_LABELS.filter((l) => labels.includes(l));
+export const parkedBy = (labels = []) => {
+  const names = labelNames(labels);
+  return PARKING_LABELS.filter((l) => names.includes(l));
+};
+
+/**
+ * THE ONE BUILDABLE TEST (#3818 slice 2). Both claim paths (`claimFeedback`, `planReadyIntent`)
+ * and the live burn-down (`/work-issues`'s QUEUE step) ask this, so the async lane and a live
+ * session can never disagree about whether a parked issue may be built. Accepts names or `{ name }`.
+ */
+export const isBuildable = (labels = []) => parkedBy(labels).length === 0;
+
+/** The one-line reason a claim path gives when it refuses a parked issue. */
+export const parkedReason = (number, labels = []) =>
+  `issue #${number} is parked by ${parkedBy(labels).join(", ")} — ready + parked is never built; ` +
+  "clear the parking label (or the stale flip) on the issue first";
 
 /** The hand-set priority labels, highest first — what `scripts/rank.mjs` reads (#4064). */
 export const PRIORITY_LABELS = [LABELS.p0.name, LABELS.p1.name, LABELS.p2.name, LABELS.p3.name];

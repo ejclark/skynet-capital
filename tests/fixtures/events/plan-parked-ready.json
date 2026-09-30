@@ -1,0 +1,11 @@
+{
+  "payload": {
+    "issue": {
+      "number": 3194,
+      "state": "open",
+      "labels": [{ "name": "enhancement" }, { "name": "plan" }, { "name": "needs-eric" }],
+      "body": "a plan still waiting on Eric's call"
+    },
+    "comment": { "body": "ready" }
+  }
+}

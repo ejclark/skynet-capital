@@ -22,9 +22,11 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 
 1. **SYNC.** `git fetch origin main` — every decision derives from shipped reality.
 2. **QUEUE.** List open issues labeled `feedback` or `plan`. From that set, exclude:
-   - anything also labeled `needs-eric`, `needs-info`, `next-slice`, `hold-merge`,
+   - anything also labeled `needs-eric`, `needs-info`, `needs-design`, `hold-merge`, `next-slice`,
      `conflict-flagged`, or `stall-flagged` — those are already parked on a signal only a human (or
-     a later cycle) resolves, per `docs/ISSUES.md`'s label vocabulary.
+     a later cycle) resolves, per `docs/ISSUES.md`'s label vocabulary. The parking half of that
+     list is `isBuildable(labels)` in `scripts/moneypenny/labels.mjs` — the same test both
+     Moneypenny claim paths refuse on (#3818 slice 2); the other three are this pass's own extras.
    - anything with an open PR already referencing it (`Fixes #N` / a branch named for the issue) —
      WIP limit 1 per issue, same rule as `/governor`'s athlete check. Inventory is waste.
    - anything Moneypenny already has a live claim on — `node scripts/moneypenny/index.mjs

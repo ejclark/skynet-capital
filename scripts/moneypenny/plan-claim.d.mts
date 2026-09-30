@@ -21,6 +21,12 @@ export interface PlanReadyIntent {
 
 /** Does this comment read as a ready-flip ("ready", "go", "aligned, execute", or similar)? */
 export function isReadySignal(text: unknown): boolean;
+/** The one first line a Claude-authored comment may use to flip a plan ready (#3818 slice 2). */
+export const CLAUDE_READY_LINE: string;
+/** Does this comment carry the Claude Code footer? */
+export function isClaudeComment(text: unknown): boolean;
+/** Is the comment's first line exactly CLAUDE_READY_LINE (em dash or ASCII hyphen)? */
+export function isClaudeReadyLine(text: unknown): boolean;
 /** Does this issue carry the `plan` label? */
 export function hasPlanLabel(issue: PlanIssue | undefined): boolean;
 /** The pure decision: is this `issue_comment` payload a ready-flip on an open plan issue? */

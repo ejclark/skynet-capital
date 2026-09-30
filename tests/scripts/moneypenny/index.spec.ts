@@ -372,6 +372,28 @@ describe("resolving which feedback issues have shipped", () => {
     });
   });
 
+  it("leaves a next-slice issue open when a slice's PR merged — the remainder is unbuilt (#3818 criterion 11)", () => {
+    const issues = [
+      {
+        number: 3818,
+        title: "sliced plan, slice 1 shipped",
+        labels: [{ name: "feedback" }, { name: "next-slice" }],
+        closedByPullRequestsReferences: [{ number: 4100 }],
+      },
+      {
+        number: 3819,
+        title: "final slice shipped, next-slice removed",
+        labels: [{ name: "feedback" }],
+        closedByPullRequestsReferences: [{ number: 4101 }],
+      },
+    ];
+
+    expect(resolve(issues, [4100, 4101], { "3818": [{ number: 4100 }] })).toEqual({
+      shipped: [{ number: 3819, title: "final slice shipped, next-slice removed", pr: 4101 }],
+      warnings: [],
+    });
+  });
+
   it("leaves an issue alone while its PR is still open — only a merge is a ship", () => {
     const issues = [
       { number: 494, title: "in flight", closedByPullRequestsReferences: [{ number: 500 }] },

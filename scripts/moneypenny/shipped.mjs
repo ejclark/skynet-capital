@@ -1,7 +1,12 @@
 // THE LAST MILE — closing feedback and event-research issues whose work has already merged. Split
 // out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { ghRest } from "./gh.mjs";
-import { FOOTER } from "./labels.mjs";
+import { FOOTER, LABELS } from "./labels.mjs";
+
+const NEXT_SLICE = LABELS.nextSlice.name;
+/** `gh` hands labels back as `[{ name }]`; a fixture may use plain strings. */
+const labelNames = (labels = []) =>
+  (labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
 
 /**
  * THE LAST MILE. An issue whose work has MERGED but which is still open.
@@ -64,7 +69,12 @@ export function mergedReference(refs = [], isMerged = () => false) {
  *
  * Pure, given its three injected dependencies, so every branch is fixture-drivable.
  *
- * @param issues  `[{ number, title, closedByPullRequestsReferences }]` from the list query
+ * NEVER CLOSES A `next-slice` ISSUE (#3818 slice 2, criterion 11 as amended 2026-09-29). A sliced
+ * issue gets a merged PR per slice, and each one references it — so without this, slice 1 landing
+ * would close the whole issue with its remainder unbuilt. The final slice removes `next-slice`, so
+ * a finished issue still closes on the next sweep. Skipped before the re-check, so it costs nothing.
+ *
+ * @param issues  `[{ number, title, labels, closedByPullRequestsReferences }]` from the list query
  * @param deps    { isMerged, recheckRefs, warn }
  */
 export function resolveShipped(issues = [], deps = {}) {
@@ -74,6 +84,7 @@ export function resolveShipped(issues = [], deps = {}) {
   const { isMerged = () => false, recheckRefs = () => [], warn = silent } = deps;
   const shipped = [];
   for (const issue of issues ?? []) {
+    if (labelNames(issue?.labels).includes(NEXT_SLICE)) continue;
     const listed = issue?.closedByPullRequestsReferences ?? [];
     let pr = mergedReference(listed, isMerged);
     if (pr === undefined) {
