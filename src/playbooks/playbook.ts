@@ -245,6 +245,14 @@ export function exitSafetyIntents(
   return { intents, trips };
 }
 
+/**
+ * Post-print hygiene shared by every date-keyed play, house or member-authored: a position that
+ * somehow survived its print (missed exit, process restart) is exited on the first cycle after —
+ * never carried. Lives here rather than in `registry.ts` because `authored-play.ts` compiles the
+ * same rule into every authored pre-print play, and two copies of the number could drift apart.
+ */
+export const POST_PRINT_FLAT_DAYS = 3;
+
 /** Shared helper for date-keyed windows: days to the symbol's next print, entry-eligible only if confirmed. */
 export function printWindow(
   symbol: string,
