@@ -16,6 +16,7 @@
 //   node scripts/incident-scan.mjs --update    # rewrite incident-budget.json (ratchet: only lower)
 //   node scripts/incident-scan.mjs --candidate # the oldest unlearned incident as JSON
 //   node scripts/incident-scan.mjs --days 14   # lookback window (default 14)
+//   node scripts/incident-scan.mjs --json      # every real failed run + `learned`, for fix-held.mjs
 //
 // Resource doctrine (docs/COACHES.md): REST *core* bucket only — one request, no polling, no
 // GraphQL. Degrades to a clean no-op (exit 0) with no token or no network, so it never becomes a
@@ -85,6 +86,7 @@ async function failedMainRuns() {
     id: r.id,
     sha: (r.head_sha ?? "").slice(0, 7),
     name: r.name,
+    path: r.path,
     date: (r.created_at ?? "").slice(0, 10),
     title: (r.display_title ?? "").split("\n")[0],
     url: r.html_url,
@@ -165,6 +167,13 @@ async function main() {
   const realRuns = candidates.filter((_, i) => !zeroJob[i]);
   const phantomCount = candidates.length - realRuns.length;
   const unlearned = realRuns.filter((r) => !isLearned(r.sha));
+
+  if (flag("--json")) {
+    console.log(
+      JSON.stringify({ runs: realRuns.map((r) => ({ ...r, learned: isLearned(r.sha) })) }),
+    );
+    return 0;
+  }
 
   if (flag("--candidate")) {
     const oldest = unlearned.sort((a, b) => a.date.localeCompare(b.date))[0];

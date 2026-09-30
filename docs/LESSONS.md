@@ -27,6 +27,12 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** threads pulled (→ docs/IDEAS.md), or `none`
 ```
 
+Two optional lines go after `SHA`/`DATE`: **`COVERS:`** lists other failing-run shas the same
+root cause closes (read by `incident-scan.mjs`), and **`RECURS:`** names, by exact title, the
+earlier entry whose class came back — the fix it describes did not hold. `npm run lessons:held`
+counts those against each entry's prevention type (the "Did the fix hold?" loop,
+`docs/process/LEARNING-LOOP.md`).
+
 ---
 
 ### A mount declared before its volume existed turned 16 consecutive merges to main red
@@ -64,6 +70,7 @@ it. Prevention ranks, best first:
 ### Two successful research sessions were reported as failures for crossing `--max-turns 90`
 - **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
 - **COVERS:** 3a208f2 dbf6880 2384fa9 59d0276 56cd30e 5cd7119 a3a2950
+- **RECURS:** `claude-code-action`'s turn caps are chronically too tight — and it fails runs that already succeeded (cause now established)
 - **SIGNAL:** research legs on 2026-09-05 with a merged PR and a complete assessment row, red in the run list at 92 and 94 turns. Recurred 2026-09-06 07:10Z and 07:52Z while the raise sat on platter #1757: five legs across two runs hit 90, three of them after landing their PR (#1783, #1790); `existing-home-sales-2026-11-12` hit it twice without landing, ~$22 of research with no row to show. Third recurrence 08:28Z (`56cd30e`): the same event landed on its third attempt (#1796) and was still reported red at 93 turns. Fourth and fifth 09:35Z and 10:10Z (`5cd7119`, `a3a2950`): both fhfa-hpi sessions landed (#1821 at 105 turns, #1836) and were reported red — five recurrence runs, eight legs, in one night while the raise waited. **Falsifier for the 150 cap:** an event that hits 150 twice is a loop in the session, not a short cap — fix the prompt, not the number.
 - **ROOT CAUSE:** `--max-turns 90` was set as a runaway backstop when a research session took ~40 turns; the deterministic screen, the adjacency sweep and the proposal write each added tool calls, and a normal full session now lands in the 80s–90s. The action treats "over the cap" as a failed run even when the work landed, so the backstop became a false red that dispatched repair for finished work.
 - **PREVENTION:** gate — raise the cap in `.github/workflows/moneypenny-events.yml` (protected, boards the platter) to a number a full session never reaches on a normal day, keeping it as a runaway stop. Ledger: a turn cap is sized from the measured distribution of green runs, not from the first run that worked, and re-sized whenever the session gains a step.
@@ -292,6 +299,7 @@ it. Prevention ranks, best first:
 ### The app/ cache fix only ever warmed a scope no other PR could read — verify never runs on main
 
 - **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **RECURS:** The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile [INCOMPLETE — see the follow-up entry above]
 - **SIGNAL:** Eric, reading a live CI run: "verify is still installing dependencies twice... This
   feels like a complete waste of time." Three separate PRs that evening (#1194, #1203, #1206) each
   ran `verify` and each showed the identical pattern in its raw log: `Install dependencies` and
@@ -410,6 +418,7 @@ it. Prevention ranks, best first:
 ### The prior fix for the feedback-log seam only worked for the one call site it didn't need to fix
 
 - **SHA:** n/a   **DATE:** 2026-09-03   **STATUS:** closed
+- **RECURS:** The first-feedback milestone never earned in production — the engagement track read the feedback log with the wrong key
 - **SIGNAL:** found by code review while re-plumbing the ladder gate onto a new message log (a
   member request to lower the gate from "filed an issue" to "said hello"), not by a report — the
   binding below it never independently surfaced a symptom distinct from the incident it was meant
@@ -1490,6 +1499,7 @@ it. Prevention ranks, best first:
 
 ### The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
 - **SHA:** n/a   **DATE:** 2026-08-17   **STATUS:** closed
+- **RECURS:** The chain was severed at the join — a workflow's issue can never wake another workflow
 - **SIGNAL:** the canary's PR (#371) opened successfully, carrying a clean five-file diff and three
   well-formed commits — and `get_check_runs` returned **`total_count: 0`**. Not a failing check: no
   checks. `mergeable_state: "blocked"`, because a required check that never runs never passes.
@@ -1542,6 +1552,7 @@ it. Prevention ranks, best first:
 - **SHA:** a5ebe9d   **DATE:** 2026-08-10   **STATUS:** closed
 - **SHA:** b29b4fb   **DATE:** 2026-08-10   **STATUS:** closed
 - **SHA:** e9390b9   **DATE:** 2026-08-09   **STATUS:** closed
+- **RECURS:** The deploy doom loop — a gate that counted main failures ran inside the job it counted
 - **SIGNAL:** `incident-scan.mjs`'s own 14-day lookback still carried 21 unlearned `main` failures
   when this batch closure was written — only `615a269` (the entry directly above) had a ledger
   line. Detection lag: none, since the scan is the detector; the gap was that 14 of its 15 findings
@@ -1655,6 +1666,7 @@ it. Prevention ranks, best first:
 ### A markdown screenshot embed — and `<details>`/`<summary>` — vanished through `ship.sh` too: the 2026-08-25 attribution to the GitHub MCP tools was incomplete
 - **SHA:** 5eb6b8a   **DATE:** 2026-08-26   **STATUS:** closed (worked around; the constraint itself
   is outside repo control)
+- **RECURS:** The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
 - **SIGNAL:** PR #661's fridge picture — `![alt](<SHA-pinned raw.githubusercontent.com URL>)`, opened
   via `scripts/ship.sh open` (REST, not the GitHub MCP write tools) — came back from
   `pull_request_read` with the `!` dropped and the URL wrapped in stray backticks/quotes,
@@ -1939,6 +1951,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SHA:** f681944   **DATE:** 2026-08-29   **STATUS:** closed
 - **SHA:** 65da6c3   **DATE:** 2026-08-29   **STATUS:** closed
 - **SHA:** c27600e   **DATE:** 2026-08-29   **STATUS:** closed
+- **RECURS:** A `claude-code-action` research run twice burned its entire turn budget without finishing — cause not established
 - **SIGNAL:** 5 failed runs on `main` in one afternoon, surfaced by `incident-scan.mjs` as two
   apparently-separate classes — 2 labeled `Claude` (`.github/workflows/claude.yml`, PR-comment
   review sessions on #869 and #724) and 3 labeled `Postmaster` (`.github/workflows/moneypenny-events.yml`'s
@@ -2503,6 +2516,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 ### A "free-standing state, replace in place" design choice for one ledger field produced a 19-PR conflict backlog — the first fix only rate-limited it
 
 - **SHA:** n/a (a 19-PR backlog, not a single failing run)   **DATE:** 2026-09-19   **STATUS:** closed
+- **RECURS:** Three merge-side fixes in one day could not stop research PRs conflicting — the shared file was the bug, not the merge
 - **SIGNAL:** Eric: "there is a lot of research related prs that have conflicts. the conflicts
   feels like the same structural/systemic problem that we've called out that remains unaddressed."
   19 of 23 open PRs carried `conflict-flagged` + `needs-eric` — 17 the bot's "deterministic screen"
@@ -2547,6 +2561,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 ### A fourth `gh run view --log` timeout is the same already-tracked circuit-breaker fragility as #3307's cause 3 — not re-diagnosed here
 
 - **SHA:** b4dbb23   **DATE:** 2026-09-19   **STATUS:** closed
+- **RECURS:** The just-shipped rate-limit fix's own circuit breaker crashes reading a large prior run's log, plus two more shell steps break at the same growing volume
 - **SIGNAL:** `route` job failed on run 35415921799 (push): `dial tcp 140.82.114.22:443: i/o
   timeout` fetching a prior run's log via `gh run view --log`, so `circuit breaker machinery
   failed... refusing to dispatch with an incomplete spend total.`
@@ -2564,6 +2579,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 ### A turn-closing "say the word" re-asked permission for already-`ready`, fork-free work — third confirmed instance of the ungated-prose-rule class
 
 - **SHA:** n/a   **DATE:** 2026-09-22   **STATUS:** closed
+- **RECURS:** A wake-reply rule written in prose was skipped at generation time — no gate exists for "does this reply add anything"
 - **SIGNAL:** Eric, one turn after Claude closed a report on shipped/merged slice 1 of plan #3543
   with "say the word when you want the next one, or let it sit as banked work": "Why do you need my
   blessing? I ask so u can codify removal of the impediment you continue to add." Detection lag: one
