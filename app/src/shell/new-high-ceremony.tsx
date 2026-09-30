@@ -18,7 +18,7 @@ import { Takeover } from "./takeover";
  *
  * Not here yet, from the design's trigger list: beating the S&P, a profitable close, a streak,
  * passing someone on the league. Each is its own component on the same `Takeover`, with its own
- * "seen" key — the level-up celebration (#469) is the next.
+ * "seen" key — as the level-up celebration (#469, `level-up-ceremony.tsx`) is.
  * There's also no "Share to the league" yet, because there's no share mechanism to call. The
  * league link stands in for it.
  */

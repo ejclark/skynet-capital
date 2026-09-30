@@ -102,8 +102,24 @@ export async function fetchJourney(): Promise<Journey> {
 
 type WriteAnswer = { readonly ok: true } | { readonly ok: false; readonly error: string };
 
+/**
+ * A whole course the claim just finished (#469) — the server's `graduated` ceremony cue, handed
+ * back to the member it is about. `id` is the cue's own id, never parsed: the celebration's "seen"
+ * key. `opens` is the course that finishing it opened; absent after the top one.
+ */
+export interface LevelUp {
+  readonly id: string;
+  readonly level: number;
+  readonly title: string;
+  readonly opens?: { readonly level: number; readonly title: string };
+}
+
+type ClaimAnswer =
+  | { readonly ok: true; readonly graduated?: readonly LevelUp[] }
+  | { readonly ok: false; readonly error: string };
+
 /** Bank the one-time celebration — the service filters ids against the real curriculum. */
-export const claimMilestones = (ack: readonly string[]): Promise<WriteAnswer> =>
+export const claimMilestones = (ack: readonly string[]): Promise<ClaimAnswer> =>
   postJson("/api/learn/claim", { ack });
 
 /** Post answer indices for grading. The verdict comes back — it is never ours to state. */

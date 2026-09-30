@@ -1,10 +1,11 @@
 import { type ReactElement, type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { type FlareKind, flareTower } from "./tower-bus";
 
 /**
  * THE TAKEOVER — the full-screen celebration shell, lifted out of the new-high ceremony (#3977
  * slice 3) so every "something big went right" moment shares one: the new all-time high today,
- * the level-up celebration next (#469), and the design's other triggers after it (beating the
+ * the level-up celebration (#469, `level-up-ceremony.tsx`), and the design's other triggers after it (beating the
  * S&P, a streak). A caller brings its own content and its own "seen" rule; the shell owns what
  * must not drift between them:
  *  - Matrix-rain glyphs under a vignette behind the content. Static under `prefers-reduced-motion`
@@ -16,6 +17,8 @@ import { type FlareKind, flareTower } from "./tower-bus";
  *    under solid page colour, and on a fresh load its frame is not listening yet — a flare at open
  *    is spent where no one can see it. Once per takeover, never under reduced motion
  *    (`flareTower`).
+ *  - It renders into `document.body` (a portal), so no section's stacking context can trap it
+ *    under the site header: on a phone the header had covered the celebration's own headline.
  */
 
 /** Deterministic glyph columns: the same rain every render, no Math.random in a render path. */
@@ -59,7 +62,7 @@ export function Takeover({
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  return (
+  return createPortal(
     <div
       className="nh-overlay"
       role="dialog"
@@ -78,6 +81,7 @@ export function Takeover({
         ))}
       </div>
       <div className="nh-body">{children(leave)}</div>
-    </div>
+    </div>,
+    document.body,
   );
 }

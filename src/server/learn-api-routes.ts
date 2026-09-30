@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { COURSES, type CourseLevel } from "../domain/curriculum.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -94,16 +95,20 @@ export async function serveLearnApi(
     // seam `took_profit`/`deployed_capital` already use (`world-transitions.ts`). `acknowledge`
     // guarantees each level appears at most once ever for this participant, so this never
     // double-fires the fanfare for the same graduation.
-    for (const level of graduated) {
+    const cues = graduated.map((level) => ({ id: `graduated:${id}:${level}`, level }));
+    for (const cue of cues) {
       config.ceremonies?.emit({
-        id: `graduated:${id}:${level}`,
+        ...cue,
         type: "graduated",
         participantId: id,
-        level,
         at: new Date().toISOString(),
       });
     }
-    sendJson(res, 200, { ok: true });
+    // The claimer is the one member the cue is about, and this reply is already in their hands:
+    // the same cues come back so their own level-up celebration opens (`level-up-ceremony.tsx`),
+    // keyed by the cue's id. The board stream carries every member's cues to every viewer, so it is
+    // the wrong door for "you just levelled up".
+    sendJson(res, 200, cues.length > 0 ? { ok: true, graduated: cues.map(levelUp) } : { ok: true });
     return true;
   }
 
@@ -120,4 +125,16 @@ export async function serveLearnApi(
   }
   sendJson(res, 200, { ok: true, result });
   return true;
+}
+
+/** One graduation as the claimer's celebration reads it: the course just finished, and the next. */
+function levelUp(cue: { readonly id: string; readonly level: CourseLevel }) {
+  const course = COURSES.find((c) => c.level === cue.level);
+  const next = COURSES.find((c) => c.level > cue.level);
+  return {
+    id: cue.id,
+    level: cue.level,
+    title: course?.title ?? `Course ${cue.level}`,
+    ...(next ? { opens: { level: next.level, title: next.title } } : {}),
+  };
 }
