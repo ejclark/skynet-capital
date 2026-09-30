@@ -336,6 +336,15 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
     expect(job).toContain("grep -qx 'hold-merge'");
   });
 
+  // 2026-09-30 (found by #4169): `e2e` is skipped on a docs-only PR, and a job whose `needs:` include
+  // a skipped job is itself skipped unless its `if:` calls a status function. Without `!cancelled()`
+  // the `needs.e2e.result == 'skipped'` branch never ran, so no docs PR was ever armed.
+  it("still evaluates its condition when integration tests were skipped", () => {
+    const condition = job.slice(job.indexOf("if: >-"), job.indexOf("runs-on:"));
+    expect(condition).toContain("!cancelled()");
+    expect(condition).toContain("needs.e2e.result == 'skipped'");
+  });
+
   it("arms only when that live read said unheld", () => {
     const arm = job.slice(job.indexOf("- name: Arm auto-merge"));
     expect(arm).toContain("steps.hold.outputs.held == 'false'");

@@ -283,8 +283,13 @@ jobs:
     # lanes stopped arming by hand, because native auto-merge honours only required checks and that
     # let three PRs merge mid-integration-tests. A fix pushed after opening must re-arm here too.
     needs: [verify, e2e]
+    # `!cancelled()` is load-bearing (found by #4169, 2026-09-30): `e2e` is skipped on a docs-only PR,
+    # and a job whose `needs:` include a skipped job is skipped too unless its `if:` calls a status
+    # function — so the `skipped` branch below never ran and docs PRs were never armed. With sessions
+    # and lanes no longer arming by hand, that would strand every research PR. The explicit
+    # `needs.verify.result == 'success'` keeps the gate the implicit success() check provided.
     if: >-
-      ${{ github.event_name == 'pull_request' && needs.verify.result == 'success' &&
+      ${{ !cancelled() && github.event_name == 'pull_request' && needs.verify.result == 'success' &&
           (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
           github.event.pull_request.draft == false &&
           contains(fromJSON('["opened","reopened","ready_for_review","synchronize"]'), github.event.action) &&
