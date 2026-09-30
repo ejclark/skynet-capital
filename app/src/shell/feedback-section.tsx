@@ -47,7 +47,9 @@ export function FeedbackSection(): ReactElement {
         </button>
       </header>
       {!data.enabled ? (
-        <p className="note">Feedback isn't switched on yet — ask Eric to set the feedback token.</p>
+        <p className="note">
+          Feedback filing isn't set up on this deployment yet, so notes can't be filed from here.
+        </p>
       ) : (
         <>
           {data.celebrating.length > 0 ? (
