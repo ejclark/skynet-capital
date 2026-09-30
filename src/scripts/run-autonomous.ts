@@ -56,6 +56,7 @@ import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
+import { armCondScout } from "./autonomous-cond-scout.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import {
   bootMissionControl,
@@ -70,7 +71,7 @@ import {
   tradingRoster,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
-import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
+import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
@@ -194,14 +195,7 @@ async function runLive(): Promise<void> {
     discipline: { calendar: UPCOMING_PRINTS },
   };
   const playbookRoster = enabledPlaybooks(process.env);
-  for (const bad of playbookRoster.rejected) {
-    console.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
-  }
-  if (playbookRoster.enabled.length > 0) {
-    console.log(
-      `[playbooks] armed: ${playbookRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
-    );
-  }
+  announceRoster(playbookRoster);
   const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
@@ -224,7 +218,7 @@ async function runLive(): Promise<void> {
     },
     UNIVERSE,
   );
-  const { marketClock, marketDataStream, getNews } = shared;
+  const { marketClock, marketDataStream, getNews, currentCredentials } = shared;
 
   const pollNews = async () => {
     try {
@@ -373,6 +367,16 @@ async function runLive(): Promise<void> {
       ),
   });
 
+  // COND-SCOUT (#3651): shadow probes only, dark unless SKYNET_COND_SCOUT_UNIVERSE is set.
+  const condScoutPass = armCondScout(process.env, {
+    streamed: UNIVERSE,
+    credentials: currentCredentials,
+    risk,
+    blockedReason,
+    botsStateDb,
+    onDecision,
+  });
+
   armMomentumPersistence(botsStateDb, tracker);
 
   const contextNow = () => sentiment.overlay(tracker.context(new Date().toISOString()));
@@ -383,7 +387,9 @@ async function runLive(): Promise<void> {
     if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) return;
     lastEval = now;
     evaluating = true;
-    await runner.runCycle(contextNow());
+    const context = contextNow();
+    await runner.runCycle(context);
+    void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
     evaluating = false;
   };
   // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".

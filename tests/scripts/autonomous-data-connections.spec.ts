@@ -93,5 +93,8 @@ describe("startSharedDataConnections", () => {
     // News: getNews() no longer 401s (fakeFetch would reject an unrecognized key otherwise —
     // both keys are wired here, so this call succeeding at all after the swap is the proof).
     await expect(shared.getNews(["NVDA"])).resolves.toEqual([]);
+
+    // And any reader built per call (COND-SCOUT's daily bars) sees the rotated key too.
+    expect(shared.currentCredentials()).toEqual({ apiKey: "new-key", apiSecret: "new-secret" });
   });
 });

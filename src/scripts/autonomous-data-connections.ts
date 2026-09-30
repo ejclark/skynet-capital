@@ -23,6 +23,8 @@ export interface SharedDataConnections {
   getNews(symbols: readonly string[]): Promise<NewsArticle[]>;
   /** Applies a rotated credential to the clock, news client, and price stream at once. */
   replaceCredentials(next: AlpacaCredentials): void;
+  /** The credential in force now — rotated ones included — for readers built per call. */
+  currentCredentials(): AlpacaCredentials;
 }
 
 function buildNewsClient(creds: AlpacaCredentials): AlpacaNewsClient {
@@ -41,6 +43,7 @@ export async function startSharedDataConnections(
   symbols: readonly string[],
 ): Promise<SharedDataConnections> {
   let newsClient = buildNewsClient(dataCreds);
+  let current = dataCreds;
   const marketClock = await startMarketClock(dataCreds);
   const marketDataStream = new AlpacaMarketDataStream({
     apiKey: dataCreds.apiKey,
@@ -53,7 +56,9 @@ export async function startSharedDataConnections(
     marketClock,
     marketDataStream,
     getNews: (want) => newsClient.getNews(want),
+    currentCredentials: () => current,
     replaceCredentials: (next) => {
+      current = next;
       newsClient = buildNewsClient(next);
       marketClock.replaceCredentials(next);
       marketDataStream.replaceCredentials(next.apiKey, next.apiSecret);
