@@ -101,22 +101,64 @@ const settings = {
   ],
 };
 
+// The selected account's own closed trades per playbook (#3665 slice 3): S1-NVDA has a record,
+// HC-SAURON has none — so one frame shows both the numbers and the honest empty state.
+const HOUR = 3_600_000;
+const performance = {
+  house: [],
+  mine: [
+    {
+      playbookId: "S1-NVDA",
+      trades: 4,
+      wins: 3,
+      losses: 1,
+      winRate: 75,
+      netRealized: 842.5,
+      returnPct: 6.2,
+      capitalCommitted: 13_580,
+      avgHoldMs: 9 * 24 * HOUR,
+      longestHold: { holdMs: 14 * 24 * HOUR + 3 * HOUR },
+      shortestHold: { holdMs: 2 * 24 * HOUR + 6 * HOUR },
+      byDirection: { long: 4, short: 0 },
+      byInstrument: { stock: 3, call: 1, put: 0 },
+    },
+  ],
+  accounts: ["human-joe"],
+};
+
 // One shell per state rather than a reload: the browser serves a fulfilled route from its own
 // memory cache on reload, so a second state has to be a second page load with its own stubs.
-async function frame(tag, locked, expect, viewport) {
+async function frame(tag, locked, expect, viewport, scrollTo) {
   const { page, origin, shoot, close } = await openShell({
     name: "playbook-store",
     ...(viewport ? { viewport } : {}),
-    stubs: { "/api/playbook-store": store(locked), "/api/desk/*": desk, "/api/settings": settings },
+    stubs: {
+      "/api/playbook-store": store(locked),
+      "/api/desk/*": desk,
+      "/api/settings": settings,
+      "/api/outpost/performance": performance,
+    },
   });
   await page.goto(`${origin}/app/u/human-joe/playbooks`);
   await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=human-joe/);
   await page.getByText(expect).first().waitFor();
+  if (scrollTo)
+    await page
+      .getByText(scrollTo)
+      .first()
+      .evaluate((el) => el.scrollIntoView({ block: "center" }));
   await shoot(tag);
   await close();
 }
 
 const PHONE = { width: 390, height: 844 };
+await frame(
+  "phone-account-metrics",
+  false,
+  "No closed trades on this playbook yet",
+  PHONE,
+  "Closed trades",
+);
 await frame("phone-delegation-earned", false, "Capital to delegate", PHONE);
 await frame("delegation-locked", true, "Delegating capital opens after");
 await frame("delegation-earned", false, "Capital to delegate");
