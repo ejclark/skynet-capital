@@ -12,9 +12,9 @@ set -euo pipefail
 #   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify]
 #       verify locally (fail fast) → incident preflight → push → open a PR over REST (core
 #       bucket). Prints the
-#       PR number + URL. THEN, per .claude/skills/ship/SKILL.md: make ONE
-#       `enable_pr_auto_merge` MCP call (the only GraphQL-only step — 1 call/PR, trivial)
-#       for walk-away merge-on-green, and STOP. Do not poll.
+#       PR number + URL, then STOP. Do NOT arm auto-merge by hand: pipeline.yml's `arm auto-merge`
+#       job arms it once verify AND integration tests pass (#4094). `ship automerge` is only the
+#       fallback for a PR that job can't reach, and it refuses until integration tests passed.
 #
 #   scripts/ship.sh platter {open|board|ledger|landed} …
 #       batch every change that needs Eric's merge onto ONE held PR per cadence, one commit per
@@ -255,6 +255,23 @@ EOF_SHOTS
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
     npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
     echo "ship: verify green."
+    # INTEGRATION TESTS TOO (2026-09-30, #4094). `verify` is unit/DOM-level; the Playwright suite is
+    # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
+    # red. Same classification as CI's "Detect non-docs changes": a docs-only diff skips it there,
+    # so it skips here. Chromium is preinstalled in cloud sessions (PLAYWRIGHT_BROWSERS_PATH).
+    # Only when the PINNED browser build is on disk: screenshots are baselined on CI's exact Chromium,
+    # and a cloud session ships a different build (2026-09-30: 1194 on disk vs 1234 pinned) that it
+    # must not re-download — a mismatched run is false-red, not signal. Then the pipeline's arm job
+    # is the gate (it waits for `integration tests`), and this says so rather than passing silently.
+    if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
+      if node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
+        echo "ship: local integration tests (npm run test:e2e)…"
+        npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
+        echo "ship: integration tests green."
+      else
+        echo "ship: ⚠ local integration tests NOT run — the pinned Chromium build isn't installed here. CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
+      fi
+    fi
   fi
 
   # Worktree-freshness advisory (docs/LESSONS.md, 2026-08-30): the scans below read LIVE GitHub
@@ -366,7 +383,7 @@ sys.exit(1 if hits else 0)
       printf '%s\n' "$opened_hits"
       echo "ship: NEXT — say on the PR what the protected touch is, and hand #$num to Eric. STOP."
     else
-      echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call (or \`scripts/ship.sh automerge $num\` when the MCP tool is unavailable), then STOP. No polling."
+      echo "ship: NEXT — nothing. Do NOT arm auto-merge by hand: pipeline.yml's \`arm auto-merge\` job arms #$num itself once verify AND integration tests pass (#4094). STOP. No polling."
     fi
   else
     echo "ship: REST open returned HTTP $http (proxy may block writes). Body:" >&2
@@ -448,6 +465,31 @@ cmd_automerge() {
     exit 5
   fi
   cmd_checkarm "${paths[@]}" --base "origin/$base_ref"
+
+  # NEVER ARM PAST INTEGRATION TESTS (2026-09-30, #4094). Native auto-merge waits only on REQUIRED
+  # checks, and only `verify` is required — so arming here the moment a PR opened let #4151, #4155
+  # and #4158 merge while `integration tests` was still running (two went red). pipeline.yml's own
+  # `arm auto-merge` job already waits for it; this is the fallback for a PR that job can't arm
+  # (e.g. a re-push, where `opened` won't fire again), so it must hold the same line. Skipped counts
+  # as passed: CI skips the job on a docs-only diff.
+  local head_sha cresp chttp cbody e2e_state
+  head_sha="$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin)["head"]["sha"])')"
+  cresp="$(api GET "/commits/$head_sha/check-runs?check_name=integration%20tests&per_page=10")"
+  chttp="$(http_of "$cresp")"; cbody="$(body_of "$cresp")"
+  [ "$chttp" = 200 ] || { echo "ship automerge: GET check-runs returned HTTP $chttp — refusing to arm unproven." >&2; exit 6; }
+  e2e_state="$(printf '%s' "$cbody" | python3 -c '
+import sys, json
+runs = json.load(sys.stdin).get("check_runs", [])
+if not runs: print("not reported yet")
+else:
+    r = max(runs, key=lambda r: r.get("started_at") or "")
+    print(r.get("conclusion") or r.get("status"))
+')"
+  case "$e2e_state" in
+    success|skipped) ;;
+    *) echo "ship automerge: integration tests on #$num are '$e2e_state' — refusing to arm. Only a passed (or skipped) run may merge (#4094)." >&2; exit 6 ;;
+  esac
+
   local q payload gql
   q='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }'
   payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"

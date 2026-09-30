@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { claimFeedback } from "../../../scripts/moneypenny/index.mjs";
 import {
   CLAUDE_READY_LINE,
+  feedbackReadyIntent,
   hasPlanLabel,
   isClaudeComment,
   isClaudeReadyLine,
@@ -199,5 +200,125 @@ describe("claimFeedback — the parking guard (#3818 criterion 5)", () => {
     });
     expect(result.claimed).toBe(false);
     expect(result.reason).toContain("parked by needs-info");
+  });
+});
+
+// #3960 criterion 1 / #3818 slice 3 — the plan lane also wakes on the `ready` LABEL (an `issues`
+// labeled event), under the same parking guard. The comment path above is unchanged.
+describe("planReadyIntent — the label-event ready path", () => {
+  it("is ready when `ready` is labeled onto an open, buildable plan", () => {
+    const intent = planReadyIntent(fixture("plan-ready-label"));
+    expect(intent.ready).toBe(true);
+    expect(intent.issue?.number).toBe(3960);
+    expect(intent.reason).toContain("`ready` label");
+  });
+
+  it("refuses a parked plan even on the label", () => {
+    const intent = planReadyIntent(fixture("plan-ready-label-parked"));
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("parked by needs-eric");
+  });
+
+  it("refuses an issue without the plan label", () => {
+    const intent = planReadyIntent(fixture("plan-ready-label-not-plan"));
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("plan label");
+  });
+
+  it("ignores any other label landing on a plan", () => {
+    const intent = planReadyIntent({
+      payload: {
+        action: "labeled",
+        label: { name: "enhancement" },
+        issue: { number: 5, state: "open", labels: [{ name: "plan" }, { name: "enhancement" }] },
+      },
+    });
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("not `ready`");
+  });
+});
+
+// #3960 criterion 2 — clearing the last parking label from a still-`ready` issue re-wakes it, so a
+// parked-then-cleared issue builds without anyone saying "ready" a second time.
+describe("the unpark path — an `unlabeled` parking label on a ready issue", () => {
+  const unlabeled = (removed: string, labels: string[], lane = "plan") => ({
+    payload: {
+      action: "unlabeled",
+      label: { name: removed },
+      issue: { number: 77, state: "open", labels: [lane, ...labels].map((name) => ({ name })) },
+    },
+  });
+
+  it("wakes a plan whose needs-eric was cleared while it stayed ready", () => {
+    const intent = planReadyIntent(fixture("plan-unparked-ready"));
+    expect(intent.ready).toBe(true);
+    expect(intent.reason).toContain("unparked (`needs-eric` removed)");
+  });
+
+  it("wakes a feedback issue the same way", () => {
+    const intent = feedbackReadyIntent(fixture("feedback-unparked-ready"));
+    expect(intent.ready).toBe(true);
+    expect(intent.issue?.number).toBe(4100);
+  });
+
+  it.each(["needs-info", "needs-design", "hold-merge"])(
+    "treats removing %s as an unpark",
+    (label) => {
+      expect(planReadyIntent(unlabeled(label, ["ready"])).ready).toBe(true);
+      expect(feedbackReadyIntent(unlabeled(label, ["ready"], "feedback")).ready).toBe(true);
+    },
+  );
+
+  it("stays asleep when the issue does not carry `ready`", () => {
+    const intent = planReadyIntent(unlabeled("needs-eric", []));
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("does not carry `ready`");
+  });
+
+  it("stays asleep while a second parking label remains", () => {
+    const intent = feedbackReadyIntent(
+      unlabeled("needs-eric", ["ready", "needs-info"], "feedback"),
+    );
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("parked by needs-info");
+  });
+
+  it("stays asleep when the removed label is not a parking label", () => {
+    const intent = planReadyIntent(unlabeled("next-slice", ["ready"]));
+    expect(intent.ready).toBe(false);
+    expect(intent.reason).toContain("not a parking label");
+  });
+
+  it("stays asleep on a closed issue", () => {
+    const ctx = unlabeled("needs-eric", ["ready"], "feedback");
+    ctx.payload.issue = { ...ctx.payload.issue, state: "closed" };
+    expect(feedbackReadyIntent(ctx).ready).toBe(false);
+  });
+});
+
+describe("feedbackReadyIntent — the existing shape is kept", () => {
+  it("is ready for a buildable feedback issue with no label event (the labeled:ready step)", () => {
+    const intent = feedbackReadyIntent({
+      payload: { issue: { number: 1, labels: [{ name: "feedback" }, { name: "ready" }] } },
+    });
+    expect(intent.ready).toBe(true);
+  });
+
+  it("is ready on the `labeled: ready` event itself", () => {
+    const intent = feedbackReadyIntent({
+      payload: {
+        action: "labeled",
+        label: { name: "ready" },
+        issue: { number: 1, state: "open", labels: [{ name: "feedback" }, { name: "ready" }] },
+      },
+    });
+    expect(intent.ready).toBe(true);
+  });
+
+  it("is not this lane's without the feedback label", () => {
+    const intent = feedbackReadyIntent({
+      payload: { issue: { number: 1, labels: [{ name: "ready" }] } },
+    });
+    expect(intent.reason).toContain("not a feedback issue");
   });
 });

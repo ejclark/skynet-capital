@@ -660,3 +660,37 @@ describe("ship — a curl that sends a body declares it as JSON", () => {
     expect(bare).toEqual([]);
   });
 });
+
+/**
+ * NEVER MERGE PAST INTEGRATION TESTS (2026-09-30, #4094). Native auto-merge waits only on REQUIRED
+ * checks and only `verify` is required, so the skill's "arm the moment it opens" let #4151, #4155
+ * and #4158 merge while `integration tests` was still running; two of those runs went red. The
+ * pipeline's own arm job already waits for it — so `ship open` stops telling sessions to arm, runs
+ * the Playwright suite locally first, and `ship automerge` (the fallback) holds the same line.
+ */
+describe("ship — integration tests gate every merge path", () => {
+  const source = readFileSync("scripts/ship.sh", "utf8");
+  const automerge = source.slice(source.indexOf("cmd_automerge()"));
+
+  it("checks the integration tests run BEFORE the arm mutation, and refuses anything but pass/skip", () => {
+    const gate = automerge.indexOf("check_name=integration%20tests");
+    const mutation = automerge.indexOf("enablePullRequestAutoMerge");
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(mutation);
+    expect(automerge).toMatch(/success\|skipped\) ;;/);
+    expect(automerge).toMatch(/refusing to arm/);
+  });
+
+  it("runs the local integration suite on a non-docs diff before anything is pushed", () => {
+    const open = source.slice(source.indexOf("cmd_open()"), source.indexOf("cmd_automerge()"));
+    const e2e = open.indexOf("npm run test:e2e");
+    expect(e2e).toBeGreaterThan(open.indexOf("npm run verify"));
+    expect(e2e).toBeLessThan(open.indexOf("git push"));
+    expect(open).toMatch(/LOCAL INTEGRATION TESTS FAILED — not pushing/);
+  });
+
+  it("no longer tells a session to arm by hand after opening", () => {
+    expect(source).toMatch(/Do NOT arm auto-merge by hand/);
+    expect(source).not.toMatch(/NEXT \(per \.claude\/skills\/ship\) — one enable_pr_auto_merge/);
+  });
+});
