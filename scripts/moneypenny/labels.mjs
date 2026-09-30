@@ -144,6 +144,18 @@ export const LABELS = {
       "Urgent (a user-harming bug or CVE): builds even when the work spigot is on conserve",
     managed: true,
   },
+  // #3960 (decided 2026-09-30) — THE ONE IN-FLIGHT SIGNAL. The board's "In Progress" column could
+  // never fill: it keyed on an open linked PR nobody read, and live sessions auto-merge within
+  // minutes, so an open PR is rarely there to see. Every build path applies this when it starts
+  // (the claim lanes in index.mjs, `/work-issues`), takes it off at its terminal state, and the
+  // stall audit clears one left behind after 6h quiet. Managed: an unprovisioned label would 404 on
+  // the very `--add-label` that marks work started.
+  inProgress: {
+    name: "in-progress",
+    color: "fef2c0",
+    description: "Being built right now — cleared when the build ends or after 6h with no activity",
+    managed: true,
+  },
 
   // ── registered, not owned ───────────────────────────────────────────────────
   // Real labels this repo runs on that no lane here applies. They are named so `feedback-scan`,
@@ -249,6 +261,37 @@ export const isBuildable = (labels = []) => parkedBy(labels).length === 0;
 export const parkedReason = (number, labels = []) =>
   `issue #${number} is parked by ${parkedBy(labels).join(", ")} — ready + parked is never built; ` +
   "clear the parking label (or the stale flip) on the issue first";
+
+/**
+ * Which issue a claim-lease slug names — `feedback-1234` / `plan-1234` → 1234, anything else →
+ * null. The release paths (`--release <slug>`, the `release-claim` dispatch) only carry the slug,
+ * and they are the ones that must take `in-progress` back off (#3960).
+ */
+export function issueNumberFromSlug(slug) {
+  const m = /^(?:feedback|plan)-(\d+)$/.exec(String(slug ?? ""));
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Put `in-progress` on (`add: true`) or take it off an issue (#3960). BEST-EFFORT on purpose: the
+ * label is how the board SHOWS a build, never what makes the build safe (the lease does that), so a
+ * failed write warns and returns false rather than killing a claim that already won. Removing a
+ * label an issue does not carry is a harmless no-op.
+ */
+export function setInProgress(number, add) {
+  if (!number) return false;
+  const flag = add ? "--add-label" : "--remove-label";
+  try {
+    sh("gh", ["issue", "edit", String(number), flag, LABELS.inProgress.name]);
+    return true;
+  } catch (err) {
+    const verb = add ? "apply" : "remove";
+    console.log(
+      `::warning::could not ${verb} \`${LABELS.inProgress.name}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+    return false;
+  }
+}
 
 /** The hand-set priority labels, highest first — what `scripts/rank.mjs` reads (#4064). */
 export const PRIORITY_LABELS = [LABELS.p0.name, LABELS.p1.name, LABELS.p2.name, LABELS.p3.name];

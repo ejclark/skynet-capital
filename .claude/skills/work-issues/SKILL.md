@@ -22,6 +22,7 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 
 1. **SYNC.** `git fetch origin main` — every decision derives from shipped reality.
 2. **QUEUE.** List open issues labeled `feedback` or `plan`. From that set, exclude:
+   - anything labeled `in-progress` — another session or lane is building it right now (#3960).
    - anything also labeled `needs-eric`, `needs-info`, `needs-design`, `hold-merge`, `next-slice`,
      `conflict-flagged`, or `stall-flagged` — those are already parked on a signal only a human (or
      a later cycle) resolves, per `docs/ISSUES.md`'s label vocabulary. The parking half of that
@@ -54,7 +55,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    issues because everything is genuinely parked, say so and stop; don't loosen the filter to find
    something to do.
 
-3. **PICK ONE.** Take the head of the queue.
+3. **PICK ONE.** Take the head of the queue and label it `in-progress` right away
+   (`gh issue edit <n> --add-label in-progress`) — that label is what the Orchestration board's
+   In Progress column counts (#3960). Every terminal outcome in LAND takes it back off.
 4. **READ THE STATE BLOCK FIRST, on a `plan` issue.** If the issue carries a state block
    (`docs/ISSUES.md` → *The state block*, #3765), it names the slice, its inputs, its done line
    and its falsifier: take that slice and do not re-read the thread to re-derive it. If a `plan`
@@ -64,8 +67,8 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    sketch, and the slice you're about to build — before writing any code. This is the confirmation
    loop named as a follow-up in `docs/plans/issue-centric-orchestration.md` (slice 4): it catches a
    misread ask for the cost of one comment instead of a wasted build. If the restated ask feels
-   underspecified to act on, label `needs-info` (member) or `needs-eric` (his call) here and skip to
-   the next issue — don't guess past real ambiguity just to keep the loop moving.
+   underspecified to act on, label `needs-info` (member) or `needs-eric` (his call), remove
+   `in-progress`, and skip to the next issue — don't guess past real ambiguity just to keep the loop moving.
 6. **BUILD.** Branch off `origin/main` in an isolated worktree (`docs/DELEGATION.md`), dispatch the
    build via the `Agent` tool (general-purpose, or a named athlete if the work matches one's mandate)
    with the issue's full capsule as its prompt — it has no memory of this session, so the prompt must
@@ -74,7 +77,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 7. **LAND.** On a PR outcome: open it with `/ship`, following its merge-policy table verbatim
    (`.claude/skills/governor/SKILL.md` — don't re-derive it here) including the carve-outs
    (workflow files, the irreversible class per `envelope.json`, taste holds). On any other outcome:
-   apply the label, comment the reason in one line, and move on — a `needs-eric` item doesn't block
+   apply the label, comment the reason in one line, and move on. Either way, remove `in-progress`
+   (`--remove-label in-progress`) on every terminal outcome — PR merged, `next-slice`,
+   `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
    log line) and never a new status comment; the one-line reason for a non-PR outcome goes in the

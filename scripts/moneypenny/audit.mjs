@@ -39,6 +39,13 @@ export function answered(issue = {}) {
  * Deliberately DETERMINISTIC and ceiling-capped: it comments and warns — it never reclaims a lock,
  * reassigns work, or flips a status. Deciding whether a stalled build is dead or just slow is
  * judgment, and judgment belongs to the humans and agents the comment summons.
+ *
+ * ONE NARROW EXCEPTION (#3960, 2026-09-30): a stale `in-progress` label comes off. That label is
+ * not work state but a DISPLAY of it — the board's In Progress column — and a build that died
+ * without its terminal step leaves the column lying, with a WIP limit of 3 counting a ghost. So
+ * after `inProgressStaleAfterHours` with no activity on the issue it is removed, with one comment
+ * saying so. Removing the label is its own memory (the issue leaves the candidate list), so this
+ * fires once per stale label, and re-applying it is one click. No lease is touched.
  */
 export function audit(deps = {}) {
   const {
@@ -46,6 +53,8 @@ export function audit(deps = {}) {
     silentFeedback = [],
     readyPlans = [],
     conflictedPRs = [],
+    staleInProgress = [],
+    inProgressStaleAfterHours = 6,
     staleAfterDays = 2,
     silentAfterHours = 6,
     planStallAfterHours = 48,
@@ -109,6 +118,20 @@ export function audit(deps = {}) {
       title: p.title,
       hoursSinceReady: p.hoursSinceReady,
       body: `⏳ **Plan never claimed** — a ready-flip comment landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
+    });
+  }
+  // #3960 — a stale in-flight label. `staleInProgress` arrives as every open issue carrying
+  // `in-progress` with how long it has been quiet (`updatedAt`: any comment, label or edit counts
+  // as activity); this loop only applies the threshold. No `flagged` check: taking the label off
+  // is what stops the next push from seeing it again.
+  for (const w of staleInProgress) {
+    if (w.hoursQuiet < inProgressStaleAfterHours) continue;
+    intents.push({
+      kind: "clear-in-progress",
+      issueNumber: w.number,
+      title: w.title,
+      hoursQuiet: w.hoursQuiet,
+      body: `Cleared \`${LABELS.inProgress.name}\`: no activity for ${inProgressStaleAfterHours}h. Re-apply it when work resumes.\n\n${FOOTER}`,
     });
   }
   // #909 / #1403 — the one class nothing else was watching: a PR that went `CONFLICTING` against
@@ -289,6 +312,12 @@ export function gatherAuditDeps(nowMs) {
       hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
     }));
 
+  // #3960: every open issue still marked in-flight, and how long it has been quiet. `updatedAt` is
+  // the activity proxy — a live build comments, pushes a linked PR, or moves a label well inside 6h.
+  const staleInProgress = issues
+    .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.inProgress.name))
+    .map((i) => ({ title: i.title, number: i.number, hoursQuiet: hoursSince(i.updatedAt) }));
+
   // #897: plan issues whose ready-flip may never have been claimed. Skip the (expensive-ish,
   // per-issue) comment fetch entirely for anything the cheap in-memory checks already rule out —
   // answered or already flagged — same "don't pay for what you don't need" discipline as the
@@ -347,6 +376,7 @@ export function gatherAuditDeps(nowMs) {
     silentFeedback,
     readyPlans,
     conflictedPRs,
+    staleInProgress,
     alreadyFlagged,
     alreadyFlaggedPRs,
   };

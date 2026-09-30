@@ -7,10 +7,13 @@
 // path to a personal-account project, so this can't ride the App identity like the rest of
 // Moneypenny does. The repo is public, so the same PAT reads issue data fine too; no second token.
 //
-// KNOWN GAP, said plainly: "In Progress" (an open linked PR) is never set by this script — reading
-// timeline cross-references reliably needs more than this slice's scope, so every issue here reads
-// as Backlog/Ready/Blocked/Done only. `statusForIssue()`'s own default for `hasOpenLinkedPr` is
-// `false`, so this is an honest partial implementation, not a bug — a natural next slice.
+// "In Progress" comes from the `in-progress` LABEL (#3960, 2026-09-30), not from linked PRs: this
+// script still never reads timeline cross-references, and a live session's PR auto-merges within
+// minutes anyway. The claim lanes and `/work-issues` apply the label when a build starts and take
+// it off at the end; the stall audit clears one left 6h quiet. Since it is a label, adding or
+// removing it is an `issues` labeled/unlabeled event — the trigger this job already runs on. One
+// caveat: an event a workflow's own GITHUB_TOKEN causes starts no new run, so a label written by
+// a GITHUB_TOKEN step shows on the board at that issue's next event, not instantly.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-sync.mjs <issue-number>
 //
