@@ -98,7 +98,30 @@ describe("serveLearnApi", () => {
     expect(emitted).toEqual([
       expect.objectContaining({ type: "graduated", participantId: "human-eric", level: 200 }),
     ]);
-    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+    // The claimer hears the same cue back — its id is their celebration's "seen" key.
+    expect(JSON.parse(out.body ?? "{}")).toEqual({
+      ok: true,
+      graduated: [
+        {
+          id: "graduated:human-eric:200",
+          level: 200,
+          title: "The Wheel — get paid to own good stocks",
+          opens: { level: 300, title: "Directional options — buying calls & puts" },
+        },
+      ],
+    });
+  });
+
+  it("names no next course when the top one graduates", async () => {
+    const config = configWith({
+      progression: { acknowledge: () => Promise.resolve([500]) } as never,
+    });
+    const { res, out } = fakeRes();
+    await serveLearnApi(jsonReq({ ack: ["x"] }), res, "/api/learn/claim", config, session);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.graduated).toEqual([
+      { id: "graduated:human-eric:500", level: 500, title: "Zero-DTE — the fastest clock" },
+    ]);
   });
 
   it("acknowledges without incident when nothing graduated (the common case)", async () => {

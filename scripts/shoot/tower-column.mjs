@@ -1,6 +1,6 @@
 // Pictures for #3977: the big tower in the page frame's own column, from just under the navbar,
 // unboxed (Eric, 2026-09-30, picked by eye from a mock). Phone first — the page stays one column
-// and the Overview keeps the boxed card in its flow — then 1280 (the bench width, where the column
+// and the Overview keeps the league in its flow, with no tower frame on a phone — then 1280 (the bench width, where the column
 // starts) and 1600, one Profile section other than the Overview, and R&D — the same frame, never
 // reloaded, on every page (`vantage.tsx`).
 //
@@ -32,11 +32,12 @@ async function ready(tag, frame = "iframe.vantage") {
   await page.waitForTimeout(1500);
 }
 
-// --- PHONE FIRST (390): one column, the card after the decisions ---
+// --- PHONE FIRST (390): one column, the league after the decisions — no tower frame on a phone
+// (#3977, the phone face: the still Eye in the brand slot is the tower there) ---
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".char-art").scrollIntoViewIfNeeded();
-await ready("phone", ".char-art iframe");
+await page.locator(".char-card").scrollIntoViewIfNeeded();
+await page.waitForTimeout(500);
 await shoot("tower-column-phone");
 
 // --- 1280 and 1600: the column from just under the navbar ---

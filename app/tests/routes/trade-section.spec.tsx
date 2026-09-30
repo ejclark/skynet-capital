@@ -57,12 +57,12 @@ rstest.mock("../../src/live/alerts", () => ({
     Promise.resolve({ available: false, reason: "unlinked", alerts: [], dismissable: false }),
   dismissDeskAlert: () => Promise.reject(new Error("not used in this spec")),
 }));
-// The market calendar's head (#3807 slice 3b-2) reads the research corpus; an empty one keeps the
+// The market calendar's head (#3807 slice 3b-2) reads the calendar's slice (#3977 slice 5); an empty one keeps the
 // tree off the network — its line has its own spec (`tests/shell/trade-clock.spec.tsx`).
 rstest.mock("../../src/live/research", () => ({
   ...actualResearch,
-  fetchResearch: () =>
-    Promise.resolve({ events: [], closures: [], calls: [], symbols: [], studies: [], ledgers: [] }),
+  fetchResearch: () => Promise.reject(new Error("the calendar never reads the whole shelf")),
+  fetchResearchCalendar: () => Promise.resolve({ events: [], closures: [], calls: [] }),
 }));
 rstest.mock("../../src/live/bars", () => ({
   fetchBars: () => Promise.resolve({ barsNote: "Fixture bars note — the chart section is here." }),

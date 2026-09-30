@@ -241,6 +241,15 @@ describe("closing the last mile", () => {
     expect(intents[0]?.body).toContain("Shipped");
   });
 
+  // The sweep rides the push to main, before deploy has run — so the comment must not claim the
+  // change is live yet (#3952, follow-up to #4181).
+  it("says merged, live after the next deploy — never that it is already live", () => {
+    const intents = dryRun("sweep-shipped-feedback.json") as Intent[];
+
+    expect(intents[0]?.body).toContain("merged in #448; live after the next deploy");
+    expect(intents[0]?.body).not.toContain("and is live");
+  });
+
   // 2026-08-28 triage: #510/#706/#707/#720 all had their research docs merged (PRs
   // #695/#727, #721, #715, #712) but stayed open — the sweep only ever swept `feedback`, so
   // `event-research` issues had no last-mile net at all. This is that net.

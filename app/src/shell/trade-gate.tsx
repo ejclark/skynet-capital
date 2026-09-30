@@ -21,6 +21,7 @@ import {
   type TicketResult,
   tifLabel,
 } from "../live/ticket";
+import { useFillFlare } from "./fill-flare";
 import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { QuoteHeader } from "./quote-header";
@@ -270,6 +271,7 @@ export function TradeGate({
     deskId,
     state.step === "done" && state.result.ok ? state.result.orderId : undefined,
   );
+  useFillFlare(fill);
 
   const submit = async (preview: TicketPreview) => {
     setState({ step: "submitting", preview });

@@ -45,6 +45,19 @@ describe("moneypenny projects: statusForIssue", () => {
     expect(statusForIssue({ labels: ["feedback", "ready", "in-progress"] })).toBe("In Progress");
   });
 
+  // #3913 slice 2: a needs-eric with no "Needs from you" callout is not waiting on Eric yet.
+  it("does not read Blocked for a needs-eric whose decision callout is missing", () => {
+    expect(statusForIssue({ labels: ["needs-eric"], decisionCalloutMissing: true })).toBe(
+      "Backlog",
+    );
+    expect(statusForIssue({ labels: ["needs-eric", "ready"], decisionCalloutMissing: true })).toBe(
+      "Ready",
+    );
+    expect(
+      statusForIssue({ labels: ["needs-eric", "needs-info"], decisionCalloutMissing: true }),
+    ).toBe("Blocked");
+  });
+
   it("in-progress still yields to Blocked and to Done", () => {
     expect(statusForIssue({ labels: ["in-progress", "needs-info"] })).toBe("Blocked");
     expect(statusForIssue({ labels: ["in-progress", "needs-eric"] })).toBe("Blocked");

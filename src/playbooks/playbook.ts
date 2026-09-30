@@ -60,6 +60,7 @@ import type {
   PlaybookVerdict,
   Portfolio,
 } from "../domain/types.js";
+import type { MixedSignalsDial } from "./mixed-signals.js";
 import { type TacticalRule, tacticalIntentForSymbol } from "./tactical-playbook.js";
 
 /** What a playbook wants its book to look like at a moment in time. */
@@ -138,6 +139,10 @@ export interface Playbook {
    *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
    *  for every playbook today). Unverified by any audit until step 3. */
   readonly derivesFrom?: string;
+  /** Optional — opts this playbook into the mixed-signals detector (#3194 step 5, see
+   *  `mixed-signals.ts`). OBSERVE-ONLY: a reading is logged, never read by `playbookIntents`.
+   *  Absent (every playbook today) means the detector never looks at this playbook. */
+  readonly mixedSignals?: MixedSignalsDial;
   /**
    * Optional — a second, richer decision surface (issue #3527 plan, slice 2), for a play that
    * runs a prioritized rule chain every cycle instead of a single condition (see

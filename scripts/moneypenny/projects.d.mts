@@ -27,6 +27,7 @@ export function statusForIssue(issue?: {
   state?: "open" | "closed";
   labels?: string[];
   hasOpenLinkedPr?: boolean;
+  decisionCalloutMissing?: boolean;
 }): "Backlog" | "Ready" | "In Progress" | "Blocked" | "Done";
 
 export function isBacklogCandidate(issue?: { labels?: string[] }): boolean;
@@ -37,11 +38,36 @@ export function isMaskedOwnerFailure(text: unknown): boolean;
 
 export function isRetryableProjectsGhError(text: unknown): boolean;
 
+export const CURL_SERVER_ERROR: RegExp;
+
+export function isRetryableRestError(text: unknown): boolean;
+
 export function explainMaskedOwnerFailure(probe?: { ok?: boolean; text?: string }): string;
 
 export const ALREADY_ON_BOARD_FAILURE: RegExp;
 
 export function isAlreadyOnBoardError(text: unknown): boolean;
+
+export const RATE_LIMIT_EXHAUSTED: RegExp;
+
+export function isRateLimitExhausted(text: unknown): boolean;
+
+export function explainRateLimitExhausted(detail?: {
+  call?: string;
+  remaining?: number;
+  reset?: number;
+  now?: number;
+}): string;
+
+export const SWEEP_MIN_GRAPHQL_POINTS: number;
+
+export function planBoardSweep(budget?: {
+  issueCount?: number;
+  remaining?: number;
+  reset?: number;
+  now?: number;
+  minPoints?: number;
+}): { ok: boolean; reason: string };
 
 export interface BoardItem {
   id: string;
@@ -57,6 +83,7 @@ export function resolveBoardItem(deps: {
   addItem: () => BoardItem;
   listItems: () => { items?: BoardItem[]; totalCount?: number };
   issueUrl?: string;
+  cachedItems?: BoardItem[];
   attempts?: number;
   baseMs?: number;
   sleep?: (ms: number) => void;

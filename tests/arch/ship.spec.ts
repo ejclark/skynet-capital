@@ -229,6 +229,38 @@ describe("ship checkbody — the picture/format contract", () => {
     expect(code).toBe(0);
   });
 
+  // `ship open` pins docs/shots/ URLs to HEAD before checkbody runs. The ref group once matched a
+  // single path segment, so a slashed branch (feat/x) slipped through unpinned and `open` refused
+  // its own body (#4193, hit on #4192). The pin must cover every ref shape a branch can take.
+  describe("pinshots — the auto-pin `ship open` applies before checkbody", () => {
+    const sha = "b".repeat(40);
+    const shot = (ref: string) =>
+      `## The picture\n\n<img src="https://raw.githubusercontent.com/o/r/${ref}/docs/shots/pr-9/x.jpg">\n\n_Caption — before/after of /login, npm run shoot:login_\n\n## Summary\n\n- x\n`;
+    const pin = (content: string) => run(["pinshots", body(content), sha]);
+
+    it.each(["my-branch", "feat/3665-account-playbook-metrics", "a/b/c"])(
+      "pins a %s ref to the HEAD SHA, and the result passes checkbody",
+      (ref) => {
+        const { code, stdout } = pin(shot(ref));
+        expect(code).toBe(0);
+        expect(stdout).toContain(`raw.githubusercontent.com/o/r/${sha}/docs/shots/pr-9/x.jpg`);
+        expect(stdout).not.toContain(ref);
+        expect(run(["checkbody", body(stdout)]).code).toBe(0);
+      },
+    );
+
+    it("passes an already-pinned 40-hex SHA through untouched", () => {
+      const already = "c".repeat(40);
+      expect(pin(shot(already)).stdout).toBe(shot(already));
+    });
+
+    it("pins each URL on its own — two shots on one line never merge into one match", () => {
+      const line = `![a](https://raw.githubusercontent.com/o/r/feat/x/docs/shots/a.jpg) ![b](https://raw.githubusercontent.com/o/r/feat/x/docs/shots/b.jpg)`;
+      const { stdout } = pin(line);
+      expect(stdout).toBe(line.replaceAll("feat/x", sha));
+    });
+  });
+
   it("refuses Summary bullets over 120 chars — one short line each (Eric, 2026-08-19)", () => {
     const long = `- ${"narrates every mechanical step ".repeat(5)}`;
     const { code, stderr } = run([
@@ -605,6 +637,71 @@ describe("ship open --hold — the label is on before the PR is ever ready", () 
   it("never reports a stranded draft as ready", () => {
     const failure = open.slice(open.indexOf("could NOT promote"));
     expect(failure.slice(0, 300)).toContain("still a DRAFT");
+  });
+});
+
+/**
+ * A HELD PR'S VERIFY IS A REAL RUN (2026-09-30, #4168). `open --hold` fires `opened` (draft) and
+ * `ready_for_review` a second apart in one cancel-in-progress group; on #4166 the draft run landed
+ * second, cancelled the real verify, and left a skipped verify as the latest word — which branch
+ * protection reads as a PASS (the #322 hole). After promoting, ship.sh reads the head's verify
+ * once and fires an `edited` event when it is stale. The verdict is pure, so it is pinned here.
+ */
+describe("ship open --hold — a late draft run never leaves verify skipped", () => {
+  const verdict = (runs: object[]) =>
+    execFileSync("bash", ["scripts/ship.sh", "checkverify"], {
+      input: JSON.stringify({ check_runs: runs }),
+      env: { ...process.env, GH_TOKEN: "test-token-never-used" },
+    })
+      .toString()
+      .trim();
+  const real = { id: 1, name: "verify", status: "completed", conclusion: "cancelled" };
+  const skipped = { id: 2, name: "verify", status: "completed", conclusion: "skipped" };
+
+  it("calls the #4166 shape stale: cancelled real run, then a newer skipped one", () => {
+    expect(verdict([real, skipped])).toBe("stale");
+  });
+
+  it("reads the LATEST verify by id, not the first listed", () => {
+    const rerun = { id: 3, name: "verify", status: "completed", conclusion: "success" };
+    expect(verdict([rerun, real, skipped])).toBe("real");
+    expect(verdict([{ ...rerun, conclusion: "failure" }, skipped])).toBe("real");
+  });
+
+  it("leaves a queued or running verify alone", () => {
+    expect(verdict([skipped, { id: 4, name: "verify", status: "in_progress" }])).toBe("pending");
+  });
+
+  it("ignores other checks, and says none when no verify exists yet", () => {
+    expect(
+      verdict([{ id: 9, name: "integration tests", status: "completed", conclusion: "skipped" }]),
+    ).toBe("none");
+  });
+
+  const script = readFileSync("scripts/ship.sh", "utf8");
+  const start = script.indexOf("cmd_open()");
+  const open = script.slice(start, script.indexOf("\ncmd_", start + 1));
+  const fn = script.slice(
+    script.indexOf("reverify_held() {"),
+    script.indexOf("\n}\n", script.indexOf("reverify_held() {")),
+  );
+
+  it("re-checks verify only after a confirmed promote", () => {
+    const promoted = open.indexOf("promoted #$num to ready");
+    const reverify = open.indexOf("reverify_held");
+    expect(promoted).toBeGreaterThan(-1);
+    expect(reverify).toBeGreaterThan(promoted);
+    expect(reverify).toBeLessThan(open.indexOf("could NOT promote"));
+  });
+
+  it("re-triggers with a CHANGED body (an unchanged PATCH fires no edited event), and says so", () => {
+    expect(fn).toContain('api PATCH "/pulls/$num"');
+    expect(fn).toContain("<!-- ship: re-verify");
+    expect(fn).toContain("fired an edited event");
+  });
+
+  it("reads once after a delay — never a polling loop", () => {
+    expect(fn).not.toMatch(/\b(while|until)\b/);
   });
 });
 

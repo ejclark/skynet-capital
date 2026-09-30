@@ -30,3 +30,8 @@
      e.g. "6 structural PRs auto-merged · 2 gate catches self-corrected · 3 pulse checks, no stance change" -->
 
 -
+- <`npm run rank -- --digest` line 1: "Rank since …: N moved up · M retired · K new.">
+- <`npm run thrash:scan -- --digest --file` Noise lines, verbatim; its Needs-you lines go above.>
+
+<!-- `npm run rank -- --digest` line 2 goes here, verbatim: the rank snapshot the next digest diffs against. -->
+<!-- `npm run thrash:scan -- --digest` marker goes here, verbatim: the thrash scan the next digest's two-scan rule reads. -->

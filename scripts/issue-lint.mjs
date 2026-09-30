@@ -22,9 +22,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readBaseline } from "./bottleneck-baseline.mjs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
+import { STATUS_OPTIONS } from "./moneypenny/projects.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
 
 /** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
@@ -216,12 +218,20 @@ function collectNotes(text, notes) {
   }
 }
 
+/** The decision callout (docs/ISSUES.md rule 7): a `> [!IMPORTANT]` alert above the fold that
+ *  says "Needs from you". Exported because the rule is also checked AFTER filing — the label
+ *  usually lands later, from another lane (#3913 slice 2, scripts/moneypenny/decision-callout.mjs). */
+export function hasDecisionCallout(body = "") {
+  const top = aboveFold(body ?? "");
+  return /^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top);
+}
+
 /** `needs-eric` promises Eric a decision; this is where the decision is required to live —
  *  above the fold, in its own callout, never folded in with build-only "Open questions"
- *  (docs/ISSUES.md rule 6, Eric 2026-08-30: issues buried the action-required item behind a fold). */
+ *  (docs/ISSUES.md rule 7, Eric 2026-08-30: issues buried the action-required item behind a fold). */
 function checkNeedsFromYou(text, labels, problems, notes) {
   const top = aboveFold(text);
-  const hasCallout = /^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top);
+  const hasCallout = hasDecisionCallout(text);
 
   if (Array.isArray(labels) && labels.includes("needs-eric") && !hasCallout) {
     problems.push(
@@ -244,6 +254,18 @@ function checkNeedsFromYou(text, labels, problems, notes) {
       );
     }
   }
+}
+
+/** A `bottleneck` issue names a measured constraint, so it carries the number its fix should move
+ *  (docs/ISSUES.md → Bottleneck issues, #4063): a `**Before:**` line with a measurement, or
+ *  `unmeasured — <why>`. Without it the before/after loop (docs/process/LEARNING-LOOP.md) has
+ *  nothing to compare the fix against — 35 issues were filed that way before this rule. */
+function checkBottleneckBaseline(text, labels, problems) {
+  if (!(Array.isArray(labels) && labels.includes("bottleneck"))) return;
+  if (readBaseline(text).before) return;
+  problems.push(
+    "labelled `bottleneck` but no `**Before:**` line with a number — write the measured value, its date and how it was counted, or `unmeasured — <why>` (docs/ISSUES.md → Bottleneck issues)",
+  );
 }
 
 /** A plan issue is picked up from its state block, not from its comment thread (docs/ISSUES.md →
@@ -296,6 +318,57 @@ function checkStateBlockTop(text, notes) {
   }
 }
 
+/** The words a Status row may lead with, mapped to the board column they claim. The board's own
+ *  five (projects.mjs STATUS_OPTIONS — the skeleton's vocabulary, docs/ISSUES.md) plus the label
+ *  spellings older rows used in their place (#3407's row said "needs-eric"). */
+const STATUS_WORDS = new Map([
+  ...STATUS_OPTIONS.map((s) => [s.toLowerCase(), s]),
+  ["in-progress", "In Progress"],
+  ["needs-eric", "Blocked"],
+  ["needs-info", "Blocked"],
+]);
+
+/** What the labels must show for a row's claim to hold. Not the board's full precedence
+ *  (projects.mjs statusForIssue): a row that says Ready while its issue is being built is not
+ *  stale, only behind, and a note on every in-flight issue would be noise, not signal. The note is
+ *  for the row that is WRONG — Ready with no `ready`, Blocked with nothing blocking, Backlog after
+ *  the flip. Done is left alone: an open-state check needs the issue's state, which a body lint
+ *  never has. */
+const STATUS_HOLDS = {
+  Backlog: (has) => !(has("ready") || has("needs-eric") || has("needs-info")),
+  Ready: (has) => has("ready"),
+  "In Progress": (has) => has("in-progress"),
+  Blocked: (has) => has("needs-eric") || has("needs-info"),
+};
+
+/** The board column a body's Status row claims, from its first word — or null when the row is
+ *  absent or leads with free text ("proposed", "awaiting…"), which this check leaves alone. */
+export function statusRowClaim(body = "") {
+  const row = /^\|\s*\*\*Status\*\*\s*\|\s*(.+?)\s*\|\s*$/m.exec(aboveFold(body));
+  if (!row) return null;
+  const lead = row[1].replace(/[*_`]/g, "").trim().toLowerCase();
+  if (/^in[ -]progress\b/.test(lead)) return "In Progress";
+  const word = /^[a-z-]+/.exec(lead)?.[0] ?? "";
+  return STATUS_WORDS.get(word) ?? null;
+}
+
+/** #3913 criterion 5: the Status row is typed once and the labels move on, so a human reading the
+ *  row first — and a cold session trusting it — gets the wrong state. Advisory by the gate
+ *  doctrine (drift is pointed at, never a red); fires only when labels were supplied, because a
+ *  body linted before filing has nothing to contradict. */
+function checkStatusRow(text, labels, notes) {
+  if (!Array.isArray(labels)) return;
+  const claim = statusRowClaim(text);
+  const holds = claim && STATUS_HOLDS[claim];
+  if (!holds || holds((name) => labels.includes(name))) return;
+  const shown = labels.length ? labels.map((l) => `\`${l}\``).join(", ") : "none";
+  notes.push(
+    `Status row says ${claim} but the labels (${shown}) say otherwise — the row is what a phone ` +
+      "reader and a cold session read first; update its first word to the board's Status " +
+      "(docs/ISSUES.md → The capsule)",
+  );
+}
+
 /** The vocabulary an issue's labels are checked against — one registry, shared with the lanes that
  *  apply them (scripts/moneypenny/labels.mjs `LABELS`). */
 const KNOWN_LABELS = new Set(LABEL_NAMES);
@@ -343,7 +416,9 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   collectNotes(text, notes);
   if (Array.isArray(labels)) checkLabels(labels, notes);
   checkStateBlock(text, labels, notes);
+  checkBottleneckBaseline(text, labels, problems);
   checkStateBlockTop(text, notes);
+  checkStatusRow(text, labels, notes);
   checkNeedsFromYou(text, labels, problems, notes);
   notes.push(...readinessNotes({ title, body: text, labels }));
 

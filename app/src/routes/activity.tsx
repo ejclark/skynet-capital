@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { fetchCouncil } from "../live/council";
+import { fetchFilingComments } from "../live/filing-comments";
 import {
   fetchWire,
   matchesWire,
@@ -12,6 +13,7 @@ import {
   type WireTrade,
 } from "../live/wire";
 import { CouncilCompose } from "../shell/council-compose";
+import { FilingComments } from "../shell/filing-comments";
 import { PageFrame } from "../shell/frame";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
@@ -173,6 +175,12 @@ type PulseFilter = (typeof PULSE_FILTERS)[number][0];
  *  for a member's own filings, #429; the league-wide pulse never inherited it). */
 function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
   const [filter, setFilter] = useState<PulseFilter>("active");
+  // Comments on a filing (issue #2224 shape 3) — the app's own store, never the GitHub thread. A
+  // failed or unwired read just leaves the cards without their fold; the pulse itself still renders.
+  const queryClient = useQueryClient();
+  const comments = useQuery({ queryKey: ["filing-comments"], queryFn: fetchFilingComments });
+  const threads = comments.data?.enabled ? comments.data : undefined;
+  const refreshComments = () => queryClient.invalidateQueries({ queryKey: ["filing-comments"] });
   const visible =
     filter === "all" ? wire.feedback : wire.feedback.filter((f) => f.statusKey !== "shipped");
   return (
@@ -204,12 +212,24 @@ function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
                 <span className={`wire-status wire-status-${item.statusKey}`}>{item.status}</span>
               ) : null}
               <span className="wire-fdbk-meta num">{item.meta}</span>
+              {threads ? (
+                <FilingComments
+                  issueNumber={item.issueNumber}
+                  comments={threads.comments[String(item.issueNumber)] ?? []}
+                  isOwn={threads.ownFilings.includes(item.issueNumber)}
+                  onSaved={refreshComments}
+                />
+              ) : null}
             </li>
           ))}
         </ul>
       )}
       <details className="wire-onramp">
-        <summary>Weigh in on someone else's idea</summary>
+        <summary>Steer someone else's idea on GitHub</summary>
+        <p>
+          A comment here is for members to read; it doesn't reach the build. To change what gets
+          built, comment on the GitHub issue itself:
+        </p>
         <ol>
           <li>
             <strong>Create a free GitHub account</strong> if you don't have one —{" "}

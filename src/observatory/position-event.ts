@@ -1,4 +1,9 @@
-import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import {
+  daysUntil,
+  type EarningsPrint,
+  nextPrint,
+  UPCOMING_PRINTS,
+} from "../domain/earnings-calendar.js";
 import { allEvents, MARKET_EVENTS, type MarketEvent } from "../domain/market-events.js";
 
 /**
@@ -37,7 +42,7 @@ export interface NextEvent {
 const SHARE_HORIZON_DAYS = 60;
 
 /** The headline macro prints, by the calendar's stable id prefixes, with the words we print. */
-const HEADLINE_MACRO: ReadonlyArray<readonly [prefix: string, noun: string]> = [
+export const HEADLINE_MACRO: ReadonlyArray<readonly [prefix: string, noun: string]> = [
   ["fomc-2", "Fed meeting"],
   ["cpi-2", "CPI report"],
   ["jobs-2", "Jobs report"],
@@ -97,4 +102,44 @@ export function nextEventFor(
     }
   }
   return undefined;
+}
+
+/**
+ * A HELD SYMBOL'S NEXT EARNINGS PRINT (#3977 slice 4), for the market calendar to mark its day.
+ * `nextEventFor` above can't serve it: for an option it names the print only when the print lands
+ * before expiry, and otherwise falls back to a macro date. This names the print itself, whenever
+ * it lands, read from the same checked-in table (`nextPrint` in `domain/earnings-calendar.ts`).
+ *
+ * HONEST ABOUT WHAT WE DON'T KNOW. A cadence estimate says so in its words and its status, and a
+ * symbol with no print on file (an ETF, a name the research hasn't dated) is `unknown`, which
+ * carries no date at all. Nothing here guesses one.
+ */
+export type NextPrint =
+  | {
+      readonly status: "confirmed" | "estimate";
+      /** The print day, YYYY-MM-DD (after the close unless the table says otherwise). */
+      readonly at: string;
+      /** "Earnings Oct 28", or "Earnings Oct 28 (estimated)". */
+      readonly label: string;
+      /** The bounded range around an estimate, when the research has one (CRWV: Nov 9–16). */
+      readonly window?: { readonly start: string; readonly end: string };
+    }
+  | { readonly status: "unknown"; readonly label: string };
+
+export const NO_PRINT_ON_FILE = "No earnings date on file";
+
+export function nextPrintFor(
+  underlying: string,
+  asOfIso: string,
+  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): NextPrint {
+  const print = nextPrint(underlying, asOfIso, prints);
+  if (!print) return { status: "unknown", label: NO_PRINT_ON_FILE };
+  const day = shortDate(print.date);
+  return {
+    status: print.status,
+    at: print.date,
+    label: print.status === "estimate" ? `Earnings ${day} (estimated)` : `Earnings ${day}`,
+    ...(print.window ? { window: print.window } : {}),
+  };
 }

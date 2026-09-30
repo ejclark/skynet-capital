@@ -35,7 +35,26 @@ describe("under the page's tower, in the frame's column (#3977)", () => {
     expect(screen.getByText("the league")).toBeInTheDocument();
   });
 
-  it("keeps its own tower everywhere else (below the bench width, the boxed card)", () => {
+  it("mounts no frame on a phone — no WebGL until a real-device recheck; the brand slot holds the still Eye", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: () => ({
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+    try {
+      const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" />);
+      expect(container.querySelector("iframe")).toBeNull();
+      expect(screen.getByRole("region", { name: "The league" })).toBeInTheDocument();
+    } finally {
+      Reflect.deleteProperty(window, "matchMedia");
+    }
+  });
+
+  it("keeps its own tower everywhere else (between the phone and the bench width, the boxed card)", () => {
     const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" />);
     expect(container.querySelector("iframe")?.getAttribute("src")).toBe("/tower?frame=card");
     expect(screen.getByRole("region", { name: "Sauron's tower and the league" })).not.toHaveClass(

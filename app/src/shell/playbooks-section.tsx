@@ -1,7 +1,9 @@
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
+import { fetchPlaybookPerformance, type PlaybookMetricsView } from "../live/playbook-performance";
 import { fetchPlaybookStore, type PlaybookStoreView } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import type { MetricsScope } from "./playbook-metrics";
 import { PlaybookCard } from "./playbook-store-cards";
 
 /**
@@ -77,6 +79,29 @@ export function PlaybooksSection({
   const queryClient = useQueryClient();
   const onChanged = () =>
     void queryClient.invalidateQueries({ queryKey: ["playbook-store", accountId ?? ""] });
+  // One read, two groupings (#3665): `mine` is the selected account's own closed trades — only for
+  // an account the viewer manages, and the server re-scopes `?accounts=` to owned ids regardless —
+  // and `house` is every account's, drawn on every card even in catalog-only mode. Unmanaged views
+  // ask without `?accounts=`; their `mine` (all owned accounts) is never rendered.
+  const manages = Boolean(accountId && store.data?.canManage);
+  const scopeId = manages ? (accountId ?? "") : "";
+  const performance = useQuery({
+    queryKey: ["playbook-performance", scopeId],
+    queryFn: () => fetchPlaybookPerformance(scopeId || undefined),
+    enabled: store.isSuccess,
+  });
+  const pick = (
+    rows: readonly PlaybookMetricsView[] | null | undefined,
+    id: string,
+  ): MetricsScope => {
+    if (!rows) return { kind: "unreadable" };
+    const row = rows.find((r) => r.playbookId === id);
+    return row ? { kind: "read", row } : { kind: "read" };
+  };
+  const metricsFor = (playbookId: string): MetricsScope | undefined =>
+    manages && !performance.isPending ? pick(performance.data?.mine, playbookId) : undefined;
+  const houseFor = (playbookId: string): MetricsScope | undefined =>
+    performance.isPending ? undefined : pick(performance.data?.house, playbookId);
 
   if (store.isPending) return <p className="note">Opening the playbooks…</p>;
   if (store.isError) return <p className="note">The playbooks are unreachable.</p>;
@@ -114,6 +139,9 @@ export function PlaybooksSection({
             canManage={Boolean(accountId) && view.canManage}
             delegation={view.delegation}
             onChanged={onChanged}
+            accountName={accountName ?? accountId ?? ""}
+            metrics={metricsFor(card.id)}
+            house={houseFor(card.id)}
           />
         ))}
       </div>

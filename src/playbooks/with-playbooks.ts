@@ -12,6 +12,11 @@ import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
 import {
+  type MixedSignalsSink,
+  observeMixedSignals,
+  SILENT_MIXED_SIGNALS_SINK,
+} from "./mixed-signals.js";
+import {
   type EnabledPlaybook,
   type PlaybookEvent,
   playbookIntents,
@@ -25,6 +30,10 @@ export function withPlaybooks(
   /** Recent external events (e.g. TACO signals) for any event-driven play in the roster.
    *  Optional and additive — every existing call site keeps working unchanged. */
   events: readonly PlaybookEvent[] = [],
+  /** Where mixed-signals observations are logged (#3194 step 5). Observe-only: the detector runs
+   *  after this cycle's intents are fixed and its output never reaches them. Defaults to a no-op,
+   *  and no playbook opts in today, so every existing call site is unchanged. */
+  mixedSignalsLog: MixedSignalsSink = SILENT_MIXED_SIGNALS_SINK,
 ): Persona {
   if (enabled.length === 0) {
     return base;
@@ -37,6 +46,7 @@ export function withPlaybooks(
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
       const plays = playbookIntents(enabled, context, portfolio, calendar, events);
       const reflexes = base.decide(context, portfolio).filter((i) => !managed.has(i.symbol));
+      observeMixedSignals(enabled, context, mixedSignalsLog);
       return [...plays, ...reflexes];
     },
     playbookVerdicts: (context) => playbookVerdicts(enabled, context.asOf, calendar, events),

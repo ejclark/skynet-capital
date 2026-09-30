@@ -2,6 +2,7 @@ import { type ReactElement, useId, useRef } from "react";
 import { LeagueCard } from "./league-card";
 import { type Crest, usePrefs } from "./prefs";
 import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * SAURON'S CHARACTER CARD (plan #3727, design handoff 6a): the league, with Barad-dûr standing
@@ -32,6 +33,10 @@ import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
  * the shade down: the mist the tower's foot melts into, then the league. Its landmark's dials still
  * reach the tower (`useTowerMood`). It replaces the `?card=art|league` compare (#3807 slice 3b-1),
  * retired unused: neither option was the intent.
+ *
+ * ON A PHONE (≤860, #3977 the phone face): the same `under` card — no frame mounts, so no WebGL
+ * context opens on a phone until a real-device recheck measures one. The Eye stays in view as the
+ * brand slot's still picture (`brand-eye.tsx`).
  */
 
 /** The tower's URL: the card framing, the landmark's dials when this account has one, and the
@@ -142,7 +147,10 @@ export function SauronCard({
   useTowerGlance(scope, frame);
   useTowerMood(landmark);
   useCardFrame(frame);
-  if (under)
+  // No WebGL on a phone (#3977) until a real-device recheck: the still Eye in the brand slot is the
+  // tower's presence there (`brand-eye.tsx`), and this card is the league under its mist.
+  const phone = usePhoneWidth();
+  if (under || phone)
     return (
       <section className="char-card char-card--under" aria-label="The league">
         <div className="char-blend">

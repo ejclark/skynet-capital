@@ -79,6 +79,58 @@ promote_ready() {
   [ "$(http_of "$rresp")" = 200 ] && grep -q '"draft":false' <<<"$(body_of "$rresp")"
 }
 
+# checkverify — is the head's latest `verify` check a REAL run? A pure verdict over a check-runs
+# JSON document on stdin (GET /commits/<sha>/check-runs), so the spec pins it with no network.
+# Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
+# skipped or cancelled), none (no verify check yet). "Latest" is the highest id — the order GitHub
+# created them in, which is the order branch protection reads.
+cmd_checkverify() {
+  python3 -c '
+import sys, json
+runs = [r for r in json.load(sys.stdin).get("check_runs", []) if r.get("name") == "verify"]
+if not runs:
+    print("none"); sys.exit(0)
+latest = max(runs, key=lambda r: r.get("id", 0))
+if latest.get("status") != "completed":
+    print("pending")
+elif latest.get("conclusion") in ("skipped", "cancelled"):
+    print("stale")
+else:
+    print("real")
+'
+}
+
+# A held PR's verify can end as a skipped check read as a PASS (#4168). `open --hold` fires
+# `opened` (draft) and `ready_for_review` about a second apart, both in one cancel-in-progress
+# concurrency group; on #4166 the draft run was created second and cancelled the real verify,
+# leaving its own skipped verify as the latest word — the #322 hole, on every held PR. The root
+# fix is a per-draft concurrency group in pipeline.yml (Eric's to merge); this is the in-envelope
+# net: ONE delayed read (not a poll) once both runs have registered, and if the latest verify is
+# skipped/cancelled/absent, an `edited` event (a body marker — an unchanged PATCH fires nothing)
+# starts a real run. The event carries hold-merge, so the arm job still skips it.
+reverify_held() {
+  local num="$1" sha="$2" body="$3" wait="${SHIP_REVERIFY_WAIT:-20}" cresp verdict
+  sleep "$wait"
+  cresp="$(api GET "/commits/$sha/check-runs?check_name=verify&filter=all&per_page=100")"
+  if [ "$(http_of "$cresp")" != 200 ]; then
+    echo "ship: could not read #$num's verify check (HTTP $(http_of "$cresp")) — check it is a real run, not skipped (#4168)." >&2
+    return 0
+  fi
+  verdict="$(body_of "$cresp" | cmd_checkverify)"
+  case "$verdict" in
+    real|pending) echo "ship: #$num's latest verify is a real run ($verdict)." ;;
+    *)
+      local marker='<!-- ship: re-verify, the draft run left verify skipped (#4168) -->' patch presp
+      patch="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1] + '\n\n' + sys.argv[2]}))" "$body" "$marker")"
+      presp="$(api PATCH "/pulls/$num" "$patch")"
+      if [ "$(http_of "$presp")" = 200 ]; then
+        echo "ship: #$num's latest verify was $verdict (a late draft run cancelled it) — fired an edited event so a real verify runs (#4168)."
+      else
+        echo "ship: #$num's latest verify is $verdict and the re-trigger PATCH failed (HTTP $(http_of "$presp")) — edit the PR body by hand to re-run verify; skipped reads as a PASS (#4168)." >&2
+      fi ;;
+  esac
+}
+
 # checkbody — the picture/format contract as a pure, testable linter (no network, no git writes).
 # The 2026-08-20 hat-team research finding this encodes: format compliance tracks enforcement,
 # never willingness (fridge rule adopted by 4/126 bodies while comment-only; every machine-gated
@@ -148,6 +200,23 @@ $mm"
   echo "ship checkbody: ✓ body passes the picture/format contract."
 }
 
+# pinshots <bodyfile> <sha> — print the body with every docs/shots/ raw URL pinned to <sha>.
+# The ref is everything between owner/repo/ and /docs/shots/ (non-greedy, no whitespace/quotes),
+# so slashed branches (feat/x) pin too — a one-segment ref group missed them (#4193). Refs that
+# are already a 40-hex SHA pass through untouched. Pure (no git), so the spec drives it directly.
+cmd_pinshots() {
+  python3 - "$1" "$2" <<'PY'
+import re, sys
+body = open(sys.argv[1]).read()
+sha = sys.argv[2]
+def pin(m):
+    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
+        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
+sys.stdout.write(re.sub(
+    r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^\s)\"'<>]+?)/docs/shots/", pin, body))
+PY
+}
+
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
@@ -188,16 +257,8 @@ cmd_open() {
 
   # SHA-pin docs/shots/ raw URLs to HEAD (the commit about to be pushed — tree is clean, so HEAD
   # is exactly what ships). Branch-form URLs 404 at squash-merge; already-pinned SHAs pass through.
-  local sha pinned; sha="$(git rev-parse HEAD)"; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
-  python3 - "$bodyfile" "$sha" > "$pinned" <<'PY'
-import re, sys
-body = open(sys.argv[1]).read()
-sha = sys.argv[2]
-def pin(m):
-    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
-        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
-sys.stdout.write(re.sub(r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^/\s)]+)/docs/shots/", pin, body))
-PY
+  local pinned; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
+  cmd_pinshots "$bodyfile" "$(git rev-parse HEAD)" > "$pinned"
   bodyfile="$pinned"
 
   # The picture/format contract — fail fast, before spending verify or a push.
@@ -363,6 +424,7 @@ EOF_SHOTS
       fi
       if promote_ready "$num" "$(printf '%s' "$body" | json_field node_id)"; then
         echo "ship: promoted #$num to ready — the ready_for_review event carries hold-merge, so nothing arms it."
+        reverify_held "$num" "$(printf '%s' "$body" | python3 -c "import sys,json; print(json.load(sys.stdin)['head']['sha'])")" "$(printf '%s' "$payload" | json_field body)"
         echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
       else
         echo "ship: labelled #$num but could NOT promote it from draft — mark it ready by hand (verify won't run on a draft)." >&2
@@ -892,7 +954,9 @@ case "${1:-}" in
   merge) shift; cmd_merge "$@" ;;
   automerge) shift; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
+  pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
+  checkverify) shift; cmd_checkverify "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | checkarm <path...> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
 esac

@@ -151,6 +151,7 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | Market closure | `ResearchClosure` `app/src/live/research.ts:65` / `MarketClosure` `horizon-range.ts:27` (`src/domain/market-calendar.ts:27`) | rides `GET /api/research` only (`content-api-routes.ts:66-78`) | date | hatched on the grid; counts sessions | `EventHorizon` `event-horizon.tsx:138` | — |
 | Market session clock | `MarketSessionView` `app/src/live/market-session.ts:18` | none — client clock | date | — | `MarketSession` `app/src/shell/market-session.tsx:26` (`__root.tsx:176`, every route) | — |
 | Council line (this week) | `CouncilEntry` / `CouncilWeek` `app/src/live/council.ts:8,21` | `GET/POST /api/council` `src/server/council-api-routes.ts:9` | member (`mine`) · date (`week`) · playbook (`playbookId`) | `plays[]` = playbook id + symbol | `CouncilSection` `app/src/routes/activity.tsx:239` | `enabled` |
+| Comment on a filing (another member's) | `FilingComment` / `FilingComments` `app/src/live/filing-comments.ts` | `GET/POST /api/feedback/comments` `src/server/filing-comments-api-routes.ts` — the app's own store, never the GitHub thread (#2224 shape 3) | filing (`issueNumber`) · member (`mine`, `ownFilings`) | — | `FilingComments` on each Feedback-pulse card `app/src/shell/filing-comments.tsx` | `enabled`; the filer gets Follow up instead |
 
 ### 2d. The progression group — the member's rungs (member-keyed, never account-keyed)
 
@@ -777,7 +778,12 @@ scenarios asked; 33–36 were added by the red passes.
    endpoint; §4 joint 1 is client-side over three payloads; macro events with `symbols []` are
    dropped by a `sym:` scope (`board-section.tsx:43-56`). A slim range-scoped calendar endpoint
    (events; closures are already client-side) is the panel's precondition for any head outside the
-   Board (`/api/research` is one ≈2.5 MB payload, `content-api-routes.ts:61-77`).
+   Board (`/api/research` is one ≈2.5 MB payload, `content-api-routes.ts:61-77`). **Shipped as
+   field-scoped, not range-scoped** (#3977 slice 5): `GET /api/research/calendar` carries every
+   event, the closures, and only the calls a calendar prints — 220 KB (42 KB gzipped) against the
+   shelf's 2.6 MB (698 KB) on 2026-09-30 — and R&D's grid, Profile's Events and Trade's line read it.
+   Whole history on purpose: the arrows and the all lens step client-side, so a range param would
+   refetch per step for a payload already small.
 5. **A closure-gap range (last close → next open) and sessions-to-expiry** — `DayRange` is
    calendar-anchored (`rangeFor`, `horizon-range.ts:72`); `sessionsIn` is client-side for R&D's
    head only (`:148-151`); `MarketSessionView.nextOpen` is a string (`market-session.ts:26`) and
@@ -955,8 +961,8 @@ scenarios asked; 33–36 were added by the red passes.
 34. ◆ **The training-wheels preference as a visible control** — `PlaysIndex.wheels` +
     `POST /api/trade/wheels` (`plays-api-routes.ts:100-137`) is a per-account record two fogs read
     (the day lens, `fog.ts:21-23`; the store's delegation gate, `playbook-store.ts:47-53`) and no
-    control renders; the zero-DTE refusal still says "Turn the wheels off to open the full catalog"
-    (`option-api-routes.ts:227-233`); `FOG-OF-WAR.md:75` still says the day lens lifts "or wheels
+    control renders; every ladder refusal now reads one sentence (`ladderLockedReason`,
+    `progression.ts`) that no longer offers "turn the wheels off" (#469); `FOG-OF-WAR.md:75` still says the day lens lifts "or wheels
     off", which #1870 removed.
 35. ◆ **A rung on the lever call** — `LeverCall` (`position-guidance-types.ts:196-208`) carries lever
     · call · confidence · reasons · provesWrong · until · atOpen and no `unlocksAfter`/`locked`,

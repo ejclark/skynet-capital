@@ -94,6 +94,25 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
 }
 
 /**
+ * What is left in each API bucket — and the one GitHub read that is FREE.
+ *
+ * `GET /rate_limit` is documented as not counting against any limit, and that is exactly what makes
+ * a pre-flight check worth doing: asking "does this sweep fit in the hour?" costs nothing, where
+ * failing into the answer costs the whole hour for every other consumer of the same token (#4183 —
+ * see projects.mjs's `RATE_LIMIT_EXHAUSTED` block for the incident). docs/LESSONS.md's 2026-08-26
+ * entry banked this exact question as a side quest ("does GitHub expose remaining GraphQL quota
+ * cheaply enough to skip the sweep pre-emptively rather than fail into it?"); it does.
+ *
+ * Returns GitHub's own `resources` map — `{core, graphql, …}`, each `{limit, remaining, reset}` with
+ * `reset` an epoch-SECONDS stamp. `{}` when the payload is not that shape, so the caller's own
+ * guard decides what to do about a read that failed rather than crashing on `undefined.remaining`.
+ */
+export function ghRateLimit(opts = {}) {
+  const res = ghRest("https://api.github.com/rate_limit", opts);
+  return res?.resources ?? {};
+}
+
+/**
  * Every page of a REST list, not just the first — the truncation half of #2968.
  *
  * `ghRest("issues?state=open&per_page=100")` is a FIRST PAGE, and nothing said so. The open-issue

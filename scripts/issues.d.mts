@@ -5,6 +5,8 @@ interface IssueLike {
   title: string;
   state?: string;
   labels?: Array<string | { name: string }>;
+  body?: string | null;
+  user?: { login?: string };
 }
 export function parseArgs(argv: string[]): {
   cmd: string | undefined;

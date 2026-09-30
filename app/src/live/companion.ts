@@ -44,6 +44,13 @@ export interface CompanionDraft {
   readonly details: string;
 }
 
+/** The page the member is asking from — `pathname + search`, e.g. `/trade?symbol=NVDA`. The server
+ *  maps it onto fixed words (`src/companion/companion-page.ts`, #2224 shape 2) so "this strike"
+ *  has a referent; the raw string never reaches her prompt. */
+function currentPage(): string | undefined {
+  return typeof location === "undefined" ? undefined : `${location.pathname}${location.search}`;
+}
+
 /** One parsed SSE frame — the event name and its `data:` payload. */
 function parseFrame(frame: string): { readonly event: string; readonly data: string } {
   let event = "message";
@@ -69,7 +76,7 @@ export async function streamCompanionTurn(
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, page: currentPage() }),
   });
   if (!(res.headers.get("content-type") ?? "").includes("text/event-stream")) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };

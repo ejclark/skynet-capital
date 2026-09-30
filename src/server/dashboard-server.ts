@@ -22,6 +22,7 @@ import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
+import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
@@ -143,6 +144,7 @@ async function serveWriteApis(
   if (await servePlaybooksApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveCouncilApi(req, res, path, config.council, session)) return true;
+  if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;

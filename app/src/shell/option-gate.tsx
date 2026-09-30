@@ -15,6 +15,7 @@ import {
 import { navForPlay, type PlayCode, playForNav } from "../live/plays";
 import { formatExpiration } from "../live/straddle";
 import { ChainStraddle } from "./chain-straddle";
+import { useFillFlare } from "./fill-flare";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
@@ -400,6 +401,7 @@ export function OptionGate({
     deskId,
     state.step === "done" && state.result.ok ? state.result.orderId : undefined,
   );
+  useFillFlare(fill);
 
   const submit = async () => {
     if (state.step !== "reviewed") return;

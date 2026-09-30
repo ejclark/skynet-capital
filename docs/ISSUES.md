@@ -60,7 +60,7 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 
 | | |
 |---|---|
-| **Status** | proposed · waiting on a decision (needs-eric) |
+| **Status** | Blocked · waiting on a decision (needs-eric) |
 | **Surface** | Moneypenny's rail (filings listed at `/app/accounts?section=feedback`) |
 | **Size** | ~2 PRs |
 
@@ -106,7 +106,10 @@ Rules that make it work, in priority order:
    a member or open build forks — questions nobody is blocked on. Mixing the two is how a decision
    Eric alone can make ends up 3/4 of the way down an accordion, which is the defect this rule
    exists to prevent (Eric, 2026-08-30: issues bury the action-required item behind a fold instead
-   of surfacing it below the context).
+   of surfacing it below the context). The rule holds **after filing too**: the label usually
+   lands later, from another lane, so `issues.mjs update --add needs-eric` refuses a body with no
+   callout, and the board keeps such an issue out of Blocked until the callout exists
+   (`scripts/moneypenny/decision-callout.mjs`, #3913). Eric's own issues are exempt.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
    after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
@@ -120,6 +123,13 @@ Rules that make it work, in priority order:
    ranked list of what the page shows first at phone width (`At 390, in order: balance · open
    positions · the trade button`). The PR's first phone screenshot is checked against it
    (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
+11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready · In
+   Progress · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`), then a `·`
+   and whatever a reader needs: `Ready · plan, no decision needed`. The labels and the board move
+   after filing; the row is typed once, and #3748 and #3407 were found saying `ready` and
+   `needs-eric` with neither label on them. `issue-lint --labels` notes a first word the labels
+   contradict (#3913) — a note, not a failure. When the state changes, the row's first word
+   changes with it; free text that does not lead with a board word is left alone.
 
 ### An optional block: capturing a raw idea before it's a plan
 
@@ -254,6 +264,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | duplicate blocks | no paragraph repeated verbatim | #455 shipped its whole body twice |
 | mermaid | every block parses under GitHub's own Mermaid (`scripts/mermaid-lint.mjs`) | a syntax error renders as the opening frame |
 | `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
+| `bottleneck` baseline | labelled `bottleneck` ⇒ a `**Before:**` line with a number, or `unmeasured — <why>` | a fix nobody measured before cannot be shown to have worked |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤80 chars, not `Fix bug`-class | Google's rule, their anti-patterns |
 
@@ -277,6 +288,26 @@ The research behind that caution: no readability formula is universally valid, o
 general prose scores worse on technical text, which is exactly this repo's content. Treat a hit as
 "maybe worth a `linguist` pass," never as a defect — same non-blocking doctrine as every other note
 in this section.
+
+## Bottleneck issues — the number the fix should move (#4063)
+
+A `bottleneck` issue names a *measured* constraint (CLAUDE.md → "A bottleneck surfaced by
+fan-out"), so it carries the measurement, in two lines of the body:
+
+```text
+- **Before:** <number and unit> — <date>, <how it was counted>
+- **After:** <number and unit> — <date>, <how it was counted>
+```
+
+- **Before** is required when the issue is filed: `issue-lint` refuses a `bottleneck`-labelled
+  body without it. **After** is added by whoever closes the issue, counted the same way.
+- Either line may say `unmeasured — <why>` instead. An honest "we could not count this" is an
+  answer; a missing line or a `TBD` is not.
+- `npm run bottleneck:baseline` lists the issues owed a line and the closed ones that carry both.
+  It feeds the *Bottleneck before/after* row in `docs/process/LEARNING-LOOP.md`. Issues filed
+  before 2026-10-01 are reported as legacy; the research grind backfills their Before line when
+  it picks one up (`docs/grind/research-bottleneck.instructions.md`, step 2).
+- First instance: #3926, the CI-failure recurrence storm.
 
 ## The state block — a plan issue's context store (#3765)
 

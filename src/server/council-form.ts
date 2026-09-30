@@ -1,5 +1,6 @@
 import { findPlaybook, playbookRoster } from "../playbooks/registry.js";
 import { type CouncilState, MAX_COUNCIL_TEXT_LENGTH, weekKey } from "./council-store.js";
+import { toMemberLine } from "./member-line.js";
 
 /**
  * THE COUNCIL's action + read authority — the shared logic `council-api-routes.ts` calls, kept
@@ -77,7 +78,8 @@ export function submitThesis(
   deps: CouncilDeps,
   playbookId?: string,
 ): SubmitThesisResult {
-  const trimmed = text.trim();
+  // Everyone in the gate reads this line — `toMemberLine` owns why (#2224 shape 3 red-team, H2).
+  const trimmed = toMemberLine(text);
   if (trimmed.length === 0) {
     return { ok: false, error: "Say something — even one line." };
   }

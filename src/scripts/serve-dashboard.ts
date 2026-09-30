@@ -154,6 +154,7 @@ async function main(): Promise<void> {
     allowlist,
     botControls,
     council,
+    filingComments,
     subscriptions,
     savedPositions,
     knownPersonaIds,
@@ -291,6 +292,18 @@ async function main(): Promise<void> {
       retract: (week, memberId) => {
         council.retract(week, memberId);
       },
+    },
+    // Comments on another member's filing (issue #2224 shape 3): the app's own store plus the
+    // app's own feedback log — deliberately no GitHub client in reach.
+    filingComments: {
+      load: () => filingComments.load(),
+      add: (issue, comment) => {
+        filingComments.add(issue, comment);
+      },
+      remove: (issue, commentId, authorId) => {
+        filingComments.remove(issue, commentId, authorId);
+      },
+      readFilings: () => feedbackLog.list(),
     },
     progression: progressionService,
     // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`

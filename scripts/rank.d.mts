@@ -31,3 +31,10 @@ export function rankRow(
 ): RankRow | null;
 export function rankOrder(rows: RankRow[]): RankRow[];
 export function renderRank(rows: RankRow[]): string;
+export function snapshotMarker(numbers: number[]): string;
+export function parseSnapshot(text: string | null | undefined): number[] | null;
+export function rankDelta(
+  prev: number[],
+  curr: number[],
+): { movedUp: number[]; retired: number[]; added: number[] };
+export function digestLine(prev: number[] | null, curr: number[], since: string | null): string;

@@ -8,6 +8,7 @@ import {
 import { type ReactElement, useRef } from "react";
 import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
+import { BrandEye } from "../shell/brand-eye";
 import { KeyboardChords } from "../shell/keyboard";
 import { MarketSession } from "../shell/market-session";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
@@ -149,6 +150,7 @@ function RootShell(): ReactElement {
             <span className="brand-mark" aria-hidden="true">
               SC
             </span>
+            <BrandEye />
             Skynet Capital
           </span>
           <nav className="topnav" aria-label="Views">

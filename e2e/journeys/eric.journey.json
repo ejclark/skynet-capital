@@ -31,9 +31,11 @@
         {
           "id": "s3",
           "goto": "/app/accounts",
-          "sees": "the market calendar's head under the section switch — the week's range, arrows, the lens row — and under the net-worth card the events on what he holds (nothing dated on EEM this week; the market-wide print beside it)",
+          "sees": "the market calendar under the section switch — at desktop the head in the row (the week's range, arrows, the lens row); on a phone one chip naming the range that opens the head in a sheet — and under the net-worth card the events on what he holds (nothing dated on EEM this week; the market-wide print beside it)",
           "ears": "WHEN the owner reads the book on a Monday, the app shall show the week's events that touch the tickers held, on the same page.",
-          "expect": [{ "role": "button", "name": "Week", "exact": true, "within": "main" }],
+          "expect": [
+            { "role": "region", "name": "Market calendar", "exact": true, "within": "main" }
+          ],
           "act": { "click": { "role": "button", "name": "Events", "exact": true } },
           "judge": "does this reader know what is happening this week to what they hold?"
         },
@@ -198,9 +200,12 @@
         {
           "id": "s3",
           "goto": "/app/research",
-          "sees": "R&D at 390: the calendar in the phone strip, the fog notice beside the day lens",
-          "ears": "WHEN R&D renders on a phone, the app shall keep the range control and its fog notice visible without hover.",
-          "expect": [{ "role": "heading", "name": "R&D" }],
+          "sees": "R&D at 390: the calendar's chip naming the range; one tap opens the head and the month grid in a sheet, the fog notice beside the day lens",
+          "ears": "WHEN R&D renders on a phone, the app shall keep the range control one tap away and its fog notice visible without hover.",
+          "expect": [
+            { "role": "heading", "name": "R&D" },
+            { "role": "button", "name": "Market calendar:" }
+          ],
           "judge": "can this reader change the week from here?"
         }
       ]

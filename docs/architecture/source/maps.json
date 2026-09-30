@@ -570,7 +570,7 @@
           {
             "id": "prefs",
             "label": "Per-viewer preferences",
-            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, decision-pager.tsx, new-high-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts",
+            "path": "app/src/shell/prefs.ts, saved-views.ts, default-account.ts, decision-pager.tsx, new-high-ceremony.tsx, level-up-ceremony.tsx, alpaca-guide.tsx, app/src/live/moneypenny-storage.ts, guidance.ts",
             "responsibility": "localStorage-backed per-browser conveniences (theme, density, saved views, default account, dismissed ceremonies) — never shared state."
           },
           {

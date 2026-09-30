@@ -7,8 +7,10 @@ import {
   type EngagementCelebration,
   type GradedAnswer,
   type JourneyCelebration,
+  type LevelUp,
   submitCheckAnswers,
 } from "../live/learn";
+import { flareTower } from "./tower-bus";
 
 /**
  * THE UNLOCK MOMENT IN THE SHELL (#738 phase 8b) — the celebration banner and the comprehension
@@ -22,8 +24,13 @@ import {
 
 /** The claim mechanics every unlock banner shares: bank the ids, refuse silently to swallow an
  *  error, refetch on success. One hook so `UnlockBanner` and `EngagementUnlockBanner` (#567)
- *  don't each carry their own copy of the same busy/error dance. */
-function useClaim(ids: readonly string[], onClaimed: () => void) {
+ *  don't each carry their own copy of the same busy/error dance. A claim the server accepted is
+ *  when the tower reacts (#3977 slice 3): the Eye flares once while the banner's lines are still
+ *  the thing just read. Only the member's own earn reaches this banner (`/api/learn` is the
+ *  session's own progress), and a refused claim flares nothing. A claim that finished a whole
+ *  course hands its level-ups to `onClaimed` instead: the level-up takeover covers the page, so
+ *  the Eye waits and flares as the member leaves it (`takeover.tsx`). */
+function useClaim(ids: readonly string[], onClaimed: (levelUps: readonly LevelUp[]) => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const claim = async () => {
@@ -31,8 +38,11 @@ function useClaim(ids: readonly string[], onClaimed: () => void) {
     setError(undefined);
     try {
       const answer = await claimMilestones(ids);
-      if (answer.ok) onClaimed();
-      else setError(answer.error);
+      if (answer.ok) {
+        const levelUps = answer.graduated ?? [];
+        if (levelUps.length === 0) flareTower("milestone");
+        onClaimed(levelUps);
+      } else setError(answer.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -54,7 +64,7 @@ function UnlockBannerShell({
   readonly eyebrow: string;
   readonly lines: readonly ReactNode[];
   readonly ids: readonly string[];
-  readonly onClaimed: () => void;
+  readonly onClaimed: (levelUps: readonly LevelUp[]) => void;
 }): ReactElement {
   const { busy, error, claim } = useClaim(ids, onClaimed);
   return (
@@ -91,7 +101,8 @@ export function UnlockBanner({
   onClaimed,
 }: {
   readonly celebrations: readonly JourneyCelebration[];
-  readonly onClaimed: () => void;
+  /** Given the courses this claim finished, if any — the caller opens their level-up. */
+  readonly onClaimed: (levelUps: readonly LevelUp[]) => void;
 }): ReactElement {
   return (
     <UnlockBannerShell

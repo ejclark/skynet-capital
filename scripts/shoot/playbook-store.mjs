@@ -101,22 +101,107 @@ const settings = {
   ],
 };
 
+// The selected account's own closed trades per playbook (#3665 slice 3): S1-NVDA has a record,
+// HC-SAURON has none — so one frame shows both the numbers and the honest empty state. The
+// house-wide block (slice 4) has both: every account's trips, larger than the account's own and
+// drawn beside it, never summed into it.
+const HOUR = 3_600_000;
+const performance = {
+  house: [
+    {
+      playbookId: "S1-NVDA",
+      trades: 19,
+      wins: 13,
+      losses: 6,
+      winRate: 68.4,
+      netRealized: 3_915.2,
+      returnPct: 4.7,
+      capitalCommitted: 83_300,
+      avgHoldMs: 10 * 24 * HOUR,
+      longestHold: { holdMs: 15 * 24 * HOUR },
+      shortestHold: { holdMs: 26 * HOUR },
+      byDirection: { long: 19, short: 0 },
+      byInstrument: { stock: 12, call: 7, put: 0 },
+    },
+    {
+      playbookId: "HC-SAURON",
+      trades: 212,
+      wins: 109,
+      losses: 97,
+      winRate: 52.9,
+      netRealized: -1_284.75,
+      returnPct: -0.6,
+      capitalCommitted: 214_050,
+      avgHoldMs: 7 * HOUR,
+      longestHold: { holdMs: 4 * 24 * HOUR + 2 * HOUR },
+      shortestHold: { holdMs: 18 * 60_000 },
+      byDirection: { long: 188, short: 24 },
+      byInstrument: { stock: 212, call: 0, put: 0 },
+    },
+  ],
+  mine: [
+    {
+      playbookId: "S1-NVDA",
+      trades: 4,
+      wins: 3,
+      losses: 1,
+      winRate: 75,
+      netRealized: 842.5,
+      returnPct: 6.2,
+      capitalCommitted: 13_580,
+      avgHoldMs: 9 * 24 * HOUR,
+      longestHold: { holdMs: 14 * 24 * HOUR + 3 * HOUR },
+      shortestHold: { holdMs: 2 * 24 * HOUR + 6 * HOUR },
+      byDirection: { long: 4, short: 0 },
+      byInstrument: { stock: 3, call: 1, put: 0 },
+    },
+  ],
+  accounts: ["human-joe"],
+};
+
 // One shell per state rather than a reload: the browser serves a fulfilled route from its own
 // memory cache on reload, so a second state has to be a second page load with its own stubs.
-async function frame(tag, locked, expect, viewport) {
+async function frame(tag, locked, expect, viewport, scrollTo, path = "/app/u/human-joe/playbooks") {
   const { page, origin, shoot, close } = await openShell({
     name: "playbook-store",
     ...(viewport ? { viewport } : {}),
-    stubs: { "/api/playbook-store": store(locked), "/api/desk/*": desk, "/api/settings": settings },
+    stubs: {
+      "/api/playbook-store": store(locked),
+      "/api/desk/*": desk,
+      "/api/settings": settings,
+      "/api/outpost/performance": performance,
+    },
   });
-  await page.goto(`${origin}/app/u/human-joe/playbooks`);
-  await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=human-joe/);
+  await page.goto(`${origin}${path}`);
+  if (path.startsWith("/app/u/"))
+    await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=human-joe/);
   await page.getByText(expect).first().waitFor();
+  if (scrollTo)
+    await page
+      .getByText(scrollTo)
+      .first()
+      .evaluate((el) => el.scrollIntoView({ block: "center" }));
   await shoot(tag);
   await close();
 }
 
 const PHONE = { width: 390, height: 844 };
+await frame(
+  "phone-account-metrics",
+  false,
+  "No closed trades on this playbook yet",
+  PHONE,
+  "Closed trades",
+);
+// Catalog-only (no account picked): the house block alone, on every card (#3665 slice 4).
+await frame(
+  "phone-catalog-house",
+  false,
+  "House — every account",
+  PHONE,
+  "212",
+  "/app/research?section=playbooks",
+);
 await frame("phone-delegation-earned", false, "Capital to delegate", PHONE);
 await frame("delegation-locked", true, "Delegating capital opens after");
 await frame("delegation-earned", false, "Capital to delegate");

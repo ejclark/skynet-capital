@@ -1,5 +1,14 @@
 import { describe, expect, it } from "@rstest/core";
-import { classOf, rankOrder, rankRow, renderRank } from "../../scripts/rank.mjs";
+import {
+  classOf,
+  digestLine,
+  parseSnapshot,
+  rankDelta,
+  rankOrder,
+  rankRow,
+  renderRank,
+  snapshotMarker,
+} from "../../scripts/rank.mjs";
 
 // #4064's ordering rule: a coarse class with a one-line why, then oldest-ready-first inside a
 // class, with an item past one delivery unit ranked below the ready units in its class. The
@@ -109,5 +118,38 @@ describe("rank: the order", () => {
     const table = renderRank([row(12, ["plan", "ready"], now - 50 * H)].filter((r) => r !== null));
     expect(table).toContain("**1 buildable items · P0 0 · P1 0 · P2 1 · P3 0**");
     expect(table).toContain("| 1 | P2 | #12 Build 12 | improves a surface or a process | 2d |  |");
+  });
+});
+
+// Slice 3: the rank is derived live, so a merge re-ranks it by the next read; what the digest owes
+// Eric is the movement since the last digest, in one line.
+describe("rank: the digest delta", () => {
+  it("round-trips the snapshot a digest embeds, and reads none from an older digest", () => {
+    const text = `## Noise absorbed\n- line\n${snapshotMarker([4060, 2485, 3621])}\n`;
+    expect(parseSnapshot(text)).toEqual([4060, 2485, 3621]);
+    expect(parseSnapshot("## Noise absorbed\n- no marker")).toBeNull();
+    expect(parseSnapshot(snapshotMarker([]))).toEqual([]);
+  });
+
+  it("does not count a retirement shifting the tail up a row as a move", () => {
+    expect(rankDelta([1, 2, 3, 4], [2, 3, 4])).toEqual({ movedUp: [], retired: [1], added: [] });
+  });
+
+  it("counts an item that overtook one still ranked, and names what is new", () => {
+    // 4 was labelled bug and jumped the queue; 9 was filed since.
+    expect(rankDelta([1, 2, 3, 4], [4, 1, 2, 9, 3])).toEqual({
+      movedUp: [4],
+      retired: [],
+      added: [9],
+    });
+  });
+
+  it("writes one line, or says a baseline was set when the last digest carried no snapshot", () => {
+    expect(digestLine([1, 2, 3, 4], [4, 2, 3], "2026-09-30")).toBe(
+      "Rank since 2026-09-30: 1 moved up (#4) · 1 retired (#1) · 0 new.",
+    );
+    expect(digestLine(null, [1, 2], "2026-09-30")).toBe(
+      "Rank: 2 items — baseline set; the next digest reports movement.",
+    );
   });
 });

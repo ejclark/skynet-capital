@@ -58,6 +58,9 @@ export interface ResearchEvent {
   readonly impact?: string;
   readonly symbols: readonly string[];
   readonly researched: boolean;
+  /** The calendar payload's mark for an event whose ledger states a call (#3977 slice 5) — how
+   *  R&D's fog line counts held calls without the calls. Absent on the full shelf's events. */
+  readonly called?: boolean;
 }
 
 /** A day the exchange is closed, or closes early — mirrors the server's MarketClosure. */
@@ -82,6 +85,27 @@ export async function fetchResearch(): Promise<ResearchShelfData> {
   const raw = (await res.json()) as Partial<ResearchShelfData>;
   // A server from before slice 2 sends no closures; the calendar then colours nothing, honestly.
   return { ...(raw as ResearchShelfData), closures: raw.closures ?? [] };
+}
+
+/**
+ * THE CALENDAR'S SLICE (#3977 slice 5) — `/api/research/calendar`, what the three calendar
+ * surfaces (R&D's grid, the Profile page's Events, Trade's line) read instead of the whole shelf:
+ * every event without its impact, the closures, and only the calls a calendar can print (an event
+ * naming a ticker, or a headline macro print). The server says why each field is there
+ * (`src/observatory/research-calendar-json-view.ts`). Its calls are `ResearchCall`s without the
+ * board's TL;DR, adjacents or freshness, so `callForLens` and `bookEventsIn` read them unchanged.
+ */
+export interface ResearchCalendarData {
+  readonly events: readonly ResearchEvent[];
+  readonly closures: readonly ResearchClosure[];
+  readonly calls: readonly ResearchCall[];
+}
+
+export async function fetchResearchCalendar(): Promise<ResearchCalendarData> {
+  const res = await fetch("/api/research/calendar", { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`research calendar ${res.status}`);
+  const raw = (await res.json()) as Partial<ResearchCalendarData>;
+  return { events: raw.events ?? [], closures: raw.closures ?? [], calls: raw.calls ?? [] };
 }
 
 /**

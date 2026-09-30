@@ -79,10 +79,17 @@ export const FIELDS = [
  * it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in for a
  * caller that can see one.
  */
-export function statusForIssue({ state = "open", labels = [], hasOpenLinkedPr = false } = {}) {
+export function statusForIssue({
+  state = "open",
+  labels = [],
+  hasOpenLinkedPr = false,
+  decisionCalloutMissing = false,
+} = {}) {
   if (state === "closed") return "Done";
   const has = (name) => labels.includes(name);
-  if (has("needs-eric") || has("needs-info")) return "Blocked";
+  // #3913 slice 2: a `needs-eric` with no `Needs from you` callout (decision-callout.mjs) is not
+  // shown as waiting on Eric — it falls through to its ordinary column until the ask is written.
+  if (has("needs-info") || (has("needs-eric") && !decisionCalloutMissing)) return "Blocked";
   if (has("in-progress") || hasOpenLinkedPr) return "In Progress";
   if (has("ready")) return "Ready";
   return "Backlog";
@@ -125,6 +132,19 @@ export function isRetryableProjectsGhError(text) {
   return isTransientGhError(text) || isMaskedOwnerFailure(text);
 }
 
+// #4182 — CURL SAYS "5xx" IN ITS OWN WORDS. `syncIssue`'s one REST read (`ghRest`, curl `--fail`)
+// reports a GitHub 502 as `curl: (22) The requested URL returned error: 502` — reproduced against a
+// local server returning 502/504/403 with curl 8.5. `isTransientGhError` matches gh's `HTTP 502`
+// form, not this one, so the issue read got exactly one attempt; 12 of the 2026-09-30 backfill's 20
+// failures were GitHub 5xx. Only 5xx: curl's 403/429 is a rate limit or auth, and an hourly window
+// does not reopen in six seconds (see `isRateLimitExhausted`, below).
+export const CURL_SERVER_ERROR = /returned error: 5\d\d\b/i;
+
+/** Is this `ghRest` (curl) failure a GitHub-side 5xx or network blip that a second try can fix? */
+export function isRetryableRestError(text) {
+  return isTransientGhError(text) || CURL_SERVER_ERROR.test(String(text ?? ""));
+}
+
 // #3954 — `gh project item-add` IS NOT IDEMPOTENT, and every sync after an issue's first one
 // depends on it being so. `addProjectV2ItemById` answers a second add for the same content with
 // `GraphQL: Content already exists in this project`, so `sync project status` went red on `main`
@@ -139,6 +159,114 @@ export const ALREADY_ON_BOARD_FAILURE = /Content already exists in this project/
 /** Is this `gh project item-add` failure just "the issue is already an item on this board"? */
 export function isAlreadyOnBoardError(text) {
   return ALREADY_ON_BOARD_FAILURE.test(String(text ?? ""));
+}
+
+// #4183 — A BULK SWEEP PRICED BY COST, NOT BY CALL COUNT, DRAINS THE HOUR FOR EVERYTHING ELSE.
+//
+// `projects-setup.yml`'s backfill job ran 12:14:53Z–12:20:34Z on 2026-09-30 and called `syncIssue`
+// once per open issue. Each call re-read the board's ENTIRE item list, plus the project and its
+// field definitions — and GraphQL prices an `items(first: 100){ … fieldValues(first: 100) }` page
+// by node count (~100 points), not as one call. Ninety-odd issues spent Eric's whole 5,000-point
+// hour in under six minutes: the backfill died on its own drain, and every `sync project status`
+// run behind it failed the same way until the window rolled over. #4183 is one of those, filed at
+// 12:22:43Z — a repair session dispatched against a job that was an innocent bystander.
+//
+// This is docs/LESSONS.md's 2026-08-26 entry recurring one level up ("A burst of pushes drained the
+// postmaster's own GraphQL rate limit"), and that entry's own banked side quest is half the fix:
+// GitHub exposes the remaining quota for free (`ghRateLimit`), so a sweep can refuse to start
+// instead of failing into it. The other half is `resolveBoardItem`'s `cachedItems` below — reading
+// the per-run constants ONCE is what takes the sweep off the ceiling in the first place.
+export const RATE_LIMIT_EXHAUSTED = /API rate limit (?:already )?exceeded/i;
+
+/** Is this `gh` failure "the hourly API budget for this token is spent", rather than a code fault? */
+export function isRateLimitExhausted(text) {
+  return RATE_LIMIT_EXHAUSTED.test(String(text ?? ""));
+}
+
+// Deliberately NOT added to `isRetryableProjectsGhError`, for the same reason `isAlreadyOnBoardError`
+// is not: the window is HOURLY and the retry ladder is six seconds, so three attempts only restate
+// the same refusal three times and spend two more points doing it.
+
+/** `reset` is epoch SECONDS. Renders it as the sentence a log reader can act on. */
+function resetPhrase(reset, now) {
+  if (typeof reset !== "number" || !Number.isFinite(reset)) {
+    return "Re-run once GitHub's hourly GraphQL window has rolled over.";
+  }
+  const at = new Date(reset * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+  const mins = Math.max(0, Math.ceil((reset * 1000 - now) / 60_000));
+  return `The budget resets at ${at} (${mins} min) — re-run after that.`;
+}
+
+/**
+ * The sentence a repair session should find in the log instead of a `child_process` stack trace.
+ * An exhausted quota is not a defect in this repo's code and no retry can shorten an hourly window,
+ * so the only useful output is: which bucket, how much is left, when it comes back. Pure — the
+ * caller supplies the free `ghRateLimit` read.
+ *
+ * KEEPS THE PHRASE `API rate limit exceeded` IN THE TEXT, deliberately: this replaces gh's error as
+ * the message a caller further up sees, and projects-backfill.mjs decides whether to abort the whole
+ * sweep by running `isRateLimitExhausted` over exactly that message. An explanation its own
+ * classifier can no longer recognise would have turned the abort back into a grind. The round trip
+ * is specced, not assumed.
+ */
+export function explainRateLimitExhausted({
+  call = "a `gh project` call",
+  remaining,
+  reset,
+  now = Date.now(),
+} = {}) {
+  const left = typeof remaining === "number" ? ` GitHub reports ${remaining} point(s) left.` : "";
+  return (
+    `${call} hit "API rate limit exceeded" — this token's hourly GraphQL budget is spent (#4183), ` +
+    `which is not a code fault and not retryable: the window is hourly, the retry ladder is ` +
+    `seconds.${left} ${resetPhrase(reset, now)}`
+  );
+}
+
+// The floor a whole-backlog sweep must clear before it starts. Once the per-run constants are read
+// once instead of once per issue (`cachedItems`, below), a ~90-issue backfill costs about one
+// `item-list` page (~100 points) plus a couple of points per issue for the REST read and the Status
+// write — low hundreds, not thousands. 500 is that shape with headroom. Below it the honest move is
+// to wait for the reset rather than start: a sweep that dies halfway leaves the board half-written
+// and the log carrying one identical failure per remaining issue, which is what #4183 looked like.
+export const SWEEP_MIN_GRAPHQL_POINTS = 500;
+
+/**
+ * May a whole-backlog sweep start on the budget GitHub currently reports? Returns `{ok, reason}` —
+ * the reason is logged either way, so the next run's log carries the budget that was actually seen
+ * rather than leaving a future session to infer it.
+ *
+ * A missing/garbled budget reads as GO, never as STOP: the pre-flight exists to protect a shared
+ * quota, not to become a second way for the sweep to fail. If the read was wrong, the sweep's own
+ * `isRateLimitExhausted` abort still catches the exhaustion on the first call that hits it.
+ */
+export function planBoardSweep({
+  issueCount = 0,
+  remaining,
+  reset,
+  now = Date.now(),
+  minPoints = SWEEP_MIN_GRAPHQL_POINTS,
+} = {}) {
+  if (typeof remaining !== "number" || !Number.isFinite(remaining)) {
+    return {
+      ok: true,
+      reason:
+        "GitHub reported no graphql budget — proceeding rather than blocking on a read that failed.",
+    };
+  }
+  if (remaining >= minPoints) {
+    return {
+      ok: true,
+      reason: `graphql budget ${remaining} ≥ floor ${minPoints} — enough for a ${issueCount}-issue sweep.`,
+    };
+  }
+  return {
+    ok: false,
+    reason:
+      `Only ${remaining} graphql point(s) left, floor ${minPoints} — refusing to start a ` +
+      `${issueCount}-issue sweep that would die halfway and half-write the board (#4183). ` +
+      resetPhrase(reset, now),
+  };
 }
 
 /**
@@ -201,15 +329,26 @@ function readBoardUntilItemAppears({ listItems, issueUrl, attempts, baseMs, slee
  * missing (#3979, above). Still fails closed once the re-reads are spent — a silent miss here
  * would write Status to nothing at all — naming the two states that survive a re-read: a truncated
  * page, or an item GitHub counts but `item-list` won't show (an ARCHIVED item is the known case).
+ *
+ * `cachedItems` is a board list the caller ALREADY HOLDS (#4183): a whole-backlog sweep reads the
+ * board once and hands the same list to every issue. A hit costs nothing at all — no `item-add`
+ * mutation that was only ever going to come back "already exists", and no second `item-list`. A
+ * miss falls straight into the add-first path below, unchanged, so the first sync of a brand-new
+ * issue still costs one mutation and no list read; and a stale cache can only produce a miss, never
+ * a false hit, because the match is on `content.url` against a list GitHub really returned.
  */
 export function resolveBoardItem({
   addItem,
   listItems,
   issueUrl,
+  cachedItems,
   attempts = BOARD_LOOKUP_ATTEMPTS,
   baseMs = BOARD_LOOKUP_BASE_MS,
   sleep = sleepSync,
 }) {
+  const known = findBoardItem(cachedItems, issueUrl);
+  if (known) return { item: known, added: false };
+
   try {
     return { item: addItem(), added: true };
   } catch (err) {

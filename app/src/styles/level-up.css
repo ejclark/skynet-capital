@@ -1,0 +1,131 @@
+/* The level-up ceremony (#469): `shell/level-up-ceremony.tsx`, on the shared takeover
+ * (`new-high.css` owns the overlay, rain, eyebrow, value and actions). What is added here is the
+ * ladder strip and the list of what finished the course. Every rung's state rides a shape, a word
+ * and a weight — the accent is decoration, never the only signal (docs/BRAND.md → Accessibility). */
+
+/* A ladder of five and two lines of proof read best at phone width; desktop adds air, not width. */
+.lu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 600px);
+}
+.lu-value {
+  font-size: clamp(40px, 12vw, 84px);
+}
+.lu-check {
+  display: inline-block;
+  font-size: 0.7em;
+  vertical-align: 0.08em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lu-check {
+    animation: lu-stamp 520ms var(--ease-spatial, cubic-bezier(0.2, 0.8, 0.2, 1)) 180ms both;
+  }
+  .lu-rung--now .lu-mark {
+    animation: lu-rise 700ms var(--ease-spatial, cubic-bezier(0.2, 0.8, 0.2, 1)) 320ms both;
+  }
+}
+@keyframes lu-stamp {
+  from {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes lu-rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.lu-course {
+  margin: 0;
+  font-size: var(--text-md, 15px);
+  font-weight: 600;
+  color: var(--text);
+}
+.lu-ladder {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.lu-rung {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  font-family: var(--mono);
+}
+.lu-mark {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text);
+}
+.lu-rung b {
+  font-size: 13px;
+}
+.lu-word {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* The one just finished: bigger mark, heavier border, the word in full text colour. */
+.lu-rung--now {
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.lu-rung--now .lu-mark {
+  font-size: 26px;
+  color: var(--charged);
+}
+.lu-rung--now .lu-word {
+  color: var(--text);
+  font-weight: 700;
+}
+.lu-rung--open {
+  border-style: dashed;
+}
+.lu-rung--locked {
+  opacity: 0.55;
+}
+.lu-proved {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm, 13px);
+  color: var(--text);
+}
+.lu-on {
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .lu-rung {
+    padding: 6px 2px;
+  }
+  .lu-word {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+}

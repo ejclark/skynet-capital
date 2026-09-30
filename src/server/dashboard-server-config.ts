@@ -21,6 +21,7 @@ import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
+import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
@@ -271,4 +272,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * of the composer.
    */
   readonly council?: CouncilDeps;
+  /**
+   * `GET/POST /api/feedback/comments` — comments on another member's filing, kept in the app and
+   * never posted to GitHub (issue #2224 shape 3). Omit to disable — the Feedback pulse then shows
+   * its cards with no comment fold.
+   */
+  readonly filingComments?: FilingCommentsDeps;
 }

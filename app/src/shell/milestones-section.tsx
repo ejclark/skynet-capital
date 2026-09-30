@@ -1,13 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useEffect, useRef } from "react";
-import { fetchJourney, type Journey } from "../live/learn";
+import { useEffect, useRef, useState } from "react";
+import { fetchJourney, type Journey, type LevelUp } from "../live/learn";
 import { fetchOnboarding, type Onboarding } from "../live/onboarding";
 import { fetchPlaybooks, type Playbooks } from "../live/playbooks";
 import { ConnectLink, scrollToChapter } from "./connect-link";
 import { Hud, ladderProgress } from "./course-cards";
 import { LadderChapter } from "./ladder-chapter";
 import { LadderGateCard } from "./ladder-gate";
+import { LevelUpCeremony } from "./level-up-ceremony";
 import { type ChapterState, MilestoneCard, type MilestoneChapter } from "./milestone-card";
 import { OnboardingChapter } from "./onboarding-chapter";
 import { PlaybooksChapter } from "./playbooks-chapter";
@@ -136,6 +137,8 @@ export function MilestonesSection({
   const onboarding = useQuery({ queryKey: ["onboarding"], queryFn: fetchOnboarding });
   const playbooks = useQuery({ queryKey: ["playbooks"], queryFn: fetchPlaybooks });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["learn"] });
+  // Held here, not in the banner: the refetch a claim triggers unmounts the banner that claimed.
+  const [levelUps, setLevelUps] = useState<readonly LevelUp[]>([]);
   const anchor = useChapterAnchor(chapter, journey.isSuccess);
 
   if (journey.isPending) return <p className="note">Opening the journey…</p>;
@@ -146,6 +149,7 @@ export function MilestonesSection({
   return (
     <div className="milestones">
       <ProfileMeta />
+      <LevelUpCeremony levelUps={levelUps} courses={data.courses} />
       <header className="page-header">
         <div className="join-eyebrow">Milestones · table of contents</div>
         <h2>Your milestones</h2>
@@ -168,7 +172,13 @@ export function MilestonesSection({
         </p>
       ) : null}
       {data.celebrating.length > 0 ? (
-        <UnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
+        <UnlockBanner
+          celebrations={data.celebrating}
+          onClaimed={(ups) => {
+            if (ups.length > 0) setLevelUps(ups);
+            refresh();
+          }}
+        />
       ) : null}
       {data.engagementCelebrating.length > 0 ? (
         <EngagementUnlockBanner celebrations={data.engagementCelebrating} onClaimed={refresh} />
