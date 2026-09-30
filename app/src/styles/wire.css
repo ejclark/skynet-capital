@@ -323,6 +323,11 @@
 }
 .council-entries li span {
   line-height: 1.5;
+  /* one member's unbroken 280-char line (a URL, "WWWW…") must wrap, never widen everyone's list
+     at phone width; isolate keeps its text direction from spilling onto the play tag (#2224 shape 3). */
+  min-width: 0;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
 }
 .council-play-picker {
   display: flex;

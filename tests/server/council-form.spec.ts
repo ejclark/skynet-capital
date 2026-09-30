@@ -41,6 +41,18 @@ describe("submitThesis", () => {
     expect(view.mine?.text).toBe("NVDA runs, because volume confirms it.");
   });
 
+  it("strips bidi overrides and flattens control characters to one line (#2224 shape 3, H2)", () => {
+    const d = deps();
+    expect(submitFn("long \u202Eevil\u202C\nNVDA\tinto print", "member-1", d)).toEqual({
+      ok: true,
+    });
+    expect(viewFn(d, "member-1").mine?.text).toBe("long evil NVDA into print");
+  });
+
+  it("refuses a line that is only control characters", () => {
+    expect(submitFn("\u202E\n\u2066", "member-1", deps())).toMatchObject({ ok: false });
+  });
+
   it("refuses an empty line without touching the store", () => {
     const d = deps();
     expect(submitFn("   ", "abc123", d)).toEqual({

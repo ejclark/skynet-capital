@@ -77,7 +77,13 @@ export function submitThesis(
   deps: CouncilDeps,
   playbookId?: string,
 ): SubmitThesisResult {
-  const trimmed = text.trim();
+  // Everyone in the gate reads this line (#2224 shape 3 red-team, H2): bidi overrides/isolates
+  // could visually reorder the play tag beside it, and control characters (a newline from a pasted
+  // block) break "one line". Overrides go; controls collapse to a space. Emoji joiners stay.
+  const trimmed = text
+    .replace(/[\u202A-\u202E\u2066-\u2069]/g, "")
+    .replace(/\p{Cc}+/gu, " ")
+    .trim();
   if (trimmed.length === 0) {
     return { ok: false, error: "Say something — even one line." };
   }

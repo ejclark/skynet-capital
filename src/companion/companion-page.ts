@@ -60,12 +60,19 @@ const PLAIN_PAGES: Readonly<Record<string, string>> = {
   "/settings": "settings",
 };
 
+/** A map lookup that only answers from the map's OWN keys. A plain `map[key]` on a member-typed
+ *  key walks the prototype chain — `?section=constructor` came back as the text of
+ *  `function Object()` in the privileged Page line (#2224 shape 3 red-team, C1). */
+function ownValue(map: Readonly<Record<string, string>>, key: string): string | undefined {
+  return Object.hasOwn(map, key) ? map[key] : undefined;
+}
+
 function withSection(
   base: string,
   sections: Readonly<Record<string, string>>,
   asked: string | null,
 ): string {
-  const section = asked ? sections[asked] : undefined;
+  const section = asked ? ownValue(sections, asked) : undefined;
   return section ? `${base}, showing ${section}` : base;
 }
 
@@ -77,7 +84,8 @@ function describeTrade(params: URLSearchParams): string {
   if (play) parts.push(`set to "${play.name}" (${play.code})`);
   const manage = params.get("manage")?.trim().toUpperCase();
   if (manage && parseOccSymbol(manage))
-    parts.push(`managing their held ${humanizeOptionSymbol(manage)}`);
+    // The URL is not proof they hold it — the Position line (from their desk) says whether they do.
+    parts.push(`on the manage view for ${humanizeOptionSymbol(manage)}`);
   return withSection(parts.join(" "), TRADE_SECTIONS, params.get("section"));
 }
 
@@ -120,11 +128,11 @@ export function describePage(page: unknown): string | undefined {
     return withSection("the Activity page", ACTIVITY_SECTIONS, params.get("section"));
   if (path === "/research")
     return withSection("the research page", RESEARCH_SECTIONS, params.get("section"));
-  const plain = PLAIN_PAGES[path];
+  const plain = ownValue(PLAIN_PAGES, path);
   if (plain) return plain;
   const profile = /^\/u\/[^/]+(?:\/([a-z]+))?$/.exec(path);
   if (profile) {
-    const tab = profile[1] ? PROFILE_TABS[profile[1]] : undefined;
+    const tab = profile[1] ? ownValue(PROFILE_TABS, profile[1]) : undefined;
     if (profile[1] && !tab) return undefined;
     return tab ? `a member's profile (${tab})` : "a member's profile";
   }
