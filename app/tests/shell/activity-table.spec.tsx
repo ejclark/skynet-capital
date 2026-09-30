@@ -135,3 +135,29 @@ describe("ActivityTable — the round behind a fill", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 });
+
+// #4046 item 1: a Thesis marker links `?section=activity#act-<orderId>`, but the ledger arrives
+// after the router has tried the hash — the row has to bring itself into view once it exists.
+describe("ActivityTable — the row a link points at", () => {
+  const scroll = rstest.fn();
+  beforeEach(() => {
+    scroll.mockReset();
+    Element.prototype.scrollIntoView = scroll;
+  });
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("scrolls the targeted row into view when it renders", () => {
+    window.location.hash = "#act-ord-2";
+    render(<ActivityTable events={[event(), event({ orderId: "ord-2", symbol: "XLE" })]} />);
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(scroll.mock.contexts[0]).toHaveAttribute("id", "act-ord-2");
+  });
+
+  it("leaves the page where it is with no row in the hash", () => {
+    window.location.hash = "#cycle-1";
+    render(<ActivityTable events={[event()]} />);
+    expect(scroll).not.toHaveBeenCalled();
+  });
+});
