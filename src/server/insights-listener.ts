@@ -5,6 +5,7 @@ import {
   BOT_CREDENTIALS_PATH,
   BOT_CREDENTIALS_SECRET_HEADER,
 } from "../autonomous/bot-credentials-wire.js";
+import { type CondScoutSnapshot, parseCondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import { type ControlsPollReport, controlsPollReport } from "../autonomous/controls-poll-wire.js";
 import { type DecisionBatch, parseDecisionBatch } from "../autonomous/decision-wire.js";
 import {
@@ -15,15 +16,11 @@ import {
 } from "../autonomous/insight-record.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { BotCredentials } from "./bot-credentials-gate.js";
+import { handleBridgePost, readBoundedBody, respond } from "./bridge-http.js";
 
 /** The bots→app decision-replication bridge route (`decision-wire.ts`). */
 const DECISIONS_PATH = "/decisions";
-
-/**
- * One insight record, JSON-encoded, is a few hundred bytes at most. 16 KB is generous headroom
- * without letting a hostile/broken caller hold the process's memory hostage streaming a body.
- */
-const MAX_BODY_BYTES = 16 * 1024;
+const COND_SCOUT_PATH = "/cond-scout";
 
 /**
  * `/decisions` is a DIFFERENT payload class from `/insights` and needs its own cap — a
@@ -35,10 +32,12 @@ const MAX_BODY_BYTES = 16 * 1024;
  * 16 KB cap, which is sized for a single few-hundred-byte insight, not a hundred-record decision
  * batch. This is almost certainly the real reason replication ever looked "stuck": a batch this
  * size has likely never once fit under 16 KB. 4 MB is generous headroom for a realistic batch
- * while still bounding a hostile/broken caller, the same reasoning `MAX_BODY_BYTES` above states
+ * while still bounding a hostile/broken caller, the same reasoning `MAX_BODY_BYTES` (`bridge-http.ts`) states
  * for its own (much smaller) payload class.
  */
 const MAX_DECISIONS_BODY_BYTES = 4 * 1024 * 1024;
+/** 50 retros + 20 open probes serialize to well under this; the cap is the bound, not a target. */
+const MAX_COND_SCOUT_BODY_BYTES = 512 * 1024;
 
 export interface InsightsListenerConfig {
   readonly record: (entry: InsightRecord) => Promise<void>;
@@ -67,6 +66,8 @@ export interface InsightsListenerConfig {
    * `POST /decisions` — the bots→app decision-replication bridge (PR 4). Omit to 404 the route,
    * same posture as every other optional bridge surface here.
    */
+  /** `POST /cond-scout` — COND-SCOUT's ledger snapshot (#3651). Omit to 404 the route. */
+  readonly condScout?: { readonly accept: (snapshot: CondScoutSnapshot) => void };
   readonly decisions?: {
     readonly recordBatch: (batch: DecisionBatch) => void;
   };
@@ -136,13 +137,6 @@ export function createInsightsListener(config: InsightsListenerConfig): Server {
   });
 }
 
-/** JSON in, JSON out — matches `fetchJson` (`src/http/fetch-json.ts`), the client's one fetch
- * call site, which parses every response body as JSON regardless of status. */
-function respond(res: ServerResponse, status: number, body: Record<string, unknown>): void {
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify(body));
-}
-
 async function handleInsightPost(
   req: IncomingMessage,
   res: ServerResponse,
@@ -162,6 +156,11 @@ async function handleInsightPost(
 
   if (path === DECISIONS_PATH) {
     await handleDecisionsPost(req, res, config);
+    return;
+  }
+
+  if (path === COND_SCOUT_PATH) {
+    await handleCondScoutPost(req, res, config);
     return;
   }
 
@@ -263,58 +262,50 @@ function handleControlsGet(
 /** `POST /decisions` — the bots→app decision-replication bridge (`decision-wire.ts`). Same trust
  *  boundary and body-size cap as `/insights`; a malformed/oversized/unauthenticated body can only
  *  ever produce an HTTP error response. */
-async function handleDecisionsPost(
+function handleDecisionsPost(
   req: IncomingMessage,
   res: ServerResponse,
   config: InsightsListenerConfig,
 ): Promise<void> {
-  if (req.method !== "POST") {
-    res.setHeader("allow", "POST");
-    respond(res, 405, { error: "method not allowed" });
-    return;
-  }
-  if (req.headers[INSIGHTS_BRIDGE_SECRET_HEADER] !== INSIGHTS_BRIDGE_SHARED_SECRET) {
-    respond(res, 401, { error: "unauthorized" });
-    return;
-  }
-  if (!config.decisions) {
-    respond(res, 404, { error: "decisions not configured" });
-    return;
-  }
+  const decisions = config.decisions;
+  return handleBridgePost(req, res, {
+    name: "decisions",
+    maxBytes: MAX_DECISIONS_BODY_BYTES,
+    parse: parseDecisionBatch,
+    invalid: "invalid decision batch",
+    ...(decisions
+      ? {
+          accept: (batch: DecisionBatch) => {
+            decisions.recordBatch(batch);
+            return { count: batch.records.length };
+          },
+        }
+      : {}),
+  });
+}
 
-  const bodyResult = await readBoundedBody(req, MAX_DECISIONS_BODY_BYTES);
-  if (!bodyResult.ok) {
-    try {
-      respond(res, bodyResult.reason === "too-large" ? 413 : 400, { error: bodyResult.reason });
-    } catch {
-      /* socket already gone — nothing left to respond to */
-    }
-    return;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = bodyResult.body.length > 0 ? JSON.parse(bodyResult.body) : undefined;
-  } catch {
-    respond(res, 400, { error: "malformed json" });
-    return;
-  }
-
-  const batch = parseDecisionBatch(parsed);
-  if (!batch) {
-    respond(res, 400, { error: "invalid decision batch" });
-    return;
-  }
-
-  try {
-    config.decisions.recordBatch(batch);
-  } catch (error) {
-    process.emitWarning(`[insights-listener] decision batch write failed: ${String(error)}`);
-    respond(res, 502, { error: "write failed" });
-    return;
-  }
-
-  respond(res, 200, { ok: true, count: batch.records.length });
+/** `POST /cond-scout` — COND-SCOUT's ledger snapshot (`cond-scout-wire.ts`, #3651 slice 7a). Same
+ *  trust boundary and handling as `/decisions`; the snapshot replaces the last one whole. */
+function handleCondScoutPost(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: InsightsListenerConfig,
+): Promise<void> {
+  const condScout = config.condScout;
+  return handleBridgePost(req, res, {
+    name: "cond-scout",
+    maxBytes: MAX_COND_SCOUT_BODY_BYTES,
+    parse: parseCondScoutSnapshot,
+    invalid: "invalid cond-scout snapshot",
+    ...(condScout
+      ? {
+          accept: (snapshot: CondScoutSnapshot) => {
+            condScout.accept(snapshot);
+            return { count: snapshot.open.length + snapshot.retros.length };
+          },
+        }
+      : {}),
+  });
 }
 
 /** `GET /bot-credentials?id=<personaId>` — never logs, never echoes anything BUT the requested
@@ -359,53 +350,4 @@ function handleBotCredentialsGet(
     return;
   }
   respond(res, 200, { ...credentials });
-}
-
-type BodyResult =
-  | { readonly ok: true; readonly body: string }
-  | { readonly ok: false; readonly reason: "too-large" | "stream error" };
-
-/**
- * Reads the request body, never buffering past `maxBytes`. Once the cap is crossed it stops
- * retaining further chunks (so a hostile/oversized body can't grow this process's memory) but
- * deliberately does NOT tear down the socket — this listener only reaches here after the
- * shared-secret check above passes, so the caller is always the `bots` process, never an
- * unauthenticated stranger; destroying the connection mid-body-write (as an earlier version of
- * this function did) raced the client's own request write and surfaced as a hard connection
- * reset instead of a clean 413. Letting the stream finish and *then* responding is both simpler
- * and more correct. `maxBytes` defaults to `MAX_BODY_BYTES` — the small-insight cap; a caller
- * with a different payload class (e.g. `/decisions`) passes its own.
- */
-function readBoundedBody(
-  req: IncomingMessage,
-  maxBytes: number = MAX_BODY_BYTES,
-): Promise<BodyResult> {
-  return new Promise((resolve) => {
-    let bytes = 0;
-    let oversized = false;
-    const chunks: Buffer[] = [];
-    let settled = false;
-    const finish = (result: BodyResult) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-    req.on("data", (chunk: Buffer) => {
-      bytes += chunk.length;
-      if (bytes > maxBytes) {
-        oversized = true;
-        chunks.length = 0; // stop holding retained bytes once we know we'll reject the body
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => {
-      finish(
-        oversized
-          ? { ok: false, reason: "too-large" }
-          : { ok: true, body: Buffer.concat(chunks).toString("utf8") },
-      );
-    });
-    req.on("error", () => finish({ ok: false, reason: "stream error" }));
-  });
 }

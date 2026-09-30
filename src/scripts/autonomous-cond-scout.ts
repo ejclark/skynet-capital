@@ -16,6 +16,7 @@ import {
   CondScoutRunner,
   type DailyBars,
 } from "../autonomous/cond-scout-runner.js";
+import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import type { MarketContext } from "../domain/types.js";
@@ -99,6 +100,10 @@ export interface CondScoutWiring {
   readonly botsStateDb: BotsStateDb | undefined;
   readonly onDecision: (record: DecisionRecord) => void;
   readonly log?: Log;
+  /** The bot account the scout runs beside — the one Heartbeat that shows its ledger. */
+  readonly hostPersonaId?: string;
+  /** Hands the app-bound snapshot getter to the bridge sender once the scout is armed. */
+  readonly publish?: (get: () => CondScoutSnapshot) => void;
   /** Replaces the Alpaca bars reader — specs only; production always reads Alpaca. */
   readonly closesFor?: CondScoutDeps["closesFor"];
   readonly barsFor?: DailyBars;
@@ -151,6 +156,8 @@ export function armCondScout(
   const runner = buildCondScout(env, wiring);
   if (!runner) return () => Promise.resolve();
   const log = wiring.log ?? console;
+  const host = wiring.hostPersonaId;
+  if (host) wiring.publish?.(() => runner.snapshot(host, Date.now()));
   let inFlight = false;
   return async (context) => {
     if (inFlight) return;

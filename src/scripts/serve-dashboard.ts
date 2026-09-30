@@ -310,6 +310,7 @@ async function main(): Promise<void> {
     ...(insightsBridge.listRetrospectives
       ? { listRetrospectives: insightsBridge.listRetrospectives }
       : {}),
+    readCondScout: insightsBridge.readCondScout,
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,

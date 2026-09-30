@@ -333,4 +333,22 @@ describe("CondScoutRunner", () => {
       expect(retro?.market?.excess).toBeCloseTo((retro?.roi ?? 0) - 0.02, 6);
     });
   });
+
+  describe("the app-bound snapshot (slice 7a)", () => {
+    it("carries each open probe with its latest mark, and the newest retros", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const { runner } = setup({ store, clock });
+      await runner.runPass(at(80));
+      const snap = runner.snapshot("sauron", T0);
+      expect(snap).toMatchObject({ kind: "cond-scout.v1", hostPersonaId: "sauron", at: T0 });
+      expect(snap.open).toHaveLength(1);
+      expect(snap.open[0]?.markRoi).toBeCloseTo(store.snapshots[0]?.markRoi ?? Number.NaN, 9);
+      clock.t = T0 + 3_600_000;
+      await runner.runPass(at(70)); // stopped out
+      const after = runner.snapshot("sauron", clock.t);
+      expect(after.open).toEqual([]);
+      expect(after.retros.map((r) => r.symbol)).toEqual(["AMD"]);
+    });
+  });
 });

@@ -39,7 +39,6 @@ import {
 } from "../autonomous/bots-state-db.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
-import { resolveDecisionReplication } from "../autonomous/decision-replication-client.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -56,6 +55,7 @@ import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
+import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import {
@@ -114,10 +114,10 @@ async function runLive(): Promise<void> {
     return true;
   });
   // `decisionDb` doesn't exist yet at this point in boot (it's seeded further down, once the
-  // enabled roster is known) — `decisionReplication` reads it fresh via a getter on every poll
+  // enabled roster is known) — `replication` reads it fresh via a getter on every poll
   // rather than closing over a value, so the background poll (started later) sees it once seeded.
   let decisionDbRef: DecisionDb | undefined;
-  const decisionReplication = resolveDecisionReplication(process.env, () => decisionDbRef);
+  const replication = bridgeReplication(process.env, () => decisionDbRef);
   // The subscription swap (issue #3595) can't exist yet either — the roster it swaps is built much
   // further down, once credentials and the collision guard have settled who is actually trading.
   // The hook below therefore PARKS the boot fetch's own snapshot instead of dropping it, and the
@@ -128,7 +128,7 @@ async function runLive(): Promise<void> {
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
     undefined,
-    (cursor) => void decisionReplication.replicate(cursor),
+    (cursor) => replication.onPoll(cursor),
     (snapshot) => {
       if (subscriptionSync) subscriptionSync.accept(snapshot);
       else parkedSubscriptions = snapshot;
@@ -375,6 +375,8 @@ async function runLive(): Promise<void> {
     blockedReason,
     botsStateDb,
     onDecision,
+    ...(dataCredsPersonaId ? { hostPersonaId: dataCredsPersonaId } : {}),
+    publish: replication.publishCondScout,
   });
 
   armMomentumPersistence(botsStateDb, tracker);
