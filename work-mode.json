@@ -1,0 +1,12 @@
+{
+  "$comment": "The work spigot's dial (#3960). One `work-mode:<position>` label on trackingIssue sets how fast every autonomous lane pulls work; scripts/moneypenny/work-mode.mjs reads it and hands lanes the numbers below. Same doctrine as research-circuit-breaker.json: the STATE is an issue label (never a committed file, #915), this file only holds the per-position numbers, and a missing or malformed file refuses to run rather than defaulting to unlimited.",
+  "$why": "Eric's three scenarios on #3960 (2026-09-28): throttle hard to protect the weekly quota (conserve), shut everything off (halt), and fan out when quota would otherwise be lost at the reset (surge). The phrase-triggered conserve-mode in docs/COMPUTE.md reached only the session that heard it; a label on one issue reaches every lane with one `gh issue view`. Numbers: normal.inFlightCap 3 matches the board's In Progress WIP limit Eric set on 2026-09-30, so the board and the lanes never disagree; normal.researchPerTick 6 matches research-dispatch-budget.json maxPerTick (today's behavior, unchanged). surge doubles normal as a first guess, to be re-sized once the ::notice::cost data for a 6-session tick is measured (#3960 open question). halt is zero everywhere by definition — a brake is a brake.",
+  "trackingIssue": 4153,
+  "labelPrefix": "work-mode:",
+  "positions": {
+    "halt": { "inFlightCap": 0, "researchPerTick": 0 },
+    "conserve": { "inFlightCap": 1, "researchPerTick": 2 },
+    "normal": { "inFlightCap": 3, "researchPerTick": 6 },
+    "surge": { "inFlightCap": 6, "researchPerTick": 12 }
+  }
+}
