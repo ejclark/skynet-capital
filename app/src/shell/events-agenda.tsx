@@ -12,6 +12,7 @@ import { type BookEvent, dayLabel, describeTouch } from "../live/book-events";
  */
 
 export const TIER = {
+  decide: { glyph: "▲", word: "decide by" },
   held: { glyph: "◆", word: "on what you hold" },
   market: { glyph: "○", word: "market-wide" },
 } as const;
