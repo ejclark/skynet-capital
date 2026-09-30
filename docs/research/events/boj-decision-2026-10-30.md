@@ -21,11 +21,23 @@ off** on the FOMC. And the placement finding is the sharpest one on this calenda
 tracked events sit within ±5 days of 10-30**, double the September decision's 14. Date is
 **estimate**; it widens caution and licenses nothing.
 
+**Update, 2026-09-30 (D-30) — the fork resolved into the branch this doc was built for.** The BoJ
+**hiked 25bp to 1.25% on 2026-09-18** (7-2, Asada/Sato dissenting to hold — [close-out,
+`boj-decision-2026-09-18`](boj-decision-2026-09-18.md#outcome)), so **this is no longer conditional:
+10-30 is hold-modal in fact, not merely in the modal branch of a forecast.** Real market pricing now
+exists for the first time (initial research had none): futures-derived October hike **15.2%** / no
+change **84.8%** (centralbank.watch, "data as of September 29, 2026"); the per-meeting venue book
+— [`boj-decision-2026-09-18`](boj-decision-2026-09-18.md)'s own FT-3 finding prefers this instrument
+— prices October no-change at **~77%** (Polymarket "Bank of Japan Decision in October?", fetched
+2026-09-30, $161K volume). Both agree with the call; the venue book is simply less lopsided. December
+leans toward the next hike on both reads (futures-derived 71.5% hike; venue book 56% on a 25bp move).
+See the Stance amendment below for the full sweep.
+
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
 | Today | **Stand aside** — nothing here is ours to hold | High | `symbols: []`, no house playbook is rates- or FX-keyed, and at D-55 there is no position this event could be sized into | A tracked name (NVDA/AVGO/MRVL/CRWV) moving **>2%** on any session **2026-09-05 → 2026-10-29** that the tape attributes to a BoJ headline — the "no price channel" premise would be wrong and this doc is rebuilt |
-| This week | **Stand aside; the BoJ question that matters this week is 09-18, not 10-30** | High | This meeting is 55 days out and behind a sibling decision that resolves most of its own distribution; nothing in the 09-07 → 09-11 tape is 10-30-keyed | Any BoJ communication before **2026-09-11** that pre-commits to a move at *this* meeting specifically — the conditional structure below collapses early and every leg is re-derived |
-| This month | **Watch — do not assess this event independently of the 2026-09-18 decision** | Medium-High | The September outcome forks this one: a 09-18 hike makes 10-30 hold-modal on all three surveys; a 09-18 hold hands it the live decision plus fresh projections | The BoJ hiking on **2026-09-18** *and* issuing an explicit pace guide pointing at the next meeting, observed by **2026-09-26** (this event's next check) — 10-30 becomes a two-sided event and the hold-modal call is withdrawn, not patched |
+| This week | **Stand aside; the BoJ question that matters this week is 09-18, not 10-30** | High | This meeting is 55 days out and behind a sibling decision that resolves most of its own distribution; nothing in the 09-07 → 09-11 tape is 10-30-keyed | Any BoJ communication before **2026-09-11** that pre-commits to a move at *this* meeting specifically — the conditional structure below collapses early and every leg is re-derived. *Status 2026-09-30: no pre-commitment found before 09-11; the meeting resolved on its own schedule* |
+| This month | **Watch — do not assess this event independently of the 2026-09-18 decision** | Medium-High | The September outcome forks this one: a 09-18 hike makes 10-30 hold-modal on all three surveys; a 09-18 hold hands it the live decision plus fresh projections | The BoJ hiking on **2026-09-18** *and* issuing an explicit pace guide pointing at the next meeting, observed by **2026-09-26** (this event's next check) — 10-30 becomes a two-sided event and the hold-modal call is withdrawn, not patched. *Status 2026-09-30: fork kill did NOT fire (BoJ hiked to 1.25%, 7-2); pace kill did NOT fire (no explicit dated pace guide located — search-corroborated only, primary statement not independently re-fetched this pulse). Hold-modal call confirmed, not withdrawn* |
 | This quarter | **Do not treat a second Q4 hike as the base case** | Medium-High | Three dated surveys (05-15, 06-09, 08-26) independently say one more hike in 2026; the BoJ's own July guidance is *"continue to raise… consider the timing and pace"* — not back-to-back language | The policy rate standing **above 1.25%** immediately after the **2026-10-30** decision — already registered by the sibling ledger as **FT-boj-decision-2026-09-18-2**, score by 2026-10-31; not re-registered here, because scoring one claim twice is double-counting, not a second observation |
 
 **Signals & conditions** — the buy/sell/hold triggers:
@@ -254,15 +266,75 @@ meeting's* Minutes and Oct. 1 its SoO — which also settles the question the 09
 and the FOMC is **2026-10-28**, not 10-29, with META/GOOG on 10-28 and AAPL/AMZN on 10-29.
 Estimates widen caution and license nothing.
 
+**Amendment, 2026-09-30 (D-30) — the fork this doc was built to watch resolved, and the hold-modal
+call is now confirmed rather than conditional.** Stance stays **stand-aside**, zero capital, no
+position; what changes is that the branch structure in the header collapses to one live branch.
+
+1. **The BoJ hiked 25bp to 1.25% on 2026-09-18, 7-2** — Governor Ueda's majority against **Asada
+   Toichiro** and **Sato Ayano** dissenting *to hold* (both citing core CPI still below 2%); Takata
+   and Tamura voted for the hike but separately objected the Outlook's price-risk language was too
+   cautious ([close-out, `boj-decision-2026-09-18`](boj-decision-2026-09-18.md#outcome), BoJ
+   Statement `k260918a.pdf` fetched direct by that lane). **Fork kill (score by 2026-09-19) did NOT
+   fire.** Two dovish dissents against zero hawkish dissents (against July's 8-1 solo hawkish
+   dissent) is, if anything, corroborating evidence for the hold-modal read rather than merely
+   consistent with it — the board's revealed preference on 09-18 leaned more cautious than the
+   pre-decision survey consensus assumed.
+2. **Pace kill (score by 2026-09-26) did NOT fire, on the evidence located.** A WebSearch synthesis
+   (not a direct fetch of the BoJ's own post-meeting communication) reports one board member noting
+   markets expect hikes roughly every six months while flagging the pace could quicken if inflation
+   risk intensifies — an observation about market expectations, not the Bank's own dated guidance
+   naming a meeting. Recorded as **search-corroborated, not primary-verified this pulse** — the
+   honest gap this row leaves for the next session, rather than a claim dressed as more solid than it
+   is.
+3. **Real market pricing exists for the first time.** Futures-derived, **centralbank.watch, fetched
+   direct** ("Data as of September 29, 2026"): October hike **15.2%** / no change **84.8%**;
+   December hike **71.5%** / no change **24.1%**. Per-meeting venue book, **Polymarket "Bank of Japan
+   Decision in October?", fetched direct 2026-09-30** (resolves in ~30 days, matching this event's
+   date): no-change priced at **~77%** on $161K volume / $53.7K liquidity — thinner than September's
+   $830.6K book, consistent with a less-decided, further-out meeting. December venue book: 25bp
+   increase **56%**, $9.2K volume. Per the sibling ledger's **FT-3** (venue book over futures-derived
+   for BoJ meetings, PASS at September's close-out), the 77% read is the one to weight; both
+   instruments still agree directionally with the hold-modal call, the venue book merely less
+   lopsided than the futures-derived 84.8%.
+4. **USD/JPY has stayed range-bound since the hike — no carry-unwind signal.** ECB daily reference
+   series / Yahoo daily closes: **157.89 (09-18 close)** → 158.81 (09-24) → 157.36 (09-28) →
+   **156.48 (09-30)** — drifting inside a ~156–159 handle, nothing carry-unwind-shaped. This event's
+   own **carry kill** (FT-boj-decision-2026-10-30-1, scored on the 10-29→10-30 close) stays
+   unscored and on track; nothing to score yet.
+5. **VIX ticked up modestly, below the regime threshold.** **16.04** (2026-09-29 close, Yahoo daily
+   bars) against the **14.53** anchor — **+1.51pt**, under the 3-point materiality band. Recorded,
+   not treated as a regime shift.
+6. **The confound is re-measured, not re-estimated, and it grew.** `node scripts/event-scan.mjs
+   --on-date=<date>` swept every date **2026-10-25 → 2026-11-04**: **52 tracked events** now sit
+   within ±5 days of 10-30, up from **28** at initial research (2026-09-05) — the calendar's own
+   growth in the interim, not a re-estimate of the same picture. `adjacentStrongIds` (confirmed,
+   high/critical impact): `fomc-2026-10-28`, `gdp-q3-2026-advance-2026-10-29`, `pce-2026-10-29`,
+   `eci-q3-2026-10-30`. **No new dated adjacency to propose** — `--on-date=2026-10-30` shows all 8
+   same-date entries already tracked (four new ones since initial research —
+   `ecb-spf-q4-2026-10-30`, `g20-foreign-ministers-atlanta-2026-10-30`,
+   `russell-style-month-end-capping-effective-2026-10-30`, `uk-blue-book-2026-10-30` /
+   `uk-pink-book-2026-10-30` — all filed by other lanes, nothing owed here), and the ±5-day sweep
+   found no id absent from the live calendar.
+7. **Channel and politics kills: not fired, nothing new found.** No headline attributes any
+   NVDA/AVGO/MRVL/CRWV move to a BoJ headline in this window; no Bessent commentary was found dated
+   after the 09-18 decision (all located commentary pre-dates the hike and is already booked in the
+   sibling ledger).
+8. **Data kill: still open, still unsourced.** No new Japanese national CPI print located this sweep
+   beyond the August figure (1.7% y/y) already booked at the sibling's close-out; `stat.go.jp`'s
+   release-schedule pages were not re-attempted this pulse (time-boxed sweep, not a re-run of a
+   known-blocked source) — the next pulse should retry directly rather than inherit this gap
+   silently.
+
 **Kill switches:**
 
-- **Fork kill (the one that rewrites this doc):** the BoJ **holding** on **2026-09-18**. This
-  meeting inherits a live rate decision *plus* fresh projections in the most confounded session on
-  the calendar; the hold-modal call is withdrawn, not patched, and the `medium` impact tier gets
-  argued explicitly. Score by **2026-09-19**.
-- **Pace kill:** the BoJ hiking on 09-18 **and** issuing explicit guidance pointing at the next
-  meeting (a dated pace guide, not a restatement of *"timing and pace"*). Leg 3's survey consensus
-  is behind the bank's own intent and every call above is re-derived. Score by **2026-09-26**.
+- ~~**Fork kill (the one that rewrites this doc):** the BoJ **holding** on **2026-09-18**.~~ —
+  **did NOT fire, RETIRED 2026-09-30.** The BoJ hiked 25bp to 1.25% (7-2). Retired.
+- ~~**Pace kill:** the BoJ hiking on 09-18 **and** issuing explicit guidance pointing at the next
+  meeting (a dated pace guide, not a restatement of *"timing and pace"*).~~ — **did NOT fire on the
+  evidence located, RETIRED 2026-09-30.** No dated pace guide found this pulse; the finding is
+  search-corroborated only, not confirmed against the BoJ's own statement text. Retired as a live
+  switch — a future session finding the primary statement says otherwise should treat that as new
+  information, not a reversal of this entry.
 - **Path kill (registered by the sibling, cited not re-registered):** the policy rate standing
   **above 1.25%** immediately after this decision — **FT-boj-decision-2026-09-18-2**, score by
   2026-10-31. Registering it again here would score one claim twice; it is named so the next session
@@ -301,6 +373,7 @@ so re-registering it would inflate the out-of-sample count with one observation 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-05 | D-55 | Initial research banked (above). **Corrections first, from the raw schedule table (fetched HTTP 200, 41,959 bytes, column-parsed rather than summarized):** columns are `MPM \| Outlook Report \| Summary of Opinions \| Minutes`, so **Oct. 29-30 → Outlook Oct. 30 → SoO Nov. 10 → Minutes Dec. 23**, and this entry's own `source` line read **Nov. 5** as this meeting's SoO — that is the **Sept. 17-18 meeting's Minutes**, one row and one column adrift. This **settles the 09-18 ledger's open question**: the September SoO is **Oct. 1**, and the "09-28" reading is the *July 30-31 Minutes*. `notes` also had the FOMC at 10-29 (it is **2026-10-28**, confirmed `FED:`) and META in the 10-29 cluster (**META + GOOG 10-28**, **AAPL + AMZN 10-29**, est.). JSON amended in this PR. **October is a genuine Outlook meeting** — "Oct. 30 (Fri.)" in the Outlook column; Mar/Jun/Sep/Dec all read "-". **Consensus carries one more 2026 hike, not two**, across three dated surveys: Reuters **05-15** (62 economists) median **1.25% in Q4**, 1.50% Q3-2027; Bloomberg **06-09** 49/51 for June's 1.0% with 1.25% by year-end; Reuters **Aug 17-24** (pub. **08-26**, 58 economists) **57%** for a September hike — from just **5%** in July — but **"a minority, 10 of 58, expected it to follow with another hike to 1.5% in either October or December."** ~17% across *both* Q4 meetings. Timing repriced hard; the count did not. **The BoJ's own July guidance** (highlights, fetched): *"continue to raise the policy interest rate… consider the timing and pace of adjustment"* — direction committed, pace discretionary. **The one novel finding:** Japanese fiscal H2 2026 opens **2026-10-01**, so this is the **first Outlook published inside the window its own July forecast named** — *"clearly above 2 percent from the second half of fiscal 2026"* — while realised national core CPI is **1.8%**, below target for a sixth month. And July's FY2026 downgrade was **mechanical**: *"the government's measures to reduce the household burden of higher energy prices… during summer,"* core-core *"more or less unchanged"* — subsidies that expire inside that same window. Adjacency sweep: **peers** — none, `symbols: []`. **Macro** — the 10-27→10-30 corridor the [`fomc-2026-10-28`](fomc-2026-10-28.md) ledger identified closes on this date; 10-30 itself carries **ECI Q3** (confirmed, 08:30 ET) and **Chicago PMI** (est., 09:45 ET). **Volatility** — VIX **14.53** (2026-09-04 close, `market-data.mjs`). **Geopolitical** — Bloomberg **09-02** headline *"Bessent Leaves BOJ in No-Win Situation"* (403, headline-only) is the live counterweight: US pressure cuts toward *speed*, against the hold-modal read. **Event tape** — **the confound is measured and it is double September's: 28 tracked events within ±5 days** vs 14 for 09-18, and unlike the 09-18 witching it is a *pile-up*, with no single alternative to rule out. **One dated adjacency proposed as `estimate`:** **`boj-decision-2026-12-18`** (Dec. 17-18 MPM, same table read today; **not** an Outlook meeting) — which lands on **`opex-2026-12-18`**, the same quarterly-witching confound as September. **Honest weaknesses:** no OIS strip (rateprobability.com **403** to WebFetch *and* browser-UA curl), so leg 3 is economist surveys only; Bloomberg **403**; the Outlook's projection *table* is an image and was not extracted, so this doc has the BoJ's language and not its numbers; stat.go.jp CPI schedule **404**, so the data kill names a threshold without its print dates. | — (stance set: stand aside, no position, no play; hold-modal for 10-30 **conditional on a 09-18 hike**, at Medium-High because Takata's standing 1.25% dissent and US pressure both cut toward speed; three commitments — correct the schedule/FOMC/cluster metadata, treat the October Outlook's projection window as this meeting's real content, and rule out ECI, the mega-cap reactions, Chicago PMI and the FOMC/ECB/PCE hangover individually before crediting Tokyo with anything on 10-30) | 2026-09-26 (medium, 31+d band: every 21d) |
+| 2026-09-30 | D-30 | **Full session — the fork this doc was built to watch resolved.** **The BoJ hiked 25bp to 1.25% on 2026-09-18, 7-2** (Asada/Sato dissenting to hold; Takata/Tamura for the hike but objecting to Outlook wording), per [`boj-decision-2026-09-18`](boj-decision-2026-09-18.md#outcome)'s close-out. **Fork kill (score by 09-19) did NOT fire; pace kill (score by 09-26) did NOT fire on the evidence located** (search-corroborated only — no primary re-fetch of the BoJ's own statement this pulse). Both retired below. **Real market pricing now exists:** futures-derived (centralbank.watch, "data as of 2026-09-29") October hike 15.2%/no-change 84.8%, December hike 71.5%/no-change 24.1%; per-meeting venue book (Polymarket "Bank of Japan Decision in October?", fetched 2026-09-30, $161K volume) no-change ~77%, December 25bp-increase 56% ($9.2K volume) — FT-3's preferred instrument agrees directionally, less lopsided than futures. **USD/JPY range-bound since the hike:** 157.89 (09-18) → 158.81 (09-24) → 156.48 (09-30), no carry-unwind signal; this event's own carry kill (FT-1) stays unscored, on track for the 10-29→10-30 close. **VIX** 16.04 (09-29 close) vs 14.53 anchor, +1.51pt, below the 3-point regime band. **Corridor re-measured:** `event-scan --on-date` swept 10-25→11-04, **52 tracked events within ±5 days**, up from 28 at initial research (calendar growth, not re-estimation); `adjacentStrongIds` = `fomc-2026-10-28`, `gdp-q3-2026-advance-2026-10-29`, `pce-2026-10-29`, `eci-q3-2026-10-30`. **No new dated adjacency to propose** — `--on-date=2026-10-30` shows all 8 same-date entries already tracked (4 new since initial research, filed by other lanes: `ecb-spf-q4-2026-10-30`, `g20-foreign-ministers-atlanta-2026-10-30`, `russell-style-month-end-capping-effective-2026-10-30`, `uk-blue-book-2026-10-30`/`uk-pink-book-2026-10-30`), and the ±5-day sweep surfaced nothing absent from the live calendar. **Channel/politics kills:** not fired, nothing new found (no BoJ-attributed tracked-symbol move; no post-09-18 Bessent commentary located). **Data kill:** still open, unsourced — `stat.go.jp` not re-attempted this pulse. Cadence band transitioned **medium:31+ → medium:8+** (interval 21d → 7d). | **Amendment (fork resolved; hold-modal confirmed, not conditional) — see Stance section for the full sweep.** Stance unchanged: stand aside, zero capital. | 2026-10-07 (medium, 8+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -309,3 +382,6 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
 (`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-09-30
+<!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:8+","adjacentIds":["dallas-fed-mfg-2026-10-26","mwts-benchmark-revision-2026-10-26","treasury-2y-note-2026-10-26","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","fhfa-hpi-2026-10-27","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","new-home-sales-2026-10-27","treasury-5y-note-2026-10-27","treasury-buyback-20y30y-2026-10-27","advance-economic-indicators-2026-10-28","fomc-2026-10-28","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","meta-2026-10-28-print","treasury-2y-frn-2026-10-28","uk-autumn-budget-2026-10-28","aapl-2026-10-29-print","amzn-2026-10-29-print","dallas-fed-trimmed-mean-2026-10-29","ecb-decision-2026-10-29","gdp-q3-2026-advance-2026-10-29","jgb-2y-auction-2026-10-29","nar-metro-home-prices-2026-10-29","pce-2026-10-29","treasury-7y-note-2026-10-29","chicago-pmi-2026-10-30","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","g20-foreign-ministers-atlanta-2026-10-30","russell-style-month-end-capping-effective-2026-10-30","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","opec-plus-meeting-2026-11-01","construction-spending-2026-11-02","ism-manufacturing-2026-11-02","jgb-climate-transition-5y-auction-2026-11-02","sloos-2026-11-02","treasury-borrowing-estimates-2026-11-02","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","adp-employment-2026-11-04","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","treasury-buyback-10y20y-2026-11-04","treasury-refunding-2026-11-04"],"adjacentStrongIds":["fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30"],"screenStreak":0} -->
