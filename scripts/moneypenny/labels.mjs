@@ -106,6 +106,44 @@ export const LABELS = {
     description: "Green but held — a taste call or explicit hold; arm-auto-merge skips this PR",
     managed: true,
   },
+  // #3960 — the work spigot. Exactly one of these four sits on tracking issue #4153 and sets how
+  // fast every autonomous lane pulls work (scripts/moneypenny/work-mode.mjs reads it). Managed, so
+  // the dial exists before anyone reaches for it: a position nobody provisioned would 404 on
+  // `--add-label` exactly when someone is trying to hit the brake — the 2026-08-22 defect again.
+  workModeHalt: {
+    name: "work-mode:halt",
+    color: "000000",
+    description: "Work spigot: every autonomous lane dispatches nothing (set on #4153)",
+    managed: true,
+  },
+  workModeConserve: {
+    name: "work-mode:conserve",
+    color: "fbca04",
+    description:
+      "Work spigot: lanes cut to 1 build in flight and 2 research sessions a tick (#4153)",
+    managed: true,
+  },
+  workModeNormal: {
+    name: "work-mode:normal",
+    color: "0e8a16",
+    description: "Work spigot: lanes run at today's numbers, 3 builds in flight (set on #4153)",
+    managed: true,
+  },
+  workModeSurge: {
+    name: "work-mode:surge",
+    color: "1d76db",
+    description: "Work spigot: raised caps to use spare quota before the reset — Eric only (#4153)",
+    managed: true,
+  },
+  // #3960 — goes on a work issue, not on #4153: an urgent bug or CVE that still builds under
+  // `work-mode:conserve` (never under `halt`). Any session may apply it.
+  fastTrack: {
+    name: "fast-track",
+    color: "b60205",
+    description:
+      "Urgent (a user-harming bug or CVE): builds even when the work spigot is on conserve",
+    managed: true,
+  },
 
   // ── registered, not owned ───────────────────────────────────────────────────
   // Real labels this repo runs on that no lane here applies. They are named so `feedback-scan`,
