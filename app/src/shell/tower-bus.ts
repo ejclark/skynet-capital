@@ -15,8 +15,10 @@ import { create } from "zustand";
  * (`vantage.tsx`, registered here). The hooks default to the crest.
  */
 
-/** What a flare is for (the scene's `src/three/kit/flare.ts` knows the same kinds). */
-export type FlareKind = "new-high";
+/** What a flare is for (the scene's `src/three/kit/flare.ts` knows the same kinds): a new
+ *  all-time high (`new-high-ceremony.tsx`), or an order of the member's own that filled
+ *  (`fill-flare.ts`, #3977 slice 3). */
+export type FlareKind = "new-high" | "fill";
 
 /** Page → scene. */
 export type TowerMessage =

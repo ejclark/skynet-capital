@@ -75,8 +75,14 @@ describe("readTowerMessage — the shapes", () => {
     ).toEqual({ type: "tower:flare", kind: "new-high" });
   });
 
+  it("reads a flare for a fill of the member's own order (#3977 slice 3)", () => {
+    expect(
+      readTowerMessage(from({ type: "tower:flare", kind: "fill", orderId: "o-1" }), here),
+    ).toEqual({ type: "tower:flare", kind: "fill" });
+  });
+
   it("ignores a flare of an unknown kind, or with no kind at all", () => {
-    for (const kind of ["new-low", "NEW-HIGH", "", 1, null, undefined]) {
+    for (const kind of ["new-low", "NEW-HIGH", "FILL", "order.filled", "", 1, null, undefined]) {
       expect(readTowerMessage(from({ type: "tower:flare", kind }), here)).toBe(undefined);
     }
     expect(readTowerMessage(from({ type: "tower:flare" }), here)).toBe(undefined);
