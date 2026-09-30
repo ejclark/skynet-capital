@@ -24,15 +24,21 @@ import {
 const REFRESH_MS = 60_000;
 const CLOSES_SHOWN = 5;
 
+/** A plain boolean check — `Array.isArray` would narrow the typed lists below to `any[]`. */
+const isList = (value: unknown): boolean => Array.isArray(value);
+
 export function ShadowProbes({ deskId }: { readonly deskId: string }): ReactElement | null {
   const query = useQuery({
     queryKey: ["desk-probes", deskId],
     queryFn: () => fetchDeskProbes(deskId),
     refetchInterval: REFRESH_MS,
   });
-  if (!query.data?.available) return null;
-  const { verdicts, open, retros, at } = query.data;
-  const now = at;
+  const data = query.data;
+  // A payload missing its lists is a broken reply, not an empty ledger — say nothing rather than
+  // take the rest of the Heartbeat down with it.
+  if (!data?.available || !isList(data.verdicts) || !isList(data.open)) return null;
+  const { verdicts, open, at: now } = data;
+  const retros = isList(data.retros) ? data.retros : [];
   return (
     <section className="hb-card sp-card" aria-labelledby="sp-title">
       <h2 className="hb-h" id="sp-title">
