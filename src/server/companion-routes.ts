@@ -6,6 +6,7 @@ import {
   COMPANION_THROTTLE_MAX,
   COMPANION_THROTTLE_WINDOW_MS,
 } from "../companion/companion-limits.js";
+import { describePage } from "../companion/companion-page.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
@@ -109,6 +110,7 @@ function serveCompanionIndex(res: ServerResponse, config: DashboardServerConfig)
 async function memberContextFor(
   config: DashboardServerConfig,
   session: Session,
+  page?: string,
 ): Promise<string | undefined> {
   try {
     const [onboarding, filings] = await Promise.all([
@@ -122,6 +124,7 @@ async function memberContextFor(
         .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
         .map((f) => ({ issueNumber: f.issueNumber, title: f.title, filedAt: f.filedAt })),
       marketOpen: regularSessionOpen(),
+      ...(page ? { page } : {}),
     });
   } catch {
     return undefined;
@@ -144,7 +147,8 @@ async function serveChat(
   }
   const raw = await readJsonPost(req, res, CHAT_BODY_CAP_BYTES);
   if (raw === undefined) return; // readJsonPost already answered (405/415/413)
-  const messages = parseMessages(parseJsonRecord(raw));
+  const body = parseJsonRecord(raw);
+  const messages = parseMessages(body);
   if (messages.length === 0) {
     sendJson(res, 400, { ok: false, error: "say something first" });
     return;
@@ -153,7 +157,9 @@ async function serveChat(
   // (`plays-api-routes.ts`) — never a client-supplied id, so a tool call can never be pointed at
   // another member's account.
   const participantId = resolveCurrentId(session, config.resolveOwnerId);
-  const context = await memberContextFor(config, session);
+  // The page they asked from (#2224 shape 2), mapped onto fixed words — the raw path never
+  // reaches the prompt (`companion-page.ts`).
+  const context = await memberContextFor(config, session, describePage(body?.page));
 
   openSseStream(res);
   let seq = 0;
