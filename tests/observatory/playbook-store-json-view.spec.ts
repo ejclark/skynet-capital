@@ -116,6 +116,40 @@ describe("playbookStoreView", () => {
     expect(djt?.metrics).toEqual([{ label: "Whipsaw rate", value: "0% whipsaw (5 round trips)" }]);
   });
 
+  /**
+   * THE SUBSCRIBER COUNT (#3970). WHEN the caller supplies house-wide counts, EACH card SHALL carry
+   * its own as a plain number — 0 where none was supplied, and independent of whether the viewer
+   * manages an account. Falsifier: a card whose `subscribers` is undefined, or one carrying another
+   * card's count.
+   */
+  describe("subscriber count (issue #3970)", () => {
+    it("puts each playbook's own count on its own card", () => {
+      const view = playbookStoreView([], false, [], { "S1-NVDA": 3, "G1-GOOG": 1 });
+      expect(view.cards.find((c) => c.id === "S1-NVDA")?.subscribers).toBe(3);
+      expect(view.cards.find((c) => c.id === "G1-GOOG")?.subscribers).toBe(1);
+      expect(view.cards.find((c) => c.id === "TACO-DJT")?.subscribers).toBe(0);
+    });
+
+    it("reports 0 — never undefined — on every card when no counts are supplied", () => {
+      for (const card of playbookStoreView([]).cards) {
+        expect(card.subscribers).toBe(0);
+      }
+    });
+
+    it("shows the count to a viewer who manages nothing (catalog-only still answers 'is anyone using this')", () => {
+      const view = playbookStoreView(undefined, false, [], { "S1-NVDA": 2 });
+      expect(view.canManage).toBe(false);
+      expect(view.cards.find((c) => c.id === "S1-NVDA")?.subscribers).toBe(2);
+    });
+
+    it("never turns a count into a roster — the card gains no account identity alongside it", () => {
+      const view = playbookStoreView([], false, [], { "S1-NVDA": 2 });
+      const nvda = view.cards.find((c) => c.id === "S1-NVDA");
+      expect(nvda).not.toHaveProperty("subscriberAccounts");
+      expect(JSON.stringify(nvda)).not.toContain("acct-");
+    });
+  });
+
   describe("compounding opt-in (issue #3527 slice 3)", () => {
     it("carries compoundAllocation: true onto the subscription, omits it when off", () => {
       const view = playbookStoreView([sub({ playbookId: "S1-NVDA", compoundAllocation: true })]);

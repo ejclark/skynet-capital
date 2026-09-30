@@ -1,6 +1,8 @@
+import type { PlaybookSubscription } from "../../src/domain/types.js";
 import {
   EMPTY_SUBSCRIPTIONS,
   parseSubscriptionsState,
+  subscriberCountsByPlaybook,
 } from "../../src/subscriptions/subscription-state.js";
 
 const valid = {
@@ -117,5 +119,57 @@ describe("parseSubscriptionsState", () => {
       expect(state?.["acct-1"]).toHaveLength(1);
       expect(state?.["acct-1"]?.[0]).not.toHaveProperty("compoundAllocation");
     });
+  });
+});
+
+/**
+ * WHO RUNS EACH PLAYBOOK, AS A COUNT (#3970). WHEN accounts have a playbook subscribed and enabled,
+ * `subscriberCountsByPlaybook` SHALL report how many — and nothing that identifies them. Falsifier:
+ * any account id reachable from the returned value, or a paused subscription raising a count.
+ */
+describe("subscriberCountsByPlaybook", () => {
+  const sub = (over: Partial<PlaybookSubscription>): PlaybookSubscription =>
+    ({ ...valid, accountId: "acct-1", ...over }) as PlaybookSubscription;
+
+  it("counts one per account with the playbook enabled, across every account", () => {
+    const counts = subscriberCountsByPlaybook({
+      "acct-1": [sub({ playbookId: "S1-NVDA" }), sub({ playbookId: "G1-GOOG" })],
+      "acct-2": [sub({ accountId: "acct-2", playbookId: "S1-NVDA" })],
+      "acct-3": [sub({ accountId: "acct-3", playbookId: "S1-NVDA" })],
+    });
+    expect(counts["S1-NVDA"]).toBe(3);
+    expect(counts["G1-GOOG"]).toBe(1);
+  });
+
+  it("leaves a playbook nobody subscribed to absent, never a measured zero", () => {
+    const counts = subscriberCountsByPlaybook({ "acct-1": [sub({ playbookId: "S1-NVDA" })] });
+    expect(counts).not.toHaveProperty("TACO-DJT");
+  });
+
+  it("excludes a paused subscription — the count answers 'who is running this', not 'who ever did'", () => {
+    const counts = subscriberCountsByPlaybook({
+      "acct-1": [sub({ playbookId: "S1-NVDA", enabled: false })],
+      "acct-2": [sub({ accountId: "acct-2", playbookId: "S1-NVDA", enabled: true })],
+    });
+    expect(counts["S1-NVDA"]).toBe(1);
+  });
+
+  it("drops to an empty map for a playbook whose only subscribers are all paused", () => {
+    const counts = subscriberCountsByPlaybook({
+      "acct-1": [sub({ playbookId: "S1-NVDA", enabled: false })],
+    });
+    expect(counts).toEqual({});
+  });
+
+  it("carries no account identity at all — only playbook ids as keys and numbers as values", () => {
+    const counts = subscriberCountsByPlaybook({
+      "acct-secret": [sub({ accountId: "acct-secret", playbookId: "S1-NVDA" })],
+    });
+    expect(JSON.stringify(counts)).not.toContain("acct-secret");
+    expect(Object.values(counts).every((n) => typeof n === "number")).toBe(true);
+  });
+
+  it("is empty for empty state", () => {
+    expect(subscriberCountsByPlaybook(EMPTY_SUBSCRIPTIONS)).toEqual({});
   });
 });

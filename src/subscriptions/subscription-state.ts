@@ -71,3 +71,29 @@ export function parseSubscriptionsState(raw: unknown): SubscriptionsState | null
   }
   return state;
 }
+
+/**
+ * How many accounts have each playbook switched on, keyed by playbook id (#3970) — the ONLY
+ * cross-account read this module offers, and deliberately a lossy one: a count names nobody, so it
+ * survives #885's no-cross-account-visibility rule and the #3834 fix that withholds playbook names
+ * from non-owners. Hand the result to a view; never hand a view the state it was derived from.
+ *
+ * Disabled subscriptions are not counted. The question a member asks of this number is "is anyone
+ * actually running this playbook", and a paused subscription would overstate it — the same
+ * enabled-only rule `capitalUnderManagement` and `subscriptionRoster` already apply.
+ *
+ * A playbook nobody subscribed to is simply absent from the map, not zero: the caller renders
+ * `?? 0`, and an absent key can never be mistaken for a measured zero.
+ */
+export function subscriberCountsByPlaybook(
+  state: SubscriptionsState,
+): Readonly<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const subs of Object.values(state)) {
+    for (const sub of subs) {
+      if (!sub.enabled) continue;
+      counts[sub.playbookId] = (counts[sub.playbookId] ?? 0) + 1;
+    }
+  }
+  return counts;
+}

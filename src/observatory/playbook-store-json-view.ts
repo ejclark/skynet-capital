@@ -16,6 +16,12 @@ import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
 import type { RoundTrip } from "../trading/round-trips.js";
 
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
+  /**
+   * How many accounts have this playbook switched on, across the whole house (#3970) — a bare
+   * count, never a roster. Always a number so the card never has to special-case "unknown": a
+   * playbook nobody runs is 0, which is a fact, not a gap.
+   */
+  readonly subscribers: number;
   readonly subscription?: {
     readonly mode: PlaybookSubscription["mode"];
     readonly capitalAllocated: number;
@@ -62,6 +68,11 @@ export function playbookStoreView(
    *  to none: a caller not yet passing them gets the bare catalog metrics, exactly as before this
    *  parameter existed. */
   roundTrips: readonly RoundTrip[] = [],
+  /** House-wide enabled-subscription counts by playbook id (#3970), from
+   *  `subscriberCountsByPlaybook`. A COUNT, not a roster — this function is still never handed
+   *  another account's subscriptions, so the boundary in the module doc above holds. Defaults to
+   *  none: a caller not yet passing them renders every card as 0 subscribers. */
+  subscribers: Readonly<Record<string, number>> = {},
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const whipsawByPlaybookId = new Map(
@@ -72,6 +83,7 @@ export function playbookStoreView(
     const whipsaw = whipsawByPlaybookId.get(entry.id);
     return {
       ...entry,
+      subscribers: subscribers[entry.id] ?? 0,
       ...(whipsaw ? { metrics: [...entry.metrics, whipsawMetric(whipsaw)] } : {}),
       ...(sub
         ? {

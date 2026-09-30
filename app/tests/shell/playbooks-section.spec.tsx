@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import type { PlaybookMetricsView } from "../../src/live/playbook-performance";
+import { PlaybookCard } from "../../src/shell/playbook-store-cards";
 import { PlaybooksSection, usePlaybooksSection } from "../../src/shell/playbooks-section";
 
 /**
@@ -26,7 +27,7 @@ const row = (playbookId: string, trades: number, netRealized: number): PlaybookM
   byInstrument: { stock: trades, call: 0, put: 0 },
 });
 
-const card = (id: string) => ({
+const card = (id: string, subscribers = 0) => ({
   id,
   symbol: "NVDA",
   symbols: ["NVDA"],
@@ -38,6 +39,7 @@ const card = (id: string) => ({
   exitCutLosses: "cut",
   hold: "hold",
   metrics: [],
+  subscribers,
 });
 
 const requested: (string | undefined)[] = [];
@@ -45,7 +47,7 @@ const requested: (string | undefined)[] = [];
 rstest.mock("../../src/live/playbook-store", () => ({
   fetchPlaybookStore: (accountId: string) =>
     Promise.resolve({
-      cards: [card("S1-NVDA"), card("HC-SAURON")],
+      cards: [card("S1-NVDA", 3), card("HC-SAURON", 0)],
       capitalUnderManagement: 0,
       canManage: accountId !== "",
       delegation: { locked: true, unlocksAfter: "102", unlocksAfterName: "Sell stock", note: "" },
@@ -122,5 +124,44 @@ describe("PlaybooksSection metric blocks", () => {
     expect(
       cardOf("HC-SAURON").getByText(/No account has closed a trade on this playbook yet/),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * THE SUBSCRIBER COUNT (#3970). WHEN a playbook has enabled subscriptions house-wide, ITS card SHALL
+ * show how many accounts — and never which. WHERE no account is selected, the count SHALL still show.
+ * Falsifier: an account name or id rendered beside the count, or a card with no count line at all.
+ */
+describe("PlaybookCard subscriber count", () => {
+  it("shows the count on each card, and 'none yet' rather than a bare 0", async () => {
+    mount("human-joe");
+    await screen.findAllByRole("region", { name: /House — every account/ });
+    expect(cardOf("S1-NVDA").getByText("3 accounts")).toBeInTheDocument();
+    expect(cardOf("HC-SAURON").getByText("none yet")).toBeInTheDocument();
+    expect(cardOf("HC-SAURON").queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("says 'account' singular for exactly one subscriber", () => {
+    render(
+      <PlaybookCard
+        accountId=""
+        card={card("S1-NVDA", 1) as never}
+        canManage={false}
+        delegation={{ locked: false, unlocksAfter: "", unlocksAfterName: "", note: "" }}
+        onChanged={() => undefined}
+        accountName=""
+      />,
+    );
+    expect(screen.getByText("1 account")).toBeInTheDocument();
+  });
+
+  it("still shows the count in catalog-only mode, and names no account", async () => {
+    mount(undefined);
+    await screen.findAllByRole("region", { name: /House — every account/ });
+    const nvda = cardOf("S1-NVDA");
+    expect(nvda.getByText("3 accounts")).toBeInTheDocument();
+    expect(nvda.getByText(/Subscribed and active/)).toBeInTheDocument();
+    expect(nvda.queryByText(/human-joe/)).not.toBeInTheDocument();
+    expect(nvda.queryByText(/Uncle Joe/)).not.toBeInTheDocument();
   });
 });

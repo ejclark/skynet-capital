@@ -43,6 +43,9 @@ const cards = [
       },
     ],
     metrics: [],
+    // The house-wide subscriber count (#3970): a busy playbook, and — below — one nobody runs yet,
+    // so one frame carries both the number and the "none yet" wording.
+    subscribers: 3,
   },
   {
     id: "HC-SAURON",
@@ -59,6 +62,7 @@ const cards = [
       "src/personas/sauron-hardcore.ts (Eric, 2026-08-20) — trade volume as research data, not P/L; not yet a docs/research/ backtest of its own.",
     traits: [],
     metrics: [],
+    subscribers: 0,
   },
 ];
 
@@ -200,6 +204,16 @@ await frame(
   "House — every account",
   PHONE,
   "212",
+  "/app/research?section=playbooks",
+);
+// The subscriber count (#3970), at the top of the deck where it is read: "3 accounts" on one card
+// and "none yet" on the other, in catalog-only mode so the count is proven to show without one.
+await frame(
+  "phone-subscriber-count",
+  false,
+  "Subscribed and active",
+  PHONE,
+  "Subscribed and active",
   "/app/research?section=playbooks",
 );
 await frame("phone-delegation-earned", false, "Capital to delegate", PHONE);

@@ -217,6 +217,32 @@ function SubscriptionRow({
 const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
 
 /**
+ * HOW MANY ACCOUNTS RUN THIS (#3970) — the bare count of enabled subscriptions across the whole
+ * house, and never which accounts they are: #885 settled that no viewer sees another account's
+ * subscriptions, and #3834 withholds even playbook names from non-owners, so a number is the most
+ * this card may say. A count names nobody.
+ *
+ * Drawn on every card, in catalog-only mode too — "is anyone using this?" is a question a member
+ * asks BEFORE they pick an account, so gating it on a selection would withhold the answer exactly
+ * when it is wanted. Sits high on the card for the same reason (phone-first ranking): adoption is
+ * the fact the issue was filed about, and it is one short line.
+ *
+ * Words only, no hue and no bar — a standing reader is red/green colorblind. A paused subscription
+ * is not in the count, and the label says "active" so the number can't be read as "ever
+ * subscribed"; "none yet" rather than "0" keeps the empty case reading like a sentence.
+ */
+function SubscriberCount({ count }: { readonly count: number }): ReactElement {
+  return (
+    <p className="pb-card-subscribers">
+      <span>Subscribed and active</span>{" "}
+      <b className="num">
+        {count === 0 ? "none yet" : `${count} account${count === 1 ? "" : "s"}`}
+      </b>
+    </p>
+  );
+}
+
+/**
  * The facts the probe derives from the playbook's own code — window, target exposure per mode, and
  * the traits it proved — ported from the retired Plays cards (#3623) so they can never drift from
  * what the playbook does. A tactical playbook has no window, so it shows none rather than a false
@@ -285,6 +311,7 @@ export function PlaybookCard({
         <span className="num pb-card-symbols">{card.symbols.join(" · ")}</span>
       </h2>
       <p className="pb-card-description">{card.description}</p>
+      <SubscriberCount count={card.subscribers} />
       <PlaybookFacts card={card} />
       <dl className="pb-card-triggers">
         <dt>Enter</dt>

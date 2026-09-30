@@ -32,6 +32,28 @@
   line-height: 1.5;
 }
 
+/* How many accounts run this playbook (#3970) — one line, label then number, no hue and no bar. The
+   label carries the meaning so the figure never has to; the number is `--text` against the muted
+   label, which is the contrast step that makes it the thing your eye lands on. */
+.pb-card-subscribers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.pb-card-subscribers b {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
 .pb-card-triggers {
   margin: 0;
   display: grid;

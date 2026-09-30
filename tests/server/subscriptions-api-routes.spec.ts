@@ -68,6 +68,16 @@ function storeWith(calls: unknown[] = []) {
 
 const answered = (out: Answer): Record<string, unknown> => JSON.parse(out.body ?? "{}");
 
+/** One enabled subscription, shaped as the store's own parser leaves it (#3970's count fixtures). */
+const enabledSub = (playbookId: string) => ({
+  playbookId,
+  mode: "standard" as const,
+  capitalAllocated: 5_000,
+  enabled: true,
+  createdAt: "2026-09-29T00:00:00.000Z",
+  updatedAt: "2026-09-29T00:00:00.000Z",
+});
+
 describe("serveSubscriptionsApi", () => {
   it("claims only its paths", async () => {
     const { res } = fakeRes();
@@ -115,6 +125,70 @@ describe("serveSubscriptionsApi", () => {
     );
     const body = answered(out);
     expect(body.canManage).toBe(false);
+  });
+
+  /**
+   * THE SUBSCRIBER COUNT (#3970) — the one house-wide figure this route serves. WHEN other accounts
+   * have a playbook enabled, the card SHALL carry how many, even for a viewer who owns none of them;
+   * it SHALL NOT carry which. Falsifier: any other account's id, mode, or capital in the response.
+   */
+  describe("GET index: the house-wide subscriber count (#3970)", () => {
+    const filled = (over: Record<string, unknown> = {}) =>
+      ({
+        ...(storeWith() as object),
+        load: () => ({
+          "acct-mine": [enabledSub("S1-NVDA")],
+          "acct-theirs": [enabledSub("S1-NVDA"), enabledSub("G1-GOOG")],
+          "acct-paused": [{ ...enabledSub("S1-NVDA"), enabled: false }],
+        }),
+        ...over,
+      }) as never;
+
+    const cardsOf = (out: Answer) =>
+      answered(out).cards as readonly { id: string; subscribers: number }[];
+
+    it("counts every account with the playbook enabled, and excludes the paused one", async () => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        get("/api/playbook-store?id=acct-mine"),
+        res,
+        "/api/playbook-store",
+        configWith({ subscriptions: filled() }),
+        session,
+      );
+      const cards = cardsOf(out);
+      expect(cards.find((c) => c.id === "S1-NVDA")?.subscribers).toBe(2);
+      expect(cards.find((c) => c.id === "G1-GOOG")?.subscribers).toBe(1);
+      expect(cards.find((c) => c.id === "TACO-DJT")?.subscribers).toBe(0);
+    });
+
+    it("answers a non-owner too — a count is not cross-account visibility, and names nobody", async () => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        get("/api/playbook-store?id=someone-elses"),
+        res,
+        "/api/playbook-store",
+        configWith({ subscriptions: filled() }),
+        session,
+      );
+      expect(answered(out).canManage).toBe(false);
+      expect(cardsOf(out).find((c) => c.id === "S1-NVDA")?.subscribers).toBe(2);
+      // The whole payload, not just the card: no other account's id may appear anywhere in it.
+      expect(out.body).not.toContain("acct-theirs");
+      expect(out.body).not.toContain("acct-paused");
+    });
+
+    it("reports 0 rather than omitting the field when the store isn't wired at all", async () => {
+      const { res, out } = fakeRes();
+      await serveSubscriptionsApi(
+        get("/api/playbook-store"),
+        res,
+        "/api/playbook-store",
+        configWith(),
+        session,
+      );
+      for (const card of cardsOf(out)) expect(card.subscribers).toBe(0);
+    });
   });
 
   it("subscribe: refuses malformed bodies with 400", async () => {

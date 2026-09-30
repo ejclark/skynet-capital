@@ -33,6 +33,9 @@ export interface PlaybookStoreCardView {
   readonly exitCutLosses: string;
   readonly hold: string;
   readonly metrics: readonly never[];
+  /** How many accounts have this playbook switched on, house-wide (#3970). A count and nothing
+   *  more — the server never sends which accounts they are. */
+  readonly subscribers: number;
   readonly subscription?: {
     readonly mode: PlaybookMode;
     readonly capitalAllocated: number;

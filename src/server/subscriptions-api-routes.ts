@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { DELEGATION_LOCKED_NOTE, delegationLocked } from "../domain/playbook-delegation.js";
 import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import { subscriberCountsByPlaybook } from "../subscriptions/subscription-state.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -148,12 +149,22 @@ async function serveStoreIndex(
   const owns = Boolean(id) && config.auth && resolveOwnedIds(session, config).includes(id ?? "");
   // The store omits an account until its first subscribe, so an owned account with no entry yet is
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
-  const subscriptions =
-    owns && id && config.subscriptions ? (config.subscriptions.load()[id] ?? []) : undefined;
+  const all = config.subscriptions?.load();
+  const subscriptions = owns && id && all ? (all[id] ?? []) : undefined;
+  // The one house-wide figure this route serves (#3970): how many accounts run each playbook. A
+  // count, derived here and passed down instead of the state, so the view still only ever sees the
+  // viewer's OWN subscriptions — #885's boundary, kept mechanical rather than remembered. Served on
+  // every read, including catalog-only, because "is anyone using this" precedes picking an account.
+  const subscribers = all ? subscriberCountsByPlaybook(all) : {};
   sendJson(
     res,
     200,
-    playbookStoreView(subscriptions, await viewerDelegationLocked(config, session)),
+    playbookStoreView(
+      subscriptions,
+      await viewerDelegationLocked(config, session),
+      [],
+      subscribers,
+    ),
   );
 }
 
