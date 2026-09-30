@@ -26,7 +26,7 @@ export function routeShipped(deps = {}) {
     issueNumber: f.number,
     title: f.title,
     pr: f.pr,
-    body: `🚀 **Shipped** — this landed in #${f.pr} and is live.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so Moneypenny closes these itself rather than depending on an event.\n\n${FOOTER}`,
+    body: `🚀 **Shipped** — merged in #${f.pr}; live after the next deploy.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so Moneypenny closes these itself rather than depending on an event.\n\n${FOOTER}`,
   }));
 }
 

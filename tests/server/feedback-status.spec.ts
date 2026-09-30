@@ -1,5 +1,9 @@
 import type { JsonResponse } from "../../src/http/fetch-json.js";
-import { createStatusFetcher, resolveFeedbackStatus } from "../../src/server/feedback-status.js";
+import {
+  createStatusFetcher,
+  FEEDBACK_STATUS_LABEL,
+  resolveFeedbackStatus,
+} from "../../src/server/feedback-status.js";
 
 // GitHub is the source of truth for a filed issue's state — these specs cover the fold from raw
 // issue JSON into the app's own four-outcome vocabulary (docs/FEEDBACK.md, "the four ways a build
@@ -30,6 +34,26 @@ describe("feedback-status", () => {
     );
 
     expect((await fetch([7])).get(7)).toBe("next-slice");
+  });
+
+  it("reads an issue closed as not planned as closed, not built — never as shipped (#3952)", async () => {
+    const fetch = createStatusFetcher(
+      config,
+      fakeFetch({
+        7: { status: 200, body: { state: "closed", state_reason: "not_planned", labels: [] } },
+        8: {
+          status: 200,
+          body: { state: "closed", state_reason: "not_planned", labels: ["next-slice"] },
+        },
+        9: { status: 200, body: { state: "closed", state_reason: "completed", labels: [] } },
+      }),
+    );
+
+    const statuses = await fetch([7, 8, 9]);
+    expect(statuses.get(7)).toBe("not-built");
+    expect(statuses.get(8)).toBe("not-built");
+    expect(statuses.get(9)).toBe("shipped");
+    expect(FEEDBACK_STATUS_LABEL["not-built"]).toBe("Closed, not built");
   });
 
   it("reads an open issue with no triage label as open", async () => {
