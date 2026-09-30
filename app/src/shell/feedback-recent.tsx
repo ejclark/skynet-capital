@@ -13,7 +13,9 @@ import { Toggle } from "./toggle";
  * still moving. "Completed" means `status === "shipped"` specifically: `next-slice` still has
  * real work on the issue (docs/FEEDBACK.md's "four ways a build session ends" — sliced waits on
  * nobody, but isn't done), so it stays in the default view alongside `open`/`needs-info`/
- * `needs-eric`. The `Toggle` only appears once there's something it would reveal.
+ * `needs-eric`. So does `not-built` (closed as not planned): it is finished, but the member who
+ * filed it should see that plainly rather than have it vanish. The `Toggle` only appears once
+ * there's something it would reveal.
  *
  * A shipped filing also carries the last piece of #429's acceptance criteria: "stamped with the
  * release version, and celebrate it." `appVersion` is this SERVER's own currently-running
@@ -34,6 +36,7 @@ const STATUS_LABELS: Record<string, string> = {
   "needs-eric": "with Eric",
   "next-slice": "next slice",
   shipped: "shipped",
+  "not-built": "closed, not built",
 };
 
 function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactElement {
