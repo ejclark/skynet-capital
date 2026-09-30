@@ -217,11 +217,16 @@ jobs:
     # other. On a PR, needs verify's `code` output so a docs-only PR doesn't pay for a Chromium boot
     # too; on push to main (#3333) there's no `verify` run to classify against, so it always runs —
     # see the top-of-file note on why `e2e` alone runs on both triggers.
+    # `!cancelled()` is load-bearing (#3621): a job with `needs:` gets an implicit `success()` in
+    # its `if:`, and `verify` is PR-only, so on push the skipped `verify` silently skipped this job
+    # too — for weeks, while the push leg below read as live and /research's baseline went stale.
+    # With the implicit gate gone, the PR leg must ask for `verify`'s success itself.
     needs: verify
     if: >-
-      ${{ (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
-           needs.verify.outputs.code == 'true') ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+      ${{ !cancelled() && (
+          (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+           needs.verify.result == 'success' && needs.verify.outputs.code == 'true') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
