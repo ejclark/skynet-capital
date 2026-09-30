@@ -30,10 +30,10 @@ import {
   sectionFromSearch,
   sectionsFor,
 } from "../shell/profile-sections";
+import { ProfileTower } from "../shell/profile-tower";
 import type { PageSection } from "../shell/sections";
 import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
-import { TowerColumn, useTowerColumn } from "../shell/tower-column";
 
 /**
  * THE PROFILE PAGE (#2321, the Cockpit): a unified per-account view whose sticky head carries the
@@ -303,37 +303,22 @@ function AccountsBody({
   readonly onSelectAccount: (id: string) => void;
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
-  const towerColumn = useTowerColumn();
-  const head = (
-    <CockpitHead
-      accounts={body.accounts}
-      accountId={body.accountId}
-      section={body.section}
-      sections={sections}
-      onSelectSection={onSelectSection}
-      onSelectAccount={onSelectAccount}
-      isDefault={isDefault}
-      onToggleDefault={onToggleDefault}
-    />
-  );
   return (
-    <PageFrame>
+    <PageFrame tower={<ProfileTower accounts={body.accounts} deskIds={body.deskIds} />}>
       <h1 className="visually-hidden">Accounts</h1>
-      {towerColumn ? (
-        // #3977: the big tower's own column, from just under the navbar, on every section.
-        <div className="cockpit cockpit--tower">
-          <div className="cockpit-main">
-            {head}
-            <CockpitBody {...body} />
-          </div>
-          <TowerColumn accounts={body.accounts} deskIds={body.deskIds} />
-        </div>
-      ) : (
-        <div className="cockpit">
-          {head}
-          <CockpitBody {...body} />
-        </div>
-      )}
+      <div className="cockpit">
+        <CockpitHead
+          accounts={body.accounts}
+          accountId={body.accountId}
+          section={body.section}
+          sections={sections}
+          onSelectSection={onSelectSection}
+          onSelectAccount={onSelectAccount}
+          isDefault={isDefault}
+          onToggleDefault={onToggleDefault}
+        />
+        <CockpitBody {...body} />
+      </div>
     </PageFrame>
   );
 }

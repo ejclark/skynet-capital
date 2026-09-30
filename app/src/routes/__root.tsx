@@ -39,8 +39,9 @@ import { Vantage } from "../shell/vantage";
  * a member picks on the Profile page is the week R&D and Trade open on. The model, its defaults
  * and its falsifier: `live/horizon-params.ts`.
  *
- * The tower's crest (#3807 slice 3a, behind `?shell=watchtower`) is ONE frame mounted here, beside
- * the page and never inside the topbar, so it survives every navigation (`shell/vantage.tsx`).
+ * The page's tower (#3977; the crest of #3807 slice 3a before it) is ONE frame mounted here, beside
+ * the page and never inside the topbar, so it survives every navigation (`shell/vantage.tsx`),
+ * laid over the page frame's tower column (`shell/tower-column.tsx`).
  */
 
 function GearIcon(): ReactElement {

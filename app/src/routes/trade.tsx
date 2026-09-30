@@ -713,7 +713,7 @@ function TradePage(): ReactElement {
       }
     >
       {/* The market calendar's head leads the stage (#3807 slice 3b-2, `trade-clock.tsx`): a row,
-          its line scoped to the ticket's symbol, the tower's slot at its right cap under the flag. */}
+          its line scoped to the ticket's symbol. */}
       <TradeClock symbol={symbol} />
       <header className="page-header">
         {tradedAccount ? (

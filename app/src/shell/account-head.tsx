@@ -84,13 +84,16 @@ export function AccountHead({
  *  one wrapper so the five sections read identically (`.acct-page` scopes the card's glance). */
 export function AccountPage({
   desk,
+  tower,
   children,
 }: {
   readonly desk: { readonly id: string; readonly name: string; readonly kind: "human" | "bot" };
+  /** What the page stands under the tower in the frame's column (#3977) — the account's league. */
+  readonly tower?: ReactNode;
   readonly children: ReactNode;
 }): ReactElement {
   return (
-    <PageFrame>
+    <PageFrame tower={tower}>
       <div className="cockpit acct-page">
         <AccountHead id={desk.id} name={desk.name} kind={desk.kind} />
         {children}

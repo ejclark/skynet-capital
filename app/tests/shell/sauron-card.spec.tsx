@@ -1,5 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
-import { usePrefs } from "../../src/shell/prefs";
+import { render, screen } from "@testing-library/react";
 import { SauronCard, towerSrc } from "../../src/shell/sauron-card";
 
 // The league reads the board over the network; these cases are about the art column only.
@@ -28,28 +27,19 @@ describe("towerSrc", () => {
   });
 });
 
-describe("the open card, in the Profile page's tower column (#3977)", () => {
-  afterEach(() => act(() => usePrefs.getState().setCrest("live")));
-
-  it("stands unboxed: the open class, the live tower, the league under it", () => {
-    const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" open />);
-    const card = screen.getByRole("region", { name: "Sauron's tower and the league" });
-    expect(card).toHaveClass("char-card--open");
-    expect(container.querySelector("iframe")?.getAttribute("src")).toBe("/tower?frame=card");
+describe("under the page's tower, in the frame's column (#3977)", () => {
+  it("draws no art of its own — the shade and the league only, so the page draws one tower", () => {
+    const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" under />);
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.getByRole("region", { name: "The league" })).toHaveClass("char-card--under");
     expect(screen.getByText("the league")).toBeInTheDocument();
   });
 
-  it("stays boxed everywhere else (/u/:id, the Overview below the bench width)", () => {
-    render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" />);
-    const card = screen.getByRole("region", { name: "Sauron's tower and the league" });
-    expect(card).not.toHaveClass("char-card--open");
-  });
-
-  it("carries the member's Still to the open tower too", () => {
-    act(() => usePrefs.getState().setCrest("still"));
-    const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" open />);
-    expect(container.querySelector("iframe")?.getAttribute("src")).toBe(
-      "/tower?frame=card&rest=still",
+  it("keeps its own tower everywhere else (below the bench width, the boxed card)", () => {
+    const { container } = render(<SauronCard ownedIds={["a1"]} meId="a1" scope=".cockpit" />);
+    expect(container.querySelector("iframe")?.getAttribute("src")).toBe("/tower?frame=card");
+    expect(screen.getByRole("region", { name: "Sauron's tower and the league" })).not.toHaveClass(
+      "char-card--under",
     );
   });
 });

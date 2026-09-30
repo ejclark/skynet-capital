@@ -734,6 +734,9 @@ const { page, origin, shoot, close } = await openShell({
   stubs: {
     "/api/trade/plays": () => currentPlays,
     "/api/settings": () => currentSettings,
+    // The calendar head reads the research shelf (#3807); an unstubbed `{}` crashed the page with
+    // "not iterable" before any frame was shot (found 2026-09-30, #3977). An empty shelf is honest.
+    "/api/research": { events: [], closures: [], calls: [], symbols: [], studies: [], ledgers: [] },
     "/api/desk/*": () => currentDesk,
     // Exact key beats the `/api/desk/*` prefix above (`lib.mjs`'s `stubBody`) — every fixture in
     // this script logs in as the same "human-eric" account (`settings.accounts[0].id`).

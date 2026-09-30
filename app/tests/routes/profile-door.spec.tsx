@@ -125,8 +125,8 @@ rstest.mock("../../src/shell/events-section", () => ({
 }));
 // The tower column's card and council line have their own specs; here only where the column stands.
 rstest.mock("../../src/shell/sauron-card", () => ({
-  SauronCard: ({ open }: { open?: boolean }) => (
-    <section data-testid="tower" data-open={open ? "true" : "false"} />
+  SauronCard: ({ under }: { under?: boolean }) => (
+    <section data-testid="tower" data-under={under ? "true" : "false"} />
   ),
 }));
 rstest.mock("../../src/shell/council-line-card", () => ({
@@ -341,16 +341,19 @@ function benchWidth(): () => void {
 }
 
 describe("the big tower's own column (#3977)", () => {
-  it("stands the open tower beside the page from the bench width, on every section", async () => {
+  it("stands the tower column beside the page from the bench width, on every section", async () => {
     const restore = benchWidth();
     try {
       accounts = [ERIC];
       onboardingComplete = true;
       const router = mountAccounts("/accounts");
       expect(await screen.findByTestId("overview")).toBeInTheDocument();
+      // The league stands under the column's tower (the frame draws the tower itself, vantage.tsx).
       const tower = screen.getByTestId("tower");
-      expect(tower.dataset.open).toBe("true");
-      expect(tower.closest("aside.tower-column")).not.toBeNull();
+      expect(tower.dataset.under).toBe("true");
+      expect(
+        tower.closest("aside.tower-column")?.querySelector("[data-tower-slot]"),
+      ).not.toBeNull();
       await userEvent.click(screen.getByRole("button", { name: "Milestones" }));
       await waitFor(() =>
         expect(router.state.location.search).toMatchObject({ section: "milestones" }),
