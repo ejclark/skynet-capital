@@ -43,6 +43,10 @@ docs first").
    — not the issue's assertion of it. If you can't reproduce or locate the constraint, stop: report
    `status: "blocked"` with summary "not reproducible/measured — looked at <what>" and post that as
    the comment instead of a call sheet. A fix for an unmeasured bottleneck is speculation.
+   **Then make sure the body carries the number** (`docs/ISSUES.md` → *Bottleneck issues*): if it has
+   no `**Before:**` line, edit one into the body (`node scripts/issues.mjs update <n> --body-file
+   b.md`) with the value, the date and how you counted it, so the next session can re-count it the
+   same way. Your call sheet's falsifier should name that same number.
 3. **Survey existing solutions — at least two genuinely different candidates**, plus "keep the
    status quo" as a candidate in its own right. Prefer proven tools and practices this repo could
    adopt over anything it would have to build. For each candidate, read the **primary source** —
@@ -75,7 +79,7 @@ docs first").
    `needs-eric` when the recommended step is his call (a protected path, spend, a policy choice);
    `feedback` when it's buildable now, in-envelope, by the Moneypenny lane; `next-slice` when it
    depends on something else landing first. Never remove `bottleneck`, never close the issue —
-   the lane that acts on the call sheet does that. **If the issue carries `needs-eric` and your
+   the lane that acts on the call sheet does that, after adding the `**After:**` line. **If the issue carries `needs-eric` and your
    call sheet establishes that no decision remains** — the policy is already written, the fact is
    already settled, the fork was a false one — **remove it** (`DELETE .../issues/<n>/labels/needs-eric`)
    and say in the comment exactly which evidence settled it. Eric, 2026-09-04, on the first time

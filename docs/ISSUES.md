@@ -257,6 +257,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | duplicate blocks | no paragraph repeated verbatim | #455 shipped its whole body twice |
 | mermaid | every block parses under GitHub's own Mermaid (`scripts/mermaid-lint.mjs`) | a syntax error renders as the opening frame |
 | `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
+| `bottleneck` baseline | labelled `bottleneck` ⇒ a `**Before:**` line with a number, or `unmeasured — <why>` | a fix nobody measured before cannot be shown to have worked |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤80 chars, not `Fix bug`-class | Google's rule, their anti-patterns |
 
@@ -280,6 +281,26 @@ The research behind that caution: no readability formula is universally valid, o
 general prose scores worse on technical text, which is exactly this repo's content. Treat a hit as
 "maybe worth a `linguist` pass," never as a defect — same non-blocking doctrine as every other note
 in this section.
+
+## Bottleneck issues — the number the fix should move (#4063)
+
+A `bottleneck` issue names a *measured* constraint (CLAUDE.md → "A bottleneck surfaced by
+fan-out"), so it carries the measurement, in two lines of the body:
+
+```text
+- **Before:** <number and unit> — <date>, <how it was counted>
+- **After:** <number and unit> — <date>, <how it was counted>
+```
+
+- **Before** is required when the issue is filed: `issue-lint` refuses a `bottleneck`-labelled
+  body without it. **After** is added by whoever closes the issue, counted the same way.
+- Either line may say `unmeasured — <why>` instead. An honest "we could not count this" is an
+  answer; a missing line or a `TBD` is not.
+- `npm run bottleneck:baseline` lists the issues owed a line and the closed ones that carry both.
+  It feeds the *Bottleneck before/after* row in `docs/process/LEARNING-LOOP.md`. Issues filed
+  before 2026-10-01 are reported as legacy; the research grind backfills their Before line when
+  it picks one up (`docs/grind/research-bottleneck.instructions.md`, step 2).
+- First instance: #3926, the CI-failure recurrence storm.
 
 ## The state block — a plan issue's context store (#3765)
 

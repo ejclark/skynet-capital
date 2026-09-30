@@ -22,7 +22,13 @@ export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}
   const failing = human
     .map((i) => ({
       issue: i,
-      ...lintIssue({ title: i.title ?? "", body: i.body ?? "", labels: i.labels }),
+      // GitHub returns label objects; lintIssue's label rules compare names. Passed raw, every
+      // label-conditional rule (needs-eric callout, bottleneck baseline) silently never fired.
+      ...lintIssue({
+        title: i.title ?? "",
+        body: i.body ?? "",
+        labels: i.labels?.map((l) => (typeof l === "string" ? l : l.name)),
+      }),
     }))
     .filter((r) => r.problems.length);
 
