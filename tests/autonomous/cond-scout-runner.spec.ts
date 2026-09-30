@@ -34,7 +34,12 @@ function memoryStore(): CondScoutStore & {
     snapshots,
     saveSnapshot: (snapshot) => snapshots.push(snapshot),
     snapshotsFor: (probeId) => snapshots.filter((x) => x.probeId === probeId),
-    saveRetro: (retro) => retros.push(retro),
+    saveRetro: (retro) => {
+      const i = retros.findIndex((r) => r.probeId === retro.probeId);
+      if (i >= 0) retros[i] = retro;
+      else retros.push(retro);
+    },
+    recentRetros: (limit) => [...retros].reverse().slice(0, limit),
     loadOpen: () => opened.filter((p) => !closed.some((c) => c.probe.id === p.id)),
     saveOpen: (probe) => opened.push(probe),
     close: (close) => closed.push(close),
@@ -254,6 +259,41 @@ describe("CondScoutRunner", () => {
       await runner.runPass(at(70));
       expect(retros).toHaveLength(1);
       expect(retros[0]).toMatchObject({ snapshotCount: 1 });
+    });
+  });
+
+  describe("later-exit backfill (slice 5)", () => {
+    it("prices due checkpoints from daily bars once per session, and leaves the rest pending", async () => {
+      const store = memoryStore();
+      const clock = { t: T0 };
+      const barCalls: string[] = [];
+      const deps = (t: number) => ({
+        universe: ["AMD"],
+        closesFor: () => Promise.resolve({ AMD: SLIDE }),
+        risk: { maxPositionPct: 0.2 },
+        blockedReason: () => "halted", // no new probes: this test is about the backfill only
+        store,
+        now: () => t,
+        barsFor: (symbol: string, start: string) => {
+          barCalls.push(`${symbol}@${start}`);
+          return Promise.resolve([{ t: start, c: 120 }]);
+        },
+      });
+      // A probe that opened and closed earlier: a 2-day hold, so its first checkpoint is 1 week.
+      const first = setup({ store, clock });
+      await first.runner.runPass(at(80));
+      clock.t = T0 + 2 * DAY;
+      await first.runner.runPass(at(70, "2026-10-02T14:00:00Z"));
+      expect(store.retros).toHaveLength(1);
+
+      const later = new CondScoutRunner(deps(T0 + 8 * DAY));
+      await later.runPass(at(90, "2026-10-08T14:00:00Z"));
+      await later.runPass(at(90, "2026-10-08T15:00:00Z"));
+      expect(barCalls).toHaveLength(1);
+      const [week, threeWeeks] = store.retros[0]?.laterExits ?? [];
+      expect(week?.priceBasis).toBe("daily close");
+      expect(week?.roi).toBeGreaterThan(0);
+      expect(threeWeeks?.roi).toBeUndefined();
     });
   });
 });
