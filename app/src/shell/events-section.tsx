@@ -7,7 +7,7 @@ import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { ALL_RANGE, type DayRange, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
-import { fetchResearch, type Lens, type ResearchEvent } from "../live/research";
+import { fetchResearchCalendar, type Lens, type ResearchEvent } from "../live/research";
 import { EventHorizon } from "./event-horizon";
 import { AgendaRow, TIER, TierMark } from "./events-agenda";
 
@@ -89,7 +89,7 @@ export function EventsSection({
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays, retry: false });
   const fog = dayLensFog(plays.data);
   const horizon = useHorizonRange({ fogged: fog.fogged });
-  const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch });
+  const research = useQuery({ queryKey: ["research-calendar"], queryFn: fetchResearchCalendar });
 
   const events = research.data?.events ?? [];
   const calls = research.data?.calls ?? [];

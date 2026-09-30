@@ -37,7 +37,7 @@ export interface NextEvent {
 const SHARE_HORIZON_DAYS = 60;
 
 /** The headline macro prints, by the calendar's stable id prefixes, with the words we print. */
-const HEADLINE_MACRO: ReadonlyArray<readonly [prefix: string, noun: string]> = [
+export const HEADLINE_MACRO: ReadonlyArray<readonly [prefix: string, noun: string]> = [
   ["fomc-2", "Fed meeting"],
   ["cpi-2", "CPI report"],
   ["jobs-2", "Jobs report"],

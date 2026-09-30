@@ -778,7 +778,12 @@ scenarios asked; 33–36 were added by the red passes.
    endpoint; §4 joint 1 is client-side over three payloads; macro events with `symbols []` are
    dropped by a `sym:` scope (`board-section.tsx:43-56`). A slim range-scoped calendar endpoint
    (events; closures are already client-side) is the panel's precondition for any head outside the
-   Board (`/api/research` is one ≈2.5 MB payload, `content-api-routes.ts:61-77`).
+   Board (`/api/research` is one ≈2.5 MB payload, `content-api-routes.ts:61-77`). **Shipped as
+   field-scoped, not range-scoped** (#3977 slice 5): `GET /api/research/calendar` carries every
+   event, the closures, and only the calls a calendar prints — 220 KB (42 KB gzipped) against the
+   shelf's 2.6 MB (698 KB) on 2026-09-30 — and R&D's grid, Profile's Events and Trade's line read it.
+   Whole history on purpose: the arrows and the all lens step client-side, so a range param would
+   refetch per step for a payload already small.
 5. **A closure-gap range (last close → next open) and sessions-to-expiry** — `DayRange` is
    calendar-anchored (`rangeFor`, `horizon-range.ts:72`); `sessionsIn` is client-side for R&D's
    head only (`:148-151`); `MarketSessionView.nextOpen` is a string (`market-session.ts:26`) and

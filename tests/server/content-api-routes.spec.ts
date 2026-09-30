@@ -82,3 +82,27 @@ describe("serveContentApi", () => {
     expect(seen).toEqual([]); // progression never asked about anyone else
   });
 });
+
+describe("serveContentApi — the calendar's slice (#3977 slice 5)", () => {
+  const serve = async (path: string) => {
+    const { res, out } = fakeRes();
+    const claimed = await serveContentApi(res, path, path, configWith(), undefined);
+    return { claimed, status: out.status, body: out.body ?? "" };
+  };
+
+  it("serves the shelf's own events, narrowed, at a fraction of the shelf's bytes", async () => {
+    const shelf = await serve("/api/research");
+    const calendar = await serve("/api/research/calendar");
+    expect(calendar.claimed).toBe(true);
+    expect(calendar.status).toBe(200);
+    const full = JSON.parse(shelf.body);
+    const slim = JSON.parse(calendar.body);
+    expect(slim.events.map((e: { id: string }) => e.id)).toEqual(
+      full.events.map((e: { id: string }) => e.id),
+    );
+    expect(slim.closures).toEqual(full.closures);
+    expect(slim.calls.some((c: object) => "tldr" in c || "adjacent" in c)).toBe(false);
+    // 2.58 MB → ~0.21 MB on 2026-09-30; a quarter is the loose line a regression would cross.
+    expect(calendar.body.length).toBeLessThan(shelf.body.length / 4);
+  });
+});

@@ -14,7 +14,7 @@ import {
  * EVENTS ON YOUR BOOK (#3807 slice 2c, the co-location — `docs/IA.md` §8): the market calendar's
  * events joined to what a book holds, for the Profile page's Events section. `held-events.ts` is
  * the one-line version over each position's single `nextEvent`; this reads the research corpus
- * itself (`/api/research` — every dated event, earnings prints included), so a month with two
+ * itself (`/api/research/calendar` — every dated event, earnings prints included), so a month with two
  * events on one name shows both, in two tiers:
  *
  *   held    an event naming a ticker the book holds (an option counts as its underlying)

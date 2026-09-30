@@ -5,7 +5,7 @@ import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
 import { type DayRange, rangeLabel } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
-import { fetchResearch } from "../live/research";
+import { fetchResearchCalendar } from "../live/research";
 import { describeSymbolEvent, type SymbolEvent, symbolEventsIn } from "../live/symbol-events";
 import { CalendarHead, headLine } from "./calendar-head";
 import { CalendarSheet } from "./calendar-sheet";
@@ -77,7 +77,7 @@ export function SymbolEventsLine({
   /** The range in words, for the empty states: "Sep 28 – Oct 4", "from today on". */
   readonly when: string;
 }): ReactElement {
-  const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch });
+  const research = useQuery({ queryKey: ["research-calendar"], queryFn: fetchResearchCalendar });
   if (research.isPending) return <p className="held-events">Reading the calendar…</p>;
   if (research.isError) {
     return <p className="held-events">The calendar's events are unreachable right now.</p>;
