@@ -23,6 +23,15 @@ describe("feedback-status", () => {
     expect((await fetch([7])).get(7)).toBe("shipped");
   });
 
+  it("reads a closed issue still carrying next-slice as a first slice, not as done (#3952)", async () => {
+    const fetch = createStatusFetcher(
+      config,
+      fakeFetch({ 7: { status: 200, body: { state: "closed", labels: ["next-slice"] } } }),
+    );
+
+    expect((await fetch([7])).get(7)).toBe("next-slice");
+  });
+
   it("reads an open issue with no triage label as open", async () => {
     const fetch = createStatusFetcher(
       config,

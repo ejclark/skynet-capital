@@ -275,3 +275,35 @@ describe("draft_feedback — advisory dedup against open feedback issues (#1867 
     expect(drafts).toHaveLength(1);
   });
 });
+
+describe("get_work_status — where any issue stands (#3952 slice 1)", () => {
+  it("passes the bounded, de-duplicated numbers to the reader and returns its answer as-is", async () => {
+    const asked: (readonly number[])[] = [];
+    const result = await runCompanionTool(
+      "get_work_status",
+      depsFor({
+        readWorkStatus: (ns) => {
+          asked.push(ns);
+          return Promise.resolve(ns.map((number) => ({ number, found: false }) as const));
+        },
+      }),
+      undefined, // no linked desk: this tool reads no member data, so it still answers
+      { issues: [42, 42, 7, -1, 1.5, "8", 9, 10, 11, 12] },
+    );
+    expect(asked).toEqual([[42, 7, 9, 10, 11]]);
+    expect(result).toEqual({
+      ok: true,
+      result: { issues: [42, 7, 9, 10, 11].map((number) => ({ number, found: false })) },
+    });
+  });
+
+  it("refuses with nothing to look up, and says 'not available' — never a guess — with no token", async () => {
+    const empty = await runCompanionTool("get_work_status", depsFor(), "acct-1", { issues: [] });
+    expect(empty.ok).toBe(false);
+    const off = await runCompanionTool("get_work_status", depsFor(), "acct-1", { issues: [42] });
+    expect(off).toEqual({
+      ok: false,
+      error: "issue status isn't available on this deployment — say so plainly, never guess one",
+    });
+  });
+});

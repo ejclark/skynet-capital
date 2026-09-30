@@ -27,6 +27,7 @@ import {
   type ProgressionService,
 } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
+import { resolveWorkStatus } from "../server/work-status.js";
 
 export interface CompanionSetupDeps {
   readonly hub: ObservatoryHub;
@@ -72,11 +73,13 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   });
   const optionsClientFor = deps.optionsClientFor;
   const findSimilarFeedback = resolveSimilarFeedback(env);
+  const readWorkStatus = resolveWorkStatus(env);
   const tools: CompanionDeskDeps = {
     snapshotFor: (id) => deps.hub.getState().participants.find((p) => p.id === id),
     readTradeActivity: deps.readFills,
     progression,
     ...(findSimilarFeedback ? { findSimilarFeedback } : {}),
+    ...(readWorkStatus ? { readWorkStatus } : {}),
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {

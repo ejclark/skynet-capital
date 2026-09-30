@@ -137,7 +137,7 @@ describe("bounds — server-enforced, before any model call", () => {
 });
 
 describe("no desk linked — only the draft hand-off is on offer, never a desk lookup", () => {
-  it("offers draft_feedback alone, and a direct reply is emitted whole", async () => {
+  it("offers only the lookups that read no member data (draft_feedback, get_work_status), and a direct reply is emitted whole", async () => {
     const fetchCalls: { tools?: { name: string }[] }[] = [];
     const streamCalls: unknown[] = [];
     const chat = createCompanionChat(
@@ -150,7 +150,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
     );
     const { handlers, texts, done } = collect();
     await chat({ messages: [userMsg("what's a covered call?")] }, handlers);
-    expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual(["draft_feedback"]);
+    expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual(["get_work_status", "draft_feedback"]);
     expect(streamCalls).toEqual([]);
     expect(texts.join("")).toBe("Sure, here's how a covered call works.");
     expect(done()).toBe(true);
@@ -169,7 +169,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
     );
     const input: CompanionTurnInput = { messages: [userMsg("hi")] }; // no participantId
     await chat(input, collect().handlers);
-    expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual(["draft_feedback"]);
+    expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual(["get_work_status", "draft_feedback"]);
   });
 
   it("hands a drafted filing to onHandoff and files nothing — the member's reply does that", async () => {

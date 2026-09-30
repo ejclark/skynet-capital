@@ -39,16 +39,19 @@ const CACHE_TTL_MS = 5 * 60_000;
 
 /** Folds a GitHub issue's `state` + labels into the app's own status vocabulary — same mapping
  *  docs/FEEDBACK.md's "four ways a build session ends" table already defines. A closed issue reads
- *  as shipped: the lane never closes one any other way (docs/FEEDBACK.md, "the four ways"). */
-function statusFromIssue(state: string, labelNames: readonly string[]): FeedbackStatus {
-  if (state === "closed") return "shipped";
+ *  as shipped: the lane never closes one any other way (docs/FEEDBACK.md, "the four ways") —
+ *  except a closed issue still carrying `next-slice`, which shipped only its first slice and must
+ *  not read as done (#3952, from #4056's close-the-loop study). Shared with Moneypenny's
+ *  `get_work_status` (`work-status.ts`), so the badge and her answer never disagree. */
+export function statusFromIssue(state: string, labelNames: readonly string[]): FeedbackStatus {
+  if (state === "closed") return labelNames.includes("next-slice") ? "next-slice" : "shipped";
   if (labelNames.includes("needs-eric")) return "needs-eric";
   if (labelNames.includes("needs-info")) return "needs-info";
   if (labelNames.includes("next-slice")) return "next-slice";
   return "open";
 }
 
-function labelNamesOf(body: unknown): readonly string[] {
+export function labelNamesOf(body: unknown): readonly string[] {
   const raw = (body as { labels?: unknown } | null)?.labels;
   if (!Array.isArray(raw)) return [];
   return raw.map((l) => (typeof l === "string" ? l : ((l as { name?: string })?.name ?? "")));
