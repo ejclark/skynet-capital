@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **`Projects v2 setup` is not on the repair lane's watched-workflow list**, so its reds are silent.
+  Its 2026-09-30 backfill drained the whole GraphQL hour and failed; nothing filed, and the incident
+  was diagnosed from #4183 — a `sync project status` bystander that failed on the drain eight minutes
+  later. Add the workflow name to `moneypenny-repair.yml`'s `workflow_run.workflows` list. A workflow
+  file, so Eric's merge. _(src: Claude · while: repairing #4183)_
+- **A skipped board sync has no scheduled catch-up.** `projects-sync.mjs` is eventually consistent by
+  design (an issue re-syncs on its next event), but an issue whose LAST event lost its sync stays
+  stale, and `projects-backfill.mjs` is `workflow_dispatch`-only. A nightly backfill would close the
+  gap now that a sweep costs ~1 `item-list` page instead of one per issue (#4183). A workflow file,
+  so Eric's merge. _(src: Claude · while: repairing #4183)_
 - **Moneypenny's `Position:` line may read the wrong one of a member's own desks.** A member who
   owns two accounts gets `resolveOwnerIds(email)[0]` (`dashboard-access.ts:98`), while the ticket
   may be on another owned `?desk=`. Own data only, so honesty, not leakage. Honor `?desk=` when it
