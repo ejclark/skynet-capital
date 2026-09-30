@@ -26,6 +26,11 @@ block*, #3765): the block's current state and next-pickup line are the plan's st
 is the delta since the last digest. A plan with no block is itself a headline (it cannot be picked
 up without re-reading everything).
 
+**Rank movement** (#4064 slice 3): `npm run rank -- --digest` prints one line — "N moved up · M
+retired" since the last digest's snapshot — and a `<!-- rank-snapshot: … -->` marker. Put the line
+in "Noise absorbed" and the marker at the end of the digest, verbatim: it is what the next digest
+diffs against. A missing marker reads as "baseline set", never as zero movement.
+
 **Classify into exactly three tiers** (docs/digests/TEMPLATE.md):
 
 1. **Needs you** — the blocked queue: ready-flips, Routine armings, carve-out merges, taste
