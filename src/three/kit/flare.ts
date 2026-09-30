@@ -20,10 +20,12 @@
  *  · `fill` — an order the member placed just filled (#3977 slice 3). It plays the same flare as a
  *    new high today: a kind of its own look (a smaller swell for an everyday event) is scene work
  *    that waits for Eric's eye, and the page names the kind now so that look can land here alone.
+ *  · `milestone` — the member claimed a milestone they earned (#3977 slice 3); the same flare
+ *    for now, on the same terms as `fill`.
  */
-export type FlareKind = "new-high" | "fill";
+export type FlareKind = "new-high" | "fill" | "milestone";
 
-export const FLARE_KINDS: readonly FlareKind[] = ["new-high", "fill"];
+export const FLARE_KINDS: readonly FlareKind[] = ["new-high", "fill", "milestone"];
 
 /** Rise, hold, settle — seconds. Total ≈ 2.05 s: shorter than a glance, and over sooner. */
 export const FLARE = { attack: 0.25, hold: 0.6, release: 1.2 } as const;
