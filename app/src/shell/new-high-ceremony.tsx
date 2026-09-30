@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import type { NetWorthStatsView } from "../live/networth";
 import { RosterSparkline } from "./roster-sparkline";
-import { flareTower } from "./tower-bus";
+import { Takeover } from "./takeover";
 
 /**
  * THE NEW-HIGH CEREMONY (#3689 slice 10, handoff 2c): a full takeover the first time you open
@@ -10,19 +10,15 @@ import { flareTower } from "./tower-bus";
  * account in localStorage, so a later visit at the same high doesn't replay it, and the next
  * high does. Positive reinforcement is where this page spends its motion budget (CLAUDE.md), and
  * this is the moment it's for.
- *  - Behind it, matrix-rain glyphs under a vignette. They're static under
- *    `prefers-reduced-motion`, and the value, tiles and buttons never move.
+ *  - The shell is the shared `Takeover` (`takeover.tsx`): the rain, the three ways out, and the
+ *    tower's flare on leaving (#3807 slice 3b-3) — the Eye brightens once as the page comes back
+ *    into view, with the high just read. Never for a high already seen (no takeover, no leaving).
  *  - The value is in the "charged" highlight. Four tiles: today, locked in, on paper, the month
  *    against the S&P. Then Moneypenny's one line.
- *  - Leaving is one Escape, one click on the backdrop, or the button (focused on open).
- *  - Leaving is also when the tower hears about it (#3807 slice 3b-3, `flareTower`): the Eye
- *    brightens once and settles. Not on opening — the takeover's backdrop is opaque from 70% out
- *    and it opens with the page, before the tower's frame is listening — but the moment the
- *    tower is back in view, with the high just read. Never for a high already seen (no takeover,
- *    no leaving), and never under reduced motion.
  *
  * Not here yet, from the design's trigger list: beating the S&P, a profitable close, a streak,
- * passing someone on the league. They'd reuse this component; each needs its own "seen" key.
+ * passing someone on the league. Each is its own component on the same `Takeover`, with its own
+ * "seen" key — the level-up celebration (#469) is the next.
  * There's also no "Share to the league" yet, because there's no share mechanism to call. The
  * league link stands in for it.
  */
@@ -45,12 +41,6 @@ function markSeen(accountId: string, value: string): void {
   }
 }
 
-/** Deterministic glyph columns: the same rain every render, no Math.random in a render path. */
-const GLYPHS = "01$▲◆✦%+ΔΘ";
-const COLUMNS = Array.from({ length: 28 }, (_, c) =>
-  Array.from({ length: 22 }, (_, r) => GLYPHS[(c * 7 + r * 3) % GLYPHS.length]).join("\n"),
-);
-
 export function NewHighCeremony({
   accountId,
   caption,
@@ -64,91 +54,68 @@ export function NewHighCeremony({
   const atHigh = high !== undefined && high.aboveNow === 0;
   const [open, setOpen] = useState(() => atHigh && !alreadySeen(accountId, high?.value ?? ""));
   const back = useRef<HTMLButtonElement>(null);
-  const told = useRef(false);
-
-  useEffect(() => {
-    if (!open) return;
-    back.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
 
   if (!(open && high)) return null;
   const month = stats.windows.find((w) => w.label === "1M");
-  function close() {
-    if (high) markSeen(accountId, high.value);
-    setOpen(false);
-    if (told.current) return;
-    told.current = true;
-    flareTower("new-high");
-  }
+  const seen = high.value;
 
   return (
-    <div
-      className="nh-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="nh-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
+    <Takeover
+      titleId="nh-title"
+      flare="new-high"
+      focus={back}
+      onLeave={() => {
+        markSeen(accountId, seen);
+        setOpen(false);
       }}
-      onKeyDown={() => undefined}
     >
-      <div className="nh-rain" aria-hidden="true">
-        {COLUMNS.map((col, i) => (
-          <span key={col + String(i)} style={{ animationDelay: `${(i % 7) * -0.9}s` }}>
-            {col}
-          </span>
-        ))}
-      </div>
-      <div className="nh-body">
-        <span className="nh-eyebrow">New all-time high · {caption}</span>
-        <h2 id="nh-title" className="nh-value num">
-          {stats.value}
-        </h2>
-        <RosterSparkline accountId={accountId} className="nh-spark" />
-        <div className="nh-tiles">
-          <div>
-            <span>Today</span>
-            <b className={`num tone-${stats.dayTone}`}>{stats.dayChange}</b>
+      {(leave) => (
+        <>
+          <span className="nh-eyebrow">New all-time high · {caption}</span>
+          <h2 id="nh-title" className="nh-value num">
+            {stats.value}
+          </h2>
+          <RosterSparkline accountId={accountId} className="nh-spark" />
+          <div className="nh-tiles">
+            <div>
+              <span>Today</span>
+              <b className={`num tone-${stats.dayTone}`}>{stats.dayChange}</b>
+            </div>
+            <div>
+              <span>Locked in</span>
+              <b className={`num tone-${stats.bookedTone}`}>{stats.bookedPl}</b>
+            </div>
+            <div>
+              <span>On paper</span>
+              <b className={`num tone-${stats.onPaperTone}`}>{stats.onPaper}</b>
+            </div>
+            <div>
+              <span>This month</span>
+              <b className={`num tone-${month?.tone ?? "flat"}`}>
+                {month?.value ?? "—"}
+                {month?.vsBenchmark ? ` · ${month.vsBenchmark}` : ""}
+              </b>
+            </div>
           </div>
-          <div>
-            <span>Locked in</span>
-            <b className={`num tone-${stats.bookedTone}`}>{stats.bookedPl}</b>
+          <p className="nh-recap">
+            ✦ a new high. the part worth repeating is how you got here. locking some in is how a
+            high stays yours.
+          </p>
+          <div className="nh-actions">
+            <Link to="/leaderboard" search={{ by: "equity" }} className="decision-btn">
+              See the league ↗
+            </Link>
+            <button
+              ref={back}
+              type="button"
+              className="decision-btn decision-btn--primary"
+              onClick={leave}
+            >
+              Back to Accounts
+            </button>
           </div>
-          <div>
-            <span>On paper</span>
-            <b className={`num tone-${stats.onPaperTone}`}>{stats.onPaper}</b>
-          </div>
-          <div>
-            <span>This month</span>
-            <b className={`num tone-${month?.tone ?? "flat"}`}>
-              {month?.value ?? "—"}
-              {month?.vsBenchmark ? ` · ${month.vsBenchmark}` : ""}
-            </b>
-          </div>
-        </div>
-        <p className="nh-recap">
-          ✦ a new high. the part worth repeating is how you got here. locking some in is how a high
-          stays yours.
-        </p>
-        <div className="nh-actions">
-          <Link to="/leaderboard" search={{ by: "equity" }} className="decision-btn">
-            See the league ↗
-          </Link>
-          <button
-            ref={back}
-            type="button"
-            className="decision-btn decision-btn--primary"
-            onClick={close}
-          >
-            Back to Accounts
-          </button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </Takeover>
   );
 }

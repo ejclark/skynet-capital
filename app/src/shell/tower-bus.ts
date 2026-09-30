@@ -16,9 +16,10 @@ import { create } from "zustand";
  */
 
 /** What a flare is for (the scene's `src/three/kit/flare.ts` knows the same kinds): a new
- *  all-time high (`new-high-ceremony.tsx`), or an order of the member's own that filled
- *  (`fill-flare.ts`, #3977 slice 3). */
-export type FlareKind = "new-high" | "fill";
+ *  all-time high (`new-high-ceremony.tsx`), an order of the member's own that filled
+ *  (`fill-flare.ts`), or a milestone the member just claimed (`unlock-gate.tsx`,
+ *  `community-banner.tsx`) — the last two #3977 slice 3. */
+export type FlareKind = "new-high" | "fill" | "milestone";
 
 /** Page → scene. */
 export type TowerMessage =

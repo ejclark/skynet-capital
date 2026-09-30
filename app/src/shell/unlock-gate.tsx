@@ -9,6 +9,7 @@ import {
   type JourneyCelebration,
   submitCheckAnswers,
 } from "../live/learn";
+import { flareTower } from "./tower-bus";
 
 /**
  * THE UNLOCK MOMENT IN THE SHELL (#738 phase 8b) — the celebration banner and the comprehension
@@ -22,7 +23,10 @@ import {
 
 /** The claim mechanics every unlock banner shares: bank the ids, refuse silently to swallow an
  *  error, refetch on success. One hook so `UnlockBanner` and `EngagementUnlockBanner` (#567)
- *  don't each carry their own copy of the same busy/error dance. */
+ *  don't each carry their own copy of the same busy/error dance. A claim the server accepted is
+ *  when the tower reacts (#3977 slice 3): the Eye flares once while the banner's lines are still
+ *  the thing just read. Only the member's own earn reaches this banner (`/api/learn` is the
+ *  session's own progress), and a refused claim flares nothing. */
 function useClaim(ids: readonly string[], onClaimed: () => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -31,8 +35,10 @@ function useClaim(ids: readonly string[], onClaimed: () => void) {
     setError(undefined);
     try {
       const answer = await claimMilestones(ids);
-      if (answer.ok) onClaimed();
-      else setError(answer.error);
+      if (answer.ok) {
+        flareTower("milestone");
+        onClaimed();
+      } else setError(answer.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
