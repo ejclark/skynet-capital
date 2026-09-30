@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "action": "labeled",
+    "label": { "name": "ready" },
+    "issue": {
+      "number": 3194,
+      "state": "open",
+      "labels": [{ "name": "plan" }, { "name": "needs-eric" }, { "name": "ready" }],
+      "body": "a plan still waiting on Eric's call"
+    }
+  }
+}

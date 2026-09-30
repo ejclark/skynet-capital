@@ -11,7 +11,13 @@ export interface PlanComment {
   body?: string;
 }
 export interface IssueCommentCtx {
-  payload?: { issue?: PlanIssue; comment?: PlanComment };
+  payload?: {
+    issue?: PlanIssue;
+    comment?: PlanComment;
+    /** Present on an `issues` event: `labeled` / `unlabeled` plus the label that moved. */
+    action?: string;
+    label?: { name?: string };
+  };
 }
 export interface PlanReadyIntent {
   ready: boolean;
@@ -31,3 +37,10 @@ export function isClaudeReadyLine(text: unknown): boolean;
 export function hasPlanLabel(issue: PlanIssue | undefined): boolean;
 /** The pure decision: is this `issue_comment` payload a ready-flip on an open plan issue? */
 export function planReadyIntent(ctx: IssueCommentCtx): PlanReadyIntent;
+/** The label-event ready decision both lanes share (labeled `ready`, or an unpark while ready). */
+export function labelEventReady(
+  payload: NonNullable<IssueCommentCtx["payload"]>,
+  lane: "plan" | "feedback",
+): PlanReadyIntent;
+/** The feedback lane's pure decision: a buildable feedback issue, plus the unpark path. */
+export function feedbackReadyIntent(ctx: IssueCommentCtx): PlanReadyIntent;

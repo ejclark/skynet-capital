@@ -24,7 +24,16 @@
 // line is the one exact hand-off line below (criterion 6) — Claude comments are written by an
 // OWNER-associated token, so the workflow's `if:` lets them through, and a status comment that
 // happens to open "ready — …" must not fire a build.
-import { isBuildable, parkedReason } from "./labels.mjs";
+//
+// THE LABEL-EVENT PATHS (#3960 criteria 1–2, #3818 slice 3). A comment was the plan lane's only
+// wake-up; now an `issues` event can be one too, for both lanes, via `labelEventReady` below:
+//   - `labeled` with `ready` on an open, buildable plan → ready (the feedback lane already woke on
+//     this; the plan lane now does too, so the board's `ready` label means the same on both);
+//   - `unlabeled` removing a parking label from an open plan/feedback issue that still carries
+//     `ready` and is now buildable → ready. Without it, clearing `needs-eric` from a ready issue
+//     left it idle until someone thought to say "ready" again — the flip was already on record.
+// The comment path is unchanged.
+import { isBuildable, LABELS, labelNames, PARKING_LABELS, parkedReason } from "./labels.mjs";
 
 // Short, direct go-ahead phrases matched against the WHOLE (trimmed, trailing-punctuation-
 // tolerant) comment — never a mere prefix. A prefix match (`/^go\b/`) would fire on "go over this
@@ -111,8 +120,9 @@ export function hasPlanLabel(issue) {
 }
 
 /**
- * The pure decision: given an `issue_comment` event payload, is this a ready-flip that should
- * dispatch a build? Fixture-driven (tests/fixtures/events/plan-*.json) — no network, no clock.
+ * The pure decision: given an `issue_comment` event payload — or an `issues` labeled/unlabeled
+ * one (`labelEventReady`) — is this a ready-flip that should dispatch a build? Fixture-driven
+ * (tests/fixtures/events/plan-*.json) — no network, no clock.
  *
  * Authorization (who may say ready) is NOT re-checked here — see the header. This function only
  * ever runs on comments the workflow's own `if:` already let through, same division of labor as
@@ -130,6 +140,7 @@ export function planReadyIntent(ctx) {
   if (!hasPlanLabel(issue)) {
     return { ready: false, reason: `issue #${issue.number} does not carry the plan label` };
   }
+  if (!comment && isLabelEvent(ctx.payload)) return labelEventReady(ctx.payload, "plan");
   if (!comment) return { ready: false, reason: "no comment in the payload" };
   if (isClaudeComment(comment.body)) {
     if (!isClaudeReadyLine(comment.body)) {
@@ -145,4 +156,63 @@ export function planReadyIntent(ctx) {
     return { ready: false, reason: parkedReason(issue.number, issue.labels) };
   }
   return { ready: true, reason: "ready-flip on a plan issue", issue };
+}
+
+/** Is this an `issues` labeled/unlabeled payload (it names the label that moved)? */
+const isLabelEvent = (payload) =>
+  Boolean(payload?.label) && (payload.action === "labeled" || payload.action === "unlabeled");
+
+/**
+ * The label-event ready decision, shared by both lanes (the header's LABEL-EVENT PATHS). The caller
+ * has already checked the issue is open and carries its lane label; `issue.labels` in an `issues`
+ * payload is the state AFTER the change, so an unpark that leaves a second parking label on is
+ * still refused by `isBuildable`.
+ *
+ * @returns {{ ready: boolean, reason: string, issue?: object }}
+ */
+export function labelEventReady(payload, lane) {
+  const { action, label, issue } = payload;
+  const name = label?.name;
+  const n = issue?.number;
+  if (action === "labeled" && name !== LABELS.ready.name) {
+    return { ready: false, reason: `#${n} was labeled \`${name}\`, not \`ready\`` };
+  }
+  if (action === "unlabeled") {
+    if (!PARKING_LABELS.includes(name)) {
+      return { ready: false, reason: `#${n} lost \`${name}\`, which is not a parking label` };
+    }
+    if (!labelNames(issue?.labels).includes(LABELS.ready.name)) {
+      return { ready: false, reason: `#${n} was unparked but does not carry \`ready\`` };
+    }
+  }
+  if (!isBuildable(issue?.labels)) return { ready: false, reason: parkedReason(n, issue?.labels) };
+  const why =
+    action === "labeled"
+      ? `\`ready\` label on a ${lane} issue`
+      : `${lane} issue unparked (\`${name}\` removed) while still \`ready\``;
+  return { ready: true, reason: why, issue };
+}
+
+/**
+ * The feedback lane's pure decision — what `claimFeedback` asks before admission and the lease.
+ * Keeps that lane's existing shape (a payload with no label event, as the specs and the
+ * `labeled: ready` step hand it, needs only `feedback` + buildable) and adds the unpark path.
+ *
+ * @returns {{ ready: boolean, reason: string, issue?: object }}
+ */
+export function feedbackReadyIntent(ctx) {
+  const issue = ctx.payload?.issue;
+  if (!issue) return { ready: false, reason: "no issue in the payload" };
+  if (!labelNames(issue.labels).includes(LABELS.feedback.name)) {
+    return { ready: false, reason: "ready, but not a feedback issue — not this lane's" };
+  }
+  if (issue.state && issue.state !== "open") {
+    return { ready: false, reason: `issue #${issue.number} is not open` };
+  }
+  if (isLabelEvent(ctx.payload)) return labelEventReady(ctx.payload, "feedback");
+  // #3818 slice 2, criterion 5: ready + parked is never built (#3194 sat ready + needs-eric 9 days).
+  if (!isBuildable(issue.labels)) {
+    return { ready: false, reason: parkedReason(issue.number, issue.labels) };
+  }
+  return { ready: true, reason: "ready feedback issue", issue };
 }

@@ -50,6 +50,7 @@
 // its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { gateAdmission } from "./admission.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
@@ -58,15 +59,13 @@ import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import {
   ensureLabel,
   ensureVocabulary,
-  isBuildable,
   issueNumberFromSlug,
   LABELS,
   MANAGED_LABELS,
-  parkedReason,
   setInProgress,
 } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
-import { planReadyIntent } from "./plan-claim.mjs";
+import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 
 // Named re-exports, not `export … from` — this router keeps substantial logic of its own (the
@@ -260,20 +259,33 @@ export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS)
  * `triageFeedbackDecision`'s header for why. `ready` is a general board-status label (plan issues
  * carry it too, flipped by an Eric comment, not a label event), so this guards on `feedback` also
  * being present rather than trusting the workflow's cheap `if:` alone.
+ *
+ * #3960: also runs on an `unlabeled` event that clears the last parking label from a still-`ready`
+ * issue (`feedbackReadyIntent`), and asks the admission gate (admission.mjs) before the lease — a
+ * refusal leaves the issue `ready`, lease-free and label-free, with one queue note on it.
+ * `admission` injects the gate's reads, for specs.
  */
-export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "") {
-  const issue = ctx.payload?.issue;
-  if (!issue) return { claimed: false, reason: "no issue in the payload" };
-  const labels = (issue.labels ?? []).map((l) => l.name);
-  if (!labels.includes("feedback")) {
-    return { claimed: false, reason: "ready, but not a feedback issue — not this lane's" };
+export function claimFeedback(
+  ctx,
+  nowMs = Date.now(),
+  sha = process.env.GITHUB_SHA ?? "",
+  admission = {},
+) {
+  // The pure half (plan-claim.mjs): feedback label, parking guard (#3818 criterion 5), and the
+  // unpark path (#3960 criterion 2) — an `unlabeled` event clearing the last parking label.
+  const intent = feedbackReadyIntent(ctx);
+  if (!intent.ready) {
+    if (ctx.payload?.issue) {
+      console.log(
+        `::notice::not building feedback #${ctx.payload.issue.number} — ${intent.reason}`,
+      );
+    }
+    return { claimed: false, reason: intent.reason };
   }
-  // #3818 slice 2, criterion 5: ready + parked is never built (#3194 sat ready + needs-eric 9 days).
-  if (!isBuildable(labels)) {
-    const reason = parkedReason(issue.number, labels);
-    console.log(`::notice::not building feedback #${issue.number} — ${reason}`);
-    return { claimed: false, reason };
-  }
+  const issue = intent.issue;
+  // #3960 — the work spigot, the in-flight cap and the surface fence, BEFORE any lease is taken.
+  const gate = gateAdmission(issue, admission);
+  if (!gate.admit) return { claimed: false, reason: gate.reason };
   const result = claimHandoff(`feedback-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
     console.log(`::notice::not building feedback #${issue.number} — ${result.reason}`);
@@ -341,13 +353,20 @@ export function triageFeedback(ctx) {
  * mirroring `claude.yml`'s `author_association` gate) — this function only ever sees comments that
  * already cleared it, same division of labor as the feedback lane's label-is-the-authorization rule.
  */
-export function claimPlan(ctx, nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "") {
+export function claimPlan(
+  ctx,
+  nowMs = Date.now(),
+  sha = process.env.GITHUB_SHA ?? "",
+  admission = {},
+) {
   const intent = planReadyIntent(ctx);
   if (!intent.ready) {
     console.log(`::notice::not building a plan issue — ${intent.reason}`);
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
+  const gate = gateAdmission(issue, admission); // #3960 — same gate as the feedback claim
+  if (!gate.admit) return { claimed: false, reason: gate.reason };
   const result = claimHandoff(`plan-${issue.number}`, sha, nowMs);
   if (!result.claimed) {
     console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);

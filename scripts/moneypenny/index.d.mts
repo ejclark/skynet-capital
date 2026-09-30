@@ -1,6 +1,8 @@
 // Type surface for the parts of moneypenny.mjs (formerly postmaster.mjs) that carry logic worth testing directly.
 // The scripts/ tree is plain ESM with `allowJs` off, so a spec that imports from it needs this
 // rather than a repo-wide tsconfig loosening for one file.
+import type { AdmissionDeps } from "./admission.mjs";
+
 export interface ShippedDeps {
   isMerged: (ref: unknown) => boolean;
   recheckRefs: (n: number) => unknown[];
@@ -18,13 +20,29 @@ export function triageFeedbackDecision(issue?: { labels?: string[] }): {
   ready: boolean;
   reason: string;
 };
-/** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2). */
+type ClaimCtx = {
+  payload?: {
+    issue?: { number?: number; state?: string; body?: string; labels?: Array<{ name?: string }> };
+    comment?: { body?: string };
+    action?: string;
+    label?: { name?: string };
+  };
+};
+type ClaimResult = { claimed: boolean; reason: string; number?: number; model?: string };
+/** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2),
+ *  then asks the admission gate (#3960) — a refusal takes no lease and adds no label. */
 export function claimFeedback(
-  ctx: {
-    payload?: { issue?: { number?: number; body?: string; labels?: Array<{ name?: string }> } };
-  },
+  ctx: ClaimCtx,
   nowMs?: number,
   sha?: string,
-): { claimed: boolean; reason: string; number?: number; model?: string };
+  admission?: AdmissionDeps,
+): ClaimResult;
+/** The plan lane's claim: `planReadyIntent`, then the admission gate, then the lease. */
+export function claimPlan(
+  ctx: ClaimCtx,
+  nowMs?: number,
+  sha?: string,
+  admission?: AdmissionDeps,
+): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
