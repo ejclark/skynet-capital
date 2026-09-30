@@ -1,5 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Thrash scan (#3939 slice 1) — driven through the real entrypoint via `--explain`, same pattern as
 // latency-scan.spec.ts: state goes in as JSON on stdin, so this runs offline.
@@ -154,5 +156,151 @@ describe("thrash-scan — loud failure", () => {
       encoding: "utf8",
     });
     expect(r.status).not.toBe(0);
+  });
+});
+
+// Slice 2 (#3939 criteria 3–4): `--digest` — digest lines, the snapshot marker the next digest
+// diffs against, and the two-scan auto-file. `--explain` never files; it returns the drafts.
+describe("thrash-scan --digest — digest lines and the two-scan auto-file (#3939 slice 2)", () => {
+  type Draft = {
+    title: string;
+    body: string;
+    labels: string[];
+    unit: { signal: string; key: string };
+  };
+  type Digest = {
+    needsYou: string[];
+    noise: string[];
+    marker: string;
+    baseline: boolean;
+    repeats: number;
+    drafts: Draft[];
+    filed: unknown[];
+  };
+  const dir = mkdtempSync(join(tmpdir(), "thrash-digest-"));
+  const digestRun = (state: unknown, prev: string, today = "2026-09-30"): Digest =>
+    JSON.parse(
+      execFileSync(
+        "node",
+        [
+          "scripts/thrash-scan.mjs",
+          "--explain",
+          "--digest",
+          "--json",
+          "--file", // ignored under --explain: a spec must never POST
+          "--since=2026-09-01",
+          `--today=${today}`,
+          `--prev=${prev}`,
+        ],
+        { input: JSON.stringify(state), encoding: "utf8" },
+      ),
+    );
+  const prevDigest = (marker: string, date = "2026-09-29") => {
+    const path = join(dir, `${date}.md`);
+    writeFileSync(path, `# Digest — ${date}\n\n${marker}\n`);
+    return path;
+  };
+
+  const storm = [1, 2, 3, 4, 5, 6].map((n) =>
+    failedAgain(3720, 900 + n, `2026-09-2${n}T00:00:00Z`),
+  );
+  const dupes = [
+    issue(1, "[event-research] opex-2027-01-15", "2026-09-20T00:00:00Z"),
+    issue(2, "[event-research] opex-2027-01-15", "2026-09-21T00:00:00Z"),
+    issue(3, "[event-research] fomc-2027-03-17", "2026-09-20T00:00:00Z"),
+    issue(4, "[event-research] fomc-2027-03-17", "2026-09-22T00:00:00Z"),
+  ];
+  const plan = (n: number, at: string) =>
+    issue(n, `plan ${n}`, at, {
+      labels: ["plan"],
+      body: "| | |\n|---|---|\n| **Surface** | `/accounts` |",
+    });
+  const state = {
+    comments: storm,
+    issues: [...dupes, plan(10, "2026-09-10T00:00:00Z"), plan(11, "2026-09-12T00:00:00Z")],
+  };
+
+  it("first scan sets a baseline: lines and a marker, nothing drafted", () => {
+    const d = digestRun(state, "none");
+    expect(d.baseline).toBe(true);
+    expect(d.drafts).toEqual([]);
+    expect(d.marker).toMatch(/^<!-- thrash-snapshot: [0-9a-f,]+ -->$/);
+    expect(d.noise.join("\n")).toContain("T1 2026-09-26 #3720");
+  });
+
+  it("second scan drafts one issue per repeat — T2 folded per lane, T6 never", () => {
+    const d = digestRun(state, prevDigest(digestRun(state, "none").marker));
+    expect(d.repeats).toBe(2);
+    expect(d.drafts.map((x) => [x.unit.signal, x.unit.key])).toEqual([
+      ["T1", "#3720"],
+      ["T2", "lane:event-research"],
+    ]);
+  });
+
+  it("each draft is issue-lint clean as a `bottleneck`, with the hit's count as its Before", () => {
+    const d = digestRun(state, prevDigest(digestRun(state, "none").marker));
+    for (const x of d.drafts) {
+      const lint = spawnSync(
+        "node",
+        [
+          "scripts/issue-lint.mjs",
+          "--stdin",
+          "--json",
+          "--title",
+          x.title,
+          "--labels",
+          "bottleneck",
+        ],
+        {
+          input: x.body,
+          encoding: "utf8",
+        },
+      );
+      expect(JSON.parse(lint.stdout).problems).toEqual([]);
+    }
+    expect(d.drafts[0]?.body).toMatch(/^- \*\*Before:\*\* 6 near-identical comments — 2026-09-30/m);
+  });
+
+  it("an open bottleneck carrying the key blocks the filing; one closed before the last hit does not", () => {
+    const first = digestRun(state, "none");
+    const prev = prevDigest(first.marker);
+    const [t1] = digestRun(state, prev).drafts;
+    const key = /<!-- thrash-key: [0-9a-f]+ -->/.exec(t1?.body ?? "")?.[0];
+    const withOpen = { ...state, bottlenecks: [{ number: 99, state: "open", body: `x\n${key}` }] };
+    expect(digestRun(withOpen, prev).drafts.map((x) => x.unit.signal)).toEqual(["T2"]);
+    const closedAfter = {
+      ...state,
+      bottlenecks: [{ number: 99, state: "closed", closed_at: "2026-09-27T00:00:00Z", body: key }],
+    };
+    expect(digestRun(closedAfter, prev).drafts.map((x) => x.unit.signal)).toEqual(["T2"]);
+    const closedBefore = {
+      ...state,
+      bottlenecks: [{ number: 99, state: "closed", closed_at: "2026-09-25T00:00:00Z", body: key }],
+    };
+    expect(digestRun(closedBefore, prev).drafts.map((x) => x.unit.signal)).toEqual(["T1", "T2"]);
+  });
+
+  it("caps a run at 3 filings and says what it deferred", () => {
+    const many = {
+      comments: [3720, 3721, 3722, 3723, 3724].flatMap((i) =>
+        [1, 2, 3, 4, 5].map((n) => failedAgain(i, i * 10 + n, `2026-09-2${n}T00:00:00Z`)),
+      ),
+    };
+    const d = digestRun(many, prevDigest(digestRun(many, "none").marker));
+    expect(d.drafts).toHaveLength(3);
+    expect(d.noise.join("\n")).toContain("2 over the 3-per-run cap");
+  });
+
+  it("a T3 burst goes to Needs you; hits older than the last digest are counted, not relisted", () => {
+    const burst = {
+      issues: Array.from({ length: 12 }, (_, n) =>
+        issue(100 + n, `[event-research] e-${n}`, "2026-09-29T01:00:00Z"),
+      ),
+      comments: [1, 2, 3, 4, 5].map((n) => failedAgain(3720, n, `2026-09-0${n}T00:00:00Z`)),
+    };
+    const d = digestRun(burst, prevDigest("<!-- thrash-snapshot:  -->", "2026-09-28"));
+    expect(d.needsYou.join("\n")).toContain("event-research burst on 2026-09-29");
+    expect(d.noise[0]).toContain("2 hit(s), 1 new since 2026-09-28");
+    expect(d.noise.join("\n")).not.toContain("#3720");
   });
 });
