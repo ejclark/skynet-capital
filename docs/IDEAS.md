@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Moneypenny's `Position:` line may read the wrong one of a member's own desks.** A member who
+  owns two accounts gets `resolveOwnerIds(email)[0]` (`dashboard-access.ts:98`), while the ticket
+  may be on another owned `?desk=`. Own data only, so honesty, not leakage. Honor `?desk=` when it
+  is in `resolveOwnedIds`. Unproven: no multi-desk repro yet. _(src: Claude · while: #2224 shape 3
+  red-team, H3)_
+- **`readBody` decodes each chunk separately** (`src/server/page-shell.ts:124-137`, `body +=
+  chunk`), so a multibyte character split across TCP chunks is stored as U+FFFD, in a Council line
+  for example. Collect Buffers and decode once. _(src: Claude · while: #2224 shape 3 red-team, H4)_
 - **NYSE Day Trader's Alpaca keys are rejected** — prod logs `NYSE Day Trader: unauthorized` on
   every boot since #4159, so that bot gets no fill updates until its keys are rotated (a credential
   step, Eric's). The 2026-09-30 outage was this rejection looping. _(src: Claude · while: #4159)_
