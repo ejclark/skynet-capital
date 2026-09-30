@@ -126,4 +126,30 @@ describe("CouncilStore", () => {
     expect(store.load().weeks["2026-W37"]?.abc123?.text).toBe("week 37");
     expect(store.load().weeks["2026-W38"]?.abc123?.text).toBe("week 38");
   });
+
+  it("retracts one member's line and leaves the rest of the week standing", () => {
+    const store = new CouncilStore(join(dir, "council.json"));
+    store.submit("2026-W37", "abc123", { text: "bullish", at: "2026-09-07T12:00:00.000Z" });
+    store.submit("2026-W37", "def456", { text: "bearish", at: "2026-09-07T12:05:00.000Z" });
+    store.retract("2026-W37", "abc123");
+    expect(new CouncilStore(join(dir, "council.json")).load().weeks["2026-W37"]).toEqual({
+      def456: { text: "bearish", at: "2026-09-07T12:05:00.000Z" },
+    });
+  });
+
+  it("drops a week emptied by a retract, and leaves other weeks alone", () => {
+    const store = new CouncilStore(join(dir, "council.json"));
+    store.submit("2026-W37", "abc123", { text: "week 37", at: "2026-09-07T12:00:00.000Z" });
+    store.submit("2026-W38", "abc123", { text: "week 38", at: "2026-09-14T12:00:00.000Z" });
+    store.retract("2026-W38", "abc123");
+    expect(Object.keys(store.load().weeks)).toEqual(["2026-W37"]);
+  });
+
+  it("retracting a line that isn't there changes nothing", () => {
+    const store = new CouncilStore(join(dir, "council.json"));
+    store.submit("2026-W37", "abc123", { text: "bullish", at: "2026-09-07T12:00:00.000Z" });
+    const before = store.load();
+    expect(store.retract("2026-W37", "nobody")).toEqual(before);
+    expect(store.retract("2026-W40", "abc123")).toEqual(before);
+  });
 });

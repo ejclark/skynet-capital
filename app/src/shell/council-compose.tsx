@@ -1,6 +1,6 @@
 import type { FormEvent, ReactElement } from "react";
 import { useId, useState } from "react";
-import { type CouncilWeek, submitThesis } from "../live/council";
+import { type CouncilWeek, retractThesis, submitThesis } from "../live/council";
 
 /**
  * THE COUNCIL COMPOSER (issue #2224 shape 1; lifted out of `routes/activity.tsx` by #3963) — one
@@ -16,6 +16,11 @@ import { type CouncilWeek, submitThesis } from "../live/council";
  *
  * Resubmitting replaces this week's own line, so the composer prefills from `mine` rather than
  * always starting blank — the affordance is "edit your line," never "post again."
+ *
+ * TAKE IT BACK (slice 4): once you have a line this week you can remove it — your line only; the
+ * Council has no way to remove anyone else's (the server keys it off your session). It takes two
+ * taps, because the words are gone once it lands: the first tap arms it and says what happens, the
+ * second does it. Typing in the box disarms it, so a stray tap mid-edit never deletes.
  */
 
 const COUNCIL_MAX_CHARS = 280;
@@ -34,6 +39,7 @@ export function CouncilCompose({
   const [playDraft, setPlayDraft] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | undefined>();
+  const [retractArmed, setRetractArmed] = useState(false);
   const playSelectId = useId();
 
   const text = draft ?? week.mine?.text ?? "";
@@ -59,6 +65,30 @@ export function CouncilCompose({
     }
   };
 
+  const retract = async () => {
+    if (!retractArmed) {
+      setRetractArmed(true);
+      return;
+    }
+    setBusy(true);
+    setNote(undefined);
+    try {
+      const result = await retractThesis();
+      if (result.ok) {
+        setDraft(undefined);
+        setPlayDraft(undefined);
+        setRetractArmed(false);
+        await onSaved();
+      } else {
+        setNote(result.error ?? "Couldn't take that back.");
+      }
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <form className="council-compose" onSubmit={(e) => void submit(e)}>
@@ -68,7 +98,10 @@ export function CouncilCompose({
           maxLength={COUNCIL_MAX_CHARS}
           placeholder="I think NVDA runs, because…"
           aria-label="Your council line for the week"
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setRetractArmed(false);
+          }}
           disabled={busy}
         />
         <button
@@ -98,6 +131,32 @@ export function CouncilCompose({
         </p>
       ) : null}
       <p className="council-count num">{COUNCIL_MAX_CHARS - text.length} left</p>
+      {week.mine ? (
+        <p className="council-retract">
+          <button
+            type="button"
+            className={
+              retractArmed ? "btn council-retract-btn is-armed" : "btn council-retract-btn"
+            }
+            onClick={() => void retract()}
+            disabled={busy}
+          >
+            {retractArmed ? "Yes, take it back" : "Take back my line"}
+          </button>
+          {retractArmed ? (
+            <span className="council-retract-warn">
+              Removes it for everyone this week.{" "}
+              <button
+                type="button"
+                className="council-retract-cancel"
+                onClick={() => setRetractArmed(false)}
+              >
+                Keep it
+              </button>
+            </span>
+          ) : null}
+        </p>
+      ) : null}
       {note ? <p className="set-err">{note}</p> : null}
     </>
   );

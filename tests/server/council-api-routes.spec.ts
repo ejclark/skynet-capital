@@ -38,6 +38,7 @@ function depsWith(
   weeks: Record<string, Record<string, { text: string; at: string; playbookId?: string }>> = {},
 ) {
   const submits: { week: string; memberId: string; text: string; playbookId?: string }[] = [];
+  const retracts: { week: string; memberId: string }[] = [];
   const deps: CouncilDeps = {
     load: () => ({ weeks }),
     submit: (week, memberId, text, _at, playbookId) => {
@@ -51,12 +52,20 @@ function depsWith(
         },
       };
     },
+    retract: (week, memberId) => {
+      retracts.push({ week, memberId });
+      const { [memberId]: _gone, ...rest } = weeks[week] ?? {};
+      weeks[week] = rest;
+    },
     now: () => new Date("2026-09-07T12:00:00.000Z"),
   };
-  return { deps, submits };
+  return { deps, submits, retracts };
 }
 
 const member = { email: "member@example.com" } as never;
+// The retract specs post several times; their own members keep the shared throttle out of it.
+const retractor = { email: "retractor@example.com" } as never;
+const stickler = { email: "stickler@example.com" } as never;
 
 describe("serveCouncilApi", () => {
   it("ignores other paths", async () => {
@@ -138,5 +147,36 @@ describe("serveCouncilApi", () => {
     const req = postReq({ text: 7 });
     await serveCouncilApi(req, res, "/api/council", deps, member);
     expect(out.status).toBe(400);
+  });
+
+  it("takes back the SESSION's own line on retract — a body id never picks whose", async () => {
+    const { deps, retracts, submits } = depsWith();
+    const first = fakeRes();
+    await serveCouncilApi(postReq({ text: "bullish" }), first.res, "/api/council", deps, retractor);
+    const ownId = submits[0]?.memberId;
+    const { res, out } = fakeRes();
+    const req = postReq({ retract: true, opaqueMemberId: "someone-else" });
+    await serveCouncilApi(req, res, "/api/council", deps, retractor);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+    expect(retracts).toEqual([{ week: "2026-W37", memberId: ownId }]);
+    const read = fakeRes();
+    await serveCouncilApi(getReq(), read.res, "/api/council", deps, retractor);
+    expect(JSON.parse(read.out.body ?? "{}").entries).toEqual([]);
+  });
+
+  it("refuses a signed-out retract", async () => {
+    const { res, out } = fakeRes();
+    const { deps, retracts } = depsWith();
+    await serveCouncilApi(postReq({ retract: true }), res, "/api/council", deps, undefined);
+    expect(out.status).toBe(403);
+    expect(retracts).toEqual([]);
+  });
+
+  it("treats a non-boolean retract as a malformed write, never a retract", async () => {
+    const { res, out } = fakeRes();
+    const { deps, retracts } = depsWith();
+    await serveCouncilApi(postReq({ retract: "true" }), res, "/api/council", deps, stickler);
+    expect(out.status).toBe(400);
+    expect(retracts).toEqual([]);
   });
 });

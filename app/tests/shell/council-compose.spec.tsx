@@ -12,10 +12,16 @@ import { CouncilCompose } from "../../src/shell/council-compose";
 let posted: { text: string; playbookId?: string }[] = [];
 let response: { ok: boolean; error?: string } = { ok: true };
 let throws: Error | undefined;
+let retracts = 0;
 
 rstest.mock("../../src/live/council", () => ({
   submitThesis: (text: string, playbookId?: string) => {
     posted.push({ text, ...(playbookId ? { playbookId } : {}) });
+    if (throws) return Promise.reject(throws);
+    return Promise.resolve(response);
+  },
+  retractThesis: () => {
+    retracts += 1;
     if (throws) return Promise.reject(throws);
     return Promise.resolve(response);
   },
@@ -36,6 +42,7 @@ describe("CouncilCompose", () => {
     posted = [];
     response = { ok: true };
     throws = undefined;
+    retracts = 0;
   });
 
   it("opens empty with a dead submit until there is something to say", () => {
@@ -107,5 +114,50 @@ describe("CouncilCompose", () => {
     render(<CouncilCompose week={week({ mine })} onSaved={() => Promise.resolve()} />);
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     expect(await screen.findByText("council 500")).toBeInTheDocument();
+  });
+
+  it("offers no take-back until there is a line of your own this week", () => {
+    render(<CouncilCompose week={week()} onSaved={() => Promise.resolve()} />);
+    expect(screen.queryByRole("button", { name: "Take back my line" })).not.toBeInTheDocument();
+  });
+
+  it("takes your line back on the second tap, never the first, then refreshes", async () => {
+    let refreshed = 0;
+    render(
+      <CouncilCompose
+        week={week({ mine })}
+        onSaved={() => {
+          refreshed += 1;
+          return Promise.resolve();
+        }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Take back my line" }));
+    expect(retracts).toBe(0);
+    expect(screen.getByText(/Removes it for everyone this week/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Yes, take it back" }));
+    expect(retracts).toBe(1);
+    expect(refreshed).toBe(1);
+  });
+
+  it("disarms on Keep it, and on typing, so a stray tap mid-edit never deletes", async () => {
+    render(<CouncilCompose week={week({ mine })} onSaved={() => Promise.resolve()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Take back my line" }));
+    await userEvent.click(screen.getByRole("button", { name: "Keep it" }));
+    expect(screen.getByRole("button", { name: "Take back my line" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Take back my line" }));
+    await userEvent.type(screen.getByLabelText("Your council line for the week"), "!");
+    await userEvent.click(screen.getByRole("button", { name: "Take back my line" }));
+    expect(retracts).toBe(0);
+  });
+
+  it("shows the server's refusal when a take-back doesn't land", async () => {
+    response = { ok: false, error: "Give it a moment before changing your line again." };
+    render(<CouncilCompose week={week({ mine })} onSaved={() => Promise.resolve()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Take back my line" }));
+    await userEvent.click(screen.getByRole("button", { name: "Yes, take it back" }));
+    expect(
+      await screen.findByText("Give it a moment before changing your line again."),
+    ).toBeInTheDocument();
   });
 });

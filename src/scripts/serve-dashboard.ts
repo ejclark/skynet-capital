@@ -288,6 +288,9 @@ async function main(): Promise<void> {
           ...(playbookId ? { playbookId } : {}),
         });
       },
+      retract: (week, memberId) => {
+        council.retract(week, memberId);
+      },
     },
     progression: progressionService,
     // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`

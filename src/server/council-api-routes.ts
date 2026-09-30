@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Session } from "./auth/session.js";
-import { type CouncilDeps, councilWeekView, submitThesis } from "./council-form.js";
+import { type CouncilDeps, councilWeekView, retractThesis, submitThesis } from "./council-form.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { feedbackThrottled } from "./feedback-routes.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -39,6 +39,10 @@ async function serveSubmit(
     return;
   }
   const body = parseJsonRecord(raw);
+  if (body?.retract === true) {
+    sendJson(res, 200, retractThesis(opaqueMemberId(session.email), deps));
+    return;
+  }
   const text = body ? boundedString(body.text, 2_000) : undefined; // form-bounds first; submitThesis owns the real 280-char rule
   if (text === undefined) {
     sendJson(res, 400, { ok: false, error: "malformed council body" });
