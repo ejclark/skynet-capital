@@ -95,7 +95,8 @@ export function publishingFeedbackLogStore(
  * state a filing is in by definition the moment `feedback.filed` records it — `"open"` — so the
  * first poll of a filing still sitting in the queue emits nothing, and "status changed" never
  * claims a change that did not happen. Anything the bus already witnessed seeds the memory on
- * first use, so a restart does not re-announce history.
+ * first use, so a restart does not re-announce history, and passes are chained so two concurrent
+ * page loads cannot announce the same transition twice.
  *
  * `fetch`'s own result is returned untouched, so every existing caller (the pulse, a member's own
  * `/app/feedback` list) is byte-identical to before.
@@ -105,22 +106,47 @@ export function publishingFeedbackStatuses(
   bus: ActivityEventBus,
   now: () => string = () => new Date().toISOString(),
 ): FetchFeedbackStatuses {
-  let lastKnown: Map<number, FeedbackStatus> | undefined;
+  // The PROMISE is memoized, not the resolved map, so concurrent page loads share one bus read
+  // rather than each seeding its own memory and clobbering the others'.
+  let seeded: Promise<Map<number, FeedbackStatus>> | undefined;
+  const memory = (): Promise<Map<number, FeedbackStatus>> => {
+    seeded ??= bus
+      .list()
+      .then(latestStatusByIssue)
+      .catch((error: unknown) => {
+        // A failed seed must not become permanent — without this, every later poll would await
+        // the one rejected promise and this emitter would never publish again.
+        seeded = undefined;
+        throw error;
+      });
+    return seeded;
+  };
+
+  const publishTransitions = async (
+    statuses: ReadonlyMap<number, FeedbackStatus>,
+  ): Promise<void> => {
+    const lastKnown = await memory();
+    const at = now();
+    for (const [issueNumber, status] of statuses) {
+      if ((lastKnown.get(issueNumber) ?? "open") === status) continue;
+      // Remembered only after the publish succeeds — a failed write that updated the memory
+      // anyway would lose the transition for good, since the next poll would read as a no-op.
+      await bus.publish(activityEventFromFeedbackStatus(issueNumber, status, at));
+      lastKnown.set(issueNumber, status);
+    }
+  };
+
+  // One publish pass at a time. The memory is only updated AFTER a publish resolves (so a failed
+  // write retries), which means two passes running together would both see the same stale memory
+  // and both announce the same transition. Chaining is what makes "only a real transition
+  // publishes" true under concurrency rather than only in a single-caller test.
+  let queue: Promise<void> = Promise.resolve();
   return async (issueNumbers) => {
     const statuses = await fetchStatuses(issueNumbers);
-    try {
-      lastKnown ??= latestStatusByIssue(await bus.list());
-      const at = now();
-      for (const [issueNumber, status] of statuses) {
-        if ((lastKnown.get(issueNumber) ?? "open") === status) continue;
-        // Remembered only after the publish succeeds — a failed write that updated the memory
-        // anyway would lose the transition for good, since the next poll would read as a no-op.
-        await bus.publish(activityEventFromFeedbackStatus(issueNumber, status, at));
-        lastKnown.set(issueNumber, status);
-      }
-    } catch (error) {
-      logBusFailure("feedback status", error);
-    }
+    queue = queue
+      .then(() => publishTransitions(statuses))
+      .catch((error: unknown) => logBusFailure("feedback status", error));
+    await queue;
     return statuses;
   };
 }

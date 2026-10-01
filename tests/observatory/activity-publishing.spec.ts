@@ -209,6 +209,45 @@ describe("publishingFeedbackStatuses", () => {
     expect(await bus.list()).toHaveLength(1);
   });
 
+  it("two polls racing an unseeded memory publish the transition once, not twice", async () => {
+    const bus = new InMemoryActivityEventBus();
+    const wrapped = publishingFeedbackStatuses(
+      fetcherFor(new Map<number, FeedbackStatus>([[700, "shipped"]])),
+      bus,
+      at,
+    );
+
+    await Promise.all([wrapped([700]), wrapped([700])]);
+
+    expect(await bus.list()).toHaveLength(1);
+  });
+
+  it("a failed seed read is retried, not remembered as a permanently broken emitter", async () => {
+    const inner = new InMemoryActivityEventBus();
+    let listCalls = 0;
+    const flakyBus: ActivityEventBus = {
+      publish: (event) => inner.publish(event),
+      list: (participantId) => {
+        listCalls += 1;
+        return listCalls === 1
+          ? Promise.reject(new Error("volume not ready"))
+          : inner.list(participantId);
+      },
+      subscribe: (listener) => inner.subscribe(listener),
+    };
+    const wrapped = publishingFeedbackStatuses(
+      fetcherFor(new Map<number, FeedbackStatus>([[700, "shipped"]])),
+      flakyBus,
+      at,
+    );
+
+    await wrapped([700]);
+    expect(await inner.list()).toEqual([]);
+
+    await wrapped([700]);
+    expect(await inner.list()).toHaveLength(1);
+  });
+
   it("a bus failure never fails the status read the page is waiting on", async () => {
     const statuses = new Map<number, FeedbackStatus>([[700, "shipped"]]);
     const failingBus: ActivityEventBus = {

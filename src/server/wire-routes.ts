@@ -51,7 +51,12 @@ export interface WireRouteDeps {
    * not instead of it, for the same reason `readAllTradeActivity` is: the event log only begins
    * when #784 slice 2 deploys, so every filing before that lives here and nowhere else.
    * `mergeFeedbackLogIntoEvents` folds these in on the bus's own schema, deduplicated on the
-   * deterministic event id. Omit to render the pulse column's honest empty state instead of a feed.
+   * deterministic event id.
+   *
+   * Omitting BOTH this and `readAllActivityEvents` renders the pulse column's honest empty state
+   * instead of a feed. Omitting only this one is not an empty state — it is a pulse quietly
+   * missing every filing made before the bus existed, so drop it only once the bus is confirmed
+   * to hold the log's full history.
    */
   readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
@@ -104,7 +109,10 @@ async function assembleFeedbackPulse(
   filings: readonly FeedbackLogEntry[],
   limit: number,
 ): Promise<readonly FeedbackFeedItem[]> {
-  const withFilings = mergeFeedbackLogIntoEvents(events, filings);
+  // Narrow to the one kind that can contribute before anything walks the list twice: everything
+  // below copies and folds it, and on a `no-store` page the bus is mostly trade events.
+  const feedbackOnly = events.filter((event) => event.target.kind === "feedback");
+  const withFilings = mergeFeedbackLogIntoEvents(feedbackOnly, filings);
   const page = collapseFeedbackEvents(withFilings).slice(0, limit);
   if (!(config.fetchFeedbackStatus && page.length)) return page;
   const statuses = await config.fetchFeedbackStatus(page.map((item) => item.issueNumber));
