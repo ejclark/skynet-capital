@@ -292,3 +292,124 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols": {}, "vix": 16.04, "daysBand": "medium:0+", "adjacentIds": ["adp-employment-2026-09-30", "advance-economic-indicators-2026-09-30", "apple-eu-dma-terms-2026-10-01", "bloomberg-agg-index-rebalance-2026-09-30", "boe-dmp-2026-10-02", "boj-jgb-purchase-schedule-q4-2026-09-30", "boj-summary-of-opinions-2026-10-01", "boj-tankan-2026-10-01", "case-shiller-hpi-2026-09-29", "census-benchmark-revision-nsa-2026-09-28", "chicago-pmi-2026-09-30", "construction-spending-2026-10-01", "consumer-confidence-2026-09-29", "crwv-fully-connected-2026-09-29", "dallas-fed-mfg-2026-09-28", "dallas-fed-trimmed-mean-2026-09-30", "dallas-fed-tssos-2026-09-29", "durable-goods-2026-09-25", "eia-weekly-petroleum-status-2026-09-30", "eurostat-hicp-flash-2026-10-01", "fhfa-hpi-2026-09-29", "g20-trade-ministerial-milwaukee-2026-09-30", "gdp-q2-2026-third-2026-09-30", "google-adtech-final-judgment-2026-10-02", "government-funding-deadline-2026-09-30", "ism-manufacturing-2026-10-01", "ism-services-2026-10-05", "jgb-2y-auction-2026-09-30", "jgb-40y-auction-2026-09-29", "jgb-liquidity-enhancement-5-11y-2026-09-25", "jobs-2026-10-02", "jolts-2026-09-29", "m3-full-report-2026-10-02", "mu-2026-09-30-print", "opec-jmmc-68th-2026-10-04", "opec-plus-meeting-2026-10-04", "openai-devday-2026-09-29", "pce-2026-09-30", "pmms-2026-10-01", "retail-benchmark-revision-2026-09-28", "russell-style-quarter-end-capping-effective-2026-09-30", "sp-global-manufacturing-pmi-2026-10-01", "sp-global-pmi-commodity-price-supply-2026-10-01", "sp-global-services-pmi-2026-10-05", "sp-select-sector-secondary-reweight-2026-09-30", "tic-quarterly-external-debt-2026-09-30", "treasury-buyback-10y20y-2026-10-01", "treasury-buyback-tips-1y10y-2026-09-29", "treasury-coupon-announcement-2026-10-01", "uk-consumer-confidence-2026-09-25", "uk-electricity-vat-zero-rate-2026-10-01", "uk-quarterly-national-accounts-2026-09-30", "umich-sentiment-final-2026-09-25", "unsc-haiti-gsf-mandate-adoption-2026-09-29", "unsc-haiti-gsf-mandate-expiry-2026-09-30", "unsc-iran-panel-mandate-expiry-2026-09-26", "unsc-middle-east-2334-2026-09-28"], "adjacentStrongIds": ["pce-2026-09-30", "ism-manufacturing-2026-10-01", "jobs-2026-10-02", "ism-services-2026-10-05", "mu-2026-09-30-print"], "screenStreak": 0, "blocked": [{"url": "https://elibrary.ferc.gov/eLibrary/search?searchText=ER26-3380", "status": "NO_DOCUMENT_LIST", "at": "2026-09-08"}, {"url": "https://elibrary.ferc.gov/eLibrary/filelist?accession_number=20260731-5214", "status": "200_EMPTY_ANGULAR_SHELL", "at": "2026-09-15"}, {"url": "https://www.federalregister.gov/documents/2026/08/06/2026-15979/combined-notice-of-filings-1", "status": "302_UNBLOCK_REDIRECT", "at": "2026-09-08"}, {"url": "https://www.federalregister.gov/documents/2026/08/19/2026-16927/combined-notice-of-filings-1", "status": "302_UNBLOCK_REDIRECT (govinfo mirror served it \u2014 used)", "at": "2026-09-15"}, {"url": "https://www.ferc.gov/ferc-issuances", "status": "403", "at": "2026-09-15"}, {"url": "https://www.ferc.gov/news-events/news/summaries-september-2026-commission-meeting", "status": "403", "at": "2026-09-15"}, {"url": "https://www.whitecase.com/insight-alert/summary-ferc-meeting-agenda-september-2026", "status": "403 (public-inspection.federalregister.gov primary served the agenda \u2014 used)", "at": "2026-09-15"}, {"url": "https://www.monitoringanalytics.com/filings/2026/IMM_Protest_Docket_No_ER26-3515_20260903.pdf", "status": "PDF_UNPARSED", "at": "2026-09-15"}, {"url": "https://epsa.org/filings/epsa-protests-pjm-interim-resource-adequacy-service-proposal/", "status": "EMPTY_BODY", "at": "2026-09-15"}, {"url": "https://www.pjm.com/pjmfiles/directory/etariff/FercDockets/9806/", "status": "404", "at": "2026-09-15"}, {"url": "https://insideclimatenews.org/news/01092026/maryland-ratepayer-advocate-challenges-pjm-power-plan/", "status": "403", "at": "2026-09-08"}, {"url": "https://electroneconomics.substack.com/p/pjms-reliability-backstop-procurement", "status": "403", "at": "2026-09-08"}, {"url": "https://raokonidena.substack.com/p/major-issues-with-pjms-reliability", "status": "403", "at": "2026-09-08"}, {"url": "https://verse.inc/blog/pjm-interconnection-news", "status": "403", "at": "2026-09-08"}, {"url": "https://www.pjm.com/-/media/DotCom/about-pjm/who-we-are/public-disclosures/2026/20260727-cifp-reliability-backstop-procurement-pjm-board-decision.pdf", "status": "PDF_UNPARSED", "at": "2026-09-08"}, {"url": "https://elibrary.ferc.gov/eLibrary/docketsheet?docket_number=ER26-3380", "status": "EMPTY_HEADER_ONLY", "at": "2026-09-22"}, {"url": "https://www.ferc.gov/news-events/events", "status": "403", "at": "2026-09-22"}, {"url": "https://www.macrostream.ai/articles/6a6884ea8f6aedb5fe1642b1", "status": "403", "at": "2026-09-22"}, {"url": "https://elibrary.ferc.gov/eLibrary/docketsheet?docket_number=ER26-3380", "status": "EMPTY_HEADER_ONLY", "at": "2026-09-24"}, {"url": "https://www.ferc.gov/news-events/news", "status": "403", "at": "2026-09-30"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-01, D+1 — within the `closeOutWithinDays: 6` window; FT-1/FT-2 score by
+2026-10-06, both already settleable on same-day news).** Sector kind carries no price instrument for
+this event (`symbols: []`), so this close-out scores from re-fetched published sources, never cached
+instrument data (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges` run
+regardless, a no-op here since neither script was ever invoked for this event). `market-data.mjs`
+(cache busted) is pulled only for sleeve-name context tape, as in every prior pulse.
+
+**What actually happened — the window did not open.** FERC issued its order in ER26-3380 on
+**2026-09-29** (insidelines.pjm.com/ferc-accepts-pjm-reliability-backstop-proposal/, NEWS, fetched
+2026-10-01; corroborated by rtoinsider.com's same-dated coverage, NEWS): the Commission **accepted**
+PJM's Reliability Backstop Procurement framework but **suspended its implementation for five months**,
+to a stated new effective date of **2027-02-28**, "subject to refund and outcome of additional
+proceedings." PJM confirmed directly, quoted by its own Inside Lines: *"the RBP process will not begin
+on Sept. 30 based on the requirements of FERC's order."* **The central bid window did not open on
+2026-09-30 as scheduled.** FERC named **three discrete issues** — cost allocation methodology,
+transmission-owner exit rules, and load-serving-entity collateral requirements — as potentially unjust
+and unreasonable (Utility Dive, NEWS, fetched 2026-10-01), with Chair Laura Swett's concurrence quoted
+calling the filing "a deeply flawed, eleventh-hour procurement mechanism" the Commission had no time
+"to rehabilitate." Utility Dive separately quotes a PJM spokesman saying the RBP's actual auction
+timeline is "yet to be determined" — in tension with the 2027-02-28 figure reported elsewhere; both
+readings are recorded, neither resolved by a primary fetch (elibrary.ferc.gov again served no document
+content — see `probe-ref.blocked` below, the same wall every prior pulse hit).
+
+**FT-pjm-reliability-backstop-procurement-2026-09-30-1 — KILL.** The registered prediction was PJM
+opening the window on 09-30 absent a FERC order accepting the filing on the merits by 09-29. FERC
+*did* act, decisively, on 09-29, and PJM did not open the window — squarely the row's own kill
+condition ("PJM does not open the window on 2026-09-30"), not its `n/a` carve-out (a bare affirmative
+acceptance letting the window open some other way): the order was accept-and-suspend, and PJM itself
+says the window never opened. This ledger's central inference — its own unsourced FPA §205
+"silence is acceptance" reading, already corrected once on the 09-30 pulse to PJM's own "if and when a
+Commission order accepts" framing — is refuted outright: a delegated-authority-adjacent order with
+substantive findings was the actual trigger, and it ruled against opening on schedule. Full scoring
+recorded here; fragment: [`forward-tests/pjm-reliability-backstop-procurement-2026-09-30.md`](../forward-tests/pjm-reliability-backstop-procurement-2026-09-30.md).
+
+**FT-pjm-reliability-backstop-procurement-2026-09-30-2 — KILL.** The registered prediction was that
+09-30 publishes no RBP figure and no IPP move is attributable to the window opening. No RBP figure
+published — true, trivially, because there was no procurement to report on. The second clause is
+squarely falsified: CEG, NRG, TLN and VST all moved the same day on coverage that explicitly
+attributes the move to this docket's outcome — CEG fell **4.9%** to **$251.74**, VST **−2.69%**, NRG
+**−1.22%**, TLN **−0.50%** (Investing.com / GuruFocus / Yahoo Finance, NEWS, fetched 2026-10-01, all
+dated to "Wednesday" = 2026-09-30), with TD Cowen's John Miller quoted naming "renewed (and acute)
+uncertainty" for the names as the driver. Cross-checked against this ledger's own feed: CEG's 09-29
+close was **264.58** (this ledger, 09-30 row); 264.58 × (1 − 4.9%) ≈ **251.5**, consistent with the
+quoted $251.74. The test's own framing ("the window open is a gate, not a print… no IPP move")
+predicted no information event because bids are confidential; the actual information event was the
+regulatory outcome governing whether the gate opens at all, a channel the row did not anticipate.
+Scored a kill on the clause that fired, not `n/a` — the move is attributed to this docket by name,
+exactly the kill switch's second limb ("coverage attributing a same-day IPP move to the window
+opening").
+
+**FT-pjm-reliability-backstop-procurement-2026-09-30-3 — left open, not scored at this close-out**
+(structural, per `EVENT-RESEARCH.md`'s close-out-waits-for-its-own-predictions mode: scores by
+2026-12-09, beyond the `closeOutWithinDays: 6` ceiling, reported by the scanner as
+`forwardTestsBeyondWindow` rather than held for). Flagged here for whichever future `forward-test-due`
+dispatch scores it: the row's own premise — a 2026-12-02 RBP results publication to grade for
+clearing-price format — is now in question on its face, since the central procurement is suspended to
+2027-02-28 and no results are expected 2026-12-02. That session should check first whether results
+publish at all on schedule before grading the clearing-price-format question; the row's own registered
+void condition ("the procurement never runs… or results slip past 2026-12-31") likely applies, making
+`VOID` the probable outcome rather than `pass`/`kill` — but that is this close-out noting it, not
+scoring it.
+
+**Cross-reference, not an edit — for [`pjm-reliability-backstop-results-2026-12-02`](pjm-reliability-backstop-results-2026-12-02.md)'s own next pulse.** That ledger's 2026-12-02 results
+date reads very likely moot given this outcome; this lane does not touch that file (one owner per
+file, #1449) — recorded here as the adjacency finding its own next session should pick up.
+
+**The stance calls, scored against their own falsifiers (the `## At a glance` horizon table).**
+
+- **Today ("Stand aside — watch-only," High) — call held, falsifier fired.** The stated falsifier —
+  "A FERC order in ER26-3380 issued before 2026-09-29 that rejects, suspends, or sets the filing for
+  hearing" — is exactly what happened. The *trading* call survives (nothing was ever licensed either
+  way), but the *evidentiary* basis this ledger built across four pulses (FPA §205 silence-is-
+  acceptance, the closed-open-meeting-channel narrowing) is refuted by the mechanism that actually
+  fired: a substantive order, not silence.
+- **This week ("No action," High) — CORRECT.** No trade was ever licensed and none should have been;
+  moot either way given the window's actual outcome.
+- **This month ("Watch the gate, do not trade the open," High) — CORRECT, more cleanly than
+  hypothesized.** The stated falsifier (PJM publishing a procurement-target MW or offer statistic on
+  09-30) did not fire — nothing published, because nothing ran.
+- **This quarter ("Hold the Tier-2 gate closed," Medium) — trending CORRECT, not yet due.** Its
+  falsifier (a uniform RBP clearing price on 2026-12-02, or credible RPM cap-sunset signalling) cannot
+  fire on schedule now that the procurement itself is suspended to 2027-02-28 — if anything this
+  outcome extends the gate's closed case, pending confirmation at FT-3's eventual scoring.
+
+**Honest limits.**
+
+- **The method gap, named plainly.** This ledger's own full session, dispatched ON 2026-09-30 (the
+  event's own date), explicitly searched for an accepting order and reported "no accepting order found
+  today by any channel checked" (federalregister.gov's API, pjm.com/markets-and-operations/rpm, a
+  FERC-order-title pattern search, ferc.gov/news-events/news). The order existed by then (dated
+  2026-09-29) and was covered by PJM's own Inside Lines and RTO Insider within the same news cycle this
+  close-out found on a plain search one day later. The 09-30 session's channels missed it — not
+  because the information was unavailable, but because the specific sources it tried (a Federal
+  Register docket-number search, PJM's RPM scheduling page, a narrow FERC order-title pattern) were the
+  wrong net for an order issued and publicized through PJM's own communications and trade press rather
+  than through federalregister.gov the same day. A future session re-running this kind of gate should
+  add PJM's own Inside Lines and general trade-press search (RTO Insider, Utility Dive) to the channel
+  list before concluding silence from a federalregister.gov count alone.
+- **elibrary.ferc.gov stayed blocked through close-out** — a further attempt
+  (`docinfo?accession_Number=20260929-3099`, the order's likely accession per search results) served no
+  document content to a plain fetcher, the same wall as every prior pulse (new `probe-ref.blocked`
+  entry, recorded in the json edit accompanying this close-out). Every claim above about the order's
+  contents is NEWS-sourced (PJM's own site, RTO Insider, Utility Dive, GuruFocus), never a direct read
+  of the order itself.
+- **The 2027-02-28 "new effective date" is not fully reconciled across sources.** PJM Inside Lines and
+  RTO Insider both state it as the suspension's new effective date; Utility Dive separately quotes a
+  PJM spokesman calling the RBP's actual auction timeline "yet to be determined." Both can be true (a
+  tariff effective-date marker vs. an actual re-scheduled auction calendar) but this close-out did not
+  get a primary document to settle which.
+- **The IPP stock-move figures are search-relayed, not pulled from this repo's own instrument feed** —
+  `market-data.mjs`'s Yahoo source had not yet posted a 2026-09-30 daily bar as of this close-out (last
+  bar: 09-29), so the cited percentage moves and the $251.74 CEG print come from news coverage
+  (GuruFocus, Yahoo Finance, Investing.com), cross-checked only by confirming 264.58 × (1 − 4.9%) ≈
+  251.5 against the ledger's own 09-29 close, consistent with the quoted $251.74.
+
+This document is now closed; the scanner goes quiet on it permanently, except for
+`FT-pjm-reliability-backstop-procurement-2026-09-30-3`, which re-opens this lane as `forward-test-due`
+once 2026-12-09 arrives.
