@@ -216,6 +216,13 @@ export const LABELS = {
   // Owned by repair.mjs's own lane (formerly ci-medic.mjs), which applies it and therefore
   // guarantees it. Registered here so there is ONE vocabulary, not two that can drift.
   ciFailure: { name: "ci-failure", color: "b60205", description: "A run failed on main" },
+  // Owned by burst-alarm.mjs (#4292): a burst of capsules with a dead repair job. Its own label, not
+  // `ci-failure`, so an alarm is never counted as a capsule or dispatched to the lane it reports on.
+  ciAlarm: {
+    name: "ci-alarm",
+    color: "5319e7",
+    description: "CI failures are piling up and the repair lane is not running",
+  },
 };
 
 /** The labels this file applies and therefore guarantees. The rest are registered for lookup. */
