@@ -40,6 +40,7 @@ function mount(initialSymbol?: string) {
       <TradeGate deskId="desk-1" initialSymbol={initialSymbol} />
     </QueryClientProvider>,
   );
+  return client;
 }
 
 describe("TradeGate — limit at mid", () => {
@@ -81,5 +82,52 @@ describe("TradeGate — limit at mid", () => {
     await screen.findByText(/\$181\.32/);
     expect(screen.getByLabelText("Order type")).toHaveValue("stop");
     expect(screen.queryByText(/Limit seeded/)).not.toBeInTheDocument();
+  });
+
+  it("seeds once per symbol — a moving mid never rewrites the limit under the member", async () => {
+    // #3407 P4, the quote stream. The guard used to re-seed whenever the mid changed, which was
+    // invisible while the quote was read once and then sat still. With the quote PUSHED on the
+    // market's clock that would rewrite an untouched limit on every tick — a ticket chasing the
+    // market while the member reads it, which is the "hand on the wheel" this seed must not be.
+    answer = nvda;
+    const client = mount("NVDA");
+    const price = await screen.findByLabelText("Limit price");
+    await waitFor(() => expect(price).toHaveValue(181.3));
+
+    // A pushed frame lands in the same query the header reads.
+    client.setQueryData(["quote", "NVDA"], {
+      ...nvda,
+      last: 185.0,
+      bid: 184.9,
+      ask: 185.1,
+      mid: 185.0,
+      asOf: "2026-10-01T15:05:00Z",
+    });
+
+    await screen.findByText(/\$185\.00/);
+    expect(price).toHaveValue(181.3);
+    // The note still describes the book the seed actually came from, not the one on screen now.
+    expect(screen.getByText(/Limit seeded at the mid/)).toHaveTextContent(
+      "$181.30, between the $181.28 bid and the $181.32 ask",
+    );
+  });
+
+  it("seeds again when the member commits a different symbol", async () => {
+    answer = nvda;
+    const client = mount("NVDA");
+    await waitFor(() => expect(screen.getByLabelText("Limit price")).toHaveValue(181.3));
+
+    client.setQueryData(["quote", "NVDA"], {
+      symbol: "AAPL",
+      last: 250,
+      change: 1,
+      changePct: 0.4,
+      tone: "pos",
+      bid: 249.9,
+      ask: 250.1,
+      mid: 250,
+    });
+
+    await waitFor(() => expect(screen.getByLabelText("Limit price")).toHaveValue(250));
   });
 });

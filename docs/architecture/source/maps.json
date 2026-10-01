@@ -248,7 +248,7 @@
       {
         "from": "browser",
         "to": "api",
-        "label": "GET /api/* JSON, POST writes, EventSource /events and /api/trade/events, fetch-streamed POST /api/companion",
+        "label": "GET /api/* JSON, POST writes, EventSource /events, /api/trade/events and /api/trade/quote-stream, fetch-streamed POST /api/companion",
         "technology": "HTTPS JSON, SSE",
         "evidence": "app/src/live/channel.ts (EventSource `/events?by=metric`, fetchBoard /api/board), app/src/live/post.ts, app/src/live/desk-events.ts, app/src/live/companion.ts; server side src/server/board-patch-routes.ts, content-api-routes.ts, desk-events-route.ts, companion-routes.ts."
       },
@@ -393,8 +393,8 @@
           {
             "id": "datasource",
             "label": "Data source and syncs",
-            "path": "src/runtime/data-source.ts, src/alpaca/*, src/adapters/fixture-trading-transport.ts, src/adapters/replay-event-stream.ts, src/observatory/broker-sync.ts, src/observatory/month-return-sync.ts, src/observatory/history-sampler.ts, src/observatory/history-boot.ts, src/scripts/iv-clock-wiring.ts, src/research/iv-sampler.ts, src/adapters/alpaca-atm-quotes.ts",
-            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; the timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub, plus the IV clock: one at-the-money implied-volatility sample per tracked name in the session's last half hour, appended under SKYNET_IV_HISTORY_DIR for IV rank."
+            "path": "src/runtime/data-source.ts, src/alpaca/*, src/adapters/fixture-trading-transport.ts, src/adapters/replay-event-stream.ts, src/observatory/broker-sync.ts, src/observatory/month-return-sync.ts, src/observatory/history-sampler.ts, src/observatory/history-boot.ts, src/scripts/iv-clock-wiring.ts, src/research/iv-sampler.ts, src/adapters/alpaca-atm-quotes.ts, src/server/quote-stream-hub.ts, src/server/quote-stream-route.ts",
+            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; one market-data socket per MEMBER on that member's own credential, opened on demand by the quote hub and pushed to the trade surface over /api/trade/quote-stream (never the host credential \u2014 the bot loop holds that account's single allowed connection); the timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub, plus the IV clock: one at-the-money implied-volatility sample per tracked name in the session's last half hour, appended under SKYNET_IV_HISTORY_DIR for IV rank."
           },
           {
             "id": "desk",

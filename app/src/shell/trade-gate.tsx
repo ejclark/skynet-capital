@@ -209,7 +209,14 @@ export function TradeGate({
    *  it never overwrites a type or price the member has touched (`priced`), and a quote with no
    *  live book leaves the ticket exactly as it was (Market, the honest default when there is no
    *  mid to name). `seed` remembers what was seeded so the note below can say so — and so the
-   *  note disappears the moment the member edits the price. */
+   *  note disappears the moment the member edits the price.
+   *
+   *  ONCE PER COMMITTED SYMBOL, not once per mid (#3407 P4, the quote stream). The guard used to
+   *  re-seed whenever the mid moved, which was invisible while the quote was fetched once and then
+   *  sat still. With the quote pushed on the market's clock it would rewrite the member's limit on
+   *  every tick — a ticket that chases the market while they read it, which is the "hand on the
+   *  wheel" this seed is explicitly not allowed to be. One seed per symbol; a new symbol seeds
+   *  again, a moving mid never does. */
   const quote = useQuery(quoteQuery(quoteSym));
   const [priced, setPriced] = useState(false);
   const [seed, setSeed] = useState<{ symbol: string; bid: number; ask: number; mid: number }>();
@@ -217,7 +224,7 @@ export function TradeGate({
   useEffect(() => {
     if (priced || !mid || mid.mid === undefined || mid.bid === undefined || mid.ask === undefined)
       return;
-    if (seed?.symbol === mid.symbol && seed.mid === mid.mid) return;
+    if (seed?.symbol === mid.symbol) return;
     const { symbol, bid, ask } = mid;
     setSeed({ symbol, bid, ask, mid: mid.mid });
     setFields((f) => ({ ...f, orderType: "limit", limitPrice: mid.mid?.toFixed(2) ?? "" }));

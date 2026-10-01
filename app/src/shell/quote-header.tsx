@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { QuoteAnswer, QuoteTone } from "../live/quote";
 import { quoteQuery } from "../live/quote-query";
+import { useQuoteStream } from "../live/quote-stream";
 import { money } from "../live/ticket";
 
 /**
@@ -14,10 +15,16 @@ import { money } from "../live/ticket";
  * glyph (▲/▼/·) and an explicit sign carry direction too, and a `.visually-hidden` sentence
  * states it again in words for a screen reader (the repo's own idiom — grep `.visually-hidden`).
  * Fail-soft everywhere: no linked session, no quote, or a feed failure all render a single muted
- * note, never an error. No wording here claims freshness ("today") — `getUnderlyingQuote` reads
- * the broker's last trade with no timestamp check, so after-hours or on a weekend that could be a
- * stale prior-session move; broker-timestamp plumbing to make the claim honest is out of scope for
- * this slice (#2017), so the copy simply never makes it.
+ * note, never an error.
+ *
+ * FRESHNESS, finally sayable (#3407 P4, the quote stream). #2017's note here read: "No wording
+ * here claims freshness ('today') — `getUnderlyingQuote` reads the broker's last trade with no
+ * timestamp check… broker-timestamp plumbing to make the claim honest is out of scope for this
+ * slice." That plumbing now exists for one path and one path only: a PUSHED frame carries the
+ * feed's own tick time (`asOf`), and only then does this header show a stamp. A one-shot REST
+ * answer still has no stamp and still makes no claim, exactly as before — the rule is unchanged,
+ * it is the evidence that is new. The stamp also carries the stream's one honest weakness: a quiet
+ * name's last print can be minutes old, and the member can see that rather than infer it.
  *
  * The wrapping `.quote-header` element is ALWAYS mounted with `aria-live="polite"`, empty until
  * there's something to say (mirrors `.gate`'s draft-step pattern, `gate-draft.spec.tsx`) — a live
@@ -46,13 +53,37 @@ function signedPct(changePct: number): string {
   return magnitude;
 }
 
+const ET_CLOCK = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+/** "live 14:32:05 ET" for a pushed frame, nothing for a one-shot read. An unparseable stamp says
+ *  nothing rather than printing `Invalid Date` beside a real price. */
+function LiveStamp({ asOf }: { readonly asOf: string }): ReactElement | null {
+  const at = Date.parse(asOf);
+  if (!Number.isFinite(at)) return null;
+  const clock = ET_CLOCK.format(new Date(at));
+  return (
+    <span className="quote-live">
+      <span aria-hidden="true">◦</span> live{" "}
+      <time dateTime={asOf}>
+        {clock} ET<span className="visually-hidden">, the feed's own time for this price</span>
+      </time>
+    </span>
+  );
+}
+
 function QuoteHeaderBody({ answer }: { readonly answer: QuoteAnswer }): ReactElement {
   if ("quoteNote" in answer) {
     return <span className="quote-note">{answer.quoteNote}</span>;
   }
   // Render the server's OWN symbol field, not the caller's prop — the client renders the
   // server's answer verbatim (see `app/src/live/quote.ts`'s header comment).
-  const { symbol, last, change, changePct, tone } = answer;
+  const { symbol, last, change, changePct, tone, asOf } = answer;
   const label = `${DIRECTION_WORD[tone]} ${Math.abs(change).toFixed(2)} dollars, ${Math.abs(changePct).toFixed(2)} percent`;
   return (
     <span className="quote-line num">
@@ -62,6 +93,7 @@ function QuoteHeaderBody({ answer }: { readonly answer: QuoteAnswer }): ReactEle
         {signedPct(changePct)}%)
       </span>
       <span className="visually-hidden">{label}</span>
+      {asOf ? <LiveStamp asOf={asOf} /> : null}
     </span>
   );
 }
@@ -81,6 +113,10 @@ export function QuoteHeader({
 }): ReactElement {
   const own = quoteQuery(symbol);
   const query = useQuery({ ...own, enabled: own.enabled && provided === undefined });
+  // The push channel (#3407 P4) runs only where this header owns the query it reads. A surface
+  // that hands its quote in (`provided`) has its own source — writing a streamed frame into a
+  // query it never reads would be state nobody paints.
+  useQuoteStream(symbol, provided === undefined);
 
   const answer =
     provided === "pending"
