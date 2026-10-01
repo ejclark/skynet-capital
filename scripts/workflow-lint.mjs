@@ -39,7 +39,7 @@
 //      something that has to exist elsewhere, where the mismatch is silent at run time. The
 //      reference grammar lives in `workflow-labels.mjs`, split out as script-deps.mjs was for 6.
 //   8. A workflow that re-dispatches ITSELF (`gh workflow run <this file>`) under a token whose
-//      bot actor a `workflow_dispatch`-gated `claude-code-action` job does not name in
+//      bot actor a `claude-code-action` job REACHABLE on that dispatch does not name in
 //      `allowed_bots`. Added 2026-09-26 after #2292 moved moneypenny-events.yml's re-dispatch from
 //      GITHUB_TOKEN (actor `github-actions`) to the App token (actor `skynet-envoy`) while
 //      `build-events` still allow-listed only `github-actions`: every leg died in ~3s with
@@ -270,29 +270,21 @@ function refusals(job, actors) {
   return problems;
 }
 
-/** Rule 8: `{ job, actor }` for each dispatch-gated claude-code-action step that would refuse this
- *  file's own re-dispatch. `actor` is null when the dispatching token could not be read — reported
- *  as UNKNOWN, never passed. */
+/** Rule 8: `{ job, actor }` for each dispatch-reachable claude-code-action step that would refuse
+ *  this file's own re-dispatch. `actor` is null when the dispatching token could not be read —
+ *  reported as UNKNOWN, never passed.
+ *
+ *  Reachability is the same question rule 9 asks of `push`, so it reuses the same answer rather
+ *  than a substring test. Naming `workflow_dispatch` is not the only way in: `build-plan`'s
+ *  `github.event_name != 'push'` rules push out and lets a dispatch straight through while never
+ *  naming it. That job shipped with no `allowed_bots` at all and died in ~3s on "non-human actor:
+ *  skynet-envoy" (run 36802272261), with this gate green the whole time. */
 export function unlistedDispatchActor(name, text) {
   const actors = selfDispatchActors(name, text);
   if (!actors.size) return [];
-  return jobs(text).flatMap((job) => {
-    const header = job.text
-      .split(/\n {4}steps:/)[0]
-      .split("\n")
-      .filter((l) => !l.trim().startsWith("#"))
-      .join("\n");
-    return dispatchReachable(header) ? refusals(job, actors) : [];
-  });
-}
-
-/** Whether the file's own re-dispatch can reach a job. Naming `workflow_dispatch` is not the only
- *  way in: `github.event_name != 'push'` admits it too, and that unnamed gate is how `build-plan`
- *  shipped with no allow-list (run 36800601479). So a job counts unless its `if:` pins
- *  `github.event_name ==` to other events only. */
-function dispatchReachable(header) {
-  if (/workflow_dispatch/.test(header)) return true;
-  return !/github\.event_name\s*==\s*'/.test(header);
+  return jobs(text).flatMap((job) =>
+    reachableOnEvent(job.text, "workflow_dispatch") ? refusals(job, actors) : [],
+  );
 }
 
 /** The workflow names/paths a `workflow_run` trigger watches (its quoted `workflows:` entries). */
@@ -349,7 +341,7 @@ function jobIf(jobText) {
 }
 
 /** An expression split on its top-level `||` (parenthesis depth 0) — each operand is a way the
- *  condition can be true on its own, so each has to rule push out by itself. */
+ *  condition can be true on its own, so each has to rule the event out by itself. */
 function disjuncts(expr) {
   const out = [];
   let depth = 0;
@@ -368,12 +360,21 @@ function disjuncts(expr) {
   return out.map((s) => s.trim()).filter(Boolean);
 }
 
-/** Does this operand make a push run impossible — either by excluding push outright, or by pinning
- *  `github.event_name` to something else? */
-function rulesOutPush(operand) {
-  if (/github\.event_name\s*!=\s*'push'/.test(operand)) return true;
+/** Does this operand make a run on `event` impossible — either by excluding it outright, or by
+ *  pinning `github.event_name` to something else? */
+function rulesOutEvent(operand, event) {
+  if (new RegExp(`github\\.event_name\\s*!=\\s*'${event}'`).test(operand)) return true;
   const named = [...operand.matchAll(/github\.event_name\s*==\s*'([a-z_]+)'/g)].map((m) => m[1]);
-  return named.length > 0 && !named.includes("push");
+  return named.length > 0 && !named.includes(event);
+}
+
+/** Can this job's `if:` be true on an `event` run? Every top-level `||` operand is a way in on its
+ *  own, so the job is unreachable only when all of them rule the event out; no `if:` at all means
+ *  every trigger reaches it. Shared by rules 8 and 9 — the two ask the same question of different
+ *  events. */
+function reachableOnEvent(jobText, event) {
+  const operands = disjuncts(jobIf(jobText));
+  return !(operands.length > 0 && operands.every((o) => rulesOutEvent(o, event)));
 }
 
 /** Does any step in this job actually invoke claude-code-action? `uses:` only — several jobs
@@ -394,10 +395,7 @@ export function actionReachableOnPush(text) {
   if (!/^ {2}push:/m.test(head)) return [];
   return jobs(text)
     .filter((job) => invokesClaudeAction(job.text))
-    .filter((job) => {
-      const operands = disjuncts(jobIf(job.text));
-      return !(operands.length > 0 && operands.every(rulesOutPush));
-    })
+    .filter((job) => reachableOnEvent(job.text, "push"))
     .map((job) => job.name);
 }
 
@@ -444,7 +442,7 @@ export function lintWorkflow(
       d.actor === null
         ? `${name} re-dispatches itself with a token whose bot actor cannot be read — whether job ` +
           `\`${d.job}\`'s \`allowed_bots\` admits it is UNKNOWN (rule 8)`
-        : `${name} re-dispatches itself as \`${d.actor}\`, but dispatch-gated job \`${d.job}\`'s ` +
+        : `${name} re-dispatches itself as \`${d.actor}\`, but dispatch-reachable job \`${d.job}\`'s ` +
           `\`allowed_bots\` does not name it — claude-code-action refuses the run in ~3s (#2292)`,
     ),
     ...unlistedWatchedActor(text, actorsByWorkflow).map((d) =>
