@@ -1,8 +1,10 @@
 import type { ServerResponse } from "node:http";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import type { ActivityEvent } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
 import { attachWireReasoning } from "../observatory/wire-reasoning.js";
@@ -20,8 +22,23 @@ import { nextLinkHeader, resolvePageSize } from "./pagination.js";
  */
 export interface WireRouteDeps {
   readonly hub: ObservatoryHub;
-  /** All participants' durable trade activity — omit to render the trading column's honest empty
-   *  state instead of a feed. */
+  /**
+   * Every participant's events off the activity bus (#1211) — the feed's primary source since #784
+   * slice 1. Omit and the feed falls back to the durable ledger below, which is what every
+   * deployment did before the bus existed.
+   */
+  readonly readAllActivityEvents?: () => Promise<readonly ActivityEvent[]>;
+  /**
+   * All participants' durable trade activity, read ALONGSIDE the bus above and not instead of it:
+   * the event log only begins at #1211's deploy, so every fill booked before that lives here and
+   * nowhere else. `mergeLedgerIntoEvents` folds these in on the bus's own schema, deduplicated on
+   * the deterministic event id — see its header for why the union can't double-count and when this
+   * leg retires.
+   *
+   * Omitting BOTH this and `readAllActivityEvents` renders the trading column's honest empty state
+   * instead of a feed. Omitting only this one is not an empty state — it is a feed quietly missing
+   * every pre-bus fill, so drop it only once the bus is confirmed to hold the ledger's full history.
+   */
   readonly readAllTradeActivity?: () => Promise<readonly TradeActivityRecord[]>;
   /** Every member's filed feedback, not just one member's own — omit to render the pulse column's
    *  honest empty state instead of a feed. */
@@ -69,7 +86,14 @@ async function assembleWire(
   before?: string,
 ): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
-  const records = config.readAllTradeActivity ? await config.readAllTradeActivity() : [];
+  // Both in flight at once: two independent full-ledger reads, so awaiting them in series would
+  // pay for the union twice over on a `no-store` page. (Each is still a full read — a bounded read
+  // is a real design question for the feed redesign, #784 slice 3, not something to fake here.)
+  const [published, records] = await Promise.all([
+    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
+    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
+  ]);
+  const events = mergeLedgerIntoEvents(published, records);
   const feedback = config.readAllFeedback ? await config.readAllFeedback() : [];
   // Newest first, then bounded — `list()`'s own order is filesystem-dependent, so sort before
   // slicing or the page shown could be an arbitrary slice rather than the most recent one.
@@ -80,7 +104,7 @@ async function assembleWire(
     config.fetchFeedbackStatus && feedbackForStatus.length
       ? await config.fetchFeedbackStatus(feedbackForStatus.map((e) => e.issueNumber))
       : undefined;
-  const page = buildWireTradeRows(records, participants, { limit, before }, underlyingFilter);
+  const page = buildWireTradeRows(events, participants, { limit, before }, underlyingFilter);
 
   // "the why" and "the vitals" (PR 6, issue #2287) — only bot rows can resolve either, and only
   // when both deps are wired; a plain deployment renders every row exactly as before this PR.

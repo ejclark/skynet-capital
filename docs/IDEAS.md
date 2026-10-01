@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **`/api/wire` reads two full ledgers per request to render ~30 rows.** #784 slice 1 put the trade
+  feed on the event bus, so the route now reads the whole event log *and* the whole trade ledger
+  (parallel, deduped) on every load of a `no-store` page — and the event log grows faster than the
+  ledger it mirrors, with no compaction. A bounded read (keyset at the store, not after the join) is
+  the real fix and belongs with the feed redesign, #784 slice 3 / #4271, where the page's own paging
+  shape gets decided. Unmeasured so far — worth a number before it becomes a `bottleneck` issue.
+  _(src: Claude · while: building #784 slice 1, the trade feed's move onto the bus)_
 - **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
   refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's
   rate limit and it sat unarmed 8h+ while its class failed 11 more runs. `deploy-lag.mjs` watches

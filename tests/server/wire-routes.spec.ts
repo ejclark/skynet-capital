@@ -1,5 +1,9 @@
 import type { ServerResponse } from "node:http";
 
+import {
+  activityEventFromAuditRecord,
+  activityEventFromTradeRecord,
+} from "../../src/observatory/activity-event.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
@@ -98,6 +102,79 @@ describe("serveWireJson", () => {
     const [trade] = JSON.parse(out.body).wire.trades;
     expect(trade.symbol).toBe("NVDA");
     expect(trade.who).toBe("Sauron");
+  });
+
+  // #784 slice 1 — the trade feed is built from the activity bus's own envelope. The ledger stays
+  // wired alongside it because the event log only begins at #1211's deploy; these four hold the
+  // bar that neither source loses a fill and the overlap is never counted twice.
+  describe("the trade feed's source (#784 slice 1)", () => {
+    const tradesFrom = (body: string): Array<{ symbol: string; who: string; when: string }> =>
+      JSON.parse(body).wire.trades;
+
+    it("renders a fill the bus published with no ledger wired at all", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () => Promise.resolve([activityEventFromTradeRecord(record())]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(1);
+      expect(tradesFrom(out.body)[0]?.symbol).toBe("NVDA");
+    });
+
+    it("keeps a pre-bus ledger fill the event log never saw", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () =>
+          Promise.resolve([activityEventFromTradeRecord(record({ orderId: "on-bus" }))]),
+        readAllTradeActivity: () =>
+          Promise.resolve([record({ orderId: "pre-bus", at: "2026-07-01T00:00:00.000Z" })]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(2);
+    });
+
+    it("counts a fill on BOTH the bus and the ledger exactly once", async () => {
+      const { res, out } = capture();
+      const both = record();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () => Promise.resolve([activityEventFromTradeRecord(both)]),
+        readAllTradeActivity: () => Promise.resolve([both]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(1);
+    });
+
+    it("never puts an owner-only order.submitted line on the cross-member feed", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: () =>
+          Promise.resolve([
+            activityEventFromAuditRecord({
+              participantId: "sauron",
+              orderId: "ord-1",
+              at: "2026-08-19T14:29:00.000Z",
+              ownerEmail: "member@example.com",
+              symbol: "NVDA",
+              side: "buy",
+            }),
+          ]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toEqual([]);
+      expect(out.body).not.toContain("member@example.com");
+    });
   });
 
   it("renders every member's filed feedback, not just one member's own", async () => {

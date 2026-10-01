@@ -1,10 +1,30 @@
+import { activityEventFromTradeRecord } from "../../src/observatory/activity-event.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import {
   buildWirePnlRows,
-  buildWireTradeRows as buildWireTradeRowsPage,
+  buildWireTradeRows as buildWireTradeRowsFromEvents,
   type WireTradeRow,
+  type WireTradeRowsPage,
 } from "../../src/observatory/wire-data.js";
+
+/** #784 slice 1 moved `buildWireTradeRows` onto the `ActivityEvent` envelope. Translating the
+ *  records through `activityEventFromTradeRecord` here — the same translator the bus publishes
+ *  with — leaves every existing assertion below untouched, which is the point: the whole suite now
+ *  doubles as the proof that the round trip through the envelope changes no row the page renders. */
+function buildWireTradeRowsPage(
+  records: readonly TradeActivityRecord[],
+  participants: readonly ParticipantSnapshot[],
+  opts: { readonly limit: number; readonly before?: string },
+  underlyingFilter?: string,
+): WireTradeRowsPage {
+  return buildWireTradeRowsFromEvents(
+    records.map(activityEventFromTradeRecord),
+    participants,
+    opts,
+    underlyingFilter,
+  );
+}
 
 /** PR 5 (issue #2287) turned the bare `limit: number` param into a `{limit, before}` page request
  *  and the bare-array return into `{rows, nextCursor}` — this thin wrapper keeps every existing

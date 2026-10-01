@@ -1,16 +1,23 @@
 import { paginateDesc } from "../server/pagination.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
-import { collapseActivity, type TradeActivityRecord } from "./activity-store.js";
+import type { ActivityEvent } from "./activity-event.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
+import { collapseTradeEvents } from "./trade-event-feed.js";
 
 /**
  * THE WIRE's data assembly — pure joins over data every other view already reads, kept out of
  * wire-view.ts so the merge/sort logic stays testable with no HTML in the loop (same split as
  * desk-data.ts / research-service.ts).
  *
- * Nothing here reads a store directly: wire-routes.ts hands in whatever `readAllTradeActivity`
- * and `hub.getState()` already returned, so a fresh view over existing ledgers costs no new
- * durable state.
+ * Nothing here reads a store directly: wire-routes.ts hands in the events and whatever
+ * `hub.getState()` already returned, so a fresh view over existing ledgers costs no new durable
+ * state.
+ *
+ * The trade feed is built from `ActivityEvent`s, not from `TradeActivityRecord`s (#784 slice 1).
+ * Activity's whole point is to be one funnel for everything the league does — trades, feedback,
+ * milestones, deploys — so its rows are assembled from the shared envelope #1211 built, and each
+ * kind brings its own decoder (`trade-event-feed.ts`). The old shape read one ledger directly,
+ * which is exactly why feedback and milestones needed widgets of their own beside it.
  */
 
 export interface WireTradeRow {
@@ -49,25 +56,24 @@ export interface WireTradeRowsPage {
   readonly nextCursor?: string;
 }
 
-/** Collapse the durable ledger to one row per order, join in each order's participant, newest
- *  first, keyset-paginated (PR 5, issue #2287 — replaces the old bare `limit` cap). Unfilled/
- *  cancelled orders carry no honest side to show, so they're dropped (same rule as fillsFrom in
- *  desk-data.ts).
+/** Collapse the event feed to one row per order, join in each order's participant, newest first,
+ *  keyset-paginated (PR 5, issue #2287 — replaces the old bare `limit` cap). Unfilled/cancelled
+ *  orders carry no honest side to show, so they're dropped (same rule as fillsFrom in
+ *  desk-data.ts); `collapseTradeEvents` drops anything that isn't a public trade fill, so this may
+ *  be handed the whole bus.
  *
  * `underlyingFilter`, when given, narrows to fills on that underlying (stock or option) BEFORE
  * pagination — #2017 Phase 1 slice 12. The unfiltered Wire's page bound is an unrelated window;
  * filtering after paginating would let it silently drop a symbol's own older fill, so the filter
  * always runs first. Omitted, behavior is byte-identical to the plain feed. */
 export function buildWireTradeRows(
-  records: readonly TradeActivityRecord[],
+  events: readonly ActivityEvent[],
   participants: readonly ParticipantSnapshot[],
   opts: { readonly limit: number; readonly before?: string },
   underlyingFilter?: string,
 ): WireTradeRowsPage {
   const byId = new Map(participants.map((p) => [p.id, p]));
-  const collapsed = collapseActivity(records).filter(
-    (r) => r.filledQuantity > 0 && (r.side === "buy" || r.side === "sell"),
-  );
+  const collapsed = collapseTradeEvents(events).filter((r) => r.filledQuantity > 0);
   const scoped = underlyingFilter
     ? collapsed.filter((r) => matchesUnderlying(r.symbol, underlyingFilter))
     : collapsed;

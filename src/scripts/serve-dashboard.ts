@@ -275,7 +275,11 @@ async function main(): Promise<void> {
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
-    // `/wire`'s cross-participant feed: the same stores, called with no id.
+    // `/wire`'s cross-participant feed: the same stores, called with no id. Activity's trade rows
+    // are built from the bus's `ActivityEvent` envelope (#784 slice 1); the ledger rides alongside
+    // it because the event log only starts at #1211's deploy and older fills live only on the
+    // ledger (`mergeLedgerIntoEvents` dedupes the overlap on the deterministic event id).
+    readAllActivityEvents: () => activityEventBus.list(),
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
     // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
