@@ -1,5 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dueForResearch, loadDispatchCap } from "../../scripts/moneypenny/events.mjs";
+import {
+  dueForResearch,
+  loadDispatchCap,
+  researchCapFor,
+  researchCapNow,
+} from "../../scripts/moneypenny/events.mjs";
+import type { WorkMode } from "../../scripts/moneypenny/work-mode.d.mts";
 
 // THE DISPATCH CEILING GATE (#2946).
 //
@@ -98,13 +104,11 @@ describe("research dispatch ceiling", () => {
     // silent when nothing is deferred.
     // biome-ignore lint/suspicious/noConsole: capturing the stderr notice under test
     const original = console.error;
-    // biome-ignore lint/suspicious/noConsole: installing the stub described above
     console.error = (msg: string) => seen.push(msg);
     try {
       dueForResearch(FIVE, [], 2);
       dueForResearch(FIVE, [], 99);
     } finally {
-      // biome-ignore lint/suspicious/noConsole: restoring the real console.error
       console.error = original;
     }
     expect(seen).toHaveLength(1);
@@ -155,5 +159,68 @@ describe("research dispatch ceiling", () => {
   it("leaves event-scan --due uncapped, so deferred never reads as handled", () => {
     const src = readFileSync("scripts/event-scan.mjs", "utf8");
     expect(src).not.toMatch(/maxPerTick|dispatch-budget/);
+  });
+});
+
+// THE DIAL ON TOP OF THE CEILING (#3960 slice 2, criteria 2 and 3).
+//
+// Two controls bound one number, so these specs pin WHICH WINS and what survives of the other:
+//   - the dial wins, because `surge` has to raise the ceiling ABOVE the budget file's number and a
+//     `Math.min` of the two could never do that;
+//   - `normal` reads the budget file, so today's behavior is byte-identical and the file keeps a
+//     real job (it DEFINES normal) rather than becoming decorative;
+//   - the budget file is still loaded every tick, so #2946's loud failure survives the dial;
+//   - the position goes to stderr, never stdout — the workflow feeds stdout to `fromJSON()`.
+describe("the research ceiling follows the work spigot's dial", () => {
+  const mode = (position: string, researchPerTick: number): WorkMode =>
+    ({
+      position,
+      until: null,
+      caps: { inFlightCap: 3, researchPerTick, governorDispatches: 4 },
+      reason: `set to ${position}`,
+    }) as WorkMode;
+
+  it.each([
+    ["halt dispatches nothing", "halt", 0, 0],
+    ["conserve drops below the file's ceiling", "conserve", 2, 2],
+    ["surge raises above it, which a min() could not", "surge", 12, 12],
+  ])("%s", (_what, position, perTick, expected) => {
+    expect(researchCapFor(mode(position, perTick), 6)).toBe(expected);
+  });
+
+  it("reads the budget file at normal, so the committed ceiling stays the normal-mode knob", () => {
+    expect(researchCapFor(mode("normal", 99), 6)).toBe(6);
+  });
+
+  it("treats a mode with no usable number as zero, never as unlimited", () => {
+    expect(researchCapFor(undefined, 6)).toBe(0);
+    expect(researchCapFor({ position: "conserve" } as WorkMode, 6)).toBe(0);
+  });
+
+  it("announces the position and the override on stderr, and stays quiet at normal", () => {
+    const seen: string[] = [];
+    // biome-ignore lint/suspicious/noConsole: capturing the stderr notices under test
+    const original = console.error;
+    console.error = (msg: string) => seen.push(msg);
+    let conserve: number;
+    let normal: number;
+    try {
+      conserve = researchCapNow(() => mode("conserve", 2), 6);
+      normal = researchCapNow(() => mode("normal", 6), 6);
+    } finally {
+      console.error = original;
+    }
+    expect([conserve, normal]).toEqual([2, 6]);
+    expect(seen.filter((l) => l.includes("::notice::work-mode="))).toHaveLength(2);
+    const overrides = seen.filter((l) => l.includes("::notice::work spigot"));
+    expect(overrides).toHaveLength(1);
+    expect(overrides[0]).toContain("conserve");
+    expect(overrides[0]).toContain("is 2, not research-dispatch-budget.json's 6");
+  });
+
+  it("still refuses when the budget file is gone, dial or no dial", () => {
+    expect(() => researchCapNow(() => mode("surge", 12), loadDispatchCap("no/such.json"))).toThrow(
+      /dispatch budget missing/,
+    );
   });
 });

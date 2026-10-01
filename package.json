@@ -61,6 +61,7 @@
     "ready:report": "node scripts/ready-report.mjs",
     "rank": "node scripts/rank.mjs",
     "work-mode": "node scripts/moneypenny/work-mode.mjs",
+    "work-gate": "node scripts/moneypenny/work-gate.mjs",
     "delivery:score": "node scripts/delivery-score.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "research:scorecard": "node scripts/research-scorecard.mjs",

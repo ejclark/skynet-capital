@@ -17,7 +17,18 @@ earned after the policy proves out over reps.
 ## The cycle
 
 1. **SYNC.** `git fetch origin main` — every decision derives from shipped reality, never a stale tree.
-2. **ROSTER.** The full athlete roster — every coach in `docs/COACHES.md` that has one. Walk **all** of
+2. **SPIGOT.** `npm run work-gate` — the work spigot's dial and the #2946 spend breaker in one answer
+   (`scripts/moneypenny/work-gate.mjs`, #3960). JSON on stdout, exit **0** cleared / **3** refused.
+   - **Exit 3 → dispatch nothing this cycle.** Say which control refused, quoting its `reason`: the
+     dial reads `halt`, or the spend breaker is tripped and only a human clears that one. A refused
+     cycle is still a cycle — report it and stop, never work around it.
+   - **`caps.governorDispatches` is this cycle's athlete allowance.** `normal` 4 is one per coach,
+     today's behavior unchanged. `conserve` 1 — walk the roster as usual, dispatch only the single
+     highest-leverage candidate, and name the ones deferred. `surge` 8 — a coach may be dispatched
+     again on its next candidate once its first athlete reports, until the allowance is spent.
+   - **The allowance is the only thing the dial changes.** WIP 1, the collision check, the
+     merge-policy table and the one-cycle-one-PR rule all hold at every position.
+3. **ROSTER.** The full athlete roster — every coach in `docs/COACHES.md` that has one. Walk **all** of
    them each cycle; a coach silently omitted here is a debt dimension that never gets worked.
 
    | Athlete | Eye (`--candidate`) | Branch prefix (WIP glob) |
@@ -36,10 +47,10 @@ earned after the policy proves out over reps.
      already met) → skip; that dimension is clean, which is the goal, not a failure.
    - **COLLISION:** if the target file is modified by ANY open PR (`gh`/MCP: list open PR files), skip
      this coach this cycle — structural work never races feature work on the same file.
-3. **DISPATCH.** Launch the athlete: cheap model tier (sonnet), isolated worktree, its standard contract
+4. **DISPATCH.** Launch the athlete: cheap model tier (sonnet), isolated worktree, its standard contract
    (branch off origin/main, `bash scripts/worktree-setup.sh`, gate-confirm target, drill, verify by exit
    status, ratchet, push, report — no PR-opening; athletes carry no GitHub tooling).
-4. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
+5. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
    merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay
    distinct for bisectability), verify green once, open one PR titled
    `refactor: governed cycle <n> — <rep summaries>`, and **enable auto-merge (SQUASH)** if — and only
@@ -48,13 +59,13 @@ earned after the policy proves out over reps.
    and GitHub API calls — the measured constraints. Exception: isolate a rep in its own PR when it is
    unusually large or risky enough that independent revert matters more than the savings.
    On a failure report: surface it to the human head coach verbatim; do not retry in-cycle.
-5. **RETRO.** One line, at cycle close, never per-athlete: did anything recur across this cycle's
+6. **RETRO.** One line, at cycle close, never per-athlete: did anything recur across this cycle's
    dispatches, cost more than expected, or surface a pattern worth a new athlete? Log it to
    `docs/IDEAS.md` (`(src: Claude · while: governor cycle <n>)`); nothing to note → say nothing — this
    is the same "surface the opportunity either way, never sit on it silently" habit feast mode's own
    cost-test bullet already practices for one narrow case, generalized to the whole cycle. Never a new
    gate: no cycle waits on this, and a dry cycle costs nothing.
-6. **STOP.** One dispatch per coach per cycle. The next cycle recomputes targets from the NEW main —
+7. **STOP.** One dispatch per coach per cycle — the one exception is `surge`, whose allowance in step 2 is the only thing that lifts it. The next cycle recomputes targets from the NEW main —
    that re-derivation is the serializer that prevents two reps racing the same file.
 
 ## Feast mode — planned parallel burn-down
@@ -62,7 +73,7 @@ earned after the policy proves out over reps.
 When the head coach declares a feast (a batch burn-down), the cycle serializer is replaced by **planned
 partitioning**: each athlete gets an exclusive file territory (fence), multiple seams per dispatch are
 allowed, and all green work assembles into ONE platter branch/PR (distinct commits kept for bisect).
-Three standing rules:
+A feast is a surge-class act, so the dial gates it too: declare one only while step 2 reads `normal` or `surge`, never under `conserve` — and `halt` has already refused the whole cycle. Three standing rules:
 
 - **Leftovers ledger.** Every skip-for-collision is recorded WITH the fence that caused it. A skip
   without a recorded fence is a process bug.
