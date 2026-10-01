@@ -20,9 +20,13 @@ import type { TradeActivityRecord } from "./activity-record.js";
  *   never defaulted — a feed row invented from a half-read payload would imply a trade that did not
  *   happen, which outranks showing more rows.
  * - **An order appears on several lines** as it progresses (new → partially_filled → filled), the
- *   same append-only journal `collapseActivity` folds. `collapseTradeEvents` is that same fold,
- *   keyed on the envelope's `correlationId` (the order) instead of the record's `orderId`, with the
- *   identical most-progressed-fill-wins rule, so the folded output matches line for line.
+ *   same append-only journal `collapseActivity` folds. `collapseTradeEvents` is that same fold with
+ *   the identical most-progressed-fill-wins rule, so the folded output matches line for line. It
+ *   folds on `target.id` — the order's own identity — and NOT on `correlationId`, which the envelope
+ *   defines as the field that *chains related* events ("an order's id today"). The two are the same
+ *   string for a trade fill right now, but the first emitter to chain a multi-leg or bracketed order
+ *   under one correlation id would make the fold collapse two real fills into one row. Identity, not
+ *   grouping, is what a per-order fold keys on.
  */
 
 /** The fill-bearing event types `activity-event.ts` emits for a trade. `order.submitted` is NOT
@@ -59,6 +63,10 @@ function asFiniteNumber(value: unknown): number | undefined {
  */
 export function tradeFillFromEvent(event: ActivityEvent): TradeEventFill | null {
   if (!(TRADE_FILL_EVENT_TYPES.has(event.eventType) && PUBLIC_ONLY(event))) return null;
+  // A fill is about an order, and the row's order id is what joins it to its `DecisionRecord`
+  // (`attachWireReasoning`). An event typed as a fill but targeting something else is a mis-emitted
+  // line, not a trade — drop it rather than hand the join an id of the wrong kind.
+  if (event.target.kind !== "order" || !event.target.id) return null;
   const { symbol, side, filledQuantity, price } = event.payload;
   if (typeof symbol !== "string" || !symbol) return null;
   if (side !== "buy" && side !== "sell") return null;
@@ -66,7 +74,7 @@ export function tradeFillFromEvent(event: ActivityEvent): TradeEventFill | null 
   if (filled === undefined) return null;
   const parsedPrice = asFiniteNumber(price);
   return {
-    orderId: event.correlationId,
+    orderId: event.target.id,
     participantId: event.actor.participantId,
     symbol,
     side,
@@ -78,8 +86,9 @@ export function tradeFillFromEvent(event: ActivityEvent): TradeEventFill | null 
 }
 
 /**
- * Fold a mixed event list into the latest known fill per order, newest first — `collapseActivity`'s
- * rule applied to envelopes: the most progressed fill wins, a later `at` breaks a tie, and a later
+ * Fold a mixed event list into the latest known fill per order (`target.id`, never `correlationId` —
+ * see the header), newest first — `collapseActivity`'s rule applied to envelopes: the most progressed
+ * fill wins, a later `at` breaks a tie, and a later
  * line in the input breaks what remains (so a backfilled event never regresses a live-captured
  * one). Non-trade and unparseable events are dropped by `tradeFillFromEvent`, so a caller can hand
  * this the whole bus.

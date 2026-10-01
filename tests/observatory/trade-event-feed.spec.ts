@@ -61,8 +61,14 @@ describe("tradeFillFromEvent", () => {
     expect(fill).not.toHaveProperty("price");
   });
 
-  it("reads the order id off correlationId, so an event chained to an order still resolves it", () => {
-    expect(tradeFillFromEvent(event({ orderId: "ord-chained" }))?.orderId).toBe("ord-chained");
+  it("reads the order id off target.id — the order's identity, not correlationId's grouping", () => {
+    const chained: ActivityEvent = { ...event(), correlationId: "spread-leg-group" };
+    expect(tradeFillFromEvent(chained)?.orderId).toBe("ord-1");
+  });
+
+  it("drops a fill-typed event aimed at something that isn't an order", () => {
+    const mistyped: ActivityEvent = { ...event(), target: { kind: "position", id: "pos-1" } };
+    expect(tradeFillFromEvent(mistyped)).toBeNull();
   });
 
   it("keeps a partially filled order — progress is a trade, just not a finished one", () => {
@@ -156,6 +162,18 @@ describe("collapseTradeEvents", () => {
     expect(fills.map((f) => f.orderId)).toEqual(["b", "c", "a"]);
   });
 
+  it("keeps two orders chained under one correlationId as two rows, never folded into one", () => {
+    const chain = (orderId: string, at: string): ActivityEvent => ({
+      ...event({ orderId, at }),
+      correlationId: "spread-leg-group",
+    });
+    const fills = collapseTradeEvents([
+      chain("leg-long", "2026-08-19T14:00:00.000Z"),
+      chain("leg-short", "2026-08-19T14:00:01.000Z"),
+    ]);
+    expect(fills.map((f) => f.orderId)).toEqual(["leg-short", "leg-long"]);
+  });
+
   it("ignores everything on the bus that isn't a public trade fill, so it can be handed all of it", () => {
     const submitted = activityEventFromAuditRecord({
       orderId: "ord-1",
@@ -187,7 +205,7 @@ describe("mergeLedgerIntoEvents", () => {
 
   it("appends the ledger after the bus, so the fold's tie-break resolves as it did ledger-only", () => {
     const merged = mergeLedgerIntoEvents([event({ orderId: "bus" })], [record({ orderId: "led" })]);
-    expect(merged.map((e) => e.correlationId)).toEqual(["bus", "led"]);
+    expect(merged.map((e) => e.target.id)).toEqual(["bus", "led"]);
   });
 
   it("is the identity on an empty ledger, and the full translation on an empty bus", () => {

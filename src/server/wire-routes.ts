@@ -29,13 +29,15 @@ export interface WireRouteDeps {
    */
   readonly readAllActivityEvents?: () => Promise<readonly ActivityEvent[]>;
   /**
-   * All participants' durable trade activity — omit to render the trading column's honest empty
-   * state instead of a feed.
+   * All participants' durable trade activity, read ALONGSIDE the bus above and not instead of it:
+   * the event log only begins at #1211's deploy, so every fill booked before that lives here and
+   * nowhere else. `mergeLedgerIntoEvents` folds these in on the bus's own schema, deduplicated on
+   * the deterministic event id — see its header for why the union can't double-count and when this
+   * leg retires.
    *
-   * Still read alongside the bus, not instead of it: the event log only begins at #1211's deploy,
-   * so every fill booked before that lives here and nowhere else. `mergeLedgerIntoEvents` folds
-   * these in on the bus's own schema, deduplicated on the deterministic event id — see its header
-   * for why the union can't double-count and when this leg retires.
+   * Omitting BOTH this and `readAllActivityEvents` renders the trading column's honest empty state
+   * instead of a feed. Omitting only this one is not an empty state — it is a feed quietly missing
+   * every pre-bus fill, so drop it only once the bus is confirmed to hold the ledger's full history.
    */
   readonly readAllTradeActivity?: () => Promise<readonly TradeActivityRecord[]>;
   /** Every member's filed feedback, not just one member's own — omit to render the pulse column's
@@ -84,8 +86,13 @@ async function assembleWire(
   before?: string,
 ): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
-  const published = config.readAllActivityEvents ? await config.readAllActivityEvents() : [];
-  const records = config.readAllTradeActivity ? await config.readAllTradeActivity() : [];
+  // Both in flight at once: two independent full-ledger reads, so awaiting them in series would
+  // pay for the union twice over on a `no-store` page. (Each is still a full read — a bounded read
+  // is a real design question for the feed redesign, #784 slice 3, not something to fake here.)
+  const [published, records] = await Promise.all([
+    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
+    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
+  ]);
   const events = mergeLedgerIntoEvents(published, records);
   const feedback = config.readAllFeedback ? await config.readAllFeedback() : [];
   // Newest first, then bounded — `list()`'s own order is filesystem-dependent, so sort before
