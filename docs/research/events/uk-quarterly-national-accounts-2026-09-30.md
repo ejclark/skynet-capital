@@ -366,3 +366,97 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-01, D+1 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode runs no
+`earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design, as at initial research); the cache
+was busted anyway for the record (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) though nothing in this ledger reads it. "Re-run instrument data" here
+means re-fetching the ONS bulletin direct and re-pulling this repo's own market-data layer
+(`scripts/research/market-data.mjs`) for IGLT.L, ^FTSE, ^TNX, SPY, ^VIX and the four tracked names, never
+from memory of the tape.
+
+### What happened
+
+**The release printed on schedule and the number landed inside this document's own band.** ONS's second
+estimate (`ons.gov.uk/economy/grossdomesticproductgdp/bulletins/quarterlynationalaccounts/
+apriltojune2026`, fetched direct via plain curl 2026-10-01, HTTP 200): UK real GDP for Q2 (Apr–Jun) 2026
+revised to **+0.5%** q/q, **up 0.1pp** from the first estimate's **+0.4%**, following an unrevised **+0.6%**
+in Q1 2026. Services **+0.6%** (was +0.5%), construction **+0.8%** (was +0.3%), production **-0.1%**
+(revised down from 0.0%), household consumption **+0.3%** (unrevised), GDP per head **+0.5%** (**+1.2%**
+y/y), household saving ratio **8.8%**, **+0.2pp** on the quarter. The bulletin states the revision carries
+*"Blue Book 2026 methodological changes, and additional updated data, which includes new Value Added Tax
+(VAT) turnover data for Quarter 1 2026"* — exactly the source-data channel the 2026-09-16 pulse flagged as
+widening FT-1's tail, not a surprise beyond it. The Blue Book 2026 compendium itself remains dated
+**2026-10-30**, unchanged.
+
+**IGLT.L's close-to-close move on 2026-09-30: -0.026%.** Yahoo's historical daily-bar array had not yet
+backfilled 2026-09-30 for this LSE-listed ETF at the time of this close-out — a vendor lag, recorded rather
+than guessed — so the figure is read from the chart's own live-quote snapshot instead: `regularMarketPrice`
+**9.485**, `fulldayChange` **-0.0025** against a **9.4875** prior close, timestamped **15:35 UTC**, five
+minutes after the LSE's 16:30 BST close — a settled price, not an estimate. ^VIX closed **16.34**
+(2026-09-30), **+0.30** on the day, inside the 3-point materiality band. None of the four tracked names
+carries any reporting attributing its close-to-close move to the UK release: NVDA **+0.51%**, AVGO
+**-1.10%**, MRVL **+0.36%**, CRWV **+1.38%** — all explained elsewhere on a day carrying MU's earnings
+print, PCE and the FY2027 funding deadline, exactly as leg 7 anticipated. This document does not run a
+premarket (02:00–09:30 ET) instrument — `symbols: []`, macro mode — so the channel kill is judged on
+close-to-close moves and the absence of any attributing report, not a minute-by-minute read of the 07:00
+London window itself.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| [FT-uk-quarterly-national-accounts-2026-09-30-1](../forward-tests/uk-quarterly-national-accounts-2026-09-30.md) (Q2 revision within ±0.2pp of +0.4%) | +0.2% to +0.6% inclusive | **+0.5%**, 0.1pp off the first estimate | **PASS** |
+| [FT-uk-quarterly-national-accounts-2026-09-30-2](../forward-tests/uk-quarterly-national-accounts-2026-09-30.md) (IGLT.L within ±0.809% on 09-30) | within ±0.809% | **-0.026%**, well inside | **PASS** |
+
+**FT-uk-quarterly-national-accounts-2026-09-30-3 (the EFO excludes-but-boxes) is not scored here.** Its
+registered **score by 2026-10-29** falls after this event's `closeOutWithinDays: 6` ceiling (2026-10-06) —
+a structural conflict the process doc names explicitly
+([`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md) → *"A close-out waits for its own predictions"*),
+not a timing slip. It stays `_open_` in its own fragment; `scripts/event-scan.mjs` will re-dispatch this
+lane as `forward-test-due` once the 2026-10-28 EFO publishes and the row's score-by date has arrived.
+
+### Kill switches, re-checked at close-out
+
+- **Channel kill** — not fired. No tracked name's move is attributed anywhere to the ONS release (see above).
+- **Market kill (FT-2)** — not fired, scored **PASS** above.
+- **Revision kill (FT-1)** — not fired, scored **PASS** above.
+- **Third-outcome kill (FT-3)** — not yet testable; the EFO has not published.
+- **Content kill** — not fired. The carried revisions are Blue Book 2026 scope plus the VAT-turnover
+  source-data update, both already flagged on 2026-09-16, not an unannounced methodology change.
+- **Crowding kill** — not fired. PCE, the FY2027 funding deadline and the BEA Q2 third estimate all
+  remained on 2026-09-30 (confirmed by the sibling
+  [`gdp-q2-2026-third-2026-09-30`](gdp-q2-2026-third-2026-09-30.md) close-out, read, not re-fetched).
+- **Date kill** — not fired. The release printed on 2026-09-30 as scheduled.
+
+### The call itself, scored against the tape
+
+This book never held a position — `symbols: []`, no fiscal/rates/sterling playbook — so there is no P&L
+to score. The stand-aside call was never challenged by the size of either outcome: sizing anything off a
+`symbols: []` macro print was never on the table regardless of which way FT-1/FT-2 landed. Both of this
+document's two independent non-event arguments held: the measured null (legs 4–6) priced the release
+correctly at **0.74x–1.18x** an ordinary day, and IGLT.L's actual **-0.026%** move sits far inside every
+one of those bands; the pre-announcement mechanism (leg 2) also held — the revision landed exactly where
+the 2026-08-20 impact article and the first estimate implied, with nothing in the print a market reader
+could not have seen weeks early. The operational instruction — refuse attribution on 2026-09-30's crowded
+tape — is the one piece of this document that was actually load-bearing today, and it held: nothing in the
+day's reporting reaches for the UK release to explain any tracked name's move.
+
+### Honest limits
+
+**First, IGLT.L's figure rests on a live chart-meta snapshot, not the historical daily-bar array.** The
+snapshot is timestamped after the LSE close and is treated as the settled price for exactly that reason,
+but a future re-fetch once Yahoo backfills the array is the more durable source if this figure is ever
+disputed.
+
+**Second, the channel kill was judged on daily closes, not a premarket window.** A move specifically inside
+02:00–09:30 ET that reverses before the close would not show up in a close-to-close read; no instrument in
+this book's macro mode would catch it, and none was run.
+
+This document goes quiet on the `event-passed-unscored` door; one remains open —
+`forward-test-due` on **FT-uk-quarterly-national-accounts-2026-09-30-3**, no earlier than **2026-10-29**.
