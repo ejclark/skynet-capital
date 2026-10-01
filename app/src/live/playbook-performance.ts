@@ -21,6 +21,13 @@ export interface PlaybookMetricsView {
   readonly shortestHold: { readonly holdMs: number } | null;
   readonly byDirection: { readonly long: number; readonly short: number };
   readonly byInstrument: { readonly stock: number; readonly call: number; readonly put: number };
+  /** Option trips only, by the cycle they expired on (#3665 slice 5). These never sum to `trades`
+   *  on a playbook that also trades stock — shares have no expiration cycle. */
+  readonly byCycle: {
+    readonly weekly: number;
+    readonly monthly: number;
+    readonly quarterly: number;
+  };
 }
 
 export interface PlaybookPerformanceView {

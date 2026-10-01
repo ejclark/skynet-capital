@@ -107,7 +107,9 @@ const settings = {
 // The selected account's own closed trades per playbook (#3665 slice 3): S1-NVDA has a record,
 // HC-SAURON has none — so one frame shows both the numbers and the honest empty state. The
 // house-wide block (slice 4) has both: every account's trips, larger than the account's own and
-// drawn beside it, never summed into it.
+// drawn beside it, never summed into it. The cycle mix (slice 5) counts option trips only, so
+// S1-NVDA's 7 house contracts split across cycles while HC-SAURON, which trades only shares, says
+// so in words instead of printing three zeros.
 const HOUR = 3_600_000;
 const performance = {
   house: [
@@ -125,6 +127,7 @@ const performance = {
       shortestHold: { holdMs: 26 * HOUR },
       byDirection: { long: 19, short: 0 },
       byInstrument: { stock: 12, call: 7, put: 0 },
+      byCycle: { weekly: 2, monthly: 4, quarterly: 1 },
     },
     {
       playbookId: "HC-SAURON",
@@ -140,6 +143,7 @@ const performance = {
       shortestHold: { holdMs: 18 * 60_000 },
       byDirection: { long: 188, short: 24 },
       byInstrument: { stock: 212, call: 0, put: 0 },
+      byCycle: { weekly: 0, monthly: 0, quarterly: 0 },
     },
   ],
   mine: [
@@ -157,6 +161,7 @@ const performance = {
       shortestHold: { holdMs: 2 * 24 * HOUR + 6 * HOUR },
       byDirection: { long: 4, short: 0 },
       byInstrument: { stock: 3, call: 1, put: 0 },
+      byCycle: { weekly: 0, monthly: 1, quarterly: 0 },
     },
   ],
   accounts: ["human-joe"],
