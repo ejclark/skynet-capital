@@ -499,6 +499,10 @@ export interface DeskThesis {
   /** Null when no decision pass on hand said which plays this bot ran — an absence, never an
    *  empty list posing as "this bot has no safeguards". Absent on a human desk. */
   readonly ladder?: readonly SafeguardLadderEntry[] | null;
+  /** ISO-8601 — when the pass the ladder was read from ran. Absent alongside a null ladder. The
+   *  page prints it: nothing bounds how old that pass is, and an undated safety readout reads as
+   *  current. */
+  readonly ladderAsOf?: string;
 }
 
 export async function fetchDeskThesis(id: string): Promise<DeskThesis> {

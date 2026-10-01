@@ -250,6 +250,9 @@ export async function serveDeskJson(
         kind: "bot",
         thesis: owner ? view : withoutThesisPlaybooks(view),
         ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
+        // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
+        // as current (the same reason `playbookLines` carries `since`).
+        ...(pass ? { ladderAsOf: new Date(pass.at).toISOString() } : {}),
       }),
     );
     return;

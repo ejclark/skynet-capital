@@ -55,10 +55,13 @@ export interface HeartbeatView {
 export function latestVerdictPass(newestFirst: readonly DecisionRecord[]): {
   readonly index: number;
   readonly verdicts: readonly PlaybookVerdict[];
+  /** Epoch ms of that pass. A caller showing the roster must date it: nothing bounds how old the
+   *  newest verdict-carrying pass is, and a safety readout with no date reads as current. */
+  readonly at: number;
 } | null {
   const index = newestFirst.findIndex((r) => r.playbookVerdicts && r.playbookVerdicts.length > 0);
-  const verdicts = newestFirst[index]?.playbookVerdicts;
-  return verdicts ? { index, verdicts } : null;
+  const pass = newestFirst[index];
+  return pass?.playbookVerdicts ? { index, verdicts: pass.playbookVerdicts, at: pass.at } : null;
 }
 
 function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbeat[] | null {

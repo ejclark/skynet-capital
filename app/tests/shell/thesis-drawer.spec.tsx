@@ -323,6 +323,7 @@ describe("ThesisDrawer", () => {
         available: true,
         kind: "bot",
         thesis: quiet,
+        ladderAsOf: "2026-09-30T19:36:00.000Z",
         ladder: [
           {
             playbookId: "S1-NVDA",
@@ -335,12 +336,15 @@ describe("ThesisDrawer", () => {
         ],
       };
       render(withClient(<ThesisDrawer id="bot-sauron" />));
-      await waitFor(() => expect(screen.getByText("Safeguards")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/^Safeguards/)).toBeInTheDocument());
       expect(screen.getByText("S1-NVDA · standard")).toBeInTheDocument();
       expect(screen.getByText("Watching")).toBeInTheDocument();
       expect(screen.getByText("Off")).toBeInTheDocument();
       expect(screen.getByText("Logs it.")).toBeInTheDocument();
       expect(screen.getByText("No automatic exit.")).toBeInTheDocument();
+      // Dated on the page: an undated list of safeguards reads as "this is what protects the bot
+      // right now", and nothing bounds how old the pass it was read from is.
+      expect(screen.getByText(/as of /)).toBeInTheDocument();
     });
 
     it("labels a play whose name is withheld by its position, never by a blank", async () => {
@@ -381,7 +385,7 @@ describe("ThesisDrawer", () => {
       nextThesis = { available: true, kind: "bot", thesis: quiet };
       render(withClient(<ThesisDrawer id="bot-sauron" />));
       await waitFor(() => expect(screen.getByText("not yet measured")).toBeInTheDocument());
-      expect(screen.queryByText("Safeguards")).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Safeguards/)).not.toBeInTheDocument();
     });
   });
 });

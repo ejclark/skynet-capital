@@ -136,4 +136,16 @@ describe("safeguardLadderView — against the live roster", () => {
       expect(stages(playbook)[0]?.does).toContain("no order is held back");
     }
   });
+
+  // The other half of that guard: a setting this view has not been taught must never inherit the
+  // observe-only sentence. `action` is a one-member union today, so the case is reached by hand.
+  it("refuses to call an unrecognised setting passive", () => {
+    const widened = {
+      ...base,
+      mixedSignals: { action: "pause-entries" as unknown as "observe" },
+    };
+    const stage = stages(widened)[0];
+    expect(stage?.does).not.toContain("no order is held back");
+    expect(stage?.does).toContain("newer than this page");
+  });
 });

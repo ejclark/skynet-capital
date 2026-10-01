@@ -76,13 +76,26 @@ function stageOne(playbook: Playbook): SafeguardStageView {
   }
   const momentum = pct(dial.momentumFloor ?? DEFAULT_MOMENTUM_FLOOR);
   const sentiment = (dial.sentimentFloor ?? DEFAULT_SENTIMENT_FLOOR).toFixed(2);
+  const floors = `the price has moved ${momentum} or more against a news tone of ${sentiment} or stronger`;
+  if (dial.action === "observe") {
+    return {
+      stage: 1,
+      name: STAGE_1_NAME,
+      state: "watching",
+      does: `Notes it in the bot log when ${floors}. It only writes the note — no order is held back.`,
+    };
+  }
+  // `action` widened past "observe" (step 5b-ii wires a reading to pause entries) and nobody
+  // taught this readout the new setting. Branching on PRESENCE alone would have kept printing
+  // "no order is held back" over a stage that now holds one back — the exact lie this module
+  // exists to prevent — so an unknown setting says it is unknown.
   return {
     stage: 1,
     name: STAGE_1_NAME,
     state: "watching",
     does:
-      `Notes it in the bot log when the price has moved ${momentum} or more against a news tone ` +
-      `of ${sentiment} or stronger. It only writes the note — no order is held back.`,
+      `Watches for ${floors}, under a setting (“${String(dial.action)}”) newer than this page. ` +
+      "Read the play's own definition rather than trusting this line.",
   };
 }
 

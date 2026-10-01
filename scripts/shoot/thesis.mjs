@@ -89,6 +89,7 @@ const thesis = {
   // states — S1-NVDA exactly as the live roster has it (stage 1 watching, stage 2 unarmed), and a
   // second play with stage 2 enforcing, which no house play declares yet but the readout must
   // render honestly the day one does. Wording verbatim from `safeguard-ladder-view.ts`.
+  ladderAsOf: "2026-09-16T13:45:00Z",
   ladder: [
     {
       playbookId: "S1-NVDA",

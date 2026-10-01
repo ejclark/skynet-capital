@@ -237,6 +237,7 @@ describe("serveDeskJson", () => {
     const { res, out } = fakeRes();
     await serveDeskJson(res, "/api/desk/sauron/thesis", "/api/desk/sauron/thesis", configWith());
     expect(answered(out).ladder).toBeNull();
+    expect(answered(out).ladderAsOf).toBeUndefined();
   });
 
   it("attaches each bot activity row's decision, and never a human row's (#3687 slice 4)", async () => {
@@ -496,6 +497,11 @@ describe("serveDeskJson", () => {
         expect.objectContaining({ mode: "standard", stages: expect.any(Array) }),
       ]);
       expect(thesis.ladder[0].playbookId).toBeUndefined();
+      // WHAT THIS PROVES, AND WHAT IT DOES NOT: the FIELDS carrying a play's name are stripped.
+      // It passes partly because `pick.reason` is hand-written here; a real playbook intent's
+      // reason is built as `"S1-NVDA window open (standard): …"` (`playbookIntents`), and that
+      // free text flows into `call.why` and every `reasoning.reason` unredacted — #4442, older than
+      // this block. Do not read a green here as covering it.
       for (const sub of ["heartbeat", "decisions", "activity", "thesis"]) {
         const body = await read(sub, "guest@x");
         expect(body).not.toContain("S1-NVDA");
@@ -520,6 +526,8 @@ describe("serveDeskJson", () => {
       expect(activity.activity[0].reasoning.playbookId).toBe("S1-NVDA");
       const thesis = JSON.parse(await read("thesis", "owner@x"));
       expect(thesis.ladder[0].playbookId).toBe("S1-NVDA");
+      // The ladder is dated from the pass it was read off, never undated (#3194 slice 6a).
+      expect(thesis.ladderAsOf).toBe(new Date(pass.at).toISOString());
     });
 
     it("withholds them from a signed-out read, and keeps them with no sign-in configured", async () => {

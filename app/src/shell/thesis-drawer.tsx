@@ -131,15 +131,31 @@ const SAFEGUARD_STATE_GLYPH: Record<SafeguardState, string> = {
  */
 function SafeguardLadder({
   ladder,
+  asOf,
 }: {
   readonly ladder: readonly SafeguardLadderEntry[] | null | undefined;
+  readonly asOf: string | undefined;
 }): ReactElement | null {
   // A deployment whose thesis payload predates this field: draw nothing rather than an empty
   // section that would read as "no safeguards".
   if (ladder === undefined) return null;
+  // Dated on the page, not just in the payload: nothing bounds how old that pass is, and a
+  // safeguard list with no date reads as "this is what protects the bot right now".
+  const when = asOf ? new Date(asOf) : undefined;
+  const stamp =
+    when && !Number.isNaN(when.getTime())
+      ? when.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : undefined;
   return (
     <section className="thesis-ladder">
-      <h3 className="thesis-ladder-heading">Safeguards</h3>
+      <h3 className="thesis-ladder-heading">
+        Safeguards{stamp ? <span className="thesis-ladder-asof"> · as of {stamp}</span> : null}
+      </h3>
       {ladder === null || ladder.length === 0 ? (
         <p className="note">
           No decision pass on hand says which plays this bot runs, so its safeguards can’t be read
@@ -368,7 +384,7 @@ export function ThesisDrawer({
           <span className="thesis-health-detail"> · {data.health.detail}</span>
         ) : null}
       </p>
-      <SafeguardLadder ladder={thesis.data.ladder} />
+      <SafeguardLadder ladder={thesis.data.ladder} asOf={thesis.data.ladderAsOf} />
       <ThesisChart equity={data.equity} markers={data.markers} deskId={id} activity={activity} />
     </div>
   );
