@@ -312,12 +312,79 @@ this doc spent five rows' worth of reasoning protecting.
 | 2026-09-28 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 14.9 (+0.0pt since last), band unchanged (high:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-29 |
 | 2026-09-29 | D-1 | **Deterministic screen (no Claude session).** Readings — VIX 16.1 (+1.2pt since last), band unchanged (high:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-09-30 |
 | 2026-09-30 | D-0 | **Why this reached a session: the staleness ceiling, not new readings.** `event-material-scan.mjs` fired `material` on exactly one trigger — `staleness-ceiling` (two consecutive screens, 09-28 and 09-29, forcing the mandatory sixth real look of this doc's life). Every diffable reading is otherwise quiet. **VIX 16.04** (probe, 2026-09-29 bar-close) vs **16.07** in the prior `probe-ref` — **−0.03**, negligible and well inside the 3-point threshold. Band unchanged **high:0+**. Corridor unchanged at **56** adjacent ids (zero added, zero dropped since 09-29), and the 5 `adjacentStrongIds` are byte-identical (`ism-manufacturing-2026-10-01`, `ism-services-2026-10-05`, `jobs-2026-10-02`, `mu-2026-09-30-print`, `pce-2026-09-30`). **Funding status re-verified on the event's own calendar date, unchanged for the sixth consecutive check.** CRFB's Appropriations Watch tracker (`crfb.org/blogs/appropriations-watch-fy-2027`), fetched direct today: page still timestamped **2026-09-03**, byte-consistent with every read since 09-05 — **PL 119-103** funds agencies through **December 11, 2026**, signed 09-02, House 370–48 / Senate 90–6; House full-chamber passage of FY2027 bills reads **2 of 12** this fetch (MilCon-VA, National Security-State) — the same fetch/summarization variance the 09-27 row already flagged and declined to adopt as a new fact, not a re-derivation. A web sweep dated on or near today's original deadline (NPR's own 09-01 retrospective on the averted shutdown, White House shutdown-clock coverage, CRFB's shutdown Q&A, appropriations.house.gov's press release) found nothing dated after 09-05 and no rescission, impoundment or repeal action reopening FY2027 funding — this doc's own Today-horizon falsifier stays unfired. **Macro / geopolitical:** nothing new attributable to this event; today's own cluster (ADP employment, Chicago PMI, PCE, GDP Q2 third estimate, Dallas Fed Trimmed Mean/TSSOS, G20 trade ministerial, the JGB 2-year auction, `mu-2026-09-30-print`, the Bloomberg Agg/Russell/S&P Select Sector quarter-end mechanics) is carried by its own ledgers, not re-derived here — it is congestion, exactly as the 09-10 row called it, and none of it is a funding-channel effect. **Peers:** n/a, `symbols: []`. **No new dated adjacency found** — every search hit was already tracked or historical. **No forward test registered** — this event has never carried one and nothing here is a new testable prediction. **The event's own calendar date arrives with the branch closed 28 days ago and nothing to add.** This is the last `interval-elapsed` pulse this doc will see: from **2026-10-01 (D+1)** the scanner marks it `event-passed-unscored`, and per this doc's own 09-05/09-10/09-19/09-23/09-27 rows, that close-out has been ready since 09-05 and has nothing left to establish beyond what this lineage of rows has already banked. | **No change.** The event stays resolved, averted, retired since PL 119-103 (signed 2026-09-02); no position, no hedge, `symbols: []`. This row's only function was the mandatory staleness-ceiling real look, on the date the entry itself names — every reading it exists to check came back quiet. | 2026-10-01 — `event-passed-unscored` close-out, not a pulse |
+| 2026-10-01 | D+1 (close-out) | **Close-out — the lapse date itself has now passed with no lapse, confirmed independently rather than inherited from memory.** Cache busted first (`earnings-cycle`/`intraday-edges` untouched — `symbols: []` throughout, geopolitical kind, no ticker instrument was ever a target). A fresh primary not previously cited in this ledger: **OPM's own DC-area operating-status page** (`opm.gov/policy-data-oversight/snow-dismissal-procedures/current-status/`, fetched direct today) posted **"Status: Open" / "Federal agencies in the Washington, DC area are Open… Normal operating procedures are in effect,"** timestamped **2026-09-30 03:28 ET** — the morning of the would-be lapse date itself, which is the one record this lane had not yet pulled across six prior rows. `congress.gov` 403'd again on direct fetch (same block this doc has logged since 08-29 and the 09-05/09-10 rows). `whitehouse.gov/government-shutdown-clock` returned content, but it is **the 2025 shutdown's own retrospective page** ("Democrats Shut Down the Government for a Record 43 Days"), not a live 2026 status indicator — logged as mismatched/stale and **not used**, never silently substituted. Falling back to today's press, cross-corroborated: **fedtools** and **govtschemes** (both fetched direct) plus **Breaking Defense** and **NBC News** (via search) all independently confirm **no October 1 lapse occurred** and funding runs to **December 11, 2026** per PL 119-103 — the same conclusion this doc banked on 09-05, now reproduced from a fifth and sixth independent outlet plus the OPM primary. **VIX**, re-pulled direct from Yahoo's chart API today: **16.34** (2026-09-30 close), continuing the quiet 14–17 range this doc has tracked since 09-05 — no funding-attributable spike into the deadline date, consistent with leg 5's "non-event" finding and with `symbols: []` meaning there was never a position to mark against it. **No new dated adjacent event found** in today's sources; no proposal filed. **No forward test was ever registered against this event** — this ledger's stand-aside stance (`symbols: []`, no position proposed at any point from 08-29 through today) never produced a dated, scoreable market prediction, so there is nothing in `docs/research/forward-tests/` to score and no gap being left open by omission. Full verdict in `## Outcome` below. | — (closed; stand-aside stance stands as written — no position, hedge or sizing change was ever proposed, and the averted outcome is exactly what the 08-29 base case and every intervening row already priced, not a retroactive justification) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-10-01, D+1 — inside the `closeOutWithinDays: 6` deadline, ceiling 2026-10-06).**
+Geopolitical kind, `symbols: []` throughout, so no `earnings-cycle`/`intraday-edges` instrument ever
+had a target; the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran first
+regardless, per this lane's cache-discipline rule. "Re-run instrument data" for this event means
+re-fetching the sources that actually bear on the question — did a lapse begin — not reading this
+ledger's own six-row memory of "resolved on 09-05."
+
+**No lapse occurred. The base case this doc opened with on 08-29 was right, and the mechanism
+closed exactly the way the 09-05 stance update already recorded.** The new primary this session
+adds, not previously cited anywhere in this ledger: **OPM's own DC-area operating-status page**
+(`opm.gov/policy-data-oversight/snow-dismissal-procedures/current-status/`, fetched direct today)
+posted **"Status: Open"** — *"Federal agencies in the Washington, DC area are Open… Employees are
+expected to begin the workday on time. Normal operating procedures are in effect"* — timestamped
+**2026-09-30 03:28 ET**, the morning of the would-be lapse date itself. That is the one record nine
+prior ledger rows never pulled: a day-of operational status, not a legislative-status tracker. It
+corroborates, independently, what **PL 119-103** (H.R. 6500, signed **2026-09-02**, House 370–48 /
+Senate 90–6, funding through **December 11, 2026**) already made the expected outcome. `congress.gov`
+403'd again on direct fetch — the same block this doc has logged on every attempt since 08-29.
+`whitehouse.gov/government-shutdown-clock` returned content, but on inspection it is **the 2025
+shutdown's own retrospective page** ("Democrats Shut Down the Government for a Record 43 Days"), not
+a live 2026 indicator — logged as mismatched and **not used**, never silently substituted for a
+current reading. Falling back to today's press, each outlet checked against another: **fedtools**
+and **govtschemes** (both fetched direct), corroborated by **Breaking Defense** and **NBC News** (via
+search) — all independently confirm no October 1 lapse and the December 11 funding line, a fifth and
+sixth outlet repeating the same fact this doc already banked on primaries 26 days ago.
+
+**No tradable reaction, and there was never a question to mark one against.** VIX, re-pulled direct
+from Yahoo's chart API today: **16.34** (2026-09-30 close) — continuing the same quiet 14–17 range
+this doc has tracked since 09-05, with no spike into the deadline date it was built to watch for.
+`symbols: []` throughout the doc's life, and the stand-aside stance never proposed a position, a
+hedge, or a sizing change at any point from the 08-29 initial research through today — so there is
+nothing here to mark against the tape, and the quiet VIX is confirmatory context, not a scored
+result.
+
+**No forward tests to score.** This event never carried one: `docs/research/forward-tests/` has no
+`government-funding-deadline-2026-09-30.md` fragment, and no legacy `FT-N` row in
+`forward-tests/legacy.md` is registered against this event id (the one legacy row that discusses this
+ledger, `FT-48`, is registered against the *sibling* event `cr-expiry-2026-12-11` and is not this
+event's to score). The stand-aside stance — `symbols: []`, no position proposed — never produced a
+dated, scoreable market prediction, so the absence of a scoring table here is the honest state, not
+an omission.
+
+**No new dated adjacent event found** in today's sources; no proposal filed.
+
+**What the resolution changes, restated plainly for a reader landing only on the close-out.** The
+tail risk this doc spent five legs protecting against (a lapse deleting `jobs-2026-10-02` and
+`cpi-2026-10-14`, feeding a no-SEP **2026-10-28 FOMC** with no data and no forward guidance) did not
+materialize — both BLS releases print on schedule inside the funded window. The exposure moved,
+unchanged from the 09-05 stance update: it is now **2026-12-11**, two days after `fomc-2026-12-09`
+and one day after `cpi-2026-12-10`, in a lame duck the tape prices at **86.5%** Democratic House
+(09-10 row). [`cr-expiry-2026-12-11`](cr-expiry-2026-12-11.md) owns that cliff and has already
+declined to inherit this doc's aversion prior, on its own measured grounds — that stands unchanged.
+
+**Honest limits, closing.** `congress.gov` was never read directly across this doc's entire life
+(08-29 through today) — every legislative-status claim traces to a funding tracker, House committee
+releases, cross-corroborated press, and (for the signature and vote margins) `clerk.house.gov` and
+`whitehouse.gov`'s own 09-05 reads, not a bill-status primary. The `whitehouse.gov/government-
+shutdown-clock` page is a static or infrequently-updated artifact that still surfaces 2025 content a
+year later — a schema gap in that source worth remembering, not in this lane. The one genuinely new
+primary this close-out adds (OPM's operating-status page) is itself a point-in-time snapshot rather
+than a continuously-updated feed; it is read as the single day-of operational confirmation it is, not
+over-interpreted as a running status.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"high:8+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
