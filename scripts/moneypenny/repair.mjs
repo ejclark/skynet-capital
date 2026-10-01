@@ -41,6 +41,7 @@
 // the close, and files normally. See `fixedWhileInFlight`.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { raiseAlarmIfBurst } from "./burst-alarm.mjs";
 import { LABELS } from "./index.mjs";
 import { jobLog } from "./repair-logs.mjs";
 
@@ -370,8 +371,10 @@ function ensureLabel() {
   }
 }
 
+/** Acts on the intents; returns the capsules it filed, so the burst alarm can count them. */
 function execute(intents) {
   const dispatch = [];
+  const filed = [];
   for (const intent of intents) {
     if (intent.type === "skip") {
       console.log(`::notice::moneypenny-repair quiet on #${intent.issue} — ${intent.reason}`);
@@ -396,11 +399,17 @@ function execute(intents) {
       ]);
       const number = url.split("/").pop();
       console.log(`::notice::filed ${intent.title} as #${number}`);
+      filed.push({
+        number: Number(number),
+        title: intent.title,
+        createdAt: new Date().toISOString(),
+      });
       if (intent.dispatch) dispatch.push(number);
     }
   }
   const out = process.env.GITHUB_OUTPUT;
   if (out && dispatch[0]) appendFileSync(out, `issue=${dispatch[0]}\n`);
+  return filed;
 }
 
 function main(argv) {
@@ -425,7 +434,13 @@ function main(argv) {
     console.log(JSON.stringify(intents, null, 2));
     return;
   }
-  execute(intents);
+  const filed = execute(intents);
+  // #4292: a new capsule is the only moment a burst can grow, so it is the moment to check the
+  // repair job is alive. Fail-quiet by construction — it never throws into this triage step.
+  if (filed.length)
+    raiseAlarmIfBurst(run.name, [...(deps.openIssues ?? []), ...filed], {
+      selfRunId: process.env.GITHUB_RUN_ID,
+    });
 }
 
 /** Open this lane's own issues, by signature. Only this label — it never reads the wider backlog. */
@@ -440,7 +455,7 @@ function openIssues() {
     "--limit",
     "50",
     "--json",
-    "number,title,labels",
+    "number,title,labels,createdAt",
   ]).map((i) => ({ ...i, labels: (i.labels ?? []).map((l) => l.name) }));
 }
 
