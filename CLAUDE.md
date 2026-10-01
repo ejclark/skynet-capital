@@ -499,7 +499,18 @@ common routes:
   `*.instructions.md` format. Not for cross-item synthesis or a design call, or for anything
   touching `envelope.json`'s protected class — those want a purpose-built pass or Eric's gate, not
   a cheap fan-out (a `/governor` athlete's own WIP=1 throttle is deliberate for the same reason —
-  check before fanning a skill/agent that already has one).
+  check before fanning a skill/agent that already has one). A run wider than the work spigot's
+  current position allows is refused outright, with the number to re-batch it in — never truncated.
+- **"stop everything" · "conserve tokens" · "we have spare quota before the reset"** → the **work
+  spigot** (#3960): one `work-mode:<halt|conserve|normal|surge>` label on the tracking issue that
+  every autonomous lane reads before it pulls — the build lanes' in-flight cap, the research lane's
+  per-tick ceiling, a `/governor` cycle's athletes, a `/grind` run's width. `npm run work-gate`
+  answers "may I, and how much?" (it folds in the #2946 spend breaker); the numbers are
+  `work-mode.json` and nowhere else. Who may turn it (Eric, 2026-09-30): `halt` and `normal`
+  anyone, `conserve` only on his explicit phrase ([`docs/COMPUTE.md`](docs/COMPUTE.md)), `surge`
+  his alone — raising a cap is the spend class. Every non-normal position carries an `until <date>`
+  comment and reads as `normal` once it passes, so a forgotten throttle can't starve the repo; a
+  `bug` + `fast-track` issue still builds under `conserve`, and nothing builds under `halt`.
 - **A bottleneck surfaced by fan-out** (Eric, 2026-09-04: "given we are fanning out process, I
   expect a number of new bottlenecks to surface... capture and delegate pursuit of opportunities to
   integrate superior solutions") — ToC's own corollary: elevate one constraint and the next binds.

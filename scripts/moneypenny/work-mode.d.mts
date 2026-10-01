@@ -10,6 +10,8 @@ export interface Caps {
   readonly researchPerTick: number;
   /** Athletes one `/governor` cycle may launch (.claude/skills/governor/SKILL.md). */
   readonly governorDispatches: number;
+  /** Items one `/grind` run may fan out over (.claude/workflows/grind.js). */
+  readonly grindWidth: number;
 }
 
 export interface WorkModeConfig {

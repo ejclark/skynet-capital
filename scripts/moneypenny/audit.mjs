@@ -6,6 +6,8 @@ import { existsSync } from "node:fs";
 import { sh } from "./gh.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
+import { loadWorkModeConfig, resolveWorkMode } from "./work-mode.mjs";
+import { workModeRetitle } from "./work-mode-title.mjs";
 
 /**
  * #1403 — how many times a conflicted PR gets re-dispatched before this lane stops trying and
@@ -189,6 +191,13 @@ export function audit(deps = {}) {
       body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
     });
   }
+  // #3960 criterion 4's write half: this push-driven audit IS "the next lane run", so it is where
+  // the work spigot's dashboard — the tracking issue's title — catches up with the position the
+  // lanes are actually acting on. Pure decision in `workModeRetitle`, which returns null (the
+  // common case) whenever the title is already right. No comment, no label: a title is a display,
+  // and the title itself is the memory that stops the next push repeating the edit.
+  const retitle = workModeRetitle(deps.workMode);
+  if (retitle) intents.push(retitle);
   return intents;
 }
 
@@ -379,7 +388,46 @@ export function gatherAuditDeps(nowMs) {
     staleInProgress,
     alreadyFlagged,
     alreadyFlaggedPRs,
+    workMode: workModeState(nowMs, json),
   };
+}
+
+/**
+ * The dial as the audit needs to see it (#3960 slice 4): the tracking issue's CURRENT title beside
+ * the position the lanes resolve, so `workModeRetitle` can tell a stale dashboard from a fresh one.
+ * One `gh issue view` — title, labels and comments in a single call — and the same pure resolver
+ * every lane uses, so this can never disagree with them about what the position is.
+ *
+ * SOFT ON FAILURE, unlike `dueEventIds`' loud throw above, and deliberately so: this is the only
+ * thing in this file that is a DISPLAY rather than a pair of eyes. Every lane that acts on the dial
+ * reads it itself and fails closed on its own, so a malformed work-mode.json or a GitHub blip must
+ * cost one stale title — not the stall, silent-feedback, plan-stall and conflict checks that ride
+ * the same run. The warning says so out loud rather than failing silently.
+ */
+function workModeState(nowMs, json) {
+  try {
+    const config = loadWorkModeConfig();
+    const view = json(`gh issue view (work-mode, #${config.trackingIssue})`, [
+      "issue",
+      "view",
+      String(config.trackingIssue),
+      "--json",
+      "title,labels,comments",
+    ]);
+    return {
+      trackingIssue: config.trackingIssue,
+      title: view.title ?? null,
+      mode: resolveWorkMode({
+        labels: view.labels,
+        comments: view.comments,
+        now: nowMs,
+        config,
+      }),
+    };
+  } catch (err) {
+    console.log(`::warning::work-mode title sync skipped — ${String(err.message).slice(0, 200)}`);
+    return null;
+  }
 }
 
 /**

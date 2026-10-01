@@ -51,11 +51,13 @@ than a checklist that is easy to skip:
 
 **Honesty about what is actually enforced here, not just requested in prose** (a UX review of the
 first version of this section caught it overclaiming): of the four things worth settling before a
-call — item source, depth, width, outcome check — only **item source** is validated for content.
-Depth (`effort`/`model`) was already a plain, optional arg before any of this; nothing checks it is
-the right tier for the chore. Width has no arg at all — it is pure judgment. Outcome check
-(`verifyBranch`) is enforceable *if you set it*, but nothing forces you to. Read the four below as
-"here is what each dimension gets you," not "grind checks all four."
+call — item source, depth, width, outcome check — only **item source** and the **ceiling** on width
+are validated. Depth (`effort`/`model`) was already a plain, optional arg before any of this;
+nothing checks it is the right tier for the chore. Width has no arg — the right width for a batch is
+still judgment — but its upper bound is no longer: the work spigot refuses a run wider than the
+current position allows (below). Outcome check (`verifyBranch`) is enforceable *if you set it*, but
+nothing forces you to. Read the list below as "here is what each dimension gets you," not "grind
+checks all four."
 
 - **`args.itemSource`** (required, 12+ characters) — a real description of where `items` came from:
   a scan/query command, or the explicit reason none applies. The length floor exists because a
@@ -63,6 +65,20 @@ the right tier for the chore. Width has no arg at all — it is pure judgment. O
   `"items"` or `"n/a"` satisfied a bare non-empty check while saying nothing. It is logged at run
   start and included in the returned result, so a bad answer is at least visible after the fact,
   not just required and then discarded.
+- **The work spigot gates the run before anything dispatches** (#3960). One cheap agent runs
+  `node scripts/moneypenny/work-gate.mjs` — the dial (`work-mode:*` on #4153) and the #2946 spend
+  breaker folded into one verdict — and the run **throws** rather than dispatching when work-mode is
+  `halt`, when the breaker is tripped, or when `args.items` is wider than that position's
+  `grindWidth` in [`work-mode.json`](../../work-mode.json) (`conserve` 5; `normal` 200, which is
+  `grind.js`'s own `MAX_ITEMS`, so `normal` changes nothing). **Items are never silently dropped** —
+  a run that quietly truncated the list would report "N/N done" over a batch nobody chose, so a
+  refused batch comes back with the number to re-run it in. Capping concurrency instead is not an
+  option: the Workflow host caps concurrent agents at `min(16, cpus-2)` with no knob, so the only
+  width a caller controls is how many items one run carries. The read goes through an agent because
+  `grind.js` has no filesystem or `gh` access of its own (same reason the chore manifests below do).
+  An unreadable dial reads as `conserve` inside the gate rather than a halt, so a GitHub blip
+  narrows a batch instead of stopping the repo; a *malformed* control config exits 1 there and
+  throws here, because a broken control must never read as a quiet "go".
 - **An envelope check runs as step 0, on by default.** Every item goes through `node
   scripts/envelope-scan.mjs --check <path> --base origin/main` before your own steps run, closing
   what used to be a documented gap (nothing in `grind.js` filtered `items` against

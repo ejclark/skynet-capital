@@ -205,3 +205,46 @@ describe("audit() — clearing a stale in-progress label", () => {
     expect(intents).toHaveLength(1);
   });
 });
+
+// #3960 slice 4 (criterion 4's write half) — this push-driven audit IS "the next lane run", so it
+// is where the spigot's dashboard catches up with the dial. The decision rules live in
+// work-mode-title.spec.ts; what matters here is that the dial is wired into this lane and costs the
+// other four checks nothing.
+describe("audit() — syncing the work spigot's title", () => {
+  const expired = {
+    trackingIssue: 4153,
+    title: "Work mode: CONSERVE until 2026-09-29",
+    mode: {
+      position: "normal" as const,
+      until: null,
+      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
+      reason: "conserve expired at the end of 2026-09-29 (UTC)",
+    },
+  };
+
+  it("emits one retitle intent when the title has gone stale", () => {
+    const intents = audit({ workMode: expired });
+    expect(intents.map((i) => [i.kind, i.issueNumber, i.newTitle])).toEqual([
+      ["retitle-work-mode", 4153, "Work mode: NORMAL"],
+    ]);
+  });
+
+  it("is silent when the dial could not be read, and when the title already matches", () => {
+    expect(audit({ workMode: null })).toHaveLength(0);
+    expect(audit({})).toHaveLength(0);
+    expect(audit({ workMode: { ...expired, title: "Work mode: NORMAL" } })).toHaveLength(0);
+  });
+
+  it("does not disturb the other audit lanes", () => {
+    const intents = audit({
+      workMode: expired,
+      staleInProgress: [{ title: "Build 4205", number: 4205, hoursQuiet: 9 }],
+      silentFeedback: [{ title: "some feedback", number: 2, hoursSinceFiled: 10 }],
+    });
+    expect(intents.map((i) => i.kind)).toEqual([
+      "flag-silent-feedback",
+      "clear-in-progress",
+      "retitle-work-mode",
+    ]);
+  });
+});

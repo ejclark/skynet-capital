@@ -25,10 +25,10 @@ const CONFIG: WorkModeConfig = {
   trackingIssue: 4153,
   labelPrefix: "work-mode:",
   positions: {
-    halt: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 },
-    conserve: { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 },
-    normal: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 },
-    surge: { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8 },
+    halt: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0, grindWidth: 0 },
+    conserve: { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1, grindWidth: 5 },
+    normal: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
+    surge: { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8, grindWidth: 200 },
   },
 };
 
@@ -48,15 +48,15 @@ describe("reading the dial — one label is one position", () => {
     expect(mode).toEqual({
       position: "normal",
       until: null,
-      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 },
+      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
       reason: "set to normal",
     });
   });
 
   it.each([
-    ["halt", { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 }],
-    ["conserve", { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 }],
-    ["surge", { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8 }],
+    ["halt", { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0, grindWidth: 0 }],
+    ["conserve", { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1, grindWidth: 5 }],
+    ["surge", { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8, grindWidth: 200 }],
   ])("reads %s with its caps while its expiry is ahead", (position, caps) => {
     const mode = resolve([label(position)], [until("2026-10-06")]);
     expect(mode.position).toBe(position);
@@ -87,7 +87,12 @@ describe("reading the dial — anything but exactly one known label fails closed
   ])("%s → conserve with a warning", (_what, labels) => {
     const mode = resolve(labels, [until("2026-10-06")]);
     expect(mode.position).toBe("conserve");
-    expect(mode.caps).toEqual({ inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 });
+    expect(mode.caps).toEqual({
+      inFlightCap: 1,
+      researchPerTick: 2,
+      governorDispatches: 1,
+      grindWidth: 5,
+    });
     expect(mode.until).toBeNull();
     expect(mode.warning).toMatch(/conserve/);
   });
@@ -98,7 +103,12 @@ describe("expiry — non-normal positions end on their until date", () => {
     const mode = resolve([label("conserve")], [until("2026-09-29")]);
     expect(mode.position).toBe("normal");
     expect(mode.reason).toMatch(/expired at the end of 2026-09-29/);
-    expect(mode.caps).toEqual({ inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 });
+    expect(mode.caps).toEqual({
+      inFlightCap: 3,
+      researchPerTick: 6,
+      governorDispatches: 4,
+      grindWidth: 200,
+    });
   });
 
   it("holds through the whole of the until day, in UTC", () => {
@@ -151,7 +161,12 @@ describe("no expiry at all — the brake holds, the throttle and the surge do no
     const mode = resolve([label("halt")], [{ body: "stop everything" }]);
     expect(mode.position).toBe("halt");
     expect(mode.until).toBeNull();
-    expect(mode.caps).toEqual({ inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 });
+    expect(mode.caps).toEqual({
+      inFlightCap: 0,
+      researchPerTick: 0,
+      governorDispatches: 0,
+      grindWidth: 0,
+    });
     expect(mode.warning).toBeUndefined();
   });
 
@@ -192,7 +207,12 @@ describe("readWorkMode — one gh call, never a throw on a bad read", () => {
     const { exec } = fakeExec(result);
     const mode = readWorkMode(exec, CONFIG, NOW);
     expect(mode.position).toBe("conserve");
-    expect(mode.caps).toEqual({ inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 });
+    expect(mode.caps).toEqual({
+      inFlightCap: 1,
+      researchPerTick: 2,
+      governorDispatches: 1,
+      grindWidth: 5,
+    });
     expect(mode.warning).toMatch(/could not read issue #4153/);
   });
 });
@@ -226,23 +246,43 @@ describe("work-mode config — fail closed", () => {
     ["a missing position", { ...CONFIG, positions: { ...CONFIG.positions, surge: undefined } }],
     [
       "a negative cap",
-      withPos("conserve", { inFlightCap: -1, researchPerTick: 2, governorDispatches: 1 }),
+      withPos("conserve", {
+        inFlightCap: -1,
+        researchPerTick: 2,
+        governorDispatches: 1,
+        grindWidth: 5,
+      }),
     ],
     [
       "a fractional cap",
-      withPos("normal", { inFlightCap: 2.5, researchPerTick: 6, governorDispatches: 4 }),
+      withPos("normal", {
+        inFlightCap: 2.5,
+        researchPerTick: 6,
+        governorDispatches: 4,
+        grindWidth: 200,
+      }),
     ],
     [
       "a halt that dispatches",
-      withPos("halt", { inFlightCap: 0, researchPerTick: 1, governorDispatches: 0 }),
+      withPos("halt", { inFlightCap: 0, researchPerTick: 1, governorDispatches: 0, grindWidth: 0 }),
     ],
     [
       "a conserve looser than normal",
-      withPos("conserve", { inFlightCap: 4, researchPerTick: 2, governorDispatches: 1 }),
+      withPos("conserve", {
+        inFlightCap: 4,
+        researchPerTick: 2,
+        governorDispatches: 1,
+        grindWidth: 5,
+      }),
     ],
     [
       "a surge tighter than normal",
-      withPos("surge", { inFlightCap: 6, researchPerTick: 5, governorDispatches: 8 }),
+      withPos("surge", {
+        inFlightCap: 6,
+        researchPerTick: 5,
+        governorDispatches: 8,
+        grindWidth: 200,
+      }),
     ],
     // A lane whose key is absent from a position would otherwise read `undefined` and dispatch on
     // `?? 0`-style defaults scattered across callers. Every position carries every lane's number.
@@ -252,7 +292,12 @@ describe("work-mode config — fail closed", () => {
     ],
     [
       "a governor allowance looser under conserve than normal",
-      withPos("conserve", { inFlightCap: 1, researchPerTick: 2, governorDispatches: 9 }),
+      withPos("conserve", {
+        inFlightCap: 1,
+        researchPerTick: 2,
+        governorDispatches: 9,
+        grindWidth: 5,
+      }),
     ],
   ])("refuses %s", (_what, cfg) => {
     expect(() => loadWorkModeConfig(write(cfg))).toThrow(/Refusing to run/);
@@ -283,6 +328,26 @@ describe("the committed work-mode.json", () => {
   // The two files bound the same number and the dial wins at every position but `normal`
   // (events.mjs → researchCapFor), so this pair is what keeps "normal changes nothing" true. The
   // spec above is the live gate; this one says what breaks if someone edits one file alone.
+  // #3960 slice 4, the third pair of this shape: the dial's `normal` number must equal whatever the
+  // consumer already did, or "normal changes nothing" stops being true. grind.js's MAX_ITEMS is its
+  // own sanity ceiling, so a `normal` grindWidth below it would silently narrow every grind run.
+  it("keeps normal's grind width equal to grind.js's MAX_ITEMS, so normal changes nothing", () => {
+    const grind = readFileSync(".claude/workflows/grind.js", "utf8");
+    const maxItems = Number(grind.match(/const MAX_ITEMS = (\d+)/)?.[1]);
+    expect(maxItems).toBeGreaterThan(0);
+    expect(committed.positions.normal.grindWidth).toBe(maxItems);
+    expect(committed.positions.surge.grindWidth).toBe(maxItems);
+  });
+
+  // The slice's own falsifier (#3960): "a conserve window passes with a /grind run at full width →
+  // the width cap sat in a doc no run actually reads". This is that falsifier as a gate — the cap
+  // has to be read by the script, not just written down in docs/grind/README.md.
+  it("is actually read by grind.js, not just documented", () => {
+    const grind = readFileSync(".claude/workflows/grind.js", "utf8");
+    expect(grind).toContain("scripts/moneypenny/work-gate.mjs");
+    expect(grind).toContain("gate.grindWidth");
+  });
+
   it("keeps normal's governor allowance equal to the governor roster's size, so normal changes nothing", () => {
     // Counted from the roster table rather than hardcoded, so adding a fifth athlete fails here
     // until the allowance follows it — the same shape as the research pair above.

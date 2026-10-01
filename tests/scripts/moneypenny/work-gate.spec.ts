@@ -17,7 +17,7 @@ const mode = (position: string, extra: Partial<WorkMode> = {}): WorkMode =>
   ({
     position,
     until: null,
-    caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 },
+    caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
     reason: `set to ${position}`,
     ...extra,
   }) as WorkMode;
@@ -34,7 +34,12 @@ describe("the work gate — the dial and the spend breaker in one answer", () =>
     expect(g.dispatch).toBe(true);
     expect(g.breakerTripped).toBe(false);
     expect(g.reason).toBe("cleared: work-mode is normal");
-    expect(g.caps).toEqual({ inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 });
+    expect(g.caps).toEqual({
+      inFlightCap: 3,
+      researchPerTick: 6,
+      governorDispatches: 4,
+      grindWidth: 200,
+    });
   });
 
   it("clears conserve and surge too — they are allowances, not stops", () => {
@@ -100,7 +105,7 @@ describe("the gate's CLI — the exit code is the verdict", () => {
       dispatch: true,
       position: "normal",
       until: null,
-      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 },
+      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
       breakerTripped: false,
       reason: "cleared: work-mode is normal",
     });
@@ -115,7 +120,7 @@ describe("the gate's CLI — the exit code is the verdict", () => {
       dispatch: false,
       position: "halt",
       until: "2026-10-05",
-      caps: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 },
+      caps: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0, grindWidth: 0 },
       breakerTripped: false,
       reason: "refused: work-mode is halt",
     });

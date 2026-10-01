@@ -1,12 +1,22 @@
 {
   "$comment": "The work spigot's dial (#3960). One `work-mode:<position>` label on trackingIssue sets how fast every autonomous lane pulls work; scripts/moneypenny/work-mode.mjs reads it and hands lanes the numbers below. Same doctrine as research-circuit-breaker.json: the STATE is an issue label (never a committed file, #915), this file only holds the per-position numbers, and a missing or malformed file refuses to run rather than defaulting to unlimited.",
-  "$why": "Eric's three scenarios on #3960 (2026-09-28): throttle hard to protect the weekly quota (conserve), shut everything off (halt), and fan out when quota would otherwise be lost at the reset (surge). The phrase-triggered conserve-mode in docs/COMPUTE.md reached only the session that heard it; a label on one issue reaches every lane with one `gh issue view`. Numbers: normal.inFlightCap 3 matches the board's In Progress WIP limit Eric set on 2026-09-30, so the board and the lanes never disagree; normal.researchPerTick 6 matches research-dispatch-budget.json maxPerTick (today's behavior, unchanged). surge doubles normal as a first guess, to be re-sized once the ::notice::cost data for a 6-session tick is measured (#3960 open question). halt is zero everywhere by definition — a brake is a brake. normal.governorDispatches 4 is today's behavior too: `/governor` walks all four athletes in the roster at WIP 1 each, so 4 is one full cycle; conserve 1 is the plan's 'one coach per cycle'; surge 8 lets a coach be dispatched more than once in a cycle, which is the only way a governor cycle goes faster (added #3960 slice 2).",
+  "$why": "Eric's three scenarios on #3960 (2026-09-28): throttle hard to protect the weekly quota (conserve), shut everything off (halt), and fan out when quota would otherwise be lost at the reset (surge). The phrase-triggered conserve-mode in docs/COMPUTE.md reached only the session that heard it; a label on one issue reaches every lane with one `gh issue view`. Numbers: normal.inFlightCap 3 matches the board's In Progress WIP limit Eric set on 2026-09-30, so the board and the lanes never disagree; normal.researchPerTick 6 matches research-dispatch-budget.json maxPerTick (today's behavior, unchanged). surge doubles normal as a first guess, to be re-sized once the ::notice::cost data for a 6-session tick is measured (#3960 open question). halt is zero everywhere by definition — a brake is a brake. normal.governorDispatches 4 is today's behavior too: `/governor` walks all four athletes in the roster at WIP 1 each, so 4 is one full cycle; conserve 1 is the plan's 'one coach per cycle'; surge 8 lets a coach be dispatched more than once in a cycle, which is the only way a governor cycle goes faster (added #3960 slice 2). grindWidth is the items one `/grind` run may fan out over: normal 200 is grind.js's own MAX_ITEMS sanity cap, so normal changes nothing and surge cannot exceed it without raising that constant; conserve 5 is the plan's 'cap /grind width' made a number — a wider batch is refused with the position named, never silently truncated (added #3960 slice 4).",
   "trackingIssue": 4153,
   "labelPrefix": "work-mode:",
   "positions": {
-    "halt": { "inFlightCap": 0, "researchPerTick": 0, "governorDispatches": 0 },
-    "conserve": { "inFlightCap": 1, "researchPerTick": 2, "governorDispatches": 1 },
-    "normal": { "inFlightCap": 3, "researchPerTick": 6, "governorDispatches": 4 },
-    "surge": { "inFlightCap": 6, "researchPerTick": 12, "governorDispatches": 8 }
+    "halt": { "inFlightCap": 0, "researchPerTick": 0, "governorDispatches": 0, "grindWidth": 0 },
+    "conserve": {
+      "inFlightCap": 1,
+      "researchPerTick": 2,
+      "governorDispatches": 1,
+      "grindWidth": 5
+    },
+    "normal": {
+      "inFlightCap": 3,
+      "researchPerTick": 6,
+      "governorDispatches": 4,
+      "grindWidth": 200
+    },
+    "surge": { "inFlightCap": 6, "researchPerTick": 12, "governorDispatches": 8, "grindWidth": 200 }
   }
 }

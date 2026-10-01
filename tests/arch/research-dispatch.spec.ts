@@ -176,7 +176,7 @@ describe("the research ceiling follows the work spigot's dial", () => {
     ({
       position,
       until: null,
-      caps: { inFlightCap: 3, researchPerTick, governorDispatches: 4 },
+      caps: { inFlightCap: 3, researchPerTick, governorDispatches: 4, grindWidth: 200 },
       reason: `set to ${position}`,
     }) as WorkMode;
 
