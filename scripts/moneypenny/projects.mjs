@@ -377,6 +377,40 @@ export function findBoardItem(items = [], issueUrl) {
   return items.find((item) => item?.content?.url === issueUrl);
 }
 
+// #4439 — ONE ISSUE'S SYNC PAID FOR THE WHOLE BOARD, AND A DOZEN OF THEM SPENT THE HOUR.
+//
+// `sync project status` fires once per `issues` event and syncs exactly ONE issue — but to answer
+// "is it already an item?" it read the board's entire item list, which GraphQL prices by node count
+// (~100 points per 100-item page, and the board carries every issue synced since 2026-09-27, closed
+// ones included). Measured on the 2026-10-01 window that opened 05:41:57Z: 12 `issues` runs went
+// through it, and the 13th found 44 of 5,000 points left at 06:25:56Z — ~400 points a run, so a
+// dozen issue events in one hour exhaust Eric's PAT and every sync behind them fails #4183's way.
+// That is a normal hour here, not a burst: #4213 had already separated the burst case out.
+//
+// #4183 took the whole-board read off the per-ISSUE path inside one process (`cachedItems`, below);
+// it could not help the per-RUN path, which is the only shape the events lane has. GitHub answers
+// the narrow question directly: an Issue's own `projectItems` connection names the items it already
+// belongs to — ~40 nodes for one issue, 1 point instead of ~400. The whole-board read stays for the
+// callers that genuinely want it (a sweep reads it once and shares it across every issue) and as
+// this lookup's own fallback, so a credential that cannot see `projectItems` degrades to today's
+// cost instead of to a red `main`.
+//
+// ARCHIVED ITEMS STAY INVISIBLE, deliberately. `gh project item-list` hides them too, so asking with
+// `includeArchived: false` keeps `resolveBoardItem`'s fail-closed archived message reachable rather
+// than handing back an id whose card nobody can see.
+/**
+ * One issue's board items, selected from its `projectItems` nodes and shaped like the `item-list`
+ * rows `resolveBoardItem`'s `cachedItems` already takes: a one-element list when the issue is on
+ * project `projectNumber`, empty when it is not. Pure — the caller runs the GraphQL read.
+ *
+ * `issueUrl` is carried through rather than read back from GitHub because the match rule downstream
+ * is `content.url` (`findBoardItem`), and the query was asked ABOUT this issue: the url is known.
+ */
+export function boardItemsFromProjectItems({ nodes = [], projectNumber, issueUrl } = {}) {
+  const node = (nodes ?? []).find((n) => n?.id && n?.project?.number === projectNumber);
+  return node ? [{ id: node.id, content: { type: "Issue", url: issueUrl } }] : [];
+}
+
 // #3979 — THE BOARD READS STALE FOR A FEW SECONDS AFTER SOMEONE ELSE'S ADD, and the add-or-find
 // above (#3954) assumed it never did. Filing an issue applies several labels in a same-second
 // burst; each `labeled` add is its own `issues` event and moneypenny-events.yml's concurrency key
