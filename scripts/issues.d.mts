@@ -29,3 +29,9 @@ export function matches(
   words: string,
   opts?: { label?: string },
 ): boolean;
+export function followUps(args: {
+  child: { id: number; number: number };
+  parentNumber?: number;
+  blockers?: Array<{ id: number }>;
+  closed?: boolean;
+}): Array<{ method: string; path: string; payload: Record<string, unknown> }>;

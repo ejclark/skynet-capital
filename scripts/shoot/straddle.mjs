@@ -118,12 +118,22 @@ const rows = (type) =>
       openInterest: 1000 + i * 137,
     };
   });
+// The as-of stamp (#4327): fetched now, quoted `quoteAgeMs` ago by the delayed feed. The stale
+// frame below swaps in quotes five days old — stale in session or out, whatever the real clock.
+let quoteAgeMs = 3 * 60_000;
 const chain = (type) => ({
   symbol: "NVDA",
   optionType: type,
   expirations: ["2026-09-09", "2026-09-11", "2026-09-16"],
   expiration: "2026-09-09",
   spot: 230.36,
+  quotes: {
+    source: "indicative",
+    quoted: strikes.length,
+    total: strikes.length,
+    asOf: new Date().toISOString(),
+    quotedAt: new Date(Date.now() - quoteAgeMs).toISOString(),
+  },
   rows: rows(type),
 });
 
@@ -146,11 +156,11 @@ page.on("console", (msg) => {
 });
 
 await page.goto(`${origin}/app/trade?play=201`);
-// Scoped to the ticket's own region: the multi-leg builder further down has an Underlying field
-// too, and a bare label lookup reached that one first.
+// Scoped to the ticket's own region: the multi-leg builder further down has a symbol field too,
+// and a bare label lookup reached that one first. (Labelled "Symbol" since the ticket rename.)
 const ticket = page.getByRole("region", { name: "Sell a cash-secured put" });
-await ticket.getByLabel("Underlying").fill("NVDA");
-await ticket.getByLabel("Underlying").press("Enter");
+await ticket.getByLabel("Symbol", { exact: true }).fill("NVDA");
+await ticket.getByLabel("Symbol", { exact: true }).press("Enter");
 try {
   await page.getByText("Current price ·").waitFor();
 } catch (error) {
@@ -160,8 +170,27 @@ try {
 await page.locator(".straddle").scrollIntoViewIfNeeded();
 await shoot("straddle-phone");
 
+// The Chain pane with its as-of stamp (#4327), phone first: the delayed answer, then a Refresh
+// that comes back stale — the stamp re-reads, and stale earns the weight + left rule.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&section=chain`);
+await page.locator(".chain-as-of").waitFor();
+// The stamp near the top, clear of the sticky header and market clock, the table under it.
+const toPane = () =>
+  page.locator(".chain-as-of").evaluate((el) => {
+    el.scrollIntoView({ block: "start" });
+    window.scrollBy(0, -220);
+  });
+await toPane();
+await shoot("chain-as-of-phone");
+quoteAgeMs = 5 * 24 * 60 * 60_000;
+await page.getByRole("button", { name: "Refresh" }).click();
+await page.locator('.chain-as-of[data-state="stale"]').waitFor();
+await toPane();
+await shoot("chain-as-of-stale-phone");
+
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.locator(".straddle").scrollIntoViewIfNeeded();
+await page.locator(".straddle").first().scrollIntoViewIfNeeded();
 await shoot("straddle-desktop");
 
 await close();

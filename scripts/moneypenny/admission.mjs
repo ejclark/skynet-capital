@@ -25,8 +25,19 @@
 // not collide (a missed fence costs a merge conflict, which the conflict sweep already catches); a
 // looser match would queue unrelated work (a false fence costs throughput, silently). Tighten it
 // only with measured misses in hand.
+//
+// ONE PULL RULE FOR EVERY PULLER (#4393 slice 3). What may be pulled at all is `pullable` in
+// labels.mjs (the board's Ready column: open, `ready`, buildable, not `in-progress`); this gate
+// decides whether it may start NOW. A live session — the claim lanes ask through `gateAdmission`,
+// `/work-issues` through the read-only CLI at the foot of this file:
+//   node scripts/moneypenny/admission.mjs --check <n>   # {admit, reason, queuedBehind?}; exit 0 | 3
+//   node scripts/moneypenny/admission.mjs --next        # the sweep's pick, same JSON; exit 0 | 3
+//   node scripts/moneypenny/admission.mjs --queue       # the Ready column, in pick order (JSON)
+// The CLI never comments and never labels. A session Eric starts by hand is the EXPEDITE class: it
+// never asks, and is still counted — its PR names the issue, which derives `in-progress` (#4402).
+import { classOf } from "../rank.mjs";
 import { sh } from "./gh.mjs";
-import { FOOTER, isBuildable, LABELS, labelNames } from "./labels.mjs";
+import { FOOTER, LABELS, labelNames, notPullableReason, pullable } from "./labels.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
 /** Hidden marker on every queue note, so the dedupe finds this lane's own comments. */
@@ -91,21 +102,52 @@ const createdMs = (i) => {
   return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
 };
 
+/** The rank class (`P0`–`P3`) and bug-expedite flag `npm run rank` gives an issue, from its labels. */
+const rankOf = (i) => classOf({ labels: labelNames(i.labels) });
+
 /**
- * For the retry sweep: the one ready issue to try next, or null. Skips anything already in flight
- * or parked; `fast-track` goes first (it is urgent by definition), then oldest by `createdAt`,
- * then lowest number. One per call — admitting it changes the in-flight list the next pick sees.
+ * THE PULL ORDER: the pullable issues (`pullable`, labels.mjs) in the order a puller takes them.
+ * `fast-track` goes first (it is urgent by definition), then the same order `npm run rank` shows —
+ * class (a hand-set `P0`–`P3` wins), an expedited bug first inside its class (Eric, 2026-09-30:
+ * bugs found mid-build are the next pull) — then oldest by `createdAt`, then lowest number.
+ * Oldest-first alone picked a P3 idea (#784) over P0 work on the sweep's first live tick.
  */
-export function nextAdmissible(readyIssues = [], inFlight = [], mode) {
-  const candidates = (readyIssues ?? [])
-    .filter((i) => i && !hasLabel(i, LABELS.inProgress.name) && isBuildable(i.labels))
+export function pullQueue(readyIssues = []) {
+  return (readyIssues ?? [])
+    .filter((i) => i && pullable(i))
+    .map((i) => ({ i, r: rankOf(i) }))
     .sort(
       (a, b) =>
-        Number(hasLabel(b, LABELS.fastTrack.name)) - Number(hasLabel(a, LABELS.fastTrack.name)) ||
-        createdMs(a) - createdMs(b) ||
-        (a.number ?? 0) - (b.number ?? 0),
-    );
-  return candidates.find((issue) => admitBuild({ issue, inFlight, mode }).admit) ?? null;
+        Number(hasLabel(b.i, LABELS.fastTrack.name)) -
+          Number(hasLabel(a.i, LABELS.fastTrack.name)) ||
+        a.r.cls.localeCompare(b.r.cls) ||
+        Number(Boolean(b.r.expedite)) - Number(Boolean(a.r.expedite)) ||
+        createdMs(a.i) - createdMs(b.i) ||
+        (a.i.number ?? 0) - (b.i.number ?? 0),
+    )
+    .map(({ i }) => i);
+}
+
+/**
+ * For the retry sweep: the first issue in `pullQueue` order the gate admits, or null. One per
+ * call — admitting it changes the in-flight list the next pick sees.
+ */
+export function nextAdmissible(readyIssues = [], inFlight = [], mode) {
+  return (
+    pullQueue(readyIssues).find((issue) => admitBuild({ issue, inFlight, mode }).admit) ?? null
+  );
+}
+
+/**
+ * The whole question a puller asks before starting `issue` (#4393 criteria 10–11): is it pullable
+ * at all, then would the gate admit it now. Pure; the CLI's `--check` is this plus the reads.
+ *
+ * @returns {{ admit: boolean, reason: string, queuedBehind?: number }}
+ */
+export function checkAdmission({ issue, inFlight = [], mode }) {
+  const notPullable = notPullableReason(issue);
+  if (notPullable) return { admit: false, reason: `not pullable: ${notPullable}` };
+  return admitBuild({ issue, inFlight, mode });
 }
 
 /** The first body line a queue note carries — also the dedupe key. */
@@ -150,6 +192,7 @@ export function readOpenIssues(label, exec = sh) {
     .filter((r) => !r.pull_request)
     .map((r) => ({
       number: r.number,
+      title: r.title ?? "",
       state: r.state ?? "open",
       body: r.body ?? "",
       labels: r.labels ?? [],
@@ -211,3 +254,87 @@ export function gateAdmission(issue, deps = {}) {
   }
   return verdict;
 }
+
+// ── the CLI (#4393 slice 3) — read-only; never comments, never labels ────────────────────────────
+
+/** One issue over REST (core bucket). A PR number throws: a PR is never pulled. */
+export function readIssue(n, exec = sh) {
+  const r = JSON.parse(exec("gh", ["api", `repos/{owner}/{repo}/issues/${n}`]) || "{}");
+  if (r.pull_request) throw new Error(`#${n} is a pull request, not an issue`);
+  if (!r.number) throw new Error(`#${n} did not read as an issue`);
+  const { number, title = "", state = "open", body = "", labels = [], created_at } = r;
+  return { number, title, state, body, labels, createdAt: created_at };
+}
+
+const USAGE = "usage: admission.mjs --check <issue-number> | --next | --queue";
+
+/**
+ * The CLI, every read injectable. Exit codes: 0 admitted (or `--queue` printed), 3 refused —
+ * including an unreadable issue or in-flight list (fail closed, as `gateAdmission` does), 2 a usage
+ * error. A broken work-mode CONFIG still throws (work-mode.mjs's doctrine), so the shell sees 1.
+ */
+export function runCli(argv = [], io = {}) {
+  const {
+    readMode = () => readWorkMode(),
+    readInFlight: inFlightOf = () => readInFlight(),
+    readReady = () => readOpenIssues(LABELS.ready.name),
+    readIssue: issueOf = (n) => readIssue(n),
+    print = (line) => console.log(line),
+    printErr = (line) => console.error(line),
+  } = io;
+  const out = (verdict) => {
+    print(JSON.stringify(verdict));
+    return verdict.admit ? 0 : 3;
+  };
+  const refuse = (reason, err) =>
+    out({ admit: false, reason: `${reason}: ${err?.message ?? err}` });
+  if (argv.includes("--queue")) {
+    let ready;
+    try {
+      ready = readReady();
+    } catch (err) {
+      printErr(`the open \`ready\` issues could not be read: ${err?.message ?? err}`);
+      return 3;
+    }
+    const rows = pullQueue(ready).map((i) => ({ number: i.number, title: i.title ?? "" }));
+    print(JSON.stringify(rows));
+    return 0;
+  }
+  const checkIdx = argv.indexOf("--check");
+  const n = checkIdx >= 0 ? Number(argv[checkIdx + 1]) : null;
+  if (!(argv.includes("--next") || (Number.isInteger(n) && n > 0))) {
+    printErr(USAGE);
+    return 2;
+  }
+  const mode = readMode();
+  let inFlight;
+  try {
+    inFlight = inFlightOf();
+  } catch (err) {
+    return refuse("the in-flight list could not be read", err);
+  }
+  if (argv.includes("--next")) {
+    let ready;
+    try {
+      ready = readReady();
+    } catch (err) {
+      return refuse("the open `ready` issues could not be read", err);
+    }
+    const pick = nextAdmissible(ready, inFlight, mode);
+    if (!pick) {
+      const why = `nothing admissible (${pullQueue(ready).length} pullable, ${inFlight.length} in flight, work-mode=${mode.position})`;
+      return out({ admit: false, reason: why });
+    }
+    return out({ number: pick.number, ...admitBuild({ issue: pick, inFlight, mode }) });
+  }
+  let issue;
+  try {
+    issue = issueOf(n);
+  } catch (err) {
+    return refuse(`#${n} could not be read`, err);
+  }
+  return out({ number: n, ...checkAdmission({ issue, inFlight, mode }) });
+}
+
+if (import.meta.url === `file://${process.argv[1]}`)
+  process.exitCode = runCli(process.argv.slice(2));

@@ -109,6 +109,27 @@ robust, alpha fragile — is the finding.
   without a second confirming instance at a comparably elevated yield level — n=1 killed on its first
   out-of-sample test, same shape as the housing-starts ladder above.
 
+- **A scheduled reset of the same quantity a conditional threshold test checks defuses that test by a
+  measured base rate (FT-russell-style-quarter-end-capping-effective-2026-09-30-1 and -2)** — added
+  2026-10-01 from the
+  [russell-style-quarter-end-capping-effective-2026-09-30 close-out](events/russell-style-quarter-end-capping-effective-2026-09-30.md).
+  The founding leg measured, across five years of real prices, that resetting the Russell US Style
+  over-4.8%-company cohort to 45% sixteen days before the quarter-end 48% breach test cuts the
+  probability of that test firing roughly sevenfold (4.02% vs 28.96% un-reset) — a clean, well-sourced
+  base-rate argument. It failed on its own first live test: the reset (2026-09-09 cut-off, effective
+  2026-09-21) did not bring IWY's cohort to ~45% as assumed — the real, non-drifted 2026-09-21 holdings
+  already read **50.01%**, because a sixth company (META) crossed *into* the over-4.8% cohort between
+  the review's cut-off and its effective date, which the reset mechanism has no way to anticipate.
+  Reconstructed from real prices bracketing that real snapshot, the cohort stayed above the 48% trigger
+  itself through the 2026-09-25 test date (≈49.6%). **What this does and does not refute:** the
+  sevenfold-reduction arithmetic is correct as a *historical base rate* for a cohort whose membership is
+  frozen at the reset — it is not a safe stand-in for *this specific* post-reset cohort, because the
+  gap between a reset's cut-off and its effective date is enough time for a new name to cross the
+  per-company inclusion threshold and the reset doesn't catch it. Do not treat "a scheduled reset of a
+  threshold quantity defuses the downstream test" as reliable without re-measuring the cohort's actual
+  post-reset composition — membership can move between the reset's own cut-off and effective dates, not
+  just the drift the base rate already prices in.
+
 - **A French flash PMI's own-hours footprint on the CAC-minus-DAX residual, measured as genuinely
   absent at registration (FT-sp-global-flash-france-pmi-2026-09-23-1)** — added 2026-09-24 from the
   [sp-global-flash-france-pmi-2026-09-23 close-out](events/sp-global-flash-france-pmi-2026-09-23.md).
@@ -698,6 +719,24 @@ robust, alpha fragile — is the finding.
   name" for a future product-launch event without first checking whether that keynote's own slate is
   incremental or a genuine step-change — the same discipline the AAPL launch close-out's "a converged
   rumor band is not a narrow distribution" lesson already banked for the *pricing* half of a launch.
+
+- **The CPI/PCE wedge read as mostly outside BEA's own targeted deflators, tested against the
+  revision's actually-published size (FT-pce-2026-09-30-3)** — added 2026-10-01 from the
+  [pce-2026-09-30 close-out](events/pce-2026-09-30.md). Registered 2026-09-15 on August core CPI
+  printing **2.4%** against a core-PCE nowcast of **3.40%** — a ~100bp inverted wedge — with the
+  hypothesis that BEA's three re-deflated components (portfolio management, legal services, computer
+  software), sized at **-13 to -30bp** by every street estimate on the record, could not explain a
+  gap that large, so the wedge should stay **≥75bp** (core PCE ≥3.15%) even after the revision.
+  August core PCE printed **3.0%** — a **60bp** wedge, below the registered floor. CNBC (citing BEA)
+  put the named revision's own effect at **-0.36pp**, within 4bp of the full nowcast-to-print gap
+  (3.40% → 3.00%) — so the three targeted components explain nearly all of it, not merely a fraction.
+  **What this does and does not refute:** the ~100bp wedge itself was real and printed, not a model
+  artifact (this ledger's own 09-15 row already confirmed that on an out-of-sample nowcast check);
+  what dies is the inference that a measurement story limited to three named components was too small
+  to carry a gap that size. Do not re-propose "a narrowly-scoped methodology fix can't explain a
+  wide, qualitatively-different cross-series wedge" without first sizing the fix's own realized effect
+  against the wedge — the street's pre-print range (-13 to -30bp) undersold this one by 6-23bp, and
+  the gap it was meant to close was exactly as large as that undersell implies.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

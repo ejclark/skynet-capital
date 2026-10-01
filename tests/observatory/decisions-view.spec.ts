@@ -59,6 +59,30 @@ describe("decisionsFor", () => {
     expect(decisionsFor("eric", [held("NVDA261218C00130000", 1, 500, 700)], [])).toEqual([]);
   });
 
+  describe("the day it's due (#3977 slice 4)", () => {
+    it("is an option's expiry when its stock has nothing of its own before then", () => {
+      // TSLA's jobs-report clock is a macro print: a clock on the card, never its due date
+      const [d] = decisionsFor("eric", [held("TSLA261017P00400000", 8, 1410, 5040)], []);
+      expect(d?.due).toEqual({ at: "2026-10-17", reason: "expiry", label: "Expires Oct 17" });
+    });
+
+    it("is the stock's own print for shares, flagged when the date is an estimate", () => {
+      const [d] = decisionsFor("eric", [held("MSFT", 10, 300, 3900)], []);
+      expect(d?.due).toEqual({
+        at: "2026-10-27",
+        reason: "event",
+        label: "Earnings Oct 27",
+        estimated: true,
+      });
+    });
+
+    it("is absent when there is no such day — shares with nothing dated, and ideas", () => {
+      const ds = decisionsFor("eric", [held("SPY", 10, 700, 5000)], [idea]);
+      expect(ds.map((d) => d.kind)).toEqual(["at-risk", "idea"]);
+      expect(ds.every((d) => d.due === undefined)).toBe(true);
+    });
+  });
+
   it("leaves a position between the lines alone", () => {
     expect(decisionsFor("eric", [held("AAPL", 100, 190, 18_500)], [])).toEqual([]);
   });

@@ -175,6 +175,69 @@ describe("OptionPositionsCard — Position Statement vocabulary (#3407 P2 slice 
   });
 });
 
+describe("OptionPositionsCard — book delta weighted to SPY (#4327)", () => {
+  const statement = (betaWeighted: unknown) => ({
+    available: true,
+    asOf: "t",
+    representative: true,
+    rows: [],
+    book: { delta: -84, gamma: 0, theta: -38, vega: 0, covered: 1, total: 1, uncovered: [] },
+    ...(betaWeighted ? { betaWeighted } : {}),
+  });
+
+  it("names the benchmark in words and shows each beta with its source and as-of", async () => {
+    nextStatement = statement({
+      benchmark: "SPY",
+      benchmarkPrice: 600,
+      delta: -86.1,
+      dollarDelta: -51_660,
+      weighted: { MSFT: { beta: 1.5, asOf: "2026-09-29" } },
+      unweighted: {},
+    });
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Weighted to SPY \(the S&P 500 fund\): −86\.1 SPY shares/),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByText(/≈ −\u2060\$51,660 of SPY — about −\u2060\$517 per 1% SPY move/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Beta vs SPY from a year of daily closes, as of Sep 29: MSFT 1.50."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Not weighted/)).not.toBeInTheDocument();
+  });
+
+  it("lists a name with no measured beta un-weighted, with its raw delta — never a guessed beta", async () => {
+    nextStatement = statement({
+      benchmark: "SPY",
+      benchmarkPrice: 600,
+      delta: 0,
+      dollarDelta: 0,
+      weighted: {},
+      unweighted: { MSFT: -84 },
+    });
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Not weighted — no measured beta: MSFT (raw Δ −84)."),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Weighted to SPY/)).not.toBeInTheDocument();
+  });
+
+  it("says so plainly when SPY itself couldn't be priced", async () => {
+    nextStatement = statement(undefined);
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Not weighted to SPY — SPY's price couldn't be read/),
+      ).toBeInTheDocument(),
+    );
+  });
+});
+
 describe("OptionPositionsCard — handed off from the guidance (#3729)", () => {
   it("marks the contract the guidance named, and leaves the others alone", () => {
     const other = { ...held, symbol: "MSFT260918P00400000", display: "MSFT 400 put · Sep 18" };

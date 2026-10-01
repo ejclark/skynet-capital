@@ -127,8 +127,7 @@ async function serveSubmit(
   if (!config.submitFeedback) {
     sendJson(res, 200, {
       ok: false,
-      error:
-        "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
+      error: "Feedback isn't switched on in this deployment yet, so your note wasn't sent.",
     });
     return;
   }

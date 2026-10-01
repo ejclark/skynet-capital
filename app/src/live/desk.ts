@@ -56,7 +56,22 @@ export interface DeskPosition {
   readonly worst?: string;
   /** The next dated thing that can move it (`src/observatory/position-event.ts`). */
   readonly nextEvent?: PositionEvent;
+  /** The underlying's next earnings print, whenever it lands (#3977 slice 4). Not the same as a
+   *  stock-scope `nextEvent`: that one names the print only before an option's expiry, and can be
+   *  a named non-earnings event. Optional so an older payload still renders. */
+  readonly nextPrint?: NextPrint;
 }
+
+/** Mirrors the server's `NextPrint`. `unknown` carries no date — never guess one. */
+export type NextPrint =
+  | {
+      readonly status: "confirmed" | "estimate";
+      readonly at: string;
+      /** "Earnings Oct 28", or "Earnings Oct 28 (estimated)". */
+      readonly label: string;
+      readonly window?: { readonly start: string; readonly end: string };
+    }
+  | { readonly status: "unknown"; readonly label: string };
 
 /** Mirrors the server's `NextEvent`: "Earnings Oct 28" and whether it lands before expiry. */
 export interface PositionEvent {
@@ -98,6 +113,19 @@ export interface Decision {
   };
   /** A glossary term the card opens in place ("What is IV crush?"); unknown terms are dropped. */
   readonly learn?: { readonly term: string; readonly label: string };
+  /** The day to decide by (#3977 slice 4) — the stock's own event while it can still move the
+   *  position, else the option's expiry. Absent when there is no such day (and on ideas). */
+  readonly due?: DecisionDue;
+}
+
+/** Mirrors `DecisionDue` in `src/observatory/decisions-view.ts`. */
+export interface DecisionDue {
+  /** `YYYY-MM-DD`. */
+  readonly at: string;
+  readonly reason: "event" | "expiry";
+  /** "Earnings Oct 28", "Expires Oct 17". */
+  readonly label: string;
+  readonly estimated?: true;
 }
 
 /** One considerations-rail chip (#3186 slice 3) — mirrors `ConsiderationChip` in

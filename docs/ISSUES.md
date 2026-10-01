@@ -241,7 +241,8 @@ They are advice, never a gate:
   stale; don't auto-fix it, because some flips are Eric's own. Ready + `next-slice` is legal and
   means "in progress, a remainder pending".
 - **past one delivery unit**: a Size cell declaring more than 3 PRs (or slices). Split the slices
-  into sub-issues that each fit one. Lead every Size cell with `~N PRs` so it can be read at all.
+  into sub-issues that each fit one (*Slices as sub-issues*, below). Lead every Size cell with
+  `~N PRs` so it can be read at all.
 - **a decision-shaped title with no `Done when`**: *Decide / Investigate / Rethink…* work needs the
   recorded decision that ends it, or its remainder idles after the first PR.
 - **a protected path with no route**: a named `.github/`, `.claude/` or envelope path with no
@@ -250,6 +251,29 @@ They are advice, never a gate:
 
 The rubric retires itself if it doesn't earn its place: #4056's call sheet says to drop everything
 except the parked check if flagged and unflagged items deliver within 5pp of each other by 2026-10-31.
+
+### Slices as sub-issues (#4056 slice 3)
+
+**Any plan whose slices will outlive the session that files it splits them into native sub-issues.**
+GitHub then draws the parent's progress bar on the board and in the issue list (`5/5 ▰▰▰▰▰`), which
+is the story at a glance, and `npm run rank` ranks the open children instead of the parent, so
+lanes pick up the next slice without reading the thread. Pilot: #3955, five slices filed as
+#4059–#4063 on 2026-09-29, all shipped by 2026-09-30 with no re-plan.
+
+- **Parent keeps** the intent, the picture, the brief and the state block. **Each child carries**
+  a one-line ask, the metadata table (Status · Parent `#N, slice k of n` · Size · As of), an EARS
+  `Done when` line, and nothing else — the brief is the parent's (#4059 is the reference shape).
+- A child inherits the parent's `ready`; say so in its Status cell. A slice that waits on another
+  gets a native **blocked-by** link, not prose.
+- **Only the last child closes the parent.** A slice PR writes `Closes #<child>` and `Part of
+  #<parent>` — never the parent's number next to a closing keyword anywhere in the body, follow-ups
+  included (#4179's "closes #3955" in a follow-up line closed the parent with a slice still open).
+- **Not for** a plan that ships in one sitting: its bar would go 0 → full inside an hour, and the
+  children are filing cost with no reader. One PR, no children.
+
+Held as a hypothesis (#4056's call sheet, confidence medium-low): it is wrong if split parents show
+no lower follow-up-fix rate than unsplit ≥4-PR plans by 2026-10-31, or ≥2 of the first 5 split
+plans need a re-plan.
 
 ## What is gated, what is taste
 

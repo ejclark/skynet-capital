@@ -430,3 +430,106 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-01, D+1).** No `earnings-cycle` / `intraday-edges` instrument run applies —
+`symbols: []` by design, rates mode; the cache-bust step was still run as a no-op
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Every figure below
+is re-fetched direct today, never carried over from an earlier row.
+
+**What printed** (primary: MOF `calendar/eresul/eresul20260930.htm`, HTTP 200, cross-checked against
+the NPC-II page `calendar/eresul/eresul20260930a.htm`, HTTP 200 — the same procedure leg 7 established).
+**Issue Number 489** — the inference stands confirmed, and the calendar's own `2609e.htm` (re-fetched
+today, HTTP 200) now prints `2-year<span>(489)</span>` where it carried no number through D-7. Auction
+Date 9/30/2026, Issue Date 10/1/2026, Maturity Date 10/1/2028 — all exactly as the D-7 announcement
+read. **Nominal Coupon 2.0%** — outside the 1.7–1.9% band this ledger carried since D-21. Competitive
+bids ¥8,344.8bn against ¥2,145.3bn accepted (**cover 3.890**, inside the ¥2.8tn-era range 2.966–5.244
+and above the 3.885 mean); lowest accepted price 100.055 (yield 1.971%), weighted average price 100.069
+(yield 1.964%) — **tail 0.7bp**; non-competitive tendered/accepted ¥0.079bn; NPC I ¥654.0bn; NPC II
+(from the `a`-suffix page) **¥228.9bn** — the second-largest of the ¥2.8tn era behind No.483's
+¥279.1bn, and this time captured directly rather than inferred from the workbook. Total eligible stock
+= 2,145.3 + 0.079 + 654.0 + 228.9 = **¥3,028.3bn**, inside the ¥2,600–3,078bn full-era range the
+November composition projection (leg 1) already sized its ±0.78–0.95pp band on — **no revision needed
+there.**
+
+**FT-jgb-2y-auction-2026-09-30-1 — KILL, and the coupon-setting rule is not what broke.** MOF
+`jgbcme.csv` re-fetched today (HTTP 200, redirect-followed; the English path moved from
+`jgbs/reference/...` to `policy/jgbs/reference/...`, a 302 followed, not a new source): the 2Y closed
+**1.976%** on 2026-09-29 (the prior session) and **1.952%** on auction day, both up sharply from the
+**1.868%** this ledger's D-7 row read on 09-17 — a **+10.8bp** move in nine sessions, 2.6bp past the
+**+8.2bp** of room the D-7 row itself flagged to the 1.95 break. `round(1.976) = 2.0` and
+`round(1.952) = 2.0` (1.952 sits 4.8bp from 2.0 against 5.2bp from 1.9) — the **coupon rule holds, now
+9 of 9** on both the prior-session and same-day close. The kill switch (coupon below 1.7% or above
+1.9%) fired on the yield move, not on a convention failure: this doc's own band assumed the 2Y would
+stay inside its 09-17 cushion through 09-30, and it did not. No single new catalyst was isolated this
+session (no fresh BoJ communication between 09-18 and 09-29 that this doc's sources surfaced) —
+recorded as an honest limit below rather than a traced cause.
+
+**FT-jgb-2y-auction-2026-09-30-3 — KILL, on the compound terms the test registered, though two of its
+three legs independently passed.** The test's kill switch is an OR over three sub-claims; the
+**publishes-before-2026-09-21** leg fired on 2026-09-18 (recorded at the D-7 row, before the auction),
+which kills the test as registered. Scored today for completeness, not newly discovered: **size**
+passes (¥2.8tn offering as announced — a separate figure from today's ¥3,028.3bn eligible-stock total,
+which includes non-competitive tranches never part of the pre-announced competitive offering); **issue
+number** passes outright (489, confirmed in both the calendar and the result page). The method this
+test was built to validate — reading the calendar's `href` presence and `<span>` issue-number pattern
+to forecast an unannounced auction's terms — is vindicated on two of three legs; its D-7-lag assumption,
+inherited from a single prior observation (No.488), was the one piece that did not generalize.
+
+**FT-jgb-2y-auction-2026-09-30-4 — PASS; August was a print, not a regime.** Cover **3.890** (above
+2.966) and tail **0.7bp** (below 1.7bp) — neither kill condition met, let alone both. Allotment at the
+lowest price **39.3473%**, against August's concentrated **93.31%** — a far more orderly auction. The
+2-Year sector's bid quality recovered fully one print after its worst showing of the ¥2.8tn era, even
+into a tape where the underlying yield itself moved more than it did into August.
+
+**FT-jgb-2y-auction-2026-09-30-2 and -5 — not yet due, correctly left unscored.** Both score past this
+event's `closeOutWithinDays` window (2026-10-06): `FT-2` on 2026-11-20, `FT-5` on 2026-11-21. Per
+`docs/process/EVENT-RESEARCH.md`'s `forward-test-due` mode, each re-opens this id automatically on its
+own score-by date — no action needed here, and none taken. One fact worth carrying forward without
+scoring anything on it: No.489's confirmed coupon (**2.0%**) is itself ≥1.0%, so one of the two entrants
+`FT-2`'s saturation call needs is now locked in as fact rather than assumption; No.490 (2026-10-29,
+already canonical) is the other.
+
+**Kill switches, re-adjudicated at close.**
+- **KS1 (no-price-channel premise)** — not fired. No source reviewed this session (including
+  `mu-2026-09-30-print`'s own 2026-10-01 close-out, read as input) attributes any tracked name's move to
+  a JGB or yen headline.
+- **KS2 / KS3 (the 2026-11-20 window rule / a sub-1% survivor)** — not yet evaluable; the announcement
+  is ~six weeks out.
+- **KS4 (coupon outside 1.7–1.9%)** — **fired**, same event as `FT-1` above.
+- **KS5 (issue-number inference wrong)** — **did not fire on the number itself** (489 confirmed), but
+  its sibling clause (the D-7 lag) already failed at D-7 and is what kills `FT-3` above.
+- **KS6 (August a regime, not a print)** — **did not fire**, same event as `FT-4` above.
+- **KS7 (workbook correction moves)** — no new evidence; `Auction_Results_for_JGBs.xls` was not
+  re-checked this session, since nothing in today's result bears on No.488's own figures.
+
+**The stance calls, scored against their own falsifiers.**
+- **Today / This week ("stand aside," High confidence) — CORRECT.** No tracked symbol moved on a JGB
+  or yen headline; nothing here was ever traded off.
+- **This month ("coupon 1.7–1.9%, modal 1.9%," High confidence) — REFUTED by its own stated
+  falsifier.** The result printed **2.0%**, outside the band. The call followed from a rule that held
+  (9/9) applied to a yield level that moved further than the stated falsifier anticipated — recording
+  the miss plainly, as pre-registration is for.
+- **This quarter ("retire the 2-Year sector as a composition explanation after 2026-11-20," High
+  confidence) — NOT YET SCOREABLE.** Its falsifiers are `FT-2`/`FT-5`, both past this close-out's
+  window; nothing here adjudicates it, and today's coupon print (confirming No.489 ≥1.0%) is
+  consistent with, not a test of, the saturation arithmetic.
+
+**Honest limits.** The 2Y's **+10.8bp** move between 09-17 and 09-29 is reported, not explained — no
+dated catalyst was isolated this session, and a deeper dive (BoJ speeches, JGB-specific flow
+commentary) was judged out of scope for a close-out whose job is scoring, not re-opening the macro
+narrative leg 7 already covers. `probe-ref.blocked` is empty — every fetch this session returned
+HTTP 200 (one 302 redirect on `jgbcme.csv`'s moved path, followed, not blocked). The VIX reading
+(**16.34**, Yahoo chart endpoint) carries the same tool quirk this family has flagged before: the
+endpoint's own human-readable label misread the timestamp as "May 30, 2025," corrected here by decoding
+the raw epoch (`1790751600` → 2026-09-30 07:00 UTC) before use.
+
+**Kill list.** No house playbook is rates-keyed and this ledger carried `symbols: []` throughout its
+life, so neither killed forward test (`FT-1`, `FT-3`) has an entry to add to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list — that list is scoped to ticker-level
+S1/S2/E1/S3/S4/G1 hypotheses, which this event never had. Recorded here so the next session that checks
+doesn't go looking for one.

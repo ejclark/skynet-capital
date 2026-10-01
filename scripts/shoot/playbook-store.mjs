@@ -43,6 +43,8 @@ const cards = [
       },
     ],
     metrics: [],
+    // The subscriber count (#3970): enabled subscriptions across every account, a bare number.
+    subscribers: 3,
   },
   {
     id: "HC-SAURON",
@@ -59,6 +61,7 @@ const cards = [
       "src/personas/sauron-hardcore.ts (Eric, 2026-08-20) — trade volume as research data, not P/L; not yet a docs/research/ backtest of its own.",
     traits: [],
     metrics: [],
+    subscribers: 0,
   },
 ];
 
@@ -200,6 +203,23 @@ await frame(
   "House — every account",
   PHONE,
   "212",
+  "/app/research?section=playbooks",
+);
+// The subscriber count (#3970), catalog-only: shown with no account picked, never who.
+await frame(
+  "phone-subscriber-count",
+  false,
+  "3 active subscribers",
+  PHONE,
+  undefined,
+  "/app/research?section=playbooks",
+);
+await frame(
+  "phone-subscriber-none",
+  false,
+  "No active subscribers yet",
+  PHONE,
+  "No active subscribers yet",
   "/app/research?section=playbooks",
 );
 await frame("phone-delegation-earned", false, "Capital to delegate", PHONE);

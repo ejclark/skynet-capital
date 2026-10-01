@@ -230,6 +230,9 @@ const ericDecisions = [
     plTone: "pos",
     title: "Up 27%: consider locking some of it in",
     captionShort: "Bought at $198.50; now $251.10.",
+    // #3977 slice 4: the stock's own print, a cadence estimate in `earnings-calendar.ts`, so the
+    // Events section's ▲ day says "estimated date" in words.
+    due: { at: "2026-10-29", reason: "event", label: "Earnings Oct 29", estimated: true },
     caption: "AAPL has made $10,520 on $39,700. Closing some of it now locks that part in.",
     why: "✦ winners can give it back. closing part turns what's on paper into what's locked in, and the rest keeps running.",
     clocks: ["200 shares · worth $50,220"],
@@ -415,6 +418,7 @@ const PLAIN = {
     worst: "−$39,700",
     // AAPL's Oct 29 print (`src/domain/earnings-calendar.ts`) is inside the 60-day share horizon.
     nextEvent: { label: "Earnings Oct 29", at: "2026-10-29", beforeExpiry: false, scope: "stock" },
+    nextPrint: { status: "estimate", at: "2026-10-29", label: "Earnings Oct 29 (estimated)" },
   },
   NVDA260918C00180000: {
     plainName: "Call option · profits if NVDA rises",
@@ -424,6 +428,8 @@ const PLAIN = {
     best: "unlimited",
     worst: "−$1,530",
     nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: true, scope: "stock" },
+    // NVDA's Aug 26 print is behind the fixture's date and the table has no next one yet.
+    nextPrint: { status: "unknown", label: "Next earnings date not known yet" },
   },
 };
 ericDesk.desk.positions = ericDesk.desk.positions.map((p) => ({ ...p, ...PLAIN[p.symbol] }));
@@ -1175,6 +1181,8 @@ const { page, origin, out, close } = await openShell({
     "/api/settings": settings,
     "/api/board": board,
     "/api/research": research,
+    // The calendar-only slice (#4204) the Events section and the cockpit head now read.
+    "/api/research/calendar": research,
     "/api/council": council,
     // The netted option book the Money strip reads its plain greeks from: the NVDA call, 3 contracts.
     "/api/trade/option-positions": {
@@ -1315,6 +1323,9 @@ await shootCockpit("accounts-all-summary-phone");
 // so the held line says so in words and the market-wide prints still show.
 await page.goto(`${origin}/app/accounts?section=events&on=2026-10-15&span=month`);
 await page.getByText("AAPL earnings print").waitFor();
+// #3977 slice 4: the grid's ▲ on the day AAPL's decision is due, with the agenda's first rows.
+await page.locator(".book-events .eh-legend").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-marks-phone");
 // At 390 the agenda sits beneath the grid: the frame ends on its footer so the rows are the picture.
 await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
 await shootCockpit("events-held-phone");
@@ -1507,7 +1518,8 @@ const cardReady = async (frame = ".char-art iframe") => {
 };
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
-await cardReady();
+// No WebGL on a phone (#4190): the card at 390 is the league under its mist, no tower frame.
+await page.locator(".char-card").waitFor();
 // Element shots are taken after scrolling, so the sticky top bar and cockpit head would paint over
 // the card's top. Unstick them for this one frame.
 await page.addStyleTag({ content: ".topbar, .cockpit-head { position: static !important; }" });

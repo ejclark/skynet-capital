@@ -5,8 +5,8 @@ import {
   isHeadlineMacro,
   touchedPositions,
 } from "../../src/live/book-events";
-import type { PositionEvent } from "../../src/live/desk";
-import { rangeFor } from "../../src/live/horizon-range";
+import type { DecisionDue, NextPrint, PositionEvent } from "../../src/live/desk";
+import { ALL_RANGE as ALL, rangeFor } from "../../src/live/horizon-range";
 import type { ResearchCall, ResearchEvent } from "../../src/live/research";
 
 /**
@@ -95,6 +95,7 @@ describe("bookEventsIn — the three fixtures across October 2026", () => {
       ["sauron", 1, 3],
       ["day-trader", 2, 3],
     ]);
+    expect([eric, sauron, dayTrader].map((b) => join(b).decide.length)).toEqual([0, 0, 0]);
   });
 
   it("keeps only the headline macro prints market-wide — never an auction or a name not held", () => {
@@ -139,6 +140,109 @@ describe("bookEventsIn — the backstop when the corpus is missing", () => {
     const { held, market } = join(dayTrader, october, []);
     expect(held.map((e) => `${e.date} ${e.title}`)).toEqual(["2026-10-29 AAPL earnings"]);
     expect(market.map((e) => `${e.date} ${e.title}`)).toEqual(["2026-10-02 Jobs report"]);
+  });
+});
+
+describe("bookEventsIn — the book's own days (#3977 slice 4)", () => {
+  const print = (status: "confirmed" | "estimate", at: string): NextPrint => ({
+    status,
+    at,
+    label: `Earnings ${at}${status === "estimate" ? " (estimated)" : ""}`,
+  });
+  const unknown: NextPrint = { status: "unknown", label: "Earnings date unknown" };
+  const withPrints = (
+    id: string,
+    rows: readonly [string, NextPrint][],
+    decisions: BookDesk["desk"]["decisions"] = [],
+  ): BookDesk => ({
+    desk: {
+      id,
+      positions: rows.map(([symbol, nextPrint]) => ({
+        symbol,
+        quantity: "10",
+        isOption: symbol.length > 6,
+        nextPrint,
+      })),
+      decisions,
+    },
+  });
+  const decision = (id: string, symbol: string, display: string, due?: DecisionDue) => ({
+    id,
+    symbol,
+    display,
+    title: "Up 42%: consider locking some of it in",
+    ...(due ? { due } : {}),
+  });
+
+  it("marks a held name's next print the corpus lacks, and an estimate says so in words", () => {
+    const desk = withPrints("sauron", [
+      ["TSLA", print("confirmed", "2026-10-21")],
+      ["AMD", print("estimate", "2026-10-27")],
+    ]);
+    expect(join(desk, october, []).held.map((e) => `${e.date} ${e.title}`)).toEqual([
+      "2026-10-21 TSLA earnings",
+      "2026-10-27 AMD earnings (estimated date)",
+    ]);
+  });
+
+  it("never marks an unknown print — no date is guessed", () => {
+    const desk = withPrints("sauron", [["AMD", unknown]]);
+    expect(join(desk, ALL, []).held).toEqual([]);
+  });
+
+  it("adds no second row when the corpus already has that print, or the next event repeats it", () => {
+    const desk: BookDesk = {
+      desk: {
+        id: "sauron",
+        positions: [
+          {
+            symbol: "META",
+            quantity: "50",
+            isOption: false,
+            nextPrint: print("confirmed", "2026-10-28"),
+            nextEvent: stock("Earnings Oct 28", "2026-10-28"),
+          },
+        ],
+      },
+    };
+    expect(join(desk).held.map((e) => e.id)).toEqual(["meta-2026-10-28-print"]);
+    expect(join(desk, october, []).held.map((e) => e.id)).toEqual(["print META 2026-10-28"]);
+  });
+
+  it("puts each decision's due day in its own tier, landing on the held row", () => {
+    const desk = withPrints(
+      "day-trader",
+      [["NVDA261016C00180000", unknown]],
+      [
+        decision("lock-nvda", "NVDA261016C00180000", "NVDA Oct 16 $180 call", {
+          at: "2026-10-16",
+          reason: "expiry",
+          label: "Expires Oct 16",
+        }),
+        decision("iv-amd", "AMD", "AMD", {
+          at: "2026-10-27",
+          reason: "event",
+          label: "Earnings Oct 27",
+          estimated: true,
+        }),
+        decision("idea", "MRVL", "MRVL"),
+      ],
+    );
+    const { decide } = join(desk, october, []);
+    expect(decide.map((e) => [e.date, e.tier, e.title])).toEqual([
+      [
+        "2026-10-16",
+        "decide",
+        "NVDA Oct 16 $180 call — Up 42%: consider locking some of it in (Expires Oct 16)",
+      ],
+      [
+        "2026-10-27",
+        "decide",
+        "AMD — Up 42%: consider locking some of it in (Earnings Oct 27, estimated date)",
+      ],
+    ]);
+    expect(decide[0]?.touches.map((t) => t.rowSymbol)).toEqual(["NVDA261016C00180000"]);
+    expect(join(desk, rangeFor("2026-11-02", "week"), []).decide).toEqual([]);
   });
 });
 

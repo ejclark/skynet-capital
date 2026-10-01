@@ -11,6 +11,7 @@ import {
   toggleQualifier,
 } from "../live/desk";
 import { fetchOptionPositions, type OptionPositions } from "../live/options";
+import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
@@ -156,6 +157,8 @@ export function PositionsBlotter({
   });
   const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
   const view = lens === "map" && !allocation ? "list" : (lens ?? "list");
+  // An Events row's `#pos-<symbol>` link (#4348): land on the row or card once it has rendered.
+  useLandOnPosition(`${view}:${shown.map((p) => p.symbol).join(",")}`);
   return (
     <>
       {lens && onLensChange ? (

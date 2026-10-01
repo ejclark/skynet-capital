@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
 
 /** A small pill-style single-select control (theme, density, …) — narrow viewports swap in
- *  the option's initial so the pill never renders empty (see `.toggle-abbr` in shell.css).
+ *  the option's initial so the pill never renders empty (see `.toggle-abbr` in shell.css); each
+ *  button carries its full word as `aria-label`, so a screen reader never hears the initial.
  *  `disabled` locks the whole group; its reason belongs in visible text beside it, which
  *  `describedBy` names for assistive tech.
  *
@@ -26,7 +27,15 @@ export function Toggle<T extends string>({
     <fieldset className="toggle-group" disabled={disabled} aria-describedby={describedBy}>
       <legend className="visually-hidden">{label}</legend>
       {options.map(([key, text]) => (
-        <button key={key} type="button" aria-pressed={key === value} onClick={() => onPick(key)}>
+        // The name rides on the button itself (#4046 item 2): at ≤860px `.toggle-text` is
+        // display:none and the initial is aria-hidden, so without it the pill announces nothing.
+        <button
+          key={key}
+          type="button"
+          aria-pressed={key === value}
+          aria-label={text}
+          onClick={() => onPick(key)}
+        >
           <span className="toggle-text">{text}</span>
           <span className="toggle-abbr" aria-hidden="true">
             {text.slice(0, 1)}

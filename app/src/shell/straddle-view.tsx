@@ -87,6 +87,7 @@ export function StraddleView({
   now = new Date(),
   quotes,
   expirationField,
+  asOf,
   heldBadges,
   pending,
 }: {
@@ -114,6 +115,9 @@ export function StraddleView({
    *  from. Omitted, nothing renders here (the multi-leg builder's plain `<select>` stays in its
    *  own field grid, untouched). */
   readonly expirationField?: ReactNode;
+  /** The chain's as-of stamp (#4327, `chain-as-of.tsx`) — above the table, where the member reads
+   *  WHEN these numbers are from before reading the numbers. */
+  readonly asOf?: ReactNode;
   /** A held-position badge per strike ("C"/"P"/"C/P") — a REAL, already-filled holding, distinct
    *  from `markedStrikes`'s draft-leg outline. Only the single-leg ticket passes this (Eric,
    *  2026-09-22); omitted, no badge column space is reserved and no other caller's layout shifts. */
@@ -150,6 +154,7 @@ export function StraddleView({
   return (
     <section className="straddle" aria-label={`Options chain for ${symbol}`}>
       {expirationField}
+      {asOf}
       <EarningsBadge symbol={symbol} now={now} />
       <div
         className={pending ? "straddle-scroll straddle-pending" : "straddle-scroll"}
@@ -260,20 +265,17 @@ export function StraddleView({
   );
 }
 
-/** The provenance sentence: source, coverage and the as-of clock — words, never a hue. */
+/** The provenance sentence: source and coverage — words, never a hue. The WHEN lives in the
+ *  as-of stamp above the table (#4327), so it isn't repeated down here. */
 export function coverageLine(quotes: ChainQuoteCoverage): string {
-  const at = new Date(quotes.asOf);
-  const stamp = Number.isNaN(at.getTime())
-    ? ""
-    : ` · as of ${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
   if (quotes.source === "unavailable") {
-    return `Quotes unavailable right now — strikes from the contract list, premiums from last close; "—" means not quoted${stamp}.`;
+    return `Quotes unavailable right now — strikes from the contract list, premiums from last close; "—" means not quoted.`;
   }
   const coverage =
     quotes.quoted === quotes.total
       ? `all ${quotes.total} strikes`
       : `${quotes.quoted} of ${quotes.total} strikes`;
-  return `Bid / ask and greeks from the indicative feed · ${coverage} quoted; "—" means the feed had none${stamp}.`;
+  return `Bid / ask and greeks from the indicative feed · ${coverage} quoted; "—" means the feed had none.`;
 }
 
 function DividerRow({ spot }: { readonly spot: number }): ReactElement {

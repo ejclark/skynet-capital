@@ -42,3 +42,6 @@ export function unlistedWatchedActor(
   text: string,
   actorsByWorkflow: Map<string, Array<string | null>>,
 ): Array<{ job: string; actor: string | null }>;
+/** Rule 9 (#4359): job names that invoke claude-code-action in a push-triggered workflow without an
+ *  `if:` that rules `push` out — the action rejects that event type outright. */
+export function actionReachableOnPush(text: string): string[];

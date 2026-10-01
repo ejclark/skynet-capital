@@ -50,7 +50,7 @@ export const FB_QUESTION =
 export const NUDGE =
   "Moneypenny · i can help you get set up, explain how it works, answer questions, or file your feedback. tell me what's on your mind — or tap a suggestion below.";
 export const FEEDBACK_OFF =
-  "Moneypenny · feedback isn't switched on in this deployment yet — ask Eric to set the feedback token. your note wasn't sent.";
+  "Moneypenny · feedback isn't switched on in this deployment yet, so your note wasn't sent.";
 
 export interface Chip {
   readonly label: string;

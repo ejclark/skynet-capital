@@ -139,4 +139,17 @@ describe("EventHorizon", () => {
     mount({ pinned: false });
     expect(screen.queryByRole("button", { name: /^Clear/ })).toBeNull();
   });
+  it("marks a decision's due day with a ▲ and names it in the legend — a shape and a word", () => {
+    mount({ decideDays: new Set(["2026-09-10"]) });
+    const day = screen.getByRole("button", { name: "10" });
+    expect(day.querySelector(".eh-decide")?.textContent).toBe("▲");
+    expect(screen.getByRole("button", { name: "11" }).querySelector(".eh-decide")).toBeNull();
+    expect(screen.getByText(/decide by/)).toBeTruthy();
+  });
+
+  it("draws no ▲ and no legend entry when no decide days are passed (R&D's board)", () => {
+    mount();
+    expect(document.querySelector(".eh-decide")).toBeNull();
+    expect(screen.queryByText(/decide by/)).toBeNull();
+  });
 });

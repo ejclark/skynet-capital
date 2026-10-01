@@ -7,6 +7,7 @@ import type { DeskPosition, PositionEvent, PositionLot, Tone } from "../live/des
 import { type OptionPreview, reviewOption, submitOption } from "../live/options";
 import { reviewTicket, submitTicket, type TicketPreview, type TicketResult } from "../live/ticket";
 import { buysLabel } from "./glossary";
+import { positionAnchor } from "./position-anchor";
 
 /**
  * One blotter row (#738 phase 2c, extracted 3b) — responsive disclosure per the round-1 verdict:
@@ -189,7 +190,7 @@ export function BlotterRow({
 
   return (
     <>
-      <tr id={`pos-${position.symbol}`}>
+      <tr id={positionAnchor(position.symbol)}>
         <td className="fold-col">
           <button
             type="button"

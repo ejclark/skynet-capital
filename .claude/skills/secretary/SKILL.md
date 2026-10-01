@@ -31,10 +31,23 @@ retired" since the last digest's snapshot — and a `<!-- rank-snapshot: … -->
 in "Noise absorbed" and the marker at the end of the digest, verbatim: it is what the next digest
 diffs against. A missing marker reads as "baseline set", never as zero movement.
 
+**Thrash** (#3939 slice 2): `npm run thrash:scan -- --digest --file` (≈300 REST calls, ~3.5 min)
+prints the scan's hits as digest lines — a T3 burst under "Needs you", the rest under "Noise
+absorbed", only hits newer than the last digest listed — and a `<!-- thrash-snapshot: … -->`
+marker. Paste both verbatim, the marker beside the rank one: the next digest reads it as "the
+previous scan". A T1–T5 hit on both scans with no `bottleneck` issue carrying its key files one
+(T2 folded per lane, ≤3 a run); the filed numbers come back as a Noise line. T6 never files. No
+marker on the last digest reads as "baseline set" and files nothing. `--json` gives the same
+shape for tooling; without `--file` it drafts and says so, never posts.
+
 **Classify into exactly three tiers** (docs/digests/TEMPLATE.md):
 
 1. **Needs you** — the blocked queue: ready-flips, Routine armings, carve-out merges, taste
    forks, irreversible-class items. Each with evidence attached and phrased so "yes" is one word.
+   **The item set is `node scripts/digest-scan.mjs --needs-you`** (#4293) — the same query that
+   assigns him issues (`scripts/moneypenny/assignments.mjs`), so the digest never lists a
+   decision GitHub didn't send him, or misses one it did. Shape each listed item; don't add or
+   drop items by hand — a missing one is a selector bug, fixed there.
    **Format contract (Eric, 2026-08-15):** a TLDR-style *numbered procedure* per item, never
    prose; every instruction pre-verified before it ships (commands actually run, links resolved,
    states confirmed — it must work on his first try). Before an item enters this tier at all,

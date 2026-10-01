@@ -282,8 +282,17 @@ export function unlistedDispatchActor(name, text) {
       .split("\n")
       .filter((l) => !l.trim().startsWith("#"))
       .join("\n");
-    return /workflow_dispatch/.test(header) ? refusals(job, actors) : [];
+    return dispatchReachable(header) ? refusals(job, actors) : [];
   });
+}
+
+/** Whether the file's own re-dispatch can reach a job. Naming `workflow_dispatch` is not the only
+ *  way in: `github.event_name != 'push'` admits it too, and that unnamed gate is how `build-plan`
+ *  shipped with no allow-list (run 36800601479). So a job counts unless its `if:` pins
+ *  `github.event_name ==` to other events only. */
+function dispatchReachable(header) {
+  if (/workflow_dispatch/.test(header)) return true;
+  return !/github\.event_name\s*==\s*'/.test(header);
 }
 
 /** The workflow names/paths a `workflow_run` trigger watches (its quoted `workflows:` entries). */
@@ -310,6 +319,86 @@ export function unlistedWatchedActor(text, actorsByWorkflow) {
     for (const a of actorsByWorkflow.get(w) ?? []) actors.add(a);
   if (!actors.size) return [];
   return jobs(text).flatMap((job) => refusals(job, actors));
+}
+
+// ── rule 9: claude-code-action can never run under a `push` event ─────────────
+// PROVENANCE (#4359, and docs/LESSONS.md 2026-08-20 for the first occurrence). The action rejects
+// the event type outright — `Action failed with error: Unsupported event type: push` — so a job
+// that invokes it from a push run cannot succeed, ever, for any prompt. The event-research lane
+// already knows this and re-dispatches itself as a `workflow_dispatch`; nothing checked that the
+// OTHER build lanes stayed out of push's reach, and #4165's retry sweep quietly put `build plan
+// issue` there, failing every merge to `main` in ~17s.
+
+/** A job's own `if:` expression — inline or block scalar — comments stripped, flattened to one line. */
+function jobIf(jobText) {
+  const header = jobText
+    .split(/\n {4}steps:/)[0]
+    .split("\n")
+    .filter((l) => !l.trim().startsWith("#"));
+  const at = header.findIndex((l) => /^ {4}if:/.test(l));
+  if (at === -1) return "";
+  const first = (header[at] ?? "").replace(/^ {4}if:\s*/, "");
+  // `>`/`|` opens a block scalar whose value is the indented lines that follow; anything else is
+  // the whole expression inline (with a possible trailing YAML comment).
+  const parts = [/^[|>]/.test(first) ? "" : first.replace(/\s+#.*$/, "")];
+  for (const line of header.slice(at + 1)) {
+    if (line.trim() && /^ {0,4}\S/.test(line)) break;
+    parts.push(line.trim());
+  }
+  return parts.join(" ").trim();
+}
+
+/** An expression split on its top-level `||` (parenthesis depth 0) — each operand is a way the
+ *  condition can be true on its own, so each has to rule push out by itself. */
+function disjuncts(expr) {
+  const out = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < expr.length; i++) {
+    const c = expr[i];
+    if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (depth === 0 && c === "|" && expr[i + 1] === "|") {
+      out.push(expr.slice(start, i));
+      i++;
+      start = i + 1;
+    }
+  }
+  out.push(expr.slice(start));
+  return out.map((s) => s.trim()).filter(Boolean);
+}
+
+/** Does this operand make a push run impossible — either by excluding push outright, or by pinning
+ *  `github.event_name` to something else? */
+function rulesOutPush(operand) {
+  if (/github\.event_name\s*!=\s*'push'/.test(operand)) return true;
+  const named = [...operand.matchAll(/github\.event_name\s*==\s*'([a-z_]+)'/g)].map((m) => m[1]);
+  return named.length > 0 && !named.includes("push");
+}
+
+/** Does any step in this job actually invoke claude-code-action? `uses:` only — several jobs
+ *  DISCUSS the action in comments (including the very re-dispatch step that works around this
+ *  rule), and a comment must never read as an invocation. */
+function invokesClaudeAction(jobText) {
+  return stepsOf(jobText).some((step) =>
+    step.split("\n").some((l) => /^\s*(-\s+)?uses:\s*anthropics\/claude-code-action[@\s]/.test(l)),
+  );
+}
+
+/** Rule 9: job names that invoke claude-code-action and are reachable on `push`. */
+export function actionReachableOnPush(text) {
+  const head = (text.split(/^jobs:\s*$/m)[0] ?? "")
+    .split("\n")
+    .filter((l) => !l.trim().startsWith("#"))
+    .join("\n");
+  if (!/^ {2}push:/m.test(head)) return [];
+  return jobs(text)
+    .filter((job) => invokesClaudeAction(job.text))
+    .filter((job) => {
+      const operands = disjuncts(jobIf(job.text));
+      return !(operands.length > 0 && operands.every(rulesOutPush));
+    })
+    .map((job) => job.name);
 }
 
 export function lintWorkflow(
@@ -364,6 +453,12 @@ export function lintWorkflow(
           "actor cannot be read — whether its `allowed_bots` admits the inherited actor is UNKNOWN (rule 8)"
         : `${name} job \`${d.job}\` is woken by \`workflow_run\` and inherits the watched run's actor ` +
           `\`${d.actor}\`, which its \`allowed_bots\` does not name — the repair dies in ~3s, the 2026-09-25 shape`,
+    ),
+    ...actionReachableOnPush(text).map(
+      (job) =>
+        `${name} job \`${job}\` invokes claude-code-action and its \`if:\` does not rule out ` +
+        '`push` — the action rejects that event type outright ("Unsupported event type: push"), ' +
+        "so the job fails on every merge. Re-dispatch as `workflow_dispatch` instead (#4359)",
     ),
   ];
 }

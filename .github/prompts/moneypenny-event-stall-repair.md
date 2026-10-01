@@ -56,7 +56,8 @@ HOW TO WORK IT:
      cache, a malformed proposal file, an instrument script throwing on this symbol) — fix it on an
      ordinary branch (never `research/<event-id>` — that branch name is reserved for the research
      lane itself and this fix is not that PR), verify (`npm run typecheck && npm run lint && npm
-     test`), ship it via `gh pr create` + `bash scripts/ship.sh automerge <pr-number>`. Once merged,
+     test`), ship it via `gh pr create` (the pipeline's `arm auto-merge` job arms it after integration tests —
+     never arm by hand, #4094). Once merged,
      the next push naturally re-includes the event as due and a normal matrix leg will research it —
      you do not need to also do the research yourself, but you may if it is fast and you have budget
      left, following `event-research.md` exactly as any other matrix leg would.
