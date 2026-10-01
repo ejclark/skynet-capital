@@ -1,4 +1,4 @@
-import { type DraftLeg, legOnSameContract, type NewLeg } from "../../app/src/live/draft-order";
+import { type DraftLeg, legOnSameContract, type NewLeg } from "../../src/live/draft-order";
 
 /** The one decision the multi-leg builder makes before it posts (#3407): is this chain tap a new
  *  leg, or the price for a leg the draft already holds? Everything else about a draft is the

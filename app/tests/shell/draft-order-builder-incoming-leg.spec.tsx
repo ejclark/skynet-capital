@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import * as actualDraft from "../../src/live/draft-order" with { rstest: "importActual" };
 import type { DraftOrder, NewLeg } from "../../src/live/draft-order";
 import { DraftOrderBuilder } from "../../src/shell/draft-order-builder";
 
@@ -32,6 +33,8 @@ const legB: NewLeg = {
 
 const addLegCalls: Array<{ draft: DraftOrder; leg: NewLeg }> = [];
 rstest.mock("../../src/live/draft-order", () => ({
+  // The real selector: the builder asks it whether a pick is a reprice before it posts.
+  legOnSameContract: actualDraft.legOnSameContract,
   emptyDraft: () => ({ phase: "empty" as const, legs: [], refusals: [], nextLegId: 1 }),
   addDraftLeg: (_desk: string, draft: DraftOrder, leg: NewLeg) => {
     addLegCalls.push({ draft, leg });
