@@ -28,6 +28,9 @@
 // owner-lookup failure as the bare string `unknown owner type` — see projects.mjs's block above
 // `MASKED_OWNER_FAILURE` for the reproduction and why that string is never a real classification.
 //
+// #4213: a rate-limit refusal is classified against the budget GraphQL itself reports, not REST's
+// stale mirror — a burst of concurrent runs being throttled is ridden out, only a spent hour fails.
+//
 // #4183: the three board-wide reads are per-RUN constants, not per-issue ones — see
 // `createBoardContext`. They used to run once per `syncIssue` call, which was free for the
 // one-issue job this file is named for and a 9,000-point bill when projects-backfill.mjs calls it
@@ -36,13 +39,13 @@ import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
 import {
   explainMaskedOwnerFailure,
-  explainRateLimitExhausted,
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
   isRetryableRestError,
   resolveBoardItem,
+  runThroughRateLimit,
   statusForIssue,
 } from "./projects.mjs";
 
@@ -74,26 +77,24 @@ function probeGraphql() {
  * at all before this; it shells to the same subcommand family and fails the same way.
  */
 function ghProject(args) {
+  const run = () => sh("gh", ["project", ...args]);
   try {
-    return withRetry(() => sh("gh", ["project", ...args]), {
-      isTransient: isRetryableProjectsGhError,
-    });
+    return withRetry(run, { isTransient: isRetryableProjectsGhError });
   } catch (err) {
     const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
     // #4183: an exhausted hourly budget used to surface as a raw `child_process` stack trace, and
     // the repair session it dispatched spent its first ten minutes working out that "GraphQL: API
     // rate limit exceeded for user ID 3472134" was a quota, not a bug. `ghRateLimit` is free, so
     // asking GitHub for the reset stamp on the way out costs nothing and answers that in one line.
+    // #4213: the same question also answers whether it is a quota AT ALL — `runThroughRateLimit`
+    // rides out a throttled burst rather than failing `main` for a squeeze that clears in a minute.
     if (isRateLimitExhausted(text)) {
-      const { graphql } = ghRateLimit();
-      throw new Error(
-        explainRateLimitExhausted({
-          call: `\`gh project ${args[0]}\``,
-          remaining: graphql?.remaining,
-          reset: graphql?.reset,
-        }),
-        { cause: err },
-      );
+      return runThroughRateLimit({
+        call: `\`gh project ${args[0]}\``,
+        run,
+        firstError: err,
+        readBudget: ghRateLimit,
+      });
     }
     if (!isMaskedOwnerFailure(text)) throw err;
     throw new Error(explainMaskedOwnerFailure(probeGraphql()), { cause: err });

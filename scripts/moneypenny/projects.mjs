@@ -12,7 +12,7 @@
 // below was written); only the writes need Eric's PAT in a workflow. The stale sentence still sits
 // in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
 
-import { isTransientGhError, sleepSync } from "./gh.mjs";
+import { isTransientGhError, sleepSync, withRetry } from "./gh.mjs";
 
 export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
@@ -221,6 +221,104 @@ export function explainRateLimitExhausted({
     `which is not a code fault and not retryable: the window is hourly, the retry ladder is ` +
     `seconds.${left} ${resetPhrase(reset, now)}`
   );
+}
+
+// #4213 — "API RATE LIMIT EXCEEDED" IS TWO DIFFERENT FAILURES WEARING ONE SENTENCE.
+//
+// On 2026-09-30 a burst of ~29 `issues` events between 18:07:50Z and 18:09:54Z fanned out that many
+// concurrent `sync project status` jobs against Eric's one PAT. The first fourteen synced; from
+// 18:08:02Z every one of them died on `GraphQL: API rate limit exceeded for user ID 3472134`, eight
+// red runs on `main` and a repair session dispatched for each. #4183's classifier called all of it
+// "the hourly budget is spent" — and printed `GitHub reports 4998 point(s) left` in the same
+// sentence, because that number came from REST's stale mirror (see `ghGraphqlBudget`).
+//
+// With a budget we can actually trust, the two cases separate:
+//   · budget genuinely low  → an hour is gone; no ladder outwaits it. Fail loudly. (#4183, unchanged)
+//   · budget clearly fine   → GitHub is throttling a BURST, not enforcing the hour. Its own guidance
+//                             for that is to wait at least a minute and try again — so we do, on a
+//                             minute-scale ladder, instead of turning a 60-second squeeze into a red
+//                             `main` and a repair session.
+//
+// The floor is two `item-list` pages' worth (~100 points each by node count). Below that a single
+// board read could legitimately exhaust what is left, so "plenty remains" would be a guess; at or
+// above it, a refusal cannot be the hourly window and calling it one is the mistake this fixes.
+export const THROTTLE_BUDGET_FLOOR = 200;
+
+// Minute-scale on purpose: GitHub's advice for a throttled burst is to wait at least 60s, and
+// `withRetry`'s six-second ladder was built for a 502. Three attempts = 60s + 120s of waiting at
+// worst, on a job whose happy path is twelve seconds — cheap next to a red run someone must read.
+export const THROTTLE_ATTEMPTS = 3;
+export const THROTTLE_BASE_MS = 60_000;
+
+/**
+ * Which of the two failures is this refusal? `"spent"` when GitHub says the hourly budget really is
+ * gone — and when it told us nothing, which keeps an unreadable budget on #4183's proven behaviour
+ * rather than inventing a retry on no evidence. `"throttled"` only on a number that says otherwise.
+ */
+export function classifyRateLimitRefusal({ remaining, floor = THROTTLE_BUDGET_FLOOR } = {}) {
+  if (typeof remaining !== "number" || !Number.isFinite(remaining)) return "spent";
+  return remaining >= floor ? "throttled" : "spent";
+}
+
+/**
+ * The sentence for a burst that never cleared. Deliberately keeps the phrase `API rate limit
+ * exceeded`, for the same reason `explainRateLimitExhausted` does: projects-backfill.mjs decides
+ * whether to abort a whole sweep by running `isRateLimitExhausted` over the message it caught, and
+ * a throttle that survives three minutes should abort a sweep exactly as an empty hour does.
+ */
+export function explainThrottled({
+  call = "a `gh project` call",
+  remaining,
+  attempts = THROTTLE_ATTEMPTS,
+  baseMs = THROTTLE_BASE_MS,
+} = {}) {
+  const left = typeof remaining === "number" ? `${remaining} point(s)` : "an unknown amount";
+  const waited = Math.round((baseMs * (2 ** (attempts - 1) - 1)) / 1000);
+  return (
+    `${call} still hit "API rate limit exceeded" after ${attempts} attempts across ${waited}s — but ` +
+    `GitHub's own rateLimit reports ${left} of the hourly GraphQL budget still available, so this ` +
+    `is a burst being throttled, not a spent hour (#4213). Something is fanning many concurrent ` +
+    `calls at this token; look for a burst of workflow runs around this timestamp before looking ` +
+    `for a bug here.`
+  );
+}
+
+/**
+ * THE DECISION BEHIND THE REFUSAL, with its effects injected so it is provable without a network
+ * call. Reads the budget once (free), then either fails the #4183 way or rides the burst out.
+ *
+ * `run` has already failed once at the call site — that first failure is `firstError`, carried as
+ * the `cause` so the raw gh wording survives under the explanation.
+ */
+export function runThroughRateLimit({
+  call,
+  run,
+  firstError,
+  readBudget,
+  sleep,
+  attempts = THROTTLE_ATTEMPTS,
+  baseMs = THROTTLE_BASE_MS,
+  now = Date.now(),
+}) {
+  const { graphql } = readBudget();
+  const remaining = graphql?.remaining;
+
+  if (classifyRateLimitRefusal({ remaining }) === "spent") {
+    throw new Error(explainRateLimitExhausted({ call, remaining, reset: graphql?.reset, now }), {
+      cause: firstError,
+    });
+  }
+
+  try {
+    return withRetry(run, {
+      attempts,
+      baseMs,
+      isTransient: isRateLimitExhausted,
+      ...(sleep ? { sleep } : {}),
+    });
+  } catch (err) {
+    throw new Error(explainThrottled({ call, remaining, attempts, baseMs }), { cause: err });
+  }
 }
 
 // The floor a whole-backlog sweep must clear before it starts. Once the per-run constants are read
