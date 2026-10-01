@@ -584,13 +584,17 @@ let currentAlerts = noAlerts;
 // A 2-lot NVDA 180/200 call credit spread walked add → validate → review → confirm, exactly the
 // states `draft-order.ts` produces; the confirm answer is the route's own shape with the
 // broker's echo (`executed: true`, order id, status, the working-orders note).
+// The expiration is the one the `chain` fixture above is OPEN on (2026-09-09) — these legs are
+// what tapping that chain produces, and the chain-reprice scene below needs the contract the stub
+// claims to hold to be the contract a tap actually names (found 2026-10-01: the fixture said
+// 2026-09-18, so a second tap on the same row read as a different contract).
 const spreadLegs = [
   {
     id: "leg-1",
     underlying: "NVDA",
     optionType: "call",
     strike: 180,
-    expiration: "2026-09-18",
+    expiration: "2026-09-09",
     action: "sell",
     contracts: 2,
     limitPrice: 4.2,
@@ -600,7 +604,7 @@ const spreadLegs = [
     underlying: "NVDA",
     optionType: "call",
     strike: 200,
-    expiration: "2026-09-18",
+    expiration: "2026-09-09",
     action: "buy",
     contracts: 2,
     limitPrice: 1.1,
@@ -725,6 +729,17 @@ const draftScript = [
     draft: {
       phase: "drafting",
       legs: [{ ...spreadLegs[0], limitPrice: 4.35 }],
+      refusals: [],
+      nextLegId: 2,
+    },
+  },
+  // Reprice FROM THE CHAIN (#3407, the banked "reprice from a chain row"): the 180 bid tapped a
+  // second time puts leg-1 on the chain's own bid ($2.52, the fixture's 180 row) — a `reprice-leg`
+  // post, not the duplicate add the state machine used to refuse where nobody could see the refusal.
+  {
+    draft: {
+      phase: "drafting",
+      legs: [{ ...spreadLegs[0], limitPrice: 2.52 }],
       refusals: [],
       nextLegId: 2,
     },
@@ -1127,6 +1142,36 @@ await page.evaluate(() => window.scrollBy({ top: 180, left: 0 }));
 await page.evaluate(() => window.scrollTo({ left: 0 }));
 const shootLegReprice = shooter(page, resolve("docs/shots/leg-reprice"));
 await shootLegReprice("leg-reprice-phone");
+
+// REPRICE FROM THE CHAIN: tap the 180 call's bid a SECOND time — the strike is outlined because
+// the draft already holds it, and the tap sends `reprice-leg`, moving the typed $4.35 onto the
+// chain's own $2.52 bid. Before this the same tap posted `add-leg` and got "already in this order",
+// a refusal that renders on the ticket pane a member tapping the standalone Chain pane isn't reading.
+// Contracts matches the held leg's 2 first — a pick at a DIFFERENT size is the resize that refusal
+// is actually about, and still falls through to the add (`legOnSameContract`).
+// The stub answers from a script regardless of what was posted, so the frame alone cannot prove
+// which action ran: assert the request body, or this shot would be a picture of the old behaviour.
+await page.getByLabel("Contracts").fill("2");
+const chainRepricePost = page.waitForRequest((r) => r.url().includes("/api/trade/draft"));
+const chainRepriceEcho = page.waitForResponse((r) => r.url().includes("/api/trade/draft"));
+await page.getByRole("button", { name: "Pick the 180 call bid" }).click();
+const posted = (await chainRepricePost).postDataJSON();
+if (posted?.action?.kind !== "reprice-leg" || posted?.action?.id !== "leg-1") {
+  throw new Error(
+    `chain-reprice: expected a reprice-leg post on leg-1, got ${JSON.stringify(posted?.action)}`,
+  );
+}
+await chainRepriceEcho;
+await page.locator(".draft-leg-row").first().scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy({ top: 180, left: 0 }));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootChainReprice = shooter(page, resolve("docs/shots/chain-reprice"));
+await shootChainReprice("chain-reprice-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.locator(".draft-leg-row").first().scrollIntoViewIfNeeded();
+await shootChainReprice("chain-reprice-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+
 await page.getByRole("button", { name: "Pick the 182.5 call ask" }).click();
 await page.locator(".draft-leg-label", { hasText: "Buy 2 NVDA $200C" }).waitFor();
 await page.getByRole("button", { name: "Validate against account" }).click();

@@ -105,6 +105,35 @@ function applyDraftAction(
   return postJson("/api/trade/draft", { participantId, draft, action });
 }
 
+/**
+ * The leg a pick would DUPLICATE — same underlying, same contract, same side, same size — or
+ * `undefined` when the pick is a genuinely new leg (#3407, the banked "reprice from a chain row").
+ *
+ * WHY THIS LIVES HERE AND NOT IN THE STATE MACHINE. `src/trading/draft-order.ts` refuses a
+ * duplicate add in words ("change its size instead of adding it twice") and that refusal is
+ * deliberate: two legs the broker would net into one is a resize nobody typed. This is not a
+ * second opinion on that rule — it is the question a CALLER has to answer before it posts, the
+ * same way `LegRow` already decides between `reprice-leg` and nothing. The draft is still only
+ * ever mutated by the server's own answer.
+ *
+ * SIZE IS PART OF THE MATCH, on purpose. A pick for the same contract at a DIFFERENT number of
+ * contracts is not a reprice — it is the resize the state machine's refusal is about, so it falls
+ * through to the add and gets that message. A pick at the same size is only ever asking for the
+ * tapped price.
+ */
+export function legOnSameContract(legs: readonly DraftLeg[], leg: NewLeg): DraftLeg | undefined {
+  const underlying = leg.underlying.trim().toUpperCase();
+  return legs.find(
+    (held) =>
+      held.underlying.trim().toUpperCase() === underlying &&
+      held.optionType === leg.optionType &&
+      held.strike === leg.strike &&
+      held.expiration === leg.expiration &&
+      held.action === leg.action &&
+      held.contracts === leg.contracts,
+  );
+}
+
 export const addDraftLeg = (participantId: string, draft: DraftOrder, leg: NewLeg) =>
   applyDraftAction(participantId, draft, { kind: "add-leg", leg });
 

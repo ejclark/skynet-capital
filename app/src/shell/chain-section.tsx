@@ -185,7 +185,7 @@ export function ChainSection({
       />
       <p className="note">
         {nav.instrument === "spread"
-          ? "Tap a bid to sell that contract, an ask to buy it — it's added as a leg to your spread."
+          ? "Tap a bid to sell that contract, an ask to buy it — it's added as a leg to your spread. Tap an outlined strike's price again to reprice that leg."
           : "Tap a bid to sell it or an ask to buy it — the ticket opens preset with that contract."}
       </p>
     </section>
