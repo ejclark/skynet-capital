@@ -18,12 +18,30 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A failed open-issue read makes the board sweep plan a Done move for every card.** `planReconcile`
+  cannot tell "no open issues came back" from "every issue is closed", and the sweep's own specs use
+  `openIssues: []` as shorthand for the second. The COLUMNS still come out right — `syncIssue`
+  re-reads each issue before it writes — so the cost is bounded to ~one `item-edit` per board item
+  on a quiet hour, with `isRateLimitExhausted`'s abort as the backstop. Deliberately NOT guarded
+  when found: a refusal in the pure function would have meant rewriting four just-merged specs to
+  protect against a self-correcting cost. The honest fix is in `reconcileBoard`, which is the layer
+  that knows a READ happened — a sentinel (`null` for "not read") rather than an empty list.
+  _(src: Claude · while: #4393 slice 1 hardening, reviewing the landed sweep)_
+- **A `gh project` failure outside the two classified ones is still a raw stack trace.** `ghProject`
+  explains gh's masked owner failure (#3914) and an exhausted quota (#4183); everything else —
+  including `Could not resolve to a ProjectV2 with the number 2`, which is what a token WITHOUT
+  Projects access says — reaches the log as a `child_process` trace with the useful sentence buried
+  on line 5. The first line is honest, so this is log ergonomics, not a wrong answer: one more
+  classifier naming "this token cannot see the project — it needs `PROJECTS_PAT`, not the App
+  token". _(src: Claude · while: #4393 slice 1, smoking `projects-reconcile.mjs --dry-run` locally)_
 - **`Projects v2 setup` is not on the repair lane's watched-workflow list**, so its reds are silent.
   Its 2026-09-30 backfill drained the whole GraphQL hour and failed; nothing filed, and the incident
   was diagnosed from #4183 — a `sync project status` bystander that failed on the drain eight minutes
   later. Add the workflow name to `moneypenny-repair.yml`'s `workflow_run.workflows` list. A workflow
   file, so Eric's merge. _(src: Claude · while: repairing #4183)_
-- **A skipped board sync has no scheduled catch-up.** `projects-sync.mjs` is eventually consistent by
+- ~~**A skipped board sync has no scheduled catch-up.**~~ **Closed by #4402** —
+  `projects-reconcile.mjs` is that sweep; the hourly cron that fires it is #4393 slice 2.
+  `projects-sync.mjs` is eventually consistent by
   design (an issue re-syncs on its next event), but an issue whose LAST event lost its sync stays
   stale, and `projects-backfill.mjs` is `workflow_dispatch`-only. A nightly backfill would close the
   gap now that a sweep costs ~1 `item-list` page instead of one per issue (#4183). A workflow file,

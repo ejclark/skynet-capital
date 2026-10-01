@@ -1,9 +1,11 @@
 import { describe, expect, it } from "@rstest/core";
 import {
   boardIssueNumber,
+  boardItemsOrThrow,
   planReconcile,
   type ReconcileItem,
   type RestIssue,
+  readOpenIssuesWithRetry,
   reconcileBoard,
 } from "../../../scripts/moneypenny/projects-reconcile.mjs";
 import { createBoardContext } from "../../../scripts/moneypenny/projects-sync.mjs";
@@ -217,5 +219,86 @@ describe("reconcileBoard: the sweep", () => {
     const s = sweep({ items: [card(1, "Ready")], openIssues: [open(1, ["ready"])] });
     expect(s.synced).toEqual([]);
     expect(s.result.drift).toEqual([]);
+  });
+});
+
+// #4182 — THE SWEEP'S ONE REST READ HAD NO SECOND CHANCE. `ghRestAll` shells to curl, whose 5xx
+// wording the shared transient classifier never matched (the reason `readIssue` had to be wrapped),
+// and it throws rather than return a truncated list — so one 502 on page 2 ended the whole hourly
+// run. 12 of the 2026-09-30 backfill's 20 failures were GitHub 5xx. Curl strings verbatim from
+// curl 8.5 against a local 502/403.
+describe("readOpenIssuesWithRetry: the open-issue read rides out a GitHub 5xx", () => {
+  const curlFail = (code: number) =>
+    Object.assign(new Error("Command failed: curl"), {
+      stderr: `curl: (22) The requested URL returned error: ${code}`,
+    });
+
+  it("retries a 502 with backoff and returns the issues", () => {
+    const waits: number[] = [];
+    let calls = 0;
+    const issues = readOpenIssuesWithRetry({
+      read: (path) => {
+        calls += 1;
+        expect(path).toBe("issues?state=open");
+        if (calls < 3) throw curlFail(502);
+        return [open(1, ["ready"])];
+      },
+      sleep: (ms) => waits.push(ms),
+    });
+
+    expect(issues.map((i) => i.number)).toEqual([1]);
+    expect(waits).toEqual([2000, 4000]);
+  });
+
+  it("is bounded — a 5xx that persists fails the run after three tries", () => {
+    let calls = 0;
+    expect(() =>
+      readOpenIssuesWithRetry({
+        read: () => {
+          calls += 1;
+          throw curlFail(504);
+        },
+        sleep: () => undefined,
+      }),
+    ).toThrow("Command failed: curl");
+    expect(calls).toBe(3);
+  });
+
+  it("fails a rate-limited read at once — an hourly window does not reopen in six seconds", () => {
+    const waits: number[] = [];
+    let calls = 0;
+    expect(() =>
+      readOpenIssuesWithRetry({
+        read: () => {
+          calls += 1;
+          throw curlFail(403);
+        },
+        sleep: (ms) => waits.push(ms),
+      }),
+    ).toThrow();
+    expect([calls, waits.length]).toEqual([1, 0]);
+  });
+});
+
+// `resolveBoardItem` already treats a truncated page as fatal for ONE issue (#3954). A whole-board
+// sweep shrugging at it is worse: it reports the cards it could not see as agreeing — "600 item(s),
+// 0 in the wrong column", green, while the rest of the board drifts (#2968's rule, one level up).
+describe("boardItemsOrThrow: a truncated board page is fatal, not a quiet pass", () => {
+  it("refuses a page GitHub counted higher than it returned, naming the knob to turn", () => {
+    expect(() =>
+      boardItemsOrThrow({ items: () => ({ items: [card(1, "Ready")], totalCount: 600 }) }),
+    ).toThrow(/ITEM_LIST_LIMIT/);
+  });
+
+  it("passes a complete page straight through", () => {
+    const items = [card(1, "Ready"), card(2, "Done")];
+    expect(boardItemsOrThrow({ items: () => ({ items, totalCount: 2 }) })).toEqual(items);
+  });
+
+  it("treats a page with no count at all as complete, rather than inventing a failure", () => {
+    expect(boardItemsOrThrow({ items: () => ({ items: [card(1, "Ready")] }) })).toEqual([
+      card(1, "Ready"),
+    ]);
+    expect(boardItemsOrThrow({ items: () => ({}) })).toEqual([]);
   });
 });
