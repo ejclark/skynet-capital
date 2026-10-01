@@ -699,6 +699,24 @@ robust, alpha fragile — is the finding.
   incremental or a genuine step-change — the same discipline the AAPL launch close-out's "a converged
   rumor band is not a narrow distribution" lesson already banked for the *pricing* half of a launch.
 
+- **The CPI/PCE wedge read as mostly outside BEA's own targeted deflators, tested against the
+  revision's actually-published size (FT-pce-2026-09-30-3)** — added 2026-10-01 from the
+  [pce-2026-09-30 close-out](events/pce-2026-09-30.md). Registered 2026-09-15 on August core CPI
+  printing **2.4%** against a core-PCE nowcast of **3.40%** — a ~100bp inverted wedge — with the
+  hypothesis that BEA's three re-deflated components (portfolio management, legal services, computer
+  software), sized at **-13 to -30bp** by every street estimate on the record, could not explain a
+  gap that large, so the wedge should stay **≥75bp** (core PCE ≥3.15%) even after the revision.
+  August core PCE printed **3.0%** — a **60bp** wedge, below the registered floor. CNBC (citing BEA)
+  put the named revision's own effect at **-0.36pp**, within 4bp of the full nowcast-to-print gap
+  (3.40% → 3.00%) — so the three targeted components explain nearly all of it, not merely a fraction.
+  **What this does and does not refute:** the ~100bp wedge itself was real and printed, not a model
+  artifact (this ledger's own 09-15 row already confirmed that on an out-of-sample nowcast check);
+  what dies is the inference that a measurement story limited to three named components was too small
+  to carry a gap that size. Do not re-propose "a narrowly-scoped methodology fix can't explain a
+  wide, qualitatively-different cross-series wedge" without first sizing the fix's own realized effect
+  against the wedge — the street's pre-print range (-13 to -30bp) undersold this one by 6-23bp, and
+  the gap it was meant to close was exactly as large as that undersell implies.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
