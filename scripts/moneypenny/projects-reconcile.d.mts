@@ -22,6 +22,15 @@ export interface Drift {
   want: string;
 }
 
+export function readOpenIssuesWithRetry(deps?: {
+  read?: (path: string) => RestIssue[];
+  sleep?: (ms: number) => void;
+}): RestIssue[];
+
+export function boardItemsOrThrow(board: {
+  items(opts?: { refresh?: boolean }): { items?: ReconcileItem[]; totalCount?: number };
+}): ReconcileItem[];
+
 export function boardIssueNumber(item: ReconcileItem | undefined, repo?: string): number | null;
 
 export function wantedStatusOf(issue: RestIssue): string | null;
