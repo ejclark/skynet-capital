@@ -8,7 +8,12 @@ import {
   readInFlight,
   surfaceOf,
 } from "../../../scripts/moneypenny/admission.mjs";
-import { type ClaimCtx, claimNext, peekNext } from "../../../scripts/moneypenny/index.mjs";
+import {
+  type ClaimCtx,
+  claimNext,
+  peekNext,
+  SWEEP_HELD_SKIPS,
+} from "../../../scripts/moneypenny/index.mjs";
 
 // THE ADMISSION GATE (#3960 criteria 1, 2, 7). Between "ready" and "a build session starts":
 // halt refuses everything, conserve refuses all but fast-track, the in-flight cap refuses all but
@@ -368,6 +373,74 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
     expect(r.claimed).toBe(false);
     expect(r.reason).toContain("1 ready, 3 in flight, work-mode=normal");
     expect(called).toEqual([]);
+  });
+});
+
+// 2026-10-01: #3960's lease outlived its successful build, and every tick for ~2h stopped at
+// "held by a live claim" without trying the next ready issue. The sweep now steps past a held pick.
+describe("claimNext — a lease-held pick does not block the rest of the queue", () => {
+  const sweep = (held: number[], ready: ReturnType<typeof issue>[]) => {
+    const tried: number[] = [];
+    const claim = (ctx: ClaimCtx) => {
+      const n = ctx.payload?.issue?.number ?? -1;
+      tried.push(n);
+      return held.includes(n)
+        ? { claimed: false, reason: "held by a live claim (112m old)" }
+        : { claimed: true, reason: "claimed", number: n };
+    };
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => ready,
+      readInFlight: () => [],
+      claims: { plan: claim, feedback: claim },
+    };
+    return { r: claimNext(0, "abc", deps), tried };
+  };
+  const at = (n: number, day: number) => ({
+    ...issue(n, `t${n}`, ["ready", "plan"]),
+    createdAt: `2026-09-${String(day).padStart(2, "0")}T00:00:00Z`,
+  });
+
+  it("claims the next admissible issue when the top pick is held", () => {
+    const { r, tried } = sweep([1], [at(1, 1), at(2, 2)]);
+    expect(r).toMatchObject({ claimed: true, number: 2, lane: "plan" });
+    expect(tried).toEqual([1, 2]);
+  });
+
+  it("stops at a refusal that is not a lease, rather than walking the queue", () => {
+    const tried: number[] = [];
+    const deps = {
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => [at(1, 1), at(2, 2)],
+      readInFlight: () => [],
+      claims: {
+        plan: (ctx: ClaimCtx) => {
+          tried.push(ctx.payload?.issue?.number ?? -1);
+          return { claimed: false, reason: "parked" };
+        },
+        feedback: () => ({ claimed: false, reason: "unused" }),
+      },
+    };
+    expect(claimNext(0, "abc", deps)).toMatchObject({ claimed: false, reason: "parked" });
+    expect(tried).toEqual([1]);
+  });
+
+  it("gives up for the tick after a bounded number of held picks", () => {
+    const all = Array.from({ length: SWEEP_HELD_SKIPS + 2 }, (_, k) => at(k + 1, k + 1));
+    const { r, tried } = sweep(
+      all.map((i) => i.number),
+      all,
+    );
+    expect(r.claimed).toBe(false);
+    expect(r.reason).toContain("held by live claims");
+    expect(tried).toHaveLength(SWEEP_HELD_SKIPS);
+  });
+
+  it("reports nothing admissible once every candidate was held", () => {
+    const { r, tried } = sweep([1], [at(1, 1)]);
+    expect(r).toMatchObject({ claimed: false });
+    expect(r.reason).toContain("nothing admissible (0 ready");
+    expect(tried).toEqual([1]);
   });
 });
 
