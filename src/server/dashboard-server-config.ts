@@ -34,6 +34,7 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import type { ProgressionService } from "./progression-service.js";
+import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
@@ -197,6 +198,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** The underlying quote, pushed instead of polled (`quote-stream-route.ts`, #3407 P4) — one
+   *  market-data socket per member, on that member's own credential. Absent = the route says so
+   *  and the quote keeps its 15-second poll. */
+  readonly quoteStream?: QuoteStreamPort;
   /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the
    *  alerts route still lists, and says dismissals are off. */
   readonly alertDismissals?: AlertDismissalsPort;

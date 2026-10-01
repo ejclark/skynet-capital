@@ -44,7 +44,11 @@ import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
 import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
-import { wireAccountDeskAccess, wireDeskTrading } from "./dashboard-desk-wiring.js";
+import {
+  wireAccountDeskAccess,
+  wireDeskTrading,
+  wireQuoteStream,
+} from "./dashboard-desk-wiring.js";
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
@@ -143,13 +147,27 @@ async function main(): Promise<void> {
   });
 
   // Account service + live-roster/findParticipant/clientFor helpers (dashboard-desk-wiring.ts).
+  // Removing an account closes BOTH of its sockets — the fill stream and (if it is streaming a
+  // quote right now) its market-data one, so a departed member's credential stops being used the
+  // moment they leave. Declared before the hub it reads, and only ever called after boot.
   const { accounts, liveRoster, findParticipant, clientFor } = wireAccountDeskAccess({
     hub,
     store,
     envRoster,
     owners,
     clientFactory: dataSource.clientFactory,
-    stopParticipantStream: (id) => dataSource.stopParticipantStream(id),
+    stopParticipantStream: (id) => {
+      dataSource.stopParticipantStream(id);
+      quoteStream.stopDesk(id);
+    },
+  });
+
+  // The underlying quote, pushed rather than polled (#3407 P4) — one market-data socket per member
+  // on that member's own credential. Never the host's: the bot loop holds that account's single
+  // allowed connection (`quote-stream-hub.ts` carries the full reason).
+  const quoteStream = wireQuoteStream({
+    findParticipant,
+    optionsClientFactory: dataSource.optionsClientFactory,
   });
 
   // Guest list, Mission Control store, authenticator, and owner-link lookup (dashboard-access.ts).
@@ -348,6 +366,7 @@ async function main(): Promise<void> {
     // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
     alertDismissals: createAlertDismissals(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).

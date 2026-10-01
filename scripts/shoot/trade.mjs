@@ -892,6 +892,47 @@ await shoot("trade-quote-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-quote-desktop");
 
+// THE PUSHED QUOTE (#3407 P4) — the same header reading a frame that arrived over SSE rather than
+// a one-shot REST read, so it carries the feed's own tick time and says "live". The frames come
+// from a fulfilled body, not a held-open stream: `shell.mjs` is right that an SSE channel can't be
+// faked through `page.route` in general (nothing can arrive LATER), but one complete batch of
+// frames delivered at once is enough to prove the client seam and the rendered stamp. Registered
+// after the blanket `**/api/**` stub so it wins (Playwright matches routes most-recent-first), and
+// unregistered again below so every later scene sees the unstreamed header exactly as before.
+const livePush = (route) =>
+  route.fulfill({
+    status: 200,
+    headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
+    body:
+      `event: hello\ndata: ${JSON.stringify({ symbol: "NVDA", at: "2026-09-21T18:32:05Z" })}\n\n` +
+      `event: quote\ndata: ${JSON.stringify({ ...quote, last: 181.47, change: 2.29, changePct: 1.28, asOf: "2026-09-21T18:32:05Z" })}\n\n`,
+  });
+const shootQuoteStream = shooter(page, resolve("docs/shots/quote-stream"));
+// Centre the quote line so the before/after pair frames the same thing; `scrollIntoViewIfNeeded`
+// leaves it technically visible but pinned to the bottom edge, which is the thing to show.
+const centreOn = (selector) =>
+  page.locator(selector).evaluate((el) => el.scrollIntoView({ block: "center" }));
+
+// BEFORE — no stream behind this surface, so no stamp and no claim about freshness.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.locator(".quote-line").waitFor();
+await centreOn(".quote-line");
+await shootQuoteStream("quote-stream-before-phone");
+
+// AFTER — the pushed frame's price, and the feed's own tick time beside it.
+await page.route("**/api/trade/quote-stream*", livePush);
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+const liveStamp = page.locator(".quote-live");
+await liveStamp.waitFor();
+const centreStamp = () => centreOn(".quote-live");
+await centreStamp();
+await shootQuoteStream("quote-stream-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await centreStamp();
+await shootQuoteStream("quote-stream-desktop");
+await page.unroute("**/api/trade/quote-stream*", livePush);
+
 // The options ticket's own quote header (#2017 Phase 0.9 review, item 5) — the same header, on
 // an unlocked option play (201 needs the ladder through 102 earned, so `throughLongs` here).
 currentPlays = throughLongs;

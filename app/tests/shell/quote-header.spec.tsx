@@ -118,4 +118,64 @@ describe("QuoteHeader", () => {
     expect(container.querySelector(".quote-header")).toBeEmptyDOMElement();
     expect(fetches).toBe(0);
   });
+
+  // #3407 P4, the quote stream. #2017's header deliberately made no freshness claim because the
+  // REST read carried no timestamp; a PUSHED frame does, and only then is a stamp honest.
+  describe("the live stamp", () => {
+    it("shows the feed's own tick time, in ET, when the answer was pushed", () => {
+      render(
+        withClient(
+          <QuoteHeader
+            symbol="NVDA"
+            provided={{
+              symbol: "NVDA",
+              last: 181.32,
+              change: 2.14,
+              changePct: 1.19,
+              tone: "pos",
+              asOf: "2026-10-01T18:32:05Z",
+            }}
+          />,
+        ),
+      );
+      const stamp = screen.getByText(/live/).closest(".quote-live");
+      expect(stamp).not.toBeNull();
+      expect(stamp?.textContent).toContain("14:32:05 ET");
+      expect(stamp?.querySelector("time")).toHaveAttribute("datetime", "2026-10-01T18:32:05Z");
+      // The word carries the state, never a colour alone (a standing reader is colourblind).
+      expect(stamp?.textContent).toContain("live");
+    });
+
+    it("shows no stamp at all on a one-shot read — the old no-claim rule, unchanged", () => {
+      const { container } = render(
+        withClient(
+          <QuoteHeader
+            symbol="NVDA"
+            provided={{ symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" }}
+          />,
+        ),
+      );
+      expect(container.querySelector(".quote-live")).toBeNull();
+    });
+
+    it("says nothing rather than printing an invalid date beside a real price", () => {
+      const { container } = render(
+        withClient(
+          <QuoteHeader
+            symbol="NVDA"
+            provided={{
+              symbol: "NVDA",
+              last: 181.32,
+              change: 2.14,
+              changePct: 1.19,
+              tone: "pos",
+              asOf: "not a time",
+            }}
+          />,
+        ),
+      );
+      expect(container.querySelector(".quote-live")).toBeNull();
+      expect(screen.getByText("$181.32")).toBeInTheDocument();
+    });
+  });
 });

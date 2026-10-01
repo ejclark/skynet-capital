@@ -16,6 +16,10 @@ export interface Quote {
   readonly bid?: number;
   readonly ask?: number;
   readonly mid?: number;
+  /** When the feed made the tick this answer was built from — set ONLY on a pushed frame
+   *  (`quote-stream.ts`, #3407 P4). Its presence is what licenses the header to say anything about
+   *  freshness at all; the one-shot REST answer still makes no such claim. */
+  readonly asOf?: string;
 }
 
 /** The honest degrade: no linked client, no quote right now, or a feed failure — a sentence. */

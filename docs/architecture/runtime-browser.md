@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | member | browser | Uses the observatory shell | HTTPS, session cookie | grounded — Fix the evidence chain: dashboard-server.ts handleRequest → gateRequest (auth passes) → serveAuthorizedRoute → serveAppShell for /app/*. gateRequest does not call serveAppShell. The relationship label is fine as is: memb |
 | eric | browser | Mission Control suspend/mode toggles, invites, claims | HTTPS | grounded — Relabel the edge as: "Owner toggles suspend/resume (global and per bot) and Moneypenny's model in Mission Control, and manages invites and claims on the settings admin cards". Cite: mission-control.tsx -> app/src/live/co |
-| browser | api | GET /api/* JSON, POST writes, EventSource /events and /api/trade/events, fetch-streamed POST /api/companion | HTTPS JSON, SSE | grounded — Relabel the companion edge as "GET /api/companion (enabled JSON); POST /api/companion/chat (fetch-streamed SSE: delta/handoff/done/error); POST /api/companion/ack". Note that /events (seq-numbered board patch SSE, auth-g |
+| browser | api | GET /api/* JSON, POST writes, EventSource /events, /api/trade/events and /api/trade/quote-stream, fetch-streamed POST /api/companion | HTTPS JSON, SSE | grounded — Relabel the companion edge as "GET /api/companion (enabled JSON); POST /api/companion/chat (fetch-streamed SSE: delta/handoff/done/error); POST /api/companion/ack". Note that /events (seq-numbered board patch SSE, auth-g |
 
 ## Components
 

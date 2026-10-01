@@ -9,6 +9,7 @@
  * own access/ops-status wiring sits between them and reads `liveRoster`/`findParticipant`.
  */
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
+import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import { publishingOrderAuditLog } from "../observatory/activity-publishing.js";
 import { createBrokerSync } from "../observatory/broker-sync.js";
@@ -21,6 +22,7 @@ import { resolveDeskTrading } from "../server/account-identity-gate.js";
 import { createAccountService } from "../server/account-service.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog, type OrderAuditLog } from "../server/order-audit-log.js";
+import { createQuoteStreamHub, type QuoteStreamHub } from "../server/quote-stream-hub.js";
 
 export interface AccountDeskAccessDeps {
   readonly hub: ObservatoryHub;
@@ -67,6 +69,49 @@ export function wireAccountDeskAccess(deps: AccountDeskAccessDeps): AccountDeskA
   };
 
   return { accounts, liveRoster, findParticipant, clientFor };
+}
+
+export interface QuoteStreamWiringDeps {
+  readonly findParticipant: (id: string) => Participant | undefined;
+  readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
+}
+
+/**
+ * The live half of the quote stream (#3407 P4): the hub, bound to a real Alpaca market-data socket
+ * per member. Read through the LIVE roster on every call, same as `clientFor` — so an account added
+ * or rotated at runtime streams on the next page view, not the next restart. A member with no
+ * key/secret pair (an OAuth link) gets `undefined`, which the hub turns into a sentence.
+ *
+ * Known limit, stated rather than plumbed: a credential rotated WHILE a socket is open leaves that
+ * one socket on the old key until the member's page reconnects. `AlpacaMarketDataStream` has
+ * `replaceCredentials` for the bot loop's long-lived socket; these live for one page view, and a
+ * rotation already sends the member back through a sign-in, so the gap closes itself.
+ */
+export function wireQuoteStream(deps: QuoteStreamWiringDeps): QuoteStreamHub {
+  return createQuoteStreamHub({
+    openSocket: (requesterId, sinks) => {
+      const credentials = deps.findParticipant(requesterId)?.credentials;
+      if (!(credentials?.apiKey && credentials.apiSecret)) return undefined;
+      return new AlpacaMarketDataStream({
+        apiKey: credentials.apiKey,
+        apiSecret: credentials.apiSecret,
+        // Nothing until a surface asks: the hub resubscribes the moment it has a symbol.
+        symbols: [],
+        quotes: true,
+        onEvent: (event) => {
+          if (event.type === "price") {
+            sinks.onTrade({ symbol: event.symbol, price: event.price, at: event.at });
+          }
+        },
+        onQuote: sinks.onQuote,
+      });
+    },
+    snapshot: (requesterId, symbol) => {
+      const participant = deps.findParticipant(requesterId);
+      if (!participant) return Promise.resolve(undefined);
+      return deps.optionsClientFactory(participant).getUnderlyingQuote(symbol);
+    },
+  });
 }
 
 export interface DeskTradingDeps {

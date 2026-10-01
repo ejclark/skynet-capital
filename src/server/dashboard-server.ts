@@ -31,6 +31,7 @@ import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { serveQuoteStream } from "./quote-stream-route.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
@@ -119,6 +120,20 @@ function serveHomePage(
   return true;
 }
 
+/** The desk's Server-Sent Events channels — a desk's order lifecycle (#3407 P4 slice 1) and one
+ *  symbol's pushed quote (#3407 P4, the quote stream). Grouped because neither is a write API and
+ *  both are synchronous route claims, so `serveWriteApis` carries one branch for the pair. */
+function serveStreamApis(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): boolean {
+  if (serveDeskEventsApi(req, res, path, config, session)) return true;
+  return serveQuoteStream(req, res, path, config, session);
+}
+
 /** The shell's write-API families, one dispatcher — trade (shares, options, the plays catalog),
  *  settings, learn, controls, join. */
 async function serveWriteApis(
@@ -130,7 +145,7 @@ async function serveWriteApis(
 ): Promise<boolean> {
   if (await serveTradeApi(req, res, path, config, session)) return true;
   if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
-  if (serveDeskEventsApi(req, res, path, config, session)) return true;
+  if (serveStreamApis(req, res, path, config, session)) return true;
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;

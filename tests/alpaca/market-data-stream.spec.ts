@@ -291,4 +291,99 @@ describe("AlpacaMarketDataStream", () => {
       });
     });
   });
+
+  // #3407 P4, the quote stream: the symbol set only LOOKED fixed at boot (subscribe() had one
+  // caller), and the quote channel is opt-in so the bot loop's traffic is unchanged.
+  describe("quotes", () => {
+    it("subscribes to the quote channel beside trades only when asked", () => {
+      const { socket } = startStream({ quotes: true, symbols: ["NVDA"] });
+
+      socket.emit("message", frame(AUTHENTICATED));
+
+      expect(JSON.parse(socket.sent[socket.sent.length - 1] ?? "")).toEqual({
+        action: "subscribe",
+        trades: ["NVDA"],
+        quotes: ["NVDA"],
+      });
+    });
+
+    it("forwards a bid/ask pair to onQuote, and never as a price event", () => {
+      const quotes: unknown[] = [];
+      const { socket, events } = startStream({ quotes: true, onQuote: (q) => quotes.push(q) });
+
+      socket.emit(
+        "message",
+        frame([
+          { T: "q", S: "NVDA", bp: 141.2, ap: 141.3, t: "2026-10-01T15:01:00Z" },
+          { T: "t", S: "NVDA", p: 141.25, t: "2026-10-01T15:01:01Z" },
+        ]),
+      );
+
+      expect(quotes).toEqual([
+        { symbol: "NVDA", bid: 141.2, ask: 141.3, at: "2026-10-01T15:01:00Z" },
+      ]);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ type: "price", price: 141.25 });
+    });
+
+    it("drops a quote message when no onQuote is wired (the bot loop's case)", () => {
+      const { socket, events } = startStream();
+
+      socket.emit("message", frame([{ T: "q", S: "NVDA", bp: 1, ap: 2, t: "x" }]));
+
+      expect(events).toEqual([]);
+    });
+  });
+
+  describe("resubscribe", () => {
+    it("unsubscribes what left and subscribes what arrived, on both channels", () => {
+      const { stream, socket } = startStream({ quotes: true, symbols: ["NVDA"] });
+      socket.emit("message", frame(AUTHENTICATED));
+      const before = socket.sent.length;
+
+      stream.resubscribe(["NVDA", "AAPL"]);
+      stream.resubscribe(["AAPL"]);
+
+      const sent = socket.sent.slice(before).map((raw) => JSON.parse(raw));
+      expect(sent).toEqual([
+        { action: "subscribe", trades: ["AAPL"], quotes: ["AAPL"] },
+        { action: "unsubscribe", trades: ["NVDA"], quotes: ["NVDA"] },
+      ]);
+    });
+
+    it("sends nothing when the set did not change", () => {
+      const { stream, socket } = startStream({ symbols: ["NVDA"] });
+      socket.emit("message", frame(AUTHENTICATED));
+      const before = socket.sent.length;
+
+      stream.resubscribe(["NVDA"]);
+
+      expect(socket.sent).toHaveLength(before);
+    });
+
+    it("before auth: records the set, and the handshake subscribes to it", () => {
+      const { stream, socket } = startStream({ symbols: [] });
+
+      stream.resubscribe(["NVDA"]);
+      expect(socket.sent).toEqual([]);
+
+      socket.emit("message", frame(AUTHENTICATED));
+
+      expect(JSON.parse(socket.sent[socket.sent.length - 1] ?? "")).toEqual({
+        action: "subscribe",
+        trades: ["NVDA"],
+      });
+    });
+
+    it("after a close: records the set rather than writing into a dead socket", () => {
+      const { stream, socket } = startStream({ symbols: ["NVDA"] });
+      socket.emit("message", frame(AUTHENTICATED));
+      socket.emit("close");
+      const before = socket.sent.length;
+
+      stream.resubscribe(["AAPL"]);
+
+      expect(socket.sent).toHaveLength(before);
+    });
+  });
 });
