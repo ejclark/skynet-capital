@@ -69,6 +69,14 @@
       "why": "hosting config — spend and deploy topology (fly.toml is the dashboard app, fly.bots.toml the bots app)"
     },
     {
+      "pattern": "research-dispatch-budget.json",
+      "why": "the research lane's per-tick ceiling — Eric, 2026-09-30 on #3960: raising it in a lane PR steps around 'surge is Eric's', since raising a cap is the spend class"
+    },
+    {
+      "pattern": "research-circuit-breaker.json",
+      "why": "the spend breaker's own thresholds (#2946) — the one automatic stop in the repo; a lane that can loosen its own breaker has no breaker"
+    },
+    {
       "pattern": "scripts/bot-relevant.mjs",
       "why": "deploy topology — decides which pushes redeploy the bots app; widening its skip list silently strands bots on stale code"
     },
