@@ -644,3 +644,26 @@ jobs:
     }
   });
 });
+
+// #4430 sat clean and unarmed: the arm job's two-dot `git diff base head` also listed what landed
+// on main after the PR branched (#4425's Dockerfile/fly.toml), so the envelope step called a
+// scripts-only PR protected and skipped the arm with a green job. Three dots = the PR's own diff.
+describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const range =
+    /git diff --name-only "?\$\{\{ github\.event\.pull_request\.base\.sha \}\}(\.\.\.|"? "?)\$\{\{ github\.event\.pull_request\.head\.sha \}\}/g;
+
+  it("every base..head diff in pipeline.yml uses the merge-base range", () => {
+    const seps = [...pipeline.matchAll(range)].map((m) => m[1]);
+    expect(seps.length).toBeGreaterThanOrEqual(2);
+    expect(seps.every((sep) => sep === "...")).toBe(true);
+  });
+
+  it("the envelope step fails closed and says why it did not arm", () => {
+    const step = pipeline.slice(pipeline.indexOf("name: Is the diff protected?"));
+    const body = step.slice(0, step.indexOf("- name:", 10));
+    expect(body).toContain("SCAN=$(node scripts/envelope-scan.mjs");
+    expect(body).toContain("jq -er");
+    expect(body).toContain("::notice::not arming");
+  });
+});
