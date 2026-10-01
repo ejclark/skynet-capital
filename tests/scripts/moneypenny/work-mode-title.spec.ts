@@ -68,13 +68,35 @@ describe("workModeRetitle — only when the dashboard is actually stale", () => 
     expect(workModeRetitle(state("  Work mode: NORMAL  "))).toBeNull();
   });
 
-  it("never retitles on a fail-closed read — the warning is that state's signal", () => {
+  it("never retitles when the tracking issue could not be read — that conserve is a fallback", () => {
     const unreadable = state("Work mode: NORMAL", {
       position: "conserve",
+      unreadable: true,
       reason: "fail-closed: the tracking issue could not be read",
       warning: "work-mode: could not read issue #4153 (HTTP 502) — acting as conserve",
     });
     expect(workModeRetitle(unreadable)).toBeNull();
+  });
+
+  // The first version of this rule keyed on `warning` and so skipped exactly the states where the
+  // title goes stale and nothing else ever corrects it: the dial was READ fine, it is just
+  // misconfigured. A warning is not a failed read — only `unreadable` is.
+  it("still retitles a position that was read fine but warned — a forgotten `until` comment", () => {
+    const forgotten = state("Work mode: CONSERVE until 2026-09-29", {
+      position: "normal",
+      reason: "conserve carries no expiry, so it is treated as expired",
+      warning: 'work-mode: conserve has no "until <YYYY-MM-DD>" comment — acting as normal',
+    });
+    expect(workModeRetitle(forgotten)?.newTitle).toBe("Work mode: NORMAL");
+  });
+
+  it("still retitles when the dial carries two labels at once — the lanes act on conserve", () => {
+    const ambiguous = state("Work mode: SURGE until 2026-10-06", {
+      position: "conserve",
+      reason: "fail-closed: the dial is not set to exactly one position",
+      warning: "work-mode: 2 (work-mode:normal, work-mode:surge) work-mode:* labels",
+    });
+    expect(workModeRetitle(ambiguous)?.newTitle).toBe("Work mode: CONSERVE");
   });
 
   it.each([

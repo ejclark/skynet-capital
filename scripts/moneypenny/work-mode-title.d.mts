@@ -25,7 +25,7 @@ export interface RetitleIntent {
 export function workModeTitle(mode: Pick<WorkMode, "position" | "until">): string;
 
 /** Pure: the retitle intent for a stale dashboard, or null when the title is already right, the
- *  dial was unreadable (a `warning`), or there is no current title to compare. */
+ *  tracking issue could not be read (`mode.unreadable`), or there is no current title to compare. */
 export function workModeRetitle(
   state?: { trackingIssue?: number; title?: string | null; mode?: Partial<WorkMode> } | null,
 ): RetitleIntent | null;

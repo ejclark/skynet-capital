@@ -43,6 +43,13 @@ const resolve = (labels: Array<{ name: string }>, comments: Array<{ body: string
   resolveWorkMode({ labels, comments, now: NOW, config: CONFIG });
 
 describe("reading the dial — one label is one position", () => {
+  it("never marks a dial it actually read as unreadable, however it warns", () => {
+    expect(resolve([label("normal")]).unreadable).toBeUndefined();
+    expect(resolve([label("conserve")]).unreadable).toBeUndefined();
+    expect(resolve([]).unreadable).toBeUndefined();
+    expect(resolve([label("turbo")]).unreadable).toBeUndefined();
+  });
+
   it("reads normal with today's caps and ignores any comments", () => {
     const mode = resolve([label("normal")], [until("2026-09-01")]);
     expect(mode).toEqual({
@@ -207,6 +214,9 @@ describe("readWorkMode — one gh call, never a throw on a bad read", () => {
     const { exec } = fakeExec(result);
     const mode = readWorkMode(exec, CONFIG, NOW);
     expect(mode.position).toBe("conserve");
+    // The one state where the position is a fallback, not a reading — marked explicitly so the
+    // title sync can tell it from the warnings `resolveWorkMode` raises on a dial it read fine.
+    expect(mode.unreadable).toBe(true);
     expect(mode.caps).toEqual({
       inFlightCap: 1,
       researchPerTick: 2,

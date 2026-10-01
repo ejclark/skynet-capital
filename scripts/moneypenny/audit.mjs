@@ -414,16 +414,17 @@ function workModeState(nowMs, json) {
       "--json",
       "title,labels,comments",
     ]);
-    return {
-      trackingIssue: config.trackingIssue,
-      title: view.title ?? null,
-      mode: resolveWorkMode({
-        labels: view.labels,
-        comments: view.comments,
-        now: nowMs,
-        config,
-      }),
-    };
+    const mode = resolveWorkMode({
+      labels: view.labels,
+      comments: view.comments,
+      now: nowMs,
+      config,
+    });
+    // A dial read fine but misconfigured — two labels, a forgotten `until` — still warns, and the
+    // title sync corrects the DISPLAY without fixing the cause. Print it here so the push run that
+    // retitles also says why it had to.
+    if (mode.warning) console.log(`::warning::${mode.warning}`);
+    return { trackingIssue: config.trackingIssue, title: view.title ?? null, mode };
   } catch (err) {
     console.log(`::warning::work-mode title sync skipped — ${String(err.message).slice(0, 200)}`);
     return null;

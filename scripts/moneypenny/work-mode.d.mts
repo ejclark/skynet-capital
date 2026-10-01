@@ -28,6 +28,9 @@ export interface WorkMode {
   readonly reason: string;
   /** Present when the dial was unreadable, ambiguous, or missing its expiry — print as ::warning::. */
   readonly warning?: string;
+  /** Only on the one state where the position is a FALLBACK, not a reading: the tracking issue
+   *  itself could not be read. A warning alone does not imply this (a forgotten expiry warns too). */
+  readonly unreadable?: true;
 }
 
 /** An injectable stand-in for `child_process.execFileSync`, so specs fake `gh` without a network. */

@@ -17,10 +17,13 @@
 // one that already rides every merge to `main` — "the next lane run", in the criterion's words).
 //
 // TWO DELIBERATE SILENCES — this never fires when it cannot be sure the title is wrong:
-//   - a mode carrying a `warning` is a FAIL-CLOSED READ, not a reading of the dial: an unreadable
-//     tracking issue resolves to `conserve`, and retitling on that would turn a GitHub blip into a
-//     dashboard that says the repo is throttled when nobody throttled it. The `::warning::` the
-//     lane already prints is that state's signal; a title rewrite is not.
+//   - `mode.unreadable`: the tracking issue itself could not be read, so `conserve` is a FALLBACK
+//     rather than a reading of the dial, and retitling on it would turn a GitHub blip into a
+//     dashboard saying the repo is throttled when nobody throttled it. Keyed on that flag and NOT
+//     on `warning`, which was the first version of this rule and had it backwards: `resolveWorkMode`
+//     also warns on states it read perfectly well — a `conserve` label whose `until` comment was
+//     forgotten (reads as `normal`), or two dial labels at once — and those are exactly the cases
+//     where the title has gone stale and nothing else would ever correct it.
 //   - a missing or empty current title means `gh` gave us nothing to compare, so there is nothing
 //     to correct.
 
@@ -50,7 +53,7 @@ export function workModeTitle(mode) {
 export function workModeRetitle(state) {
   const { trackingIssue, title, mode } = state ?? {};
   if (!Number.isInteger(trackingIssue) || trackingIssue <= 0) return null;
-  if (!mode?.position || mode.warning) return null;
+  if (!mode?.position || mode.unreadable) return null;
   if (typeof title !== "string" || !title.trim()) return null;
   const current = title.trim();
   const desired = workModeTitle(mode);
