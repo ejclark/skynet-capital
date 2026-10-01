@@ -774,6 +774,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
           github_token: ${{ steps.app-token.outputs.token }}
+          # The route job re-dispatches this file with the App token, so a plan build runs as
+          # skynet-envoy; without it the action refuses in ~3s (run 36800601479, workflow-lint rule 8).
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }}
           # The triage rules and the build envelope live in .github/prompts/plan-build.md, not

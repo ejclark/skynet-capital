@@ -370,7 +370,11 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
 // Rule 8 (#2292): a self re-dispatch signed by one bot, landing on a claude-code-action job that
 // allow-lists another. Event research died in ~3s per leg for ~41h on exactly this drift.
 describe("workflow lint — a self-dispatch actor the dispatch-gated job does not allow", () => {
-  const selfDispatching = (token: string, allowed: string | null) => `name: Loop
+  const selfDispatching = (
+    token: string,
+    allowed: string | null,
+    gate = "github.event_name == 'workflow_dispatch'",
+  ) => `name: Loop
 on:
   push:
     branches: [main]
@@ -388,7 +392,7 @@ jobs:
   build:
     needs: route
     # comment lines never count as the gate
-    if: github.event_name == 'workflow_dispatch'
+    if: ${gate}
     runs-on: ubuntu-latest
     steps:
       - uses: anthropics/claude-code-action@v1
@@ -423,6 +427,26 @@ jobs:
     expect(unlistedDispatchActor("loop.yml", selfDispatching("secrets.SOME_PAT", "*"))).toEqual([
       { job: "build", actor: null },
     ]);
+  });
+
+  it("fails a gate that admits the dispatch without naming it (build-plan, run 36800601479)", () => {
+    const loop = selfDispatching(
+      "steps.app-token.outputs.token",
+      null,
+      "github.event_name != 'push'",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([
+      { job: "build", actor: "skynet-envoy" },
+    ]);
+  });
+
+  it("ignores a job pinned to another event", () => {
+    const loop = selfDispatching(
+      "steps.app-token.outputs.token",
+      null,
+      "github.event_name == 'issues'",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([]);
   });
 
   it("ignores a dispatch aimed at a different workflow file", () => {

@@ -94,6 +94,52 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
 }
 
 /**
+ * The GraphQL budget GitHub will actually enforce — asked of GraphQL itself, not of REST's mirror.
+ *
+ * #4213: `GET /rate_limit`'s `resources.graphql` node LAGS the real budget, silently and by a lot.
+ * Measured against one token seconds apart on 2026-09-30:
+ *
+ *   gh api graphql -f query='{rateLimit{used remaining resetAt}}'  →  used 8, remaining 4992
+ *   gh api rate_limit --jq .resources.graphql                      →  used 1, remaining 4999
+ *
+ * The stale half is the number `sync project status` printed while GitHub was refusing its every
+ * call: "this token's hourly GraphQL budget is spent … GitHub reports 4998 point(s) left" — a
+ * sentence that contradicts itself because its two halves came from two different sources. Reading
+ * a budget that cannot move is worse than reading none: it makes an unfalsifiable diagnosis.
+ *
+ * STILL FREE. GitHub documents the `rateLimit` field as not counting against the limit, and three
+ * consecutive reads left `used` pinned at 8 — so the pre-flight #4183 built on "the budget read
+ * costs nothing" keeps that property, it just reads a number that is true.
+ *
+ * Returns `{limit, remaining, reset}` with `reset` in epoch SECONDS, matching REST's shape so
+ * callers need no second branch — or `{}` when the read failed or came back a shape we do not
+ * recognise. A budget probe must never become a second way to fail.
+ */
+export function ghGraphqlBudget({ run = sh } = {}) {
+  try {
+    const node = JSON.parse(
+      run("gh", [
+        "api",
+        "graphql",
+        "-f",
+        "query=query{rateLimit{limit remaining resetAt}}",
+        "--jq",
+        ".data.rateLimit",
+      ]) || "null",
+    );
+    if (typeof node?.remaining !== "number") return {};
+    const reset = Date.parse(node.resetAt ?? "");
+    return {
+      limit: node.limit,
+      remaining: node.remaining,
+      ...(Number.isFinite(reset) ? { reset: Math.floor(reset / 1000) } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
  * What is left in each API bucket — and the one GitHub read that is FREE.
  *
  * `GET /rate_limit` is documented as not counting against any limit, and that is exactly what makes
@@ -106,10 +152,21 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
  * Returns GitHub's own `resources` map — `{core, graphql, …}`, each `{limit, remaining, reset}` with
  * `reset` an epoch-SECONDS stamp. `{}` when the payload is not that shape, so the caller's own
  * guard decides what to do about a read that failed rather than crashing on `undefined.remaining`.
+ *
+ * #4213: the `graphql` entry is OVERLAID from `ghGraphqlBudget`, because REST's own is stale — see
+ * that function. REST still answers for `core` and the rest, which it reports correctly. And the
+ * REST read is allowed to fail softly here: every caller runs this INSIDE an error handler, where a
+ * throwing probe would replace the failure being diagnosed with its own.
  */
-export function ghRateLimit(opts = {}) {
-  const res = ghRest("https://api.github.com/rate_limit", opts);
-  return res?.resources ?? {};
+export function ghRateLimit({ readRest = ghRest, readGraphql = ghGraphqlBudget, ...opts } = {}) {
+  let resources = {};
+  try {
+    resources = readRest("https://api.github.com/rate_limit", opts)?.resources ?? {};
+  } catch {
+    resources = {};
+  }
+  const graphql = readGraphql();
+  return typeof graphql.remaining === "number" ? { ...resources, graphql } : resources;
 }
 
 /**

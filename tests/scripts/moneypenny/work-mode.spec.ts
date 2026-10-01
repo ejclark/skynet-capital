@@ -25,10 +25,10 @@ const CONFIG: WorkModeConfig = {
   trackingIssue: 4153,
   labelPrefix: "work-mode:",
   positions: {
-    halt: { inFlightCap: 0, researchPerTick: 0 },
-    conserve: { inFlightCap: 1, researchPerTick: 2 },
-    normal: { inFlightCap: 3, researchPerTick: 6 },
-    surge: { inFlightCap: 6, researchPerTick: 12 },
+    halt: { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 },
+    conserve: { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 },
+    normal: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 },
+    surge: { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8 },
   },
 };
 
@@ -48,15 +48,15 @@ describe("reading the dial — one label is one position", () => {
     expect(mode).toEqual({
       position: "normal",
       until: null,
-      caps: { inFlightCap: 3, researchPerTick: 6 },
+      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 },
       reason: "set to normal",
     });
   });
 
   it.each([
-    ["halt", { inFlightCap: 0, researchPerTick: 0 }],
-    ["conserve", { inFlightCap: 1, researchPerTick: 2 }],
-    ["surge", { inFlightCap: 6, researchPerTick: 12 }],
+    ["halt", { inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 }],
+    ["conserve", { inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 }],
+    ["surge", { inFlightCap: 6, researchPerTick: 12, governorDispatches: 8 }],
   ])("reads %s with its caps while its expiry is ahead", (position, caps) => {
     const mode = resolve([label(position)], [until("2026-10-06")]);
     expect(mode.position).toBe(position);
@@ -87,7 +87,7 @@ describe("reading the dial — anything but exactly one known label fails closed
   ])("%s → conserve with a warning", (_what, labels) => {
     const mode = resolve(labels, [until("2026-10-06")]);
     expect(mode.position).toBe("conserve");
-    expect(mode.caps).toEqual({ inFlightCap: 1, researchPerTick: 2 });
+    expect(mode.caps).toEqual({ inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 });
     expect(mode.until).toBeNull();
     expect(mode.warning).toMatch(/conserve/);
   });
@@ -98,7 +98,7 @@ describe("expiry — non-normal positions end on their until date", () => {
     const mode = resolve([label("conserve")], [until("2026-09-29")]);
     expect(mode.position).toBe("normal");
     expect(mode.reason).toMatch(/expired at the end of 2026-09-29/);
-    expect(mode.caps).toEqual({ inFlightCap: 3, researchPerTick: 6 });
+    expect(mode.caps).toEqual({ inFlightCap: 3, researchPerTick: 6, governorDispatches: 4 });
   });
 
   it("holds through the whole of the until day, in UTC", () => {
@@ -151,7 +151,7 @@ describe("no expiry at all — the brake holds, the throttle and the surge do no
     const mode = resolve([label("halt")], [{ body: "stop everything" }]);
     expect(mode.position).toBe("halt");
     expect(mode.until).toBeNull();
-    expect(mode.caps).toEqual({ inFlightCap: 0, researchPerTick: 0 });
+    expect(mode.caps).toEqual({ inFlightCap: 0, researchPerTick: 0, governorDispatches: 0 });
     expect(mode.warning).toBeUndefined();
   });
 
@@ -192,7 +192,7 @@ describe("readWorkMode — one gh call, never a throw on a bad read", () => {
     const { exec } = fakeExec(result);
     const mode = readWorkMode(exec, CONFIG, NOW);
     expect(mode.position).toBe("conserve");
-    expect(mode.caps).toEqual({ inFlightCap: 1, researchPerTick: 2 });
+    expect(mode.caps).toEqual({ inFlightCap: 1, researchPerTick: 2, governorDispatches: 1 });
     expect(mode.warning).toMatch(/could not read issue #4153/);
   });
 });
@@ -224,11 +224,36 @@ describe("work-mode config — fail closed", () => {
     ["an empty labelPrefix", { ...CONFIG, labelPrefix: "" }],
     ["no positions", { ...CONFIG, positions: undefined }],
     ["a missing position", { ...CONFIG, positions: { ...CONFIG.positions, surge: undefined } }],
-    ["a negative cap", withPos("conserve", { inFlightCap: -1, researchPerTick: 2 })],
-    ["a fractional cap", withPos("normal", { inFlightCap: 2.5, researchPerTick: 6 })],
-    ["a halt that dispatches", withPos("halt", { inFlightCap: 0, researchPerTick: 1 })],
-    ["a conserve looser than normal", withPos("conserve", { inFlightCap: 4, researchPerTick: 2 })],
-    ["a surge tighter than normal", withPos("surge", { inFlightCap: 6, researchPerTick: 5 })],
+    [
+      "a negative cap",
+      withPos("conserve", { inFlightCap: -1, researchPerTick: 2, governorDispatches: 1 }),
+    ],
+    [
+      "a fractional cap",
+      withPos("normal", { inFlightCap: 2.5, researchPerTick: 6, governorDispatches: 4 }),
+    ],
+    [
+      "a halt that dispatches",
+      withPos("halt", { inFlightCap: 0, researchPerTick: 1, governorDispatches: 0 }),
+    ],
+    [
+      "a conserve looser than normal",
+      withPos("conserve", { inFlightCap: 4, researchPerTick: 2, governorDispatches: 1 }),
+    ],
+    [
+      "a surge tighter than normal",
+      withPos("surge", { inFlightCap: 6, researchPerTick: 5, governorDispatches: 8 }),
+    ],
+    // A lane whose key is absent from a position would otherwise read `undefined` and dispatch on
+    // `?? 0`-style defaults scattered across callers. Every position carries every lane's number.
+    [
+      "a position missing a lane's cap",
+      withPos("conserve", { inFlightCap: 1, researchPerTick: 2 }),
+    ],
+    [
+      "a governor allowance looser under conserve than normal",
+      withPos("conserve", { inFlightCap: 1, researchPerTick: 2, governorDispatches: 9 }),
+    ],
   ])("refuses %s", (_what, cfg) => {
     expect(() => loadWorkModeConfig(write(cfg))).toThrow(/Refusing to run/);
   });
@@ -253,6 +278,18 @@ describe("the committed work-mode.json", () => {
   it("keeps normal's research cap equal to research-dispatch-budget.json, so normal changes nothing", () => {
     const budget = JSON.parse(readFileSync("research-dispatch-budget.json", "utf8"));
     expect(committed.positions.normal.researchPerTick).toBe(budget.maxPerTick);
+  });
+
+  // The two files bound the same number and the dial wins at every position but `normal`
+  // (events.mjs → researchCapFor), so this pair is what keeps "normal changes nothing" true. The
+  // spec above is the live gate; this one says what breaks if someone edits one file alone.
+  it("keeps normal's governor allowance equal to the governor roster's size, so normal changes nothing", () => {
+    // Counted from the roster table rather than hardcoded, so adding a fifth athlete fails here
+    // until the allowance follows it — the same shape as the research pair above.
+    const skill = readFileSync(".claude/skills/governor/SKILL.md", "utf8");
+    const athletes = skill.match(/^\s*\| `[a-z-]+` \| `scripts\/[^`]+` \| `[^`]+` \|/gm) ?? [];
+    expect(athletes.length).toBeGreaterThan(0);
+    expect(committed.positions.normal.governorDispatches).toBe(athletes.length);
   });
 });
 

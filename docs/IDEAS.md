@@ -18,6 +18,22 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
+  refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's
+  rate limit and it sat unarmed 8h+ while its class failed 11 more runs. `deploy-lag.mjs` watches
+  merged-but-undeployed; the repair lane watches a red `main`; nothing lists open PRs with green
+  checks, a failed arm job, and no `hold-merge`. One digest line would have caught it within the hour.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **Derive `allowed_bots` from the dispatching token instead of linting two hand-kept lists.**
+  Workflow-lint rule 8 decides reachability from the `if:` spelling, so `!= 'push'` slipped past it
+  (#4385 widens it; `event_name == 'issues' || …` still under-flags). Three recurrences (09-05,
+  09-25, 09-30) were all "a lane's token changed and its allow-list didn't". A shared constant per
+  token (or a composite action that sets both) removes the second edit entirely.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **`auditLedger()` could warn on an entry with `SHA: n/a` and no `COVERS:`.** That shape closes no
+  incident in the scan, so the entry's own failing runs stay "unlearned" — the backfill-sweep entry of
+  2026-09-30 left `decfc83` open that way. Advisory warning, not a failure.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
 - **A failed open-issue read makes the board sweep plan a Done move for every card.** `planReconcile`
   cannot tell "no open issues came back" from "every issue is closed", and the sweep's own specs use
   `openIssues: []` as shorthand for the second. The COLUMNS still come out right — `syncIssue`

@@ -1,13 +1,18 @@
 import { describe, expect, it } from "@rstest/core";
+import { ghGraphqlBudget, ghRateLimit } from "../../../scripts/moneypenny/gh.mjs";
 import {
   type BoardItem,
+  classifyRateLimitRefusal,
   explainRateLimitExhausted,
+  explainThrottled,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
   isRetryableRestError,
   planBoardSweep,
   resolveBoardItem,
+  runThroughRateLimit,
   SWEEP_MIN_GRAPHQL_POINTS,
+  THROTTLE_BUDGET_FLOOR,
 } from "../../../scripts/moneypenny/projects.mjs";
 import { createBoardContext, readIssue } from "../../../scripts/moneypenny/projects-sync.mjs";
 
@@ -248,6 +253,160 @@ describe("moneypenny projects: the free pre-flight on a whole-backlog sweep (#41
     expect(planBoardSweep({ issueCount: 90 }).ok).toBe(true);
     expect(planBoardSweep({ remaining: Number.NaN }).ok).toBe(true);
     expect(planBoardSweep({}).reason).toContain("proceeding");
+  });
+});
+
+// #4213 — THE BUDGET WE READ WAS NOT THE BUDGET GITHUB ENFORCES. A burst of ~29 `issues` events on
+// 2026-09-30 (18:07:50Z–18:09:54Z) fanned out that many concurrent `sync project status` jobs at one
+// PAT; from 18:08:02Z every one died on `API rate limit exceeded` while printing "the hourly budget
+// is spent … 4998 point(s) left" — the two halves of that sentence came from two sources, and the
+// REST one cannot move. Measured against a live token seconds apart: GraphQL's own `rateLimit` said
+// used 8 / remaining 4992, REST's `resources.graphql` said used 1 / remaining 4999.
+describe("moneypenny projects: the GraphQL budget, read from GraphQL (#4213)", () => {
+  const graphqlSaid = (node: unknown) => () => JSON.stringify(node);
+
+  it("parses GitHub's rateLimit node and hands back REST's epoch-seconds shape", () => {
+    const budget = ghGraphqlBudget({
+      run: graphqlSaid({ limit: 5000, remaining: 4992, resetAt: "2026-09-30T19:09:16Z" }),
+    });
+
+    expect(budget).toEqual({
+      limit: 5000,
+      remaining: 4992,
+      reset: Math.floor(Date.UTC(2026, 8, 30, 19, 9, 16) / 1000),
+    });
+  });
+
+  it("reads as unknown rather than throwing when the probe fails — never a second way to fail", () => {
+    expect(
+      ghGraphqlBudget({
+        run: () => {
+          throw new Error("Command failed: gh api graphql");
+        },
+      }),
+    ).toEqual({});
+    expect(ghGraphqlBudget({ run: graphqlSaid(null) })).toEqual({});
+    expect(ghGraphqlBudget({ run: () => "not json" })).toEqual({});
+  });
+
+  it("overlays the authoritative graphql budget over REST's stale mirror, keeping core", () => {
+    const resources = ghRateLimit({
+      readRest: () => ({
+        resources: {
+          core: { limit: 5000, remaining: 4987, reset: 1 },
+          graphql: { limit: 5000, remaining: 4999, reset: 1 },
+        },
+      }),
+      readGraphql: () => ({ limit: 5000, remaining: 4992, reset: 2 }),
+    });
+
+    // The whole incident in one assertion: 4999 is the number that lied, 4992 is the one GitHub
+    // was enforcing. `core` still comes from REST, which reports it correctly.
+    expect(resources.graphql).toEqual({ limit: 5000, remaining: 4992, reset: 2 });
+    expect(resources.core?.remaining).toBe(4987);
+  });
+
+  it("keeps REST's answer when the GraphQL probe could not answer", () => {
+    const resources = ghRateLimit({
+      readRest: () => ({ resources: { graphql: { remaining: 4999 } } }),
+      readGraphql: () => ({}),
+    });
+    expect(resources.graphql?.remaining).toBe(4999);
+  });
+
+  it("survives a REST read that throws — every caller runs this inside an error handler", () => {
+    const resources = ghRateLimit({
+      readRest: () => {
+        throw new Error("curl: (22) The requested URL returned error: 403");
+      },
+      readGraphql: () => ({ remaining: 4992 }),
+    });
+    expect(resources.graphql?.remaining).toBe(4992);
+  });
+});
+
+describe("moneypenny projects: a throttled burst is not a spent hour (#4213)", () => {
+  const GH_SAID = "GraphQL: API rate limit exceeded for user ID 3472134.\n";
+  const refusal = () =>
+    Object.assign(new Error("Command failed: gh project item-list"), { stderr: GH_SAID });
+
+  it("calls a healthy budget a throttle and an empty one a spent hour", () => {
+    expect(classifyRateLimitRefusal({ remaining: 4998 })).toBe("throttled");
+    expect(classifyRateLimitRefusal({ remaining: THROTTLE_BUDGET_FLOOR })).toBe("throttled");
+    expect(classifyRateLimitRefusal({ remaining: THROTTLE_BUDGET_FLOOR - 1 })).toBe("spent");
+    expect(classifyRateLimitRefusal({ remaining: 0 })).toBe("spent");
+  });
+
+  it("calls an unreadable budget spent — no retry invented on no evidence", () => {
+    expect(classifyRateLimitRefusal({})).toBe("spent");
+    expect(classifyRateLimitRefusal({ remaining: Number.NaN })).toBe("spent");
+  });
+
+  it("rides out a burst that clears, instead of failing the run", () => {
+    // The incident itself: 4998 points left and GitHub refusing anyway. Pre-fix this threw.
+    const waits: number[] = [];
+    let calls = 0;
+    const out = runThroughRateLimit({
+      call: "`gh project item-list`",
+      run: () => {
+        calls += 1;
+        if (calls < 3) throw refusal();
+        return "[]";
+      },
+      firstError: refusal(),
+      readBudget: () => ({ graphql: { remaining: 4998, reset: 0 } }),
+      sleep: (ms: number) => waits.push(ms),
+    });
+
+    expect(out).toBe("[]");
+    expect(waits).toEqual([60_000, 120_000]);
+  });
+
+  it("fails a genuinely spent hour at once, spending no runner minutes on it", () => {
+    const waits: number[] = [];
+    expect(() =>
+      runThroughRateLimit({
+        call: "`gh project field-list`",
+        run: () => {
+          throw new Error("a spent hour must never be retried");
+        },
+        firstError: refusal(),
+        readBudget: () => ({ graphql: { remaining: 3, reset: 0 } }),
+        sleep: (ms: number) => waits.push(ms),
+      }),
+    ).toThrow("hourly GraphQL budget is spent");
+    expect(waits).toEqual([]);
+  });
+
+  it("is bounded — a throttle that never clears ends in a sentence, not a stack trace", () => {
+    let calls = 0;
+    expect(() =>
+      runThroughRateLimit({
+        call: "`gh project item-list`",
+        run: () => {
+          calls += 1;
+          throw refusal();
+        },
+        firstError: refusal(),
+        readBudget: () => ({ graphql: { remaining: 4998 } }),
+        sleep: () => undefined,
+      }),
+    ).toThrow("burst being throttled");
+    expect(calls).toBe(3);
+  });
+
+  it("still reads as a rate limit to its own classifier — the sweep's abort depends on it", () => {
+    // Same round trip `explainRateLimitExhausted` is held to: projects-backfill.mjs aborts a whole
+    // sweep by classifying the message it caught, and a three-minute throttle should abort one too.
+    expect(isRateLimitExhausted(explainThrottled({ remaining: 4998 }))).toBe(true);
+  });
+
+  it("names the number that makes the burst diagnosis falsifiable", () => {
+    const said = explainThrottled({ call: "`gh project item-list`", remaining: 4998 });
+    expect(said).toContain("`gh project item-list`");
+    expect(said).toContain("4998 point(s)");
+    expect(said).toContain("3 attempts across 180s");
+    expect(explainThrottled({})).toContain("an unknown amount");
   });
 });
 

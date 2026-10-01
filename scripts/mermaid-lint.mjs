@@ -372,8 +372,12 @@ async function main() {
   }
 
   if (json) {
+    // exitCode + return, never process.exit(): stdout to a pipe is async in Node, and exiting
+    // here truncated the report at one 64 KiB pipe buffer once the corpus outgrew it — the
+    // corpus spec then JSON.parsed half a document and failed every full-suite run.
     console.log(JSON.stringify(all, null, 2));
-    process.exit(all.problems.length ? 1 : 0);
+    process.exitCode = all.problems.length ? 1 : 0;
+    return;
   }
   for (const n of all.notes) console.log(`· ${n}`);
   for (const p of all.problems) console.error(`✗ ${p}`);
