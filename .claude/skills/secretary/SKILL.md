@@ -44,6 +44,10 @@ shape for tooling; without `--file` it drafts and says so, never posts.
 
 1. **Needs you** — the blocked queue: ready-flips, Routine armings, carve-out merges, taste
    forks, irreversible-class items. Each with evidence attached and phrased so "yes" is one word.
+   **The item set is `node scripts/digest-scan.mjs --needs-you`** (#4293) — the same query that
+   assigns him issues (`scripts/moneypenny/assignments.mjs`), so the digest never lists a
+   decision GitHub didn't send him, or misses one it did. Shape each listed item; don't add or
+   drop items by hand — a missing one is a selector bug, fixed there.
    **Format contract (Eric, 2026-08-15):** a TLDR-style *numbered procedure* per item, never
    prose; every instruction pre-verified before it ships (commands actually run, links resolved,
    states confirmed — it must work on his first try). Before an item enters this tier at all,
