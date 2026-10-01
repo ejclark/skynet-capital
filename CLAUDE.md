@@ -406,6 +406,10 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
   archive as the final action.
 - **Done-check fails** (blocked, PR open, watch pending) → never archive: the open session is the
   signal that it still needs someone.
+- **Spawned sessions carry `issue:<n>`** (Eric, 2026-10-01: "if grouped, we could archive the
+  group"): `create_session` tags each child with the issue it serves, so one issue's sessions are
+  one group. When that issue closes, the spawner archives every open session in the group whose PRs
+  are merged or closed — one sweep catches the children that stopped short of archiving themselves.
 
 `archive_session` releases the container the call runs in, so its spinner can sit for a minute with
 no result — that wait is teardown, not thinking. Nothing goes after it.
