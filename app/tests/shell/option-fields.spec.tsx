@@ -184,6 +184,9 @@ describe("ExpirationField", () => {
   });
 
   it("disables today's tab with a visible non-colour cue and the lock reason when zero-DTE is locked", () => {
+    // Pinned (#4366): on or after 2026-10-16 the real "today" would collide with the open tab.
+    rstest.useFakeTimers({ toFake: ["Date"] });
+    rstest.setSystemTime(new Date("2026-09-20T15:00:00Z"));
     const today = new Date().toISOString().slice(0, 10);
     const chainWithToday: ChainData = {
       ...chainManyExpirations,
@@ -208,14 +211,23 @@ describe("ExpirationField", () => {
 
     const openTab = screen.getByText(formatExpiration("2026-10-16"));
     expect(openTab).not.toBeDisabled();
+    rstest.useRealTimers();
   });
 
   describe("the earnings print mark (#2017 Phase 1 slice 11)", () => {
     // MU's confirmed print is 2026-09-30 (`src/domain/earnings-calendar.ts`). `nextPrint` reads
-    // the real system clock (no injectable `now` on this field, mirroring the zero-DTE case just
-    // above, which already reasons about "today" via the real `new Date()` rather than a mock) —
-    // so this exercises the real `UPCOMING_PRINTS` table against the real clock, which is safely
-    // before 2026-09-30 for the lifetime of this fixture.
+    // the system clock (no injectable `now` on this field), so the clock is PINNED before the
+    // print. It used to read the real clock on the claim that it was "safely before 2026-09-30
+    // for the lifetime of this fixture" — it went red at midnight 2026-10-01 and blocked every PR
+    // (#4366). Only `Date` is faked; the real `UPCOMING_PRINTS` table is still what's exercised.
+    beforeEach(() => {
+      rstest.useFakeTimers({ toFake: ["Date"] });
+      rstest.setSystemTime(new Date("2026-09-20T15:00:00Z"));
+    });
+    afterEach(() => {
+      rstest.useRealTimers();
+    });
+
     const chainAroundMuPrint: ChainData = {
       symbol: "MU",
       optionType: "call",
