@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { routeShipped } from "./shipped.mjs";
+import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
 /* THE DISPATCH CEILING (#2946). The research lane spent a full weekly token quota in ~24 hours:
  * moneypenny-events.yml's matrix buys ONE opus session per row this function returns, at
@@ -78,6 +79,51 @@ export function loadDispatchCap(file = DISPATCH_BUDGET_FILE) {
   if (!Number.isInteger(cap) || cap < 1)
     throw new Error(
       `moneypenny: ${file} maxPerTick must be a positive integer, got ${JSON.stringify(cap)}.`,
+    );
+  return cap;
+}
+
+/* THE DIAL ON TOP OF THE CEILING (#3960 slice 2). Two things now bound this one number, so one of
+ * them has to win. research-dispatch-budget.json is a POLICY ceiling: edited in a reviewed PR,
+ * durable across ticks. The work spigot is a STATE dial: one label on #4153, flipped with no PR,
+ * re-read every tick (work-mode.mjs). The DIAL WINS, because the plan's criteria ask for exactly
+ * what a `Math.min` of the two could never give — `conserve` must drop the lane to 2 with no PR,
+ * and `surge` must raise it ABOVE the file's number (criterion 3).
+ *
+ * The budget file keeps a job rather than losing one: it DEFINES the `normal` position, and a spec
+ * pins the two together (tests/scripts/moneypenny/work-mode.spec.ts: normal.researchPerTick ===
+ * maxPerTick), so editing one without the other turns the build red instead of letting the two
+ * disagree silently. It is also still LOADED on every tick, which is what keeps #2946's loud
+ * failure alive: delete or corrupt it and the lane refuses to dispatch, dial or no dial.
+ *
+ * WHY THE READ LIVES IN dueForResearch'S DEFAULT PARAMETER rather than in the workflow step beside
+ * the breaker's own check: `.github/workflows/**` is envelope-protected and never auto-merges, so
+ * wiring it there would put this slice on Eric's platter for zero behavioral gain. The production
+ * call site passes no `cap` (moneypenny-events.yml → "List due events"), so the default IS the
+ * production path — and `cap` stays injectable, so every spec below is still pure and offline. */
+
+/** Pure: the ceiling for the position the dial is on. `normal` reads the budget file, so today's
+ *  behavior is byte-identical; every other position reads its own number. A mode object with no
+ *  usable number is 0 rather than unlimited — fail-closed, the same instinct as the loaders above
+ *  (unreachable from `resolveWorkMode`, which only ever returns numbers a validated config held). */
+export function researchCapFor(mode, budgetCap = loadDispatchCap()) {
+  if (mode?.position === "normal") return budgetCap;
+  const n = mode?.caps?.researchPerTick;
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+/** Impure: read the dial (one `gh issue view`) and return this tick's ceiling, announcing both the
+ *  position and any override on stderr — stdout carries the matrix JSON the workflow hands to
+ *  `fromJSON()`, so a line there would corrupt it. `readMode` is injectable for specs. */
+export function researchCapNow(readMode = readWorkMode, budgetCap = loadDispatchCap()) {
+  const mode = readMode();
+  console.error(noticeLine(mode));
+  if (mode.warning) console.error(`::warning::${mode.warning}`);
+  const cap = researchCapFor(mode, budgetCap);
+  if (cap !== budgetCap)
+    console.error(
+      `::notice::work spigot — the dial reads ${mode.position}, so this tick's research ceiling ` +
+        `is ${cap}, not research-dispatch-budget.json's ${budgetCap} (#3960).`,
     );
   return cap;
 }
@@ -212,9 +258,10 @@ function receiptCloseBody(r) {
  * Then the dispatch ceiling (#2946): rank what survived the dedupe and hand the matrix at most
  * `cap` of them. Deferral is not dropping — the remainder stays due and rides the next tick in the
  * same order — and the deferred count goes to stderr as a `::notice::` so it is never silent.
- * `cap` is injectable so specs can pin it; production reads research-dispatch-budget.json.
+ * `cap` is injectable so specs can pin it; production reads the work spigot's number for whatever
+ * position the dial is on, which is the budget file's `maxPerTick` at `normal` (`researchCapNow`).
  */
-export function dueForResearch(dueEvents = [], openPrHeads = [], cap = loadDispatchCap()) {
+export function dueForResearch(dueEvents = [], openPrHeads = [], cap = researchCapNow()) {
   const inFlight = new Set(openPrHeads);
   const eligible = dueEvents
     .filter((e) => !inFlight.has(`research/${e.id}`))
@@ -228,9 +275,9 @@ export function dueForResearch(dueEvents = [], openPrHeads = [], cap = loadDispa
     const next = eligible[dispatched.length];
     console.error(
       `::notice::dispatch ceiling — ${dispatched.length} of ${eligible.length} eligible event(s) ` +
-        `dispatched this tick (cap ${cap}, research-dispatch-budget.json); ${deferred} deferred to ` +
-        `later ticks, close-outs then highest impact then soonest. Next in line: ${next.id} ` +
-        `(${next.impact}).`,
+        `dispatched this tick (cap ${cap}, the work spigot's number for the dial's position — ` +
+        `work-mode.json / research-dispatch-budget.json); ${deferred} deferred to later ticks, ` +
+        `close-outs then highest impact then soonest. Next in line: ${next.id} (${next.impact}).`,
     );
   }
   return dispatched;
