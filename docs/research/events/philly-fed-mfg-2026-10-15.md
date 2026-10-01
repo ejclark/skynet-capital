@@ -6,8 +6,10 @@
 
 ## At a glance
 
-**TL;DR.** **The Philly Fed is running the hottest activity print in 58 years while its price line
-cools, and the honest reading of 2026-10-15 is a convergence, not a verdict.** Measured this
+**TL;DR.** *(Refreshed 2026-10-01 at D-14; the reading order and the stand-aside are both
+unchanged — substance moved, the call did not.)* **The Philly Fed is running the hottest activity
+print in 58 years while its price line cools, and the honest reading of 2026-10-15 is a
+convergence, not a verdict.** Measured this
 session from the Philadelphia Fed's own series on FRED — **700 monthly observations back to May
 1968**, the longest regional-Fed manufacturing record in existence: August's headline **47.4** is
 the **99.0th percentile** of the whole series, with employment at the **97.7th**, average workweek
@@ -383,6 +385,29 @@ power leg 10 measures at R² ≈ 0.20–0.27 — every finding above is bounded 
 
 ## Stance & kill switches
 
+**Stance amendment, 2026-10-01 (D-14) — receipt: the ledger row of the same date.** The refusal
+and reading order are both unchanged; three facts newly on the record. **(a)** The date is
+`confirmed` as of **2026-09-20** (issue #3117 added a `FRB:` source-prefix slot for a regional
+Reserve Bank's own schedule page, the same mechanism that promoted the Empire and Dallas
+siblings) — schema catching up to evidence this doc already held primary-verified, not new date
+certainty. **(b)** The September MBOS printed **2026-09-17**, closed out at
+[`philly-fed-mfg-2026-09-17`](philly-fed-mfg-2026-09-17.md): headline **37.8** (Aug 47.4, −9.6),
+squarely inside the AR(1)'s 90% band (23.1–58.1) and close to its central estimate (40.6) — the
+6/6 next-month-lower base rate leg 5 rests on extends to **7/7** and this kill switch's September
+trigger did **not** fire. **(c)** The 09-16 FOMC fork is closed, hawkish: **25bp hike to
+3.75–4.00%, unanimous**, SEP shows 16/18 participants favor another hike (year-end 4.1–4.4%,
+carried from [`fomc-2026-09-16`](fomc-2026-09-16.md)'s close-out) — the Fed-stops-being-anchored
+kill switch did **not** fire, and the prices-first reading order is strengthened rather than
+inverted, same resolution as the Dallas and Empire siblings recorded the same week. One
+complication, not a kill: the September **headline** gap (Empire 7.6 vs Philly 37.8 = **30.2**)
+*widened* from August's 26.8, even as the **prices-paid** gap narrowed from 17.7 to 14.5 exactly as
+leg 7 predicted (independently scored in the 09-17 close-out at 15/17 → 17/18) — so the pair
+comparison this doc's `FT-…-2` tracks is prices-paid only, deliberately, and that is the line still
+on track. 10y yield moved from 4.806% to **~5.29%** (+48bp) on the hike; VIX **16.34** from 15.72
+(+0.62, under the 3-point regime threshold); Brent **~$97–103** through late September, closing
+09-30 at **$97.09** — still well above the ~$85 unwind level, so the energy-shock kill switch
+condition is untouched. No October MBOS or Empire consensus exists yet, as expected at D-14.
+
 **Stance (date `estimate`, two Philadelphia Fed primaries fetched direct 2026-09-08 HTTP 200,
 full 2026 calendar enumerated).** Treat 2026-10-15 08:30 ET as a **low-impact reading exercise and
 never an event**: no position is opened, closed or sized off it, no house playbook targets it, and on
@@ -414,7 +439,10 @@ ledgers' kill switches already name that date.
 - **September MBOS (2026-09-17) prints a headline at or above 47.4** — the 6/6 next-month-lower base
   rate in leg 5 breaks on its first out-of-sample test, `FT-philly-fed-mfg-2026-10-15-1` loses its
   basis before it can be scored, and leg 5 gets re-derived on a regime-conditional window rather than
-  patched.
+  patched. — **NOT FIRED 2026-09-17.** Headline printed **37.8** (Aug 47.4, −9.6), inside the AR(1)'s
+  90% band (23.1–58.1) and near its central estimate (40.6); the base rate extends to **7/7**
+  ([close-out](philly-fed-mfg-2026-09-17.md)). `FT-philly-fed-mfg-2026-10-15-1` keeps its basis
+  into the October print.
 - **Either Empire−Philly gap WIDENS on 2026-10-15** — a headline gap above 26.8 or a prices-paid gap
   above 17.7 — which would put this configuration outside the 88–94% convergence base rates entirely,
   kill `FT-philly-fed-mfg-2026-10-15-2`, and mean the divergence is a regime feature rather than
@@ -433,20 +461,29 @@ ledgers' kill switches already name that date.
 - **The Fed stops being inflation-anchored** — a 09-16 or 10-28 repricing from hold-vs-hike toward
   hold-vs-cut, or the energy shock unwinding (Brent sustained below ~$85 with the EIA gasoline y/y
   gap under ~+15%) — at which point the prices lines lose their claim on attention and the reading
-  order inverts toward an activity headline leg 10 measures at R² ≈ 0.20 nationally.
+  order inverts toward an activity headline leg 10 measures at R² ≈ 0.20 nationally. — **NOT FIRED,
+  and the fork closed hawkish 2026-09-16.** The FOMC hiked 25bp to **3.75–4.00%** (unanimous), SEP
+  shows 16/18 participants favoring another hike, year-end 4.1–4.4%
+  ([close-out](fomc-2026-09-16.md)). Brent closed September at **~$97**, nowhere near the ~$85
+  unwind level. The prices-first reading order rests on a decided regime, not a live fork, same
+  resolution as the Dallas and Empire siblings.
 - **A full-year FY2027 appropriations package before 2026-12-11** — leg 12's surviving December
   branch closes, and the 12-17 edition is ordinary context rather than a possible
   last-data-standing print.
 - **A `FED:`-class prefix is added for regional Reserve Bank survey schedules** — the date can be
   promoted out of `estimate` by whoever owns that change (`market-events-data.ts`), which would also
   promote the sibling Empire entry and every future Philly/Dallas/Chicago entry. Recorded as the
-  one-time governance fix that would stop this taxonomy gap recurring, not as an ask.
+  one-time governance fix that would stop this taxonomy gap recurring, not as an ask. — **FIRED
+  2026-09-20.** Issue #3117 added a `FRB:` source-prefix slot for a regional Reserve Bank's own
+  published schedule; this entry was promoted `estimate` → `confirmed` the same day
+  (`market-events/philly-fed-mfg-2026-10-15.json`), as was the Empire sibling.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-08 | D-37 | Initial research banked (above). **Canonical entry written this PR** — this id existed only as `proposals/philly-fed-mfg-2026-10-15.from-empire-state-mfg-2026-10-15.json`; per EVENT-RESEARCH's proposal rule that file was read first, then both Philadelphia Fed primaries re-fetched independently (**HTTP 200** each): the MBOS landing page (*"Oct 15 2026 October Manufacturing Business Outlook Survey 8:30 a.m."*) and — new — `calendar-of-events?release=manufacturing-business-outlook-survey`, which embeds the **full 2026 schedule**: Jan 15 · Feb 19 · Mar 19 · Apr 16 · May 21 · Jun 18 · Jul 16 · Aug 20 · **Sep 17** · **Oct 15** · **Nov 19** · **Dec 17**, all 8:30 a.m., all third Thursdays — **12 of 12**, closing the sibling ledger's own stated limit that the full calendar was never enumerated. Stays `estimate`: no confirmed-prefix member exists for a regional Reserve Bank survey schedule, and this lane does not self-confirm. **Original measurement #1 — the sibling's reading-order finding replicates but is regime-conditional, not structural.** FRED pull of the Philadelphia Fed's own series, **700 months, 1968-05 → 2026-08** (2.3× the sibling's 302): headline lag-1 autocorr **0.822 full / 0.761 2001+ / 0.703 2021+ / 0.309 2024+**; prices paid **0.923 / 0.920 / 0.928 / 0.830**. Full-sample AR(1) (slope 0.824, resid sd 10.65) two steps from Aug **47.4** → Oct **35.1**, se **13.79** vs unconditional **18.69** = **26%** uncertainty reduction, 90% band **12.4–57.7**; prices paid (slope 0.923, resid sd 8.26) → Oct **39.2**, se **11.25** vs **21.46** = **48%**. Prices paid is always the more persistent half; the headline is only near-useless post-2024, which a 2001-start record cannot see. **Original measurement #2 — August is a 6-in-700 activity print with a cooling price line.** Headline **47.4** = **99.0th percentile** of 700 months; workweek **98.6**, employment **97.7**, unfilled orders **94.7**, six-month-ahead GA **93.7**, new orders **91.9** — while **prices paid FELL 13.0 to 40.9 (70.9th)** and prices received 17.7 (68.4th), spread **23.2** and narrowing. Exactly inverse to Empire's August (headline 20.6, prices paid 58.6, spread 35.9). Base rate on headline ≥47.4 (n=**6**: 1972-12 · 1973-01 · 1973-03 · 1973-04 · 1983-07 · 2021-04): next month lower **6/6** (mean −8.9); **two** months later below start **5/6**, median **38.5**, never below 20. At ≥45 (n=9): 8/9 and 6/9. **Original measurement #3 — the pair is at a DOUBLE extreme and both extremes revert.** Over 302 common months prices-paid levels correlate **r=0.908** (sibling's number reproduced) but headline levels only **r=0.697**. Aug 2026: headline gap **26.8** (Empire 20.6 vs Philly 47.4) = **97.4th pct** (median 8.4, p90 20.9); prices-paid gap **17.7** = **94.0th pct** (median 5.9, p90 15.0). Philly prints below Empire on prices paid in 198/302 months, so the sign is ordinary and only the size is not. **Conditional reversion:** prices gap ≥17.7 (n=17) narrower 2m later **15/17**, below 10 in **12/17**; headline gap ≥20 (n=33) narrower **31/33**, median 9.5. **This corrects the sibling ledger:** its "10-15 is the morning that adjudicates it" becomes *10-15 is when the gap most likely closes* — convergence is uninformative about which survey was right. **Original measurement #4 — nowcast, not lead.** Philly prices paid vs core PPI (`WPSFD49207`) 3m annualized peaks at **lead 0, r=0.637**, decaying monotonically 0.540 · 0.409 · 0.295 · 0.237 · 0.198 · **0.178** at 6m. Real edge is coverage timing: on 10-15 the survey reads **October** while the same-minute PPI reads **September**. **Original measurement #5 — representativeness caps everything.** Philly headline vs `IPMAN` 3m %chg: r=**0.623** (1972+), **0.516** (2001+), **0.444** (2015+) — R² **0.197** on the recent window. Sub-state footprint per the bank's own About block: Delaware, southern New Jersey, eastern and central Pennsylvania; launched 1968, longest-running regional-Fed manufacturing survey. **Calendar arithmetic (new).** Philly = third Thursday, Empire = the 15th rolled off weekends → they coincide only when the 15th IS the third Thursday, which in 2026 is **October alone**. Sep: Empire 09-15 / Philly 09-17. Nov: 11-16 / **11-19**. Dec: 12-15 / **12-17**. **The one morning the pair publishes simultaneously is the one morning neither is readable against the tape** — 10-15 carries retail sales (`high`, confirmed) + PPI (`medium`, confirmed) at 8:30; Philly's clean morning is **11-19** (nothing else at 8:30). So the sibling's Dallas-style release-hour test is deliberately **not** run here either; the leg-7 pair comparison is a *data* question and survives intact. **Adjacency sweep.** *Peers:* `symbols: []`, so the peer is the twin survey — Empire State, whose 10-15 co-print is the whole subject of leg 7. *Macro:* CPI **10-14** covers **September** while this survey's collection window covers **October**; Beige Book same afternoon 10-14; blackout **10-17**; FOMC **10-28** hold-modal per the sibling ledger. **The Philadelphia Fed's own calendar page independently lists the 2026 FOMC blackout windows verbatim — "September 5–17" and "October 17–29" — a Federal Reserve primary corroborating `fomc-blackout-start-2026-10-17`.** *Volatility regime:* **VIX 15.72** (2026-09-08, own Yahoo pull), SPY **765.96**, QQQ **718.36**, 10y **4.806%** — baseline established, nothing to diff against yet. *Geopolitical/energy:* gasoline **$4.071/gal** wk-end 08-31 vs **$3.177** y/y (**+28.1%**, EIA primary via the sibling CPI ledger), AAA **$4.15** on 09-04, Jazan strike 09-07 with Brent **$97.29** — the input the prices-paid line measures, and the reason leg 6's 1972-73 analogue was tested at all. *Event tape:* **no October consensus exists at D-37** and none will until release week. **Adjacency proposal filed (1):** `proposals/philly-fed-mfg-2026-09-17.from-philly-fed-mfg-2026-10-15.json`, `estimate`, `low` — filed because **two** ledgers already on the shelf name 2026-09-17 as a kill switch (this one, and `empire-state-mfg-2026-10-15`'s "Empire and Philly September prices paid converge inside ~5 points") while the calendar tracks it nowhere; it is 9 days out, lands **21 days before** this doc's scheduled 2026-10-08 pulse, and its own morning is readable where 10-15's is not. **Considered and declined (3):** (a) **`philly-fed-nbos-2026-10-20`**, the Philadelphia Fed's Nonmanufacturing Business Outlook Survey, enumerated from the same primary at 8:30 a.m. on 10-20 — declined on the identical second-order-survey grounds the sibling used to decline the NY Fed's Business Leaders Survey, kept consistent deliberately. (b) **`philly-fed-mfg-2026-11-19`**, genuinely the readable edition (nothing else at 8:30) — declined today because the November case is about *readability* rather than materiality, the same reason the sibling declined its own 11-16 entry; the retail-sales/PPI re-dating kill switch is what would change that calculus. (c) **The Third District Price and Inflation Expectations Survey** (quarterly, next edition undated on the page fetched) — the most on-thesis instrument for the pass-through question, declined only because no date was obtainable from the primary today. Named, not guessed. **Fetch failure recorded, not substituted:** the August 2026 release note returns a **404 body under HTTP 200** at its guessed URL, so no Philadelphia Fed narration of the August print is quoted and the survey's respondent count is **not** stated in this doc; `blocked` stays empty because both *cited* primaries returned real content. **Registered:** `FT-philly-fed-mfg-2026-10-15-1` (October headline below 47.4) and `FT-philly-fed-mfg-2026-10-15-2` (the Empire−Philly prices-paid gap narrows below 17.7). | — (stance set) | 2026-10-08 per the `low:15+` band (every 30d) — but read the **09-15 Empire** and **09-17 Philly** prints first; they reset leg 5's base-rate anchor and both forward tests |
+| 2026-10-01 | D-14 | **Cadence band transitioned `low:15+` → `low:0+` (37→14 days out), which is why this pulse dispatched a full session ahead of the prior row's stated 10-08 date rather than waiting for it — a band transition is itself material per `event-material-decide.mjs`.** **Date promoted to `confirmed`, 2026-09-20** — issue #3117 added a `FRB:` source-prefix slot for a District Reserve Bank's own published schedule; `philly-fed-mfg-2026-10-15.json` was promoted the same day, as was the Empire sibling (receipt in the Stance amendment above). **The September MBOS printed and closed out** ([`philly-fed-mfg-2026-09-17`](philly-fed-mfg-2026-09-17.md)): headline **37.8** (Aug 47.4, −9.6, inside the AR(1)'s 90% band 23.1–58.1, near its 40.6 central estimate) — kill switch 1 did **not** fire, the 6/6 next-month-lower base rate extends to **7/7**, and `FT-philly-fed-mfg-2026-10-15-1` keeps its basis. Prices paid **48.6** (Aug 40.9, +7.7); prices received 31.3; employment fell to 11.8; six-month-ahead GA fell to 52.9. **The Empire−Philly September pair is a split result.** Prices-paid gap narrowed **17.7 → 14.5** exactly as leg 7 predicted — independently scored in the 09-17 close-out (15/17 → 17/18) and corroborating `FT-philly-fed-mfg-2026-10-15-2`'s underlying thesis, though that test itself scores only the **2026-10-15** reading and remains open. The **headline** gap instead *widened*, **26.8 → 30.2** (Empire 20.6→7.6, Philly 47.4→37.8) — recorded as a complication, not a kill, since kill switch 2 is scoped to the 10-15 reading and this doc's pair claim (leg 7) is prices-paid-led by design. **09-16 FOMC fork closed, hawkish, not dovish:** 25bp hike to **3.75–4.00%** (unanimous), SEP 16/18 favor another hike, year-end 4.1–4.4% ([close-out](fomc-2026-09-16.md)) — kill switch 6 did **not** fire; the prices-first reading order is strengthened. **Adjacency sweep.** *Peers:* covered above (Philly + Empire September prints). *Macro:* the FOMC hike above; no other surprise since the last row. *Volatility regime:* **VIX 16.34** from 15.72 (+0.62, under the 3-point screen threshold); **10y 5.29%** from 4.806% (+48bp) on the hike. *Geopolitical/energy:* Brent **~$97–103** through late September, closing 09-30 at **$97.09** — still far above the ~$85 unwind level named in kill switch 6, energy shock still live. Shutdown risk resolved as already known: P.L. 119-103 (signed 09-02) funds through 2026-12-11, no October lapse — leg 12's branch arithmetic is unchanged. *Event tape:* `event-scan.mjs --on-date=2026-10-15` shows the same 12 tracked entries as the initial row (retail sales `high`, PPI `medium`, no new confirmed high/critical neighbor); no October MBOS or Empire consensus exists yet, as expected at D-14. **Adjacency proposals: none** — nothing untracked found on or near 2026-10-15; the proposed `philly-fed-mfg-2026-09-17` entry from the initial row is already canonical and closed out. | Reading order and stand-aside unchanged; two kill switches resolved not-fired (date-promotion switch fired and is now moot), strengthening rather than moving the stance — receipt above. | 2026-10-08 per the `low:0+` band (every 7d) — but the October MBOS/Empire pair itself prints 2026-10-15, one week later, which scores both open forward tests |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay, and a stance *change* earns its sentence in the Stance section with
@@ -456,3 +493,6 @@ gets proposed as a new `src/domain/market-events/proposals/<id>.from-philly-fed-
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","g20-fmcbg-bangkok-2026-10-15","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["ppi-2026-10-15","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->

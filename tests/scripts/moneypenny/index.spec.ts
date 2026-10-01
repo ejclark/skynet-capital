@@ -101,6 +101,8 @@ describe("moneypenny routing", () => {
   it("dueForResearch filters out events whose research PR is still open — the per-push dedupe", () => {
     // The event lane rides EVERY push (no cron, by directive — docs/ROUTINES.md). This filter plus
     // the mandated `research/<id>` branch name is what stops back-to-back merges double-researching.
+    // The cap is passed explicitly so this stays offline: the default now reads the work spigot's
+    // dial over `gh` (#3960 slice 2), which is `researchCapNow`'s business to test, not this one's.
     const out = execFileSync(
       "node",
       [
@@ -109,7 +111,7 @@ describe("moneypenny routing", () => {
            const due = [{ id: "cpi-2026-09-11", reason: "interval-elapsed" },
                         { id: "fomc-2026-12-09", reason: "never-assessed" }];
            const heads = ["research/cpi-2026-09-11", "feedback/42"];
-           console.log(JSON.stringify(m.dueForResearch(due, heads).map((e) => e.id)));
+           console.log(JSON.stringify(m.dueForResearch(due, heads, 6).map((e) => e.id)));
          });`,
       ],
       { cwd: process.cwd(), encoding: "utf8" },

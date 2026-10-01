@@ -20,4 +20,12 @@ export interface RateLimitBucket {
   reset?: number;
 }
 
-export function ghRateLimit(opts?: { token?: string }): Record<string, RateLimitBucket>;
+export function ghGraphqlBudget(opts?: {
+  run?: (cmd: string, args: string[]) => string;
+}): RateLimitBucket;
+
+export function ghRateLimit(opts?: {
+  token?: string;
+  readRest?: (path: string, opts?: { token?: string }) => unknown;
+  readGraphql?: () => RateLimitBucket;
+}): Record<string, RateLimitBucket>;

@@ -31,16 +31,56 @@
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-reconcile.mjs [--dry-run]
 import { missingDecisionCallout } from "./decision-callout.mjs";
-import { ghRateLimit, ghRestAll } from "./gh.mjs";
+import { ghRateLimit, ghRestAll, withRetry } from "./gh.mjs";
 import {
   isBacklogCandidate,
   isRateLimitExhausted,
+  isRetryableRestError,
   planBoardSweep,
   statusForIssue,
 } from "./projects.mjs";
 import { createBoardContext, syncIssue } from "./projects-sync.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
+
+/**
+ * Every open issue, with the bounded backoff `readIssue` already carries (#4182).
+ *
+ * `ghRestAll` shells to curl, whose 5xx wording the shared transient classifier never matched — the
+ * reason `readIssue` had to be wrapped in the first place, and 12 of the 2026-09-30 backfill's 20
+ * failures were GitHub 5xx. This read has no second chance inside the run: `ghRestAll` throws
+ * rather than hand back a truncated list, so one 502 on page 2 ends the whole hourly sweep. A
+ * rate-limit 403/429 still fails at once, by design — an hourly window does not reopen in six
+ * seconds.
+ */
+export function readOpenIssuesWithRetry({ read = ghRestAll, sleep } = {}) {
+  return withRetry(() => read("issues?state=open"), {
+    isTransient: isRetryableRestError,
+    ...(sleep ? { sleep } : {}),
+  });
+}
+
+/**
+ * The board's item list, refusing a page GitHub counted higher than it returned.
+ *
+ * `resolveBoardItem` already treats that truncation as fatal for ONE issue (#3954, "raise the
+ * --limit on item-list"); a whole-board sweep shrugging at it is worse, because it reports the
+ * items it could not see as agreeing — "600 item(s), 0 in the wrong column", green, while the rest
+ * of the board drifts. Same silent-half-answer rule `ghRestAll` exists to refuse (#2968).
+ */
+export function boardItemsOrThrow(board) {
+  const page = board.items() ?? {};
+  const items = page.items ?? [];
+  const counted = typeof page.totalCount === "number" ? page.totalCount : items.length;
+  if (counted > items.length) {
+    throw new Error(
+      `the board lists ${items.length} item(s) but GitHub counts ${counted} — refusing to ` +
+        "reconcile a truncated board and report the items it could not see as agreeing. Raise " +
+        "ITEM_LIST_LIMIT in projects-sync.mjs.",
+    );
+  }
+  return items;
+}
 
 /** The issue number of a board item that is an issue in THIS repo, else null (drafts, PRs, others). */
 export function boardIssueNumber(item, repo = REPO) {
@@ -99,7 +139,7 @@ export function planReconcile({
  */
 export function reconcileBoard({
   board = createBoardContext(),
-  readOpenIssues = () => ghRestAll("issues?state=open"),
+  readOpenIssues = readOpenIssuesWithRetry,
   rateLimit = () => ghRateLimit().graphql ?? {},
   sync = (number, opts) => syncIssue(String(number), opts),
   statusOf,
@@ -114,7 +154,7 @@ export function reconcileBoard({
   if (!budget.ok)
     return { started: false, reason: budget.reason, drift: [], fixed: [], failed: [] };
 
-  const items = board.items().items ?? [];
+  const items = boardItemsOrThrow(board);
   const drift = planReconcile({ items, openIssues, ...(statusOf ? { statusOf } : {}) });
   log(`board: ${items.length} item(s), ${drift.length} in the wrong column`);
 
