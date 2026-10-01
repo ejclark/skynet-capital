@@ -90,7 +90,12 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   order: waste first (`docs/process/TOKEN-EFFICIENCY.md`), then fan-out width (fewer parallel
   items, not cheaper ones), then effort, then model — and say which cut was made. The durable
   carrier for that signal is the `work-mode:*` label on #4153, read by
-  `scripts/moneypenny/work-mode.mjs`; it is wired to the lanes in #3960 slices 2–3.
+  `scripts/moneypenny/work-mode.mjs`. It now cuts width mechanically, in exactly that order and no
+  further: the build lanes' in-flight cap (`scripts/moneypenny/admission.mjs`), the research lane's
+  per-tick ceiling (`scripts/moneypenny/events.mjs` → `researchCapNow`) and a `/governor` cycle's
+  athlete allowance (`npm run work-gate`). Effort and model floors are untouched at every position —
+  the dial is a width control, which is why it can be mechanical while this bullet's cut order
+  stays a judgment.
 - **Cost-first defaults are bugs.** A default that exists "to be cheap" rather than because a
   higher tier wouldn't change the outcome contradicts this doc; `scripts/config-audit.mjs` checks
   agents against the floor table, and the same rubric applies to `docs/grind/*.instructions.md`

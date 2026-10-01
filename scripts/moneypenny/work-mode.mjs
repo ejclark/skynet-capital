@@ -1,4 +1,4 @@
-// THE WORK SPIGOT'S READER (#3960 slice 1 — the carrier and the reader; no lane reads it yet).
+// THE WORK SPIGOT'S READER (#3960 slice 1; the lanes read it from slice 2 on — see work-gate.mjs).
 //
 // One dial, four positions, carried as exactly one `work-mode:<position>` label on tracking issue
 // #4153: `halt` (dispatch nothing), `conserve` (caps drop), `normal` (today's numbers), `surge`
@@ -36,8 +36,13 @@ const CONFIG_FILE = join(process.cwd(), "work-mode.json");
 /** The four positions, in order of how much work they let through. */
 export const POSITIONS = ["halt", "conserve", "normal", "surge"];
 
-/** The per-position numbers every position must carry. */
-const CAP_KEYS = ["inFlightCap", "researchPerTick"];
+/** The per-position numbers every position must carry — one per lane the dial throttles:
+ *  `inFlightCap` the build lanes (admission.mjs), `researchPerTick` the event-research lane
+ *  (events.mjs `dueForResearch`), `governorDispatches` the athletes one `/governor` cycle may
+ *  launch. A lane added later adds its key HERE rather than inventing its own file, which is the
+ *  whole point of the spigot: one dial, not four. Every position must carry every key, so adding
+ *  one is a loud edit to work-mode.json rather than a silent default. */
+const CAP_KEYS = ["inFlightCap", "researchPerTick", "governorDispatches"];
 
 const refuse = (file, what) => {
   throw new Error(

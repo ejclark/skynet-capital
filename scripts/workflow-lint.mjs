@@ -282,8 +282,17 @@ export function unlistedDispatchActor(name, text) {
       .split("\n")
       .filter((l) => !l.trim().startsWith("#"))
       .join("\n");
-    return /workflow_dispatch/.test(header) ? refusals(job, actors) : [];
+    return dispatchReachable(header) ? refusals(job, actors) : [];
   });
+}
+
+/** Whether the file's own re-dispatch can reach a job. Naming `workflow_dispatch` is not the only
+ *  way in: `github.event_name != 'push'` admits it too, and that unnamed gate is how `build-plan`
+ *  shipped with no allow-list (run 36800601479). So a job counts unless its `if:` pins
+ *  `github.event_name ==` to other events only. */
+function dispatchReachable(header) {
+  if (/workflow_dispatch/.test(header)) return true;
+  return !/github\.event_name\s*==\s*'/.test(header);
 }
 
 /** The workflow names/paths a `workflow_run` trigger watches (its quoted `workflows:` entries). */

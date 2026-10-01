@@ -4,7 +4,7 @@
 
 **Responsibility:** One router for every issue-driven automation: sweeps receipt issues for never-assessed events, claims feedback labels and plan ready-comments with a 2h lease, screens quiet pulses deterministically, dispatches capped event-research matrix legs behind a spend circuit breaker, reviews dependabot PRs, audits stalls and conflicts on every push, and closes shipped issues
 
-**Code roots:** `.github/workflows/moneypenny-events.yml` · `scripts/moneypenny/` · `scripts/event-scan.mjs` · `scripts/event-material-scan.mjs` · `scripts/event-material-decide.mjs` · `.github/prompts/feedback-build.md` · `.github/prompts/plan-build.md` · `.github/prompts/event-research.md` · `.claude/agents/dep-warden.md` · `.github/actions/app-token/` · `.github/actions/oauth-token-gate/` · `research-dispatch-budget.json` · `research-circuit-breaker.json` · `assessment-cadence.json` · `tests/scripts/moneypenny/`
+**Code roots:** `.github/workflows/moneypenny-events.yml` · `scripts/moneypenny/` · `scripts/event-scan.mjs` · `scripts/event-material-scan.mjs` · `scripts/event-material-decide.mjs` · `.github/prompts/feedback-build.md` · `.github/prompts/plan-build.md` · `.github/prompts/event-research.md` · `.claude/agents/dep-warden.md` · `.github/actions/app-token/` · `.github/actions/oauth-token-gate/` · `research-dispatch-budget.json` · `research-circuit-breaker.json` · `work-mode.json` · `assessment-cadence.json` · `tests/scripts/moneypenny/`
 
 **Entrypoints:** `.github/workflows/moneypenny-events.yml` · `node scripts/moneypenny/index.mjs`
 
@@ -32,12 +32,13 @@ C4Component
   System_Ext(github, "GitHub", "Events in; issues, labels, claim refs and PRs out")
   System_Ext(cca, "claude-code-action", "One session per build or matrix leg on the flat-rate OAuth token")
   Container(mp_repair, "Moneypenny repair lane", "moneypenny-repair.yml", "Takes flag-conflict and flag-stall dispatches")
-  ContainerDb(ledgers, "Repo ledgers", "git", "docs/research/events, src/domain/market-events, research-dispatch-budget.json, research-budget.json")
+  ContainerDb(ledgers, "Repo ledgers", "git", "docs/research/events, src/domain/market-events, research-dispatch-budget.json, work-mode.json, research-budget.json")
 
   Container_Boundary(lane, "Moneypenny event lane") {
     Component(wf, "Trigger shim", ".github/workflows/moneypenny-events.yml", "on push main, issues labeled, issue_comment created, pull_request opened, workflow_dispatch scan audit release-claim. Jobs route, build-feedback, build-plan, build-events matrix max 8, dep-warden. App token per job via .github/actions/app-token, oauth-token-gate")
     Component(router, "Router", "scripts/moneypenny/index.mjs", "route() yields pure intents, execute() touches GitHub; claimHandoff and releaseClaim; flags --claim-feedback --claim-plan --audit --release --guard-feedback-outcome")
-    Component(events, "Event-research dispatch", "scripts/moneypenny/events.mjs", "routeSweep receipt issues, dueForResearch dedupe against open research branches, cap from research-dispatch-budget.json")
+    Component(events, "Event-research dispatch", "scripts/moneypenny/events.mjs", "routeSweep receipt issues, dueForResearch dedupe against open research branches, per-tick cap from the work spigot (research-dispatch-budget.json at normal)")
+    Component(spigot, "Work spigot", "scripts/moneypenny/work-mode.mjs, work-gate.mjs, admission.mjs", "One work-mode:POSITION label on issue 4153 reads as inFlightCap, researchPerTick, governorDispatches from work-mode.json; the admission gate queues a claim over cap, under conserve or behind an in-flight issue on the same Surface")
     Component(audit, "Stall and conflict audit", "scripts/moneypenny/audit.mjs", "flag-stall, silent feedback, plan-ready stalls, conflict re-dispatch up to CONFLICT_REPAIR_CAP 3 then needs-eric; memory is the stall-flagged and conflict-flagged labels")
     Component(lease, "Claim lease", "scripts/moneypenny/claim-lease.mjs", "refs/tags/claim/SLUG compare-and-set via POST git/refs, CLAIM_TTL_MS two hours")
     Component(tier, "Model tier", "scripts/moneypenny/model-tier.mjs", "haiku light for single-criterion asks, sonnet default, opus escalation from the skynet-spec block; plan issues stay on opus")
@@ -54,6 +55,8 @@ C4Component
   Rel(github, wf, "Delivers the event payload", "GITHUB_EVENT_PATH")
   Rel(wf, router, "node scripts/moneypenny/index.mjs", "route job")
   Rel(router, events, "push or scan: routeSweep and dueForResearch")
+  Rel(router, spigot, "claimFeedback and claimPlan ask the admission gate before taking a lease")
+  Rel(events, spigot, "researchCapNow reads the dial for this tick's ceiling")
   Rel(router, audit, "--audit on every push")
   Rel(router, lease, "claim and release")
   Rel(router, tier, "--claim-feedback picks the model")
@@ -80,7 +83,8 @@ _Caption — components of Moneypenny event lane, from the paths on each element
 |---|---|---|
 | **Trigger shim** | `.github/workflows/moneypenny-events.yml` | Declares the triggers (push main, issues labeled, issue_comment created, dependabot pull_request opened, workflow_dispatch scan/audit/release-claim), the per-event concurrency group, and the jobs route, build-feedback, build-plan, build-events (matrix, max-parallel 8, sonnet, --max-turns 150) and dep-warden; mints an App token per job via .github/actions/app-token and gates on CLAUDE_CODE_OAUTH_TOKEN via .github/actions/oauth-token-gate |
 | **Router** | `scripts/moneypenny/index.mjs` | route() is pure (event + deps → intents); execute()/runIntents() is the only impure half; owns claimHandoff/releaseClaim (refs/tags lease, pinned by tests/arch/lease-namespace.spec.ts), claimFeedback, claimPlan, sweepShipped, stallRepairDispatch and the CLI flags |
-| **Event-research dispatch** | `scripts/moneypenny/events.mjs` | routeSweep/routeReceipts open one [event-research] receipt issue per never-assessed event; dueForResearch dedupes against open research/* PR heads and caps the batch from research-dispatch-budget.json (close-outs first) |
+| **Event-research dispatch** | `scripts/moneypenny/events.mjs` | routeSweep/routeReceipts open one [event-research] receipt issue per never-assessed event; dueForResearch dedupes against open research/* PR heads and caps the batch (close-outs first) at researchCapNow — the work spigot's number for the dial's position, which is research-dispatch-budget.json's maxPerTick at `normal` |
+| **Work spigot** | `scripts/moneypenny/work-mode.mjs, scripts/moneypenny/work-gate.mjs, scripts/moneypenny/admission.mjs` | One `work-mode:<position>` label on the tracking issue is the whole state (#3960); work-mode.json holds the per-position numbers (inFlightCap, researchPerTick, governorDispatches) and refuses to load if a position is missing one or is looser than the one above it. resolveWorkMode fails closed to conserve on an unreadable dial; workGate folds in the spend breaker for callers with no import statement (a skill). admitBuild refuses under halt, under conserve without `fast-track`, over the in-flight cap, or behind an in-flight issue sharing the capsule's Surface cell |
 | **Stall and conflict audit** | `scripts/moneypenny/audit.mjs` | audit() emits flag-stall / silent-feedback / plan-ready-stall / flag-conflict intents with stall-flagged and conflict-flagged labels as memory; CONFLICT_REPAIR_CAP 3 escalates to needs-eric |
 | **Claim lease support** | `scripts/moneypenny/claim-lease.mjs` | CLAIM_TTL_MS (2h), claimAgeOf, claimStamp, claimFailureReason for the refs/tags/claim/<slug> compare-and-set |
 | **Model tier** | `scripts/moneypenny/model-tier.mjs` | modelTier(body): sonnet default, opus escalation from the issue's skynet-spec block readiness/criteria; plan issues stay on opus |

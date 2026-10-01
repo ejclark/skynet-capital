@@ -18,12 +18,14 @@
 //   node scripts/incident-scan.mjs --days 14   # lookback window (default 14)
 //   node scripts/incident-scan.mjs --json      # every real failed run + `learned`, for fix-held.mjs
 //
-// Resource doctrine (docs/COACHES.md): REST *core* bucket only — one request, no polling, no
+// Resource doctrine (docs/COACHES.md): REST *core* bucket only — one request per 100 runs (paged,
+// capped by incident-runs.mjs; a single 50-run page once hid a 76-run outage), no polling, no
 // GraphQL. Degrades to a clean no-op (exit 0) with no token or no network, so it never becomes a
 // flaky gate; the ledger's own well-formedness is enforced offline by tests/arch/lessons.spec.ts.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PER_PAGE, readAllPages } from "./incident-runs.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
@@ -67,22 +69,32 @@ async function hasZeroJobs(runId) {
   return (body.total_count ?? 1) === 0;
 }
 
-/** Failed workflow runs on `main` within the lookback window. */
+/** Failed workflow runs on `main` within the lookback window — every page, not just the first. */
 async function failedMainRuns() {
   const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
-  const url =
-    `https://api.github.com/repos/${repoSlug()}/actions/runs` +
-    `?branch=main&status=failure&per_page=50&created=%3E%3D${since}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "User-Agent": "skynet-capital",
-    },
-  });
-  if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-  const body = await res.json();
-  return (body.workflow_runs ?? []).map((r) => ({
+  const fetchPage = async (page) => {
+    const url =
+      `https://api.github.com/repos/${repoSlug()}/actions/runs` +
+      `?branch=main&status=failure&per_page=${PER_PAGE}&page=${page}&created=%3E%3D${since}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "skynet-capital",
+      },
+    });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    return res.json();
+  };
+  const { runs, total, truncated } = await readAllPages(fetchPage);
+  // stderr, so `--json` (read by fix-held.mjs) stays parseable.
+  if (truncated) {
+    console.error(
+      `incident-scan: read ${runs.length} of ${total} failed runs — the window is truncated; ` +
+        `narrow it with --days to see the oldest.`,
+    );
+  }
+  return runs.map((r) => ({
     id: r.id,
     sha: (r.head_sha ?? "").slice(0, 7),
     name: r.name,
