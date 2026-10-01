@@ -1,7 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
-import { botHeartbeatView } from "../observatory/bot-heartbeat-view.js";
+import { botHeartbeatView, latestVerdictPass } from "../observatory/bot-heartbeat-view.js";
 import {
   decisionCyclesView,
   expectancyView,
@@ -11,6 +11,7 @@ import { deskLedger, realizedByOrder } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
+import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { reasoningForOrder } from "../observatory/wire-reasoning.js";
@@ -23,7 +24,9 @@ import {
   ownsDesk,
   withoutCyclePlaybooks,
   withoutHeartbeatPlaybookIds,
+  withoutLadderPlaybookIds,
   withoutReasoningPlaybook,
+  withoutThesisPlaybooks,
 } from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
 
@@ -235,11 +238,21 @@ export async function serveDeskJson(
     const activity = activityRecords
       ? deskActivityView(activityRecords, undefined, { limit: MAX_PAGE_SIZE }).activity
       : [];
+    // The safeguard ladder (#3194 slice 6a) — read off the plays the BOT's own newest
+    // verdict-carrying pass reported, never this process's env (see `safeguard-ladder-view.ts`).
+    // Null means "no pass on hand said which plays ran", which is never "no safeguards".
+    const pass = latestVerdictPass(decisionRecords ?? []);
+    const ladder = pass ? safeguardLadderView(pass.verdicts) : null;
+    const view = thesisView(found.personaId, decisions, activity, samples, config.findByOrderId);
     res.end(
       JSON.stringify({
         available: true,
         kind: "bot",
-        thesis: thesisView(found.personaId, decisions, activity, samples, config.findByOrderId),
+        thesis: owner ? view : withoutThesisPlaybooks(view),
+        ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
+        // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
+        // as current (the same reason `playbookLines` carries `since`).
+        ...(pass ? { ladderAsOf: new Date(pass.at).toISOString() } : {}),
       }),
     );
     return;

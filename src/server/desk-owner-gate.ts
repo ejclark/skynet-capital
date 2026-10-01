@@ -1,5 +1,7 @@
 import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartbeat-view.js";
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
+import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
+import type { ThesisView } from "../observatory/thesis-json-view.js";
 import type { WireTradeReasoning } from "../observatory/wire-reasoning.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -40,6 +42,14 @@ export function withoutHeartbeatPlaybookIds(heartbeat: HeartbeatView): WithheldH
   };
 }
 
+/** The safeguard ladder without each play's id (#3194 slice 6a): what a bot's safety net would do
+ *  is its health, same as a verdict line — which play it belongs to stays the owner's. */
+export function withoutLadderPlaybookIds(
+  ladder: readonly SafeguardLadderEntry[],
+): readonly Omit<SafeguardLadderEntry, "playbookId">[] {
+  return ladder.map(({ playbookId: _withheld, ...entry }) => entry);
+}
+
 type Outcome = DecisionCycleView["outcomes"][number];
 
 /** Decision cycles with each outcome's `playbook · mode` chip removed. */
@@ -61,4 +71,25 @@ export function withoutReasoningPlaybook(
 ): Omit<WireTradeReasoning, "playbookId" | "playbookMode"> {
   const { playbookId: _p, playbookMode: _m, ...rest } = reasoning;
   return rest;
+}
+
+type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning"> & {
+  readonly reasoning?: ReturnType<typeof withoutReasoningPlaybook>;
+};
+
+/**
+ * The thesis view with each fill marker's decision stripped of its playbook. `/thesis` joins the
+ * SAME audit rows `/activity` does (both through `config.findByOrderId`), so it was handing a
+ * non-owner the one key `/activity` already withheld — found by #3194 slice 6a's own gate spec,
+ * which asked the thesis payload the question this block had only ever asked the other three.
+ */
+export function withoutThesisPlaybooks(
+  thesis: ThesisView,
+): Omit<ThesisView, "markers"> & { readonly markers: readonly WithheldMarker[] } {
+  return {
+    ...thesis,
+    markers: thesis.markers.map(({ reasoning, ...marker }) =>
+      reasoning ? { ...marker, reasoning: withoutReasoningPlaybook(reasoning) } : marker,
+    ),
+  };
 }

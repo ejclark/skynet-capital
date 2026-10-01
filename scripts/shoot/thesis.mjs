@@ -85,6 +85,53 @@ const thesis = {
       },
     ],
   },
+  // The safeguard ladder (#3194 slice 6a). Two plays so the frame shows the real spread of
+  // states — S1-NVDA exactly as the live roster has it (stage 1 watching, stage 2 unarmed), and a
+  // second play with stage 2 enforcing, which no house play declares yet but the readout must
+  // render honestly the day one does. Wording verbatim from `safeguard-ladder-view.ts`.
+  ladderAsOf: "2026-09-16T13:45:00Z",
+  ladder: [
+    {
+      playbookId: "S1-NVDA",
+      mode: "standard",
+      stages: [
+        {
+          stage: 1,
+          name: "Price and news disagreeing",
+          state: "watching",
+          does:
+            "Notes it in the bot log when the price has moved 2.0% or more against a news tone " +
+            "of 0.20 or stronger. It only writes the note — no order is held back.",
+        },
+        {
+          stage: 2,
+          name: "Automatic exit on a losing position",
+          state: "off",
+          does: "No automatic exit on standard. This play sells only when its own rule says to.",
+        },
+      ],
+    },
+    {
+      playbookId: "G1-GOOG",
+      mode: "conservative",
+      stages: [
+        {
+          stage: 1,
+          name: "Price and news disagreeing",
+          state: "off",
+          does: "Nothing checks whether the price move and the news tone disagree on this play.",
+        },
+        {
+          stage: 2,
+          name: "Automatic exit on a losing position",
+          state: "enforcing",
+          does:
+            "Sells the whole position at market once the bid is 6.0% or more below what this " +
+            "play paid for it, whatever the play's own rule says that cycle.",
+        },
+      ],
+    },
+  ],
 };
 
 const { page, origin, shoot, close } = await openShell({
@@ -102,9 +149,17 @@ await page.goto(`${origin}/app/u/bot-sauron/thesis`);
 await page.getByText("Entering").waitFor();
 await shoot("thesis-drawer-phone");
 
+// The safeguard ladder sits below the call banner, so the drawer's own top-of-page frame cannot
+// show it — this one scrolls it into view (#3194 slice 6a).
+await page.getByText("Safeguards").scrollIntoViewIfNeeded();
+await shoot("thesis-safeguards-phone");
+
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/u/bot-sauron/thesis`);
 await page.getByText("Entering").waitFor();
 await shoot("thesis-drawer-desktop");
+
+await page.getByText("Safeguards").scrollIntoViewIfNeeded();
+await shoot("thesis-safeguards-desktop");
 
 await close();
