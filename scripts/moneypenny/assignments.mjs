@@ -19,7 +19,9 @@
 // ones that state none — `needs-eric` means exactly one thing, a decision only Eric can make
 // (CLAUDE.md), so a label with no stated decision is a candidate to clear, never an assignment.
 //
-// #4293 (digest criterion 12) reads `plan()`'s assign set, so this is the one selector both share.
+// #4293 (digest criterion 12): `plan()` also returns `needsYou` — the set Eric holds once this run's
+// writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
+// readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 import { aboveFold } from "../issue-lint.mjs";
 import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
 import { ghRestAll } from "./gh.mjs";
@@ -73,23 +75,31 @@ export function assignmentComment({ decision }) {
 /**
  * Plan every action, write nothing. Inputs are REST shapes (labels/assignees as objects or
  * strings); `markers` is the set of issue/PR numbers already carrying this lane's marker comment.
- * Returns `{ queue, actions }`: `queue` is the honest-queue listing, `actions` the would-be writes,
- * each with the criterion and a one-line why. Pure.
+ * Returns `{ queue, actions, needsYou }`: `queue` is the honest-queue listing, `actions` the
+ * would-be writes, each with the criterion and a one-line why, and `needsYou` the set Eric holds
+ * once those writes land (criterion 12 — the digest's Needs-you list). Pure.
  */
 export function plan({ issues = [], prs = [], markers = new Set(), now = Date.now() } = {}) {
   const queue = [];
   const actions = [];
-  for (const issue of issues) planIssue(issue, { markers, now, queue, actions });
+  const needsYou = [];
+  const ask = (row) => needsYou.some((n) => n.number === row.number) || needsYou.push(row);
+  for (const issue of issues) planIssue(issue, { markers, now, queue, actions, ask });
   for (const pr of prs) {
+    const hours = heldPrHours(pr, now);
+    if (hours === null) continue;
+    const why = `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`;
+    ask({ number: pr.number, title: pr.title, criterion: 4, why });
     if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) continue; // one ask each
-    const action = planHeldPr(pr, now);
-    if (action) actions.push(action);
+    if (!logins(pr.assignees).some(isEric)) {
+      actions.push({ kind: "assign", criterion: 4, number: pr.number, title: pr.title, why });
+    }
   }
-  return { queue, actions };
+  return { queue, actions, needsYou };
 }
 
 /** Criteria 1–3 and the honest queue, for one issue (or a PR GitHub lists as one). */
-function planIssue(issue, { markers, now, queue, actions }) {
+function planIssue(issue, { markers, now, queue, actions, ask }) {
   const assigned = logins(issue.assignees).some(isEric);
   const marked = markers.has(issue.number);
   const open = (issue.state ?? "open") === "open";
@@ -111,25 +121,22 @@ function planIssue(issue, { markers, now, queue, actions }) {
   });
   // No stated decision → a clear candidate, never an ask. Marked → criterion 3, asked once
   // already. Assigned → his by hand; nothing to add.
-  if (decision && !marked && !assigned) {
-    act("assign", 1, `needs-eric with a stated decision: "${decision}"`);
+  const why = `needs-eric with a stated decision: "${decision}"`;
+  if (decision && !marked && !assigned) act("assign", 1, why);
+  // Needs-you = what he holds after this run: stated, and either his already or about to be. A
+  // marked issue he unassigned himself stays off — criterion 3 means the lane won't re-ask.
+  if (decision && (assigned || !marked)) {
+    ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
   }
 }
 
-/** Criterion 4, for one PR: held (`hold-merge` or a `platter/` branch), ready, ≥12h, not his yet. */
-function planHeldPr(pr, now) {
+/** Criterion 4's test for one PR: held (`hold-merge` or `platter/`), open, ready, ≥12h → hours. */
+function heldPrHours(pr, now) {
   if ((pr.state ?? "open") !== "open" || pr.draft) return null;
   const held = names(pr.labels).includes(HOLD_MERGE) || /^platter\//.test(pr.head?.ref ?? "");
-  if (!held || logins(pr.assignees).some(isEric)) return null;
+  if (!held) return null;
   const hours = (now - Date.parse(pr.created_at ?? now)) / 36e5;
-  if (hours < HELD_PR_HOURS) return null;
-  return {
-    kind: "assign",
-    criterion: 4,
-    number: pr.number,
-    title: pr.title,
-    why: `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`,
-  };
+  return hours < HELD_PR_HOURS ? null : hours;
 }
 
 /** The dry run's report, as markdown — what Eric reads before anything is switched on. Pure. */
@@ -155,7 +162,8 @@ export function report({ queue, actions }) {
   return out.join("\n");
 }
 
-function gather() {
+/** The live REST read both the dry run and the digest plan from — one gather, one `plan()`. */
+export function gather() {
   // PRs stay in: a held PR can carry `needs-eric` too (#4361), and GitHub lists it as an issue.
   const issues = ghRestAll(`issues?state=open&labels=${NEEDS_ERIC}`);
   // Criterion 2's candidates: things Eric holds that may have lost the label or closed since.
