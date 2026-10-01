@@ -4,8 +4,12 @@
 export type Position = "halt" | "conserve" | "normal" | "surge";
 
 export interface Caps {
+  /** Open issues carrying `in-progress` a build lane will tolerate (admission.mjs). */
   readonly inFlightCap: number;
+  /** Event-research sessions one tick may dispatch (events.mjs `researchCapFor`). */
   readonly researchPerTick: number;
+  /** Athletes one `/governor` cycle may launch (.claude/skills/governor/SKILL.md). */
+  readonly governorDispatches: number;
 }
 
 export interface WorkModeConfig {
