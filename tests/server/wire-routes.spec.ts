@@ -2,6 +2,8 @@ import type { ServerResponse } from "node:http";
 
 import {
   activityEventFromAuditRecord,
+  activityEventFromFeedbackEntry,
+  activityEventFromFeedbackStatus,
   activityEventFromTradeRecord,
 } from "../../src/observatory/activity-event.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
@@ -188,6 +190,61 @@ describe("serveWireJson", () => {
 
     const [feedback] = JSON.parse(out.body).wire.feedback;
     expect(feedback.title).toBe("Shared idea");
+  });
+
+  it("renders a filing that reached the bus but is not on the log — the pulse reads the envelope", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllActivityEvents: () =>
+        Promise.resolve([activityEventFromFeedbackEntry(entry({ title: "Bus-only idea" }))]),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback[0].title).toBe("Bus-only idea");
+  });
+
+  it("shows a filing's open/shipped state off the bus with no status fetcher wired", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllActivityEvents: () =>
+        Promise.resolve([
+          activityEventFromFeedbackEntry(entry()),
+          activityEventFromFeedbackStatus(1, "shipped", "2026-08-21T00:00:00.000Z"),
+        ]),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback[0]).toMatchObject({ statusKey: "shipped" });
+  });
+
+  it("never double-counts a filing the bus and the log both hold", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllActivityEvents: () => Promise.resolve([activityEventFromFeedbackEntry(entry())]),
+      readAllFeedback: () => Promise.resolve([entry()]),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback).toHaveLength(1);
+  });
+
+  it("a just-polled status reaches this render, not the next one", async () => {
+    const { res, out } = capture();
+    const deps: WireRouteDeps = {
+      hub: hubWith([]),
+      readAllFeedback: () => Promise.resolve([entry()]),
+      fetchFeedbackStatus: () => Promise.resolve(new Map([[1, "needs-info" as const]])),
+    };
+
+    await serveWireJson(res, "/api/wire", deps, true);
+
+    expect(JSON.parse(out.body).wire.feedback[0]).toMatchObject({ statusKey: "needs-info" });
   });
 
   it("fetches live status only for the feedback it actually renders", async () => {

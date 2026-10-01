@@ -3,6 +3,12 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEvent } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import {
+  collapseFeedbackEvents,
+  type FeedbackFeedItem,
+  mergeFeedbackLogIntoEvents,
+  mergeFeedbackStatusesIntoEvents,
+} from "../observatory/feedback-event-feed.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
@@ -40,8 +46,13 @@ export interface WireRouteDeps {
    * every pre-bus fill, so drop it only once the bus is confirmed to hold the ledger's full history.
    */
   readonly readAllTradeActivity?: () => Promise<readonly TradeActivityRecord[]>;
-  /** Every member's filed feedback, not just one member's own — omit to render the pulse column's
-   *  honest empty state instead of a feed. */
+  /**
+   * Every member's filed feedback, not just one member's own — read ALONGSIDE the bus above and
+   * not instead of it, for the same reason `readAllTradeActivity` is: the event log only begins
+   * when #784 slice 2 deploys, so every filing before that lives here and nowhere else.
+   * `mergeFeedbackLogIntoEvents` folds these in on the bus's own schema, deduplicated on the
+   * deterministic event id. Omit to render the pulse column's honest empty state instead of a feed.
+   */
   readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
   /** The exact order-id join into the decision store (PR 6, issue #2287) — omit to render every
@@ -73,10 +84,32 @@ interface AssembledWire {
     readonly nextCursor?: string;
   };
   readonly pnl: ReturnType<typeof buildWirePnlRows>;
-  readonly feedback: FeedbackLogEntry[];
-  readonly feedbackStatuses?: Awaited<
-    ReturnType<NonNullable<WireRouteDeps["fetchFeedbackStatus"]>>
-  >;
+  readonly feedback: readonly FeedbackFeedItem[];
+}
+
+/**
+ * The pulse, off the same envelope the trade rows now read (#784 slice 2). Two phases, because the
+ * status poll needs to know WHICH filings are on the page before it can refresh them:
+ *
+ * 1. Bridge the durable feedback log into the bus's schema and fold — that gives the page's
+ *    filings, newest first. (The bridge is `mergeLedgerIntoEvents`'s twin; see its header for why
+ *    the bus alone would drop every pre-slice-2 filing.)
+ * 2. Refresh those filings' GitHub state. That call is also the bus's status emitter
+ *    (`publishingFeedbackStatuses`), so folding its result back in on the same schema is what
+ *    keeps this render from being one request behind its own writer.
+ */
+async function assembleFeedbackPulse(
+  config: WireRouteDeps,
+  events: readonly ActivityEvent[],
+  filings: readonly FeedbackLogEntry[],
+  limit: number,
+): Promise<readonly FeedbackFeedItem[]> {
+  const withFilings = mergeFeedbackLogIntoEvents(events, filings);
+  const page = collapseFeedbackEvents(withFilings).slice(0, limit);
+  if (!(config.fetchFeedbackStatus && page.length)) return page;
+  const statuses = await config.fetchFeedbackStatus(page.map((item) => item.issueNumber));
+  const observed = mergeFeedbackStatusesIntoEvents(withFilings, statuses, new Date().toISOString());
+  return collapseFeedbackEvents(observed).slice(0, limit);
 }
 
 async function assembleWire(
@@ -94,16 +127,12 @@ async function assembleWire(
     config.readAllTradeActivity ? config.readAllTradeActivity() : [],
   ]);
   const events = mergeLedgerIntoEvents(published, records);
-  const feedback = config.readAllFeedback ? await config.readAllFeedback() : [];
-  // Newest first, then bounded — `list()`'s own order is filesystem-dependent, so sort before
-  // slicing or the page shown could be an arbitrary slice rather than the most recent one.
-  const feedbackForStatus = [...feedback]
-    .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
-    .slice(0, limit);
-  const feedbackStatuses =
-    config.fetchFeedbackStatus && feedbackForStatus.length
-      ? await config.fetchFeedbackStatus(feedbackForStatus.map((e) => e.issueNumber))
-      : undefined;
+  const filings = config.readAllFeedback ? await config.readAllFeedback() : [];
+  // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
+  // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
+  // `published`, not `events`: the trade ledger's translated lines carry no feedback kind, so
+  // handing them to the pulse would only make its fold walk them for nothing.
+  const feedback = await assembleFeedbackPulse(config, published, filings, limit);
   const page = buildWireTradeRows(events, participants, { limit, before }, underlyingFilter);
 
   // "the why" and "the vitals" (PR 6, issue #2287) — only bot rows can resolve either, and only
@@ -128,8 +157,7 @@ async function assembleWire(
   return {
     trades: { rows, ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}) },
     pnl: buildWirePnlRows(participants),
-    feedback: feedbackForStatus,
-    ...(feedbackStatuses ? { feedbackStatuses } : {}),
+    feedback,
   };
 }
 
@@ -167,13 +195,7 @@ export async function serveWireJson(
   res.writeHead(200, headers);
   res.end(
     JSON.stringify({
-      wire: wireJsonView(
-        assembled.trades.rows,
-        assembled.pnl,
-        assembled.feedback,
-        feedbackEnabled,
-        assembled.feedbackStatuses,
-      ),
+      wire: wireJsonView(assembled.trades.rows, assembled.pnl, assembled.feedback, feedbackEnabled),
     }),
   );
 }

@@ -1,3 +1,5 @@
+import type { FeedbackLogEntry } from "../server/feedback-log.js";
+import type { FeedbackStatus } from "../server/feedback-status.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
@@ -144,6 +146,87 @@ export function activityEventFromAuditRecord(record: OrderAuditRecord): Activity
       ...(record.code ? { code: record.code } : {}),
       ...(record.intent ? { intent: record.intent } : {}),
     },
+  };
+}
+
+// --- feedback (#784 slice 2) ---------------------------------------------------------------------
+//
+// The second KIND on the bus, and the first that is not a trade. Both translators key the event's
+// identity off the issue number, which is what a filing and every later observation of it have in
+// common — `correlationId: "feedback:<n>"` is therefore the chain a slice-3 feed row groups on,
+// exactly as an order id chains a fill to its submission.
+//
+// ONE THING A LATER SLICE MUST NOT ASSUME: `actor.participantId` here is NOT a hub participant id.
+// A filing's actor is the member's `opaqueMemberId` (`feedback-attribution.ts`) and a status
+// observation's actor is `"system"`; neither will ever match a trade event's `participantId`. The
+// two id spaces are deliberately separate — the attribution ruling (Eric, 2026-08-19) is that a
+// filing correlates pseudonymously and nothing finer. A one-feed slice joins these kinds by
+// `target`, never by actor.
+
+/** Who a status observation is attributed to. GitHub changed the state and the app noticed; no
+ *  member acted, so inventing one would be a lie. Also the bus's file key, which is why it is one
+ *  constant and not a per-issue id — `JsonlActivityEventBus` writes one file per
+ *  `actor.participantId`, and a file per filing would be a directory that grows without bound. */
+const SYSTEM_ACTOR = "system";
+
+/**
+ * One member filing → one bus event. `visibility: "public"` matches today's `/api/wire` pulse
+ * exactly (every member's filings, cross-member, pseudonymous) — this slice changes the schema,
+ * not who sees what, the same posture `activityEventFromTradeRecord` took in slice 1.
+ *
+ * Carrying `opaqueMemberId` on a public-tier event is no new exposure: that same id is already
+ * written into the GitHub issue's own public body and its `member-<id>` label
+ * (`feedback-attribution.ts`). The pulse still never renders it — the envelope captures what the
+ * source honestly knows, and a narrower audience is a narrower subscription (#1211 settled forks).
+ */
+export function activityEventFromFeedbackEntry(entry: FeedbackLogEntry): ActivityEvent {
+  return {
+    id: `feedback:${entry.issueNumber}:feedback.filed:${entry.filedAt}`,
+    eventType: "feedback.filed",
+    actor: { participantId: entry.opaqueMemberId, kind: "human" },
+    target: { kind: "feedback", id: String(entry.issueNumber) },
+    at: entry.filedAt,
+    correlationId: `feedback:${entry.issueNumber}`,
+    source: "app",
+    outcome: "success",
+    visibility: "public",
+    payload: {
+      issueNumber: entry.issueNumber,
+      kind: entry.kind,
+      title: entry.title,
+      url: entry.url,
+    },
+  };
+}
+
+/**
+ * One observed change in a filing's state → one bus event. `at` is when the APP observed the
+ * status, not when GitHub changed it: the poll (`feedback-status.ts`) reads a current state, and
+ * labels carry no timestamp, so a change time would be invented. The id includes `at` for that
+ * reason too — a filing that is shipped, reopened, then shipped again is three honest observations,
+ * and an id keyed on the status alone would silently collapse the second shipping into the first.
+ *
+ * Only a real transition is published (`publishingFeedbackStatuses`); a filing sitting in the queue
+ * does not re-emit on every poll.
+ */
+export function activityEventFromFeedbackStatus(
+  issueNumber: number,
+  status: FeedbackStatus,
+  at: string,
+): ActivityEvent {
+  return {
+    id: `feedback:${issueNumber}:feedback.status-changed:${status}:${at}`,
+    eventType: "feedback.status-changed",
+    actor: { participantId: SYSTEM_ACTOR, kind: "system" },
+    target: { kind: "feedback", id: String(issueNumber) },
+    at,
+    correlationId: `feedback:${issueNumber}`,
+    // GitHub is the source of truth for a filing's state and stays external to this app
+    // (`feedback-status.ts`) — the provenance of this line is the poll, not the app's own write.
+    source: "github",
+    outcome: "success",
+    visibility: "public",
+    payload: { issueNumber, status },
   };
 }
 

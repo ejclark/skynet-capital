@@ -16,7 +16,10 @@ import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
-import { bootPublishingActivityStore } from "../observatory/activity-publishing.js";
+import {
+  bootPublishingActivityStore,
+  publishingFeedback,
+} from "../observatory/activity-publishing.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -192,6 +195,11 @@ async function main(): Promise<void> {
     feedbackFollowup,
     communityProgression,
   } = setupFeedback(process.env);
+  // Feedback as the bus's second kind (#784 slice 2): a filing publishes `feedback.filed`, and the
+  // GitHub status poll publishes `feedback.status-changed` on a real transition. Both wrap here
+  // rather than in `setupFeedback` because the bus is booted above, with the trade ledger's.
+  // Built ONCE at boot, not per request — the status wrapper remembers what it last published.
+  const feedbackSinks = publishingFeedback(activityEventBus, { feedbackLog, feedbackStatus });
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -261,9 +269,9 @@ async function main(): Promise<void> {
     ...(opsStatus ? { opsStatus } : {}), // #666 — dashboard-ops-status.ts owns the wiring + gate
     ...(feedback ? { submitFeedback: feedback } : {}),
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
-    recordFeedback: (entry) => feedbackLog.record(entry),
+    recordFeedback: (entry) => feedbackSinks.log.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
-    ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
+    ...(feedbackSinks.status ? { fetchFeedbackStatus: feedbackSinks.status } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
     ...(companion ? { companion } : {}),
