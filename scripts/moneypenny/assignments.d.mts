@@ -42,17 +42,27 @@ export interface PlannedAction {
   title?: string;
   why: string;
 }
+export interface NeedsYouRow {
+  number: number;
+  title?: string;
+  criterion: 1 | 4;
+  why: string;
+  decision?: string;
+}
 export interface Planned {
   queue: QueueRow[];
   actions: PlannedAction[];
+  needsYou: NeedsYouRow[];
 }
-
-export function decisionLine(body?: string | null): string | null;
-export function assignmentComment(opts: { decision: string }): string;
-export function plan(input?: {
+export interface PlanInput {
   issues?: PlanIssue[];
   prs?: PlanPr[];
   markers?: Set<number>;
   now?: number;
-}): Planned;
-export function report(planned: Planned): string;
+}
+
+export function decisionLine(body?: string | null): string | null;
+export function assignmentComment(opts: { decision: string }): string;
+export function plan(input?: PlanInput): Planned;
+export function report(planned: Pick<Planned, "queue" | "actions">): string;
+export function gather(): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;

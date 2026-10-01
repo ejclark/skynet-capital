@@ -9,9 +9,15 @@
 //   node scripts/digest-scan.mjs               # human report
 //   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op)
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
+//   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
 //
-// Enforced in CI via tests/arch/digest-scan.spec.ts. Dependency-free (node built-ins + git).
+// NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
+// scripts/moneypenny/assignments.mjs — the same call the assignment dry run makes, never a second
+// selector here. Imported lazily, so the importers of `digestFiles`/`latestDigestDate` (comms,
+// rank, thrash) stay git-only; tests/scripts/moneypenny/needs-you.spec.ts fails on any divergence.
+//
+// Enforced in CI via tests/arch/digest-scan.spec.ts. Node built-ins + git (+ gh for --needs-you).
 // Loud-failure doctrine: an unreadable input or missing git ref is an error, never "not due".
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -50,15 +56,31 @@ export function digestFiles() {
     .reverse();
 }
 
+const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
+
 /** Commits landed on origin/main since a date — the autonomous-change volume signal.
- *  Squash-merge means one commit ≈ one landed PR. Missing ref throws — loud, never "not due". */
+ *  Squash-merge means one commit ≈ one landed PR. Missing ref throws — loud, never "not due".
+ *  A shallow clone (sessions fetch 50) stops the walk at its graft: when every reachable commit
+ *  is inside the window the true count is unknown above it, so it comes back `truncated` — a
+ *  floor, printed `≥N` — never a silent 50 (#3818 slice 7). */
 function commitsSince(date) {
-  const out = execFileSync(
-    "git",
-    ["rev-list", "--count", `--since=${date}T23:59:59Z`, "origin/main"],
-    { cwd: ROOT, encoding: "utf8" },
+  const count = Number.parseInt(
+    git(["rev-list", "--count", `--since=${date}T23:59:59Z`, "origin/main"]),
+    10,
   );
-  return Number.parseInt(out.trim(), 10);
+  const shallow = git(["rev-parse", "--is-shallow-repository"]) === "true";
+  const truncated =
+    shallow && count === Number.parseInt(git(["rev-list", "--count", "origin/main"]), 10);
+  return { count, truncated };
+}
+
+/** The digest's "Needs you" list from `plan()` output: one line per item Eric holds. Pure. */
+export function needsYouLines({ needsYou }) {
+  if (!needsYou.length) return ["_Nothing is assigned to you._"];
+  return needsYou.map(
+    (n) =>
+      `- #${n.number}${n.title ? ` ${n.title}` : ""} — ${n.criterion === 4 ? n.why : (n.decision ?? n.why)}`,
+  );
 }
 
 /** The newest committed digest's date, or `null` when none exists yet. Exported because it is the
@@ -77,11 +99,12 @@ function status(today) {
       reason: "no-digest",
       lastDigest: null,
       commitsSinceLast: null,
+      commitsTruncated: false,
       daysSinceLast: null,
     };
   }
   const lastDate = latest.slice(0, 10);
-  const commits = commitsSince(lastDate);
+  const { count: commits, truncated } = commitsSince(lastDate);
   const days = daysBetween(lastDate, today);
   const reason =
     commits >= COMMIT_THRESHOLD ? "threshold" : days >= HEARTBEAT_DAYS ? "heartbeat" : null;
@@ -90,6 +113,7 @@ function status(today) {
     reason,
     lastDigest: lastDate,
     commitsSinceLast: commits,
+    commitsTruncated: truncated,
     daysSinceLast: days,
   };
 }
@@ -114,7 +138,7 @@ function validate() {
   console.log(`✓ ${digestFiles().length} digest(s) satisfy the contract.`);
 }
 
-function main() {
+async function main() {
   const today = arg("today") ?? new Date().toISOString().slice(0, 10);
   if (!DATE_RE.test(today)) throw new Error("digest-scan: --today must be YYYY-MM-DD.");
   if (!existsSync(DIGEST_DIR)) {
@@ -128,6 +152,11 @@ function main() {
     validate();
     return;
   }
+  if (has("needs-you")) {
+    const { gather, plan } = await import("./moneypenny/assignments.mjs");
+    console.log(needsYouLines(plan(gather())).join("\n"));
+    return;
+  }
 
   const s = status(today);
   if (has("due")) {
@@ -137,11 +166,12 @@ function main() {
 
   const mark = s.due ? "▶" : "·";
   console.log(
-    `${mark} last digest: ${s.lastDigest ?? "never"} · ${s.commitsSinceLast ?? "?"} commit(s) since ` +
+    `${mark} last digest: ${s.lastDigest ?? "never"} · ${s.commitsTruncated ? "≥" : ""}` +
+      `${s.commitsSinceLast ?? "?"} commit(s) since ` +
       `(threshold ${COMMIT_THRESHOLD}) · ${s.daysSinceLast ?? "?"}d elapsed (heartbeat ${HEARTBEAT_DAYS}d)` +
       `${s.due ? ` — DUE (${s.reason}); run /secretary` : ""}`,
   );
 }
 
 // CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === `file://${process.argv[1]}`) await main();
