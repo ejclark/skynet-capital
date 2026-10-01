@@ -774,6 +774,13 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
           github_token: ${{ steps.app-token.outputs.token }}
+          # Same list as `build-feedback` above, for the same reason: `route`'s re-dispatch and the
+          # retry sweep both sign as `skynet-envoy`, and claude-code-action refuses a non-human
+          # actor it was not told about. Missing here until 2026-10-01 — run 36802272261 died in 3s
+          # on "non-human actor: skynet-envoy" — because rule 8 only looked at jobs whose `if:`
+          # spells `workflow_dispatch`, and this one rules push out instead. The rule now asks
+          # reachability, so this list and the dispatch can no longer drift apart unnoticed.
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }}
           # The triage rules and the build envelope live in .github/prompts/plan-build.md, not

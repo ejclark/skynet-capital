@@ -429,6 +429,59 @@ jobs:
     const other = selfDispatching("steps.app-token.outputs.token", "github-actions");
     expect(unlistedDispatchActor("elsewhere.yml", other)).toEqual([]);
   });
+
+  // Run 36802272261: `build-plan` carried no `allowed_bots` at all and died in 3s on "non-human
+  // actor: skynet-envoy", with this rule green. Its `if:` rules push out by negation and never
+  // spells `workflow_dispatch`, and the rule's reachability test was a substring match on that
+  // word — so the one job the rule existed to cover was the one it skipped. Reachability is now
+  // the same question rule 9 asks of `push`.
+  const gatedBy = (jobIf: string, allowed: string | null) =>
+    selfDispatching("steps.app-token.outputs.token", allowed).replace(
+      "    if: github.event_name == 'workflow_dispatch'",
+      `    if: ${jobIf}`,
+    );
+
+  it("fails a job gated by negation — rules push out, never names the dispatch", () => {
+    expect(
+      unlistedDispatchActor(
+        "loop.yml",
+        gatedBy("github.event_name != 'push' && needs.route.outputs.plan_issue != ''", null),
+      ),
+    ).toEqual([{ job: "build", actor: "skynet-envoy" }]);
+  });
+
+  it("fails a job with no `if:` at all — every trigger reaches it", () => {
+    expect(
+      unlistedDispatchActor(
+        "loop.yml",
+        gatedBy("PLACEHOLDER", null).replace(/^ {4}if: .*$\n/m, ""),
+      ),
+    ).toEqual([{ job: "build", actor: "skynet-envoy" }]);
+  });
+
+  it("still skips a job no dispatch can reach", () => {
+    expect(
+      unlistedDispatchActor("loop.yml", gatedBy("github.event_name == 'pull_request'", null)),
+    ).toEqual([]);
+  });
+
+  it("fails an `||` with one branch a dispatch can enter", () => {
+    expect(
+      unlistedDispatchActor(
+        "loop.yml",
+        gatedBy("github.event_name == 'issues' || needs.route.outputs.x != ''", null),
+      ),
+    ).toEqual([{ job: "build", actor: "skynet-envoy" }]);
+  });
+
+  // The live gate: whatever the fixtures prove, the real file is what runs.
+  it("holds for the real workflows in this repo", () => {
+    for (const f of readdirSync(".github/workflows")) {
+      expect(unlistedDispatchActor(f, readFileSync(join(".github/workflows", f), "utf8"))).toEqual(
+        [],
+      );
+    }
+  });
 });
 
 // Rule 8's second half: a `workflow_run` run inherits the watched run's actor. Repair job
