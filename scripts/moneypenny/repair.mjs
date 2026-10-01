@@ -28,6 +28,17 @@
 //   3. One open issue per failure signature: a recurrence comments, it never files again — and a
 //      matrix job's legs fold onto one signature (`normalizeJobName`), so one fault is one issue.
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
+//
+// THE STALENESS GUARD, separate from the four above and deliberately not one of them (#4374): the
+// loop guards stop this lane feeding itself, this one stops it reporting a fault that is already
+// fixed. Guard 3's dedupe only reads OPEN issues, so the window slams shut the instant the fixing
+// PR merges and closes the capsule — while runs started on pre-fix commits keep finishing for
+// minutes afterwards. Measured: run 36800376847 started 01:17:21Z on `ec0605b8`, #4361 merged and
+// closed #4359 (same signature) at 01:20:06Z, and 49s later this lane filed #4374 as a brand-new
+// fault and spent a full Opus repair session on a bug that no longer existed. The test is purely
+// temporal — a run that STARTED before the fix merged cannot have carried it — which is why it can
+// never silence the net: a fault that genuinely survives the fix fails a run that starts *after*
+// the close, and files normally. See `fixedWhileInFlight`.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { LABELS } from "./index.mjs";
@@ -181,10 +192,46 @@ export function issueBody(run, failure) {
 }
 
 /**
+ * THE STALENESS GUARD (see the header). Was this signature's capsule closed AFTER this run started?
+ * If so the fix merged while the run was still in flight, so the run tested a commit that predates
+ * it — a stale report, not a new fault.
+ *
+ * Fail-safe direction is deliberate: a missing or unparseable `run_started_at`/`closedAt` returns
+ * `null`, which falls through to filing. This guard may only ever suppress a report it can PROVE is
+ * stale; where it cannot prove that, the net stays loud.
+ *
+ * @param run {{ run_started_at?: string }}
+ * @param closedIssues {{ number: number, title: string, closedAt?: string }[]}
+ * @param title the failure signature
+ * @returns the closed capsule this run is a stale echo of, or `null`
+ */
+export function fixedWhileInFlight(run, closedIssues, title) {
+  const started = Date.parse(run?.run_started_at ?? "");
+  if (!Number.isFinite(started)) return null;
+  for (const issue of closedIssues ?? []) {
+    if (issue.title !== title) continue;
+    const closed = Date.parse(issue.closedAt ?? "");
+    if (Number.isFinite(closed) && closed > started) return issue;
+  }
+  return null;
+}
+
+/** What a stale echo leaves behind — visible on the closed capsule, never a fresh one. */
+function staleEchoBody(run, failure, issue) {
+  return [
+    `Stale echo, not a recurrence — no new fault here.`,
+    "",
+    `Run [${run.id}](${run.html_url}) failed at job \`${failure.job}\`, step \`${failure.step ?? "unknown"}\`, but it started at \`${run.run_started_at}\` on \`${(run.head_sha ?? "").slice(0, 8)}\` — before this issue was closed at \`${issue.closedAt}\`. The fix merged while the run was already in flight, so it was testing a commit that predates it.`,
+    "",
+    `No capsule filed and no repair session dispatched. If this signature survives the fix, the next failing run will start *after* this close and file normally.`,
+  ].join("\n");
+}
+
+/**
  * Decide what to do about a completed run. Pure.
  *
  * @param ctx {{ run: object, defaultBranch: string, failures: {job: string, step?: string, logTail?: string}[] }}
- * @param deps {{ openIssues?: {number: number, title: string, labels?: string[]}[] }}
+ * @param deps {{ openIssues?: {number: number, title: string, labels?: string[]}[], closedIssues?: {number: number, title: string, closedAt?: string}[] }}
  * @returns intents — `[]` means deliberately nothing.
  */
 export function routeFailure(ctx, deps = {}) {
@@ -200,6 +247,17 @@ export function routeFailure(ctx, deps = {}) {
     const title = signature(run, failure.job);
     const existing = open.find((i) => i.title === title);
     if (!existing) {
+      // The staleness guard runs only where guard 3 found nothing open — an OPEN capsule for this
+      // signature always wins, so a live fault is still commented on as a recurrence.
+      const echoed = fixedWhileInFlight(run, deps.closedIssues, title);
+      if (echoed) {
+        intents.push({
+          type: "comment",
+          issue: echoed.number,
+          body: staleEchoBody(run, failure, echoed),
+        });
+        continue;
+      }
       intents.push({
         type: "open-issue",
         title,
@@ -360,7 +418,7 @@ function main(argv) {
     // no failing job means the workflow file itself was rejected — still a failure, still ours.
     failures: raw.failures ?? withParseFallback(run, dry ? [] : gatherFailures(run.id)),
   };
-  const deps = fixture ?? (dry ? {} : { openIssues: openIssues() });
+  const deps = fixture ?? (dry ? {} : { openIssues: openIssues(), closedIssues: closedIssues() });
   const intents = routeFailure(ctx, deps);
 
   if (dry) {
@@ -384,6 +442,31 @@ function openIssues() {
     "--json",
     "number,title,labels",
   ]).map((i) => ({ ...i, labels: (i.labels ?? []).map((l) => l.name) }));
+}
+
+/**
+ * This lane's CLOSED capsules, for the staleness guard. Same label-only scope as `openIssues` — it
+ * never reads the wider backlog.
+ *
+ * Over-fetching is harmless and under-fetching only costs loudness: the guard's own `closedAt >
+ * run_started_at` test is exact, so every row that cannot satisfy it is discarded anyway, and a
+ * capsule missed by the window simply gets reported as a fresh fault — the status quo. Only an
+ * issue closed in the last few minutes can ever match, and `ci-failure` runs at tens of issues
+ * total, so 50 is comfortably past the horizon that matters.
+ */
+function closedIssues() {
+  return json("gh issue list", [
+    "issue",
+    "list",
+    "--state",
+    "closed",
+    "--label",
+    LABEL.name,
+    "--limit",
+    "50",
+    "--json",
+    "number,title,closedAt",
+  ]);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
