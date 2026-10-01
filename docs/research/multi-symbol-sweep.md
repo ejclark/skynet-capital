@@ -109,6 +109,27 @@ robust, alpha fragile — is the finding.
   without a second confirming instance at a comparably elevated yield level — n=1 killed on its first
   out-of-sample test, same shape as the housing-starts ladder above.
 
+- **A scheduled reset of the same quantity a conditional threshold test checks defuses that test by a
+  measured base rate (FT-russell-style-quarter-end-capping-effective-2026-09-30-1 and -2)** — added
+  2026-10-01 from the
+  [russell-style-quarter-end-capping-effective-2026-09-30 close-out](events/russell-style-quarter-end-capping-effective-2026-09-30.md).
+  The founding leg measured, across five years of real prices, that resetting the Russell US Style
+  over-4.8%-company cohort to 45% sixteen days before the quarter-end 48% breach test cuts the
+  probability of that test firing roughly sevenfold (4.02% vs 28.96% un-reset) — a clean, well-sourced
+  base-rate argument. It failed on its own first live test: the reset (2026-09-09 cut-off, effective
+  2026-09-21) did not bring IWY's cohort to ~45% as assumed — the real, non-drifted 2026-09-21 holdings
+  already read **50.01%**, because a sixth company (META) crossed *into* the over-4.8% cohort between
+  the review's cut-off and its effective date, which the reset mechanism has no way to anticipate.
+  Reconstructed from real prices bracketing that real snapshot, the cohort stayed above the 48% trigger
+  itself through the 2026-09-25 test date (≈49.6%). **What this does and does not refute:** the
+  sevenfold-reduction arithmetic is correct as a *historical base rate* for a cohort whose membership is
+  frozen at the reset — it is not a safe stand-in for *this specific* post-reset cohort, because the
+  gap between a reset's cut-off and its effective date is enough time for a new name to cross the
+  per-company inclusion threshold and the reset doesn't catch it. Do not treat "a scheduled reset of a
+  threshold quantity defuses the downstream test" as reliable without re-measuring the cohort's actual
+  post-reset composition — membership can move between the reset's own cut-off and effective dates, not
+  just the drift the base rate already prices in.
+
 - **A French flash PMI's own-hours footprint on the CAC-minus-DAX residual, measured as genuinely
   absent at registration (FT-sp-global-flash-france-pmi-2026-09-23-1)** — added 2026-09-24 from the
   [sp-global-flash-france-pmi-2026-09-23 close-out](events/sp-global-flash-france-pmi-2026-09-23.md).
