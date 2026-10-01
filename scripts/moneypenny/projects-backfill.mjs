@@ -58,6 +58,11 @@ function main() {
   if (!plan.ok) process.exit(1);
 
   const board = createBoardContext();
+  // #4439: read the board ONCE, up front. `syncIssue` now prefers a per-issue lookup when no list
+  // has been read — right for the one-issue events job, wrong for a sweep, which gets every issue's
+  // answer out of a single page. Warming it here keeps (1) above a property of this file, not a
+  // side effect of which call happens to touch the board first.
+  board.items();
   let added = 0;
   const skipped = issues.length - candidates.length;
   const failures = [];

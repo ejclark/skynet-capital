@@ -35,9 +35,15 @@
 // `createBoardContext`. They used to run once per `syncIssue` call, which was free for the
 // one-issue job this file is named for and a 9,000-point bill when projects-backfill.mjs calls it
 // ninety times in five minutes.
+//
+// #4439: and for the one-issue job the whole-board read was never free either — ~400 points a run
+// meant a dozen `issues` events spent the PAT's hour, with `main` red behind them. `itemsFor` asks
+// GitHub about the issue instead of about the board, and only a caller already holding a board list
+// (a sweep) uses one.
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
 import {
+  boardItemsFromProjectItems,
   explainMaskedOwnerFailure,
   isBacklogCandidate,
   isMaskedOwnerFailure,
@@ -70,14 +76,18 @@ function probeGraphql() {
 }
 
 /**
- * EVERY `gh project` call in this module goes through here, so all of them get the same two things
- * #3914 proved were missing: a retry that can actually see gh's masked transient
+ * EVERY `gh` call in this module goes through here, so all of them get the same two things #3914
+ * proved were missing: a retry that can actually see gh's masked transient
  * (`isRetryableProjectsGhError`), and — when it sticks — an error that names the cause instead of
  * handing the next repair session `unknown owner type` and a stack trace. `item-edit` had no retry
  * at all before this; it shells to the same subcommand family and fails the same way.
+ *
+ * `onStickyError` is the per-caller last word before the raw error escapes: only `gh project` can
+ * produce `unknown owner type`, so only `ghProject` passes one (#4439 split this out so the
+ * per-issue GraphQL read could share the rate-limit handling without inheriting that diagnosis).
  */
-function ghProject(args) {
-  const run = () => sh("gh", ["project", ...args]);
+function runGh(call, argv, { onStickyError } = {}) {
+  const run = () => sh("gh", argv);
   try {
     return withRetry(run, { isTransient: isRetryableProjectsGhError });
   } catch (err) {
@@ -89,16 +99,20 @@ function ghProject(args) {
     // #4213: the same question also answers whether it is a quota AT ALL — `runThroughRateLimit`
     // rides out a throttled burst rather than failing `main` for a squeeze that clears in a minute.
     if (isRateLimitExhausted(text)) {
-      return runThroughRateLimit({
-        call: `\`gh project ${args[0]}\``,
-        run,
-        firstError: err,
-        readBudget: ghRateLimit,
-      });
+      return runThroughRateLimit({ call, run, firstError: err, readBudget: ghRateLimit });
     }
-    if (!isMaskedOwnerFailure(text)) throw err;
-    throw new Error(explainMaskedOwnerFailure(probeGraphql()), { cause: err });
+    onStickyError?.(text, err);
+    throw err;
   }
+}
+
+function ghProject(args) {
+  return runGh(`\`gh project ${args[0]}\``, ["project", ...args], {
+    onStickyError: (text, err) => {
+      if (!isMaskedOwnerFailure(text)) return;
+      throw new Error(explainMaskedOwnerFailure(probeGraphql()), { cause: err });
+    },
+  });
 }
 
 function ghProjectJson(args) {
@@ -138,6 +152,71 @@ function readFieldsFromGh() {
   return Array.isArray(fields) ? fields : (fields.fields ?? []);
 }
 
+// The one question the events lane actually has — "which item does THIS issue already have on the
+// board?" — asked of the issue instead of of the board (#4439, see projects.mjs's block above
+// `boardItemsFromProjectItems` for the arithmetic). `first: 20` is generous: an issue on more than a
+// couple of projects is already unusual, and the nodes are two fields each, so the whole read prices
+// out at a single point against the ~400 one `item-list` costs.
+//
+// THE `projectOwner` ALIAS IS THE LOAD-BEARING HALF, not decoration. A token that cannot SEE the
+// project gets `projectItems: {nodes: []}` — indistinguishable from "this issue is not on the board",
+// and a FALSE miss is the one outcome worse than the bug being fixed: it would send every sync down
+// the `item-add` → "Content already exists" → re-read-the-whole-list path, three board pages instead
+// of one. Asking for the project's id in the same breath makes that case LOUD: GitHub answers
+// `NOT_FOUND` and gh exits non-zero (verified 2026-10-01 against this session's App token, which is
+// blind to a personal-account project exactly as this module's header says), so `itemsFor`'s fallback
+// takes over and the run costs what it costs today. An empty `nodes` can then only mean what it says.
+const ISSUE_PROJECT_ITEMS_QUERY = `query($owner:String!,$repo:String!,$number:Int!,$projectOwner:String!,$project:Int!){
+  projectOwner: user(login:$projectOwner){ projectV2(number:$project){ id } }
+  repository(owner:$owner,name:$repo){
+    issue(number:$number){
+      projectItems(first:20,includeArchived:false){ nodes{ id project{ number } } }
+    }
+  }
+}`;
+
+/**
+ * One issue's board items over GraphQL — the events lane's whole board bill, ~1 point (#4439).
+ *
+ * Exported with `gh` injected so the two things that make it safe are provable without a network
+ * call: the argv it asks (both halves of the query, this issue's number) and the fail-closed read of
+ * a response whose `projectOwner` came back blind.
+ */
+export function readIssueItemsFromGh(
+  issue,
+  { gh = (argv) => runGh("`gh api graphql` (one issue's project items)", argv) } = {},
+) {
+  const [owner, repo] = (process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital").split("/");
+  const out = gh([
+    "api",
+    "graphql",
+    "-f",
+    `query=${ISSUE_PROJECT_ITEMS_QUERY}`,
+    "-F",
+    `owner=${owner}`,
+    "-F",
+    `repo=${repo}`,
+    "-F",
+    `number=${Number(issue?.number)}`,
+    "-F",
+    `projectOwner=${OWNER}`,
+    "-F",
+    `project=${PROJECT_NUMBER}`,
+  ]);
+  const data = JSON.parse(out || "null")?.data;
+  if (!data?.projectOwner?.projectV2?.id) {
+    throw new Error(
+      `this token cannot see project #${PROJECT_NUMBER} under ${OWNER}, so an empty projectItems ` +
+        "list would be a false miss — reading the board instead (#4439).",
+    );
+  }
+  return boardItemsFromProjectItems({
+    nodes: data.repository?.issue?.projectItems?.nodes,
+    projectNumber: PROJECT_NUMBER,
+    issueUrl: issue?.html_url,
+  });
+}
+
 function readProjectFromGh() {
   const projects = ghProjectJson(["list", "--owner", OWNER, "--limit", "100"]);
   const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
@@ -165,15 +244,44 @@ export function createBoardContext({
   readItems = readItemsFromGh,
   readFields = readFieldsFromGh,
   readProject = readProjectFromGh,
+  readIssueItems = readIssueItemsFromGh,
+  log = console.log,
 } = {}) {
   let items;
   let fields;
   let project;
 
+  const readAllItems = ({ refresh = false } = {}) => {
+    if (refresh || !items) items = readItems();
+    return items;
+  };
+
   return {
-    items({ refresh = false } = {}) {
-      if (refresh || !items) items = readItems();
-      return items;
+    items: readAllItems,
+    /**
+     * The candidate items for ONE issue, charged at the cheapest source that can answer (#4439).
+     * A list this context has already read answers for free, which is the whole-backlog sweep's
+     * path and #4183's fix unchanged; otherwise GitHub is asked about this issue alone — ~1 point
+     * against the ~400 a board page costs, and the events lane's entire bill.
+     *
+     * A failed lookup FALLS BACK to the whole-board read rather than failing the sync: this is a
+     * cost optimisation, and a cost optimisation that invents a new way to fail `main` has made
+     * things worse. An exhausted quota is the one failure that propagates — a board read cannot
+     * succeed where this just didn't, and `runThroughRateLimit` has already had its say.
+     */
+    itemsFor(issue) {
+      if (items) return items.items ?? [];
+      try {
+        return readIssueItems(issue);
+      } catch (err) {
+        const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+        if (isRateLimitExhausted(text)) throw err;
+        log(
+          `per-issue board lookup failed (${text.replace(/\s+/g, " ").trim().slice(0, 200)}) — ` +
+            "falling back to the whole-board read (#4439)",
+        );
+        return readAllItems().items ?? [];
+      }
     },
     fields() {
       fields ??= readFields();
@@ -241,7 +349,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
   // answers that common case for free (#4183), and only a miss pays for the add.
   const { item, added } = resolveBoardItem({
     issueUrl: issue.html_url,
-    cachedItems: board.items().items,
+    cachedItems: board.itemsFor(issue),
     addItem: () =>
       ghProjectJson([
         "item-add",

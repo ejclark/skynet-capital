@@ -103,6 +103,12 @@ export interface BoardItem {
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
 
+export function boardItemsFromProjectItems(args?: {
+  nodes?: ({ id?: string; project?: { number?: number } } | null | undefined)[];
+  projectNumber?: number;
+  issueUrl?: string;
+}): BoardItem[];
+
 export const BOARD_LOOKUP_ATTEMPTS: number;
 export const BOARD_LOOKUP_BASE_MS: number;
 
