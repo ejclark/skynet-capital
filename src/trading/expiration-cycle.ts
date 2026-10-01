@@ -25,12 +25,19 @@ import { parseOccSymbol } from "./option-symbols.js";
  *  - every other expiration date — Mondays, Wednesdays, the other Fridays of a month, the dailies
  *    some index products list — is a **weekly**.
  *
+ * The Thursday shift is NOT a rare edge case, which is worth saying because it looks like one:
+ * **Juneteenth lands on the third Friday of June twice inside the closure table's current horizon**
+ * — 2026-06-19 and 2027-06-18 are both full closures (`domain/market-calendar.ts`), so the June
+ * quarterly witching those years expires on the Thursday. Every June-witching contract this app can
+ * trade in that window takes this branch, so it is pinned against those real dates in the spec, not
+ * only against a stub.
+ *
  * Honesty bound, deliberate and narrow: the holiday adjustment can only be applied where
  * `market-calendar.ts`'s checked-in closure table reaches (it publishes the exchange's own two-year
  * horizon). Beyond that horizon a holiday-shifted monthly reads as a weekly rather than being
  * guessed at — the same posture that table's own docblock takes ("extend by year with a dated
- * source line; never infer a date"). In practice a full-day closure on a third Friday is rare
- * (Good Friday is the only candidate, and it lands on a third Friday only occasionally).
+ * source line; never infer a date"). That bound is the one way this classifier can be wrong about a
+ * real contract, and it fails toward the vaguer label rather than inventing a confident one.
  */
 
 /** Which listing cycle a contract expired on. */
@@ -57,9 +64,14 @@ function thirdFriday(year: number, month: number): string {
  * The cycle an OCC expiration date belongs to. Takes the date rather than the symbol so a caller
  * that has already parsed the contract doesn't parse it twice.
  *
- * `closed` is injectable for one reason worth stating: no third Friday inside the closure table's
- * current horizon is a holiday, so the Thursday-shift branch has no real date to exercise it and
- * would otherwise be an untested claim about a rule we believe.
+ * `closed` is injectable so the spec can pin the SHIFT RULE independently of the closure table's
+ * contents: the June witchings exercise it on real dates, but a later edit to that table (a year
+ * added, a date corrected) would otherwise be able to turn the rule's own test green or red for a
+ * reason that has nothing to do with the rule.
+ *
+ * Total by construction — every string in, a cycle out. A malformed date is read as a weekly rather
+ * than thrown on, because this runs once per trip inside `tradeStats`: one unparseable symbol in a
+ * ledger must cost that trip its cycle label, never the whole account's metrics.
  */
 export function cycleOfExpiration(
   expiration: string,
@@ -67,13 +79,15 @@ export function cycleOfExpiration(
 ): ExpirationCycle {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(expiration);
   if (!match) return "weekly";
-  const year = Number(match[1]);
+  // The pattern admits `2026-99-99` and `2026-02-30`; only parsing rejects a day that never was.
+  const time = Date.parse(`${expiration}T00:00:00Z`);
+  if (!Number.isFinite(time)) return "weekly";
   const month = Number(match[2]);
-  const standard = thirdFriday(year, month);
+  const standard = thirdFriday(Number(match[1]), month);
   const isStandard =
     expiration === standard ||
     // Shut all day on the third Friday → the standard expiration is the Thursday before it.
-    (isoDay(Date.parse(`${expiration}T00:00:00Z`) + DAY_MS) === standard && closed(standard));
+    (isoDay(time + DAY_MS) === standard && closed(standard));
   if (!isStandard) return "weekly";
   return WITCHING_MONTHS.has(month) ? "quarterly" : "monthly";
 }

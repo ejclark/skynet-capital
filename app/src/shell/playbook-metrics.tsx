@@ -45,7 +45,7 @@ export function mixLabel(counts: Readonly<Record<string, number>>): string {
 }
 
 /**
- * "2 monthly · 1 weekly" — shortest-dated cycle first, which is how a chain reads. Counts option
+ * "1 weekly · 2 monthly" — shortest-dated cycle first, which is how a chain reads. Counts option
  * trips only, so a playbook that trades shares says that in words: three zeros would be a false
  * reading (it did trade, just nothing with an expiration) and a bare "—" reads like a number we
  * failed to compute rather than a thing that doesn't apply.
