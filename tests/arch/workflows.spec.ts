@@ -369,7 +369,7 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
 
 // Rule 8 (#2292): a self re-dispatch signed by one bot, landing on a claude-code-action job that
 // allow-lists another. Event research died in ~3s per leg for ~41h on exactly this drift.
-describe("workflow lint — a self-dispatch actor the dispatch-gated job does not allow", () => {
+describe("workflow lint — a self-dispatch actor a dispatch-reachable job does not allow", () => {
   const selfDispatching = (
     token: string,
     allowed: string | null,
@@ -452,6 +452,38 @@ jobs:
   it("ignores a dispatch aimed at a different workflow file", () => {
     const other = selfDispatching("steps.app-token.outputs.token", "github-actions");
     expect(unlistedDispatchActor("elsewhere.yml", other)).toEqual([]);
+  });
+
+  // Reachability is the question rule 9 asks of `push` (run 36802272261 died on the gap a
+  // substring test left): no `if:` admits every trigger, and any one `||` branch is a way in.
+  it("fails a job with no `if:` at all — every trigger reaches it", () => {
+    const loop = selfDispatching("steps.app-token.outputs.token", null).replace(
+      /^ {4}if: .*\n/m,
+      "",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([
+      { job: "build", actor: "skynet-envoy" },
+    ]);
+  });
+
+  it("fails an `||` with one branch a dispatch can enter", () => {
+    const loop = selfDispatching(
+      "steps.app-token.outputs.token",
+      null,
+      "github.event_name == 'issues' || needs.route.outputs.x != ''",
+    );
+    expect(unlistedDispatchActor("loop.yml", loop)).toEqual([
+      { job: "build", actor: "skynet-envoy" },
+    ]);
+  });
+
+  // The live gate: whatever the fixtures prove, the real file is what runs.
+  it("holds for the real workflows in this repo", () => {
+    for (const f of readdirSync(".github/workflows")) {
+      expect(unlistedDispatchActor(f, readFileSync(join(".github/workflows", f), "utf8"))).toEqual(
+        [],
+      );
+    }
   });
 });
 
