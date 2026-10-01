@@ -1,6 +1,7 @@
 // Type surface for audit.mjs (formerly postmaster-audit.mjs) — the scripts/ tree is plain ESM with `allowJs` off, so a
 // spec that imports from it needs this rather than a repo-wide tsconfig loosening for one file
 // (see scripts/moneypenny/index.d.mts (formerly postmaster.d.mts), the pattern this mirrors).
+import type { WorkModeState } from "./work-mode-title.d.mts";
 export interface AuditIssue {
   number?: number;
   title?: string;
@@ -47,6 +48,9 @@ export interface InProgressIssue {
   hoursQuiet: number;
 }
 export interface AuditDeps {
+  /** The work spigot's dial and the title it currently shows (#3960 criterion 4) — null when it
+   *  could not be read, which skips the title sync without touching the other checks. */
+  workMode?: WorkModeState | null;
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
@@ -64,7 +68,15 @@ export interface AuditIntent {
   issueNumber?: number;
   prNumber?: number;
   title: string;
-  body: string;
+  /** Every flag intent posts a comment; `retitle-work-mode` deliberately does not — a title is a
+   *  display, and its own value is the memory that stops the next push repeating the edit. */
+  body?: string;
+  /** The title a `retitle-work-mode` intent writes (#3960 criterion 4). */
+  newTitle?: string;
+  /** The position a `retitle-work-mode` intent is syncing the title to. */
+  position?: string;
+  /** Why that position resolved, carried from the dial's reader for the run receipt. */
+  reason?: string;
   quietDays?: number;
   hoursSinceFiled?: number;
   hoursSinceReady?: number;

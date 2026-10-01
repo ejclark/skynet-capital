@@ -39,10 +39,11 @@ export const POSITIONS = ["halt", "conserve", "normal", "surge"];
 /** The per-position numbers every position must carry — one per lane the dial throttles:
  *  `inFlightCap` the build lanes (admission.mjs), `researchPerTick` the event-research lane
  *  (events.mjs `dueForResearch`), `governorDispatches` the athletes one `/governor` cycle may
- *  launch. A lane added later adds its key HERE rather than inventing its own file, which is the
+ *  launch, `grindWidth` the items one `/grind` run may fan out over (.claude/workflows/grind.js).
+ *  A lane added later adds its key HERE rather than inventing its own file, which is the
  *  whole point of the spigot: one dial, not four. Every position must carry every key, so adding
  *  one is a loud edit to work-mode.json rather than a silent default. */
-const CAP_KEYS = ["inFlightCap", "researchPerTick", "governorDispatches"];
+const CAP_KEYS = ["inFlightCap", "researchPerTick", "governorDispatches", "grindWidth"];
 
 const refuse = (file, what) => {
   throw new Error(
@@ -213,6 +214,13 @@ export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), 
       until: null,
       caps: { ...config.positions.conserve },
       reason: "fail-closed: the tracking issue could not be read",
+      // The one state where the position is a FALLBACK rather than a reading of the dial, marked
+      // explicitly rather than inferred from `warning` (#3960 slice 4): `resolveWorkMode` also
+      // warns on states it read perfectly well — a forgotten `until` comment, two dial labels — and
+      // a consumer that needs "did we actually read it?" must not confuse the two. The title sync
+      // is that consumer (work-mode-title.mjs): it writes the position the lanes act on, but never
+      // from a fallback.
+      unreadable: true,
       warning: `work-mode: could not read issue #${config.trackingIssue} (${err.message}) — acting as conserve`,
     };
   }

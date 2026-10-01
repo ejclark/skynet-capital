@@ -984,6 +984,13 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::notice::cleared in-progress on #${i.issueNumber} — quiet ${i.hoursQuiet}h`);
     return `🧹 cleared \`in-progress\` — \`${i.title}\` quiet ${i.hoursQuiet}h (#${i.issueNumber})`;
   }
+  if (i.kind === "retitle-work-mode") {
+    // #3960 criterion 4 — the dashboard catches up with the dial. One write, no comment: the title
+    // IS the display, and a comment per expiry would be noise on the one issue a human watches.
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--title", i.newTitle]);
+    console.log(`::notice::work-mode title → ${i.newTitle} (${i.reason})`);
+    return `🪧 retitled #${i.issueNumber} — \`${i.title}\` → \`${i.newTitle}\``;
+  }
   if (i.kind === "flag-conflict-cap") {
     commentAndFlagConflictCap(i);
     console.log(`::warning::conflict repair cap reached — #${i.prNumber} \`${i.title}\``);
