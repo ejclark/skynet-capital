@@ -438,3 +438,72 @@ after which this doc goes quiet.
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+*Close-out, **2026-10-01** (D+1, inside `closeOutWithinDays: 6`). No symbol instruments apply
+(`symbols: []` — not an earnings-cycle/intraday-edges target); `rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges` was run as the standard
+close-out formality and is a no-op for this kind. Every figure below is a **primary re-fetched
+today** (`ticdata.treasury.gov` Table A vintages, plain curl, direct, HTTP 200) — never the D-0
+screen row, and never memory of this ledger's own prior arithmetic.*
+
+**Verdict: the release landed exactly where the ledger said it would, on every axis that was
+registered.** The print published on schedule, the headline sits inside the forecast band near its
+historical seasonal center, and the one prediction that cannot be judged yet — whether this as-of
+quarter turns out to be the year's most heavily revised — stays open on its own clock, nine months
+out, exactly as it was always going to.
+
+### FT-1 — PASSED. September extends to 16 of 16 at offset +0
+
+`debta2026q2.html` (re-fetched today, HTTP 200, 31,985 bytes) carries the footnote stamp
+**"Source: Department of the Treasury, September 30, 2026."** — the as-of 2026-06-30 Gross External
+Debt Position published on its scheduled last-business-day date, consistent with the Treasury
+release-dates page's 16:00 ET / no-press-release note. September's own sub-series record extends
+from **15 of 15** to **16 of 16** at offset +0 — still the only release month in the archive that
+has never once slipped.
+
+### FT-2 — PASSED. $30.467tn, inside the registered band, near the YoY center
+
+Published headline: **$30,467,296M = $30.467tn**. Registered band was **$29.7tn–$31.0tn** (centre
+$30.3tn); the print sits inside it, and inside the narrower ±2σ normal-theory interval
+($29.77tn–$30.87tn) the clean sample alone implied.
+
+- **YoY** (base independently re-fetched today — `debta2025q2.html`, stamp "September 30, 2025",
+  **$28,604,291M**, matching the base this ledger already carried): $30,467,296M ÷ $28,604,291M =
+  **+6.513%**, against the forecast mean **+6.00% (sd 0.97pp, n=11)** — **+0.53σ**, comfortably
+  inside range.
+- **QoQ** (base independently re-fetched today — `debta2026q1.html`, stamp "June 30, 2026",
+  **$30,196,961M**, matching the base this ledger already carried): **+0.895%**, against the
+  historical Q2 QoQ mean **+0.81% (sd 1.51pp)** — the closest match to its own seasonal mean of any
+  quarter in the ledger's panel.
+
+Kill switch 3 (a first-vintage headline outside the band) did not fire — same evidence.
+
+**One factual aside, not a registered claim.** The $270.3bn QoQ increase breaks down General
+Government **−$17.9bn**, Central Bank **+$9.6bn**, Deposit-taking corporations **+$59.9bn**, Other
+Sectors **+$193.8bn**, DI intercompany lending **+$25.0bn** — Other Sectors alone is **72%** of the
+quarter's growth. That is organic QoQ movement, a different phenomenon from leg 3's finding about
+which sector carries the *restatement* nine months later; named here only because the sector
+matches, not as evidence for leg 3.
+
+### Kill switch 2 / the revision monopoly — did not fire, corroborating (not re-scored here)
+
+`deb2a2026q1.html` returns **404** today — the September 2026 edition published no revised vintage
+for any previously published as-of quarter. September's revision count stays **0**, consistent with
+the 52-of-52 June monopoly. Not re-registered: `FT-tic-quarterly-external-debt-2027-06-30-2` already
+owns and scores this observation, first checkpoint 2026-10-01 (today) — see that sibling ledger.
+
+### FT-3 — stays open. Score-by 2027-07-07, structurally beyond this close-out's window
+
+`closeOutWithinDays: 6` puts this event's close-out ceiling at **2026-10-06**; FT-3 is about the
+**2027-06-30** edition's revision to this quarter, nine months out, and cannot be judged from
+anything published today. `event-scan.mjs` named it in `forwardTestsBeyondWindow` for exactly this
+reason — the row stays registered as written rather than taking a premature verdict, and its own
+`forward-test-due` dispatch picks it up when 2027-07-07 arrives.
+
+**No tape test was ever registered (leg 5)**, so there is nothing to score there; the corridor's own
+`high` PCE print lands the same day, with ISM/jobs/GDP-third-estimate inside the week — exactly the
+unattributable mix the initial research declined to touch.
+
+This document goes quiet on `## Outcome`; the one door back in is FT-3's own score-by.

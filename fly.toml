@@ -69,7 +69,9 @@ primary_region = "ord"  # Chicago — closest to Iowa
   SKYNET_INSIGHTS_DIR = "/data/insights"
 
 [processes]
-  app = "npm run serve:dashboard"
+  # Plain node on the esbuild bundle (Dockerfile's build:server) — never `npm run`/tsx in prod: each
+  # wrapper is its own Node process, and the stack OOM-killed this 512 MB machine (#4425).
+  app = "node --enable-source-maps dist/serve.mjs"
 
 [http_service]
   internal_port = 8787

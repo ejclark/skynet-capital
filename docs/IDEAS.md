@@ -18,12 +18,46 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
+  refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's
+  rate limit and it sat unarmed 8h+ while its class failed 11 more runs. `deploy-lag.mjs` watches
+  merged-but-undeployed; the repair lane watches a red `main`; nothing lists open PRs with green
+  checks, a failed arm job, and no `hold-merge`. One digest line would have caught it within the hour.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **Derive `allowed_bots` from the dispatching token instead of linting two hand-kept lists.**
+  Workflow-lint rule 8 decides reachability from the `if:` spelling, so `!= 'push'` slipped past it
+  (#4385 widens it; `event_name == 'issues' || …` still under-flags). Three recurrences (09-05,
+  09-25, 09-30) were all "a lane's token changed and its allow-list didn't". A shared constant per
+  token (or a composite action that sets both) removes the second edit entirely.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **`auditLedger()` could warn on an entry with `SHA: n/a` and no `COVERS:`.** That shape closes no
+  incident in the scan, so the entry's own failing runs stay "unlearned" — the backfill-sweep entry of
+  2026-09-30 left `decfc83` open that way. Advisory warning, not a failure.
+  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
+- **A failed open-issue read makes the board sweep plan a Done move for every card.** `planReconcile`
+  cannot tell "no open issues came back" from "every issue is closed", and the sweep's own specs use
+  `openIssues: []` as shorthand for the second. The COLUMNS still come out right — `syncIssue`
+  re-reads each issue before it writes — so the cost is bounded to ~one `item-edit` per board item
+  on a quiet hour, with `isRateLimitExhausted`'s abort as the backstop. Deliberately NOT guarded
+  when found: a refusal in the pure function would have meant rewriting four just-merged specs to
+  protect against a self-correcting cost. The honest fix is in `reconcileBoard`, which is the layer
+  that knows a READ happened — a sentinel (`null` for "not read") rather than an empty list.
+  _(src: Claude · while: #4393 slice 1 hardening, reviewing the landed sweep)_
+- **A `gh project` failure outside the two classified ones is still a raw stack trace.** `ghProject`
+  explains gh's masked owner failure (#3914) and an exhausted quota (#4183); everything else —
+  including `Could not resolve to a ProjectV2 with the number 2`, which is what a token WITHOUT
+  Projects access says — reaches the log as a `child_process` trace with the useful sentence buried
+  on line 5. The first line is honest, so this is log ergonomics, not a wrong answer: one more
+  classifier naming "this token cannot see the project — it needs `PROJECTS_PAT`, not the App
+  token". _(src: Claude · while: #4393 slice 1, smoking `projects-reconcile.mjs --dry-run` locally)_
 - **`Projects v2 setup` is not on the repair lane's watched-workflow list**, so its reds are silent.
   Its 2026-09-30 backfill drained the whole GraphQL hour and failed; nothing filed, and the incident
   was diagnosed from #4183 — a `sync project status` bystander that failed on the drain eight minutes
   later. Add the workflow name to `moneypenny-repair.yml`'s `workflow_run.workflows` list. A workflow
   file, so Eric's merge. _(src: Claude · while: repairing #4183)_
-- **A skipped board sync has no scheduled catch-up.** `projects-sync.mjs` is eventually consistent by
+- ~~**A skipped board sync has no scheduled catch-up.**~~ **Closed by #4402** —
+  `projects-reconcile.mjs` is that sweep; the hourly cron that fires it is #4393 slice 2.
+  `projects-sync.mjs` is eventually consistent by
   design (an issue re-syncs on its next event), but an issue whose LAST event lost its sync stays
   stale, and `projects-backfill.mjs` is `workflow_dispatch`-only. A nightly backfill would close the
   gap now that a sweep costs ~1 `item-list` page instead of one per issue (#4183). A workflow file,

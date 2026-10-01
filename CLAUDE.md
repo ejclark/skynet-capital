@@ -389,15 +389,30 @@ obvious>.` — e.g. `#1267 — waiting on you to R+M. Closes the deploy-churn si
 effects on deploy."` Never restate what the PR body, the CI run, or the notification's own payload
 already said; a wake with nothing new to report earns silence (re-arm the check-in), not a recap.
 
-**A finished session asks to archive itself** (Eric, 2026-09-28: "The point is to reduce the pileup
-of open sessions" — and sessions marked finished still "look like they have follow-up actions").
-Done is checked, not assumed: every PR it opened is merged or closed; every follow-up it produced (an
-open question, a parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan
-issue — never only the chat; its plan issue's state block is current; no PR watch or scheduled
-check-in is pending. Then it asks **"archive this session?"** as a yes/no form (`AskUserQuestion`),
-the same clickable shape as an approval prompt — not a plain-text question needing a typed reply
-(Eric, 2026-09-29: "makes this process easier to navigate") — and on yes it archives itself as its
-final action (`archive_session` on its own session id).
+**A finished session archives itself — it asks first only when a human opened it** (Eric,
+2026-09-28: "The point is to reduce the pileup of open sessions" — and sessions marked finished still
+"look like they have follow-up actions"; 2026-10-01, after 46 spawned sessions in one day left 35
+finished but open: archiving "should be the default path as a clean up activity"). Done is checked,
+not assumed: every PR it opened is merged or closed; every follow-up it produced (an open question, a
+parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan issue — never only the
+chat; its plan issue's state block is current; no PR watch or scheduled check-in is pending. Then
+`get_session` (no id) decides the shape:
+- **Spawned** (`origin: claude_code_mcp_seed` — another session's `create_session`) → no ask. Write
+  the final report, then `archive_session` on its own id as the last tool call **of that same turn**.
+  An ask costs a whole extra turn (a full context re-read) for a decision already made, and archiving
+  is reversible (Unarchive).
+- **Opened by hand** (any other origin — app, phone, CLI) → ask **"archive this session?"** as a
+  yes/no `AskUserQuestion` form (Eric, 2026-09-29: "makes this process easier to navigate"); on yes,
+  archive as the final action.
+- **Done-check fails** (blocked, PR open, watch pending) → never archive: the open session is the
+  signal that it still needs someone.
+- **Spawned sessions carry `issue:<n>`** (Eric, 2026-10-01: "if grouped, we could archive the
+  group"): `create_session` tags each child with the issue it serves, so one issue's sessions are
+  one group. When that issue closes, the spawner archives every open session in the group whose PRs
+  are merged or closed — one sweep catches the children that stopped short of archiving themselves.
+
+`archive_session` releases the container the call runs in, so its spinner can sit for a minute with
+no result — that wait is teardown, not thinking. Nothing goes after it.
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens

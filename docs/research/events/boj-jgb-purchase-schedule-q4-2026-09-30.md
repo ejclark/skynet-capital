@@ -362,3 +362,89 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-29
 <!-- probe-ref: {"symbols":{},"vix":16.07,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-01, D+1).** Rates mode runs no `earnings-cycle`/`intraday-edges` instrument
+(`symbols: []` by design, as at initial research); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing in
+this ledger reads it — "re-run instrument data" here means re-fetching every cited primary direct
+rather than reading this doc's own memory of the earlier reads.
+
+### What happened
+
+The Bank published the October–December 2026 schedule on schedule: `mpr260930a.pdf`
+(boj.or.jp/en/mopo/mpmdeci/mpr_2026/, fetched direct, HTTP 200, 125,665 bytes, header dated
+"September 30, 2026"), found via a fresh fetch of the 2026 releases index
+(`mpr_2026/index.htm`, HTTP 200, 43,647 bytes) rather than guessed from the prior two primaries'
+filename pattern — the index lists it at "Sept. 30, 2026" exactly where predicted. No CID-font
+trap this time: `pdfminer.six`'s `extract_text` (installed this session; unavailable at initial
+research) decoded the embedded font cleanly on the first pass, no manual offset needed.
+
+**Leg 1 (the headline is not news) — CONFIRMED to the yen.** The six coupon-JGB monthly buckets
+(¥100mn) print **1,000 / 6,600 / 5,800 / 6,100 / 1,700 / 1,500** (up to 1y / 1–3y / 3–5y / 5–10y /
+10–25y / >25y) — summing to **22,700** (¥2.27tn). The Bank's own grand total, which also folds in
+the inflation-indexed-bonds row (300/month, unchanged from Jul–Sep — re-checked directly against
+`mpr260616a.pdf`, re-fetched this session, which carries the identical 300/300), prints **"計
+23,000"** — **¥2.30tn on the nose**, matching the June 16 2026 plan's "about 2.3 trillion yen"
+exactly rather than merely "about."
+
+**Leg 2 (the super-long bucket is protected) — CONFIRMED, 6 of 6.** "More than 25 years" prints
+**750 per auction / 1,500 monthly** — unchanged for a **sixth** consecutive quarter, extending the
+Jul–Sep-2025-through-Jul–Sep-2026 run this ledger measured at initial research. Its share of BoJ
+monthly buying is now **1,500 / 22,700 ≈ 6.61%**, landing within a point of the **~6.6%** this
+ledger projected if 09-30 left the bucket alone.
+
+**Leg 4 (the frequency grid: one-off harmonisation, not further consolidation) — SETTLED, the n=1
+uncertainty resolves clean.** Per-auction sizes (¥100mn) are **1,000 / 3,300 / 2,900 / 3,050 / 850 /
+750**, giving monthly-to-per-auction ratios of **1 / 2 / 2 / 2 / 2 / 2** — identical to the
+Jul–Sep-2026 grid in every bucket. The Jul–Sep thinning (3 auctions/month → 2, across 1y–25y) did
+not thin further; it held. The honest open question this ledger flagged ("a shrinking monthly
+envelope divided three ways eventually produces operations too small to be liquid, an argument for
+more consolidation, not less") did not materialise this quarter.
+
+**Kill switches, checked against the primary and the tape, none fired:**
+
+1. **Headline premise** — already confirmed unbroken at the D-8 pulse (09-18 MPM statement,
+   `k260918a.pdf`, carried zero mentions of the purchase plan) and reconfirmed now: the printed
+   total reconciles to the plan to the yen (above). Not fired.
+2. **Super-long reading** — 1,500/750, exactly as on five prior schedules. Not fired.
+3. **Frequency grid** — every bucket's ratio held from Jul–Sep to Oct–Dec. Not fired.
+4. **No-price-channel** — checked across the full window (USD/JPY daily, ECB reference series,
+   fetched direct, 2026-09-15 through 2026-09-30): the largest single-session move is **+0.59%**
+   (09-24), well inside the ±1% bar, so no session in the window pairs a ≥1% yen move with
+   anything. On the release's own session (09-30), USD/JPY ran 157.12 → 157.00 (**-0.08%**) while
+   the tracked names moved NVDA +1.16%, AVGO -0.56%, MRVL +0.63%, CRWV +2.14% (Yahoo Finance
+   full-day quotes, fetched direct) — CRWV alone clears 2%, but with no yen leg behind it, the same
+   "wrong sign / no sign" finding the D-8 pulse recorded. Not fired.
+5. **Q4 supply arithmetic** — MOF's December calendar (`2612e.htm`) is not due until ~2026-10-31
+   and still 404s (re-checked this session); this kill switch's window extends past this
+   close-out and stays open, as the D-15 and D-8 rows already flagged.
+6. **Release slip** — published 2026-09-30 at its stated 17:00 JST slot, per the PDF's own
+   September-30-2026 dateline. Not fired.
+
+**Rates and vol context (re-fetched, not re-read from memory).** MOF's par curve through
+**2026-09-30** (`jgbcm.csv`, HTTP 200): 10Y **3.057**, 20Y **3.877**, 25Y **4.131**, 30Y **4.098**,
+40Y **4.099** — 30s40s **+0.1bp** (flat, a touch positive versus the D-8 row's -1.1bp), and the 40Y
+sits **4.6bp** below its 2026-09-01 all-time high of 4.145%. VIX (Yahoo, direct) closed **16.34**
+(prior close 16.07, **+0.27**, inside the 3-point screen band — no regime shift on the release).
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-boj-jgb-purchase-schedule-q4-2026-09-30-1` (super-long protected) | ">25 years" prints 1,500 monthly / 750 per auction, a sixth consecutive unchanged quarter | `mpr260930a.pdf` primary: **1,500 / 750**, exactly as predicted | **PASS** |
+| `FT-boj-jgb-purchase-schedule-q4-2026-09-30-2` (headline is arithmetic, not news) | The six coupon-JGB monthly buckets sum to ¥2.225tn–¥2.325tn (22,250–23,250 in ¥100mn) | Summed **22,700** (¥2.27tn); the Bank's own grand total incl. inflation-indexed bonds is **23,000** (¥2.30tn), matching the June plan's "about 2.3tn" exactly | **PASS** |
+| `FT-boj-jgb-purchase-schedule-q4-2026-09-30-3` (frequency grid holds) | Every coupon bucket keeps its Jul–Sep monthly-to-per-auction ratio (2/month for 1y–25y and >25y, 1/month for up-to-1y) | Ratios print **1 / 2 / 2 / 2 / 2 / 2** — identical to Jul–Sep-2026 in every bucket | **PASS** |
+
+**Reading the sweep.** All three predictions pass clean, which is the least interesting outcome a
+forward test can have and also the correct one here: this entry's whole thesis was that the 09-30
+release is a publication of decisions already made (June 2025's pace, June 2026's plan), not a new
+decision — a clean 3-for-3 is what "nothing to decide" looks like when the schedule actually prints.
+The one genuinely open question this ledger carried (n=1 on the frequency grid) is now n=2 and
+resolved toward "harmonisation," not "further consolidation." Kill switch 5 (Q4 supply arithmetic)
+is the one piece still unresolved, correctly, because MOF's December calendar is not due yet;
+nothing else in this assessment remains open. Scored at close-out, this document.
