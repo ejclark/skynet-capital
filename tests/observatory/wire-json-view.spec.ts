@@ -1,5 +1,5 @@
+import type { FeedbackFeedItem } from "../../src/observatory/feedback-event-feed.js";
 import { wireJsonView } from "../../src/observatory/wire-json-view.js";
-import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 
 /** The Wire's JSON twin: formatted figures, provenance kept, pseudonymous pulse, honest gates. */
 
@@ -17,17 +17,15 @@ const trade = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const filing = (over: Partial<FeedbackLogEntry> = {}): FeedbackLogEntry =>
-  ({
-    uuid: "u-1",
-    opaqueMemberId: "m-1",
-    issueNumber: 700,
-    url: "https://github.com/ejclark/skynet-capital/issues/700",
-    kind: "idea",
-    title: "A better wire",
-    filedAt: "2026-08-27T10:00:00Z",
-    ...over,
-  }) as FeedbackLogEntry;
+const filing = (over: Partial<FeedbackFeedItem> = {}): FeedbackFeedItem => ({
+  issueNumber: 700,
+  filerId: "m-1",
+  url: "https://github.com/ejclark/skynet-capital/issues/700",
+  kind: "idea",
+  title: "A better wire",
+  filedAt: "2026-08-27T10:00:00Z",
+  ...over,
+});
 
 describe("wireJsonView", () => {
   it("formats the trade feed and keeps reconstructed provenance", () => {
@@ -59,13 +57,19 @@ describe("wireJsonView", () => {
     const view = wireJsonView(
       [],
       [],
-      [filing(), filing({ uuid: "u-2", issueNumber: 701, filedAt: "2026-08-28T10:00:00Z" })],
+      [filing(), filing({ issueNumber: 701, filedAt: "2026-08-28T10:00:00Z", status: "shipped" })],
       true,
-      new Map([[701, "shipped"]]),
     );
     expect(view.feedback[0]).toMatchObject({ status: "Shipped", statusKey: "shipped" });
     expect(view.feedback[1]?.status).toBeUndefined();
     expect(view.feedback[0]?.meta.startsWith("#701")).toBe(true);
+  });
+
+  it("badges a filing whose kind the app doesn't recognize rather than dropping it", () => {
+    const { kind: _dropped, ...kindless } = filing();
+    const view = wireJsonView([], [], [kindless], true);
+    expect(view.feedback).toHaveLength(1);
+    expect(view.feedback[0]?.icon).toBe("📄");
   });
 
   it("says when the feedback lane is unwired — the gate rides the payload", () => {

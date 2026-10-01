@@ -128,7 +128,7 @@
         "id": "appvol",
         "label": "Observatory volume",
         "technology": "Fly volume skynet_data mounted at /data; JSON files (src/storage/json-file-store.ts), JSONL per-key stores (src/storage/jsonl-store.ts), AES-256-GCM envelopes keyed by SKYNET_STORE_SECRET (src/storage/secure-envelope.ts), one node:sqlite decisions.db",
-        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json, history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
+        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger, plus activity/events/ \u2014 the unified ActivityEvent bus, which nests under the same pinned var rather than taking one of its own), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json, history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
         "code_roots": [
           "src/storage",
           "src/participants/participant-store.ts",
@@ -143,6 +143,7 @@
           "src/server/progression-store.ts",
           "src/server/ladder-progress-log.ts",
           "src/observatory/activity-store.ts",
+          "src/observatory/activity-bus.ts",
           "src/observatory/history-store.ts",
           "src/adapters/jsonl-alert-dismissals.ts",
           "src/autonomous/jsonl-insight-store.ts",

@@ -1,6 +1,6 @@
-import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
 import { formatPrice } from "./desk-data.js";
+import type { FeedbackFeedItem } from "./feedback-event-feed.js";
 import { FEEDBACK_KIND_ICON } from "./feedback-view.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
 import type { WireTradeVitals } from "./vitals.js";
@@ -58,12 +58,18 @@ export interface WireView {
   readonly feedback: readonly WireFeedbackView[];
 }
 
+/** A filing whose payload named a kind this app doesn't file — the row still belongs on the
+ *  league's record, so it is badged neutrally rather than dropped (`feedback-event-feed.ts`). */
+const UNKNOWN_KIND_ICON = "📄";
+
 export function wireJsonView(
   trades: readonly WireTradeWithReasoning[],
   pnl: readonly WirePnlRow[],
-  feedback: readonly FeedbackLogEntry[],
+  /** Decoded off the `ActivityEvent` bus (#784 slice 2) — the pulse used to arrive here as a
+   *  `FeedbackLogEntry[]` joined against a separately-fetched status map, which is the second
+   *  data model this slice removed. Status now rides on the item as a facet of one schema. */
+  feedback: readonly FeedbackFeedItem[],
   feedbackEnabled: boolean,
-  statuses?: ReadonlyMap<number, FeedbackStatus>,
 ): WireView {
   return {
     trades: trades.map((row, index) => ({
@@ -90,18 +96,19 @@ export function wireJsonView(
       tone: plClass(row.realizedPl),
     })),
     feedbackEnabled,
+    // Sorted here as well as by the decoder: newest-first is this view's own contract, and it
+    // should not depend on which caller assembled the list.
     feedback: [...feedback]
       .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
-      .map((entry) => {
-        const status = statuses?.get(entry.issueNumber);
-        return {
-          issueNumber: entry.issueNumber,
-          icon: FEEDBACK_KIND_ICON[entry.kind],
-          title: entry.title,
-          url: entry.url,
-          ...(status ? { status: FEEDBACK_STATUS_LABEL[status], statusKey: status } : {}),
-          meta: `#${entry.issueNumber} · ${new Date(entry.filedAt).toLocaleDateString()}`,
-        };
-      }),
+      .map((item) => ({
+        issueNumber: item.issueNumber,
+        icon: item.kind ? FEEDBACK_KIND_ICON[item.kind] : UNKNOWN_KIND_ICON,
+        title: item.title,
+        url: item.url,
+        ...(item.status
+          ? { status: FEEDBACK_STATUS_LABEL[item.status], statusKey: item.status }
+          : {}),
+        meta: `#${item.issueNumber} · ${new Date(item.filedAt).toLocaleDateString()}`,
+      })),
   };
 }
