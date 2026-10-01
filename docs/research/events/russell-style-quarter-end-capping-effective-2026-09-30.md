@@ -372,3 +372,127 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-10-01).** Sector mode runs no `earnings-cycle`/`intraday-edges` instrument —
+`symbols: []` by design — so this is scored from freshly re-fetched holdings, daily bars and volume
+(cache busted first: `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`,
+confirmed empty before any read below), never from memory. **The primary stayed blocked to this
+runner**: iShares' own holdings ajax endpoints for both IWF and IWY (the same URLs `probe-ref.blocked`
+has carried since the D-14 pulse) served the product-page HTML again this session, with and without a
+browser user-agent, a `Referer` header, and a warmed cookie jar. The Wayback Machine carries no snapshot
+of either holdings page or `stockanalysis.com`'s holdings table anywhere near 2026-09-25 (closest
+archived copies predate this event by roughly a year) — there is no way to read the actual 2026-09-25
+file directly. What follows is the most rigorous reconstruction available from real data, not a direct
+observation, and is scored with that caveat attached throughout.
+
+### What the data shows
+
+**Two real, non-drifted holdings snapshots bracket the 2026-09-25 test date.** The D-7 pulse's own
+2026-09-21 iShares CSV read (already in the ledger) is one anchor. `stockanalysis.com`'s rendered
+holdings tables, re-fetched this session (HTTP 200, both funds, page footer dated **`As of Sep 29,
+2026`**), are the other — real, not vendor-drifted, four sessions past the test date:
+
+| | NVDA | AAPL | MSFT | Alphabet (GOOGL+GOOG) | AVGO | META | Cohort (>4.8% members) |
+|---|---|---|---|---|---|---|---|
+| **IWY, 2026-09-29** | 15.38 | 7.81 | 5.92 | 5.88+4.75=10.63 | 5.27 | 4.45 (excluded, <4.8) | **45.01%** |
+| **IWF, 2026-09-29** | 15.57 | 7.58 | 5.55 | 5.83+4.71=10.54 | 4.85 | 3.90 (excluded, <4.8) | **44.09%** |
+
+Both read comfortably under 48% — but 09-29 is four sessions *after* the 09-25 test date and, per the
+chain this ledger already established, sits exactly at or after the session a confirmed recap would
+trade (09-29 close → effective 09-30 open). A post-event reading cannot stand in for the test date
+itself, especially once a quarter-end recap trims a breached cohort back toward 45% — a confirmed
+breach and a clean non-event would both leave a ~45% reading by 09-29. The two hypotheses have to be
+told apart at 09-25, not after it.
+
+**Forward-drifting the real 09-21 base to the real 09-25 close — the valid estimator, since no trade
+is scheduled in that window — puts IWY above the trigger.** Yahoo daily bars for every cohort name
+plus IWY/IWF (cache busted, re-fetched this session) give exact, non-estimated prices at both dates.
+Applying `weight_t = weight_base × (1+r_stock)/(1+r_fund)` to the D-7 pulse's real 2026-09-21 holdings:
+
+| | NVDA | AAPL | MSFT | Alphabet | AVGO | META | **Cohort (>4.8%)** |
+|---|---|---|---|---|---|---|---|
+| **IWY, drifted to 09-25** | 14.97 | 8.01 | 5.94 | 10.58 | 5.14 | **5.00** (in) | **49.64%** |
+| **IWF, drifted to 09-25** | 15.30 | 7.79 | 5.59 | 10.57 | 4.79 (out) | 3.94 (out) | **39.25%** |
+
+IWY's cohort reads **≈49.64%** at the 09-25 close — **above the 48% trigger itself**, confirming the
+D-7 pulse's own alarm rather than reversing it. The reconstruction agrees with the real 09-21 and 09-29
+anchors on every name *except* META and (for IWF) AVGO, within 0.02–0.13pp — i.e. the method's error
+band on names far from a threshold is small and well-behaved.
+
+**A fund-specific fingerprint corroborates that IWY, specifically, was trimmed between 09-25 and
+09-29.** Projecting the same real 09-21 base straight through to 2026-09-29 on price alone (no trade
+assumed) and comparing to the real 09-29 readings above:
+
+| | NVDA | AAPL | MSFT | GOOGL | GOOG | AVGO | META |
+|---|---|---|---|---|---|---|---|
+| **IWY: predicted − actual** | +0.02 | **−0.21** | +0.00 | −0.00 | +0.00 | +0.13 | **−0.35** |
+| **IWF: predicted − actual** | −0.11 | **−0.21** | −0.00 | −0.04 | −0.02 | +0.07 | **+0.12** |
+
+AAPL misses by almost the same amount in *both* funds — a generic drift-approximation artifact, not a
+capping signal (AAPL is nowhere near a cohort threshold in either fund). **META is the one name whose
+miss is fund-specific and sign-flipped**: IWY's actual 09-29 META weight came in 0.35pp *below* what
+clean price drift predicts, while IWF's came in 0.12pp *above* — the opposite sign, for the same
+security, in the fund whose cohort never approached 48%. That divergence is exactly the signature a
+09-25 breach followed by a 09-29 trim would leave: IWY's newly-crossed sixth cohort member (META, the
+D-7 pulse's own finding) getting pared down in the one fund where the aggregate test had something to
+correct, and nothing of the kind happening in the fund that was never close.
+
+**Dollar magnitude, updated.** The stance's leg 10 estimated a fired recap at ~3pp of IWY's AUM
+(48%→45%) ≈ $478M. The reconstruction above implies a larger apparent trim — from a ~49.6% peak to the
+09-29 actual 45.01%, **≈4.6pp** — against IWY's current AUM (**$16.27B**, stockanalysis.com, re-fetched
+this session) ≈ **$753M**. Still a fraction of a day's combined volume across six mega-caps and still
+self-cancelling in direction (trims the over-cap names, buys the rest) — the conclusion is unchanged,
+the number is larger than estimated.
+
+### Scoring the stance
+
+- **Leg 5 (the quarter-end check is a backstop its predecessor defuses ~7×, 4.02% base rate) — FAILED
+  for IWY, SUPPORTED for IWF.** The reset did not bring IWY's cohort to ~45% as assumed: the real
+  2026-09-21 reading was already 50.01%, because a sixth company (META) crossed into the over-4.8%
+  cohort between the quarterly review's 09-09 cut-off and its 09-21 effective date — a gap the reset
+  mechanism cannot see across. The reconstructed 09-25 reading (49.64%) stays above the 48% trigger
+  itself. This is the "a sheet built on a 4.02% base rate has to explain a 1-in-25 draw landing first
+  time" scenario the stance itself named as the thing that would need explaining — and the explanation
+  is membership drift between a reset's cut-off and effective dates, not a flaw in the probability
+  arithmetic itself (which still describes a frozen-membership cohort correctly; see the kill-list entry
+  in [`multi-symbol-sweep.md`](../multi-symbol-sweep.md)). For IWF, which never had a membership crossing
+  of this kind, the cohort stayed in the 39–44% range throughout and the defusing logic held.
+- **Legs 2, 3, 4, 6, 7, 9 — unaffected, all still stand.** The $294.6B family scope, the dead single-name
+  leg (NVDA never approached 22.5%/24% in either fund), the five funds that cannot breach by
+  construction, the company-combining and iterative-recap arithmetic (both used directly in the scoring
+  above), and the one-session-apart S&P pairing are untouched by this outcome.
+- **Leg 10 (even the fire case is small) — reaffirmed, resized upward.** See "Dollar magnitude" above:
+  ≈$753M rather than the original ≈$478M estimate, still proportionally small and self-cancelling.
+- **The call itself — right in the only sense that mattered for trading, wrong in its mechanical
+  justification.** No house playbook is index-flow-keyed (leg 9, unchanged), so nothing here was ever
+  actionable regardless of whether the test fired — the stand-aside call never needed leg 5 to be right.
+  But leg 5's probability claim was the sheet's own central, headlined finding, and it did not survive
+  contact with this cycle's actual cohort composition. Both should be said plainly rather than letting a
+  correct non-trade cover for an incorrect statistical claim.
+- **The honest-limits gap ("nothing here observed a quarter-end capping check actually firing")
+  narrows, but does not close.** No FTSE Russell index notice confirming a recap was found this session
+  either — `lseg.com/en/ftse-russell/index-notices` still returns 404 to this runner, unchanged since the
+  D-7 pulse (`probe-ref.blocked`). This reconstruction is the first evidence *consistent with* a firing
+  this calendar has assembled, built from real prices and two real bracketing snapshots rather than a
+  primary confirmation — it updates the gap from "zero observed instances" to "one reconstructed,
+  unconfirmed instance, IWY, 2026-09," not to a settled count.
+
+### Forward tests scored (2026-10-01)
+
+All four registered tests are scored in
+[`forward-tests/russell-style-quarter-end-capping-effective-2026-09-30.md`](../forward-tests/russell-style-quarter-end-capping-effective-2026-09-30.md),
+from re-run data, cache busted this session, never from memory: `-1` **kill** (IWY's reconstructed
+09-25 cohort, ≈49.64%, stays above the 48% trigger), `-2` **kill** (resolved already at the D-7 pulse —
+the real 09-21 holdings read 50.01%, above the 45.5% line, before any drift was needed), `-3` **pass**
+(IWY's 09-18 volume ran 0.385× SPY's own-median-normalized ratio, well under the 1.25× line — the
+quarterly trim left no visible turnover signature), `-4` **unscoreable** (AVGO's IWF weight at 09-25
+reconstructs to 4.79–4.86% depending on drift direction, straddling the 4.8% line within the method's
+own ~0.1–0.2pp noise floor, with no fund-specific signal available to break the tie the way FT-1 had
+one for IWY/META). Two scored kills are recorded in
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list, as one entry covering both since they
+test the same underlying mechanism.
+
+**Last assessed:** 2026-10-01
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.ishares.com/us/products/239720/ishares-russell-top-200-growth-etf/1467271812596.ajax?fileType=csv&fileName=IWY_holdings&dataType=fund","status":"200-html-product-page-not-csv","at":"2026-10-01"},{"url":"https://www.ishares.com/us/products/239706/ishares-russell-1000-growth-etf/1467271812596.ajax?fileType=csv&fileName=IWF_holdings&dataType=fund","status":"200-html-product-page-not-csv","at":"2026-10-01"},{"url":"https://www.lseg.com/en/ftse-russell/index-notices","status":404,"at":"2026-10-01"}]} -->
