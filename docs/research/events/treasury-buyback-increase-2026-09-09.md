@@ -384,3 +384,14 @@ program, and none should be.
 `home.treasury.gov/news/press-releases` index · `api.bls.gov` series `WPSFD4` and `WPUFD4` ·
 `cdn.cboe.com` VIX history and delayed quote · [`ppi-2026-09-10.md`](ppi-2026-09-10.md) for the
 +0.3% consensus anchor. Scanner goes quiet on this event.
+
+### FT-2 scored (2026-10-01)
+
+**FT-treasury-buyback-increase-2026-09-09-2 → pass**, scored this session from
+`home.treasury.gov`'s Daily Treasury Par Yield Curve CSV (re-fetched direct, HTTP 200), not from
+the hand-off note's standing figure above. 30Y par closed **5.64%** on 2026-09-30, 64bp above the
+5.00% bar and 27bp above this doc's own 5.37% close-out reading — the selloff extended rather than
+reversed across the first three doubled-size operations. Full scoring detail, including the
+attribution caveat, lives in
+[`forward-tests/treasury-buyback-increase-2026-09-09.md`](../forward-tests/treasury-buyback-increase-2026-09-09.md).
+This is a scoring note only; the close-out verdict above is unchanged.
