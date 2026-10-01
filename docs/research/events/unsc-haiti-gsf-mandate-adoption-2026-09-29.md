@@ -422,3 +422,18 @@ Outcome` now exists; per `event-scan.mjs`'s `hasOutcome` check this document goe
 `event-passed-unscored` door, with exactly three doors back in — `FT-…-1`, `FT-…-2` and `FT-…-3`
 each reopen this event as `forward-test-due` on 2026-10-01, 2026-10-05 and 2026-10-09
 respectively, scored from re-run data at that time, never from this paragraph.
+
+**`forward-test-due` note, 2026-10-01 (#2884) — `FT-…-1` scored, not a second verdict on the
+event.** Re-fetched RCL/CCL/NCLH/SPY direct today (`stockanalysis.com` daily-history API, HTTP
+200): 09-28→09-29 closes **RCL 242.59→260.67 (+7.45%)**, **CCL 22.14→25.11 (+13.41%)**, **NCLH
+14.31→14.80 (+3.42%)**, **SPY 765.61→764.20 (−0.18%)** — unchanged from the close-out's own pull,
+independently reconfirmed rather than carried from memory. RCL's move clears the registered
+**1.97%** ceiling, but contemporaneous reporting (Yahoo/Fool's "Stock Market Today, Sept. 29," 24/7
+Wall St, TradingKey) attributes it explicitly and exclusively to Carnival's Q3 beat and the analyst
+upgrades that followed it — TradingKey: RCL "climbed purely on Carnival's news... a sympathy gain
+tied to a rival's report" — with no surfaced reporting naming the Council vote in connection with
+any cruise-name move. **`FT-unsc-haiti-gsf-mandate-adoption-2026-09-29-1` scores `pass`**; full
+verdict recorded in
+[forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md](../forward-tests/unsc-haiti-gsf-mandate-adoption-2026-09-29.md).
+`FT-…-2`/`FT-…-3` remain `_open_`, unaffected, and are not scoreable from today's date (score-by
+2026-10-05 / 2026-10-09). The stance, the close-out and everything above this note are unchanged.
