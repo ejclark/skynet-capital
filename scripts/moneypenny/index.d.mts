@@ -46,6 +46,8 @@ export function claimNext(
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
   },
 ): ClaimResult & { lane?: "plan" | "feedback" };
+/** How many lease-held picks one sweep steps past before giving up for the tick. */
+export const SWEEP_HELD_SKIPS: number;
 /** The sweep's dry run for the push pass: the issue `claimNext` would pick, or null. Claims nothing. */
 export function peekNext(
   deps?: AdmissionDeps & { readReady?: () => AdmissionIssue[] },

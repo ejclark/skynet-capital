@@ -431,21 +431,36 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const mode = readMode();
   const inFlight = inFlightOf();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
-  const pick = nextAdmissible(ready, inFlight, mode);
-  if (!pick) {
-    const why = `nothing admissible (${ready.length} ready, ${inFlight.length} in flight, work-mode=${mode.position})`;
-    console.log(`::notice::retry sweep — ${why}`);
-    return { claimed: false, reason: why };
-  }
-  const lane = labelNames(pick.labels).includes(LABELS.plan.name) ? "plan" : "feedback";
-  const ctx = { payload: { action: "labeled", label: { name: LABELS.ready.name }, issue: pick } };
+  let pool = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
   const gateDeps = { readMode: () => mode, readInFlight: () => inFlight, ...admission };
-  const result = claims[lane](ctx, nowMs, sha, gateDeps);
-  const out = process.env.GITHUB_OUTPUT;
-  if (result.claimed && out) appendFileSync(out, `lane=${lane}\n`);
-  return { ...result, lane };
+  // A lease outlives a successful build (only a failed one releases it), so the top-ranked issue
+  // can sit "held" for the whole TTL after its slice ships. Stopping there idled the sweep for up
+  // to 2h behind #3960 on 2026-10-01; step past a held pick instead, a bounded number of times.
+  for (let tries = 0; tries < SWEEP_HELD_SKIPS; tries++) {
+    const pick = nextAdmissible(pool, inFlight, mode);
+    if (!pick) {
+      const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, work-mode=${mode.position})`;
+      console.log(`::notice::retry sweep — ${why}`);
+      return { claimed: false, reason: why };
+    }
+    const lane = labelNames(pick.labels).includes(LABELS.plan.name) ? "plan" : "feedback";
+    const ctx = { payload: { action: "labeled", label: { name: LABELS.ready.name }, issue: pick } };
+    const result = claims[lane](ctx, nowMs, sha, gateDeps);
+    if (!result.claimed && /^held by a live claim/.test(result.reason ?? "")) {
+      pool = pool.filter((i) => i.number !== pick.number);
+      continue;
+    }
+    const out = process.env.GITHUB_OUTPUT;
+    if (result.claimed && out) appendFileSync(out, `lane=${lane}\n`);
+    return { ...result, lane };
+  }
+  const why = `the top ${SWEEP_HELD_SKIPS} admissible picks are all held by live claims`;
+  console.log(`::notice::retry sweep — ${why}`);
+  return { claimed: false, reason: why };
 }
+
+/** How many lease-held picks one sweep steps past before giving up for this tick. */
+export const SWEEP_HELD_SKIPS = 5;
 
 // ── the impure half ───────────────────────────────────────────────────────────
 
