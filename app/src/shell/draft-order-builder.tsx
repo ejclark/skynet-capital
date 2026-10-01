@@ -7,6 +7,7 @@ import {
   type DraftOrder,
   type DraftPreview,
   emptyDraft,
+  legOnSameContract,
   type NewLeg,
   removeDraftLeg,
   repriceDraftLeg,
@@ -16,7 +17,7 @@ import {
 } from "../live/draft-order";
 import { money, type TicketTimeInForce, tifLabel } from "../live/ticket";
 import { DraftLegForm } from "./draft-leg-form";
-import { LegRow } from "./draft-leg-row";
+import { LegRow, legLabel } from "./draft-leg-row";
 import { DisarmNote, GateHead } from "./gate-frame";
 import { PayoffChart } from "./payoff-chart";
 import { TimeInForceField } from "./tif-field";
@@ -242,18 +243,44 @@ export function DraftOrderBuilder({
     }
   };
 
-  const addLeg = (leg: NewLeg) => void apply(() => addDraftLeg(deskId, draft, leg));
+  /**
+   * THE ONE FUNNEL every chain pick posts through — the builder's own inline chain
+   * (`DraftLegForm`) and the bench's standalone Chain pane (`trade.tsx`'s `chainPickLeg`) both
+   * land here, so they can't drift apart.
+   *
+   * A TAP ON A MARKED ROW IS A REPRICE, not a duplicate add (#3407, the banked "reprice from a
+   * chain row"). The state machine refuses a second leg on a contract the draft already holds, and
+   * that refusal is right — but it renders on THIS pane, which a member tapping the standalone
+   * Chain pane at the docked width is not reading, so the tap looked dead. A pick for a leg
+   * already held at the same side and size is only ever asking for the tapped price: send it as
+   * `reprice-leg`. A pick at a different size still falls through to the add and still gets the
+   * refusal that names the size, which is the thing that message is actually about.
+   */
+  const addLeg = (leg: NewLeg) => {
+    const held = legOnSameContract(draft.legs, leg);
+    if (held && leg.limitPrice !== undefined) {
+      // Already at that price: say so rather than spend a round trip whose own effect would be to
+      // knock a reviewed draft back to `drafting` (every edit drops the verdict) for no change.
+      if (held.limitPrice === leg.limitPrice) {
+        setNote(`${legLabel(held)} is already priced at $${leg.limitPrice.toFixed(2)}/sh.`);
+        return;
+      }
+      void apply(() => repriceDraftLeg(deskId, draft, held.id, leg.limitPrice));
+      return;
+    }
+    void apply(() => addDraftLeg(deskId, draft, leg));
+  };
 
   // Applies the chain pane's leg pick exactly once per distinct `key`, whichever draft is
-  // current at the moment the pick arrives — `deskId`/`draft`/`apply`/`onIncomingLegHandled` are
-  // read at their latest closure value on purpose, so this must NOT re-fire when any of THOSE
-  // change, only when a genuinely new pick arrives.
+  // current at the moment the pick arrives — `addLeg` (and through it `deskId`/`draft`/`apply`)
+  // and `onIncomingLegHandled` are read at their latest closure value on purpose, so this must NOT
+  // re-fire when any of THOSE change, only when a genuinely new pick arrives.
   const appliedLegKey = useRef<number | undefined>(undefined);
   // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above — incomingLeg alone is the trigger
   useEffect(() => {
     if (!incomingLeg || incomingLeg.key === appliedLegKey.current) return;
     appliedLegKey.current = incomingLeg.key;
-    void apply(() => addDraftLeg(deskId, draft, incomingLeg.leg));
+    addLeg(incomingLeg.leg);
     onIncomingLegHandled?.();
   }, [incomingLeg]);
   const remove = (id: string) => void apply(() => removeDraftLeg(deskId, draft, id));

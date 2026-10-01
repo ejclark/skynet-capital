@@ -145,7 +145,8 @@ export function DraftLegForm({
         <>
           <p className="tkt-note draft-pick-note">
             Tap a <strong>Bid</strong> to sell that contract, an <strong>Ask</strong> to buy it —
-            the tapped price is the leg's limit. Marked strikes are already in this order.
+            the tapped price is the leg's limit. Marked strikes are already in this order; tapping
+            one again reprices that leg.
           </p>
           <ChainStraddle
             chainSym={chainSym}

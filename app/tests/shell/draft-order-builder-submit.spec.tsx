@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import * as actualDraft from "../../src/live/draft-order" with { rstest: "importActual" };
 import type { DraftOrder, DraftResponse } from "../../src/live/draft-order";
 import { DraftOrderBuilder } from "../../src/shell/draft-order-builder";
 
@@ -51,6 +52,8 @@ const preview = {
 const submits: unknown[] = [];
 let nextSubmit: DraftResponse = { draft: reviewedDraft, preview };
 rstest.mock("../../src/live/draft-order", () => ({
+  // The real selector: the builder asks it whether a pick is a reprice before it posts.
+  legOnSameContract: actualDraft.legOnSameContract,
   emptyDraft: () => reviewedDraft,
   addDraftLeg: () => Promise.reject(new Error("not used")),
   removeDraftLeg: () => Promise.reject(new Error("not used")),
