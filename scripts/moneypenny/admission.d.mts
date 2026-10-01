@@ -6,6 +6,8 @@ type Label = string | { name?: string };
 
 export interface AdmissionIssue {
   number?: number;
+  title?: string;
+  state?: string;
   body?: string;
   labels?: readonly Label[];
   createdAt?: string;
@@ -39,7 +41,9 @@ export function admitBuild(opts: {
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
 }): AdmissionVerdict;
-/** The one ready issue the retry sweep should try next (fast-track, then oldest), or null. */
+/** The pullable issues (`pullable`, labels.mjs) in pick order: fast-track, rank class, oldest. */
+export function pullQueue<T extends AdmissionIssue>(readyIssues: readonly T[]): T[];
+/** The first `pullQueue` issue the gate admits now, or null (#4393: pullable issues only). */
 export function nextAdmissible<T extends AdmissionIssue>(
   readyIssues: readonly T[],
   inFlight: readonly AdmissionIssue[],
@@ -63,3 +67,25 @@ export function readInFlight(
 ): Required<Pick<AdmissionIssue, "number" | "body" | "labels">>[];
 /** The impure gate both claim lanes call before taking a lease. */
 export function gateAdmission(issue: AdmissionIssue, deps?: AdmissionDeps): AdmissionVerdict;
+/** Is it pullable at all (#4393 criterion 10), then would the gate admit it now (criterion 11)? */
+export function checkAdmission(opts: {
+  issue: AdmissionIssue;
+  inFlight?: readonly AdmissionIssue[];
+  mode: AdmissionMode;
+}): AdmissionVerdict;
+/** One issue over REST; throws on a PR number or an unreadable row. */
+export function readIssue(
+  n: number,
+  exec?: (cmd: string, args: string[]) => string,
+): Required<Pick<AdmissionIssue, "number" | "title" | "state" | "body" | "labels">> &
+  AdmissionIssue;
+export interface AdmissionCliIO {
+  readMode?: AdmissionDeps["readMode"];
+  readInFlight?: () => AdmissionIssue[];
+  readReady?: () => AdmissionIssue[];
+  readIssue?: (n: number) => AdmissionIssue;
+  print?: (line: string) => void;
+  printErr?: (line: string) => void;
+}
+/** The read-only CLI: `--check <n>` | `--next` | `--queue`. Returns the exit code (0 · 2 · 3). */
+export function runCli(argv?: readonly string[], io?: AdmissionCliIO): number;

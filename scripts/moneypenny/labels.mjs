@@ -270,6 +270,36 @@ export const parkedReason = (number, labels = []) =>
   "clear the parking label (or the stale flip) on the issue first";
 
 /**
+ * THE ONE PULL RULE (#4393 criterion 10). An automated puller — both claim lanes, the retry sweep
+ * (`nextAdmissible`) and `/work-issues` — may start an issue only when the board shows it in
+ * **Ready**: open, labelled `ready`, `isBuildable`, and not already `in-progress`. Before this,
+ * each puller re-derived its own test, and `/work-issues` pulled any open `feedback`/`plan` issue,
+ * Backlog included. Asked in that order, so the reason names the first rule that fails.
+ *
+ * Pure: accepts a REST row, an event payload's issue, or `gh issue view` JSON (state `OPEN`).
+ * A missing `state` counts as open — the same reading the claim lanes already gave it.
+ *
+ * @returns {string | null} why the issue may not be pulled, or null when it may
+ */
+export function notPullableReason(issue) {
+  if (!issue) return "no issue to pull";
+  const n = issue.number;
+  if (issue.state && String(issue.state).toLowerCase() !== "open") return `#${n} is not open`;
+  const names = labelNames(issue.labels);
+  if (!names.includes(LABELS.ready.name)) {
+    return `#${n} does not carry \`ready\` — the board shows it in Backlog, not Ready`;
+  }
+  if (!isBuildable(issue.labels)) return parkedReason(n, issue.labels);
+  if (names.includes(LABELS.inProgress.name)) {
+    return `#${n} is already \`in-progress\` — another session or lane is building it`;
+  }
+  return null;
+}
+
+/** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
+export const pullable = (issue) => notPullableReason(issue) === null;
+
+/**
  * Which issue a claim-lease slug names — `feedback-1234` / `plan-1234` → 1234, anything else →
  * null. The release paths (`--release <slug>`, the `release-claim` dispatch) only carry the slug,
  * and they are the ones that must take `in-progress` back off (#3960).

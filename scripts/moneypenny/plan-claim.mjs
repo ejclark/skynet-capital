@@ -33,7 +33,17 @@
 //     `ready` and is now buildable → ready. Without it, clearing `needs-eric` from a ready issue
 //     left it idle until someone thought to say "ready" again — the flip was already on record.
 // The comment path is unchanged.
-import { isBuildable, LABELS, labelNames, PARKING_LABELS, parkedReason } from "./labels.mjs";
+import { LABELS, labelNames, notPullableReason, PARKING_LABELS } from "./labels.mjs";
+
+// THE PULL RULE (#4393 criterion 10) is `notPullableReason` in labels.mjs — the one test every
+// puller asks. A ready-flip comment and a `labeled: ready` event ARE the flip, so those two paths
+// ask it of the issue with `ready` folded in (`asFlipped`); an unpark and the bare feedback path
+// ask it of the issue as it stands. Beyond the parking check this lane always made, it now also
+// refuses an issue already `in-progress` (a live session's PR or another lane is building it).
+const asFlipped = (issue) => ({
+  ...issue,
+  labels: [...labelNames(issue?.labels), LABELS.ready.name],
+});
 
 // Short, direct go-ahead phrases matched against the WHOLE (trimmed, trailing-punctuation-
 // tolerant) comment — never a mere prefix. A prefix match (`/^go\b/`) would fire on "go over this
@@ -152,9 +162,8 @@ export function planReadyIntent(ctx) {
   } else if (!isReadySignal(comment.body)) {
     return { ready: false, reason: "comment does not read as a ready-flip" };
   }
-  if (!isBuildable(issue.labels)) {
-    return { ready: false, reason: parkedReason(issue.number, issue.labels) };
-  }
+  const notPullable = notPullableReason(asFlipped(issue));
+  if (notPullable) return { ready: false, reason: notPullable };
   return { ready: true, reason: "ready-flip on a plan issue", issue };
 }
 
@@ -185,7 +194,8 @@ export function labelEventReady(payload, lane) {
       return { ready: false, reason: `#${n} was unparked but does not carry \`ready\`` };
     }
   }
-  if (!isBuildable(issue?.labels)) return { ready: false, reason: parkedReason(n, issue?.labels) };
+  const notPullable = notPullableReason(action === "labeled" ? asFlipped(issue) : issue);
+  if (notPullable) return { ready: false, reason: notPullable };
   const why =
     action === "labeled"
       ? `\`ready\` label on a ${lane} issue`
@@ -211,8 +221,8 @@ export function feedbackReadyIntent(ctx) {
   }
   if (isLabelEvent(ctx.payload)) return labelEventReady(ctx.payload, "feedback");
   // #3818 slice 2, criterion 5: ready + parked is never built (#3194 sat ready + needs-eric 9 days).
-  if (!isBuildable(issue.labels)) {
-    return { ready: false, reason: parkedReason(issue.number, issue.labels) };
-  }
+  // #4393: and neither is a Backlog issue (no `ready`) nor one already `in-progress`.
+  const notPullable = notPullableReason(issue);
+  if (notPullable) return { ready: false, reason: notPullable };
   return { ready: true, reason: "ready feedback issue", issue };
 }
