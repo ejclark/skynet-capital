@@ -2,7 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import { fetchDeskThesis, type ThesisData, type ThesisMarker } from "../live/desk";
+import {
+  fetchDeskThesis,
+  type SafeguardLadderEntry,
+  type SafeguardState,
+  type ThesisData,
+  type ThesisMarker,
+} from "../live/desk";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { readChartPalette } from "./chart-mount";
 import { mountThesisChart } from "./thesis-chart-mount";
@@ -93,6 +99,85 @@ function BotControls({
         {STEERING_RULES_UNAVAILABLE_REASON}
       </p>
     </fieldset>
+  );
+}
+
+const SAFEGUARD_STATE_LABEL: Record<SafeguardState, string> = {
+  off: "Off",
+  watching: "Watching",
+  "alert-only": "Alert only",
+  enforcing: "Enforcing",
+};
+
+/** Four genuinely different SHAPES, not four fill levels of one — a quarter-filled circle has no
+ *  glyph in several common stacks and fell back to a smudge in the 390px frame. Hollow circle,
+ *  diamond, warning triangle, filled circle all render in core fonts and read apart at 12px. The
+ *  state never depends on hue (CLAUDE.md: a standing reader is red/green colourblind); this is the
+ *  third signal, after the word beside it and the stage's own border pattern. */
+const SAFEGUARD_STATE_GLYPH: Record<SafeguardState, string> = {
+  off: "○",
+  watching: "◆",
+  "alert-only": "▲",
+  enforcing: "●",
+};
+
+/**
+ * THE SAFEGUARD LADDER (#3194 slice 6a) — per play this bot ran, what each of its two safety
+ * stages actually does today. Read-only: arming or downgrading a stage is slice 6b, and this
+ * surface exists first on purpose — a member cannot consent to a safety net they cannot see.
+ * Every word here comes from `safeguard-ladder-view.ts`, which is where the honesty invariant
+ * lives (a stage never claims to act when the code only logs); this component renders it and
+ * invents nothing.
+ */
+function SafeguardLadder({
+  ladder,
+}: {
+  readonly ladder: readonly SafeguardLadderEntry[] | null | undefined;
+}): ReactElement | null {
+  // A deployment whose thesis payload predates this field: draw nothing rather than an empty
+  // section that would read as "no safeguards".
+  if (ladder === undefined) return null;
+  return (
+    <section className="thesis-ladder">
+      <h3 className="thesis-ladder-heading">Safeguards</h3>
+      {ladder === null || ladder.length === 0 ? (
+        <p className="note">
+          No decision pass on hand says which plays this bot runs, so its safeguards can’t be read
+          yet.
+        </p>
+      ) : (
+        ladder.map((entry, i) => (
+          <div className="thesis-ladder-play" key={`${entry.playbookId ?? i}:${entry.mode}`}>
+            <p className="thesis-ladder-play-name">
+              {entry.playbookId ?? `Play ${i + 1}`} · {entry.mode}
+            </p>
+            {entry.stages === null ? (
+              <p className="note">
+                Not one of the house plays, so its safeguards can’t be read here.
+              </p>
+            ) : (
+              <ol className="thesis-ladder-stages">
+                {entry.stages.map((stage) => (
+                  <li
+                    className={`thesis-ladder-stage thesis-ladder-stage-${stage.state}`}
+                    key={stage.stage}
+                  >
+                    <p className="thesis-ladder-stage-name">
+                      Stage {stage.stage} — {stage.name}
+                      <span className="thesis-ladder-state">
+                        <span aria-hidden="true">{SAFEGUARD_STATE_GLYPH[stage.state]} </span>
+                        {SAFEGUARD_STATE_LABEL[stage.state]}
+                      </span>
+                    </p>
+                    <p className="thesis-ladder-stage-does">{stage.does}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        ))
+      )}
+    </section>
   );
 }
 
@@ -283,6 +368,7 @@ export function ThesisDrawer({
           <span className="thesis-health-detail"> · {data.health.detail}</span>
         ) : null}
       </p>
+      <SafeguardLadder ladder={thesis.data.ladder} />
       <ThesisChart equity={data.equity} markers={data.markers} deskId={id} activity={activity} />
     </div>
   );

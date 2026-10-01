@@ -1,5 +1,5 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
-import type { PlaybookMode, PlaybookVerdictState } from "../domain/types.js";
+import type { PlaybookMode, PlaybookVerdict, PlaybookVerdictState } from "../domain/types.js";
 
 /**
  * BOT HEARTBEAT (#3687 slice 2) — is this bot's decision loop alive, and what is each of its
@@ -45,11 +45,27 @@ export interface HeartbeatView {
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
 }
 
+/**
+ * The newest pass that carried playbook verdicts, with its index — the BOT'S OWN account of which
+ * plays it ran. The dashboard process cannot read the `bots` process's roster (`SKYNET_PLAYBOOKS`
+ * merged with that account's subscriptions), so this is the one honest source, and it is shared
+ * with the Thesis Drawer's safeguard ladder (#3194 slice 6a) so two surfaces can never name a
+ * different set of plays for the same bot.
+ */
+export function latestVerdictPass(newestFirst: readonly DecisionRecord[]): {
+  readonly index: number;
+  readonly verdicts: readonly PlaybookVerdict[];
+} | null {
+  const index = newestFirst.findIndex((r) => r.playbookVerdicts && r.playbookVerdicts.length > 0);
+  const verdicts = newestFirst[index]?.playbookVerdicts;
+  return verdicts ? { index, verdicts } : null;
+}
+
 function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbeat[] | null {
-  const start = newestFirst.findIndex((r) => r.playbookVerdicts && r.playbookVerdicts.length > 0);
-  const latest = newestFirst[start]?.playbookVerdicts;
-  if (!latest) return null;
-  return latest.map((verdict) => {
+  const pass = latestVerdictPass(newestFirst);
+  if (!pass) return null;
+  const start = pass.index;
+  return pass.verdicts.map((verdict) => {
     let oldest = start;
     for (let i = start + 1; i < newestFirst.length; i++) {
       const match = newestFirst[i]?.playbookVerdicts?.find(

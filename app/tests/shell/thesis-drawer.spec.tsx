@@ -306,4 +306,82 @@ describe("ThesisDrawer", () => {
       "/u/bot-sauron/activity#act-ord-1",
     );
   });
+
+  // The safeguard ladder (#3194 slice 6a). The server owns the words (its own spec pins them
+  // against the code); these cases pin that the drawer prints the state as a WORD and never
+  // invents a row the payload did not carry.
+  describe("the safeguard ladder", () => {
+    const quiet: DeskThesis["thesis"] = {
+      call: { verdict: "no data yet", why: "No decision cycles recorded yet." },
+      health: { measured: false, label: "not yet measured" },
+      equity: [],
+      markers: [],
+    };
+
+    it("prints each stage's state as a word, beside what it does", async () => {
+      nextThesis = {
+        available: true,
+        kind: "bot",
+        thesis: quiet,
+        ladder: [
+          {
+            playbookId: "S1-NVDA",
+            mode: "standard",
+            stages: [
+              { stage: 1, name: "Price and news disagreeing", state: "watching", does: "Logs it." },
+              { stage: 2, name: "Automatic exit", state: "off", does: "No automatic exit." },
+            ],
+          },
+        ],
+      };
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText("Safeguards")).toBeInTheDocument());
+      expect(screen.getByText("S1-NVDA · standard")).toBeInTheDocument();
+      expect(screen.getByText("Watching")).toBeInTheDocument();
+      expect(screen.getByText("Off")).toBeInTheDocument();
+      expect(screen.getByText("Logs it.")).toBeInTheDocument();
+      expect(screen.getByText("No automatic exit.")).toBeInTheDocument();
+    });
+
+    it("labels a play whose name is withheld by its position, never by a blank", async () => {
+      nextThesis = {
+        available: true,
+        kind: "bot",
+        thesis: quiet,
+        ladder: [{ mode: "aggressive", stages: [] }],
+      };
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText("Play 1 · aggressive")).toBeInTheDocument());
+    });
+
+    it("says why the ladder is unreadable rather than implying there is none", async () => {
+      nextThesis = { available: true, kind: "bot", thesis: quiet, ladder: null };
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() =>
+        expect(
+          screen.getByText(/No decision pass on hand says which plays this bot runs/),
+        ).toBeInTheDocument(),
+      );
+    });
+
+    it("says a non-house play's safeguards cannot be read here", async () => {
+      nextThesis = {
+        available: true,
+        kind: "bot",
+        thesis: quiet,
+        ladder: [{ playbookId: "MINE-1", mode: "standard", stages: null }],
+      };
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() =>
+        expect(screen.getByText(/Not one of the house plays/)).toBeInTheDocument(),
+      );
+    });
+
+    it("draws nothing at all when the payload predates the ladder field", async () => {
+      nextThesis = { available: true, kind: "bot", thesis: quiet };
+      render(withClient(<ThesisDrawer id="bot-sauron" />));
+      await waitFor(() => expect(screen.getByText("not yet measured")).toBeInTheDocument());
+      expect(screen.queryByText("Safeguards")).not.toBeInTheDocument();
+    });
+  });
 });

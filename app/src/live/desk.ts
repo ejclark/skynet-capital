@@ -473,10 +473,32 @@ export interface ThesisData {
   readonly markers: readonly ThesisMarker[];
 }
 
+/** What one safeguard stage does to a play's position today (#3194 slice 6a). The word IS the
+ *  signal — the stylesheet's border pattern rides alongside it, never instead of it. */
+export type SafeguardState = "off" | "watching" | "alert-only" | "enforcing";
+
+export interface SafeguardStage {
+  readonly stage: 1 | 2;
+  readonly name: string;
+  readonly state: SafeguardState;
+  readonly does: string;
+}
+
+export interface SafeguardLadderEntry {
+  /** Absent for a desk this session does not own — a bot's play names are its owner's (#885). */
+  readonly playbookId?: string;
+  readonly mode: "conservative" | "standard" | "aggressive";
+  /** Null when the house roster does not know this play, which is never "it has no safeguards". */
+  readonly stages: readonly SafeguardStage[] | null;
+}
+
 export interface DeskThesis {
   readonly available: boolean;
   readonly kind: "human" | "bot";
   readonly thesis?: ThesisData;
+  /** Null when no decision pass on hand said which plays this bot ran — an absence, never an
+   *  empty list posing as "this bot has no safeguards". Absent on a human desk. */
+  readonly ladder?: readonly SafeguardLadderEntry[] | null;
 }
 
 export async function fetchDeskThesis(id: string): Promise<DeskThesis> {
