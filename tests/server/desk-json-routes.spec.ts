@@ -517,6 +517,10 @@ describe("serveDeskJson", () => {
     it("keeps them for the bot's owner", async () => {
       const heartbeat = JSON.parse(await read("heartbeat", "owner@x"));
       expect(heartbeat.heartbeat.playbooks[0].playbookId).toBe("S1-NVDA");
+      expect(heartbeat.heartbeat.rollCall[0]).toMatchObject({
+        playbookId: "S1-NVDA",
+        status: "armed",
+      });
       const decisions = JSON.parse(await read("decisions", "owner@x"));
       expect(decisions.cycles[0].outcomes[0]).toMatchObject({
         playbook: "S1-NVDA",

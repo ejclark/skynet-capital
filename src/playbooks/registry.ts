@@ -225,6 +225,23 @@ export const HC_SAURON: Playbook = {
 };
 
 const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON];
+
+/**
+ * WHY A REGISTERED PLAYBOOK CANNOT FIRE (#4450 slice 1). Arming one of these changes nothing a
+ * member would recognise as "this playbook trades", so the roll call must never call it armed.
+ * Each line is the honesty-gap note on the playbook's own definition, said in one sentence; a
+ * slice that closes a gap deletes its line here in the same PR.
+ */
+export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
+  "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
+  "HC-SAURON":
+    "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
+};
+
+/** Every house playbook id, in roster order — the list the roll call checks each bot against. */
+export function houseRosterIds(): readonly string[] {
+  return ROSTER.map((p) => p.id);
+}
 const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
 
 /**

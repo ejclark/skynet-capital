@@ -3,6 +3,7 @@ import type { PlaybookVerdict } from "../../src/domain/types.js";
 import {
   botHeartbeatView,
   PASS_CADENCE_MS,
+  playbookRollCall,
   STALE_AFTER_MS,
 } from "../../src/observatory/bot-heartbeat-view.js";
 
@@ -107,5 +108,43 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
 
   it("is null, not empty, when no pass on hand carries verdicts", () => {
     expect(botHeartbeatView([pass(0)], NOW, true).playbooks).toBeNull();
+  });
+});
+
+describe("playbookRollCall — every house playbook is accounted for, never silently absent", () => {
+  const house = ["S1-NVDA", "G1-GOOG", "TACO-DJT"];
+  const gaps = { "TACO-DJT": "no feed" };
+
+  it("calls a playbook the bot ran armed, with its mode", () => {
+    const lines = playbookRollCall([s1("no-window")], house, gaps);
+    expect(lines[0]).toMatchObject({ playbookId: "S1-NVDA", status: "armed", mode: "standard" });
+  });
+
+  it("calls a registered playbook the bot never ran off, rather than leaving it out", () => {
+    const lines = playbookRollCall([s1("long")], house, gaps);
+    expect(lines.find((l) => l.playbookId === "G1-GOOG")).toMatchObject({ status: "off" });
+    expect(lines.find((l) => l.playbookId === "G1-GOOG")?.mode).toBeUndefined();
+  });
+
+  it("calls a playbook with a wiring gap blocked even while it runs — it can never trade", () => {
+    const taco: PlaybookVerdict = { playbookId: "TACO-DJT", mode: "standard", state: "no-window" };
+    expect(playbookRollCall([taco], house, gaps).find((l) => l.playbookId === "TACO-DJT")).toEqual({
+      playbookId: "TACO-DJT",
+      status: "blocked",
+      mode: "standard",
+      reason: "no feed",
+    });
+  });
+
+  it("appends a Store playbook the bot ran that the house roster does not list", () => {
+    const store: PlaybookVerdict = { playbookId: "U-abc", mode: "conservative", state: "flat" };
+    const ids = playbookRollCall([store], house, gaps).map((l) => l.playbookId);
+    expect(ids).toEqual([...house, "U-abc"]);
+  });
+
+  it("lists the whole house roster off when no pass has recorded verdicts", () => {
+    const view = botHeartbeatView([pass(20_000)], NOW, true);
+    expect(view.rollCall.length).toBeGreaterThan(0);
+    expect(view.rollCall.every((l) => l.status !== "armed")).toBe(true);
   });
 });
