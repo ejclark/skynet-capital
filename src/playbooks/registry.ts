@@ -34,6 +34,7 @@ export const S1_NVDA: Playbook = {
   // it also carries the strongest evidence line of the roster. Pausing entries on a reading is
   // step 5b-ii, gated on the detector's falsifier (30 observations or 2026-11-30).
   mixedSignals: { action: "observe" },
+  keyedOn: "earnings",
   desiredState(asOfIso, calendar) {
     if (recentPrint("NVDA", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat";
@@ -64,6 +65,7 @@ export const G1_GOOG: Playbook = {
   evidence:
     "docs/research/multi-symbol-sweep.md G1: pooled 37/43 positive, p=0.0008 at measured base; net-of-QQQ positive all eras",
   size: { conservative: 0.01, standard: 0.015, aggressive: 0.02 },
+  keyedOn: "earnings",
   desiredState(asOfIso, calendar) {
     if (recentPrint("GOOG", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
       return "flat"; // failsafe: the close exit was missed — exit on the first post-print cycle
@@ -126,6 +128,7 @@ export const TACO_DJT: Playbook = {
   // Below S1-NVDA (0.01-0.03) and G1-GOOG (0.01-0.02): an unvalidated, event-driven play sized
   // more cautiously than the evidence-backed date-keyed ones until a backtest earns it more.
   size: { conservative: 0.005, standard: 0.01, aggressive: 0.015 },
+  keyedOn: "event",
   desiredState(asOfIso, _calendar, events = []) {
     const own = events.filter((event) => event.symbol === TACO_SYMBOL);
     if (own.length === 0) {
@@ -238,9 +241,11 @@ export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
     "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
 };
 
-/** Every house playbook id, in roster order — the list the roll call checks each bot against. */
-export function houseRosterIds(): readonly string[] {
-  return ROSTER.map((p) => p.id);
+/** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:
+ *  reading what an armed playbook is waiting for means asking its own `desiredState`
+ *  (`observatory/playbook-window.ts`), which an id cannot answer. */
+export function registeredPlaybooks(): readonly Playbook[] {
+  return ROSTER;
 }
 const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
 

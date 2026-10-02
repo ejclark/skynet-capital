@@ -1,6 +1,9 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookMode, PlaybookVerdict, PlaybookVerdictState } from "../domain/types.js";
-import { houseRosterIds, PLAYBOOK_WIRING_GAPS } from "../playbooks/registry.js";
+import type { Playbook } from "../playbooks/playbook.js";
+import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
+import { readPlaybookWindow } from "./playbook-window.js";
 
 /**
  * BOT HEARTBEAT (#3687 slice 2) — is this bot's decision loop alive, and what is each of its
@@ -58,6 +61,11 @@ export interface HeartbeatView {
  * - `off` — registered, but no pass on hand ran it: nobody switched it on for this bot.
  * - `blocked` — registered, but the live wiring cannot make it fire (`PLAYBOOK_WIRING_GAPS`).
  *   Blocked wins over armed: a playbook that runs but can never trade is not online.
+ *
+ * AN ARMED LINE SAYS WHAT IT IS WAITING FOR, not just that it is on (criterion 1's second half:
+ * "an armed one carries its next possible entry date where it has one"). One shared sentence for
+ * every armed playbook would have read as reassurance on the very day the calendar held no
+ * confirmed NVDA print — see `playbook-window.ts`, which owns that read and its honesty rules.
  */
 export type RollCallStatus = "armed" | "off" | "blocked";
 
@@ -67,27 +75,45 @@ export interface RollCallLine {
   /** The mode it runs in; present only when armed or blocked-while-running. */
   readonly mode?: PlaybookMode;
   readonly reason: string;
+  /** `YYYY-MM-DD` the playbook's own rule would next open a position. Absent for a playbook with
+   *  no datable window, one already inside its window, and anything not armed. */
+  readonly nextEntry?: string;
 }
 
 const OFF_REASON = "Not switched on for this bot — no recorded pass ran it.";
+/** The fallback for an armed playbook whose definition is not on hand: a Store playbook, authored
+ *  on its owner's account, whose rule this process cannot read to say more than this. */
 const ARMED_REASON = "Checked on every pass; it trades when its own condition holds.";
 
 export function playbookRollCall(
   verdicts: readonly PlaybookVerdict[] | null,
-  house: readonly string[] = houseRosterIds(),
+  now: Date = new Date(),
+  house: readonly Playbook[] = registeredPlaybooks(),
   gaps: Readonly<Record<string, string>> = PLAYBOOK_WIRING_GAPS,
+  calendar: readonly EarningsPrint[] = UPCOMING_PRINTS,
 ): RollCallLine[] {
   const ran = verdicts ?? [];
+  const byId = new Map(house.map((playbook) => [playbook.id, playbook]));
   // House roster first in its own order, then anything else the bot ran (a Store play).
-  const ids = [...house, ...ran.map((v) => v.playbookId).filter((id) => !house.includes(id))];
+  const ids = [...byId.keys(), ...ran.map((v) => v.playbookId).filter((id) => !byId.has(id))];
   return [...new Set(ids)].map((playbookId): RollCallLine => {
     const verdict = ran.find((v) => v.playbookId === playbookId);
     const mode = verdict ? { mode: verdict.mode } : {};
     const gap = gaps[playbookId];
     if (gap) return { playbookId, status: "blocked", ...mode, reason: gap };
-    return verdict
-      ? { playbookId, status: "armed", ...mode, reason: ARMED_REASON }
-      : { playbookId, status: "off", reason: OFF_REASON };
+    if (!verdict) return { playbookId, status: "off", reason: OFF_REASON };
+    const playbook = byId.get(playbookId);
+    if (!playbook) {
+      return { playbookId, status: "armed", ...mode, reason: ARMED_REASON };
+    }
+    const read = readPlaybookWindow(playbook, verdict.state, now, calendar);
+    return {
+      playbookId,
+      status: "armed",
+      ...mode,
+      reason: read.reason,
+      ...(read.nextEntry ? { nextEntry: read.nextEntry } : {}),
+    };
   });
 }
 
@@ -146,7 +172,7 @@ export function botHeartbeatView(
       lastPassAt: null,
       sinceLastPassMs: null,
       playbooks: null,
-      rollCall: playbookRollCall(null),
+      rollCall: playbookRollCall(null, now),
     };
   }
   const sinceLastPassMs = Math.max(0, now.getTime() - newest.at);
@@ -162,6 +188,6 @@ export function botHeartbeatView(
     sinceLastPassMs,
     ...(newest.halted ? { halted: newest.halted } : {}),
     playbooks: playbookLines(records),
-    rollCall: playbookRollCall(latestVerdictPass(records)?.verdicts ?? null),
+    rollCall: playbookRollCall(latestVerdictPass(records)?.verdicts ?? null, now),
   };
 }
