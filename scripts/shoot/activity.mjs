@@ -1,8 +1,8 @@
-// Visual harness for /app/activity (#1740) — the rail's section switch over the league's pulse,
-// from the REAL built shell over stub APIs. PHONE FIRST (docs/PICTURES.md → "Trading surfaces shoot
-// the phone frame first"): the 390px frames prove that Booked P&L is one tap away rather than a
-// scroll below 60 trade rows, and the desktop frame proves the same choice adds room instead of a
-// new concept. JPEG ≤100KB.
+// Visual harness for /app/activity (#1740; rebuilt for #784 slice 3) — ONE feed of two kinds, with
+// booked P&L as a strip above it, from the REAL built shell over stub APIs. PHONE FIRST
+// (docs/PICTURES.md → "Trading surfaces shoot the phone frame first"): the 390px frames prove that
+// the ranking is on screen without a tap and that a filing and a fill read as sibling rows, and the
+// desktop frame proves the same choice adds room instead of a new concept. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:activity [outdir]
 import { openShell } from "./shell.mjs";
 
@@ -15,9 +15,22 @@ const NAMES = [
 ];
 const SYMBOLS = ["NVDA", "AAPL", "SPY", "MSFT", "TSLA", "AMD", "KO", "JNJ"];
 
-// A full feed — the point of the change is that a long list no longer buries what sits beside it.
+// A full feed — the point of the change is that a long list no longer needs a widget beside it.
+// `at` walks back from the close in 9-minute steps and `when` is derived FROM it, so the two agree:
+// a frame where the displayed clock disagrees with the sort order would read as a bug in the shot.
+// The filings below are dated into the same run rather than after it — a mixed feed that happened to
+// sort into two clumps would prove nothing about the mixing.
+const CLOSE = Date.parse("2026-10-01T20:00:00.000Z");
+const et = (ms) =>
+  new Date(ms).toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
 const trades = Array.from({ length: 34 }, (_, i) => {
   const [who, whoId, kind] = NAMES[i % NAMES.length];
+  const ms = CLOSE - (i + 1) * 9 * 60_000;
   return {
     key: `t${i}`,
     side: i % 3 === 0 ? "sell" : "buy",
@@ -28,7 +41,8 @@ const trades = Array.from({ length: 34 }, (_, i) => {
     whoId,
     kind,
     reconstructed: i % 9 === 0,
-    when: `${9 + Math.floor(i / 6)}:${String((i * 7) % 60).padStart(2, "0")}`,
+    when: et(ms),
+    at: new Date(ms).toISOString(),
   };
 });
 
@@ -43,28 +57,37 @@ const wire = {
   feedbackEnabled: true,
   feedback: [
     {
-      icon: "💡",
+      issueNumber: 1740,
+      icon: "🗺️",
+      kindLabel: "Idea",
       title: "Tabs as an organic boundary for a page's information",
       url: "https://github.com/ejclark/skynet-capital/issues/1740",
       status: "next slice",
       statusKey: "next-slice",
-      meta: "opened today",
+      meta: "#1740 · 10/1/2026",
+      at: "2026-10-01T19:46:00.000Z",
     },
     {
-      icon: "🐛",
+      issueNumber: 1739,
+      icon: "🐞",
+      kindLabel: "Bug",
       title: "The activity route still says 'wire'",
       url: "https://github.com/ejclark/skynet-capital/issues/1739",
-      status: "shipped",
-      statusKey: "shipped",
-      meta: "closed today",
+      status: "In the queue",
+      statusKey: "open",
+      meta: "#1739 · 10/1/2026",
+      at: "2026-10-01T19:20:00.000Z",
     },
     {
-      icon: "💡",
+      issueNumber: 1742,
+      icon: "✨",
+      kindLabel: "Feature",
       title: "Show each call row's assessment date",
       url: "https://github.com/ejclark/skynet-capital/issues/1742",
-      status: "shipped",
+      status: "Shipped",
       statusKey: "shipped",
-      meta: "closed today",
+      meta: "#1742 · 9/30/2026",
+      at: "2026-09-30T16:20:00.000Z",
     },
   ],
 };
@@ -76,27 +99,33 @@ const { page, origin, shoot, close } = await openShell({
   stubs: { "/api/wire": { wire } },
 });
 
-// 1. The phone's default section: the feed, with its own filter bar and the section switch above
-//    it in the rail's horizontal row.
+// 1. The phone's default view: the P&L strip on screen with no tap, then one feed whose rows are
+//    fills and filings interleaved — each row's left edge saying which it is.
 await page.goto(`${origin}/app/activity`);
-await page.getByRole("heading", { name: "Trading activity" }).waitFor();
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 await shoot("activity-feed-phone");
 
-// 2. One tap — not a scroll past 34 rows. This is the defect the section switch fixes.
-await page.getByRole("button", { name: "Booked P&L" }).click();
-await page.getByRole("heading", { name: "Booked P&L" }).waitFor();
-await shoot("activity-pnl-phone");
+// 2. The kind facet: one chip narrows the same list instead of paging to another widget.
+await page.getByRole("button", { name: "Ideas", exact: true }).click();
+await page.getByRole("link", { name: /activity route still says/ }).waitFor();
+await shoot("activity-ideas-phone");
 
-// 3. The URL carries the section, so a link lands on the same one.
-console.log(`shoot/activity: url after the tap → ${new URL(page.url()).search}`);
+// 3. "Include shipped" is the pulse's old Active/All separation, now a token on the one query.
+await page.getByRole("button", { name: "Include shipped" }).click();
+await page.getByRole("link", { name: /assessment date/ }).waitFor();
+await shoot("activity-ideas-shipped-phone");
+// The filter is URL-stateful on a 300ms debounce (`activity.tsx`), so a link to this exact view is
+// shareable — wait past it before reading, or the log prints the pre-debounce URL and says nothing.
+await page.waitForFunction(() => window.location.search.includes("show"), undefined, {
+  timeout: 2000,
+});
+console.log(`shoot/activity: url after two chips → ${new URL(page.url()).search}`);
 
-// 4. Desktop: the same choice promotes P&L to the primary column and keeps the rest beside it —
-//    room added, no new concept.
-await page.setViewportSize({ width: 1280, height: 900 });
-await shoot("activity-pnl-desktop");
-
+// 4. Desktop: the same rows, more of them, and the strip's cells wrap instead of scrolling — room
+//    added, no new concept.
 await page.goto(`${origin}/app/activity`);
-await page.getByRole("heading", { name: "Trading activity" }).waitFor();
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 await shoot("activity-feed-desktop");
 
 await close();

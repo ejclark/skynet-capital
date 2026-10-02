@@ -75,6 +75,16 @@ type DesiredState = "long" | "flat" | "no-window";
 export type PlaybookHorizon = "short" | "medium" | "long";
 
 /**
+ * What opens this playbook's window — the one fact the roll call needs to diagnose a quiet
+ * playbook honestly (#4450 slice 1). `earnings` means the window is keyed to a print date, so "no
+ * confirmed print on the calendar" IS the reason it is quiet; `event` means an outside signal opens
+ * it, so the calendar explains nothing about it. Optional, and a playbook that declares neither
+ * gets no diagnosis rather than a guessed one — naming the wrong cause for a quiet playbook is
+ * worse than naming none.
+ */
+export type PlaybookKey = "earnings" | "event";
+
+/**
  * The one exit-safety schema every playbook fills in per `PlaybookMode`, rather than inventing
  * its own shape (#3194). `drawdownTripPct` is the peak-to-trough drawdown, as a fraction of the
  * play's own equity contribution, that trips the exit stage for THAT mode — a playbook's
@@ -152,6 +162,9 @@ export interface Playbook {
    * tactics declared," which behaves identically to today for every current playbook.
    */
   readonly tactics?: readonly TacticalRule[];
+  /** Optional — see `PlaybookKey`. Absent means "undeclared", which a reader must treat as
+   *  "unknown", never as a default. */
+  readonly keyedOn?: PlaybookKey;
 }
 
 /** A playbook enabled in a specific mode — the unit the runner iterates. */

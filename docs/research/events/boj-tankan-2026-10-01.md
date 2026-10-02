@@ -466,3 +466,90 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out, 2026-10-02 (D+1, inside `closeOutWithinDays: 6`).** Instrument cache busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing
+here reads from it — `symbols: []`, and `earnings-cycle.mjs`/`intraday-edges.mjs` have no macro
+mode, as the initial research noted. Every figure below is a fresh pull: Nikkei/Advantest/Tokyo
+Electron/S&P/VIX daily bars re-fetched today through the same `scripts/research/market-data.mjs`
+pipeline (`query1.finance.yahoo.com`) the initial research used, and the Tankan's own print from a
+BoJ primary — never the D-1 row, never memory of the tape.
+
+**What printed (primary: boj.or.jp/en/statistics/tk/yoshi/tk2609.htm, fetched today, cross-checked
+against boj.or.jp/en/statistics/tk/gaiyo/2026/index.htm, both HTTP 200).** The September 2026
+Tankan published **2026-10-01**, exactly as the forward schedule's serial 46296 said it would.
+Large-manufacturer business conditions DI: **+24** (June: +22) — a sixth straight quarterly rise,
+the highest since March 2018 — a **+7** surprise against the anchor **FT-2** registered (the
+Bank's own June-published forecast of **+17**), well past the BigGo private-sector consensus
+(+26) found on the 09-25 pulse. Large non-manufacturer DI: **+35** (June: +37). December forecast:
+**+21** large-mfg. No BoJ release-time page states "08:50 JST" verbatim for this specific edition,
+but the forward schedule confirmed byte-identical across four separate fetches (09-05 through
+09-28, md5 `d03654377cb5188caa65d1d5f1b73533`) never showed a different time, and nothing found
+today contradicts it.
+
+**FT-boj-tankan-2026-10-01-1 — PASSED.** The Tankan published on the predicted date. The schedule
+primary that has carried this test since D-26 never moved; the Bank's own 2026 archive index now
+lists the September release at **October 1, 2026**, closing the loop the schedule file predicted.
+
+**FT-boj-tankan-2026-10-01-2 — PASSED, on the loudest version of this window the calendar could
+construct.** Nikkei 225 opening gap, 2026-10-01: \|67,106.52 (open) ÷ 66,753.72 (09-30 close) −
+1\| = **0.5285%** — comfortably under the registered **0.641%** floor (the n=89 detection floor
+this doc's initial research derived). The AND-gated kill (gap > 0.641% **while** the DI sits
+within ±3 of the 17 anchor) could not fire on the gap leg alone, regardless of the DI's own
++7 surprise: a release that moved its own headline number by more than this doc's surprise study
+ever saw still did not move the Tokyo open past an ordinary session. This is the test's strongest
+possible confirmation of legs 2–6, not a lucky pass — the DI leg was never reached.
+
+**FT-boj-tankan-2026-10-01-4 — VOID, exactly as its own registration specified.** Its own text:
+*"If the Nikkei gap lands at or below 0.641% this test is void, not passed."* The gap landed at
+0.5285%, so the conditional premise never obtained and Advantest's reaction is not scored against
+it. For the record, not for the verdict: Advantest's own opening gap that day was **2.014%**
+(34,950 open ÷ 34,260 09-30 close) against a 2019-2026 median of 1.303%, and Tokyo Electron's was
+**4.824%** (12,385 ÷ 11,815) against its own history — normalising Advantest to the Nikkei's own
+gap (0.5285% ÷ 0.497% median) gives a ratio of **1.45**, just under the 1.5 line the (never-reached)
+test would have scored against. Close, but the test's own gate held: there was no broad Tokyo
+repricing for a semi-cap ratio to be compared to.
+
+**What the tape actually credited the day to — the Attribution kill did not fire.** Nikkei closed
+**+3.30%** (66,753.72 → 68,956.72, its highest close since 17 August) — a close-to-close move far
+larger than the opening-gap test this doc instruments, which is exactly why the test is built on
+the open and not the close. Financial press (Reuters via Investing.com, BBN Times, Invezz, Nikkei
+Asia, Japan Times) attributed the rally explicitly to **Micron's earnings beat** lighting up
+Advantest/Lasertec/Tokyo Electron/Kioxia — one outlet's headline reads verbatim *"Nikkei 225 Soars
+3.30% … as Micron Ignites Japan's Chip Stocks."* Nobody in the sources checked today credited the
+Tankan. This is precisely the mechanism **FT-4** was registered to separate and leg 12 flagged as
+a live contaminant on 09-15 (#2028): the MU print landing 05:30 JST, 3h20m before the Tankan's
+08:50 JST release, is the move's own stated cause, and the opening-gap instrument — measuring
+before either the Tankan's content or the bulk of the day's chip-sector repricing had time to
+land — never saw it.
+
+**Vs. the stance.** **Stand aside was right for the entry's whole life, and the one session it
+could ever be tested against validated it rather than merely leaving it untested.** The founding
+premise this entry was built to check — "is the control a control?" — closes **no**: the Tankan's
+Nikkei opening-gap elevation was 0.88× over 90 releases at initial research, and the one live
+observation this calendar gets before the close-out window expires produced a gap of 0.53%, below
+even that modest average. The release's own surprise (+7, the largest DI jump in this doc's
+machine-readable surprise series) still didn't move the open. Three commitments from the Stance
+section all stand confirmed rather than merely unrefuted: the "bounds, not excludes" qualifier
+stays struck; the 10-01 Tokyo open was not this survey's verdict (it was Micron's); and the clean
+observation remains **mid-December** ([`boj-tankan-2026-12-14`](../../../src/domain/market-events/boj-tankan-2026-12-14.json)).
+
+**FT-boj-tankan-2026-10-01-3 stays open.** Its score-by, **2026-12-15**, sits 74 days past this
+event's `closeOutWithinDays: 6` ceiling — `--due`'s `forwardTestsBeyondWindow` clamp names exactly
+this row, so this close-out does not wait on it (per `docs/process/EVENT-RESEARCH.md` →
+"A close-out waits for its own predictions"). It remains `_open_` for a future `forward-test-due`
+dispatch against the December Tankan's own opening gap.
+
+**Honest limits.** One session is one observation — it adds a data point to a 90-release study, it
+does not re-run the study. The DI's +7 surprise is a single value against a 22-release surprise
+series whose correlation was already measured as noise (+0.17, p = 0.44); this print is consistent
+with that noise, not proof of it (n=23 now, not formally re-computed here). The 08:50 JST release
+time for this specific edition is inferred from an unbroken schedule-primary track record, not
+re-confirmed verbatim from a same-day BoJ page, because none of today's sources states it in those
+words. The normalised Advantest ratio (1.45) is reported for color only — the test it would have
+scored against never triggers, and treating a near-miss on a void test as informative would be
+exactly the retrofitting this doc's own rules forbid. This document goes quiet on its own stance as
+of this `## Outcome` section, except for FT-3, which remains genuinely open until the December
+Tankan prints.

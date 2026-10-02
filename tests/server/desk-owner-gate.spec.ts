@@ -48,7 +48,9 @@ describe("the playbook strips", () => {
           sinceIsLowerBound: false,
         },
       ],
+      rollCall: [{ playbookId: "S1-NVDA", status: "armed" as const, reason: "checked" }],
     };
+    expect(withoutHeartbeatPlaybookIds(heartbeat)).not.toHaveProperty("rollCall");
     expect(withoutHeartbeatPlaybookIds(heartbeat).playbooks).toEqual([
       { mode: "standard", state: "long", since: "2026-09-22T15:00:00Z", sinceIsLowerBound: false },
     ]);

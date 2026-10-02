@@ -3,8 +3,10 @@ import type { PlaybookVerdict } from "../../src/domain/types.js";
 import {
   botHeartbeatView,
   PASS_CADENCE_MS,
+  playbookRollCall,
   STALE_AFTER_MS,
 } from "../../src/observatory/bot-heartbeat-view.js";
+import type { Playbook } from "../../src/playbooks/playbook.js";
 
 const NOW = new Date("2026-09-24T15:00:00Z");
 const pass = (
@@ -107,5 +109,69 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
 
   it("is null, not empty, when no pass on hand carries verdicts", () => {
     expect(botHeartbeatView([pass(0)], NOW, true).playbooks).toBeNull();
+  });
+});
+
+describe("playbookRollCall — every house playbook is accounted for, never silently absent", () => {
+  /** A stand-in roster, so these specs pin the roll call's own behaviour rather than the house
+   *  registry's current contents. The window read is covered by `playbook-window.spec.ts`; here the
+   *  rules only need a playbook that never opens one. */
+  const play = (id: string): Playbook => ({
+    id,
+    symbols: [id.split("-")[1] ?? "TST"],
+    thesis: "a spec",
+    evidence: "a spec",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    desiredState: () => "no-window",
+  });
+  const house = [play("S1-NVDA"), play("G1-GOOG"), play("TACO-DJT")];
+  const ids = house.map((p) => p.id);
+  const gaps = { "TACO-DJT": "no feed" };
+  const rollCall = (verdicts: readonly PlaybookVerdict[]) =>
+    playbookRollCall(verdicts, NOW, house, gaps, []);
+
+  it("calls a playbook the bot ran armed, with its mode", () => {
+    const lines = rollCall([s1("no-window")]);
+    expect(lines[0]).toMatchObject({ playbookId: "S1-NVDA", status: "armed", mode: "standard" });
+  });
+
+  it("calls a registered playbook the bot never ran off, rather than leaving it out", () => {
+    const lines = rollCall([s1("long")]);
+    expect(lines.find((l) => l.playbookId === "G1-GOOG")).toMatchObject({ status: "off" });
+    expect(lines.find((l) => l.playbookId === "G1-GOOG")?.mode).toBeUndefined();
+  });
+
+  it("calls a playbook with a wiring gap blocked even while it runs — it can never trade", () => {
+    const taco: PlaybookVerdict = { playbookId: "TACO-DJT", mode: "standard", state: "no-window" };
+    expect(rollCall([taco]).find((l) => l.playbookId === "TACO-DJT")).toEqual({
+      playbookId: "TACO-DJT",
+      status: "blocked",
+      mode: "standard",
+      reason: "no feed",
+    });
+  });
+
+  it("appends a Store playbook the bot ran that the house roster does not list", () => {
+    const store: PlaybookVerdict = { playbookId: "U-abc", mode: "conservative", state: "flat" };
+    expect(rollCall([store]).map((l) => l.playbookId)).toEqual([...ids, "U-abc"]);
+  });
+
+  /** A Store playbook's rule lives on its author's account, so this process cannot read what it is
+   *  waiting for — it says only what it can stand behind, and carries no date. */
+  it("falls back to the shared sentence for an armed playbook whose rule it cannot read", () => {
+    const store: PlaybookVerdict = {
+      playbookId: "U-abc",
+      mode: "conservative",
+      state: "no-window",
+    };
+    const line = rollCall([store]).find((l) => l.playbookId === "U-abc");
+    expect(line?.reason).toBe("Checked on every pass; it trades when its own condition holds.");
+    expect(line?.nextEntry).toBeUndefined();
+  });
+
+  it("lists the whole house roster off when no pass has recorded verdicts", () => {
+    const view = botHeartbeatView([pass(20_000)], NOW, true);
+    expect(view.rollCall.length).toBeGreaterThan(0);
+    expect(view.rollCall.every((l) => l.status !== "armed")).toBe(true);
   });
 });

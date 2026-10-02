@@ -1,18 +1,22 @@
 import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
 import { formatPrice } from "./desk-data.js";
 import type { FeedbackFeedItem } from "./feedback-event-feed.js";
-import { FEEDBACK_KIND_ICON } from "./feedback-view.js";
+import { FEEDBACK_KIND_ICON, FEEDBACK_KIND_WORD } from "./feedback-view.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
 import type { WireTradeVitals } from "./vitals.js";
 import type { WirePnlRow } from "./wire-data.js";
 import type { WireTradeReasoning, WireTradeWithReasoning } from "./wire-reasoning.js";
 
 /**
- * THE WIRE AS DATA — `/api/wire`, the JSON twin behind the shell's Wire. Same
- * three feeds wire-view.ts renders (trading activity, booked P&L, the feedback pulse), same
- * honesty seams (reconstructed provenance, feedback-unwired banner, pseudonymous filings), with
- * every displayed figure formatted here. The filterable raws (side, kind, symbol, name) ride
- * along as plain strings — the browser matches text, it never re-derives a number.
+ * THE WIRE AS DATA — `/api/wire`, the JSON twin behind the shell's Activity page. Three arrays,
+ * two roles since #784 slice 3: `trades` and `feedback` are the two KINDS of one feed the page
+ * interleaves (`app/src/live/activity-feed.ts`), and `pnl` is the standing snapshot it renders as a
+ * summary strip. They stay separate arrays here because the trade half has a second consumer that
+ * wants it alone — the options ticket's who-else-traded row (`fetchWireForSymbol`) — and because
+ * the two kinds page differently (see that module's header). Same honesty seams throughout
+ * (reconstructed provenance, feedback-unwired banner, pseudonymous filings), with every displayed
+ * figure formatted here. The filterable raws (side, kind, symbol, name) ride along as plain
+ * strings — the browser matches text, it never re-derives a number.
  */
 
 interface WireTradeView {
@@ -26,6 +30,10 @@ interface WireTradeView {
   readonly kind: "human" | "bot";
   readonly reconstructed: boolean;
   readonly when: string;
+  /** The raw ISO instant behind `when` (#784 slice 3) — the ONE field the page needs un-formatted,
+   *  because one feed of two kinds has to interleave them in time and `when` is a localized phrase
+   *  ("3m ago"). Everything else stays formatted here; the browser still never re-derives a number. */
+  readonly at: string;
   /** Absent for a human trade, or a bot trade whose decision wasn't found — never fabricated
    *  (`wire-reasoning.ts`). Both fields are already display-ready; nothing here re-derives them. */
   readonly reasoning?: WireTradeReasoning;
@@ -44,11 +52,16 @@ interface WireFeedbackView {
   /** The filing's issue number — the key its in-app comments hang off (issue #2224 shape 3). */
   readonly issueNumber: number;
   readonly icon: string;
+  /** The icon's word ("Bug", "Feature", "Idea", else "Filing") — on one mixed feed the row's first
+   *  token has to say what the row is, and an emoji alone doesn't (#784 slice 3). */
+  readonly kindLabel: string;
   readonly title: string;
   readonly url: string;
   readonly status?: string;
   readonly statusKey?: FeedbackStatus;
   readonly meta: string;
+  /** The filing instant, raw — the trade row's `at` twin, for the same interleave reason. */
+  readonly at: string;
 }
 
 export interface WireView {
@@ -61,6 +74,7 @@ export interface WireView {
 /** A filing whose payload named a kind this app doesn't file — the row still belongs on the
  *  league's record, so it is badged neutrally rather than dropped (`feedback-event-feed.ts`). */
 const UNKNOWN_KIND_ICON = "📄";
+const UNKNOWN_KIND_WORD = "Filing";
 
 export function wireJsonView(
   trades: readonly WireTradeWithReasoning[],
@@ -85,6 +99,7 @@ export function wireJsonView(
       kind: row.kind,
       reconstructed: row.reconstructed,
       when: formatActivityTime(row.at),
+      at: row.at,
       ...(row.reasoning ? { reasoning: row.reasoning } : {}),
       ...(row.vitals ? { vitals: row.vitals } : {}),
     })),
@@ -103,12 +118,14 @@ export function wireJsonView(
       .map((item) => ({
         issueNumber: item.issueNumber,
         icon: item.kind ? FEEDBACK_KIND_ICON[item.kind] : UNKNOWN_KIND_ICON,
+        kindLabel: item.kind ? FEEDBACK_KIND_WORD[item.kind] : UNKNOWN_KIND_WORD,
         title: item.title,
         url: item.url,
         ...(item.status
           ? { status: FEEDBACK_STATUS_LABEL[item.status], statusKey: item.status }
           : {}),
         meta: `#${item.issueNumber} · ${new Date(item.filedAt).toLocaleDateString()}`,
+        at: item.filedAt,
       })),
   };
 }

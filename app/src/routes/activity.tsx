@@ -1,87 +1,102 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import {
+  type ActivityFilter,
+  type ActivityQualifier,
+  buildActivityFeed,
+  filingsInScope,
+  matchesActivity,
+  parseActivityQuery,
+  toggleActivityQualifier,
+} from "../live/activity-feed";
 import { fetchCouncil } from "../live/council";
 import { fetchFilingComments } from "../live/filing-comments";
-import {
-  fetchWire,
-  matchesWire,
-  parseWireQuery,
-  toggleWireQualifier,
-  type WireFeed,
-  type WireTrade,
-} from "../live/wire";
+import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
 import { CouncilCompose } from "../shell/council-compose";
-import { FilingComments } from "../shell/filing-comments";
+import { FilingOnramp } from "../shell/filing-onramp";
 import { PageFrame } from "../shell/frame";
+import { PnlStrip } from "../shell/pnl-strip";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
-import { Toggle } from "../shell/toggle";
+import { FilingRow } from "../shell/wire-filing-row";
 import { TradeRow } from "../shell/wire-trade-row";
 
 /**
- * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse
- * in the shell, on the Issues-list template: a filterable trade feed (chips ⇄ query text,
- * URL-stateful) with the booked-P&L strip and the feedback pulse alongside. IA: this is every
- * transaction and open idea across the whole league, one feed — "Activity" says that in one word
- * where "The Wire" made a first-time viewer guess (Eric, 2026-08-28: "i don't know what to expect
- * when I see 'The Wire' — the verbiage should be intuitive"). The topbar link and the `?`
- * shortcuts map already read "Activity" (#1119's canvas naming); the page followed in #784, and
- * the ROUTE followed last (2026-09-06, Eric: "the route for the activity tab still shows 'wire'
- * which is confusing af") — `/app/activity`, with `/app/wire` and `/wire` 302ing here so no
- * bookmark strands. Routes are implementation details of the IA: the label, the page and the URL
- * now say the same word. Same honesty seams as the
- * server view it succeeds: reconstructed provenance is labeled, an unwired feedback lane says so,
- * filings stay pseudonymous. The GitHub onramp folds behind a disclosure — reference, not front
- * matter.
+ * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse in
+ * the shell, on the Issues-list template: ONE feed of everything the league does, filterable by
+ * kind, with booked P&L as a summary strip above it. IA: this is every transaction and open idea
+ * across the whole league, one feed — "Activity" says that in one word where "The Wire" made a
+ * first-time viewer guess (Eric, 2026-08-28: "i don't know what to expect when I see 'The Wire'").
+ * The topbar link, the page and the URL all say the same word (`/app/activity`, with `/app/wire` and
+ * `/wire` 302ing here so no bookmark strands). Honesty seams are unchanged: reconstructed provenance
+ * is labeled, an unwired feedback lane says so, filings stay pseudonymous.
  *
- * SECTIONS, NOT TABS (#1740): the page holds three different SHAPES of data, so its controls row carries a
- * section switch above its filter chips (`frame.tsx`'s three-word rule — a section is a boundary,
- * a kind is a qualifier). EXCLUSIVE AT EVERY WIDTH (2026-09-06 — Eric, on the "beside" shape #1749
- * shipped: "'on the page' sections are always visible just place a different section in the
- * cockpit/driver's seat... the whole page just feels like a hot mess"): the pressed section is the
- * only one rendered, matching Settings' own use of the same switch (`settings.tsx`) — a page that
- * shares a mechanism should share its meaning. The section's panel is capped at `--col-read`
- * (`wire.css`), not stretched edge to edge, so a lone list on a wide screen reads as a page, not a
- * strip in a mostly-empty grid.
+ * ONE FEED, NOT THREE WIDGETS (#784 slice 3). Trades and filings were never two presentation
+ * choices — they were two unrelated DATA MODELS sharing a screen (Eric, 2026-09-06: they "have no
+ * fundamental overlap"), which is what slices 1 and 2 fixed by putting both on #1211's one event
+ * envelope. So this page now spends its "section" concept on only what is genuinely a different
+ * SHAPE of data, and expresses the rest as KINDS — `frame.tsx`'s three-word rule, applied:
+ *   - Trades and filings are KINDS: chips on one list (`activity-feed.ts` owns the grammar).
+ *   - Booked P&L is a STRIP, not a section: a standing snapshot, always true, never paged to
+ *     (#784's criterion — "never a fourth item competing for the same section concept").
+ *   - The Council stays a SECTION: a composer plus this week's lines is not a record of something
+ *     that happened, so it is not a kind of event and does not belong in the feed.
+ * Two sections remain, and the one that is current renders ALONE at every width — Settings' own use
+ * of the same switch, and the shape Eric asked for on 2026-09-06 after #1749 shipped the "beside"
+ * version ("the whole page just feels like a hot mess"). Mobile-first (`CLAUDE.md`): the feed is
+ * curated at 390px — one row per event, the kind word at the left edge — and a wider viewport gives
+ * the same rows more room, never new concepts.
  */
 
+/** The chip groups, in the order the controls row reads them. Kind leads, because it decides which
+ *  of the groups below it still have anything to do. */
+const KIND_CHIPS = [
+  ["is:trade", "Trades"],
+  ["is:feedback", "Ideas"],
+] as const;
 const SIDE_CHIPS = [
   ["is:buy", "Buys"],
   ["is:sell", "Sells"],
 ] as const;
-const KIND_CHIPS = [
+const DESK_CHIPS = [
   ["is:bot", "Bots"],
   ["is:human", "Humans"],
 ] as const;
+const FILING_CHIPS = [["show:shipped", "Include shipped"]] as const;
 
-type ActivitySection = "feed" | "pnl" | "pulse" | "council";
+type ActivitySection = "feed" | "council";
 
 const SECTIONS: readonly PageSection<ActivitySection>[] = [
-  { id: "feed", label: "Trading activity" },
-  { id: "pnl", label: "Booked P&L" },
-  { id: "pulse", label: "Feedback pulse" },
+  { id: "feed", label: "Activity" },
   { id: "council", label: "The Council" },
 ];
 
 /** The controls row (#3807 slice 2a — the rail left the frame): the page's sections first, then —
- *  only while the feed is the current one — its filter groups, the same one-model qualifiers the bar accepts as text. The row drives the section
- *  below it (`frame.tsx`), so a chip that filters a list this page has paged away from would be a
- *  control with nothing to do; the feed's own bar travels with the feed either way. The `<hr />`
- *  keeps the two roles apart at every width, where the row hides the group labels. */
+ *  only while the feed is the current one — its filter groups, the same one-model qualifiers the bar
+ *  accepts as text. A group whose kind the filter has already excluded is not rendered: a "Buys"
+ *  chip beside a list narrowed to filings would be a control with nothing to do, the same reason the
+ *  whole row hides when the page has paged away from the feed. The `<hr />` keeps the two roles
+ *  apart at every width, where the row hides the group labels. */
 function WireControls({
   query,
+  filter,
+  feedbackEnabled,
   onChange,
   section,
   onSection,
 }: {
   readonly query: string;
+  readonly filter: ActivityFilter;
+  /** With the feedback lane unwired the feed has exactly ONE kind, so the kind and filings chips
+   *  are controls with nothing to do — and pressing "Ideas" would blame a member's filter for a
+   *  deployment fact. The feed says why in its own note instead. */
+  readonly feedbackEnabled: boolean;
   readonly onChange: (next: string) => void;
   readonly section: ActivitySection;
   readonly onSection: (next: ActivitySection) => void;
 }): ReactElement {
-  const tokens = query.toLowerCase().split(/\s+/);
   const group = (label: string, chips: readonly (readonly [string, string])[]) => (
     <>
       <p className="rail-label">{label}</p>
@@ -90,22 +105,26 @@ function WireControls({
           key={qualifier}
           type="button"
           className="railctl"
-          aria-pressed={tokens.includes(qualifier)}
-          onClick={() => onChange(toggleWireQualifier(query, qualifier as never))}
+          aria-pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
+          onClick={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
         >
           {text}
         </button>
       ))}
     </>
   );
+  const tradesInScope = !filter.qualifiers.includes("is:feedback");
+  const filings = feedbackEnabled && filingsInScope(filter);
   return (
     <>
       <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
       {section === "feed" ? (
         <>
           <hr />
-          {group("Side", SIDE_CHIPS)}
-          {group("Desks", KIND_CHIPS)}
+          {feedbackEnabled ? group("Kind", KIND_CHIPS) : null}
+          {tradesInScope ? group("Side", SIDE_CHIPS) : null}
+          {tradesInScope ? group("Desks", DESK_CHIPS) : null}
+          {filings ? group("Filings", FILING_CHIPS) : null}
         </>
       ) : null}
     </>
@@ -131,124 +150,11 @@ function WireFilterBar({
           type="text"
           value={query}
           spellCheck={false}
-          placeholder="filter — try NVDA, is:sell, is:bot, a name"
+          placeholder="filter — try NVDA, is:sell, is:feedback, a name"
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
     </div>
-  );
-}
-
-function PnlSection({ wire }: { readonly wire: WireFeed }): ReactElement {
-  return (
-    <section className="wire-panel">
-      <h2 className="wire-h">Booked P&L</h2>
-      {wire.pnl.length === 0 ? (
-        <p className="note">Nothing booked yet — realized P&L shows up on the first close.</p>
-      ) : (
-        <ul className="wire-pnl">
-          {wire.pnl.map((row) => (
-            <li key={row.whoId}>
-              <Link to="/u/$id" params={{ id: row.whoId }}>
-                {row.who}
-              </Link>
-              <span className={`chip chip-${row.kind}`}>
-                {row.kind === "bot" ? "BOT" : "HUMAN"}
-              </span>
-              <span className={`num tone-${row.tone}`}>{row.realized}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-const PULSE_FILTERS = [
-  ["active", "Active"],
-  ["all", "All"],
-] as const;
-type PulseFilter = (typeof PULSE_FILTERS)[number][0];
-
-/** Open and shipped filings are two different things to look at — one is still moving, the other
- *  is a record — so they don't share a list by default (the same rule `feedback-recent.tsx` set
- *  for a member's own filings, #429; the league-wide pulse never inherited it). */
-function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
-  const [filter, setFilter] = useState<PulseFilter>("active");
-  // Comments on a filing (issue #2224 shape 3) — the app's own store, never the GitHub thread. A
-  // failed or unwired read just leaves the cards without their fold; the pulse itself still renders.
-  const queryClient = useQueryClient();
-  const comments = useQuery({ queryKey: ["filing-comments"], queryFn: fetchFilingComments });
-  const threads = comments.data?.enabled ? comments.data : undefined;
-  const refreshComments = () => queryClient.invalidateQueries({ queryKey: ["filing-comments"] });
-  const visible =
-    filter === "all" ? wire.feedback : wire.feedback.filter((f) => f.statusKey !== "shipped");
-  return (
-    <section className="wire-panel">
-      <div className="wire-h-row">
-        <h2 className="wire-h">Feedback pulse</h2>
-        {wire.feedback.some((f) => f.statusKey === "shipped") ? (
-          <Toggle label="Show" value={filter} options={PULSE_FILTERS} onPick={setFilter} />
-        ) : null}
-      </div>
-      {!wire.feedbackEnabled ? (
-        <p className="note">Feedback isn't switched on yet, so there's nothing to show here.</p>
-      ) : wire.feedback.length === 0 ? (
-        <p className="note">
-          No feedback filed yet — be the first: tell Moneypenny, and your filings are listed on{" "}
-          <a href="/app/accounts?section=feedback">your Profile</a>.
-        </p>
-      ) : visible.length === 0 ? (
-        <p className="note">Nothing active — flip to "All" to see what's already shipped.</p>
-      ) : (
-        <ul className="wire-fdbk">
-          {visible.map((item) => (
-            <li key={item.url}>
-              <span title="kind">{item.icon}</span>
-              <a href={item.url} target="_blank" rel="noopener noreferrer">
-                {item.title}
-              </a>
-              {item.status ? (
-                <span className={`wire-status wire-status-${item.statusKey}`}>{item.status}</span>
-              ) : null}
-              <span className="wire-fdbk-meta num">{item.meta}</span>
-              {threads ? (
-                <FilingComments
-                  issueNumber={item.issueNumber}
-                  comments={threads.comments[String(item.issueNumber)] ?? []}
-                  isOwn={threads.ownFilings.includes(item.issueNumber)}
-                  onSaved={refreshComments}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-      <details className="wire-onramp">
-        <summary>Steer someone else's idea on GitHub</summary>
-        <p>
-          A comment here is for members to read; it doesn't reach the build. To change what gets
-          built, comment on the GitHub issue itself:
-        </p>
-        <ol>
-          <li>
-            <strong>Create a free GitHub account</strong> if you don't have one —{" "}
-            <a href="https://github.com/join" target="_blank" rel="noopener noreferrer">
-              github.com/join
-            </a>
-            .
-          </li>
-          <li>
-            <strong>Open the issue</strong> from any item above and drop a comment — agree, add
-            detail, or just say you want it too.
-          </li>
-          <li>
-            <strong>Mention @claude</strong> when you want it acted on, not just read. (Ask Eric to
-            add you as a collaborator first — that's what makes the mention count.)
-          </li>
-        </ol>
-      </details>
-    </section>
   );
 }
 
@@ -297,15 +203,17 @@ function CouncilSection(): ReactElement {
   );
 }
 
-/** The feed section — its filter bar travels with it, because the filter is the feed's control and
- *  not the page's (a bar for a list the section switch has paged away from is noise).
+/** The feed — one list, both kinds, newest first; its filter bar travels with it, because the filter
+ *  is the feed's control and not the page's.
  *
- *  `/api/wire` pages at 30 rows (`src/server/pagination.ts`'s default); on a league with any real
- *  trading volume that's today's trades alone, so "load older trades" is not a nicety — without it
- *  every trade before the current page is permanently unreachable from this screen even though the
- *  activity store still has it (#3187). */
+ *  Only TRADES page: `/api/wire` cursors them at 30 rows (`src/server/pagination.ts`'s default), so
+ *  without "load older trades" every fill before the current page is permanently unreachable from
+ *  this screen even though the activity store still has it (#3187). Filings arrive bounded by the
+ *  same `per_page` and have no cursor of their own — see `activity-feed.ts`'s header for why one
+ *  unified cursor over two kinds with wildly different arrival rates would strand the rarer one. */
 function FeedSection({
   wire,
+  filter,
   query,
   onChange,
   onLoadMore,
@@ -313,29 +221,46 @@ function FeedSection({
   loadMoreError,
 }: {
   readonly wire: WireFeed;
+  readonly filter: ActivityFilter;
   readonly query: string;
   readonly onChange: (next: string) => void;
   readonly onLoadMore?: () => void;
   readonly loadingMore: boolean;
   readonly loadMoreError: boolean;
 }): ReactElement {
-  const filter = parseWireQuery(query);
-  const shown = wire.trades.filter((trade) => matchesWire(trade, filter));
+  // Comments on a filing (issue #2224 shape 3) — the app's own store, never the GitHub thread. A
+  // failed or unwired read just leaves the rows without their fold; the feed itself still renders.
+  const queryClient = useQueryClient();
+  const comments = useQuery({ queryKey: ["filing-comments"], queryFn: fetchFilingComments });
+  const threads = comments.data?.enabled ? comments.data : undefined;
+  const items = buildActivityFeed(wire.trades, wire.feedbackEnabled ? wire.feedback : []);
+  const shown = items.filter((item) => matchesActivity(item, filter));
   return (
     <section className="wire-panel">
-      <h2 className="wire-h">Trading activity</h2>
+      <h2 className="wire-h">Everything, newest first</h2>
       <WireFilterBar query={query} onChange={onChange} />
       {shown.length === 0 ? (
         <p className="note">
-          {wire.trades.length === 0
-            ? "No trades yet — the first fill lights it up."
+          {items.length === 0
+            ? "Nothing yet — the first fill or filed idea lights it up."
             : "Nothing here matches this filter."}
         </p>
       ) : (
-        <ul className="wire-trades">
-          {shown.map((trade) => (
-            <TradeRow key={trade.key} trade={trade} />
-          ))}
+        <ul className="wire-feed">
+          {shown.map((item) =>
+            item.kind === "trade" ? (
+              <TradeRow key={item.key} trade={item.trade} />
+            ) : (
+              <FilingRow
+                key={item.key}
+                filing={item.filing}
+                {...(threads ? { threads } : {})}
+                onCommentSaved={() =>
+                  queryClient.invalidateQueries({ queryKey: ["filing-comments"] })
+                }
+              />
+            ),
+          )}
         </ul>
       )}
       {onLoadMore ? (
@@ -349,6 +274,20 @@ function FeedSection({
         </button>
       ) : null}
       {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
+      {/* Two honesty seams the three-widget page also carried, and the feed owes a reader both: an
+          unwired lane is a deployment fact rather than "nobody has filed", and a wired-but-empty one
+          is an invitation rather than a gap. Neither is the feed's own empty state, which is about
+          the filter. */}
+      {wire.feedbackEnabled ? null : (
+        <p className="note">Filing ideas isn't switched on yet, so only trades show here.</p>
+      )}
+      {wire.feedbackEnabled && wire.feedback.length === 0 ? (
+        <p className="note">
+          No ideas filed yet — be the first: tell Moneypenny, and your filings are listed on{" "}
+          <a href="/app/accounts?section=feedback">your Profile</a>.
+        </p>
+      ) : null}
+      <FilingOnramp />
     </section>
   );
 }
@@ -421,47 +360,69 @@ function WirePage(): ReactElement {
 
   const feed = wire.data;
   const feedWithOlder: WireFeed = { ...feed, trades: [...feed.trades, ...olderTrades] };
-  const render = (id: ActivitySection): ReactElement =>
-    id === "feed" ? (
-      <FeedSection
-        wire={feedWithOlder}
-        query={query}
-        onChange={setFilter}
-        onLoadMore={cursor ? loadMore : undefined}
-        loadingMore={loadingMore}
-        loadMoreError={loadMoreError}
-      />
-    ) : id === "pnl" ? (
-      <PnlSection wire={feed} />
-    ) : id === "pulse" ? (
-      <PulseSection wire={feed} />
-    ) : (
-      <CouncilSection />
-    );
+  const filter = parseActivityQuery(query);
 
   return (
     <PageFrame
       controls={
-        <WireControls query={query} onChange={setFilter} section={section} onSection={setSection} />
+        <WireControls
+          query={query}
+          filter={filter}
+          feedbackEnabled={feed.feedbackEnabled}
+          onChange={setFilter}
+          section={section}
+          onSection={setSection}
+        />
       }
     >
       <header className="page-header">
         <h1>Activity</h1>
-        <p>Every trade, every P&L, every open idea — the live pulse of the whole league.</p>
+        <p>Every trade, every open idea — the live pulse of the whole league, one feed.</p>
       </header>
-      {render(section)}
+      {section === "feed" ? (
+        <>
+          <PnlStrip rows={feed.pnl} />
+          <FeedSection
+            wire={feedWithOlder}
+            filter={filter}
+            query={query}
+            onChange={setFilter}
+            onLoadMore={cursor ? loadMore : undefined}
+            loadingMore={loadingMore}
+            loadMoreError={loadMoreError}
+          />
+        </>
+      ) : (
+        <CouncilSection />
+      )}
     </PageFrame>
   );
 }
 
+/**
+ * `?section=pnl` and `?section=pulse` are LEGACY (#784 slice 3 folded both into the feed), and a
+ * bookmark on either must not strand: `pnl` lands on the feed with the strip right there, and
+ * `pulse` lands on the feed pre-filtered to filings, which is the thing that URL was asking for.
+ * An unknown value falls through to the feed via `resolveSection`, never a blank stage.
+ */
+function readSearch(search: Record<string, unknown>): {
+  readonly q?: string;
+  readonly section?: ActivitySection;
+} {
+  const asked = typeof search.section === "string" ? search.section : undefined;
+  const q =
+    typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
+      ? search.q
+      : asked === "pulse"
+        ? "is:feedback"
+        : undefined;
+  return {
+    ...(q ? { q } : {}),
+    ...(SECTIONS.some((s) => s.id === asked) ? { section: asked as ActivitySection } : {}),
+  };
+}
+
 export const Route = createFileRoute("/activity")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
-      ? { q: search.q }
-      : {}),
-    ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
-      ? { section: search.section as ActivitySection }
-      : {}),
-  }),
+  validateSearch: readSearch,
   component: WirePage,
 });
