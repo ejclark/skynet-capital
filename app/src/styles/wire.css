@@ -30,8 +30,10 @@
   color: var(--muted);
   font-weight: 600;
 }
+/* `.wire-trades` survives for `scripts/design-cards.mjs`'s trade-row card; the page's own list is
+   `.wire-feed` (activity-feed.css) since #784 slice 3. `.wire-fdbk` is now the Council's list only —
+   the feedback pulse it was named for became a kind of the one feed. */
 .wire-trades,
-.wire-pnl,
 .wire-fdbk {
   list-style: none;
   margin: 0;
@@ -216,7 +218,6 @@
   color: var(--muted);
   white-space: nowrap;
 }
-.wire-pnl li,
 .wire-fdbk li {
   display: flex;
   flex-wrap: wrap;
@@ -226,21 +227,14 @@
   font-size: 12.5px;
   border-bottom: 1px solid var(--border);
 }
-.wire-pnl li:last-child,
 .wire-fdbk li:last-child {
   border-bottom: none;
 }
-.wire-pnl a,
 .wire-fdbk a {
   font-weight: 600;
 }
-.wire-pnl a:hover,
 .wire-fdbk a:hover {
   color: var(--accent);
-}
-.wire-pnl .num {
-  margin-left: auto;
-  font-weight: 600;
 }
 .wire-status {
   font-size: 10px;
@@ -389,9 +383,9 @@
   white-space: nowrap;
 }
 
-/* A filing's comments on its pulse card (issue #2224 shape 3) — a full-width row under the card's
-   title line, collapsed by default so the pulse stays a list of ideas at 390px. */
-.wire-fdbk li .fc {
+/* A filing's comments on its feed row (issue #2224 shape 3) — a full-width row under the row's
+   title line, collapsed by default so the feed stays one line per event at 390px. */
+.wire-filing .fc {
   flex-basis: 100%;
 }
 .fc-toggle,
@@ -424,11 +418,19 @@
   flex-direction: column;
   gap: 4px;
 }
-.wire-fdbk .fc-list li {
+/* A comment row's own layout, stated rather than inherited: these rules used to ride on
+   `.wire-fdbk li`, which matched every descendant `<li>` as well as the card itself. With the
+   filing row on its own class (#784 slice 3) the nesting no longer does that for free, and without
+   it a comment's text and its date run together. */
+.wire-filing .fc-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
   padding: 0 0 6px;
   border-bottom: 1px dashed var(--border);
 }
-.wire-fdbk .fc-list li:last-child {
+.wire-filing .fc-list li:last-child {
   padding-bottom: 0;
   border-bottom: none;
 }

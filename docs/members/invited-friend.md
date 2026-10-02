@@ -98,11 +98,12 @@ for, and seeing one would read as "I am in the wrong place".
 2. `/app/activity` — the league's fills: the friend's XLE buy beside Eric's EEM buy. **WHEN the
    invited friend opens Activity, the app shall show the whole league's fills, other members'
    included.** Judge: can this reader tell who did what today?
-3. `/app/activity?section=pnl` — Booked P&L: realized P&L per account across the league, each a
-   link into its page (offline nothing is booked yet — the frozen fixture has no closes). **WHEN
-   the invited friend opens Booked P&L, the app shall show realized P&L for every member's
-   accounts, the friend's and the owner's alike.** Judge: can this reader tell where they stand on
-   what has been closed? _(Added 2026-09-29, #3816 slice 9.)_
+3. `/app/activity` — the Booked P&L strip above the feed: realized P&L per account across the
+   league, each a link into its page, on screen without a tap (offline nothing is booked yet — the
+   frozen fixture has no closes). **WHEN the invited friend opens Activity, the app shall show
+   realized P&L for every member's accounts, the friend's and the owner's alike, without paging
+   away from the feed.** Judge: can this reader tell where they stand on what has been closed?
+   _(Added 2026-09-29, #3816 slice 9; the section became a strip in #784 slice 3.)_
 
 ### j3 — another member's bot, read only
 

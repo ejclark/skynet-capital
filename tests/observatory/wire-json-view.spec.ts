@@ -70,6 +70,20 @@ describe("wireJsonView", () => {
     const view = wireJsonView([], [], [kindless], true);
     expect(view.feedback).toHaveLength(1);
     expect(view.feedback[0]?.icon).toBe("📄");
+    expect(view.feedback[0]?.kindLabel).toBe("Filing");
+  });
+
+  it("rides the icon with its word, so a row's kind never depends on one glyph (#784 slice 3)", () => {
+    const view = wireJsonView([], [], [filing({ kind: "bug" }), filing({ kind: "feature" })], true);
+    expect(view.feedback.map((f) => f.kindLabel)).toEqual(["Bug", "Feature"]);
+  });
+
+  it("ships the raw instant beside the formatted one for both kinds, so one feed can interleave them", () => {
+    const view = wireJsonView([trade()], [], [filing()], true);
+    expect(view.trades[0]?.at).toBe("2026-08-28T14:00:00Z");
+    expect(view.feedback[0]?.at).toBe("2026-08-27T10:00:00Z");
+    // `when` stays the formatted phrase — the raw field is an addition, not a replacement.
+    expect(view.trades[0]?.when).not.toBe(view.trades[0]?.at);
   });
 
   it("says when the feedback lane is unwired — the gate rides the payload", () => {

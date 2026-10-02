@@ -18,14 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
-- **`/api/wire` reads three full ledgers per request to render ~30 rows.** #784 slice 1 put the trade
-  feed on the event bus, so the route reads the whole event log *and* the whole trade ledger
-  (parallel, deduped) on every load of a `no-store` page; slice 2 added the whole feedback log
-  beside them, for the same bus-is-younger-than-the-source reason — and the event log grows faster
-  than the ledgers it mirrors, with no compaction. A bounded read (keyset at the store, not after
-  the join) is
-  the real fix and belongs with the feed redesign, #784 slice 3 / #4271, where the page's own paging
-  shape gets decided. Unmeasured so far — worth a number before it becomes a `bottleneck` issue.
+- ~~**`/api/wire` reads three full ledgers per request to render ~30 rows.**~~ **Measured and
+  routed → #4458** (2026-10-02, while building #784 slice 3). The number the item was waiting for:
+  **189 ms and 30.4 MB parsed per request at 100k events**, linear, for ONE of the three legs, on a
+  `no-store` page. Slice 3 settled the half that was its to settle — the paging *shape*
+  (`app/src/live/activity-feed.ts`'s header: the feed pages on the trade cursor, filings ride the
+  same `per_page` and have no cursor of their own, because a filing mutates after it is written) —
+  and the storage half, a keyset bound at `JsonlKeyedStore` rather than after the join, is now a
+  `bottleneck` issue with its own `Before:` row.
   _(src: Claude · while: building #784 slices 1 and 2, the trade feed and the pulse moving onto the bus)_
 - **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
   refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's

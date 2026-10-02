@@ -37,6 +37,7 @@ const trade = (overrides: Partial<WireTrade> = {}): WireTrade => ({
   kind: "bot",
   reconstructed: false,
   when: "2:30p",
+  at: "2026-10-01T18:30:00.000Z",
   ...overrides,
 });
 
