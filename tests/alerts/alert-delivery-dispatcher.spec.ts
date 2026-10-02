@@ -130,6 +130,18 @@ describe("AlertDeliveryDispatcher", () => {
     expect(retried.delivered).toEqual([deliveryFingerprint(alert())]);
   });
 
+  it("stops mailing a previous owner once the account has changed hands", async () => {
+    const transport = new FakeTransport();
+    const store = new FakeStore({ ann: on });
+    // The account is now owned by someone else; the stored destination is stale.
+    const dispatcher = new AlertDeliveryDispatcher(store, transport, () => "bob@x.com");
+    expect((await dispatcher.deliver("ann", [alert()])).delivered).toEqual([]);
+    expect(transport.sent).toEqual([]);
+    // Same owner, different case, is still the owner.
+    const same = new AlertDeliveryDispatcher(store, transport, () => "Ann@X.com");
+    expect((await same.deliver("ann", [alert()])).delivered).toHaveLength(1);
+  });
+
   it("does not touch the store for an empty list", async () => {
     const transport = new FakeTransport();
     const dispatcher = new AlertDeliveryDispatcher(new FakeStore({ ann: on }), transport);

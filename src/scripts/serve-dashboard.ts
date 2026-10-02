@@ -244,6 +244,7 @@ async function main(): Promise<void> {
   const alertDelivery = wireAlertDelivery({
     env: process.env,
     activityEvents: activityEventBus,
+    ownerEmailFor,
     deps: () => ({
       hub,
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),

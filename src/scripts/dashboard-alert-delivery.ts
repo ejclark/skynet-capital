@@ -49,6 +49,9 @@ export function wireAlertDelivery(options: {
   /** Everything the strip's own derivation needs, minus the dismissals this wiring adds itself. */
   readonly deps: () => DeskAlertsDeps;
   readonly activityEvents: Pick<ActivityEventBus, "subscribe">;
+  /** Who owns an account right now — a background send re-checks the stored address against it,
+   *  so an account that changed hands stops mailing its previous owner. */
+  readonly ownerEmailFor: (participantId: string) => string | undefined;
   readonly sweepMinutes?: number;
 }): AlertDeliveryWiring {
   const store = createAlertDeliveryStore(options.env);
@@ -59,7 +62,7 @@ export function wireAlertDelivery(options: {
     return { store, stop: noop };
   }
   const transport = built.port;
-  const dispatcher = new AlertDeliveryDispatcher(store, transport);
+  const dispatcher = new AlertDeliveryDispatcher(store, transport, options.ownerEmailFor);
 
   const deliverFor = async (participantId: string): Promise<void> => {
     try {

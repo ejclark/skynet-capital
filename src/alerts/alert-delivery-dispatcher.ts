@@ -34,10 +34,23 @@ export interface DispatchOutcome {
 
 const NOTHING: DispatchOutcome = { delivered: [], failed: [], heldBack: 0 };
 
+/** Same address, ignoring case — a session's email is lowercased at mint, a stamped roster one
+ *  is not, and an owner whose address differs only in case is still the owner. */
+function sameAddress(stored: string, current: string | undefined): boolean {
+  return current !== undefined && stored.toLowerCase() === current.toLowerCase();
+}
+
 export class AlertDeliveryDispatcher {
   constructor(
     private readonly store: AlertDeliveryStorePort,
     private readonly transport: AlertDeliveryPort,
+    /**
+     * Who owns this account RIGHT NOW. The stored destination was captured from a session at
+     * opt-in, and an account can change hands afterwards (an owner unlinks and re-links it) — so
+     * every background send re-checks the address against current ownership rather than trusting a
+     * record written months ago. Absent (specs, offline wiring) = no re-check.
+     */
+    private readonly ownerEmailFor?: (consumerId: string) => string | undefined,
   ) {}
 
   /**
@@ -48,6 +61,11 @@ export class AlertDeliveryDispatcher {
     if (alerts.length === 0) return NOTHING;
     const { prefs, sent } = await this.store.load(consumerId);
     if (prefs.channel === "off" || !prefs.destination) return NOTHING;
+    if (this.ownerEmailFor && !sameAddress(prefs.destination, this.ownerEmailFor(consumerId))) {
+      // The account changed hands since this choice was made. Silence is the right answer: the
+      // previous owner must not keep receiving this account's positions and fills.
+      return NOTHING;
+    }
     const already = new Set(sent);
     const candidates = sortAlerts(alerts).filter(
       (alert) => shouldDeliver(alert, prefs) && !already.has(deliveryFingerprint(alert)),
