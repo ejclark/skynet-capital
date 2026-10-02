@@ -477,6 +477,7 @@ own falsifier) and **-3** (the opening-gap detection floor). One dated adjacent 
 | 2026-09-17 | D-14 | **Escalated past the deterministic screen** (`event-material-scan.mjs`: `days-band-transition:low:15+->low:0+`, `new-adjacent-event:mu-2026-09-30-print`) — the low-impact cadence band tightened from monthly to weekly at D-15, and a confirmed critical-impact print entered the corridor. *Adjacency sweep.* **Peers** — `symbols: []`, unchanged. **Macro** — [MU](mu-2026-09-30-print.md) is confirmed 2026-09-30 16:30 ET AMC = **05:30 JST 10-01**, landing **3h20m before** the shared 08:50 JST Tankan/Summary window: a **third** contaminant on the Tokyo 10-01 bar alongside the Tankan (initial-research leg 5) and ISM/funding-deadline in New York. The [boj-tankan sibling's own D-16 pulse](boj-tankan-2026-10-01.md) already registered **FT-4** to separate a Micron-carried Nikkei/semi-cap gap from a Tankan-carried one; this ledger's attribution kill inherits the same third rule-out — a 10-01 breach must clear Micron and the Tankan before crediting this document, on either bar. Japan CPI (Aug data) is now canonical at [2026-09-18](japan-cpi-2026-09-18.md), decision-morning — not this bar, no new adjacency here. The schedule row itself was independently re-read today by the [09-18 decision ledger](boj-decision-2026-09-18.md) (`['Sept. 17 (Thurs.), 18 (Fri.)', '-', 'Oct. 1 (Thurs.)']`, unchanged) — this session did not re-fetch boj.or.jp. **Volatility** — VIX **15.94** (2026-09-17 close) vs 14.53 at initial research, **+1.41**, under the 3pt regime threshold. **Flag, not re-derived this pulse:** the boj-tankan sibling found the live 2026 Tokyo opening-gap regime clears *its* 0.641% floor at **46.2%** of sessions vs a pooled 2004-2026 baseline of 39.6% (1.22×, p=0.015) — the same underlying series this ledger's own instrument-floor kill (0.620% floor, base rate 0.397) is built on; carried to close-out, not re-run here. **Geopolitical** — nothing beyond the channels the 09-18 decision ledger already owns. **Event tape** — leg 13's upstream conditional sharpened: that sibling's no-hike tail now reads **dead at ~1%** (was ~16-20% at initial research), so a hike to 1.25% is near-certain into tomorrow's decision, raising the odds the **Class kill (upward)** fires by its 2026-09-19 observe-by — the meeting has not concluded as of this row. **Channel kill: not fired** — no document has published yet to attribute a move to; the tankan sibling's 09-14 >2% tracked-name bars were CPI/Fed-attributed, not BoJ. Tankan and MU are both already canonical; nothing new to propose this pulse. | — (stance unchanged: **stand aside**, no position, no play, no size, in any branch. The venue's no-clean-bar problem gained a third contaminant — Micron — rather than resolving, which reinforces rather than changes the standing rule: take no number off either 10-01 bar. The hike tail collapsing to ~1% raises the odds this becomes an acting non-Outlook account by observe-by 09-19; legs 3 and 7 still wait on that outcome, unchanged since initial research.) | 2026-09-24 (low, 0+d band: every 7d) |
 | 2026-09-24 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.2 (-0.8pt since last), band unchanged (low:0+), 59 adjacent event(s) tracked, new in corridor since last pulse: `gdp-q2-2026-third-2026-09-30` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-01 |
 | 2026-10-01 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.3 (+1.2pt since last), band unchanged (low:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-08 |
+| 2026-10-02 | D+1 | **Close-out — full detail in [`## Outcome`](#outcome).** boj.or.jp's Monetary Policy Meetings schedule page (refetched raw via curl, HTTP 200, 42,169 bytes) now shows a **live** PDF link on the September row's Summary-of-Opinions cell — `opi260918.pdf`, "Oct. 1 (Thurs.) [PDF 227KB]" — published exactly as scheduled. **`FT-…-1` scores `pass`.** boj.or.jp's Tankan releases page (refetched raw, HTTP 200, 59,988 bytes) confirms the September 2026 Tankan published the same date, 2026-10-01, across its Outline ZIP/PDF/short-survey rows. **`FT-…-2` scores `pass`.** Fresh Yahoo v8 pull, parsed directly from raw JSON (not an AI-summarized fetch, after a first pass on that path misparsed a timestamp): Nikkei 225 09-30 close **66,753.72** → 10-01 open **67,106.52**, opening gap **0.5285%**, below the 0.620% n=86 floor. **`FT-…-3` scores `pass`** (Low confidence, as filed). The day's own close-to-close run was **+3.30%** and intraday **+2.76%** — the largest session this venue has logged in six ledgers — but per the attribution kill no claim is made on it: the Tankan, ISM Manufacturing (confirmed, high) and MU's print all share the window, and the one registered test is the opening gap alone, which stayed quiet. VIX essentially flat (16.34→16.39, +0.05pt). The Sept-18 upstream conditional (leg 13) resolved toward a hike, inferred from a "(Reference) Change in the Guideline for Money Market Operations" document dated 09-18 on the Bank's own release list — not independently read from the decision statement's own text this session, so the acting/holding reclassification stays unmeasured, same as every prior row. No kill switch fired beyond what the three forward tests already settle; no position was ever keyed or taken. | — (event closed; stance held unexecuted — `symbols: []` and `estimate` licensed no position and none was taken; all three forward tests score **pass**) | none — closed |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -491,3 +492,99 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out written 2026-10-02, D+1 — inside `closeOutWithinDays`, after the Bank's own 2026-10-01
+publication and on all three registered forward tests' own score-by date.** The stance held exactly
+as filed: no position was ever licensed (`symbols: []`, `estimate`, `impact: low`), none was taken,
+and all three registered, scoreable predictions — the publication-date/schedule law, the Tankan
+collision, and the opening-gap detection-floor bound — **pass**.
+
+**Sourcing note.** `symbols: []`; `earnings-cycle.mjs`/`intraday-edges.mjs` have no macro mode and no
+target here. Their caches were busted anyway per the standing rule
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Every price below is
+a fresh Yahoo v8 chart pull made this session, parsed directly from the raw JSON — a first pass through
+a summarizing fetch tool misdecoded a Unix timestamp and was discarded rather than cited. Both BoJ pages
+were refetched raw via `curl` today: the Monetary Policy Meetings schedule (HTTP 200, 42,169 bytes) and
+the Tankan releases list (HTTP 200, 59,988 bytes).
+
+### 1. What actually happened, against what was filed
+
+| Filed | What happened | Verdict |
+|---|---|---|
+| Summary of Opinions publishes **2026-10-01** at 08:50 JST, the 6th Tokyo trading day after 2026-09-18 (`estimate`) | boj.or.jp's schedule page now carries a **live** PDF link on the September row's Summary-of-Opinions cell — `opi260918.pdf`, "Oct. 1 (Thurs.) [PDF 227KB]" — it actually published, not merely stayed scheduled | **Correct — FT-1 passes** |
+| September 2026 Tankan collides into the same date, the fifth such September and the only hemisphere-cleaning event this cohort has had | boj.or.jp's Tankan releases page lists "Oct. 1, 2026 — September 2026 Survey" across the Outline ZIP, Outline PDF and short-survey rows; the detailed "all industries" tables post the next day (Oct. 2), the Bank's normal cadence and outside the registered claim | **Correct — FT-2 passes** |
+| The opening-gap test's own positive control (the Tankan) cannot clear its detection floor, so a same-slot session at/below 0.620% is unsurprising even on the loudest version of this collision the calendar will ever offer | 2026-10-01 Nikkei 225 opening gap vs the 09-30 close = **0.5285%** (raw Yahoo bars: 66,753.72 → 67,106.52) — below the 0.620% n=86 floor | **Correct — FT-3 passes (Low confidence, as filed)** |
+| No clean bar in either hemisphere — read it, never trade it | Tokyo ran **+3.30%** close-to-close (66,753.72 → 68,956.72) and **+2.76%** intraday (open → close) on 10-01 — the largest session this venue has logged in six ledgers, and exactly the kind of move leg 10 said could never be safely credited to this one document, with the Tankan, ISM Manufacturing and MU's print all sharing the window | **Confirmed, vividly — the attribution kill does not fire, because no claim is made** |
+| No Outlook Report on the Sept 17-18 MPM (schema `-` cell) | Schedule page's September row Outlook column still reads `-` | **Correct** |
+| Upstream conditional (leg 13): ~80-84% priced to hike to 1.25%, outcome unknown at initial research | The schedule page's September-MPM row now also carries a live decision-statement PDF (`k260918a.pdf`), and the Bank's 09-18 release list separately carries a "(Reference) Change in the Guideline for Money Market Operations" document dated 09-18 | **Likely hiked — inferred from the existence of a "Change" document, not independently read from the decision statement's own text this session** |
+| No entry, exit, hedge or size keyed to this document | None taken | **Correct** |
+
+### 2. The forward tests, scored
+
+**`FT-boj-summary-of-opinions-2026-10-01-1` — `pass`.** Prediction: publication on 2026-10-01, the 6th
+Tokyo trading day after 2026-09-18. boj.or.jp's Monetary Policy Meetings schedule page, refetched raw
+today (HTTP 200, 42,169 bytes), shows the September row's Summary-of-Opinions cell as a live link —
+`<a href="/en/mopo/mpmsche_minu/opinion_2026/opi260918.pdf">Oct. 1 (Thurs.) [PDF 227KB]</a>` — dated
+exactly as the schedule and the 6-trading-day law predicted five weeks out. Scored in
+[`forward-tests/boj-summary-of-opinions-2026-10-01.md`](../forward-tests/boj-summary-of-opinions-2026-10-01.md).
+
+**`FT-boj-summary-of-opinions-2026-10-01-2` — `pass`.** Prediction: the September 2026 Tankan releases
+2026-10-01 at 08:50 JST, the fifth Tankan-collided September account. boj.or.jp's Tankan releases page,
+refetched raw today (HTTP 200, 59,988 bytes), lists "Oct. 1, 2026 — September 2026 Survey" across the
+Outline ZIP, Outline PDF and short-survey rows — confirmed, date-for-date, against the Summary of
+Opinions above. The 08:50 JST time is not independently re-fetched this session (the per-release
+calendar page does not restate it); it rests on the standing methodology primary initial research
+already cited, an institutional constant rather than a per-release variable.
+
+**`FT-boj-summary-of-opinions-2026-10-01-3` — `pass`.** Prediction (Low confidence): the 2026-10-01
+Nikkei 225 opening gap comes in at or below 0.620%, the n=86 detection floor. Fresh Yahoo v8 chart pull,
+parsed directly from raw JSON: 09-30 close **66,753.72**, 10-01 open **67,106.52** → gap **0.5285%**.
+Below the floor, as the Low-confidence prediction said was more likely than not (base rate 0.397 of
+clearing it on an ordinary session) — and notably, below the floor even on a day whose own
+close-to-close run (+3.30%) was the largest this venue has ever logged in six ledgers. That gap/intraday
+split is the session's cleanest illustration yet of leg 3's finding: the slot's own ten minutes stayed
+quiet while the rest of the day did almost all of the moving.
+
+### 3. The measurement
+
+Fresh Yahoo pulls, raw JSON, this session:
+
+| Reading | 09-29 | 09-30 | 10-01 | 10-02 |
+|---|---|---|---|---|
+| Nikkei 225 (close) | 65,481.27 | 66,753.72 | **68,956.72** | — (bar incomplete at fetch time) |
+| VIX | 16.04 | 16.34 | 16.39 | 15.31 |
+| S&P 500 | 7,670.84 | 7,651.54 | 7,666.45 | 7,722.72 |
+
+Nikkei's 09-30→10-01 opening gap (67,106.52 open ÷ 66,753.72 prior close = **0.5285%**) is the only
+registered reading; the **+3.30%** close-to-close and **+2.76%** intraday legs are reported for context
+only, per the attribution kill — the Tankan, ISM Manufacturing (confirmed, high, 10:00 ET) and Micron's
+print all share this exact window, and no test here is written on a close-to-close basis for precisely
+that reason. VIX is essentially flat (+0.05pt 09-30→10-01), consistent with an equity-vol non-event even
+on a day the index itself ran hard.
+
+### 4. What carries forward
+
+- **The 6-Tokyo-trading-day publication law now has an out-of-sample pass, not just a backward fit.**
+  All five prior sibling ledgers measured the rule against history; this is the first time it was
+  registered as a forward test *before* the fact and then watched clear. The next BoJ Summary ledger
+  can cite this as the first prospective confirmation, not only the 82/86 backward count.
+- **The detection-floor framing (leg 4) earns its keep a second way.** The loudest version of this
+  collision the calendar will ever offer (two 08:50 JST BoJ releases, one genuinely material) still
+  landed under the floor on the opening gap — while the *day itself* ran +3.3%. That split is the
+  clearest evidence yet that this calendar's bare "no measurable channel" findings on 08:50 JST BoJ
+  releases should carry leg 4's qualifier, and a future ledger citing a null here should link this
+  close-out as the demonstration.
+- **The acting/holding cell leg 13 flagged as unmeasured stays unmeasured here.** This event's own
+  life ends at close-out; whether the Sept 18 hike (inferred, not independently confirmed from the
+  decision statement's text) reclassifies this document as an **acting non-Outlook** account, and what
+  that cell's Nikkei/yen ratios look like, is a question for whichever future session next measures the
+  acting/holding split — it does not change this close-out's stance or its forward-test scores.
+- **No position was taken at any point in this ledger's life, and none was available.** The event
+  closed `estimate`, `symbols: []`, `low`. What this ledger cost across three pulses plus close-out was
+  research time; what it protected was the discipline not to credit a +3.3% Nikkei session to a document
+  whose own ten-minute window moved the index 0.53%.
+
+**Last assessed:** 2026-10-02
+<!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
