@@ -1,10 +1,17 @@
-import type { ActivityEventBus } from "../../src/observatory/activity-event.js";
-import { activityEventFromFeedbackStatus } from "../../src/observatory/activity-event.js";
+import type {
+  ActivityEventBus,
+  MergedPullRequestInfo,
+} from "../../src/observatory/activity-event.js";
+import {
+  activityEventFromFeedbackStatus,
+  activityEventFromMergedPullRequest,
+} from "../../src/observatory/activity-event.js";
 import {
   bootPublishingActivityStore,
   publishingActivityStore,
   publishingFeedbackLogStore,
   publishingFeedbackStatuses,
+  publishingMergedPullRequests,
   publishingOrderAuditLog,
 } from "../../src/observatory/activity-publishing.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
@@ -259,6 +266,113 @@ describe("publishingFeedbackStatuses", () => {
     await expect(
       publishingFeedbackStatuses(fetcherFor(statuses), failingBus, at)([700]),
     ).resolves.toBe(statuses);
+  });
+});
+
+describe("publishingMergedPullRequests", () => {
+  const merge = (over: Partial<MergedPullRequestInfo> = {}): MergedPullRequestInfo => ({
+    number: 4272,
+    title: "feat(activity): development events for merged PRs",
+    author: "claude",
+    url: "https://github.com/ejclark/skynet-capital/pull/4272",
+    mergedAt: "2026-10-02T12:00:00.000Z",
+    ...over,
+  });
+
+  it("returns the poll's result untouched, so the caller sees exactly what GitHub said", async () => {
+    const merges = [merge()];
+    const wrapped = publishingMergedPullRequests(
+      () => Promise.resolve(merges),
+      new InMemoryActivityEventBus(),
+    );
+
+    expect(await wrapped()).toBe(merges);
+  });
+
+  it("publishes a merge the bus has not seen", async () => {
+    const bus = new InMemoryActivityEventBus();
+    const wrapped = publishingMergedPullRequests(() => Promise.resolve([merge()]), bus);
+
+    await wrapped();
+
+    expect(await bus.list()).toMatchObject([
+      { eventType: "development.pr-merged", payload: { pullRequest: 4272 } },
+    ]);
+  });
+
+  it("stays silent on a second poll of the same merge — a rolling window overlaps itself by design", async () => {
+    const bus = new InMemoryActivityEventBus();
+    const wrapped = publishingMergedPullRequests(() => Promise.resolve([merge()]), bus);
+
+    await wrapped();
+    await wrapped();
+
+    expect(await bus.list()).toHaveLength(1);
+  });
+
+  it("never re-announces history after a restart: the memory is seeded from the bus itself", async () => {
+    const bus = new InMemoryActivityEventBus();
+    await bus.publish(activityEventFromMergedPullRequest(merge()));
+
+    await publishingMergedPullRequests(() => Promise.resolve([merge()]), bus)();
+
+    expect(await bus.list()).toHaveLength(1);
+  });
+
+  it("publishes a window of unseen merges oldest first, so the bus reads in the order they happened", async () => {
+    const bus = new InMemoryActivityEventBus();
+    const wrapped = publishingMergedPullRequests(
+      () =>
+        Promise.resolve([
+          merge({ number: 2, mergedAt: "2026-10-03T00:00:00.000Z" }),
+          merge({ number: 1, mergedAt: "2026-10-01T00:00:00.000Z" }),
+        ]),
+      bus,
+    );
+
+    await wrapped();
+
+    expect((await bus.list()).map((e) => e.payload.pullRequest)).toEqual([1, 2]);
+  });
+
+  it("two concurrent page loads cannot both announce the same merge", async () => {
+    const bus = new InMemoryActivityEventBus();
+    const wrapped = publishingMergedPullRequests(() => Promise.resolve([merge()]), bus);
+
+    await Promise.all([wrapped(), wrapped()]);
+
+    expect(await bus.list()).toHaveLength(1);
+  });
+
+  it("a bus failure never fails the read the page is waiting on", async () => {
+    const merges = [merge()];
+    const failingBus: ActivityEventBus = {
+      publish: () => Promise.reject(new Error("bus down")),
+      list: () => Promise.resolve([]),
+      subscribe: () => ({ unsubscribe: () => undefined }),
+    };
+
+    await expect(
+      publishingMergedPullRequests(() => Promise.resolve(merges), failingBus)(),
+    ).resolves.toBe(merges);
+  });
+
+  it("a failed seed is not permanent — the next poll tries again instead of going silent forever", async () => {
+    const inner = new InMemoryActivityEventBus();
+    let listFails = true;
+    const flaky: ActivityEventBus = {
+      publish: (event) => inner.publish(event),
+      list: (id) => (listFails ? Promise.reject(new Error("read failed")) : inner.list(id)),
+      subscribe: (listener) => inner.subscribe(listener),
+    };
+    const wrapped = publishingMergedPullRequests(() => Promise.resolve([merge()]), flaky);
+
+    await wrapped();
+    expect(await inner.list()).toHaveLength(0);
+
+    listFails = false;
+    await wrapped();
+    expect(await inner.list()).toHaveLength(1);
   });
 });
 

@@ -16,7 +16,10 @@
   flex-direction: column;
   gap: 6px;
 }
-.wire-filing {
+/* `.wire-merge` (#784 slice 4) shares every rule rather than copying them: the third kind is a row on
+   the same list, so it is the same card at the same rhythm, differing only in what it says. */
+.wire-filing,
+.wire-merge {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -27,18 +30,28 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.wire-filing > a {
+.wire-filing > a,
+.wire-merge > a {
   font-weight: 600;
   /* one filing's long title must wrap inside the row, never widen the feed at phone width. */
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.wire-filing > a:hover {
+.wire-filing > a:hover,
+.wire-merge > a:hover {
   color: var(--accent);
 }
+/* Who opened the merged PR — a GitHub login, so it is set apart from the title at the meta weight
+   rather than beside it as a peer. A merge GitHub attributed to nobody simply omits this. */
+.wire-merge-by {
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
 /* The row's leading token, at `.wire-side`'s exact weight and size so the feed's left edge is one
-   column: a trade says BUY/SELL there, a filing says Bug/Feature/Idea. The icon rides WITH the word
-   and never alone (`docs/BRAND.md` → Accessibility: a signal is never one 12px glyph). */
+   column: a trade says BUY/SELL there, a filing says Bug/Feature/Idea, a merge says MERGED. The icon
+   rides WITH the word and never alone (`docs/BRAND.md` → Accessibility: a signal is never one 12px
+   glyph). */
 .wire-filing-kind {
   font-family: var(--mono);
   font-weight: 700;

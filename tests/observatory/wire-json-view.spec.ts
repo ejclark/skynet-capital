@@ -1,3 +1,4 @@
+import type { DevelopmentFeedItem } from "../../src/observatory/development-event-feed.js";
 import type { FeedbackFeedItem } from "../../src/observatory/feedback-event-feed.js";
 import { wireJsonView } from "../../src/observatory/wire-json-view.js";
 
@@ -24,6 +25,15 @@ const filing = (over: Partial<FeedbackFeedItem> = {}): FeedbackFeedItem => ({
   kind: "idea",
   title: "A better wire",
   filedAt: "2026-08-27T10:00:00Z",
+  ...over,
+});
+
+const merged = (over: Partial<DevelopmentFeedItem> = {}): DevelopmentFeedItem => ({
+  pullRequest: 4272,
+  title: "feat(activity): development events for merged PRs",
+  author: "claude",
+  url: "https://github.com/ejclark/skynet-capital/pull/4272",
+  mergedAt: "2026-10-02T12:00:00Z",
   ...over,
 });
 
@@ -88,5 +98,33 @@ describe("wireJsonView", () => {
 
   it("says when the feedback lane is unwired — the gate rides the payload", () => {
     expect(wireJsonView([], [], [], false).feedbackEnabled).toBe(false);
+  });
+
+  it("formats a merged pull request as the feed's third kind, newest merge first (#784 slice 4)", () => {
+    const view = wireJsonView([], [], [], true, [
+      merged(),
+      merged({ pullRequest: 4273, mergedAt: "2026-10-03T12:00:00Z" }),
+    ]);
+    expect(view.development[0]).toMatchObject({
+      pullRequest: 4273,
+      kindLabel: "Merged",
+      at: "2026-10-03T12:00:00Z",
+    });
+    expect(view.development[0]?.meta.startsWith("#4273")).toBe(true);
+  });
+
+  it("says 'Merged', not 'Shipped' — a filing row already wears that word as a status", () => {
+    const view = wireJsonView([], [], [filing({ status: "shipped" })], true, [merged()]);
+    expect(view.development[0]?.kindLabel).not.toBe(view.feedback[0]?.status);
+  });
+
+  it("omits the author rather than naming someone GitHub did not", () => {
+    const view = wireJsonView([], [], [], true, [merged({ author: undefined })]);
+    expect(view.development[0]).not.toHaveProperty("author");
+  });
+
+  it("tells an unwired development read apart from a league that has merged nothing", () => {
+    expect(wireJsonView([], [], [], true).developmentEnabled).toBe(false);
+    expect(wireJsonView([], [], [], true, []).developmentEnabled).toBe(true);
   });
 });

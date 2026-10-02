@@ -230,6 +230,73 @@ export function activityEventFromFeedbackStatus(
   };
 }
 
+// --- development (#784 slice 4) ------------------------------------------------------------------
+//
+// The third KIND, and the first whose source is not inside this app at all. A merged pull request is
+// the league's own record of what got built, which this issue's original notes named and nothing
+// ever emitted ("the list/collection of records should contain all activity for skynet capital —
+// transactions, feedback, development", Eric 2026-08-28).
+//
+// WHERE IT COMES FROM, AND WHY NOT A WEBHOOK. #784's brief guessed this would ride "the same GitHub
+// webhook infra already wired for Moneypenny's PR-activity subscriptions" and left a build session
+// to confirm. There is no such infrastructure: nothing in `src/` receives an inbound GitHub webhook.
+// What does exist is three read-only POLLS on the token the app already holds — `feedback-status.ts`,
+// `work-status.ts`, `ops-status-deploy-lag.ts` — so this kind is a fourth one
+// (`development-activity.ts`), demoted to an emitter exactly as `publishingFeedbackStatuses` demoted
+// the feedback status poll. No new credential and no new inbound surface, which is also why it needs
+// no bridge: there is no local development ledger that predates the bus, and GitHub itself holds the
+// history the poll's window reads.
+
+/** What the merged-PR poll honestly knows about one merge (`development-activity.ts` narrows the
+ *  GitHub payload into exactly this, so nothing downstream reads a raw API body). Every field is
+ *  something the payload SAID — a merge with no `merged_at`, number, title or URL never becomes an
+ *  event, because the row would have to invent what it is about. */
+export interface MergedPullRequestInfo {
+  readonly number: number;
+  readonly title: string;
+  /** The GitHub login that opened it, or absent when the payload carried none (a deleted account).
+   *  Never defaulted to a person: an unattributed merge is honest, a wrong name is not. */
+  readonly author?: string;
+  readonly url: string;
+  readonly mergedAt: string;
+}
+
+/**
+ * One merged pull request → one bus event. `at` is the merge instant GitHub reported, not when the
+ * poll noticed — unlike a filing's status, a merge HAS a timestamp in the payload, so there is
+ * nothing to invent and the row sorts into the feed at the moment it actually happened.
+ *
+ * `actor` is the system, not the PR's author, for both of the reasons the feedback status emitter
+ * gives: no member of this league acted (GitHub merged it, the app observed it), and
+ * `JsonlActivityEventBus` writes one file per `actor.participantId`, so a file per GitHub login would
+ * be a directory that grows with the contributor list. The author's login rides in the payload,
+ * where it is a fact about the merge rather than a claim about a participant.
+ *
+ * `visibility: "public"` — a merged PR in a public repo is already public, and the whole league's
+ * record is what this kind exists to complete.
+ */
+export function activityEventFromMergedPullRequest(info: MergedPullRequestInfo): ActivityEvent {
+  return {
+    // No `at` in the id: a merge happens ONCE, so the PR number alone is its identity, and keying on
+    // the instant too would let a re-read with a reformatted timestamp publish the same merge twice.
+    id: `development:${info.number}:development.pr-merged`,
+    eventType: "development.pr-merged",
+    actor: { participantId: SYSTEM_ACTOR, kind: "system" },
+    target: { kind: "development", id: String(info.number) },
+    at: info.mergedAt,
+    correlationId: `development:${info.number}`,
+    source: "github",
+    outcome: "success",
+    visibility: "public",
+    payload: {
+      pullRequest: info.number,
+      title: info.title,
+      ...(info.author ? { author: info.author } : {}),
+      url: info.url,
+    },
+  };
+}
+
 /** One bot order the broker actually accepted. A structural (not imported) shape — mirrors
  *  `AlpacaBrokerAdapter`'s `BotOrderSubmission` without this schema module depending on the
  *  adapters layer; TypeScript's structural typing means the adapter's own shape satisfies
