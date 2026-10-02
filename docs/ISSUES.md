@@ -220,6 +220,65 @@ Two issue-specific cautions:
   `main` — that would fire the deploy pipeline) and linked as a SHA-pinned
   `raw.githubusercontent.com` URL, same mechanics as a PR screenshot (src/server/feedback-images.ts).
 
+## Ready — the one definition (#3818 slice 4)
+
+**`ready` means one thing: an automated puller may start this issue now.** It is the
+*authorization*, never a quality score — a shabby issue can be `ready` and a beautifully written one
+can sit in Backlog for weeks. The word was said in dozens of plan issues before anything read it
+(#823: #467/#468/#469 sat 7.3 days fully scoped on a flip nobody could act on), so the point of
+writing it down once is that the label, the comment and the code now agree.
+
+**Mechanically, "in the board's Ready column" — `pullable()` in `scripts/moneypenny/labels.mjs`.**
+Four conditions, asked in this order so the refusal names the first one that fails
+(`notPullableReason`). Every puller asks exactly this function — both claim lanes, the push-tick
+retry sweep (`nextAdmissible`), and `/work-issues` — so the async lane and a live session can never
+disagree about what may be built:
+
+1. **open** — a closed issue is never pulled. If its remainder outlived it, see the relay below.
+2. **labelled `ready`** — without it the board shows Backlog, and nothing pulls from Backlog.
+3. **not parked** — none of `needs-eric`, `needs-info`, `needs-design`, `hold-merge`
+   (`PARKING_LABELS`). `ready` + parked is illegal, reported, and never auto-fixed: some flips are
+   Eric's own. `ready` + `next-slice` is legal and means "in progress, a remainder pending".
+4. **not `in-progress`** — another lane or session already holds it.
+
+**Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
+filing at capture (`FEEDBACK.md` → *What the lane will build*) — and otherwise **never applies
+`ready` to make something pullable**, which is the one rule that keeps the label an authorization
+rather than a formality. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+an OWNER/MEMBER/COLLABORATOR (`readyShaped()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
+"go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
+Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
+so a lane quoting the word in prose can never flip itself.
+
+**Clearing a parking label re-asks the question.** Removing `needs-eric` from an issue that already
+carries `ready` wakes a claim on its own (the unpark path) — the flip was already on record and
+nobody should have to say it twice.
+
+### When a remainder outlives its issue — the relay (`scripts/moneypenny/relay.mjs`)
+
+Every condition above starts with **open**, which is where a sliced issue used to lose its tail: the
+build writes the remainder onto the issue, applies `next-slice`, and once the issue closes that
+remainder is invisible to every puller while still reading, on the issue itself, as "captured". 24
+closed issues were in exactly that state on 2026-10-02, all closed `completed`.
+
+So the push sweep relays them. A closed issue still carrying `next-slice` or `needs-session` gets a
+fresh `[relay] #N remainder — …` issue that links back, and the remainder label comes off the
+source (with a receipt comment, which is what makes the sweep idempotent). Three properties worth
+knowing:
+
+- **It lands in Backlog, never `ready`.** A remainder's shape is the thing nobody has judged yet;
+  carrying it forward is capture, authorizing it is a separate act. A false positive — a remainder
+  that actually landed and left its label behind — therefore costs one close, never a build.
+- **It quotes nothing.** The remainder is prose whose shape nobody pinned, so the relay points at
+  the source thread instead of restating it; a confidently wrong restatement is worse for a
+  zero-context puller than a link.
+- **A `not planned` close is never relayed.** That close is a decision, and overturning a decision
+  mechanically is the opposite of what the lane is for.
+
+The push path only relays closes from the watermark (`RELAY_FROM`) forward, so nothing is lost from
+here on with no noise; the historical queue is `node scripts/moneypenny/relay.mjs --list --backfill`
+and drains with `--apply` when a person is there to read it.
+
 ## Readiness — what committed work carries when it goes `ready` (#4056)
 
 A fresh build session cannot ask a question mid-run, so whatever the issue leaves open gets

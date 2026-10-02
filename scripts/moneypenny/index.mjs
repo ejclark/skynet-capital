@@ -69,6 +69,7 @@ import {
 } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
+import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -87,6 +88,7 @@ export {
   mergedReference,
   modelTier,
   resolveShipped,
+  routeRelay,
   routeShipped,
 };
 
@@ -630,6 +632,10 @@ function gatherDeps(ctx) {
       : [],
     openIssueTitles: open.map((i) => i.title),
     openEventReceipts: needsScan ? readReceipts(open) : [],
+    // The dropped-remainder relay (#3818 slice 4). REST and paged, like the open-issue read above,
+    // and only on a sweep — nothing on a label or comment event can close an issue, so no other
+    // path has anything to relay.
+    closedWithRemainder: needsScan ? gatherRelayDeps() : [],
   };
 }
 
@@ -889,6 +895,48 @@ function dispatchEventStallRepair(issueNumbers) {
 }
 
 /**
+ * The push sweep's own three intents — the two closes and the dropped-remainder relay. Split out of
+ * `executeOne` when the relay landed (#3818 slice 4): that function was already one point under the
+ * cognitive-complexity ceiling, and a lane adding a branch to the shared dispatcher should pay for
+ * its own room rather than ratchet the budget up. Groups cleanly because all three are the *level*
+ * sweep's writes (a merged PR, a ledger on disk, a remainder with nowhere to live), where everything
+ * left in `executeOne` reacts to a single event.
+ *
+ * @returns the receipt line, or `undefined` when this is not one of the sweep's intents.
+ */
+function executeSweepIntent(i) {
+  if (i.kind === "close-shipped") {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
+    console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
+    return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
+  if (i.kind === "close-receipt") {
+    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
+    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
+    sh("gh", [
+      "issue",
+      "close",
+      String(i.issueNumber),
+      "--reason",
+      i.closeReason,
+      "--comment",
+      i.body,
+    ]);
+    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
+    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
+  }
+  if (i.kind === "relay-remainder") {
+    // The three writes (file the relay, receipt the source, clear the remainder label) live in
+    // relay.mjs so its own CLI can reuse them without importing this router.
+    const line = executeRelay(i);
+    console.log(`::notice::relayed #${i.source}'s remainder — ${i.title}`);
+    return line;
+  }
+  return undefined;
+}
+
+/**
  * @param i the intent to carry out.
  * @param stallRepairs collector for `flag-stall` issue numbers — the dispatch is fired once per
  *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
@@ -939,27 +987,8 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
     return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber}, repair batched)` : ""}`;
   }
-  if (i.kind === "close-shipped") {
-    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-    sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
-    console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
-    return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
-  }
-  if (i.kind === "close-receipt") {
-    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
-    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
-    sh("gh", [
-      "issue",
-      "close",
-      String(i.issueNumber),
-      "--reason",
-      i.closeReason,
-      "--comment",
-      i.body,
-    ]);
-    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
-    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
-  }
+  const swept = executeSweepIntent(i);
+  if (swept !== undefined) return swept;
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
     console.log(

@@ -90,7 +90,10 @@ board (Status/Horizon populated the same way every other issue's is — `scripts
 until something applies `ready`: Eric's own call, or a later triage/backlog-prioritization pass.
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
-fresh Claude session. The triage rules for *that* build session live in
+fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
+who may flip it, the plan lane's equivalent comment door — is defined once in
+[`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the self-ready above is the one case where a
+session applies it to its own filing. The triage rules for *that* build session live in
 `.github/prompts/feedback-build.md`; what the lane may not touch lives in
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
 on every `feedback/*` branch — not as prompt text a session can reason its way past.
