@@ -169,6 +169,7 @@ quarter, never a template and never a base rate.
 | 2026-09-16 | D-14 | **Both arithmetic legs refuted.** Re-derived the sibling close-out's weight instrument independently (SSGA daily share counts × Yahoo closes, all 11 funds — the documented URL 301s to the non-`/us/en/intermediary/` path, HTTP 200 after; validates ±0.005pp on XLK/XLC, ±0.073pp worst-case XLP vs published 09-14 weights) and reproduced its 09-11 figures to 3dp. **The 09-11 reference close is struck, so the 09-18 cap is computable, not guessed:** only **XLE** (group 58.37→45.7) and **XLY** (AMZN 24.94→23.00) cap; **XLC does not** (47.44 < 50) → **no reset**, so it enters the test at **48.06** (09-15), **1.94pp** out, with **DIS 4.68 needing +2.6% rel** for a ~4.6pp discontinuous step. 5y × 10-session return-vector replay on today's baskets: **XLC breaches 47.6%** of windows (292/613) vs **AMZN/XLY 7.0%**, XLE 0.6%, every other fund ≤0.9% — **the placement inverts**. The rule's **4.5% floor keeps the knife-edge** leg 3 credited the 2024 change with removing (XLE post-cap carries 11 names at 4.28–4.65). **Sizing was ~6× low:** an XLC fire is a median **7.49pp ≈ $1.73B** one-way (p90 $2.40B), ~$630M META against an $11.1B 20d ADV. **Adjacency — peers:** none (`symbols: []`). **Macro:** the 5-day corridor grew 18→**56** tracked events (4 confirmed high/critical); **FOMC 09-16 lands hours after this row** and IS a capping input via relative sector weights — the channel the 09-04 row denied. **MU re-dated 09-29→09-30 AMC, now `confirmed` (IR:)** — it prints *after* the test. **Vol:** VIX **17.20** (09-15 close) vs **14.13** on 09-04, **+3.07**, past the 3-point materiality step (path 15.72/16.46/17.84/15.84/17.10/17.20); SPY 757.39, XLC 114.03, XLY 110.88, XLE 65.93. **Geopolitical:** the Hormuz shock left XLE **+2.9%** vs SPY **−1.7%** since 09-04 (+4.7% relative) — a weights channel, not a topic. **Two more index-flow events now stack on 09-30** (Russell style quarter-end capping at the open, Bloomberg Agg rebalance), both already tracked. **No new dated adjacency proposed** — the S&P chain 09-04→09-11→09-18→09-21→09-29/30 is tracked end to end and the December sibling test sits outside the 60-day horizon leash. **`FT-…-2` registered.** | **Amended, not reversed** — stand aside holds on all four horizons, but the live leg moves XLY→**XLC** and the fire case $300M→**$1.73B**, so the refusal now rests on no-pre-announcement + no index-flow playbook + a ~48% coin flip, not on a post-reset buffer that does not exist | **2026-09-23** (low:0+ band, 7d) — the last pulse before the test itself on **09-29**. Close-out by **2026-10-06** |
 | 2026-09-23 | D-7 | **Placement flips a third time.** Fresh SSGA holdings, dated **2026-09-21** — the first live read of post-09-18-reconstitution weights (fetched direct 2026-09-23; XLC AUM $23.28B, XLY $22.00B, XLE $40.02B). **XLC widened, not tightened:** cohort META 21.93 + GOOGL 11.62 + GOOG 9.31 = **42.86%**, a **7.14pp** buffer to 50% — wider than 09-15's 1.94pp, despite META's own **+11.4%** single-day rally on 09-21 (Wells Fargo PT raise to $796, Muse AI #1 on the App Store); the 09-18 quarterly share/IWF reconstitution ran the other way. Nearest name **WBD 4.76%**, 0.84% relative from joining. **AMZN/XLY is now the tightest leg measured:** **23.56%** vs the 24% cap, **+1.9% relative** away (tighter than 23.00%/+4.3%rel at D-14 or 24.30%/+4.3%rel at D-26); no single catalyst found beyond routine analyst-estimate raises, AMZN still ~9% off its $284.02 ATH. **XLE has also tightened:** cohort XOM 23.04 + CVX 17.75 + COP 6.76 = **47.55%**, **2.45pp** from 50% (tighter than D-14's modeled 45.7% post-cap), still riding the Hormuz-conflict oil rally (WTI $90–104 this month; XOM +40%/CVX +44% YTD); three refiners (VLO 4.73, MPC 4.71, PSX 4.69) sit within ~1.5–2.4% relative of joining the cohort *together*. **Adjacency — peers:** none (`symbols: []`). **Macro:** FOMC hiked 25bp to 3.75–4.00% on 09-16 (unanimous, first hike since July 2023) — the capping-input channel the 09-16 row flagged as live, now realized; no CPI/jobs print landed between 09-16 and this row. **Vol:** VIX **14.87** (09-22 close) vs 17.20 (09-15), **−2.33**, short of the 3-point screen threshold; SPY **773.38** (09-22) vs 757.39 (09-16), XLE **$62.46** (09-21). **Geopolitical:** Hormuz/Iran conflict continues driving oil, feeding XLE — not new, already tracked since 09-16. A Senate-passed CR (90-6, 2026-08-08) funding through 2026-12-11 surfaced in this session's search, House-side status unclear from here — flagged for `government-funding-deadline-2026-09-30`'s own ledger, not resolved by this lane. **No new dated adjacency proposed** — the 54-id corridor (09-25 through 10-05) matches the prior pulse's composition; `mu-2026-09-30-print` (confirmed critical, already known at D-14) folded into `adjacentStrongIds` this pulse. **`FT-…-3` registered**, naming the flip itself as the falsifiable claim. | **Amended, not reversed** — stand aside holds on all four horizons; the live-leg placement moves XLC→**AMZN/XLY and XLE jointly**, and XLC's 1.94pp buffer (09-16) is now 7.14pp, a materially different picture from the "coin-flip on XLC" framing four sessions ago | Next check due: none — the event resolves **09-29/09-30**; next session is the close-out (`event-passed-unscored`, from D+1). Close-out by **2026-10-06** |
 | 2026-09-30 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.0 (+1.2pt since last), band unchanged (low:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-07 |
+| 2026-10-02 | D+2 | **Close-out — see `## Outcome`.** Re-ran the weight-reconstruction instrument (SSGA current holdings dated **01-Oct-2026** × Yahoo daily closes, projected back to the **09-21** share-count baseline the 09-23 pulse read) across all three tracked legs, rather than reading the current snapshot at face value. Reconstructed at the actual **09-29** test close: XLC cohort **48.11%** (<50), AMZN/XLY **23.12%** (<24%), XLE's 3-name cohort **48.66%** (<50, refiners not yet joined). **None breached.** The current (10-01) snapshot's apparent XLE cohort of **58.26%** is a post-test artifact — MPC and VLO each rallied **+5–6%** on **09-30→10-01**, crossing 4.8% a session *after* the test closed. Confirmed by matching all 10 names across XLC/XLY/XLE to their pure price-drift projection from the 09-21 baseline to within **0.02pp each** — a match that precise rules out any corrective trade anywhere in the three funds. **FT-1 and FT-2 killed** (both named the wrong leg as live and both get at least one clause refuted independently); **FT-3 passes** (correctly ranked XLC least-live, AMZN and XLE closer — scored in [`forward-tests/sp-select-sector-secondary-reweight-2026-09-30.md`](../forward-tests/sp-select-sector-secondary-reweight-2026-09-30.md)). No vendor or press report of a triggered reweighting was found — none expected, since none fired. | — (the refusal was right and free: no reweighting fired, so the "even if it fires it's too small to trade" sizing argument was never put to the test, and zero capital was ever at risk on any horizon) | closed |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from memory — after which this doc goes quiet.
 
@@ -177,3 +178,141 @@ quarter, never a template and never a base rate.
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-10-02, D+2 — inside the `closeOutWithinDays: 6` deadline of 10-06).** Sector mode
+runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design), so the mandated
+cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) had no
+target, run anyway for the record. Every figure below is re-fetched today — SSGA's current XLC/
+XLY/XLE holdings workbooks and Yahoo daily closes for all ten tracked names — never recalled from a
+prior pulse.
+
+**The headline: nothing fired, and the instrument needed to show that had to look past the test
+date rather than at it.** The current (as-of-01-Oct-2026) vendor snapshot reads XLE's over-4.8%
+cohort at **58.26%** — apparently a clean breach of the 50% trigger — which would read, at a
+glance, as the quarter's live fire case. It is not. Reconstructing each name's weight at the actual
+test close (**2026-09-29**) from the 09-23 pulse's own **2026-09-21** baseline (shares held frozen,
+price drift only — the same "shares are weight-invariant between rebalance dates" method the sibling
+[`sp-rebalance-proforma-capped-2026-09-11`](sp-rebalance-proforma-capped-2026-09-11.md) close-out
+built) puts XLE's 3-name cohort at **48.66%** on 09-29 — under the line. The 58.26% reading is a
+**post-test artifact**: MPC and VLO each rallied **+5–6% in the single session 09-30→10-01**,
+crossing the 4.8% floor a day *after* the test had already closed. **Not one of the three tracked
+legs breached at the 09-29 close.**
+
+### The instrument, and why it is trusted here
+
+The same price-drift projection run forward to **today's actual holdings** (rather than back to the
+09-29 test) reproduces every one of the ten names checked, across all three funds, to within
+**0.02 percentage points**:
+
+| Fund | Name | 09-21 weight | Drift-projected 10-01 | Actual 10-01 (SSGA) | Diff |
+|---|---|---|---|---|---|
+| XLC | META | 21.93% | 22.42% | 22.42% | 0.00pp |
+| XLC | GOOGL | 11.62% | 11.56% | 11.56% | 0.00pp |
+| XLC | GOOG | 9.31% | 9.28% | 9.27% | 0.01pp |
+| XLC | WBD | 4.76% | 4.99% | 4.99% | 0.00pp |
+| XLY | AMZN | 23.56% | 23.34% | 23.33% | 0.01pp |
+| XLE | XOM | 23.04% | 23.75% | 23.76% | 0.01pp |
+| XLE | CVX | 17.75% | 17.98% | 17.99% | 0.01pp |
+| XLE | COP | 6.76% | 6.71% | 6.71% | 0.00pp |
+| XLE | MPC | 4.71% | 4.90% | 4.90% | 0.00pp |
+| XLE | VLO | 4.73% | 4.89% | 4.89% | 0.00pp |
+
+A fixed-share, price-only projection does not match a trimmed or redistributed basket to two decimal
+places by chance. If any of these three funds had executed a secondary reweighting between 09-21 and
+10-01, the capped or redistributed names would show a visible, asymmetric gap here — exactly the
+signature the sibling close-out used to catch that XLC's own 2026-09-11 cohort reading had decayed
+from a correctly-computed-but-stale snapshot. None appears. **The conclusion is measured, not
+assumed: no corrective trade occurred in any of the three funds this quarter.**
+
+### Reconstructed at the actual test close (2026-09-29)
+
+| Leg | Cohort / weight | vs. threshold | Relative gap |
+|---|---|---|---|
+| XLC group (>4.8% cohort) | **48.11%** | 1.89pp under 50% | 3.78% |
+| XLY/AMZN single-company | **23.12%** | 0.88pp under 24% | 3.67% |
+| XLE group (3-name cohort; MPC/VLO had not yet crossed 4.8%) | **48.66%** | 1.34pp under 50% | 2.68% |
+
+XLE was in fact the **closest** of the three to its trigger at the actual test — closer than XLC,
+reversing nothing from the 09-23 pulse's placement, which ranked XLC least-live and named AMZN/XLY
+and XLE as the two closer legs without claiming either would cross.
+
+### Forward tests, scored
+
+Full receipts in [`forward-tests/sp-select-sector-secondary-reweight-2026-09-30.md`](../forward-tests/sp-select-sector-secondary-reweight-2026-09-30.md).
+
+- **`FT-…-1` (09-04, AMZN/XLY the sole live leg) — kill.** Required AMZN above 24% *and* XLC/XLE
+  both under 50% at the 09-29 close. AMZN read 23.12% — under the cap — which kills it on its own
+  written clause regardless of the other leg.
+- **`FT-…-2` (09-16, XLC's group leg if anything fires) — kill.** Required XLC to hold the smallest
+  gap to its own trigger of all eleven funds *and* XLE's cohort under 45%. XLE's relative gap
+  (2.68%) was tighter than XLC's (3.78%), and XLE's cohort (48.66%) was nowhere near the ~45%
+  post-cap target the claim needed — both named kill clauses fire independently.
+- **`FT-…-3` (09-23, XLC least-live; AMZN/XLY and XLE both closer) — pass.** XLC's relative gap
+  (3.78%) was the largest of the three; AMZN's (3.67%) and XLE's (2.68%) were both tighter, exactly
+  as registered. AMZN vs. XLC was a thin margin (3.67% vs 3.78%, inside this reconstruction's own
+  noise band) — recorded as a pass on the letter of the claim, not as a wide margin.
+
+### Kill switches, settled
+
+1. **"AMZN's XLY weight is at or below 24.0% in holdings dated 2026-09-29"** — **FIRED.** 23.12%,
+   reconstructed. The single-company leg was never live this quarter.
+2. **"Any Select Sector fund shows an over-4.8% cohort above 50% in holdings dated 2026-09-29"** —
+   **did not fire.** The closest approach, XLE at 48.66%, stayed under the line; the 58.26% reading
+   that looks like a breach belongs to 10-01, a session after the test.
+3. **"A dated report of a September-2026 secondary reweighting moving more than $1B in any single
+   name"** — **unresolvable as a report; moot as a fact.** No vendor or press coverage of a
+   September-2026 Select Sector secondary reweighting was found (searched directly); the
+   reconstruction above independently shows none occurred, so there was nothing to report.
+4. **"S&P DJI publishes, or a vendor reconstructs, an actual history of triggered secondary
+   reweightings"** — **not resolved.** Still no base rate; this quarter adds one more data point
+   (no fire) to a history nobody has published.
+5. **"The live single-company cap proves to be 22.5%, not the SEC filing's 24%/23%"** — **moot.**
+   AMZN never approached either threshold at the test close.
+6. **"The 2026-09-18 quarterly rebalance does not clear on schedule"** — **did not fire**; the
+   09-23 pulse already confirmed post-rebalance weights were live, and nothing since contradicts it.
+
+### The four horizon calls, scored
+
+| Horizon | Call | Verdict |
+|---|---|---|
+| Today (D-7, 09-23 pulse) | Stand aside | **Right, and free.** Falsifier (an off-cycle S&P DJI announcement before 09-29) never fired. Zero capital, zero loss |
+| This week | Stand aside | **Right.** No holdings file showed AMZN under 23.0% or XLE under 45% *as a reversal of the pulse's read* — instead the test simply never crossed either threshold; the falsifier's spirit (the legs this pulse called "closing in" turning out to be snapshot artifacts) is the actual result, just not the mechanism named |
+| This month | Watch AMZN/XLY and XLE, take no position | **Right instruction, and the falsifier is exactly what happened in reverse.** It named "AMZN below 23.0% and XLE's cohort below 45%" as the kill condition; neither occurred, but neither leg crossed its *trigger* either — the instruction to watch without trading cost nothing and the two numbers it named were the two that mattered |
+| This quarter | Stand aside; December stacks on year-end | **Unfalsified.** Its falsifier (a methodology change moving the 24/4.8/50 thresholds before 2026-12-30) never fired. The December sibling test carries forward the same unresolved base-rate gap (kill switch 4) |
+
+### What the stance cost, and what it bought
+
+Zero capital deployed; realized P&L **zero**, the correct outcome for a stand-aside on a trigger that
+never crossed. The three-session placement churn (XLY → XLC → AMZN/XLY-and-XLE-jointly) never once
+changed the call, because the refusal's real legs — no pre-announcement, no index-flow-keyed house
+playbook, an execution window crowded with PCE/GDP/ADP/a funding deadline — never depended on which
+name was closest. What this quarter adds to the instrument built by the 09-11 sibling: a **forward**
+projection (price-drift from a known baseline to an undated future snapshot) cross-validates a
+reconstruction the same way a **backward** one does, and the discipline of testing the *actual* date
+rather than the nearest available snapshot is what caught the one place (XLE) where a lazy read of
+"today's holdings" would have reported a breach that was never there at the close that mattered.
+
+### Honest limits
+
+- **No archived 09-29 holdings snapshot exists to read directly.** SSGA's daily-holdings endpoint
+  serves only the current day's file, and the Wayback Machine holds no capture of it from this
+  window (checked). Every 09-29 figure above is a reconstruction from a 09-21 baseline plus Yahoo
+  closes, not a document anyone published — the same limit the 09-16 and 09-23 pulses already
+  carried forward, closed out rather than removed.
+- **ETF vendor weight is still a proxy for the index's own capped-weight test**, which uses
+  "additional weight factors... as of the reweighting effective date" that are not visible here.
+  This gap is the reason the close-out leaned on a method that cross-validates against *known*
+  current data (the 10-01 table above) rather than trusting the 09-29 reconstruction alone.
+- **No vendor or desk report of a September-2026 secondary reweighting was found, searched directly**
+  (S&P DJI's own announcement and indexology pages still return 403 on direct fetch, as every prior
+  pulse recorded) — absence of a report is consistent with absence of an event, not proof of it on
+  its own; the reconstruction above is what carries the conclusion.
+- **The AMZN-vs-XLC ordering in `FT-…-3` is a thin margin** (3.67% vs 3.78% relative gap) inside the
+  likely error of a price-drift reconstruction — scored as written, flagged as thin.
+- Every figure above is `estimate`-labeled by inheritance from the event itself; nothing here was
+  ever a license to trade, and the close-out confirms rather than revises that.
+
+**This document is now closed.** No trade was taken, none was authorized, and the stance registered
+into the event — stand aside, zero capital, on every horizon — stands as the final word on it.
