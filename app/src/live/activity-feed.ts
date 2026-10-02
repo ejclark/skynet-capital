@@ -1,4 +1,4 @@
-import type { WireFeedbackItem, WireTrade } from "./wire";
+import type { WireDevelopmentItem, WireFeedbackItem, WireTrade } from "./wire";
 
 /**
  * ONE FEED, SEVERAL KINDS (#784 slice 3) — the Activity page's own model, and the reason the page
@@ -13,10 +13,15 @@ import type { WireFeedbackItem, WireTrade } from "./wire";
  * a different shape of data — so trades and feedback are kinds here, and Booked P&L (a standing
  * snapshot, never an event) left the section switch for a summary strip.
  *
+ * THE THIRD KIND COST A BRANCH (#784 slice 4). A merged pull request joined the list as `is:development`
+ * — one entry in `QUALIFIER_KIND`, one branch in `buildActivityFeed`, one row component — and the page's
+ * shape did not move. That is the test slices 1–3 were built to pass: the next kind is a filter, never a
+ * widget.
+ *
  * THE GRAMMAR IS ONE MODEL (the Issues-list template, unchanged since #738): every control on the
  * page writes a token into the same query string the filter box accepts as text. Three groups, and
  * one include-flag:
- *   - `is:trade` · `is:feedback` — the kind facets this slice adds.
+ *   - `is:trade` · `is:feedback` · `is:development` — the kind facets.
  *   - `is:buy`/`is:sell` and `is:bot`/`is:human` — facets only a TRADE can satisfy, so either one
  *     narrows the feed to trades. A filing has no side and no desk; leaving filings in the list
  *     while "Buys" is pressed would be noise, not honesty, and the kind chip would then disagree
@@ -50,7 +55,17 @@ export type ActivityFeedItem =
       readonly at: string;
       readonly kind: "feedback";
       readonly filing: WireFeedbackItem;
+    }
+  | {
+      readonly key: string;
+      readonly at: string;
+      readonly kind: "development";
+      readonly merge: WireDevelopmentItem;
     };
+
+/** The kinds one list can hold. Named so the qualifier table and the scope checks below can't drift
+ *  from the row union above — adding a fourth kind should fail to compile until both are updated. */
+export type ActivityKind = ActivityFeedItem["kind"];
 
 /**
  * Both kinds into one list, newest first. The tie-break on `key` is not decoration: two fills can
@@ -66,6 +81,7 @@ const instant = (at: string | undefined): string => at ?? "";
 export function buildActivityFeed(
   trades: readonly WireTrade[],
   filings: readonly WireFeedbackItem[],
+  merges: readonly WireDevelopmentItem[] = [],
 ): ActivityFeedItem[] {
   const items: ActivityFeedItem[] = [
     ...trades.map(
@@ -84,6 +100,17 @@ export function buildActivityFeed(
         filing,
       }),
     ),
+    // A filing and a merge can share a number (issue #4272 and PR #4272 are different things), so the
+    // key is namespaced per kind — one list keyed on the bare number would collide in React's
+    // reconciler and drop a real row.
+    ...merges.map(
+      (merge): ActivityFeedItem => ({
+        key: `merge:${merge.pullRequest}`,
+        at: instant(merge.at),
+        kind: "development",
+        merge,
+      }),
+    ),
   ];
   return items.sort((a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key));
 }
@@ -91,7 +118,7 @@ export function buildActivityFeed(
 /** Facets only a trade row can satisfy — see the header for why each one narrows the feed to
  *  trades rather than letting filings ride along beside them. */
 const TRADE_ONLY_QUALIFIERS = ["is:buy", "is:sell", "is:bot", "is:human"] as const;
-const KIND_QUALIFIERS = ["is:trade", "is:feedback"] as const;
+const KIND_QUALIFIERS = ["is:trade", "is:feedback", "is:development"] as const;
 
 export const ACTIVITY_QUALIFIERS = [
   ...KIND_QUALIFIERS,
@@ -103,7 +130,7 @@ export type ActivityQualifier = (typeof ACTIVITY_QUALIFIERS)[number];
 /** One per group at a time — picking a sibling replaces it, never stacks a contradiction.
  *  `show:shipped` is in no group: it is a flag, on or off. */
 const EXCLUSIVE_GROUPS: readonly (readonly ActivityQualifier[])[] = [
-  ["is:trade", "is:feedback"],
+  [...KIND_QUALIFIERS],
   ["is:buy", "is:sell"],
   ["is:bot", "is:human"],
 ];
@@ -113,7 +140,7 @@ const EXCLUSIVE_GROUPS: readonly (readonly ActivityQualifier[])[] = [
  *  is on would otherwise leave `is:buy` in the query with no chip left to clear it — inert, and
  *  removable only by hand-editing the filter box. Turning any chip on drops the other kind's tokens
  *  (see `toggleActivityQualifier`), so what is in the query is always what is on screen. */
-const QUALIFIER_KIND: Record<ActivityQualifier, "trade" | "feedback"> = {
+const QUALIFIER_KIND: Record<ActivityQualifier, ActivityKind> = {
   "is:trade": "trade",
   "is:buy": "trade",
   "is:sell": "trade",
@@ -121,6 +148,10 @@ const QUALIFIER_KIND: Record<ActivityQualifier, "trade" | "feedback"> = {
   "is:human": "trade",
   "is:feedback": "feedback",
   "show:shipped": "feedback",
+  // A merge has no facets of its own yet — the kind chip is the whole control. The state block's
+  // settled rule for slice 4 holds for whatever one is added next: anything only a merge can satisfy
+  // belongs in this table, so turning a chip on can never strand it in the query with no chip to clear it.
+  "is:development": "development",
 };
 
 export interface ActivityFilter {
@@ -137,20 +168,30 @@ export function parseActivityQuery(query: string): ActivityFilter {
   };
 }
 
-/** Which kind the qualifiers alone allow — "both" when nothing narrows it. Pulled out so the one
- *  rule "a trade-only facet implies the trade kind" lives in a single place. */
-function allowedKind(qualifiers: readonly ActivityQualifier[]): "trade" | "feedback" | "both" {
-  if (qualifiers.includes("is:feedback")) return "feedback";
-  if (qualifiers.includes("is:trade")) return "trade";
+/** Which kind the qualifiers alone allow — "all" when nothing narrows it. Pulled out so the one rule
+ *  "a trade-only facet implies the trade kind" lives in a single place. The explicit kind chip wins
+ *  over an inferred one, which is what lets a stale `is:buy` lose to a freshly pressed `is:feedback`. */
+function allowedKind(qualifiers: readonly ActivityQualifier[]): ActivityKind | "all" {
+  const asked = qualifiers.find((q): q is (typeof KIND_QUALIFIERS)[number] =>
+    (KIND_QUALIFIERS as readonly string[]).includes(q),
+  );
+  if (asked) return QUALIFIER_KIND[asked];
   return qualifiers.some((q) => (TRADE_ONLY_QUALIFIERS as readonly string[]).includes(q))
     ? "trade"
-    : "both";
+    : "all";
 }
 
-/** True while filings can appear at all — what the Filings status toggle renders on, so a control
- *  is never shown for a kind the current filter has already excluded. */
+/** True while rows of `kind` can appear at all — what every control group renders on, so a chip is
+ *  never shown for a kind the current filter has already excluded (a "Buys" chip beside a list
+ *  narrowed to merges would be a control with nothing to do). */
+export function kindInScope(filter: ActivityFilter, kind: ActivityKind): boolean {
+  const allowed = allowedKind(filter.qualifiers);
+  return allowed === "all" || allowed === kind;
+}
+
+/** True while filings can appear at all — what the Filings status toggle renders on. */
 export function filingsInScope(filter: ActivityFilter): boolean {
-  return allowedKind(filter.qualifiers) !== "trade";
+  return kindInScope(filter, "feedback");
 }
 
 function matchesTradeFacets(trade: WireTrade, qualifiers: readonly ActivityQualifier[]): boolean {
@@ -164,16 +205,19 @@ function matchesTradeFacets(trade: WireTrade, qualifiers: readonly ActivityQuali
 }
 
 /** What a bare search term matches, per kind: a trade by its symbol or its trader, a filing by its
- *  title or its issue number (so pasting "#4271" finds the row the way pasting "NVDA" does). */
+ *  title or its issue number (so pasting "#4271" finds the row the way pasting "NVDA" does), a merge
+ *  by its title, its PR number or the author GitHub named. */
 function haystack(item: ActivityFeedItem): string {
-  return item.kind === "trade"
-    ? `${item.trade.symbol} ${item.trade.who}`.toLowerCase()
-    : `${item.filing.title} #${item.filing.issueNumber}`.toLowerCase();
+  if (item.kind === "trade") return `${item.trade.symbol} ${item.trade.who}`.toLowerCase();
+  if (item.kind === "feedback") {
+    return `${item.filing.title} #${item.filing.issueNumber}`.toLowerCase();
+  }
+  return `${item.merge.title} #${item.merge.pullRequest} ${item.merge.author ?? ""}`.toLowerCase();
 }
 
 export function matchesActivity(item: ActivityFeedItem, filter: ActivityFilter): boolean {
   const kind = allowedKind(filter.qualifiers);
-  if (kind !== "both" && item.kind !== kind) return false;
+  if (kind !== "all" && item.kind !== kind) return false;
   if (item.kind === "trade" && !matchesTradeFacets(item.trade, filter.qualifiers)) return false;
   // A shipped filing is a record, not something still moving, so it stays out of the default view —
   // the separation `/app/feedback` has had since #1308, now a token instead of a bespoke toggle

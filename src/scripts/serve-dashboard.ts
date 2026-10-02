@@ -19,6 +19,7 @@ import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
 import {
   bootPublishingActivityStore,
   publishingFeedback,
+  publishingMergedPullRequests,
 } from "../observatory/activity-publishing.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
@@ -37,6 +38,7 @@ import { resolveDataSource } from "../runtime/data-source.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
@@ -218,6 +220,14 @@ async function main(): Promise<void> {
   // rather than in `setupFeedback` because the bus is booted above, with the trade ledger's.
   // Built ONCE at boot, not per request — the status wrapper remembers what it last published.
   const feedbackSinks = publishingFeedback(activityEventBus, { feedbackLog, feedbackStatus });
+  // Development as the bus's third kind (#784 slice 4): a merged pull request publishes
+  // `development.pr-merged`. A poll, not a webhook — nothing in this app receives one, and three
+  // read-only GitHub polls already exist on this token. Built ONCE at boot like the status emitter
+  // above, because the wrapper remembers which merges it has already published.
+  const mergedPullRequests = resolveDevelopmentActivity(process.env);
+  const developmentSink = mergedPullRequests
+    ? publishingMergedPullRequests(mergedPullRequests, activityEventBus)
+    : undefined;
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -308,6 +318,9 @@ async function main(): Promise<void> {
     readAllActivityEvents: () => activityEventBus.list(),
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
+    // Absent without a GitHub token: the feed then renders no development kind and says so, rather
+    // than letting an empty list imply the league has never merged anything.
+    ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),
     // The Sunday Council's weekly thesis line (issue #2224 shape 1) — on whenever the store is,
     // no separate switch, matching Mission Control's own always-on-when-wired posture.
     council: {

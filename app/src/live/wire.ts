@@ -76,11 +76,32 @@ export interface WireFeedbackItem {
   readonly at: string;
 }
 
+/** One merged pull request on the feed (#784 slice 4) — the third kind. No in-app identity to join
+ *  on: GitHub owns the merge, so the row is a title, a link and when it landed. */
+export interface WireDevelopmentItem {
+  readonly pullRequest: number;
+  readonly icon: string;
+  /** The icon's word ("Merged") — the row's leading token, as BUY/SELL and "Bug" are for the others. */
+  readonly kindLabel: string;
+  readonly title: string;
+  readonly url: string;
+  /** Absent when GitHub named no author — the row then says what merged, not who merged it. */
+  readonly author?: string;
+  readonly meta: string;
+  /** The merge instant, raw — the other kinds' `at` twin. */
+  readonly at: string;
+}
+
 export interface WireFeed {
   readonly trades: readonly WireTrade[];
   readonly pnl: readonly WirePnl[];
   readonly feedbackEnabled: boolean;
   readonly feedback: readonly WireFeedbackItem[];
+  /** False when this deployment cannot read GitHub — the feed says so, rather than letting an empty
+   *  list imply nothing has ever merged. Absent on a response from a server older than slice 4, which
+   *  reads as off: the honest answer for a server that cannot send the kind at all. */
+  readonly developmentEnabled?: boolean;
+  readonly development?: readonly WireDevelopmentItem[];
   /** Present only when the trade page was full — the `before` cursor for the next `/api/wire`
    *  request, read off the server's `Link: rel="next"` header (GitHub's own pagination
    *  convention, `src/server/pagination.ts`). Absent means there are no older trades to fetch. */

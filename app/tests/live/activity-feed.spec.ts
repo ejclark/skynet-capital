@@ -2,11 +2,12 @@ import {
   type ActivityFeedItem,
   buildActivityFeed,
   filingsInScope,
+  kindInScope,
   matchesActivity,
   parseActivityQuery,
   toggleActivityQualifier,
 } from "../../src/live/activity-feed";
-import type { WireFeedbackItem, WireTrade } from "../../src/live/wire";
+import type { WireDevelopmentItem, WireFeedbackItem, WireTrade } from "../../src/live/wire";
 
 /**
  * ONE FEED, SEVERAL KINDS (#784 slice 3) — the page's own model. Behavioral only: given a query a
@@ -39,6 +40,18 @@ const filing = (over: Partial<WireFeedbackItem> = {}): WireFeedbackItem => ({
   url: "https://github.com/ejclark/skynet-capital/issues/4271",
   meta: "#4271 · 10/1/2026",
   at: "2026-10-01T12:00:00.000Z",
+  ...over,
+});
+
+const merge = (over: Partial<WireDevelopmentItem> = {}): WireDevelopmentItem => ({
+  pullRequest: 4272,
+  icon: "🚀",
+  kindLabel: "Merged",
+  title: "development events for merged PRs",
+  url: "https://github.com/ejclark/skynet-capital/pull/4272",
+  author: "claude",
+  meta: "#4272 · 10/2/2026",
+  at: "2026-10-02T12:00:00.000Z",
   ...over,
 });
 
@@ -93,6 +106,77 @@ describe("the kind facets", () => {
     );
     expect(show(many, "is:trade")).toHaveLength(2);
     expect(show(many, "is:feedback")).toHaveLength(2);
+  });
+});
+
+/**
+ * THE THIRD KIND (#784 slice 4) — a merged pull request on the same list. The slice's own falsifier is
+ * pinned here twice: "a merged PR produces no row", and a merge that collides with a filing on the same
+ * number (issue #4272 and PR #4272 are different things) must not displace it.
+ */
+describe("the development kind", () => {
+  const feed = buildActivityFeed([trade({ key: "t-1" })], [filing()], [merge()]);
+
+  it("interleaves a merge into the one list on its merge instant", () => {
+    const ordered = buildActivityFeed(
+      [trade({ key: "t-1", at: "2026-10-01T09:00:00.000Z" })],
+      [filing({ at: "2026-10-03T09:00:00.000Z" })],
+      [merge({ at: "2026-10-02T09:00:00.000Z" })],
+    );
+    expect(keys(ordered)).toEqual(["filing:4271", "merge:4272", "t-1"]);
+  });
+
+  it("is:development keeps every merge and drops the other kinds", () => {
+    expect(keys(show(feed, "is:development"))).toEqual(["merge:4272"]);
+  });
+
+  it("never hides a merge that was asked for — the slice's own falsifier", () => {
+    const many = buildActivityFeed([], [], [merge(), merge({ pullRequest: 4273 })]);
+    expect(show(many, "is:development")).toHaveLength(2);
+  });
+
+  it("drops merges when another kind is asked for, and vice versa", () => {
+    expect(keys(show(feed, "is:trade"))).toEqual(["t-1"]);
+    expect(keys(show(feed, "is:feedback"))).toEqual(["filing:4271"]);
+    expect(keys(show(feed, "is:buy"))).toEqual(["t-1"]);
+  });
+
+  it("keys a merge apart from a filing on the same number, so neither displaces the other", () => {
+    const collided = buildActivityFeed([], [filing({ issueNumber: 4272 })], [merge()]);
+    expect(keys(collided)).toEqual(["merge:4272", "filing:4272"]);
+    expect(new Set(keys(collided)).size).toBe(2);
+  });
+
+  it("is never hidden by show:shipped — a merge has no open/shipped state to separate", () => {
+    expect(keys(show(feed, "is:development"))).toEqual(["merge:4272"]);
+    expect(show(buildActivityFeed([], [], [merge()]), "")).toHaveLength(1);
+  });
+
+  it("matches a bare term by title, PR number or the author GitHub named", () => {
+    expect(keys(show(feed, "merged"))).toEqual(["merge:4272"]);
+    expect(keys(show(feed, "#4272"))).toEqual(["merge:4272"]);
+    expect(keys(show(feed, "claude"))).toEqual(["merge:4272"]);
+  });
+
+  it("renders no merges at all when the caller passes none — an unwired read is not an empty claim", () => {
+    expect(keys(buildActivityFeed([trade({ key: "t-1" })], [filing()]))).toEqual([
+      "t-1",
+      "filing:4271",
+    ]);
+  });
+
+  it("hides every other kind's controls while the feed is narrowed to merges", () => {
+    const narrowed = parseActivityQuery("is:development");
+    expect(kindInScope(narrowed, "trade")).toBe(false);
+    expect(kindInScope(narrowed, "feedback")).toBe(false);
+    expect(kindInScope(narrowed, "development")).toBe(true);
+    expect(filingsInScope(narrowed)).toBe(false);
+  });
+
+  it("clears the other kinds' tokens when pressed, so no chip can strand one", () => {
+    expect(toggleActivityQualifier("is:buy", "is:development")).toBe("is:development");
+    expect(toggleActivityQualifier("show:shipped", "is:development")).toBe("is:development");
+    expect(toggleActivityQualifier("is:development", "is:trade")).toBe("is:trade");
   });
 });
 
