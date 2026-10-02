@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import {
+  entryDateText,
   fetchDeskHeartbeat,
   type Heartbeat,
   heartbeatLine,
@@ -72,7 +73,9 @@ export function VerdictTable({
 }
 
 /** The roll call (#4450 slice 1): every house playbook against this bot, so one that nobody
- *  switched on reads "Off" instead of being absent. Owner-only — the server withholds it. */
+ *  switched on reads "Off" instead of being absent. Owner-only — the server withholds it. An "On"
+ *  line also says what it is waiting for and, where its rule has one, the day its window next
+ *  opens — "On" alone reads as reassurance when the calendar holds no confirmed date. */
 export function RollCallList({ lines }: { readonly lines: readonly RollCallLine[] }): ReactElement {
   // A list, not a table: at 390px the reason is the part worth reading, and a third column
   // squeezed it to two words a line. Name and status share a line; the reason gets the width.
@@ -90,6 +93,9 @@ export function RollCallList({ lines }: { readonly lines: readonly RollCallLine[
               </span>
             </span>
             <span className="note">{line.reason}</span>
+            {line.nextEntry ? (
+              <span className="note">Next window: {entryDateText(line.nextEntry)}</span>
+            ) : null}
           </li>
         );
       })}

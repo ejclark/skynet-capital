@@ -1,5 +1,6 @@
 import {
   agoText,
+  entryDateText,
   type Heartbeat,
   heartbeatLine,
   type PlaybookHeartbeat,
@@ -73,5 +74,17 @@ describe("sinceText", () => {
   it("says 'at least since' when the run may be older than the passes on hand", () => {
     expect(sinceText(p("2026-09-22T15:00:00Z", true), now)).toMatch(/^at least since /);
     expect(sinceText(p("2026-09-22T15:00:00Z", false), now)).toMatch(/^since /);
+  });
+});
+
+describe("entryDateText — the day an On playbook's window next opens (#4450 slice 1)", () => {
+  it("reads a date-only entry day as that day, never the one before it", () => {
+    // A bare `YYYY-MM-DD` parses as UTC midnight, which is the previous evening in every US
+    // offset — the off-by-one this helper exists to prevent. Asserted as "the day number is 2 and
+    // the month is November", so it holds under any runner locale.
+    const text = entryDateText("2026-11-02");
+    expect(text).toMatch(/\b2\b/);
+    expect(text).not.toMatch(/\b1\b/);
+    expect(text.toLowerCase()).toContain("nov");
   });
 });

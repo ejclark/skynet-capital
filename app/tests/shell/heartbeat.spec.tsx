@@ -46,6 +46,32 @@ const staleHeartbeat: Heartbeat = {
       sinceIsLowerBound: true,
     },
   ],
+  rollCall: [
+    {
+      playbookId: "S1-NVDA",
+      status: "armed",
+      mode: "standard",
+      reason: "On and waiting for its own window to open.",
+      nextEntry: "2026-11-02",
+    },
+    {
+      playbookId: "G1-GOOG",
+      status: "armed",
+      mode: "conservative",
+      reason:
+        "On, but the next print date for GOOG (2026-10-28) is an estimate — only a confirmed date opens a position.",
+    },
+    {
+      playbookId: "TACO-DJT",
+      status: "blocked",
+      reason: "No news feed is wired to it yet, so its trigger never arrives.",
+    },
+    {
+      playbookId: "HC-SAURON",
+      status: "off",
+      reason: "Not switched on for this bot — no recorded pass ran it.",
+    },
+  ],
 };
 const staleDesk: DeskHeartbeat = { available: true, heartbeat: staleHeartbeat };
 
@@ -75,7 +101,8 @@ describe("HeartbeatSection", () => {
     render(withClient(<HeartbeatSection deskId="sauron" />));
     await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
     expect(screen.getByText(/Stale means no pass for 2 min/)).toBeInTheDocument();
-    expect(screen.getByText("S1-NVDA")).toBeInTheDocument();
+    // Twice: once as a roll-call line, once as the verdict table's own row.
+    expect(screen.getAllByText("S1-NVDA")).toHaveLength(2);
   });
 
   // #885 — a bot the viewer does not own: verdict words, no playbook names, no chips.
@@ -144,5 +171,33 @@ describe("HeartbeatSection", () => {
     expect(
       await screen.findByText("No decision trail is wired in this deployment."),
     ).toBeInTheDocument();
+  });
+});
+
+/** #4450 slice 1 — "On" on its own read as reassurance: the calendar can hold no confirmed date
+ *  for a playbook that is switched on, and the line has to say so. */
+describe("RollCallList — an On line says what it is waiting for", () => {
+  it("prints the day a playbook's window next opens, and the cause when there is none", async () => {
+    next = staleDesk;
+    render(withClient(<HeartbeatSection deskId="sauron" />));
+    expect(await screen.findByText("Which playbooks this bot runs")).toBeInTheDocument();
+    expect(screen.getByText("Next window: Nov 2")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "On, but the next print date for GOOG (2026-10-28) is an estimate — only a confirmed date opens a position.",
+      ),
+    ).toBeInTheDocument();
+    // No date claimed for the one held by the calendar, nor for anything not on.
+    expect(screen.getAllByText(/^Next window: /)).toHaveLength(1);
+  });
+
+  it("keeps the whole roll call off a bot the viewer does not own", async () => {
+    // The wire shape a non-owner receives (`desk-owner-gate.ts`): the key is absent entirely.
+    const { rollCall: _withheld, ...withoutRollCall } = staleHeartbeat;
+    next = { available: true, heartbeat: withoutRollCall as typeof staleHeartbeat };
+    render(withClient(<HeartbeatSection deskId="sauron" showPlaybooks={false} />));
+    await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
+    expect(screen.queryByText("Which playbooks this bot runs")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Next window: /)).not.toBeInTheDocument();
   });
 });

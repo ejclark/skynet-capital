@@ -1,10 +1,22 @@
 // Visual harness for the playbook roll call (#4450 slice 1) — the Heartbeat section with every
 // house playbook listed On / Off / Can't fire, over the real built shell + stubbed APIs.
-// The stub mirrors production as found on 2026-10-02: no house playbook armed, so S1 and G1 read
-// Off; TACO-DJT and HC-SAURON read Can't fire whatever is armed (`PLAYBOOK_WIRING_GAPS`).
+//
+// `roll-call-*` mirrors production as found on 2026-10-02: no house playbook armed, so S1 and G1
+// read Off; TACO-DJT and HC-SAURON read Can't fire whatever is armed (`PLAYBOOK_WIRING_GAPS`).
+//
+// `roll-call-armed-*` is the frame an ARMED roster produces — what lands the moment slice 2 flips
+// the house roster on. It is built by calling the real `playbookRollCall`, never by hand-writing
+// its sentences, so the frame cannot claim a reason the code does not produce. Its calendar is the
+// real one plus ONE confirmed NVDA date, which is the only way to picture both halves of the read
+// at once: S1 with a dated window ahead of it, and G1 held by an estimate (the state the real
+// calendar is in for both names today).
+//
 // JPEG ≤100KB (docs/PICTURES.md). Shots live under docs/shots/pr-4450 (the plan issue's number).
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/heartbeat-roll-call.mjs
 import { resolve } from "node:path";
+import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
+import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
+import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
 import { openShell } from "./shell.mjs";
 
 const settings = {
@@ -64,13 +76,34 @@ const heartbeat = {
   },
 };
 
+// The armed roster, as the live code reads it. `now` is fixed so the frame is reproducible; the
+// extra NVDA print is confirmed and 30 days out, which puts S1's D-20 entry 10 days ahead.
+const NOW = new Date("2026-10-02T15:00:00Z");
+const armedVerdicts = [
+  { playbookId: "S1-NVDA", mode: "standard", state: "no-window" },
+  { playbookId: "G1-GOOG", mode: "conservative", state: "no-window" },
+  { playbookId: "U-wheel-spy", mode: "conservative", state: "flat" },
+];
+const armedHeartbeat = {
+  available: true,
+  heartbeat: {
+    ...heartbeat.heartbeat,
+    rollCall: playbookRollCall(armedVerdicts, NOW, registeredPlaybooks(), PLAYBOOK_WIRING_GAPS, [
+      ...UPCOMING_PRINTS,
+      { symbol: "NVDA", date: "2026-11-01", status: "confirmed", source: "IR: shoot fixture" },
+    ]),
+  },
+};
+
+let currentHeartbeat = heartbeat;
+
 const { page, origin, shoot, close } = await openShell({
   name: "heartbeat-roll-call",
   out: resolve("docs/shots/pr-4450"),
   stubs: {
     "/api/settings": settings,
     "/api/desk/bot-sauron": desk,
-    "/api/desk/bot-sauron/heartbeat": heartbeat,
+    "/api/desk/bot-sauron/heartbeat": () => currentHeartbeat,
     "/api/desk/bot-sauron/probes": { available: false },
     "/api/desk/bot-sauron/decisions": { available: true, kind: "bot", cycles: [] },
   },
@@ -85,5 +118,17 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/u/bot-sauron/decisions`);
 await page.getByText("Which playbooks this bot runs").scrollIntoViewIfNeeded();
 await shoot("roll-call-desktop");
+
+// The same section with the roster armed — the reason an On line needs more than one sentence.
+currentHeartbeat = armedHeartbeat;
+for (const [tag, viewport] of [
+  ["phone", { width: 390, height: 844 }],
+  ["desktop", { width: 1280, height: 900 }],
+]) {
+  await page.setViewportSize(viewport);
+  await page.goto(`${origin}/app/u/bot-sauron/decisions`);
+  await page.getByText("Which playbooks this bot runs").scrollIntoViewIfNeeded();
+  await shoot(`roll-call-armed-${tag}`);
+}
 
 await close();
