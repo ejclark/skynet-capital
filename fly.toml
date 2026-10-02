@@ -36,6 +36,10 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # A member's alert dismissals (#3407 P4, jsonl-alert-dismissals.ts) — the one alert fact that
   # must outlive a deploy: losing it re-shows every alert they already waved away.
   SKYNET_ALERT_DISMISSALS_DIR = "/data/alert-dismissals"
+  # A member's alert-delivery choice and sent-ledger (#3407 P4 slice 3,
+  # jsonl-alert-delivery-store.ts). Losing the choice silently turns delivery off; losing the
+  # ledger re-mails every standing alert on the next deploy.
+  SKYNET_ALERT_DELIVERY_DIR = "/data/alert-delivery"
   # Owner→member account links (#546, owner-link-store.ts) — who claimed an unowned board account.
   SKYNET_OWNER_LINKS_FILE = "/data/owner-links.json"
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned

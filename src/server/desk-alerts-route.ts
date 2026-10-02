@@ -37,6 +37,47 @@ const OWNER_TIERS = forVisibility(["public", "owner-only"]);
 /** The wire shape of one alert — the substrate's own fields, nothing added. */
 export type DeskAlert = Alert & { readonly fingerprint: string };
 
+/** Everything the derivation needs. Narrowed so the delivery sweep (#3407 P4 slice 3) derives a
+ *  member's alerts through THIS function rather than a second copy of the same two producers. */
+export type DeskAlertsDeps = Pick<
+  DashboardServerConfig,
+  "hub" | "optionsClientFor" | "now" | "activityLog" | "alertDismissals"
+>;
+
+/** One member's standing alerts, from both producers, minus what they dismissed — the single
+ *  derivation the strip's route and the delivery sweep share. */
+export async function deskAlertsFor(
+  id: string,
+  config: DeskAlertsDeps,
+): Promise<
+  | { readonly kind: "missing" }
+  | { readonly kind: "unavailable"; readonly reason: string }
+  | {
+      readonly kind: "ok";
+      readonly asOf: Date;
+      readonly alerts: readonly DeskAlert[];
+      readonly dismissable: boolean;
+    }
+> {
+  const positions = await loadOptionPositions(id, config);
+  if (positions.kind === "missing") return { kind: "missing" };
+  // Two producers, one list: the positions' standing conditions and the orders' recent lifecycle
+  // (#3407 P4 slice 2). An account with neither source wired says so in words.
+  const log = config.activityLog;
+  if (positions.kind === "unlinked" && !log) return { kind: "unavailable", reason: "unlinked" };
+  const now = config.now?.() ?? new Date();
+  const rows = positions.kind === "ok" ? positions.view.rows : [];
+  const events = log ? (await log.list(id)).filter(OWNER_TIERS) : [];
+  const dismissed = new Set(await config.alertDismissals?.loadDismissed(id));
+  const alerts = sortAlerts([
+    ...positionAlerts(rows, now.getTime()),
+    ...orderAlerts(events, now.getTime()),
+  ])
+    .map((alert) => ({ ...alert, fingerprint: alertFingerprint(alert) }))
+    .filter((alert) => !dismissed.has(alert.fingerprint));
+  return { kind: "ok", asOf: now, alerts, dismissable: config.alertDismissals !== undefined };
+}
+
 function owned(id: string, config: DashboardServerConfig, session: Session | undefined): boolean {
   const ids = config.auth ? resolveOwnedIds(session, config) : [id];
   return id !== "" && ids.includes(id);
@@ -53,33 +94,25 @@ async function serveList(
     sendJson(res, 404, { error: "no such account" });
     return;
   }
-  const positions = await loadOptionPositions(id, config);
-  if (positions.kind === "missing") {
+  const derived = await deskAlertsFor(id, config);
+  if (derived.kind === "missing") {
     sendJson(res, 404, { error: "no such account" });
     return;
   }
-  // Two producers, one list: the positions' standing conditions and the orders' recent
-  // lifecycle (#3407 P4 slice 2). An account with neither source wired says so in words.
-  const log = config.activityLog;
-  if (positions.kind === "unlinked" && !log) {
-    sendJson(res, 200, { available: false, reason: "unlinked", alerts: [], dismissable: false });
+  if (derived.kind === "unavailable") {
+    sendJson(res, 200, {
+      available: false,
+      reason: derived.reason,
+      alerts: [],
+      dismissable: false,
+    });
     return;
   }
-  const now = config.now?.() ?? new Date();
-  const rows = positions.kind === "ok" ? positions.view.rows : [];
-  const events = log ? (await log.list(id)).filter(OWNER_TIERS) : [];
-  const dismissed = new Set(await config.alertDismissals?.loadDismissed(id));
-  const alerts: DeskAlert[] = sortAlerts([
-    ...positionAlerts(rows, now.getTime()),
-    ...orderAlerts(events, now.getTime()),
-  ])
-    .map((alert) => ({ ...alert, fingerprint: alertFingerprint(alert) }))
-    .filter((alert) => !dismissed.has(alert.fingerprint));
   sendJson(res, 200, {
     available: true,
-    asOf: now.toISOString(),
-    alerts,
-    dismissable: config.alertDismissals !== undefined,
+    asOf: derived.asOf.toISOString(),
+    alerts: derived.alerts,
+    dismissable: derived.dismissable,
   });
 }
 

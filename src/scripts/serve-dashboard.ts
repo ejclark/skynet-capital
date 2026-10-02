@@ -42,6 +42,7 @@ import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
+import { wireAlertDelivery } from "./dashboard-alert-delivery.js";
 import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
 import {
@@ -236,6 +237,21 @@ async function main(): Promise<void> {
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
   });
 
+  // Alert delivery (#3407 P4 slice 3) — the member's own switch, durable; plus the two triggers
+  // that reach them when the Alerts strip is not on screen. Off (and said so in words) until the
+  // mail credential is set, which is the one step that is Eric's.
+  const alertDismissals = createAlertDismissals(process.env);
+  const alertDelivery = wireAlertDelivery({
+    env: process.env,
+    activityEvents: activityEventBus,
+    deps: () => ({
+      hub,
+      optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+      activityLog: activityEventBus,
+      alertDismissals,
+    }),
+  });
+
   createDashboardServer({
     hub,
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
@@ -364,7 +380,9 @@ async function main(): Promise<void> {
     activityEvents: activityEventBus,
     activityLog: activityEventBus,
     // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
-    alertDismissals: createAlertDismissals(process.env),
+    alertDismissals,
+    alertDeliveryStore: alertDelivery.store,
+    ...(alertDelivery.transport ? { alertDelivery: alertDelivery.transport } : {}),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
