@@ -14,6 +14,7 @@
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
+//   node scripts/moneypenny/index.mjs --check-callout          # needs-eric just landed: is the ask actually written?
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -55,6 +56,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs
 import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./admission.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -349,6 +351,51 @@ export function triageFeedback(ctx) {
     sh("gh", ["issue", "edit", String(issue.number), "--add-label", "ready"]);
   }
   return decision;
+}
+
+/**
+ * #3913 SLICE 2b — THE DECISION-QUEUE CHECK, AFTER FILING. `needs-eric` means exactly one thing:
+ * a decision only Eric can make. `issue-lint` already demands the `Needs from you` callout that
+ * states WHAT the decision is, but only at filing time — and the 2026-09-28 audit found the label
+ * almost always lands later, from another lane (7 of 8 open `needs-eric` issues carried no callout;
+ * #4056's capture study traced 6 of those 7 to a post-filing relabel). `issues.mjs` refuses to add
+ * the label without one (slice 2a), and the board keeps a callout-less issue out of Blocked — this
+ * is the third consumer: the loud, reversible comment on the paths neither of those covers (a
+ * human or a lane labelling through `gh` or the GitHub UI).
+ *
+ * The rule itself is `decision-callout.mjs` and is pure; this function is only its I/O — the
+ * labelled issue straight from the event payload (no `gh issue view`, same discipline as
+ * `triageFeedback`), its comment bodies over REST, and one comment when the gap is real. `deps`
+ * injects both so the wiring is specced without a network.
+ *
+ * NEVER strips the label (a settled fork on #3913): silently removing a decision label would hide
+ * a real ask. A comment is loud, reversible, and leaves the ask where Eric can still see it.
+ */
+export function checkCallout(ctx, deps = {}) {
+  const issue = ctx.payload?.issue;
+  if (!issue) return { posted: false, reason: "no issue in the payload" };
+  const readComments =
+    deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`).map((c) => c?.body ?? ""));
+  const post =
+    deps.post ?? ((n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]));
+
+  const labels = (issue.labels ?? []).map((l) => l.name);
+  const gap = shouldPostCalloutGap({
+    labels,
+    body: issue.body ?? "",
+    author: issue.user?.login ?? "",
+    comments: readComments(issue.number),
+  });
+  if (!gap) {
+    console.log(`::notice::#${issue.number} — needs-eric callout check: nothing to say`);
+    return { posted: false, reason: "no gap, or already commented" };
+  }
+  const actor = ctx.payload?.sender?.login ?? ctx.actor;
+  post(issue.number, calloutGapComment({ actor }));
+  console.log(
+    `::notice::#${issue.number} — needs-eric with no decision callout (labelled by ${actor}); commented once`,
+  );
+  return { posted: true, actor };
 }
 
 /**
@@ -1070,6 +1117,13 @@ function runCliFlag(argv, ctx) {
   // or Backlog. Never touches the claim lease; that only starts once `ready` actually lands.
   if (argv.includes("--triage-feedback")) {
     triageFeedback(ctx);
+    return true;
+  }
+
+  // `--check-callout` (#3913 slice 2b): `needs-eric` just landed on an issue — say so once if the
+  // body never states what the decision is. Read-only but for that one comment; never relabels.
+  if (argv.includes("--check-callout")) {
+    checkCallout(ctx);
     return true;
   }
 

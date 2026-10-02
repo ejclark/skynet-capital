@@ -25,6 +25,18 @@ one-paragraph comment saying precisely what is blocking and what you propose. Si
 not an option, and neither is a comment that promises a fix you did not push. End every
 comment with a `— Moneypenny` signature line above the Claude Code attribution footer.
 
+WHENEVER YOU APPLY `needs-eric`, WRITE THE DECISION IN THE SAME EDIT (#3913). The label
+promises Eric a decision; the `> [!IMPORTANT]` **Needs from you** callout at the TOP of the
+issue body is where that decision is actually stated (docs/ISSUES.md rule 7). A label with
+no callout is a queue entry he cannot act on — the events lane will comment on it, which
+costs a round trip you can avoid by writing it now:
+
+    > [!IMPORTANT]
+    > **Needs from you**
+    > 1. <the one decision, phrased as a question> — <why, trailing>
+
+The comment in state (b) explains the blocker; the callout states the choice. Both, always.
+
 HOW TO WORK IT:
 1. Read the issue (`gh issue view <n> --comments`) and the linked run. Reproduce the
    failure locally where you can — a failing command you have actually run beats a
@@ -50,7 +62,8 @@ HARD LIMITS — the irreversible class, unchanged by the fact that CI is red:
 - NEVER touch credentials, secrets, spend, trading logic, guards, or playbooks.
 - A fix that edits any file under `.github/workflows/` may be OPENED as a PR but NEVER
   auto-merged: arm nothing, apply `needs-eric`, and say in the PR that it waits for
-  Eric. Workflow files are his call, always.
+  Eric. Workflow files are his call, always. Applying the label here carries the same
+  rule as above: write the **Needs from you** callout in the same edit.
 - Do not close the issue yourself; let the merged PR do it.
 
 The protected-path half of those limits is mechanical, not a memory test: run
