@@ -1,11 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useId, useState } from "react";
 import { structureLabel } from "../../../src/options/candidate-mechanics";
-import type { Outlook, OutlookDirection, OutlookMagnitude } from "../../../src/options/outlook";
+import {
+  OUTLOOK_DIRECTIONS,
+  OUTLOOK_HORIZON_DAYS,
+  OUTLOOK_MAGNITUDES,
+  type Outlook,
+  type OutlookDirection,
+  type OutlookMagnitude,
+} from "../../../src/options/outlook";
 import type { RankedCandidate, Recommendation } from "../../../src/options/recommend";
+import type { CandidateAbsence } from "../../../src/options/structure-candidates";
 import { absenceWords, volRegimeWords } from "../../../src/options/structure-words";
 import type { PlayInfo } from "../live/options";
-import { type StructuresAnswer, structuresQuery } from "../live/structures";
+import { type StructuresAnswer, structuresKey, structuresQuery } from "../live/structures";
 import { OutlookCard } from "./outlook-card";
 import { type OutlookPick, outlookPick } from "./outlook-pick";
 import { SymbolPrompt } from "./symbol-prompt";
@@ -31,21 +39,23 @@ import { SymbolPrompt } from "./symbol-prompt";
  * considered and rejected", which is a different and false claim (`recommend.ts`'s own doctrine).
  */
 
-const DIRECTIONS: readonly { readonly id: OutlookDirection; readonly label: string }[] = [
-  { id: "bullish", label: "Up" },
-  { id: "bearish", label: "Down" },
-  { id: "neutral", label: "Sideways" },
-];
+/** The words each direction is offered under. Keyed by the vocabulary in `outlook.ts`, which is the
+ *  same list the route accepts — a choice this pane offered and the route refused would come back as
+ *  a note blaming the broker for our own mismatch. */
+const DIRECTION_WORDS: Readonly<Record<OutlookDirection, string>> = {
+  bullish: "Up",
+  bearish: "Down",
+  neutral: "Sideways",
+};
+const DIRECTIONS = OUTLOOK_DIRECTIONS.map((id) => ({ id, label: DIRECTION_WORDS[id] }));
 
 /** Magnitude reads as DISTANCE for a directional view and as TIGHTNESS for a neutral one — the one
  *  thing `outlook.ts` warns a renderer not to collapse, so the words change with the direction. */
-const MAGNITUDES: readonly OutlookMagnitude[] = ["slight", "moderate", "strong"];
 const MAGNITUDE_WORDS: Readonly<Record<OutlookMagnitude, readonly [string, string]>> = {
   slight: ["a little", "loosely"],
   moderate: ["a fair amount", "fairly tightly"],
   strong: ["a lot", "very tightly"],
 };
-const HORIZONS: readonly number[] = [7, 14, 30, 45];
 
 function magnitudeLabel(magnitude: OutlookMagnitude, direction: OutlookDirection): string {
   const [distance, tightness] = MAGNITUDE_WORDS[magnitude];
@@ -90,7 +100,10 @@ function Choice<T extends string | number>({
 function Absent({
   absent,
 }: {
-  readonly absent: readonly { readonly kind: RankedCandidate["kind"]; readonly reason: string }[];
+  readonly absent: readonly {
+    readonly kind: RankedCandidate["kind"];
+    readonly reason: CandidateAbsence;
+  }[];
 }): ReactElement | null {
   if (absent.length === 0) return null;
   return (
@@ -101,8 +114,7 @@ function Absent({
       <ul>
         {absent.map((item) => (
           <li key={`${item.kind}-${item.reason}`}>
-            <strong>{structureLabel(item.kind)}</strong> —{" "}
-            {absenceWords(item.reason as Parameters<typeof absenceWords>[0])}
+            <strong>{structureLabel(item.kind)}</strong> — {absenceWords(item.reason)}
           </li>
         ))}
       </ul>
@@ -140,6 +152,10 @@ function Proposals({
   const { ranked, absent, volRegime, target, disclosure } = recommendation;
   return (
     <>
+      {/* The view these cards ANSWER, echoed from the route rather than read off the controls: the
+          controls keep moving while an answer sits on screen, and a bullish list under a sentence
+          that now says "is down" would be a false label on a real reading. */}
+      <p className="outlook-answered">Answering: {viewSentence(recommendation.outlook)}</p>
       <p className="outlook-regime">{volRegimeWords(volRegime)}</p>
       <p className="outlook-muted">
         {target === undefined
@@ -156,14 +172,18 @@ function Proposals({
         <ul className="outlook-list">
           {ranked.map((candidate) => {
             const pick = outlookPick(candidate, plays);
+            // The rung is named as unearned only when the ladder actually SAYS so. While `plays` is
+            // still loading (or its read failed) `outlookPick` reads locked — fail safe, so nothing
+            // widens — but claiming the member hasn't earned a rung we couldn't look up would be a
+            // false statement about their own progression, so the label stays neutral.
             const rung = plays?.find((p) => p.code === pick.lockedPlay)?.name;
             return (
               <OutlookCard
                 key={`${candidate.kind}-${candidate.expiration ?? candidate.daysToExpiry}`}
                 candidate={candidate}
                 useLabel={
-                  pick.locked
-                    ? `Open the chain on its legs — ${rung ?? "that rung"} isn't earned yet`
+                  pick.locked && rung
+                    ? `Open the chain on its legs — ${rung} isn't earned yet`
                     : "Open the chain on its legs"
                 }
                 onUse={(c) => onUse(c, pick)}
@@ -199,6 +219,15 @@ export function OutlookSection({
   const staged: Outlook = { symbol, direction, magnitude, horizonDays };
   const view = asked ?? staged;
   const answer = useQuery(structuresQuery(view, asked !== undefined && asked.symbol === symbol));
+  /** Asking for the SAME view again has to force the read, not just set state: the query key is the
+   *  view, so re-asking after a failure (or after a stale answer) matches a key react-query already
+   *  holds and would do nothing — the button would be dead exactly where its copy invites a retry. */
+  const onAsk = async () => {
+    const same =
+      asked !== undefined && structuresKey(asked).join() === structuresKey(staged).join();
+    setAsked(staged);
+    if (same) await answer.refetch();
+  };
 
   if (symbol === "") {
     return onSymbolCommit ? (
@@ -223,14 +252,14 @@ export function OutlookSection({
         <Choice
           legend={direction === "neutral" ? "How tightly" : "How far"}
           name="outlook-magnitude"
-          options={MAGNITUDES.map((m) => ({ id: m, label: magnitudeLabel(m, direction) }))}
+          options={OUTLOOK_MAGNITUDES.map((m) => ({ id: m, label: magnitudeLabel(m, direction) }))}
           value={magnitude}
           onChange={setMagnitude}
         />
         <Choice
           legend="Over"
           name="outlook-horizon"
-          options={HORIZONS.map((d) => ({ id: d, label: `${d} days` }))}
+          options={OUTLOOK_HORIZON_DAYS.map((d) => ({ id: d, label: `${d} days` }))}
           value={horizonDays}
           onChange={setHorizonDays}
         />
@@ -238,7 +267,7 @@ export function OutlookSection({
       <button
         type="button"
         className="btn outlook-ask"
-        onClick={() => setAsked(staged)}
+        onClick={() => void onAsk()}
         disabled={answer.isFetching}
       >
         {answer.isFetching ? "Reading the chain…" : "Show me the structures"}

@@ -233,4 +233,24 @@ describe("chainMarks", () => {
     });
     expect(marks).toEqual([190, 180]);
   });
+
+  // Found in review: filtering the pick by symbol alone left a 30-day structure's strikes outlined
+  // while the member browsed a weekly expiry that lists no such contract. A mark is a claim about
+  // THIS chain's rows, so a proposal is filtered the same two ways a draft leg is.
+  it("drops a pick whose expiry isn't the one being browsed", () => {
+    const picked = { symbol: "NVDA", strikes: [170, 180], expiration: "2026-11-20" };
+    expect(
+      chainMarks({ symbol: "NVDA", expiration: "2026-11-20", legs: [], spread: false, picked }),
+    ).toEqual([170, 180]);
+    expect(
+      chainMarks({ symbol: "NVDA", expiration: "2026-12-18", legs: [], spread: false, picked }),
+    ).toBeUndefined();
+  });
+
+  it("keeps a pick the chain carried no expiry for — there is nothing to disagree with", () => {
+    const picked = { symbol: "NVDA", strikes: [180] };
+    expect(
+      chainMarks({ symbol: "NVDA", expiration: "2026-12-18", legs: [], spread: false, picked }),
+    ).toEqual([180]);
+  });
 });

@@ -1,6 +1,13 @@
 import type { ServerResponse } from "node:http";
 import { assembleChain } from "../adapters/alpaca-recommend-chain.js";
-import type { Outlook, OutlookDirection, OutlookMagnitude } from "../options/outlook.js";
+import {
+  OUTLOOK_DIRECTIONS,
+  OUTLOOK_HORIZON_DAYS,
+  OUTLOOK_MAGNITUDES,
+  type Outlook,
+  type OutlookDirection,
+  type OutlookMagnitude,
+} from "../options/outlook.js";
 import { rankStructures } from "../options/recommend.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -29,13 +36,6 @@ import { sendJson } from "./page-shell.js";
  * 45-day view would be our own page size masquerading as a fact about the listing.
  */
 
-const DIRECTIONS: readonly OutlookDirection[] = ["bullish", "bearish", "neutral"];
-const MAGNITUDES: readonly OutlookMagnitude[] = ["slight", "moderate", "strong"];
-
-/** The horizons the pane offers, in calendar days. A value outside this set is refused rather than
- *  clamped — a 400-day "horizon" silently served as 45 days would answer a view nobody stated. */
-export const HORIZON_DAYS: readonly number[] = [7, 14, 30, 45];
-
 /** Expiration pages, floored so a one-week view still sees a spread's choices and ceilinged so the
  *  call budget above is a real ceiling rather than a typical case. */
 const MIN_PAGES = 4;
@@ -55,9 +55,11 @@ export function parseOutlook(params: URLSearchParams): Outlook | undefined {
   const direction = params.get("direction") ?? "";
   const magnitude = params.get("magnitude") ?? "";
   const horizonDays = Number(params.get("horizon") ?? "");
-  if (!DIRECTIONS.includes(direction as OutlookDirection)) return undefined;
-  if (!MAGNITUDES.includes(magnitude as OutlookMagnitude)) return undefined;
-  if (!HORIZON_DAYS.includes(horizonDays)) return undefined;
+  // The accepted set is `outlook.ts`'s, not a copy — the pane offering a value this refuses would
+  // turn every ask into a note blaming the broker for our own mismatch.
+  if (!OUTLOOK_DIRECTIONS.includes(direction as OutlookDirection)) return undefined;
+  if (!OUTLOOK_MAGNITUDES.includes(magnitude as OutlookMagnitude)) return undefined;
+  if (!OUTLOOK_HORIZON_DAYS.includes(horizonDays)) return undefined;
   return {
     symbol,
     direction: direction as OutlookDirection,
@@ -77,7 +79,7 @@ export async function serveStructures(
     sendJson(res, 400, {
       error:
         "the outlook wants ?symbol=<ticker>&direction=bullish|bearish|neutral" +
-        `&magnitude=slight|moderate|strong&horizon=${HORIZON_DAYS.join("|")}`,
+        `&magnitude=slight|moderate|strong&horizon=${OUTLOOK_HORIZON_DAYS.join("|")}`,
     });
     return;
   }

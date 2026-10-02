@@ -30,7 +30,12 @@ import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import type { PositionFocus } from "../shell/option-positions";
 import { OrdersSection } from "../shell/orders-section";
-import { chainMarks, type OutlookPick, outlookSearch } from "../shell/outlook-pick";
+import {
+  chainMarks,
+  type OutlookPick,
+  outlookSearch,
+  type PickedStructure,
+} from "../shell/outlook-pick";
 import { OutlookSection } from "../shell/outlook-section";
 import { RungChip } from "../shell/rung-chip";
 import { SectionSwitch } from "../shell/section-switch";
@@ -617,9 +622,7 @@ function TradePage(): ReactElement {
   // beside them and compared at use rather than cleared by an effect: a proposal about one
   // underlying's chain says nothing about another's, and deriving that is one fewer render pass than
   // resetting state after the fact (which would also outline the old strikes for one frame).
-  const [picked, setPicked] = useState<
-    { readonly symbol: string; readonly strikes: readonly number[] } | undefined
-  >(undefined);
+  const [picked, setPicked] = useState<PickedStructure | undefined>(undefined);
   const isSpread = navForPlay(play ?? "101").instrument === "spread";
   // Leaving the Spread rung empties the marks — a stale outline from an abandoned draft would
   // otherwise survive a switch to an unrelated ticket (`DraftOrderBuilder` itself remounts fresh
@@ -665,7 +668,11 @@ function TradePage(): ReactElement {
    *  describe a proposal this browser is looking at, and a bookmarked `?legs=` list would outline
    *  strikes against whatever the chain lists tomorrow. */
   const onOutlookUse = (pick: OutlookPick) => {
-    setPicked({ symbol: symbol ?? "", strikes: pick.strikes });
+    setPicked({
+      symbol: symbol ?? "",
+      strikes: pick.strikes,
+      ...(pick.expiration ? { expiration: pick.expiration } : {}),
+    });
     void navigate({ resetScroll: false, search: (prev) => outlookSearch(prev, pick) });
   };
   /** `?exp=` follows whichever tool changed it — the chain pane's browse or the ticket's own

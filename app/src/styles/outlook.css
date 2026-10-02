@@ -34,6 +34,14 @@
 .outlook-regime {
   font-weight: 600;
 }
+/* The view the cards below ANSWER, echoed from the route. Set apart with a rule rather than a tone
+   so it reads as a label on the answer, not as the live controls above it. */
+.outlook-answered {
+  padding-left: var(--space-2);
+  border-left: 3px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
 .outlook-disclosure {
   font-size: var(--text-xs);
 }

@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { structureLabel } from "../../../src/options/candidate-mechanics";
 import type { RankedCandidate } from "../../../src/options/recommend";
-import { boundWords } from "../../../src/options/structure-words";
+import { boundWords, noDenominatorWords, noRatioWords } from "../../../src/options/structure-words";
 
 /**
  * ONE PROPOSED STRUCTURE, AS A CARD (#3407, slice 4). Mobile-first: at 390px the member reads a
@@ -80,18 +80,14 @@ export function OutlookCard({
         <Mark
           label="Return at target"
           value={
-            score.targetReturn === undefined
-              ? "no capped loss to measure against"
-              : pct(score.targetReturn)
+            score.targetReturn === undefined ? noDenominatorWords(risk) : pct(score.targetReturn)
           }
         />
         <Mark
           label="Reward to risk"
           value={
             score.rewardToRisk === undefined
-              ? risk.maxLoss.kind === "unbounded"
-                ? "loss has no ceiling"
-                : "profit has no ceiling"
+              ? noRatioWords(risk)
               : `${score.rewardToRisk.toFixed(2)}×`
           }
         />

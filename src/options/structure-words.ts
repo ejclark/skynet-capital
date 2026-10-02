@@ -1,6 +1,6 @@
 import type { VolRegimeReading } from "./outlook.js";
 import type { CandidateAbsence } from "./structure-candidates.js";
-import type { RiskBound } from "./structure-risk.js";
+import type { RiskBound, StructureRisk } from "./structure-risk.js";
 
 /**
  * THE WORDS A RANKED LIST IS READ IN (#3407, slice 4 — the outlook-to-structure surface).
@@ -37,9 +37,17 @@ const ABSENCE_WORDS: Readonly<Record<CandidateAbsence, string>> = {
   "not-scoreable": "the payoff model couldn't mark it at your horizon",
 };
 
-/** The reason a structure isn't on the list — always a reason, never a blank. */
+/**
+ * The reason a structure isn't on the list — always a reason, never a blank. The fallback is not
+ * defensive clutter: this runs on a value that arrived over the wire, so a reason added to the
+ * engine and shipped before a client reload would otherwise render as an empty string after the
+ * dash — exactly the blank this module exists to prevent.
+ */
 export function absenceWords(reason: CandidateAbsence): string {
-  return ABSENCE_WORDS[reason];
+  return (
+    ABSENCE_WORDS[reason] ??
+    "the engine couldn't rank it, and gave a reason this app doesn't know yet"
+  );
 }
 
 /** Why no IV rank could be read. Total over `VolRegimeAbsence` (`IvAbsence` + this app's own). */
@@ -62,6 +70,31 @@ export function volRegimeWords(reading: VolRegimeReading): string {
   }
   const why = REGIME_ABSENCE_WORDS[reading.reason] ?? "no IV rank could be read";
   return `Premium can't be called rich or cheap here — ${why}.`;
+}
+
+/**
+ * WHY A RATIO IS ABSENT — read off BOTH bounds the scorer read, never inferred from one of them.
+ *
+ * `candidate-score.ts` drops each ratio for more than one reason. `targetReturn` goes when there is
+ * no capital at risk to divide by, and that happens two ways: the loss is uncapped (`capitalAtRisk`
+ * absent) or the structure cannot lose at all (`capitalAtRisk === 0` — a credit at least as wide as
+ * the spread). `rewardToRisk` goes for three: either bound uncapped, or that same zero loss.
+ *
+ * So "is maxLoss unbounded?" alone prints the OPPOSITE claim on the zero-loss case — "profit has no
+ * ceiling" beside a stated ceiling, "no capped loss" beside a stated $0.00. These read both bounds.
+ */
+export function noRatioWords(risk: StructureRisk): string {
+  if (risk.maxLoss.kind === "unbounded") return "loss has no ceiling";
+  if (risk.maxProfit.kind === "unbounded") return "profit has no ceiling";
+  return "nothing at risk to divide by";
+}
+
+/** The same distinction for a return measured against capital at risk. */
+export function noDenominatorWords(risk: StructureRisk): string {
+  if (risk.maxLoss.kind === "amount" && risk.maxLoss.amount <= 0) {
+    return "nothing at risk to measure against";
+  }
+  return "no capped loss to measure against";
 }
 
 /** A dollar bound, or the honest admission there isn't one — never a number standing in for ∞. */

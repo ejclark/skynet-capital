@@ -102,12 +102,30 @@ export function chainMarks({
   /** The Spread draft's legs — only marked when `spread` says that ticket is the one on screen. */
   readonly legs: readonly DraftLeg[];
   readonly spread: boolean;
-  readonly picked?: { readonly symbol: string; readonly strikes: readonly number[] };
+  readonly picked?: PickedStructure;
 }): readonly number[] | undefined {
+  const onThisChain = (at: string | undefined) => !(expiration && at) || at === expiration;
   const fromLegs = (spread ? legs : [])
-    .filter((leg) => leg.underlying === symbol && (!expiration || leg.expiration === expiration))
+    .filter((leg) => leg.underlying === symbol && onThisChain(leg.expiration))
     .map((leg) => leg.strike);
-  const fromPick = picked?.symbol === symbol ? picked.strikes : [];
+  // A proposal is filtered the same two ways a draft leg is. Filtering it by symbol alone would
+  // leave a 30-day structure's strikes outlined while the member browsed a weekly expiry that
+  // contains no such contract — a mark is a claim about THIS chain's rows.
+  const fromPick =
+    picked?.symbol === symbol && onThisChain(picked.expiration) ? picked.strikes : [];
   const marks = [...new Set([...fromLegs, ...fromPick])];
   return marks.length > 0 ? marks : undefined;
+}
+
+/**
+ * A structure the member picked, held while they work the chain it points at. It carries its own
+ * symbol and expiry so `chainMarks` can judge whether it still describes what is on screen — the
+ * alternative, clearing it from an effect on every navigation, outlines the old strikes for one
+ * frame on the way and still misses the cases nobody enumerated.
+ */
+export interface PickedStructure {
+  readonly symbol: string;
+  readonly strikes: readonly number[];
+  /** The expiry the structure's legs sit on; absent when the chain carried none to name. */
+  readonly expiration?: string;
 }

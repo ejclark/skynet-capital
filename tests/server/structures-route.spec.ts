@@ -1,7 +1,7 @@
 import type { ServerResponse } from "node:http";
+import { OUTLOOK_HORIZON_DAYS } from "../../src/options/outlook.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import {
-  HORIZON_DAYS,
   pagesForHorizon,
   parseOutlook,
   serveStructures,
@@ -103,7 +103,7 @@ describe("pagesForHorizon", () => {
   });
 
   it("is bounded both ways, so the stated call budget is a real ceiling", () => {
-    for (const days of HORIZON_DAYS) {
+    for (const days of OUTLOOK_HORIZON_DAYS) {
       expect(pagesForHorizon(days)).toBeGreaterThanOrEqual(4);
       expect(pagesForHorizon(days)).toBeLessThanOrEqual(10);
     }
@@ -112,7 +112,7 @@ describe("pagesForHorizon", () => {
   });
 
   it("keeps the worst-case load inside the 22 broker calls the route states", () => {
-    const worst = 2 + 2 * pagesForHorizon(Math.max(...HORIZON_DAYS));
+    const worst = 2 + 2 * pagesForHorizon(Math.max(...OUTLOOK_HORIZON_DAYS));
     expect(worst).toBeLessThanOrEqual(22);
   });
 });
