@@ -352,3 +352,117 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out, 2026-10-02 (D+1, inside `closeOutWithinDays: 6`).** Instrument cache busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Every figure below
+is a fresh pull: Yahoo **5-minute** bars for SPY/QQQ/TLT/IWM/`^TNX` re-fetched today
+(`range=60d&interval=5m`, the identical fetch legs 2–3 used), with the identical window construction
+— open of the bar starting at A → close of the bar starting at B−5m — and the release's own PDF
+fetched direct from S&P Global's live press-release index. Nothing here is carried from a prior row
+or from memory of the tape.
+
+**What printed (primary: `pmi.spglobal.com/Public/Release/PressReleases?language=en`, browser-UA
+fetch, HTTP 200, today — the plain-UA fetch is still 403, the same block every pulse has logged
+since 09-17; the release itself fetched direct from the live index's own link, HTTP 200,
+112,391 bytes).** The slot landed exactly where every prior row said it would: the PDF's own
+masthead reads verbatim **"Embargoed until 0945 EDT 1 October 2026 / 1345 UTC 1 October 2026."**
+**September 2026 S&P Global US Manufacturing PMI (final): 55.9**, up from August's 53.9 — the
+strongest reading since May 2022, output growth now running 16 months. Stays `estimate`: a clean
+date match does not clear the schema gap this doc has named on every row (no confirmed-source
+prefix for a private PMI compiler), and this lane may not self-promote on the strength of its own
+fetch.
+
+**Revision kill switch FIRED.** The flash printed **57.0** (09-23,
+[sp-global-flash-us-pmi-2026-09-23](sp-global-flash-us-pmi-2026-09-23.md)); the final came in at
+**55.9**, a **−1.1pt** revision — past this doc's own **±1.0pt** trigger ("the two-pair 0.40pt mean
+stops being the right prior and the magnitude claim is re-argued from a longer series"). The
+revision series is now three pairs, not two, and the sign flips for the first time: July **+0.1**,
+August **+0.7**, September **−1.1** — mean |revision| widens from **0.40pt (n=2)** to **0.63pt
+(n=3)**. The two-pair prior this doc's base case leaned on is retired on its own terms; the
+magnitude claim wants a longer series before the next final, not a patch here. **Sub-50 kill
+switch:** did not fire — 55.9 sits 5.9pt clear of the trigger, and the fifteen-month-plus output
+expansion stands.
+
+**FT-sp-global-manufacturing-pmi-2026-10-01-1 — KILLED.** Measured on 2026-10-01 on the bars
+above:
+
+| Instrument | 09:45–10:00 \|move\| | 10:00–10:15 \|move\| | ISM wins? |
+|---|---|---|---|
+| SPY | 0.1100% | 0.2184% | **ISM** |
+| QQQ | 0.0445% | 0.2870% | **ISM** |
+| TLT | 0.0325% | 0.0260% | S&P G |
+| IWM | 0.0434% | 0.1084% | **ISM** |
+| `^TNX` | 0.0752% | 0.0751% | S&P G (by 0.0001pp) |
+
+**ISM wins 3 of 5** (SPY, QQQ, IWM), meeting the registered kill condition verbatim — "the ISM
+window out-moves the 09:45 window in 3 or more of the five instruments." The `^TNX` cell is a
+near-exact tie (0.07515% vs 0.07521%, a 0.0001pp gap) but does not change the count either way: at
+3/5 the kill fires regardless of which way that single coin-flip-close instrument falls. The
+sibling's raw ordering statistic **holds on the manufacturing twin after all** — this doc's leg 2
+was a two-day accident, not a real refutation, exactly as the kill switch's own text anticipated.
+No void condition applies: no named non-PMI catalyst ran inside 09:30–10:30 ET on 5-minute bars,
+and `construction-spending-2026-10-01` sharing ISM's slot is excluded from voiding by the
+registration's own design.
+
+**FT-sp-global-manufacturing-pmi-2026-10-01-2 — PASSED.** Measured on the same bars, the 09:45–10:00
+window's \|move\| as a share of that day's 09:30–10:30 \|move\|, against the trailing medians fixed
+at registration:
+
+| Instrument | 09:45–10:00 share of hour | Trailing median | At or below? |
+|---|---|---|---|
+| SPY | 21.79% | 46.3% | **yes** |
+| QQQ | 7.98% | 53.4% | **yes** |
+| TLT | 25.50% | 50.8% | **yes** |
+| IWM | 10.74% | 47.4% | **yes** |
+| `^TNX` | 100.01% | 50.1% | no |
+
+**4 of 5 at or below the trailing median**, clearing the registered ≥3-of-5 bar. The degeneracy
+guard does not apply to the one instrument that fails: `^TNX`'s 09:30–10:30 \|move\| was 0.0752%,
+above the stated 0.02% floor, so it counts as a real (if extreme) observation rather than being
+excluded — the yield round-tripped within the hour (up through 10:00, down hard 10:15–10:30), so a
+genuinely small net hour move sits in the denominator of a ratio that is otherwise well-behaved for
+the other four instruments. This is the share-ratio instability the Honest-limits section flagged
+at registration, now observed on the test day itself rather than merely anticipated — and it is the
+one cell working against the hypothesis, not for it, so it does not flatter the pass.
+
+**Combined verdict — this is the registration's first named world: "-1 fails and -2 passes."**
+*Read literally against the registration's own three-way framing:* the raw ordering statistic
+(FT-1) is refuted on 2026-10-01 — ISM *does* out-move the 09:45 window, 3 of 5 — but once
+normalised to that same day's own session (FT-2), the 09:45 window is still quiet, 4 of 5 at or
+below its trailing median. **"The ledger's confound story is right"** (the registration's own
+words): the raw statistic reads as ISM dominance because manufacturing release days are loud
+sessions start to finish, not because the 09:45 S&P Global print itself carries weight — SPY's full
+09:30–10:30 hour moved **−0.51%** and QQQ **−0.56%**, both well above an ordinary hour, exactly the
+month-start-flow pattern leg 3 described. Normalised within the day, the print's own window still
+reads quiet in four of five instruments. The within-day statistic is now 2 for 2 out of sample
+(this doc's own leg 3 in-sample plus this close-out), while the raw ordering statistic is 1 for 2
+(failed in-sample here on 09-09, held on the live test day) — the asymmetry the registration was
+designed to surface.
+
+**Vs. the stance.** **Tradeability-nil holds, confirmed rather than merely unrefuted.** Nothing
+traded this print: `symbols: []`, no macro-keyed playbook, and the corridor made attribution
+hopeless regardless (seven same-day tracked events, two sharing the 10:00 ET slot). The
+**informational-location** claim is also confirmed on the clearest test it will get: the revision
+was the largest and first negative-signed one in the sample (−1.1pt), it landed on a day this
+close-out's own share statistic says was quiet for the print's own window in 4 of 5 instruments,
+and the flash — not the final — carried the surprise-testable content back on 09-23. **One thing
+moves:** the ±1.0pt revision magnitude kill switch fired, so the "revision inside ±1.0pt" base case
+this doc carried since 09-24 is retired; the next first-working-day final should anchor on a wider
+band (now 0.1/0.7/1.1 across three observations, not a tight 0.4pt prior).
+
+**Honest limits.** **n=3 release days for the window study, now with one live out-of-sample
+observation added rather than a fourth in-sample one** — the designed pair closes this
+investigation's measurement budget; a true re-estimate wants the next several first-working-day
+releases, not retrofitting these three. **The `^TNX` cells in both tables are close calls built on
+tiny absolute moves** (0.075% hour move, 0.0001pp separating the two FT-1 legs) — a few ticks of
+quote noise could flip either one, and neither flip would change either test's verdict (FT-1 stays
+at 3/5 either way; FT-2 stays at 4/5 either way), which is the reason the registration bolted a
+design-pair structure onto a single-day test rather than trusting one coin flip alone. **The
+revision series is still short** — three pairs, two of them (July, September-vs-flash) resting on
+one primary term each rather than two; the 0.73pt mean is a wider prior than 0.40pt, not a
+confident one. **Nothing here tests the survey's economic content**, only where its information
+lands and whether either statistic the sibling pair measures replicates. This document goes quiet
+on its own stance as of this `## Outcome` section — both registered forward tests are now scored
+and neither remains open.
