@@ -431,6 +431,16 @@ close-out); none is proposed.
 
 **Nothing blocked this session.**
 
+**Forward-test-due re-dispatch (2026-10-02).** `FT-…-1` and `FT-…-4` reached their 2026-10-02
+score-by; both re-scored from freshly re-pulled instrument data (`market-data.mjs`, cache busted
+again this session) rather than yesterday's close-out prose. `FT-…-1`: SPY's 09-29→09-30
+close-to-close is **−0.205%** (764.20 → 762.63) — at/below the registered 0.31% floor, so the
+kill-switch condition fires. Scored **kill**; added to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list. `FT-…-4`: WU's 09-29→09-30
+close-to-close is **−1.172%** (5.97 → 5.90) — down, but short of the registered 1.58% kill
+threshold. Scored **pass**. `FT-…-2` (score-by 2026-10-06) and `FT-…-3` (score-by 2026-10-09)
+remain `_open_` — not yet due. No assessment reopened; `## Outcome` above is otherwise unchanged.
+
 **Last assessed:** 2026-10-01 (close-out — this document goes quiet, except for the four forward tests
 above, which re-open this lane via `forward-test-due` on or after their own score-by dates)
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["pce-2026-09-30","ism-manufacturing-2026-10-01","jobs-2026-10-02","ism-services-2026-10-05","mu-2026-09-30-print"],"screenStreak":0,"blocked":[]} -->
