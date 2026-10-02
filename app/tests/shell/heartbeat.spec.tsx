@@ -181,7 +181,8 @@ describe("RollCallList — an On line says what it is waiting for", () => {
     next = staleDesk;
     render(withClient(<HeartbeatSection deskId="sauron" />));
     expect(await screen.findByText("Which playbooks this bot runs")).toBeInTheDocument();
-    expect(screen.getByText("Next window: Nov 2")).toBeInTheDocument();
+    // Matched loosely: the date is formatted in the reader's own locale ("Nov 2", "2. Nov.").
+    expect(screen.getByText(/^Next window: .*2/)).toBeInTheDocument();
     expect(
       screen.getByText(
         "On, but the next print date for GOOG (2026-10-28) is an estimate — only a confirmed date opens a position.",

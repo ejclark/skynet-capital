@@ -117,16 +117,15 @@ describe("readPlaybookWindow — what an armed playbook is actually waiting for"
   });
 });
 
-describe("readPlaybookWindow — against the live house roster", () => {
-  it("reports the two date-keyed house plays' real standing today", async () => {
-    const { S1_NVDA, G1_GOOG } = await import("../../src/playbooks/registry.js");
-    const now = new Date();
-    for (const play of [S1_NVDA, G1_GOOG]) {
-      const read = readPlaybookWindow(play, "no-window", now);
-      // Either there IS a window ahead (a confirmed print is on the calendar) or the reason says
-      // which of the two calendar causes is holding it — never the bare "it trades when its
-      // condition holds" that this module exists to replace.
-      expect(read.nextEntry !== null || /print date/.test(read.reason)).toBe(true);
-    }
+describe("the live house roster declares what opens each window", () => {
+  /** The registry half of this read: the calendar diagnosis is only said for a playbook that
+   *  declares the calendar opens its window, so a date-keyed house play that forgets `keyedOn`
+   *  silently falls back to the generic horizon sentence. Asserted against the declarations rather
+   *  than against today's calendar: a routine print-date refresh (the documented unlock for
+   *  date-keyed entries) must never be able to turn this spec red. */
+  it("keys S1-NVDA and G1-GOOG on earnings, and TACO-DJT on an event", async () => {
+    const { S1_NVDA, G1_GOOG, TACO_DJT } = await import("../../src/playbooks/registry.js");
+    expect([S1_NVDA.keyedOn, G1_GOOG.keyedOn]).toEqual(["earnings", "earnings"]);
+    expect(TACO_DJT.keyedOn).toBe("event");
   });
 });

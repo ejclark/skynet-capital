@@ -88,6 +88,14 @@ const armedHeartbeat = {
   available: true,
   heartbeat: {
     ...heartbeat.heartbeat,
+    // The verdict table and the roll call BOTH come from `armedVerdicts`, because
+    // `botHeartbeatView` derives both from the same `latestVerdictPass` — a frame showing one
+    // roster in the table and another in the roll call is a state production cannot reach.
+    playbooks: armedVerdicts.map((v) => ({
+      ...v,
+      since: "2026-10-01T13:30:00Z",
+      sinceIsLowerBound: false,
+    })),
     rollCall: playbookRollCall(armedVerdicts, NOW, registeredPlaybooks(), PLAYBOOK_WIRING_GAPS, [
       ...UPCOMING_PRINTS,
       { symbol: "NVDA", date: "2026-11-01", status: "confirmed", source: "IR: shoot fixture" },

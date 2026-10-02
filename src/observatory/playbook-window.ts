@@ -112,7 +112,7 @@ function waitingReason(playbook: Playbook, now: Date, calendar: readonly Earning
   }
   return (
     (playbook.keyedOn === "earnings" ? calendarCause(playbook, now, calendar) : undefined) ??
-    `On, with no day inside the next ${NEXT_ENTRY_HORIZON_DAYS} on which its rule would open a position.`
+    `On, with no day inside the next ${NEXT_ENTRY_HORIZON_DAYS} days on which its rule would open a position.`
   );
 }
 

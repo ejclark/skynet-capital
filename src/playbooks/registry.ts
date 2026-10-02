@@ -241,11 +241,6 @@ export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
     "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
 };
 
-/** Every house playbook id, in roster order — the list the roll call checks each bot against. */
-export function houseRosterIds(): readonly string[] {
-  return ROSTER.map((p) => p.id);
-}
-
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:
  *  reading what an armed playbook is waiting for means asking its own `desiredState`
  *  (`observatory/playbook-window.ts`), which an id cannot answer. */
