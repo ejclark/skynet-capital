@@ -36,6 +36,19 @@ export interface RollCallLine {
   readonly status: RollCallStatus;
   readonly mode?: string;
   readonly reason: string;
+  /** `YYYY-MM-DD` its own rule would next open a position. Absent for a playbook with no datable
+   *  window, one already inside its window, and anything not on. */
+  readonly nextEntry?: string;
+}
+
+/** "Oct 28" — the day a playbook's own rule would next open a position. Date-only in, so it is
+ *  parsed at UTC noon: a bare `YYYY-MM-DD` read in a negative-offset timezone prints the day
+ *  before. */
+export function entryDateText(date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). */
