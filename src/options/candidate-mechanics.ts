@@ -31,7 +31,9 @@ import type { StructureKind } from "./structure-templates.js";
  * PURE: no I/O, no clock, no locale lookup. The horizon is stated in days, exactly as it came in.
  */
 
-/** Display names, in the order a chain quotes them. */
+/** Display names, in the order a chain quotes them. Exported through `structureLabel` so a
+ *  renderer heads a card with the same words the mechanics sentence uses — one table, not two
+ *  (#3407: the Outlook pane names each candidate above its own sentence). */
 const STRUCTURE_LABELS: Readonly<Record<StructureKind, string>> = {
   "long-call": "Long call",
   "bull-call-spread": "Bull call spread",
@@ -43,6 +45,11 @@ const STRUCTURE_LABELS: Readonly<Record<StructureKind, string>> = {
   "short-strangle": "Short strangle",
   "long-call-butterfly": "Long call butterfly",
 };
+
+/** The structure's display name — total over `StructureKind`, so there is no unnamed kind. */
+export function structureLabel(kind: StructureKind): string {
+  return STRUCTURE_LABELS[kind];
+}
 
 /** Where on the price line the structure is above water at the horizon. */
 type ProfitRegion =

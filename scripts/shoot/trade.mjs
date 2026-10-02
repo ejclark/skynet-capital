@@ -6,6 +6,7 @@
 import { resolve } from "node:path";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
+import { outlookAnswer } from "./trade-outlook-fixture.mjs";
 import { recentOrdersActivity } from "./trade-recent-orders-fixture.mjs";
 
 const play = (code, name, tldr, kind, side, optionType, state, opensAfter) => ({
@@ -790,6 +791,9 @@ const { page, origin, shoot, close } = await openShell({
     // The multi-leg builder's lifecycle (#3407 P3 slice 1) — one scripted answer per action, in
     // the order the scene clicks them; the last answer repeats so a stray re-read stays put.
     "/api/trade/draft": () => currentDraftScript.shift() ?? currentDraftFallback,
+    // The Outlook pane's ranked structures (#3407 slice 4) — pathname-matched, so one key covers
+    // any `?direction=&magnitude=&horizon=`.
+    "/api/trade/structures": () => outlookAnswer,
   },
 });
 
@@ -1590,5 +1594,36 @@ await shootMilestoneStrip("trade-milestone-strip-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByText("Milestone · Trading ladder").waitFor();
 await shootMilestoneStrip("trade-milestone-strip-desktop");
+
+// THE OUTLOOK PANE (#3407, slice 4 — the outlook-to-structure surface). An AUXILIARY entry into
+// the bench, never its home: `?section=outlook` opens it, the view is stated with three segment
+// rows, and the ask is explicit because one read is up to 22 broker calls. What the frames have to
+// prove is the honesty, not the layout: the long call's ceiling reads "unlimited" rather than a
+// sampled figure, its reward-to-risk says which side has no ceiling, the vol regime says WHY it
+// can't be called rich or cheap, and one structure the chain couldn't carry is folded underneath
+// with its reason rather than quietly missing. PHONE FIRST.
+currentPlays = plays;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?section=outlook&symbol=NVDA&play=101`);
+await page.getByText(/Nothing is read until you ask/).waitFor();
+await page.getByRole("button", { name: "Show me the structures" }).click();
+await page.getByText("Bull call spread").waitFor();
+await page.getByText(/couldn't be ranked/).waitFor();
+const shootOutlook = shooter(page, resolve("docs/shots/outlook"));
+// The controls frame first (the view, stated), then the answer — at 390px they do not share a
+// screen, and the answer is the one that carries the honesty rules, so it gets its own frame.
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+await shootOutlook("outlook-view-phone");
+await page.getByRole("button", { name: "Show me the structures" }).scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy({ top: 120, left: 0 }));
+await shootOutlook("outlook-phone");
+// Docked, the pane is full-span below the ticket (it is one of the three that never dock on their
+// own), so the desktop frame scrolls to it — what it proves is that the wide layout ADDS ROOM for
+// the marks that were one scroll away at 390px, not that it introduces a figure the phone lacks.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByText("Bull call spread").waitFor();
+await page.locator("#bench-outlook").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy({ top: -24, left: 0 }));
+await shootOutlook("outlook-desktop");
 
 await close();
