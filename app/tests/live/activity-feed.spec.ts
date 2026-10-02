@@ -55,6 +55,14 @@ describe("buildActivityFeed", () => {
     expect(keys(feed)).toEqual(["filing:4271", "t-early"]);
   });
 
+  it("survives a server that doesn't send `at` yet, rather than throwing mid-render", () => {
+    // The field is new in this slice; a new bundle can reach an old server for the length of a
+    // rolling deploy. Sorting `undefined` would white-screen the page — this sorts it last.
+    const stale = { ...trade({ key: "t-stale" }), at: undefined } as unknown as WireTrade;
+    const feed = buildActivityFeed([stale, trade({ key: "t-fresh" })], [filing()]);
+    expect(keys(feed)).toEqual(["t-fresh", "filing:4271", "t-stale"]);
+  });
+
   it("orders two events that share an instant deterministically, so a re-render never reshuffles", () => {
     const at = "2026-10-01T18:30:00.000Z";
     const first = buildActivityFeed([trade({ key: "t-b", at }), trade({ key: "t-a", at })], []);
@@ -162,8 +170,22 @@ describe("toggleActivityQualifier", () => {
     expect(toggleActivityQualifier("nvda is:feedback", "is:feedback")).toBe("nvda");
   });
 
-  it("treats show:shipped as a flag in no group, so it survives a kind change", () => {
+  it("treats show:shipped as a flag in no group, so it survives a kind change within its kind", () => {
     expect(toggleActivityQualifier("show:shipped", "is:feedback")).toBe("show:shipped is:feedback");
+  });
+
+  it("clears the other kind's tokens, so a chip that unmounts can never strand one", () => {
+    // Pressing Ideas while Buys is on: the Side group is no longer rendered, so `is:buy` would
+    // otherwise be inert AND unreachable — removable only by hand-editing the filter box.
+    expect(toggleActivityQualifier("is:buy", "is:feedback")).toBe("is:feedback");
+    expect(toggleActivityQualifier("is:bot is:sell", "is:feedback")).toBe("is:feedback");
+    // And the mirror: pressing Trades drops the filings flag, whose chip goes with it.
+    expect(toggleActivityQualifier("show:shipped", "is:trade")).toBe("is:trade");
+    expect(toggleActivityQualifier("is:feedback show:shipped", "is:buy")).toBe("is:buy");
+  });
+
+  it("never clears a bare search term — NVDA still means NVDA whichever kind is up", () => {
+    expect(toggleActivityQualifier("nvda is:buy", "is:feedback")).toBe("nvda is:feedback");
   });
 });
 

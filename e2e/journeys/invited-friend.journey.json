@@ -123,13 +123,10 @@
         },
         {
           "id": "s3",
-          "goto": "/app/activity?section=pnl",
-          "sees": "Activity → Booked P&L: realized P&L per account across the league, each a link into its page; offline nothing is booked yet (the frozen fixture has no closes)",
-          "ears": "WHEN the invited friend opens Booked P&L, the app shall show realized P&L for every member's accounts, the friend's and the owner's alike.",
-          "expect": [
-            { "url": "/app/activity?section=pnl" },
-            { "role": "heading", "name": "Booked P&L" }
-          ],
+          "goto": "/app/activity",
+          "sees": "Activity → the Booked P&L strip above the feed: realized P&L per account across the league, each a link into its page, on screen without a tap (#784 slice 3 took it out of the section switch); offline nothing is booked yet (the frozen fixture has no closes)",
+          "ears": "WHEN the invited friend opens Activity, the app shall show realized P&L for every member's accounts, the friend's and the owner's alike, without paging away from the feed.",
+          "expect": [{ "url": "/app/activity" }, { "role": "heading", "name": "Booked P&L" }],
           "judge": "can this reader tell where they stand on what has been closed?"
         }
       ]

@@ -1,8 +1,9 @@
 /* ONE FEED + ONE STRIP (#784 slice 3) — Activity's two remaining visual jobs, after booked P&L left
    the section switch and filings stopped being a widget of their own. Tokens only.
 
-   Mobile-first (`CLAUDE.md`): every rule here is written for 390px first, and the one media query
-   below only gives the strip more room — never a new concept. */
+   Mobile-first (`CLAUDE.md`): every rule here is written for 390px first and there is no breakpoint
+   at all — the strip's cells flex-wrap, so a wider viewport fits more of them per row and nothing
+   else changes. A layout that needs no media query to expand is the rule working, not a gap. */
 
 /* The feed: both kinds as sibling rows at one rhythm. `.wire-trade` (wire.css) already sets the
    card; a filing row matches it deliberately, because a mixed list where the two kinds look like

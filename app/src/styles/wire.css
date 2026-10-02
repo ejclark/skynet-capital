@@ -418,7 +418,15 @@
   flex-direction: column;
   gap: 4px;
 }
+/* A comment row's own layout, stated rather than inherited: these rules used to ride on
+   `.wire-fdbk li`, which matched every descendant `<li>` as well as the card itself. With the
+   filing row on its own class (#784 slice 3) the nesting no longer does that for free, and without
+   it a comment's text and its date run together. */
 .wire-filing .fc-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
   padding: 0 0 6px;
   border-bottom: 1px dashed var(--border);
 }

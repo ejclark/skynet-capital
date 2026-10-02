@@ -82,12 +82,17 @@ const SECTIONS: readonly PageSection<ActivitySection>[] = [
 function WireControls({
   query,
   filter,
+  feedbackEnabled,
   onChange,
   section,
   onSection,
 }: {
   readonly query: string;
   readonly filter: ActivityFilter;
+  /** With the feedback lane unwired the feed has exactly ONE kind, so the kind and filings chips
+   *  are controls with nothing to do — and pressing "Ideas" would blame a member's filter for a
+   *  deployment fact. The feed says why in its own note instead. */
+  readonly feedbackEnabled: boolean;
   readonly onChange: (next: string) => void;
   readonly section: ActivitySection;
   readonly onSection: (next: ActivitySection) => void;
@@ -109,16 +114,17 @@ function WireControls({
     </>
   );
   const tradesInScope = !filter.qualifiers.includes("is:feedback");
+  const filings = feedbackEnabled && filingsInScope(filter);
   return (
     <>
       <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
       {section === "feed" ? (
         <>
           <hr />
-          {group("Kind", KIND_CHIPS)}
+          {feedbackEnabled ? group("Kind", KIND_CHIPS) : null}
           {tradesInScope ? group("Side", SIDE_CHIPS) : null}
           {tradesInScope ? group("Desks", DESK_CHIPS) : null}
-          {filingsInScope(filter) ? group("Filings", FILING_CHIPS) : null}
+          {filings ? group("Filings", FILING_CHIPS) : null}
         </>
       ) : null}
     </>
@@ -268,11 +274,19 @@ function FeedSection({
         </button>
       ) : null}
       {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
-      {/* An honesty seam the three-widget page also carried: with the feedback lane unwired, the
-          absence of filings is a deployment fact, not "nobody has filed anything". */}
+      {/* Two honesty seams the three-widget page also carried, and the feed owes a reader both: an
+          unwired lane is a deployment fact rather than "nobody has filed", and a wired-but-empty one
+          is an invitation rather than a gap. Neither is the feed's own empty state, which is about
+          the filter. */}
       {wire.feedbackEnabled ? null : (
         <p className="note">Filing ideas isn't switched on yet, so only trades show here.</p>
       )}
+      {wire.feedbackEnabled && wire.feedback.length === 0 ? (
+        <p className="note">
+          No ideas filed yet — be the first: tell Moneypenny, and your filings are listed on{" "}
+          <a href="/app/accounts?section=feedback">your Profile</a>.
+        </p>
+      ) : null}
       <FilingOnramp />
     </section>
   );
@@ -354,6 +368,7 @@ function WirePage(): ReactElement {
         <WireControls
           query={query}
           filter={filter}
+          feedbackEnabled={feed.feedbackEnabled}
           onChange={setFilter}
           section={section}
           onSection={setSection}

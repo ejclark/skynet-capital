@@ -55,19 +55,31 @@ export type ActivityFeedItem =
 /**
  * Both kinds into one list, newest first. The tie-break on `key` is not decoration: two fills can
  * share a millisecond, and a list whose order flips between renders makes a member re-read it.
+ *
+ * `instant()` is a deploy guard, not paranoia: `at` is a field `/api/wire` GAINED in this slice, so
+ * a browser holding the new bundle can reach a server still on the old one for the length of a
+ * rolling deploy. Sorting `undefined` would throw inside render and white-screen the whole page; an
+ * event with no instant sorts last instead, which is a feed slightly out of order for a minute.
  */
+const instant = (at: string | undefined): string => at ?? "";
+
 export function buildActivityFeed(
   trades: readonly WireTrade[],
   filings: readonly WireFeedbackItem[],
 ): ActivityFeedItem[] {
   const items: ActivityFeedItem[] = [
     ...trades.map(
-      (trade): ActivityFeedItem => ({ key: trade.key, at: trade.at, kind: "trade", trade }),
+      (trade): ActivityFeedItem => ({
+        key: trade.key,
+        at: instant(trade.at),
+        kind: "trade",
+        trade,
+      }),
     ),
     ...filings.map(
       (filing): ActivityFeedItem => ({
         key: `filing:${filing.issueNumber}`,
-        at: filing.at,
+        at: instant(filing.at),
         kind: "feedback",
         filing,
       }),
@@ -95,6 +107,21 @@ const EXCLUSIVE_GROUPS: readonly (readonly ActivityQualifier[])[] = [
   ["is:buy", "is:sell"],
   ["is:bot", "is:human"],
 ];
+
+/** Which kind each qualifier belongs to. This is what stops a chip STRANDING another one: the
+ *  controls row only renders a group whose kind is still in scope, so pressing "Ideas" while "Buys"
+ *  is on would otherwise leave `is:buy` in the query with no chip left to clear it — inert, and
+ *  removable only by hand-editing the filter box. Turning any chip on drops the other kind's tokens
+ *  (see `toggleActivityQualifier`), so what is in the query is always what is on screen. */
+const QUALIFIER_KIND: Record<ActivityQualifier, "trade" | "feedback"> = {
+  "is:trade": "trade",
+  "is:buy": "trade",
+  "is:sell": "trade",
+  "is:bot": "trade",
+  "is:human": "trade",
+  "is:feedback": "feedback",
+  "show:shipped": "feedback",
+};
 
 export interface ActivityFilter {
   readonly terms: readonly string[];
@@ -162,11 +189,21 @@ export function matchesActivity(item: ActivityFeedItem, filter: ActivityFilter):
   return filter.terms.every((term) => text.includes(term));
 }
 
-/** Chip toggle with the exclusive-group rule (the blotter's behavior, on this page's groups). */
+/**
+ * Chip toggle, two rules. The blotter's exclusive-group rule (picking a sibling replaces it, never
+ * stacks a contradiction), plus: turning a chip ON clears every active qualifier belonging to the
+ * OTHER kind. Bare search terms are never touched — "NVDA" still means NVDA whichever kind is up.
+ */
 export function toggleActivityQualifier(query: string, qualifier: ActivityQualifier): string {
   const tokens = query.split(/\s+/).filter(Boolean);
   const active = tokens.some((t) => t.toLowerCase() === qualifier);
   const siblings = EXCLUSIVE_GROUPS.find((group) => group.includes(qualifier)) ?? [qualifier];
   const kept = tokens.filter((t) => !(siblings as readonly string[]).includes(t.toLowerCase()));
-  return (active ? kept : [...kept, qualifier]).join(" ");
+  if (active) return kept.join(" ");
+  const wanted = QUALIFIER_KIND[qualifier];
+  const compatible = kept.filter((t) => {
+    const kind = QUALIFIER_KIND[t.toLowerCase() as ActivityQualifier];
+    return kind === undefined || kind === wanted;
+  });
+  return [...compatible, qualifier].join(" ");
 }
