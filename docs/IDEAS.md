@@ -1655,6 +1655,27 @@ already applied to the strike-pick row highlight (PR #3510) — pick a wash opac
 clearly present without being loud.
 _(src: Eric · while: chain header/shading work, `straddle-view.tsx`/`straddle.css`)_
 
+### No net watches for a green PR that stops moving — only for a red one
+Found 2026-10-02 while landing plan #3665's last slice: PR #4449 sat `MERGEABLE`, `CLEAN`, not a
+draft, both required checks passing, and **unarmed**, for 29 hours. Nothing noticed, because every
+net we have watches for red and this failure mode is green. Root cause in `docs/LESSONS.md`
+(2026-10-02) and the one-line fix in #4477 — but that fix closes one cause, not the class: #4351 is
+the same symptom from a rate-limit cause, so it is already twice. The cheap sweep: over open PRs,
+flag any whose check runs are all green and whose `autoMergeRequest` is null and which carries no
+`hold-merge` — that single query would have caught both in minutes. Candidate home is the
+main-branch tick that already runs `deploy-lag.mjs` and the conflict sweep, so it costs no new
+schedule.
+_(src: Claude · while: landing plan #3665 slice 5, diagnosing why #4449 never armed)_
+
+### An allowlist that must mirror another list in the same file is drift waiting to happen
+Found 2026-10-02 (#4477): `pipeline.yml`'s arm job allow-listed four of the five pull-request
+actions the same file's `types:` declares, ~250 lines away. A spec now pins those two lists
+together, but that is one instance of a class — `workflow-lint.mjs` is where the class could live
+(any `fromJSON([...])` action list in a job must cover its workflow's own `types:`, unless the job
+names the exclusion). Worth doing only if a second instance turns up; noted so the second one is
+recognised as a pattern rather than re-diagnosed.
+_(src: Claude · while: writing the #4477 fix's falsifier spec)_
+
 ## The chat/companion feature will likely change alongside orchestration work
 
 Eric, on why feedback filing is quiet (#3818 open question 4): "no one is really using the app —

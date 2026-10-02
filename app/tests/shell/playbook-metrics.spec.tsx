@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { PlaybookMetricsView } from "../../src/live/playbook-performance";
 import {
   AccountPlaybookMetrics,
+  cycleLabel,
   HousePlaybookMetrics,
   holdLabel,
   mixLabel,
@@ -30,6 +31,7 @@ const row: PlaybookMetricsView = {
   shortestHold: { holdMs: 2 * HOUR + 15 * 60_000 },
   byDirection: { long: 3, short: 1 },
   byInstrument: { stock: 0, call: 4, put: 0 },
+  byCycle: { weekly: 1, monthly: 3, quarterly: 0 },
 };
 
 describe("AccountPlaybookMetrics", () => {
@@ -42,6 +44,22 @@ describe("AccountPlaybookMetrics", () => {
   it("renders the trade count with only the directions and instruments that happened", () => {
     render(<AccountPlaybookMetrics accountName="Joe" scope={{ kind: "read", row }} />);
     expect(screen.getByText("3 long · 1 short · 4 call")).toBeInTheDocument();
+  });
+
+  it("shows the expiration-cycle mix, shortest-dated first", () => {
+    render(<AccountPlaybookMetrics accountName="Joe" scope={{ kind: "read", row }} />);
+    expect(screen.getByText("Expiration cycle")).toBeInTheDocument();
+    expect(screen.getByText("1 weekly · 3 monthly")).toBeInTheDocument();
+  });
+
+  it("says a share-only playbook has no expirations rather than printing zeros", () => {
+    const shares = {
+      ...row,
+      byInstrument: { stock: 4, call: 0, put: 0 },
+      byCycle: { weekly: 0, monthly: 0, quarterly: 0 },
+    };
+    render(<AccountPlaybookMetrics accountName="Joe" scope={{ kind: "read", row: shares }} />);
+    expect(screen.getByText(/shares carry no expiration/)).toBeInTheDocument();
   });
 
   it("spells out the sign on P/L in dollars and percent, never by colour alone", () => {
@@ -109,5 +127,17 @@ describe("holdLabel", () => {
 describe("mixLabel", () => {
   it("drops the zero counts", () => {
     expect(mixLabel({ stock: 2, call: 0, put: 1 })).toBe("2 stock · 1 put");
+  });
+});
+
+describe("cycleLabel", () => {
+  it("lists only the cycles that were traded, shortest-dated first", () => {
+    expect(cycleLabel({ weekly: 2, monthly: 0, quarterly: 1 })).toBe("2 weekly · 1 quarterly");
+  });
+
+  it("says why there is nothing to show when no option was traded", () => {
+    expect(cycleLabel({ weekly: 0, monthly: 0, quarterly: 0 })).toBe(
+      "no option trades — shares carry no expiration",
+    );
   });
 });

@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FOOTER, LABELS } from "./labels.mjs";
+import { routeRelay } from "./relay.mjs";
 import { routeShipped } from "./shipped.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
@@ -130,7 +131,8 @@ export function researchCapNow(readMode = readWorkMode, budgetCap = loadDispatch
 
 /** Something landed on main (or the `scan` command re-ran the sweep by hand — same path, never a
  *  second one that can drift). One issue per never-assessed event, deduped by exact open-issue
- *  title; plus the close-the-loop pass below. */
+ *  title; plus the close-the-loop pass below, and the relay that keeps a sliced issue's remainder
+ *  pullable after the issue itself closes (#3818 slice 4, relay.mjs). */
 export function routeSweep(deps) {
   const { dueEvents = [], openIssueTitles = [] } = deps;
   const intents = [];
@@ -141,7 +143,7 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return [...intents, ...routeReceipts(deps), ...routeShipped(deps)];
+  return [...intents, ...routeReceipts(deps), ...routeShipped(deps), ...routeRelay(deps)];
 }
 
 /** `[event-research] <event-id>` — the receipt title this lane writes and reads back. */

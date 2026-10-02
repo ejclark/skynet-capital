@@ -109,6 +109,23 @@ robust, alpha fragile — is the finding.
   without a second confirming instance at a comparably elevated yield level — n=1 killed on its first
   out-of-sample test, same shape as the housing-starts ladder above.
 
+- **A UN mandate deadline landing on quarter-end reads as contaminated by construction, tested
+  against the registered 0.31% SPY floor (FT-unsc-haiti-gsf-mandate-expiry-2026-09-30-1)** — added
+  2026-10-02 from the
+  [unsc-haiti-gsf-mandate-expiry-2026-09-30 close-out](events/unsc-haiti-gsf-mandate-expiry-2026-09-30.md).
+  SPY's actual 2026-09-30 close-to-close move was **−0.205%** (764.20 → 762.63, re-pulled
+  cache-busted `market-data.mjs` bars), *below* the six-observation Haiti-deadline median (0.31%)
+  this ledger's initial research treated as the floor a contaminated date would clear — the
+  kill-switch condition exactly as registered. **What this does and does not refute:** the
+  corridor density this leg measured is a fact (56 adjacent events, 17 sharing the date itself, two
+  of the last six September quarter-ends historically clearing 1.04%), but the close-out's own read
+  already named why this particular quarter-end stayed quiet — the government-funding-deadline
+  branch had been defanged three weeks earlier (H.R. 6500 signed 2026-09-02) and PCE printed
+  without a surprise large enough to move SPY beyond its ordinary range. Do not re-propose "UN
+  deadline + quarter-end density predicts an outsized move" without first checking whether the
+  corridor's other high-impact legs are still live going into the date, not merely present on the
+  calendar.
+
 - **A scheduled reset of the same quantity a conditional threshold test checks defuses that test by a
   measured base rate (FT-russell-style-quarter-end-capping-effective-2026-09-30-1 and -2)** — added
   2026-10-01 from the
