@@ -74,3 +74,6 @@
 @import "./guidance.css";
 @import "./desk-alerts.css";
 @import "./wire.css";
+/* after wire.css, not in alphabetical seat: its `.wire-filing` rules sit beside `.wire-trade`'s card
+ * and read as a pair only when they cascade in that order (#784 slice 3). */
+@import "./activity-feed.css";

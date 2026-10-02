@@ -1,0 +1,102 @@
+/* ONE FEED + ONE STRIP (#784 slice 3) — Activity's two remaining visual jobs, after booked P&L left
+   the section switch and filings stopped being a widget of their own. Tokens only.
+
+   Mobile-first (`CLAUDE.md`): every rule here is written for 390px first, and the one media query
+   below only gives the strip more room — never a new concept. */
+
+/* The feed: both kinds as sibling rows at one rhythm. `.wire-trade` (wire.css) already sets the
+   card; a filing row matches it deliberately, because a mixed list where the two kinds look like
+   different components reads as two widgets again. */
+.wire-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wire-filing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: calc(var(--row-py) - 4px) 10px;
+  font-size: 12.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.wire-filing > a {
+  font-weight: 600;
+  /* one filing's long title must wrap inside the row, never widen the feed at phone width. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.wire-filing > a:hover {
+  color: var(--accent);
+}
+/* The row's leading token, at `.wire-side`'s exact weight and size so the feed's left edge is one
+   column: a trade says BUY/SELL there, a filing says Bug/Feature/Idea. The icon rides WITH the word
+   and never alone (`docs/BRAND.md` → Accessibility: a signal is never one 12px glyph). */
+.wire-filing-kind {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The strip: booked P&L as a standing snapshot above the feed, matching the feed panel's own read
+   cap so the two left edges align. The cells WRAP at every width rather than scrolling sideways:
+   the whole ranking is the point, and a horizontally scrolled row hides part of it behind a gesture
+   with no affordance — a figure cut mid-number reads as broken, not as "there is more". The cost is
+   that a large league is several rows tall here; a friends-and-family one is not, and a cap is a
+   change to make when a real league earns it, not on a guess. */
+.pnl-strip {
+  max-width: var(--col-read);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: var(--panel-p);
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.pnl-cells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* `flex: 1 1 140px` rather than intrinsic width: the number of cells per row is then a property of
+   the viewport, not of how long the longest display name happens to be — two at 390px, four or five
+   at the reading width. The cell wraps INSIDE itself rather than truncating, so a long persona name
+   pushes its own figure onto a second line instead of ellipsing away the only thing that says whose
+   figure it is. Nothing in this strip is ever abbreviated: it is four short facts, not a table. */
+.pnl-cells li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 6px 9px;
+  font-size: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.pnl-cells a {
+  font-weight: 600;
+}
+.pnl-cells a:hover {
+  color: var(--accent);
+}
+.pnl-cells .num {
+  font-weight: 600;
+  white-space: nowrap;
+}
