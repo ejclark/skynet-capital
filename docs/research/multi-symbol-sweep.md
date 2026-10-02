@@ -738,6 +738,24 @@ robust, alpha fragile — is the finding.
   against the wedge — the street's pre-print range (-13 to -30bp) undersold this one by 6-23bp, and
   the gap it was meant to close was exactly as large as that undersell implies.
 
+- **A fixed-band spread kill switch, tested against the series it was written for
+  (FT-pmms-2026-10-01-1)** — added 2026-10-02 from the
+  [pmms-2026-10-01 close-out](events/pmms-2026-10-01.md). Registered 2026-09-16: the PMMS 30-year
+  average modelled as the window-average CMT 10Y plus a trailing spread (36 paired 2026 weeks, mean
+  1.967pp, last-13-week mean 1.987pp, sd 0.019), with the kill switch naming a trailing-13-week
+  spread outside **1.94–2.04pp** as a regime break distinct from a point-error miss. The 2026-10-01
+  print landed at 7.28% against a 7.215% projection ((09-24…09-30 average 10Y 5.228%) + 1.987pp) —
+  a 6.5bp miss, inside the point forecast's own ±10bp tolerance. But the realized spread, 2.052pp,
+  printed outside the registered band for the first time in the sample, after two prior
+  post-registration prints (09-17: 1.972pp; 09-24: 2.034pp) that both stayed inside it — three
+  straight readings drifting 1.972 → 2.034 → 2.052pp. **What this does and does not refute:** the
+  transmission mechanism — PMMS lags the 10Y plus a roughly stable spread — is not refuted; the
+  point forecast it produces is still accurate to 6.5bp. What's refuted is the band's stationarity
+  assumption at the precision it was fixed to: the spread is drifting wider as the level rises, not
+  holding flat. Do not re-propose a fixed-width spread-band kill switch for this series without
+  first widening it to the trend's own drift rate, or re-deriving it from a shorter trailing window
+  that can track a live widening regime.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
