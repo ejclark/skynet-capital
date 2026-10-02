@@ -70,7 +70,14 @@ glance — the same picture-first, ten-second-review contract the PR template ca
    session needs (see `docs/PICTURES.md` for the communication rationale).
 2. **The fan-out route** *(ships with this plan's PR)*: idea-routing gains
    `fan out (→ issue → fresh session)` beside act/park/profile/question, with the override `FAN:`.
-3. **Projects flight board** *(Eric's gate — needs project-scope credentials; procedure below)*.
+3. ~~**Projects flight board** *(Eric's gate — needs project-scope credentials; procedure below)*.~~
+   **SUPERSEDED 2026-10-02 by #3818 slice B, shipped as #3904.** The board exists, with three views
+   (Board / Backlog / Roadmap) over one item set, and `scripts/moneypenny/projects-sync.mjs` moves
+   items on label events. This slice's shape was wrong in two ways: it asked Eric to turn on
+   built-in automations that cannot know this repo's vocabulary (`needs-eric`/`needs-info` → Blocked,
+   `ready` → Ready are ours, not GitHub's), and it assumed the board could then be driven with no
+   code. Nothing here is left to do; see #3818's brief for what shipped and `docs/MONEYPENNY.md` for
+   who owns it. The credentialed procedure below is kept only as the record of what was asked for.
 4. **Postmaster story echo** *(carve-out PR, follow-up)*: the fresh session's first visible act is
    restating the ask as a story comment on the issue — the confirmation loop that catches a
    misread ask before tokens are spent building the wrong thing.
@@ -90,7 +97,11 @@ glance — the same picture-first, ten-second-review contract the PR template ca
 - Default merge policy applies. Issue templates + docs auto-merge; slices 3–5 are Eric-gated as
   marked.
 
-## Eric's one credentialed step — the Projects board (slice 3)
+## Eric's one credentialed step — the Projects board (slice 3) — SUPERSEDED
+
+> **Do not run these steps.** Superseded 2026-10-02 by #3818 slice B (#3904): the board, its fields
+> and its label-driven sync all ship, and Eric set the In Progress WIP limit by hand on 2026-09-30.
+> Kept as the record of what was originally asked of him, not as an instruction.
 
 1. Open <https://github.com/users/ejclark/projects/new>, name it **Skynet flight board**, template
    **Board** — creating a user-owned Projects v2 board is account-scoped, which is why this step is
@@ -121,3 +132,7 @@ _(none)_
   `docs/handoffs/` deleted, HANDOFFS.md rewritten as the issue-intake doc. The watcher-machinery
   teardown follows as a held PR (workflow carve-out). Generalized rule this bakes in: **ephemeral
   queue state lives in issues; the repo holds only durable intent and code.**
+- 2026-10-02 · Slice 3 marked superseded by #3818 slice B (#3904), as #3818's settled forks required.
+  The flight board this plan asked Eric to click together is built, and driven by this repo's own
+  label vocabulary rather than GitHub's built-in automations — which is the part this plan could not
+  have known it needed. Only slice 3 is touched; the other slices' states are unchanged by this edit.
