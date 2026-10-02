@@ -126,6 +126,68 @@ describe("development-activity", () => {
     expect(await read()).toEqual([]);
   });
 
+  it("walks back past the first page on a boot, so a quiet week cannot lose merges for good", async () => {
+    // A FULL page means there is more behind it — the poll fires on a page load, so "since the last
+    // poll" can be a week, and anything that falls out of the window before reaching the bus is lost.
+    const pages: Record<string, JsonResponse> = {
+      "page=1": {
+        status: 200,
+        body: Array.from({ length: 100 }, (_, i) => pull({ number: i + 1 })),
+      },
+      "page=2": { status: 200, body: [pull({ number: 200 })] },
+    };
+    const read = createMergedPullRequestFetcher(config, (_method, url) =>
+      Promise.resolve(
+        pages[url.includes("page=2") ? "page=2" : "page=1"] ?? { status: 200, body: [] },
+      ),
+    );
+
+    expect((await read()).map((m) => m.number)).toContain(200);
+  });
+
+  it("stops the walk at a SHORT page, not at a page that merely held no merges", async () => {
+    const calls = { count: 0 };
+    // Page 1 is full but entirely closed-unmerged: no merges, yet older pages still exist.
+    const read = createMergedPullRequestFetcher(config, (_method, url) => {
+      calls.count += 1;
+      if (url.includes("page=2"))
+        return Promise.resolve({ status: 200, body: [pull({ number: 9 })] });
+      return Promise.resolve({
+        status: 200,
+        body: Array.from({ length: 100 }, () => pull({ merged_at: null })),
+      });
+    });
+
+    expect((await read()).map((m) => m.number)).toEqual([9]);
+    expect(calls.count).toBe(2);
+  });
+
+  it("a failed later page keeps what the earlier ones gave, rather than losing the whole read", async () => {
+    const read = createMergedPullRequestFetcher(config, (_method, url) =>
+      url.includes("page=2")
+        ? Promise.resolve({ status: 500, body: null })
+        : Promise.resolve({
+            status: 200,
+            body: Array.from({ length: 100 }, (_, i) => pull({ number: i + 1 })),
+          }),
+    );
+
+    expect(await read()).toHaveLength(100);
+  });
+
+  it("remembers a FAILED read briefly, so an outage cannot make every render another GitHub call", async () => {
+    const calls = { count: 0 };
+    const read = createMergedPullRequestFetcher(
+      config,
+      fakeFetch({ status: 403, body: { message: "no access" } }, calls),
+    );
+
+    await read();
+    await read();
+
+    expect(calls.count).toBe(1);
+  });
+
   it("stays inert until the GitHub token is configured", () => {
     expect(resolveDevelopmentActivity({})).toBeUndefined();
     expect(resolveDevelopmentActivity({ SKYNET_FEEDBACK_GITHUB_TOKEN: "t" })).toBeDefined();
