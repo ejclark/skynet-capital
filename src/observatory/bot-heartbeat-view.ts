@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { PlaybookMode, PlaybookVerdict, PlaybookVerdictState } from "../domain/types.js";
+import { houseRosterIds, PLAYBOOK_WIRING_GAPS } from "../playbooks/registry.js";
 
 /**
  * BOT HEARTBEAT (#3687 slice 2) — is this bot's decision loop alive, and what is each of its
@@ -43,6 +44,51 @@ export interface HeartbeatView {
   /** Null when the newest verdict-carrying pass is absent (records predate capture, or no
    *  playbooks run on this account) — an absence, never an empty list posing as "none active". */
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
+  /** Every house playbook plus any the bot ran, each armed, off or blocked (#4450 slice 1). */
+  readonly rollCall: readonly RollCallLine[];
+}
+
+/**
+ * THE ROLL CALL (#4450 slice 1) — "is every playbook online?" answered per bot. The verdict table
+ * lists only what the bot ran, so a playbook nobody switched on was simply absent, and absence
+ * reads like a quiet market. This lists the whole house roster against the bot's own newest
+ * verdict pass, so "off" is said out loud.
+ *
+ * - `armed` — the bot's newest verdict pass ran it.
+ * - `off` — registered, but no pass on hand ran it: nobody switched it on for this bot.
+ * - `blocked` — registered, but the live wiring cannot make it fire (`PLAYBOOK_WIRING_GAPS`).
+ *   Blocked wins over armed: a playbook that runs but can never trade is not online.
+ */
+export type RollCallStatus = "armed" | "off" | "blocked";
+
+export interface RollCallLine {
+  readonly playbookId: string;
+  readonly status: RollCallStatus;
+  /** The mode it runs in; present only when armed or blocked-while-running. */
+  readonly mode?: PlaybookMode;
+  readonly reason: string;
+}
+
+const OFF_REASON = "Not switched on for this bot — no recorded pass ran it.";
+const ARMED_REASON = "Checked on every pass; it trades when its own condition holds.";
+
+export function playbookRollCall(
+  verdicts: readonly PlaybookVerdict[] | null,
+  house: readonly string[] = houseRosterIds(),
+  gaps: Readonly<Record<string, string>> = PLAYBOOK_WIRING_GAPS,
+): RollCallLine[] {
+  const ran = verdicts ?? [];
+  // House roster first in its own order, then anything else the bot ran (a Store play).
+  const ids = [...house, ...ran.map((v) => v.playbookId).filter((id) => !house.includes(id))];
+  return [...new Set(ids)].map((playbookId): RollCallLine => {
+    const verdict = ran.find((v) => v.playbookId === playbookId);
+    const mode = verdict ? { mode: verdict.mode } : {};
+    const gap = gaps[playbookId];
+    if (gap) return { playbookId, status: "blocked", ...mode, reason: gap };
+    return verdict
+      ? { playbookId, status: "armed", ...mode, reason: ARMED_REASON }
+      : { playbookId, status: "off", reason: OFF_REASON };
+  });
 }
 
 /**
@@ -100,6 +146,7 @@ export function botHeartbeatView(
       lastPassAt: null,
       sinceLastPassMs: null,
       playbooks: null,
+      rollCall: playbookRollCall(null),
     };
   }
   const sinceLastPassMs = Math.max(0, now.getTime() - newest.at);
@@ -115,5 +162,6 @@ export function botHeartbeatView(
     sinceLastPassMs,
     ...(newest.halted ? { halted: newest.halted } : {}),
     playbooks: playbookLines(records),
+    rollCall: playbookRollCall(latestVerdictPass(records)?.verdicts ?? null),
   };
 }

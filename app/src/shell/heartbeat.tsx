@@ -5,6 +5,8 @@ import {
   type Heartbeat,
   heartbeatLine,
   type PlaybookHeartbeat,
+  ROLL_CALL_WORDS,
+  type RollCallLine,
   sinceText,
   VERDICT_WORDS,
 } from "../live/heartbeat";
@@ -66,6 +68,32 @@ export function VerdictTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+/** The roll call (#4450 slice 1): every house playbook against this bot, so one that nobody
+ *  switched on reads "Off" instead of being absent. Owner-only — the server withholds it. */
+export function RollCallList({ lines }: { readonly lines: readonly RollCallLine[] }): ReactElement {
+  // A list, not a table: at 390px the reason is the part worth reading, and a third column
+  // squeezed it to two words a line. Name and status share a line; the reason gets the width.
+  return (
+    <ul className="hb-roll">
+      {lines.map((line) => {
+        const { glyph, word } = ROLL_CALL_WORDS[line.status];
+        return (
+          <li key={line.playbookId} data-status={line.status}>
+            <span className="hb-roll-head">
+              <span className="num">{line.playbookId}</span>
+              <span>
+                <span aria-hidden="true">{glyph}</span> <b>{word}</b>
+                {line.mode ? ` · ${line.mode}` : ""}
+              </span>
+            </span>
+            <span className="note">{line.reason}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -146,6 +174,12 @@ export function HeartbeatSection({
           {stale} min during market hours.
         </p>
       </section>
+      {showPlaybooks && heartbeat.rollCall ? (
+        <section className="hb-card">
+          <h2 className="hb-h">Which playbooks this bot runs</h2>
+          <RollCallList lines={heartbeat.rollCall} />
+        </section>
+      ) : null}
       <section className="hb-card">
         <h2 className="hb-h">What each playbook concluded on the last pass</h2>
         <VerdictTable playbooks={heartbeat.playbooks} showPlaybook={showPlaybooks} />

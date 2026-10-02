@@ -25,7 +25,28 @@ export interface Heartbeat {
   readonly staleAfterMs: number;
   readonly halted?: string;
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
+  /** Every house playbook, armed · off · blocked (#4450). Absent for a non-owner. */
+  readonly rollCall?: readonly RollCallLine[];
 }
+
+export type RollCallStatus = "armed" | "off" | "blocked";
+
+export interface RollCallLine {
+  readonly playbookId: string;
+  readonly status: RollCallStatus;
+  readonly mode?: string;
+  readonly reason: string;
+}
+
+/** A glyph and a word for each status — never hue alone (`docs/BRAND.md` → Accessibility). */
+export const ROLL_CALL_WORDS: Record<
+  RollCallStatus,
+  { readonly glyph: string; readonly word: string }
+> = {
+  armed: { glyph: "●", word: "On" },
+  off: { glyph: "○", word: "Off" },
+  blocked: { glyph: "⊘", word: "Can't fire" },
+};
 
 export type DeskHeartbeat =
   | { readonly available: true; readonly heartbeat: Heartbeat }
