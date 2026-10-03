@@ -60,6 +60,7 @@
     "issues": "node scripts/issues.mjs",
     "ready:report": "node scripts/ready-report.mjs",
     "relay": "node scripts/moneypenny/relay.mjs",
+    "assignments": "node scripts/moneypenny/assignments.mjs",
     "rank": "node scripts/rank.mjs",
     "work-mode": "node scripts/moneypenny/work-mode.mjs",
     "work-gate": "node scripts/moneypenny/work-gate.mjs",
