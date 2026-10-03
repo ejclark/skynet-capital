@@ -1,7 +1,7 @@
 # block — Block diagram (block-beta / block): columns, block widths (id:N, block:name:N), nested composite blocks, space, 15 shapes, block arrows, edges, style/classDef — `block-beta` · `block`
 
 **Status:** Stable since Mermaid v11.10.0. The CHANGELOG (#6653) drops the "-beta" suffix "to reflect their stable status", and the current docs page shows only `block`. It started as `block-beta`, and the detector `/^\s*block(-beta)?/` and the lexer still accept both. On develop, package version 12.0.0 adds per-composite palettes (redux-color themes) and `look: neo`. v11.15.0 adds all arrow types (#7633): dotted and thick edges, plus correct x/o/< ends.
-**GitHub (11.17.2):** The docs say nothing about GitHub or renderer support. Verify on github.com: GitHub's Mermaid version is unknown. Safest assumptions: use `block-beta`, not `block`, because GitHub may predate 11.10. Use only `-->`, `---`, `--x`, `--o` and quoted labels. Don't rely on dotted or thick edges (they need >= 11.15), `<-->`, composite labels, frontmatter titles, accTitle/accDescr, or markdown labels. The grammar has no click, href or tooltip, so GitHub's lack of callbacks costs nothing here. useMaxWidth defaults to true, so on a narrow viewport GitHub scales the SVG down rather than scrolling it; design for <= 390px natively.
+**GitHub (11.17.2):** The docs say nothing about GitHub or renderer support. GitHub renders 11.17.2 (the pin in scripts/mermaid-lint.mjs; config-on-github.md), so the 11.10 `block` keyword and the 11.15 dotted/thick edges are both available: `-.->`, `==>` and `<-->` parse under the lint (probed 2026-10-03). Still unverified here: composite labels, frontmatter titles and markdown labels; accTitle placed before `columns` fails to parse, so check its position with the lint before relying on it. The grammar has no click, href or tooltip, so GitHub's lack of callbacks costs nothing here. useMaxWidth defaults to true, so on a narrow viewport GitHub scales the SVG down rather than scrolling it; design for <= 390px natively.
 
 ## When to reach for it
 - Deploy/runtime topology where position must stay put: the two Fly apps (dashboard `fly.toml` vs stateful bots `fly.bots.toml`), the 6PN controls bridge (SKYNET_INSIGHTS_BRIDGE_URL, fail-open, which maps naturally to `--o`), Alpaca paper broker and market data, and GitHub's deploy pipeline. Author-fixed grid cells mean the picture doesn't reshuffle between PRs the way flowchart auto-layout does.
@@ -13,7 +13,7 @@
 
 **Not for:**
 - Anything edge-dense: edges are straight center-to-center lines with no routing, so more than about 6 edges or any cross-row diagonals produce lines through blocks. Use flowchart or architecture-beta.
-- Edge semantics carried by line style (dotted = async, thick = money path). On GitHub's unknown version these fail or render solid, which misleads a reader who is relying on them.
+- Edge semantics carried by line style (dotted = async, thick = money path). These need 11.15+, which GitHub's 11.17.2 covers; they parse under the lint (probed 2026-10-03), and only an older renderer draws them solid.
 - Named groups: composite labels are invisible, so a container whose NAME is the point (a C4 system boundary) is better as a flowchart subgraph or C4 Boundary.
 - Time or ordering: request/response sequences (use sequence), bot lifecycles and order states (use stateDiagram), budget ratchets over weeks (use xychart), backlog snapshots (use kanban), token-budget shares (use treemap/pie), message byte layouts (use packet).
 - Wide inventories: more than 3 columns or long labels overflow 390px because every column takes the widest block's width.
@@ -21,7 +21,7 @@
 - Anything needing accessibility metadata inside the diagram (no accTitle/accDescr) or click-through links.
 
 ## Header forms
-- block-beta   (the original keyword. Every version that has block diagrams accepts it, so it is the SAFEST choice for GitHub's unknown Mermaid version)
+- block-beta   (the original keyword. Every version that has block diagrams accepts it, so it is the form the Mermaid Chart validator and other older renderers need; GitHub's 11.17.2 accepts both)
 - block   (Mermaid >= 11.10.0 only; the validator accepted it)
 - ---
 title: "Runtime map"
@@ -111,7 +111,7 @@ block-beta   (block config keys live under `block:`. Frontmatter config is gener
 - Numbering or prefixes inside labels ("1 Browser", "NEW API", "x Legacy") plus quoted edge labels.
 - POSITION is fully author-controlled. Fixed rows and columns can carry meaning (left = inside our deploy, right = outside; top = client, bottom = providers), and the grid stays identical between before/after pictures.
 - WIDTH `id:N` = umbrella or importance. `space:N` gaps separate zones.
-- Do NOT rely on dotted (`-.->`) or thick (`==>`) edges on GitHub: they either fail or silently render solid in pre-11.15 renderers.
+- Dotted (`-.->`) and thick (`==>`) edges need 11.15+: fine on GitHub's 11.17.2 (lint-probed 2026-10-03), but they fail or silently render solid on an older renderer such as the Mermaid Chart validator (11.13), so a solid edge there is not a bug in the source.
 
 ## Styling hooks
 - `style id fill:#636,stroke:#333,stroke-width:4px,color:#fff,stroke-dasharray: 5 5`: properties are comma-separated and a trailing `;` is fine. A comma list works too: `style a,b ...`.
@@ -148,7 +148,7 @@ block-beta   (block config keys live under `block:`. Frontmatter config is gener
 - Width `id:N` greater than `columns` logs a warning and overflows. Since 11.10 (#6702) that overflow no longer shifts later rows, so the same source can lay out differently on older renderers.
 - Every column is as wide as the widest block in its container. At 390px keep columns <= 3 and labels <= ~12 characters: the rich example measured 375.5px max-width, while with 'Ledger store' / 'Alpaca paper' labels it was 418px. useMaxWidth then shrinks text on phones.
 - Composites stretch row heights (the rich example's API block became 65px tall), so vertical size grows faster than you expect.
-- The `block` keyword needs >= 11.10. Older renderers (plausibly GitHub's) only know `block-beta`.
+- The `block` keyword needs >= 11.10. GitHub's 11.17.2 has it; older renderers only know `block-beta`.
 - The grammar has no click, href, tooltip or icon syntax, so interactivity is moot. Theme palettes are hue-only.
 - Labels are DOMPurify-sanitized and HTML labels are on (`<b>` survives). Unicode inside quoted labels should be fine, but it was not probed.
 

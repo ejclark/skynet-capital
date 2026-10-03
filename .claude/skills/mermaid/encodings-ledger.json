@@ -1,0 +1,59 @@
+{
+  "about": "Decisions for syntax-table rows that name a visual encoding the card's \"Emphasis without hue\" section does not list. scripts/mermaid-skill-scan.mjs (check ②) counts any such row with no decision here. status: promoted (it is in the emphasis section under another name) | structural (the term is a name, not an encoding, or a variant of one already listed) | declined (a reason the house does not draw it). Silence is not a decision.",
+  "decisions": [
+    {
+      "card": "block.md",
+      "row": "block arrow (fat directional glyph that sits in a grid cell)",
+      "status": "promoted",
+      "reason": "Listed in the emphasis section as BLOCK ARROWS; only the word 'glyph' differs."
+    },
+    {
+      "card": "flowchart.md",
+      "row": "Priority action",
+      "status": "structural",
+      "reason": "A v11 shape name from the shape list; 'priority' names the shape, it is not an encoding of priority."
+    },
+    {
+      "card": "flowchart.md",
+      "row": "Icon node (v11.3.0+)",
+      "status": "declined",
+      "reason": "GitHub registers no icon packs; a pack icon renders as '?' (config-on-github.md, Declined here)."
+    },
+    {
+      "card": "mindmap.md",
+      "row": "Icon decoration",
+      "status": "declined",
+      "reason": "GitHub registers no icon packs and loads no Font Awesome CSS (config-on-github.md, Declined here)."
+    },
+    {
+      "card": "requirementdiagram.md",
+      "row": "reverse form",
+      "status": "structural",
+      "reason": "Writes the same relationship with its ends swapped; it changes declaration order, not what the reader sees."
+    },
+    {
+      "card": "sequencediagram.md",
+      "row": "reverse top half (v11.12.3+)",
+      "status": "structural",
+      "reason": "Mirror of a half-arrow head; half and stick heads are already named in the emphasis section."
+    },
+    {
+      "card": "sequencediagram.md",
+      "row": "reverse bottom half (v11.12.3+)",
+      "status": "structural",
+      "reason": "Mirror of a half-arrow head; half and stick heads are already named in the emphasis section."
+    },
+    {
+      "card": "sequencediagram.md",
+      "row": "reverse top stick (v11.12.3+)",
+      "status": "structural",
+      "reason": "Mirror of a stick-arrow head; half and stick heads are already named in the emphasis section."
+    },
+    {
+      "card": "sequencediagram.md",
+      "row": "reverse bottom stick (v11.12.3+)",
+      "status": "structural",
+      "reason": "Mirror of a stick-arrow head; half and stick heads are already named in the emphasis section."
+    }
+  ]
+}

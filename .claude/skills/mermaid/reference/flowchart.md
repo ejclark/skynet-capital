@@ -7,15 +7,16 @@
 (3) ELK in v11 had to be enabled by the host.
 (4) v12 changes the default layout, look and theme, so the same source can render differently.
 
-GitHub's deployed Mermaid version is unknown. The validator here runs v11.13.0, so a green validation is only a proxy for GitHub. To pin GitHub's actual version, preview a ```mermaid block containing only `info` in an issue or PR on github.com; it renders the version string.
+GitHub renders 11.17.2 (the pin in scripts/mermaid-lint.mjs; config-on-github.md). The validator here runs v11.13.0, so a green validation is only a proxy; `npm run mermaid:lint` parses with GitHub's version and is the oracle. To re-check the pin, preview a ```mermaid block containing only `info` on github.com.
 
-Until that is known, keep repo diagrams to features that parse on v11.13:
+Everything through 11.17 is available on GitHub, including:
 - classic bracket shapes
-- @{ shape } restricted to the v11.13 list (so no person, folder, bucket, console, browser or datastore)
+- the full @{ shape } list on 11.17.2 (person, folder, bucket, console, browser and datastore included)
 - markdown strings
-- edge IDs
+- edge IDs, and edge animation (`e1@{ animate: true }`)
+- collapsible subgraphs (`one@{ view: collapsed }`, v11.17.0; parses under the lint, probed 2026-10-03)
 
-Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: verify on github.com.
+Treat v12-only shapes and v12 defaults as unavailable. The Mermaid Chart validator (11.13) draws collapsed subgraphs expanded and rejects the newer shapes, so a red there on these is a false red.
 
 ## When to reach for it
 - PR-body opening picture (the fridge rule) for any dataflow, pipeline or CI change: ship.sh open → auto-merge → deploy, pipeline.yml's verify-vs-deploy split, and the docs-only fast path. docs/PICTURES.md already prescribes `flowchart LR` for 'Dataflow / pipeline'.
@@ -26,7 +27,7 @@ Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: v
 - Platter PRs: items (@{shape: docs}) → one commit per item → one held PR → Eric merge ([stadium] human hand-off), with carve-outs on a normal edge and the auto-land path thick.
 - Governor / coach dispatch cycle: WIP check → gate target → collision check → dispatch athlete in a worktree → PR with auto-merge.
 - Research-doc structure arguments (constraint chains, reaction functions), as PICTURES.md already notes; see ai-hardware-constraints-aug-2026.md.
-- Stable-type fallback for architecture maps: subgraphs as system or container boundaries, [(cyl)] for stores, [[subroutine]] for services. Use it wherever C4 or architecture-beta cannot be trusted to render on GitHub's unknown version.
+- Stable-type fallback for architecture maps: subgraphs as system or container boundaries, [(cyl)] for stores, [[subroutine]] for services. Use it wherever C4 or architecture-beta would draw badly on a phone, or the reader needs the stable classic look.
 
 **Not for:**
 - Lifecycles with guarded transitions (issue proposed → ready → executing → done; SIM/LIVE mode; order states): stateDiagram-v2 says it more honestly, and a flowchart hides which states are resting states.
@@ -35,7 +36,7 @@ Treat collapsed subgraphs and v12-only shapes as unavailable. Everything else: v
 - Research call sheets (call · confidence · why · falsifier): the five-column table is already the picture. Wrapping it in nodes adds nothing and costs width.
 - Schemas or data models: erDiagram or classDiagram.
 - UI changes: before/after screenshots. A box diagram of a screen is misleading.
-- Anything over about 15 nodes, or long LR chains: unreadable at 390px. Split it, or use collapsed subgraphs once the renderer is at v11.17 or later.
+- Anything over about 15 nodes, or long LR chains: unreadable at 390px. Split it, or collapse the detail with `@{ view: collapsed }` (v11.17; GitHub's 11.17.2 has it).
 - Any diagram where colour (classDef fill) is the only carrier of pass/fail or risk. It violates the colourblind rule, and PICTURES.md bans improvised styling.
 - Interactive affordances (click, tooltips, animated edges as the only signal): GitHub renders statically and strict. Links and callbacks will not work there, and motion alone must not carry meaning.
 
