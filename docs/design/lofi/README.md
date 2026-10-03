@@ -19,7 +19,14 @@ account data, so the teardown ban on frames does not apply.
 |---|---|---|
 | `trading-journeys.html` | the home of trading (#3407): Arcade · Outlook · Workbench · Register × ten journeys | `docs/research/trading-parity-2026-09.md` |
 | `trade-chain-composition.html` | inside the (already-picked) Workbench: where the chain and chart compose with the ticket at the docked width (#3407 follow-up) — Workbench-as-shipped · Ticket Accordion · Collapsible Dock · Chain Sheet | Eric, 2026-09-22, live-reviewing the shipped Workbench |
+| `sector-coverage.html` | the shape of R&D's Coverage section (#3811 slice 2, sub-issue #4314) — Calendar twin grid · Coverage rows · Coverage matrix · Sector treemap · GICS ring | #3811's own brief; real values from `coverageBySector()` (`src/domain/sector-coverage.ts`, slice 1) as of 2026-10-03 |
 
 Published: https://claude.ai/artifact/H8zbzDxvn2Nw4HW1nPt1C3 (private; republish from `trading-journeys.html` with the document wrapper stripped).
 
 `trade-chain-composition.html` published: https://claude.ai/artifact/PXipgaX4vEekQaqUM94Knr (private; republish from the committed file).
+
+`sector-coverage.html` — not published as an artifact; the committed file is what the plan issue links.
+Its middle switcher is **account** (`no linked account` · `linked`) rather than a journey step: on a
+coverage map the thing that changes what you see is not where you are in a flow, it is whether the viewer
+has a broker read — which decides whether the held marks render and whether any sector-fund number may be
+shown at all (#3811 criterion 5). Hash shape: `#grid/none/390` = shape / account / viewport.

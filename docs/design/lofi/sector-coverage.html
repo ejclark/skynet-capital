@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R&amp;D — Sector Coverage — Lo-fi</title>
+<meta name="description" content="Five greybox shapes for the sector coverage section of R&D (#3811 slice 2). Real values from coverageBySector() as of 2026-10-03. No colour, no motion, no invented numbers.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #111; --ink2: #3b3b3b; --ink3: #6a6a6a;
+    --line: #767676; --line2: #949494;
+    --paper: #fff; --grey: #f4f4f4; --grey2: #e6e6e6; --grey3: #d0d0d0;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #ebebeb; --ink2: #c9c9c9; --ink3: #9b9b9b;
+      --line: #6f6f6f; --line2: #3c3c3c;
+      --paper: #171717; --grey: #202020; --grey2: #2b2b2b; --grey3: #3b3b3b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ebebeb; --ink2: #c9c9c9; --ink3: #9b9b9b;
+    --line: #6f6f6f; --line2: #3c3c3c;
+    --paper: #171717; --grey: #202020; --grey2: #2b2b2b; --grey3: #3b3b3b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 14px/1.45 var(--sans); overflow-x: hidden; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 24px 16px 64px; }
+  .eyebrow { font: 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); margin: 0 0 8px; }
+  h1 { font-size: 22px; line-height: 1.15; margin: 0 0 8px; }
+  h2 { font-size: 15px; margin: 24px 0 6px; }
+  .lede { color: var(--ink2); max-width: 76ch; margin: 0 0 10px; }
+  .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+  .switchers { position: sticky; top: 0; z-index: 3; background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+  .group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .group-label { font: 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-right: 4px; min-width: 60px; }
+  .sw { font: inherit; font-size: 12.5px; padding: 5px 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; border-radius: 3px; }
+  .sw[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+  .sw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .shape-name { flex-basis: 100%; font-size: 12.5px; color: var(--ink2); margin: 4px 0 0; }
+  .shape-name b { font-weight: 700; color: var(--ink); }
+  .howto { max-width: 88ch; color: var(--ink2); margin: 12px 0 16px; font-size: 13px; }
+  .frame-wrap { overflow-x: auto; min-width: 0; margin-top: 14px; }
+  .frame { width: var(--fw); min-height: var(--fh); position: relative; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font-size: 12.5px; line-height: 1.35; }
+  .frame::after { content: "fold · " attr(data-fold); position: absolute; left: 0; right: 0; top: calc(var(--fh) - 1px); border-top: 1px dashed var(--line); font: 9px/1 var(--mono); color: var(--ink3); padding: 2px 4px; pointer-events: none; }
+  .fbar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--ink); background: var(--grey); font: 11px/1 var(--mono); }
+  .fbar .brand { font-weight: 700; }
+  .fbar .nav { flex: 1; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fbar .nav u { color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .fcap { margin: 0; padding: 4px 10px; border-bottom: 1px dashed var(--line2); font: 11.5px/1.3 var(--mono); color: var(--ink2); }
+  .meta { font: 11px var(--mono); border: 1px dashed var(--line); padding: 4px 8px; color: var(--ink2); display: block; }
+  .fbody { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .ftitle { font-size: 15px; font-weight: 700; margin: 0; }
+  .secsw { display: flex; gap: 0; border: 1px solid var(--line); width: max-content; max-width: 100%; overflow: hidden; }
+  .secsw span { padding: 4px 9px; font-size: 12px; white-space: nowrap; }
+  .secsw span + span { border-left: 1px solid var(--line); }
+  .secsw .on { background: var(--ink); color: var(--paper); font-weight: 700; }
+  .readout { font-size: 13px; margin: 0; }
+  .readout b { font-size: 15px; }
+  .sub { color: var(--ink3); font-size: 11px; margin: 0; }
+  .why { font-size: 11px; color: var(--ink2); margin: 0; }
+  .why::before { content: "↳ "; color: var(--ink3); }
+  .qbar { border: 1px solid var(--line); background: var(--grey); padding: 5px 8px; font-family: var(--mono); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---- the marks. Every one is a SHAPE plus a WORD; nothing here uses hue (BRAND.md → Accessibility) ---- */
+  .mk { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); display: inline-block; flex: none; }
+  .ring { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink); display: inline-block; flex: none; }
+  .dring { width: 9px; height: 9px; border-radius: 50%; border: 1.5px dashed var(--ink); display: inline-block; flex: none; }
+  .sq { width: 9px; height: 9px; border: 1.5px solid var(--ink); display: inline-block; flex: none; }
+  .hatchmark { width: 10px; height: 10px; display: inline-block; flex: none; border: 1px solid var(--line); background: repeating-linear-gradient(135deg, var(--ink3) 0 2px, transparent 2px 4px); }
+  .dots { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+  .mkword { font: 10.5px/1 var(--mono); color: var(--ink2); }
+
+  .tile { border: 1px solid var(--line); padding: 7px 8px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .tile.gap { background: repeating-linear-gradient(135deg, var(--grey2) 0 6px, var(--paper) 6px 12px); border-style: solid; }
+  .tile .tname { font-size: 12px; font-weight: 700; margin: 0; line-height: 1.2; }
+  .tile .tfund { font: 10.5px/1 var(--mono); color: var(--ink3); }
+  .tile .tnext { font: 10.5px/1.3 var(--mono); color: var(--ink2); margin: 0; }
+  .tile .tbars { font: 10.5px/1.3 var(--mono); color: var(--ink3); margin: 0; border-top: 1px dotted var(--line2); padding-top: 4px; }
+  .grid { display: grid; gap: 7px; }
+  .grid.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid.c4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  .rows { display: flex; flex-direction: column; border-top: 1px solid var(--line2); }
+  .crow { display: grid; gap: 2px 10px; padding: 7px 2px; border-bottom: 1px solid var(--line2); align-items: baseline; }
+  .crow.wide { grid-template-columns: 210px 54px minmax(0, 1fr) 260px; align-items: center; }
+  .crow .cname { font-size: 12.5px; font-weight: 700; }
+  .crow .cfund { font: 11px/1 var(--mono); color: var(--ink3); }
+  .crow .cmarks { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+  .crow .cmetric { font: 10.5px/1.3 var(--mono); color: var(--ink2); }
+  .crow.gaprow { background: repeating-linear-gradient(135deg, var(--grey2) 0 6px, var(--paper) 6px 12px); }
+
+  .tw { overflow-x: auto; min-width: 0; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .tbl th { text-align: center; font: 10.5px/1.2 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--ink3); padding: 3px 4px; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .tbl th:first-child { text-align: left; }
+  .tbl td { padding: 4px; border-bottom: 1px solid var(--line2); vertical-align: middle; text-align: center; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .tbl td:first-child { text-align: left; font-family: var(--sans); font-size: 11.5px; }
+  .tbl tr.gaprow td { background: repeating-linear-gradient(135deg, var(--grey2) 0 6px, var(--paper) 6px 12px); }
+  .tbl .none { color: var(--ink3); }
+
+  .ringwrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .legend { display: grid; grid-template-columns: max-content 1fr; gap: 3px 8px; font-size: 11px; margin: 0; }
+  .legend dt { display: flex; align-items: center; }
+  .legend dd { margin: 0; color: var(--ink2); }
+  .keyline { display: flex; flex-wrap: wrap; gap: 6px 14px; border: 1px dashed var(--line); padding: 5px 8px; }
+
+  .cut { border: 1px solid var(--ink); border-left-width: 4px; padding: 6px 9px; }
+  .cut p { margin: 0 0 4px; }
+  .cut p:last-child { margin-bottom: 0; }
+  .ct { font-size: 12px; font-weight: 700; }
+  table.doc { border-collapse: collapse; font-size: 13px; margin: 8px 0 0; }
+  table.doc th, table.doc td { border: 1px solid var(--line2); padding: 5px 8px; text-align: left; vertical-align: top; }
+  table.doc th { font: 11px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--ink3); font-weight: 400; }
+  .foot { color: var(--ink2); font-size: 13px; max-width: 86ch; }
+</style>
+</head>
+<body>
+<main class="page">
+  <p class="eyebrow">Lo-fi shapes · docs/PATTERNS.md · #3811 slice 2 (sub-issue #4314)</p>
+  <h1>Where does our attention sit across the market — and what shape says it?</h1>
+  <p class="lede">Eric, 2026-09-26: "the research tab shows all the stocks I'm paying attention too. This
+    information should be part of a larger visual… this communicates what part of the market we have
+    covered and gaps in our portfolio… this has parallels to the calendar showing events over a
+    timespan." Five greybox shapes for a <b>Coverage</b> section of R&amp;D, two viewports, phone first.</p>
+
+  <p class="howto">Every count, symbol, fund ticker and date below is <b>real</b> — read out of
+    <code>coverageBySector()</code> (<code>src/domain/sector-coverage.ts</code>, shipped in slice 1) and the live
+    event corpus on <b>2026-10-03</b>. Nothing is a placeholder. The one thing that is not a number is the
+    sector-fund return: there is no bars source without a member's own linked account, so the no-account
+    frames say so in words and the linked frames show a <b>width sample</b> (<span class="mono">▒</span> glyphs) to
+    size the slot — never a figure. Vanilla HTML/CSS/JS, no build step, no network. The URL hash is the
+    state (<code>#grid/none/390</code> = shape / account / viewport), so a link lands on a frame.</p>
+
+  <nav class="switchers" id="switchers">
+    <div class="group">
+      <span class="group-label">Shape</span>
+      <button class="sw" data-role="shape" data-shape="grid">A · Calendar twin grid</button>
+      <button class="sw" data-role="shape" data-shape="rows">B · Coverage rows</button>
+      <button class="sw" data-role="shape" data-shape="matrix">C · Coverage matrix</button>
+      <button class="sw" data-role="shape" data-shape="treemap">D · Sector treemap</button>
+      <button class="sw" data-role="shape" data-shape="ring">E · GICS ring</button>
+    </div>
+    <div class="group">
+      <span class="group-label">Account</span>
+      <button class="sw" data-role="acct" data-acct="none">no linked account</button>
+      <button class="sw" data-role="acct" data-acct="linked">linked</button>
+    </div>
+    <div class="group">
+      <span class="group-label">Viewport</span>
+      <button class="sw" data-role="vp" data-vp="390">390</button>
+      <button class="sw" data-role="vp" data-vp="1280">1280</button>
+    </div>
+    <p class="shape-name" id="shape-name"></p>
+  </nav>
+
+  <div class="frame-wrap" id="stage"></div>
+
+  <h2>The marks, and why each one is a shape and a word</h2>
+  <div class="keyline">
+    <span class="mk"><span class="dot"></span><span class="mkword">researched — a ledger exists</span></span>
+    <span class="mk"><span class="ring"></span><span class="mkword">on the calendar — dated, no ledger yet</span></span>
+    <span class="mk"><span class="sq"></span><span class="mkword">held — in your positions</span></span>
+    <span class="mk"><span class="dring"></span><span class="mkword">events — macro ledgers, no names</span></span>
+    <span class="mk"><span class="hatchmark"></span><span class="mkword">gap — none of the above</span></span>
+  </div>
+  <p class="foot" style="margin-top:8px">A standing reader has mild red/green colourblindness, so no state is
+    carried by hue (<code>docs/BRAND.md</code> → Accessibility). Filled · hollow · dashed · square · hatched are
+    five distinguishable <i>shapes</i>, each printed beside its word. The hatch is the calendar's own closed-day
+    fill, which is the whole point of shape A: a member who can read the month grid can read this.</p>
+
+  <h2>What the frames are telling you, in four findings</h2>
+  <table class="doc">
+    <thead><tr><th>Finding</th><th>The number</th><th>Why it matters to the shape</th></tr></thead>
+    <tbody>
+      <tr><td><b>Coverage is wider than "mostly tech"</b> — but thin</td>
+        <td>8 of 11 sectors covered; only <b>4</b> by name, <b>4</b> by macro ledgers alone</td>
+        <td>A shape that collapses to "covered / not covered" would read 8/11 and flatter us. The
+          by-name vs by-macro split is the finding, so every shape has to carry two marks, not one.</td></tr>
+      <tr><td><b>The "on the calendar" column is empty today</b></td>
+        <td>0 names, across all 11</td>
+        <td>Every one of the 10 symbols on our forward print calendar already has a ledger. The hollow
+          ring is real and will fill, but today it only renders in the legend — a shape must not look broken
+          when a whole state is absent.</td></tr>
+      <tr><td><b>Real Estate is our deepest macro beat and has no names</b></td>
+        <td>32 macro ledgers, 28 upcoming events, 0 symbols</td>
+        <td>The sector with the most dated work in it would read as a gap on any by-name-only map. It is
+          the single strongest argument for the dashed "events" ring.</td></tr>
+      <tr><td><b>The one holding on file does not file</b></td>
+        <td>EEM → Unclassified</td>
+        <td>Switch Account to <i>linked</i>. The fixture book's only position is an emerging-markets ETF,
+          which GICS cannot place. The Unclassified row is not a defensive nicety — it is where the
+          viewer's actual holding lands.</td></tr>
+      <tr><td><b>The fund-number line is the most expensive thing on a phone tile</b></td>
+        <td>3 of a tile's 7 lines, at 390, in shape A's linked frame</td>
+        <td>Switch Account to <i>linked</i> at 390 and compare. Return + vs-S&amp;P + vol is one line on a
+          desk and three on a phone, which is the mobile-first ranking question made concrete: if only one
+          number survives the phone, the brief's table has to say which. Drawn at full length deliberately so
+          the cost is visible rather than assumed away.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The red pass, per shape — the strongest objection before Eric sees it</h2>
+  <table class="doc">
+    <thead><tr><th>Shape</th><th>Strongest objection</th><th>What it would take to settle</th></tr></thead>
+    <tbody>
+      <tr><td><b>A · Calendar twin grid</b></td>
+        <td>Seven filled dots in the Technology tile is a count rendered as a picture at the exact size
+          where counting is slowest. And the grid's resemblance to the month grid is a promise it does not
+          keep: the month grid's cells are days in order, these are sectors in an arbitrary order.</td>
+        <td>Eric reads the Technology tile and says "seven" without hesitating. If he hesitates, the dots
+          become one numeral and the grid loses its twin claim.</td></tr>
+      <tr><td><b>B · Coverage rows</b></td>
+        <td>Eleven rows at 390 is a scroll, and the thing he asked for — "what part of the market we have
+          covered" — is a <i>shape</i> question that a vertical list answers worst.</td>
+        <td>Does he scroll past row 6? If the three gaps at the bottom go unseen, the list buried the
+          finding.</td></tr>
+      <tr><td><b>C · Coverage matrix</b></td>
+        <td>Four mark columns where two are empty for every row today (calendar: 0 everywhere; held: 0 or
+          1) is a table mostly made of blanks, and a blank cell is the one thing a coverage map must never
+          be ambiguous about.</td>
+        <td>Render the empty columns with an explicit "—" rather than whitespace and see whether the
+          table still reads. It is here in that honest form; judge it as drawn.</td></tr>
+      <tr><td><b>D · Sector treemap</b></td>
+        <td>A treemap's whole mechanic is area = weight, and <b>we have no source for index weights</b>.
+          Equal tiles are a treemap that lies about being one. At 390 the small sectors would be slivers even
+          if we had the weights.</td>
+        <td>Nothing settles it without a weights source. Drawn so the objection is visible, expected to
+          be declined.</td></tr>
+      <tr><td><b>E · GICS ring</b></td>
+        <td>Eleven labels will not fit around a 390px donut, so the ring needs a legend list beside it —
+          at which point the legend is shape B and the ring is decoration above it. Worse, a ring of eleven
+          arcs has no twelfth: Unclassified — where this book's only holding, EEM, actually lands — cannot be
+          drawn on it at all.</td>
+        <td>Is the "8 / 11" in the middle worth the space the donut costs? If yes, it is a summary tile
+          at the top of another shape, not the shape.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Patterns each shape borrows</h2>
+  <table class="doc">
+    <thead><tr><th>Shape</th><th>Rows in <code>docs/PATTERNS.md</code></th></tr></thead>
+    <tbody>
+      <tr><td><b>A</b></td><td>proposes <b>Twin instrument</b>; uses <b>section</b> (the vocabulary),
+        <b>Chips ⇄ query text, one model</b> (a tap writes <code>sector:</code>), <b>Absence is named, never
+        dropped</b> (the Unclassified tile), <b>Mobile-first curation</b></td></tr>
+      <tr><td><b>B</b></td><td>proposes <b>Coverage rows</b>; uses <b>Priority guide</b> (the ranked read
+        straight down), <b>Absence is named, never dropped</b></td></tr>
+      <tr><td><b>C</b></td><td>proposes <b>Coverage matrix</b>; uses <b>Mobile-first curation</b> (the fund
+        columns are what the desk width <i>adds</i>, never a new concept)</td></tr>
+      <tr><td><b>D</b></td><td>proposes <b>Weighted treemap</b> — expected <i>declined-here</i></td></tr>
+      <tr><td><b>E</b></td><td>proposes <b>Sector ring</b> — a spectacle shape, candidate for a summary tile
+        elsewhere</td></tr>
+    </tbody>
+  </table>
+  <p class="foot">Ruled out as a precedent before any of these were drawn: <b>Narrative shelves</b>
+    (Public.com's "Themes", declined on #3623 — browsing by story was rejected). This is a coverage audit that
+    feeds the Board, not a browse surface. No prior call of Eric's is reversed by any of the five, so no
+    frame carries a reversal flag.</p>
+
+  <h2>What this lo-fi does not settle</h2>
+  <p class="foot">Placement and polish (hi-fi, <code>/design</code>): type scale, the real tokens, where the
+    section sits in the switch order. And four questions the brief already parks: whether "add this stock" is a
+    shared-list request or a personal watchlist (#3811 open question 1), which energy names Eric holds (3),
+    whether "held" shows your positions or every member's (4), and whether depth counts ledgers or also
+    playbook symbols (5). None of them changes which shape wins.</p>
+</main>
+<script>
+/* Real values, 2026-10-03, from coverageBySector() over the live shelf + event corpus.
+   `researched` = symbols with a ledger. `macro` = macro ledgers attributed to the sector by
+   SECTOR_MACRO_SERIES. `upcoming` = dated events ahead that eventInSector() places here.
+   `next` = the first of them. `calendar` is empty for every sector today and is kept as a field,
+   not dropped, so the shapes are drawn against the state that will exist, not just today's. */
+const SECTORS = [
+  { name: 'Technology', fund: 'XLK', researched: ['AAPL','AVGO','CRWV','MRVL','MSFT','MU','NVDA'], calendar: [], macro: 0, upcoming: 8, next: ['MRVL Investor Day', '2026-10-06'] },
+  { name: 'Communication Services', fund: 'XLC', researched: ['GOOG','META'], calendar: [], macro: 0, upcoming: 2, next: ['GOOG print', '2026-10-28'] },
+  { name: 'Healthcare', fund: 'XLV', researched: [], calendar: [], macro: 0, upcoming: 0, next: null },
+  { name: 'Financials', fund: 'XLF', researched: [], calendar: [], macro: 0, upcoming: 0, next: null },
+  { name: 'Energy', fund: 'XLE', researched: [], calendar: [], macro: 20, upcoming: 12, next: ['OPEC+ JMMC (68th)', '2026-10-04'] },
+  { name: 'Consumer Discretionary', fund: 'XLY', researched: ['AMZN','KBH','LEN'], calendar: [], macro: 12, upcoming: 14, next: ['Prime Big Deal Days', '2026-10-06'] },
+  { name: 'Consumer Staples', fund: 'XLP', researched: ['COST'], calendar: [], macro: 0, upcoming: 0, next: null },
+  { name: 'Industrials', fund: 'XLI', researched: [], calendar: [], macro: 4, upcoming: 3, next: ['Construction Spending', '2026-11-02'] },
+  { name: 'Utilities', fund: 'XLU', researched: [], calendar: [], macro: 5, upcoming: 4, next: ['PJM IRAS · FERC 205(d)', '2026-10-12'] },
+  { name: 'Real Estate', fund: 'XLRE', researched: [], calendar: [], macro: 32, upcoming: 28, next: ['Existing-Home Sales', '2026-10-13'] },
+  { name: 'Materials', fund: 'XLB', researched: [], calendar: [], macro: 0, upcoming: 0, next: null },
+];
+/* The fixture book for human-eric holds exactly one position, EEM — an emerging-markets ETF, which
+   the GICS directory files under no sector. It lands in Unclassified, counted and named. */
+const HELD_BY_SECTOR = { 'Unclassified': ['EEM'] };
+const AS_OF = '2026-10-03';
+const BARS_SAMPLE = '+##.#% · 1M · #.# pts vs S&amp;P · vol ##%';
+
+const held = (name) => state.acct === 'linked' ? (HELD_BY_SECTOR[name] ?? []) : [];
+const depthOf = (s) => {
+  if (s.researched.length) return 'researched';
+  if (held(s.name).length) return 'held';
+  if (s.calendar.length) return 'calendar';
+  if (s.macro) return 'events';
+  return 'gap';
+};
+const rowsAll = () => SECTORS.concat([{ name: 'Unclassified', fund: null, researched: [], calendar: [], macro: 0, upcoming: 0, next: null }]);
+const coveredCount = () => SECTORS.filter(s => depthOf(s) !== 'gap').length;
+const byName = () => SECTORS.filter(s => s.researched.length).length;
+const byMacroOnly = () => SECTORS.filter(s => !s.researched.length && s.macro).length;
+
+function dotsFor(s) {
+  const bits = [];
+  if (s.researched.length) bits.push(`<span class="mk"><span class="dots">${s.researched.map(() => '<span class="dot"></span>').join('')}</span><span class="mkword">${s.researched.length} researched</span></span>`);
+  if (s.calendar.length) bits.push(`<span class="mk"><span class="dots">${s.calendar.map(() => '<span class="ring"></span>').join('')}</span><span class="mkword">${s.calendar.length} on the calendar</span></span>`);
+  if (held(s.name).length) bits.push(`<span class="mk"><span class="sq"></span><span class="mkword">held · ${held(s.name).join(' ')}</span></span>`);
+  if (s.macro) bits.push(`<span class="mk"><span class="dring"></span><span class="mkword">${s.macro} events</span></span>`);
+  if (!bits.length) bits.push(`<span class="mk"><span class="hatchmark"></span><span class="mkword">gap — no coverage</span></span>`);
+  return bits.join(' ');
+}
+function namesLine(s) {
+  if (s.researched.length) return s.researched.join(' · ');
+  if (held(s.name).length) return held(s.name).join(' · ');
+  return null;
+}
+function nextLine(s) {
+  return s.next ? `next: ${s.next[0]} ${s.next[1]}` : 'next: nothing dated ahead';
+}
+function barsLine(s) {
+  if (!s.fund) return '';
+  return state.acct === 'linked'
+    ? `<p class="tbars">${s.fund} ${BARS_SAMPLE} <i>width sample, not a quote</i></p>`
+    : `<p class="tbars">${s.fund} — no market data · link an account</p>`;
+}
+function head(title, note) {
+  return `<p class="ftitle">${title}</p>
+    <div class="secsw"><span>Board</span><span class="on">Coverage</span><span>Playbooks</span></div>
+    <p class="readout"><b>${coveredCount()} of 11</b> sectors covered · ${byName()} by name · ${byMacroOnly()} by macro ledgers only · 3 blank</p>
+    <p class="sub">as of ${AS_OF} · tap a sector to add <span class="mono">sector:&lt;name&gt;</span> to the Board query</p>
+    ${note ? `<span class="meta">${note}</span>` : ''}`;
+}
+function acctNote() {
+  return state.acct === 'linked'
+    ? 'Linked: holdings come from the viewer\'s own broker read. This book holds one position, EEM — an ETF the GICS directory cannot file, so it lands in Unclassified. The # strings are a WIDTH SAMPLE sizing the slot, never a quote.'
+    : 'No linked account: no sector-fund return is shown, and no number is invented in its place. Everything else on this frame — ledgers, macro series, dated events — needs no broker at all.';
+}
+
+/* ---- A · Calendar twin grid ---- */
+function tile(s) {
+  const gap = depthOf(s) === 'gap';
+  const names = namesLine(s);
+  return `<div class="tile${gap ? ' gap' : ''}">
+    <p class="tname">${s.name}${s.fund ? ` <span class="tfund">${s.fund}</span>` : ''}</p>
+    <div class="cmarks">${dotsFor(s)}</div>
+    ${names ? `<p class="tnext">${names}</p>` : ''}
+    ${s.fund ? `<p class="tnext">${nextLine(s)}</p>` : '<p class="tnext">not a GICS sector</p>'}
+    ${barsLine(s)}
+  </div>`;
+}
+function shapeGrid(wide) {
+  return `${head('R&amp;D', acctNote())}
+    <div class="grid ${wide ? 'c4' : 'c2'}">${rowsAll().map(tile).join('')}</div>
+    <span class="meta">The month grid's own marks on a second axis: filled = researched, hollow = dated but
+      unwritten, dashed = macro only, hatched = gap — the calendar's closed-day fill. ${wide ? 'Desk width adds columns, never tiles.' : '2 up at 390; 4 up from 1280.'}</span>`;
+}
+
+/* ---- B · Coverage rows ---- */
+function shapeRows(wide) {
+  const row = (s) => {
+    const gap = depthOf(s) === 'gap';
+    const names = namesLine(s);
+    if (wide) {
+      return `<div class="crow wide${gap ? ' gaprow' : ''}">
+        <span class="cname">${s.name}</span>
+        <span class="cfund">${s.fund ?? '—'}</span>
+        <span class="cmarks">${dotsFor(s)}</span>
+        <span class="cmetric">${s.fund ? nextLine(s) : 'not a GICS sector'}<br>${s.fund ? (state.acct === 'linked' ? `${s.fund} ${BARS_SAMPLE}` : `${s.fund} — no market data`) : ''}</span>
+      </div>`;
+    }
+    return `<div class="crow${gap ? ' gaprow' : ''}">
+      <span class="cname">${s.name} <span class="cfund">${s.fund ?? '—'}</span></span>
+      <span class="cmarks">${dotsFor(s)}</span>
+      ${names ? `<span class="cmetric">${names}</span>` : ''}
+      <span class="cmetric">${s.fund ? nextLine(s) : 'not a GICS sector'}</span>
+      <span class="cmetric">${s.fund ? (state.acct === 'linked' ? `${s.fund} ${BARS_SAMPLE}` : `${s.fund} — no market data · link an account`) : ''}</span>
+    </div>`;
+  };
+  return `${head('R&amp;D', acctNote())}
+    <div class="rows">${rowsAll().map(row).join('')}</div>
+    <span class="meta">One row per sector, read straight down in coverage order — the priority guide made
+      literal. A gap says "no coverage" in words, not only in fill. ${wide ? 'Desk width lifts the metric beside the marks instead of beneath them.' : '12 rows at 390 is a scroll: the red pass asks whether the three blanks at the bottom ever get seen.'}</span>`;
+}
+
+/* ---- C · Coverage matrix ---- */
+function shapeMatrix(wide) {
+  const cell = (n, mark) => n ? `<span class="mk">${mark}<span class="mkword">${n}</span></span>` : '<span class="none">—</span>';
+  const row = (s) => `<tr class="${depthOf(s) === 'gap' ? 'gaprow' : ''}">
+      <td>${s.name}<br><span class="cfund">${s.fund ?? '—'}</span></td>
+      <td>${cell(s.researched.length, '<span class="dot"></span>')}</td>
+      <td>${cell(s.calendar.length, '<span class="ring"></span>')}</td>
+      <td>${cell(held(s.name).length, '<span class="sq"></span>')}</td>
+      <td>${cell(s.macro, '<span class="dring"></span>')}</td>
+      ${wide ? `<td class="none">${s.fund ? (state.acct === 'linked' ? BARS_SAMPLE : 'no market data') : '—'}</td>
+      <td>${s.fund ? (s.next ? `${s.next[0]} ${s.next[1]}` : '<span class="none">—</span>') : '<span class="none">—</span>'}</td>` : ''}
+    </tr>`;
+  return `${head('R&amp;D', acctNote())}
+    <div class="tw"><table class="tbl">
+      <thead><tr><th>Sector</th><th>Res.</th><th>Cal.</th><th>Held</th><th>Events</th>${wide ? '<th>Fund window</th><th>Next dated</th>' : ''}</tr></thead>
+      <tbody>${rowsAll().map(row).join('')}</tbody>
+    </table></div>
+    <span class="meta">Four mark columns, one per depth, counted. ${wide ? 'Desk width adds the fund window and the next dated event as columns — room, not new concepts.' : 'At 390 only the four mark columns survive; the fund window and next event are what desk width adds.'} Every empty cell is an explicit "—", because a blank cell on a coverage map is the one ambiguity it cannot afford.</span>`;
+}
+
+/* ---- D · Sector treemap ---- */
+function shapeTreemap(wide) {
+  return `${head('R&amp;D', acctNote())}
+    <div class="cut"><p class="ct">Drawn so the objection is visible</p>
+      <p class="why">A treemap means area = weight. We have <b>no source for GICS index weights</b> — no
+        fundamentals provider, no index-weight feed. These tiles are therefore equal-area, which is a treemap
+        that lies about being one.</p></div>
+    <div class="grid ${wide ? 'c4' : 'c2'}">${rowsAll().map(s => {
+      const gap = depthOf(s) === 'gap';
+      return `<div class="tile${gap ? ' gap' : ''}" style="min-height:${wide ? 92 : 78}px">
+        <p class="tname">${s.name}${s.fund ? ` <span class="tfund">${s.fund}</span>` : ''}</p>
+        ${s.fund ? '<p class="sub">weight: no source</p>' : '<p class="sub">not a GICS sector · no tile in a weighted map at all</p>'}
+        <div class="cmarks">${dotsFor(s)}</div>
+      </div>`;
+    }).join('')}</div>
+    <span class="meta">If weights ever arrive they would need a dated table beside the map (the as-of of the
+      weighting), which is a second artifact to keep honest. At 390 the small sectors are slivers even then.</span>`;
+}
+
+/* ---- E · GICS ring ---- */
+/* One <path> arc per sector, so each arc can carry its own dash pattern — the ring's answer to
+   "no state may be hue-only": thick solid = researched, medium dashed = macro only, thin dotted
+   and faint = gap. 11 equal arcs with a small wedge of air between them. */
+function ringSvg(size) {
+  const cx = size / 2, cy = size / 2, r = size / 2 - 16;
+  const n = SECTORS.length, step = 360 / n, pad = 2.2;
+  const pt = (deg) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return `${(cx + r * Math.cos(rad)).toFixed(2)} ${(cy + r * Math.sin(rad)).toFixed(2)}`;
+  };
+  const arcs = SECTORS.map((s, i) => {
+    const d = depthOf(s);
+    const dash = d === 'gap' ? '1.5 4' : d === 'events' ? '7 4' : '';
+    const w = d === 'researched' ? 14 : d === 'held' ? 10 : d === 'events' ? 9 : 5;
+    const a0 = i * step + pad, a1 = (i + 1) * step - pad;
+    return `<path d="M ${pt(a0)} A ${r} ${r} 0 0 1 ${pt(a1)}" fill="none" stroke="currentColor"
+      stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} opacity="${d === 'gap' ? 0.4 : 1}"></path>`;
+  }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${coveredCount()} of 11 GICS sectors covered">
+    ${arcs}
+    <text x="${cx}" y="${cy}" text-anchor="middle" font-family="ui-monospace, monospace" font-size="${(size / 6).toFixed(0)}" font-weight="700" fill="currentColor">${coveredCount()}/11</text>
+    <text x="${cx}" y="${(cy + size / 9).toFixed(0)}" text-anchor="middle" font-family="ui-monospace, monospace" font-size="${(size / 19).toFixed(0)}" fill="currentColor" opacity="0.7">sectors covered</text>
+  </svg>`;
+}
+function shapeRing(wide) {
+  return `${head('R&amp;D', acctNote())}
+    <div class="ringwrap">
+      ${ringSvg(wide ? 300 : 230)}
+      <dl class="legend">${rowsAll().filter(s => s.fund).map(s => `
+        <dt>${dotsFor(s).replace(/<span class="mkword">[^<]*<\/span>/g, '')}</dt>
+        <dd><b>${s.name}</b> <span class="cfund">${s.fund}</span> — ${depthOf(s) === 'gap' ? 'gap' : depthOf(s) === 'events' ? `${s.macro} macro ledgers, no names` : `${s.researched.length} researched`}</dd>`).join('')}
+      </dl>
+    </div>
+    <p class="why">The ring has eleven arcs and no twelfth: <b>Unclassified</b> cannot ride it${state.acct === 'linked' ? ' — and it is where this book\'s only holding, EEM, lands' : ''}. A shape that cannot draw the row where a real position sits has to carry it as an exception beneath, which is its own argument against the ring.</p>
+    <span class="meta">Arc thickness is the depth (thick = researched, medium dashed = macro only, thin faint
+      = gap); the ring itself carries no label, because 11 labels will not fit around a ${wide ? '300' : '230'}px donut.
+      Which is the objection: the legend beside it IS shape B, and the donut is decoration above it. Candidate
+      for a one-tile summary at the top of another shape, not a shape of its own.</span>`;
+}
+
+const TEMPLATES = { grid: shapeGrid, rows: shapeRows, matrix: shapeMatrix, treemap: shapeTreemap, ring: shapeRing };
+const NAMES = {
+  grid: 'A · <b>Calendar twin grid</b> — sector tiles drawn in the month grid\'s own marks; a tap filters the Board the way a day does. The lead: it makes "parallels to the calendar" a mechanic, not a look-alike.',
+  rows: 'B · <b>Coverage rows</b> — one row per sector, read straight down: name · fund · marks · one metric. Gaps say "no coverage" in words. Candidate as A\'s detail fold.',
+  matrix: 'C · <b>Coverage matrix</b> — sectors × four counted mark columns; desk width adds the fund window and the next dated event.',
+  treemap: 'D · <b>Sector treemap</b> — equal tiles, because index weights have no source here. Drawn to show why it is expected to be declined.',
+  ring: 'E · <b>GICS ring</b> — 11 arcs, thickness = depth, "8/11" in the middle. A spectacle shape; the labels do not fit at 390.',
+};
+const state = { shape: 'grid', acct: 'none', vp: 390 };
+function render() {
+  document.querySelectorAll('.sw[data-role="shape"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shape === state.shape)));
+  document.querySelectorAll('.sw[data-role="acct"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.acct === state.acct)));
+  document.querySelectorAll('.sw[data-role="vp"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vp) === state.vp)));
+  document.getElementById('shape-name').innerHTML = NAMES[state.shape];
+  const wide = state.vp === 1280;
+  const fh = wide ? 760 : 900;
+  const body = `<div class="fbar"><span class="brand">Skynet Capital</span><span class="nav">${wide ? 'Leaderboard · Profile · Trade · Activity · <u>R&amp;D</u>' : '☰ <u>R&amp;D</u>'}</span></div>
+    <p class="fcap">/app/research?section=coverage · ${wide ? 'desk' : 'phone'} · account: ${state.acct === 'linked' ? 'linked' : 'none'}</p>
+    <div class="fbody">${TEMPLATES[state.shape](wide)}
+      <div class="qbar">filter — sector:energy · sym:NVDA · kind:opex · lens:month</div>
+      <p class="why">a tap on a sector writes <span class="mono">sector:&lt;name&gt;</span> into the same query the chips write — one model, two carriers</p>
+    </div>`;
+  document.getElementById('stage').innerHTML =
+    `<div class="frame" data-fold="${fh}" style="--fw:${state.vp}px;--fh:${fh}px">${body}</div>`;
+  const hash = `#${state.shape}/${state.acct}/${state.vp}`;
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+}
+function readHash() {
+  const m = /^#(grid|rows|matrix|treemap|ring)\/(none|linked)\/(390|1280)$/.exec(location.hash);
+  if (!m) return false;
+  state.shape = m[1]; state.acct = m[2]; state.vp = Number(m[3]);
+  return true;
+}
+document.getElementById('switchers').addEventListener('click', e => {
+  const b = e.target.closest('.sw');
+  if (!b) return;
+  if (b.dataset.role === 'shape') state.shape = b.dataset.shape;
+  else if (b.dataset.role === 'acct') state.acct = b.dataset.acct;
+  else state.vp = Number(b.dataset.vp);
+  render();
+});
+document.getElementById('switchers').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const b = e.target.closest('.sw');
+  if (!b) return;
+  const peers = [...document.querySelectorAll(`.sw[data-role="${b.dataset.role}"]`)];
+  const next = peers[(peers.indexOf(b) + (e.key === 'ArrowRight' ? 1 : peers.length - 1)) % peers.length];
+  e.preventDefault();
+  next.focus();
+  next.click();
+});
+window.addEventListener('hashchange', () => { if (readHash()) render(); });
+readHash();
+render();
+</script>
+</body>
+</html>
