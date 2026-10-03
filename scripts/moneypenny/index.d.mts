@@ -28,6 +28,26 @@ export type ClaimCtx = {
     label?: { name?: string };
   };
 };
+export type CalloutCtx = {
+  actor?: string;
+  payload?: {
+    issue?: {
+      number?: number;
+      body?: string | null;
+      user?: { login?: string };
+      labels?: Array<{ name?: string }>;
+    };
+    sender?: { login?: string };
+  };
+};
+/** #3913 slice 2b: `needs-eric` landed — comment once if the body never states the decision. */
+export function checkCallout(
+  ctx: CalloutCtx,
+  deps?: {
+    readComments?: (issueNumber: number) => (string | null)[];
+    post?: (issueNumber: number, body: string) => void;
+  },
+): { posted: boolean; reason?: string; actor?: string };
 export type ClaimResult = { claimed: boolean; reason: string; number?: number; model?: string };
 /** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2),
  *  then asks the admission gate (#3960) — a refusal takes no lease and adds no label. */
