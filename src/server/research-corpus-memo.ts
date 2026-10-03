@@ -18,8 +18,9 @@ import { join } from "node:path";
  * spec run cycling through temp dirs cannot grow this without bound.
  */
 
-/** The directories the shelf reads (see `listResearch`): studies, weekly studies, event ledgers. */
-const SHELVED_DIRS = ["", "weeks", "events"] as const;
+/** The directories the shelf reads (see `listResearch`): studies, weekly studies, event ledgers,
+ *  and the forward-test register's fragments (see `composeRegister`). */
+const SHELVED_DIRS = ["", "weeks", "events", "forward-tests"] as const;
 
 /** Cheap stand-in for the corpus contents: stat calls only, no file reads. */
 export function corpusFingerprint(root: string): string {
@@ -43,7 +44,10 @@ export function memoByCorpus<T>(name: string, root: string, compute: () => T): T
   const fingerprint = corpusFingerprint(root);
   const hit = memo.get(name);
   if (hit && hit.root === root && hit.fingerprint === fingerprint) return hit.value as T;
-  const value = compute();
+  // structuredClone detaches every string from the file it was matched out of. A regex match is a
+  // V8 *sliced* string that keeps its whole parent alive, so caching a 40-char title raw pinned the
+  // entire markdown file — the memo retained ~170 MB, i.e. the whole corpus (measured 2026-10-02).
+  const value = structuredClone(compute());
   memo.set(name, { root, fingerprint, value });
   return value;
 }

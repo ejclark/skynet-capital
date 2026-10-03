@@ -298,15 +298,20 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const shelf = listResearch(root);
   const doc = [...shelf.studies, ...shelf.ledgers].find((d) => d.slug === slug);
   if (!doc) return null;
-  const file = join(root, `${doc.slug}.md`);
-  const raw = readFileSync(file, "utf8");
-  const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
-  const { glanceMd, bodyMd } = extractGlance(md);
-  return {
-    ...doc,
-    html: rewriteDocLinks(renderFolded(bodyMd)),
-    glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+  const render = (): RenderedDoc => {
+    const raw = readFileSync(join(root, `${doc.slug}.md`), "utf8");
+    const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
+    const { glanceMd, bodyMd } = extractGlance(md);
+    return {
+      ...doc,
+      html: rewriteDocLinks(renderFolded(bodyMd)),
+      glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+    };
   };
+  // The register composes ~620 fragments into a ~4.7 MB page — ~200 MB of transient heap per
+  // render, so a handful of members opening it together could OOM the dashboard. Render it once
+  // per corpus state; every other doc is one file and stays cheap to render on demand.
+  return doc.slug === REGISTER_SLUG ? memoByCorpus("register", root, render) : render();
 }
 
 /** Verbatim section extraction — an excerpt, never a summary (honesty: no lossy compression). */

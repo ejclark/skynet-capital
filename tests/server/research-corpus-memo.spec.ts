@@ -2,7 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { memoByCorpus } from "../../src/server/research-corpus-memo.js";
-import { docsMentioning, listResearch } from "../../src/server/research-service.js";
+import {
+  docsMentioning,
+  findResearchDoc,
+  listResearch,
+} from "../../src/server/research-service.js";
 
 // The research corpus is parsed once per process (an OOM fix: re-parsing 35 MB of markdown per
 // /api/research request took the 512 MB dashboard machine past its limit). These pin the other
@@ -53,5 +57,24 @@ describe("research corpus memo", () => {
     } finally {
       rmSync(other, { recursive: true, force: true });
     }
+  });
+
+  it("hands back a detached copy, never the value compute() built", () => {
+    // A regex match is a V8 sliced string that pins its whole source file; caching it raw kept the
+    // entire corpus alive (~170 MB). The clone is what lets the parsed text be collected.
+    const built = { title: "Alpha study" };
+    const cached = memoByCorpus("spec-detach", root, () => built);
+    expect(cached).toEqual(built);
+    expect(cached).not.toBe(built);
+  });
+
+  it("renders the forward-test register once, and again when a fragment changes", () => {
+    mkdirSync(join(root, "forward-tests"));
+    doc("forward-tests.md", "# Forward-test register\nIndex.");
+    doc("forward-tests/amd-print.md", "# AMD print\nfirst row");
+    expect(findResearchDoc("forward-tests", root)?.html).toContain("first row");
+    expect(findResearchDoc("forward-tests", root)).toBe(findResearchDoc("forward-tests", root));
+    doc("forward-tests/amd-print.md", "# AMD print\nrevised row", Date.now() / 1000 + 5);
+    expect(findResearchDoc("forward-tests", root)?.html).toContain("revised row");
   });
 });
