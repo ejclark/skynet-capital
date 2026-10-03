@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { routeAssignments } from "./assignments.mjs";
+import { routeContinuation } from "./continuation.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { routeRelay } from "./relay.mjs";
 import { routeShipped } from "./shipped.mjs";
@@ -148,7 +149,18 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  const sweep = [...intents, ...routeReceipts(deps), ...routeShipped(deps), ...routeRelay(deps)];
+  // Continuation's STOP half goes before the assignment lane for the same reason the closes do:
+  // both can ask Eric about the same plan, and a stop already assigns him with the run link, so
+  // letting it land first means the generic `needs-eric` ask has nothing left to add (#3818
+  // criterion 10). Its CONTINUE half is not here — a claim only works in a run
+  // `claude-code-action` accepts, so `claimNext` asks `pickContinuation` instead.
+  const sweep = [
+    ...intents,
+    ...routeReceipts(deps),
+    ...routeShipped(deps),
+    ...routeRelay(deps),
+    ...routeContinuation(deps),
+  ];
   // The assignment lane goes LAST and reads what the rest of this tick already decided to close.
   // Every lane here plans from the same pre-write snapshot, so an issue carrying `needs-eric` whose
   // PR merged would otherwise be asked about and closed in the same run — one interrupt spent on a

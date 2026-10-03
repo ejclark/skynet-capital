@@ -94,8 +94,10 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   further, across every lane the plan named: the build lanes' in-flight cap
   (`scripts/moneypenny/admission.mjs`), the research lane's per-tick ceiling
   (`scripts/moneypenny/events.mjs` → `researchCapNow`), a `/governor` cycle's athlete allowance
-  (`npm run work-gate`), and a `/grind` run's fan-out width (`.claude/workflows/grind.js`, which
-  refuses a batch wider than the position's `grindWidth` rather than silently dropping items).
+  (`npm run work-gate`), a `/grind` run's fan-out width (`.claude/workflows/grind.js`, which
+  refuses a batch wider than the position's `grindWidth` rather than silently dropping items), and
+  the slices one ready plan may continue into on its own in a day
+  (`scripts/moneypenny/continuation.mjs` → `continuationsPerDay`; `halt` stops continuation dead).
   **The numbers live in `work-mode.json`, not in this doc** — citing the spigot is the whole point
   of it having one carrier; restating the positions here is how the two drift apart. Effort and
   model floors are untouched at every position — the dial is a width control, which is why it can
@@ -140,6 +142,15 @@ best-outcome routing, not economy:
   ambiguous escalates up, never down. The `haiku` band sits below this table's first row on
   purpose — a single-fact, zero-ambiguity edit is the one case where the lightest model changes
   nothing but wall-clock.
+- **A plan's CONTINUED slice** (`scripts/moneypenny/continuation.mjs` → `CONTINUED_MODEL`, #3818
+  criterion 9): a plan issue carries no `skynet-spec` block, so `modelTier` hands every plan build
+  `opus` — right for the first slice off a brief, and over-resourced for a slice whose scope the
+  state block already fixes (its inputs, its done line, its falsifier). So a continuation claim
+  pins `sonnet`; a ready-flip or label claim on the same plan still gets `opus`. The structural
+  signal is which door the claim came through, and the justification is the same as the row above
+  it: the judgment this tier buys was already spent, at planning time. Not economy — if a
+  continued slice starts needing Opus, that is evidence the state block is not carrying the scope,
+  which is a planning defect to fix rather than a tier to raise.
 - **`/grind` steps** (`.claude/workflows/grind.js`): effort defaults by step kind — `script`
   (run a command, report its exit) at `low`, everything else at `high`; model defaults to
   `sonnet`, and a chore that needs more declares it in its front matter (the research chore runs

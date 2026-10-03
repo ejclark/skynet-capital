@@ -39,11 +39,19 @@ export const POSITIONS = ["halt", "conserve", "normal", "surge"];
 /** The per-position numbers every position must carry — one per lane the dial throttles:
  *  `inFlightCap` the build lanes (admission.mjs), `researchPerTick` the event-research lane
  *  (events.mjs `dueForResearch`), `governorDispatches` the athletes one `/governor` cycle may
- *  launch, `grindWidth` the items one `/grind` run may fan out over (.claude/workflows/grind.js).
+ *  launch, `grindWidth` the items one `/grind` run may fan out over (.claude/workflows/grind.js),
+ *  `continuationsPerDay` the slices one ready plan may continue into on its own within 24h
+ *  (continuation.mjs, #3818 criterion 9 — `halt` stops continuation dead, `conserve` allows one).
  *  A lane added later adds its key HERE rather than inventing its own file, which is the
  *  whole point of the spigot: one dial, not four. Every position must carry every key, so adding
  *  one is a loud edit to work-mode.json rather than a silent default. */
-const CAP_KEYS = ["inFlightCap", "researchPerTick", "governorDispatches", "grindWidth"];
+const CAP_KEYS = [
+  "inFlightCap",
+  "researchPerTick",
+  "governorDispatches",
+  "grindWidth",
+  "continuationsPerDay",
+];
 
 const refuse = (file, what) => {
   throw new Error(

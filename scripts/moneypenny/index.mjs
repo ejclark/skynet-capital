@@ -56,6 +56,15 @@ import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./a
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import {
+  CONTINUED_MODEL,
+  continuationContext,
+  executeStopContinuation,
+  gatherContinuationDeps,
+  pickContinuation,
+  postContinuationReceipt,
+  routeContinuation,
+} from "./continuation.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -89,6 +98,7 @@ export {
   mergedReference,
   modelTier,
   resolveShipped,
+  routeContinuation,
   routeRelay,
   routeShipped,
 };
@@ -379,7 +389,13 @@ export function claimPlan(
     console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);
     return result;
   }
-  const tier = modelTier(issue.body ?? "");
+  // #3818 criterion 9: a CONTINUED slice builds below the top tier. `modelTier` hands every plan
+  // Opus (no plan carries a `skynet-spec` block), which is right for a first slice off a brief and
+  // wrong for one whose scope is already written in the state block. `ctx.continuation` is set only
+  // by `claimNext`'s continuation branch — never by a label or comment event.
+  const tier = ctx.continuation
+    ? { model: CONTINUED_MODEL, reason: "continued slice — below the top tier (criterion 9)" }
+    : modelTier(issue.body ?? "");
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
@@ -410,11 +426,14 @@ export function peekNext(deps = {}) {
     readMode = () => readWorkMode(),
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
+    continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
   const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
-  const pick = nextAdmissible(ready, inFlightOf(), mode);
+  // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
+  // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
+  const pick = continuationPick(continuation) ?? nextAdmissible(ready, inFlightOf(), mode);
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -429,6 +448,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
     claims = { plan: claimPlan, feedback: claimFeedback },
+    continuation = () => continuationContext({ now: nowMs }),
     ...admission
   } = deps;
   const mode = readMode();
@@ -436,6 +456,16 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
   let pool = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
   const gateDeps = { readMode: () => mode, readInFlight: () => inFlight, ...admission };
+  // #3818 slice 8, criterion 9 — a plan whose slice just landed goes FIRST, ahead of rank order.
+  // Rank order cannot express it: the plan's lease is still held by the build that just finished,
+  // so the loop below would step past it for the lease's full TTL and claim something else.
+  const continued = continueNext(continuationPick(continuation), {
+    claims,
+    nowMs,
+    sha,
+    gateDeps,
+  });
+  if (continued) return continued;
   // A lease outlives a successful build (only a failed one releases it), so the top-ranked issue
   // can sit "held" for the whole TTL after its slice ships. Stopping there idled the sweep for up
   // to 2h behind #3960 on 2026-10-01; step past a held pick instead, a bounded number of times.
@@ -464,6 +494,92 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
+
+/**
+ * `pickContinuation` over a freshly gathered context, FAIL-OPEN — the same call `gatherDeps` wraps
+ * for the sweep, for the same reason. This gather is the chattiest read on a tick (a comments page
+ * and a run lookup per candidate plan) and `ghRest` throws on a 5xx; letting that throw would fail
+ * the `peek` step, and with it the whole `route` job — taking down the re-dispatch that carries the
+ * retry sweep AND the event-research legs for that merge. A continuation missed on one tick is
+ * picked up on the next push; a red `route` job costs everything the tick was for.
+ */
+function continuationPick(read) {
+  try {
+    return pickContinuation(read());
+  } catch (err) {
+    console.log(
+      `::warning::continuation — skipping this tick, the read failed: ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * The lease's own timestamp in ms, or null when nothing holds it. Same read and same stamp
+ * `isClaimed` uses; this one hands back the number a comparison needs rather than prose.
+ */
+function leaseStampMs(slug) {
+  try {
+    const ref = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/claim/${slug}`]));
+    const ms = Date.parse(claimAgeOf(ref.object.sha));
+    return Number.isNaN(ms) ? null : ms;
+  } catch {
+    return null; // 404 — nothing held, nothing to release
+  }
+}
+
+/**
+ * Claim a continuation pick, or return null so the caller falls through to rank order (#3818
+ * criterion 9).
+ *
+ * THE LEASE IS RELEASED FIRST, AND ONLY IF IT PREDATES THE MERGE — the one write here that needs
+ * its reasoning on the record. A lease outlives a SUCCESSFUL build, so a plan whose slice just
+ * merged is still held by the run that finished, which is exactly the state `claimNext`'s loop
+ * steps past; releasing that is safe, because `continuationDecision` has already proved the prior
+ * slice is done (pullable, no open PR naming it, the last run concluded, the state block moved).
+ *
+ * A lease stamped AFTER that merge is a different animal: it belongs to a claim taken since the
+ * gather's snapshot — a `ready` label event, a live session, another lane — and deleting it would
+ * defeat the compare-and-set the whole lease exists to be, putting two sessions on one plan and one
+ * state block. Those two runs sit in different concurrency groups, so nothing else serialises them.
+ * Unconditional release was the first draft of this function and it is the bug a `/code-review`
+ * pass caught before this slice shipped. So: compare, and leave a newer lease alone.
+ */
+function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
+  if (!pick) return null;
+  const slug = `plan-${pick.number}`;
+  const stamp = leaseStampMs(slug);
+  if (stamp !== null && pick.mergedMs && stamp > pick.mergedMs) {
+    console.log(
+      `::notice::continuation — #${pick.number} took a new lease after its slice merged; leaving it alone`,
+    );
+    return null;
+  }
+  releaseClaim(slug);
+  const ctx = {
+    continuation: true,
+    payload: { action: "labeled", label: { name: LABELS.ready.name }, issue: pick.issue },
+  };
+  const result = claims.plan(ctx, nowMs, sha, gateDeps);
+  if (!result.claimed) {
+    console.log(`::notice::continuation — not claiming #${pick.number}: ${result.reason}`);
+    return null;
+  }
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) appendFileSync(out, "lane=plan\n");
+  console.log(`::notice::continuing #${pick.number} — ${pick.reason} → ${pick.pickup}`);
+  try {
+    postContinuationReceipt(pick);
+  } catch (err) {
+    // The receipt is this lane's memory (the daily cap and criterion 10 both read it), but the
+    // build is already claimed and running — so a failed comment is a warning, never a reason to
+    // abandon the slice. The cost is one unjudged run, and the next tick sees no receipt to judge.
+    console.log(
+      `::warning::continuation — the receipt on #${pick.number} did not post: ${String(err?.message).slice(0, 200)}`,
+    );
+  }
+  return { ...result, lane: "plan", continued: true };
+}
 
 // ── the impure half ───────────────────────────────────────────────────────────
 
@@ -649,16 +765,28 @@ function gatherDeps(ctx) {
     // keeps no state of its own. (Contrast `readReceipts`, which refuses outright: there a false
     // empty would CLOSE the whole queue.)
     assignments: needsScan ? gatherAssignmentsSafely() : null,
+    // Continuation's stop half (#3818 slice 8, criterion 10). Sweep-only and FAIL-OPEN, for both
+    // of the reasons the assignment read above records: only a push can have merged the slice that
+    // makes a plan continuable, and this read is chatty enough (a comments page and a run lookup
+    // per candidate plan) to meet a transient 5xx. A skipped tick costs nothing — the next push
+    // re-reads the same state, and the only thing waiting is a stop that was already late.
+    continuations: needsScan ? gatherSafely("continuations", gatherContinuationDeps) : null,
   };
 }
 
 /** `gatherAssignmentDeps` with the fail-open wrapper `gatherDeps` explains above. */
 function gatherAssignmentsSafely() {
+  return gatherSafely("assignments", gatherAssignmentDeps);
+}
+
+/** The fail-open gather `gatherDeps` explains: a read that throws warns and reads as "not this
+ *  tick" (`null`), never as an empty queue — the one shape that could make a lane act wrongly. */
+function gatherSafely(lane, read) {
   try {
-    return gatherAssignmentDeps();
+    return read();
   } catch (err) {
     console.log(
-      `::warning::assignments — skipping this tick, the queue read failed: ${String(err).slice(0, 200)}`,
+      `::warning::${lane} — skipping this tick, the read failed: ${String(err).slice(0, 200)}`,
     );
     return null;
   }
@@ -956,6 +1084,13 @@ function executeSweepIntent(i) {
     // this router — the same cycle-avoidance as the relay below.
     const line = executeAssignments(i);
     console.log(`::notice::${line}`);
+    return line;
+  }
+  if (i.kind === "stop-continuation") {
+    // The label write and the assignment live in continuation.mjs so its own CLI can reuse them
+    // without importing this router — the same cycle-avoidance as the relay and the assignments.
+    const line = executeStopContinuation(i);
+    console.log(`::warning::${line}`);
     return line;
   }
   if (i.kind === "relay-remainder") {
