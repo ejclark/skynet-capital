@@ -10,7 +10,13 @@ import { workModeRetitle, workModeTitle } from "../../../scripts/moneypenny/work
 //   - a fail-closed READ (a `warning`) never retitles — a GitHub blip must not post a dashboard
 //     saying the repo is throttled when nobody throttled it.
 
-const caps = { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 };
+const caps = {
+  inFlightCap: 3,
+  researchPerTick: 6,
+  governorDispatches: 4,
+  grindWidth: 200,
+  continuationsPerDay: 3,
+};
 const mode = (over: Partial<WorkMode> = {}): WorkMode => ({
   position: "normal",
   until: null,
