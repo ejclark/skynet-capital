@@ -37,21 +37,26 @@
 // SHAPE — decide/do, like every other lane here: `continuationDecision` is pure (one plan's issue,
 // comments, sub-issues and run outcomes in; one verdict out), `gatherContinuationDeps` is the only
 // part that reads GitHub, and `routeContinuation`/`pickContinuation` are pure selectors over the
-// gathered data. Every branch is specced from data in tests/scripts/moneypenny/continuation.spec.ts.
-import { createHash } from "node:crypto";
-
+// gathered data. Reading the state block itself is one file over — `state-block.mjs`, the single
+// parser for the format `docs/ISSUES.md` defines, so a later reader of that block imports it rather
+// than re-deriving the regexes. Every branch is specced from data in
+// tests/scripts/moneypenny/continuation.spec.ts.
 import { admitBuild, readInFlight } from "./admission.mjs";
 import { ASSIGN_MARKER, executeAssignments } from "./assignments.mjs";
 import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
-import { FOOTER, notPullableReason } from "./labels.mjs";
+import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { derivePrIssues } from "./pr-issues.mjs";
+import {
+  allReceiptsOf,
+  blockFingerprint,
+  nextPickupOf,
+  receiptBody,
+  receiptsOf,
+  STOP_MARKER,
+  stateBlockOf,
+} from "./state-block.mjs";
 import { readWorkMode } from "./work-mode.mjs";
-
-/** The receipt this lane leaves when it continues a plan — and its memory of having done so. */
-export const CONTINUE_MARKER = "<!-- moneypenny:continued";
-/** The marker on a criterion-10 stop, so an unparked plan is never re-stopped for the same run. */
-export const STOP_MARKER = "<!-- moneypenny:continue-stopped -->";
 
 /**
  * The model a continued slice builds on (criterion 9: "below the top model tier"). A continuation
@@ -74,118 +79,42 @@ export const MERGE_WINDOW_HOURS = 24;
  *  one: stop, and assign. */
 export const STALL_HOURS = 3;
 
+/** Plans one tick looks at in full, newest merge first. The screen below can name more than one
+ *  plan on a busy day; each costs several REST calls, and the decision is level-based, so an
+ *  overflowed candidate is simply looked at on the next push (still inside the window above). */
+export const MAX_CANDIDATES = 5;
+
+/** Stops one tick may make (criterion 10). The same blast-radius bound as `ASSIGN_CAP`, set lower
+ *  because each stop both PARKS a plan and spends one of Eric's interrupts: a wrong gather costs
+ *  one park and one assignment, not every candidate plan at once. A second wedged plan waits for
+ *  the next push, which is minutes away. */
+export const STOP_CAP = 1;
+
+/** How many open sub-issues one candidate reads blockers for. Past this the answer is UNKNOWN, and
+ *  `nextSubIssue` refuses an unknown rather than guessing it unblocked (see its header). */
+const BLOCKER_READS = 10;
+
 const DAY_MS = 864e5;
-const PLAN_BRANCH = /^plan\/(\d+)$/;
-
-const firstLine = (body) =>
-  String(body ?? "")
-    .trim()
-    .split("\n")[0]
-    .trim();
-
-/**
- * The plan's state block — the newest comment whose first line is its heading (`docs/ISSUES.md` →
- * *The state block*). The block, never the thread, is what names the next slice; a plan with no
- * block is not continuable, because there is nothing to say what "the next slice" means.
- *
- * @returns {{ id?: number, body: string, updatedAt?: string } | null}
- */
-export function stateBlockOf(comments = []) {
-  const blocks = (comments ?? []).filter((c) => /^##\s+state block/i.test(firstLine(c?.body)));
-  const newest = blocks[blocks.length - 1];
-  return newest ? { id: newest.id, body: String(newest.body), updatedAt: newest.updated_at } : null;
-}
-
-/**
- * The block's next-pickup text, whitespace-collapsed — the fallback target when a plan has no open
- * sub-issues left (#4056's correction to this slice: "target the next open, unblocked sub-issue
- * when one exists; fall back to the state block otherwise").
- *
- * BOTH REAL SHAPES MATCH, and the looser pattern is why. `docs/ISSUES.md` writes the canonical form
- * with the bold spanning the whole line (`**Next pickup: slice 3, …. One PR.**`), while live blocks
- * (#3818's own, #4450's, #4469's) bold only the label (`**Next pickup:** slice 8 …`). A pattern
- * pinned to either one reads the other as "no pickup named", which is a refusal to continue a plan
- * that said exactly where to go — so the label is matched, its punctuation eaten, and the rest of
- * the paragraph taken as the text.
- */
-export function nextPickupOf(blockBody) {
-  const m = /\*\*next pickup\b[:*\s]*([\s\S]*?)(?:\n\s*\n|$)/i.exec(String(blockBody ?? ""));
-  if (!m) return null;
-  return m[1].replace(/\*\*/g, "").replace(/\s+/g, " ").trim() || null;
-}
-
-/**
- * A short, stable fingerprint of the state block — how criterion 10 answers "did the slice leave the
- * block unchanged?". A hash, not the comment's `updated_at`: the lane edits the block in place with
- * `gh api --method PATCH`, and an edit that rewrites the same text (a retry, a reformat) bumps the
- * timestamp while changing nothing a reader would call progress.
- */
-export function blockFingerprint(blockBody) {
-  const text = String(blockBody ?? "")
-    .replace(/\r/g, "")
-    .trim();
-  return text ? createHash("sha256").update(text).digest("hex").slice(0, 12) : "";
-}
-
-/** The hidden data line on a receipt: this lane's whole memory of a dispatch. */
-const receiptData = ({ runId, fingerprint, target }) =>
-  `${CONTINUE_MARKER} ${JSON.stringify({ run: String(runId ?? ""), block: fingerprint, target })} -->`;
-
-/** One receipt's data back out of a comment body, or `null` when it carries none. */
-export function parseReceipt(body) {
-  const m = new RegExp(`${CONTINUE_MARKER}\\s*(\\{.*?\\})\\s*-->`).exec(String(body ?? ""));
-  if (!m) return null;
-  try {
-    const d = JSON.parse(m[1]);
-    return { runId: String(d.run ?? ""), fingerprint: String(d.block ?? ""), target: d.target };
-  } catch {
-    return null;
-  }
-}
-
-/** Every receipt this lane has left on one plan, oldest first — the daily cap's counter. */
-export function allReceiptsOf(comments = []) {
-  return (comments ?? [])
-    .map((c) => ({
-      createdAt: c?.created_at ?? c?.createdAt ?? "",
-      body: String(c?.body ?? ""),
-      data: parseReceipt(c?.body),
-    }))
-    .filter((r) => r.data)
-    .map((r) => ({ createdAt: r.createdAt, ...r.data }));
-}
-
-/**
- * The receipts a criterion-10 judgment may look at: only those NEWER than the last stop. A stop
- * ends that chain — once Eric clears the parking label, the next continuation starts fresh rather
- * than re-judging the run he already saw and deliberately resumed past. (Without this, an unparked
- * plan would be stopped again on the same evidence forever.)
- *
- * The DAILY CAP deliberately reads `allReceiptsOf` instead, so a stop-then-unpark cycle still
- * counts against the dial's `continuationsPerDay` — otherwise clearing the label would also clear
- * the day's budget.
- */
-export function receiptsOf(comments = []) {
-  const stops = (comments ?? []).filter((c) => String(c?.body ?? "").includes(STOP_MARKER));
-  const newestStop = stops[stops.length - 1];
-  const since = newestStop
-    ? Date.parse(newestStop.created_at ?? newestStop.createdAt ?? "")
-    : -Infinity;
-  return allReceiptsOf(comments).filter((r) => Date.parse(r.createdAt) > since);
-}
 
 /**
  * The next slice to take: the first open sub-issue whose every blocker is closed (#4056's
  * correction). Order is the sub-issue list's own, which GitHub returns in the order they were
  * attached — the plan's slicing order.
  *
+ * AN UNREAD BLOCKER LIST IS UNKNOWN, NEVER "UNBLOCKED". The gather reads blockers for the first
+ * `BLOCKER_READS` open slices only, so a sub-issue with no entry in `blockedBy` has not been asked
+ * about — and treating that as "no blockers" would dispatch a slice whose dependency is still open,
+ * which is precisely the check #4056 asked for. A plan deep enough to run past that bound falls
+ * back to the block's next-pickup line instead, which a human wrote.
+ *
  * @param blockedBy map of sub-issue number → its blocker issues (`[{ state }]`)
  */
 export function nextSubIssue(subIssues = [], blockedBy = {}) {
+  const known = (s) => Object.hasOwn(blockedBy ?? {}, s.number);
   return (
     (subIssues ?? [])
-      .filter((s) => (s?.state ?? "open") === "open")
-      .find((s) => (blockedBy?.[s.number] ?? []).every((b) => (b?.state ?? "open") !== "open")) ??
+      .filter((s) => s && (s.state ?? "open") === "open")
+      .find((s) => known(s) && blockedBy[s.number].every((b) => (b?.state ?? "open") !== "open")) ??
     null
   );
 }
@@ -204,10 +133,19 @@ function judgePriorRun(receipt, { runs = {}, fingerprint, now }) {
     runId: receipt.runId,
     runUrl: run?.url ?? runUrlFor(receipt.runId),
   });
+  // A READ THAT FAILED IS NOT A RUN THAT FAILED. The gather marks the difference (`unreadable` for
+  // a 5xx or a network blip, `missing` for GitHub answering 404), because the two deserve opposite
+  // answers: parking a plan and spending one of Eric's interrupts over a transient API error is the
+  // worst outcome available here, so an unreadable run always waits for a later tick. A plan left
+  // waiting on a permanently unreadable run is visible to the stall audit; a plan parked wrongly is
+  // not visible to anything.
+  if (run?.status === "unreadable") {
+    return { action: "skip", reason: `the continued run ${receipt.runId} could not be read` };
+  }
   if (run?.status !== "completed") {
     if (hours >= STALL_HOURS) {
       return stop(
-        `the continued slice's run has not reported in ${Math.floor(hours)}h (${run?.status ?? "unreadable"})`,
+        `the continued slice's run has not reported in ${Math.floor(hours)}h (${run?.status ?? "no run found"})`,
       );
     }
     return {
@@ -241,6 +179,13 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
   const plan = candidate.plan ?? {};
   const base = { number: plan.number, title: plan.title ?? "" };
   const skip = (reason) => ({ ...base, action: "skip", reason });
+  // THE LANE CHECK COMES FIRST, and it is not redundant with `claimPlan`'s own. The screen below
+  // finds candidates from merged PRs, which name feedback issues and loose references too; without
+  // this, such an issue could sit permanently in `continue`, making `has_next` true on every push
+  // and burning a dispatch run that `claimPlan` then always refuses (it requires the `plan` label).
+  if (!labelNames(plan.labels).includes(LABELS.plan.name)) {
+    return skip(`#${plan.number} does not carry the \`plan\` label — not this lane's`);
+  }
   const notPullable = notPullableReason(plan);
   if (notPullable) return skip(notPullable);
   if (candidate.openPlanPr) {
@@ -275,6 +220,9 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
     ...base,
     action: "continue",
     issue: plan,
+    // The merge that made this plan continuable — `continueNext`'s lease check compares against it
+    // (a lease stamped AFTER the merge belongs to a claim that is still alive).
+    mergedMs: candidate.mergedMs,
     target: sub?.number ?? plan.number,
     pickup: sub ? `#${sub.number} — ${sub.title ?? ""}`.trim() : pickup,
     fingerprint,
@@ -290,26 +238,6 @@ export function decideContinuations(deps = {}) {
   if (!continuations) return [];
   const { candidates = [], caps = {} } = continuations;
   return candidates.map((c) => continuationDecision(c, { caps, now }));
-}
-
-/** The receipt a continuation leaves on the plan — and the data criterion 10 later reads back. */
-export function receiptBody({ pickup, target, runId, fingerprint, model = CONTINUED_MODEL }) {
-  return [
-    "**Continuing this plan** — a slice landed, so the next one starts without a fresh ready-flip.",
-    "",
-    `- Taking: ${pickup}`,
-    `- Build run: ${runUrlFor(runId) || "this run"}`,
-    `- Model: \`${model}\` — below the top tier, per this plan's criterion 9.`,
-    "",
-    "If that build fails or leaves the state block unchanged, this lane stops continuing this plan " +
-      "and assigns Eric with the run link (criterion 10). Nothing needed from anyone here.",
-    "",
-    receiptData({ runId, fingerprint, target }),
-    "",
-    "— Moneypenny",
-    "",
-    FOOTER,
-  ].join("\n");
 }
 
 /** Criterion 10's comment: what stopped, which run proves it, and what clearing the label does. */
@@ -342,16 +270,22 @@ export function stopComment(decision) {
  * which is the re-dispatched scan, so `claimNext` asks `pickContinuation` instead (#4359's wall).
  */
 export function routeContinuation(deps = {}) {
-  return decideContinuations(deps)
-    .filter((d) => d.action === "stop")
-    .map((d) => ({
-      kind: "stop-continuation",
-      issueNumber: d.number,
-      title: d.title,
-      reason: d.reason,
-      runUrl: d.runUrl,
-      body: stopComment(d),
-    }));
+  const stops = decideContinuations(deps).filter((d) => d.action === "stop");
+  if (stops.length > STOP_CAP) {
+    // stderr only — stdout carries machine-read output on some of this router's call paths.
+    console.error(
+      `::notice::continuation — stopping ${STOP_CAP} of ${stops.length} wedged plan(s) this tick ` +
+        `(cap ${STOP_CAP}); the rest follow on later pushes.`,
+    );
+  }
+  return stops.slice(0, STOP_CAP).map((d) => ({
+    kind: "stop-continuation",
+    issueNumber: d.number,
+    title: d.title,
+    reason: d.reason,
+    runUrl: d.runUrl,
+    body: stopComment(d),
+  }));
 }
 
 /**
@@ -395,7 +329,15 @@ export function postContinuationReceipt(
   pick,
   { run = sh, retry = withRetry, runId = process.env.GITHUB_RUN_ID } = {},
 ) {
-  const body = receiptBody({ ...pick, runId });
+  // The lane's own policy (which model, which footer, where the run lives) stays here; the receipt's
+  // FORMAT lives with the parser that reads it back, in state-block.mjs.
+  const body = receiptBody({
+    ...pick,
+    runId,
+    runUrl: runUrlFor(runId),
+    model: CONTINUED_MODEL,
+    footer: FOOTER,
+  });
   retry(() => run("gh", ["issue", "comment", String(pick.number), "--body", body]));
   return body;
 }
@@ -438,43 +380,78 @@ function openPrsByIssue(openPrs = []) {
  * Which plans could be continuing right now, and everything the decision needs about each.
  *
  * TWO CHEAP READS SCREEN FIRST (see `MERGE_WINDOW_HOURS`): the open PRs — the "a slice is still in
- * flight" oracle above — and the most recently updated closed PRs, which is where a slice branch
- * that merged in the window shows up. Only the plans those two name get the per-plan reads
- * (comments, sub-issues, blockers, the last run's outcome), so a quiet tick costs two calls.
+ * flight" oracle above — and the most recently updated closed PRs, which is where a slice that
+ * merged in the window shows up. Only the plans those two name get the per-plan reads (comments,
+ * sub-issues, blockers, the last run's outcome), so a quiet tick costs two calls.
+ *
+ * THE SAME ORACLE ON BOTH SIDES: a merged PR's plan is whatever it NAMES, not what its branch is
+ * called, for the reason `openPrsByIssue` records — slices ship on `feat/*` as readily as on
+ * `plan/<n>`, and a branch-only screen would mean criterion 9 silently never fired for them.
+ *
+ * The looser oracle names more than plans (a merged PR citing three issues names three), and on a
+ * 57-merge day the newest few are mostly feedback issues — which would crowd a cap-bounded
+ * candidate list and starve the lane it exists for. So the open `plan` issues are read ONCE (paged,
+ * because 95 of them exist today and a single page would silently drop the rest) and the screen is
+ * the intersection: every candidate is already a plan, and its labels and body come from that same
+ * read rather than a call each.
  */
 export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode() } = {}) {
+  const plans = new Map(
+    ghRestAll(`issues?state=open&labels=${LABELS.plan.name}`)
+      .filter((i) => !i.pull_request)
+      .map((i) => [i.number, i]),
+  );
   const open = ghRest("pulls?state=open&per_page=100") ?? [];
   const closed = ghRest("pulls?state=closed&sort=updated&direction=desc&per_page=100") ?? [];
   const inFlightPr = openPrsByIssue(open);
-  const candidates = [];
-  const seen = new Set();
+  const merged = new Map();
   for (const pr of closed) {
-    const n = Number(PLAN_BRANCH.exec(pr?.head?.ref ?? "")?.[1]);
     const mergedMs = Date.parse(pr?.merged_at ?? "");
-    if (!n || seen.has(n) || Number.isNaN(mergedMs)) continue;
-    if (now - mergedMs > MERGE_WINDOW_HOURS * 36e5) continue;
-    seen.add(n);
-    candidates.push(readCandidate(n, { openPlanPr: inFlightPr.get(n) }));
+    if (Number.isNaN(mergedMs) || now - mergedMs > MERGE_WINDOW_HOURS * 36e5) continue;
+    const named = derivePrIssues({ title: pr?.title, body: pr?.body, headRef: pr?.head?.ref });
+    // Newest merge wins the timestamp: it is what the lease check compares against, and a lease
+    // taken after the LAST merge is a live claim, whichever earlier slice also named this plan.
+    for (const n of named) if (plans.has(n) && !merged.has(n)) merged.set(n, mergedMs);
   }
+  const candidates = [...merged.entries()]
+    .slice(0, MAX_CANDIDATES)
+    .map(([n, mergedMs]) =>
+      readCandidate(plans.get(n), { openPlanPr: inFlightPr.get(n), mergedMs }),
+    );
   return { candidates, caps: mode.caps ?? {} };
 }
 
-/** Everything one candidate plan's verdict reads, as plain data. */
-function readCandidate(n, { openPlanPr }) {
-  const plan = ghRest(`issues/${n}`);
+/**
+ * The last dispatched run's outcome, with a READ FAILURE told apart from a missing run.
+ * `judgePriorRun`'s header says why the difference matters; `withRetry` is what makes `unreadable`
+ * mean "GitHub is still refusing after three tries", not "one packet dropped".
+ */
+function readRunOutcome(runId) {
+  try {
+    const r = withRetry(() => ghRest(`actions/runs/${runId}`));
+    return r ? { status: r.status, conclusion: r.conclusion, url: r.html_url } : { status: "none" };
+  } catch (err) {
+    const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+    return /\b404\b/.test(text) ? { status: "none" } : { status: "unreadable" };
+  }
+}
+
+/** Everything one candidate plan's verdict reads, as plain data. The plan issue itself came from
+ *  the screen's own paged read, so this adds the per-plan calls and nothing else. */
+function readCandidate(plan, { openPlanPr, mergedMs }) {
+  const n = plan.number;
   const comments = ghRestAll(`issues/${n}/comments`);
   const subIssues = restOr(`issues/${n}/sub_issues?per_page=100`, []) ?? [];
   const blockedBy = {};
-  for (const s of subIssues.filter((x) => (x?.state ?? "open") === "open").slice(0, 5)) {
+  for (const s of subIssues
+    .filter((x) => (x?.state ?? "open") === "open")
+    .slice(0, BLOCKER_READS)) {
     blockedBy[s.number] = restOr(`issues/${s.number}/dependencies/blocked_by`, []) ?? [];
   }
   const last = receiptsOf(comments).slice(-1)[0];
   const runs = {};
-  if (last?.runId) {
-    const r = restOr(`actions/runs/${last.runId}`, null);
-    if (r) runs[last.runId] = { status: r.status, conclusion: r.conclusion, url: r.html_url };
-  }
-  return { plan, comments, subIssues, blockedBy, openPlanPr, runs };
+  if (last?.runId) runs[last.runId] = readRunOutcome(last.runId);
+  return { plan, comments, subIssues, blockedBy, openPlanPr, mergedMs, runs };
 }
 
 /** `gatherContinuationDeps` plus the live admission inputs — what both call sites need. */

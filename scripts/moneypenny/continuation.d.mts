@@ -31,6 +31,7 @@ export interface RunOutcome {
 
 export interface Candidate {
   readonly plan: PlanIssue;
+  readonly mergedMs?: number;
   readonly comments?: readonly RestComment[];
   readonly subIssues?: readonly SubIssue[];
   readonly blockedBy?: Record<number, readonly { state?: string }[]>;
@@ -56,6 +57,7 @@ export interface Decision {
   readonly fingerprint?: string;
   readonly runId?: string;
   readonly runUrl?: string;
+  readonly mergedMs?: number;
 }
 
 export interface StopIntent {
@@ -77,22 +79,12 @@ export interface ContinuationDeps {
   readonly mode?: { readonly position?: string; readonly caps?: Record<string, number> };
 }
 
-export const CONTINUE_MARKER: string;
-export const STOP_MARKER: string;
 export const CONTINUED_MODEL: string;
 export const MERGE_WINDOW_HOURS: number;
 export const STALL_HOURS: number;
+export const MAX_CANDIDATES: number;
+export const STOP_CAP: number;
 
-export function stateBlockOf(
-  comments?: readonly RestComment[],
-): { id?: number; body: string; updatedAt?: string } | null;
-export function nextPickupOf(blockBody?: string): string | null;
-export function blockFingerprint(blockBody?: string): string;
-export function parseReceipt(
-  body?: string,
-): { runId: string; fingerprint: string; target?: number } | null;
-export function allReceiptsOf(comments?: readonly RestComment[]): Receipt[];
-export function receiptsOf(comments?: readonly RestComment[]): Receipt[];
 export function nextSubIssue(
   subIssues?: readonly SubIssue[],
   blockedBy?: Record<number, readonly { state?: string }[]>,
@@ -102,13 +94,6 @@ export function continuationDecision(
   opts?: { caps?: { continuationsPerDay?: number }; now?: number },
 ): Decision;
 export function decideContinuations(deps?: ContinuationDeps): Decision[];
-export function receiptBody(pick: {
-  pickup?: string;
-  target?: number;
-  runId?: string | number;
-  fingerprint?: string;
-  model?: string;
-}): string;
 export function stopComment(decision: Decision): string;
 export function routeContinuation(deps?: ContinuationDeps): StopIntent[];
 export function pickContinuation(deps?: ContinuationDeps): Decision | null;

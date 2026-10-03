@@ -1,23 +1,26 @@
 import {
-  blockFingerprint,
   type Candidate,
   CONTINUED_MODEL,
   continuationDecision,
   type Decision,
   executeStopContinuation,
-  nextPickupOf,
   nextSubIssue,
-  parseReceipt,
   pickContinuation,
   postContinuationReceipt,
-  receiptBody,
-  receiptsOf,
   routeContinuation,
   STALL_HOURS,
-  stateBlockOf,
+  STOP_CAP,
   stopComment,
 } from "../../../scripts/moneypenny/continuation.mjs";
 import { derivePrIssues } from "../../../scripts/moneypenny/pr-issues.mjs";
+import {
+  blockFingerprint,
+  nextPickupOf,
+  parseReceipt,
+  receiptBody,
+  receiptsOf,
+  stateBlockOf,
+} from "../../../scripts/moneypenny/state-block.mjs";
 
 // CONTINUATION (#3818 slice 8, #4295 — criteria 9–10). A plan's slice merges; the build session
 // removes `in-progress` and ends; the plan's lease outlives it, so the retry sweep steps past the
@@ -68,6 +71,7 @@ const receipt = (over: { run?: string; block?: string; at?: string; target?: num
     target: over.target ?? 4295,
     runId: over.run ?? "900",
     fingerprint: over.block ?? blockFingerprint(block().body),
+    model: CONTINUED_MODEL,
   }),
 });
 
@@ -142,6 +146,26 @@ describe("criterion 9 — when a plan continues itself", () => {
     );
 
     expect(sub?.number).toBe(2);
+  });
+
+  it("never continues an issue that is not a plan — a merged PR names other issues too", () => {
+    const d = decide({ plan: plan({ labels: [{ name: "feedback" }, { name: "ready" }] }) });
+
+    expect(d.action).toBe("skip");
+    expect(d.reason).toContain("`plan` label");
+  });
+
+  it("reads a pickup line that says none as nothing to build", () => {
+    expect(nextPickupOf("**Next pickup:** none — this closes the issue.")).toBeNull();
+    // but the LAST slice's line, which ends by saying it closes the issue, is still a slice
+    expect(
+      nextPickupOf("**Next pickup:** slice 8. **This slice closes this issue.**"),
+    ).not.toBeNull();
+  });
+
+  it("refuses a sub-issue whose blockers were never read — unknown is not unblocked", () => {
+    // the gather reads blockers for the first 10 open slices; an 11th has no entry at all
+    expect(nextSubIssue([{ number: 99, state: "open" }], {})).toBeNull();
   });
 
   it("never continues a parked plan — the one pull rule decides", () => {
@@ -244,6 +268,16 @@ describe("criterion 10 — when a continued slice stops the plan", () => {
     expect(d.action).toBe("continue");
   });
 
+  it("never stops a plan over a run it could not READ — only over one that failed", () => {
+    const d = decide({
+      comments: [block(), receipt({ at: "2026-10-03T04:00:00Z" })],
+      runs: { "900": { status: "unreadable" } },
+    });
+
+    expect(d.action).toBe("skip");
+    expect(d.reason).toContain("could not be read");
+  });
+
   it(`stops a run that never reported after ${STALL_HOURS}h`, () => {
     const d = decide({
       comments: [block(), receipt({ at: "2026-10-03T04:00:00Z" })],
@@ -294,7 +328,13 @@ describe("the receipt is the lane's whole memory", () => {
   });
 
   it("names the model it downgraded to, so the receipt proves criterion 9", () => {
-    const body = receiptBody({ pickup: "#4295", target: 4295, runId: "900", fingerprint: "a" });
+    const body = receiptBody({
+      pickup: "#4295",
+      target: 4295,
+      runId: "900",
+      fingerprint: "a",
+      model: CONTINUED_MODEL,
+    });
 
     expect(body).toContain(CONTINUED_MODEL);
   });
@@ -326,6 +366,21 @@ describe("the writes", () => {
     expect(intents[0]?.kind).toBe("stop-continuation");
     expect(intents[0]?.issueNumber).toBe(3818);
     expect(intents[0]?.body).toContain("https://run/900");
+  });
+
+  it(`stops at most ${STOP_CAP} plan(s) a tick — a wrong read costs one park, not the queue`, () => {
+    const wedged = (number: number) =>
+      candidate({
+        plan: plan({ number }),
+        comments: [block(), receipt()],
+        runs: { "900": { status: "completed", conclusion: "failure", url: "u" } },
+      });
+    const intents = routeContinuation({
+      continuations: { candidates: [wedged(1), wedged(2), wedged(3)], caps },
+      now: NOW,
+    });
+
+    expect(intents).toHaveLength(STOP_CAP);
   });
 
   it("routes nothing at all without a gathered read (every non-push event)", () => {

@@ -433,7 +433,7 @@ export function peekNext(deps = {}) {
   const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
-  const pick = pickContinuation(continuation()) ?? nextAdmissible(ready, inFlightOf(), mode);
+  const pick = continuationPick(continuation) ?? nextAdmissible(ready, inFlightOf(), mode);
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -459,7 +459,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   // #3818 slice 8, criterion 9 — a plan whose slice just landed goes FIRST, ahead of rank order.
   // Rank order cannot express it: the plan's lease is still held by the build that just finished,
   // so the loop below would step past it for the lease's full TTL and claim something else.
-  const continued = continueNext(pickContinuation(continuation()), {
+  const continued = continueNext(continuationPick(continuation), {
     claims,
     nowMs,
     sha,
@@ -496,22 +496,66 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
 export const SWEEP_HELD_SKIPS = 5;
 
 /**
+ * `pickContinuation` over a freshly gathered context, FAIL-OPEN — the same call `gatherDeps` wraps
+ * for the sweep, for the same reason. This gather is the chattiest read on a tick (a comments page
+ * and a run lookup per candidate plan) and `ghRest` throws on a 5xx; letting that throw would fail
+ * the `peek` step, and with it the whole `route` job — taking down the re-dispatch that carries the
+ * retry sweep AND the event-research legs for that merge. A continuation missed on one tick is
+ * picked up on the next push; a red `route` job costs everything the tick was for.
+ */
+function continuationPick(read) {
+  try {
+    return pickContinuation(read());
+  } catch (err) {
+    console.log(
+      `::warning::continuation — skipping this tick, the read failed: ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * The lease's own timestamp in ms, or null when nothing holds it. Same read and same stamp
+ * `isClaimed` uses; this one hands back the number a comparison needs rather than prose.
+ */
+function leaseStampMs(slug) {
+  try {
+    const ref = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/claim/${slug}`]));
+    const ms = Date.parse(claimAgeOf(ref.object.sha));
+    return Number.isNaN(ms) ? null : ms;
+  } catch {
+    return null; // 404 — nothing held, nothing to release
+  }
+}
+
+/**
  * Claim a continuation pick, or return null so the caller falls through to rank order (#3818
  * criterion 9).
  *
- * THE LEASE IS RELEASED FIRST, and that is the one write here that needs its reasoning on the
- * record. A lease outlives a SUCCESSFUL build, so a plan whose slice just merged is still held by
- * the run that finished — exactly the state `claimNext`'s loop steps past. Releasing it is safe
- * only because `continuationDecision` has already proved the prior slice is done: the plan is
- * pullable (not parked, not `in-progress`), no PR is open on `plan/<n>`, the last dispatched run
- * concluded, and the state block moved. Nothing else in this file may release another lane's lease.
+ * THE LEASE IS RELEASED FIRST, AND ONLY IF IT PREDATES THE MERGE — the one write here that needs
+ * its reasoning on the record. A lease outlives a SUCCESSFUL build, so a plan whose slice just
+ * merged is still held by the run that finished, which is exactly the state `claimNext`'s loop
+ * steps past; releasing that is safe, because `continuationDecision` has already proved the prior
+ * slice is done (pullable, no open PR naming it, the last run concluded, the state block moved).
  *
- * A refused claim (the admission gate queued it, or a live claim appeared between the two reads) is
- * NOT an error: it returns null, the ordinary sweep runs, and the next push asks again.
+ * A lease stamped AFTER that merge is a different animal: it belongs to a claim taken since the
+ * gather's snapshot — a `ready` label event, a live session, another lane — and deleting it would
+ * defeat the compare-and-set the whole lease exists to be, putting two sessions on one plan and one
+ * state block. Those two runs sit in different concurrency groups, so nothing else serialises them.
+ * Unconditional release was the first draft of this function and it is the bug a `/code-review`
+ * pass caught before this slice shipped. So: compare, and leave a newer lease alone.
  */
 function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
   if (!pick) return null;
-  releaseClaim(`plan-${pick.number}`);
+  const slug = `plan-${pick.number}`;
+  const stamp = leaseStampMs(slug);
+  if (stamp !== null && pick.mergedMs && stamp > pick.mergedMs) {
+    console.log(
+      `::notice::continuation — #${pick.number} took a new lease after its slice merged; leaving it alone`,
+    );
+    return null;
+  }
+  releaseClaim(slug);
   const ctx = {
     continuation: true,
     payload: { action: "labeled", label: { name: LABELS.ready.name }, issue: pick.issue },
