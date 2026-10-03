@@ -521,7 +521,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy to Fly
-        run: flyctl deploy --remote-only
+        # A shim: scripts/fly-deploy.mjs owns the retry decision and is specced. The bare
+        # `flyctl deploy` this replaced had no second attempt, so on run 37094550247 (#4523) one
+        # closed socket on Fly's first app lookup (`api.machines.dev … : EOF`, six seconds in, no
+        # build started) failed the release and left `main` merged-but-undeployed. Connection-level
+        # failures only — an auth refusal, a build error or failed health checks still fail at once.
+        run: node scripts/fly-deploy.mjs --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -543,7 +548,7 @@ jobs:
         if: ${{ failure() && steps.smoke.conclusion == 'failure' && steps.prev.outputs.image != '' }}
         run: |
           echo "smoke failed — rolling back to ${{ steps.prev.outputs.image }}"
-          flyctl deploy -a skynet-capital --image "${{ steps.prev.outputs.image }}"
+          node scripts/fly-deploy.mjs -a skynet-capital --image "${{ steps.prev.outputs.image }}"
           bash scripts/smoke.sh https://skynet-capital.fly.dev
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -657,7 +662,7 @@ jobs:
           sed "/^\[env\]/a\\
             GIT_SHA = \"${{ github.sha }}\"" fly.bots.toml > /tmp/fly.bots.deploy.toml
           grep -A2 '^\[env\]' /tmp/fly.bots.deploy.toml
-          flyctl deploy --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
+          node scripts/fly-deploy.mjs --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
@@ -674,6 +679,6 @@ jobs:
         if: ${{ failure() && steps.smoke-bots.conclusion == 'failure' && steps.prev-bots.outputs.image != '' }}
         run: |
           echo "bots smoke failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
-          flyctl deploy --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
+          node scripts/fly-deploy.mjs --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
