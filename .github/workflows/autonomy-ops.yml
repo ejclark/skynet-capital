@@ -30,6 +30,7 @@ on:
           - set-playbooks
           - set-beta-forcing
           - set-hardcore
+          - set-cond-scout-universe
       target_app:
         description: >-
           Which Fly app to operate on. After the deploy split the bots fleet lives in
@@ -70,6 +71,15 @@ on:
           Comma-separated persona ids for HARDCORE research mode — only read by set-hardcore.
           Empty string = hardcore dark. Unknown ids are refused loudly at boot
           (src/personas/registry.ts). Currently built: sauron.
+        required: false
+        type: string
+        default: ""
+      cond_scout_universe:
+        description: >-
+          COND-SCOUT shadow-probe universe, comma-separated tickers — only read by
+          set-cond-scout-universe. Empty string = scout dark. e.g. "NVDA,AAPL,SPY". Shadow ledger
+          only, never orders; non-ticker tokens are dropped and symbols off the live price stream
+          are skipped at boot (src/playbooks/cond-scout.ts parseCondScoutUniverse).
         required: false
         type: string
         default: ""
@@ -201,6 +211,25 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
           HARDCORE_BOTS: ${{ inputs.hardcore_bots }}
+
+      - name: Set COND-SCOUT universe
+        if: ${{ inputs.action == 'set-cond-scout-universe' }}
+        # COND_SCOUT_UNIVERSE passed via env and read as a shell variable, not interpolated via
+        # ${{ }} — same free-text-input discipline as set-playbooks above. The runner
+        # (src/scripts/autonomous-cond-scout.ts) holds no broker: armed, it writes shadow probes
+        # to the ledger the Heartbeat "Shadow probes" card reads (#3651), nothing more.
+        run: |
+          echo "Setting SKYNET_COND_SCOUT_UNIVERSE=$COND_SCOUT_UNIVERSE"
+          if [ -z "$COND_SCOUT_UNIVERSE" ]; then
+            flyctl secrets unset SKYNET_COND_SCOUT_UNIVERSE -a "$TARGET_APP" || true
+            echo "Cleared — COND-SCOUT dark; no new shadow probes open."
+          else
+            flyctl secrets set "SKYNET_COND_SCOUT_UNIVERSE=$COND_SCOUT_UNIVERSE" -a "$TARGET_APP"
+            echo "::warning::COND-SCOUT armed on the shadow ledger (no orders). Symbols not on the live price stream are dropped at boot. Watch fly logs -a $TARGET_APP for the [cond-scout] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+          COND_SCOUT_UNIVERSE: ${{ inputs.cond_scout_universe }}
 
       - name: Preflight — refuse live on the bots app while the old shared-app bots group survives
         # The mechanical anti-double-trade gate for the deploy-split cutover. The boot-time

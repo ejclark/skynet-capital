@@ -233,7 +233,7 @@ C4Container
   Rel(github, claude_lane, "OWNER, MEMBER or COLLABORATOR comment, new or edited, on an issue or PR thread, or a new issue with @claude", "Actions, cancel-in-progress")
   Rel(claude_lane, ccp, "Interactive session", "claude-code-action")
   Rel(dependabot, github, "Opens weekly bump PRs", "pull_request opened")
-  Rel(ops_buttons, bots, "flip-mode, set-playbooks, set-beta-forcing, set-hardcore, logs, status, bootstrap; never bot Alpaca credentials", "flyctl secrets set and logs through the Fly API")
+  Rel(ops_buttons, bots, "flip-mode, set-playbooks, set-beta-forcing, set-hardcore, set-cond-scout-universe, logs, status, bootstrap; never bot Alpaca credentials", "flyctl secrets set and logs through the Fly API")
   Rel(ops_buttons, anthropic, "companion-eval replays and LLM judge; key borrowed from the Fly app at run time", "companion-eval.yml")
   Rel(ccp, secretary, "Fires daily 12:00; gated by digest-scan --due", "Routine trig_01KaMC2uR3cFW5XTUL6rzPuS")
   Rel(secretary, ledgers, "Writes docs/digests/YYYY-MM-DD.md from TEMPLATE and ships it as an auto-merged docs PR", "ship skill")
