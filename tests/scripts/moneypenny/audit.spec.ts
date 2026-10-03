@@ -217,7 +217,13 @@ describe("audit() — syncing the work spigot's title", () => {
     mode: {
       position: "normal" as const,
       until: null,
-      caps: { inFlightCap: 3, researchPerTick: 6, governorDispatches: 4, grindWidth: 200 },
+      caps: {
+        inFlightCap: 3,
+        researchPerTick: 6,
+        governorDispatches: 4,
+        grindWidth: 200,
+        continuationsPerDay: 3,
+      },
       reason: "conserve expired at the end of 2026-09-29 (UTC)",
     },
   };

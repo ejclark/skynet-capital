@@ -189,6 +189,22 @@ restored from history rather than rebuilt.
 | **Fit finder** | Start from a symbol and see which playbooks its traits fit, each with the one-line reason, then add it to one — the funnel's front door. | a symbol's own view (search or R&D) (#4469 slice 4) | same, "funnel symbols towards strategies that match the characteristics of a stock" | seeded — opens when a second playbook declares fit criteria; with one there is nothing to choose between |
 | **Research on add** | Adding a symbol to a playbook runs that playbook's fit research once per playbook × symbol: a verdict with a dated falsifier, plus the settings the playbook trades it with; a stale or falsified verdict stops new entries until re-run. | the playbook's symbol list (#4469 slices 1–2; CRWV first, #4460) | same, "some research to understand the behaviors, cycles, etc. … to influence behavior" | seeded — #4469 slice 1 |
 
+## The ledger — coverage (R&D's *where* axis)
+
+The calendar answers *when*; coverage answers *where*. Five shapes drawn for #3811 slice 2 against real
+values, in `docs/design/lofi/sector-coverage.html`. All five are **proposed**, none placed — Eric picks one
+and this table records the pick. Each carries the objection its red pass raised, because a shape declined
+for a named reason is worth more to the next session than a shape that simply lost.
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **Twin instrument** | A second axis of the same data drawn in an existing instrument's own grammar — the same marks, the same gesture, the same thing happening on tap — so a member who can read the first can read the second with nothing new to learn. Coverage borrows the month grid's filled/hollow/hatched marks and its tap-to-filter; the claim is a *mechanic*, not a resemblance. | proposed for R&D → Coverage, shape A (`docs/design/lofi/sector-coverage.html#grid/none/390`) | Eric, 2026-09-26: "this has parallels to the calendar showing events over a timespan" | seeded — the lead shape. Red pass: seven filled dots in the Technology tile is a count drawn as a picture, and sectors have no natural order the way days do |
+| **Coverage rows** | One row per thing-we-might-cover, read straight down in depth order: name · its fund · the marks · one metric. An absent row reads "no coverage" in words, never only as an empty cell. The vertical form of *Priority guide*. | proposed for R&D → Coverage, shape B; candidate as A's detail fold | #3811's brief | seeded. Red pass: twelve rows at 390 is a scroll, and the three gaps sort to the bottom — the finding is the thing least likely to be seen |
+| **Coverage matrix** | Subjects down the side × one narrow counted column per depth; desk width adds metric columns beside them, never new concepts. Every empty cell is an explicit "—", because a blank cell on a coverage map is the one ambiguity it cannot afford. | proposed for R&D → Coverage, shape C | #3811's brief | seeded. Red pass: two of the four mark columns are empty for every row today, so it is mostly a table of dashes |
+| **Weighted treemap** | Area = weight, so the eye reads importance before it reads labels. | proposed for R&D → Coverage, shape D | #3811's brief | expected **declined-here** — we have no source for GICS index weights (no fundamentals provider, no index feed), so the tiles would be equal-area: a treemap that lies about being one. Banked for a surface where the weights are ours and real (a book's own position sizes) |
+| **Sector ring** | A donut of equal arcs, one per category, the covered ones drawn heavier, the count in the middle. | proposed for R&D → Coverage, shape E | #3811's brief | expected **declined-here** as a *shape* — eleven labels do not fit around a 390px donut, so it needs a legend beside it and the legend is shape B. Two further tells: a ring of eleven arcs has no twelfth, so the Unclassified row (where the only holding on file, EEM, actually lands) cannot be drawn at all. Banked as a one-tile **summary** at the top of another shape |
+| **Absence is named, never dropped** (instance) | — see the discovery ledger's row | R&D → Coverage's Unclassified row, in all five shapes | #617 | seeded here — the strongest instance yet: Unclassified is not a defensive nicety on this surface, it is where a real holding lands |
+
 ## How a pattern enters
 
 1. **Named anywhere → a row here.** A teardown's vocabulary list, a call sheet's shape names, a

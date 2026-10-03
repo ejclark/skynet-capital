@@ -93,16 +93,41 @@ export interface ParticipantSnapshot {
   readonly monthReturnPct?: number;
 }
 
+/** The identity half of a snapshot — carried by both a good read and a degraded one. */
+type SnapshotIdentity = Pick<
+  ParticipantSnapshot,
+  "id" | "displayName" | "kind" | "personaId" | "timezone"
+>;
+
+/** How a read that produced nothing degrades: zeros, no holdings, and the reason why. */
+function degraded(base: SnapshotIdentity, reason: unknown): ParticipantSnapshot {
+  return { ...base, cash: 0, equity: 0, positions: [], activity: [], error: String(reason) };
+}
+
+export interface SnapshotReadOptions {
+  /**
+   * Per-account deadline in milliseconds. On expiry the read degrades to the same error row a
+   * thrown failure produces, rather than waiting on the broker forever. Omit for an unbounded
+   * read — the right default on a request path, where the caller's own client owns the timeout.
+   */
+  readonly timeoutMs?: number;
+}
+
 /**
  * Read one participant's live account into a dashboard snapshot. Alpaca returns numbers
  * as strings; this is where they become numbers. A read failure is captured on the
  * snapshot (not thrown) so one unreachable account never blanks the whole dashboard.
+ *
+ * A read that never *finishes* is the same outage wearing different clothes, and it needs
+ * `options.timeoutMs` to come out the same way — see `SNAPSHOT_READ_TIMEOUT_MS` in
+ * `dashboard-data.ts` for why the boot path always sets one.
  */
 export async function buildParticipantSnapshot(
   participant: Participant,
   client: AlpacaTradingClient,
+  options: SnapshotReadOptions = {},
 ): Promise<ParticipantSnapshot> {
-  const base = {
+  const base: SnapshotIdentity = {
     id: participant.id,
     displayName: participant.displayName,
     kind: participant.kind,
@@ -110,6 +135,30 @@ export async function buildParticipantSnapshot(
     ...(participant.timezone ? { timezone: participant.timezone } : {}),
   };
 
+  const read = readAccount(base, client);
+  const { timeoutMs } = options;
+  if (timeoutMs === undefined) return read;
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<ParticipantSnapshot>((resolve) => {
+    timer = setTimeout(
+      () => resolve(degraded(base, new Error(`broker read timed out after ${timeoutMs}ms`))),
+      timeoutMs,
+    );
+  });
+  try {
+    // `Promise.race` attaches handlers to both, so a stalled read that rejects later is still
+    // handled — it just no longer holds up the caller.
+    return await Promise.race([read, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readAccount(
+  base: SnapshotIdentity,
+  client: AlpacaTradingClient,
+): Promise<ParticipantSnapshot> {
   try {
     const [account, positions] = await Promise.all([client.getAccount(), client.getPositions()]);
     return {
@@ -123,7 +172,7 @@ export async function buildParticipantSnapshot(
       activity: await readActivity(client),
     };
   } catch (error) {
-    return { ...base, cash: 0, equity: 0, positions: [], activity: [], error: String(error) };
+    return degraded(base, error);
   }
 }
 

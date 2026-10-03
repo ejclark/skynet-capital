@@ -32,4 +32,8 @@ export const CONSUMER_DISCRETIONARY: readonly TickerEntry[] = [
   { symbol: "GRMN", name: "Garmin", sector: "Consumer Discretionary" },
   { symbol: "DECK", name: "Deckers Brands", sector: "Consumer Discretionary" },
   { symbol: "ULTA", name: "Ulta Beauty", sector: "Consumer Discretionary" },
+  // The one homebuilder the corpus already researches that this table was missing (#3811): KB Home
+  // has its own event and ledger (`kb-home-q3-fy2026-2026-09-22`), so without this row the coverage
+  // map had to file a researched name under Unclassified. Same industry as DHI/LEN/NVR/PHM above.
+  { symbol: "KBH", name: "KB Home", sector: "Consumer Discretionary" },
 ];

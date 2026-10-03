@@ -461,6 +461,20 @@ past three prose lines or carries more than two inline code spans; both notes ar
 gate. The lanes that pick plans up (`.github/prompts/plan-build.md`, `.github/prompts/feedback-build.md`,
 `/work-issues`) read the block first and edit it on finish (slice 3 of #3765).
 
+**Two lines of the block are machine-read now, so write them for a reader AND a script**
+(`scripts/moneypenny/continuation.mjs`, #3818 criterion 9 — after a slice PR merges, the plan takes
+its next slice itself):
+
+- **The next-pickup line is the fallback target.** The lane prefers the plan's next open, unblocked
+  sub-issue; with none, it continues on whatever that line names. A block with no next-pickup line
+  and no open slice is read as "this plan is finished" and nothing continues — which is correct on
+  the last slice, and a silent stall if the line was simply forgotten. Either bold shape works
+  (`**Next pickup: …**` or `**Next pickup:** …`).
+- **The edit itself is the proof of work.** A continued slice that ends with the block byte-identical
+  stops the plan and assigns Eric with the run link — the lane cannot tell "nothing moved" from
+  "moved but did not say so". Editing in place on finish is therefore not hygiene; it is how the
+  chain keeps going.
+
 ## Comments — the surface that outnumbers issues 10:1
 
 An issue's body is written once; its comments accumulate forever, and they are what a human actually
