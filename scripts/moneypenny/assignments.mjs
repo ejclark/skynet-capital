@@ -4,11 +4,23 @@
 // own posts — so nothing came back to him (#3818's call 2: 0 call sites assigned him; 8 open
 // `needs-eric`, median ~15.5 days). An assignment by a bot DOES push to GitHub Mobile.
 //
-// WHY DRY-RUN ONLY (this PR). Assigning is a GitHub write on Eric's own queue. The plan's rule is
-// "dry run for one day first": he reads what WOULD be assigned, and only then does a separate,
-// explicit step switch writes on. So this file has no write path at all — `--dry-run` is required
-// and the CLI refuses without it. The workflow wiring is `.github/**` (the envelope) and is a
-// follow-up on #4289, not this PR.
+// THE DRY RUN CAME FIRST, AND IT IS STILL THE CLI DEFAULT. Assigning is a GitHub write on Eric's
+// own queue, so the plan's rule was "dry run for one day first". Two dry runs are on #4289's thread
+// — 2026-10-01 (1 would-be assignment) and 2026-10-02 (2) — both tiny and both correct, which is the
+// reading that rule existed to produce. So this file now has a write path, behind `--apply`;
+// `--dry-run` remains what you get by default and what the report is for.
+//
+// WHY THE PUSH SWEEP, NOT A WORKFLOW STEP. #4289's own note planned the live half as a
+// `.github/**` platter item — an envelope-protected file, so one more merge of Eric's. It does not
+// need to be: the sweep already runs `index.mjs` on every push with the App token, so this lane
+// folds in beside the relay (slice 4) as a routed intent and costs him nothing. Same outcome, one
+// fewer touch point, which is this whole plan's point.
+//
+// THE BLAST-RADIUS BOUND IS `ASSIGN_CAP`. A live lane that reads the queue wrong could assign Eric
+// to everything it can see once. Three new assignments per tick means a wrong read costs three
+// notifications and three `unassign`s, not a queue-wide fan-out — the same instinct as the relay's
+// watermark (#4484) and the receipt sweep's batch cap. Removals are uncapped: they only ever shrink
+// his queue, and holding one back would leave a stale assignment pushing at him.
 //
 // WHAT IT PLANS (#3818's EARS criteria):
 //   1. `needs-eric` + a `Needs from you` line → assign ejclark, one comment quoting the line.
@@ -24,11 +36,13 @@
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 import { aboveFold } from "../issue-lint.mjs";
 import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
-import { ghRestAll } from "./gh.mjs";
+import { ghRestAll, sh } from "./gh.mjs";
 
 export const ASSIGN_MARKER = "<!-- moneypenny:assigned -->";
 export const HOLD_MERGE = "hold-merge";
 export const HELD_PR_HOURS = 12;
+/** New assignments one sweep tick may make. See the header: the bound on a wrong read. */
+export const ASSIGN_CAP = 3;
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const logins = (users = []) => users.map((u) => (typeof u === "string" ? u : u?.login));
@@ -84,7 +98,16 @@ export function plan({ issues = [], prs = [], markers = new Set(), now = Date.no
   const actions = [];
   const needsYou = [];
   const ask = (row) => needsYou.some((n) => n.number === row.number) || needsYou.push(row);
-  for (const issue of issues) planIssue(issue, { markers, now, queue, actions, ask });
+  // CRITERION 4 OUTRANKS CRITERION 2 ON THE SAME NUMBER, and this set is what makes that true.
+  // GitHub lists a PR among `issues`, so a PR assigned under criterion 4 reaches `planIssue` as an
+  // issue that is marked, assigned and has no `needs-eric` — which reads as "the label came off,
+  // clear it". The first live run (2026-10-02, #4436) assigned the held PR and the next tick wanted
+  // to unassign it: an assign/unassign loop pushing at Eric twice per cycle. Computed before either
+  // loop, because the issue pass runs first (its results are what dedupes criterion 4's own ask).
+  const stillHeld = new Set(
+    prs.filter((pr) => heldPrHours(pr, now) !== null).map((pr) => pr.number),
+  );
+  for (const issue of issues) planIssue(issue, { markers, now, queue, actions, ask, stillHeld });
   for (const pr of prs) {
     const hours = heldPrHours(pr, now);
     if (hours === null) continue;
@@ -92,14 +115,23 @@ export function plan({ issues = [], prs = [], markers = new Set(), now = Date.no
     ask({ number: pr.number, title: pr.title, criterion: 4, why });
     if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) continue; // one ask each
     if (!logins(pr.assignees).some(isEric)) {
-      actions.push({ kind: "assign", criterion: 4, number: pr.number, title: pr.title, why });
+      actions.push({
+        kind: "assign",
+        criterion: 4,
+        number: pr.number,
+        title: pr.title,
+        why,
+        // A held PR states no decision in a callout — the decision IS the merge click, and it is
+        // his because the carve-out says so (CLAUDE.md's irreversible class), so name that.
+        decision: `Merge this held PR, or say why not — it has been green and unmerged ${Math.floor(hours)}h, and a protected-path change is yours to merge.`,
+      });
     }
   }
   return { queue, actions, needsYou };
 }
 
 /** Criteria 1–3 and the honest queue, for one issue (or a PR GitHub lists as one). */
-function planIssue(issue, { markers, now, queue, actions, ask }) {
+function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new Set() }) {
   const assigned = logins(issue.assignees).some(isEric);
   const marked = markers.has(issue.number);
   const open = (issue.state ?? "open") === "open";
@@ -107,7 +139,9 @@ function planIssue(issue, { markers, now, queue, actions, ask }) {
     actions.push({ kind, criterion, number: issue.number, title: issue.title, why });
 
   if (!(open && names(issue.labels).includes(NEEDS_ERIC))) {
-    if (marked && assigned) act("unassign", 2, open ? "needs-eric removed" : "issue closed");
+    if (marked && assigned && !stillHeld.has(issue.number)) {
+      act("unassign", 2, open ? "needs-eric removed" : "issue closed");
+    }
     return;
   }
   const decision = decisionLine(issue.body);
@@ -122,7 +156,16 @@ function planIssue(issue, { markers, now, queue, actions, ask }) {
   // No stated decision → a clear candidate, never an ask. Marked → criterion 3, asked once
   // already. Assigned → his by hand; nothing to add.
   const why = `needs-eric with a stated decision: "${decision}"`;
-  if (decision && !marked && !assigned) act("assign", 1, why);
+  if (decision && !marked && !assigned) {
+    actions.push({
+      kind: "assign",
+      criterion: 1,
+      number: issue.number,
+      title: issue.title,
+      why,
+      decision,
+    });
+  }
   // Needs-you = what he holds after this run: stated, and either his already or about to be. A
   // marked issue he unassigned himself stays off — criterion 3 means the lane won't re-ask.
   if (decision && (assigned || !marked)) {
@@ -162,6 +205,87 @@ export function report({ queue, actions }) {
   return out.join("\n");
 }
 
+/**
+ * The sweep's view of `plan()`: `plan`'s actions as intents `index.mjs` can execute, capped.
+ *
+ * Pure, and a no-op without `deps.assignments` — every non-push event and every `routeSweep`
+ * fixture that predates this lane therefore routes exactly as it did before.
+ *
+ * Removals go first and are never capped (criterion 2: a stale assignment is still pushing at him),
+ * then at most `ASSIGN_CAP` new asks by ascending number — oldest first, because REST hands back
+ * `labels=` newest-first and a cap applied to that order would starve the items that have waited
+ * longest, which is exactly the 15.5-day median this plan set out to fix.
+ *
+ * @param deps { assignments: { issues, prs, markers }, now }
+ * @returns Intent[] — `[]` on most pushes, which is the correct answer.
+ */
+export function routeAssignments(deps = {}) {
+  const { assignments, now = Date.now() } = deps;
+  if (!assignments) return [];
+  const { actions } = plan({ ...assignments, now });
+  const removals = actions.filter((a) => a.kind === "unassign");
+  const asks = actions.filter((a) => a.kind === "assign").sort((a, b) => a.number - b.number);
+  const batch = asks.slice(0, ASSIGN_CAP);
+  if (asks.length > batch.length) {
+    // stderr only — stdout carries machine-read output on some call paths of this router.
+    console.error(
+      `::notice::assignments — asking Eric about ${batch.length} of ${asks.length} item(s) this ` +
+        `tick (cap ${ASSIGN_CAP}); the rest follow on later pushes.`,
+    );
+  }
+  return [...removals, ...batch].map((a) => ({
+    kind: a.kind === "assign" ? "assign-eric" : "unassign-eric",
+    number: a.number,
+    title: a.title,
+    criterion: a.criterion,
+    why: a.why,
+    body: a.kind === "assign" ? assignmentComment({ decision: a.decision }) : undefined,
+  }));
+}
+
+/**
+ * Carry out one assignment intent. THE COMMENT GOES FIRST, and that order is deliberate.
+ *
+ * Two writes cannot be atomic, so one of them can land alone. Comment-then-assign leaves the ask
+ * written on the issue where a human can read it; assign-then-comment leaves Eric holding an
+ * assignment that says nothing — the one state this whole lane exists to avoid. A failed assign
+ * throws, so the run goes red and the repair lane sees it rather than the gap sitting silent.
+ *
+ * `gh api`, not `gh issue edit`/`gh issue comment`: criterion 4's targets are PRs, and the issue
+ * subcommands refuse a PR number while the `issues/` REST route serves both.
+ */
+export function executeAssignments(intent, { run = sh } = {}) {
+  const n = String(intent.number);
+  if (intent.kind === "unassign-eric") {
+    run("gh", [
+      "api",
+      "--method",
+      "DELETE",
+      `repos/{owner}/{repo}/issues/${n}/assignees`,
+      "-f",
+      `assignees[]=${ERIC}`,
+    ]);
+    return `🧹 unassigned #${n} — ${intent.why}`;
+  }
+  run("gh", [
+    "api",
+    "--method",
+    "POST",
+    `repos/{owner}/{repo}/issues/${n}/comments`,
+    "-f",
+    `body=${intent.body}`,
+  ]);
+  run("gh", [
+    "api",
+    "--method",
+    "POST",
+    `repos/{owner}/{repo}/issues/${n}/assignees`,
+    "-f",
+    `assignees[]=${ERIC}`,
+  ]);
+  return `📬 assigned #${n} to @${ERIC} (criterion ${intent.criterion}) — ${intent.why}`;
+}
+
 /** The live REST read both the dry run and the digest plan from — one gather, one `plan()`. */
 export function gather() {
   // PRs stay in: a held PR can carry `needs-eric` too (#4361), and GitHub lists it as an issue.
@@ -182,15 +306,21 @@ export function gather() {
 }
 
 function main(argv) {
-  if (!argv.includes("--dry-run")) {
-    console.error(
-      "assignments: only --dry-run exists. Live assignment is a separate, explicit step after Eric " +
-        "has read a dry run (#4289).",
-    );
-    process.exit(2);
+  const apply = argv.includes("--apply");
+  const deps = gather();
+  const planned = plan(deps);
+  if (!apply) {
+    console.log(argv.includes("--json") ? JSON.stringify(planned, null, 2) : report(planned));
+    if (planned.actions.length) console.log("\nRun again with --apply to write them.");
+    return;
   }
-  const planned = plan(gather());
-  console.log(argv.includes("--json") ? JSON.stringify(planned, null, 2) : report(planned));
+  // By hand, the same path the push sweep takes — one route, never a second that can drift.
+  const intents = routeAssignments({ assignments: deps });
+  if (!intents.length) {
+    console.log("· nothing to assign or clear");
+    return;
+  }
+  for (const i of intents) console.log(executeAssignments(i));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

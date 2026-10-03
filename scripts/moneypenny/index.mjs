@@ -53,6 +53,7 @@
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./admission.mjs";
+import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
@@ -636,6 +637,10 @@ function gatherDeps(ctx) {
     // and only on a sweep — nothing on a label or comment event can close an issue, so no other
     // path has anything to relay.
     closedWithRemainder: needsScan ? gatherRelayDeps() : [],
+    // The assignment lane (#3818 slice 5). Sweep-only for the same reason as the relay above: only
+    // a push can have changed what Eric holds since the last tick, and `null` (not `{}`) is what
+    // makes `routeAssignments` a no-op on every other event and in every pre-slice-5 fixture.
+    assignments: needsScan ? gatherAssignmentDeps() : null,
   };
 }
 
@@ -925,6 +930,13 @@ function executeSweepIntent(i) {
     ]);
     console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
     return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
+  }
+  if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
+    // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
+    // this router — the same cycle-avoidance as the relay below.
+    const line = executeAssignments(i);
+    console.log(`::notice::${line}`);
+    return line;
   }
   if (i.kind === "relay-remainder") {
     // The three writes (file the relay, receipt the source, clear the remainder label) live in

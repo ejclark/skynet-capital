@@ -49,6 +49,7 @@ C4Component
     Component(screen, "Deterministic screen", "scripts/event-material-scan.mjs, event-material-decide.mjs, scripts/moneypenny/open-screen-pr.mjs", "Quiet interval-elapsed pulses get a ledger row through a screen PR, never a session")
     Component(shipped, "Last-mile closer", "scripts/moneypenny/shipped.mjs", "Closes feedback and event-research issues whose PR merged")
     Component(relay, "Dropped-remainder relay", "scripts/moneypenny/relay.mjs", "A closed issue still carrying next-slice or needs-session gets a fresh Backlog issue, a receipt on the source, and the remainder label removed last; RELAY_FROM watermark, cap 3 a tick")
+    Component(assign, "Decision assignment lane", "scripts/moneypenny/assignments.mjs", "needs-eric with a Needs-from-you callout assigns ejclark and posts one marked comment quoting the decision; a held or platter PR unmerged 12h too; ASSIGN_CAP 3 new asks a tick, removals uncapped")
     Component(vocab, "Vocabulary and gh wrapper", "scripts/moneypenny/labels.mjs, scripts/moneypenny/gh.mjs", "LABELS registry, FOOTER, ensureVocabulary; sh, withRetry, ghRest")
     Component(prompts, "Lane instruction sets", ".github/prompts/feedback-build.md, plan-build.md, event-research.md, .claude/agents/dep-warden.md", "Envelope-protected orders each session reads first")
   }
@@ -64,6 +65,7 @@ C4Component
   Rel(router, planclaim, "--claim-plan")
   Rel(router, shipped, "sweepShipped on push")
   Rel(events, relay, "routeSweep composes routeRelay")
+  Rel(events, assign, "routeSweep composes routeAssignments")
   Rel(router, vocab, "labels, footer, gh calls")
   Rel(wf, breaker, "checkCircuitBreaker before listing due events")
   Rel(wf, eventscan, "event-scan.mjs --due")
@@ -97,5 +99,6 @@ _Caption — components of Moneypenny event lane, from the paths on each element
 | **Deterministic screen** | `scripts/event-material-scan.mjs, scripts/event-material-decide.mjs, scripts/moneypenny/open-screen-pr.mjs` | For interval-elapsed pulses, probes price/VIX movement; quiet ones get a ledger row committed on a moneypenny/screen-* branch and a screen PR (never a direct push, never a session) |
 | **Last-mile closer** | `scripts/moneypenny/shipped.mjs` | routeShipped/resolveShipped/prIsMerged close feedback and event-research issues whose PR merged, because Closes # links do not fire for bot-authored bot-merged PRs; never closes an issue still carrying next-slice |
 | **Dropped-remainder relay** | `scripts/moneypenny/relay.mjs` | routeRelay/notRelayableReason/executeRelay carry a CLOSED issue's unbuilt remainder to a fresh [relay] #N issue in Backlog (never ready), because pullable() reads open issues only; the source gets a receipt and loses the remainder label last, which is the idempotency. A not_planned close is never relayed; only closes from the RELAY_FROM watermark forward, RELAY_CAP 3 a tick, oldest first; --list / --apply --backfill drain the historical queue by hand |
+| **Decision assignment lane** | `scripts/moneypenny/assignments.mjs` | decisionLine/plan/routeAssignments/executeAssignments: an open needs-eric issue whose above-the-fold Needs-from-you callout states a decision gets ejclark assigned and ONE marked comment quoting that line (the marker is the memory, so it never asks twice); criterion 4 does the same for a hold-merge or platter/ PR unmerged 12h, and criterion 2 removes only the assignments it marked. The comment is written BEFORE the assignment so a half-write never leaves an assignment with no ask; criterion 4 outranks criterion 2 on the same number, or a still-held PR would assign/unassign every tick. ASSIGN_CAP 3 new asks a tick (oldest number first) bounds a wrong read; removals are uncapped. plan() is also the digest's Needs-you selector (criterion 12) |
 | **Vocabulary and gh wrapper** | `scripts/moneypenny/labels.mjs, scripts/moneypenny/gh.mjs` | LABELS registry (managed vs registered), FOOTER, ensureVocabulary/ensureLabel; sh, isTransientGhError, withRetry, ghRest, ghRestAll |
 | **Lane instruction sets** | `.github/prompts/feedback-build.md, .github/prompts/plan-build.md, .github/prompts/event-research.md, .claude/agents/dep-warden.md` | The complete orders each claude-code-action session reads first; envelope-protected so no lane can rewrite its own instructions |
