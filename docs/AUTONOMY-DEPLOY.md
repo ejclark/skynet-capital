@@ -96,6 +96,12 @@ Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
 - **`flip-mode`**, with `mode: live` — **the one genuinely irreversible step. Run it during a market
   open, watching the logs.** Bots begin placing real (paper) orders; fills show on the board.
 
+- **`set-cond-scout-universe`**, with `cond_scout_universe: NVDA,AAPL,…` — arms the COND-SCOUT
+  shadow scout (#3651) on those tickers: it scans and opens **shadow probes only** (no orders, no
+  broker) that fill the Heartbeat "Shadow probes" card. Tickers off the live price stream are dropped
+  at boot; watch the logs for the `[cond-scout] armed` line. Run it with the input empty to unset
+  `SKYNET_COND_SCOUT_UNIVERSE` and take the scout dark.
+
 Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
 
 ### The terminal path (if you'd rather run it locally)
