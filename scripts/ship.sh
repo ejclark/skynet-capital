@@ -324,8 +324,13 @@ EOF_SHOTS
     # and a cloud session ships a different build (2026-09-30: 1194 on disk vs 1234 pinned) that it
     # must not re-download — a mismatched run is false-red, not signal. Then the pipeline's arm job
     # is the gate (it waits for `integration tests`), and this says so rather than passing silently.
+    # Same reasoning for the PLATFORM (2026-10-02, PR #4519): screenshot baselines are
+    # `*-chromium-linux.png` only, so on macOS Playwright writes fresh `-darwin` files and fails
+    # every `matches the known-good page screenshot` spec — false-red. Local e2e runs on Linux only.
     if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
-      if node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
+      if [ "$(uname -s)" != "Linux" ]; then
+        echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
+      elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
         echo "ship: local integration tests (npm run test:e2e)…"
         npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
         echo "ship: integration tests green."
