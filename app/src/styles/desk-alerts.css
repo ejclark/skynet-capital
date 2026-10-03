@@ -67,3 +67,29 @@
 .al-note:empty {
   margin: 0;
 }
+
+/* Delivery (#3407 P4 slice 3) — the member's own switch, under the rows it governs. Phone first:
+   the two fields stack, and only a wider pane puts them side by side. */
+.ad-box {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.ad-h {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.ad-fields {
+  display: grid;
+  gap: var(--space-2);
+}
+@media (min-width: 34rem) {
+  .ad-fields {
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    gap: var(--space-3);
+  }
+}

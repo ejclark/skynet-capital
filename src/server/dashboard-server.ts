@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import { serveAdminApi } from "./admin-api-routes.js";
+import { serveAlertDeliveryApi } from "./alert-delivery-route.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
 import {
@@ -148,6 +149,7 @@ async function serveWriteApis(
   if (serveStreamApis(req, res, path, config, session)) return true;
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
+  if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;

@@ -534,6 +534,32 @@ const currentOptionPositions = optionPositions;
 // The alerts the held positions imply (#3407 P4 slice 1) — the same MSFT put a month-rung
 // reminder, plus a written NVDA call in the money three days out: assignment risk, critical.
 const noAlerts = { available: true, asOf: "2026-09-21T14:00:00Z", alerts: [], dismissable: true };
+// Delivery (#3407 P4 slice 3) — the member's own switch under the rows. Three states worth a frame:
+// unconfigured (a sentence, never a dead control), available-and-off (the default), and on (the
+// destination the session carried, never a field anyone typed).
+const deliveryUnconfigured = {
+  available: false,
+  reason: "Alert delivery isn't configured on this deployment yet — alerts stay on this page.",
+  channels: ["off", "email"],
+  channel: "off",
+  minPriority: "critical",
+};
+const deliveryOff = {
+  available: true,
+  channels: ["off", "email"],
+  channel: "off",
+  minPriority: "critical",
+  from: "Skynet Capital <alerts@skynet.example>",
+};
+const deliveryOn = {
+  available: true,
+  channels: ["off", "email"],
+  channel: "email",
+  minPriority: "warning",
+  destination: "ann@skynet.example",
+  from: "Skynet Capital <alerts@skynet.example>",
+};
+let currentDelivery = deliveryOff;
 const positionWatchAlerts = {
   available: true,
   asOf: "2026-09-21T14:00:00Z",
@@ -781,6 +807,9 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/option-positions": () => currentOptionPositions,
     "/api/trade/alerts": () => currentAlerts,
     "/api/trade/alerts/dismiss": { ok: true },
+    // Delivery's read and write share one path; the stub answers both with the current state
+    // (pathname-matched, so `?participantId=` is covered).
+    "/api/trade/alerts/delivery": () => currentDelivery,
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
     "/api/trade/replace": {
       ok: true,
@@ -1448,6 +1477,22 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy(0, -120));
 await shootAlerts("desk-alerts-desktop");
+
+// Delivery (#3407 P4 slice 3): the same strip, with the member's own switch for "also reach me when
+// this page is closed". Two more phone frames — delivery ON (the destination the session carried,
+// never a field anyone typed) and the unconfigured deployment saying so in words.
+const frameDelivery = async (tag) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
+  await page.getByRole("heading", { name: "Send these to me" }).scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 40));
+  await shootAlerts(tag);
+};
+currentDelivery = deliveryOn;
+await frameDelivery("alert-delivery-on-phone");
+currentDelivery = deliveryUnconfigured;
+await frameDelivery("alert-delivery-unconfigured-phone");
+currentDelivery = deliveryOff;
 currentAlerts = noAlerts;
 
 // Roll as one ticket (#3407 P3 slice 3) — the same held put, Roll… opened: target expiration
