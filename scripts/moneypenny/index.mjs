@@ -640,8 +640,28 @@ function gatherDeps(ctx) {
     // The assignment lane (#3818 slice 5). Sweep-only for the same reason as the relay above: only
     // a push can have changed what Eric holds since the last tick, and `null` (not `{}`) is what
     // makes `routeAssignments` a no-op on every other event and in every pre-slice-5 fixture.
-    assignments: needsScan ? gatherAssignmentDeps() : null,
+    //
+    // FAIL OPEN HERE, unlike every other read in this function — the one deliberate exception. This
+    // read is the chattiest on the tick (a comments page per candidate) and so the likeliest to meet
+    // a transient 5xx, and a throw out of `gatherDeps` happens BEFORE `runIntents`' per-intent
+    // isolation: it would take the receipt closes, the relay and `has_next` down with it. Nothing is
+    // lost by skipping a tick, because the next push re-reads the same queue from GitHub — this lane
+    // keeps no state of its own. (Contrast `readReceipts`, which refuses outright: there a false
+    // empty would CLOSE the whole queue.)
+    assignments: needsScan ? gatherAssignmentsSafely() : null,
   };
+}
+
+/** `gatherAssignmentDeps` with the fail-open wrapper `gatherDeps` explains above. */
+function gatherAssignmentsSafely() {
+  try {
+    return gatherAssignmentDeps();
+  } catch (err) {
+    console.log(
+      `::warning::assignments — skipping this tick, the queue read failed: ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
 }
 
 /**

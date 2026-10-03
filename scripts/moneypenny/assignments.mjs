@@ -36,7 +36,7 @@
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 import { aboveFold } from "../issue-lint.mjs";
 import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
-import { ghRestAll, sh } from "./gh.mjs";
+import { ghRestAll, sh, withRetry } from "./gh.mjs";
 
 export const ASSIGN_MARKER = "<!-- moneypenny:assigned -->";
 export const HOLD_MERGE = "hold-merge";
@@ -114,16 +114,25 @@ export function plan({ issues = [], prs = [], markers = new Set(), now = Date.no
     const why = `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`;
     ask({ number: pr.number, title: pr.title, criterion: 4, why });
     if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) continue; // one ask each
-    if (!logins(pr.assignees).some(isEric)) {
+    // `!markers.has` is criterion 3 applied to criterion 4, and it is load-bearing, not symmetry.
+    // Without it: Eric unassigns himself from a still-held PR, which drops it out of `gather()`'s
+    // issue reads (no `needs-eric`, no longer assigned to him) so nothing else can see it — and
+    // every later push re-assigns him and posts another marker comment, forever, with `stillHeld`
+    // blocking criterion 2 from ever clearing it. Marked means asked; an unassign after that is his
+    // answer.
+    if (!(markers.has(pr.number) || logins(pr.assignees).some(isEric))) {
       actions.push({
         kind: "assign",
         criterion: 4,
         number: pr.number,
         title: pr.title,
         why,
-        // A held PR states no decision in a callout — the decision IS the merge click, and it is
-        // his because the carve-out says so (CLAUDE.md's irreversible class), so name that.
-        decision: `Merge this held PR, or say why not — it has been green and unmerged ${Math.floor(hours)}h, and a protected-path change is yours to merge.`,
+        // A held PR carries no callout, so name the one thing that IS known: it is held, and a held
+        // PR only moves on his click. Deliberately does NOT claim green or protected — `heldPrHours`
+        // reads state, draft, label and age and nothing else, and `hold-merge` also goes on a PR
+        // held for a taste fork, so either word would be the app telling him something it never
+        // checked.
+        decision: `Merge this held PR, or say what it's waiting on — it has been open and held ${Math.floor(hours)}h, and a held PR moves only on your click.`,
       });
     }
   }
@@ -244,45 +253,51 @@ export function routeAssignments(deps = {}) {
 }
 
 /**
- * Carry out one assignment intent. THE COMMENT GOES FIRST, and that order is deliberate.
+ * Carry out one assignment intent. THE ASSIGNMENT GOES FIRST, and which order is a real choice.
  *
- * Two writes cannot be atomic, so one of them can land alone. Comment-then-assign leaves the ask
- * written on the issue where a human can read it; assign-then-comment leaves Eric holding an
- * assignment that says nothing — the one state this whole lane exists to avoid. A failed assign
- * throws, so the run goes red and the repair lane sees it rather than the gap sitting silent.
+ * Two writes cannot be atomic, so one can land alone — so pick the order whose half-write is the
+ * recoverable one, and the marker comment is what decides that. The marker IS this lane's memory
+ * (criteria 2 and 3), so:
+ *   - comment first, assign fails → the issue is marked, so criterion 1 never asks again AND
+ *     `needsYou` drops it (`decision && (assigned || !marked)`). The decision disappears from the
+ *     assignment channel and from `digest-scan --needs-you` at once. Unrecoverable and silent.
+ *   - assign first, comment fails → Eric holds the assignment, so the phone push (the entire point)
+ *     landed and the digest still lists it; only the convenience quote is missing, and the issue's
+ *     own `Needs from you` callout is the real copy anyway.
+ * The second is strictly the better failure, so: assign, then comment. Both writes are retried for
+ * GitHub's own 5xx, which is the overwhelmingly likely cause of a single-write failure.
  *
  * `gh api`, not `gh issue edit`/`gh issue comment`: criterion 4's targets are PRs, and the issue
  * subcommands refuse a PR number while the `issues/` REST route serves both.
  */
-export function executeAssignments(intent, { run = sh } = {}) {
+export function executeAssignments(intent, { run = sh, retry = withRetry } = {}) {
   const n = String(intent.number);
+  const assignees = (method) =>
+    retry(() =>
+      run("gh", [
+        "api",
+        "--method",
+        method,
+        `repos/{owner}/{repo}/issues/${n}/assignees`,
+        "-f",
+        `assignees[]=${ERIC}`,
+      ]),
+    );
   if (intent.kind === "unassign-eric") {
+    assignees("DELETE");
+    return `🧹 unassigned #${n} — ${intent.why}`;
+  }
+  assignees("POST");
+  retry(() =>
     run("gh", [
       "api",
       "--method",
-      "DELETE",
-      `repos/{owner}/{repo}/issues/${n}/assignees`,
+      "POST",
+      `repos/{owner}/{repo}/issues/${n}/comments`,
       "-f",
-      `assignees[]=${ERIC}`,
-    ]);
-    return `🧹 unassigned #${n} — ${intent.why}`;
-  }
-  run("gh", [
-    "api",
-    "--method",
-    "POST",
-    `repos/{owner}/{repo}/issues/${n}/comments`,
-    "-f",
-    `body=${intent.body}`,
-  ]);
-  run("gh", [
-    "api",
-    "--method",
-    "POST",
-    `repos/{owner}/{repo}/issues/${n}/assignees`,
-    "-f",
-    `assignees[]=${ERIC}`,
-  ]);
+      `body=${intent.body}`,
+    ]),
+  );
   return `📬 assigned #${n} to @${ERIC} (criterion ${intent.criterion}) — ${intent.why}`;
 }
 
@@ -297,10 +312,16 @@ export function gather() {
     if (!seen.has(i.number)) issues.push(i);
   }
   const prs = ghRestAll("pulls?state=open");
+  // Marker candidates: every issue above, PLUS the held PRs criterion 4 targets. The PRs matter —
+  // without their markers, a PR Eric unassigned himself from is invisible to every other read here
+  // and gets re-asked on every push (see `plan`'s `!markers.has(pr.number)`). Only the ones already
+  // past the hold window, so this is normally one or two extra reads, not one per open PR.
+  const candidates = new Set(issues.map((i) => i.number));
+  for (const pr of prs) if (heldPrHours(pr, Date.now()) !== null) candidates.add(pr.number);
   const markers = new Set();
-  for (const i of issues) {
-    const comments = ghRestAll(`issues/${i.number}/comments`);
-    if (comments.some((c) => (c.body ?? "").includes(ASSIGN_MARKER))) markers.add(i.number);
+  for (const n of candidates) {
+    const comments = ghRestAll(`issues/${n}/comments`);
+    if (comments.some((c) => (c.body ?? "").includes(ASSIGN_MARKER))) markers.add(n);
   }
   return { issues, prs, markers };
 }

@@ -9,6 +9,7 @@ import {
   report,
   routeAssignments,
 } from "../../../scripts/moneypenny/assignments.mjs";
+import { routeSweep } from "../../../scripts/moneypenny/events.mjs";
 
 // #4289 (#3818 slice 5): `needs-eric` means one thing — a decision only Eric can make. The dry run
 // lists every such issue with the decision it waits on and says what it WOULD assign; it writes
@@ -141,6 +142,21 @@ describe("plan: assignments (criteria 1–4)", () => {
     ]);
   });
 
+  it("criterion 3 covers a held PR too: once marked, an unassign is his answer, not a prompt to re-ask", () => {
+    const held = {
+      number: 10,
+      title: "held",
+      state: "open",
+      labels: [{ name: "hold-merge" }],
+      created_at: "2026-09-29T12:00:00Z",
+      assignees: [],
+    };
+    // Unmarked: ask. Marked and he took himself off: never again — otherwise every push re-assigns
+    // him, since nothing else in `gather()` can even see a PR that is neither needs-eric nor his.
+    expect(plan({ prs: [held], now: NOW }).actions).toHaveLength(1);
+    expect(plan({ prs: [held], markers: new Set([10]), now: NOW }).actions).toEqual([]);
+  });
+
   it("asks once when a held PR also carries needs-eric", () => {
     const both = issue({ number: 10 });
     const pr = {
@@ -232,6 +248,9 @@ describe("routeAssignments: the sweep's intents", () => {
     if (!intent) throw new Error("one intent expected");
     expect(intent).toMatchObject({ kind: "assign-eric", number: 10, criterion: 4 });
     expect(intent.body).toContain("Merge this held PR");
+    // …and claims nothing it never checked: `heldPrHours` reads state/draft/label/age only, and
+    // `hold-merge` also goes on a PR held for a taste fork.
+    expect(intent.body).not.toMatch(/green|protected/i);
   });
 });
 
@@ -245,17 +264,39 @@ describe("executeAssignments: the two writes", () => {
     return { calls, run };
   };
 
-  it("posts the ask BEFORE assigning, so a half-write never leaves an assignment with no ask", () => {
+  // Order is a correctness choice, not a style one: the marker comment is this lane's memory, so a
+  // comment that lands without its assignment silences the item in BOTH channels forever (criterion
+  // 1 skips a marked issue, and needsYou drops it). Assignment first keeps the phone push.
+  it("assigns BEFORE commenting, so a half-write still leaves Eric holding the item", () => {
     const { calls, run } = spy();
     executeAssignments(
       { kind: "assign-eric", number: 7, criterion: 1, why: "w", body: "the ask" },
       { run },
     );
     expect(calls.map((a) => [a[2], a[3]])).toEqual([
-      ["POST", "repos/{owner}/{repo}/issues/7/comments"],
       ["POST", "repos/{owner}/{repo}/issues/7/assignees"],
+      ["POST", "repos/{owner}/{repo}/issues/7/comments"],
     ]);
-    expect(calls[0] ?? []).toContain("body=the ask");
+    expect(calls[1] ?? []).toContain("body=the ask");
+  });
+
+  it("sends every write through the retry wrapper, so GitHub's own 5xx does not strand a half-write", () => {
+    const { run } = spy();
+    let wrapped = 0;
+    const retry = <T>(fn: () => T) => {
+      wrapped += 1;
+      return fn();
+    };
+    executeAssignments(
+      { kind: "assign-eric", number: 7, criterion: 1, why: "w", body: "the ask" },
+      { run, retry },
+    );
+    expect(wrapped).toBe(2);
+    executeAssignments(
+      { kind: "unassign-eric", number: 7, criterion: 2, why: "w" },
+      { run, retry },
+    );
+    expect(wrapped).toBe(3);
   });
 
   it("removes an assignment with one DELETE and no comment", () => {
@@ -280,5 +321,28 @@ describe("executeAssignments: the two writes", () => {
     );
     expect(calls.every((a) => a[0] === "api")).toBe(true);
     expect(calls.every((a) => !a.includes("issue"))).toBe(true);
+  });
+});
+
+// The composition order inside routeSweep is behaviour, not arrangement: every lane in that sweep
+// plans from one pre-write snapshot, so two of them can disagree about the same issue in one tick.
+describe("routeSweep: a close beats an ask on the same issue", () => {
+  const needsEricIssue = issue({ number: 42, title: "shipped but still labelled" });
+
+  it("drops the assignment for an issue this same tick is closing as shipped", () => {
+    const intents = routeSweep({
+      shippedFeedback: [{ number: 42, title: "shipped but still labelled", pr: 99 }],
+      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
+      now: NOW,
+    }) as { kind: string; number?: number; issueNumber?: number }[];
+    expect(intents.map((i) => i.kind)).toEqual(["close-shipped"]);
+  });
+
+  it("still asks when nothing in the tick touches that issue", () => {
+    const intents = routeSweep({
+      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
+      now: NOW,
+    }) as { kind: string }[];
+    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
   });
 });

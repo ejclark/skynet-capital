@@ -83,5 +83,9 @@ export function routeAssignments(deps?: {
 }): AssignIntent[];
 export function executeAssignments(
   intent: AssignIntent,
-  opts?: { run?: (cmd: string, args: string[]) => string },
+  opts?: {
+    run?: (cmd: string, args: string[]) => string;
+    /** Injected for specs; production uses gh.mjs's `withRetry` on every write. */
+    retry?: <T>(fn: () => T) => T;
+  },
 ): string;

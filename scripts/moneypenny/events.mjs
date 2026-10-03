@@ -148,13 +148,16 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return [
-    ...intents,
-    ...routeReceipts(deps),
-    ...routeShipped(deps),
-    ...routeRelay(deps),
-    ...routeAssignments(deps),
-  ];
+  const sweep = [...intents, ...routeReceipts(deps), ...routeShipped(deps), ...routeRelay(deps)];
+  // The assignment lane goes LAST and reads what the rest of this tick already decided to close.
+  // Every lane here plans from the same pre-write snapshot, so an issue carrying `needs-eric` whose
+  // PR merged would otherwise be asked about and closed in the same run — one interrupt spent on a
+  // question that stopped existing seconds later, then an unassign next tick. The closes win:
+  // `needs-eric` on a shipped issue is a stale label, not a live decision.
+  const closing = new Set(
+    sweep.filter((i) => i.kind?.startsWith("close-")).map((i) => i.issueNumber),
+  );
+  return [...sweep, ...routeAssignments(deps).filter((i) => !closing.has(i.number))];
 }
 
 /** `[event-research] <event-id>` — the receipt title this lane writes and reads back. */
