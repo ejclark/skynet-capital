@@ -143,13 +143,18 @@ export function sectorSlug(sector: string): string {
   return sector.toLowerCase().replace(/[^a-z]+/g, "-");
 }
 
-/** A `sector:` token's value resolved back to its canonical sector name, or undefined when it
- *  names no sector — a token nothing can be said about filters nothing, rather than everything. */
+/**
+ * A `sector:` token's value resolved back to its canonical sector name, or undefined when it names
+ * none — a token nothing can be said about must filter nothing, rather than everything.
+ *
+ * The 11 GICS sectors ONLY. `Unclassified` is a row on the coverage map, not a place an event can
+ * be in: nothing is filed there BY the directory, so a `sector:unclassified` scope would match no
+ * event and empty the board while printing "no ledger is in Unclassified" — a false claim about a
+ * corpus full of them.
+ */
 export function sectorFromSlug(slug: string): string | undefined {
   const wanted = slug.trim().toLowerCase();
-  return [...GICS_SECTORS.map((s) => s.name), UNCLASSIFIED].find(
-    (name) => sectorSlug(name) === wanted,
-  );
+  return GICS_SECTORS.map((s) => s.name).find((name) => sectorSlug(name) === wanted);
 }
 
 /**
@@ -261,8 +266,9 @@ const bucket = (): {
  * THE JOIN. Pure: every fact arrives as an argument, nothing is read from disk or the network, so
  * a spec can pin the whole map against a fixed corpus.
  *
- * Classification per symbol is strongest-first — a researched name is not also listed as "on the
- * calendar", because the two mean different things to a reader deciding where to look next.
+ * Research depth is strongest-first: a researched name is never also listed as "on the calendar",
+ * because the two are the same axis and a name in both would double-count the sector. A HOLDING is
+ * a different axis (the viewer's portfolio) and may co-occur with either — see the note inline.
  */
 export function coverageBySector(inputs: CoverageInputs): CoverageMap {
   const ledgers = inputs.ledgerIds.map(stripSlug);
@@ -273,19 +279,37 @@ export function coverageBySector(inputs: CoverageInputs): CoverageMap {
     return out;
   };
 
-  // A symbol is RESEARCHED when some ledger on the shelf is for it, under the one rule above.
+  // RESEARCHED is read off the LEDGERS, not off the calendar. Walking the events instead would
+  // make coverage expire: earnings events come from a rolling forward window, so the day a symbol
+  // drops off it, its ledgers would stop counting and its sector would flip to `gap` — the same
+  // silent drop as the company-named ledgers this slice fixes, one layer up.
   const eventSymbolsById = new Map(
     inputs.allEvents.map((e) => [e.id, new Set(e.symbols.map((s) => s.toUpperCase()))] as const),
   );
   const researched = new Set<string>();
-  for (const sym of symbolsOf(inputs.allEvents)) {
-    const covered = ledgers.some((id) =>
-      ledgerCoversSymbol(id, sym, eventSymbolsById.get(id) ?? new Set()),
-    );
-    if (covered) researched.add(sym);
+  for (const id of ledgerSet) {
+    const named = eventSymbolsById.get(id);
+    if (named && named.size > 0) {
+      for (const sym of named) researched.add(sym);
+      continue;
+    }
+    // No event to read the names off (it has aged out of the table, or names none): fall back to
+    // the id's leading token, and ONLY when the directory files it as a real ticker. Without that
+    // guard every macro ledger would mint a symbol — `eia-steo-…` would file "EIA" as a name we
+    // research, under Unclassified, which is a claim about a ticker that does not exist.
+    const lead = id.toUpperCase().split("-")[0] ?? "";
+    if (sectorOf(lead)) researched.add(lead);
   }
 
-  // ON THE CALENDAR: still ahead, nothing written yet. Researched outranks it.
+  // ON THE CALENDAR: still ahead, nothing written yet. Researched OUTRANKS it, and the two are
+  // exclusive — they are the same dimension (how far our research has got with this name), and a
+  // name in both columns would double-count the sector's depth.
+  //
+  // `held` is NOT that dimension and deliberately overlaps either: it is the viewer's portfolio,
+  // not our research. "Upcoming print, no ledger, and you own it" is the single most useful cell
+  // on the map, so suppressing one of those two facts to keep the row tidy would cost a reader the
+  // thing they came for. `depth` below still picks ONE label for the tile.
+  const held = new Set(inputs.heldSymbols.map((s) => s.trim().toUpperCase()).filter(Boolean));
   const calendar = new Set<string>();
   for (const sym of [
     ...symbolsOf(inputs.upcomingEvents),
@@ -293,7 +317,6 @@ export function coverageBySector(inputs: CoverageInputs): CoverageMap {
   ]) {
     if (!researched.has(sym)) calendar.add(sym);
   }
-  const held = new Set(inputs.heldSymbols.map((s) => s.trim().toUpperCase()).filter(Boolean));
 
   const rows = new Map<string, ReturnType<typeof bucket>>();
   const rowFor = (sector: string): ReturnType<typeof bucket> => {

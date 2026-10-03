@@ -101,10 +101,15 @@ describe("the sector: token", () => {
     expect(filter.terms).toEqual(["fed"]);
   });
 
-  it("ignores a slug that names no sector — and leaves it visible as a term", () => {
+  it("leaves a slug that names no sector visible as a term, the way impact:huge is", () => {
     const filter = parseResearchQuery("sector:crypto");
     expect(filter.sector).toBeUndefined();
-    expect(filter.terms).toEqual([]);
+    expect(filter.terms).toEqual(["sector:crypto"]);
+  });
+
+  it("refuses `unclassified` — a coverage ROW, not a place an event can be in", () => {
+    // Resolving it would empty the board and then blame a sector nothing is filed under.
+    expect(parseResearchQuery("sector:unclassified").sector).toBeUndefined();
   });
 
   it("is single-valued: a second sector replaces the first rather than widening", () => {

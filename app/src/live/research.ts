@@ -167,8 +167,20 @@ const SECTOR_RE = /^sector:([a-z-]+)$/;
 const KIND_RE = /^kind:([a-z-]+)$/;
 const IMPACT_RE = /^impact:(critical|high|medium|low)$/;
 const CALL_RE = /^call:(stand-aside|watch|act|conditional)$/;
-const CONTROLS = [ON_RE, LENS_RE, SYM_RE, SECTOR_RE, KIND_RE, IMPACT_RE, CALL_RE];
-const isControl = (token: string): boolean => CONTROLS.some((re) => re.test(token.toLowerCase()));
+const CONTROLS = [ON_RE, LENS_RE, SYM_RE, KIND_RE, IMPACT_RE, CALL_RE];
+
+/**
+ * A `sector:` token counts as a control ONLY when its slug names a real sector. An unresolvable
+ * one falls through to a plain term instead of being swallowed, which is already how
+ * `impact:huge` and `lens:decade` behave — the typo stays visible on screen rather than filtering
+ * nothing and leaving no trace of why.
+ */
+const isControl = (token: string): boolean => {
+  const lower = token.toLowerCase();
+  const slug = SECTOR_RE.exec(lower)?.[1];
+  if (slug !== undefined) return sectorFromSlug(slug) !== undefined;
+  return CONTROLS.some((re) => re.test(lower));
+};
 
 const firstMatch = (tokens: readonly string[], re: RegExp): string | undefined =>
   tokens.map((t) => re.exec(t.toLowerCase())?.[1]).find(Boolean);

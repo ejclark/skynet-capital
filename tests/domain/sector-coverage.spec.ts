@@ -60,12 +60,20 @@ describe("sector coverage", () => {
       expect(sectorSlug("Consumer Discretionary")).toBe("consumer-discretionary");
       expect(sectorFromSlug("consumer-discretionary")).toBe("Consumer Discretionary");
       expect(sectorFromSlug("real-estate")).toBe("Real Estate");
-      expect(sectorFromSlug(UNCLASSIFIED.toLowerCase())).toBe(UNCLASSIFIED);
     });
 
     it("resolves an unknown slug to nothing — a token nobody can answer filters nothing", () => {
       expect(sectorFromSlug("crypto")).toBeUndefined();
       expect(sectorFromSlug("")).toBeUndefined();
+    });
+
+    it("refuses the Unclassified ROW as a scope — no event is filed there", () => {
+      // It resolves to nothing precisely because `eventInSector(UNCLASSIFIED, …)` can never be
+      // true: scoping it would empty the board and then blame a sector nothing is filed under.
+      expect(sectorFromSlug(sectorSlug(UNCLASSIFIED))).toBeUndefined();
+      expect(eventInSector(UNCLASSIFIED, { id: "nvda-2026-08-26-print", symbols: ["NVDA"] })).toBe(
+        false,
+      );
     });
 
     it("lists a sector's members, and files the homebuilders together", () => {
@@ -162,6 +170,31 @@ describe("sector coverage", () => {
         allEvents: [{ id: "costco-q4-fy2026-2026-09-24", symbols: ["COST"] }],
       });
       expect(rowFor(map, "Consumer Staples").researched).toEqual(["COST"]);
+    });
+
+    it("keeps a ledger counting after its event ages off the calendar", () => {
+      // Coverage must not expire: earnings events come from a rolling forward window, so reading
+      // researched off the events would flip a sector to `gap` the day its print dropped out.
+      const map = coverageBySector({ ...noInputs, ledgerIds: ["events/jpm-2026-07-14-print"] });
+      expect(rowFor(map, "Financials").researched).toEqual(["JPM"]);
+      expect(map.coveredCount).toBe(1);
+    });
+
+    it("never mints a ticker out of a macro ledger's prefix", () => {
+      // `eia-steo-…` must not file "EIA" as a researched NAME — there is no such ticker.
+      const map = coverageBySector({ ...noInputs, ledgerIds: ["events/eia-steo-2026-10-06"] });
+      expect(map.unclassified.researched).toEqual([]);
+      expect(map.sectors.flatMap((s) => s.researched)).toEqual([]);
+    });
+
+    it("lists a held name that also has an upcoming print in BOTH columns", () => {
+      // Different axes: research depth vs. the viewer's portfolio. "Print coming, no ledger, and
+      // you own it" is the most useful cell on the map — tidying one of the two away loses it.
+      const map = coverageBySector({ ...noInputs, printSymbols: ["NVDA"], heldSymbols: ["NVDA"] });
+      const tech = rowFor(map, "Technology");
+      expect(tech.calendar).toEqual(["NVDA"]);
+      expect(tech.held).toEqual(["NVDA"]);
+      expect(tech.depth).toBe("held");
     });
 
     it("separates on-the-calendar from researched — a symbol is never in both", () => {

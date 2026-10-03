@@ -604,13 +604,15 @@ export function useBoardView({
             rows={ledgers}
             empty={
               scopedEmpty("ledger", ` in ${rangeLabel(range, filter.lens, fiscal)}`) ??
-              // "No ledger in this week." claims the range is empty; with a sector scoped the
-              // honest claim is about the sector, not the week (#3811).
+              // "No ledger in this week." claims the range is empty; with a sector scoped and
+              // nothing else narrowing, the honest claim is about the sector (#3811). The sector
+              // only takes the credit when it is the ONLY thing filtering — the same rule
+              // `alsoFiltered` applies to the symbol scope, for the same reason.
               `No ledger in ${rangeLabel(range, filter.lens, fiscal)}${
-                filter.sector
-                  ? ` is in ${filter.sector}.`
-                  : filter.terms.length > 0
-                    ? " matches this filter."
+                filter.terms.length > 0 || filter.kind || filter.impact
+                  ? " matches this filter."
+                  : filter.sector
+                    ? ` is in ${filter.sector}.`
                     : "."
               }`
             }
