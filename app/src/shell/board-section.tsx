@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId } from "react";
 import { fiscalQuarterFor, fiscalYearEndFor } from "../../../src/domain/fiscal-calendar";
+import { eventInSector } from "../../../src/domain/sector-coverage";
 import { CALL_CLASS_LABEL, CALL_CLASSES, callMix, classifyCall, hubEvents } from "../live/call-mix";
 import { dayLensFog } from "../live/fog";
 import { useHorizonRange } from "../live/horizon-params";
@@ -38,6 +39,19 @@ import { FacetRow } from "./facet-row";
  * text/symbol filter, the call board, and the ledger/study doc lists. See `research.tsx`'s own doc
  * comment for the lens/range design and why this became one section among three.
  */
+
+/** Sector scope (#3811): the WHERE axis, applied to the event-keyed lists only. One rule, shared
+ *  with the coverage join, so a sector tile and the board it filters never disagree. An event the
+ *  payload has no entry for (a call whose event fell out of the calendar) cannot be placed in a
+ *  sector by its symbols, so its id alone is tested — the same fallback `inSymbolScope` makes. */
+function inSectorScope(
+  sector: string | undefined,
+  event: ResearchEvent | undefined,
+  eventId: string,
+): boolean {
+  if (!sector) return true;
+  return eventInSector(sector, { id: eventId, symbols: event?.symbols ?? [] });
+}
 
 /** Symbol scope (OR): on the event, leading the id, or named in the TL;DR — any listed symbol. */
 function inSymbolScope(
@@ -92,7 +106,7 @@ export function CallBoard({
   readonly inRangeIds: ReadonlySet<string>;
   readonly rangeName: string;
 }): ReactElement | null {
-  const { lens, terms, symbols, kind, impact, callClass } = filter;
+  const { lens, terms, symbols, sector, kind, impact, callClass } = filter;
   const today = marketToday();
   const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   // One row per ledger, read through the lens; a ledger with no row for it is left out, never
@@ -105,6 +119,7 @@ export function CallBoard({
     ({ call, row, event }) =>
       inRangeIds.has(call.eventId) &&
       inSymbolScope(symbols, event, call.eventId, call.tldr) &&
+      inSectorScope(sector, event, call.eventId) &&
       (!kind || event?.kind === kind) &&
       (!impact || event?.impact === impact) &&
       (!callClass || classifyCall(row.call) === callClass) &&
@@ -212,6 +227,12 @@ export function CallBoard({
             two lists otherwise disagree about the same scope for no visible reason. */}
         {symbols.length > 0
           ? " Scoped to the names a call is about — a ledger that only mentions one is listed below, not called here."
+          : ""}
+        {/* #3811: a sector is read off the event (its symbols, its id, its own macro series), which
+            studies are not keyed by at all. Said out loud so the Studies list below is not read as
+            "no study touches this sector" when it was never sector-scoped in the first place. */}
+        {sector
+          ? ` Sector scope reaches the calls and ledgers below; studies are not sector-keyed, so ${sector} does not narrow them.`
           : ""}
       </p>
     </section>
@@ -323,7 +344,7 @@ export function ResearchFilters({
             type="text"
             value={query}
             spellCheck={false}
-            placeholder="filter — a word · sym:NVDA · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month · lens:all"
+            placeholder="filter — a word · sym:NVDA · sector:energy · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month · lens:all"
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
@@ -528,6 +549,7 @@ export function useBoardView({
       const event = eventsById.get(eventId);
       const keep =
         matchesTerms(doc) &&
+        inSectorScope(filter.sector, event, eventId) &&
         (!filter.kind || event?.kind === filter.kind) &&
         (!filter.impact || event?.impact === filter.impact);
       return keep ? [rowOf(doc, eventId)] : [];
@@ -548,7 +570,11 @@ export function useBoardView({
   // `impact:low` actually emptied, which is the same false claim in the other direction.
   const alsoFiltered = {
     study: filter.terms.length > 0,
-    ledger: filter.terms.length > 0 || Boolean(filter.kind) || Boolean(filter.impact),
+    ledger:
+      filter.terms.length > 0 ||
+      Boolean(filter.kind) ||
+      Boolean(filter.impact) ||
+      Boolean(filter.sector),
   };
   const scopedEmpty = (noun: "study" | "ledger", where: string) =>
     scopeEmptyText(noun, where, filter.symbols, searchState, alsoFiltered[noun]);
@@ -578,8 +604,14 @@ export function useBoardView({
             rows={ledgers}
             empty={
               scopedEmpty("ledger", ` in ${rangeLabel(range, filter.lens, fiscal)}`) ??
+              // "No ledger in this week." claims the range is empty; with a sector scoped the
+              // honest claim is about the sector, not the week (#3811).
               `No ledger in ${rangeLabel(range, filter.lens, fiscal)}${
-                filter.terms.length > 0 ? " matches this filter." : "."
+                filter.sector
+                  ? ` is in ${filter.sector}.`
+                  : filter.terms.length > 0
+                    ? " matches this filter."
+                    : "."
               }`
             }
           />

@@ -11,6 +11,7 @@ import {
   setFacet,
   setLens,
   toggleOnDate,
+  toggleSectorScope,
   toggleSymbolScope,
   unsearchedSymbols,
 } from "../../src/live/research";
@@ -89,6 +90,31 @@ describe("toggleSymbolScope / mentionsSymbol — the chips' scope", () => {
     expect(mentionsSymbol("the NVDA print", "NVDA")).toBe(true);
     expect(mentionsSymbol("a MUnich trip", "MU")).toBe(false);
     expect(mentionsSymbol(undefined, "MU")).toBe(false);
+  });
+});
+
+// The WHERE axis (#3811): one sector, resolved to its canonical name so the readout can say it.
+describe("the sector: token", () => {
+  it("reads a sector slug as its canonical name and keeps it out of the text terms", () => {
+    const filter = parseResearchQuery("sector:consumer-discretionary fed");
+    expect(filter.sector).toBe("Consumer Discretionary");
+    expect(filter.terms).toEqual(["fed"]);
+  });
+
+  it("ignores a slug that names no sector — and leaves it visible as a term", () => {
+    const filter = parseResearchQuery("sector:crypto");
+    expect(filter.sector).toBeUndefined();
+    expect(filter.terms).toEqual([]);
+  });
+
+  it("is single-valued: a second sector replaces the first rather than widening", () => {
+    expect(toggleSectorScope("sector:energy fed", "Technology")).toBe("fed sector:technology");
+    expect(parseResearchQuery("sector:energy sector:technology").sector).toBe("Energy");
+  });
+
+  it("clears on a second tap of the same sector, and every other token survives", () => {
+    expect(toggleSectorScope("fed lens:month", "Energy")).toBe("fed lens:month sector:energy");
+    expect(toggleSectorScope("fed sector:energy lens:month", "Energy")).toBe("fed lens:month");
   });
 });
 

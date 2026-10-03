@@ -19,7 +19,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked } from "marked";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
-import { allEvents, type MarketEvent } from "../domain/market-events.js";
+import { allEvents, everyEvent, type MarketEvent } from "../domain/market-events.js";
+import { ledgerCoversSymbol } from "../domain/sector-coverage.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { DECISION_HEADINGS, type EventCall, todayCallOf } from "./research-event-calls.js";
 
@@ -327,8 +328,9 @@ export function shelfSymbols(
   for (const e of upcoming) for (const s of e.symbols) syms.add(s);
   for (const p of UPCOMING_PRINTS) syms.add(p.symbol);
   const ledgers = listResearch(root).ledgers;
+  const symbolsByEvent = eventSymbolsById();
   return [...syms]
-    .filter((s) => ledgers.some((d) => ledgerIsFor(d, s)))
+    .filter((s) => ledgers.some((d) => ledgerIsFor(d, s, symbolsByEvent)))
     .sort()
     .map((symbol) => {
       const next = upcoming.find((e) => e.symbols.includes(symbol));
@@ -336,9 +338,28 @@ export function shelfSymbols(
     });
 }
 
-/** Ledger ids are `<sym>-<date>-print` for prints; match by lowercase prefix. */
-const ledgerIsFor = (doc: ResearchDoc, symbol: string): boolean =>
-  doc.slug.startsWith(`events/${symbol.toLowerCase()}-`);
+/**
+ * Which symbols each event in the WHOLE corpus names, keyed by event id — the second test
+ * `ledgerCoversSymbol` needs. Built from `everyEvent()`, not the upcoming slice: a ledger is often
+ * for an event already past (Costco's Q4 print was 2026-09-24), and the shelf still counts it.
+ */
+const eventSymbolsById = (): ReadonlyMap<string, ReadonlySet<string>> =>
+  new Map(everyEvent().map((e) => [e.id, new Set(e.symbols.map((s) => s.toUpperCase()))] as const));
+
+/**
+ * Ledger ids are `<sym>-<date>-print` for prints — but three in the corpus are named for the
+ * COMPANY (`costco-…`, `lennar-…`, `kb-home-…`), so a prefix test alone dropped COST, LEN and KBH
+ * from the shelf while their ledgers sat on it (#3811). The rule itself lives in
+ * `domain/sector-coverage.ts` so the shelf and the coverage map read one definition of "researched".
+ */
+const ledgerIsFor = (
+  doc: ResearchDoc,
+  symbol: string,
+  symbolsByEvent: ReadonlyMap<string, ReadonlySet<string>> = eventSymbolsById(),
+): boolean => {
+  const id = doc.slug.startsWith("events/") ? doc.slug.slice("events/".length) : doc.slug;
+  return ledgerCoversSymbol(id, symbol, symbolsByEvent.get(id) ?? new Set());
+};
 
 /** A symbol as this module will accept one: the shape `sym:` parses on the board, upper-cased. */
 const SYMBOL_RE = /^[A-Z]{1,6}$/;
@@ -428,7 +449,8 @@ export function symbolResearch(
   if (!SYMBOL_RE.test(sym)) return null;
   const shelf = listResearch(root);
   const events = upcoming.filter((e) => e.symbols.includes(sym));
-  const ledgers = shelf.ledgers.filter((d) => ledgerIsFor(d, sym)).reverse();
+  const symbolsByEvent = eventSymbolsById();
+  const ledgers = shelf.ledgers.filter((d) => ledgerIsFor(d, sym, symbolsByEvent)).reverse();
   const studies = shelf.studies.filter((d) =>
     namesSymbol(readFileSync(join(root, `${d.slug}.md`), "utf8"), sym),
   );
