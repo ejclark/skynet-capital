@@ -22,6 +22,7 @@ import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents, everyEvent, type MarketEvent } from "../domain/market-events.js";
 import { ledgerCoversSymbol } from "../domain/sector-coverage.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { memoByCorpus } from "./research-corpus-memo.js";
 import { DECISION_HEADINGS, type EventCall, todayCallOf } from "./research-event-calls.js";
 
 // Re-exported so existing importers of the call-sheet contract keep working unchanged. (An
@@ -104,10 +105,10 @@ function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
  * already names the week, so it sorts and reads as one of them.
  */
 export function listResearch(root: string = RESEARCH_DIR()): ResearchShelf {
-  return {
+  return memoByCorpus("listResearch", root, () => ({
     studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
     ledgers: docsIn(join(root, "events"), "events/"),
-  };
+  }));
 }
 
 /** The forward-test register's slug: an index on disk, the whole register when served. */
@@ -279,12 +280,14 @@ function renderFolded(md: string): string {
  * researchedEventIds builds the link set, so the agenda gets both from one directory read.
  */
 export function eventCalls(root: string = RESEARCH_DIR()): ReadonlyMap<string, EventCall> {
-  const calls = new Map<string, EventCall>();
-  for (const doc of listResearch(root).ledgers) {
-    const found = todayCallOf(readFileSync(join(root, `${doc.slug}.md`), "utf8"));
-    if (found) calls.set(doc.slug.slice("events/".length), found);
-  }
-  return calls;
+  return memoByCorpus("eventCalls", root, () => {
+    const calls = new Map<string, EventCall>();
+    for (const doc of listResearch(root).ledgers) {
+      const found = todayCallOf(readFileSync(join(root, `${doc.slug}.md`), "utf8"));
+      if (found) calls.set(doc.slug.slice("events/".length), found);
+    }
+    return calls;
+  });
 }
 
 /**
@@ -295,15 +298,20 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const shelf = listResearch(root);
   const doc = [...shelf.studies, ...shelf.ledgers].find((d) => d.slug === slug);
   if (!doc) return null;
-  const file = join(root, `${doc.slug}.md`);
-  const raw = readFileSync(file, "utf8");
-  const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
-  const { glanceMd, bodyMd } = extractGlance(md);
-  return {
-    ...doc,
-    html: rewriteDocLinks(renderFolded(bodyMd)),
-    glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+  const render = (): RenderedDoc => {
+    const raw = readFileSync(join(root, `${doc.slug}.md`), "utf8");
+    const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
+    const { glanceMd, bodyMd } = extractGlance(md);
+    return {
+      ...doc,
+      html: rewriteDocLinks(renderFolded(bodyMd)),
+      glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+    };
   };
+  // The register composes ~620 fragments into a ~4.7 MB page — ~200 MB of transient heap per
+  // render, so a handful of members opening it together could OOM the dashboard. Render it once
+  // per corpus state; every other doc is one file and stays cheap to render on demand.
+  return doc.slug === REGISTER_SLUG ? memoByCorpus("register", root, render) : render();
 }
 
 /** Verbatim section extraction — an excerpt, never a summary (honesty: no lossy compression). */
@@ -421,17 +429,21 @@ export function docsMentioning(
     .slice(0, MENTION_SCOPE_MAX);
   const found: Record<string, string[]> = Object.fromEntries(wanted.map((s) => [s, []]));
   if (wanted.length === 0) return found;
-  const shelved = [
-    ...shelvedFiles(root, ""),
-    ...shelvedFiles(join(root, "weeks"), "weeks/"),
-    ...shelvedFiles(join(root, "events"), "events/"),
-  ];
-  for (const { slug, file } of shelved) {
-    const tokens = tickerTokens(readFileSync(file, "utf8"));
+  for (const { slug, tokens } of tickerIndex(root)) {
     for (const sym of wanted) if (tokens.has(sym)) found[sym]?.push(slug);
   }
   return found;
 }
+
+/** Every shelved doc's ticker-shaped words, read once per corpus state (research-corpus-memo.ts). */
+const tickerIndex = (root: string): readonly { slug: string; tokens: ReadonlySet<string> }[] =>
+  memoByCorpus("tickerIndex", root, () =>
+    [
+      ...shelvedFiles(root, ""),
+      ...shelvedFiles(join(root, "weeks"), "weeks/"),
+      ...shelvedFiles(join(root, "events"), "events/"),
+    ].map(({ slug, file }) => ({ slug, tokens: tickerTokens(readFileSync(file, "utf8")) })),
+  );
 
 /**
  * The living symbol page's data: everything symbol-keyed the repo already holds, assembled —
