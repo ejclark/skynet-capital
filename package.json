@@ -54,6 +54,7 @@
     "incident:scan": "node scripts/incident-scan.mjs",
     "ci-duration:scan": "node scripts/ci-install-duration-scan.mjs",
     "docrot:scan": "node scripts/doc-rot-scan.mjs",
+    "mermaid-skill:scan": "node scripts/mermaid-skill-scan.mjs",
     "forward-test-id:scan": "node scripts/forward-test-id-scan.mjs",
     "doctrine:scan": "node scripts/doctrine-scan.mjs",
     "issue:lint": "node scripts/issue-lint.mjs",
