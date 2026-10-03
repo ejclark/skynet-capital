@@ -367,14 +367,17 @@ with the complexity moved into the wiring.
   two half-agreeing docs** (`docs/grind/README.md`'s own "when to reach for this" section points
   here rather than restating a narrower version). Pick by whether the target list is known up front
   and whether dynamic re-triggering is needed:
-  - Routine, one-target-at-a-time burn-down → `/governor`'s normal cycle. The default.
+  - Routine, one-target-at-a-time burn-down → `/governor`'s normal cycle, or
+    [`docs/grind/governor.instructions.md`](grind/governor.instructions.md) — the same cycle's
+    dispatch steps as a chore, one item per coach, which is the shape the 2026-10-03 sunset review
+    below settled on. Either way the gate picks the target and the wave lands as one cycle PR.
   - The target list isn't fully known up front, or new targets should unblock reactively as fenced
     seams land within one sitting → `/governor` feast mode — its "every athlete completion is a
     mini-cycle trigger" re-checks the fence ledger for newly-unblocked work, something a static item
     list cannot do.
   - A known, fixed batch of targets for one athlete's own chore, no dynamic re-triggering needed →
-    `/grind` fanning that athlete's skill (already true today for `/bury`/`/backfill`; `/decompose`/
-    `/dedupe` are equally fannable, just not yet checked in as manifest chores). Land the wave the
+    `/grind` fanning that athlete's skill (`/bury` and `/backfill` carry their own calling
+    conventions; `/decompose` and `/dedupe` are equally fannable). Land the wave the
     *same shape* feast mode's own platter step already uses — merge each item's verified branch into
     one wave branch, verify the union once, open one PR, auto-merge normally per the merge-policy
     table below — **never** via `scripts/ship.sh platter`, a different mechanism reserved for the
@@ -384,3 +387,50 @@ with the complexity moved into the wiring.
     uncontested case.
 - Adding a Coach = one eval + one budget + one CI spec + one skill (+ optionally one agent). Use
   `skill-creator` and mirror an existing pair so the roster stays uniform.
+
+## Sunset review — the first one, 2026-10-03 (#3939 slice 3)
+
+Machinery earns its place or loses it, and the only honest way to tell is to count. The rule
+`/charter` already holds for a *new* agent — never trust an unchecked usage claim, in either
+direction — pointed at the roster that already exists. Eric's trigger (2026-09-28): *"a lot of the
+orchestration we setup before… should be scrutinised and considered for being consolidated /
+decommissioned / replaced by better more ootb systems as we scale."*
+
+**Method, so the next pass reproduces it rather than re-deriving it.** Window 2026-09-03 → 2026-10-03
+(30 days), measured against GitHub and git, never estimated:
+
+| Question | How it was counted |
+|---|---|
+| Did an athlete run? | every PR in the window whose head branch matches that athlete's prefix glob, then the PR's author and body read to tell a dispatch from a human's own refactor |
+| Did a cycle run? | PRs on `refactor/governed-cycle-*` |
+| Did the correction land? | `git log --since=<window start> -- <that coach's budget file>` — a ratchet is the only durable trace a rep leaves |
+| Is there work to do? | each eye's own `--candidate` |
+
+**What it found.** One rep in 30 days across all four athletes, zero cycles — and not one budget
+moved. Meanwhile every gate names a live target: 76 duplicate symbols, 135 dead exports, 31 untested
+files, the top size target 1,020 code lines over cap. So the roster is not idle because the codebase
+is clean, and the thing that stopped was never the drills.
+
+| Piece | Reps, 30d | Call | Conf. | Why | What proves it wrong |
+|---|---|---|---|---|---|
+| `/governor`'s dispatch steps (3–4) | 0 cycles | **consolidate** into [`docs/grind/governor.instructions.md`](grind/governor.instructions.md) | high | A chore expresses WIP 1 and the collision check with no new grind code, and *one item per coach* makes the ratchet fence structural instead of prose | The chore needs a rule `grind.js` cannot carry → keep the dispatch layer. Tested when writing it: it did not |
+| `/governor`'s merge-policy table + feast mode | cited from `CLAUDE.md` | **keep** | high | Policy, not dispatch; nothing else holds the auto-merge carve-outs | — |
+| `decomposer` · `ui-librarian` · `mortician` · `test-backfiller` | 1 · 0 · 0 · 0 | **merge** — the chore reads each drill's own skill spec, so the agent file is a second copy of a loop that already lives in one place | med-high | Four wrappers, one rep between them; the skills and gates they drive all stay | A drill turns out to need an agent-only capability the chore cannot reach → keep the wrapper |
+| The four eyes and the four drills | gates run every `npm test` | **keep, untouched** | high | These are the capability. The review found the *trigger* missing, never the correction | — |
+| `/charter` | this review is its first sunset pass | **keep, and give it a sunset mode** | high | Usage proved measurable four different ways above, which was the falsifier for adding the mode | A later pass cannot measure an agent → the mode defaults to keep, never to retire on silence |
+
+**The next constraint, which this review surfaced rather than fixed.** Consolidating one idle layer
+into another does not answer why neither ran. Nothing schedules, nudges or surfaces debt work, so it
+happens when a human thinks of it — once, in 30 days. That is filed with its number as
+[#4527](https://github.com/ejclark/skynet-capital/issues/4527) (`bottleneck`), for the research chore
+to price the candidates: the digest clock that already exists, a standing issue per coach in the ready
+queue, a scheduled workflow, or a native GitHub feature. Exactly ToC's own corollary — elevate one
+constraint and the next binds.
+
+**Still pending, and deliberately not done here.** The `merge` verdicts above are *recorded, not yet
+executed*: deleting the four agent files and adding sunset mode to `/charter` are both writes under
+`.claude/`, a Claude Code protected directory an unattended lane cannot write to at all (probed
+2026-10-03, refused; `docs/grind/README.md` → *Known limitations* says to route it to an interactive
+session). Until [#4526](https://github.com/ejclark/skynet-capital/issues/4526) lands, the four agent
+files still exist and still work — the roster table above is accurate as written, and `/governor`
+remains invokable exactly as before. Nothing is removed by a doc.

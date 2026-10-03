@@ -169,6 +169,13 @@ prose ("the target below") rather than trying to template inside the instruction
   — the dead-code and spec-gap drills, fanned with `{kind: "skill"}`. They started life as two
   hand-copied chore files here; #1326 hoisted them so the `mortician`/`test-backfiller` agents and
   grind share one copy. Each skill's body carries its grind calling convention.
+- [`governor.instructions.md`](governor.instructions.md) — one coach's athlete rep: WIP check, the
+  gate's own `--candidate`, the open-PR file-collision check, then the drill's `SKILL.md`. The
+  dispatch half of `/governor`'s cycle (steps 3–4) expressed as a chore, with **one item per coach**
+  as the fence that keeps two reps off one ratchet file. The sunset review in `docs/COACHES.md`
+  (2026-10-03) is why: the four athlete agents ran once between them in 30 days while their gates
+  carried real debt, so the dispatch layer is the part that was idle, not the drills. Landing the
+  wave as one cycle PR stays the caller's job — a rep opens nothing.
 - [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one dead doc reference
   flagged by `scripts/doc-rot-scan.mjs`.
 - [`triage-comment-bloat.instructions.md`](triage-comment-bloat.instructions.md) — triage one
