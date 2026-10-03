@@ -1,9 +1,12 @@
 /**
  * The house playbook roster — every play that survived the red team, encoded with its own
  * window shape and its evidence citation. Enablement is DARK by default: nothing here runs
- * until SKYNET_PLAYBOOKS names it (e.g. "S1-NVDA:standard,G1-GOOG:conservative"), and flipping
- * that env in production goes through the approval-gated autonomy-ops workflow — live
- * enablement stays Eric's single credentialed step (plan → autonomy envelope).
+ * until SKYNET_PLAYBOOKS names it (e.g. "S1-NVDA:standard,G1-GOOG:conservative") or an account
+ * subscribes to it in the Playbook Store. Who may change what an account runs is ownership and
+ * nothing else (Eric, #928 — `envelope.json` `$openOnPurpose`): an owner subscribes their own
+ * account, nobody changes an account that is not theirs, and there is no approval step on top.
+ * The house-wide env roster is a fallback on its way out — bot behaviour becomes the bot's own
+ * subscriptions (plan #4535).
  */
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";

@@ -2,10 +2,11 @@
  * COND-SCOUT's live wiring (#3651 slice 2c) — kept out of `run-autonomous.ts` to hold that file
  * under its line cap, the same reason `autonomous-scout-staging.ts` exists.
  *
- * DARK BY DEFAULT. Nothing runs unless `SKYNET_COND_SCOUT_UNIVERSE` names tickers, and that knob is
- * flipped through the approval-gated `autonomy-ops` workflow like every other trading-behavior
- * toggle. Even armed, the runner holds no broker: probes live on the shadow ledger only (Eric,
- * 2026-09-30 — "keeps the information contained to the health dashboard").
+ * DARK BY DEFAULT. Nothing runs unless `SKYNET_COND_SCOUT_UNIVERSE` names tickers. That knob is a
+ * server env today; plan #4535 moves it, like every bot-behaviour setting, into the bot account's
+ * own settings, where the only gate is ownership (Eric, #928 — no approval step). Even armed, the
+ * runner holds no broker: probes live on the shadow ledger only (Eric, 2026-09-30 — "keeps the
+ * information contained to the health dashboard").
  */
 import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
