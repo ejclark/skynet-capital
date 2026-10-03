@@ -132,7 +132,9 @@
 
   <p class="howto">Every count, symbol, fund ticker and date below is <b>real</b> — read out of
     <code>coverageBySector()</code> (<code>src/domain/sector-coverage.ts</code>, shipped in slice 1) and the live
-    event corpus on <b>2026-10-03</b>. Nothing is a placeholder. The one thing that is not a number is the
+    event corpus on <b>2026-10-03</b>, <b>with slice 1 (#4496) applied</b> — it is the tree the Coverage
+    section will be built on, and it is the one that files KBH under Consumer Discretionary. Nothing is a
+    placeholder. The one thing that is not a number is the
     sector-fund return: there is no bars source without a member's own linked account, so the no-account
     frames say so in words and the linked frames show a <b>width sample</b> (<span class="mono">▒</span> glyphs) to
     size the slot — never a figure. Vanilla HTML/CSS/JS, no build step, no network. The URL hash is the
@@ -276,7 +278,10 @@
    `researched` = symbols with a ledger. `macro` = macro ledgers attributed to the sector by
    SECTOR_MACRO_SERIES. `upcoming` = dated events ahead that eventInSector() places here.
    `next` = the first of them. `calendar` is empty for every sector today and is kept as a field,
-   not dropped, so the shapes are drawn against the state that will exist, not just today's. */
+   not dropped, so the shapes are drawn against the state that will exist, not just today's.
+   Read on the slice-1 tree (#4496): without its ticker-directory entry KBH has no sector and falls
+   into Unclassified, so re-deriving these numbers on a tree without that PR gives 2 researched names
+   in Consumer Discretionary, not 3. */
 const SECTORS = [
   { name: 'Technology', fund: 'XLK', researched: ['AAPL','AVGO','CRWV','MRVL','MSFT','MU','NVDA'], calendar: [], macro: 0, upcoming: 8, next: ['MRVL Investor Day', '2026-10-06'] },
   { name: 'Communication Services', fund: 'XLC', researched: ['GOOG','META'], calendar: [], macro: 0, upcoming: 2, next: ['GOOG print', '2026-10-28'] },
