@@ -53,6 +53,7 @@
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./admission.mjs";
+import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
@@ -636,7 +637,31 @@ function gatherDeps(ctx) {
     // and only on a sweep — nothing on a label or comment event can close an issue, so no other
     // path has anything to relay.
     closedWithRemainder: needsScan ? gatherRelayDeps() : [],
+    // The assignment lane (#3818 slice 5). Sweep-only for the same reason as the relay above: only
+    // a push can have changed what Eric holds since the last tick, and `null` (not `{}`) is what
+    // makes `routeAssignments` a no-op on every other event and in every pre-slice-5 fixture.
+    //
+    // FAIL OPEN HERE, unlike every other read in this function — the one deliberate exception. This
+    // read is the chattiest on the tick (a comments page per candidate) and so the likeliest to meet
+    // a transient 5xx, and a throw out of `gatherDeps` happens BEFORE `runIntents`' per-intent
+    // isolation: it would take the receipt closes, the relay and `has_next` down with it. Nothing is
+    // lost by skipping a tick, because the next push re-reads the same queue from GitHub — this lane
+    // keeps no state of its own. (Contrast `readReceipts`, which refuses outright: there a false
+    // empty would CLOSE the whole queue.)
+    assignments: needsScan ? gatherAssignmentsSafely() : null,
   };
+}
+
+/** `gatherAssignmentDeps` with the fail-open wrapper `gatherDeps` explains above. */
+function gatherAssignmentsSafely() {
+  try {
+    return gatherAssignmentDeps();
+  } catch (err) {
+    console.log(
+      `::warning::assignments — skipping this tick, the queue read failed: ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
 }
 
 /**
@@ -925,6 +950,13 @@ function executeSweepIntent(i) {
     ]);
     console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
     return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
+  }
+  if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
+    // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
+    // this router — the same cycle-avoidance as the relay below.
+    const line = executeAssignments(i);
+    console.log(`::notice::${line}`);
+    return line;
   }
   if (i.kind === "relay-remainder") {
     // The three writes (file the relay, receipt the source, clear the remainder label) live in

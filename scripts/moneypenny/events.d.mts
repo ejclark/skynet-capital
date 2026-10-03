@@ -43,3 +43,11 @@ export function dueForResearch<T extends DueEvent>(
   openPrHeads?: readonly string[],
   cap?: number,
 ): T[];
+
+/**
+ * The push sweep's whole intent list: receipt issues for never-assessed events, the receipt and
+ * shipped closes, the dropped-remainder relay, then the assignment lane — which is filtered against
+ * the closes this same tick already decided, so a shipped-but-still-labelled issue is never asked
+ * about and closed in one run (#3818 slice 5).
+ */
+export function routeSweep(deps?: Record<string, unknown>): Record<string, unknown>[];
