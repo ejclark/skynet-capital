@@ -5,6 +5,15 @@ import { captureWholeFrame, freezePage } from "./determinism";
 // research markdown off disk (src/server/research-service.ts). The e2e server points
 // SKYNET_RESEARCH_DIR at the frozen shelf in e2e/fixtures/research (playwright.config.ts, #4047),
 // never the live docs/research/, so a new research doc cannot move research-page.png.
+//
+// What the fixture does NOT freeze: a symbol chip's sub-label is its next upcoming event, read off
+// the LIVE market-events corpus against the real clock (`shelfSymbols(new Date()…)`,
+// src/server/content-api-routes.ts). So a chip reads a date until that event passes and then flips
+// to "no dated event" on its own — and adding a market-event JSON naming MU or NVDA flips it back.
+// Each flip is a few hundred pixels, under FROZEN_DIFF_RATIO alone but enough to push a real
+// change over it (#4496: MU's 2026-09-30 print had already rotted when the filter placeholder grew
+// a `sector:` example, and the two together failed the shot). Re-shoot the snapshot; the chip is
+// telling the truth. Freezing the clock for this route is filed separately.
 test.describe("research", () => {
   test("renders the R&D board", async ({ page }) => {
     await page.goto("/app/research");
