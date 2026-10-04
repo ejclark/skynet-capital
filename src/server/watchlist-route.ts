@@ -123,15 +123,18 @@ async function serveToggle(
     return;
   }
 
+  // The rules decide against the list as it stands NOW, re-read per change rather than trusted
+  // from the client: two tabs on one account are two writers, and the cap has to hold across both.
+  // Read BEFORE the symbol is judged, so that every refusal past this point answers with the real
+  // list — a refusal carrying an empty one would read as "and your list is now empty", which a
+  // client applying the answer verbatim (the whole point of echoing it) would then render.
+  const current = await store.load(memberId);
   const normalized = normalizeWatchSymbol(symbol);
   if (!normalized) {
-    sendJson(res, 200, { ok: false, refusals: [WATCHLIST_BAD_SYMBOL], watching: [] });
+    sendJson(res, 200, { ok: false, refusals: [WATCHLIST_BAD_SYMBOL], watching: current });
     return;
   }
 
-  // The rules decide against the list as it stands NOW, re-read per change rather than trusted
-  // from the client: two tabs on one account are two writers, and the cap has to hold across both.
-  const current = await store.load(memberId);
   const at = (config.now?.() ?? new Date()).toISOString();
   const change = watching
     ? addToWatchlist(current, normalized, at)

@@ -105,7 +105,7 @@ describe("WatchlistSection", () => {
     const picked: string[] = [];
     render(withClient(<WatchlistSection symbol="" onPick={(s) => picked.push(s)} />));
     await waitFor(() => expect(screen.getByText("NVDA")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Open NVDA on the bench" }));
+    fireEvent.click(screen.getByRole("button", { name: /NVDA.*open it on the bench/ }));
     expect(picked).toEqual(["NVDA"]);
   });
 
@@ -127,6 +127,53 @@ describe("WatchlistSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Stop watching NVDA" }));
     await waitFor(() => expect(screen.queryByText("NVDA")).toBeNull());
     expect(toggles).toEqual([{ symbol: "NVDA", watching: false }]);
+  });
+
+  it("announces the price and its direction as part of the row's own name", async () => {
+    // An `aria-label` would REPLACE the contents as the accessible name and silence the
+    // `.visually-hidden` sentence `quote-change.tsx` exists to speak — a screen reader would hear
+    // the ticker and the action, and nothing about the money.
+    list = { available: true, limit: 20, watching: [row("NVDA")] };
+    quotes = {
+      NVDA: { symbol: "NVDA", last: 178.42, change: 2.31, changePct: 1.31, tone: "pos" },
+    };
+    render(withClient(<WatchlistSection symbol="" onPick={() => undefined} />));
+    await waitFor(() => expect(screen.getByText("$178.42")).toBeInTheDocument());
+    expect(
+      screen.getByRole("button", { name: /NVDA.*up 2\.31 dollars, 1\.31 percent/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not add a half-typed name just because the field lost focus", async () => {
+    // Tapping a row blurs the input first; `SymbolField` commits on blur everywhere it writes a
+    // reversible `?symbol=`, and a durable append is not that.
+    list = { available: true, limit: 20, watching: [row("NVDA")] };
+    render(withClient(<WatchlistSection symbol="" onPick={() => undefined} />));
+    await waitFor(() => expect(screen.getByText("NVDA")).toBeInTheDocument());
+    const field = screen.getByLabelText("Watch a name");
+    fireEvent.change(field, { target: { value: "TS" } });
+    fireEvent.blur(field);
+    expect(toggles).toEqual([]);
+    // Enter still commits, so nothing a member MEANT to do was taken away.
+    fireEvent.change(field, { target: { value: "TSLA" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    await waitFor(() => expect(toggles).toEqual([{ symbol: "TSLA", watching: true }]));
+  });
+
+  it("keeps the list on screen when the server refuses a name it never read the list for", async () => {
+    // The bad-symbol refusal is decided before the route has the list; adopting its `watching`
+    // verbatim would blank the member's whole list — and close the shared stream with it.
+    list = { available: true, limit: 20, watching: [row("NVDA"), row("AAPL")] };
+    result = { ok: false, refusals: ["That doesn't read as a ticker"], watching: [] };
+    render(withClient(<WatchlistSection symbol="" onPick={() => undefined} />));
+    await waitFor(() => expect(screen.getByText("NVDA")).toBeInTheDocument());
+    const field = screen.getByLabelText("Watch a name");
+    fireEvent.change(field, { target: { value: "NVIDIA" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    await waitFor(() => expect(screen.getByText(/doesn't read as a ticker/)).toBeInTheDocument());
+    expect(screen.getByText("NVDA")).toBeInTheDocument();
+    expect(screen.getByText("AAPL")).toBeInTheDocument();
+    expect(streamed.at(-1)).toEqual(["NVDA", "AAPL"]);
   });
 
   it("shows the server's refusal verbatim and leaves the list alone", async () => {

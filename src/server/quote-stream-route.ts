@@ -62,7 +62,7 @@ const NOT_LINKED =
  * lenient on a bad member of the set: silently dropping one would open a stream that looks
  * complete and is missing a row, which is the dishonesty this surface's criteria forbid.
  */
-export function parseSymbols(raw: string | null): readonly string[] | undefined {
+export function parseSymbolSet(raw: string | null): readonly string[] | undefined {
   const parts = (raw ?? "")
     .split(",")
     .map((part) => part.trim().toUpperCase())
@@ -84,7 +84,7 @@ export function serveQuoteStream(
   if (!requireGet(req, res)) return true;
 
   const params = new URL(req.url ?? "/", "http://localhost").searchParams;
-  const asked = parseSymbols(params.get("symbol"));
+  const asked = parseSymbolSet(params.get("symbol"));
   if (!asked) {
     sendJson(res, 400, {
       error: "the quote stream wants ?symbol=<ticker> or a comma-separated set",

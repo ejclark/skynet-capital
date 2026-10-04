@@ -51,14 +51,15 @@ function Row({
   const answer: QuoteAnswer | undefined = quote.data;
   return (
     <li className="wl-row">
-      <button
-        type="button"
-        className="wl-pick"
-        onClick={() => onPick(row.symbol)}
-        aria-label={`Open ${row.symbol} on the bench`}
-      >
+      {/* NO `aria-label` here, deliberately: a label REPLACES an element's contents as its
+          accessible name, so one would have silenced exactly the `.visually-hidden` price and
+          direction sentence `quote-change.tsx` exists to speak. The action is said as hidden text
+          INSIDE the button instead, so the announced name is the symbol, its price, its direction
+          in words, and then what tapping it does. */}
+      <button type="button" className="wl-pick" onClick={() => onPick(row.symbol)}>
         <span className="wl-sym">{row.symbol}</span>
         <Price answer={answer} />
+        <span className="visually-hidden">— open it on the bench</span>
       </button>
       <button
         type="button"
@@ -110,6 +111,10 @@ function AddName({
         placeholder="AAPL"
         maxLength={12}
         onChange={setTyped}
+        // A commit here is a DURABLE append, not a `?symbol=` a member can retype — so leaving the
+        // field must not write one. Tapping a row blurs this input first, which would otherwise
+        // have persisted whatever was half-typed and spent a slot against the cap.
+        commitOnBlur={false}
         onCommit={(symbol) => {
           if (symbol.trim() === "") return;
           onAdd(symbol);
@@ -149,8 +154,12 @@ export function WatchlistSection({
       setWatching(name, watching),
     onSuccess: (result) => {
       // The server's own list, written straight in — the cap and the dedupe rules are its, and a
-      // locally patched copy would eventually disagree with what the next reader loads.
+      // locally patched copy would eventually disagree with what the next reader loads. ONLY on
+      // `ok`, though: a refusal the route decides before it has read the list answers with an
+      // empty one (`watchlist-route.ts`'s bad-symbol branch), and adopting that would blank a
+      // member's whole list — and close the shared stream with it — over a typo.
       setRefusal(result.ok ? undefined : result.refusals[0]);
+      if (!result.ok) return;
       queryClient.setQueryData(watchlistKey, (prev: WatchlistAnswer | undefined) =>
         prev ? { ...prev, watching: result.watching } : prev,
       );

@@ -184,8 +184,10 @@ describe("serveWatchlistApi", () => {
     expect(store.lines).toHaveLength(WATCHLIST_LIMIT);
   });
 
-  it("refuses a symbol that isn't a ticker", async () => {
-    const store = fakeStore();
+  it("refuses a symbol that isn't a ticker, and still answers with the REAL list", async () => {
+    // Every refusal's `watching` is applied verbatim by the client (that is why it is echoed), so
+    // one carrying an empty list would read as "and your list is now empty".
+    const store = fakeStore(["NVDA", "AAPL"]);
     const { res, out } = fakeRes();
     await serveWatchlistApi(
       post({ symbol: "nope!", watching: true }),
@@ -195,7 +197,8 @@ describe("serveWatchlistApi", () => {
       ann,
     );
     expect(json(out).ok).toBe(false);
-    expect(store.lines).toHaveLength(0);
+    expect(symbols(out)).toEqual(["NVDA", "AAPL"]);
+    expect(store.lines).toHaveLength(2);
   });
 
   it("rejects a malformed body rather than guessing a direction", async () => {

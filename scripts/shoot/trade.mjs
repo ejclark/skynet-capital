@@ -1661,10 +1661,10 @@ const perSymbolQuote = (route) => {
     json: watchQuotes[symbol] ?? { quoteNote: "no price right now" },
   });
 };
-await page.route(
-  (url) => new URL(url).pathname === "/api/trade/quote",
-  perSymbolQuote,
-);
+// The matcher is hoisted, not written inline twice: `page.unroute` matches on the SAME matcher
+// reference, so a second arrow with identical text would never find the route it meant to remove.
+const isQuoteRead = (url) => new URL(url).pathname === "/api/trade/quote";
+await page.route(isQuoteRead, perSymbolQuote);
 // One connection carries the whole set, so one fulfilled batch proves the seam — the same
 // technique as the quote-stream scene above, with TSLA deliberately left out of the live set.
 // Delayed deliberately, so the batch lands AFTER each row's one-shot read — the order production
@@ -1689,7 +1689,7 @@ const pushSet = async (route) => {
 await page.route("**/api/trade/quote-stream*", pushSet);
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?section=watchlist&symbol=NVDA&play=101`);
-await page.getByRole("button", { name: "Open NVDA on the bench" }).waitFor();
+await page.getByRole("button", { name: /^NVDA .* open it on the bench$/ }).waitFor();
 await page.getByText(/4 of 20 names/).waitFor();
 // Three rows streaming, the fourth not — the exact contrast these frames exist to show, waited on
 // rather than assumed, so a regression in the seam fails the harness instead of shipping a frame
@@ -1709,6 +1709,6 @@ await page.locator("#bench-watchlist").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy({ top: -24, left: 0 }));
 await shootWatchlist("watchlist-desktop");
 await page.unroute("**/api/trade/quote-stream*", pushSet);
-await page.unroute((url) => new URL(url).pathname === "/api/trade/quote", perSymbolQuote);
+await page.unroute(isQuoteRead, perSymbolQuote);
 
 await close();
