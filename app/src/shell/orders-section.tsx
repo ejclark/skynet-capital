@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { fetchDesk } from "../live/desk";
 import { DeskAlerts } from "./desk-alerts";
+import { OptionLifecycleCard } from "./option-lifecycle-card";
 import { OptionPositionsCard, type PositionFocus } from "./option-positions";
 import { WorkingOrders } from "./working-orders";
 
@@ -39,6 +40,11 @@ export function OrdersSection({
           {...(focus ? { focus } : {})}
         />
       ) : null}
+      {/* Last in the pane, and deliberately after the holdings (#3407 slice 4): what the account
+          HAS leads, what has already happened to it follows. The card is what closes the loop the
+          positions card opens — a contract that leaves the book without an order now has a line
+          saying why it left and what that did to the P/L. */}
+      <OptionLifecycleCard deskId={deskId} />
     </div>
   );
 }
