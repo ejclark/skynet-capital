@@ -321,6 +321,43 @@ export function runThroughRateLimit({
   }
 }
 
+// #4438 — THE BOARD IS A DISPLAY, SO A RATE LIMIT SKIPS THE SYNC INSTEAD OF REDDENING `main`.
+//
+// Run 36808329767 (sha 3c72dc5, 2026-10-01) went red on `sync project status` because the token's
+// GraphQL hour was spent — #3914's probe said so in as many words. Nothing was wrong with the code,
+// and the lane is level-based: the next `issues` event computes the Status from labels again and
+// writes it, so a skipped write costs a stale column for at most one hour. That is the same split
+// the work spigot's title sync draws (#3960 slice 4): a DISPLAY that cannot be written warns, a
+// CONTROL that cannot be read refuses. Only the CLI entry point uses this — `syncIssue` still
+// throws, so projects-backfill.mjs's abort-the-sweep check and every claim/lease/gate stay loud.
+// The split is on the CAUSE (the phrase every rate-limit explainer above deliberately keeps),
+// never on the step: a wrong owner, a missing project or a bad field id still exits non-zero.
+
+/** "the board catches up at …" — the reset is the moment the next event's sync can succeed. */
+function catchUpPhrase(reset, now) {
+  if (typeof reset !== "number" || !Number.isFinite(reset)) {
+    return "GitHub did not report a reset time; the hourly GraphQL window rolls over within the hour.";
+  }
+  const at = new Date(reset * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+  const mins = Math.max(0, Math.ceil((reset * 1000 - now) / 60_000));
+  return `The GraphQL budget resets at ${at} (${mins} min); the next issue event after that re-syncs the board.`;
+}
+
+/**
+ * Should this sync failure skip with a warning rather than fail the job? Returns the one-line
+ * `::warning::` to print when the failure is a rate limit, `null` for anything else (re-throw it).
+ * Pure: `budget` is the caller's free `ghRateLimit().graphql` read, `{}` when unreadable.
+ */
+export function boardSyncSkip({ issueNumber, error, budget = {}, now = Date.now() } = {}) {
+  const text = `${error?.message ?? ""} ${error?.stderr ?? ""}`.replace(/\s+/g, " ").trim();
+  if (!isRateLimitExhausted(text)) return null;
+  return (
+    `::warning title=Board sync skipped (rate limit)::issue #${issueNumber} was not synced to the ` +
+    `board — GitHub refused the GraphQL call for its rate limit, and the board is a display, not a ` +
+    `control (#4438). ${catchUpPhrase(budget.reset, now)} Cause: ${text}`
+  );
+}
+
 // The floor a whole-backlog sweep must clear before it starts. Once the per-run constants are read
 // once instead of once per issue (`cachedItems`, below), a ~90-issue backfill costs about one
 // `item-list` page (~100 points) plus a couple of points per issue for the REST read and the Status
@@ -522,6 +559,15 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
     return (
       `${head} A direct GraphQL call with the same GH_TOKEN succeeded, so the credential is ` +
       "good: a GitHub-side hiccup outlasted the retries, and re-running the job is the fix."
+    );
+  }
+  // #4438: checked BEFORE the credential branch — gh can word a spent hour with `HTTP 403`, and
+  // "re-save the secret" is the wrong repair for a quota. Keeps the probe's own phrase in the text,
+  // which is what `boardSyncSkip` keys the soft skip on.
+  if (isRateLimitExhausted(probe)) {
+    return (
+      `${head} The same GH_TOKEN's direct GraphQL call was refused for its rate limit: "${probe}" — ` +
+      "a spent or throttled budget, not a code fault and not a bad credential."
     );
   }
   if (/Bad credentials|HTTP 401|Resource not accessible|HTTP 403/i.test(probe)) {

@@ -75,6 +75,14 @@ export function explainThrottled(detail?: {
   baseMs?: number;
 }): string;
 
+/** #4438: the `::warning::` line for a rate-limited board sync, or null to re-throw. */
+export function boardSyncSkip(opts?: {
+  issueNumber?: number | string;
+  error?: unknown;
+  budget?: { reset?: number; remaining?: number };
+  now?: number;
+}): string | null;
+
 export function runThroughRateLimit<T>(opts: {
   call?: string;
   run: () => T;
