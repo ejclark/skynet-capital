@@ -3,6 +3,7 @@ import {
   CONFLICT_REPAIR_CAP,
   readyPlanCandidate,
   staleInProgressFrom,
+  untruncated,
 } from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
@@ -288,5 +289,22 @@ describe("audit() — syncing the work spigot's title", () => {
       "clear-in-progress",
       "retitle-work-mode",
     ]);
+  });
+});
+
+describe("untruncated() — a list read at its --limit fails loudly instead of auditing a partial list", () => {
+  it("passes a list shorter than the limit through unchanged", () => {
+    const rows = [{ number: 1 }, { number: 2 }];
+    expect(untruncated(rows, 3, "gh issue list")).toBe(rows);
+  });
+
+  it("throws when the read came back exactly at the limit — more may sit behind it", () => {
+    // 2026-10-04: 100 rows at --limit 100 with ~140 open; the oldest 40 were invisible.
+    const rows = Array.from({ length: 100 }, (_, n) => ({ number: n }));
+    expect(() => untruncated(rows, 100, "gh issue list")).toThrow(/may be truncated/);
+  });
+
+  it("treats a missing list as empty, not as a crash", () => {
+    expect(untruncated(undefined, 100, "gh issue list")).toEqual([]);
   });
 });
