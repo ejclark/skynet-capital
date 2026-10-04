@@ -21,8 +21,8 @@
 // REST (the core bucket — #4183 is what spending GraphQL on a sweep costs); the label write is the
 // existing `setInProgress` (labels.mjs), best-effort by design: a failed write warns, never fails.
 //
-// NOT WIRED YET. Slice 2 boards the `pull_request` trigger onto the platter (workflow files are
-// envelope.json's class). Until then this runs only by hand.
+// WIRED by .github/workflows/board-sync.yml (#4393 slice 2): every same-repo PR open, reopen, edit
+// and close. A PR opened with the plain GITHUB_TOKEN emits no event, so it is not seen here.
 import { ghRest, ghRestAll, withRetry } from "./gh.mjs";
 import { isClaimed } from "./index.mjs";
 import { LABELS, setInProgress } from "./labels.mjs";
