@@ -242,6 +242,29 @@ export function staleInProgressFrom(issues = [], nowMs = 0) {
     }));
 }
 
+/**
+ * How many open issues the audit reads in one list call. `gh issue list` pages GraphQL in 100s up
+ * to this, so it is a ceiling, not a page size — ~140 open on 2026-10-04, so ~7x headroom.
+ */
+export const OPEN_ISSUE_LIMIT = 1000;
+
+/**
+ * LOUD ON THE CEILING — `ghRestAll`'s fail-closed doctrine, for a `gh … list --limit` read. A list
+ * that came back exactly `limit` long may have had more behind it, and every audit rule reads an
+ * absent issue as "nothing to flag": at `--limit 100` the oldest ~40 open issues were invisible to
+ * the plan-stall, silent-feedback, unclaimed and already-flagged checks (#4547 found it for
+ * `in-progress`). Throwing turns that silent half-answer into a red run someone sees.
+ */
+export function untruncated(rows, limit, label) {
+  if ((rows ?? []).length >= limit) {
+    throw new Error(
+      `${label} returned ${rows.length} rows at --limit ${limit}; the list may be truncated. ` +
+        "Raise the limit rather than audit a partial list.",
+    );
+  }
+  return rows ?? [];
+}
+
 /** Audit-mode dependencies: unclaimed dispatch issues. Loud on failure, same doctrine as
  *  gatherDeps. `now` injected for the day math (never Date.now() in a testable path — the caller
  *  passes it). */
@@ -286,16 +309,23 @@ export function gatherAuditDeps(nowMs) {
     }
     return { sha: null, attempt: 1 };
   }
-  const issues = json("gh issue list", [
-    "issue",
-    "list",
-    "--state",
-    "open",
-    "--limit",
-    "100",
-    "--json",
-    "title,number,state,updatedAt,createdAt,labels,closedByPullRequestsReferences",
-  ]).map((i) => ({ ...i, closedByPullRequests: i.closedByPullRequestsReferences ?? [] }));
+  // EVERY open issue, not the newest 100: each rule below filters this list, so a truncated read
+  // is a rule that silently sees nothing. Not REST (`ghRestAll`) — REST has no
+  // `closedByPullRequestsReferences`, and `answered()` would then cost one lookup per issue.
+  const issues = untruncated(
+    json("gh issue list", [
+      "issue",
+      "list",
+      "--state",
+      "open",
+      "--limit",
+      String(OPEN_ISSUE_LIMIT),
+      "--json",
+      "title,number,state,updatedAt,createdAt,labels,closedByPullRequestsReferences",
+    ]),
+    OPEN_ISSUE_LIMIT,
+    "gh issue list",
+  ).map((i) => ({ ...i, closedByPullRequests: i.closedByPullRequestsReferences ?? [] }));
   const alreadyFlagged = issues
     .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.stall.name))
     .map((i) => i.number);
@@ -336,26 +366,11 @@ export function gatherAuditDeps(nowMs) {
       hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
     }));
 
-  // #3960: every open issue still marked in-flight, and how long it has been quiet. Its OWN
-  // label-filtered read, never a filter over `issues` above: that list is the newest 100 of ~140
-  // open, and the oldest plans — the long-running builds most likely to leak the label — fell off
-  // its end. On 2026-10-04 #3651, #3407 and #3939 sat at positions 110–124, quiet 15–35h, holding
-  // all 3 in-flight slots as ghosts while the sweep reported nothing to clear.
-  const staleInProgress = staleInProgressFrom(
-    json("gh issue list (in-progress)", [
-      "issue",
-      "list",
-      "--state",
-      "open",
-      "--label",
-      LABELS.inProgress.name,
-      "--limit",
-      "100",
-      "--json",
-      "title,number,updatedAt,labels",
-    ]),
-    nowMs,
-  );
+  // #3960: every open issue still marked in-flight, and how long it has been quiet. #4547 gave this
+  // its own label-filtered read because `issues` was then the newest 100 of ~140 open — on
+  // 2026-10-04 #3651, #3407 and #3939 sat at positions 110–124 and held all 3 in-flight slots as
+  // ghosts. `issues` is now the whole open list, so the filter is safe again.
+  const staleInProgress = staleInProgressFrom(issues, nowMs);
 
   // #897: plan issues whose ready-flip may never have been claimed. Skip the (expensive-ish,
   // per-issue) comment fetch entirely for anything the cheap in-memory checks already rule out —
