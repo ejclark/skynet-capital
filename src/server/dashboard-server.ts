@@ -38,6 +38,7 @@ import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveSubscriptionsApi } from "./subscriptions-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveTradeOrdersApi } from "./trade-orders-routes.js";
+import { serveWatchlistApi } from "./watchlist-route.js";
 
 export type { DashboardServerConfig };
 
@@ -148,6 +149,7 @@ async function serveWriteApis(
   if (serveStreamApis(req, res, path, config, session)) return true;
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
+  if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
   if (await servePlaysApi(req, res, path, config, session)) return true;

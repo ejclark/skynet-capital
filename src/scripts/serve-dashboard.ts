@@ -13,6 +13,7 @@
  */
 
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
+import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
@@ -378,6 +379,9 @@ async function main(): Promise<void> {
     activityLog: activityEventBus,
     // A member's alert dismissals, durable on the volume (#3407 P4 slice 1 follow-up).
     alertDismissals: createAlertDismissals(process.env),
+    // The names a member chose to watch — member-authored truth nothing re-derives, so it is
+    // durable on the same volume (#4332).
+    watchlist: createWatchlist(process.env),
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),

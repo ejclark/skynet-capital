@@ -297,6 +297,9 @@ let currentChain = chain;
 let currentQuote = quote;
 // The base twenty bars for every chart shot but the studies scene, which swaps in `studyBars`.
 let currentBars = bars;
+// The watchlist (#4332) — one key serves both directions: the GET answer's shape and the POST
+// result's shape overlap, so `{ ok, available, limit, watching }` satisfies both readers.
+let currentWatchlist = { ok: true, available: true, limit: 20, watching: [] };
 // Working orders (#3407 P1 slice 2): the list a Limit was missing. Every scene but the one that
 // proves it starts with nothing working — the honest empty line is itself part of every ticket
 // frame now. The proving scene swaps in one GTC limit, one partial fill and two settled rows.
@@ -794,6 +797,8 @@ const { page, origin, shoot, close } = await openShell({
     // The Outlook pane's ranked structures (#3407 slice 4) — pathname-matched, so one key covers
     // any `?direction=&magnitude=&horizon=`.
     "/api/trade/structures": () => outlookAnswer,
+    // The watchlist (#4332) — pathname-matched, so one key covers the GET and the POST toggle.
+    "/api/trade/watchlist": () => currentWatchlist,
   },
 });
 
@@ -1625,5 +1630,85 @@ await page.getByText("Bull call spread").waitFor();
 await page.locator("#bench-outlook").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy({ top: -24, left: 0 }));
 await shootOutlook("outlook-desktop");
+
+// THE WATCHLIST PANE (#3407 P4 / #4332) — the names a member keeps an eye on, the prices moving,
+// one tap from any row onto the bench. Another AUXILIARY entry (`?section=watchlist`), so it never
+// docks on its own either. What the frames have to prove is the honesty, not the layout: three
+// rows receive pushed frames and carry the feed's own "◦ live" mark, the fourth receives none and
+// so shows its last read price with NO claim about freshness — and the caption under the list
+// says what that difference means, instead of leaving a member to guess why one row is still.
+// PHONE FIRST.
+const watched = ["NVDA", "AAPL", "MSFT", "TSLA"];
+const watchQuotes = {
+  NVDA: { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" },
+  AAPL: { symbol: "AAPL", last: 225.1, change: -0.88, changePct: -0.39, tone: "neg" },
+  MSFT: { symbol: "MSFT", last: 412.06, change: 0.03, changePct: 0.01, tone: "flat" },
+  TSLA: { symbol: "TSLA", last: 248.74, change: -4.12, changePct: -1.63, tone: "neg" },
+};
+currentWatchlist = {
+  ok: true,
+  available: true,
+  limit: 20,
+  watching: watched.map((symbol) => ({ symbol, at: "2026-10-01T13:00:00Z" })),
+};
+// One answer per symbol, which the pathname-keyed stub table can't do (`shell.mjs` passes the
+// pathname alone) — a predicate route, registered after the blanket stub so it wins, and scoped
+// to `/api/trade/quote` exactly so the stream path below is untouched.
+const perSymbolQuote = (route) => {
+  const url = new URL(route.request().url());
+  const symbol = url.searchParams.get("symbol") ?? "";
+  return route.fulfill({
+    json: watchQuotes[symbol] ?? { quoteNote: "no price right now" },
+  });
+};
+await page.route(
+  (url) => new URL(url).pathname === "/api/trade/quote",
+  perSymbolQuote,
+);
+// One connection carries the whole set, so one fulfilled batch proves the seam — the same
+// technique as the quote-stream scene above, with TSLA deliberately left out of the live set.
+// Delayed deliberately, so the batch lands AFTER each row's one-shot read — the order production
+// has (the hub does its own snapshot read once the subscription exists) and the one that makes
+// this frame deterministic rather than a race between two stubs answering in the same tick.
+const liveSet = ["NVDA", "AAPL", "MSFT"];
+const pushSet = async (route) => {
+  await new Promise((done) => setTimeout(done, 500));
+  return route.fulfill({
+    status: 200,
+    headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
+    body:
+      `event: hello\ndata: ${JSON.stringify({ symbol: "NVDA", symbols: liveSet, at: "2026-10-04T17:45:12Z" })}\n\n` +
+      liveSet
+        .map(
+          (symbol) =>
+            `event: quote\ndata: ${JSON.stringify({ ...watchQuotes[symbol], asOf: "2026-10-04T17:45:12Z" })}\n\n`,
+        )
+        .join(""),
+  });
+};
+await page.route("**/api/trade/quote-stream*", pushSet);
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?section=watchlist&symbol=NVDA&play=101`);
+await page.getByRole("button", { name: "Open NVDA on the bench" }).waitFor();
+await page.getByText(/4 of 20 names/).waitFor();
+// Three rows streaming, the fourth not — the exact contrast these frames exist to show, waited on
+// rather than assumed, so a regression in the seam fails the harness instead of shipping a frame
+// that quietly proves nothing.
+await page.locator(".wl-row .quote-live").nth(2).waitFor();
+const shootWatchlist = shooter(page, resolve("docs/shots/watchlist"));
+// `scrollIntoView`, not `…IfNeeded`: the pane technically fits, so "if needed" leaves it pinned to
+// the bottom edge with the caption clipped — and the caption is half the point of the frame.
+await page.locator(".wl").evaluate((el) => el.scrollIntoView({ block: "start" }));
+await page.evaluate(() => window.scrollBy({ top: -72, left: 0 }));
+await shootWatchlist("watchlist-phone");
+// Docked, the pane is full-span below the ticket (one of the four that never dock on their own),
+// so the desktop frame scrolls to it: the wide layout puts each row's symbol and its price on ONE
+// line, which is the room the phone layout was already wrapping — not a new concept.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.locator("#bench-watchlist").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy({ top: -24, left: 0 }));
+await shootWatchlist("watchlist-desktop");
+await page.unroute("**/api/trade/quote-stream*", pushSet);
+await page.unroute((url) => new URL(url).pathname === "/api/trade/quote", perSymbolQuote);
 
 await close();

@@ -10,6 +10,7 @@ import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
+import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
@@ -205,6 +206,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the
    *  alerts route still lists, and says dismissals are off. */
   readonly alertDismissals?: AlertDismissalsPort;
+  /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
+   *  list isn't stored on this deployment rather than accepting names into memory. */
+  readonly watchlist?: WatchlistPort;
   /** The IV clock's daily at-the-money IV history (#3729) — the position guidance reads IV rank off
    *  it. Absent (clock off): richness falls back to implied ÷ realized, capped at medium. */
   readonly ivHistory?: IvHistoryPort;
