@@ -101,5 +101,10 @@ export function readyPlanCandidate(
   hasClaim?: boolean,
   nowMs?: number,
 ): ReadyPlanCandidate | null;
+/** The open issues carrying `in-progress`, each with whole hours since `updatedAt` (#3960). */
+export function staleInProgressFrom(
+  issues?: { title: string; number: number; updatedAt: string; labels?: { name: string }[] }[],
+  nowMs?: number,
+): InProgressIssue[];
 /** Read the real audit dependencies over `gh` — network, not fixture-drivable. */
 export function gatherAuditDeps(nowMs: number): AuditDeps;
