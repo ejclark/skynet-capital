@@ -26,6 +26,7 @@ import type { Participant } from "../participants/participant.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
+import { createSubscriptionSeederFromEnv } from "../server/subscription-seed-store.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 
 /**
@@ -107,6 +108,10 @@ export function startInsightsBridge(
   // a threaded-through one: `SKYNET_SUBSCRIPTIONS_FILE` already pins the path on this app, and
   // `JsonFileStore` holds no state between reads.
   const subscriptions = createSubscriptionStore(env, (message) => console.error(message));
+  // #4535 slice 1b: seeds each house bot's subscriptions once from the bots app's reported env
+  // roster (uncapped, behaviour-preserving). Runs before the response reads the store, so the
+  // poll that carries the first report already gets the seeded snapshot back.
+  const seeder = createSubscriptionSeederFromEnv(env, (message) => console.error(message));
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
@@ -142,6 +147,14 @@ export function startInsightsBridge(
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
       botsGate = report.gate;
+      if (report.houseRoster) {
+        const seeded = seeder.seed(report.houseRoster);
+        if (seeded.length > 0) {
+          console.log(
+            `[subscriptions] seeded from the bots app's SKYNET_PLAYBOOKS roster (uncapped): ${seeded.join(", ")}`,
+          );
+        }
+      }
     },
     ...(credentialsDeps && botCredentialsSecret
       ? {

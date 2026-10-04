@@ -13,6 +13,7 @@ import {
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
 import { parseDecisionsCursor } from "./decision-wire.js";
+import { controlsPollRosterHeaders, type HouseRosterReport } from "./house-roster-wire.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
@@ -44,6 +45,13 @@ export interface BotControlsClient {
    * disabled client. `buildLiveBot` calls this once per bot as it wires each one.
    */
   reportPersonaGate(verdict: PersonaGateVerdict): void;
+  /**
+   * Records this boot's `SKYNET_PLAYBOOKS` house roster and the bot accounts it runs on, reported
+   * on every subsequent poll so the dashboard can seed each house bot's own subscriptions from it
+   * (#4535 slice 1b, `house-roster-wire.ts`). Same shape as `reportPersonaGate`: safe before
+   * `start()`, a no-op on the disabled client, latest call wins.
+   */
+  reportHouseRoster(report: HouseRosterReport): void;
   /** True when a bridge URL is configured (used only for honest boot logging). */
   readonly enabled: boolean;
 }
@@ -56,6 +64,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   stop: () => undefined,
   suspendedReason: () => null,
   reportPersonaGate: () => undefined,
+  reportHouseRoster: () => undefined,
   enabled: false,
 };
 
@@ -87,6 +96,7 @@ export function resolveBotControls(
   // Filled in by `reportPersonaGate` as `buildLiveBot` wires each bot; read fresh on every poll
   // (not captured once like `selfReport`) since it only settles after boot has built the roster.
   const gateVerdicts = new Map<string, PersonaGateVerdict>();
+  let houseRoster: HouseRosterReport | undefined;
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -105,6 +115,7 @@ export function resolveBotControls(
             ...controlsPollGateHeaders(
               gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,
             ),
+            ...controlsPollRosterHeaders(houseRoster),
           },
           undefined,
           controller.signal,
@@ -156,6 +167,9 @@ export function resolveBotControls(
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
+    },
+    reportHouseRoster: (report) => {
+      houseRoster = report;
     },
   };
 }

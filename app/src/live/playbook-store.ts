@@ -38,7 +38,8 @@ export interface PlaybookStoreCardView {
   readonly subscribers?: number;
   readonly subscription?: {
     readonly mode: PlaybookMode;
-    readonly capitalAllocated: number;
+    /** Absent = uncapped: no subscription budget (#4535's seeded house roster). */
+    readonly capitalAllocated?: number;
     readonly enabled: boolean;
     /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
      *  #3527 slice 3) — absent means off, the flat-budget default. */

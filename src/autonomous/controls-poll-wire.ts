@@ -24,6 +24,8 @@
  * or malformed-shape payloads read as "not reported", never as a wrong verdict.
  */
 
+import { type HouseRosterReport, parseControlsPollRoster } from "./house-roster-wire.js";
+
 /** The bots process's running commit, as its deploy stamped `GIT_SHA` into the machine env. */
 export const CONTROLS_BOT_SHA_HEADER = "x-skynet-bots-sha";
 
@@ -50,6 +52,9 @@ export interface ControlsPollReport {
   readonly gitSha?: string;
   /** Absent when the bots build predates this header, or the payload didn't parse cleanly. */
   readonly gate?: readonly PersonaGateVerdict[];
+  /** The bots app's `SKYNET_PLAYBOOKS` house roster and the accounts it runs on (#4535 slice
+   *  1b, `house-roster-wire.ts`) — absent when not reported or not cleanly parsed. */
+  readonly houseRoster?: HouseRosterReport;
 }
 
 /** A full or abbreviated git sha and nothing else. Strict on purpose: this value is rendered into
@@ -114,5 +119,10 @@ export function controlsPollReport(headers: NodeJS.Dict<string | string[]>): Con
   const raw = headers[CONTROLS_BOT_SHA_HEADER];
   const sha = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   const gate = parseControlsPollGate(headers);
-  return { ...(SHA.test(sha) ? { gitSha: sha } : {}), ...(gate ? { gate } : {}) };
+  const houseRoster = parseControlsPollRoster(headers);
+  return {
+    ...(SHA.test(sha) ? { gitSha: sha } : {}),
+    ...(gate ? { gate } : {}),
+    ...(houseRoster ? { houseRoster } : {}),
+  };
 }

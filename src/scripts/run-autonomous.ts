@@ -39,6 +39,7 @@ import {
 } from "../autonomous/bots-state-db.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
+import { houseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -263,6 +264,14 @@ async function runLive(): Promise<void> {
   );
   await seedDailyLossBaseline(bots, safety);
   const botRosters = buildBotRosters(bots, playbookRoster, process.env); // issue #885
+  // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
+  // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
+  controls.reportHouseRoster(
+    houseRosterReport(
+      bots.map((bot) => bot.persona.id),
+      playbookRoster.enabled,
+    ),
+  );
   const realizedPlFor = (bot: Bot) =>
     decisionDb
       ? (playbookId: string) => decisionDb.realizedPlForPlaybook(bot.persona.id, playbookId)
