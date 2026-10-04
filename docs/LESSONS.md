@@ -35,6 +35,15 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A spent GraphQL hour still turned the board sync — a display — into a red run on `main`
+- **SHA:** 3c72dc5   **DATE:** 2026-10-04   **STATUS:** closed
+- **SIGNAL:** run 36808329767 (`Moneypenny Events`, `issues`, 2026-10-01T02:58:24Z) failed `sync project status` for #3960 with `gh project` masked as `unknown owner type`; #3914's probe in the same log said `API rate limit already exceeded for user ID 3472134`. `incident-scan.mjs` held it as the one unlearned incident over a budget of 0, printed on every `ship.sh` run until #4438 was filed.
+- **ROOT CAUSE:** the #4183/#4213 work made a rate limit *legible* and rode out a throttled burst, but kept a genuinely spent hour (and the masked-owner path whose probe says the same thing) fatal — on a job whose only output is a board column, written level-based from labels on every `issues` event. A display that cannot be written was being treated like a control that cannot be read. The explainer also checked `HTTP 403` before the rate-limit phrase, so a quota could be diagnosed as a bad `PROJECTS_PAT`.
+- **PREVENTION:** script + spec (#4438). `projects-sync.mjs`'s CLI entry catches a failure whose text carries the rate-limit phrase every explainer deliberately keeps, prints one `::warning::` naming the GraphQL reset time, and exits 0 (`boardSyncSkip` in `projects.mjs`); everything else re-throws. `syncIssue` itself still throws, so the backfill's sweep abort and every claim/lease/gate stay loud. `explainMaskedOwnerFailure` names a rate-limited probe before the credential branch. 6 specs in `tests/scripts/moneypenny/projects-sync-rate-limit-skip.spec.ts`, driven from the failing run's own probe text.
+- **SIDE QUESTS:** the falsifier on #4438 — if next month's red `sync project status` runs are mostly *not* rate limits, the owner-type path (#3914) is the real half. The `concurrency:` group already named on #4242 would stop the bursts at the source.
+
+---
+
 ### The arm job refused the one pull-request action ship.sh fires on purpose, so a finished PR sat green for 29 hours
 - **SHA:** n/a   **DATE:** 2026-10-02   **STATUS:** open
 - **SIGNAL:** none fired. PR #4449 — the fifth and final slice of plan #3665 — was merged only because a build session was dispatched at the plan that owned it, 29 hours after its checks went green. No red check, no notification, no stale-PR sweep caught it: the PR was `MERGEABLE`, `CLEAN`, not a draft, unlabelled, both required checks passing. The absence of a signal IS the finding here — every net we have watches for red, and this failure mode is green.
