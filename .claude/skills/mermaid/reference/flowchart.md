@@ -316,5 +316,5 @@ flowchart TD
 - https://raw.githubusercontent.com/mermaid-js/mermaid/mermaid%4011.13.0/packages/mermaid/src/schemas/config.schema.yaml (v11.13 flowchart, layout, elk, look, htmlLabels, maxTextSize, maxEdges)
 - https://raw.githubusercontent.com/mermaid-js/mermaid/mermaid%4011.13.0/packages/mermaid/src/docs/config/layouts.md
 - https://registry.npmjs.org/mermaid (latest 12.0.0, 2026-09-10; 11.x release dates)
-- /home/user/skynet-capital/docs/PICTURES.md (house rules: stable types only, no init/classDef by default)
+- /home/user/skynet-capital/docs/PICTURES.md (house rules: the parse gate, not a type list; no theme or %%{init}%%, colour only from the sanctioned snippet)
 - /home/user/skynet-capital/scripts/ship.sh and /home/user/skynet-capital/.github/workflows/pipeline.yml (grounding for the rich example)
