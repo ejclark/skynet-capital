@@ -227,6 +227,21 @@ export function readyPlanCandidate(issue, comments = [], hasClaim = false, nowMs
   return { title: issue.title, number: issue.number, hoursSinceReady };
 }
 
+/**
+ * #3960 — the open issues carrying `in-progress`, each with how long it has been quiet. `updatedAt`
+ * is the activity proxy: a live build comments, pushes a linked PR, or moves a label well inside
+ * 6h. Re-filters on the label so a caller may pass any issue list; `audit()` applies the threshold.
+ */
+export function staleInProgressFrom(issues = [], nowMs = 0) {
+  return (issues ?? [])
+    .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.inProgress.name))
+    .map((i) => ({
+      title: i.title,
+      number: i.number,
+      hoursQuiet: Math.floor((nowMs - Date.parse(i.updatedAt)) / 3_600_000),
+    }));
+}
+
 /** Audit-mode dependencies: unclaimed dispatch issues. Loud on failure, same doctrine as
  *  gatherDeps. `now` injected for the day math (never Date.now() in a testable path — the caller
  *  passes it). */
@@ -321,11 +336,26 @@ export function gatherAuditDeps(nowMs) {
       hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
     }));
 
-  // #3960: every open issue still marked in-flight, and how long it has been quiet. `updatedAt` is
-  // the activity proxy — a live build comments, pushes a linked PR, or moves a label well inside 6h.
-  const staleInProgress = issues
-    .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.inProgress.name))
-    .map((i) => ({ title: i.title, number: i.number, hoursQuiet: hoursSince(i.updatedAt) }));
+  // #3960: every open issue still marked in-flight, and how long it has been quiet. Its OWN
+  // label-filtered read, never a filter over `issues` above: that list is the newest 100 of ~140
+  // open, and the oldest plans — the long-running builds most likely to leak the label — fell off
+  // its end. On 2026-10-04 #3651, #3407 and #3939 sat at positions 110–124, quiet 15–35h, holding
+  // all 3 in-flight slots as ghosts while the sweep reported nothing to clear.
+  const staleInProgress = staleInProgressFrom(
+    json("gh issue list (in-progress)", [
+      "issue",
+      "list",
+      "--state",
+      "open",
+      "--label",
+      LABELS.inProgress.name,
+      "--limit",
+      "100",
+      "--json",
+      "title,number,updatedAt,labels",
+    ]),
+    nowMs,
+  );
 
   // #897: plan issues whose ready-flip may never have been claimed. Skip the (expensive-ish,
   // per-issue) comment fetch entirely for anything the cheap in-memory checks already rule out —
