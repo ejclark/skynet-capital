@@ -776,6 +776,40 @@ describe("AlpacaOptionsClient", () => {
       expect(await client.getOptionLifecycleActivities()).toEqual([]);
     });
   });
+
+  /** The member-facing read (#3407 slice 4): same request, but it SAYS whether it worked. On a
+   *  screen, "nothing happened to your contracts" and "we couldn't ask" are different sentences,
+   *  and the fail-soft array above cannot tell them apart. */
+  describe("readOptionLifecycleActivities", () => {
+    it("reports success with the rows", async () => {
+      const rows = [{ id: "a1", activity_type: "OPEXP", symbol: "MSFT260918P00420000", qty: "2" }];
+      const client = new AlpacaOptionsClient(fakeTransport({ "/v2/account/activities": rows }));
+      expect(await client.readOptionLifecycleActivities()).toEqual({ ok: true, rows });
+    });
+
+    it("reports success with NO rows when the account genuinely has none", async () => {
+      const client = new AlpacaOptionsClient(fakeTransport({ "/v2/account/activities": [] }));
+      expect(await client.readOptionLifecycleActivities()).toEqual({ ok: true, rows: [] });
+    });
+
+    it("reports failure on a non-2xx, a body that isn't a list, or a throw", async () => {
+      expect(
+        await new AlpacaOptionsClient(fakeTransport({})).readOptionLifecycleActivities(),
+      ).toEqual({ ok: false });
+      const badShape = new AlpacaOptionsClient(
+        fakeTransport({ "/v2/account/activities": { not: "an array" } }),
+      );
+      expect(await badShape.readOptionLifecycleActivities()).toEqual({ ok: false });
+      const throwing: AlpacaTradingTransport = {
+        get: () => Promise.reject(new Error("network down")),
+        post: () => Promise.reject(new Error("unused")),
+        delete: () => Promise.reject(new Error("unused")),
+      };
+      expect(await new AlpacaOptionsClient(throwing).readOptionLifecycleActivities()).toEqual({
+        ok: false,
+      });
+    });
+  });
 });
 
 describe("rowPremium — rounds to the cent at the source (round-half-up)", () => {
