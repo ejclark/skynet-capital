@@ -263,7 +263,9 @@ quadrantChart
 ````
 _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 
-**The legibility budget:** ≤15 nodes; plain words, not paths (`login canvas`, never
+**The legibility budget** (the first two clauses are on trial — #4550; their drawn pairs and the
+measured phone numbers are on #3778, and this line changes to match whichever version wins):
+≤15 nodes; plain words, not paths (`login canvas`, never
 `src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
 containing special characters. The real reading condition is a phone at 390px.
 
@@ -404,8 +406,10 @@ flowchart TD
   `scripts/ship.sh open` pins this automatically from `HEAD`. Never hand-write a branch-name URL —
   the branch deletes at squash-merge and the picture 404s from the permanent record within a day
   (empirical: PR #446's screenshots, the flagship fridge PR, were dead by 2026-08-20).
-- **One representative frame per changed surface**; prefer a before/after composite (one file)
-  over a gallery. Side-by-side via a 2-column GFM table of `<img width="49%">`.
+- **One representative frame per changed surface, per viewport that surface owes** (#4550: read
+  against the phone-first bullet below, which asks an information surface for a phone frame *and* a
+  desktop one — those two are the surface's pair, not a gallery). Prefer a before/after composite
+  (one file) over a strip. Side-by-side via a 2-column GFM table of `<img width="49%">`.
 - **`docs/shots/` holds only the frames a PR's picture slot needs.** A showcase for humans (a
   before/after gallery, a demo reel for a colleague) goes on the issue or the PR as a comment,
   never into the tree (Eric, 2026-09-26, on #3760: "the before and after don't need baked into
