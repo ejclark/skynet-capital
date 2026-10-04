@@ -2,6 +2,7 @@ import {
   audit,
   CONFLICT_REPAIR_CAP,
   readyPlanCandidate,
+  staleInProgressFrom,
 } from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
@@ -203,6 +204,41 @@ describe("audit() — clearing a stale in-progress label", () => {
     // must not keep the column lying.
     const intents = audit({ staleInProgress: [w(4204, 12)], alreadyFlagged: [4204] });
     expect(intents).toHaveLength(1);
+  });
+});
+
+// 2026-10-04 — the gather filtered `in-progress` out of the newest-100 open-issue read, so the
+// oldest plans (positions 110–124 of 139) were invisible and held every in-flight slot as ghosts.
+// The gather now reads the label directly; this pins the shaping it hands `audit()`.
+describe("staleInProgressFrom() — the in-flight issues and how long each has been quiet", () => {
+  const now = Date.parse("2026-10-04T12:00:00Z");
+  const issue = (number: number, updatedAt: string, labels: string[]) => ({
+    number,
+    title: `Plan ${number}`,
+    updatedAt,
+    labels: labels.map((name) => ({ name })),
+  });
+
+  it("keeps only issues carrying in-progress, with whole hours quiet", () => {
+    const rows = staleInProgressFrom(
+      [
+        issue(3651, "2026-10-03T15:24:36Z", ["plan", "in-progress"]),
+        issue(3939, "2026-10-03T04:21:51Z", ["in-progress"]),
+        issue(4100, "2026-10-01T00:00:00Z", ["plan", "ready"]),
+      ],
+      now,
+    );
+    expect(rows).toEqual([
+      { number: 3651, title: "Plan 3651", hoursQuiet: 20 },
+      { number: 3939, title: "Plan 3939", hoursQuiet: 31 },
+    ]);
+  });
+
+  it("feeds audit() so a ghost older than any page window still clears", () => {
+    const rows = staleInProgressFrom([issue(3407, "2026-10-03T00:33:18Z", ["in-progress"])], now);
+    expect(audit({ staleInProgress: rows }).map((i) => [i.kind, i.issueNumber])).toEqual([
+      ["clear-in-progress", 3407],
+    ]);
   });
 });
 
