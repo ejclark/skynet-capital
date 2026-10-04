@@ -15,7 +15,7 @@
 - Variable-length or keyed formats (JSON payloads, API responses, YAML frontmatter). A packet diagram implies fixed offsets. Using it for JSON fields is misleading, and erDiagram or classDiagram is better.
 - Status or state (open/closed, verbatim/amended/reject verdicts). Every block looks identical and cannot be styled per field, so the distinction would rest on text alone. Use a table or stateDiagram.
 - Large layouts on phones at default config (32x32 = 1026px wide). This is decorative at best, because the text becomes unreadable once scaled into 390px.
-- Prescribed PR-template slots. By house rule (docs/PICTURES.md) only stable types that GitHub is known to render are prescribed. Packet is ad hoc only until verified on github.com.
+- Prescribed PR-template slots. The house gate is the parse check rather than a stable/beta list (docs/PICTURES.md), but its decision table names no story packet is the right weapon for — so it stays ad hoc, and the phone read above is the reason.
 
 ## Header forms
 - packet
@@ -172,4 +172,4 @@ accDescr: ROOT, then YYMMDD expiry, C or P, then strike x1000 zero-padded to 8 d
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/themes/theme-dark.js
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/CHANGELOG.md (11.7.0 #5980 +count; 11.9.0 #6510 out of beta)
 - /home/user/skynet-capital/src/trading/option-symbols.ts (grounding for rich example)
-- /home/user/skynet-capital/docs/PICTURES.md (house rule: beta types ad hoc only; GitHub Mermaid version lags)
+- /home/user/skynet-capital/docs/PICTURES.md (house rules: the parse gate, not a type list; the 390px phone read)

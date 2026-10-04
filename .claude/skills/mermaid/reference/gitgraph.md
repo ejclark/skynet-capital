@@ -173,4 +173,4 @@ gitGraph TB:
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/diagrams/git/gitGraphRenderer.ts
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/diagrams/git/styles.js
 - https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/diagrams/git/gitGraphDetector.ts
-- /home/user/skynet-capital/docs/PICTURES.md (repo picture rules: stable types, <=15 nodes, 390px, no init/style blocks)
+- /home/user/skynet-capital/docs/PICTURES.md (repo picture rules: <=15 nodes, 390px, no init/style blocks)
