@@ -18,7 +18,8 @@ import type { RoundTrip } from "../trading/round-trips.js";
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
   readonly subscription?: {
     readonly mode: PlaybookSubscription["mode"];
-    readonly capitalAllocated: number;
+    /** Absent = uncapped (no subscription budget — #4535's seeded house roster). */
+    readonly capitalAllocated?: number;
     readonly enabled: boolean;
     /** Symbol-targeting filter (#885) — absent means unrestricted. */
     readonly symbols?: readonly string[];
@@ -32,7 +33,8 @@ interface PlaybookStoreCardView extends PlaybookStoreEntry {
 export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
   /** Sum of capitalAllocated across this account's ENABLED subscriptions (Eric, #885: "the
-   *  summation of money being managed under playbooks could be an interesting metric"). */
+   *  summation of money being managed under playbooks could be an interesting metric"). An
+   *  uncapped subscription has no allocation to add, so it contributes nothing. */
   readonly capitalUnderManagement: number;
   /** Whether the viewer may subscribe at all — absent when nobody's account is open here. */
   readonly canManage: boolean;
@@ -77,7 +79,9 @@ export function playbookStoreView(
         ? {
             subscription: {
               mode: sub.mode,
-              capitalAllocated: sub.capitalAllocated,
+              ...(sub.capitalAllocated !== undefined
+                ? { capitalAllocated: sub.capitalAllocated }
+                : {}),
               enabled: sub.enabled,
               ...(sub.symbols ? { symbols: sub.symbols } : {}),
               ...(sub.compoundAllocation ? { compoundAllocation: true } : {}),
@@ -88,7 +92,7 @@ export function playbookStoreView(
   });
   const capitalUnderManagement = (subscriptions ?? [])
     .filter((s) => s.enabled)
-    .reduce((sum, s) => sum + s.capitalAllocated, 0);
+    .reduce((sum, s) => sum + (s.capitalAllocated ?? 0), 0);
   return {
     cards,
     capitalUnderManagement,

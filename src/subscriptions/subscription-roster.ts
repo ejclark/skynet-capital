@@ -56,12 +56,20 @@ export function subscriptionRoster(
 /**
  * Merge an account's subscription-driven roster over the house-wide one — override wins by
  * `playbook.id`, so a bot that explicitly subscribed to a playbook the house roster ALSO enables
- * gets its own mode/capital, not a second conflicting entry for the same symbol.
+ * gets its own mode/capital, not a second conflicting entry for the same symbol — in the house
+ * entry's position.
  */
 export function mergeRosters(
   base: readonly EnabledPlaybook[],
   overrides: readonly EnabledPlaybook[],
 ): EnabledPlaybook[] {
-  const overrideIds = new Set(overrides.map((e) => e.playbook.id));
-  return [...base.filter((e) => !overrideIds.has(e.playbook.id)), ...overrides];
+  // Replace in place, so an override changes a house entry's mode without changing its turn in
+  // the evaluation order — seeding a bot's subscriptions from the house roster (#4535) must leave
+  // the order it trades in exactly as it was. Overrides the base lacks append, in their own order.
+  const byId = new Map(overrides.map((e) => [e.playbook.id, e]));
+  const baseIds = new Set(base.map((e) => e.playbook.id));
+  return [
+    ...base.map((e) => byId.get(e.playbook.id) ?? e),
+    ...overrides.filter((e) => !baseIds.has(e.playbook.id)),
+  ];
 }

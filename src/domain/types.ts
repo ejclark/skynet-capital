@@ -163,7 +163,14 @@ export interface PlaybookSubscription {
   readonly accountId: string;
   readonly playbookId: string;
   readonly mode: PlaybookMode;
-  readonly capitalAllocated: number;
+  /**
+   * Absent = UNCAPPED: no subscription budget, so `clampBuy` sizes exactly as it does for a
+   * house-roster entry (cash and the position cap only). This is the shape a subscription seeded
+   * from the retiring `SKYNET_PLAYBOOKS` roster takes (#4535 slice 1b) — that roster never had a
+   * budget, so any finite seed would have tightened sizing. A member's own subscribe still
+   * always sends a number (`subscriptions-api-routes.ts`).
+   */
+  readonly capitalAllocated?: number;
   readonly enabled: boolean;
   /** ISO-8601. */
   readonly createdAt: string;
