@@ -38,6 +38,14 @@ describe("lifecycleRow — the contract, in a member's words", () => {
     expect(row.display).toBe("MSFT");
   });
 
+  it("takes the unit from the EVENT TYPE, so a row can never contradict its own headline", () => {
+    // Alpaca's OPTRD wire shape is unconfirmed (#837): it may yet arrive keyed on the OCC symbol.
+    // Deriving the noun from the symbol would then print "Shares settled · 1 contract".
+    expect(lifecycleRow(contract({ type: "OPTRD" })).unit).toBe("shares");
+    // And the mirror: an expiry on a root this app can't parse is still about contracts.
+    expect(lifecycleRow(contract({ type: "OPEXP", symbol: "WEIRDROOT" })).unit).toBe("contracts");
+  });
+
   it("gives every type its own headline, so no two events read as the same thing", () => {
     const headlines = (["OPEXP", "OPASN", "OPEXC", "OPTRD"] as const).map(
       (type) => lifecycleRow(contract({ type })).headline,

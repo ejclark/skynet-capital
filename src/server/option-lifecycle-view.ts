@@ -126,8 +126,14 @@ const LEDGER: Record<OptionLifecycleType, string> = {
  *  `lifecycleClosingFill` is the authority, and this set is read FROM that rule, not beside it. */
 const PRICED: ReadonlySet<OptionLifecycleType> = new Set<OptionLifecycleType>(["OPEXP", "OPASN"]);
 
-/** One normalized activity as a row. `OPTRD` carries the underlying ticker rather than a contract,
- *  so it counts shares and its display passes through unchanged. */
+/** One normalized activity as a row.
+ *
+ *  `unit` comes from the TYPE, never from whether the symbol happens to parse as a contract: the
+ *  share settlement is the share leg by definition and the other three are about contracts by
+ *  definition, so deriving it from the symbol would let one row say "Shares settled · 1 contract"
+ *  the day Alpaca sends an `OPTRD` keyed on the OCC symbol (its wire shape is still unconfirmed —
+ *  #837 — so that is a live possibility, not a hypothetical). The symbol decides only how the
+ *  contract is SPELLED, and `humanizeOptionSymbol` already passes a bare ticker through unchanged. */
 export function lifecycleRow(activity: NormalizedLifecycleActivity): LifecycleRow {
   const parts: OptionContractParts | undefined = parseOccSymbol(activity.symbol);
   return {
@@ -137,7 +143,7 @@ export function lifecycleRow(activity: NormalizedLifecycleActivity): LifecycleRo
     display: humanizeOptionSymbol(activity.symbol),
     ...(parts ? { underlying: parts.underlying } : {}),
     quantity: activity.quantity,
-    unit: parts ? "contracts" : "shares",
+    unit: activity.type === "OPTRD" ? "shares" : "contracts",
     at: activity.at,
     headline: HEADLINE[activity.type],
     detail: DETAIL[activity.type],
