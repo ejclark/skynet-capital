@@ -410,6 +410,26 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --triage-feedback
 
+      # THE DECISION-QUEUE CHECK (#3913 slice 2b). `needs-eric` promises Eric a decision; the
+      # `Needs from you` callout is where that decision is actually written (docs/ISSUES.md rule 7).
+      # `issue-lint` demands it at FILING, but the 2026-09-28 audit found the label almost always
+      # lands later, from another lane — 7 of 8 open `needs-eric` issues carried no callout. Slice 2a
+      # closed the two paths we own (`issues.mjs` refuses the label without one; the board keeps such
+      # an issue out of Blocked). This step is the catch-all for the rest: a human or a lane labelling
+      # through `gh` or the UI gets one loud, reversible comment. It never strips the label — a
+      # settled fork on #3913: silently removing a decision label would hide a real ask.
+      #
+      # GITHUB_TOKEN, deliberately, where every step around it uses the App token: those steps WRITE
+      # LABELS and need the resulting event to start another run, which GITHUB_TOKEN suppresses. This
+      # one only comments, and a comment that woke another lane would be a loop, not a feature. Never
+      # `sync-project`'s PAT either — that is Eric's, so the comment would read as him talking to
+      # himself about his own missing ask.
+      - name: Check the decision callout when needs-eric lands
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'needs-eric'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/moneypenny/index.mjs --check-callout
+
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
       # assigned to a claude session"; re-gated on `ready` rather than `feedback` itself, #3818
       # consolidation 2026-09-28 — see the triage step above). Applying a label requires
