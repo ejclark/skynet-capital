@@ -284,6 +284,33 @@ describe("AlpacaOptionOrderFlow.submit", () => {
         reason: "Error: socket hang up",
       });
     });
+
+    it("never calls a failed POST rejected when the lookup after it fails too — working, pending by client order id", async () => {
+      const broker = new FakeOptionBroker();
+      broker.placeAnswer = new Error("ETIMEDOUT");
+      const outage = new AlpacaApiError(503, { message: "service unavailable" });
+      // Step 1 finds nothing; then every lookup after the POST fails (1 + 2 settle retries).
+      broker.lookups.push(undefined, outage, outage, outage);
+      const { flow, pending, submitted } = flowOver(broker);
+      const result = await flow.submit(put());
+      expect(result).toEqual({
+        intent: put(),
+        status: "working",
+        reason: "sent, but its outcome is unknown — rechecked next cycle (Error: ETIMEDOUT)",
+      });
+      expect(pending.list()).toEqual([{ clientOrderId: CID, underlying: "CRWV" }]);
+      expect(broker.calls.filter((c) => c.startsWith("byClientId"))).toHaveLength(4);
+      expect(submitted).toEqual([]);
+    });
+
+    it("retries a failed lookup after a failed POST and adopts the order once it is found", async () => {
+      const broker = filling();
+      broker.placeAnswer = new Error("ETIMEDOUT");
+      broker.lookups.push(undefined, new AlpacaApiError(503, null), anOrder({ status: "new" }));
+      const { flow, pending } = flowOver(broker);
+      expect(await flow.submit(put())).toMatchObject({ status: "filled", orderId: "o1" });
+      expect(pending.list()).toEqual([]);
+    });
   });
 
   it("4 · an order the broker rejected on arrival is rejected, with its id, and announced to no one", async () => {
@@ -334,6 +361,11 @@ describe("AlpacaOptionOrderFlow.submit", () => {
         legFills: [{ occSymbol: PUT, filledQuantity: 1, filledPrice: 2.1 }],
       });
       expect(broker.calls).not.toContain("cancel o1");
+      // Nested, so a spread's per-leg fills come back with the parent.
+      expect(broker.calls).toContain("getOrder o1 nested=true");
+      expect(
+        broker.calls.filter((c) => c.startsWith("getOrder") && !c.endsWith("nested=true")),
+      ).toEqual([]);
     });
 
     it("reports a partial fill as filled — what filled — once the remainder is canceled", async () => {

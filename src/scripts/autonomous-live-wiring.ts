@@ -119,16 +119,22 @@ export function seedDailyLossBaseline(
   accounts: ReadonlyMap<string, AlpacaAccount | undefined>,
   safety: SafetyController,
 ): void {
-  const perBotEquity = [...accounts.values()].map((a) => (a ? parseDayOpenEquity(a) : null));
-  const seed = fleetDayOpenEquity(perBotEquity);
-  if (seed === null) {
-    console.warn(
-      "[safety] day-open equity unavailable — daily-loss baseline falls back to the first equity reading this process sees",
-    );
-    return;
+  // The read already cannot throw (`readBootAccounts`); this catch keeps the parse and the seed
+  // just as non-fatal, so a malformed payload never stops every bot at boot.
+  try {
+    const perBotEquity = [...accounts.values()].map((a) => (a ? parseDayOpenEquity(a) : null));
+    const seed = fleetDayOpenEquity(perBotEquity);
+    if (seed === null) {
+      console.warn(
+        "[safety] day-open equity unavailable — daily-loss baseline falls back to the first equity reading this process sees",
+      );
+      return;
+    }
+    safety.seedBaseline(seed);
+    console.log(`[safety] daily-loss baseline seeded from day-open equity: $${seed.toFixed(2)}`);
+  } catch (error) {
+    console.warn("[safety] day-open equity seed failed (non-fatal):", error);
   }
-  safety.seedBaseline(seed);
-  console.log(`[safety] daily-loss baseline seeded from day-open equity: $${seed.toFixed(2)}`);
 }
 
 /**

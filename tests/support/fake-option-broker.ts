@@ -63,6 +63,9 @@ export class FakeOptionBroker implements OptionFlowTradingClient, OptionFlowOpti
   /** Orders Alpaca knows by client order id; `afterPost` lands one only once a POST was tried. */
   readonly byClientId = new Map<string, AlpacaOrder>();
   afterPost?: AlpacaOrder;
+  /** Scripted answers for the next `getOrderByClientOrderId` calls, in order — an Error throws (a
+   *  503, a dropped socket), `undefined` is Alpaca's 404. Once spent, the lookup answers as above. */
+  readonly lookups: (AlpacaOrder | undefined | Error)[] = [];
   placeAnswer: AlpacaOrder | Error = anOrder();
   /** Per order id, what successive `getOrder` reads return (the last repeats). */
   readonly reads = new Map<string, (AlpacaOrder | Error)[]>();
@@ -92,8 +95,8 @@ export class FakeOptionBroker implements OptionFlowTradingClient, OptionFlowOpti
     return this.listError ? Promise.reject(this.listError) : Promise.resolve(this.open);
   }
 
-  getOrder(id: string): Promise<AlpacaOrder> {
-    this.calls.push(`getOrder ${id}`);
+  getOrder(id: string, params?: { nested?: boolean }): Promise<AlpacaOrder> {
+    this.calls.push(`getOrder ${id} nested=${params?.nested}`);
     const sequence = this.reads.get(id);
     const next = sequence && sequence.length > 1 ? sequence.shift() : sequence?.[0];
     if (next === undefined)
@@ -108,6 +111,10 @@ export class FakeOptionBroker implements OptionFlowTradingClient, OptionFlowOpti
 
   getOrderByClientOrderId(cid: string): Promise<AlpacaOrder | undefined> {
     this.calls.push(`byClientId ${cid}`);
+    if (this.lookups.length > 0) {
+      const scripted = this.lookups.shift();
+      return scripted instanceof Error ? Promise.reject(scripted) : Promise.resolve(scripted);
+    }
     const landed = this.posted && this.afterPost ? this.afterPost : undefined;
     return Promise.resolve(this.byClientId.get(cid) ?? landed);
   }

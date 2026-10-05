@@ -78,6 +78,18 @@ describe("seedDailyLossBaseline — from the boot accounts", () => {
     );
     expect(seeded).toEqual([1500]);
   });
+
+  it("never stops boot: a malformed payload or a failing seed only leaves the baseline unset", () => {
+    const safety = new SafetyController();
+    const malformed = { ...account(), last_equity: null } as unknown as AlpacaAccount;
+    expect(() => seedDailyLossBaseline(new Map([["a", malformed]]), safety)).not.toThrow();
+    safety.seedBaseline = () => {
+      throw new Error("breaker refused");
+    };
+    expect(() =>
+      seedDailyLossBaseline(new Map([["a", account({ last_equity: "1000" })]]), safety),
+    ).not.toThrow();
+  });
 });
 
 describe("BotOptionLevels", () => {

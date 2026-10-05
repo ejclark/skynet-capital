@@ -33,6 +33,10 @@ describe("AlpacaOptionOrderFlow.settle", () => {
     expect(broker.calls).toContain("cancel live");
     expect(broker.calls).not.toContain("cancel done");
     expect(pending.list().map((p) => p.orderId)).toEqual(["live"]);
+    expect(broker.calls.filter((c) => c.startsWith("getOrder"))).toEqual([
+      "getOrder done nested=true",
+      "getOrder live nested=true",
+    ]);
   });
 
   it("forgets an order the broker no longer knows (404), but keeps blocking on any other failed read", async () => {
@@ -45,6 +49,33 @@ describe("AlpacaOptionOrderFlow.settle", () => {
 
     expect([...(await flow.settle())]).toEqual(["NVDA"]);
     expect(pending.list().map((p) => p.orderId)).toEqual(["blip"]);
+  });
+});
+
+describe("AlpacaOptionOrderFlow.settle — an order whose POST outcome was never learned", () => {
+  const cid = (n: number) => `${PREFIX}CRWV-a-${n}`;
+
+  it("resolves it by client order id: forgets one never placed or ended, cancels and pins one live, blocks on a failed lookup", async () => {
+    const broker = new FakeOptionBroker();
+    const pending = new PendingOptionOrders();
+    pending.add({ clientOrderId: cid(0), underlying: "CRWV" });
+    pending.add({ clientOrderId: cid(1), underlying: "AMD" });
+    pending.add({ clientOrderId: cid(2), underlying: "NVDA" });
+    pending.add({ clientOrderId: cid(3), underlying: "TSLA" });
+    broker.lookups.push(
+      undefined,
+      anOrder({ id: "ended", status: "canceled" }),
+      anOrder({ id: "landed", status: "new" }),
+      new AlpacaApiError(503, null),
+    );
+    const { flow } = flowOver(broker, pending);
+
+    expect([...(await flow.settle())]).toEqual(["NVDA", "TSLA"]);
+    expect(broker.calls.filter((c) => c.startsWith("cancel"))).toEqual(["cancel landed"]);
+    expect(pending.list()).toEqual([
+      { clientOrderId: cid(2), underlying: "NVDA", orderId: "landed" },
+      { clientOrderId: cid(3), underlying: "TSLA" },
+    ]);
   });
 });
 

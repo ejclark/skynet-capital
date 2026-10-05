@@ -39,7 +39,8 @@ import type { PendingOptionOrders } from "./pending-option-orders.js";
  *      already working (a close cancels this bot's own working orders there first), the book
  *      re-checked with the guards' own arithmetic, and the limit still inside a fresh quote;
  *   3. placed — one leg as a single order, two as one `mleg` order with the signed net limit
- *      exactly as decided; a POST that throws is looked up by its id before it is called failed;
+ *      exactly as decided; a POST that throws is looked up by its id before it is called failed,
+ *      and one that cannot be looked up either is kept pending by that id, never called rejected;
  *   4–6. given `waitMs` to fill, then canceled, then re-read until the cancel is confirmed;
  *   7. reported as what the broker last said: filled, unfilled, rejected, or still `working` —
  *      which is kept pending and rechecked at the top of the next live cycle (`settle`).
@@ -116,6 +117,13 @@ const rejectedResult = (intent: OrderIntent, reason: string): OrderResult => ({
   reason,
 });
 
+/** A POST that threw: `refused` when the broker says no order carries its id, `unknown` when the
+ *  broker could not be asked — the order may be live, so it is never reported rejected. */
+interface NotPlaced {
+  readonly notPlaced: "refused" | "unknown";
+  readonly reason: string;
+}
+
 /** Broker statuses that mean a just-placed order is already over with nothing traded. */
 const DEAD_ON_ARRIVAL: ReadonlySet<string> = new Set(["rejected", "canceled"]);
 
@@ -154,7 +162,15 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
       const refusal = await this.preflight(order, option);
       if (refusal) return rejectedResult(order, refusal);
       const sent = await this.place(order, option, cid);
-      if (typeof sent === "string") return rejectedResult(order, sent);
+      if ("notPlaced" in sent) {
+        if (sent.notPlaced === "refused") return rejectedResult(order, sent.reason);
+        this.pending.add({ clientOrderId: cid, underlying: order.symbol });
+        return {
+          intent: order,
+          status: "working",
+          reason: `sent, but its outcome is unknown — rechecked next cycle (${sent.reason})`,
+        };
+      }
       placed = sent;
     }
     if (DEAD_ON_ARRIVAL.has(placed.status) && filledQuantityOf(placed) === 0) {
@@ -178,31 +194,37 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
    * Re-reads every order a submit left working: forgets the ended, cancels the live again and
    * returns their underlyings, so the trader attempts nothing new there. An order the broker no
    * longer knows (404, e.g. after a rotation onto another account) is forgotten; any other failed
-   * read keeps its underlying blocked — unknown is never read as safe. No network when nothing is
-   * pending.
+   * read keeps its underlying blocked — unknown is never read as safe. An entry whose broker id was
+   * never learned is read by its client order id, and pinned to the id once found. No network when
+   * nothing is pending.
    */
   async settle(): Promise<ReadonlySet<string>> {
     const pending = this.pending.list();
     if (pending.length === 0) return NOTHING_PENDING;
     const live = new Set<string>();
     for (const entry of pending) {
-      let order: AlpacaOrder;
+      let order: AlpacaOrder | undefined;
       try {
-        order = await this.trading.getOrder(entry.orderId, { nested: true });
+        order =
+          entry.orderId === undefined
+            ? await this.trading.getOrderByClientOrderId(entry.clientOrderId)
+            : await this.trading.getOrder(entry.orderId, { nested: true });
       } catch (error) {
         if (error instanceof AlpacaApiError && error.status === 404) {
-          this.pending.forget(entry.orderId);
+          this.pending.forget(entry.clientOrderId);
         } else {
           live.add(entry.underlying);
         }
         continue;
       }
-      if (isTerminalOrder(order)) {
+      // `undefined`: no order ever carried this client order id — the lost POST never landed.
+      if (order === undefined || isTerminalOrder(order)) {
         // A late fill is not written back into the old record: the positions show it.
-        this.pending.forget(entry.orderId);
+        this.pending.forget(entry.clientOrderId);
         continue;
       }
-      await this.cancel(entry.orderId);
+      if (entry.orderId === undefined) this.pending.add({ ...entry, orderId: order.id });
+      await this.cancel(order.id);
       live.add(entry.underlying);
     }
     return live;
@@ -276,11 +298,30 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
     );
   }
 
+  /**
+   * After a POST that threw, asks whether it landed anyway — a few tries on the settle budget. A
+   * lookup that fails is NOT "not found": unlike step 1 there is no later POST to be refused, so
+   * swallowing it would call a possibly live order rejected and leave it untracked.
+   */
+  private async lookUpAfterPost(cid: string, error: unknown): Promise<AlpacaOrder | NotPlaced> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const found = await this.trading.getOrderByClientOrderId(cid);
+        return found ?? { notPlaced: "refused", reason: String(error) };
+      } catch {
+        if (attempt >= this.timing.settleAttempts) {
+          return { notPlaced: "unknown", reason: String(error) };
+        }
+        await this.sleep(this.timing.settleDelayMs);
+      }
+    }
+  }
+
   private async place(
     order: OrderIntent,
     option: OptionOrderIntent,
     cid: string,
-  ): Promise<AlpacaOrder | string> {
+  ): Promise<AlpacaOrder | NotPlaced> {
     const [only, second] = option.legs;
     try {
       if (only && !second) {
@@ -311,7 +352,7 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
     } catch (error) {
       // The POST may have landed although its answer did not (a timeout, a 5xx after the write,
       // or Alpaca's 422 for a client order id it already holds): look before calling it failed.
-      return (await this.findByClientId(cid)) ?? String(error);
+      return this.lookUpAfterPost(cid, error);
     }
   }
 
