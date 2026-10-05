@@ -7,6 +7,7 @@ import type { AutonomousTrader, TraderMode } from "./autonomous-trader.js";
 import type { ScoutState } from "./bots-state-db.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
 import { fleetEquity } from "./equity-watch.js";
+import { actionFor } from "./option-cycle.js";
 import type { SafetyController } from "./safety.js";
 
 /**
@@ -276,14 +277,7 @@ export class LiveCycleRunner {
       const result = await scout.broker.submit(intent);
       this.deps.safety.recordOrder();
       this.deps.onResult?.(result);
-      outcomes.push({
-        intent,
-        // `unfilled` ended with nothing traded, so it reads as rejected downstream; `working` may
-        // still fill, so it is a placed order.
-        action:
-          result.status === "rejected" || result.status === "unfilled" ? "rejected" : "placed",
-        result,
-      });
+      outcomes.push({ intent, action: actionFor(result), result });
     }
     const refusals = verdict?.refused ?? [];
     this.deps.onDecision?.({

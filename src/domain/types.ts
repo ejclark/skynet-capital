@@ -60,12 +60,40 @@ export interface OptionContractQuote {
   readonly fetchedAt: string;
 }
 
+/** Underlying → its listed expirations, sorted ascending. */
+export type ListedExpirations = Readonly<Record<string, readonly string[]>>;
+
 /** What one cycle knows about the option market: the listed expirations and the quotes it read. */
-interface OptionMarket {
-  /** Underlying → its listed expirations, sorted ascending. */
-  readonly listed: Readonly<Record<string, readonly string[]>>;
+export interface OptionMarket {
+  readonly listed: ListedExpirations;
   /** Keyed by OCC symbol. */
   readonly contracts: Readonly<Record<string, OptionContractQuote>>;
+}
+
+/** One chain a cycle asks to read: every strike of one type at one expiry. */
+export interface OptionChainRequest {
+  readonly underlying: string;
+  readonly expiration: string;
+  readonly type: "call" | "put";
+}
+
+/** The quotes a cycle needs — chains to scan, and named contracts (held, or about to be closed). */
+export interface OptionDemand {
+  readonly chains: readonly OptionChainRequest[];
+  readonly contracts: readonly string[];
+}
+
+/** Needs nothing — the answer that costs no network at all. */
+export const NO_OPTION_DEMAND: OptionDemand = { chains: [], contracts: [] };
+
+/** What the trader asks the option market for, once per cycle. */
+export interface OptionMarketRequest {
+  readonly asOf: string;
+  readonly underlyings: readonly string[];
+  /** Underlyings cooling down or with a working order — nothing is read for them. */
+  readonly skip: ReadonlySet<string>;
+  /** PURE: called by the port once `listed` is known, so demand can depend on what is listed. */
+  demand(listed: ListedExpirations): OptionDemand;
 }
 
 /**

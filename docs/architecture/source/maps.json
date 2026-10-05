@@ -447,8 +447,8 @@
           {
             "id": "boot",
             "label": "Boot and live wiring",
-            "path": "src/scripts/run-autonomous.ts, src/scripts/autonomous-live-wiring.ts, src/scripts/autonomous-boot-credentials.ts, src/scripts/autonomous-sinks.ts, src/scripts/autonomous-offline-runner.ts, src/bots/bot-registry.ts, src/bots/bot.ts, src/bots/account-guard.ts",
-            "responsibility": "Resolves the enabled roster (SKYNET_AUTONOMOUS_BOTS, hardcore overrides), primes per-bot Alpaca credentials (env or bridge), refuses account collisions, gates each persona's mode on its readiness pack, and wires every LiveBot; offline mode replays fixtures against in-memory brokers."
+            "path": "src/scripts/run-autonomous.ts, src/scripts/autonomous-live-wiring.ts, src/scripts/autonomous-option-wiring.ts, src/scripts/autonomous-boot-credentials.ts, src/scripts/autonomous-sinks.ts, src/scripts/autonomous-offline-runner.ts, src/bots/bot-registry.ts, src/bots/bot.ts, src/bots/account-guard.ts",
+            "responsibility": "Resolves the enabled roster (SKYNET_AUTONOMOUS_BOTS, hardcore overrides), primes per-bot Alpaca credentials (env or bridge), refuses account collisions, gives each option playbook its underlyings (other playbooks lose them, loudly), gates each persona's mode on its readiness pack, and wires every LiveBot; offline mode replays fixtures against in-memory brokers."
           },
           {
             "id": "data",
@@ -471,14 +471,14 @@
           {
             "id": "trader",
             "label": "Autonomous trader",
-            "path": "src/autonomous/autonomous-trader.ts, src/autonomous/decision-record.ts, src/autonomous/decision-funnel.ts",
-            "responsibility": "Per-persona evaluate(): assess → applyGuardsWithVerdicts → cooldown filter → submit only in live mode; emits one DecisionRecord per cycle; swapRoster lets a Playbook Store change land without restart."
+            "path": "src/autonomous/autonomous-trader.ts, src/autonomous/option-cycle.ts, src/autonomous/client-order-id.ts, src/ports/option-market.ts, src/autonomous/decision-record.ts, src/autonomous/decision-funnel.ts",
+            "responsibility": "Per-persona evaluate(): settle working option orders (live) → read only the option quotes the persona asked for → assess → applyGuardsWithVerdicts → cooldown filter (shares per symbol; options one attempt per underlying per 10 min, observe included) → client order id on each option order → submit only in live mode; emits one DecisionRecord per cycle with the context it was handed (no option quotes); swapRoster lets a Playbook Store change land without restart."
           },
           {
             "id": "personas",
             "label": "Personas and playbooks",
-            "path": "src/personas/*.ts (sauron, sauron-hardcore, day-trader, futurist, gold-bug, news-fader, retail-investor, rumor-trader, banker, prospector, configured-persona), src/playbooks/playbook.ts, registry.ts, tactical-playbook.ts, with-playbooks.ts, src/autonomous/subscription-sync.ts, src/subscriptions/*",
-            "responsibility": "Pure strategy functions over MarketContext; playbooks enabled by SKYNET_PLAYBOOKS and by member subscriptions arriving on the /controls poll."
+            "path": "src/personas/*.ts (sauron, sauron-hardcore, day-trader, futurist, gold-bug, news-fader, retail-investor, rumor-trader, banker, prospector, configured-persona), src/playbooks/playbook.ts, registry.ts, tactical-playbook.ts, with-playbooks.ts, option-intent.ts, option-hygiene.ts, with-option-safety.ts, option-ownership.ts, option-demand.ts, src/options/contract-picker.ts, src/autonomous/subscription-sync.ts, src/subscriptions/*",
+            "responsibility": "Pure strategy functions over MarketContext; playbooks enabled by SKYNET_PLAYBOOKS and by member subscriptions arriving on the /controls poll. An option playbook decides whole intents (pure contract picks and limits inside the quote); expiry hygiene (withOptionSafety, not yet applied to a live bot) closes any contract from two sessions before expiry or a print."
           },
           {
             "id": "guards",

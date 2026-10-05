@@ -54,7 +54,9 @@
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
+  ListedExpirations,
   MarketContext,
+  OptionDemand,
   OrderIntent,
   PlaybookMode,
   PlaybookVerdict,
@@ -111,6 +113,21 @@ export interface PlaybookEvent {
   readonly detectedAt: string;
 }
 
+/**
+ * What makes a playbook an OPTION play (#4645). It claims its underlyings for the bot that runs it —
+ * every other playbook in that roster stops trading them (`option-ownership.ts`) — and its contracts
+ * are closed by expiry hygiene unless it declares it holds a short to expiry on purpose.
+ */
+interface OptionPlaybookTraits {
+  /** Must equal `symbols`. */
+  readonly underlyings: readonly string[];
+  /** Shorts this play deliberately holds into assignment (the wheel: ["put", "call"]). */
+  readonly holdsShortToExpiry: readonly ("call" | "put")[];
+  /** Alpaca options level its OPENS need: 1 cash-secured put / covered call · 2 long single · 3
+   *  spreads. */
+  readonly requiredLevel: 1 | 2 | 3;
+}
+
 export interface Playbook {
   /** e.g. "S1-NVDA" — the id that flows through the attribution seam into every record. */
   readonly id: string;
@@ -165,6 +182,28 @@ export interface Playbook {
   /** Optional — see `PlaybookKey`. Absent means "undeclared", which a reader must treat as
    *  "unknown", never as a default. */
   readonly keyedOn?: PlaybookKey;
+  /** Optional — present only on an option play; see `OptionPlaybookTraits`. */
+  readonly options?: OptionPlaybookTraits;
+  /** PURE. Which chains and contracts this cycle needs priced. `NO_OPTION_DEMAND` = no network. */
+  optionDemand?(
+    asOfIso: string,
+    portfolio: Portfolio,
+    listed: ListedExpirations,
+    calendar: readonly EarningsPrint[],
+    mode: PlaybookMode,
+  ): OptionDemand;
+  /**
+   * Optional — the widened decision surface (#3208). PURE: `context.asOf` is the only clock. When
+   * present, `playbookIntents` calls this INSTEAD of `tactics`/`desiredState`, keeps only intents on
+   * the playbook's own symbols that no exit-safety trip claimed, and stamps `playbookId`/
+   * `playbookMode` itself. `desiredState` stays the verdict the roll call records.
+   */
+  decide?(
+    context: MarketContext,
+    portfolio: Portfolio,
+    calendar: readonly EarningsPrint[],
+    mode: PlaybookMode,
+  ): readonly OrderIntent[];
 }
 
 /** A playbook enabled in a specific mode — the unit the runner iterates. */
@@ -311,6 +350,27 @@ function tacticalPlaybookIntents(
 }
 
 /**
+ * A `decide` playbook's contribution for one cycle: only intents on its own symbols, none on a
+ * symbol an exit-safety trip already claimed, every one stamped HERE with this playbook's id and
+ * mode — a playbook cannot attribute its orders to anyone else.
+ */
+function decidedIntents(
+  playbook: Playbook,
+  mode: PlaybookMode,
+  context: MarketContext,
+  portfolio: Portfolio,
+  calendar: readonly EarningsPrint[],
+  trippedSymbols: ReadonlySet<string>,
+): OrderIntent[] {
+  const intents: OrderIntent[] = [];
+  for (const intent of playbook.decide?.(context, portfolio, calendar, mode) ?? []) {
+    if (!playbook.symbols.includes(intent.symbol) || trippedSymbols.has(intent.symbol)) continue;
+    intents.push({ ...intent, playbookId: playbook.id, playbookMode: mode });
+  }
+  return intents;
+}
+
+/**
  * Turn desired-vs-actual into intents for one cycle. Pure — the runner supplies live context.
  *
  * First-cut ownership rule (documented, deliberate): a symbol managed by an enabled playbook is
@@ -324,7 +384,8 @@ function tacticalPlaybookIntents(
  * A TACTICAL playbook (issue #3527 plan, slice 2 — `playbook.tactics` present) runs its own
  * prioritized rule chain per symbol instead of the shared long/flat/no-window condition below —
  * `desiredState` goes uncalled for it. See `tactical-playbook.ts`'s module doc for why this is a
- * second shape rather than more fields bolted onto the state machine.
+ * second shape rather than more fields bolted onto the state machine. A `decide` playbook (#4645,
+ * the option plays) goes first of all three and answers with whole intents — `decidedIntents`.
  */
 /** Each enabled playbook's verdict for this pass — the same pure `desiredState` call
  *  `playbookIntents` makes, recorded so a quiet pass can say which playbooks looked and why each
@@ -353,6 +414,10 @@ export function playbookIntents(
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
   for (const { playbook, mode } of enabled) {
+    if (playbook.decide) {
+      intents.push(...decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols));
+      continue;
+    }
     if (playbook.tactics) {
       intents.push(...tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols));
       continue;
@@ -364,35 +429,49 @@ export function playbookIntents(
       if (trippedSymbols.has(symbol)) {
         continue;
       }
-      const held = heldQuantity(portfolio, symbol);
-      const quote = context.quotes[symbol];
-
-      if (state === "long" && held === 0 && quote && quote.ask > 0) {
-        const equity = portfolio.cash + held * quote.ask; // playbook symbols enter from flat
-        const quantity = Math.floor((playbook.size[mode] * equity) / quote.ask);
-        if (quantity > 0) {
-          intents.push({
-            symbol,
-            side: "buy",
-            quantity,
-            type: "market",
-            reason: `${playbook.id} window open (${mode}): ${playbook.thesis}`,
-            playbookId: playbook.id,
-            playbookMode: mode,
-          });
-        }
-      } else if (state === "flat" && held > 0) {
-        intents.push({
-          symbol,
-          side: "sell",
-          quantity: held,
-          type: "market",
-          reason: `${playbook.id} window closed (${mode}): exiting per the play's own rule`,
-          playbookId: playbook.id,
-          playbookMode: mode,
-        });
-      }
+      const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
+      if (intent) intents.push(intent);
     }
   }
   return intents;
+}
+
+/** The gap between one symbol's desired state and what is held, as at most one intent. */
+function stateIntent(
+  playbook: Playbook,
+  mode: PlaybookMode,
+  state: DesiredState,
+  symbol: string,
+  context: MarketContext,
+  portfolio: Portfolio,
+): OrderIntent | undefined {
+  const held = heldQuantity(portfolio, symbol);
+  const quote = context.quotes[symbol];
+
+  if (state === "long" && held === 0 && quote && quote.ask > 0) {
+    const equity = portfolio.cash + held * quote.ask; // playbook symbols enter from flat
+    const quantity = Math.floor((playbook.size[mode] * equity) / quote.ask);
+    if (quantity > 0) {
+      return {
+        symbol,
+        side: "buy",
+        quantity,
+        type: "market",
+        reason: `${playbook.id} window open (${mode}): ${playbook.thesis}`,
+        playbookId: playbook.id,
+        playbookMode: mode,
+      };
+    }
+  } else if (state === "flat" && held > 0) {
+    return {
+      symbol,
+      side: "sell",
+      quantity: held,
+      type: "market",
+      reason: `${playbook.id} window closed (${mode}): exiting per the play's own rule`,
+      playbookId: playbook.id,
+      playbookMode: mode,
+    };
+  }
+  return undefined;
 }
