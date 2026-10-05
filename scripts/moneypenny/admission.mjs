@@ -197,6 +197,7 @@ export function readOpenIssues(label, exec = sh) {
       body: r.body ?? "",
       labels: r.labels ?? [],
       createdAt: r.created_at,
+      issue_dependencies_summary: r.issue_dependencies_summary, // the pull rule's blocker count
     }));
 }
 
@@ -263,7 +264,8 @@ export function readIssue(n, exec = sh) {
   if (r.pull_request) throw new Error(`#${n} is a pull request, not an issue`);
   if (!r.number) throw new Error(`#${n} did not read as an issue`);
   const { number, title = "", state = "open", body = "", labels = [], created_at } = r;
-  return { number, title, state, body, labels, createdAt: created_at };
+  const { issue_dependencies_summary } = r;
+  return { number, title, state, body, labels, createdAt: created_at, issue_dependencies_summary };
 }
 
 const USAGE = "usage: admission.mjs --check <issue-number> | --next | --queue";

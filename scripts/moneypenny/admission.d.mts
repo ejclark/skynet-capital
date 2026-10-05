@@ -11,6 +11,8 @@ export interface AdmissionIssue {
   body?: string;
   labels?: readonly Label[];
   createdAt?: string;
+  /** GitHub's dependency summary; the pull rule refuses `blocked_by > 0` (open blockers). */
+  issue_dependencies_summary?: { blocked_by?: number };
 }
 
 export interface AdmissionVerdict {

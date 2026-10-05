@@ -12,8 +12,10 @@ export interface PullableIssue {
   number?: number;
   state?: string;
   labels?: readonly PullLabel[];
+  /** GitHub's dependency summary; `blocked_by` counts OPEN blockers. Absent reads as unblocked. */
+  issue_dependencies_summary?: { blocked_by?: number };
 }
 /** Why an automated puller may not start this issue (first failing rule), or null (#4393). */
 export function notPullableReason(issue: PullableIssue | null | undefined): string | null;
-/** The board's Ready column: open, `ready`, buildable, not `in-progress` (#4393 criterion 10). */
+/** The board's Ready column: open, `ready`, buildable, not `in-progress`, no open blocker (#4393). */
 export function pullable(issue: PullableIssue | null | undefined): boolean;
