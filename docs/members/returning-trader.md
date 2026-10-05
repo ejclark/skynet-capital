@@ -36,22 +36,23 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 
 ## 5. What frustrates them
 
-- **6 (partly fixed, #3807 slices 2a + 2d)** — Trade's "← Back to account" and the rail's
-  "← Leaderboard" are gone (2a); their own account's page now links the same account on their
-  Profile page ("Open in your Accounts", `app/src/shell/account-head.tsx`). Still open:
-  `/accounts` never links the other page for the same account.
+- **6 (fixed, #3807 slices 2a + 2b + 2d + 2e)** — Trade's "← Back to account" and the rail's
+  "← Leaderboard" are gone (2a), and the topbar's Profile tab always lands on the cockpit (2b).
+  Their own account's page links the same account on their Profile page ("Open in your Accounts",
+  `app/src/shell/account-head.tsx`), and the Profile page links back ("Open as the league sees it",
+  `app/src/shell/cockpit-head.tsx`, 2e).
 - **9 (found by run 0; fixed)** — `/api/accounts/networth` answered 500 on the offline fixture
   (`h.equity.forEach`, `src/server/networth-api-routes.ts`, when the history read carried no
   equity series); the Overview said "Net worth is unreachable right now." and the positions
   blotter vanished with it — one failed feed blanked the whole page. Root cause: the fixture
   transport answered `/v2/account/portfolio/history` with the account payload; it now 404s and
   the route degrades to "—" windows with the blotter intact.
-- **8** — a docked Trade has no entry to the standalone Chain (`app/src/routes/trade.tsx:113` lists
-  it; the docked bench never renders the switch).
-- **3** — on a phone, the Chain pane says "Pick a symbol on the Ticket…" with no input of its own
-  (`app/src/shell/chain-section.tsx:125`).
-- **7** — two "Playbooks": the Profile chapter with a disabled Arm (`app/src/routes/playbooks.tsx:41`)
-  and R&D's subscribe-able store (`app/src/shell/playbooks-section.tsx:84`).
+- **8 (fixed, #3807 slice 3b-2)** — a docked Trade had no entry to the standalone Chain.
+- **3 (fixed, #3807 slice 2e)** — on a phone, the Chain pane said "Pick a symbol on the Ticket…"
+  with no input of its own.
+- **7** — two "Playbooks": the Profile chapter with a disabled Arm
+  (`app/src/shell/playbooks-chapter.tsx`) and R&D's subscribe-able store
+  (`app/src/shell/playbooks-section.tsx`).
 
 ## 6. Journeys
 
@@ -74,9 +75,10 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    and are specified by `tests/options/position-guidance*.spec.ts`, not by the crawl). **WHEN the
    member follows a position into Trade, the app shall open Trade with that symbol and its
    guidance pane.** Judge: can this reader tell whether to sell the call today?
-5. `/app/trade?desk=human-eric&symbol=EEM` — "← Back to account" points at the desk. **WHEN the
+5. `/app/trade?desk=human-eric&symbol=EEM` — no back link on the stage (the rail's "← Back to
+   account" left with the rail); the topbar's Profile tab always lands on the cockpit. **WHEN the
    member wants to return from Trade to their book, the app shall link back to the cockpit they
-   came from.** _known gap — dead end 6._ Judge: does the reader land where they started?
+   came from.** _Fixed — dead end 6 (#3807 slices 2a + 2b)._ Judge: does the reader land where they started?
 6. desktop only — the docked bench, "Options chain" beside the milestone strip. **WHEN Trade is
    docked at desktop width, the app shall offer an entry to the standalone options chain.**
    _Fixed — #3807 slice 3b-2._ Judge: can the reader find the chain from here?
@@ -101,9 +103,10 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
    `/u/human-eric`. **WHEN the member is on their Profile page with one account picked, the app
    shall link that account's page as the league sees it (`/u/:id`).** _Fixed — #3807 slice 2e._
    Judge: does the reader know there are two pages for one account?
-2. `/app/u/human-eric` — the desk; the rail's only way out is "← Leaderboard". **WHEN the member is
-   on their own desk, the app shall link back to their cockpit.** _known gap — dead end 6._ Judge:
-   does the reader land where they started?
+2. `/app/u/human-eric` — their own account's page: the head (name, HUMAN, SIM, "Open in your
+   Accounts"), the switch with Settings, tiles, the blotter with Close, New trade. **WHEN the member
+   is on their own account's page, the app shall link back to the same account on their Profile
+   page.** _Fixed — dead end 6 ("Open in your Accounts")._ Judge: does the reader land where they started?
 
 ### j4 — playbooks, twice
 
