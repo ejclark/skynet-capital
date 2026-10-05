@@ -9,6 +9,7 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
@@ -206,6 +207,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Where a member's alert dismissals are kept (#3407 P4 slice 1; the #586 port). Absent: the
    *  alerts route still lists, and says dismissals are off. */
   readonly alertDismissals?: AlertDismissalsPort;
+  /** Where a member's alert-delivery choice and sent-ledger live (#3407 P4 slice 3). Absent: the
+   *  delivery route still answers, and says this deployment keeps no delivery settings. */
+  readonly alertDeliveryStore?: AlertDeliveryStorePort;
+  /** The transport that carries an alert off this machine — the one half that needs Eric's
+   *  credential. Absent: delivery reads as unconfigured IN WORDS, never a silent drop. */
+  readonly alertDelivery?: AlertDeliveryPort;
   /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
    *  list isn't stored on this deployment rather than accepting names into memory. */
   readonly watchlist?: WatchlistPort;
