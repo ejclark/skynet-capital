@@ -51,11 +51,12 @@ export interface EarningsPrint {
  *   - `deadZoneDays`      — S1's dead zone: inside this, the pre-print positioning bid is over
  *                           (docs/research/nvda-earnings-cycle.md — D-5→D is NVDA's dead week).
  *
- * WHY THESE MIRROR RATHER THAN DRIVE. `engine/guards.ts` and `playbooks/**` are envelope-protected
- * — a read-only display change may not edit them — so they still hold their own literals and these
- * are copies. Copies drift, so `tests/domain/earnings-calendar.spec.ts` PINS each value to the
- * behaviour it claims: change a guard's number without changing this one and the suite goes red.
- * Rewiring those two files to import from here is the right end state and is Eric's call.
+ * WHY THESE MIRROR RATHER THAN DRIVE. `engine/guards.ts` and `playbooks/**` still hold their own
+ * literals and these are copies — written when both were envelope-protected. They are open now
+ * (`envelope.json` `$openOnPurpose`, #928), so rewiring them to import from here is an ordinary
+ * follow-up, not a gated call. Until then copies drift, so `tests/domain/earnings-calendar.spec.ts`
+ * PINS each value to the behaviour it claims: change a guard's number without changing this one
+ * and the suite goes red.
  *
  * These are TRADING-DISCIPLINE numbers. A display that wants a proximity horizon reads one of
  * them; retuning one to make a badge look better would be changing the discipline, so don't.
@@ -80,6 +81,17 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
       "IR: nvidianews.nvidia.com call notice — results ~1:20pm PT Aug 26 (after the 4pm ET close)",
   },
   {
+    // Q3 FY27. NVIDIA posts its call notice about three weeks out (2025: Oct 29 for Nov 19), and
+    // as of 2026-10-05 nothing is posted, so this stays an estimate and opens no S1 entry yet.
+    symbol: "NVDA",
+    date: "2026-11-18",
+    status: "estimate",
+    source:
+      "EST: EDGAR Item 2.02 Q3 cadence (2023-11-21, 2024-11-20, 2025-11-19); aggregators split " +
+      "11-17/11-25; Cboe term structure steps up between the 11-13 and 11-20 expiries (2026-10-05)",
+    window: { start: "2026-11-17", end: "2026-11-25" },
+  },
+  {
     symbol: "MRVL",
     date: "2026-08-27",
     status: "confirmed",
@@ -102,6 +114,24 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     status: "estimate",
     source: "8-K cadence off 2026-08-11 midday print",
     window: { start: "2026-11-09", end: "2026-11-16" },
+  },
+  {
+    // Q4 FY27, by the same cadence: Q4 has filed 2025-02-26 and 2026-02-25 (EDGAR Item 2.02).
+    symbol: "NVDA",
+    date: "2027-02-24",
+    status: "estimate",
+    source: "EST: EDGAR Item 2.02 Q4 cadence (2025-02-26, 2026-02-25)",
+    window: { start: "2027-02-17", end: "2027-03-03" },
+  },
+  {
+    // Q4 2026. CRWV's one Q4 filed 2026-02-26; its quarters have drifted a week either way
+    // (Q1 2025-05-14 vs 2026-05-07), so the window is two weeks wide. Without a next row on file,
+    // nothing after the November print could be shown to clear a print (#4642 slice 5).
+    symbol: "CRWV",
+    date: "2027-02-25",
+    status: "estimate",
+    source: "EST: 8-K cadence (Q4 filed 2026-02-26; Q1 drifted 2025-05-14 → 2026-05-07)",
+    window: { start: "2027-02-18", end: "2027-03-05" },
   },
   {
     symbol: "MU",
@@ -161,8 +191,37 @@ export function recentPrint(
 }
 
 /**
- * The print inside the next `days` calendar days, if any — the S2 question. Estimates count
- * (they widen the flat window; see the date policy above).
+ * The days a print could plausibly land on: an estimate's researched `window` when it has one,
+ * else its one date. The SAFETY reading of a row — the date policy says an estimate may only
+ * widen a safety window, and its window is exactly that widening.
+ */
+export function printSpan(print: EarningsPrint): { readonly start: string; readonly end: string } {
+  return print.status === "estimate" && print.window
+    ? print.window
+    : { start: print.date, end: print.date };
+}
+
+/**
+ * The symbol's next print that may still be AHEAD — an estimate stays live until its whole window
+ * has passed, not just its point date. This is the safety question ("could the print still be in
+ * front of me?"); `nextPrint` stays the display question ("which date do we show?"). Before
+ * #4646 the S2 guard asked the display question, so a bot buying CRWV on 11-12 — after the
+ * 11-10 estimate, inside its 11-09..11-16 window — was not protected at all.
+ */
+export function nextPrintRisk(
+  symbol: string,
+  asOfIso: string,
+  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): EarningsPrint | undefined {
+  return prints
+    .filter((p) => p.symbol === symbol && daysUntil(asOfIso, printSpan(p).end) >= 0)
+    .sort((a, b) => printSpan(a).start.localeCompare(printSpan(b).start))[0];
+}
+
+/**
+ * The print that may land inside the next `days` calendar days, if any — the S2 question.
+ * Estimates count from the START of their window and stay counted to its end (they widen the
+ * flat window; see the date policy above). A confirmed print reads exactly as its one date.
  */
 export function printWithin(
   symbol: string,
@@ -170,6 +229,6 @@ export function printWithin(
   days: number,
   prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
 ): EarningsPrint | undefined {
-  const next = nextPrint(symbol, asOfIso, prints);
-  return next && daysUntil(asOfIso, next.date) <= days ? next : undefined;
+  const next = nextPrintRisk(symbol, asOfIso, prints);
+  return next && daysUntil(asOfIso, printSpan(next).start) <= days ? next : undefined;
 }
