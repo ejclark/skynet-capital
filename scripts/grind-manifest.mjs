@@ -5,19 +5,15 @@
 //   node scripts/grind-manifest.mjs <path...>            # just these files
 //   node scripts/grind-manifest.mjs --args --items '<json array>' <path>   # emit ready-to-paste grind args
 //
-// WHY (#1325): `.claude/workflows/grind.js` defaults every dispatch to low effort on a cheap model,
-// and the Workflow harness gives a script no filesystem access — so grind cannot read the chore it
-// is about to dispatch. The tier therefore lived in each chore's prose header, and the CALLER was
-// expected to transcribe it into the `steps` array. All 5 checked-in chores carry such a header;
-// nothing warned when one was skipped, and a skipped `isolation` is worse than a skipped `effort`
-// (concurrent items share one checkout — docs/grind/README.md, "Two hazards").
-//
-// This script is the declare-and-check half of the fix: the chore states its tier in YAML front
-// matter, using the SAME key names as `.claude/agents/*.md` frontmatter (`model` · `effort` ·
-// `isolation`), so a chore that later graduates to a real subagent carries its header unchanged.
-// `--args` then emits the exact grind args, so a caller generates the call instead of transcribing
-// it. Teaching `grind.js` itself to read this at dispatch is the next slice (see the issue) — until
-// then a caller who skips `--args` can still under-tier a run.
+// WHY (#1325): the Workflow harness gives a script no filesystem access, so grind.js cannot read the
+// chore it is about to dispatch. Each chore therefore states its tier in YAML front matter, using the
+// SAME key names as `.claude/agents/*.md` frontmatter (`model` · `effort` · `isolation`), so a chore
+// that later graduates to a real subagent carries its header unchanged. A skipped `isolation` is the
+// costly miss: concurrent items then share one checkout (each worktree chore's calling convention,
+// e.g. docs/grind/fix-doc-rot.instructions.md). Two readers use the front matter: `--args` emits
+// the exact grind args for a caller, and grind.js runs this script at dispatch to resolve each
+// chore's tier (explicit step field › whole-run arg › this front matter › grind's default),
+// throwing rather than dispatching at a guessed tier when the manifest cannot be read.
 //
 // Enforced in CI via tests/arch/grind-manifest.spec.ts (blocking — a chore that silently runs at the
 // wrong tier is a broken contract, not debt to ratchet).

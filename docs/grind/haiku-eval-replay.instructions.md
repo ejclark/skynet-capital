@@ -16,13 +16,9 @@ comparison is apples-to-apples. `isolation: none` and no `outcomeCheck` — read
 edited or pushed, no branch or worktree needed. The deliverable is the
 structured report back, not a commit.
 
-**Codified from a 4-item pilot, 2026-09-18** (banked as a lesson: `docs/LESSONS.md`). Refine this
-file in place as later batches surface more findings — the pilot already forced one real revision
-(see "Known open problem" below); expect more.
-
 ## Goal
 
-**Prospective use only (2026-09-18) — see the resolved contamination finding below.** Given one
+**Prospective use only — see "Why prospective only" below.** Given one
 *newly-dispatched, live* due event (never a historical id from the frozen
 `docs/research/haiku-eval-sample-<date>.json` sample — that path is retired for this purpose),
 independently produce an initial research stance for it at the specified model tier, in parallel
@@ -65,36 +61,25 @@ CONTAMINATION_NOTE: <one line — did search results surface information about t
    most useful finding came from an agent disclosing this unprompted; make it a required field so it
    doesn't depend on the agent thinking to volunteer it.
 
-## Known open problem — read before running at scale
+## Why prospective only
 
-**Every sampled event is, by construction, in the past relative to today.** Live WebSearch does not
-respect that boundary — a query about a historical macro print routinely surfaces news about what
-actually happened, even when this chore's own corpus file is correctly avoided. The 2026-09-18
-pilot caught this directly: one Sonnet replay self-disclosed seeing the real PCE outcome and the
-Fed's subsequent hike; a parallel Haiku replay showed the same signature (hindsight-shaped framing)
-without flagging it, until the `CONTAMINATION_NOTE` field above made it a required report.
-
-This means a result reported here tests "does this model produce a reasonable-sounding judgment
-with hindsight-adjacent search results available," not "would this model reach the same *initial*
-call with only what was knowable at the time" — an easier task than the one #2946's S5 spec
-actually wants measured, which inflates every stance-match score built from this chore's output.
-
-**Resolved 2026-09-18 (#3264): prospective testing only, historical replay retired for this
-purpose.** The date-cutoff fix is not buildable — `WebSearch` takes only `query` and domain
-allow/block lists, no date-range or as-of parameter, so nothing constrains it to pre-event results.
-**This chore no longer runs against the frozen historical sample.** The valid design is to run it
-against newly-dispatched *live* due events going forward (no hindsight exists yet to leak, by
-construction) — one data point per real dispatch, accrued over time rather than 30 at once. Do not
-resurrect the 30-item historical batch under this chore's steps; it would reproduce the same leak
-measured in the 2026-09-18 pilot (docs/LESSONS.md) no matter how many events are added.
+A historical event is already in the past, and live WebSearch has no date cutoff (it takes only
+`query` and domain allow/block lists, no as-of parameter). A replay of a historical event therefore
+surfaces what actually happened and measures judgment with hindsight — an easier task than the
+initial call the S5 spec wants measured, which inflates every stance-match score built from it. Run
+this chore only on newly-dispatched live events, one data point per real dispatch accrued over time,
+and never on the frozen `docs/research/haiku-eval-sample-<date>.json` sample, however many events
+are added to it (`docs/LESSONS.md`, the 2026-09-18 pilot).
 
 ## Guardrails
 
 - Never write to `docs/research/events/<id>.md` or any file under `docs/research/forward-tests/` —
   this is a read-only comparison exercise, not a real dispatch, and must never be mistaken for one
   by a later session scanning the corpus.
-- Stay efficient — this is a blind eval replay, not a production research doc. A pilot run
-  completed in 6-13 tool calls per item; treat a run needing significantly more as worth a second
-  look, not just a cost overrun.
+- This is a blind eval replay, not a production research doc: the deliverable is the five-field
+  block, not a write-up. Check the specifics step 4 names (consensus, reaction function,
+  sensitivity) with WebSearch/WebFetch rather than answering from training knowledge. For the
+  calling session: a pilot run took 6-13 tool calls per item, so a run needing significantly more
+  is worth a second look, not just a cost overrun.
 - If the event's calendar JSON is missing or the event id doesn't resolve, report `status:
   "blocked"` rather than guessing at what the event was.

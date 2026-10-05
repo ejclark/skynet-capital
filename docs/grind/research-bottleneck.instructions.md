@@ -82,8 +82,7 @@ docs first").
    the lane that acts on the call sheet does that, after adding the `**After:**` line. **If the issue carries `needs-eric` and your
    call sheet establishes that no decision remains** — the policy is already written, the fact is
    already settled, the fork was a false one — **remove it** (`DELETE .../issues/<n>/labels/needs-eric`)
-   and say in the comment exactly which evidence settled it. Eric, 2026-09-04, on the first time
-   this happened (#1318): "that is fantastic; ideal" — a stale `needs-eric` spends his attention on
+   and say in the comment exactly which evidence settled it — a stale `needs-eric` spends his attention on
    nothing. Leave it on when any genuine choice remains, however small.
 7. Report `status: "done"` with the comment's `html_url` in `summary`.
 
