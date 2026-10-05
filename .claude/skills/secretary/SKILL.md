@@ -62,6 +62,10 @@ shape for tooling; without `--file` it drafts and says so, never posts.
    "worked on X").
 3. **Noise absorbed** — counts only ("6 structural PRs auto-merged, 2 gate catches
    self-corrected"). The tier that proves the machine is eating its own noise.
+   **Unlearned incidents go here, as `node scripts/digest-scan.mjs --learning`'s one line —
+   never as a "run `/retro`" item under Needs you** (#4212). A repair capsule's close drafts its
+   own LESSONS entry (`scripts/moneypenny/lesson-draft.mjs`), so the count drains without him; a
+   number that stops falling is a retro for this pipeline, not a step on his list.
 
 **Measure the digest's own channel** (#456): `node scripts/comms-scan.mjs --table` emits one row
 per PR merged since the last digest — which picture form it used (or waived, with the reason),

@@ -181,6 +181,16 @@ job name with a matrix leg's values stripped (#3913): keying on the leg made one
 issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
 opened but never auto-merged — that carve-out is unchanged.
 
+**The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
+When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs
+`scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
+closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as ROOT CAUSE, the specs
+it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
+as a comment instead, never a ledger PR that would mark its runs learned with nothing learned.
+`/retro` still deepens an entry when a class recurs; it is no longer the only way one lands. The
+digest carries the residue as one line (`digest-scan.mjs --learning`) under Noise absorbed, never
+under Needs you.
+
 
 Two rules fall out, both paid for the hard way (see the ledger):
 

@@ -10,12 +10,18 @@
 //   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op)
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
+//   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
 // scripts/moneypenny/assignments.mjs — the same call the assignment dry run makes, never a second
 // selector here. Imported lazily, so the importers of `digestFiles`/`latestDigestDate` (comms,
 // rank, thrash) stay git-only; tests/scripts/moneypenny/needs-you.spec.ts fails on any divergence.
+//
+// LEARNING (#4212, #4056 slice 7): unlearned incidents are a count line under "Noise absorbed",
+// never a Needs-you item — a repair capsule's close drafts its own ledger entry
+// (scripts/moneypenny/lesson-draft.mjs), so draining them is the system's job, not Eric's. The
+// 2026-10-05 digest listed "run /retro" as Needs-you item 7; this line is where that goes instead.
 //
 // Enforced in CI via tests/arch/digest-scan.spec.ts. Node built-ins + git (+ gh for --needs-you).
 // Loud-failure doctrine: an unreadable input or missing git ref is an error, never "not due".
@@ -81,6 +87,24 @@ export function needsYouLines({ needsYou }) {
     (n) =>
       `- #${n.number}${n.title ? ` ${n.title}` : ""} — ${n.criterion === 4 ? n.why : (n.decision ?? n.why)}`,
   );
+}
+
+/**
+ * The "Noise absorbed" line for unlearned incidents, from `incident-scan.mjs --count`. Pure.
+ * `unlearnedRuns: null` means the scan could not reach GitHub — said as unknown, never as zero.
+ */
+export function learningLine({ days = 14, openEntries = [], unlearnedRuns = null }) {
+  const runs =
+    unlearnedRuns === null
+      ? `failed runs on main unknown (no GitHub read)`
+      : `${unlearnedRuns} failed run(s) on main in ${days}d not yet in LESSONS`;
+  const open = openEntries.length
+    ? ` · ${openEntries.length} entry(ies) still STATUS: open (${openEntries.map((t) => `"${t.length > 60 ? `${t.slice(0, 59)}…` : t}"`).join(", ")})`
+    : "";
+  if (unlearnedRuns === 0 && !openEntries.length) {
+    return `- Learning: every failed run on main in ${days}d has a lesson; no open entries.`;
+  }
+  return `- Learning: ${runs}${open} — capsule closes draft their own entries (#4212).`;
 }
 
 /** The newest committed digest's date, or `null` when none exists yet. Exported because it is the
@@ -150,6 +174,14 @@ async function main() {
 
   if (has("validate")) {
     validate();
+    return;
+  }
+  if (has("learning")) {
+    const out = execFileSync("node", [join(ROOT, "scripts/incident-scan.mjs"), "--count"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    console.log(learningLine(JSON.parse(out)));
     return;
   }
   if (has("needs-you")) {

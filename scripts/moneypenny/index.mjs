@@ -80,6 +80,7 @@ import {
   MANAGED_LABELS,
   setInProgress,
 } from "./labels.mjs";
+import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
@@ -123,10 +124,12 @@ export const slugify = (s) =>
  * @returns Intent[]  — `[]` means "nothing to do", which is the common and correct outcome.
  *
  * (Issue-label events reach the workflow but carry no router lane here — the feedback claim is a
- * workflow step calling `claimHandoff` directly, and the retired handoff-inbox lane is gone.)
+ * workflow step calling `claimHandoff` directly, and the retired handoff-inbox lane is gone. One
+ * issue event does: a repair capsule closing drafts its LESSONS entry, #4212.)
  */
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
+  if (ctx.eventName === "issues") return routeLessonDraft(ctx);
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -1231,6 +1234,7 @@ function executeOne(i, stallRepairs = []) {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   }
+  if (i.kind === "draft-lesson") return draftLesson(i);
   if (i.kind === "release-claim") {
     const freed = releaseBuild(i.slug);
     console.log(
