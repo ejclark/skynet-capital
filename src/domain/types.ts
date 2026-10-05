@@ -340,8 +340,10 @@ export interface PlaybookSubscription {
   readonly compoundAllocation?: boolean;
 }
 
-/** `unfilled`: was live, ended with nothing filled. `working`: the cancel was not confirmed, so the
- *  broker may still fill it. A result is `filled` only on a broker-confirmed filled quantity > 0. */
+/** `unfilled`: was live, ended with nothing filled. `working`: still live at the broker, so it may
+ *  still fill — a limit whose cancel was not confirmed, or a share order no fill was seen for yet
+ *  (queued after hours, or slower than the poll, #4655). A result is `filled` only on a
+ *  broker-confirmed filled quantity > 0. */
 export type OrderStatus = "filled" | "rejected" | "unfilled" | "working";
 export const ORDER_STATUSES: readonly OrderStatus[] = ["filled", "rejected", "unfilled", "working"];
 

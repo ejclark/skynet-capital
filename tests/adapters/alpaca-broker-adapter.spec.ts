@@ -158,7 +158,7 @@ describe("AlpacaBrokerAdapter", () => {
       expect(calls).toBe(0);
     });
 
-    it("reports a filled result when the order is accepted, with no price when the fill poll never resolves", async () => {
+    it("reports working, never filled, when the fill poll never sees the order (#4655)", async () => {
       const adapter = adapterWith(
         {
           "/v2/orders": {
@@ -172,8 +172,139 @@ describe("AlpacaBrokerAdapter", () => {
 
       const result = await adapter.submit(buy);
 
-      expect(result).toMatchObject({ status: "filled", filledQuantity: 100, orderId: "o1" });
-      expect(result.filledPrice).toBeUndefined();
+      // Nothing confirmed a fill, so the placement response's own status is all there is to say.
+      expect(result).toEqual({
+        intent: buy,
+        status: "working",
+        reason: "order accepted",
+        orderId: "o1",
+      });
+    });
+
+    // #4655 EARS 3/4: the poll reads the order fine, it just has not traded — a queued after-hours
+    // market order sits at "accepted" until the open; "new", "held" and "pending_new" are the
+    // other live states a slow fill passes through.
+    for (const brokerStatus of ["accepted", "new", "held", "pending_new"]) {
+      it(`reports a live ${brokerStatus} order as working with the broker's status`, async () => {
+        const adapter = adapterWith(
+          {
+            "/v2/orders": {
+              status: 200,
+              body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+            },
+            "/v2/orders/o1": {
+              status: 200,
+              body: { id: "o1", status: brokerStatus, filled_qty: "0", filled_avg_price: null },
+            },
+          },
+          { sleep: () => Promise.resolve() },
+        );
+
+        const result = await adapter.submit(buy);
+
+        expect(result).toEqual({
+          intent: buy,
+          status: "working",
+          reason: `order ${brokerStatus}`,
+          orderId: "o1",
+        });
+      });
+    }
+
+    // #4655 EARS 2: the order was taken, then ended before anything traded.
+    for (const brokerStatus of ["canceled", "expired", "rejected"]) {
+      it(`reports an order the broker ${brokerStatus} with nothing filled as rejected, keeping its id`, async () => {
+        let reads = 0;
+        const transport = new SequencedGetTransport(
+          {
+            "/v2/orders": {
+              status: 200,
+              body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+            },
+          },
+          {
+            "/v2/orders/o1": [
+              { status: 200, body: { id: "o1", status: brokerStatus, filled_qty: "0" } },
+            ],
+          },
+        );
+        const counting: AlpacaTradingTransport = {
+          get: (path) => {
+            reads++;
+            return transport.get(path);
+          },
+          post: (path, body) => transport.post(path, body),
+          delete: () => transport.delete(),
+        };
+        const adapter = new AlpacaBrokerAdapter(new AlpacaTradingClient(counting), {
+          sleep: () => Promise.resolve(),
+        });
+
+        const result = await adapter.submit(buy);
+
+        expect(result).toEqual({
+          intent: buy,
+          status: "rejected",
+          reason: `order ${brokerStatus}`,
+          orderId: "o1",
+        });
+        // An ended order will not change, so the poll stops at the first read that says so.
+        expect(reads).toBe(1);
+      });
+    }
+
+    // #4655 EARS 1: a partial fill is a fill of what filled, never of what was asked.
+    it("reports a partial fill as filled with the quantity and price the broker confirmed", async () => {
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+          "/v2/orders/o1": {
+            status: 200,
+            body: {
+              id: "o1",
+              status: "partially_filled",
+              filled_qty: "40",
+              filled_avg_price: "42.15",
+            },
+          },
+        },
+        { sleep: () => Promise.resolve() },
+      );
+
+      const result = await adapter.submit(buy);
+
+      expect(result).toEqual({
+        intent: buy,
+        status: "filled",
+        filledQuantity: 40,
+        filledPrice: 42.15,
+        orderId: "o1",
+      });
+    });
+
+    it("reports a canceled order that partly filled as filled with what traded", async () => {
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+          "/v2/orders/o1": {
+            status: 200,
+            body: { id: "o1", status: "canceled", filled_qty: "25", filled_avg_price: "42.00" },
+          },
+        },
+        { sleep: () => Promise.resolve() },
+      );
+
+      expect(await adapter.submit(buy)).toMatchObject({
+        status: "filled",
+        filledQuantity: 25,
+        filledPrice: 42,
+      });
     });
 
     it("polls getOrder and captures the real fill price once Alpaca reports it (#2287 PR 7 prerequisite)", async () => {
@@ -200,10 +331,17 @@ describe("AlpacaBrokerAdapter", () => {
 
       const result = await adapter.submit(buy);
 
-      expect(result).toMatchObject({ status: "filled", filledQuantity: 100, filledPrice: 176.42 });
+      // #4655 EARS 5: a fill the poll sees is reported exactly as before — the whole object.
+      expect(result).toEqual({
+        intent: buy,
+        status: "filled",
+        filledQuantity: 100,
+        filledPrice: 176.42,
+        orderId: "o1",
+      });
     });
 
-    it("a throwing/404ing getOrder poll never turns a real fill into a rejection", async () => {
+    it("a throwing getOrder poll never turns a live order into a rejection — it stays working", async () => {
       const adapter = adapterWith(
         {
           "/v2/orders": {
@@ -217,7 +355,8 @@ describe("AlpacaBrokerAdapter", () => {
 
       const result = await adapter.submit(buy);
 
-      expect(result.status).toBe("filled");
+      expect(result).toMatchObject({ status: "working", reason: "order accepted", orderId: "o1" });
+      expect(result.filledQuantity).toBeUndefined();
       expect(result.filledPrice).toBeUndefined();
     });
 
@@ -265,7 +404,7 @@ describe("AlpacaBrokerAdapter", () => {
 
       const result = await adapter.submit(buy);
 
-      expect(result.status).toBe("filled");
+      expect(result.status).toBe("working");
       expect(submitted).toEqual([
         {
           orderId: "o1",
@@ -301,17 +440,22 @@ describe("AlpacaBrokerAdapter", () => {
             status: 200,
             body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
           },
+          "/v2/orders/o1": {
+            status: 200,
+            body: { id: "o1", status: "filled", filled_qty: "100", filled_avg_price: "42.10" },
+          },
         },
         {
           onSubmitted: () => {
             throw new Error("listener boom");
           },
+          sleep: () => Promise.resolve(),
         },
       );
 
       const result = await adapter.submit(buy);
 
-      expect(result).toMatchObject({ status: "filled", filledQuantity: 100 });
+      expect(result).toMatchObject({ status: "filled", filledQuantity: 100, filledPrice: 42.1 });
     });
   });
 });
