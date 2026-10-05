@@ -3,9 +3,9 @@ name: governor
 description: >-
   Run one head-coach dispatch cycle: for each defensive coach with an athlete, check WIP, take the
   gate's named target, check collisions, dispatch the athlete on a cheap model in an isolated worktree,
-  then open its PR with auto-merge enabled per the merge-policy table. Use when asked to "run the
+  then land the green reps as one cycle PR under the merge-policy table. Use when asked to "run the
   coaches", "run a governor cycle", or to work down structural debt autonomously. One dispatch per
-  coach per cycle; never retries a failed athlete automatically.
+  coach per cycle (surge excepted); never retries a failed athlete automatically.
 ---
 
 # Governor — one dispatch cycle of the mechanized head coach
@@ -22,8 +22,8 @@ earned after the policy proves out over reps.
    - **Exit 3 → dispatch nothing this cycle.** Say which control refused, quoting its `reason`: the
      dial reads `halt`, or the spend breaker is tripped and only a human clears that one. A refused
      cycle is still a cycle — report it and stop, never work around it.
-   - **`caps.governorDispatches` is this cycle's athlete allowance.** `normal` 4 is one per coach,
-     today's behavior unchanged. `conserve` 1 — walk the roster as usual, dispatch only the single
+   - **`caps.governorDispatches` is this cycle's athlete allowance.** `normal` 4 is one per coach.
+     `conserve` 1 — walk the roster as usual, dispatch only the single
      highest-leverage candidate, and name the ones deferred. `surge` 8 — a coach may be dispatched
      again on its next candidate once its first athlete reports, until the allowance is spent.
    - **The allowance is the only thing the dial changes.** WIP 1, the collision check, the
@@ -38,8 +38,10 @@ earned after the policy proves out over reps.
    | `mortician` | `scripts/dead-scan.mjs` | `refactor/bury-*` |
    | `test-backfiller` | `scripts/spec-gap-scan.mjs` | `test/backfill-*` |
 
-   Coaches with an eye but **no athlete yet** (`dep-graph`, `incident`) are not dispatched — they await
-   the rule of three. Their gates still enforce in CI; only the autonomous correction is missing.
+   Every other coach in `docs/COACHES.md` sits outside this cycle: it has no athlete (yet — it waits
+   for the rule of three — or by design), or its athlete runs event-driven (Moneypenny's repair lane
+   owns unlearned incidents). Their eyes still report where they exist; only the governed correction
+   is missing.
 
    For each athlete in the table:
    - **WIP limit 1:** if its branch glob already has an open PR, skip it this cycle. Inventory is waste.
@@ -52,11 +54,13 @@ earned after the policy proves out over reps.
    status, ratchet, push, report — no PR-opening; athletes carry no GitHub tooling).
 5. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
    merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay
-   distinct for bisectability), verify green once, open one PR titled
-   `refactor: governed cycle <n> — <rep summaries>`, and **enable auto-merge (SQUASH)** if — and only
-   if — every rep in the batch is a class the merge-policy table allows (one disallowed rep = the whole
-   PR waits for human review, or ship that rep separately). Batching halves CI runs, release entries,
-   and GitHub API calls — the measured constraints. Exception: isolate a rep in its own PR when it is
+   distinct for bisectability), verify green once, and open one PR titled
+   `refactor: governed cycle <n> — <rep summaries>` with `/ship`. Never arm auto-merge by hand — the
+   pipeline arms it once `verify` and integration tests pass. If any rep in the batch is a class the
+   merge-policy table does not auto-merge (a ❌ row, or a ✅-only-if row whose condition fails), open
+   the PR held (`scripts/ship.sh open --hold`, which labels it `hold-merge`) or ship that rep
+   separately. Batching halves CI runs, release entries, and GitHub API calls — the measured
+   constraints. Exception: isolate a rep in its own PR when it is
    unusually large or risky enough that independent revert matters more than the savings.
    On a failure report: surface it to the human head coach verbatim; do not retry in-cycle.
 6. **RETRO.** One line, at cycle close, never per-athlete: did anything recur across this cycle's
@@ -85,16 +89,18 @@ A feast is a surge-class act, so the dial gates it too: declare one only while s
 
 ## Merge-policy table — auto-merge is the default
 
-**Standing rule: every Claude-authored PR gets native auto-merge (SQUASH) enabled at open, so it
-merges itself the moment CI goes green — unless Eric says hold it, or it falls in a carve-out below.**
+**Standing rule: every Claude-authored PR merges itself (native auto-merge, SQUASH) once CI is green —
+the pipeline's `arm auto-merge` job arms it after `verify` and integration tests pass, never a hand
+arm — unless Eric says hold it, or it falls in a carve-out below.**
 Auto-merge is opt-*out*, not opt-in: the reviewer is the gate suite, and flow is the point. To hold a
-PR for Eric's eyes, either don't enable auto-merge or add a `no-automerge` label; say so per-PR.
+PR for Eric's eyes, open it held (`scripts/ship.sh open --hold` labels it `hold-merge`, which the arm
+job skips); say so per-PR.
 
 | Class | Auto-merge | Rationale |
 |---|---|---|
 | Everything by default: athlete refactors, docs, features, visual work — verified green | ✅ default-on | The gates are the reviewer; revert is cheap; tempo is the point |
 | Config/tooling (lint rules, budgets, scanners) | ✅ only if the same PR lands with zero open violations | Config changes the *system's* behavior |
-| Visual/taste work Eric wants to eyeball first | ⏸ hold on request only | Reaffirmed (Eric, 2026-08-20, PR #459): taste review is live post-merge by default; a pre-merge hold happens only when Eric names the PR or Claude flags a specific taste fork |
+| Visual/taste work Eric wants to eyeball first | ⏸ hold on request only | Taste review is live post-merge by default (Eric, 2026-08-20); a pre-merge hold happens only when Eric names the PR or Claude flags a specific taste fork |
 | Workflow files (`.github/workflows/**`) | ❌ never | High blast radius; Eric rations runner minutes — his one-click by design |
 | Auth/tokens/spend, credentials, anything outward-facing **and hard to reverse** | ❌ never | The irreversible class stays Eric's (CLAUDE.md hard boundaries). The list is `envelope.json` — check with `envelope-scan --check`, don't reason from memory |
 
@@ -110,7 +116,8 @@ copies of this rule that dropped `and hard to reverse` are where the over-trigge
 copy tweak is not the irreversible class.
 
 Auto-merge adds tempo, not trust: every auto-merged PR still passes typecheck · lint · full tests ·
-all ratchet gates · commitlint, and post-merge the pipeline smoke-tests prod and rolls back on failure.
+integration tests · commitlint (the ratchet scans report, advisory), and post-merge the pipeline
+smoke-tests prod and rolls back on failure.
 Native auto-merge (not an in-CI REST merge) is deliberate: a GITHUB_TOKEN merge would not trigger the
 `push`→`main` deploy job, so the merge must be a first-class GitHub merge.
 
@@ -120,8 +127,6 @@ Native auto-merge (not an in-CI REST merge) is deliberate: a GITHUB_TOKEN merge 
   follows the rule of three (docs/COACHES.md) and is a head-coach decision.
 - **Never bypass a gate, never `--no-verify`, never edit a budget upward on an athlete's behalf.**
 - **In doubt about a PR's class → check, don't hold.** `node scripts/envelope-scan.mjs --check
-  <paths>` answers it mechanically; if nothing comes back protected, arm auto-merge and revert if it
-  turns out wrong. This line used to say the opposite ("default to human review"), which quietly
-  re-instated the universal pre-merge gate `CLAUDE.md` calls a throughput bug — *"every trivial PR
-  silently becomes a request for Eric's attention — the exact ToC violation this whole model exists
-  to avoid."* Doubt is cheap to resolve and reverts are cheap to make; his attention is neither.
+  <paths>` answers it mechanically; if nothing comes back protected, let it auto-merge and revert if
+  it turns out wrong. Defaulting to human review would make every trivial PR a request for Eric's
+  attention; doubt is cheap to resolve and reverts are cheap to make, his attention is neither.

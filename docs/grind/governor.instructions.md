@@ -108,7 +108,7 @@ it yourself; nothing substitutes them for you.
    outcome than a skipped cycle. Duplication will skip the most often, because its target is a
    symbol spread across every file that pasted it; that is the check working, not a bug.
 4. **Envelope check on the real target.**
-   `node scripts/envelope-scan.mjs --check <every path from your step-2 row> --base origin/main`.
+   `node scripts/envelope-scan.mjs --check <every path from your step-2 row>`.
    Any entry with `blocking: true` → report `status: "blocked"` with
    `target is envelope-protected` and stop. This is the check grind's step 0 could not do for you
    (see the calling convention above).

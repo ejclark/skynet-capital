@@ -15,11 +15,10 @@ This is the missing layer between `docs/IDEAS.md` (capture — one-liners, not e
 loop (execution — assumes direction already settled). A **plan** is the unit of alignment: rich enough
 that execution needs no live guidance, explicit about what was pre-decided, and honest about what wasn't.
 
-**Plans authored elsewhere:** a design handoff from a Claude Design session is the same object with a
-bundle of mocks attached — it lives as a `[handoff]` GitHub issue (never in the source tree, since
-2026-08-21), carries this same contract shape and these exact sections, and starts only on Eric's
-explicit go (a comment or label — the issue-world equivalent of the `ready` flip). See
-[`docs/HANDOFFS.md`](../HANDOFFS.md).
+**Plans authored elsewhere:** a design from a Claude Design session reaches code by one of the two
+paths in [`docs/HANDOFFS.md`](../HANDOFFS.md) — the canvas lane, or a `plan` GitHub issue that
+carries this same contract shape with the design's spec pasted inside it (never in the source tree,
+since 2026-08-21).
 
 ## Lifecycle
 

@@ -153,7 +153,7 @@ We don't have one, and we won't add one. Instead:
 - **WHY earns its place; WHAT/history doesn't.** A comment stating a non-obvious invariant (the gold
   standard above) is intent. A comment whose only content is a bare issue/PR number, "used by X", or
   "added for the Y flow" is narration — git blame and the PR already carry that, and it rots the moment
-  the number stops being resolvable (CLAUDE.md, "Doing tasks": comments belong to the WHY, not the task).
+  the number stops being resolvable.
   `node scripts/comment-bloat-scan.mjs` flags candidates (advisory, `docs/COACHES.md`'s Comment-bloat
   Coach) — `/code-review` and `reviewer` judge each flagged line against this split, not a blanket cut.
 - Folder structure encodes the architecture, so structure alone tells you where behavior lives:
@@ -162,7 +162,7 @@ We don't have one, and we won't add one. Instead:
 src/
   domain/     pure types + pure math (no I/O, no mutation)
   ports/      interfaces at the system boundary (BrokerPort, MarketDataPort)
-  adapters/   concrete implementations of ports (in-memory today, Alpaca next)
+  adapters/   concrete implementations of ports (in-memory for tests, Alpaca for the paper account)
   personas/   strategies — pure decide(context, portfolio) => intents
   engine/     orchestration + risk (owns the cycle, owns the guards)
 ```
@@ -175,7 +175,7 @@ production with no code change. New execution or data backends are new adapters,
 
 ## Component libraries & consistent look/feel
 
-When the dashboard arrives, UI is built from a shared component library — reusable, modular
+UI is built from a shared component library — reusable, modular
 components with one source of truth for look, feel, and behavior. No bespoke one-off widgets,
 no god components. The same principle the backend already follows, applied to the frontend.
 
@@ -186,14 +186,12 @@ The question of whether a tool like **Redux Toolkit** helps is really a question
 to read, extend, and reason about (for humans and for agents) than mutations scattered across
 modules. We buy that principle in full. Where we apply it differs by layer:
 
-- **The dashboard (React, `app/` — #738): TanStack Query + Zustand, superseding the earlier
-  "Redux Toolkit is the likely choice" note (2026-08-28).** The principle stands unchanged; what
-  changed is that server state and client state are different problems and each now has a
-  purpose-built home: Query holds the server's copy (the board snapshot, patched in place by the
-  SSE stream via `setQueryData` — see `app/src/live/channel.ts`), Zustand holds what only the
-  client knows (connection status, seq position — `app/src/live/connection.ts`). Both are
-  explicit, typed, serializable, and inspectable; the server/client boundary is visible in the
-  code instead of by convention inside one store.
+- **The dashboard (React, `app/`): TanStack Query + Zustand.** Server state and client state are
+  different problems, and each has a purpose-built home: Query holds the server's copy (the board
+  snapshot, patched in place by the SSE stream via `setQueryData` — see `app/src/live/channel.ts`),
+  Zustand holds what only the client knows (connection status, seq position —
+  `app/src/live/connection.ts`). Both are explicit, typed, serializable, and inspectable; the
+  server/client boundary is visible in the code instead of by convention inside one store.
 - **The headless engine: adopt the *pattern*, not the dependency.** Engine and account state is
   already an explicit, typed, serializable shape (`Portfolio`, `CycleReport`) with transitions
   modeled as data (`OrderIntent` → `OrderResult`). That is a reducer in spirit. Pulling a
