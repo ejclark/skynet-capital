@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Mirror the official Claude Code documentation locally — the raw material for token-burn research.
 //
-//   node scripts/fetch-claude-docs.mjs              # mirror all English pages → .cache/claude-docs/
+//   node scripts/fetch-claude-docs.mjs              # mirror all English pages → docs/vendor/claude-code/ (npm run docs:claude)
 //   node scripts/fetch-claude-docs.mjs --dir <path> # mirror somewhere else
 //
 // WHY THIS EXISTS (2026-08-28). Eric asked for research on token-burn efficiency so the budget
