@@ -145,7 +145,9 @@ export class AutonomousTrader {
     const options = await readCycleOptions(persona, this.config.optionMarket, {
       context,
       portfolio,
-      skip: cooling,
+      // A snapshot: `cooling` grows as this cycle's attempts start their clocks, and the market read
+      // must keep the set it was actually asked with.
+      skip: new Set(cooling),
     });
     const enriched = options ? { ...context, options } : context;
     const rawIntents = persona.decide(enriched, portfolio);
@@ -167,9 +169,16 @@ export class AutonomousTrader {
       if (handled.result) results.push(handled.result);
     }
     // A refused option attempt starts its underlying's clock too — after the approved ones ran, so
-    // a refused sibling never starves an approved close in the same cycle.
+    // a refused sibling never starves an approved close in the same cycle. Never on an underlying
+    // already cooling: its quotes were skipped this cycle, so a close emitted without them is
+    // refused `no-quote` — re-arming the clock on that refusal would keep it cooling (and quote-
+    // less) forever, carrying the contract into expiry.
     for (const refusal of refusals) {
-      if (refusal.intent.option) this.optionAttemptAt.set(refusal.intent.symbol, now);
+      const underlying = refusal.intent.symbol;
+      if (refusal.intent.option && !cooling.has(underlying)) {
+        this.optionAttemptAt.set(underlying, now);
+        cooling.add(underlying);
+      }
     }
 
     this.config.onDecision?.({
@@ -189,7 +198,7 @@ export class AutonomousTrader {
 
   /** Underlyings no option order may be attempted on this cycle: one still working at the broker,
    *  or one attempted inside the option cooldown. */
-  private optionCooling(working: ReadonlySet<string>, now: number): ReadonlySet<string> {
+  private optionCooling(working: ReadonlySet<string>, now: number): Set<string> {
     const gap = this.config.optionCooldownMs ?? DEFAULT_OPTION_COOLDOWN_MS;
     const cooling = new Set(working);
     for (const [underlying, at] of this.optionAttemptAt) {
@@ -222,17 +231,17 @@ export class AutonomousTrader {
       readonly persona: Persona;
       readonly mode: TraderMode;
       readonly now: number;
-      readonly cooling: ReadonlySet<string>;
+      /** Mutable for the cycle: an attempt adds its underlying, so a sibling waits its turn. */
+      readonly cooling: Set<string>;
     },
   ): Promise<Handled> {
     const underlying = intent.symbol;
-    const gap = this.config.optionCooldownMs ?? DEFAULT_OPTION_COOLDOWN_MS;
-    const last = this.optionAttemptAt.get(underlying);
-    if (cycle.cooling.has(underlying) || (last !== undefined && cycle.now - last < gap)) {
+    if (cycle.cooling.has(underlying)) {
       return { outcome: { intent, action: "cooldown-skipped" } };
     }
     // Observe mode starts the clock too: a watched bot attempts at the same pace a live one would.
     this.optionAttemptAt.set(underlying, cycle.now);
+    cycle.cooling.add(underlying);
     if (cycle.mode === "observe") return { outcome: { intent, action: "observed" } };
     const stamped: OrderIntent = {
       ...intent,

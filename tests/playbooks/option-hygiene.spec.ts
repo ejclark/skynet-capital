@@ -90,6 +90,16 @@ describe("expiry hygiene — when a contract falls due", () => {
     expect(hygieneDemand(T2, long, [], CALENDAR).contracts).toEqual([CALL_95]);
   });
 
+  it("never drops a worthless long: a $0.00 bid asks one tick ($0.05), and the guards name what stops it", () => {
+    const worthless = quoted(T2, [CALL_95, 0, 0]);
+    const [close] = hygieneIntents(worthless, long, [], CALENDAR);
+    expect(close?.option).toMatchObject({ limitPrice: 0.05, band: { low: 0, high: 0 } });
+    const verdict = applyGuardsWithVerdicts(close ? [close] : [], long, worthless, {
+      maxPositionPct: 1,
+    });
+    expect(verdict.refused.map((r) => r.reason)).toEqual(["option-limit-outside-quote"]);
+  });
+
   it("walks the limit from mid to natural as the day and the sessions pass", () => {
     const priceAt = (asOf: string) =>
       hygieneIntents(quoted(asOf, [CALL_95, 1, 1.2]), long, [], CALENDAR)[0]?.option?.limitPrice;

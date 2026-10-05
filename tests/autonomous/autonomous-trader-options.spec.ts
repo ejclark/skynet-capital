@@ -208,6 +208,19 @@ describe("AutonomousTrader — option orders", () => {
     expect(h.records[1]?.outcomes.map((o) => o.action)).toEqual(["cooldown-skipped"]);
   });
 
+  it("a refusal on an underlying already cooling never re-arms its clock — quotes come back when it ends", async () => {
+    // A contract the market never quotes: every attempt is refused `no-quote`. Before the fix, each
+    // refusal while cooling restarted the clock, so the underlying cooled — unquoted — forever.
+    const market = new FakeMarket();
+    const h = harness({ mode: "observe", persona: wheelPersona([UNQUOTED]), market });
+    await h.trader.evaluate(context); // t0: refused, clock starts
+    h.advance(5 * 60_000);
+    await h.trader.evaluate(context); // t0+5m: cooling, refused again — must not re-arm
+    h.advance(6 * 60_000);
+    await h.trader.evaluate(context); // t0+11m: the t0 clock has run out
+    expect([...(market.requests[2]?.skip ?? [])]).not.toContain("CRWV");
+  });
+
   it("a market read that throws is no quotes — the cycle still decides and records", async () => {
     const failing: OptionMarketPort = { readOptionMarket: () => Promise.reject(new Error("down")) };
     const h = harness({ market: failing });

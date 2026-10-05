@@ -166,7 +166,10 @@ function closePrice(
   const [leg] = legs;
   const side = legs.length === 1 && leg ? leg.side : "buy";
   let price = priceInside(quoted, side, aggression, quoted.tick);
-  if (price === 0 && legs.length === 2) price = 0.01 <= quoted.high ? 0.01 : undefined;
+  // A $0.00 bid prices a sale at 0, which no close order may carry. Ask one tick instead: inside the
+  // quote it may fill; outside it the guard refuses it by name. Either way the stuck contract is
+  // on the record, never silently dropped (#4645 review).
+  if (price === 0) price = legs.length === 2 ? 0.01 : quoted.tick;
   if (price === undefined) return undefined;
   return { limitPrice: price, band: { low: quoted.low, high: quoted.high, at: quoted.at } };
 }
