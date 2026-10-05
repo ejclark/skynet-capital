@@ -104,7 +104,12 @@
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
-every row; a dated adjacent event found gets proposed as a new
+every row; a dated adjacent event found **inside the research horizon**
+(`assessment-cadence.json`'s `horizon`: nothing past `maxDaysOut`, and past `allImpactsWithinDays`
+only critical/high) gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
-same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
-data (cache busted first), never from memory — after which this doc goes quiet.
+same PR — your own file, never another event's canonical one (#1717). One past the horizon is named
+in the row instead (#2946): it can never become due, so a calendar file for it is clutter, while
+prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
+first), never from memory. After that the assessment is closed; the doc reopens only to score a
+registered forward test whose `Score by` has arrived (`forward-test-due`).

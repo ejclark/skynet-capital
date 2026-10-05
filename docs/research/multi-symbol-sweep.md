@@ -776,7 +776,11 @@ robust, alpha fragile — is the finding.
    newest print on five of eight tickers — blinding each study to its freshest out-of-sample
    point. The red teams caught all three; the instrument did not.
 
-## Time-sensitive (as of 2026-08-12)
+## Time-sensitive (as of 2026-08-12 — expired)
+
+Every window below closed by 2026-09-10; this section is the record of what the sweep advised that
+day, not current guidance. The MRVL, AVGO, CRWV and META follow-ups are registered as FT-1 … FT-4 in
+[`forward-tests/legacy.md`](forward-tests/legacy.md), where they are scored.
 
 - **CRWV printed yesterday** (8-K filed midday 2026-08-11 — not in the study's n=4). Today is the
   D+1 window where all four *prior* prints were ugly — but the first post-print hours ran green

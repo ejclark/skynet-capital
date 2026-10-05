@@ -82,9 +82,10 @@ faithful surfacing of the stance below, never a new claim (see the TEMPLATE). In
 
 ### `interval-elapsed` → pulse check
 
-Append **one** row to the ledger table and update the `**Last assessed:**` line. A pulse check
-answers: *what changed since the last row, and does the stance survive it?* Every row runs the
-**adjacency sweep** — the checklist below — because adjacent events are exactly the new
+Append **one** row to the ledger table, then append a fresh `**Last assessed:**` + probe-ref pair
+at the end of the file ("Deterministic screening" below; the earlier pair is never edited). A pulse
+check answers: *what changed since the last row, and does the stance survive it?* Every row runs
+the **adjacency sweep** — the checklist below — because adjacent events are exactly the new
 information Eric's brief calls out. Keep rows terse; a stance *change* earns a sentence in the
 Stance section with the row as its receipt.
 
@@ -113,11 +114,15 @@ costs seconds. (Same-date only, deliberately: D±1 scores 14 near-title pairs ov
 calendar and none is a re-slug — nine are Treasury auctions running a different tenor each day. The
 falsifier is the first confirmed same-release re-slug whose entries carry different dates.)
 
-Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new file
+Any adjacent event with a **date** discovered during the sweep that falls **inside the research
+horizon** (`assessment-cadence.json`'s `horizon`: nothing past `maxDaysOut`, and past
+`allImpactsWithinDays` only critical/high) is PROPOSED as a new file
 `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` **in the same PR**, always
 `status: "estimate"` (`EST:`/`NEWS:` source) — never `confirmed` without a primary source. That
-proposal is how the calendar feeds itself. **One file per owner** (issues #1449, #1717): your own
-event's amendments (a status flip, a source, a notes update) go in
+proposal is how the calendar feeds itself. One past the horizon is named in your ledger row instead
+(#2946): it can never become due, so a calendar file for it is clutter, while prose in a row is
+free. **One file per owner** (issues #1449, #1717): your own event's amendments (a status flip, a
+source, a notes update) go in
 `src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal is a brand-new file
 that *you* own, named by the event it proposes and by you, so two sweeps discovering the same
 event on the same day never create the same path (that add/add was the last conflict class left
@@ -232,11 +237,14 @@ protocol above, unchanged.
 
 This is the probe's one source of truth for "what did we see last time" — embedded in the ledger
 itself (not a sidecar file), because the ledger is already this system's single source of truth
-per event. It is **replaced in place** on every pulse (screen or full session), never appended —
-distinct from the assessment ledger table, which stays strictly append-only. `TEMPLATE.md` shows
-where it goes; **initial research must populate it with real readings**, or the event's first
-`interval-elapsed` pulse has nothing to diff against and is automatically material (the safe
-default — see below) rather than a wasted "establish the baseline" session.
+per event. Every pulse (screen or full session) **appends** a fresh `**Last assessed:**` + probe-ref
+pair at the true end of the file and never edits an earlier pair — two pulses rewriting one header
+line collide as a same-logic conflict, while two appends are disjoint additions the conflict-repair
+lane resolves mechanically (docs/LESSONS.md, 2026-09-19) — and every reader takes the **last** pair
+in the file. `TEMPLATE.md` shows where the first pair goes; **initial research must populate it
+with real readings**, or the event's first `interval-elapsed` pulse has nothing to diff against and
+is automatically material (the safe default — see below) rather than a wasted "establish the
+baseline" session.
 
 **What counts as material** (the defaults `scripts/event-material-decide.mjs` ships with, chosen
 because Eric approved "use the proposed defaults" before a concrete one existed — full reasoning
