@@ -7,7 +7,11 @@ import type {
   QuoteStreamPort,
   StreamedQuote,
 } from "../../src/server/quote-stream-hub.js";
-import { QUOTE_STREAM_PATH, serveQuoteStream } from "../../src/server/quote-stream-route.js";
+import {
+  MAX_STREAM_REQUEST_SYMBOLS,
+  QUOTE_STREAM_PATH,
+  serveQuoteStream,
+} from "../../src/server/quote-stream-route.js";
 
 /**
  * The pushed quote (#3407 P4): identity from the session and nowhere else, every refusal a
@@ -210,5 +214,122 @@ describe("serveQuoteStream", () => {
     expect(out.chunks[0]).toContain("event: hello");
     expect(out.chunks[1]).toContain("event: quote");
     expect(dataOf(out.chunks[1] ?? "")).toMatchObject({ last: 140 });
+  });
+
+  // ONE STREAM CARRIES A SET (#4332, the watchlist) — a browser allows six EventSources per
+  // origin, so a connection per row would starve the seventh name.
+  describe("a set of symbols", () => {
+    it("subscribes every name on one connection and names the live ones in the hello", () => {
+      const { res, out } = fakeRes();
+      const hub = fakeHub();
+      serveQuoteStream(
+        get(url("nvda,aapl,tsla")),
+        res,
+        QUOTE_STREAM_PATH,
+        configWith({ quoteStream: hub.port }),
+        session,
+      );
+      expect(hub.asked.map((a) => a.symbol)).toEqual(["NVDA", "AAPL", "TSLA"]);
+      expect(out.headers?.["content-type"]).toBe("text/event-stream");
+      expect(dataOf(out.chunks[0] ?? "")).toMatchObject({
+        symbol: "NVDA",
+        symbols: ["NVDA", "AAPL", "TSLA"],
+      });
+    });
+
+    it("releases every subscription when the client goes away", () => {
+      const { res } = fakeRes();
+      const hub = fakeHub();
+      const req = get(url("NVDA,AAPL"));
+      serveQuoteStream(req, res, QUOTE_STREAM_PATH, configWith({ quoteStream: hub.port }), session);
+      expect(hub.listeners.size).toBe(2);
+      req.emit("close");
+      expect(hub.listeners.size).toBe(0);
+    });
+
+    it("asks for a repeated name once", () => {
+      const { res } = fakeRes();
+      const hub = fakeHub();
+      serveQuoteStream(
+        get(url("NVDA,nvda, NVDA ")),
+        res,
+        QUOTE_STREAM_PATH,
+        configWith({ quoteStream: hub.port }),
+        session,
+      );
+      expect(hub.asked.map((a) => a.symbol)).toEqual(["NVDA"]);
+    });
+
+    it("refuses the whole request when any member isn't a ticker, rather than dropping it", () => {
+      // Silently skipping one name opens a stream that looks complete and is missing a row.
+      const { res, out } = fakeRes();
+      const hub = fakeHub();
+      serveQuoteStream(
+        get(url("NVDA,NOT_A_TICKER")),
+        res,
+        QUOTE_STREAM_PATH,
+        configWith({ quoteStream: hub.port }),
+        session,
+      );
+      expect(out.status).toBe(400);
+      expect(hub.asked).toEqual([]);
+    });
+
+    it("refuses a set larger than the per-request cap", () => {
+      const { res, out } = fakeRes();
+      const hub = fakeHub();
+      // Every member is a VALID ticker, so the cap is the only thing that can refuse this.
+      const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const many = Array.from(
+        { length: MAX_STREAM_REQUEST_SYMBOLS + 1 },
+        (_, i) => `${alpha[i % 26]}${alpha[Math.floor(i / 26)]}`,
+      );
+      serveQuoteStream(
+        get(url(many.join(","))),
+        res,
+        QUOTE_STREAM_PATH,
+        configWith({ quoteStream: hub.port }),
+        session,
+      );
+      expect(out.status).toBe(400);
+      expect(hub.asked).toEqual([]);
+    });
+
+    it("opens for the names that fit and leaves the rest without a frame", () => {
+      // A partial set is an honest answer: a symbol that didn't make it never receives a frame, so
+      // it keeps its REST price and — having no `asOf` — claims nothing about freshness.
+      const { res, out } = fakeRes();
+      const listeners = new Set<QuoteListener>();
+      const budgeted: QuoteStreamPort = {
+        subscribe(_requesterId, symbol, listener) {
+          if (symbol !== "NVDA") return { ok: false, reason: "budget full" };
+          listeners.add(listener);
+          return { ok: true, unsubscribe: () => listeners.delete(listener) };
+        },
+      };
+      serveQuoteStream(
+        get(url("NVDA,AAPL")),
+        res,
+        QUOTE_STREAM_PATH,
+        configWith({ quoteStream: budgeted }),
+        session,
+      );
+      expect(out.headers?.["content-type"]).toBe("text/event-stream");
+      expect(dataOf(out.chunks[0] ?? "").symbols).toEqual(["NVDA"]);
+    });
+
+    it("declines in JSON when NOTHING could be subscribed, as the single-symbol case always has", () => {
+      const { res, out } = fakeRes();
+      const hub = fakeHub("budget full");
+      serveQuoteStream(
+        get(url("NVDA,AAPL")),
+        res,
+        QUOTE_STREAM_PATH,
+        configWith({ quoteStream: hub.port }),
+        session,
+      );
+      expect(out.headers?.["content-type"]).not.toBe("text/event-stream");
+      expect(JSON.parse(out.body ?? "{}")).toEqual({ available: false, reason: "budget full" });
+    });
   });
 });

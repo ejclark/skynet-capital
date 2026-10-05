@@ -1,0 +1,145 @@
+/* The watchlist pane (#3407 P4 / #4332) — the member's own names with their prices moving, one tap
+ * from any row onto the bench. Mobile-first: at 390px a row is the symbol and its price stacked
+ * under each other inside one full-width tap target, with the remove control pinned right; the
+ * wider layout only adds room, putting symbol and price on one line (CLAUDE.md — expand a curated
+ * phone view, never shrink a desktop one).
+ *
+ * Own file for the same reason `working-orders.css` has one: `ticket.css` is already the largest
+ * stylesheet on this surface and the line cap counts it.
+ *
+ * Nothing here rides on hue. The day's move carries a glyph and a sign (`quote-change.tsx`), the
+ * live mark is a word plus `◦`, and a row's tap target is drawn by border and weight. */
+
+.wl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* Short rows, not a grid: capped by the SHAPE of what it holds (theme.css's width scale). The
+     pane is full-span when docked, and a four-character ticker with its price stranded in the
+     left third of 1800px is a worse page, not a fuller one. */
+  max-width: var(--col-read);
+}
+
+/* The add control: the symbol field, and the one-tap offer for whatever is on the bench. Wraps to
+   its own line at 390px rather than squeezing the field (`symbol-field.css` owns the field). */
+.wl-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+.wl-add-committed {
+  white-space: nowrap;
+}
+
+.wl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.wl-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.wl-row:last-child {
+  border-bottom: 0;
+}
+
+/* The row IS the "open this on the bench" action, so the whole row is the button — a phone target
+   the width of the pane, rather than a small link beside the price. */
+.wl-pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-1);
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wl-pick:hover .wl-sym,
+.wl-pick:focus-visible .wl-sym {
+  text-decoration: underline;
+}
+
+.wl-sym {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+/* Price, move and live mark as one group, so they wrap together under the symbol at 390px instead
+   of the percent breaking away from the dollars. */
+.wl-price {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--text-base);
+}
+.wl-last {
+  font-weight: 600;
+}
+.wl-pending {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.wl-drop {
+  flex: 0 0 auto;
+  /* 32px square: a comfortable thumb target next to a full-width row button without stealing
+     width from the price at 390px. */
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+.wl-drop:hover:not(:disabled),
+.wl-drop:focus-visible {
+  color: inherit;
+  border-color: currentcolor;
+}
+.wl-drop:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.wl-count {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  max-width: 70ch;
+}
+.wl-refusal {
+  margin: 0;
+}
+
+/* Added room, not a new concept: above the fold-out width the symbol and its price sit on one
+   line, which is what the phone layout was already wrapping. */
+@media (width >= 700px) {
+  .wl-pick {
+    flex-wrap: nowrap;
+    gap: var(--space-4);
+  }
+  .wl-sym {
+    min-width: 4.5rem;
+  }
+}
