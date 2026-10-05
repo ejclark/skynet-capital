@@ -7,14 +7,15 @@ import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
+import type { ReadRoadmap } from "../server/roadmap.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of six read-only lookups plus one
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of seven read-only lookups plus one
  * hand-off (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
  * to send), and nothing else. This is the structural half of the "never fires an order" invariant (the other
- * half is the system prompt): `runCompanionTool` is a `switch` over seven literal string cases
+ * half is the system prompt): `runCompanionTool` is a `switch` over eight literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
  * function. This file does not import `trade-service.ts`, `option-trade-service.ts`,
@@ -30,11 +31,13 @@ import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
  * public play catalog, a chain read through their own linked account) — never another member's
  * account, never a write.
  *
- * The one exception to "the member's own": `get_work_status` (#3952) is the FIRST tool that reads
- * SHARED WORK RECORDS — any issue or PR on the public repo, not this member's account. It is
- * still read-only, still inside the invite gate (the chat route is authed-only), and the thread
- * text it returns is filtered to trusted authors and quoted as data in `server/work-status.ts`,
- * because on a public repo anyone on the internet can write a comment.
+ * The exceptions to "the member's own" are the two SHARED WORK RECORD reads (#3952):
+ * `get_work_status` (slice 1 — one named issue or PR on the public repo) and `get_roadmap`
+ * (slice 3 — the open plan queue, grouped Now / Next / Later). Both are read-only, both stay
+ * inside the invite gate (the chat route is authed-only), and both return only structured fields
+ * with every string filtered to trusted authors in `server/work-status.ts` and
+ * `server/roadmap.ts`, because on a public repo anyone on the internet can write a title or a
+ * comment. `get_roadmap` returns no bodies and no comments at all.
  */
 
 export const COMPANION_TOOL_NAMES = [
@@ -44,6 +47,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_play_catalog",
   "get_structures_for_outlook",
   "get_work_status",
+  "get_roadmap",
   "draft_feedback",
 ] as const;
 
@@ -110,9 +114,10 @@ export function parseOutlook(input: unknown): Outlook | { readonly error: string
 
 export type CompanionToolName = (typeof COMPANION_TOOL_NAMES)[number];
 
-/** The two tools that read no member data — declared even when the session has no linked desk. */
+/** The tools that read no member data — declared even when the session has no linked desk. */
 const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
   "get_work_status",
+  "get_roadmap",
   "draft_feedback",
 ]);
 
@@ -186,6 +191,12 @@ export const COMPANION_TOOL_DEFS = [
     },
   },
   {
+    name: "get_roadmap",
+    description:
+      "What is coming on the Skynet Capital build queue: openPlans (how many open plans there are), then groups — Now, Next and Later, each with its meaning, its total, and up to 8 of its most recently touched items (number, quoted title, member-facing status, labels, url). Use it for 'what's coming next', 'what's on the roadmap', 'are you building X'. The grouping is SEQUENCING derived from each plan's own labels — never a delivery date, and never a promise that an item ships; say so if the member reads it that way. truncated: true (when present) means the queue outran what one read covers, so every total is a floor, not a count. Returns no issue bodies and no comments. Takes no input; read-only.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "draft_feedback",
     description:
       "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed, in their latest message, to report something. Returns captured: true and a status line, plus `similar` open feedback issues when any look like duplicates; returns an error when title or details is missing (a missing or unrecognized kind is drafted as an idea).",
@@ -227,6 +238,9 @@ export interface CompanionDeskDeps {
   /** #3952: where any issue stands, read off the public repo with the feedback lane's token.
    *  Optional — without it `get_work_status` says "not available", never guesses. */
   readonly readWorkStatus?: ReadWorkStatus;
+  /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
+   *  Optional — without it `get_roadmap` says "not available", never guesses. */
+  readonly readRoadmap?: ReadRoadmap;
 }
 
 export type CompanionToolResult =
@@ -363,14 +377,23 @@ async function workStatusResult(
   return { ok: true, result: { issues: await read(parsed) } };
 }
 
+async function roadmapResult(read: ReadRoadmap | undefined): Promise<CompanionToolResult> {
+  if (!read) return { ok: false, error: "the roadmap isn't available on this deployment" };
+  const roadmap = await read();
+  // A failed read is an honest refusal, never a short roadmap: "available: false" would read to
+  // the model as "nothing is planned" (#3952 criterion 4).
+  if (!roadmap.available) return { ok: false, error: "couldn't read the build queue right now" };
+  return { ok: true, result: roadmap };
+}
+
 /**
- * Run ONE of the seven allow-listed tools. Any other name — including anything a compromised or
+ * Run ONE of the eight allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
  * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
- * then refuse honestly, and only `draft_feedback` and `get_work_status` — which read no member
- * data, only the public issue queue — still answer.
+ * then refuse honestly, and only `draft_feedback`, `get_work_status` and `get_roadmap` — which
+ * read no member data, only the public issue queue — still answer.
  */
 export async function runCompanionTool(
   name: string,
@@ -416,6 +439,8 @@ export async function runCompanionTool(
       return structuresResult(deps.rankFor, participantId, input);
     case "get_work_status":
       return workStatusResult(deps.readWorkStatus, input);
+    case "get_roadmap":
+      return roadmapResult(deps.readRoadmap);
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized
       // name (a typo, a hallucination, an adversarial member steering the model) lands here and
