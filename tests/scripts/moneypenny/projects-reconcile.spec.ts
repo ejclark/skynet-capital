@@ -115,6 +115,39 @@ describe("planReconcile: which cards sit in the wrong column", () => {
   });
 });
 
+// #3939 slice 4 (#4320), the done-when: "WHEN a built-in workflow and label-derived Status write one
+// close event, the board SHALL show one consistent Status." The slice settled on keeping
+// projects-sync whole (see statusForIssue()'s block in projects.mjs for the three findings), so what
+// has to hold is CONVERGENCE, not exclusivity: whatever value some other writer leaves on a closed
+// card — a built-in workflow, a hand-drag in the UI, a half-finished sweep — the next sweep lands on
+// exactly one answer and then stops moving it. Idempotence is the half that makes a second writer
+// harmless; without it, two writers oscillate.
+describe("planReconcile: one consistent Status, whatever else wrote the card (#4320)", () => {
+  const STATUSES = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
+
+  it("converges a closed card on Done from every column a second writer could leave it in", () => {
+    for (const have of STATUSES) {
+      const drift = planReconcile({ items: [card(42, have)], openIssues: [] });
+      expect(drift).toEqual(have === "Done" ? [] : [{ number: 42, have, want: "Done" }]);
+    }
+  });
+
+  it("is idempotent — the sweep that moved a card reports nothing to do on the next run", () => {
+    const items = [card(42, "In Progress"), card(43, "Blocked")];
+    const openIssues = [open(43, ["ready"])];
+    const first = planReconcile({ items, openIssues });
+    expect(first).toEqual([
+      { number: 42, have: "In Progress", want: "Done" },
+      { number: 43, have: "Blocked", want: "Ready" },
+    ]);
+    const settled = items.map((item) => ({
+      ...item,
+      status: first.find((d) => d.number === item.content?.number)?.want ?? item.status,
+    }));
+    expect(planReconcile({ items: settled, openIssues })).toEqual([]);
+  });
+});
+
 describe("boardIssueNumber", () => {
   it("reads this repo's issue url and nothing else", () => {
     expect(boardIssueNumber(card(4393, "Ready"))).toBe(4393);

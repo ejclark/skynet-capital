@@ -63,6 +63,42 @@ export const FIELDS = [
   { name: "Target date", dataType: "DATE" },
 ];
 
+// THIS FUNCTION IS THE BOARD'S ONLY STATUS WRITER, ON PURPOSE — #3939 slice 4, the board half of
+// the 2026-10-03 sunset review (docs/COACHES.md). The plan's hypothesis was that GitHub Projects'
+// built-in workflows ("Item closed → Done", "Item reopened", "Auto-add to project") do part of this
+// natively, so the matching code here could be deleted. Three findings killed it; the next session
+// that has the same idea should read them before writing any:
+//
+//   1. NO LANE CAN TURN ONE ON. GitHub's GraphQL schema exposes `ProjectV2.workflows` read-only
+//      (`name`, `number`, `enabled`) and exactly one mutation, `deleteProjectV2Workflow` — no
+//      create, no update, no enable (introspected live 2026-10-05 against the real API). Enabling
+//      one is a click in the Projects UI: not in this repo, not covered by a spec, not readable from
+//      CI without Eric's PROJECTS_PAT. A board rule nothing here can set or assert is worse than a
+//      pure function, whatever it saves.
+//   2. THERE IS NOTHING LEFT TO SUBTRACT. projects-reconcile.mjs (#4393) landed after that plan was
+//      written and makes this rule the authority on every column INCLUDING Done — it exists because
+//      closed cards got stuck outside Done when the event job's run was dropped. `state === "closed"`
+//      below is read by that sweep, projects-backfill.mjs, issues.mjs's column preview and
+//      issue-lint.mjs. Deleting it breaks four callers to save one line, and the sweep already heals
+//      a dropped close event, which is the only thing the built-in would have covered.
+//   3. TWO OF THEM WOULD ACTIVELY DISAGREE. "Item reopened" writes one fixed value; the rule below
+//      derives Backlog/Ready/Blocked/In Progress from the labels a reopened issue still carries, so
+//      a reopened `ready` issue would sit in the wrong column until the next push-triggered sweep
+//      overwrote it. "Auto-add to project" filters on creation and cannot express
+//      `isBacklogCandidate` for a `ci-failure` label applied afterwards.
+//
+// Evidence the built-ins are not acting on project #2 today, independent of the schema: on
+// 2026-10-01 closed issues (#3953 among them) sat in In Progress until #4393 built the sweep. A live
+// "Item closed → Done" moves those on their own close event, regardless of our rate limit — it did
+// not. Verdict: keep projects-sync whole; leave the built-ins off.
+//
+// WHAT PROVES THIS WRONG, and it is one line Eric or any session holding the PAT can paste:
+//   gh api graphql -f query='query{user(login:"ejclark"){projectV2(number:2){
+//     workflows(first:20){nodes{name enabled}}}}}'
+// Any node with `enabled: true` means the board has a second writer and this block is stale — then
+// reconcile the two deliberately rather than leaving them to race. (This lane's App token is blind
+// to a personal-account project, so that read was NOT performed here. Said plainly, not "verified".)
+//
 /**
  * The sync rule from #3818 slice B, as one pure decision: given what's already knowable about an
  * issue from labels/state/linked PRs (never a network call itself), which Status column does it
