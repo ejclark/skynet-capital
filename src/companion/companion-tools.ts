@@ -110,24 +110,39 @@ export function parseOutlook(input: unknown): Outlook | { readonly error: string
 
 export type CompanionToolName = (typeof COMPANION_TOOL_NAMES)[number];
 
+/** The two tools that read no member data — declared even when the session has no linked desk. */
+const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
+  "get_work_status",
+  "draft_feedback",
+]);
+
+/** The tool names one turn declares: every tool for a member with a linked desk, otherwise only
+ *  the deskless two. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
+ *  refusal both read this, so the refusal never names a tool the turn didn't offer. */
+export function declaredToolNames(participantId: string | undefined): readonly CompanionToolName[] {
+  return participantId
+    ? COMPANION_TOOL_NAMES
+    : COMPANION_TOOL_NAMES.filter((n) => DESKLESS_TOOLS.has(n));
+}
+
 /** The Anthropic `tools` array — schemas only, no executable reference. */
 export const COMPANION_TOOL_DEFS = [
   {
     name: "get_my_positions",
     description:
-      "The member's own current holdings: symbol, quantity, average price, market value, and cash. Read-only.",
+      "The member's own current holdings on their linked paper account: cash, equity, and one row per open position with symbol, quantity, avgPrice and marketValue. Use it when a question is about what they hold or what a holding is worth now and the MEMBER CONTEXT block doesn't already answer it. Covers only this member's account; returns 'no linked desk' when they have no linked account. Read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "get_my_round_trips",
     description:
-      "The member's own closed trades (FIFO-matched round trips): symbol, entry/exit price, realized P/L, hold time. Read-only; at most the 10 most recent.",
+      "The member's own closed trades, FIFO-matched into round trips — the 10 most recent, oldest first. Each row: symbol, quantity, entryPrice, exitPrice, realized (P/L in dollars), returnPct, closedAt, and soldToOpen: true on a written (sold-to-open) option contract, where an exit near $0 means the writer kept the premium — read the outcome from realized, never from the price pair. Also returns openLots (lots still open), truncated (true when a stock sale had no visible opening lot, so the share record is a window, not the whole history) and writtenContracts (option contracts read as written — the options form of that caveat). It has no open dates or hold times. Returns 'no linked desk' when the member has no linked account. Read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "get_my_curriculum_progress",
     description:
-      "The member's own learning progress: training-wheels state, points, rank, milestones earned, and the next play to unlock. Read-only.",
+      "The member's own progress on the trading ladder: wheels (true when training wheels are on, restricting trading to unlocked rungs), points, rank, earnedCount (how many ladder rungs they have earned — a count, not the list), unlocked (the rung codes open to them, e.g. 101, 102), nextUp (the rung code to chase next; absent when nothing is next: a complete ladder, or one not open yet) and ladderGated (present, true, only while the ladder is not open yet: training wheels on and no message to Moneypenny or feedback filing recorded yet, so unlocked holds only rungs already earned). Use it for questions about rank, points or what unlocks next; onboarding steps and filings are in the MEMBER CONTEXT block, not here. Returns an error when no progression data exists for this member. Read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -173,7 +188,7 @@ export const COMPANION_TOOL_DEFS = [
   {
     name: "draft_feedback",
     description:
-      "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed to report something; then ask them exactly one clarifying question, or tell them to reply 'send' if nothing is missing.",
+      "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed, in their latest message, to report something. Returns captured: true and a status line, plus `similar` open feedback issues when any look like duplicates; returns an error when title or details is missing (a missing or unrecognized kind is drafted as an idea).",
     input_schema: {
       type: "object",
       properties: {
@@ -279,6 +294,8 @@ function progressionResult(view: ParticipantProgression | undefined): CompanionT
       nextUp: view.nextUp,
       earnedCount: view.earned.length,
       unlocked: [...view.unlocked],
+      // Without this a ladder that hasn't opened (no `nextUp`) reads as a finished one.
+      ...(view.ladderGate ? { ladderGated: true } : {}),
     },
   };
 }
@@ -340,7 +357,7 @@ async function workStatusResult(
   if (!read) {
     return {
       ok: false,
-      error: "issue status isn't available on this deployment — say so plainly, never guess one",
+      error: "issue status isn't available on this deployment",
     };
   }
   return { ok: true, result: { issues: await read(parsed) } };
@@ -365,7 +382,7 @@ export async function runCompanionTool(
   switch (name as CompanionToolName) {
     case "draft_feedback": {
       const draft = parseFeedbackDraft(input);
-      if (!draft) return { ok: false, error: "a draft needs a kind, a title and details" };
+      if (!draft) return { ok: false, error: "a draft needs a title and details" };
       deps.onDraft?.(draft);
       // Advisory only (#1867 slice 1) — a search failure or empty match list never blocks or
       // reshapes the draft; `send` still always files it unmodified. `similar` is left OFF the
@@ -376,7 +393,7 @@ export async function runCompanionTool(
         ok: true,
         result: {
           captured: true,
-          next: "The rail now holds this draft. Ask the member exactly one clarifying question if something material is missing; otherwise tell them to reply 'send'. Their reply files it — nothing is sent yet.",
+          status: "held in the rail, not sent — the member's own reply 'send' files it",
           ...(similar.length > 0 ? { similar } : {}),
         },
       };
@@ -402,7 +419,11 @@ export async function runCompanionTool(
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized
       // name (a typo, a hallucination, an adversarial member steering the model) lands here and
-      // nowhere else.
-      return { ok: false, error: `no such tool: ${name}` };
+      // nowhere else. Naming the declared tools lets a typo recover; the list is this turn's own
+      // `tools` array (`declaredToolNames`), so it never offers a tool the turn didn't declare.
+      return {
+        ok: false,
+        error: `no such tool: ${name} (the declared tools are ${declaredToolNames(participantId).join(", ")})`,
+      };
   }
 }

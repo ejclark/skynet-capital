@@ -100,9 +100,6 @@ because the before-frame came from the broken harness and the after-frame from t
 
 > Before trusting a comparison: run the same capture twice and diff it. If two identical inputs don't
 > produce (near-)identical outputs, you have no instrument and any conclusion is noise.
-> Known residual: the crown smoke is an unseeded `ParticleSystem` — ~55% of the Eye region varies run to
-> run. Until it is seeded against `kit/rng.ts`, byte-comparison is not available and a golden-image gate
-> is not viable.
 
 ---
 

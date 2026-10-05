@@ -14,10 +14,8 @@ description: >-
 
 This is a meta-skill: it doesn't touch application code, it produces (or explicitly declines to produce)
 `.claude/agents/*.md` files. It exists because building the wrong agent is cheap to do and expensive to
-notice — `render-alchemist` sat with a clear mandate and, by one measure, fired zero times; a later audit
-in the same repo found it had actually fired repeatedly, just never in the exact output mode its own spec
-described. Both the false negative and the real gap it pointed at are why this process exists: it is easy
-to be wrong about whether an agent is earning its place in either direction.
+notice, and it is easy to be wrong in either direction about whether an agent is earning its place — an
+agent can look idle while it is in real use in a mode its own spec never described.
 
 ## The process
 
@@ -105,8 +103,10 @@ plain-functional for debt/process agents, forge-lore-adjacent only where the exi
 uses that register), `description` (states the trigger and scope precisely enough that routing doesn't
 collide with an existing agent — name the adjacent agent and the boundary explicitly if there's any risk
 of overlap, the way `red-team`/`reviewer` and `red-team`/`/security-review` each state their boundary),
-`tools` (minimum needed — a research-only agent gets no `Edit`/`Write`), `model` (`sonnet` for mechanical
-debt work, `opus` for research/judgment-heavy work).
+`tools` (minimum needed — a research-only agent gets no `Edit`/`Write`), and `model` + `effort` at or
+above the floor `docs/COMPUTE.md` → *The floor table* sets for the agent's task class (aliases only);
+add the agent's row to that doc's `FLOOR-TABLE` block, which `scripts/config-audit.mjs` checks every
+agent against.
 
 ### 5.5 Codification pre-mortem — pressure-test the compression before it ships
 
