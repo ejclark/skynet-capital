@@ -9,7 +9,7 @@ outcomeCheck: 'test "$(curl -sSf -H "Authorization: Bearer $GITHUB_TOKEN" -H "Ac
 
 # Split one plan into sub-issues — the backfill behind docs/ISSUES.md → *Slices as sub-issues*
 
-First run: #4056 by hand (children #4206–#4212, 3 filed closed).
+A finished example: #4056 (children #4206–#4212, three of them filed closed because they had already shipped).
 
 **Calling convention:** items are open issue numbers (`"3977"`). `isolation: none` — no checkout,
 no file edits; the deliverable is GitHub state (child issues, links, a state-block edit). Items are

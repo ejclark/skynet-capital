@@ -10,7 +10,7 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/triage-comment-bloat.instructions.md`
-rather than transcribing these values by hand. `effort: high` because every flagged comment is a keep-or-delete judgment where the expensive direction is a real invariant deleted (the tiger team's objection when this chore was adopted), and `docs/COMPUTE.md` puts anything that judges at `high` — `low` was a cost-first default. `isolation: worktree` because step 1 below does its own
+rather than transcribing these values by hand. `effort: high` because every flagged comment is a keep-or-delete judgment where the expensive direction is a real invariant deleted, and `docs/COMPUTE.md` puts anything that judges at `high`. `isolation: worktree` because step 1 below does its own
 `git checkout -B`, and without a fresh worktree per item, concurrent items share one working
 directory and stomp on each other's checkout.
 
@@ -32,8 +32,12 @@ either delete the narration or leave it, one comment at a time, without changing
 
 1. `git fetch origin main && git checkout -B docs/triage-comment-bloat-<slug> origin/main`, then
    `bash scripts/worktree-setup.sh`.
-2. `node scripts/comment-bloat-scan.mjs --candidate` only to confirm the target file is still
-   flagged — don't re-pick a different file.
+2. Confirm the target file is still flagged: test its comment lines against the four regexes in
+   `NARRATION_PATTERNS` (`scripts/comment-bloat-scan.mjs`), case-insensitively. They are
+   JavaScript regexes, so use `grep -niP`, or `grep -niE` with each `\d` rewritten as `[0-9]`
+   (GNU `grep -E` has no `\d`; a literal copy matches nothing). `--candidate` names only the
+   single worst file, so it cannot confirm an arbitrary target. If nothing matches any more,
+   report `status: "skipped"` with "no longer flagged". Don't re-pick a different file.
 3. Open the flagged file and read every comment the scan matched (a bare `(#123)` citation, "PR
    #N", "issue #N", or "added/removed/used by/handles the case from"). For each one, read the
    surrounding code and decide:

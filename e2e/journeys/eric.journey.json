@@ -165,7 +165,7 @@
           "sees": "the book — no standing 'wait' anywhere, no date that reopens the question",
           "ears": "WHEN the owner has decided to wait, the app shall carry the wait on the book with the date that reopens it.",
           "expect": [{ "text": "Wait until", "within": "main" }],
-          "known_gap": "'wait' is per-position only (src/options/position-guidance-rules.ts:231 CALL_WORDS.WAIT); nothing at book level carries a wait or the date that reopens it, and the calendar's range never reaches /accounts",
+          "known_gap": "'wait' is per-position only (src/options/position-guidance-rules.ts:231 CALL_WORDS.WAIT); nothing at book level carries a wait or the date that reopens it",
           "where": "src/options/position-guidance-rules.ts:231",
           "severity": "medium",
           "fix": "L",
