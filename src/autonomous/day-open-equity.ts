@@ -17,7 +17,9 @@ export function parseDayOpenEquity(account: AlpacaAccount): number | null {
   const raw = account.last_equity;
   // `Number("")` coerces to 0, not NaN — an empty/whitespace string must fail explicitly, or a
   // malformed payload could seed the breaker with a false $0 baseline instead of falling back.
-  if (raw === undefined || raw.trim() === "") return null;
+  // The type says string, but the payload is JSON from the wire: a null or a number must fall back,
+  // never throw.
+  if (typeof raw !== "string" || raw.trim() === "") return null;
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }

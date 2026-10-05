@@ -6,8 +6,7 @@
  * (`scripts/arch-scan.mjs`'s sibling lint gate) — everything here is wiring, no state of its own.
  */
 
-import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
+import type { AlpacaAccount } from "../alpaca/alpaca-trading-client.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
 import {
   type ControlsState,
@@ -25,7 +24,7 @@ import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
-import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
+import type { Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookSubscription } from "../domain/types.js";
@@ -36,11 +35,16 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import { mergeRosters, subscriptionRoster } from "../subscriptions/subscription-roster.js";
-import { ownedOptionRoster } from "./autonomous-option-wiring.js";
+import {
+  optionReadWarn,
+  optionTraderConfig,
+  ownedOptionRoster,
+} from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
 
 const HARDCORE_COOLDOWN_MS = 90_000;
@@ -108,24 +112,17 @@ export async function bootMissionControl(
  * forgiving the day's drawdown so far. A read failure here simply leaves the baseline unset — the
  * pre-existing first-`recordEquity` fallback in `safety.ts` takes over exactly as it always has;
  * this can only make the correct case (a real day-open number) possible, never the fallback worse.
+ * The accounts come from the one boot read (`readBootAccounts`); a bot whose read failed drops the
+ * whole seed, never a partial one (`fleetDayOpenEquity`).
  */
-export async function seedDailyLossBaseline(
-  bots: readonly Bot[],
+export function seedDailyLossBaseline(
+  accounts: ReadonlyMap<string, AlpacaAccount | undefined>,
   safety: SafetyController,
-): Promise<void> {
+): void {
+  // The read already cannot throw (`readBootAccounts`); this catch keeps the parse and the seed
+  // just as non-fatal, so a malformed payload never stops every bot at boot.
   try {
-    const perBotEquity = await Promise.all(
-      bots.map(async (bot) => {
-        const client = new AlpacaTradingClient(
-          new FetchAlpacaTradingTransport({
-            baseUrl: bot.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
-            apiKey: bot.credentials.apiKey,
-            apiSecret: bot.credentials.apiSecret,
-          }),
-        );
-        return parseDayOpenEquity(await client.getAccount());
-      }),
-    );
+    const perBotEquity = [...accounts.values()].map((a) => (a ? parseDayOpenEquity(a) : null));
     const seed = fleetDayOpenEquity(perBotEquity);
     if (seed === null) {
       console.warn(
@@ -284,7 +281,8 @@ export function resolveBotRoster(
 
 /** The two subscription-sensitive halves of a bot's trader config. */
 export interface TradingRoster {
-  /** The base persona with this roster's playbooks composed on (`withPlaybooks`). */
+  /** The base persona with this roster's playbooks composed on (`withPlaybooks`), wrapped in expiry
+   *  hygiene (`withOptionSafety`). */
   readonly persona: Persona;
   /** The risk config the guards read — capital allocations and symbol filters ride here. */
   readonly risk: RiskConfig;
@@ -306,8 +304,13 @@ export function tradingRoster(
     // Playbook Store subscription names them.
     // `console` is the live runtime's log sink: an opted-in playbook's mixed-signals readings
     // (#3194 step 5b-i) land beside the `[playbooks]`/`[gate]` lines. Observe-only — the sink
-    // never feeds back into a decision.
-    persona: withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS, [], console),
+    // never feeds back into a decision. Expiry hygiene wraps it all, so a contract on the account is
+    // looked after even with no option playbook subscribed (`with-option-safety.ts`).
+    persona: withOptionSafety(
+      withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS, [], console),
+      roster.enabled,
+      UPCOMING_PRINTS,
+    ),
     risk: {
       ...baseRisk,
       subscriptions: roster.subscriptions,
@@ -373,18 +376,19 @@ export function buildLiveBot(
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
   // client this bot trades with in place, without restarting the process (and therefore
   // without losing any bot's in-memory momentum/sentiment/cooldown state).
-  const broker = new SwappableBotBroker(
-    bot,
-    opts.activityBus
+  const broker = new SwappableBotBroker(bot, {
+    ...(opts.activityBus
       ? { onSubmitted: botOrderPublisher(bot.persona.id, opts.activityBus) }
-      : undefined,
-  );
+      : {}),
+    onOptionReadError: optionReadWarn(bot.persona.id),
+  });
   return {
     personaName: bot.persona.name,
     broker,
     trader: new AutonomousTrader({
       persona: opts.trading.persona,
       broker,
+      ...optionTraderConfig(broker),
       risk: opts.trading.risk,
       mode: effectiveMode,
       // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.

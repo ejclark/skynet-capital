@@ -2,6 +2,9 @@ import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-
 import { isBareContractOrder } from "../domain/option-order.js";
 import type { OrderIntent, OrderResult, Portfolio, Side } from "../domain/types.js";
 import type { BrokerPort } from "../ports/broker.js";
+import type { OptionOrderTracker } from "../ports/option-market.js";
+import type { AlpacaOptionOrderFlow } from "./alpaca-option-order-flow.js";
+import { portfolioFromAlpaca } from "./alpaca-portfolio.js";
 
 /** Attempts × delay for the post-fill poll below — Alpaca paper orders "usually" fill near-
  *  instantly but not on the `placeOrder` response itself (this module's own prior doc comment).
@@ -74,8 +77,9 @@ export interface BotOrderSubmission {
  * a queued after-hours order, or a fill slower than the poll (#4655). It used to call any accepted
  * order "filled" at the asked quantity with no price, which logged orders that never traded.
  */
-export class AlpacaBrokerAdapter implements BrokerPort {
+export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
   private readonly client: AlpacaTradingClient;
+  private readonly optionFlow?: AlpacaOptionOrderFlow;
   private readonly onSubmitted?: (info: BotOrderSubmission) => void;
   private readonly now: () => Date;
   private readonly fillPollAttempts: number;
@@ -91,6 +95,9 @@ export class AlpacaBrokerAdapter implements BrokerPort {
    *
    * `deps.sleep`/`fillPollAttempts`/`fillPollDelayMs` exist so tests can poll instantly and
    * deterministically rather than waiting on real timers or retry counts.
+   *
+   * `deps.optionFlow` is where an option order goes (`alpaca-option-order-flow.ts`); without one,
+   * every option order is refused — nothing option-shaped can reach the share path below.
    */
   constructor(
     client: AlpacaTradingClient,
@@ -100,9 +107,11 @@ export class AlpacaBrokerAdapter implements BrokerPort {
       sleep?: (ms: number) => Promise<void>;
       fillPollAttempts?: number;
       fillPollDelayMs?: number;
+      optionFlow?: AlpacaOptionOrderFlow;
     },
   ) {
     this.client = client;
+    if (deps?.optionFlow) this.optionFlow = deps.optionFlow;
     this.onSubmitted = deps?.onSubmitted;
     this.now = deps?.now ?? (() => new Date());
     this.sleep = deps?.sleep ?? sleep;
@@ -132,38 +141,43 @@ export class AlpacaBrokerAdapter implements BrokerPort {
     return last;
   }
 
+  /** The option orders an earlier submit left working (`AlpacaOptionOrderFlow.settle`). */
+  settle(): Promise<ReadonlySet<string>> {
+    return this.optionFlow ? this.optionFlow.settle() : Promise.resolve(new Set<string>());
+  }
+
+  /** Cancels every open order this bot stamped (`AlpacaOptionOrderFlow.sweepOrphans`). */
+  sweepOrphanOptionOrders(): Promise<readonly string[]> {
+    return this.optionFlow ? this.optionFlow.sweepOrphans() : Promise.resolve([]);
+  }
+
+  /** Cash and positions, a short always negative (`alpaca-portfolio.ts`). */
   async getPortfolio(): Promise<Portfolio> {
     const [account, positions] = await Promise.all([
       this.client.getAccount(),
       this.client.getPositions(),
     ]);
-    return {
-      cash: Number(account.cash),
-      positions: positions.map((position) => {
-        // `market_value` is the broker's own dollar mark, already contract-scaled for options —
-        // the one mark for a holding the price stream never quotes (#4643). Absent or unparseable
-        // leaves it off, so valuation falls back to cost rather than to a false $0.
-        const raw: unknown = position.market_value;
-        const marketValue = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : Number.NaN;
-        return {
-          symbol: position.symbol,
-          quantity: Number(position.qty),
-          avgPrice: Number(position.avg_entry_price),
-          ...(Number.isFinite(marketValue) ? { marketValue } : {}),
-        };
-      }),
-    };
+    return portfolioFromAlpaca(account, positions);
   }
 
   async submit(order: OrderIntent): Promise<OrderResult> {
-    // Option orders are not wired to the broker yet — refused here so nothing can ever reach the
-    // share path below as a market order on the underlying or on a contract.
-    if (order.option || isBareContractOrder(order)) {
+    // A contract only ever trades as a priced option order — a share-shaped order naming one is
+    // refused here, never sent to the share path below as a market order on a contract.
+    if (isBareContractOrder(order)) {
       return {
         intent: order,
         status: "rejected",
-        reason: "option orders are not wired to the broker yet",
+        reason: "a contract trades only as a priced option order, never as shares",
       };
+    }
+    if (order.option) {
+      return this.optionFlow
+        ? this.optionFlow.submit(order)
+        : {
+            intent: order,
+            status: "rejected",
+            reason: "option orders are not wired to this broker",
+          };
     }
     try {
       const placed = await this.client.placeOrder({

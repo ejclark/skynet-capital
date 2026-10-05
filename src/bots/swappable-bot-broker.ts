@@ -1,14 +1,28 @@
-import type { BotOrderSubmission } from "../adapters/alpaca-broker-adapter.js";
+import type { AlpacaBrokerAdapter, BotOrderSubmission } from "../adapters/alpaca-broker-adapter.js";
+import { AlpacaOptionMarket } from "../adapters/alpaca-option-market.js";
+import type { OptionOrderTiming } from "../adapters/alpaca-option-order-flow.js";
+import { PendingOptionOrders } from "../adapters/pending-option-orders.js";
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
-import type { OrderIntent, OrderResult, Portfolio } from "../domain/types.js";
+import type {
+  OptionMarket,
+  OptionMarketRequest,
+  OrderIntent,
+  OrderResult,
+  Portfolio,
+} from "../domain/types.js";
 import type { BrokerPort } from "../ports/broker.js";
+import type { OptionMarketPort, OptionOrderTracker } from "../ports/option-market.js";
 import type { Bot } from "./bot.js";
-import { createBotBroker } from "./bot-broker.js";
+import { botOptionsClient, createBotBroker } from "./bot-broker.js";
 
 /** Passed straight through to `createBotBroker` on every (re)build — see there and
  *  `alpaca-broker-adapter.ts` for what fires and when (#1211 slice 2). */
 export interface SwappableBotBrokerDeps {
   readonly onSubmitted?: (info: BotOrderSubmission) => void;
+  /** An option quote read that failed (`AlpacaOptionMarket`), for a log line. Default: silent. */
+  readonly onOptionReadError?: (what: string, error: unknown) => void;
+  /** The option flow's waits — specs pass zeros so a submit runs instantly. */
+  readonly optionOrderTiming?: Partial<OptionOrderTiming>;
 }
 
 /**
@@ -20,16 +34,40 @@ export interface SwappableBotBrokerDeps {
  * Satisfies the same `BrokerPort` interface `createBotBroker` already returns, so nothing
  * downstream (`AutonomousTrader`, `LiveCycleRunner`) needs to change — they hold this
  * object exactly as they'd hold the broker it wraps.
+ *
+ * It is also the bot's option market and option order tracker (#4642 slice 5), because it is the
+ * one object that owns the credentials AND outlives a rotation: the quote caches and the option
+ * orders a submit left working belong to the bot, not to whichever client is current.
  */
-export class SwappableBotBroker implements BrokerPort {
+export class SwappableBotBroker implements BrokerPort, OptionMarketPort, OptionOrderTracker {
   private readonly bot: Bot;
   private readonly deps?: SwappableBotBrokerDeps;
-  private current: BrokerPort;
+  private readonly pending = new PendingOptionOrders();
+  private readonly market: AlpacaOptionMarket;
+  private credentials: AlpacaCredentials;
+  private current: AlpacaBrokerAdapter;
 
   constructor(bot: Bot, deps?: SwappableBotBrokerDeps) {
     this.bot = bot;
-    this.deps = deps;
-    this.current = createBotBroker(bot, deps);
+    if (deps) this.deps = deps;
+    this.credentials = bot.credentials;
+    this.current = this.build();
+    // Reads with whatever credentials are in force at that moment, so a rotation needs no rebuild.
+    this.market = new AlpacaOptionMarket(
+      () => botOptionsClient(this.credentials),
+      deps?.onOptionReadError ? { onReadError: deps.onOptionReadError } : {},
+    );
+  }
+
+  private build(): AlpacaBrokerAdapter {
+    return createBotBroker(
+      { ...this.bot, credentials: this.credentials },
+      {
+        ...(this.deps?.onSubmitted ? { onSubmitted: this.deps.onSubmitted } : {}),
+        ...(this.deps?.optionOrderTiming ? { optionOrderTiming: this.deps.optionOrderTiming } : {}),
+        pendingOptionOrders: this.pending,
+      },
+    );
   }
 
   getPortfolio(): Promise<Portfolio> {
@@ -40,11 +78,25 @@ export class SwappableBotBroker implements BrokerPort {
     return this.current.submit(order);
   }
 
+  readOptionMarket(request: OptionMarketRequest): Promise<OptionMarket | undefined> {
+    return this.market.readOptionMarket(request);
+  }
+
+  settle(): Promise<ReadonlySet<string>> {
+    return this.current.settle();
+  }
+
+  /** Cancels every open order this bot stamped — once at boot, before the first cycle. */
+  sweepOrphanOptionOrders(): Promise<readonly string[]> {
+    return this.current.sweepOrphanOptionOrders();
+  }
+
   /** The reload seam: rebuilds the underlying client via the same, unchanged construction
    *  path a fresh boot would use — there is exactly one place credentials ever become a
    *  broker. Takes effect on the *next* call; a submit already in flight finishes on the
-   *  broker it started on. */
+   *  broker it started on. The pending option orders and the quote caches carry over. */
   replaceCredentials(credentials: AlpacaCredentials): void {
-    this.current = createBotBroker({ ...this.bot, credentials }, this.deps);
+    this.credentials = credentials;
+    this.current = this.build();
   }
 }

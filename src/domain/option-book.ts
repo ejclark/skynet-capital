@@ -446,6 +446,18 @@ export function premiumOut(option: OptionOrderIntent): number {
   return perShare * OPTION_MULTIPLIER;
 }
 
+/** Half a cent of slack when a cents limit meets a quoted band — float sums, never a price. */
+const LIMIT_EPSILON = 0.005;
+
+/** Whether a limit sits inside a quoted band (in the limit's own sign convention). The guards and
+ *  the order flow's last re-check before sending share this, so they cannot disagree. */
+export function limitInsideBand(
+  limitPrice: number,
+  band: { readonly low: number; readonly high: number },
+): boolean {
+  return limitPrice >= band.low - LIMIT_EPSILON && limitPrice <= band.high + LIMIT_EPSILON;
+}
+
 /** Sums of per-share quotes drift in the 15th decimal; a band is compared against a cents limit. */
 const tidy = (x: number): number => Math.round(x * 1e6) / 1e6;
 
@@ -472,15 +484,21 @@ export function quoteBand(
   const stamps: string[] = [];
   let stampMissing = false;
   for (const { leg, quote } of legQuotes) {
-    if (quote?.bid === undefined || quote.ask === undefined) return undefined;
-    if (legQuotes.length === 1) {
-      low = quote.bid;
-      high = quote.ask;
-    } else {
-      low += leg.ratio * (leg.side === "buy" ? quote.bid : -quote.ask);
-      high += leg.ratio * (leg.side === "buy" ? quote.ask : -quote.bid);
+    // Two real numbers, ask at or above bid — a null, infinite or inverted side prices nothing.
+    const bid = quote?.bid;
+    const ask = quote?.ask;
+    if (bid === undefined || ask === undefined || !Number.isFinite(bid) || !Number.isFinite(ask)) {
+      return undefined;
     }
-    if (quote.quotedAt === undefined) stampMissing = true;
+    if (ask < bid) return undefined;
+    if (legQuotes.length === 1) {
+      low = bid;
+      high = ask;
+    } else {
+      low += leg.ratio * (leg.side === "buy" ? bid : -ask);
+      high += leg.ratio * (leg.side === "buy" ? ask : -bid);
+    }
+    if (quote?.quotedAt === undefined) stampMissing = true;
     else stamps.push(quote.quotedAt);
   }
   const oldest = [...stamps].sort((a, b) => Date.parse(a) - Date.parse(b))[0];

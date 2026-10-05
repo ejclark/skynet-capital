@@ -129,7 +129,7 @@ describe("AlpacaBrokerAdapter", () => {
   });
 
   describe("submit", () => {
-    it("rejects an option order, and a share-shaped order naming a contract, without calling the broker", async () => {
+    it("rejects an option order when no option flow is wired, and a share-shaped order naming a contract always, without calling the broker", async () => {
       let calls = 0;
       const counting: AlpacaTradingTransport = {
         get: () => {
@@ -148,13 +148,16 @@ describe("AlpacaBrokerAdapter", () => {
       const adapter = new AlpacaBrokerAdapter(new AlpacaTradingClient(counting));
       const bare: OrderIntent = { ...buy, symbol: "EEM261120C00050000", quantity: 1 };
 
-      for (const order of [anOptionIntent(), bare]) {
-        expect(await adapter.submit(order)).toEqual({
-          intent: order,
-          status: "rejected",
-          reason: "option orders are not wired to the broker yet",
-        });
-      }
+      expect(await adapter.submit(anOptionIntent())).toEqual({
+        intent: anOptionIntent(),
+        status: "rejected",
+        reason: "option orders are not wired to this broker",
+      });
+      expect(await adapter.submit(bare)).toEqual({
+        intent: bare,
+        status: "rejected",
+        reason: "a contract trades only as a priced option order, never as shares",
+      });
       expect(calls).toBe(0);
     });
 

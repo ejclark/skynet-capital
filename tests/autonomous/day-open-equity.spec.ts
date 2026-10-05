@@ -25,6 +25,13 @@ describe("parseDayOpenEquity", () => {
   it("returns null on an empty string", () => {
     expect(parseDayOpenEquity(account(""))).toBeNull();
   });
+
+  it("returns null — never throws — when the payload carries null or a non-string", () => {
+    for (const raw of [null, 1000, {}]) {
+      const payload = { ...account(), last_equity: raw } as unknown as AlpacaAccount;
+      expect(parseDayOpenEquity(payload)).toBeNull();
+    }
+  });
 });
 
 describe("fleetDayOpenEquity", () => {

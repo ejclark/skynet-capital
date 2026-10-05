@@ -2,6 +2,7 @@ import { type EarningsPrint, optionPrintBlackout } from "../domain/earnings-cale
 import { marketDayKey } from "../domain/market-day.js";
 import {
   type CoverNeeds,
+  limitInsideBand,
   orderLegs,
   premiumOut,
   quoteBand,
@@ -49,9 +50,6 @@ import {
 /** Every option open is exactly one contract (or one spread) — sized by the Store allocation, never
  *  by the share position cap, which cannot secure even one put. */
 const MAX_OPTION_OPEN_UNITS = 1;
-
-/** A cents limit against a quoted band: half a cent of slack for the float arithmetic. */
-const LIMIT_EPSILON = 0.005;
 
 /** The slice of `RiskConfig` the option rules read — declared here so this module never imports the
  *  file that imports it. */
@@ -137,9 +135,7 @@ function priceProblem(
   if (stale) return stale;
   const band = quoteBand(option, context.options?.contracts ?? {});
   if (!band) return "no-quote";
-  const inside =
-    option.limitPrice >= band.low - LIMIT_EPSILON && option.limitPrice <= band.high + LIMIT_EPSILON;
-  return inside ? undefined : "option-limit-outside-quote";
+  return limitInsideBand(option.limitPrice, band) ? undefined : "option-limit-outside-quote";
 }
 
 /** Rule 3: close what is held — less what closes approved earlier this batch already take — and
