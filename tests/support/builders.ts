@@ -22,6 +22,7 @@ export function aPosition(overrides: Partial<Position> & Pick<Position, "symbol"
     symbol: overrides.symbol,
     quantity: overrides.quantity ?? 100,
     avgPrice: overrides.avgPrice ?? 90,
+    ...(overrides.marketValue !== undefined ? { marketValue: overrides.marketValue } : {}),
   };
 }
 

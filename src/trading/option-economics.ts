@@ -1,5 +1,5 @@
 import type { PayoffCurve } from "./draft-order-preview.js";
-import { type OptionType, parseOccSymbol } from "./option-symbols.js";
+import { OPTION_MULTIPLIER, type OptionType, parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 import { normalizeSymbol } from "./order-ticket.js";
 
@@ -126,7 +126,9 @@ export interface OptionTicketPreview {
   readonly warnings: string[];
 }
 
-export const SHARES_PER_CONTRACT = 100;
+/** The trade-ticket name for the contract size; the number itself has one home,
+ *  `OPTION_MULTIPLIER` (`option-symbols.ts`), shared with every surface that values a book. */
+export const SHARES_PER_CONTRACT = OPTION_MULTIPLIER;
 
 /** Takes only `positions`, not the full ticket context — `draft-order-account.ts` (multi-leg,
  *  #582) has no single-leg request to build an `OptionTicketContext` around, and this is the one

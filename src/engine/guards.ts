@@ -7,6 +7,7 @@ import type {
   Portfolio,
 } from "../domain/types.js";
 import { blocksRiskIncrease, type RiskTier } from "../risk/risk-ladder.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
 
 /**
  * Risk guardrails, applied by the engine to every persona's raw intents.
@@ -212,12 +213,16 @@ function clampBuy(
     return { ok: false, reason: "subscription-filter" };
   }
 
+  // Dollars for ONE unit of the order: a share, or a contract of 100 shares (#4643). Every bound
+  // below divides by this, so a quoted option is sized in contracts at its true cost — today no
+  // option intent reaches here (none carries a quote), but the day one does it must not be 100x.
+  const unitPrice = quote.ask * contractMultiplier(intent.symbol);
   const equity = computeEquity(portfolio, context.quotes);
-  const existingValue = heldQuantity(portfolio, intent.symbol) * quote.ask;
+  const existingValue = heldQuantity(portfolio, intent.symbol) * unitPrice;
   const positionBudget = Math.max(0, config.maxPositionPct * equity - existingValue);
 
-  const affordable = Math.floor(portfolio.cash / quote.ask);
-  const withinPosition = Math.floor(positionBudget / quote.ask);
+  const affordable = Math.floor(portfolio.cash / unitPrice);
+  const withinPosition = Math.floor(positionBudget / unitPrice);
 
   // The subscription's budget is shared across its playbook's WHOLE basket, not just this
   // intent's symbol — a basket playbook's other open positions already count against the same
@@ -229,7 +234,12 @@ function clampBuy(
   const basketValue = basketSymbols
     ? basketSymbols.reduce((sum, symbol) => {
         const symbolQuote = context.quotes[symbol];
-        return sum + (symbolQuote ? heldQuantity(portfolio, symbol) * symbolQuote.ask : 0);
+        return (
+          sum +
+          (symbolQuote
+            ? heldQuantity(portfolio, symbol) * symbolQuote.ask * contractMultiplier(symbol)
+            : 0)
+        );
       }, 0)
     : existingValue;
 
@@ -246,7 +256,7 @@ function clampBuy(
   const capital = subscription?.capitalAllocated;
   const subscriptionBudgetShares =
     capital !== undefined
-      ? Math.floor(Math.max(0, capital + realizedPl - basketValue) / quote.ask)
+      ? Math.floor(Math.max(0, capital + realizedPl - basketValue) / unitPrice)
       : undefined;
 
   const bounds = [intent.quantity, affordable, withinPosition];

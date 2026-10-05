@@ -44,6 +44,17 @@ describe("pendingRetrospectives", () => {
     });
   });
 
+  it("realizes an option round trip in dollars per contract — the broker's per-share price × 100 (#4643)", () => {
+    const call = "NVDA261113C00240000";
+    const rows = [
+      row({ intentId: 1, symbol: call, side: "buy", quantity: 2, price: 4.5, at: 1_000 }),
+      row({ intentId: 2, symbol: call, side: "sell", quantity: 2, price: 6, at: 2_000 }),
+    ];
+    const [insert] = pendingRetrospectives(rows, new Set());
+    expect(insert?.realized).toBeCloseTo(300); // (6.00 − 4.50) × 100 shares × 2 contracts
+    expect(insert?.returnPct).toBeCloseTo(33.33, 1);
+  });
+
   it("computes momentum/sentiment deltas from the entry vs. exit intent, never fabricating one side", () => {
     const rows = [
       row({ intentId: 1, side: "buy", momentum: -0.8, sentiment: -0.6 }),

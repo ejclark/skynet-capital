@@ -38,6 +38,36 @@ describe("applyGuards", () => {
     });
   });
 
+  describe("a quoted option contract (#4643)", () => {
+    const call = "NVDA261113C00240000";
+
+    it("is sized in contracts at 100 shares each, never at the per-share premium", () => {
+      const context = aContext({ [call]: { last: 5 } }); // ask ~5.05 per share = ~$505 per contract
+      const portfolio = aPortfolio({ cash: 2_000 });
+
+      const [approved] = applyGuards([buy(call, 50)], portfolio, context, { maxPositionPct: 1 });
+
+      // $2,000 buys 3 contracts at ~$505, not 396 "shares" of a $5.05 premium.
+      expect(approved?.quantity).toBe(3);
+    });
+
+    it("counts held contracts at 100 shares toward the per-position cap", () => {
+      const context = aContext({ [call]: { last: 5 } });
+      const portfolio = aPortfolio({
+        cash: 100_000,
+        positions: [aPosition({ symbol: call, quantity: 2, avgPrice: 5 })],
+      });
+
+      // Equity $101,000; a 1.5% cap is $1,515 — the two held contracts (~$1,010 at the ask) leave
+      // room for one more ~$505 contract. Unscaled, the held pair read as ~$10 and left room for 2.
+      const [approved] = applyGuards([buy(call, 10)], portfolio, context, {
+        maxPositionPct: 0.015,
+      });
+
+      expect(approved?.quantity).toBe(1);
+    });
+  });
+
   describe("a buy with no cash", () => {
     it("is dropped entirely", () => {
       const context = aContext({ EEM: { last: 100 } });

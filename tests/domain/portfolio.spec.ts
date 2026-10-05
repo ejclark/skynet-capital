@@ -1,4 +1,9 @@
-import { computeEquity, heldQuantity, positionFor } from "../../src/domain/portfolio.js";
+import {
+  computeEquity,
+  heldQuantity,
+  positionFor,
+  positionValue,
+} from "../../src/domain/portfolio.js";
 import { aPortfolio, aPosition, aQuote } from "../support/builders.js";
 
 describe("positionFor", () => {
@@ -109,5 +114,53 @@ describe("computeEquity", () => {
     const quotes = { TSLA: aQuote({ symbol: "TSLA", last: 250 }) };
 
     expect(computeEquity(portfolio, quotes)).toBe(500);
+  });
+});
+
+describe("option contracts count at 100 shares (#4643)", () => {
+  const call = "NVDA261113C00240000";
+
+  it("marks a quoted contract at last × 100 per contract", () => {
+    const portfolio = aPortfolio({
+      cash: 1_000,
+      positions: [aPosition({ symbol: call, quantity: 2, avgPrice: 4.5 })],
+    });
+    const quotes = { [call]: aQuote({ symbol: call, last: 5 }) };
+
+    // 1,000 cash + 2 contracts × $5.00/share × 100 shares
+    expect(computeEquity(portfolio, quotes)).toBe(1_000 + 2 * 5 * 100);
+  });
+
+  it("prefers the broker's market value over cost when the contract is unquoted", () => {
+    const position = aPosition({ symbol: call, quantity: 1, avgPrice: 4.5, marketValue: 520 });
+
+    expect(positionValue(position, undefined)).toBe(520);
+  });
+
+  it("falls back to cost × 100 when there is neither a quote nor a market value", () => {
+    const position = aPosition({ symbol: call, quantity: 1, avgPrice: 4.5 });
+
+    expect(positionValue(position, undefined)).toBe(450);
+  });
+
+  it("a written (short) contract is a liability of 100 shares per contract", () => {
+    const put = "CRWV261106P00076000";
+    const position = aPosition({ symbol: put, quantity: -1, avgPrice: 2.31 });
+
+    expect(positionValue(position, 1.5)).toBe(-150);
+  });
+
+  it("treats a zero or non-finite last as a data gap, falling through to the next mark", () => {
+    const position = aPosition({ symbol: call, quantity: 1, avgPrice: 4.5, marketValue: 520 });
+
+    expect(positionValue(position, 0)).toBe(520);
+    expect(positionValue(position, Number.NaN)).toBe(520);
+  });
+
+  it("leaves shares exactly as they were — no multiplier, quote first, then cost", () => {
+    const shares = aPosition({ symbol: "NVDA", quantity: 10, avgPrice: 200 });
+
+    expect(positionValue(shares, 210)).toBe(2_100);
+    expect(positionValue(shares, undefined)).toBe(2_000);
   });
 });
