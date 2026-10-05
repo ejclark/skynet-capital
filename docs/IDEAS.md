@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Fold a stale-echo run into its capsule's drafted lesson.** `lesson-draft.mjs` (#4212) drafts a
+  capsule's LESSONS entry at the close, but repair.mjs posts a stale echo (a run that started before
+  the fix merged) only after the close, so that run's sha never reaches the entry's `COVERS:` and
+  stays in `digest-scan --learning`'s count. Cheapest fix: the stale-echo intent also appends its
+  sha to the open `lesson/capsule-<n>` PR's entry, or comments it for the next `/retro`. Worth doing
+  if the learning line stops reaching zero because of echoes alone.
+  _(src: Claude · while: building #4056 slice 7, from its /code-review)_
 - **Re-run the model-fit audit at every model release.** The 2026-10-04 audit (Anthropic's
   `claude-api` → `prompt-audit` procedure, ten surface auditors plus an adversarial refuter each)
   found that the dominant defect was not old-model prompting. It was drift: Babylon-era facts in
