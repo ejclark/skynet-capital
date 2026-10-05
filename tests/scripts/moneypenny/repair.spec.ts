@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { logArgVariants, sanitizeLog } from "../../../scripts/moneypenny/repair-logs.mjs";
@@ -92,6 +92,44 @@ describe("moneypenny repair — routing a failed run", () => {
     expect(intent?.type).toBe("open-issue");
     expect(intent?.body).toContain("zero jobs were created");
     expect(intent?.body).toContain("scripts/workflow-lint.mjs");
+  });
+
+  it("names a runner outage as one — never as a rejected workflow file", () => {
+    // #4656: run 37370406790's jobs queued 15 minutes, got no runner, and were cancelled unstarted.
+    // With no `failure` job to find, the lane filed "GitHub rejected the workflow file" for a file
+    // that parsed fine, and dispatched a repair session to hunt a syntax error that did not exist.
+    const [intent, ...rest] = dryRun("workflow-run-runner-starved.json");
+
+    expect(rest).toEqual([]);
+    expect(intent?.type).toBe("open-issue");
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — (no runner was ever assigned)",
+    );
+    expect(intent?.body).toContain("`route` (ubuntu-latest)");
+    expect(intent?.body).toContain("`sync project status` (ubuntu-latest)");
+    expect(intent?.body).not.toContain("dep-warden review");
+    expect(intent?.body).toContain("gh run rerun 37370406790 --failed");
+    expect(intent?.body).not.toContain("rejected the workflow file");
+  });
+
+  it("still reports the real failure when a run has one beside a starved job", () => {
+    const payload = JSON.parse(
+      readFileSync("tests/fixtures/events/workflow-run-runner-starved.json", "utf8"),
+    );
+    payload.jobs.push({
+      id: 1,
+      name: "build feedback issue",
+      conclusion: "failure",
+      runner_name: "GitHub Actions 1",
+      steps: [{ name: "Run claude-code-action", conclusion: "failure" }],
+    });
+    const [intent, ...rest] = dryRunPayload(payload);
+
+    expect(rest).toEqual([]);
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — build feedback issue",
+    );
+    expect(intent?.body).toContain("Run claude-code-action");
   });
 
   it("ignores a red PR branch — that failure belongs to the PR and its author", () => {

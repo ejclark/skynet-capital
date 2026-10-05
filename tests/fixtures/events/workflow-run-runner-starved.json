@@ -1,0 +1,38 @@
+{
+  "repository": { "default_branch": "main" },
+  "workflow_run": {
+    "id": 37370406790,
+    "name": "Moneypenny Events (event-research automation)",
+    "conclusion": "failure",
+    "event": "issues",
+    "head_branch": "main",
+    "html_url": "https://github.com/ejclark/skynet-capital/actions/runs/37370406790"
+  },
+  "jobs": [
+    {
+      "id": 111965842012,
+      "name": "route",
+      "conclusion": "cancelled",
+      "runner_name": "",
+      "labels": ["ubuntu-latest"],
+      "steps": []
+    },
+    {
+      "id": 111965842247,
+      "name": "sync project status",
+      "conclusion": "cancelled",
+      "runner_name": "",
+      "labels": ["ubuntu-latest"],
+      "steps": []
+    },
+    {
+      "id": 111965842882,
+      "name": "dep-warden review",
+      "conclusion": "skipped",
+      "runner_name": null,
+      "labels": ["ubuntu-latest"],
+      "steps": []
+    }
+  ],
+  "deps": { "openIssues": [] }
+}
