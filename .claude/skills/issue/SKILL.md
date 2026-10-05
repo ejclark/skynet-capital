@@ -40,7 +40,7 @@ that gets a well-shaped issue filed without a second pass.
    settled forks, open questions, slicing sketch. One fold, not five.
 7. **File it with one command** — lint, dedupe, footer and the REST call in one step:
    ```sh
-   npm run issues -- create --title "<title>" --body-file /tmp/issue-body.md --labels needs-eric
+   npm run issues -- create --title "<title>" --body-file /tmp/issue-body.md --labels <labels>
    ```
    It refuses on a lint problem (fold, bullet length, duplicate paste, mermaid, unpinned raw URL,
    empty-calorie title) and on an open issue with the same ask (`--force` overrides, `--dry-run`
@@ -49,9 +49,13 @@ that gets a well-shaped issue filed without a second pass.
    `update N --add a --remove b --body-file f --comment-file c --close completed`,
    `search "words" --label x`, `show N`. The board column follows labels (the sync job maps
    `needs-eric`/`needs-info` → Blocked, `ready` → Ready, closed → Done), so "mark it blocked" is
-   `update N --add needs-eric`. Full usage: the header of `scripts/issues.mjs`.
-9. **Label deliberately.** `feedback` starts a Moneypenny build session on triage; `needs-eric`
-   parks it for his flip. Filing alone never authorizes work — that invariant is load-bearing on a
+   `update N --add needs-info` when a member owes the answer, or `--add needs-eric` for a decision
+   only Eric can make — refused unless the body carries a `Needs from you` callout
+   (`docs/ISSUES.md` rule 7). Full usage: the header of `scripts/issues.mjs`.
+9. **Label deliberately.** `feedback` queues it for Moneypenny's build lane, which builds it only once
+   `ready` lands (`docs/ISSUES.md` → *Ready — the one definition*); a `plan` waits for Eric's `ready`
+   flip; `needs-eric` is only for a decision only he can make, stated in a `Needs from you` callout
+   above the fold. Filing alone never authorizes work — that invariant is load-bearing on a
    public repo and this skill never widens it.
 10. **A plan gets its state block as the first comment**, posted right after filing and edited in
     place from then on: the slices as a `stateDiagram-v2` with the current one marked, what

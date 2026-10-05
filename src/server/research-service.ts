@@ -22,8 +22,14 @@ import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents, everyEvent, type MarketEvent } from "../domain/market-events.js";
 import { ledgerCoversSymbol } from "../domain/sector-coverage.js";
 import { escapeHtml } from "../ui/escape-html.js";
-import { memoByCorpus } from "./research-corpus-memo.js";
-import { DECISION_HEADINGS, type EventCall, todayCallOf } from "./research-event-calls.js";
+import { detached, memoByCorpus } from "./research-corpus-memo.js";
+import {
+  DECISION_HEADINGS,
+  type EventCall,
+  type LedgerDigest,
+  ledgerDigestOf,
+  todayCallOf,
+} from "./research-event-calls.js";
 
 // Re-exported so existing importers of the call-sheet contract keep working unchanged. (An
 // `export ... from` re-export trips Biome's noBarrelFile even in a file full of real logic, so
@@ -90,12 +96,54 @@ function shelvedFiles(dir: string, slugPrefix: string): { slug: string; file: st
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
+const docOf = (md: string, slug: string, name: string): ResearchDoc => ({
+  slug,
+  title: titleOf(md, name),
+  lastAssessed: lastAssessedOf(md),
+});
+
 function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
-  return shelvedFiles(dir, slugPrefix).map(({ slug, file }) => {
-    const md = readFileSync(file, "utf8");
-    const name = slug.slice(slugPrefix.length);
-    return { slug, title: titleOf(md, name), lastAssessed: lastAssessedOf(md) };
-  });
+  return shelvedFiles(dir, slugPrefix).map(({ slug, file }) =>
+    detached(docOf(readFileSync(file, "utf8"), slug, slug.slice(slugPrefix.length))),
+  );
+}
+
+/**
+ * Every event ledger, READ ONCE for its three readers: the shelf row, the agenda's call
+ * (`eventCalls`) and the call board's digest (`ledgerDigests`) (#4612 slice 3, #4615). Each used
+ * to re-read all ~700 ledgers, so the first calendar request after boot decoded the event corpus
+ * three times — ~170 MB of strings, and a +60 MB peak in a 512 MB container even with every row
+ * detached. One read, with no second clone of the finished shelf, measured +32-37 MB (from +100).
+ * Calls and digests are keyed by event id.
+ */
+export function ledgerShelf(root: string = RESEARCH_DIR()): {
+  readonly docs: readonly ResearchDoc[];
+  readonly calls: ReadonlyMap<string, EventCall>;
+  readonly digests: ReadonlyMap<string, LedgerDigest>;
+} {
+  return memoByCorpus(
+    "ledgerShelf",
+    root,
+    () => {
+      const docs: ResearchDoc[] = [];
+      const calls = new Map<string, EventCall>();
+      const digests = new Map<string, LedgerDigest>();
+      for (const { slug, file } of shelvedFiles(join(root, "events"), "events/")) {
+        const md = readFileSync(file, "utf8");
+        const id = slug.slice("events/".length);
+        const read = detached({
+          doc: docOf(md, slug, id),
+          call: todayCallOf(md),
+          digest: ledgerDigestOf(md),
+        });
+        docs.push(read.doc);
+        if (read.call) calls.set(id, read.call);
+        if (read.digest) digests.set(id, read.digest);
+      }
+      return { docs, calls, digests };
+    },
+    { detached: true },
+  );
 }
 
 /**
@@ -105,10 +153,15 @@ function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
  * already names the week, so it sorts and reads as one of them.
  */
 export function listResearch(root: string = RESEARCH_DIR()): ResearchShelf {
-  return memoByCorpus("listResearch", root, () => ({
-    studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
-    ledgers: docsIn(join(root, "events"), "events/"),
-  }));
+  return memoByCorpus(
+    "listResearch",
+    root,
+    () => ({
+      studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
+      ledgers: ledgerShelf(root).docs,
+    }),
+    { detached: true },
+  );
 }
 
 /** The forward-test register's slug: an index on disk, the whole register when served. */
@@ -276,18 +329,11 @@ function renderFolded(md: string): string {
 }
 
 /**
- * Event id → the call its ledger reached, for every ledger that states one. Built the same way
- * researchedEventIds builds the link set, so the agenda gets both from one directory read.
+ * Event id → the call its ledger reached, for every ledger that states one. Read in the same pass
+ * as the shelf listing (`ledgerShelf`), so the agenda costs no second read of the corpus.
  */
 export function eventCalls(root: string = RESEARCH_DIR()): ReadonlyMap<string, EventCall> {
-  return memoByCorpus("eventCalls", root, () => {
-    const calls = new Map<string, EventCall>();
-    for (const doc of listResearch(root).ledgers) {
-      const found = todayCallOf(readFileSync(join(root, `${doc.slug}.md`), "utf8"));
-      if (found) calls.set(doc.slug.slice("events/".length), found);
-    }
-    return calls;
-  });
+  return ledgerShelf(root).calls;
 }
 
 /**

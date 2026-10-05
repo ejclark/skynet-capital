@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import {
   bootSamples,
@@ -114,6 +117,38 @@ describe("when the dashboard boots with durable history", () => {
 
     expect(rebooted.participants[0]?.realizedPl).toBe(420);
     expect(recorded).not.toContain(0);
+  });
+});
+
+describe("when one participant's history file has outgrown the engine's argument limit (#4615)", () => {
+  // The boot cliff (#4612 slice 3): listing a history file of more than ~121k lines threw RangeError
+  // from inside rehydrateHistory, main() exited 1, and every restart failed the same way. Prod
+  // samples every five minutes, so one participant reaches 130k lines in about fifteen months.
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "history-boot-"));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("boots and seeds realized P/L from that file's newest line", async () => {
+    const start = Date.parse("2026-08-09T00:00:00.000Z");
+    const lines = Array.from({ length: 130_000 }, (_, i) =>
+      JSON.stringify(
+        sample({
+          at: new Date(start + i * 300_000).toISOString(),
+          realizedPl: i === 129_999 ? 777 : 1,
+        }),
+      ),
+    );
+    writeFileSync(join(dir, "human-eric.jsonl"), `${lines.join("\n")}\n`, "utf8");
+
+    const { initial: seeded } = await rehydrateHistory(
+      new JsonlHistoryStore(dir),
+      data([snapshot()]),
+      () => new Date("2027-10-01"),
+    );
+
+    expect(seeded.participants[0]?.realizedPl).toBe(777);
   });
 });
 

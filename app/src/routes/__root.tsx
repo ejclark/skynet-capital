@@ -12,6 +12,7 @@ import { BrandEye } from "../shell/brand-eye";
 import { KeyboardChords } from "../shell/keyboard";
 import { MarketSession } from "../shell/market-session";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
+import { ShellError } from "../shell/route-error";
 import { StatusPill } from "../shell/status-pill";
 import { Vantage } from "../shell/vantage";
 
@@ -43,6 +44,10 @@ import { Vantage } from "../shell/vantage";
  * The page's tower (#3977; the crest of #3807 slice 3a before it) is ONE frame mounted here, beside
  * the page and never inside the topbar, so it survives every navigation (`shell/vantage.tsx`),
  * laid over the page frame's tower column (`shell/tower-column.tsx`).
+ *
+ * A failing page renders inside the `<Outlet/>` (the router's default error component, #4614), so
+ * the topbar outlives it. `ShellError` is for this layout failing itself — the one case that may
+ * replace the shell, since there is no shell left to keep (`shell/route-error.tsx`).
  */
 
 function GearIcon(): ReactElement {
@@ -215,4 +220,5 @@ export const Route = createRootRoute({
   validateSearch: horizonSearch,
   search: { middlewares: [retainSearchParams(["on", "span"])] },
   component: RootShell,
+  errorComponent: ShellError,
 });

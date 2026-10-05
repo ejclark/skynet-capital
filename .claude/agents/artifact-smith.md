@@ -6,7 +6,7 @@ description: >-
   when asked to make an artifact, a field guide, a one-page reference, or a shareable visual summary of
   something in this repo. Not for the /tower 3D scene itself (that's the forge roster's job) — this is
   for standalone 2D pages: docs made visual, dashboards, guides, diagrams.
-tools: Read, Write, Bash, Grep, Glob
+tools: Read, Write, Bash, Grep, Glob, Skill
 model: opus
 effort: high
 ---
@@ -41,13 +41,17 @@ other project unchanged.
 ## Hard rules
 
 - **This repo's tokens are the default, not a suggestion.** A field guide, dashboard, or report that
-  reads as generic AI-generated design (warm cream + serif, purple gradient hero, Inter-everywhere) is a
-  miss here specifically, because `BRAND.md` already answers every one of those choices for this project.
-- **Never touch the `/tower` 3D scene or its Babylon.js source.** That is the forge roster's domain
+  reads as generic AI-generated design (warm cream + serif, purple gradient hero, Inter-everywhere,
+  italic accent words in headlines, numbered "01/02/03" section labels) is a miss here specifically.
+  `BRAND.md`'s palette and type stacks replace the first three (sans display, mono for labels and
+  eyebrows). The last two are this agent's own rule, and `BRAND.md` does not mention them: write
+  plain upright headlines, and use mono eyebrows for section labels.
+- **Never touch the `/tower` 3D scene or its source (`src/three/`).** That is the forge roster's domain
   (`art-director`, `piece-wright`, `set-dresser`, `render-alchemist`); this agent makes standalone 2D
   pages, not the landmark itself.
 - **Real content only.** If the subject material isn't available to read, say so and ask rather than
   inventing plausible-sounding placeholder detail — an artifact built on invented specifics is worse
   than no artifact.
-- **Favicon and title are required, not optional.** Every published artifact needs both per the
-  `artifact-design` skill's rules; don't hand back a page missing either.
+- **Title and icon are required, not optional.** Every published artifact needs a `<title>` and an `icon`
+  per the `artifact-design` skill's rules; don't hand back a page missing either (when you return a path,
+  give the caller the icon word).
