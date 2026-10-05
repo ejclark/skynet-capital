@@ -157,4 +157,59 @@ describe("JsonlKeyedStore", () => {
       expect(await store.list()).toEqual([{ key: "beta", value: 2 }]);
     });
   });
+
+  describe("when reading only the newest entry for a key (#4612 slice 7)", () => {
+    it("returns undefined for a key whose file was never written", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      expect(await store.latest("nobody")).toBeUndefined();
+    });
+
+    it("returns the last-appended entry without needing the earlier ones", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("alpha", { key: "alpha", value: 1 });
+      await store.append("alpha", { key: "alpha", value: 2 });
+      await store.append("alpha", { key: "alpha", value: 3 });
+
+      expect(await store.latest("alpha")).toEqual({ key: "alpha", value: 3 });
+    });
+
+    it("finds the last entry in a file far bigger than the read chunk", async () => {
+      mkdirSync(dir, { recursive: true });
+      const lines = Array.from({ length: 50_000 }, (_, i) =>
+        JSON.stringify({ key: "alpha", value: i }),
+      );
+      writeFileSync(fileFor(dir)("alpha"), `${lines.join("\n")}\n`, "utf8");
+
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      expect(await store.latest("alpha")).toEqual({ key: "alpha", value: 49_999 });
+    });
+
+    it("falls back to the newest intact line when the very last one is torn", async () => {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        fileFor(dir)("alpha"),
+        `${JSON.stringify({ key: "alpha", value: 1 })}\n{"key":"alpha","val`,
+        "utf8",
+      );
+
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      expect(await store.latest("alpha")).toEqual({ key: "alpha", value: 1 });
+    });
+
+    it("returns undefined for a file with no parseable line at all", async () => {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(fileFor(dir)("alpha"), '{"key":"alpha","val', "utf8");
+
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      expect(await store.latest("alpha")).toBeUndefined();
+    });
+
+    it("does not consider another key's file", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("alpha", { key: "alpha", value: 1 });
+      await store.append("beta", { key: "beta", value: 99 });
+
+      expect(await store.latest("alpha")).toEqual({ key: "alpha", value: 1 });
+    });
+  });
 });

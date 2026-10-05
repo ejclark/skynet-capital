@@ -26,33 +26,27 @@ import type { ParticipantSnapshot } from "./participant-snapshot.js";
  * ledger / Alpaca activities read, which the plan names a non-goal.
  */
 
-/** The newest sample per participant, by `at` — `HistoryStore.list` does not guarantee order. */
-export function latestByParticipant(samples: readonly EquitySample[]): Map<string, EquitySample> {
-  const latest = new Map<string, EquitySample>();
-  for (const sample of samples) {
-    const held = latest.get(sample.participantId);
-    if (!held || sample.at > held.at) latest.set(sample.participantId, sample);
-  }
-  return latest;
-}
-
 /**
- * Seed cumulative `realizedPl` onto snapshots that carry none, from durable history. A snapshot that
- * already carries a value keeps it: a live fill folded before seeding is fresher than any sample.
+ * Seed cumulative `realizedPl` onto snapshots that carry none, from each participant's newest
+ * durable sample. A snapshot that already carries a value keeps it: a live fill folded before
+ * seeding is fresher than any sample.
+ *
+ * Looks each participant up with `store.latest`, bounded to their own newest line, rather than
+ * reading every participant's entire history into memory just to find one row each — at 180 days
+ * of history across 12 participants that full read cost +205 MB at boot (#4612 slice 7).
  */
-export function seedRealizedPl(
+export async function seedRealizedPl(
   data: DashboardData,
-  samples: readonly EquitySample[],
-): DashboardData {
-  const latest = latestByParticipant(samples);
-  return {
-    ...data,
-    participants: data.participants.map((snapshot): ParticipantSnapshot => {
+  store: Pick<HistoryStore, "latest">,
+): Promise<DashboardData> {
+  const participants = await Promise.all(
+    data.participants.map(async (snapshot): Promise<ParticipantSnapshot> => {
       if (snapshot.realizedPl !== undefined) return snapshot;
-      const sample = latest.get(snapshot.id);
+      const sample = await store.latest(snapshot.id);
       return sample ? { ...snapshot, realizedPl: sample.realizedPl } : snapshot;
     }),
-  };
+  );
+  return { ...data, participants };
 }
 
 /**
@@ -94,7 +88,7 @@ export async function rehydrateHistory(
   initial: DashboardData,
   now: () => Date = () => new Date(),
 ): Promise<{ initial: DashboardData; baseline: EquitySample[] }> {
-  const seeded = seedRealizedPl(initial, await store.list());
+  const seeded = await seedRealizedPl(initial, store);
   const baseline = bootSamples(seeded, now().toISOString());
   await Promise.all(
     baseline.map((sample) =>
@@ -119,7 +113,7 @@ export function seedSampleRecorder(
 ): (snapshot: ParticipantSnapshot, at: string) => void {
   return (snapshot, at) => {
     void (async () => {
-      if ((await store.list(snapshot.id)).length > 0) return;
+      if ((await store.latest(snapshot.id)) !== undefined) return;
       await store.save({
         at,
         participantId: snapshot.id,
