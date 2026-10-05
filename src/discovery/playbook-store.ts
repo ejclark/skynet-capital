@@ -131,6 +131,32 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "session after the print — or when no 30-to-45-day expiry ends before the next one — it " +
       "sells nothing.",
   },
+  "NVDA-CALL-SPREAD": {
+    description:
+      "The options form of S1-NVDA's pre-earnings run-up: a call debit spread — buy one NVDA call " +
+      "near the money, sell one higher-strike call on the same expiry, and pay the difference. " +
+      "The most it can lose is the debit paid; the most it can make is the gap between the " +
+      "strikes, less that debit. Since 2023 NVDA has risen in the 20 sessions into all 15 of its " +
+      "prints, and the last 5 of those sessions have been a coin flip, so it is out before them.",
+    enter:
+      "From 20 trading sessions before a CONFIRMED NVIDIA earnings date to 6 before it — an " +
+      "estimated date opens nothing, so it waits for NVIDIA's own call notice. It buys the call " +
+      "nearest 0.50 delta (about at the money) and sells the call nearest 0.25 delta above it " +
+      "(0.30 conservative, 0.20 aggressive) — delta being roughly the market's odds the call " +
+      "finishes in the money — on the latest expiry after its exit day that ends before the " +
+      "print. One spread at a time, inside the capital you allocate.",
+    exitTakeProfit:
+      "No price target — like S1-NVDA, the thesis is the window. It sells the spread back 5 " +
+      "trading sessions before the print, whatever it is worth then.",
+    exitCutLosses:
+      "The loss is capped at the debit paid. It sells the spread back from 5 sessions before the " +
+      "print, and as soon as the date is no longer confirmed, starting at the middle of the quote " +
+      "— from D-5, each session it stays unsold moves the price toward the bid; after a print it " +
+      "sells at the bid at once.",
+    hold:
+      "No confirmed date, outside the window, or NVDA option positions it did not open: does " +
+      "nothing. While it is subscribed, S1-NVDA stops trading NVDA shares on the same bot.",
+  },
 };
 
 function entryOf(playbook: Playbook): PlaybookStoreEntry {

@@ -7,6 +7,7 @@ import {
   findPlaybook,
   G1_GOOG,
   HC_SAURON,
+  NVDA_CALL_SPREAD,
   PLAYBOOK_WIRING_GAPS,
   playbookRoster,
   S1_NVDA,
@@ -109,9 +110,10 @@ describe("enabledPlaybooks env parsing", () => {
     expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
   });
 
-  it("arms no option play by default, and the roll call says why the wheel cannot fire yet", () => {
+  it("arms no option play by default, and the roll call says why neither can fire yet", () => {
     expect(enabledPlaybooks({}).enabled).toEqual([]);
     expect(PLAYBOOK_WIRING_GAPS["CRWV-WHEEL"]).toBeDefined();
+    expect(PLAYBOOK_WIRING_GAPS["NVDA-CALL-SPREAD"]).toBeDefined();
   });
 
   it("recognises HC-SAURON — registered, but still dark unless named (issue #3527 plan, slice 3)", () => {
@@ -128,6 +130,7 @@ describe("findPlaybook", () => {
     expect(findPlaybook("TACO-DJT")).toBe(TACO_DJT);
     expect(findPlaybook("HC-SAURON")).toBe(HC_SAURON);
     expect(findPlaybook("CRWV-WHEEL")).toBe(CRWV_WHEEL);
+    expect(findPlaybook("NVDA-CALL-SPREAD")).toBe(NVDA_CALL_SPREAD);
   });
 
   it("returns undefined for an unknown id", () => {
@@ -143,6 +146,7 @@ describe("playbookRoster", () => {
       { id: "TACO-DJT", symbol: TACO_DJT.symbols[0] },
       { id: "HC-SAURON", symbol: HC_SAURON.symbols[0] },
       { id: "CRWV-WHEEL", symbol: "CRWV" },
+      { id: "NVDA-CALL-SPREAD", symbol: "NVDA" },
     ]);
   });
 });

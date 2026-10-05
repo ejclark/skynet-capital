@@ -42,6 +42,7 @@ function cycle(
   calendar: readonly EarningsPrint[],
   context: MarketContext,
   portfolio: Portfolio,
+  optionsLevel = 3,
 ): {
   readonly intents: readonly OrderIntent[];
   readonly approved: readonly OrderIntent[];
@@ -52,7 +53,7 @@ function cycle(
   const intents = playbookIntents(enabled, context, portfolio, calendar);
   const config: RiskConfig = {
     maxPositionPct: 0.03,
-    optionsLevel: 3,
+    optionsLevel,
     discipline: { calendar },
     subscriptions: [subscription],
     playbookSymbols: new Map(enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
@@ -132,6 +133,88 @@ describe("CRWV-WHEEL through the guards", () => {
     expect(run.approved[0]).toMatchObject({
       quantity: 1,
       option: { structure: "covered-call", legs: [{ occSymbol: occ("call", 105) }] },
+    });
+  });
+});
+
+describe("NVDA-CALL-SPREAD through the guards", () => {
+  // NVIDIA's call notice posted, confirming 11-18; February's row is the next one on file.
+  const CALENDAR: readonly EarningsPrint[] = [
+    { symbol: "NVDA", date: "2026-11-18", status: "confirmed", source: "test: IR call notice" },
+    {
+      symbol: "NVDA",
+      date: "2027-02-24",
+      status: "estimate",
+      source: "test",
+      window: { start: "2027-02-17", end: "2027-03-03" },
+    },
+  ];
+  const occ = (strike: number) =>
+    buildOccSymbol({ underlying: "NVDA", expiration: "2026-11-13", type: "call", strike });
+  const marketAt = (
+    asOf: string,
+    spot: number,
+    rows: readonly [number, number, number, number][],
+  ) =>
+    withOptionQuotes(
+      aContext({ NVDA: { last: spot } }, asOf),
+      rows.map(([strike, delta, bid, ask]) =>
+        anOptionQuote(occ(strike), { delta, bid, ask, openInterest: 2_000, at: asOf }),
+      ),
+      { NVDA: ["2026-11-06", "2026-11-13", "2026-11-20"] },
+    );
+  const spread = subscribed("NVDA-CALL-SPREAD", 2_000);
+
+  const OCT_28 = "2026-10-28T15:00:00Z"; // 11:00 ET
+  const openMarket = marketAt(OCT_28, 240, [
+    [235, 0.61, 10.9, 11.2],
+    [240, 0.52, 8.3, 8.55],
+    [250, 0.33, 4.4, 4.6],
+    [255, 0.26, 3.1, 3.25],
+    [260, 0.19, 2.1, 2.22],
+  ]);
+
+  it("opens a 240/255 debit spread the guards approve as one spread at level 3", () => {
+    const run = cycle(spread, CALENDAR, openMarket, aPortfolio({ cash: 50_000 }));
+    expect(run.refused).toEqual([]);
+    expect(run.approved).toHaveLength(1);
+    expect(run.approved[0]).toMatchObject({
+      symbol: "NVDA",
+      side: "buy",
+      quantity: 1,
+      playbookId: "NVDA-CALL-SPREAD",
+      option: {
+        structure: "call-debit-spread",
+        legs: [{ occSymbol: occ(240) }, { occSymbol: occ(255) }],
+        limitPrice: 5.3,
+      },
+    });
+  });
+
+  it("is refused below options level 3 — a spread needs it", () => {
+    const run = cycle(spread, CALENDAR, openMarket, aPortfolio({ cash: 50_000 }), 2);
+    expect(run.refused).toEqual(["options-level"]);
+  });
+
+  it("sells the spread back on D-5 as one order the guards approve", () => {
+    const nov11 = "2026-11-11T15:30:00Z"; // 10:30 ET
+    const held = aPortfolio({
+      cash: 49_470,
+      positions: [
+        aPosition({ symbol: occ(240), quantity: 1, avgPrice: 8.43 }),
+        aPosition({ symbol: occ(255), quantity: -1, avgPrice: 3.13 }),
+      ],
+    });
+    const closeMarket = marketAt(nov11, 250, [
+      [240, 0.71, 11.4, 11.7],
+      [255, 0.36, 3.9, 4.1],
+    ]);
+    const run = cycle(spread, CALENDAR, closeMarket, held);
+    expect(run.refused).toEqual([]);
+    expect(run.approved[0]).toMatchObject({
+      side: "sell",
+      quantity: 1,
+      option: { effect: "close", limitPrice: -7.55 },
     });
   });
 });

@@ -7,6 +7,7 @@ describe("playbookStoreCatalog", () => {
       "CRWV-WHEEL",
       "G1-GOOG",
       "HC-SAURON",
+      "NVDA-CALL-SPREAD",
       "S1-NVDA",
       "TACO-DJT",
     ]);
@@ -73,6 +74,16 @@ describe("playbookStoreCatalog", () => {
     expect(wheel?.description).toContain("nothing switches it off automatically");
     expect(wheel?.exitCutLosses).toContain("The real loss is owning a falling stock");
     expect(wheel?.exitCutLosses).toContain("ride through an earnings print");
+  });
+
+  it("says the NVDA spread is S1-NVDA's run-up with the loss capped, confirmed dates only, out by D-5", () => {
+    const spread = byId("NVDA-CALL-SPREAD");
+    expect(spread?.window).toBeUndefined();
+    expect(spread?.evidenceHref).toBe("/research/nvda-earnings-cycle");
+    expect(spread?.description).toContain("options form of S1-NVDA's pre-earnings run-up");
+    expect(spread?.description).toContain("The most it can lose is the debit paid");
+    expect(spread?.enter).toContain("CONFIRMED NVIDIA earnings date");
+    expect(spread?.exitTakeProfit).toContain("5 trading sessions before the print");
   });
 
   it("keeps an unevidenced playbook's honest note and links nowhere", () => {
