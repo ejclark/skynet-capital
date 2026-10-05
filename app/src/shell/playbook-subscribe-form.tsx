@@ -61,6 +61,7 @@ export function SubscribeForm({
   accountId,
   card,
   editing,
+  reduceOnly = false,
   onSaved,
   onCancel,
 }: {
@@ -68,6 +69,8 @@ export function SubscribeForm({
   readonly card: PlaybookStoreCardView;
   /** The subscription being edited. Absent = a new subscription. */
   readonly editing?: SubscriptionView;
+  /** Behind the delegation fog: an edit may only lower exposure (the server enforces it). */
+  readonly reduceOnly?: boolean;
   readonly onSaved: () => void;
   readonly onCancel?: () => void;
 }): ReactElement {
@@ -95,6 +98,9 @@ export function SubscribeForm({
     (capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0);
   // Basket order, whatever order they were tapped in.
   const symbols = card.symbols.filter((s) => picked.includes(s));
+  // A saved filter naming symbols the basket no longer holds (an API subscribe, a retired ticker)
+  // cannot be drawn as chips. Say so rather than let a save quietly widen it to the whole basket.
+  const stale = (editing?.symbols ?? []).filter((s) => !card.symbols.includes(s));
   const toggle = (symbol: string) =>
     setPicked((now) => (now.includes(symbol) ? now.filter((s) => s !== symbol) : [...now, symbol]));
 
@@ -184,6 +190,21 @@ export function SubscribeForm({
           shrinks it. Off by default.
         </label>
       </div>
+      {stale.length > 0 ? (
+        <p className="pb-form-note">
+          Its saved filter names {stale.join(", ")}, which {stale.length === 1 ? "isn't" : "aren't"}{" "}
+          in this playbook's symbols.{" "}
+          {symbols.length === 0
+            ? `Saving with nothing picked lets new entries open in all ${card.symbols.length}.`
+            : "Saving keeps only the symbols picked above."}
+        </p>
+      ) : null}
+      {reduceOnly ? (
+        <p className="pb-form-note">
+          Until you unlock delegation, an edit can only lower what this bot may do: less capital,
+          fewer symbols, a calmer mode, or compounding off.
+        </p>
+      ) : null}
       {editing && !editing.enabled ? <p className="pb-form-note">Saving keeps it paused.</p> : null}
       <div className="pb-subscription-actions">
         <button

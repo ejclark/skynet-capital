@@ -245,11 +245,23 @@ describe("a subscribed card", () => {
     expect(posts).toEqual([]);
   });
 
-  it("draws Edit disabled behind the fog, while Pause and Unsubscribe stay open", () => {
+  it("behind the fog, Edit still opens — to lower exposure only — and every exit stays open", () => {
     mount(card(BASKET, active), { delegation: FOGGED });
-    expect(screen.getByRole("button", { name: "Edit" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Pause" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Unsubscribe" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByText(/an edit can only lower what this bot may do/)).toBeInTheDocument();
+  });
+
+  it("says so when a saved filter names symbols the basket no longer holds", () => {
+    mount(card(BASKET, { ...active, symbols: ["XYZ"] }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(
+      screen.getByText(/saved filter names XYZ, which isn't in this playbook's symbols/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`nothing picked lets new entries open in all ${BASKET.length}`)),
+    ).toBeInTheDocument();
   });
 
   it("lists a human account's old subscription as never trading, leavable, not tunable", async () => {

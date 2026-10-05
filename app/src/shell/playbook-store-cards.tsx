@@ -190,12 +190,13 @@ export function PlaybookCard({
       </h2>
       {subscribed ? (
         // An existing subscription keeps every exit it had, on every account — pausing and
-        // leaving are never gated. Edit is a delegation, so it waits behind the fog.
+        // leaving are never gated. Behind the fog an edit may only lower exposure; the server
+        // refuses anything that delegates more.
         <SubscriptionRow
           accountId={accountId}
           card={card}
           human={botsOnly?.locked === true}
-          {...(delegation.locked ? { editLock: delegation.note } : {})}
+          reduceOnly={delegation.locked}
           onChanged={onChanged}
         />
       ) : null}

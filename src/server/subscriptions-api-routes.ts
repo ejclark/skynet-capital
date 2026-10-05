@@ -1,7 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { BOTS_ONLY_NOTE } from "../domain/playbook-bots-only.js";
-import { DELEGATION_LOCKED_NOTE, delegationLocked } from "../domain/playbook-delegation.js";
+import {
+  DELEGATION_LOCKED_NOTE,
+  delegationLocked,
+  raisesDelegation,
+} from "../domain/playbook-delegation.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import { accountKind } from "./account-kind.js";
@@ -83,11 +87,13 @@ async function delegationRefusal(
   notYours: string,
   config: DashboardServerConfig,
   session: Session | undefined,
+  /** False for an edit that only LOWERS exposure: reducing risk is never gated (#4649 review). */
+  delegates = true,
 ): Promise<string | undefined> {
   if (!ownedIds.includes(id)) return notYours;
   if (isHumanAccount(config, id)) return BOTS_ONLY_NOTE;
   // The fog, enforced where it counts: the disabled control is rendering, this is the gate.
-  if (await viewerDelegationLocked(config, session)) return DELEGATION_LOCKED_NOTE;
+  if (delegates && (await viewerDelegationLocked(config, session))) return DELEGATION_LOCKED_NOTE;
   return undefined;
 }
 
@@ -114,10 +120,15 @@ function basketRefusal(
  * are dropped right here, so nothing that names a subscriber can reach the response (#885's "no
  * cross-account visibility", and #3834's rule that a playbook's owner is never revealed). A paused
  * subscription is not counted: it delegates nothing, so it would overstate who is using the playbook.
+ * Neither is a human account's, saved before #4610: the runner never reads it, so it trades nothing.
  */
-function subscriberCounts(state: SubscriptionsState): ReadonlyMap<string, number> {
+function subscriberCounts(
+  state: SubscriptionsState,
+  isHuman: (accountId: string) => boolean,
+): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();
-  for (const subs of Object.values(state)) {
+  for (const [accountId, subs] of Object.entries(state)) {
+    if (isHuman(accountId)) continue;
     for (const sub of subs) {
       if (sub.enabled) counts.set(sub.playbookId, (counts.get(sub.playbookId) ?? 0) + 1);
     }
@@ -145,7 +156,9 @@ async function serveStoreIndex(
     Boolean(owns && id && isHumanAccount(config, id)),
   );
   // Unwired store → no count at all, rather than a false "No subscribers yet".
-  const counts = state ? subscriberCounts(state) : undefined;
+  const counts = state
+    ? subscriberCounts(state, (accountId) => isHumanAccount(config, accountId))
+    : undefined;
   sendJson(
     res,
     200,
@@ -214,6 +227,9 @@ async function handleConfigure(
     sendJson(res, 400, { error: "malformed configure body" });
     return;
   }
+  const prior = ownedIds.includes(body.id)
+    ? store.load()[body.id]?.find((s) => s.playbookId === body.playbookId)
+    : undefined;
   const refusal =
     (await delegationRefusal(
       body.id,
@@ -221,6 +237,7 @@ async function handleConfigure(
       "You can only change your own account's playbooks.",
       config,
       session,
+      prior === undefined || raisesDelegation(prior, body.tuning),
     )) ?? basketRefusal(body.playbookId, body.tuning.symbols);
   if (refusal) {
     sendJson(res, 200, { ok: false, error: refusal });

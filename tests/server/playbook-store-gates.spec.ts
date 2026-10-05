@@ -244,6 +244,15 @@ describe("bots-only subscriptions (#4610)", () => {
       expect(cards.find((c) => c.id === "S1-NVDA")?.subscription).toMatchObject({ enabled: true });
     });
 
+    it("counts no human account's saved subscription as an active subscriber — it never trades", async () => {
+      const { json } = await index(
+        "sauron",
+        storeWith([], { "human-eric": ["S1-NVDA"], sauron: ["S1-NVDA"] }),
+      );
+      const cards = json.cards as { id: string; subscribers?: number }[];
+      expect(cards.find((c) => c.id === "S1-NVDA")?.subscribers).toBe(1);
+    });
+
     it("says nothing about the kind of an account the viewer does not own", async () => {
       expect((await index("human-someone-else")).json.botsOnly).toMatchObject({ locked: false });
     });
@@ -337,6 +346,41 @@ describe("configure (#4649) — edit without un-pausing", () => {
       ok: false,
       error: "Not subscribed to G1-GOOG — subscribe first.",
     });
+  });
+
+  it("lets a fogged viewer LOWER a bot's exposure — reducing risk is never gated", async () => {
+    const calls: Calls = [];
+    // The stored S1-NVDA subscription is standard · $1,000; this edit is conservative · $500.
+    const answer = await call(
+      "/api/playbook-store/configure",
+      edit({
+        playbookId: "S1-NVDA",
+        mode: "conservative",
+        capitalAllocated: 500,
+        symbols: [],
+        compoundAllocation: false,
+      }),
+      configWith(storeWith(calls, subscribed), fogDown),
+    );
+    expect(answer.json).toEqual({ ok: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("still refuses a fogged viewer's edit that uncaps a bot", async () => {
+    const calls: Calls = [];
+    const answer = await call(
+      "/api/playbook-store/configure",
+      edit({
+        playbookId: "S1-NVDA",
+        mode: "standard",
+        capitalAllocated: null,
+        symbols: [],
+        compoundAllocation: false,
+      }),
+      configWith(storeWith(calls, subscribed), fogDown),
+    );
+    expect(answer.json).toMatchObject({ ok: false, error: DELEGATION_LOCKED_NOTE });
+    expect(calls).toEqual([]);
   });
 
   it.each([

@@ -1,4 +1,5 @@
 import { TRADE_TYPES, type TradeTypeCode } from "./trade-types.js";
+import type { PlaybookMode, PlaybookSubscription } from "./types.js";
 
 /**
  * THE PLAYBOOK STORE'S FOG (issue #1707) — the one rung that gates handing an account's capital to
@@ -70,4 +71,35 @@ export function delegationGateView(locked: boolean): DelegationGateView {
     unlocksAfterName: DELEGATION_RUNG_NAME,
     note: DELEGATION_LOCKED_NOTE,
   };
+}
+
+const MODE_RANK: Readonly<Record<PlaybookMode, number>> = {
+  conservative: 0,
+  standard: 1,
+  aggressive: 2,
+};
+
+/**
+ * Whether an edit hands the bot MORE than its subscription already has: a bigger mode, more or
+ * uncapped capital, a wider symbol filter, or compounding switched on. The fog gates delegation,
+ * and only this direction delegates; an edit that only lowers exposure goes through behind it,
+ * because restricting how someone reduces risk is the same safety bug as gating Pause.
+ */
+export function raisesDelegation(
+  prior: PlaybookSubscription,
+  next: Pick<PlaybookSubscription, "mode" | "capitalAllocated" | "symbols" | "compoundAllocation">,
+): boolean {
+  if (MODE_RANK[next.mode] > MODE_RANK[prior.mode]) return true;
+  if (
+    prior.capitalAllocated !== undefined &&
+    (next.capitalAllocated === undefined || next.capitalAllocated > prior.capitalAllocated)
+  ) {
+    return true;
+  }
+  const before = prior.symbols ?? [];
+  const after = next.symbols ?? [];
+  if (before.length > 0 && (after.length === 0 || after.some((s) => !before.includes(s)))) {
+    return true;
+  }
+  return next.compoundAllocation === true && prior.compoundAllocation !== true;
 }

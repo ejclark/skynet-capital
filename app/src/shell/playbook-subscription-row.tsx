@@ -54,16 +54,16 @@ export function SubscriptionRow({
   accountId,
   card,
   human,
-  editLock,
+  reduceOnly,
   onChanged,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
   /** The account is a human account (#4610): listed, leavable, never tunable. */
   readonly human: boolean;
-  /** The delegation fog's sentence while the viewer's own fog is down — Edit is drawn disabled
-   *  under it, because the server gates configure exactly like subscribe. */
-  readonly editLock?: string;
+  /** The viewer's delegation fog is down: Edit still opens, but only to LOWER exposure — the
+   *  server refuses an edit that delegates more, exactly as it refuses a subscribe. */
+  readonly reduceOnly: boolean;
   readonly onChanged: () => void;
 }): ReactElement | null {
   const sub = card.subscription;
@@ -103,6 +103,7 @@ export function SubscriptionRow({
           accountId={accountId}
           card={card}
           editing={sub}
+          reduceOnly={reduceOnly}
           onSaved={() => {
             setEditing(false);
             onChanged();
@@ -125,8 +126,7 @@ export function SubscriptionRow({
             <button
               type="button"
               className="btn mc-btn"
-              disabled={busy || editLock !== undefined}
-              title={editLock}
+              disabled={busy}
               onClick={() => setEditing(true)}
             >
               Edit
