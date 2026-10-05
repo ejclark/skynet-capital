@@ -250,3 +250,75 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-28
 <!-- probe-ref: {"symbols":{"CRWV":87.59},"vix":14.87,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bea-international-transactions-q2-2026-09-24","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-transactions-q2-2026-09-24","ism-manufacturing-2026-10-01","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mu-2026-09-30-print","new-home-sales-2026-09-24","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","scoos-2026-09-24","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-select-sector-secondary-reweight-2026-09-30","steel-imports-preliminary-2026-09-24","tic-quarterly-external-debt-2026-09-30","treasury-7y-note-2026-09-24","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0,"blocked":[{"url":"https://www.cnbc.com/quotes/.VIX","status":403,"at":"2026-09-28"}]} -->
+
+## Outcome
+
+**Close-out (written 2026-10-05, D+6 — at the `closeOutWithinDays: 6` ceiling, and the exact
+`Score by` date `FT-crwv-fully-connected-2026-09-29-1` registered; the legacy `FT-25` magnitude
+test's own `Score by` of 2026-10-02 had already arrived).** The instrument cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); every figure below
+is a fresh pull this session via `scripts/research/market-data.mjs` (daily adjusted closes for
+CRWV, QQQ, NVDA, MRVL, AVGO, MU), never read from this doc's own memory of the tape. SEC EDGAR (CIK
+0001769628) was re-pulled direct for the full 09-10→10-02 range.
+
+**The keynote carried product content, not a sized disclosure — kill switch 5 did not fire.** The
+agenda held: Day 1 (09-29) was expo/BattleBots, the Opening Keynote ran Wed 09-30 ("Built for
+Adoption," featuring NVIDIA's Ian Buck). The headline announcement was **CoreWeave Forge** — a
+unified training/inference/evaluation/agent-development layer, with early adopters MasterClass and
+Canva named (coreweave.com/news, fetched today) — product content with performance claims ("1.4×
+faster, 40% lower cost" for Serverless RL training; Agent Lens "20% more critical failures"
+detected), **no dollar figure, contract size, or named capacity commitment** anywhere in the
+release. SEC EDGAR shows **no 8-K** in the 09-28→10-02 window — only Form 4s (10-01, eight on
+10-02) and Form 144s (09-29, 09-30 ×7), i.e. insider-sale notices, not disclosure. The stance's own
+bar for reopening the amplifier-not-source read — "a named, sized capacity or customer commitment
+rather than product content" — is not met.
+
+**CRWV's actual reaction, both days, matches the sibling [openai-devday](openai-devday-2026-09-29.md)
+ledger's independently-pulled numbers exactly:** Day 1 (09-29) closed **$85.93** vs the prior close
+**$85.07** (+1.011%) against QQQ **+0.190%** — **+0.821pp excess**. Keynote day (09-30) closed
+**$87.12** (+1.385%) against QQQ **+0.249%** — **+1.136pp excess**. Both sit comfortably inside
+CRWV's own measured 174-session dispersion and neither is a conference-attributable outlier on its
+own; the corridor (PCE, GDP-3rd, ADP, Chicago PMI all on 09-30; ISM 10-01; jobs 10-02; MU print
+09-30 AMC) stays exactly as attribution-hostile as every prior row recorded, and this close-out does
+not attempt to separate the keynote's contribution from the corridor's.
+
+**`FT-crwv-fully-connected-2026-09-29-1` scores PASS.** Window 2026-09-28 close → 2026-10-02 close
+(fresh pull): CRWV **85.07 → 89.62, +5.349%**; QQQ **736.53 → 749.58, +1.772%**; CRWV excess vs QQQ
+= **+3.577pp**. Basket (equal-weight NVDA/MRVL/AVGO, MU excluded per registration since it printed
+inside the window): NVDA **228.86 → 233.95, +2.223%**; MRVL **251.90 → 272.29, +8.095%**; AVGO
+**349.57 → 355.14, +1.593%**; equal-weight average **+3.970%**; basket excess vs QQQ = **+2.199pp**.
+**Both excess returns are positive — signs match.** Kill switch ("signs differ") did not fire; void
+conditions did not fire (both dates were US trading sessions, the conference ran on its published
+window, the basket's excess was +2.199pp — well outside the ±0.5pp void band — and all five
+symbols' closes were available). As registered, a pass shows only that the conference did not push
+CRWV against its own complex — it does not separate "complex beta" from "conference," which is the
+honest ceiling this window could measure given the corridor.
+
+**Legacy `FT-25` (the magnitude test) scores PASS, uninformative, as registered.** Window
+2026-09-28 close → 2026-10-01 close (fresh pull): CRWV **85.07 → 88.57, +4.115%**; QQQ **736.53 →
+742.03, +0.747%**; excess = **+3.368pp**, \|excess\| well under the registered **16.02%** p90
+threshold — kill switch not met. Void conditions not met: QQQ's own move was **+0.747%**, inside
+the ±3% void band, and EDGAR shows no material non-conference 8-K inside the window. **Stated
+limit, exactly as registered at 08-31: the null pass rate here is 90% by construction, so this pass
+licenses nothing new** — it is recorded because the row was open, not because it adds information
+beyond what `FT-1` above already measured more informatively (a sign-match test against a real
+complex-beta benchmark, not a fixed percentile band).
+
+**Stance CONFIRMED, not falsified.** Watch-only / no-position held at every horizon through
+close-out: no kill switch fired (S1 stayed killed on its own re-run base-rate from the 09-15 row;
+the conference-window kill switch required a sized disclosure that never came; the rate-duration
+read was already retired on 09-15), both forward tests resolved cleanly (one pass against a real
+benchmark, one pass that was uninformative by its own registered design), and no paper position was
+ever entered or resized against this event. The one CoreWeave-specific catalyst this ledger ever
+recorded in the lead-up — the 09-17 convertible notes, −4.16% excess on announcement day — landed
+seven sessions before the window this close-out scores and is not re-litigated here.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-crwv-fully-connected-2026-09-29-1` (complex beta owns the window) | Sign of CRWV's 09-28→10-02 excess vs QQQ matches the sign of the NVDA/MRVL/AVGO basket's excess vs QQQ over the same window | CRWV **+3.577pp**, basket **+2.199pp** — both positive | **PASS** |
+| Legacy `FT-25` (conference window produces no outsized move) | CRWV's 09-28→10-01 excess vs QQQ lands inside ±16.02% (the registered p90) | **+3.368pp**, well inside the band; QQQ's own move (+0.747%) stayed inside the ±3% void band | **PASS (uninformative, as registered)** |
+
+**Last assessed:** 2026-10-05
+<!-- probe-ref: {"symbols":{"CRWV":89.62},"vix":15.31,"daysBand":"medium:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
