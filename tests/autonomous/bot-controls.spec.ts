@@ -60,6 +60,13 @@ describe("parseControlsState — the companion model dial (#1672 slice 4)", () =
   it("drops a model outside the allowlist rather than trusting it", () => {
     expect(parseControlsState({ companionModel: "gpt-5" })).toEqual({ bots: {} });
   });
+
+  it("drops the previous Sonnet ID a saved dial may still hold", () => {
+    // A dial saved before the allowlist moved to Sonnet 5.5 still reads "claude-sonnet-5" — an
+    // active model, just no longer on the allowlist. The fallback to the default is pinned in
+    // tests/server/controls-form.spec.ts.
+    expect(parseControlsState({ companionModel: "claude-sonnet-5" })).toEqual({ bots: {} });
+  });
 });
 
 describe("suspendedReason — the blockedReason seam", () => {

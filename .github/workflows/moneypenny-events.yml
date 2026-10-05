@@ -154,7 +154,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — dependabot PR #${{ github.event.pull_request.number }} is open but nothing will review it."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # Dependabot itself is the only bot that can ever legitimately land here (the `if:` above
           # already restricts the trigger to its own PRs) — named explicitly rather than `*`.
@@ -165,7 +165,7 @@ jobs:
           # auto-merge needs the App identity regardless of this workflow's own `permissions:` block.
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
-            --allowedTools "Bash,Read,Grep,Glob" --model claude-sonnet-5
+            --allowedTools "Bash,Read,Grep,Glob" --model claude-sonnet-5-5 --effort high
           prompt: |
             Read `.claude/agents/dep-warden.md` in this repo and follow it exactly — it is your
             complete instruction set. Review exactly one PR: #${{ github.event.pull_request.number }}
@@ -512,8 +512,8 @@ jobs:
     # 4-event run hit turn 101 mid-wrap-up (`error_max_turns`, 25 min, $11.50) after already
     # opening PRs for 3 of them — orphaned with no way to tell whether their checks would ever
     # fire. Matrixing gives every event its OWN session and its OWN turn budget: a stuck/runaway
-    # session on ONE event still gets caught fast (the guard is now TIGHTER — 60 turns for one
-    # event's work is a smaller window than 100 for a whole batch used to be), and a busy week is
+    # session on ONE event still gets caught by its own --max-turns (set on the research step below)
+    # instead of a ceiling sized for a whole batch, and a busy week is
     # more parallel jobs, never a shared budget several events race against. `fail-fast: false` so
     # one event's session dying never cancels its siblings' already-in-flight work.
     # `max-parallel` (2026-09-05, docs/LESSONS.md): sixteen sessions opened inside five minutes and six
@@ -553,7 +553,7 @@ jobs:
 
       - if: steps.gate.outputs.armed == 'true'
         id: build
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So each PR this session opens
@@ -583,12 +583,12 @@ jobs:
           # Revisit once S5's eval and the batching/tiering redesign (#2946) land — this pin is a
           # stopgap, not a permanent floor. --max-turns is a runaway backstop only, scoped to ONE
           # event's work (a `never-assessed` initial write-up — TEMPLATE + stance + kill switches
-          # + first ledger row — is the heaviest single-event case, typically 20-30 turns). The 60
-          # set here 2026-08-28 turned out too tight within a day — two runs finished normal work
-          # at turns 63 and 65-67, over cap (issue #904); 90 gives real headroom over the worst
-          # observed overrun. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
+          # + first ledger row — is the heaviest single-event case; a normal full session now lands in
+          # the 80s-90s). 150 sits above that measured distribution of green runs: a runaway stop, never
+          # a budget normal work is expected to reach (60, then 90, each failed runs that had already
+          # landed — issue #904; docs/LESSONS.md 2026-09-06). docs/process/TOKEN-EFFICIENCY.md, 2026-08-28.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5 --max-turns 150
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5-5 --effort high --max-turns 150
           # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
           # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
           # any other due event even though `event-scan.mjs --due` will still list every one of
@@ -698,7 +698,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
           # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
@@ -713,13 +713,14 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header.
           github_token: ${{ steps.app-token.outputs.token }}
+          # --effort high is the COMPUTE.md effort floor for this lane whichever tier routes it; on a
+          # Haiku route Claude Code leaves it off the request (Haiku 4.5 takes no effort parameter —
+          # docs/vendor/claude-code/env-vars.md, CLAUDE_CODE_ALWAYS_ENABLE_EFFORT). Same on plan builds.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.feedback_model }}
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.feedback_model }} --effort high
           # The triage rules and the build envelope live in .github/prompts/feedback-build.md,
-          # not here. Workflow files are Eric's carve-out and never auto-merge, so an envelope
-          # written in this file could only be tuned by spending his attention; as repo content it
-          # is an ordinary auto-merging PR. `.github/prompts/**` is in envelope.json, so no lane can
-          # rewrite its own orders.
+          # not here. `.github/prompts/**` is envelope-protected (blocking), so the prompt merges
+          # through Eric like this file, but no lane can rewrite its own orders.
           prompt: |
             Read `.github/prompts/feedback-build.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.
@@ -789,7 +790,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
@@ -798,12 +799,10 @@ jobs:
           # skynet-envoy; without it the action refuses in ~3s (run 36800601479, workflow-lint rule 8).
           allowed_bots: "github-actions,claude,skynet-envoy"
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }}
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }} --effort high
           # The triage rules and the build envelope live in .github/prompts/plan-build.md, not
-          # here — same reasoning as feedback-build.md (see its file for the full rationale):
-          # workflow files never auto-merge, so an envelope living here could only be tuned by
-          # spending Eric's attention, while `.github/prompts/**` is ordinary auto-merging content
-          # protected from self-modification by envelope.json.
+          # here — same as feedback-build.md. `.github/prompts/**` is envelope-protected (blocking),
+          # so the prompt merges through Eric like this file, but no lane can rewrite its own orders.
           prompt: |
             Read `.github/prompts/plan-build.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.

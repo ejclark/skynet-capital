@@ -4,11 +4,8 @@ You are in the skynet-capital repo, started by `moneypenny-events.yml`. **You ar
 pre-assigned exactly one event id** by the workflow that invoked you (given earlier in this
 prompt) — process only that one, never the whole due list, even though the due list will keep
 listing every event that's due right now. Each other due event has its own sibling matrix job
-running in parallel, responsible only for its own id (2026-08-29: this used to be one session
-looping over every due event in a shared turn budget, and a busy week's batch could hit
-`--max-turns` mid-run and orphan whichever events it hadn't finished yet — #799/#800/#801. One
-event per session removes that failure mode entirely: this session's turn budget only ever has to
-cover one event's work.)
+running in parallel, responsible only for its own id, and this session's turn budget is sized for
+one event's work (#799/#800/#801).
 
 Run `node scripts/event-scan.mjs --due` as a cross-check — confirm your assigned id is still in
 that list. If it prints `[]`, or your id isn't in it, stop: someone else already handled it (a
@@ -71,13 +68,12 @@ today's real readings — the current price for each symbol in the event's table
 VIX, the cadence band (`<impact>:<minDaysOut>+`, from `assessment-cadence.json`), the ids of other
 tracked events within 5 days of this one's date, and `"screenStreak": 0` (a full session always
 resets the streak — it is never itself a screen). The reader always takes the LAST such pair in the
-file, so this is what lets the event's *next* pulse be screened instead of automatically material —
-same as before. What changed (2026-09-19, docs/LESSONS.md): editing the header line in place is
-exactly the #1449 bug above wearing a different hat — two sessions touching the same event's ledger
-in the same window would rewrite the identical line and collide, instead of merging as the disjoint
-additions an append produces. Skipping the append entirely still doesn't break anything today, it
-just spends one more session than necessary next time; editing the OLD line in place is what to
-stop doing.
+file, so this is what lets the event's *next* pulse be screened instead of automatically material.
+Append rather than edit in place (docs/LESSONS.md, 2026-09-19): two sessions touching the same
+event's ledger in one window would otherwise rewrite the identical line and conflict — the same
+collision as #1449, which the one-file-per-owner rule above prevents — while appends merge as
+disjoint additions. Skipping the append breaks nothing; it only spends one more session than
+necessary at the next pulse.
 
 Ship ONE PR for your assigned event, on a branch named EXACTLY `research/<event-id>` off `origin/main` — the
 branch name is the dedupe key that stops the next push-triggered run re-researching an event whose

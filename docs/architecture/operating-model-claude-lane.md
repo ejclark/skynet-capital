@@ -1,6 +1,6 @@
 # Human-directed lane
 
-**Technology:** GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code-action on claude-opus-5 --max-turns 80, concurrency cancel-in-progress
+**Technology:** GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code-action on claude-opus-5-5 --max-turns 80, concurrency cancel-in-progress
 
 **Responsibility:** Any comment from a recognised OWNER/MEMBER/COLLABORATOR on an existing thread starts or steers a session under .github/prompts/interactive.md; a new issue needs an explicit @claude; the session answers, reviews or builds and opens PRs with the App token
 

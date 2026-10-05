@@ -33,9 +33,11 @@
 // at it: exactly 1 criterion and zero open assumptions — the single-fact, zero-ambiguity ask (a typo,
 // one label rename, one color swap). 2 or 3 criteria, or any open assumption, stays on Sonnet.
 
-const DEFAULT_MODEL = "claude-sonnet-5";
-const STRONG_MODEL = "claude-opus-5";
-const LIGHT_MODEL = "claude-haiku-4-5-20251001";
+// Exported for continuation.mjs, whose CONTINUED_MODEL is this tier by reference: it was once a
+// hand-copied literal and went stale at the next generation bump.
+export const DEFAULT_MODEL = "claude-sonnet-5-5";
+const STRONG_MODEL = "claude-opus-5-5";
+const LIGHT_MODEL = "claude-haiku-4-5";
 
 // Matches issue #981 exactly (3 criteria, spec-complete) — the case Eric named as "very simple/easy,
 // Sonnet 5 is more than capable." The floor is deliberately at, not above, that observed case.
