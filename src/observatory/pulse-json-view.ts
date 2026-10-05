@@ -3,6 +3,7 @@ import type { RoundTrip } from "../trading/round-trips.js";
 import { tradeStats } from "../trading/trade-stats.js";
 import type { TradeActivityRecord } from "./activity-store.js";
 import { deskLedger, formatPctOrDash, formatRatio } from "./desk-data.js";
+import { downsampleMinMax } from "./downsample.js";
 import { equityDrawdown } from "./equity-sparkline.js";
 import { doubledAt, seedBaseline } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
@@ -95,7 +96,13 @@ const WEEK_CAP = 12;
 const dayLabel = (iso: string): string =>
   formatDateTime(new Date(iso), "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
-function pulseCurve(samples: readonly EquitySample[]): PulseCurve | null {
+/** `drawdown` comes from the caller's own `equityDrawdown(samples)` — computed once per request,
+ *  not once for the tiles and again in here (both a sort and a full scan over every sample;
+ *  #4612 slice 7, defect #1's own follow-on). */
+function pulseCurve(
+  samples: readonly EquitySample[],
+  drawdown: ReturnType<typeof equityDrawdown>,
+): PulseCurve | null {
   if (samples.length < 2) return null;
   const ordered = [...samples].sort((a, b) => a.at.localeCompare(b.at));
   const first = ordered[0] as EquitySample;
@@ -106,9 +113,11 @@ function pulseCurve(samples: readonly EquitySample[]): PulseCurve | null {
   const low = ordered.reduce((m, s) => Math.min(m, s.equity), Number.POSITIVE_INFINITY);
   const high = ordered.reduce((m, s) => Math.max(m, s.equity), Number.NEGATIVE_INFINITY);
   const rise = Math.max(1e-9, high - low);
-  const drawdown = equityDrawdown(samples);
+  // Low/high/drawdown are measured over every sample above; only the plotted curve is bounded —
+  // the chart body, not the stats, is what grows unboundedly with history (#4612 slice 7, #13).
+  const plotted = downsampleMinMax(ordered, (s) => s.equity);
   return {
-    points: ordered.map((s) => ({
+    points: plotted.map((s) => ({
       x: (Date.parse(s.at) - t0) / span,
       y: (s.equity - low) / rise,
     })),
@@ -220,7 +229,7 @@ export function deskPulseView(
     },
   ];
   return {
-    curve: pulseCurve(samples),
+    curve: pulseCurve(samples, drawdown),
     weeks: pulseWeeks(trips),
     tiles,
     race: pulseRace(samples, snapshot.equity),

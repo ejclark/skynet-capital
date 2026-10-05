@@ -54,12 +54,16 @@ export async function readAccountDecisions(
   return [...ownRecords, ...foreignSets.flat()];
 }
 
-/** Every OTHER persona whose orders land on this account's ledger, found by the order-id join. */
+/** Every OTHER persona whose orders land on this account's ledger, found by the order-id join.
+ *  Looked up once per unique order id, not once per ledger line — a partial fill posts several
+ *  activity rows for the same order, and `findByOrderId` is a synchronous SQLite call (#4612
+ *  slice 7, defect #9: "~10x faster" over unique ids on a 70-day ledger). */
 async function foreignPersonas(accountId: string, deps: AccountDecisionsDeps): Promise<string[]> {
   if (!(deps.findByOrderId && deps.readTradeActivity)) return [];
   const found = new Set<string>();
-  for (const trade of await deps.readTradeActivity(accountId)) {
-    const personaId = deps.findByOrderId(trade.orderId)?.record.personaId;
+  const orderIds = new Set((await deps.readTradeActivity(accountId)).map((t) => t.orderId));
+  for (const orderId of orderIds) {
+    const personaId = deps.findByOrderId(orderId)?.record.personaId;
     if (personaId && personaId !== accountId) found.add(personaId);
   }
   return [...found];

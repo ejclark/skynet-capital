@@ -268,11 +268,16 @@ export function openDecisionDb(path: string): DecisionDb {
   const selectClosedCount = db.prepare(
     "SELECT COUNT(*) AS n FROM retrospectives WHERE persona_id = ?",
   );
-  const selectFunnelIntents = db.prepare(`
+  // Grouped, not one row per intent (#4612 slice 7, defect #9: "+205 MB at 12 × 180 days" on this
+  // path) — the distinct (guard_reason, action, result_status) combinations are few no matter how
+  // long a persona's history runs, so the count SQLite already has to compute for GROUP BY is the
+  // whole result, never a row pulled per intent.
+  const selectFunnelGrouped = db.prepare(`
     SELECT intents.guard_reason AS guard_reason, intents.action AS action,
-           intents.result_status AS result_status
+           intents.result_status AS result_status, COUNT(*) AS n
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE decisions.persona_id = ?
+    GROUP BY intents.guard_reason, intents.action, intents.result_status
   `);
   // Retrospectives carry no playbook id of their own — only the intent that opened the closed
   // position does — so attributing realized P/L to a playbook means joining back through it.
@@ -497,10 +502,11 @@ export function openDecisionDb(path: string): DecisionDb {
     funnelFor(personaId): DecisionFunnel {
       const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
       const closed = (selectClosedCount.get(personaId) as { n: number }).n;
-      const rows = selectFunnelIntents.all(personaId) as {
+      const rows = selectFunnelGrouped.all(personaId) as {
         guard_reason: string | null;
         action: string | null;
         result_status: string | null;
+        n: number;
       }[];
       return computeFunnel(
         cycles,
@@ -509,6 +515,7 @@ export function openDecisionDb(path: string): DecisionDb {
           guardReason: r.guard_reason as GuardRefusalReason | null,
           action: r.action,
           resultStatus: r.result_status,
+          count: r.n,
         })),
       );
     },
