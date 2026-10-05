@@ -29,6 +29,7 @@ export function SymbolField({
   maxLength,
   onChange,
   onCommit,
+  commitOnBlur = true,
 }: {
   readonly id: string;
   readonly label: string;
@@ -37,6 +38,15 @@ export function SymbolField({
   readonly maxLength?: number;
   readonly onChange: (raw: string) => void;
   readonly onCommit: (symbol: string) => void;
+  /**
+   * Whether leaving the field commits what is in it. True everywhere this field writes something
+   * REVERSIBLE — a `?symbol=` a member can retype — which is why it is the default. The watchlist
+   * (#4332) sets it false: there, a commit is a durable append to the member's own list, so
+   * half-typed text that loses focus (tapping a row blurs the input first) would otherwise persist
+   * a name nobody asked for and spend a slot against the cap. Enter and picking a suggestion still
+   * commit, so the field loses nothing a member meant to do.
+   */
+  readonly commitOnBlur?: boolean;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -159,6 +169,7 @@ export function SymbolField({
         onBlur={() => {
           setOpen(false);
           setActiveIndex(-1);
+          if (!commitOnBlur) return;
           const trimmed = value.trim().toUpperCase();
           if (trimmed !== "") onCommit(trimmed);
         }}

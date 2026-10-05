@@ -50,3 +50,44 @@ export const dismissDeskAlert = (
   participantId: string,
   fingerprint: string,
 ): Promise<DismissResult> => postJson("/api/trade/alerts/dismiss", { participantId, fingerprint });
+
+/**
+ * Delivery — whether these same alerts also reach the member when the page is closed (#3407 P4
+ * slice 3). `available: false` always carries a `reason` sentence the panel prints verbatim: a
+ * deployment with no mail credential, or a sign-in that never gave us an address. The destination
+ * is NEVER sent from here — the server reads it off the session, so this side cannot name a
+ * recipient at all.
+ */
+export type DeliveryChannel = "off" | "email";
+
+export interface AlertDelivery {
+  readonly available: boolean;
+  readonly reason?: string;
+  readonly channels: readonly DeliveryChannel[];
+  readonly channel: DeliveryChannel;
+  readonly minPriority: AlertPriority;
+  readonly destination?: string;
+  /** Who it would arrive from, so a member knows what to look for before they opt in. */
+  readonly from?: string;
+}
+
+export type SaveDeliveryResult = {
+  readonly ok: boolean;
+  readonly refusals?: readonly string[];
+};
+
+export async function fetchAlertDelivery(participantId: string): Promise<AlertDelivery> {
+  const res = await fetch(
+    `/api/trade/alerts/delivery?participantId=${encodeURIComponent(participantId)}`,
+    { credentials: "same-origin" },
+  );
+  if (!res.ok) throw new Error(`GET /api/trade/alerts/delivery → ${res.status}`);
+  return (await res.json()) as AlertDelivery;
+}
+
+export const saveAlertDelivery = (
+  participantId: string,
+  channel: DeliveryChannel,
+  minPriority: AlertPriority,
+): Promise<SaveDeliveryResult> =>
+  postJson("/api/trade/alerts/delivery", { participantId, channel, minPriority });
