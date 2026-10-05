@@ -7,6 +7,7 @@ import {
 } from "./companion-anthropic-stream.js";
 import {
   COMPANION_MAX_MESSAGE_CHARS,
+  effortFor,
   MAX_HISTORY_MESSAGES,
   MAX_TOKENS_PER_REPLY,
   MAX_TURNS,
@@ -18,12 +19,14 @@ import {
   BUDGET_SPENT_MESSAGE,
   type DoFetch,
   type Headers,
+  REFUSAL_MESSAGE,
   runToolRounds,
   systemBlocks,
+  toolsFor,
 } from "./companion-tool-rounds.js";
 import type { CompanionDeskDeps, FeedbackDraft } from "./companion-tools.js";
 
-export { BUDGET_SPENT_MESSAGE };
+export { BUDGET_SPENT_MESSAGE, REFUSAL_MESSAGE };
 
 type DoStream = typeof streamAnthropicMessage;
 
@@ -98,27 +101,42 @@ export interface CompanionChatConfig {
   readonly resolveModel?: () => CompanionModelId | undefined;
 }
 
-/** The one leg the member actually reads — streamed. `exhausted` only changes the volatile
- *  system note (tool lookups are done for this turn), never the safety-relevant static prompt. */
+const EXHAUSTED_NOTE =
+  "Tool lookups are exhausted for this turn — answer with what you already have rather than looking anything up again.";
+
+/** The streamed leg's history: the exhaustion note as a text block after the last tool_result, in
+ *  the same user turn, so the rounds' messages stay byte-identical. Guarded, not assumed: with no
+ *  tool round run (`MAX_TOOL_ROUNDS` dialled to 0) the last turn is plain-string member text —
+ *  nothing was looked up and no thinking block needs protecting, so the history goes out unchanged
+ *  and `tool_choice: none` alone stops a lookup. */
+export function withExhaustedNote(working: readonly unknown[]): readonly unknown[] {
+  const last = working[working.length - 1] as { role?: unknown; content?: unknown } | undefined;
+  if (last?.role !== "user" || !Array.isArray(last.content)) return working;
+  return [
+    ...working.slice(0, -1),
+    { role: "user", content: [...last.content, { type: "text", text: EXHAUSTED_NOTE }] },
+  ];
+}
+
+/** The one leg the member actually reads — streamed. Append-only against the tool rounds: the same
+ *  `system` and `tools` (so their thinking blocks and the cached prefix stay valid), `tool_choice:
+ *  none` to stop another lookup, and the exhaustion note after the last tool_result. */
 async function streamFinalReply(
   doStream: DoStream,
   headers: Headers,
   model: CompanionModelId,
   volatile: string,
-  exhausted: boolean,
+  participantId: string | undefined,
   working: readonly unknown[],
   handlers: CompanionHandlers,
   callsSoFar = 0,
 ): Promise<void> {
-  const finalSystem = systemBlocks(
-    exhausted
-      ? `${volatile} Tool lookups are exhausted for this turn — answer with what you already have rather than looking anything up again.`
-      : volatile,
-  );
   if (callsSoFar === 0 && handlers.budget && !handlers.budget()) {
     handlers.onError(BUDGET_SPENT_MESSAGE);
     return;
   }
+  const messages = withExhaustedNote(working);
+  let stopReason: string | undefined;
   try {
     await doStream(
       ANTHROPIC_URL,
@@ -126,15 +144,26 @@ async function streamFinalReply(
       {
         model,
         max_tokens: MAX_TOKENS_PER_REPLY,
-        system: finalSystem,
-        messages: working,
+        ...effortFor(model),
+        system: systemBlocks(volatile),
+        tools: toolsFor(participantId),
+        tool_choice: { type: "none" },
+        messages,
       },
       (event: AnthropicStreamEvent) => {
+        if (event.type === "message_delta") {
+          stopReason =
+            (event.delta as { stop_reason?: string } | undefined)?.stop_reason ?? stopReason;
+        }
         const delta = textDelta(event);
         if (delta) handlers.onText(delta);
       },
     );
-    handlers.onDone();
+    // A decline is stop_reason "refusal" — before any text, or after partial text that is not an
+    // answer. Report it as an error: with nothing streamed the rail shows the decline message, and
+    // after partial text it marks the line cut off rather than presenting it as a finished reply.
+    if (stopReason === "refusal") handlers.onError(REFUSAL_MESSAGE);
+    else handlers.onDone();
   } catch (error) {
     handlers.onError(error instanceof Error ? error.message : "companion unreachable");
   }
@@ -188,7 +217,7 @@ export function createCompanionChat(
       headers,
       model,
       volatile,
-      true,
+      canUseDesk ? input.participantId : undefined,
       outcome.working,
       handlers,
       outcome.calls,

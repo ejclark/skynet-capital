@@ -286,7 +286,7 @@ LLM-written 'mood'."* Those settle together on the precedent already in this fil
 screen** writes its own ledger row and commits it *without spending a session*, precisely so a
 mechanical check can never be worded as a verdict. A weekly study is the same shape of work: a join
 over documents that already exist. `src/research/week-study.ts` composes it; `npm run research:week`
-runs it; a cron is then one line, not a session.
+runs it; scheduling it is then one CI job on the merge tick, not a session (*The cadence*, below).
 
 **What the document contains** — and what each part is allowed to be:
 
