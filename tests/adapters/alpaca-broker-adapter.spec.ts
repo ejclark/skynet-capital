@@ -66,7 +66,59 @@ describe("AlpacaBrokerAdapter", () => {
       const portfolio = await adapter.getPortfolio();
 
       expect(portfolio.cash).toBe(4_000_000);
-      expect(portfolio.positions[0]).toEqual({ symbol: "EEM", quantity: 500, avgPrice: 42.1 });
+      expect(portfolio.positions[0]).toEqual({
+        symbol: "EEM",
+        quantity: 500,
+        avgPrice: 42.1,
+        marketValue: 21_050,
+      });
+    });
+
+    it("keeps an option row's broker market value — the dollar mark the price stream never quotes (#4643)", async () => {
+      const adapter = adapterWith({
+        "/v2/account": {
+          status: 200,
+          body: { id: "a1", cash: "10000", portfolio_value: "10500", status: "ACTIVE" },
+        },
+        "/v2/positions": {
+          status: 200,
+          // Alpaca: qty in contracts, avg_entry_price PER SHARE, market_value in total dollars.
+          body: [
+            {
+              symbol: "NVDA261113C00240000",
+              qty: "1",
+              avg_entry_price: "4.50",
+              market_value: "500",
+            },
+          ],
+        },
+      });
+
+      const [option] = (await adapter.getPortfolio()).positions;
+
+      expect(option).toEqual({
+        symbol: "NVDA261113C00240000",
+        quantity: 1,
+        avgPrice: 4.5,
+        marketValue: 500,
+      });
+    });
+
+    it("leaves marketValue off when the broker sends none, so valuation falls back to cost", async () => {
+      const adapter = adapterWith({
+        "/v2/account": {
+          status: 200,
+          body: { id: "a1", cash: "10000", portfolio_value: "10000", status: "ACTIVE" },
+        },
+        "/v2/positions": {
+          status: 200,
+          body: [{ symbol: "EEM", qty: "5", avg_entry_price: "42.10", market_value: "" }],
+        },
+      });
+
+      const [position] = (await adapter.getPortfolio()).positions;
+
+      expect(position).toEqual({ symbol: "EEM", quantity: 5, avgPrice: 42.1 });
     });
   });
 

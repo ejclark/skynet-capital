@@ -1,5 +1,5 @@
 import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
-import { isOccSymbol } from "../trading/option-symbols.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
 import type { TicketContext } from "../trading/order-ticket.js";
 import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
@@ -9,7 +9,6 @@ import {
   recordsFromActivity,
   type TradeActivityRecord,
 } from "./activity-store.js";
-import { OPTION_MULTIPLIER } from "./broker-positions.js";
 import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
 
 /**
@@ -72,7 +71,7 @@ export function fillsFrom(
         !LIFECYCLE_INFO_ONLY.has(row.status),
     )
     .map((row) => {
-      const scale = isOccSymbol(row.symbol) ? OPTION_MULTIPLIER : 1;
+      const scale = contractMultiplier(row.symbol);
       const tag = row.orderId ? playbookTags?.get(row.orderId) : undefined;
       return {
         symbol: row.symbol,

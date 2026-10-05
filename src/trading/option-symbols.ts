@@ -48,6 +48,19 @@ export function isOccSymbol(symbol: string): boolean {
   return OCC_PATTERN.test(symbol.trim().toUpperCase());
 }
 
+/** One option contract controls 100 shares, so every per-share broker price on an OCC symbol is
+ *  a per-contract price waiting to be scaled. One constant for every surface that values a book —
+ *  the member desk and the bots both — because when only one of two surfaces scaled, they
+ *  disagreed by 100x about the same trade (#4643: the bots' equity, breaker feed and
+ *  retrospectives were the surface that didn't). */
+export const OPTION_MULTIPLIER = 100;
+
+/** Shares one unit of `symbol` controls: 100 for an option contract, 1 for a share. Multiply any
+ *  per-share price (a quote, an average cost, a fill) by this before treating it as dollars. */
+export function contractMultiplier(symbol: string): number {
+  return isOccSymbol(symbol) ? OPTION_MULTIPLIER : 1;
+}
+
 /** `("MSFT","2026-09-18","put",420)` → `MSFT260918P00420000`. Throws on unbuildable input. */
 export function buildOccSymbol(parts: OptionContractParts): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(parts.expiration);

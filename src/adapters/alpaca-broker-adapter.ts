@@ -103,11 +103,22 @@ export class AlpacaBrokerAdapter implements BrokerPort {
     ]);
     return {
       cash: Number(account.cash),
-      positions: positions.map((position) => ({
-        symbol: position.symbol,
-        quantity: Number(position.qty),
-        avgPrice: Number(position.avg_entry_price),
-      })),
+      positions: positions.map((position) => {
+        // `market_value` is the broker's own dollar mark, already contract-scaled for options —
+        // the one mark for a holding the price stream never quotes (#4643). Absent or unparseable
+        // leaves it off, so valuation falls back to cost rather than to a false $0.
+        const marketValue = Number(position.market_value);
+        return {
+          symbol: position.symbol,
+          quantity: Number(position.qty),
+          avgPrice: Number(position.avg_entry_price),
+          ...(position.market_value !== undefined &&
+          position.market_value !== "" &&
+          Number.isFinite(marketValue)
+            ? { marketValue }
+            : {}),
+        };
+      }),
     };
   }
 

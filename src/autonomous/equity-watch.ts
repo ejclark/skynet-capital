@@ -1,3 +1,4 @@
+import { positionValue } from "../domain/portfolio.js";
 import type { MarketContext, Portfolio } from "../domain/types.js";
 
 /**
@@ -7,19 +8,21 @@ import type { MarketContext, Portfolio } from "../domain/types.js";
  * portfolio against the same MarketContext the personas just traded on and feeds the fleet total.
  *
  * Marking rule: a position values at the context's last price; with no usable quote it falls back
- * to average cost — a stale-but-finite read beats a false crash to $0, which would trip the breaker
- * on a data gap rather than a real loss (the data-gap breaker owns that failure mode).
+ * to the broker's own market value, then to average cost — a stale-but-finite read beats a false
+ * crash to $0, which would trip the breaker on a data gap rather than a real loss (the data-gap
+ * breaker owns that failure mode). Option contracts count at 100 shares (`positionValue`): the
+ * breaker's baseline is the broker's own last equity, which always scaled them, so an unscaled
+ * reading opened every day already "down" by 99% of any option held overnight (#4643).
  */
 
-/** One portfolio marked to market: cash + every position at last price (avg cost when unquoted). */
+/** One portfolio marked to market: cash + every position at last price (market value, then avg
+ *  cost, when unquoted), option contracts at 100 shares each. */
 export function markedEquity(portfolio: Portfolio, context: MarketContext): number {
   const positionsValue = portfolio.positions.reduce((sum, position) => {
     const quote = context.quotes[position.symbol];
-    const price =
-      quote !== undefined && Number.isFinite(quote.last) && quote.last > 0
-        ? quote.last
-        : position.avgPrice;
-    return sum + position.quantity * price;
+    const last =
+      quote !== undefined && Number.isFinite(quote.last) && quote.last > 0 ? quote.last : undefined;
+    return sum + positionValue(position, last);
   }, 0);
   return portfolio.cash + positionsValue;
 }

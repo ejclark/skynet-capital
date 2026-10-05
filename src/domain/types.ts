@@ -36,11 +36,22 @@ export interface MarketContext {
   readonly newsSentiment?: Readonly<Record<string, number>>;
 }
 
-/** A single holding. `quantity` may be negative for short positions. */
+/**
+ * A single holding. `quantity` may be negative for short positions. For an option contract (an
+ * OCC `symbol`) `quantity` is CONTRACTS and `avgPrice` is the broker's PER-SHARE premium — value
+ * it through `contractMultiplier` (`trading/option-symbols.ts`), never as `quantity × avgPrice`.
+ */
 export interface Position {
   readonly symbol: string;
   readonly quantity: number;
   readonly avgPrice: number;
+  /**
+   * The broker's own total-dollar mark for the holding, when the source has one (Alpaca's
+   * `market_value`). The best mark for anything the live price stream does not quote — an option
+   * contract above all — because it is already in dollars and already contract-scaled. Optional:
+   * in-memory and replayed books have none, and fall back to cost.
+   */
+  readonly marketValue?: number;
 }
 
 /** A persona's full account state at the start of a cycle. */
