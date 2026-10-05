@@ -331,25 +331,68 @@ export function parseFailure(run) {
   };
 }
 
-/** The failing jobs of a run, each with its failing step and the tail of its log. */
-function gatherFailures(runId) {
-  const jobs = json("gh api jobs", [
+/**
+ * A job GitHub cancelled before any runner picked it up: no runner name, not one step. The run
+ * still concludes `failure`, and the check run's only annotation reads "The job was not acquired
+ * by Runner of type hosted even after multiple attempts". A human cancelling a queued job concludes
+ * the RUN `cancelled`, which `routeFailure` never sees — so on a failed run this shape is GitHub's.
+ */
+export function neverAcquired(job) {
+  return job?.conclusion === "cancelled" && !job.runner_name && !(job.steps ?? []).length;
+}
+
+/**
+ * A failed run whose jobs never got a runner (#4656). Measured 2026-10-05 20:32Z: three Moneypenny
+ * Events runs each queued `route` for exactly 15 minutes, were cancelled unstarted, and — with no
+ * `failure` job to find — fell through to `parseFailure`, which filed "GitHub rejected the workflow
+ * file" for a file that parsed fine and sent a repair session hunting a syntax error that did not
+ * exist. Its own run-level signature, like `parseFailure`'s, so one outage is one issue per
+ * workflow rather than one per starved job. Each job's `runs-on` labels are listed because a
+ * mistyped label starves a job the same way — that one IS ours, and this is where it would show.
+ */
+export function runnerStarved(run, jobs) {
+  const names = jobs.map((j) => `\`${j.name}\` (${(j.labels ?? []).join(", ") || "no labels"})`);
+  return {
+    job: "(no runner was ever assigned)",
+    step: "GitHub never assigned a runner — the jobs were cancelled before their first step",
+    logTail: [
+      `Run ${run.id} completed with conclusion "failure", but no job failed.`,
+      `Cancelled unstarted (no runner name, zero steps): ${names.join(", ")}.`,
+      "",
+      "For a GitHub-hosted label (ubuntu-latest) that is GitHub's runner capacity, not this repo —",
+      'the job annotation reads "The job was not acquired by Runner of type hosted even after multiple attempts".',
+      `Recover the dropped event with a re-run once runners are back: gh run rerun ${run.id} --failed`,
+      "A label above that is not a GitHub-hosted runner would starve the same way, and that one is ours.",
+    ].join("\n"),
+  };
+}
+
+/**
+ * Turn a run's jobs into the failures to report. Pure — `logOf` is the only impure part and is
+ * injected. Jobs that failed are the normal case; a failed run with none of those is either starved
+ * of runners (`runnerStarved`) or rejected outright (`parseFailure`) — never "nothing to report".
+ */
+export function failuresFrom(run, jobs = [], logOf = () => "") {
+  const failed = jobs
+    .filter((j) => j.conclusion === "failure")
+    .map((j) => ({
+      job: j.name,
+      step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
+      logTail: logOf(j.id),
+    }));
+  if (failed.length || run.conclusion !== "failure") return failed;
+  const starved = jobs.filter(neverAcquired);
+  return starved.length ? [runnerStarved(run, starved)] : [parseFailure(run)];
+}
+
+/** The jobs of a run, as the API reports them. */
+function fetchJobs(runId) {
+  return json("gh api jobs", [
     "api",
     `repos/{owner}/{repo}/actions/runs/${runId}/jobs`,
     "--jq",
     ".jobs",
   ]);
-  const failed = jobs.filter((j) => j.conclusion === "failure");
-  return failed.map((j) => ({
-    job: j.name,
-    step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
-    logTail: jobLog(j.id),
-  }));
-}
-
-/** Zero failing jobs on a failed run is the workflow-rejected shape, not "nothing to report". */
-function withParseFallback(run, failures) {
-  return failures.length || run.conclusion !== "failure" ? failures : [parseFailure(run)];
 }
 
 function ensureLabel() {
@@ -423,9 +466,11 @@ function main(argv) {
   const ctx = {
     run,
     defaultBranch: raw.repository?.default_branch ?? process.env.DEFAULT_BRANCH ?? "main",
-    // A fixture supplies its own failures; a live run reads them from the API. A failed run with
-    // no failing job means the workflow file itself was rejected — still a failure, still ours.
-    failures: raw.failures ?? withParseFallback(run, dry ? [] : gatherFailures(run.id)),
+    // A fixture supplies its own failures (or the raw jobs to classify); a live run reads the jobs
+    // from the API. A failed run with no failing job is still a failure — `failuresFrom` says which.
+    failures:
+      raw.failures ??
+      failuresFrom(run, raw.jobs ?? (dry ? [] : fetchJobs(run.id)), dry ? undefined : jobLog),
   };
   const deps = fixture ?? (dry ? {} : { openIssues: openIssues(), closedIssues: closedIssues() });
   const intents = routeFailure(ctx, deps);
