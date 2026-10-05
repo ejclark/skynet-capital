@@ -101,6 +101,38 @@ describe("JsonlKeyedStore", () => {
     });
   });
 
+  describe("when one key's file outgrows the engine's argument limit (#4612 slice 3, #4615)", () => {
+    // Spreading a file's rows into push() passes every row as a separate argument, and V8 throws
+    // RangeError past ~121k of them. History rehydration lists every file at boot, so one history
+    // file that long turned every restart into `exit 1` — a crash loop, not a slow page.
+    const LINES = 130_000;
+    const writeLines = (key: string) =>
+      writeFileSync(
+        fileFor(dir)(key),
+        `${Array.from({ length: LINES }, (_, i) => JSON.stringify({ key, value: i })).join("\n")}\n`,
+        "utf8",
+      );
+
+    it("lists every row of that key without throwing", async () => {
+      writeLines("alpha");
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+
+      const rows = await store.list("alpha");
+
+      expect(rows).toHaveLength(LINES);
+      expect(rows[0]).toEqual({ key: "alpha", value: 0 });
+      expect(rows[LINES - 1]).toEqual({ key: "alpha", value: LINES - 1 });
+    });
+
+    it("lists it alongside the other keys when listing the whole store", async () => {
+      writeLines("alpha");
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("beta", { key: "beta", value: 1 });
+
+      expect(await store.list()).toHaveLength(LINES + 1);
+    });
+  });
+
   describe("when a crash or a full disk tore the last line mid-append", () => {
     // The torn line is the NEWEST one — exactly what history rehydration reads at boot. One torn byte
     // must not fail a startup, a profile page, or a board-wide metric.

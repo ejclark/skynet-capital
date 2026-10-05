@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import { maxOf, minOf } from "../math/num.js";
 import type { TradeActivityRecord } from "../observatory/activity-record.js";
 
 /** A keyset page of one persona's decisions: strictly older than `before`, newest first, at most
@@ -92,8 +93,9 @@ export async function readAccountDecisionsPage(
     s.filter((r) => r.at < before),
   );
   const full = streams.filter((s) => s.length >= page.limit);
-  const horizon =
-    full.length > 0 ? Math.max(...full.map((s) => Math.min(...s.map((r) => r.at)))) : undefined;
+  // A legacy reader returns a persona's WHOLE audit trail, so a stream is unbounded: fold it, never
+  // spread it into Math.min (RangeError past ~121k cycles, #4615). Personas are few; either works.
+  const horizon = full.length > 0 ? maxOf(full.map((s) => minOf(s.map((r) => r.at)))) : undefined;
   const records = streams.flat().filter((r) => horizon === undefined || r.at >= horizon);
   return { records, ...(horizon !== undefined ? { horizon } : {}) };
 }
