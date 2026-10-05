@@ -7,6 +7,7 @@ import {
   dismissDeskAlert,
   fetchDeskAlerts,
 } from "../live/alerts";
+import { AlertDeliveryControl } from "./alert-delivery-control";
 import { ConnectLink } from "./connect-link";
 
 /**
@@ -117,6 +118,10 @@ export function DeskAlerts({ deskId }: { readonly deskId: string }): ReactElemen
           ))}
         </ul>
       )}
+      {/* Delivery sits with what it governs: the switch for "also reach me when this page is
+          closed" belongs beside the alerts themselves, not in a settings page a member would have
+          to go looking for. Only for a linked account — there is nothing to deliver otherwise. */}
+      {data.available ? <AlertDeliveryControl deskId={deskId} /> : null}
       {data.available && !data.dismissable && data.alerts.length > 0 ? (
         <p className="al-note">
           This deployment doesn't keep dismissals, so alerts stay until the condition clears.
