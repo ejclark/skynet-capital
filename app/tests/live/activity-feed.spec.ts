@@ -7,7 +7,12 @@ import {
   parseActivityQuery,
   toggleActivityQualifier,
 } from "../../src/live/activity-feed";
-import type { WireDevelopmentItem, WireFeedbackItem, WireTrade } from "../../src/live/wire";
+import type {
+  WireDevelopmentItem,
+  WireFeedbackItem,
+  WireMilestoneItem,
+  WireTrade,
+} from "../../src/live/wire";
 
 /**
  * ONE FEED, SEVERAL KINDS (#784 slice 3) — the page's own model. Behavioral only: given a query a
@@ -282,6 +287,71 @@ describe("parseActivityQuery", () => {
   });
 
   it("treats an unknown is:-looking token as a plain term, never as a silent filter", () => {
-    expect(parseActivityQuery("is:milestone")).toEqual({ terms: ["is:milestone"], qualifiers: [] });
+    expect(parseActivityQuery("is:council")).toEqual({ terms: ["is:council"], qualifiers: [] });
+  });
+});
+
+// #784 slice 5 — the fourth kind. The plan's falsifier on this side of the wire: an earn the server
+// sent is never hidden by the filter that asks for it, and the kind never stretches to cover rows that
+// are not earns.
+describe("the milestone kind", () => {
+  const earn = (over: Partial<WireMilestoneItem> = {}): WireMilestoneItem => ({
+    key: "eric:first-buy",
+    icon: "🏅",
+    kindLabel: "Earned",
+    who: "Eric",
+    whoId: "eric",
+    title: "Buy your first stock",
+    points: 25,
+    meta: "+25 pts · 10/2/2026",
+    at: "2026-10-02T09:00:00.000Z",
+    ...over,
+  });
+  const feed = buildActivityFeed([trade({ key: "t-1" })], [filing()], [merge()], [earn()]);
+
+  it("interleaves an earn into the one list on the instant its fill proved it", () => {
+    const ordered = buildActivityFeed(
+      [trade({ key: "t-1", at: "2026-10-01T09:00:00.000Z" })],
+      [filing({ at: "2026-10-04T09:00:00.000Z" })],
+      [merge({ at: "2026-10-03T09:00:00.000Z" })],
+      [earn({ at: "2026-10-02T09:00:00.000Z" })],
+    );
+    expect(keys(ordered)).toEqual(["filing:4271", "merge:4272", "earn:eric:first-buy", "t-1"]);
+  });
+
+  it("is:milestone keeps every earn and drops the other kinds", () => {
+    const many = buildActivityFeed(
+      [trade({ key: "t-1" })],
+      [],
+      [],
+      [earn(), earn({ key: "ada:first-buy", who: "Ada", whoId: "ada" })],
+    );
+    expect(keys(show(many, "is:milestone")).sort()).toEqual([
+      "earn:ada:first-buy",
+      "earn:eric:first-buy",
+    ]);
+  });
+
+  it("drops earns when another kind is asked for, including a trade-only facet", () => {
+    expect(keys(show(feed, "is:trade"))).toEqual(["t-1"]);
+    expect(keys(show(feed, "is:buy"))).toEqual(["t-1"]);
+  });
+
+  it("matches a bare term by the milestone or the member who earned it", () => {
+    expect(keys(show(feed, "first stock"))).toEqual(["earn:eric:first-buy"]);
+    expect(keys(show(buildActivityFeed([], [], [], [earn()]), "eric"))).toEqual([
+      "earn:eric:first-buy",
+    ]);
+  });
+
+  it("hides every other kind's controls while the feed is narrowed to earns", () => {
+    const narrowed = parseActivityQuery("is:milestone");
+    expect(kindInScope(narrowed, "trade")).toBe(false);
+    expect(kindInScope(narrowed, "milestone")).toBe(true);
+    expect(filingsInScope(narrowed)).toBe(false);
+  });
+
+  it("pressing Milestones clears a trade facet rather than stranding it in the query", () => {
+    expect(toggleActivityQualifier("is:buy NVDA", "is:milestone")).toBe("NVDA is:milestone");
   });
 });

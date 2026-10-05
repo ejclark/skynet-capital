@@ -3,6 +3,7 @@ import { formatPrice } from "./desk-data.js";
 import type { DevelopmentFeedItem } from "./development-event-feed.js";
 import type { FeedbackFeedItem } from "./feedback-event-feed.js";
 import { FEEDBACK_KIND_ICON, FEEDBACK_KIND_WORD } from "./feedback-view.js";
+import type { MemberMilestone } from "./milestone-event-feed.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
 import type { WireTradeVitals } from "./vitals.js";
 import type { WirePnlRow } from "./wire-data.js";
@@ -81,6 +82,25 @@ interface WireDevelopmentView {
   readonly at: string;
 }
 
+/** One member's earned milestone as the feed renders it (#784 slice 5). `points` stays absent for a
+ *  milestone the course score does not count — a figure the Learn page never adds up would be a
+ *  number with nothing behind it. */
+interface WireMilestoneView {
+  /** Participant + milestone: an earn happens once, so the pair is the row's identity. */
+  readonly key: string;
+  readonly icon: string;
+  /** The row's leading word — the event ("Earned"), where the chip names the category. */
+  readonly kindLabel: string;
+  readonly who: string;
+  readonly whoId: string;
+  /** The milestone's achievement title, as the Learn page words it ("Buy your first stock"). */
+  readonly title: string;
+  readonly points?: number;
+  readonly meta: string;
+  /** The instant the proving fill (or expiry, or close) happened, raw — the interleave field. */
+  readonly at: string;
+}
+
 export interface WireView {
   readonly trades: readonly WireTradeView[];
   readonly pnl: readonly WirePnlView[];
@@ -90,6 +110,10 @@ export interface WireView {
    *  letting an empty list imply the league has never shipped anything. */
   readonly developmentEnabled: boolean;
   readonly development: readonly WireDevelopmentView[];
+  /** False when this deployment cannot read every milestone source — the page says so rather than
+   *  let an empty list imply nobody has earned anything. */
+  readonly milestonesEnabled: boolean;
+  readonly milestones: readonly WireMilestoneView[];
 }
 
 /** A filing whose payload named a kind this app doesn't file — the row still belongs on the
@@ -104,6 +128,12 @@ const UNKNOWN_KIND_WORD = "Filing";
 const DEVELOPMENT_ICON = "🚀";
 const DEVELOPMENT_WORD = "Merged";
 
+/** Every milestone row is one kind of thing, so word and icon are constants, as the merge row's are.
+ *  "Earned", because the chip already says "Milestones" (chips name the category, rows the event),
+ *  and because no other kind's row or pill wears it — the collision slice 4 learned to check for. */
+const MILESTONE_ICON = "🏅";
+const MILESTONE_WORD = "Earned";
+
 export function wireJsonView(
   trades: readonly WireTradeWithReasoning[],
   pnl: readonly WirePnlRow[],
@@ -116,6 +146,9 @@ export function wireJsonView(
    *  one optional argument rather than a list plus a flag, because "unwired" and "nothing merged yet"
    *  are different sentences on the page and an empty array cannot tell them apart. */
   development?: readonly DevelopmentFeedItem[],
+  /** The fourth kind (#784 slice 5) — absent, not empty, when a milestone source is unwired, for the
+   *  reason `development` is. */
+  milestones?: readonly MemberMilestone[],
 ): WireView {
   return {
     trades: trades.map((row, index) => ({
@@ -173,6 +206,20 @@ export function wireJsonView(
         ...(item.author ? { author: item.author } : {}),
         meta: `#${item.pullRequest} · ${new Date(item.mergedAt).toLocaleDateString()}`,
         at: item.mergedAt,
+      })),
+    milestonesEnabled: milestones !== undefined,
+    milestones: [...(milestones ?? [])]
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .map((item) => ({
+        key: `${item.participantId}:${item.milestoneId}`,
+        icon: MILESTONE_ICON,
+        kindLabel: MILESTONE_WORD,
+        who: item.participantName,
+        whoId: item.participantId,
+        title: item.title,
+        ...(item.points !== undefined ? { points: item.points } : {}),
+        meta: `${item.points !== undefined ? `+${item.points} pts · ` : ""}${new Date(item.at).toLocaleDateString()}`,
+        at: item.at,
       })),
   };
 }
