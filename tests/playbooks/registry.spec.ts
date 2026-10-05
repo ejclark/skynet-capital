@@ -2,10 +2,12 @@ import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
 import {
+  CRWV_WHEEL,
   enabledPlaybooks,
   findPlaybook,
   G1_GOOG,
   HC_SAURON,
+  PLAYBOOK_WIRING_GAPS,
   playbookRoster,
   S1_NVDA,
   TACO_DJT,
@@ -107,6 +109,11 @@ describe("enabledPlaybooks env parsing", () => {
     expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
   });
 
+  it("arms no option play by default, and the roll call says why the wheel cannot fire yet", () => {
+    expect(enabledPlaybooks({}).enabled).toEqual([]);
+    expect(PLAYBOOK_WIRING_GAPS["CRWV-WHEEL"]).toBeDefined();
+  });
+
   it("recognises HC-SAURON — registered, but still dark unless named (issue #3527 plan, slice 3)", () => {
     const { enabled, rejected } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "HC-SAURON:standard" });
     expect(rejected).toEqual([]);
@@ -120,6 +127,7 @@ describe("findPlaybook", () => {
     expect(findPlaybook("G1-GOOG")).toBe(G1_GOOG);
     expect(findPlaybook("TACO-DJT")).toBe(TACO_DJT);
     expect(findPlaybook("HC-SAURON")).toBe(HC_SAURON);
+    expect(findPlaybook("CRWV-WHEEL")).toBe(CRWV_WHEEL);
   });
 
   it("returns undefined for an unknown id", () => {
@@ -134,6 +142,7 @@ describe("playbookRoster", () => {
       { id: "G1-GOOG", symbol: "GOOG" },
       { id: "TACO-DJT", symbol: TACO_DJT.symbols[0] },
       { id: "HC-SAURON", symbol: HC_SAURON.symbols[0] },
+      { id: "CRWV-WHEEL", symbol: "CRWV" },
     ]);
   });
 });

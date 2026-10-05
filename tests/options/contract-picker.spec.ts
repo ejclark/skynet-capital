@@ -1,6 +1,7 @@
 import type { OptionContractQuote } from "../../src/domain/types.js";
 import {
   absDeltaOf,
+  chainQuotes,
   closeAggression,
   eligibleExpirations,
   liquid,
@@ -177,5 +178,22 @@ describe("closeAggression", () => {
     expect([closeAggression(1, "10:30"), closeAggression(1, "14:00")]).toEqual([2 / 3, 1]);
     expect(closeAggression(2, "09:45")).toBe(1);
     expect(closeAggression(-1, "15:59")).toBe(2 / 3); // not yet due reads like the due day
+  });
+});
+
+describe("chainQuotes", () => {
+  it("takes one underlying's strikes of one type at one expiry out of the cycle's snapshot", () => {
+    const want = put(80, 0.2);
+    const otherExpiry = anOptionQuote("CRWV261120P00080000", { at: AS_OF });
+    const call = anOptionQuote("CRWV261106C00080000", { at: AS_OF });
+    const otherName = anOptionQuote("NVDA261106P00080000", { at: AS_OF });
+    const market = {
+      listed: {},
+      contracts: Object.fromEntries(
+        [want, otherExpiry, call, otherName].map((q) => [q.occSymbol, q]),
+      ),
+    };
+    expect(chainQuotes(market, "CRWV", "2026-11-06", "put")).toEqual([want]);
+    expect(chainQuotes(undefined, "CRWV", "2026-11-06", "put")).toEqual([]);
   });
 });

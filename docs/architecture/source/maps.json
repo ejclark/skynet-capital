@@ -477,8 +477,8 @@
           {
             "id": "personas",
             "label": "Personas and playbooks",
-            "path": "src/personas/*.ts (sauron, sauron-hardcore, day-trader, futurist, gold-bug, news-fader, retail-investor, rumor-trader, banker, prospector, configured-persona), src/playbooks/playbook.ts, registry.ts, tactical-playbook.ts, with-playbooks.ts, option-intent.ts, option-hygiene.ts, with-option-safety.ts, option-ownership.ts, option-demand.ts, src/options/contract-picker.ts, src/autonomous/subscription-sync.ts, src/subscriptions/*",
-            "responsibility": "Pure strategy functions over MarketContext; playbooks enabled by SKYNET_PLAYBOOKS and by member subscriptions arriving on the /controls poll. An option playbook decides whole intents (pure contract picks and limits inside the quote); expiry hygiene (withOptionSafety, wrapped around every live bot's roster) closes any contract from two sessions before expiry or a print."
+            "path": "src/personas/*.ts (sauron, sauron-hardcore, day-trader, futurist, gold-bug, news-fader, retail-investor, rumor-trader, banker, prospector, configured-persona), src/playbooks/playbook.ts, registry.ts, crwv-wheel.ts, tactical-playbook.ts, with-playbooks.ts, option-intent.ts, option-hygiene.ts, with-option-safety.ts, option-ownership.ts, option-demand.ts, src/options/contract-picker.ts, src/autonomous/subscription-sync.ts, src/subscriptions/*",
+            "responsibility": "Pure strategy functions over MarketContext; playbooks enabled by SKYNET_PLAYBOOKS and by member subscriptions arriving on the /controls poll. An option playbook decides whole intents (pure contract picks and limits inside the quote) — CRWV-WHEEL sells a cash-secured put, then covered calls once assigned, each expiring before the next print blackout; expiry hygiene (withOptionSafety, wrapped around every live bot's roster) closes any contract from two sessions before expiry or a print."
           },
           {
             "id": "guards",

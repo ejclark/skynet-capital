@@ -12,6 +12,7 @@ import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
 import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
+import { CRWV_WHEEL } from "./crwv-wheel.js";
 import {
   type EnabledPlaybook,
   type Playbook,
@@ -230,7 +231,12 @@ export const HC_SAURON: Playbook = {
   tactics: HC_SAURON_TACTICS,
 };
 
-const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON];
+/** The option plays live in their own files (`crwv-wheel.ts`); re-exported here because the Store
+ *  catalog and the roll call read the house roster off what this module exports. Neither is on any
+ *  default roster: an owner subscribes their own bot to one in the Store. */
+export { CRWV_WHEEL };
+
+const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT, HC_SAURON, CRWV_WHEEL];
 
 /**
  * WHY A REGISTERED PLAYBOOK CANNOT FIRE (#4450 slice 1). Arming one of these changes nothing a
@@ -242,6 +248,8 @@ export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
   "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
   "HC-SAURON":
     "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
+  "CRWV-WHEEL":
+    "Its option quotes and orders have no route to Alpaca until the option order flow lands (#4642).",
 };
 
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:

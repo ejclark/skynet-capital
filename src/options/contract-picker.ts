@@ -1,7 +1,7 @@
 import { daysBetween } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
 import { SNAPSHOT_MAX_AGE_MS } from "../domain/option-book.js";
-import type { OptionContractQuote, PlaybookMode, Side } from "../domain/types.js";
+import type { OptionContractQuote, OptionMarket, PlaybookMode, Side } from "../domain/types.js";
 import {
   MAX_SPREAD_OF_MID,
   MIN_BID,
@@ -85,6 +85,19 @@ export function absDeltaOf(
   if (volatility === undefined) return undefined;
   const delta = priceOption({ ...input, volatility })?.delta;
   return delta === undefined ? undefined : { value: Math.abs(delta), source: "model" };
+}
+
+/** One chain out of a cycle's snapshot — every quoted strike of one type at one expiry, in no
+ *  particular order (every pick below is a total order, so the order never matters). */
+export function chainQuotes(
+  market: OptionMarket | undefined,
+  underlying: string,
+  expiration: string,
+  type: "call" | "put",
+): OptionContractQuote[] {
+  return Object.values(market?.contracts ?? {}).filter(
+    (q) => q.underlying === underlying && q.expiration === expiration && q.type === type,
+  );
 }
 
 export interface StrikeBounds {
