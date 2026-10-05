@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, open, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -56,6 +56,50 @@ async function readJsonlEntriesInto<T>(file: string, entries: T[]): Promise<void
 }
 
 /**
+ * The newest entry in `file` (its last well-formed line), read in bounded chunks from the end
+ * rather than loading and parsing the whole file — a "what's the latest row" lookup must not cost
+ * what a full `list()` costs. Undefined if the file is missing, empty, or has nothing parseable.
+ *
+ * Starts at 8 KiB and doubles until a usable line turns up or the file start is reached, so the
+ * read is bounded by the size of the trailing garbage, never by the file's full size. Walks the
+ * chunk's lines backwards and skips one that fails to parse (a crash or full disk tears the
+ * *newest* line first) rather than giving up on the first try — the same "one torn byte must not
+ * poison the read" bar `readJsonlEntriesInto` holds for a full list.
+ */
+async function readLastJsonlEntry<T>(file: string): Promise<T | undefined> {
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    handle = await open(file, "r");
+  } catch {
+    return undefined;
+  }
+  try {
+    const { size } = await handle.stat();
+    if (size === 0) return undefined;
+    for (let chunkSize = Math.min(size, 8192); ; chunkSize = Math.min(size, chunkSize * 4)) {
+      const start = size - chunkSize;
+      const buffer = Buffer.alloc(chunkSize);
+      await handle.read(buffer, 0, chunkSize, start);
+      const parts = buffer.toString("utf8").split("\n");
+      // parts[0] may be a line the chunk cut in half — only trust it once the chunk reaches byte 0.
+      const candidates = (start === 0 ? parts : parts.slice(1))
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        try {
+          return JSON.parse(candidates[i] as string) as T;
+        } catch {
+          process.emitWarning(`[jsonl-store] skipping malformed line near the end of ${file}`);
+        }
+      }
+      if (start === 0) return undefined;
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
  * One append-only JSONL file per key under `dir` — the shape shared by `JsonlAuditStore`,
  * `JsonlCycleReportStore`, and `JsonlHistoryStore`. Each of those keeps its own public API
  * (`record`/`save`, its own key-extraction) and composes this for the file-level mechanics, since
@@ -78,5 +122,10 @@ export class JsonlKeyedStore<T> {
       await readJsonlEntriesInto(file, entries);
     }
     return entries;
+  }
+
+  /** The newest entry appended for `key`, without reading the rest of its file (#4612 slice 7). */
+  latest(key: string): Promise<T | undefined> {
+    return readLastJsonlEntry<T>(this.fileFor(key));
   }
 }

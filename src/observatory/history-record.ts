@@ -29,4 +29,7 @@ export interface HistoryStore {
   save(sample: EquitySample): Promise<void>;
   /** All samples (order not guaranteed); filtered to one participant when given. */
   list(participantId?: string): Promise<EquitySample[]>;
+  /** The newest sample for one participant, without reading the rest of their history — the
+   *  bounded alternative to `list(participantId)` for a "what's the latest" lookup (#4612 slice 7). */
+  latest(participantId: string): Promise<EquitySample | undefined>;
 }

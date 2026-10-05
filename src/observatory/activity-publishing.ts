@@ -52,6 +52,7 @@ export function publishingActivityStore(
       }
     },
     list: (participantId) => store.list(participantId),
+    latest: (participantId) => store.latest(participantId),
   };
 }
 

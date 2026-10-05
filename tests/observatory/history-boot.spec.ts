@@ -5,7 +5,6 @@ import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import {
   bootSamples,
   createBootHistoryStore,
-  latestByParticipant,
   rehydrateHistory,
   seedRealizedPl,
   seedSampleRecorder,
@@ -57,15 +56,6 @@ describe("when the dashboard boots with durable history", () => {
     expect(seeded.participants[0]?.realizedPl).toBe(420);
   });
 
-  it("picks the newest sample by timestamp, not by position (list order is not guaranteed)", () => {
-    const latest = latestByParticipant([
-      sample({ at: "2026-08-09T23:55:00.000Z", realizedPl: 420 }),
-      sample({ at: "2026-08-09T20:00:00.000Z", realizedPl: 100 }),
-    ]);
-
-    expect(latest.get("human-eric")?.realizedPl).toBe(420);
-  });
-
   it("leaves realized P/L at the honest default when a participant has no history", async () => {
     const { initial: seeded } = await rehydrateHistory(
       new InMemoryHistoryStore(),
@@ -75,12 +65,23 @@ describe("when the dashboard boots with durable history", () => {
     expect(seeded.participants[0]?.realizedPl).toBeUndefined();
   });
 
-  it("keeps a value the snapshot already carries — a folded fill is fresher than any sample", () => {
-    const seeded = seedRealizedPl(data([snapshot({ realizedPl: 999 })]), [
-      sample({ realizedPl: 420 }),
-    ]);
+  it("keeps a value the snapshot already carries — a folded fill is fresher than any sample", async () => {
+    const store = new InMemoryHistoryStore();
+    await store.save(sample({ realizedPl: 420 }));
+
+    const seeded = await seedRealizedPl(data([snapshot({ realizedPl: 999 })]), store);
 
     expect(seeded.participants[0]?.realizedPl).toBe(999);
+  });
+
+  it("picks the newest durable sample via `latest`, not whatever `list` happens to read first", async () => {
+    const store = new InMemoryHistoryStore();
+    await store.save(sample({ at: "2026-08-09T20:00:00.000Z", realizedPl: 100 }));
+    await store.save(sample({ at: "2026-08-09T23:55:00.000Z", realizedPl: 420 }));
+
+    const seeded = await seedRealizedPl(data([snapshot()]), store);
+
+    expect(seeded.participants[0]?.realizedPl).toBe(420);
   });
 
   it("writes one synchronization sample per participant as the fresh baseline", async () => {

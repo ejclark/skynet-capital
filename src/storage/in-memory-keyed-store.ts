@@ -19,4 +19,11 @@ export class InMemoryKeyedStore<T> {
     const all = [...this.entries];
     return Promise.resolve(key === undefined ? all : all.filter((e) => this.keyOf(e) === key));
   }
+
+  /** The most recently appended entry for `key`, or undefined if there is none. Mirrors
+   *  `JsonlKeyedStore.latest` so an in-memory test double and the file-backed store share a
+   *  contract, even though an in-memory list is already cheap to scan in full. */
+  async latest(key: string): Promise<T | undefined> {
+    return (await this.list(key)).at(-1);
+  }
 }

@@ -12,4 +12,8 @@ export class InMemoryActivityStore implements ActivityStore {
   list(participantId?: string): Promise<TradeActivityRecord[]> {
     return this.store.list(participantId);
   }
+
+  latest(participantId: string): Promise<TradeActivityRecord | undefined> {
+    return this.store.latest(participantId);
+  }
 }
