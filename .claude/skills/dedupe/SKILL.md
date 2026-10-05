@@ -11,8 +11,9 @@ description: >-
 # Dedupe — the consolidation drill
 
 The *correction* half of the duplication Coach: the gate (`scripts/dupe-scan.mjs` + `dupe-budget.json`,
-enforced by `tests/arch/dupe.spec.ts`) is the eye that says the same symbol lives in N files; this drill
-collapses it to one. Every copy left pasted is a future drift bug — copies evolve apart silently.
+reported (advisory, non-blocking) by `tests/arch/dupe.spec.ts`) is the eye that says the same symbol
+lives in N files; this drill collapses it to one. Every copy left pasted is a future drift bug —
+copies evolve apart silently.
 
 ## 1. Take the gate's target (don't guess)
 
@@ -24,7 +25,7 @@ Emits the most-copied symbol and every file defining it. Take `candidate`. One s
 
 ## 2. Judge before you move (the eye is high-recall, not proof)
 
-Open every listed definition and compare. Three cases:
+Open every listed definition and compare. Four cases:
 
 - **True copies** (identical or trivially divergent) → consolidate (step 3).
 - **Merely similar** (common shape, different jobs) → apply the **rule of three**: abstract on the third
@@ -38,9 +39,8 @@ Open every listed definition and compare. Three cases:
 
 ## 3. Consolidate
 
-1. **Choose the natural home:** design-system/render helpers → `src/ui/` (create it on first need — this
-   is the component-library seed, audit S1); domain logic → its domain module. Never a `utils.ts` junk
-   drawer — that's a new god file in the making.
+1. **Choose the natural home:** design-system/render helpers → `src/ui/`; domain logic → its domain
+   module. Never a `utils.ts` junk drawer — that's a new god file in the making.
 2. **Move the best implementation** there (exported, name unchanged). Delete the other copies; import the
    shared one everywhere. **Behavior must not change** — this is consolidation, not a rewrite.
 3. **Check blast radius:** `graphify affected <files>` — confirm only expected dependents move.
@@ -48,7 +48,7 @@ Open every listed definition and compare. Three cases:
 ## 4. Verify green, by exit status
 
 ```bash
-npm run typecheck && npm run lint && npm test && node scripts/dupe-scan.mjs
+npm run verify && node scripts/dupe-scan.mjs
 ```
 
 Never pipe a check to `tail` — it masks the exit status.

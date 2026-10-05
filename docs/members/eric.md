@@ -95,10 +95,11 @@ influence playbooks to consider, strategies to try, decisions to execute."*
 
 ## 5. What frustrates him
 
-The dead ends he would hit on his own book today (numbers from README → "The eight dead ends"):
+The dead ends he met on his own book (numbers from README → "The eight dead ends"; whether one
+is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
 
-- **6** — Trade's "← Back to account" goes to the desk, not the cockpit he came from
-  (`app/src/routes/trade.tsx:698`); the cockpit never links his own desk.
+- **6 (fixed)** — Trade's "← Back to account" went to the desk, not the cockpit he came from,
+  and the cockpit never linked his own desk.
 - **9 (found by run 0; fixed)** — on the offline fixture `/api/accounts/networth` answered 500
   (`h.equity.forEach`, `src/server/networth-api-routes.ts`) and the whole Overview — standing,
   the money strip, the positions blotter — became "Net worth is unreachable right now."; one
@@ -106,14 +107,14 @@ The dead ends he would hit on his own book today (numbers from README → "The e
   answered `/v2/account/portfolio/history` with the account payload (a prefix match on
   `/v2/account`); it now 404s like every unfixtured endpoint, the route degrades to "—"
   windows, and the step is a passing acceptance test.
-- **8** — a docked Trade with no entry to the Chain; a greyed control whose reason is a tooltip
-  he cannot hover on a phone (`app/src/shell/thesis-drawer.tsx:81`, `app/src/routes/playbooks.tsx:42`).
+- **8 (fixed)** — a docked Trade had no entry to the Chain, and a greyed control's reason was a
+  tooltip he cannot hover on a phone.
 - **Not one of the eight, and the one that matters most to him:** every decision surface is
-  per position. The "when" (the calendar, `app/src/shell/event-horizon.tsx`) lives only on R&D; the
-  split of his money (`app/src/shell/money-strip.tsx`) has no target to be measured against; a
-  "wait" (`src/options/position-guidance-rules.ts:231`) has no book-level home and no reopen date;
-  "Lock in profit" is a decision-card kind (`app/src/shell/decision-pager.tsx:26`), not a rung
-  celebrated beside its explanation.
+  per position. The calendar's head sits in the cockpit (j1 s3). Even so, the split of his
+  money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
+  (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
+  reopen date, and "Lock in profit" is a decision-card kind (`app/src/shell/decision-pager.tsx`),
+  not a rung celebrated beside its explanation.
 
 ## 6. Journeys
 
@@ -163,7 +164,7 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 1. `/app/u/human-eric` — the desk's blotter: EEM, Guidance on the row (desktop); the EEM card
    (phone); he taps it. **WHEN the owner asks whether to take profit on a position, the app shall
    offer that position's guidance from the blotter.** Judge: can this reader tell which position to
-   act on? _(The cockpit's own blotter is the intended door; today it vanishes with finding 9.)_
+   act on? _(The cockpit's own blotter is the intended door.)_
 2. `/app/trade?desk=human-eric&symbol=EEM&section=guidance` — the Guidance pane for EEM. Offline:
    "No live quote for EEM — nothing to advise on"; live: the lever calls — call · confidence · why ·
    what would change this (`src/options/position-guidance.ts`, specified by
@@ -178,11 +179,10 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 
 ### j3 — rebalance
 
-1. `/app/accounts` — the money strip should be here: shares · options · cash as a bar, each named
-   with its amount; offline it is one sentence. **WHEN the owner reads where the money is, the app
-   shall show the split as amounts and shares of the whole.** _known gap — crawl finding 9: the
-   strip is the net-worth card's bottom row (`app/src/shell/money-strip.tsx:9`) and vanishes with
-   the 500._ Judge: can this reader tell what is over- or under-weight?
+1. `/app/accounts` — the money strip: shares · options · cash as a bar, each named with its
+   amount, with the cash ready to use. **WHEN the owner reads where the money is, the app shall
+   show the split as amounts and shares of the whole.** _Fixed — crawl finding 9 (README → "Plus
+   one run 0 found"); the step passes._ Judge: can this reader tell what is over- or under-weight?
 2. `/app/accounts` — the split, with nothing to compare it to. **WHEN the owner reads the split, the
    app shall show it against a target allocation he set once, and name what to trim or add.**
    _known gap — no target allocation exists anywhere; settings never asks for one._ Judge: can this
@@ -197,8 +197,7 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 2. `/app/accounts` — the book; no standing wait, no date that reopens the question. **WHEN the
    owner has decided to wait, the app shall carry the wait on the book with the date that reopens
    it.** _known gap — "wait" is per position only; nothing at book level carries a wait or a
-   reopen date, and the calendar's range never reaches /accounts._ Judge: does this reader know
-   when to look again?
+   reopen date._ Judge: does this reader know when to look again?
 
 ### j5 — the phone check (every step at 390×844, touch)
 

@@ -36,14 +36,13 @@ and the first button, never the rail. They skip anything that names a concept th
 
 ## 5. What frustrates them
 
-- **1** — the first sign-in lands on the leaderboard with no onboarding cue
-  (`src/server/auth/oauth-callback.ts:79` → `/` → `app/src/routes/index.tsx:21` → `/leaderboard`;
-  the Moneypenny rail is closed).
-- **2** — two contradictory gate sentences: `/learn` says "unlocks after your first feedback
-  filing" (`app/src/routes/learn.tsx:61`); the server says "the moment you say hello to
-  Moneypenny" (`src/domain/progression.ts:159`).
-- **3** — `/trade` with no account: "No accounts are linked to your session yet." and nothing to
-  click (`app/src/routes/trade.tsx:727`).
+- **1 (fixed)** — the first sign-in landed on the leaderboard with no onboarding cue. The topbar's
+  Profile tab now opens on the connect guide for a member with no account.
+- **2 (fixed)** — two contradictory gate sentences: `/learn` said "unlocks after your first
+  feedback filing", while the server says "the moment you say hello to Moneypenny"
+  (`src/domain/progression.ts`). Both now use one sentence (j1 s3).
+- **3 (fixed)** — `/trade` with no account said "No accounts are linked to your session yet." with
+  nothing to click. The words are now the link (j1 s5).
 
 ## 6. Journeys
 
@@ -55,10 +54,11 @@ and the first button, never the rail. They skip anything that names a concept th
    can this reader tell how to get in, in ten seconds? _(Added 2026-09-29, #3816 slice 9 — the
    first page this member ever saw; a spectacle surface, so the phone frame checks its honest
    fallback, not a curated layout.)_
-1. `/app/` — the league table, ranked rows, no word about where a new member starts. **WHEN a
-   signed-in member with no linked account opens the app, the app shall land them on a page with
-   a visible next step into onboarding.** _known gap — dead end 1._ Judge: can this reader tell
-   what to do next in ten seconds?
+1. `/app/` — the league table, ranked rows; the topbar's Profile tab is one tap away and lands on
+   the Profile page, which opens on the connect guide for a member with no account. **WHEN a
+   signed-in member with no linked account opens the app, the app shall keep a one-tap way into
+   onboarding on screen: the Profile tab, landing on the connect guide.** _Fixed — dead end 1
+   (#3807 slice 2b)._ Judge: can this reader tell what to do next in ten seconds?
 2. `/app/accounts?section=milestones` — the milestones page: M·01 Onboarding first. **WHEN the member opens Profile
    before onboarding is complete, the app shall show M·01 Onboarding as the next step with one
    link into it.** Judge: can this reader tell what to do next in ten seconds?

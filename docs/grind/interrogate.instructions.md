@@ -79,8 +79,8 @@ A call sheet that argues with the goal has misread the job.
    remains that evidence cannot settle and neither check below clears it — and then the comment
    renders the options as things he can judge by eye, never as a technique to arbitrate; `next-slice` when it depends on something
    landing first. If the issue already carries `needs-eric` and the sheet shows no decision remains,
-   remove it (`DELETE .../issues/<n>/labels/needs-eric`) and say which evidence settled it (Eric,
-   2026-09-04, on #1318: "that is fantastic; ideal"). Never close the issue.
+   remove it (`DELETE .../issues/<n>/labels/needs-eric`) and say which evidence settled it — a stale
+   `needs-eric` spends his attention on nothing. Never close the issue.
    **Two checks before any `needs-eric`, both written into the sheet** (Eric, 2026-09-07, deferring
    all four forks a cockpit-roadmap plan had put to him: *"I tend to defer these decisions. Completing
    other known work consistently provides extra insights that result in strong enough data points to
