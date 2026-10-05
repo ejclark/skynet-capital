@@ -89,11 +89,15 @@ export function clearBetaCache(): void {
   betaCache.clear();
 }
 
+/** All this read needs — narrowed so a background pass (the delivery sweep, #3407 P4 slice 3) can
+ *  call it with the pieces it holds instead of a whole server config. */
+export type OptionPositionsDeps = Pick<DashboardServerConfig, "hub" | "optionsClientFor" | "now">;
+
 /** The positions view for one owned account, or why there is none — shared with the alerts
  *  route so both read the same rows through the same client (#3407 P4 slice 1). */
 export async function loadOptionPositions(
   id: string,
-  config: DashboardServerConfig,
+  config: OptionPositionsDeps,
 ): Promise<
   | { readonly kind: "missing" }
   | { readonly kind: "unlinked" }
