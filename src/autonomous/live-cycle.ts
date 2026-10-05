@@ -192,14 +192,16 @@ export class LiveCycleRunner {
       if (this.scoutOwnedSymbols.size > 0) {
         const portfolio = await scout.broker.getPortfolio();
         const exits = betaScoutExitIntents(portfolio, this.scoutOwnedSymbols);
-        for (const exit of exits) {
+        // Exits pass the guards too: a scout lot is never sold out from under a sold call written on
+        // the same shares (`uncovers-short-call`). Sells skip every entry rule, so a plain exit is
+        // approved exactly as before. Ownership is released only for an exit the guards let
+        // through — a refused one keeps the lot the scout's, so the next rollover tries again
+        // rather than orphaning it.
+        const verdict = applyGuardsWithVerdicts(exits, portfolio, context, scout.risk);
+        for (const exit of verdict.approved) {
           this.scoutOwnedSymbols.delete(exit.symbol);
           exited.add(exit.symbol);
         }
-        // Exits pass the guards too: a scout lot is never sold out from under a sold call written on
-        // the same shares (`uncovers-short-call`). Sells skip every entry rule, so a plain exit is
-        // approved exactly as before.
-        const verdict = applyGuardsWithVerdicts(exits, portfolio, context, scout.risk);
         await this.submitScoutIntents(exits, scout, verdict);
       }
       this.persistScoutState();

@@ -212,9 +212,14 @@ const coverLegOf = (c: HeldContract): CoverLeg => ({
   contracts: c.quantity,
 });
 
+/** Every contract held, as the cover arithmetic sees it. */
+export function heldCoverLegs(portfolio: Portfolio): CoverLeg[] {
+  return heldContracts(portfolio).map(coverLegOf);
+}
+
 /** What everything already held promises. */
 export function bookNeeds(portfolio: Portfolio): CoverNeeds {
-  return coverNeeds(heldContracts(portfolio).map(coverLegOf));
+  return coverNeeds(heldCoverLegs(portfolio));
 }
 
 /** Cash not set aside to secure a sold put (or a spread's width). */
@@ -237,7 +242,7 @@ export function freeShares(
 const signOf = (side: Side): number => (side === "buy" ? 1 : -1);
 
 /** The order's legs as signed contract lines: a buy adds contracts, a sell takes them away. */
-function orderLegs(option: OptionOrderIntent, units: number): CoverLeg[] {
+export function orderLegs(option: OptionOrderIntent, units: number): CoverLeg[] {
   const legs: CoverLeg[] = [];
   for (const leg of option.legs) {
     const parts = parseOccSymbol(leg.occSymbol);
@@ -250,7 +255,7 @@ function orderLegs(option: OptionOrderIntent, units: number): CoverLeg[] {
 
 /** What the book would promise once `units` of this order filled. */
 function needsWith(portfolio: Portfolio, option: OptionOrderIntent, units: number): CoverNeeds {
-  return coverNeeds([...heldContracts(portfolio).map(coverLegOf), ...orderLegs(option, units)]);
+  return coverNeeds([...heldCoverLegs(portfolio), ...orderLegs(option, units)]);
 }
 
 function difference(after: CoverNeeds, before: CoverNeeds): CoverNeeds {

@@ -2,16 +2,13 @@ import { type EarningsPrint, optionPrintBlackout } from "../domain/earnings-cale
 import { marketDayKey } from "../domain/market-day.js";
 import {
   type CoverNeeds,
-  freeCash,
-  freeShares,
-  marginalNeeds,
-  needsAfterClose,
+  orderLegs,
   premiumOut,
   quoteBand,
   requiredOptionLevel,
   SNAPSHOT_MAX_AGE_MS,
 } from "../domain/option-book.js";
-import { heldQuantity, positionValue } from "../domain/portfolio.js";
+import { heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
   OptionOrderIntent,
@@ -23,10 +20,13 @@ import { QUOTE_STALE_MS } from "../options/position-guidance-rules.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import {
   claim,
+  closableContracts,
+  committedToPlaybook,
+  coverWith,
   type GuardLedger,
-  ledgerCash,
-  ledgerShares,
-  subscriptionFor,
+  soldShares,
+  subscriptionTerms,
+  unspentCash,
 } from "./guard-batch.js";
 
 /**
@@ -34,8 +34,9 @@ import {
  * `option` passes through after the shared shape, ladder and S2/E1 checks in `guards.ts`.
  *
  * The rules, in order (each refusal names itself — `GuardRefusalReason`):
- *   1. every leg is quoted, two-sided and fresh — opens AND closes; the band comes from the SNAPSHOT,
- *      never from the intent's own `band`, so a playbook cannot launder a quote;
+ *   1. every leg is quoted and two-sided in a fresh read — opens AND closes (an open's feed stamp
+ *      must be fresh too); the band comes from the SNAPSHOT, never from the intent's own `band`, so
+ *      a playbook cannot launder a quote;
  *   2. the limit sits inside that band;
  *   3. a close closes only what is held, and never leaves a sold call or put bare;
  *   4–11. an open needs the account's options level, the subscription's symbol filter, an expiry
@@ -95,8 +96,8 @@ export interface OptionBatch {
   readonly book: CoverNeeds;
 }
 
-/** Rule 1: every leg in the snapshot, two-sided, read ≤ 120s ago, and feed-stamped ≤ the max age (a
- *  missing stamp only on a close — a close must never starve). */
+/** Rule 1: every leg in the snapshot, two-sided, read ≤ 120s ago, and — for an open — feed-stamped ≤
+ *  the max age. */
 function quoteProblem(
   option: OptionOrderIntent,
   context: MarketContext,
@@ -106,17 +107,23 @@ function quoteProblem(
   const quotes = option.legs.map((leg) => contracts[leg.occSymbol]);
   const asOf = Date.parse(context.asOf);
   for (const quote of quotes) {
-    if (quote?.bid === undefined || quote.ask === undefined) return "no-quote";
+    // Two-sided means two real numbers, ask at or above bid — a null, an infinite or an inverted
+    // quote prices nothing (#4645 red-team).
+    const { bid, ask } = quote ?? {};
+    if (!(Number.isFinite(bid) && Number.isFinite(ask)) || (ask as number) < (bid as number)) {
+      return "no-quote";
+    }
   }
   for (const quote of quotes) {
     if (!quote) return "no-quote";
     // `!(age <= bound)` so an unparseable stamp reads as stale, never as fresh.
     if (!(asOf - Date.parse(quote.fetchedAt) <= SNAPSHOT_MAX_AGE_MS)) return "option-quote-stale";
-    if (quote.quotedAt === undefined) {
-      if (option.effect !== "close") return "option-quote-stale";
-    } else if (!(asOf - Date.parse(quote.quotedAt) <= maxAgeMs)) {
-      return "option-quote-stale";
-    }
+    // The feed's own stamp bounds an OPEN only. A close must never starve: the indicative feed
+    // leaves a thin strike's quote untouched for long stretches, and a close the bot cannot send
+    // carries the contract into expiry. A close still needs a fresh read and a limit inside it.
+    if (option.effect === "close") continue;
+    if (quote.quotedAt === undefined) return "option-quote-stale";
+    if (!(asOf - Date.parse(quote.quotedAt) <= maxAgeMs)) return "option-quote-stale";
   }
   return undefined;
 }
@@ -136,7 +143,8 @@ function priceProblem(
   return inside ? undefined : "option-limit-outside-quote";
 }
 
-/** Rule 3: close what is held, no more, and never leave a short bare by closing its cap. */
+/** Rule 3: close what is held — less what closes approved earlier this batch already take — and
+ *  never leave a short bare by closing its cap. */
 function clampClose(
   intent: OrderIntent,
   option: OptionOrderIntent,
@@ -146,30 +154,36 @@ function clampClose(
   let units = intent.quantity;
   for (const leg of option.legs) {
     const held = heldQuantity(portfolio, leg.occSymbol);
-    const closable = leg.side === "sell" ? Math.max(0, held) : Math.max(0, -held);
+    const closable = closableContracts(ledger, leg.occSymbol, held, leg.side);
     units = Math.min(units, Math.floor(closable / leg.ratio));
   }
   if (!(units > 0)) return refuse("nothing-held");
 
   const underlying = intent.symbol;
-  const after = needsAfterClose(portfolio, option, units);
-  const sharesBefore = book.sharesByUnderlying.get(underlying) ?? 0;
-  const sharesAfter = after.sharesByUnderlying.get(underlying) ?? 0;
+  const { before, after, elsewhere } = coverWith(
+    ledger,
+    book,
+    underlying,
+    orderLegs(option, units),
+  );
   // Only a close that RAISES what the book promises can be refused: a book already short of cover
   // must still be able to shed risk.
-  const shareRoom =
-    Math.max(0, heldQuantity(portfolio, underlying)) - ledgerShares(ledger, underlying);
-  if (sharesAfter > sharesBefore && sharesAfter > shareRoom) return refuse("call-not-covered");
-  if (after.cash > book.cash && after.cash > portfolio.cash - ledgerCash(ledger)) {
+  if (after.shares > before.shares && after.shares > shareRoom(portfolio, ledger, underlying)) {
+    return refuse("call-not-covered");
+  }
+  if (after.cash > before.cash && elsewhere + after.cash > unspentCash(portfolio, ledger)) {
     return refuse("put-not-secured");
   }
   claim(ledger, {
-    cash: Math.max(0, after.cash - book.cash) + premiumOut(option) * units,
-    underlying,
-    shares: sharesAfter - sharesBefore,
+    spent: premiumOut(option) * units,
+    order: { underlying, option, units },
   });
   return { ok: true, intent: { ...intent, quantity: units } };
 }
+
+/** Shares of `underlying` held and not sold earlier this batch — what a sold call can stand on. */
+const shareRoom = (portfolio: Portfolio, ledger: GuardLedger, underlying: string): number =>
+  Math.max(0, heldQuantity(portfolio, underlying)) - soldShares(ledger, underlying);
 
 /** Rule 6: the open must close before the earliest live print blackout begins. */
 function printProblem(
@@ -189,55 +203,38 @@ function printProblem(
   return spans ? "option-spans-print" : undefined;
 }
 
-/** Dollars a playbook's basket already holds against its allocation: shares at the ask, collateral
- *  its sold options set aside, long options at their mark, and what this batch already claimed. */
-function committedTo(
-  intent: OrderIntent,
-  portfolio: Portfolio,
-  context: MarketContext,
-  config: OptionGuardConfig,
-  { ledger, book }: OptionBatch,
-): number {
-  const playbookId = intent.playbookId ?? "";
-  const basket = config.playbookSymbols?.get(playbookId) ?? [intent.symbol];
-  let committed = ledger.byPlaybook.get(playbookId) ?? 0;
-  for (const symbol of basket) {
-    const ask = context.quotes[symbol]?.ask;
-    if (ask !== undefined) committed += heldQuantity(portfolio, symbol) * ask;
-    committed += book.cashByUnderlying.get(symbol) ?? 0;
-  }
-  for (const position of portfolio.positions) {
-    const parts = parseOccSymbol(position.symbol);
-    if (parts && position.quantity > 0 && basket.includes(parts.underlying)) {
-      committed += positionValue(position, undefined);
-    }
-  }
-  return committed;
-}
-
-/** Rules 8–9: cash for collateral and premium, shares for a sold call. */
+/** Rules 8–9: cash for collateral and premium, shares for a sold call — each judged against the
+ *  worst case of what this batch already approved (`coverWith`). `cash` is what the order newly
+ *  puts at risk: the collateral it adds at worst, plus its premium. */
 function coverProblem(
   intent: OrderIntent,
   option: OptionOrderIntent,
   portfolio: Portfolio,
   { ledger, book }: OptionBatch,
-): { readonly reason?: OptionRefusalReason; readonly cash: number; readonly shares: number } {
-  const marginal = marginalNeeds(portfolio, option, MAX_OPTION_OPEN_UNITS);
-  const cash = marginal.cash + premiumOut(option) * MAX_OPTION_OPEN_UNITS;
-  const shares = marginal.sharesByUnderlying.get(intent.symbol) ?? 0;
-  if (cash > freeCash(portfolio, book) - ledgerCash(ledger)) {
+): { readonly reason?: OptionRefusalReason; readonly cash: number } {
+  const underlying = intent.symbol;
+  const { before, after, elsewhere } = coverWith(
+    ledger,
+    book,
+    underlying,
+    orderLegs(option, MAX_OPTION_OPEN_UNITS),
+  );
+  const premium = premiumOut(option) * MAX_OPTION_OPEN_UNITS;
+  const cash = Math.max(0, after.cash - before.cash) + premium;
+  const unspent = unspentCash(portfolio, ledger);
+  if (cash > 0 && elsewhere + after.cash + premium > unspent) {
     const reason =
       option.structure === "cash-secured-put"
         ? "put-not-secured"
-        : portfolio.cash - ledgerCash(ledger) >= cash
+        : unspent >= cash
           ? "collateral-reserved"
           : "insufficient-cash";
-    return { reason, cash, shares };
+    return { reason, cash };
   }
-  const shareRoom =
-    freeShares(portfolio, intent.symbol, book) - ledgerShares(ledger, intent.symbol);
-  if (shares > 0 && shares > shareRoom) return { reason: "call-not-covered", cash, shares };
-  return { cash, shares };
+  if (after.shares > before.shares && after.shares > shareRoom(portfolio, ledger, underlying)) {
+    return { reason: "call-not-covered", cash };
+  }
+  return { cash };
 }
 
 /** Rules 4–11. */
@@ -250,32 +247,33 @@ function clampOpen(
   batch: OptionBatch,
 ): OptionOutcome {
   const level = config.optionsLevel;
-  if (level === undefined || level < requiredOptionLevel(option)) return refuse("options-level");
-  const subscription = subscriptionFor(intent, config.subscriptions);
-  if (subscription?.symbols?.length && !subscription.symbols.includes(intent.symbol)) {
-    return refuse("subscription-filter");
+  // `Number.isInteger`: a NaN level compares false against everything, which would read as "high
+  // enough" (#4645 red-team). The wiring parses it to 0..3 or undefined; this holds the line anyway.
+  if (level === undefined || !Number.isInteger(level) || level < requiredOptionLevel(option)) {
+    return refuse("options-level");
   }
+  const terms = subscriptionTerms(intent, config);
+  if (terms.refusesSymbol) return refuse("subscription-filter");
   const print = printProblem(option, intent.symbol, context.asOf, config.discipline?.calendar);
   if (print) return refuse(print);
 
   const cover = coverProblem(intent, option, portfolio, batch);
   if (cover.reason) return refuse(cover.reason);
 
-  const capital = subscription?.capitalAllocated;
+  const capital = terms.subscription?.capitalAllocated;
   if (capital === undefined) return refuse("option-unallocated");
-  const realizedPl =
-    subscription?.compoundAllocation && intent.playbookId
-      ? (config.realizedPlForPlaybook?.(intent.playbookId) ?? 0)
-      : 0;
-  // A covered call risks no cash of its own; a sold put risks its collateral, a spread its debit.
+  // A covered call risks no cash of its own, so no allocation can refuse it — not even one the
+  // stock's own rise has pushed past (#4645 review); a sold put risks its collateral, a spread its
+  // debit.
   const risk = Math.max(0, cover.cash);
-  const room = capital + realizedPl - committedTo(intent, portfolio, context, config, batch);
-  if (risk > room) return refuse("subscription-budget");
+  const committed = committedToPlaybook(intent, portfolio, context, config.playbookSymbols, batch);
+  if (risk > 0 && risk > capital + terms.realizedPl - committed) {
+    return refuse("subscription-budget");
+  }
 
   claim(batch.ledger, {
-    cash: cover.cash,
-    underlying: intent.symbol,
-    shares: cover.shares,
+    spent: premiumOut(option) * MAX_OPTION_OPEN_UNITS,
+    order: { underlying: intent.symbol, option, units: MAX_OPTION_OPEN_UNITS },
     ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
     risk,
   });

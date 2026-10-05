@@ -123,11 +123,24 @@ describe("option guards — every refusal names itself", () => {
     expect(verdict({ ...sellPut, type: "market" })).toBe("option-shape");
   });
 
+  it("option-shape: a contract named with a null or false `option` never trades as shares", () => {
+    const held = aPortfolio({ positions: [aPosition({ symbol: CALL_95, quantity: 1 })] });
+    const bare = { symbol: CALL_95, side: "sell", quantity: 1, type: "market", reason: "t" };
+    for (const option of [null, false]) {
+      const sneaky = { ...bare, option } as unknown as OrderIntent;
+      expect(verdict(sneaky, { portfolio: held })).toBe("option-shape");
+    }
+  });
+
   it("options-level: absent, or below what the structure needs — fail closed", () => {
     const { optionsLevel: _, ...noLevel } = CONFIG;
     expect(verdict(sellPut, { config: noLevel })).toBe("options-level");
     expect(verdict(sellPut, { config: { ...CONFIG, optionsLevel: 0 } })).toBe("options-level");
     expect(verdict(spread, { config: { ...CONFIG, optionsLevel: 2 } })).toBe("options-level");
+    // NaN compares false against every level, which would read as "high enough".
+    expect(verdict(sellPut, { config: { ...CONFIG, optionsLevel: Number.NaN } })).toBe(
+      "options-level",
+    );
   });
 
   it("subscription-filter: the subscription is aimed at other symbols", () => {
@@ -185,6 +198,17 @@ describe("option guards — every refusal names itself", () => {
     const oneSided = anOptionQuote(PUT, { at: AS_OF, ask: undefined });
     expect(verdict(sellPut, { context: market([oneSided]) })).toBe("no-quote");
     expect(verdict(sellPut, { context: aContext({ CRWV: { last: 90 } }, AS_OF) })).toBe("no-quote");
+  });
+
+  it("no-quote: a side that is not a real number, or an ask below the bid, prices nothing", () => {
+    for (const sides of [
+      { bid: null, ask: 2.2 },
+      { bid: 2, ask: Number.POSITIVE_INFINITY },
+      { bid: 2.2, ask: 2 },
+    ]) {
+      const broken = anOptionQuote(PUT, { at: AS_OF, ...(sides as object) });
+      expect(verdict(sellPut, { context: market([broken]) })).toBe("no-quote");
+    }
   });
 
   it("put-not-secured: not enough free cash for the strike × 100", () => {
@@ -271,14 +295,22 @@ describe("option guards — closes", () => {
     });
   });
 
-  it("still needs a fresh two-sided quote — and accepts one without a feed stamp", () => {
+  it("still needs a fresh read and a two-sided quote — but never a fresh feed stamp", () => {
     expect(verdict(closing(PUT, "buy", 2.1), { portfolio: shortPut, context: market([]) })).toBe(
       "no-quote",
     );
-    const unstamped = market([anOptionQuote(PUT, { at: AS_OF, quotedAt: undefined })]);
+    const readLongAgo = anOptionQuote(PUT, { at: AS_OF, fetchedAt: "2026-10-07T14:57:00Z" });
     expect(
-      verdict(closing(PUT, "buy", 2.1), { portfolio: shortPut, context: unstamped }),
-    ).toMatchObject({ quantity: 1 });
+      verdict(closing(PUT, "buy", 2.1), { portfolio: shortPut, context: market([readLongAgo]) }),
+    ).toBe("option-quote-stale");
+    // The indicative feed can leave a thin strike's quote untouched for long stretches; a close the
+    // bot cannot send carries the contract into expiry, so the feed's own stamp never blocks one.
+    for (const quotedAt of [undefined, "2026-10-07T14:40:00Z"]) {
+      const context = market([anOptionQuote(PUT, { at: AS_OF, quotedAt })]);
+      expect(verdict(closing(PUT, "buy", 2.1), { portfolio: shortPut, context })).toMatchObject({
+        quantity: 1,
+      });
+    }
   });
 
   it("closes a vertical as one order at a credit inside the signed band", () => {

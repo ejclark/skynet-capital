@@ -1,5 +1,5 @@
 import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
-import { bookNeeds, freeCash, opensRisk } from "../domain/option-book.js";
+import { bookNeeds, opensRisk } from "../domain/option-book.js";
 import { isBareContractOrder, optionOrderProblems } from "../domain/option-order.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type {
@@ -10,7 +10,16 @@ import type {
 } from "../domain/types.js";
 import { blocksRiskIncrease, type RiskTier } from "../risk/risk-ladder.js";
 import { contractMultiplier } from "../trading/option-symbols.js";
-import { claim, ledgerCash, ledgerShares, openLedger, subscriptionFor } from "./guard-batch.js";
+import {
+  claim,
+  committedToPlaybook,
+  openLedger,
+  promisedShares,
+  soldShares,
+  spendableCash,
+  subscriptionTerms,
+  unspentCash,
+} from "./guard-batch.js";
 import { clampOption, type OptionBatch } from "./option-guards.js";
 
 /**
@@ -255,12 +264,12 @@ function clampBuy(
     return { ok: false, reason: "no-quote" };
   }
 
-  const subscription = subscriptionFor(intent, config.subscriptions);
+  const terms = subscriptionTerms(intent, config);
   // Symbol-targeting filter (#885): a subscription with a non-empty `symbols` list refuses a buy
   // outright in any OTHER symbol — this is aim/restriction, not a soft preference. Entry side
   // only, same posture as every discipline guard in this file: a guard blocks opening risk, never
   // closing it, so an exit is never gated by this filter (see `clampSell`).
-  if (subscription?.symbols?.length && !subscription.symbols.includes(intent.symbol)) {
+  if (terms.refusesSymbol) {
     return { ok: false, reason: "subscription-filter" };
   }
 
@@ -272,45 +281,35 @@ function clampBuy(
   const existingValue = heldQuantity(portfolio, intent.symbol) * unitPrice;
   const positionBudget = Math.max(0, config.maxPositionPct * equity - existingValue);
 
-  // Cash not set aside to secure a sold put, less what earlier intents in this batch claimed. With no
-  // short options and no option intents both corrections are 0 — the raw cash, exactly as before.
-  const spendable = freeCash(portfolio, book) - ledgerCash(ledger);
+  // Cash not set aside to secure a sold put — at worst, counting the option orders approved earlier
+  // this batch — less what earlier intents paid out. With no short options and no option intents
+  // both corrections are 0: the raw cash, exactly as before.
+  const spendable = spendableCash(portfolio, ledger, book);
   const affordable = Math.floor(spendable / unitPrice);
   const withinPosition = Math.floor(positionBudget / unitPrice);
 
-  // The subscription's budget is shared across its playbook's WHOLE basket, not just this
-  // intent's symbol — a basket playbook's other open positions already count against the same
-  // allocation. Falls back to `existingValue` (this symbol only) when no basket is registered,
-  // which is exactly today's behavior for a one-symbol playbook.
-  const basketSymbols = intent.playbookId
-    ? config.playbookSymbols?.get(intent.playbookId)
-    : undefined;
-  const basketValue = basketSymbols
-    ? basketSymbols.reduce((sum, symbol) => {
-        const symbolQuote = context.quotes[symbol];
-        return (
-          sum +
-          (symbolQuote
-            ? heldQuantity(portfolio, symbol) * symbolQuote.ask * contractMultiplier(symbol)
-            : 0)
-        );
-      }, 0)
-    : existingValue;
-
-  // Compounding (issue #3527 slice 3, off by default): a subscription opted into
-  // `compoundAllocation` grows or shrinks its own budget by what it has already realized, rather
-  // than trading against a flat number forever.
-  const realizedPl =
-    subscription?.compoundAllocation && intent.playbookId
-      ? (config.realizedPlForPlaybook?.(intent.playbookId) ?? 0)
-      : 0;
-
+  // The subscription's budget is shared across its playbook's WHOLE basket — shares held, the
+  // collateral its sold puts hold, its long contracts and this batch's earlier claims — so a
+  // playbook can never commit its allocation twice (`committedToPlaybook`). With no option positions
+  // that is the basket's share value, or this symbol's alone when no basket is registered: exactly
+  // today's behavior for a one-symbol playbook. Compounding (#3527 slice 3, off by default) grows or
+  // shrinks the budget by what the playbook has realized.
   // An uncapped subscription (no `capitalAllocated` — #4535's seeded house roster) carries no
   // budget at all: it sizes exactly like a house-roster entry, on cash and the position cap alone.
-  const capital = subscription?.capitalAllocated;
+  const capital = terms.subscription?.capitalAllocated;
   const subscriptionBudgetShares =
     capital !== undefined
-      ? Math.floor(Math.max(0, capital + realizedPl - basketValue) / unitPrice)
+      ? Math.floor(
+          Math.max(
+            0,
+            capital +
+              terms.realizedPl -
+              committedToPlaybook(intent, portfolio, context, config.playbookSymbols, {
+                ledger,
+                book,
+              }),
+          ) / unitPrice,
+        )
       : undefined;
 
   const bounds = [intent.quantity, affordable, withinPosition];
@@ -318,7 +317,10 @@ function clampBuy(
   const quantity = Math.min(...bounds);
 
   if (quantity > 0) {
-    claim(ledger, { cash: quantity * unitPrice });
+    claim(ledger, {
+      spent: quantity * unitPrice,
+      ...(intent.playbookId ? { playbookId: intent.playbookId, risk: quantity * unitPrice } : {}),
+    });
     return { ok: true, intent: { ...intent, quantity } };
   }
   // Attribute the specific bound that hit zero — checked in the same priority a reader would
@@ -326,7 +328,7 @@ function clampBuy(
   // subscription's own allocation last (it's the narrowest and rarest budget of the three). Cash
   // that is there but promised to a sold put says so, rather than reading as "no cash".
   if (affordable <= 0) {
-    const reserved = Math.floor((portfolio.cash - ledgerCash(ledger)) / unitPrice) >= 1;
+    const reserved = Math.floor(unspentCash(portfolio, ledger) / unitPrice) >= 1;
     return { ok: false, reason: reserved ? "collateral-reserved" : "insufficient-cash" };
   }
   if (withinPosition <= 0) return { ok: false, reason: "position-cap" };
@@ -345,15 +347,18 @@ function clampSell(
 ): SellSizingOutcome {
   const held = heldQuantity(portfolio, intent.symbol);
   if (held <= 0) return { ok: false, reason: "nothing-held" };
-  const promised =
-    (book.sharesByUnderlying.get(intent.symbol) ?? 0) + ledgerShares(ledger, intent.symbol);
-  const quantity = Math.min(intent.quantity, Math.max(0, held - promised));
+  // Shares a sold call stands on — at worst, counting the option orders approved earlier this batch
+  // — plus what earlier sells in the batch already took.
+  const callLock = promisedShares(ledger, book, intent.symbol);
+  const soldEarlier = soldShares(ledger, intent.symbol);
+  const quantity = Math.min(intent.quantity, Math.max(0, held - callLock - soldEarlier));
   if (!(quantity > 0)) {
-    // Name the promise only when it is what stopped the sell — without it, this sell would pass.
-    const blockedByCall = Math.min(intent.quantity, held) > 0;
+    // Name the sold call only when its lock is what stopped the sell — without the lock, this sell
+    // would pass. A sell zeroed by an earlier sell in the batch is plain `nothing-held`.
+    const blockedByCall = callLock > 0 && Math.min(intent.quantity, held - soldEarlier) > 0;
     return { ok: false, reason: blockedByCall ? "uncovers-short-call" : "nothing-held" };
   }
-  claim(ledger, { underlying: intent.symbol, shares: quantity });
+  claim(ledger, { sold: { underlying: intent.symbol, shares: quantity } });
   return { ok: true, intent: { ...intent, quantity } };
 }
 
@@ -401,7 +406,7 @@ export function applyGuardsWithVerdicts(
   const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   const book = bookNeeds(portfolio);
-  const batch: OptionBatch = { ledger: openLedger(intents, book), book };
+  const batch: OptionBatch = { ledger: openLedger(intents, book, portfolio), book };
   for (const intent of intents) {
     // Shape first, permanently: a share-shaped order naming a contract is never a way to trade one
     // (a contract only trades as a priced limit through `option`), and a malformed option order is

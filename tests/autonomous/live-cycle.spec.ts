@@ -361,7 +361,7 @@ describe("LiveCycleRunner", () => {
 
   // The scout's day-rollover exits pass the guards like every other order: a scout lot is never
   // sold out from under a call sold against the same shares — and the record says why.
-  it("never sells a scout lot out from under a sold call, and records the refusal", async () => {
+  it("never sells a scout lot out from under a sold call, records the refusal, and keeps the lot the scout's", async () => {
     const shares = new InMemoryBroker(1_000_000, [
       { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
     ]);
@@ -380,6 +380,7 @@ describe("LiveCycleRunner", () => {
       },
     };
     const decisions: DecisionRecord[] = [];
+    const saved: ScoutState[] = [];
     const runner = new LiveCycleRunner({
       traders: [aBot(new NeverBuys(), shares)],
       safety: new SafetyController(),
@@ -399,7 +400,7 @@ describe("LiveCycleRunner", () => {
           firedOrganicallyToday: false,
           ownedSymbols: ["MSFT"],
         }),
-        save: () => undefined,
+        save: (state) => saved.push(state),
       },
       onDecision: (r) => decisions.push(r),
     });
@@ -407,6 +408,8 @@ describe("LiveCycleRunner", () => {
     await runner.runCycle(aContext({ MSFT: { last: 100 } }, "2026-07-24T14:30:00Z"));
 
     expect(submitted).toEqual([]);
+    // A refused exit never orphans the lot: the next rollover tries the exit again.
+    expect(saved.at(-1)?.ownedSymbols).toEqual(["MSFT"]);
     expect(decisions).toHaveLength(1);
     expect(decisions[0]).toMatchObject({
       personaId: "beta-scout",
