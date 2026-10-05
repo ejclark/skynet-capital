@@ -11,8 +11,9 @@ description: >-
 # Decompose — the split drill
 
 The *correction* half of the god-file Coach: the fitness gate (`scripts/arch-scan.mjs` +
-`arch-grandfather.json`, enforced by `tests/arch/god-file.spec.ts`) is the eye that says a file won't
-scale; this is the drill that fixes it. One split per PR — that discipline is the whole value.
+`arch-grandfather.json`, reported (advisory, non-blocking) by `tests/arch/god-file.spec.ts`) is the
+eye that says a file won't scale; this is the drill that fixes it. One split per PR — that discipline
+is the whole value.
 
 ## 1. Take the gate's target (don't guess)
 
@@ -20,11 +21,11 @@ scale; this is the drill that fixes it. One split per PR — that discipline is 
 node scripts/arch-scan.mjs --candidate
 ```
 
-Emits the largest file over the 300 **code**-line cap — blank and comment lines are not counted
-(`scripts/code-lines.mjs`) — that isn't already in `arch-grandfather.json` (a flat,
-one-line-per-file list of known legacy files with a documented reason, not a numbered budget). Take
-`candidate`. A `null` candidate means nothing new is over cap — check `arch-grandfather.json` for the
-next deliberate target instead.
+Emits the file furthest over its **code**-line cap — 300 in `src/`, `app/src/` and `scripts/`, 500 in
+`tests/`; blank and comment lines are not counted (`scripts/code-lines.mjs`) — that isn't already in
+`arch-grandfather.json` (a flat, one-line-per-file list of known legacy files with a documented reason,
+not a numbered budget). Take `candidate`; its `cap` field is the cap that applies. A `null` candidate
+means nothing new is over cap — check `arch-grandfather.json` for the next deliberate target instead.
 
 ## 2. Split along a seam
 
@@ -35,8 +36,8 @@ next deliberate target instead.
    **molecules** (a few atoms, one purpose: a card, the Eye) → **organisms** (a view, a scene). Atoms are
    the floor — go sub-atomic only when a concrete need calls (a second consumer wants half the atom),
    never speculatively. Over-splitting is the mirror slop: complexity moved into the wiring.
-3. **Extract to a new module** in its natural home (`src/ui/`, `src/scene/lego/`, `src/observatory/`…) —
-   **named for the job it does, never `utils`/`helpers`** (the junk-drawer smell; arch-scan blocks it).
+3. **Extract to a new module** in its natural home (`src/ui/`, `src/three/kit/`, `src/observatory/`…) —
+   **named for the job it does, never `utils`/`helpers`** (the junk-drawer smell; arch-scan flags it).
    Export the cluster; import it back. **This is a move + re-import, not a rewrite** — names stay identical
    so call sites don't churn, and behavior must not change.
 3. **Check blast radius** before trusting it: `graphify affected <file>` — confirm only expected dependents
@@ -45,14 +46,14 @@ next deliberate target instead.
 ## 3. Verify green, by exit status
 
 ```bash
-npm run typecheck && npm run lint && npm test && node scripts/arch-scan.mjs
+npm run verify && node scripts/arch-scan.mjs
 ```
 
 Never pipe a check to `tail` — a pipeline exits with `tail`'s status and masks failures.
 
 ## 4. Remove it from the grandfather list
 
-If the split brought the file under the 300 code-line cap (or it was in `arch-grandfather.json`), delete its
+If the split brought the file under its code-line cap (or it was in `arch-grandfather.json`), delete its
 entry there in the same PR — the list only ever shrinks. If the new module is still over cap for a real
 reason, leave it grandfathered with an updated one-line reason instead of silently dropping it.
 
