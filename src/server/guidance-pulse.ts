@@ -1,3 +1,4 @@
+import { cachedDateTimeFormat } from "../domain/intl-format.js";
 import { daysBetween, dayText } from "../options/position-guidance-rules.js";
 import type { PulseItem, PulseStatus } from "../options/position-guidance-types.js";
 import type { SpotCheck } from "../research/spot-checks.js";
@@ -319,9 +320,12 @@ export function sessionPulse(open: boolean | undefined, now: string): PulseItem 
   );
 }
 
-/** The fallback when the broker clock is unreachable: a weekday between 9:30 and 16:00 ET. */
+/**
+ * The fallback when the broker clock is unreachable: a weekday between 9:30 and 16:00 ET. The
+ * formatter is the shared cached one (`domain/intl-format.ts`, #4613) — never one per call.
+ */
 export function clockSessionOpen(now: string): boolean {
-  const parts = new Intl.DateTimeFormat("en-US", {
+  const parts = cachedDateTimeFormat("en-US", {
     timeZone: "America/New_York",
     weekday: "short",
     hour: "2-digit",

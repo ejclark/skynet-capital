@@ -8,19 +8,42 @@
  * characters instead of throwing.
  */
 
+import { cachedDateTimeFormat } from "./intl-format.js";
+
 /** The exchange wall clock every day key is measured against unless a caller says otherwise. */
 export const MARKET_TIMEZONE = "America/New_York";
 
-/** `YYYY-MM-DD` for `iso` in the given IANA timezone — lexically sortable, which day strips need. */
+/**
+ * `YYYY-MM-DD` for `iso` in the given IANA timezone — lexically sortable, which day strips need.
+ *
+ * The formatter is the shared cached one (`intl-format.ts`): building one per call held ~27 KB of
+ * native memory per instant, and keying a desk's whole history that way OOM-killed the 512 MB
+ * server (#4612 slice 1, #4613). A caller keying many instants in one zone takes `marketDayKeyer`.
+ */
 export function marketDayKey(iso: string, timezone: string = MARKET_TIMEZONE): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  return marketDayKeyer(timezone)(iso);
+}
+
+/**
+ * `marketDayKey` bound to one zone — for a loop over a history (every 5-minute sample a desk ever
+ * recorded, on each Pulse view): the shared formatter is resolved once, not once per instant. Same
+ * answers and the same fallbacks: junk input keeps its leading date characters, and a zone the
+ * runtime doesn't know degrades to the UTC date rather than throwing.
+ */
+export function marketDayKeyer(timezone: string = MARKET_TIMEZONE): (iso: string) => string {
+  let format: ((at: number) => string) | undefined;
   try {
     // en-CA renders ISO-shaped YYYY-MM-DD, which sorts lexically — the property the strip needs.
-    return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(date);
+    format = cachedDateTimeFormat("en-CA", { timeZone: timezone }).format;
   } catch {
-    return date.toISOString().slice(0, 10);
+    format = undefined;
   }
+  // Epoch ms straight into the bound `format`: no Date per instant on a 60k-sample walk.
+  return (iso) => {
+    const at = Date.parse(iso);
+    if (Number.isNaN(at)) return iso.slice(0, 10);
+    return format ? format(at) : new Date(at).toISOString().slice(0, 10);
+  };
 }
 
 /**

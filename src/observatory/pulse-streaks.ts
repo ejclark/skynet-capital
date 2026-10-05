@@ -1,5 +1,5 @@
 import type { TradeStats } from "../trading/trade-stats.js";
-import { currentDayStreak, type DayStreak, longestDayStreak } from "./day-trophies.js";
+import { currentStreakIn, type DayStreak, dailyChanges, longestStreakIn } from "./day-trophies.js";
 import { formatPctOrDash } from "./desk-data.js";
 import type { EquitySample } from "./history-store.js";
 import { formatSigned } from "./render-atoms.js";
@@ -55,12 +55,18 @@ function dayRow(label: string, streak: DayStreak | null): PulseStreakRow | null 
   };
 }
 
+/**
+ * The three day rows read one keying of the history (#4612 slice 1, #4613): every sample a desk
+ * ever recorded is bucketed into its market day ONCE per request. Asking each row to key it again
+ * tripled the work on the Accounts page's busiest read.
+ */
 function dayRows(samples: readonly EquitySample[], timezone: string | undefined): PulseStreakRow[] {
-  const current = currentDayStreak(samples, timezone);
+  const changes = dailyChanges(samples, timezone);
+  const current = currentStreakIn(changes);
   return [
     dayRow(current?.direction === "red" ? "Running red" : "Running green", current),
-    dayRow("Longest green run", longestDayStreak(samples, "green", timezone)),
-    dayRow("Longest red run", longestDayStreak(samples, "red", timezone)),
+    dayRow("Longest green run", longestStreakIn(changes, "green")),
+    dayRow("Longest red run", longestStreakIn(changes, "red")),
   ].filter((row): row is PulseStreakRow => row !== null);
 }
 

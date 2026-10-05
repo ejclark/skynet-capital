@@ -4,6 +4,7 @@ import {
   nextPrint,
   UPCOMING_PRINTS,
 } from "../domain/earnings-calendar.js";
+import { formatDateTime } from "../domain/intl-format.js";
 import { allEvents, MARKET_EVENTS, type MarketEvent } from "../domain/market-events.js";
 
 /**
@@ -48,8 +49,10 @@ export const HEADLINE_MACRO: ReadonlyArray<readonly [prefix: string, noun: strin
   ["jobs-2", "Jobs report"],
 ];
 
+/** "Oct 29". Through the shared cached formatter (`domain/intl-format.ts`, #4613): the same text
+ *  `toLocaleDateString` printed, without building a formatter per call. */
 const shortDate = (date: string): string =>
-  new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
+  formatDateTime(new Date(`${date}T12:00:00Z`), "en-US", {
     month: "short",
     day: "numeric",
     timeZone: "UTC",
