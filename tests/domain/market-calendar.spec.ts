@@ -1,8 +1,46 @@
 import {
+  daysBetween,
   isMarketClosed,
+  isSession,
   MARKET_CLOSURES,
   marketClosures,
+  nextSession,
+  sessionsBefore,
+  sessionsBetween,
 } from "../../src/domain/market-calendar.js";
+import * as guidanceRules from "../../src/options/position-guidance-rules.js";
+
+// Session arithmetic the bots' option rules count with (expiry hygiene at T-2, the session after a
+// print) — moved here from the guidance rules, which re-export the same two functions.
+describe("market calendar — sessions", () => {
+  it("an early close is a session; a weekend and a full holiday are not", () => {
+    expect(isSession("2026-11-27")).toBe(true);
+    expect(isSession("2026-11-26")).toBe(false);
+    expect(isSession("2026-11-28")).toBe(false);
+  });
+
+  it("nextSession is strictly after, skipping weekends and holidays", () => {
+    expect(nextSession("2026-11-16")).toBe("2026-11-17"); // Mon → Tue: CRWV's session after
+    expect(nextSession("2026-11-13")).toBe("2026-11-16"); // Fri → Mon
+    expect(nextSession("2026-11-25")).toBe("2026-11-27"); // over Thanksgiving, onto the early close
+    expect(nextSession("2026-11-14")).toBe("2026-11-16"); // from a Saturday
+  });
+
+  it("sessionsBetween counts sessions in (from, to], signed when to is earlier", () => {
+    expect(sessionsBetween("2026-11-11", "2026-11-11")).toBe(0);
+    expect(sessionsBetween("2026-11-13", "2026-11-16")).toBe(1); // Fri → Mon
+    expect(sessionsBetween("2026-11-24", "2026-11-30")).toBe(3); // Wed, Fri (early), Mon
+    expect(sessionsBetween("2026-11-16", "2026-11-13")).toBe(-1);
+  });
+
+  it("sessionsBefore and daysBetween keep their answers, and the guidance reads the same functions", () => {
+    expect(sessionsBefore("2026-11-18", 5)).toBe("2026-11-11"); // Veterans Day trades
+    expect(sessionsBefore("2026-11-13", 2)).toBe("2026-11-11");
+    expect(daysBetween("2026-10-07", "2026-11-06")).toBe(30);
+    expect(guidanceRules.sessionsBefore).toBe(sessionsBefore);
+    expect(guidanceRules.daysBetween).toBe(daysBetween);
+  });
+});
 
 // The exchange's published closures, as the research rail reads them (#1704 slice 2).
 describe("market calendar", () => {
