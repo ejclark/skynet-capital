@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The companion reads `stop_reason` for a refusal only — `max_tokens` and a mid-stream refusal's
+  partial are still unhandled.** (a) Neither leg reads `stop_reason: "max_tokens"`, so a truncated
+  reply finishes as done; the 4000 cap makes it rarer, not handled. (b) A refusal after partial text
+  keeps the partial on the rail with " — cut off"; the migration guide's rule is to discard it.
+  Discarding needs the rail (`app/src/live/moneypenny.ts`, the `failure` branch after the stream)
+  to tell a refusal from a transport error — today both arrive as one `onError` string.
+  _(src: Claude · while: the model-fit audit, batch companion-request — the streamed leg's refusal read)_
+- **Move the companion's exhaustion note to a mid-conversation `role: "system"` message on Sonnet
+  5.5.** Today `EXHAUSTED_NOTE` rides as a text block after the last tool_result — the guide's
+  fallback form, valid on Sonnet 5 and Haiku 4.5 — but the system prompt's UNTRUSTED INPUT rule
+  tells the model user-turn text is member data, so the note may steer weakly or be narrated back
+  to the member. Once `claude-sonnet-5-5` is on the companion allowlist (`companion-model.ts`,
+  protected), gate the system-message form by model the way `effortFor` gates effort. Until then,
+  an eval fixture that drives all three tool rounds would show whether the note ever surfaces —
+  `src/evals/companion/run-eval.ts` runs with no desk configured, so no fixture is built to reach
+  the exhausted leg today.
+  _(src: Claude · while: the model-fit audit, batch companion-request — review of the append-only final leg)_
 - ~~**`/api/wire` reads three full ledgers per request to render ~30 rows.**~~ **Measured and
   routed → #4458** (2026-10-02, while building #784 slice 3). The number the item was waiting for:
   **189 ms and 30.4 MB parsed per request at 100k events**, linear, for ONE of the three legs, on a

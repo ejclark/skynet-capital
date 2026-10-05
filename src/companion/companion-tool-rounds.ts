@@ -1,7 +1,7 @@
 import { anthropicApiError } from "../http/anthropic-reply.js";
 import type { fetchJson, JsonResponse } from "../http/fetch-json.js";
 import type { CompanionHandlers } from "./companion-chat.js";
-import { MAX_TOKENS_PER_REPLY, MAX_TOOL_ROUNDS } from "./companion-limits.js";
+import { effortFor, MAX_TOKENS_PER_REPLY, MAX_TOOL_ROUNDS } from "./companion-limits.js";
 import type { CompanionModelId } from "./companion-model.js";
 import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
@@ -23,6 +23,9 @@ export const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 export const BUDGET_SPENT_MESSAGE =
   "Lots of chatting just now — give it a few minutes and ask again.";
+
+export const REFUSAL_MESSAGE =
+  "That one's outside what I can help with here — ask it another way, or ask me about your desk or the app.";
 
 export type DoFetch = typeof fetchJson;
 export type Headers = Readonly<Record<string, string>>;
@@ -71,7 +74,7 @@ export type ToolRoundOutcome =
 
 /** The tools this turn may call: the draft hand-off always (it reads nothing); the four desk
  *  lookups only for a member with a linked desk. */
-function toolsFor(participantId: string | undefined): readonly unknown[] {
+export function toolsFor(participantId: string | undefined): readonly unknown[] {
   return participantId
     ? COMPANION_TOOL_DEFS
     : COMPANION_TOOL_DEFS.filter(
@@ -143,6 +146,7 @@ async function oneRound(
     res = await doFetch("POST", ANTHROPIC_URL, headers, {
       model,
       max_tokens: MAX_TOKENS_PER_REPLY,
+      ...effortFor(model),
       system: systemBlocks(volatile),
       messages: working,
       tools: toolsFor(participantId),
@@ -154,6 +158,11 @@ async function oneRound(
   const reply = replyContent(res);
   if (!reply.content) {
     handlers.onError(reply.error ?? "companion error");
+    return { kind: "error" };
+  }
+  // Branch on stop_reason before reading content: a decline is a 200 with empty or partial content.
+  if ((res.body as { stop_reason?: string }).stop_reason === "refusal") {
+    handlers.onError(REFUSAL_MESSAGE);
     return { kind: "error" };
   }
   const toolUses = toolUsesOf(reply.content);
@@ -178,6 +187,7 @@ async function oneRound(
           type: "tool_result",
           tool_use_id: tu.id,
           content: JSON.stringify(results[i]),
+          ...(results[i]?.ok ? {} : { is_error: true }),
         })),
       },
     ],
