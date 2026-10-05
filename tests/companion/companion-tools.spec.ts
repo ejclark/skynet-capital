@@ -321,9 +321,14 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
     const result = await runCompanionTool("bogus", depsFor(), undefined);
     expect(result).toEqual({
       ok: false,
-      error: "no such tool: bogus (the declared tools are get_work_status, draft_feedback)",
+      error:
+        "no such tool: bogus (the declared tools are get_work_status, get_roadmap, draft_feedback)",
     });
-    expect(declaredToolNames(undefined)).toEqual(["get_work_status", "draft_feedback"]);
+    expect(declaredToolNames(undefined)).toEqual([
+      "get_work_status",
+      "get_roadmap",
+      "draft_feedback",
+    ]);
     expect(declaredToolNames("acct-1")).toEqual(COMPANION_TOOL_NAMES);
   });
 
@@ -469,5 +474,38 @@ describe("get_work_status — where any issue stands (#3952 slice 1)", () => {
       ok: false,
       error: "issue status isn't available on this deployment",
     });
+  });
+});
+
+describe("get_roadmap — what is coming next (#3952 slice 3)", () => {
+  const roadmap = {
+    available: true,
+    note: "Sequencing, not dates",
+    openPlans: 1,
+    groups: [{ horizon: "Now", meaning: "Being built", total: 1, items: [] }],
+  } as const;
+
+  it("takes no input and returns the reader's answer as-is, with no linked desk", async () => {
+    const result = await runCompanionTool(
+      "get_roadmap",
+      depsFor({ readRoadmap: () => Promise.resolve(roadmap) }),
+      undefined, // no linked desk: this tool reads no member data, so it still answers
+    );
+    expect(result).toEqual({ ok: true, result: roadmap });
+  });
+
+  // Both failure shapes refuse rather than return an EMPTY roadmap: "no groups" would read to the
+  // model as "nothing is planned", which is the one thing it must never say by accident.
+  it("says 'not available' with no token, and refuses — never an empty queue — on a read failure", async () => {
+    expect(await runCompanionTool("get_roadmap", depsFor(), "acct-1")).toEqual({
+      ok: false,
+      error: "the roadmap isn't available on this deployment",
+    });
+    const blip = await runCompanionTool(
+      "get_roadmap",
+      depsFor({ readRoadmap: () => Promise.resolve({ available: false } as const) }),
+      "acct-1",
+    );
+    expect(blip).toEqual({ ok: false, error: "couldn't read the build queue right now" });
   });
 });
