@@ -42,6 +42,11 @@ export const pageControls = {
   },
 };
 
+/** These three are also what TanStack's `lazyRouteComponent` matches (router-core
+ *  `isModuleNotFoundError`), and it reloads once under its own `tanstack_router_reload:*` key before
+ *  rethrowing. So if a native-ESM failure ever reached us, the tab could reload twice — theirs, then
+ *  ours — before our marker gives up: bounded, not a loop. Dormant today: rspack's runtime throws
+ *  `ChunkLoadError` ("Loading chunk N failed"), which only our match catches. */
 const NATIVE_IMPORT_FAILED = [
   /Failed to fetch dynamically imported module/, // Chromium
   /error loading dynamically imported module/, // Firefox
@@ -182,7 +187,9 @@ function FaultPanel({
   );
 }
 
-/** The route area a failure renders into — the same frame and `<main>` a page would have had. */
+/** The route area a failure renders into — the same frame and `<main>` a page would have had. This
+ *  is `PageFrame towerless` (`frame.tsx`) written out on purpose: the fallback must not depend on
+ *  the tower-column hook or anything else that could be the thing that just threw. */
 function RouteArea({ children }: { readonly children: ReactElement }): ReactElement {
   return (
     <div className="frame">

@@ -189,6 +189,14 @@ describe("any other route error stays inside the route area", () => {
     expect(document.querySelector("header.topbar")).not.toBeNull();
     expect(screen.queryByText(/something went wrong/i)).toBeNull();
     expect(reload).not.toHaveBeenCalled();
+    // The router hands every caught error to the catch seam (`defaultOnCatch`), not only React.
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining("route error"),
+      expect.objectContaining({
+        message: "Cannot read properties of undefined (reading 'filter')",
+      }),
+      expect.anything(),
+    );
   });
 
   it("lets the member leave through the topbar, which clears the error", async () => {
