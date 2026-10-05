@@ -9,7 +9,7 @@ import type { WorkMode } from "../../scripts/moneypenny/work-mode.d.mts";
 
 // THE DISPATCH CEILING GATE (#2946).
 //
-// moneypenny-events.yml's matrix buys ONE opus session per row `dueForResearch` returns, at
+// moneypenny-events.yml's matrix buys ONE Sonnet session per row `dueForResearch` returns, at
 // --max-turns 150. The lane spent a full weekly token quota in ~24 hours because nothing bounded
 // that COUNT: max-parallel bounds concurrency, --max-turns bounds one session's depth, the
 // open-PR dedupe bounds repeats. `event-scan --due` returned 108 rows on the day this landed.
