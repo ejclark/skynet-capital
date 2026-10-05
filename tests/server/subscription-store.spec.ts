@@ -173,6 +173,85 @@ describe("SubscriptionStore", () => {
     expect(state["acct-1"]?.[0]?.playbookId).toBe("S1-NVDA");
   });
 
+  describe("configure (#4649) — re-tune without changing whether it runs", () => {
+    const seed = (store: SubscriptionStore, enabled: boolean) =>
+      store.subscribe(
+        "acct-1",
+        {
+          playbookId: "HC-SAURON",
+          mode: "standard",
+          capitalAllocated: 5_000,
+          enabled,
+          symbols: ["NVDA"],
+          compoundAllocation: true,
+        },
+        AT,
+      );
+
+    it("replaces mode, capital, symbols and compounding, keeping a paused subscription paused", () => {
+      const store = new SubscriptionStore(path);
+      seed(store, false);
+      store.configure(
+        "acct-1",
+        "HC-SAURON",
+        { mode: "aggressive", capitalAllocated: 8_000, symbols: ["NVDA", "CRWV"] },
+        LATER,
+      );
+      expect(store.load()["acct-1"]).toEqual([
+        {
+          accountId: "acct-1",
+          playbookId: "HC-SAURON",
+          mode: "aggressive",
+          capitalAllocated: 8_000,
+          enabled: false,
+          symbols: ["NVDA", "CRWV"],
+          createdAt: AT.toISOString(),
+          updatedAt: LATER.toISOString(),
+        },
+      ]);
+    });
+
+    it("keeps an active subscription active", () => {
+      const store = new SubscriptionStore(path);
+      seed(store, true);
+      store.configure("acct-1", "HC-SAURON", { mode: "conservative", capitalAllocated: 1_000 });
+      expect(store.load()["acct-1"]?.[0]?.enabled).toBe(true);
+    });
+
+    it("absent capital is uncapped and absent symbols is the whole basket", () => {
+      const store = new SubscriptionStore(path);
+      seed(store, true);
+      store.configure("acct-1", "HC-SAURON", { mode: "standard" });
+      const [sub] = store.load()["acct-1"] ?? [];
+      expect(sub).not.toHaveProperty("capitalAllocated");
+      expect(sub).not.toHaveProperty("symbols");
+      expect(sub).not.toHaveProperty("compoundAllocation");
+    });
+
+    it("never creates a subscription: an unknown one answers undefined and writes nothing", () => {
+      const store = new SubscriptionStore(path);
+      seed(store, true);
+      expect(store.configure("acct-1", "S1-NVDA", { mode: "standard" })).toBeUndefined();
+      expect(store.configure("acct-2", "HC-SAURON", { mode: "standard" })).toBeUndefined();
+      expect(store.load()["acct-1"]).toHaveLength(1);
+      expect(store.load()).not.toHaveProperty("acct-2");
+    });
+
+    it("leaves the account's other subscriptions untouched and in place", () => {
+      const store = new SubscriptionStore(path);
+      store.subscribe(
+        "acct-1",
+        { playbookId: "S1-NVDA", mode: "standard", capitalAllocated: 2_000, enabled: true },
+        AT,
+      );
+      seed(store, true);
+      store.configure("acct-1", "S1-NVDA", { mode: "aggressive", capitalAllocated: 3_000 }, LATER);
+      const subs = store.load()["acct-1"] ?? [];
+      expect(subs.map((s) => s.playbookId)).toEqual(["S1-NVDA", "HC-SAURON"]);
+      expect(subs[1]).toMatchObject({ mode: "standard", symbols: ["NVDA"] });
+    });
+  });
+
   it("writes durable JSON a fresh store can read back", async () => {
     new SubscriptionStore(path).subscribe(
       "acct-1",

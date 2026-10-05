@@ -5,8 +5,8 @@ import { isRecord } from "../storage/parse-guards.js";
  * PLAYBOOK SUBSCRIPTIONS — the durable state behind an account's Playbook Store.
  *
  * Keyed by `accountId`, one array of subscriptions per account — subscribing is always against
- * your OWN account's capital (bot or human, same mechanism), so there is no cross-account
- * lookup here at all. Mirrors `src/autonomous/bot-controls.ts`'s split of types+parser from the
+ * your OWN account's capital (one mechanism for every account kind; for now only bot accounts may
+ * subscribe, refused at the Store API — #4610), so there is no cross-account lookup here at all. Mirrors `src/autonomous/bot-controls.ts`'s split of types+parser from the
  * store that persists them (`src/server/subscription-store.ts`).
  */
 export type SubscriptionsState = Readonly<Record<string, readonly PlaybookSubscription[]>>;
