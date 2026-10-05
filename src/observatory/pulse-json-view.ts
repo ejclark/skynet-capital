@@ -1,3 +1,4 @@
+import { formatDateTime } from "../domain/intl-format.js";
 import type { RoundTrip } from "../trading/round-trips.js";
 import { tradeStats } from "../trading/trade-stats.js";
 import type { TradeActivityRecord } from "./activity-store.js";
@@ -90,8 +91,9 @@ export interface DeskPulseView {
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEK_CAP = 12;
 
+/** "Aug 17" — through the shared formatter (`domain/intl-format.ts`). */
 const dayLabel = (iso: string): string =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  formatDateTime(new Date(iso), "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 function pulseCurve(samples: readonly EquitySample[]): PulseCurve | null {
   if (samples.length < 2) return null;

@@ -1,4 +1,4 @@
-import { MARKET_TIMEZONE, marketDayKey } from "../domain/market-day.js";
+import { MARKET_TIMEZONE, marketDayKeyer } from "../domain/market-day.js";
 import { byParticipant, ordered } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
 
@@ -39,14 +39,18 @@ export interface DayChange {
   readonly pct: number;
 }
 
-/** The last sample of each recorded day, oldest day first. Intraday noise collapses to the close. */
+/**
+ * The last sample of each recorded day, oldest day first. Intraday noise collapses to the close.
+ * Runs over a desk's whole history, so the zone's formatter is resolved once (`marketDayKeyer`).
+ */
 function dayCloses(
   samples: readonly EquitySample[],
   timezone: string,
 ): { day: string; at: string; equity: number }[] {
   const closes = new Map<string, { day: string; at: string; equity: number }>();
+  const dayOf = marketDayKeyer(timezone);
   for (const s of ordered(samples)) {
-    const day = marketDayKey(s.at, timezone);
+    const day = dayOf(s.at);
     closes.set(day, { day, at: s.at, equity: s.equity });
   }
   return [...closes.values()].sort((a, b) => a.day.localeCompare(b.day));
@@ -207,9 +211,16 @@ export function dayStreakBoard(
   direction: StreakDirection,
   timezone: string = MARKET_TIMEZONE,
 ): DayStreakStanding[] {
+  return streakBoardOf(dailyChanges(samples, timezone), direction);
+}
+
+function streakBoardOf(
+  changes: readonly DayChange[],
+  direction: StreakDirection,
+): DayStreakStanding[] {
   const board: DayStreakStanding[] = [];
-  for (const [participantId, changes] of byParticipant(dailyChanges(samples, timezone))) {
-    const run = bestRun(changes, direction);
+  for (const [participantId, own] of byParticipant(changes)) {
+    const run = bestRun(own, direction);
     if (run) board.push({ participantId, ...run });
   }
   return board.sort(
@@ -230,7 +241,18 @@ export function longestDayStreak(
   direction: StreakDirection,
   timezone: string = MARKET_TIMEZONE,
 ): DayStreak | null {
-  const top = dayStreakBoard(samples, direction, timezone)[0];
+  return longestStreakIn(dailyChanges(samples, timezone), direction);
+}
+
+/**
+ * `longestDayStreak` over changes already keyed by `dailyChanges` — so a reader that wants several
+ * streaks keys the history once.
+ */
+export function longestStreakIn(
+  changes: readonly DayChange[],
+  direction: StreakDirection,
+): DayStreak | null {
+  const top = streakBoardOf(changes, direction)[0];
   return top ? withoutParticipant(top) : null;
 }
 
@@ -249,10 +271,15 @@ export function currentDayStreak(
   samples: readonly EquitySample[],
   timezone: string = MARKET_TIMEZONE,
 ): DayStreak | null {
+  return currentStreakIn(dailyChanges(samples, timezone));
+}
+
+/** `currentDayStreak` over changes already keyed by `dailyChanges` (see `longestStreakIn`). */
+export function currentStreakIn(changes: readonly DayChange[]): DayStreak | null {
   let latest: DayStreakStanding | null = null;
-  for (const [participantId, changes] of byParticipant(dailyChanges(samples, timezone))) {
-    const last = changes[changes.length - 1];
-    const open = runs(changes).pop();
+  for (const [participantId, own] of byParticipant(changes)) {
+    const last = own[own.length - 1];
+    const open = runs(own).pop();
     if (!(last && open) || open.to !== last.day) continue;
     const standing: DayStreakStanding = { participantId, ...sealed(open) };
     const rank = latest

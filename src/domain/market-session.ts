@@ -5,15 +5,30 @@
  * trip. The desk's own gate (`src/server/desk-gate.ts`) still asks Alpaca before any order.
  * Mirrors the shell's `app/src/live/market-hours.ts` (which does not yet read the calendar).
  */
+import { formatDateTime } from "./intl-format.js";
 import { MARKET_CLOSURES } from "./market-calendar.js";
 
 const OPEN_MINUTES = 9 * 60 + 30;
 const CLOSE_MINUTES = 16 * 60;
 const EARLY_CLOSE_MINUTES = 13 * 60;
 
+/**
+ * Every field `toLocaleString("en-US", { timeZone })` prints by default, spelled out so the shared
+ * formatter (`intl-format.ts`) prints the identical string.
+ */
+const NEW_YORK_CLOCK: Intl.DateTimeFormatOptions = {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+};
+
 /** True during the regular session on a trading day, judged in New York time. */
 export function regularSessionOpen(now: Date = new Date()): boolean {
-  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const et = new Date(formatDateTime(now, "en-US", NEW_YORK_CLOCK));
   const day = et.getDay();
   if (day === 0 || day === 6) return false;
   const date = `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, "0")}-${String(et.getDate()).padStart(2, "0")}`;

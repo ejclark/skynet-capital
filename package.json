@@ -109,6 +109,7 @@
     "test:e2e:journeys": "playwright test -c playwright.journeys.config.ts",
     "test:e2e:journeys:open": "JOURNEYS_MODE=open playwright test -c playwright.journeys.config.ts",
     "crawl": "tsx scripts/crawl/run.mjs",
+    "stability:budget": "tsx scripts/stability/budget-run.mjs",
     "crawl:coverage": "node scripts/crawl/coverage.mjs",
     "phone": "tsx scripts/crawl/phone-one.mjs",
     "test:e2e:ct": "playwright test -c app/playwright-ct.config.ts",
