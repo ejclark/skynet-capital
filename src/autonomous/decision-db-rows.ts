@@ -181,20 +181,6 @@ export function intentParams(
   ];
 }
 
-/** `intentParams(raw, entry, fateOf(...))` in one call, matching refusals afresh each time — the
- *  original single-intent surface, unchanged for its callers. */
-export function paramsForRawIntent(
-  raw: OrderIntent,
-  entry: Pick<DecisionRecord, "outcomes" | "refusals" | "context">,
-  usedOutcomes: Set<number>,
-): IntentInsertParams {
-  return intentParams(
-    raw,
-    entry,
-    fateOf(raw, entry, { outcomes: usedOutcomes, refusals: new Set() }),
-  );
-}
-
 /** Parse one `intents` table row (as returned by `better-sqlite3`/`node:sqlite`'s `.get()`/`.all()`,
  *  snake_case columns, `null` for absent) into the honest, optional-field `StoredIntentRow` shape,
  *  with its option order when the side tables hold one. */

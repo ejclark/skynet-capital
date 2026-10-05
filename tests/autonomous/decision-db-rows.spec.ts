@@ -1,8 +1,8 @@
 import {
   decisionFrom,
   fateOf,
+  intentParams,
   intentRowToStored,
-  paramsForRawIntent,
   type StoredIntentRow,
 } from "../../src/autonomous/decision-db-rows.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
@@ -18,7 +18,14 @@ const intent = (over: Partial<OrderIntent> = {}): OrderIntent => ({
   ...over,
 });
 
-describe("paramsForRawIntent", () => {
+/** One raw intent's row params, as `recordOne` builds them: its fate, then its columns. */
+const paramsForRawIntent = (
+  raw: OrderIntent,
+  entry: Pick<DecisionRecord, "outcomes" | "refusals" | "context">,
+  usedOutcomes: Set<number>,
+) => intentParams(raw, entry, fateOf(raw, entry, { outcomes: usedOutcomes, refusals: new Set() }));
+
+describe("intentParams over fateOf", () => {
   it("attributes an exact-reference refusal, never touching the approved columns", () => {
     const raw = intent();
     const usedOutcomes = new Set<number>();

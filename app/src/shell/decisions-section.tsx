@@ -61,7 +61,7 @@ export function OutcomeLine({
       {showPlaybook ? <PlaybookChip outcome={outcome} /> : null}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
-      {outcome.resultStatus && !outcome.fill ? (
+      {outcome.resultStatus && (!outcome.fill || outcome.resultStatus === "working") ? (
         <span className="cycle-fill">{outcome.resultLabel ?? outcome.resultStatus}</span>
       ) : null}
       <span className="cycle-reason">“{outcome.reason}”</span>

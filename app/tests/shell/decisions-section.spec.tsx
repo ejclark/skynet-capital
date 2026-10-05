@@ -155,6 +155,30 @@ describe("CycleRow", () => {
     expect(screen.queryByText("unfilled")).not.toBeInTheDocument();
   });
 
+  it("keeps a part-filled order's 'may still fill' warning beside its fill", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          outcomes: [
+            {
+              symbol: "CRWV",
+              side: "sell",
+              quantity: 3,
+              action: "placed",
+              reason: "sell puts a month out",
+              fill: "1 @ $2.10",
+              resultStatus: "working",
+              resultLabel: "may still fill — cancel not confirmed",
+            },
+          ],
+        })}
+      />,
+    );
+    open();
+    expect(screen.getByText("1 @ $2.10")).toBeInTheDocument();
+    expect(screen.getByText("may still fill — cancel not confirmed")).toBeInTheDocument();
+  });
+
   it("names the check that refused an idea, beside the idea itself", () => {
     render(
       <CycleRow

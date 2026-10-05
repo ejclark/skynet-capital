@@ -127,8 +127,11 @@ export function resolveDecisionReplication(
   // An older dashboard refuses decision.v2 outright; splitting by record keeps every share-only
   // record flowing while it does (the ascending cursor below advances even on a refused batch).
   const sendAll = async (personaId: string, records: readonly DecisionRecord[]): Promise<void> => {
-    const v1 = records.filter((r) => recordWireKind(r) === DECISION_BATCH_KIND);
-    const v2 = records.filter((r) => recordWireKind(r) === DECISION_BATCH_KIND_V2);
+    const v1: DecisionRecord[] = [];
+    const v2: DecisionRecord[] = [];
+    for (const record of records) {
+      (recordWireKind(record) === DECISION_BATCH_KIND ? v1 : v2).push(record);
+    }
     if (v1.length > 0) await sendOne(personaId, DECISION_BATCH_KIND, v1);
     if (v2.length > 0) await sendOne(personaId, DECISION_BATCH_KIND_V2, v2);
   };

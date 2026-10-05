@@ -227,4 +227,45 @@ describe("DecisionDb — option orders", () => {
     expect(row?.refusals?.[0]?.reason).toBe("option-shape");
     expect(row?.rawIntents[0]?.option?.limitPrice).toBeNaN();
   });
+
+  it("stores a malformed option AS an option, never read back as a share order", () => {
+    const broken = {
+      ...coveredCall,
+      option: { ...coveredCall.option, effect: undefined, legs: "not-an-array" },
+    } as unknown as OrderIntent;
+    db.record({
+      at: 7,
+      personaId: "sauron",
+      mode: "live",
+      rawIntents: [broken],
+      guardedIntents: [],
+      outcomes: [],
+      refusals: [{ intent: broken, reason: "option-shape" }],
+    });
+    const [read] = db.listByPersona("sauron");
+    const stored = read?.refusals?.[0]?.intent;
+    expect(stored?.option).toBeDefined();
+    expect(stored?.type).toBe("limit");
+    expect(stored?.option?.legs).toEqual([]);
+  });
+
+  it("drops a corrupt stored selection, never the whole read", () => {
+    db.record({
+      at: 8,
+      personaId: "sauron",
+      mode: "live",
+      rawIntents: [spread],
+      guardedIntents: [],
+      outcomes: [],
+      refusals: [{ intent: spread, reason: "options-level" }],
+    });
+    db.close();
+    const raw = new DatabaseSync(dbPath);
+    raw.exec("UPDATE intent_options SET selection_json = '{not json'");
+    raw.close();
+    db = openDecisionDb(dbPath);
+    const stored = db.listByPersona("sauron")[0]?.refusals?.[0]?.intent;
+    expect(stored?.option?.legs).toHaveLength(2);
+    expect(stored?.option).not.toHaveProperty("selection");
+  });
 });

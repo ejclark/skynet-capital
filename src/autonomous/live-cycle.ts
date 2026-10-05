@@ -262,7 +262,10 @@ export class LiveCycleRunner {
       this.deps.onResult?.(result);
       outcomes.push({
         intent,
-        action: result.status === "rejected" ? "rejected" : "placed",
+        // `unfilled` ended with nothing traded, so it reads as rejected downstream; `working` may
+        // still fill, so it is a placed order.
+        action:
+          result.status === "rejected" || result.status === "unfilled" ? "rejected" : "placed",
         result,
       });
     }

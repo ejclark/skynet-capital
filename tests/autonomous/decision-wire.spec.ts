@@ -179,6 +179,15 @@ describe("parseDecisionBatch", () => {
     expect(parseDecisionBatch(mixed)).toBeUndefined();
   });
 
+  it("drops an unreadable record alone, keeping every record beside it (#4644)", () => {
+    const batch = parseDecisionBatch({
+      kind: DECISION_BATCH_KIND,
+      personaId: "sauron",
+      records: [validRecord(), { personaId: "sauron", nonsense: true }, validRecord()],
+    });
+    expect(batch?.records).toHaveLength(2);
+  });
+
   it("rejects an empty or over-cap records array — the bounded-batch invariant", () => {
     expect(
       parseDecisionBatch({ kind: DECISION_BATCH_KIND, personaId: "sauron", records: [] }),

@@ -160,8 +160,13 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
     return undefined;
   }
   const parsed = records.map(parseDecisionRecord);
-  if (parsed.some((r) => !r || r.personaId !== personaId)) return undefined;
-  return { personaId, records: parsed as DecisionRecord[] };
+  // A record naming another persona is an identity fault on the bridge: refuse the whole batch.
+  if (parsed.some((r) => r !== undefined && r.personaId !== personaId)) return undefined;
+  // A record this build cannot read (a bug that emitted a malformed option, say) is dropped ALONE.
+  // Refusing the batch lost every record beside it, because the bots' ascending cursor moves on
+  // whatever the answer — and the preview leg would resend the same poisoned batch every poll.
+  const kept = parsed.filter((r): r is DecisionRecord => r !== undefined);
+  return kept.length > 0 ? { personaId, records: kept } : undefined;
 }
 
 /** `GET /controls`'s additive `decisionsCursor` field — a plain `{ personaId: epochMs }` map, the

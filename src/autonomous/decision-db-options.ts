@@ -98,13 +98,27 @@ function optionFrom(row: OptionRow, legs: readonly LegRow[]): StoredOption {
       ? { band: { low: row.band_low, high: row.band_high, at: row.band_at } }
       : {}),
     ...(row.assignment === "intended" ? { assignment: "intended" as const } : {}),
-    ...(row.selection_json ? { selection: JSON.parse(row.selection_json) as OptionSelection } : {}),
+    ...selectionFrom(row.selection_json),
   };
   return {
     option,
     ...(row.client_order_id ? { clientOrderId: row.client_order_id } : {}),
     ...(legFills.length > 0 ? { legFills } : {}),
   };
+}
+
+/** The stored selection, or nothing: one corrupt row must cost its optional detail, never every
+ *  read that touches its decision (the wire parser drops a malformed optional field the same way). */
+function selectionFrom(json: string | null): { readonly selection?: OptionSelection } {
+  if (!json) return {};
+  try {
+    const value: unknown = JSON.parse(json);
+    return value !== null && typeof value === "object"
+      ? { selection: value as OptionSelection }
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 export function openOptionTables(db: DatabaseSync): OptionTables {
@@ -131,12 +145,15 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
     write(intentId, raw, outcome) {
       const option = raw.option;
       if (!option) return;
+      // Every column is coerced to something storable: a malformed option (the case `option-shape`
+      // exists for) must still be stored AS an option, because an intent row with no option row is
+      // read back as a share order on the underlying — "SELL 1 CRWV at market" for a sold put.
       try {
         const band = option.band;
         insertOption.run(
           intentId,
-          option.effect,
-          option.structure,
+          String(option.effect ?? "unknown"),
+          String(option.structure ?? "unknown"),
           finiteOrNull(option.limitPrice),
           finiteOrNull(band?.low),
           finiteOrNull(band?.high),
@@ -145,14 +162,15 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
           option.selection ? JSON.stringify(option.selection) : null,
           outcome?.intent.clientOrderId ?? null,
         );
-        for (const [index, leg] of option.legs.entries()) {
-          const fill = outcome?.result?.legFills?.find((f) => f.occSymbol === leg.occSymbol);
+        const legs: readonly OptionLegIntent[] = Array.isArray(option.legs) ? option.legs : [];
+        for (const [index, leg] of legs.entries()) {
+          const fill = outcome?.result?.legFills?.find((f) => f.occSymbol === leg?.occSymbol);
           insertLeg.run(
             intentId,
             index,
-            leg.occSymbol,
-            leg.side,
-            leg.ratio,
+            String(leg?.occSymbol ?? ""),
+            String(leg?.side ?? ""),
+            Number.isInteger(leg?.ratio) ? leg.ratio : 0,
             finiteOrNull(fill?.filledQuantity),
             finiteOrNull(fill?.filledPrice),
           );
