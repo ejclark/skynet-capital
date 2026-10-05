@@ -195,7 +195,7 @@ export function createCompanionChat(
     const canUseDesk = Boolean(config.tools && input.participantId);
     const toolsNote = canUseDesk
       ? "This member has a linked account — the read-only tools describe their own account."
-      : "This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback and get_work_status still work.";
+      : "This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback, get_work_status and get_roadmap still work.";
     const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
     const initial = trimHistory(input.messages).map((m) => ({ role: m.role, content: m.content }));
 

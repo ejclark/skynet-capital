@@ -193,7 +193,7 @@ export const COMPANION_TOOL_DEFS = [
   {
     name: "get_roadmap",
     description:
-      "What is coming on the Skynet Capital build queue: every open plan grouped into Now, Next and Later, each group with its meaning, its total, and up to 8 of its most recently touched items (number, quoted title, member-facing status, labels). Use it for 'what's coming next', 'what's on the roadmap', 'are you building X'. The grouping is SEQUENCING derived from each plan's own labels — never a delivery date, and never a promise that an item ships; say so if the member reads it that way. Returns no issue bodies and no comments. Takes no input; read-only.",
+      "What is coming on the Skynet Capital build queue: openPlans (how many open plans there are), then groups — Now, Next and Later, each with its meaning, its total, and up to 8 of its most recently touched items (number, quoted title, member-facing status, labels, url). Use it for 'what's coming next', 'what's on the roadmap', 'are you building X'. The grouping is SEQUENCING derived from each plan's own labels — never a delivery date, and never a promise that an item ships; say so if the member reads it that way. truncated: true (when present) means the queue outran what one read covers, so every total is a floor, not a count. Returns no issue bodies and no comments. Takes no input; read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {

@@ -46,8 +46,11 @@ export const HORIZON_GLOSS: Record<Horizon, string> = {
 
 /** The labels that each say "this waits on someone", so it is not coming Now or Next. Mirrors
  *  `PARKING_LABELS` in `scripts/moneypenny/labels.mjs` minus `hold-merge`, which only ever lands
- *  on a pull request. The item's own `status` still says WHICH kind of waiting it is. */
+ *  on a pull request. The item's own `status` still says WHICH kind of waiting it is — including
+ *  `needs-design`, which the Feedback badge's own vocabulary predates and does not cover, so a
+ *  row would otherwise read "In the queue" while sitting in Later. */
 const WAITING_LABELS = ["needs-eric", "needs-info", "needs-design"];
+const NEEDS_DESIGN_STATUS = "Waiting on a design pass";
 
 /** Bounds on what one call can put in front of the model. The queue is ~90 open plans; naming
  *  eight per horizon with an honest total beats pasting the whole backlog into a chat turn. */
@@ -86,6 +89,10 @@ export type Roadmap =
       readonly note: string;
       readonly openPlans: number;
       readonly groups: readonly RoadmapGroup[];
+      /** Present, true, only when the queue outran the page ceiling: `openPlans` and every group
+       *  `total` are then a floor, not a count. The queue is ~90 plans today, so this is a guard
+       *  against a future silence, not a condition anyone is in. */
+      readonly truncated?: true;
     };
 
 export type ReadRoadmap = () => Promise<Roadmap>;
@@ -118,9 +125,18 @@ interface IssueJson {
   readonly pull_request?: unknown;
 }
 
-/** One row. Every open plan is open by definition of the query, so the status mapping is the
- *  open half of `statusFromIssue` plus the one label it does not know about (`in-progress`,
- *  #3960 — added after that mapping was written). */
+/** Every open plan is open by definition of the query, so this is the open half of
+ *  `statusFromIssue` (shared with the Feedback badge, so the two never disagree) plus the two
+ *  labels that mapping predates: `in-progress` (#3960) and `needs-design` (2026-09-29). */
+function statusWords(labels: readonly string[]): string {
+  if (labels.includes("in-progress")) return "Being built";
+  const status = statusFromIssue("open", labels);
+  // Only when the shared mapping had nothing more specific to say — `needs-eric` outranks it.
+  if (status === "open" && labels.includes("needs-design")) return NEEDS_DESIGN_STATUS;
+  return FEEDBACK_STATUS_LABEL[status];
+}
+
+/** One row — structured fields only, never a body. */
 function itemOf(raw: unknown, repo: string): RoadmapItem | undefined {
   const issue = raw as IssueJson;
   if (typeof issue.number !== "number" || issue.pull_request) return undefined;
@@ -128,9 +144,7 @@ function itemOf(raw: unknown, repo: string): RoadmapItem | undefined {
   // a trimmed list would let a 9th label slice `needs-eric` off and show a parked plan as Next.
   const all = labelNamesOf(raw).filter(Boolean);
   const labels = all.slice(0, LABELS_KEPT).map((l) => excerpt(l, 40));
-  const status = all.includes("in-progress")
-    ? "Being built"
-    : FEEDBACK_STATUS_LABEL[statusFromIssue("open", all)];
+  const status = statusWords(all);
   return {
     number: issue.number,
     title: trustedAuthor(raw as Parameters<typeof trustedAuthor>[0])
@@ -169,25 +183,38 @@ export function createRoadmapReader(
   const headers = githubHeaders(config.token);
   let cached: { readonly value: Roadmap; readonly at: number } | undefined;
 
+  /** One page: its rows, and whether GitHub filled it (so another page is worth asking for).
+   *  `undefined` is a failed read — never an empty page, which would read as a short queue. */
+  const readPage = async (
+    page: number,
+  ): Promise<{ rows: readonly RoadmapItem[]; full: boolean } | undefined> => {
+    const res = await doFetch("GET", `${base}&page=${page}`, headers);
+    if (res.status !== 200 || !Array.isArray(res.body)) return undefined;
+    const rows = res.body
+      .map((raw) => itemOf(raw, config.repo))
+      .filter((i): i is RoadmapItem => i !== undefined);
+    return { rows, full: res.body.length >= 100 };
+  };
+
   const readAll = async (): Promise<Roadmap> => {
     const items: RoadmapItem[] = [];
+    let truncated = false;
     for (let page = 1; page <= LIST_PAGES; page++) {
-      const res = await doFetch("GET", `${base}&page=${page}`, headers);
-      if (res.status !== 200 || !Array.isArray(res.body)) {
-        // A blip mid-walk would otherwise read as a short roadmap — a silent lie about the queue.
-        return { available: false };
-      }
-      for (const raw of res.body) {
-        const item = itemOf(raw, config.repo);
-        if (item) items.push(item);
-      }
-      if (res.body.length < 100) break;
+      const got = await readPage(page);
+      // A blip mid-walk would otherwise read as a short roadmap — a silent lie about the queue.
+      if (!got) return { available: false };
+      items.push(...got.rows);
+      if (!got.full) break;
+      // A full LAST page means there is more queue than the ceiling allows — say so rather than
+      // let every total quietly understate itself, the same honesty the failed-read guard keeps.
+      truncated = page === LIST_PAGES;
     }
     return {
       available: true,
       note: ROADMAP_NOTE,
       openPlans: items.length,
       groups: groupsOf(items),
+      ...(truncated ? { truncated: true as const } : {}),
     };
   };
 

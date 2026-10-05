@@ -127,6 +127,22 @@ describe("the roadmap a member gets", () => {
     expect(statusOf(2)).toBe("In the queue");
   });
 
+  // The Feedback badge's vocabulary predates `needs-design` (2026-09-29), so without this a row
+  // sat in Later — "waiting on a decision" — while its own status read "In the queue".
+  it("says which kind of waiting a `needs-design` plan is in, and lets `needs-eric` outrank it", async () => {
+    const roadmap = await read([
+      [
+        plan({ number: 6, labels: ["plan", "needs-design"] }),
+        plan({ number: 8, labels: ["plan", "needs-design", "needs-eric"] }),
+      ],
+    ]);
+
+    const items = ok(roadmap).groups.flatMap((g) => g.items);
+    expect(items.map((i) => i.horizon)).toEqual(["Later", "Later"]);
+    expect(items.find((i) => i.number === 6)?.status).toBe("Waiting on a design pass");
+    expect(items.find((i) => i.number === 8)?.status).toBe("Needs Eric's call");
+  });
+
   it("names at most 8 per horizon but still reports the real total — a cap, never a lie", async () => {
     const many = Array.from({ length: 12 }, (_, i) => plan({ number: i + 1, labels: ["plan"] }));
 
@@ -163,9 +179,23 @@ describe("the roadmap a member gets", () => {
     const roadmap = ok(await read([], doFetch));
 
     expect(roadmap.openPlans).toBe(101);
+    expect(roadmap.truncated).toBeUndefined();
     expect(calls).toHaveLength(2);
     expect(calls[0]).toContain("labels=plan");
     expect(calls[0]).toContain("state=open");
+  });
+
+  // Not a condition anyone is in (~90 open plans today) — but a queue that outran the ceiling
+  // would otherwise understate every total with nothing saying so.
+  it("flags `truncated` when the queue outruns the page ceiling, rather than understating it", async () => {
+    const full = Array.from({ length: 100 }, (_, i) => plan({ number: i + 1 }));
+    const { doFetch, calls } = fakeGitHub([full, full, full, full]);
+
+    const roadmap = ok(await read([], doFetch));
+
+    expect(calls).toHaveLength(3);
+    expect(roadmap.truncated).toBe(true);
+    expect(roadmap.openPlans).toBe(300);
   });
 });
 
