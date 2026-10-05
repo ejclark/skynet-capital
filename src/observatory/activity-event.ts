@@ -343,8 +343,12 @@ function activityEventFromMilestone(info: MilestoneEarnedInfo, source: string): 
     correlationId: `milestone:${identity}`,
     source,
     outcome: "success",
-    // Every earn is proved by a fill or a fill's outcome, and fills are already on the public feed —
-    // a milestone row tells the league nothing its trade rows did not, only what it MEANT.
+    // Public, said with what it costs: an option rung is classified from the ticket's play tag, which
+    // `activityEventFromAuditRecord` keeps owner-only, so "Sell your first covered call" tells the
+    // league a strategy that a bare SELL row does not. That is in bounds. The cross-member feed sits
+    // behind the invite gate (`serveAuthorizedRoute`), where pooling members' trades is what the
+    // invite agreement authorizes (`CLAUDE.md` → shared-universe data mixing). The audit line stays
+    // owner-only for what it carries that this event never does: the confirming member's email.
     visibility: "public",
     payload: { milestoneId: info.milestoneId, orderId: info.orderId, evidence: info.evidence },
   };

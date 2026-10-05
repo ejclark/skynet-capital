@@ -88,6 +88,10 @@ export function serveDeskEventsApi(
   res.write(sseFrame(JSON.stringify({ participantId: id, at: new Date().toISOString() }), "hello"));
   const subscription = bus.subscribe((event) => {
     if (event.actor.participantId !== id || !OWNER_TIERS(event)) return;
+    // Only an ORDER is an order frame. A member's earned milestone (#784 slice 5) is the first
+    // non-order event keyed on a hub participant id, and relaying it here would hand the desk an
+    // `orderId` that names no order.
+    if (event.target.kind !== "order") return;
     res.write(sseFrame(JSON.stringify(deskOrderEvent(event)), "order", event.id));
   });
   const heartbeat = setInterval(() => res.write(": ping\n\n"), HEARTBEAT_MS);
