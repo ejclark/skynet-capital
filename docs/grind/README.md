@@ -80,26 +80,21 @@ checks all four."
   narrows a batch instead of stopping the repo; a *malformed* control config exits 1 there and
   throws here, because a broken control must never read as a quiet "go".
 - **An envelope check runs as step 0, on by default.** Every item goes through `node
-  scripts/envelope-scan.mjs --check <path> --base origin/main` before your own steps run, closing
-  what used to be a documented gap (nothing in `grind.js` filtered `items` against
-  `envelope.json`). It is a `prompt` step, not `script` — `--check` always exits 0 and returns
-  descriptive JSON, so the dispatched agent reads it and reports `blocked` on any `blocking: true`
-  entry. For an item that is a JSON object (the `{doc, refs}` shape `fix-doc-rot` uses, for
-  example) the agent is told to extract the real path field itself rather than hand the raw JSON to
-  the shell — an early version substituted `{item}` straight into the command line, and a red-team
-  pass showed the shell word-splitting `{"doc":"envelope.json","refs":["a"]}` into fragments that
-  matched nothing, silently passing a protected-file edit. And when the item genuinely is not a
-  file path (an issue number, a ticker, a PR branch), the agent reports **`done`**, never
-  `skipped` — the pipeline treats any non-`done` status as "stop the chain for this item," so a
-  `skipped` envelope step would silently no-op the chore itself on every non-path grind call (the
-  same red-team pass caught this against `research-bottleneck`, whose items are issue numbers).
-  Pass `skipEnvelopeCheck: '<reason>'` (a non-empty string, not a bare boolean) to opt out
-  entirely; say why.
+  scripts/envelope-scan.mjs --check <path>` before your own steps run. It is a `prompt` step, not
+  `script` — `--check` always exits 0 and returns descriptive JSON, so the dispatched agent reads
+  it and reports `blocked` on any `blocking: true` entry. For an item that is a JSON object (the
+  `{doc, refs}` shape `fix-doc-rot` uses, for example) the agent is told to extract the real path
+  field itself rather than hand the raw JSON to the shell — an early version substituted `{item}`
+  straight into the command line, and a red-team pass showed the shell word-splitting
+  `{"doc":"envelope.json","refs":["a"]}` into fragments that matched nothing, silently passing a
+  protected-file edit. And when the item genuinely is not a file path (an issue number, a ticker,
+  a PR branch), the agent reports **`done`**, never `skipped` — the pipeline treats any non-`done`
+  status as "stop the chain for this item," so a `skipped` envelope step would silently no-op the
+  chore itself on every non-path grind call (the same red-team pass caught this against
+  `research-bottleneck`, whose items are issue numbers). Pass `skipEnvelopeCheck: '<reason>'` (a
+  non-empty string, not a bare boolean) to opt out entirely; say why.
   **What this does not close:** the check is agent judgment (a `prompt` step), not a hard
-  exit-code gate, and `envelope-scan.mjs --check` itself does exact-string glob matching with no
-  path normalization — `./envelope.json` or an absolute path can slip past it exactly as they can
-  slip past a hand-typed `--check` call. That fix belongs in `envelope-scan.mjs` itself, which is
-  Eric's call, not grind's. **And CI is not a backstop for every grind push** — `tests/arch/
+  exit-code gate. **And CI is not a backstop for every grind push** — `tests/arch/
   envelope.spec.ts` only enforces on lane-prefixed branches (`feedback/`, `research/`, `design/`);
   a chore branch grind pushes under another name gets no CI-side check at all, so this step-0 check
   is the only net for those, not a second one.
@@ -238,7 +233,7 @@ node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' --item-
   "items": ["src/a.ts", "src/b.ts"],
   "itemSource": "comment-bloat-scan.mjs",
   "steps": [
-    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "low", "isolation": true },
+    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "high", "isolation": true },
     { "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
   ]
 }
@@ -256,12 +251,12 @@ caller is running the preflight rather than hand-writing the args.
 `grind.js` fetches each distinct `instructions`-step path's manifest through one cheap subagent
 (`node scripts/grind-manifest.mjs <path>`, effort `low`) and resolves each of effort/model/isolation
 as `explicit step field › explicit whole-run arg (args.effort/args.model/args.isolation) › the chore
-file › the cheap default`, logging the resolved tier once per chore so a run narrates its own tier.
+file › grind's default`, logging the resolved tier once per chore so a run narrates its own tier.
 A manifest fetch that fails — a bad path, a chore missing front matter — **throws** rather than
-falling back to cheap; it never silently dispatches at a guessed tier. So a caller who hand-writes
-`steps` and skips the `--args` preflight is now tiered correctly anyway — the preflight remains the
-cheaper way to get the exact call (one command instead of remembering the resolution order), not
-the only way to get it right.
+falling back to the default; it never silently dispatches at a guessed tier. So a caller who
+hand-writes `steps` and skips the `--args` preflight is now tiered correctly anyway — the
+preflight remains the cheaper way to get the exact call (one command instead of remembering the
+resolution order), not the only way to get it right.
 
 **What front matter deliberately does NOT carry:** per-run grouping rules (per-doc, per-file,
 in waves), because `grind.js` could not enforce them anyway. Those stay prose in each chore's own
@@ -327,7 +322,7 @@ has a gap, not that those items are each uniquely unlucky. Log it to `docs/IDEAS
 no-per-item shape as `/governor`'s and `/work-issues`' own cycle-close retro line — the ledger you're
 already printing is the free checkpoint, not a new one.
 
-## Two hazards the first real run hit (2026-09-04)
+## Hazards to check before launching
 
 - **Worktrees are cut from the calling session's HEAD, not from `origin/main`.** An agent reads
   the chore file from that worktree *before* its own step 1 fetches `origin/main`, so a session
@@ -340,15 +335,14 @@ already printing is the free checkpoint, not a new one.
   before anything was committed or pushed; the outcome check would have caught a push, but the
   cheaper fix is upstream. Every chore's step 1 says `origin/main`; a chore that says bare `main`
   anywhere is a bug in the chore.
-
-**A third, from the interrogate chore's first run (2026-09-04):** an `outcomeCheck` of the shape
-`curl … | grep -q <word>` fails closed for two wrong reasons. `grep -q` exits at its first match
-and closes the pipe, so `curl` dies with exit 23 ("failure writing output") under `pipefail` —
-the check reports "blocked" on a comment that exists. And a prose word as the marker (`grep -q
-interrogation`) matches any comment that mentions the chore. Both checked-in research chores now
-use `test "$(curl -sSf … | grep -c -- "!-- <marker> --")" -gt 0`: `grep -c` reads the whole
-stream, `-f` fails on an HTTP error instead of grepping an error page, and the marker is the
-comment's literal first line as the API returns it (`<` arrives as `\u003c`, so match from `!--`).
+- **An `outcomeCheck` of the shape `curl … | grep -q <word>` fails closed for two wrong reasons.**
+  `grep -q` exits at its first match and closes the pipe, so `curl` dies with exit 23 ("failure
+  writing output") under `pipefail` — the check reports "blocked" on a comment that exists. And a
+  prose word as the marker (`grep -q interrogation`) matches any comment that mentions the chore.
+  Both checked-in research chores now use `test "$(curl -sSf … | grep -c -- "!-- <marker> --")"
+  -gt 0`: `grep -c` reads the whole stream, `-f` fails on an HTTP error instead of grepping an
+  error page, and the marker is the comment's literal first line as the API returns it (`<`
+  arrives as `\u003c`, so match from `!--`).
 
 ## If `Workflow({name: "grind"})` says "not found"
 
@@ -364,45 +358,31 @@ appeared). Two consequences:
   (`scripts/workflow-meta-scan.mjs`, blocking in `tests/arch/workflow-meta.spec.ts`) now refuses
   that shape at CI.
 - Within the session that first built the registry, fixing the file changes nothing. Invoke by
-  path instead — `Workflow({scriptPath: "/home/user/skynet-capital/.claude/workflows/grind.js",
+  path instead — `Workflow({scriptPath: "<repo root>/.claude/workflows/grind.js",
   args: {...}})` — which reads the file fresh and, if the script is malformed, reports the real
   error instead of "not found". The name works again in the next session.
 
 ## Known limitations
 
-- **`envelope.json` enforcement is now built in, and still imperfect.** `grind.js` prepends an
-  envelope-check step to every chain by default, closing the gap this bullet used to describe — see
-  "Interrogate before you call" above for the full account, including what it does NOT close
-  (agent judgment rather than a hard gate, no path normalization, and CI is not a backstop for a
-  grind push on a non-lane-prefixed branch). The follow-up this bullet originally deferred to (a
-  `--envelope` flag in `grind-manifest.mjs` that structurally drops protected items before dispatch)
-  never landed, and does not need to: the blocker was that only some item shapes are file paths —
-  issue numbers and `{doc, refs}` objects need their own mapping. Routing the check through a
-  `prompt` step sidesteps that by having the dispatched agent extract the real path itself instead
-  of grind.js needing to know every item shape in advance.
-- **An agent's loop is reachable only if it lives in a skill — and only an interactive session
-  can put it there.** `skill` steps reach `.claude/skills/*/SKILL.md`; the athletes that already
-  kept their procedure in a skill (`decomposer` → `/decompose`, `ui-librarian` → `/dedupe`) were
-  always fannable. `mortician` and `test-backfiller` weren't, so #1315 hand-copied their loops into
-  two chore files, which diverged within a day with nothing watching. #1326 fixed that the way the
-  ladder says: the loops moved into `/bury` and `/backfill`, the agents preload and follow them,
-  the copies are gone. The reason it took a human-driven session: `.claude/` is a Claude Code
-  **protected directory** — writes there are never auto-approved outside `bypassPermissions`, and
-  `permissions.allow` rules don't override that — so Moneypenny's unattended lane cannot create or
-  edit a skill or agent at all, and `envelope-scan --check` (which lists only `.claude/settings.json`)
-  will tell you the path is open. Any future issue whose build is a skill or agent contract
-  dead-ends the feedback lane the same way; route it to an interactive session. **`grind.js`
-  itself is inside that protected directory** — measured 2026-09-04 on issue #1352, whose build
-  was an edit to `.claude/workflows/grind.js`: `envelope-scan --check` returned `protected: false`
-  and the write was refused anyway, one turn later. So a feedback-lane session can *call* grind but
-  can never *change* it; file the change as its own issue and let an interactive session apply it.
-  (The earlier "never hand-pick" objection recorded here was wrong: a gate's item list *is* the
-  gate picking.)
-  What is still missing, and out of #1325's scope: `scripts/grind-manifest.mjs` — and the dispatch
-  resolution `grind.js` now runs before the pipeline — reads `*.instructions.md` front matter only,
-  never `.claude/skills/*/SKILL.md`, so a `skill`-kind step's calling convention stays hand-written
-  prose in the skill body with no CI check and no dispatch-time enforcement. File it as its own
-  issue if a skill fanned via grind starts needing a declared tier the same way.
+- **`envelope.json` enforcement is built in, and imperfect.** `grind.js` prepends an
+  envelope-check step to every chain by default (see "Interrogate before you call" above). The
+  dispatched agent extracts each item's real path itself, so no item shape has to be known in
+  advance. But the verdict is agent judgment rather than an exit-code gate, and CI does not back up
+  a grind push to a branch without a lane prefix.
+- **Only a skill is reachable from a `skill` step, and only an interactive session can edit one.**
+  `skill` steps reach `.claude/skills/*/SKILL.md`, so an agent's loop is fannable only once it lives
+  in a skill. A copy pasted into a chore file drifts from the agent with nothing watching (the
+  athletes' loops now live in `/decompose`, `/dedupe`, `/bury`, `/backfill`). Fanning one over
+  its gate's own item list is not hand-picking: the gate's list *is* the gate picking. `.claude/` is a
+  Claude Code protected directory: writes there are never auto-approved outside `bypassPermissions`,
+  and `permissions.allow` does not override that. So an unattended lane cannot create or edit a
+  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (which lists only
+  `.claude/settings.json`) reports those paths open. A feedback-lane session can call grind but not
+  change it; route such a change to an interactive session as its own issue.
+  `scripts/grind-manifest.mjs`, and the dispatch-time resolution in `grind.js`, read
+  `*.instructions.md` front matter only, never `SKILL.md`, so a `skill` step's tier stays
+  hand-written prose in the skill body with no CI check. File an issue if a fanned skill starts
+  needing a declared tier.
 
 ## When to reach for this vs. `/governor` or a purpose-built workflow
 
@@ -410,7 +390,7 @@ appeared). Two consequences:
 - **Many near-identical targets, low judgment per item** → grind (this directory).
 - **Structural debt with its own gate + ratchet (dead code, duplication, file size)** → the decision
   is `docs/COACHES.md`'s "`/governor`'s normal cycle vs. feast mode vs. `/grind` on a Coach's own
-  athlete" rule, not this bullet (a narrower, now-stale version of it used to live here). Short
+  athlete" rule, not this bullet. Short
   version: grind fanning a coach's own athlete (`/bury`, `/backfill`, `/decompose`, `/dedupe`) is in
   bounds for a known, fixed batch with no dynamic re-triggering needed, landed the same shape
   `/governor`'s own LAND step uses — never via `scripts/ship.sh platter`, a different mechanism
