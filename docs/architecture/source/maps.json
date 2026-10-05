@@ -740,7 +740,7 @@
       {
         "id": "ccp",
         "label": "Claude Code platform (claude-code-action, claude.ai Routines, remote sessions)",
-        "evidence": "anthropics/claude-code-action@cfc3eb22bfed5c26ef66e3223c982af27e4524de pinned in moneypenny-events.yml, moneypenny-repair.yml, claude.yml with secrets.CLAUDE_CODE_OAUTH_TOKEN and --model claude-opus-5 / claude-sonnet-5; docs/ROUTINES.md secretary digest Routine trig_01KaMC2uR3cFW5XTUL6rzPuS (daily 12:00, repo-wired); .claude/hooks/session-start.sh; .claude/settings.json allows mcp__Claude_Code_Remote__send_later"
+        "evidence": "anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 (Claude Code 2.1.286) pinned in moneypenny-events.yml, moneypenny-repair.yml, claude.yml with secrets.CLAUDE_CODE_OAUTH_TOKEN and --model claude-opus-5-5 / claude-sonnet-5-5; docs/ROUTINES.md secretary digest Routine trig_01KaMC2uR3cFW5XTUL6rzPuS (daily 12:00, repo-wired); .claude/hooks/session-start.sh; .claude/settings.json allows mcp__Claude_Code_Remote__send_later"
       },
       {
         "id": "fly",
@@ -750,7 +750,7 @@
       {
         "id": "dependabot",
         "label": "Dependabot",
-        "evidence": ".github/dependabot.yml (weekly npm per-package + github-actions, open-pull-requests-limit 20, playwright group); moneypenny-events.yml dep-warden job fires on pull_request opened by dependabot[bot] and runs .claude/agents/dep-warden.md on claude-sonnet-5"
+        "evidence": ".github/dependabot.yml (weekly npm per-package + github-actions, open-pull-requests-limit 20, playwright group); moneypenny-events.yml dep-warden job fires on pull_request opened by dependabot[bot] and runs .claude/agents/dep-warden.md on claude-sonnet-5-5"
       },
       {
         "id": "anthropic",
@@ -900,7 +900,7 @@
       {
         "id": "mp_repair",
         "label": "Moneypenny repair lane",
-        "technology": "GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneypenny/repair.mjs), claude-code-action on claude-opus-5",
+        "technology": "GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneypenny/repair.mjs), claude-code-action on claude-opus-5-5",
         "responsibility": "Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session; workflow_dispatch entry points repair a conflicted PR (pr_number) or a stalled event-research issue (issue_number); four loop guards keep it from feeding itself",
         "code_roots": [
           ".github/workflows/moneypenny-repair.yml",
@@ -921,7 +921,7 @@
       {
         "id": "claude_lane",
         "label": "Human-directed lane",
-        "technology": "GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code-action on claude-opus-5 --max-turns 80, concurrency cancel-in-progress",
+        "technology": "GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code-action on claude-opus-5-5 --max-turns 80, concurrency cancel-in-progress",
         "responsibility": "Any comment from a recognised OWNER/MEMBER/COLLABORATOR on an existing thread starts or steers a session under .github/prompts/interactive.md; a new issue needs an explicit @claude; the session answers, reviews or builds and opens PRs with the App token",
         "code_roots": [".github/workflows/claude.yml", ".github/prompts/interactive.md"],
         "entrypoints": [".github/workflows/claude.yml"],
@@ -1238,7 +1238,7 @@
         "from": "mp_repair",
         "to": "ccp",
         "label": "Repair sessions",
-        "technology": "claude-code-action --model claude-opus-5",
+        "technology": "claude-code-action --model claude-opus-5-5",
         "evidence": "moneypenny-repair.yml repair job (three mutually exclusive steps)"
       },
       {
