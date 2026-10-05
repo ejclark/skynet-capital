@@ -16,6 +16,10 @@ import { join } from "node:path";
  * changes, so it parses once; in dev an edited doc shows up on the next request; specs that write
  * temp corpora get fresh answers. One entry per name — a different root simply replaces it, so a
  * spec run cycling through temp dirs cannot grow this without bound.
+ *
+ * Detaching bounds two things (#4612 slice 3, #4615). The memo's clone bounds what the process
+ * KEEPS. Detaching each row as it is built (`detached`) bounds the build's PEAK — and a build that
+ * does that says so (`{ detached: true }`), so its finished shelf is not cloned a second time.
  */
 
 /** The directories the shelf reads (see `listResearch`): studies, weekly studies, event ledgers,
@@ -37,17 +41,37 @@ export function corpusFingerprint(root: string): string {
   return parts.join("|");
 }
 
+/**
+ * One doc's derived row, copied so it shares no string with the doc's text (#4612 slice 3, #4615).
+ * A regex match is a V8 *sliced* string that keeps its whole parent file alive, so a build that
+ * detaches only at the memo holds every file it has read until the last one: the whole corpus at
+ * once, +93-99 MB on the first calendar request after boot in a 512 MB container. Detached as it
+ * is built, each file is garbage before the next one is read.
+ */
+export const detached = <T>(row: T): T => structuredClone(row);
+
 const memo = new Map<string, { root: string; fingerprint: string; value: unknown }>();
 
-/** `compute()` once per (name, root, corpus state); the cached value is shared, so treat it as read-only. */
-export function memoByCorpus<T>(name: string, root: string, compute: () => T): T {
+/**
+ * `compute()` once per (name, root, corpus state); the cached value is shared, so treat it as
+ * read-only. Pass `{ detached: true }` only when compute builds its value from `detached` rows
+ * alone: a second, whole-shelf copy then buys nothing, and made at the end of the cold build it
+ * doubled what was live — ~10 MB of the first calendar request's peak (#4615).
+ */
+export function memoByCorpus<T>(
+  name: string,
+  root: string,
+  compute: () => T,
+  options: { readonly detached?: boolean } = {},
+): T {
   const fingerprint = corpusFingerprint(root);
   const hit = memo.get(name);
   if (hit && hit.root === root && hit.fingerprint === fingerprint) return hit.value as T;
   // structuredClone detaches every string from the file it was matched out of. A regex match is a
   // V8 *sliced* string that keeps its whole parent alive, so caching a 40-char title raw pinned the
   // entire markdown file — the memo retained ~170 MB, i.e. the whole corpus (measured 2026-10-02).
-  const value = structuredClone(compute());
+  const built = compute();
+  const value = options.detached ? built : structuredClone(built);
   memo.set(name, { root, fingerprint, value });
   return value;
 }

@@ -25,19 +25,23 @@ async function listJsonlFiles(dir: string): Promise<string[]> {
 }
 
 /**
- * Parse every non-empty line of `file` as JSON; empty array if `file` doesn't exist (or any read
- * error). A malformed line is skipped and logged rather than thrown: a crash or a full disk mid-append
- * leaves a torn final line, and that newest line is exactly what history rehydration reads at boot —
- * one torn byte must not fail a startup, a profile page, or a board-wide metric.
+ * Parse every non-empty line of `file` as JSON and append each to `entries`; appends nothing if
+ * `file` doesn't exist (or any read error). A malformed line is skipped and logged rather than
+ * thrown: a crash or a full disk mid-append leaves a torn final line, and that newest line is exactly
+ * what history rehydration reads at boot — one torn byte must not fail a startup, a profile page, or
+ * a board-wide metric.
+ *
+ * It appends into the caller's array one row at a time rather than returning a batch to spread:
+ * `entries.push(...rows)` passes every row as an argument, and V8 throws RangeError past ~121k of
+ * them. One history file that long made every boot exit 1 — a crash loop (#4612 slice 3, #4615).
  */
-async function readJsonlEntries<T>(file: string): Promise<T[]> {
+async function readJsonlEntriesInto<T>(file: string, entries: T[]): Promise<void> {
   let contents: string;
   try {
     contents = await readFile(file, "utf8");
   } catch {
-    return [];
+    return;
   }
-  const entries: T[] = [];
   for (const line of contents.split("\n")) {
     if (line.length === 0) continue;
     try {
@@ -49,7 +53,6 @@ async function readJsonlEntries<T>(file: string): Promise<T[]> {
       process.emitWarning(`[jsonl-store] skipping malformed line in ${file}`);
     }
   }
-  return entries;
 }
 
 /**
@@ -72,7 +75,7 @@ export class JsonlKeyedStore<T> {
     const files = key ? [this.fileFor(key)] : await listJsonlFiles(this.dir);
     const entries: T[] = [];
     for (const file of files) {
-      entries.push(...(await readJsonlEntries<T>(file)));
+      await readJsonlEntriesInto(file, entries);
     }
     return entries;
   }

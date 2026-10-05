@@ -100,8 +100,9 @@ function pulseCurve(samples: readonly EquitySample[]): PulseCurve | null {
   const last = ordered[ordered.length - 1] as EquitySample;
   const t0 = Date.parse(first.at);
   const span = Math.max(1, Date.parse(last.at) - t0);
-  const low = Math.min(...ordered.map((s) => s.equity));
-  const high = Math.max(...ordered.map((s) => s.equity));
+  // Folded, never spread: one argument per stored sample threw RangeError past ~121k (#4615).
+  const low = ordered.reduce((m, s) => Math.min(m, s.equity), Number.POSITIVE_INFINITY);
+  const high = ordered.reduce((m, s) => Math.max(m, s.equity), Number.NEGATIVE_INFINITY);
   const rise = Math.max(1e-9, high - low);
   const drawdown = equityDrawdown(samples);
   return {
