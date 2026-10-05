@@ -35,6 +35,37 @@ export interface MarketContext {
   readonly momentum?: Readonly<Record<string, number>>;
   /** News sentiment in [-1, 1]. Keyed by symbol. */
   readonly newsSentiment?: Readonly<Record<string, number>>;
+  /** In-process only: the option quotes this cycle's playbooks price from. Never written to disk or
+   *  the wire — the trader records the context it was handed, without these. */
+  readonly options?: OptionMarket;
+}
+
+/** One option contract as this process read it — in-process only, never persisted or sent. Per-share
+ *  prices; a $0.00 bid is a real quote, so an absent side is `undefined`, never 0. */
+export interface OptionContractQuote {
+  readonly occSymbol: string;
+  readonly underlying: string;
+  readonly type: "call" | "put";
+  readonly strike: number;
+  /** `YYYY-MM-DD`. */
+  readonly expiration: string;
+  readonly bid?: number;
+  readonly ask?: number;
+  /** The feed's own greek, signed (puts negative). */
+  readonly delta?: number;
+  readonly openInterest?: number;
+  /** The feed's quote stamp (`latestQuote.t`), ISO. */
+  readonly quotedAt?: string;
+  /** When this process read it, ISO. */
+  readonly fetchedAt: string;
+}
+
+/** What one cycle knows about the option market: the listed expirations and the quotes it read. */
+interface OptionMarket {
+  /** Underlying → its listed expirations, sorted ascending. */
+  readonly listed: Readonly<Record<string, readonly string[]>>;
+  /** Keyed by OCC symbol. */
+  readonly contracts: Readonly<Record<string, OptionContractQuote>>;
 }
 
 /**

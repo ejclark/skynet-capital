@@ -25,6 +25,9 @@
  * without also bringing a holiday calendar.
  */
 
+import { nextSession } from "./market-calendar.js";
+import { marketDayKey } from "./market-day.js";
+
 type PrintDateStatus = "confirmed" | "estimate";
 
 export interface EarningsPrint {
@@ -231,4 +234,35 @@ export function printWithin(
 ): EarningsPrint | undefined {
   const next = nextPrintRisk(symbol, asOfIso, prints);
   return next && daysUntil(asOfIso, printSpan(next).start) <= days ? next : undefined;
+}
+
+/** The days an option on `print.symbol` must not be open across — see `optionPrintBlackout`. */
+export interface PrintBlackout {
+  readonly start: string;
+  readonly end: string;
+  readonly print: EarningsPrint;
+}
+
+/**
+ * The earliest print blackout still live for `symbol`: `[printSpan.start, nextSession(printSpan.end)]`
+ * — an estimate's whole window counts, plus the session AFTER it, because a print after the close
+ * moves the stock on the next session (CRWV: window 11-09..11-16, blackout through 11-17). Computed
+ * over every one of the symbol's rows, not `nextPrintRisk`, which would drop a print on that extra
+ * session itself. "Today" is the ET market day. `undefined` = no print on file, so no expiry can be
+ * shown to clear one: an option open refuses (`option-print-unknown`).
+ */
+export function optionPrintBlackout(
+  symbol: string,
+  asOfIso: string,
+  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): PrintBlackout | undefined {
+  const today = marketDayKey(asOfIso);
+  return prints
+    .filter((p) => p.symbol === symbol)
+    .map((p) => {
+      const span = printSpan(p);
+      return { start: span.start, end: nextSession(span.end), print: p };
+    })
+    .filter((b) => b.end >= today)
+    .sort((a, b) => a.start.localeCompare(b.start))[0];
 }

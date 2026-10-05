@@ -2,8 +2,9 @@
  * The exchange calendar's CLOSURES — full-day holidays and 1:00 p.m. ET early closes — as a small
  * checked-in table, so the research rail can colour a closed weekday and count a week's sessions
  * (Labor Day week is four sessions; theta decays through the third day off) without a broker
- * credential. The bots' clock stays Alpaca's (`autonomous-market-clock.ts`): this table informs a
- * calendar, it never gates an order — the desk's own gate asks the exchange before any fill.
+ * credential. The bots' clock stays Alpaca's (`autonomous-market-clock.ts`): this table never says
+ * whether the market is open NOW. It does count sessions for the bots' option rules (expiry hygiene
+ * at T-2, the session after a print), which is why the session helpers below live beside it.
  *
  * SOURCE: `NYSE:` nyse.com/markets/hours-calendars, the exchange's own Holidays & Trading Hours
  * table, read at the primary 2026-09-20 (HTTP 200 after its 302, 109,133 bytes) — header verbatim
@@ -72,4 +73,53 @@ export function isMarketClosed(date: string): boolean {
   const day = new Date(`${date}T00:00:00Z`).getUTCDay();
   if (day === 0 || day === 6) return true;
   return MARKET_CLOSURES.some((c) => c.date === date && !c.early);
+}
+
+/** True when the exchange trades on `date` at all — an early close is still a session. */
+export function isSession(date: string): boolean {
+  return !isMarketClosed(date);
+}
+
+/** `date` moved by whole calendar days, as `YYYY-MM-DD`. */
+function shiftDays(date: string, days: number): string {
+  const at = new Date(`${date}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}
+
+/** The first session strictly after `date` (which need not be a session itself). */
+export function nextSession(date: string): string {
+  let at = shiftDays(date, 1);
+  while (!isSession(at)) at = shiftDays(at, 1);
+  return at;
+}
+
+/** Whole calendar days between two YYYY-MM-DD dates (negative = `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Step back `sessions` trading days from `date` — weekends and full-day exchange holidays skipped;
+ *  an early close still counts as a session. */
+export function sessionsBefore(date: string, sessions: number): string {
+  let at = date;
+  let left = sessions;
+  while (left > 0) {
+    at = shiftDays(at, -1);
+    if (isSession(at)) left -= 1;
+  }
+  return at;
+}
+
+/**
+ * Sessions `d` with `from < d ≤ to` — how many sessions have opened since `from`, signed: when `to`
+ * is earlier the count is negative (`-sessionsBetween(to, from)`), so "not yet due" reads below 0.
+ */
+export function sessionsBetween(from: string, to: string): number {
+  if (to < from) return -sessionsBetween(to, from);
+  let count = 0;
+  for (let at = shiftDays(from, 1); at <= to; at = shiftDays(at, 1)) {
+    if (isSession(at)) count += 1;
+  }
+  return count;
 }

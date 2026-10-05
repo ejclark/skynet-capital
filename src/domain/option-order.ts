@@ -34,13 +34,16 @@ const SINGLE_LEG_OPENS = new Map([
 export function isOptionOrder(
   intent: OrderIntent,
 ): intent is OrderIntent & { readonly option: OptionOrderIntent } {
-  return intent.option !== undefined;
+  // An object or nothing: a JS caller's `option: null` or `false` is no option order at all.
+  return typeof intent.option === "object" && intent.option !== null;
 }
 
 /** A share-shaped order whose `symbol` names a contract — never a way a bot may trade one. A contract
  *  only ever trades as a priced limit through `option`. */
 export function isBareContractOrder(intent: OrderIntent): boolean {
-  return intent.option === undefined && isOccSymbol(intent.symbol);
+  // Falsy, not `=== undefined`: `option: null` or `false` naming a contract is still a bare contract
+  // order, never a way past the fences into the share path (#4645 red-team).
+  return !intent.option && isOccSymbol(intent.symbol);
 }
 
 /** Alpaca's per-leg `position_intent`. */
