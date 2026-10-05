@@ -110,6 +110,8 @@ export interface PlaceOptionOrderParams {
   readonly positionIntent: "buy_to_open" | "sell_to_open" | "buy_to_close" | "sell_to_close";
   /** Alpaca accepts `day` or `gtc` for options; omit and the standing `day` is sent (#3407). */
   readonly timeInForce?: "day" | "gtc";
+  /** Alpaca `client_order_id` (≤ 128 chars, unique per account) — omitted, Alpaca makes one up. */
+  readonly clientOrderId?: string;
 }
 
 /** One leg of a multi-leg (`mleg`) order — the structure's smallest unit, so a 2:1 ratio spread
@@ -132,6 +134,8 @@ export interface PlaceMultiLegOrderParams {
    *  to remember. */
   readonly netLimitPrice: number;
   readonly timeInForce?: "day" | "gtc";
+  /** Alpaca `client_order_id`, as on a single-leg order. */
+  readonly clientOrderId?: string;
 }
 
 const num = (value: unknown): number | undefined => {
@@ -177,7 +181,7 @@ type RawGreeks = Partial<Record<GreekKey, unknown>>;
 
 /** One raw snapshot from the data host, before any field is trusted. */
 interface RawSnapshot {
-  readonly latestQuote?: { bp?: unknown; ap?: unknown };
+  readonly latestQuote?: { bp?: unknown; ap?: unknown; t?: unknown };
   readonly greeks?: RawGreeks;
   readonly impliedVolatility?: unknown;
   readonly dailyBar?: { v?: unknown };
@@ -189,6 +193,9 @@ export interface ContractSnapshot {
   readonly ask?: number;
   readonly greeks?: Partial<Record<GreekKey, number>>;
   readonly impliedVol?: number;
+  /** When the feed says this bid/ask was quoted (`latestQuote.t`) — what a bot ages a quote off
+   *  before it prices an order against it; absent when the feed gave no usable stamp. */
+  readonly quotedAt?: string;
 }
 
 /**
@@ -504,6 +511,7 @@ export class AlpacaOptionsClient {
       ...(params.type === "limit" ? { limit_price: params.limitPrice } : {}),
       time_in_force: params.timeInForce ?? "day",
       position_intent: params.positionIntent,
+      ...(params.clientOrderId !== undefined ? { client_order_id: params.clientOrderId } : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }
@@ -527,6 +535,7 @@ export class AlpacaOptionsClient {
         side: leg.side,
         position_intent: leg.positionIntent,
       })),
+      ...(params.clientOrderId !== undefined ? { client_order_id: params.clientOrderId } : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }
@@ -553,16 +562,7 @@ export class AlpacaOptionsClient {
         if (response.status < 200 || response.status >= 300) continue;
         const body = response.body as { snapshots?: Record<string, RawSnapshot> } | null;
         for (const [symbol, snap] of Object.entries(body?.snapshots ?? {})) {
-          const greeks = greeksOf(snap.greeks);
-          const bid = price0(snap.latestQuote?.bp);
-          const ask = num(snap.latestQuote?.ap);
-          const impliedVol = num(snap.impliedVolatility);
-          out.set(symbol, {
-            ...(bid !== undefined ? { bid } : {}),
-            ...(ask !== undefined ? { ask } : {}),
-            ...(Object.keys(greeks).length > 0 ? { greeks } : {}),
-            ...(impliedVol !== undefined ? { impliedVol } : {}),
-          });
+          out.set(symbol, contractSnapshotOf(snap));
         }
       } catch {
         // fail-soft: this chunk stays uncovered
@@ -620,6 +620,22 @@ export class AlpacaOptionsClient {
       return rows;
     }
   }
+}
+
+/** One held contract's snapshot, each field carried only when the feed quoted it honestly. */
+function contractSnapshotOf(snap: RawSnapshot): ContractSnapshot {
+  const greeks = greeksOf(snap.greeks);
+  const bid = price0(snap.latestQuote?.bp);
+  const ask = num(snap.latestQuote?.ap);
+  const impliedVol = num(snap.impliedVolatility);
+  const quotedAt = stampOf(snap.latestQuote?.t);
+  return {
+    ...(bid !== undefined ? { bid } : {}),
+    ...(ask !== undefined ? { ask } : {}),
+    ...(Object.keys(greeks).length > 0 ? { greeks } : {}),
+    ...(impliedVol !== undefined ? { impliedVol } : {}),
+    ...(quotedAt !== undefined ? { quotedAt } : {}),
+  };
 }
 
 /** A feed timestamp worth carrying: an ISO string that parses. Anything else stays absent. */

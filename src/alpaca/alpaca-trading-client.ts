@@ -22,6 +22,9 @@ export interface AlpacaAccount {
    *  3 = spreads). #468 criterion 7 reads this to refuse a play the account isn't approved for —
    *  optional because older recorded fixtures predate options entirely. */
   readonly options_trading_level?: string | number;
+  /** What the broker will let this account spend on options right now — a second cash bound the
+   *  bots' fresh re-check applies before an option open, beside the book's own arithmetic. */
+  readonly options_buying_power?: string;
 }
 
 /** Alpaca portfolio-history payload (subset) — `/v2/account/portfolio/history`. Equity and its
@@ -47,6 +50,11 @@ export interface AlpacaPosition {
   readonly market_value: string;
   /** Yesterday's closing price — the base the desk's day-change column measures from. */
   readonly lastday_price?: string;
+  /** "long" | "short". A short arrives with a positive `qty` on some payloads, so this is the
+   *  field that says which way it points. */
+  readonly side?: string;
+  /** "us_equity" | "us_option" | … */
+  readonly asset_class?: string;
 }
 
 /** Alpaca order payload (subset). */
@@ -71,6 +79,15 @@ export interface AlpacaOrder {
    *  superseded this — both echoed by the broker, both absent on an order never replaced. */
   readonly replaces?: string | null;
   readonly replaced_by?: string | null;
+  /** The id the submitter stamped (the bots stamp every option order — `client-order-id.ts`). */
+  readonly client_order_id?: string;
+  /** "simple" | "mleg" | … — an `mleg` parent carries no single symbol; its contracts are `legs`. */
+  readonly order_class?: string;
+  readonly position_intent?: string;
+  /** An `mleg` leg's share of the parent quantity. */
+  readonly ratio_qty?: string;
+  /** Present only on a read with `nested=true` (or a by-client-id read): the parent's legs. */
+  readonly legs?: readonly AlpacaOrder[] | null;
 }
 
 /** What a replace may change — Alpaca allows quantity, price(s) and time in force on a working
@@ -175,13 +192,20 @@ export class AlpacaTradingClient {
    * is the store of record for a pending order, so there is nothing else to maintain here.
    */
   async listOrders(
-    params: { limit?: number; until?: string; status?: "open" | "closed" | "all" } = {},
+    params: {
+      limit?: number;
+      until?: string;
+      status?: "open" | "closed" | "all";
+      /** Roll an `mleg` order's legs up under its parent. Off by default (every existing caller's
+       *  flat list); the bots' no-stacking fence turns it on so a resting spread is seen whole. */
+      nested?: boolean;
+    } = {},
   ): Promise<AlpacaOrder[]> {
     const query = new URLSearchParams({
       status: params.status ?? "all",
       limit: String(params.limit ?? 15),
       direction: "desc",
-      nested: "false",
+      nested: params.nested ? "true" : "false",
       ...(params.until ? { until: params.until } : {}),
     });
     return ensureOk<AlpacaOrder[]>(await this.transport.get(`/v2/orders?${query.toString()}`));
@@ -193,6 +217,17 @@ export class AlpacaTradingClient {
    *  throws `AlpacaApiError`, same as any other non-2xx response. */
   async getOrder(id: string): Promise<AlpacaOrder> {
     return ensureOk<AlpacaOrder>(await this.transport.get(`/v2/orders/${id}`));
+  }
+
+  /** The order a submitter stamped with `clientOrderId`, legs included — how a bot finds out
+   *  whether a POST whose answer it never saw actually landed. Alpaca answers 404 for an id it has
+   *  never seen, which is the honest "no such order" and comes back as `undefined`; any other
+   *  failure throws `AlpacaApiError` like every other read. */
+  async getOrderByClientOrderId(clientOrderId: string): Promise<AlpacaOrder | undefined> {
+    const query = new URLSearchParams({ client_order_id: clientOrderId });
+    const response = await this.transport.get(`/v2/orders:by_client_order_id?${query.toString()}`);
+    if (response.status === 404) return undefined;
+    return ensureOk<AlpacaOrder>(response);
   }
 
   /** Cancels a still-open order. Alpaca returns 204 on success; a filled/already-canceled order

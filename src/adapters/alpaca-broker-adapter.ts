@@ -2,6 +2,7 @@ import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-
 import { isBareContractOrder } from "../domain/option-order.js";
 import type { OrderIntent, OrderResult, Portfolio, Side } from "../domain/types.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { portfolioFromAlpaca } from "./alpaca-portfolio.js";
 
 /** Attempts × delay for the post-fill poll below — Alpaca paper orders "usually" fill near-
  *  instantly but not on the `placeOrder` response itself (this module's own prior doc comment).
@@ -132,27 +133,13 @@ export class AlpacaBrokerAdapter implements BrokerPort {
     return last;
   }
 
+  /** Cash and positions, a short always negative (`alpaca-portfolio.ts`). */
   async getPortfolio(): Promise<Portfolio> {
     const [account, positions] = await Promise.all([
       this.client.getAccount(),
       this.client.getPositions(),
     ]);
-    return {
-      cash: Number(account.cash),
-      positions: positions.map((position) => {
-        // `market_value` is the broker's own dollar mark, already contract-scaled for options —
-        // the one mark for a holding the price stream never quotes (#4643). Absent or unparseable
-        // leaves it off, so valuation falls back to cost rather than to a false $0.
-        const raw: unknown = position.market_value;
-        const marketValue = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : Number.NaN;
-        return {
-          symbol: position.symbol,
-          quantity: Number(position.qty),
-          avgPrice: Number(position.avg_entry_price),
-          ...(Number.isFinite(marketValue) ? { marketValue } : {}),
-        };
-      }),
-    };
+    return portfolioFromAlpaca(account, positions);
   }
 
   async submit(order: OrderIntent): Promise<OrderResult> {
