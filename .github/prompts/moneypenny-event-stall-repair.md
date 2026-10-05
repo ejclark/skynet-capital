@@ -25,7 +25,7 @@ call, a bug specific to this one event id) touches nothing on the receipt issue 
 zero visible trace, which is exactly what the stall audit is built to catch and exactly what
 nothing before this lane ever acted on.
 
-TERMINAL STATE, NON-NEGOTIABLE: this session ends in exactly one of two visible states —
+**Terminal state.** This session ends in exactly one of two visible states —
 (a) the event actually gets researched (a normal `never-assessed` PR per
 [`docs/process/EVENT-RESEARCH.md`](../../docs/process/EVENT-RESEARCH.md) and
 [`event-research.md`](event-research.md), shipped and auto-merge armed the usual way), possibly
