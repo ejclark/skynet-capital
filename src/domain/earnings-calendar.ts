@@ -116,6 +116,24 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     window: { start: "2026-11-09", end: "2026-11-16" },
   },
   {
+    // Q4 FY27, by the same cadence: Q4 has filed 2025-02-26 and 2026-02-25 (EDGAR Item 2.02).
+    symbol: "NVDA",
+    date: "2027-02-24",
+    status: "estimate",
+    source: "EST: EDGAR Item 2.02 Q4 cadence (2025-02-26, 2026-02-25)",
+    window: { start: "2027-02-17", end: "2027-03-03" },
+  },
+  {
+    // Q4 2026. CRWV's one Q4 filed 2026-02-26; its quarters have drifted a week either way
+    // (Q1 2025-05-14 vs 2026-05-07), so the window is two weeks wide. Without a next row on file,
+    // nothing after the November print could be shown to clear a print (#4642 slice 5).
+    symbol: "CRWV",
+    date: "2027-02-25",
+    status: "estimate",
+    source: "EST: 8-K cadence (Q4 filed 2026-02-26; Q1 drifted 2025-05-14 → 2026-05-07)",
+    window: { start: "2027-02-18", end: "2027-03-05" },
+  },
+  {
     symbol: "MU",
     date: "2026-09-30",
     status: "confirmed",
