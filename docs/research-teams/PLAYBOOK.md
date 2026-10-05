@@ -9,13 +9,10 @@ section when a task actually needs it — this is reference, not a checklist to 
 ## Don't make assumptions
 
 - **Code over memory.** Verify against the actual current file, not your recollection of writing it
-  — even (especially) within the same session. Concrete cost of skipping this: the four
-  `docs/grind/*.instructions.md` files shipped in #1315 with a real isolation-guidance bug (`docs/
-  grind/fix-doc-rot.instructions.md` recommended *no* worktree isolation specifically to avoid a
-  race, when isolation is what prevents one) — caught only because the file was re-read fresh
-  against `grind.js`'s actual scheduling semantics before first real use, not assumed correct
-  because it had just been written. `../TECHNIQUES.md`'s "Tool documentation is the authority"
-  section says this for *external* tools; it applies at least as much to this repo's own code.
+  — even (especially) within the same session: a file you just wrote is the one you are least likely
+  to re-read, and its bug ships on first use (the first entry under "Lessons" below, from #1315, is
+  that case). `../TECHNIQUES.md`'s "Tool documentation is the authority" section says this for
+  *external* tools; it applies at least as much to this repo's own code.
 - **Reputable sources, and the discipline to tell them apart.** `../TECHNIQUES.md`'s "Source
   hygiene" section already says prefer primary sources, label authority
   (`[official]`/`[research]`/`[practitioner opinion]`), and distrust confidently-worded summaries.

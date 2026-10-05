@@ -34,8 +34,8 @@ drained it. See `docs/COACHES.md` → *Resource cost is a fitness dimension*.
 3. **Do NOT arm auto-merge by hand.** `pipeline.yml`'s `arm auto-merge` job arms every opened PR
    with the App's token once `verify` **and** `integration tests` pass. Arming by hand the moment a
    PR opens pre-empts that wait: native auto-merge honours only *required* checks, and only
-   `verify` is required, so #4151, #4155 and #4158 merged mid-integration-tests on 2026-09-30 and
-   two of those runs went red (#4094, `docs/LESSONS.md`). `ship open` also runs `npm run test:e2e`
+   `verify` is required, so a hand-armed PR merges while integration tests are still running and
+   can land red on `main` (`docs/LESSONS.md`, #4094). `ship open` also runs `npm run test:e2e`
    locally when the pinned Chromium build is installed (cloud sessions ship a different build and
    must not re-download it — there, it says so and CI is the gate). `scripts/ship.sh automerge <n>`
    stays as the fallback for a PR the pipeline job can't reach (a re-push, where `opened` won't
@@ -67,8 +67,8 @@ For ordinary auto-merging work: assemble athlete branches locally with `git`, ve
 open` once.
 
 For the **carve-outs** — the changes Eric merges by hand — that same shape is the **platter**
-(#1343). The boundary never moves; only its cost does. On 2026-09-04 seven protected-path changes
-cost seven separate hand-merges, and the held set was not even enumerable.
+(#1343). The boundary never moves; only its cost does: without the platter, each protected-path change
+costs Eric a separate hand-merge.
 
 ```
 scripts/ship.sh platter open <item-branch>   # cut platter/<date> off main, board item 1, open it HELD
@@ -94,7 +94,7 @@ scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body),
   Anything else waits for the cadence — "it feels urgent" is not the test.
 - **It is never armed**, by two independent mechanisms: `--hold` applies `hold-merge` (which
   `pipeline.yml`'s arm job skips) and the diff is protected (which `checkarm` refuses, exit 5).
-- **`--hold` now labels.** Any held PR, platter or not, gets `hold-merge` — so "what is waiting on
+- **`--hold` labels.** Any held PR, platter or not, gets `hold-merge` — so "what is waiting on
   Eric?" is a label query rather than a guess.
 - **`--hold` waits ~20s after promoting, then checks `verify` once** (#4168). The draft's own run can
   cancel the real `verify` and leave a skipped check, which branch protection reads as a pass. If
@@ -102,7 +102,7 @@ scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body),
   `edited` event, which starts a real run. The output says when it did this. `SHIP_REVERIFY_WAIT`
   sets the wait.
 
-## Mechanics & traps (moved here from CLAUDE.md, 2026-08-28 — this skill owns the landing detail)
+## Mechanics & traps (this skill owns the landing detail)
 
 - **No `git stash`, ever.** It has silently dropped stashed edits in this environment (the incident
   is banked in `docs/LESSONS.md`). Branch-first (`git checkout -B <branch> origin/main` *before
@@ -129,7 +129,7 @@ scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body),
   `git merge origin/main --no-edit`, never a hand-written message.** commitlint requires
   Conventional-Commit format and only exempts git's own auto-generated `Merge branch 'X' into Y`
   text — a custom sentence fails the commit-msg hook (`docs/LESSONS.md`, 2026-09-04). `ship open`
-  now refuses to verify a branch that's behind `origin/$base` at all (same date's lesson): local
+  refuses to verify a branch that's behind `origin/$base` at all (same date's lesson): local
   `npm run verify` tests the checked-out tree, not the actual PR-merge state, so a stale base can
   pass locally and still fail CI on a check that only exists once `main`'s own newer commits are
   folded in.

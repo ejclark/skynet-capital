@@ -30,7 +30,7 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    sweep ask, so this pass and her lanes can never disagree about what is pullable. A Backlog issue
    (no `ready`) is never pulled here, however buildable it looks — getting it `ready` is a triage
    call, not this pass's. An issue with an open PR naming it is already `in-progress` (the PR
-   derives the label, #4402), so the old "skip anything with an open PR" check is inside the rule.
+   derives the label, #4402), so the rule already skips it.
 
    One extra check the rule cannot make: Moneypenny's lease window. Her lanes take a git-tag lease
    a moment *before* they apply `in-progress`, so for the head of the queue run `node
@@ -97,7 +97,7 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 
 ## Reporting
 
-One line per issue as it resolves (`#123 → PR #456, auto-merge armed` / `#128 → needs-info: ...`),
+One line per issue as it resolves (`#123 → PR #456 opened; the pipeline arms it after integration tests` / `#128 → needs-info: ...`),
 not a narrated play-by-play of the build. Close the pass with a short tally: shipped / parked /
 blocked, and what's left in the queue if it wasn't emptied. This is Eric's report altitude
 (`CLAUDE.md` → *Report at altitude*) applied to a burn-down instead of a time-boxed digest.

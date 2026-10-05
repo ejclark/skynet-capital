@@ -9,11 +9,11 @@ import {
 } from "../../scripts/grind-manifest.mjs";
 
 // Grind-manifest gate — every checked-in docs/grind/*.instructions.md chore must declare its own
-// compute tier in front matter. `.claude/workflows/grind.js` dispatches at low effort on a cheap
-// model by default, and the tier used to live in each chore's prose header for the CALLER to
-// transcribe by hand — silent when skipped for effort, destructive when skipped for isolation
-// (concurrent items share one checkout). Blocking on purpose: a chore running at the wrong tier is
-// a broken contract, not debt to ratchet down.
+// compute tier in front matter. `.claude/workflows/grind.js` reads that front matter at dispatch
+// (through scripts/grind-manifest.mjs) and refuses to dispatch a chore whose tier it cannot read;
+// this gate catches the missing header in CI instead of at a run's first dispatch. A skipped
+// `isolation` is the destructive miss (concurrent items share one checkout). Blocking on purpose: a
+// chore running at the wrong tier is a broken contract, not debt to ratchet down.
 const SCRIPT = join(process.cwd(), "scripts/grind-manifest.mjs");
 
 const CHORE = `---

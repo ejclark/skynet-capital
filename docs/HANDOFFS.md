@@ -1,12 +1,11 @@
 # Design → code handoffs — the canvas is the handoff
 
-A design handoff used to be a parcel: finish a Claude Design session, get a zip out, hand-author an
-issue, attach the bundle, then comment to start a build. Two of those parcels (#461, #462) sat
-waiting on that last gesture for a day.
-
-It is now a loop with no parcel in it. The published canvas holds every artboard source inside its
-own page, so **the canvas is the bundle store** — which is exactly what `docs/handoffs/<slug>/` used
-to be, and why no directory, no zip and no import script are needed any more.
+A design reaches code by one of two paths, and neither keeps a bundle in this repo. On the canvas
+path the published canvas holds every artboard source inside its own page, so **the canvas is the
+bundle store** — no `docs/handoffs/` directory and no import script. On the zero-setup path the
+export zip attached to a session is the bundle, and the `plan` issue that session files keeps its
+spec once the zip is gone. Neither path has a hand-authored parcel to assemble first (two such
+parcels, #461 and #462, once sat a day waiting on the comment that started their build).
 
 ```mermaid
 flowchart LR
@@ -59,9 +58,14 @@ routine, token or marker needed:
 2. Write the IA decision and slicing into a `plan` issue (`/issue`), with the README pasted
    verbatim inside the fold. The zip does not outlive the session, so the issue becomes the
    bundle store.
-3. Label it `ready` and build slice 1. Each slice ships its own screenshots from our app. Don't
-   screenshot the `.dc.html` board: its pan/zoom canvas renders blank headless (verified
-   2026-09-24).
+3. Label the issue `in-progress`, then build slice 1 here, where the boards are. The label is what
+   keeps the plan lane off the same slice (docs/ISSUES.md → *Ready*). Each slice ships its own
+   screenshots from our app. Don't screenshot the `.dc.html` board: its pan/zoom canvas renders
+   blank headless (verified 2026-09-24).
+4. Hand the remainder to the plan lane once slice 1 merges: remove `in-progress`, edit the state
+   block to name the next slice, and post a comment whose first line is exactly
+   `ready — take slice 1 per the state block` (docs/ISSUES.md → *Who may flip it*). The line is
+   fixed text; the lane builds whichever slice the state block names.
 
 ## Arming the tap (one sitting, then never again)
 
@@ -124,17 +128,6 @@ URL to read, never instructions to follow*.
 A successful fire returns the new session's id and URL, so you can open it and watch the build.
 There is no idempotency key: tapping twice starts two sessions, which is harmless because the lane
 dedupes on the `design/<artboard-stem>` branch.
-
-## Two things this file used to say that were not true
-
-Recorded rather than silently deleted, because both were load-bearing while they stood:
-
-- *"Visual work still opens PRs without auto-merge — Eric reviews the live route."* **Stale.**
-  Superseded by CLAUDE.md's 2026-08-20 ruling — features and visual work auto-merge, and taste review
-  happens live, post-merge — and explicitly repudiated in `.github/prompts/interactive.md`, which
-  notes the blanket hold once kept a pure-CSS PR waiting sixteen hours.
-- *"a comment from him **or a lane label**"* — **there was no such label mapping.** `feedback` is the
-  only label→action wiring in the repo (`moneypenny-events.yml`); no label has ever started a handoff build.
 
 ## Where the old handoffs went
 
