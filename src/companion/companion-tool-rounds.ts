@@ -7,6 +7,7 @@ import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
   COMPANION_TOOL_DEFS,
   type CompanionDeskDeps,
+  declaredToolNames,
   runCompanionTool,
 } from "./companion-tools.js";
 
@@ -72,14 +73,12 @@ export type ToolRoundOutcome =
    *  when the budget runs out mid-turn (the member deserves an answer from what was gathered). */
   | { readonly kind: "continue"; readonly working: unknown[]; readonly calls: number };
 
-/** The tools this turn may call: the draft hand-off always (it reads nothing); the four desk
- *  lookups only for a member with a linked desk. */
+/** The tools this turn may call: the draft hand-off and the issue-queue read always (they read
+ *  no member data); the desk lookups only for a member with a linked desk. `declaredToolNames` is
+ *  the one source, shared with the unknown-name refusal. */
 export function toolsFor(participantId: string | undefined): readonly unknown[] {
-  return participantId
-    ? COMPANION_TOOL_DEFS
-    : COMPANION_TOOL_DEFS.filter(
-        (t) => t.name === "draft_feedback" || t.name === "get_work_status",
-      );
+  const declared: readonly string[] = declaredToolNames(participantId);
+  return COMPANION_TOOL_DEFS.filter((t) => declared.includes(t.name));
 }
 
 /** Up to `MAX_TOOL_ROUNDS` non-streaming round trips letting the model call read-only tools.
