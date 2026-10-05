@@ -124,19 +124,19 @@ interface IssueJson {
 function itemOf(raw: unknown, repo: string): RoadmapItem | undefined {
   const issue = raw as IssueJson;
   if (typeof issue.number !== "number" || issue.pull_request) return undefined;
-  const labels = labelNamesOf(raw)
-    .filter(Boolean)
-    .slice(0, LABELS_KEPT)
-    .map((l) => excerpt(l, 40));
-  const status = labels.includes("in-progress")
+  // The grouping reads EVERY label; only the returned list is trimmed. Deriving the horizon from
+  // a trimmed list would let a 9th label slice `needs-eric` off and show a parked plan as Next.
+  const all = labelNamesOf(raw).filter(Boolean);
+  const labels = all.slice(0, LABELS_KEPT).map((l) => excerpt(l, 40));
+  const status = all.includes("in-progress")
     ? "Being built"
-    : FEEDBACK_STATUS_LABEL[statusFromIssue("open", labels)];
+    : FEEDBACK_STATUS_LABEL[statusFromIssue("open", all)];
   return {
     number: issue.number,
     title: trustedAuthor(raw as Parameters<typeof trustedAuthor>[0])
       ? JSON.stringify(excerpt(issue.title, TITLE_CHARS))
       : "(withheld — opened by someone outside the project)",
-    horizon: horizonOf(labels),
+    horizon: horizonOf(all),
     status,
     labels,
     url:

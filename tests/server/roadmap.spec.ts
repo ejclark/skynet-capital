@@ -136,6 +136,24 @@ describe("the roadmap a member gets", () => {
     expect(next?.items).toHaveLength(8);
   });
 
+  // Caught by this slice's own /security-review pass: trimming the labels BEFORE reading them let
+  // a 9th label slice `needs-eric` off and show a parked plan as Next — the one lie this tool
+  // must not tell. The returned list is still trimmed; the grouping now reads all of them.
+  it("groups on every label, even past the 8 it shows back", async () => {
+    const crowded = plan({
+      number: 7,
+      labels: ["enhancement", "plan", "ready", "member-abc", "next-slice", "P1", "idea", "bug"],
+    });
+    crowded.labels.push({ name: "needs-eric" });
+
+    const roadmap = ok(await read([[crowded]]));
+
+    const item = roadmap.groups.flatMap((g) => g.items)[0];
+    expect(item?.horizon).toBe("Later");
+    expect(item?.status).toBe("Needs Eric's call");
+    expect(item?.labels).toHaveLength(8);
+  });
+
   it("walks the pages GitHub returns, stopping at the first short one", async () => {
     const { doFetch, calls } = fakeGitHub([
       Array.from({ length: 100 }, (_, i) => plan({ number: i + 1, labels: ["plan"] })),
