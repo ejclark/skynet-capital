@@ -2,10 +2,8 @@ import type { ContractSnapshot } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
 import {
   bookNeeds,
-  freeCash,
-  freeShares,
-  marginalNeeds,
-  needsAfterClose,
+  limitInsideBand,
+  orderLegs,
   premiumOut,
   quoteBand,
   requiredOptionLevel,
@@ -17,6 +15,7 @@ import type {
   OrderIntent,
   Portfolio,
 } from "../domain/types.js";
+import { openLedger, unspentCash, worsens } from "../engine/guard-batch.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import { snapshotQuote } from "./alpaca-option-market.js";
 
@@ -26,15 +25,15 @@ import { snapshotQuote } from "./alpaca-option-market.js";
  * the seconds between. PURE: every function here reads payloads already fetched, so each rule is a
  * spec, not a network fixture.
  *
- * The book arithmetic is the guards' own (`option-book.ts`), so "is this put secured?" has one
- * answer; the reasons use the dashboard's refusal words (`REFUSAL_LABEL`) so a refusal here reads
- * the same as one the guards made.
+ * The cover check is the guards' own (`worsens` over `coverShortfall`, on a ledger holding just
+ * this order) and so is the band rule (`limitInsideBand`), so "is this put secured?" and "is this
+ * limit inside the quote?" each have one answer; the reasons use the dashboard's refusal words
+ * (`REFUSAL_LABEL`) so a refusal here reads the same as one the guards made.
  */
 
-/** A cents limit against a quoted band: half a cent of slack for float arithmetic — the guard's. */
-const LIMIT_EPSILON = 0.005;
 const PUT_NOT_SECURED = "not enough free cash to secure the sold put";
 const CALL_NOT_COVERED = "not enough free shares to cover the sold call";
+const SET_ASIDE = "that cash is set aside to secure a sold put";
 
 /** Alpaca's `options_trading_level` as 0–3, from a number or a numeric string. Anything else —
  *  absent, junk, a fraction, out of range — is `undefined`, never a guessed 0, and an undefined
@@ -77,8 +76,22 @@ export function ordersOn(
   return { ours: any.filter(isOurs), any };
 }
 
+/** What this order would do to cover on a book that holds only it — the guards' check, on fresh
+ *  positions. */
+function worsening(
+  intent: OrderIntent,
+  option: OptionOrderIntent,
+  portfolio: Portfolio,
+  units: number,
+) {
+  const ledger = openLedger([intent], bookNeeds(portfolio), portfolio);
+  const pays = premiumOut(option) * units;
+  const worse = worsens(portfolio, ledger, intent.symbol, { legs: orderLegs(option, units), pays });
+  return { worse, pays, unspent: unspentCash(portfolio, ledger) };
+}
+
 /** Rule 3 of the option guards on fresh positions: close what is held, and never leave a short
- *  bare by closing what capped it. */
+ *  bare by closing what capped it — or pay a buy-back out of another short's collateral. */
 function closeProblem(intent: OrderIntent, option: OptionOrderIntent, portfolio: Portfolio) {
   let units = intent.quantity;
   for (const leg of option.legs) {
@@ -89,19 +102,10 @@ function closeProblem(intent: OrderIntent, option: OptionOrderIntent, portfolio:
   if (!(units > 0)) return "nothing held to close";
   // Never resized here: the record says what was decided, and the next cycle sizes from this book.
   if (units < intent.quantity) return `only ${units} held to close, not ${intent.quantity}`;
-  const book = bookNeeds(portfolio);
-  const after = needsAfterClose(portfolio, option, units);
-  const underlying = intent.symbol;
-  const sharesBefore = book.sharesByUnderlying.get(underlying) ?? 0;
-  const sharesAfter = after.sharesByUnderlying.get(underlying) ?? 0;
-  // Only a close that RAISES what the book promises can be refused: shedding risk never is.
-  if (
-    sharesAfter > sharesBefore &&
-    sharesAfter > Math.max(0, heldQuantity(portfolio, underlying))
-  ) {
-    return CALL_NOT_COVERED;
-  }
-  if (after.cash > book.cash && after.cash > portfolio.cash) return PUT_NOT_SECURED;
+  // Only a close that makes cover WORSE can be refused: shedding risk never is.
+  const { worse, pays } = worsening(intent, option, portfolio, units);
+  if (worse.shares) return CALL_NOT_COVERED;
+  if (worse.cash) return worse.newCash > pays ? PUT_NOT_SECURED : SET_ASIDE;
   return undefined;
 }
 
@@ -113,19 +117,16 @@ function openProblem(
   portfolio: Portfolio,
   optionsBuyingPower: number | undefined,
 ) {
-  const marginal = marginalNeeds(portfolio, option, intent.quantity);
-  const cash = marginal.cash + premiumOut(option) * intent.quantity;
-  if (cash > freeCash(portfolio)) {
+  const { worse, unspent } = worsening(intent, option, portfolio, intent.quantity);
+  const cash = worse.newCash;
+  if (worse.cash) {
     if (option.structure === "cash-secured-put") return PUT_NOT_SECURED;
-    return portfolio.cash >= cash
-      ? "that cash is set aside to secure a sold put"
-      : "insufficient cash";
+    return unspent >= cash ? SET_ASIDE : "insufficient cash";
   }
   if (optionsBuyingPower !== undefined && cash > optionsBuyingPower) {
     return `options buying power $${optionsBuyingPower.toFixed(2)} is below the $${cash.toFixed(2)} this order needs`;
   }
-  const shares = marginal.sharesByUnderlying.get(intent.symbol) ?? 0;
-  if (shares > 0 && shares > freeShares(portfolio, intent.symbol)) return CALL_NOT_COVERED;
+  if (worse.shares) return CALL_NOT_COVERED;
   return undefined;
 }
 
@@ -150,8 +151,10 @@ export function optionsBuyingPowerOf(raw: unknown): number | undefined {
 
 /**
  * The quote re-check: the band the legs quote NOW, in the limit's own sign convention
- * (`quoteBand`), each leg's feed stamp no older than `maxAgeMs` (an unstamped quote only on a
- * close, which must never starve), and the limit inside the band.
+ * (`quoteBand`), the limit inside it (`limitInsideBand`), and — for an open — each leg's feed stamp
+ * no older than `maxAgeMs`. A close is never held to the feed's stamp, as in the guards: a thin
+ * strike's quote can sit untouched for long stretches, and a close that cannot be sent carries the
+ * contract into expiry.
  */
 export function freshBandProblem(
   option: OptionOrderIntent,
@@ -170,17 +173,13 @@ export function freshBandProblem(
   const contracts = option.legs.map((leg) => leg.occSymbol).join(" + ");
   if (!band) return `no fresh two-sided quote on ${contracts}`;
   for (const leg of option.legs) {
+    if (option.effect === "close") break;
     const stamp = quotes[leg.occSymbol]?.quotedAt;
-    if (stamp === undefined) {
-      if (option.effect === "open") return `the quote on ${leg.occSymbol} carries no time`;
-      continue;
-    }
+    if (stamp === undefined) return `the quote on ${leg.occSymbol} carries no time`;
     // `!(age <= bound)` so an unparseable stamp reads as stale, never as fresh.
     if (!(nowMs - Date.parse(stamp) <= maxAgeMs)) return `the quote on ${leg.occSymbol} is stale`;
   }
-  const inside =
-    option.limitPrice >= band.low - LIMIT_EPSILON && option.limitPrice <= band.high + LIMIT_EPSILON;
-  return inside
+  return limitInsideBand(option.limitPrice, band)
     ? undefined
     : `quote moved: limit ${option.limitPrice.toFixed(2)} outside [${band.low.toFixed(2)}, ${band.high.toFixed(2)}]`;
 }
