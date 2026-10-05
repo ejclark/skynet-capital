@@ -28,7 +28,7 @@ export const BANNED = [
     // the bare form) moves working-tree state through a shared stack — the failure the ban names.
     test: (cmd) => /(^|[;&|]\s*|\s)git\s+stash(\s+(?!list\b|show\b)\S+|\s*$|\s*[;&|)])/m.test(cmd),
     reason:
-      "`git stash` is banned here (CLAUDE.md → Ship loop: it has silently dropped edits; docs/LESSONS.md 2026-08-26). Branch first instead: `git fetch origin main && git checkout -B <branch> origin/main`, or set work aside with a temporary WIP commit.",
+      "`git stash` is banned here (CLAUDE.md → Ship loop: it has silently dropped edits; docs/LESSONS.md 2026-08-13). Branch first instead: `git fetch origin main && git checkout -B <branch> origin/main`, or set work aside with a temporary WIP commit.",
   },
 ];
 

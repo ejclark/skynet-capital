@@ -75,6 +75,19 @@ describe("moneypenny routing", () => {
     expect(intents[0]?.label?.name).toBe("event-research");
   });
 
+  // The issue is a RECEIPT, never a trigger (moneypenny-events.yml's header): the research matrix
+  // does the work. A body that still addressed @claude with orders would read as a live ask to
+  // humans and the stall-repair lane, and could match claude.yml's mention gate.
+  it("writes the event issue as a receipt — names the ledger and branch, gives nobody orders", () => {
+    const [intent] = dryRun("push-one-due.json") as Intent[];
+
+    expect(intent?.body).not.toContain("@claude");
+    expect(intent?.body).not.toContain("/ship");
+    expect(intent?.body).toContain("receipt, not the trigger");
+    expect(intent?.body).toContain("docs/research/events/fomc-2026-12-09.md");
+    expect(intent?.body).toContain("research/fomc-2026-12-09");
+  });
+
   it("dedupes by exact open-issue title, so a re-push while queued does nothing", () => {
     expect(dryRun("push-already-queued.json")).toHaveLength(0);
   });

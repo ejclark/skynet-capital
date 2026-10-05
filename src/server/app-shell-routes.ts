@@ -6,13 +6,21 @@ import { extname, join, normalize, resolve, sep } from "node:path";
  * `/app` — the React observatory shell, served as static files from `app/dist`
  * BEHIND the same auth gate as every board view (the caller wires this after `gateRequest`).
  *
- * Two honesty rules:
+ * Three honesty rules:
  *  - **Traversal is refused structurally, not by pattern.** The resolved path must stay inside
  *    the dist root or the request 404s — no denylist of `..` spellings to outrun.
  *  - **A missing build says so.** When `app/dist` doesn't exist (the shell wasn't built in this
  *    deployment), the route answers 404 with a plain sentence instead of pretending the shell
  *    doesn't exist as a concept — an operator reading the response knows exactly what to run.
+ *  - **A missing asset says so too** (#4614, slice 2 of #4612). Every deploy replaces the hashed
+ *    files under `static/`, so a tab opened before it asks for chunks that are gone. Answering
+ *    those with index.html made the browser run HTML as a script and the whole app blanked; a 404
+ *    lets the shell see a failed chunk load and reload once (`app/src/shell/route-error.tsx`).
  */
+
+/** Rsbuild writes every emitted asset under `static/` (its default `output.distPath`, served at
+ *  `/app/static/` through `assetPrefix: "/app/"` in app/rsbuild.config.ts). */
+const ASSET_DIR = "static";
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -38,7 +46,8 @@ export function isAppShellPath(path: string): boolean {
 }
 
 /**
- * Serve one shell request. Hashed static assets get long-lived caching; every non-file path under
+ * Serve one shell request. Hashed static assets get long-lived caching; a path in the asset folder
+ * that is not a file gets a plain 404 (never the page, #4614); every other non-file path under
  * `/app` gets `index.html` (the SPA owns its own routing), uncached so a deploy lands on reload.
  */
 export function serveAppShell(
@@ -69,6 +78,17 @@ export function serveAppShell(
         : "no-cache",
     });
     res.end(readFileSync(candidate));
+    return;
+  }
+
+  if (inside && rel.split(/[\\/]/)[0] === ASSET_DIR) {
+    // no-store: a rollback can bring the file back, and nosniff: this body is never a script.
+    res.writeHead(404, {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    });
+    res.end("No such file in this build of the app — it was likely replaced by a newer deploy.");
     return;
   }
 
