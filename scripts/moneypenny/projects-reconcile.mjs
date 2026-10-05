@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // THE BOARD'S SELF-HEALING SWEEP — #4393 slice 1, criterion 4. Recomputes Status for every board
-// item whose column disagrees with `statusForIssue()`, closed issues still outside Done included.
+// item whose column disagrees with `statusForIssue()`, closed issues still outside Done included —
+// and adds any open blocked issue that never got a card at all (#4303, see `planReconcile`).
 //
 // WHY A SWEEP AND NOT A BETTER EVENT JOB. On 2026-10-01 the In Progress column showed #3818, #3953,
 // #3977 and #4327 while zero open issues carried `in-progress` and two of them were closed. Cause:
@@ -109,6 +110,17 @@ export function wantedStatusOf(issue) {
  * `openIssues` every open issue (REST shape). An issue on the board but not in `openIssues` is
  * treated as closed and wants Done. Returns `[{number, have, want}]`, ascending by number.
  * `statusOf(item)` reads an item's current Status; the default is gh's `status` key.
+ *
+ * #4303 (#3959 slice 3) — AN OPEN ASK THAT NEVER REACHED THE BOARD IS DRIFT TOO. The Blocked column
+ * is the one place a household member checks for an open ask, so "every open needs-eric/needs-info
+ * issue is listed there" has to hold, not just "every listed card is in the right column". A card is
+ * added only by the event job on a label change, and the event job is exactly what dropped runs
+ * on 2026-09-30 — an issue whose one `needs-info` event died never got a card, and a sweep that
+ * walks only cards could not see it. So an open issue absent from the board that wants Blocked
+ * comes back as `have: null`; `syncIssue` adds it (add-or-find, #3954). Only Blocked, on purpose:
+ * Backlog/Ready cards are a convenience the pull rule never reads (it reads labels), and adding
+ * every uncarded issue is projects-backfill.mjs's one-shot job, at a GraphQL cost an hourly sweep
+ * should not carry.
  */
 export function planReconcile({
   items = [],
@@ -120,14 +132,20 @@ export function planReconcile({
     openIssues.filter((i) => i && !i.pull_request).map((i) => [Number(i.number), i]),
   );
   const drift = [];
+  const carded = new Set();
   for (const item of items) {
     const number = boardIssueNumber(item, repo);
     if (!number) continue;
+    carded.add(number);
     const issue = open.get(number);
     const want = issue ? wantedStatusOf(issue) : "Done";
     if (!want) continue;
     const have = statusOf(item) ?? null;
     if (have !== want) drift.push({ number, have, want });
+  }
+  for (const [number, issue] of open) {
+    if (!carded.has(number) && wantedStatusOf(issue) === "Blocked")
+      drift.push({ number, have: null, want: "Blocked" });
   }
   return drift.sort((a, b) => a.number - b.number);
 }

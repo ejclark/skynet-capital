@@ -90,6 +90,22 @@ _Caption — every trigger funnels through one of Moneypenny's four lanes; the O
 the exception routes: a freeform (non-`curated`) filing waits in Backlog for `ready`, a red CI run
 escalates to repair, and repair's own unresolved recurrences are the live gap #3926 names._
 
+### Where an open ask lives — the board's Blocked column
+
+The one place to look for "what is waiting on a person" is the Orchestration board's **Blocked**
+column (Eric, 2026-09-28, #3959: the live board, not a digest, is the default surface). It lists
+every open `needs-eric` and `needs-info` issue, and nothing else does that job — a digest's "Needs
+you" tier is a dated snapshot of the same query, never a second list to reconcile against it.
+
+- **How it stays complete:** the event job moves a card on every label change, and the reconcile
+  sweep (`board-sync.yml` → `scripts/moneypenny/projects-reconcile.mjs`) re-columns drifted cards
+  *and* adds any open blocked issue that never got a card because its one event run died (#4303).
+- **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout stays out of
+  Blocked until the ask is written (#3913) — an unwritten ask is not an open ask yet.
+- **From a session, without GraphQL:** `node scripts/issues.mjs show <n>` prints the column the
+  rule yields. Answering is a comment on the Blocked issue itself; once #3959's resume path lands
+  (slice 1 is #4605), an authorized reply restarts the waiting lane without a session noticing it.
+
 ## Authority — she drives the architecture, within the same fence as everyone else
 
 Eric's own framing: *"the other roles/structures that pre-dated the GitHub App have become sources

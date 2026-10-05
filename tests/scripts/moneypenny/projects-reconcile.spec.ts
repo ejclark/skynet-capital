@@ -115,6 +115,68 @@ describe("planReconcile: which cards sit in the wrong column", () => {
   });
 });
 
+// #4303 (#3959 slice 3), the done-when: "WHEN a member looks for an open ask, the Blocked column
+// SHALL list every open needs-eric and needs-info issue." A card is only ever added by the event
+// job on a label change; when that run dies (2026-09-30: eight in a row on the rate limit) the
+// issue has no card, and a sweep that walks only cards never sees it.
+describe("planReconcile: every open ask reaches the Blocked column (#4303)", () => {
+  it("adds an open needs-info or needs-eric issue the board has no card for", () => {
+    const drift = planReconcile({
+      items: [card(1, "Ready")],
+      openIssues: [
+        open(1, ["ready"]),
+        open(20, ["needs-info"]),
+        open(21, ["needs-eric"], { body: "> [!IMPORTANT]\n> **Needs from you** — pick one" }),
+      ],
+    });
+    expect(drift).toEqual([
+      { number: 20, have: null, want: "Blocked" },
+      { number: 21, have: null, want: "Blocked" },
+    ]);
+  });
+
+  it("leaves uncarded issues outside Blocked to the backfill — the hourly sweep stays cheap", () => {
+    expect(
+      planReconcile({
+        items: [],
+        openIssues: [open(30), open(31, ["ready"]), open(32, ["in-progress"])],
+      }),
+    ).toEqual([]);
+  });
+
+  it("holds the decision-callout rule: a needs-eric with no written ask is not an open ask yet", () => {
+    expect(
+      planReconcile({
+        items: [],
+        openIssues: [open(40, ["needs-eric"], { body: "no callout", user: { login: "claude" } })],
+      }),
+    ).toEqual([]);
+  });
+
+  it("never adds a ci-failure tracker, whatever it carries", () => {
+    expect(
+      planReconcile({ items: [], openIssues: [open(50, ["ci-failure", "needs-eric"])] }),
+    ).toEqual([]);
+  });
+
+  it("does not add a card twice — a carded blocked issue in the right column is quiet", () => {
+    expect(
+      planReconcile({ items: [card(60, "Blocked")], openIssues: [open(60, ["needs-info"])] }),
+    ).toEqual([]);
+  });
+
+  it("the sweep syncs the uncarded ask, still on one board read", () => {
+    const s = sweep({
+      items: [card(1, "Ready")],
+      openIssues: [open(1, ["ready"]), open(70, ["needs-info"])],
+      syncImpl: () => ({ status: "Blocked" }),
+    });
+    expect(s.synced).toEqual([70]);
+    expect(s.boardReads()).toBe(1);
+    expect(s.result.fixed).toEqual([{ number: 70, have: null, want: "Blocked", now: "Blocked" }]);
+  });
+});
+
 // #3939 slice 4 (#4320), the done-when: "WHEN a built-in workflow and label-derived Status write one
 // close event, the board SHALL show one consistent Status." The slice settled on keeping
 // projects-sync whole (see statusForIssue()'s block in projects.mjs for the three findings), so what
