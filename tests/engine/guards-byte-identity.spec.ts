@@ -14,11 +14,14 @@ import {
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
 /**
- * BYTE-IDENTITY: the option guards changed nothing for a share-only cycle with no short options.
+ * BYTE-IDENTITY: the option guards changed nothing for a share-only cycle with no short options
+ * whose orders do not compete.
  *
  * Before the batch ledger, every intent was guarded against the cycle's starting book with no
  * memory of its siblings — so a batch's verdict was exactly the verdicts of its intents run one at
- * a time, concatenated in order. That is the property pinned here, over seeded batches drawn from
+ * a time, concatenated in order. For orders that do not compete (one buy at most, one sell per
+ * symbol) that still holds, and it is the property pinned here; orders that DO compete now see
+ * each other (#4670), which is the point. Pinned over seeded batches drawn from
  * the same shapes `guards.spec.ts` exercises (cash, holdings, subscriptions with budgets and
  * filters, baskets, compounding, the ladder, S2/E1). Each single-intent verdict is the old code
  * path line for line — `guards.spec.ts` pins those — so equality here is equality with before.
@@ -76,23 +79,38 @@ const CONFIGS: readonly RiskConfig[] = [
 ];
 const ASOFS = ["2026-07-24T14:30:00Z", "2026-08-25T15:00:00.000Z", "2026-08-14T13:35:00.000Z"];
 
+/** A batch whose orders cannot compete: at most one buy (one claim on cash and on any allocation)
+ *  and at most one sell per symbol. Competing orders are the batch ledger's job by design (#4670) —
+ *  `guard-ledger.spec.ts` pins those. */
 function aBatch(rand: () => number): readonly OrderIntent[] {
   const size = 1 + Math.floor(rand() * 6);
+  let buys = 0;
+  const sold = new Set<string>();
   return Array.from({ length: size }, () => ({
     symbol: pick(rand, SYMBOLS),
     side: pick(rand, ["buy", "sell"] as const),
-    quantity: pick(rand, [1, 10, 30, 500, 10_000]),
-    type: "market" as const,
-    reason: "property",
-    ...(rand() < 0.5
-      ? {
-          playbookId: pick(rand, ["S1-NVDA", "BASKET-1", "G1-GOOG"]),
-          playbookMode: "standard" as const,
-        }
-      : {}),
-    ...(rand() < 0.2 ? { urgent: true } : {}),
-    ...(rand() < 0.2 ? { allowThroughPrint: true } : {}),
-  }));
+  }))
+    .filter(({ symbol, side }) => {
+      if (side === "buy") return buys++ === 0;
+      if (sold.has(symbol)) return false;
+      sold.add(symbol);
+      return true;
+    })
+    .map(({ symbol, side }) => ({
+      symbol,
+      side,
+      quantity: pick(rand, [1, 10, 30, 500, 10_000]),
+      type: "market" as const,
+      reason: "property",
+      ...(rand() < 0.5
+        ? {
+            playbookId: pick(rand, ["S1-NVDA", "BASKET-1", "G1-GOOG"]),
+            playbookMode: "standard" as const,
+          }
+        : {}),
+      ...(rand() < 0.2 ? { urgent: true } : {}),
+      ...(rand() < 0.2 ? { allowThroughPrint: true } : {}),
+    }));
 }
 
 function aBook(rand: () => number): Portfolio {
@@ -123,7 +141,7 @@ function oneAtATime(
   };
 }
 
-describe("guards — byte identity for share-only cycles with no short options", () => {
+describe("guards — byte identity for share-only cycles with no short options, orders not competing", () => {
   it("every batch's verdict equals its intents' verdicts one at a time, over 600 seeded batches", () => {
     let compared = 0;
     for (let seed = 1; seed <= 600; seed += 1) {
@@ -139,7 +157,7 @@ describe("guards — byte identity for share-only cycles with no short options",
       });
       compared += intents.length;
     }
-    expect(compared).toBeGreaterThan(1_500);
+    expect(compared).toBeGreaterThan(1_000);
   });
 
   it("the property is not vacuous: with a sold put on the book, two buys stop being independent", () => {
