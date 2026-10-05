@@ -557,7 +557,7 @@ describe("model routing — the shared, cheap model, on every leg", () => {
     const fetchCalls: { max_tokens?: number; output_config?: unknown }[] = [];
     const streamCalls: { max_tokens?: number; output_config?: unknown }[] = [];
     const chat = createCompanionChat(
-      { apiKey: "k", resolveModel: () => "claude-sonnet-5" },
+      { apiKey: "k", resolveModel: () => COMPANION_MODEL },
       (_m, _u, _h, b) => {
         fetchCalls.push(b as { max_tokens?: number; output_config?: unknown });
         return Promise.resolve(toolUseReply("get_play_catalog")); // rounds exhaust — every leg runs
