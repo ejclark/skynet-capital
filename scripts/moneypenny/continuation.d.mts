@@ -85,6 +85,15 @@ export const STALL_HOURS: number;
 export const MAX_CANDIDATES: number;
 export const STOP_CAP: number;
 
+/** Issue number → the first open PR that names it (`derivePrIssues`: closing/provenance refs, title, branch). */
+export function openPrsByIssue(
+  openPrs?: readonly {
+    number: number;
+    title?: string;
+    body?: string | null;
+    head?: { ref?: string };
+  }[],
+): Map<number, number>;
 export function nextSubIssue(
   subIssues?: readonly SubIssue[],
   blockedBy?: Record<number, readonly { state?: string }[]>,

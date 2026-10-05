@@ -62,6 +62,7 @@ import {
   continuationContext,
   executeStopContinuation,
   gatherContinuationDeps,
+  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -473,11 +474,15 @@ export function peekNext(deps = {}) {
     readMode = () => readWorkMode(),
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
+    readPrIssues = () => readOpenPrIssues(),
     continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
+  const ready = withoutOpenPr(
+    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
+    readPrIssues(),
+  );
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick = continuationPick(continuation) ?? nextAdmissible(ready, inFlightOf(), mode);
@@ -494,6 +499,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readMode = () => readWorkMode(),
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
+    readPrIssues = () => readOpenPrIssues(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
     ...admission
@@ -501,7 +507,10 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const mode = readMode();
   const inFlight = inFlightOf();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
-  let pool = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
+  let pool = withoutOpenPr(
+    readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l))),
+    readPrIssues(),
+  );
   const gateDeps = { readMode: () => mode, readInFlight: () => inFlight, ...admission };
   // #3818 slice 8, criterion 9 — a plan whose slice just landed goes FIRST, ahead of rank order.
   // Rank order cannot express it: the plan's lease is still held by the build that just finished,
@@ -541,6 +550,42 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
+
+/**
+ * AN ISSUE AN OPEN PR ALREADY NAMES IS NOT THE SWEEP'S TO START (2026-10-05). `pr-in-progress.mjs`
+ * labels such an issue `in-progress`, and that label is what kept the rank-order pick off it, but
+ * the label can come off while the PR is still open: the plan lane's prompt ends every session with
+ * `--remove-label in-progress`, a held slice PR included. #3959 then read as `ready` and idle, and
+ * the sweep dispatched it twice in one day against #4605 (held for a merge click). Each session
+ * found nothing to build. The continuation branch already refuses a plan with an open PR
+ * (`continuationDecision`), and this applies the same check, on the same evidence, to rank order.
+ * So the PR stays the source of truth even when the label has been removed.
+ *
+ * @param named `openPrsByIssue`'s map: issue number → the open PR naming it
+ */
+export function withoutOpenPr(pool = [], named = new Map()) {
+  return pool.filter((i) => {
+    const pr = named.get(i.number);
+    if (pr) console.log(`::notice::retry sweep — skipping #${i.number}, open PR #${pr} names it`);
+    return !pr;
+  });
+}
+
+/**
+ * The open PRs' named issues, FAIL-OPEN to an empty map. The cost of a failed read is one wasted
+ * session on a held plan. That is smaller than a red `route` tick, which also takes the
+ * event-research legs down (`continuationPick`'s header gives the same reasoning).
+ */
+function readOpenPrIssues() {
+  try {
+    return openPrsByIssue(ghRestAll("pulls?state=open"));
+  } catch (err) {
+    console.log(
+      `::warning::retry sweep — open-PR read failed, not screening: ${String(err).slice(0, 200)}`,
+    );
+    return new Map();
+  }
+}
 
 /**
  * `pickContinuation` over a freshly gathered context, FAIL-OPEN — the same call `gatherDeps` wraps
