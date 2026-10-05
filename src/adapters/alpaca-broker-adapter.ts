@@ -13,6 +13,40 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Broker statuses that mean the order is over. With nothing filled, it never traded. */
+const ENDED_UNFILLED: ReadonlySet<string> = new Set(["canceled", "expired", "rejected"]);
+
+/**
+ * What the last read of a placed order honestly says (#4655). Only a filled quantity the broker
+ * reported is a fill — a partial fill reports what filled. An order that ended with nothing filled
+ * is a rejection; anything else (accepted, new, held, pending_new, or no read at all) is still live
+ * at the broker and may yet fill, so it is `working` — never `filled` at the asked quantity, which
+ * is what a queued after-hours order used to be logged as.
+ */
+function resultFromLastRead(
+  order: OrderIntent,
+  placed: AlpacaOrder,
+  last: AlpacaOrder | undefined,
+): OrderResult {
+  const filledQuantity = Number(last?.filled_qty ?? 0);
+  if (filledQuantity > 0) {
+    return {
+      intent: order,
+      status: "filled",
+      filledQuantity,
+      ...(last?.filled_avg_price ? { filledPrice: Number(last.filled_avg_price) } : {}),
+      orderId: placed.id,
+    };
+  }
+  const brokerStatus = last?.status ?? placed.status;
+  return {
+    intent: order,
+    status: ENDED_UNFILLED.has(brokerStatus) ? "rejected" : "working",
+    reason: `order ${brokerStatus}`,
+    orderId: placed.id,
+  };
+}
+
 /**
  * One order this adapter's own submit path got the broker to accept — everything a caller
  * needs to translate into an audit line or a bus event, without this module knowing either
@@ -34,12 +68,11 @@ export interface BotOrderSubmission {
  *
  * Fill semantics differ from the in-memory broker: a market order posts asynchronously
  * and Alpaca fills it shortly after — the initial "accepted" response carries no fill price.
- * `submit()` treats a successfully-accepted order as "filled" (paper markets fill near-instantly)
- * and surfaces a rejection only when the API rejects the submission, but it now POLLS
- * `getOrder(id)` a few times (`pollFill`) to learn the real `filled_avg_price`/`filled_qty`
- * before returning — the "later increment" this module's docblock used to defer. A poll that
- * never resolves (or throws) falls back to exactly today's behavior: the requested quantity,
- * no price — never worse than before this existed, and never turns a real fill into a rejection.
+ * `submit()` POLLS `getOrder(id)` a few times (`pollFill`) and reports what the LAST read of the
+ * order actually showed: `filled` only on a broker-confirmed filled quantity, `rejected` when the
+ * broker canceled, expired or rejected it with nothing filled, and `working` for everything else —
+ * a queued after-hours order, or a fill slower than the poll (#4655). It used to call any accepted
+ * order "filled" at the asked quantity with no price, which logged orders that never traded.
  */
 export class AlpacaBrokerAdapter implements BrokerPort {
   private readonly client: AlpacaTradingClient;
@@ -79,22 +112,24 @@ export class AlpacaBrokerAdapter implements BrokerPort {
 
   /**
    * Polls `getOrder(id)` up to `fillPollAttempts` times, waiting `fillPollDelayMs` between tries,
-   * until Alpaca reports a real `filled_avg_price`. Never throws: a poll failure (network blip,
-   * an id the API briefly can't find yet) is swallowed and treated as "not filled yet" — the
-   * caller's fallback to the requested quantity with no price is always safe.
+   * until Alpaca reports a real `filled_avg_price` or the order has ended. Returns the last read
+   * that succeeded (undefined when none did). Never throws: a poll failure (network blip, an id the
+   * API briefly can't find yet) is swallowed and the loop just tries again — the caller reads a
+   * missing answer as "still working", never as a fill or a rejection.
    */
   private async pollFill(orderId: string): Promise<AlpacaOrder | undefined> {
+    let last: AlpacaOrder | undefined;
     for (let attempt = 0; attempt < this.fillPollAttempts; attempt++) {
       if (attempt > 0) await this.sleep(this.fillPollDelayMs);
       try {
-        const order = await this.client.getOrder(orderId);
-        if (order.filled_avg_price != null) return order;
+        last = await this.client.getOrder(orderId);
+        if (last.filled_avg_price != null || ENDED_UNFILLED.has(last.status)) return last;
       } catch {
-        // Treated as "not filled yet" — the loop just tries again (or falls through on the last
-        // attempt), never surfaced as a submission failure for an order the broker already has.
+        // Treated as "not filled yet" — never surfaced as a submission failure for an order the
+        // broker already has.
       }
     }
-    return undefined;
+    return last;
   }
 
   async getPortfolio(): Promise<Portfolio> {
@@ -136,7 +171,7 @@ export class AlpacaBrokerAdapter implements BrokerPort {
         qty: order.quantity,
         side: order.side,
       });
-      if (placed.status === "rejected" || placed.status === "canceled") {
+      if (ENDED_UNFILLED.has(placed.status)) {
         return {
           intent: order,
           status: "rejected",
@@ -155,17 +190,10 @@ export class AlpacaBrokerAdapter implements BrokerPort {
           });
         } catch {
           // A listener's own failure is its caller's to log — never this adapter's problem,
-          // and never allowed to turn a real fill into a reported rejection.
+          // and never allowed to turn a live order into a reported rejection.
         }
       }
-      const filled = await this.pollFill(placed.id);
-      return {
-        intent: order,
-        status: "filled",
-        filledQuantity: filled?.filled_qty ? Number(filled.filled_qty) : order.quantity,
-        ...(filled?.filled_avg_price ? { filledPrice: Number(filled.filled_avg_price) } : {}),
-        orderId: placed.id,
-      };
+      return resultFromLastRead(order, placed, await this.pollFill(placed.id));
     } catch (error) {
       // The broker never created an order here (the request itself failed), so there is no id to
       // report — `orderId` stays absent, same as any submission that never reached the broker.
