@@ -260,7 +260,14 @@ export class LiveCycleRunner {
       const result = await scout.broker.submit(intent);
       this.deps.safety.recordOrder();
       this.deps.onResult?.(result);
-      outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
+      outcomes.push({
+        intent,
+        // `unfilled` ended with nothing traded, so it reads as rejected downstream; `working` may
+        // still fill, so it is a placed order.
+        action:
+          result.status === "rejected" || result.status === "unfilled" ? "rejected" : "placed",
+        result,
+      });
     }
     this.deps.onDecision?.({
       at: now(),

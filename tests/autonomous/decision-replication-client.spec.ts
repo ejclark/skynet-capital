@@ -1,11 +1,38 @@
 import { mkdtempSync, rmSync } from "node:fs";
+import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type DecisionDb, openDecisionDb } from "../../src/autonomous/decision-db.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { resolveDecisionReplication } from "../../src/autonomous/decision-replication-client.js";
+import { DECISION_BATCH_KIND, DECISION_BATCH_KIND_V2 } from "../../src/autonomous/decision-wire.js";
+import type { OrderIntent } from "../../src/domain/types.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { anOptionIntent } from "../support/builders.js";
+
+/** A bridge that keeps every POST body verbatim and answers like a dashboard that predates
+ *  decision.v2 — accepting v1, refusing v2 — so a spec can read exactly what was sent. */
+async function recordingBridge(): Promise<{ server: Server; url: string; bodies: string[] }> {
+  const bodies: string[] = [];
+  const server = createServer((req, res) => {
+    let text = "";
+    req.on("data", (chunk) => {
+      text += String(chunk);
+    });
+    req.on("end", () => {
+      bodies.push(text);
+      const kind = (JSON.parse(text) as { kind?: string }).kind;
+      res.writeHead(kind === DECISION_BATCH_KIND ? 202 : 400, {
+        "content-type": "application/json",
+      });
+      res.end("{}");
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+  return { server, url: `http://127.0.0.1:${port}`, bodies };
+}
 
 const decision = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
   at: 1,
@@ -195,6 +222,80 @@ describe("resolveDecisionReplication", () => {
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
+    });
+
+    describe("the wire kind, per record", () => {
+      const shares: OrderIntent = {
+        symbol: "NVDA",
+        side: "buy",
+        quantity: 10,
+        type: "market",
+        reason: "x",
+      };
+
+      it("sends share-only records as exactly one decision.v1 POST per leg, the same body as before", async () => {
+        const thisBotsDb = botsDb;
+        thisBotsDb.record(decision({ at: 1, rawIntents: [shares] }));
+        thisBotsDb.record(decision({ at: 2 }));
+        const bridge = await recordingBridge();
+        try {
+          const client = resolveDecisionReplication(
+            { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
+            () => thisBotsDb,
+          );
+          await client.replicate({});
+          // One ascending POST, then one preview POST — each byte-for-byte the single v1 batch the
+          // client sent before records were kinded.
+          expect(bridge.bodies).toEqual([
+            JSON.stringify({
+              kind: DECISION_BATCH_KIND,
+              personaId: "sauron",
+              records: thisBotsDb.listSince("sauron", 0, 100),
+            }),
+            JSON.stringify({
+              kind: DECISION_BATCH_KIND,
+              personaId: "sauron",
+              records: thisBotsDb.listByPersona("sauron", { limit: 20 }),
+            }),
+          ]);
+        } finally {
+          await new Promise<void>((resolve) => bridge.server.close(() => resolve()));
+        }
+      });
+
+      it("splits a mixed batch into one v1 and one v2 POST, so an older dashboard still gets the shares", async () => {
+        const thisBotsDb = botsDb;
+        const sold = anOptionIntent();
+        thisBotsDb.record(decision({ at: 1, rawIntents: [shares] }));
+        thisBotsDb.record(
+          decision({
+            at: 2,
+            rawIntents: [sold],
+            refusals: [{ intent: sold, reason: "option-shape" }],
+          }),
+        );
+        const bridge = await recordingBridge();
+        try {
+          const client = resolveDecisionReplication(
+            { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
+            () => thisBotsDb,
+          );
+          await client.replicate({});
+          const sent = bridge.bodies.map(
+            (b) => JSON.parse(b) as { kind: string; records: DecisionRecord[] },
+          );
+          // Ascending leg, then preview leg: v1 before v2 in each.
+          expect(sent.map((b) => [b.kind, b.records.map((r) => r.at)])).toEqual([
+            [DECISION_BATCH_KIND, [1]],
+            [DECISION_BATCH_KIND_V2, [2]],
+            [DECISION_BATCH_KIND, [1]],
+            [DECISION_BATCH_KIND_V2, [2]],
+          ]);
+          expect(sent[1]?.records[0]?.rawIntents[0]).toEqual(sold);
+        } finally {
+          await new Promise<void>((resolve) => bridge.server.close(() => resolve()));
+        }
+      });
     });
 
     it("never throws when the bridge URL points at nothing listening", async () => {

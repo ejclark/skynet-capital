@@ -93,7 +93,17 @@ export function parseOccSymbol(symbol: string): OptionContractParts | undefined 
 export function humanizeOptionSymbol(symbol: string): string {
   const parts = parseOccSymbol(symbol);
   if (!parts) return symbol;
-  const [year, month, day] = parts.expiration.split("-");
+  return `${parts.underlying} ${occStrikeLabel(parts.strike)} ${parts.type.toUpperCase()} · ${occExpiryLabel(parts.expiration)}`;
+}
+
+/** `420` → `$420`, `132.5` → `$132.50` — a strike as the humanized contract prints it. */
+export function occStrikeLabel(strike: number): string {
+  return `$${Number.isInteger(strike) ? String(strike) : strike.toFixed(2)}`;
+}
+
+/** `2026-09-18` → `18 SEP 26` — an expiry as the humanized contract prints it. */
+export function occExpiryLabel(expiration: string): string {
+  const [year, month, day] = expiration.split("-");
   const months = [
     "JAN",
     "FEB",
@@ -109,6 +119,5 @@ export function humanizeOptionSymbol(symbol: string): string {
     "DEC",
   ];
   const monthName = months[Number(month) - 1] ?? month;
-  const strike = Number.isInteger(parts.strike) ? String(parts.strike) : parts.strike.toFixed(2);
-  return `${parts.underlying} $${strike} ${parts.type.toUpperCase()} · ${Number(day)} ${monthName} ${year?.slice(2)}`;
+  return `${Number(day)} ${monthName} ${year?.slice(2)}`;
 }

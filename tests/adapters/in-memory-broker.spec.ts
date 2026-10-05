@@ -1,7 +1,7 @@
 import { InMemoryBroker } from "../../src/adapters/in-memory-broker.js";
 import { computeEquity } from "../../src/domain/portfolio.js";
 import type { OrderIntent } from "../../src/domain/types.js";
-import { aQuote } from "../support/builders.js";
+import { anOptionIntent, aQuote } from "../support/builders.js";
 
 /**
  * The reference broker's unit rule (#4643): a quote is per share, as a broker quotes it, and an
@@ -41,6 +41,18 @@ describe("InMemoryBroker — option contracts", () => {
 
     expect(portfolio.cash).toBe(9_500);
     expect(portfolio.positions).toEqual([{ symbol: call, quantity: 1, avgPrice: 5 }]);
+  });
+
+  it("rejects an option order rather than filling its underlying's shares", async () => {
+    const broker = new InMemoryBroker(100_000, [aQuote({ symbol: "CRWV", last: 90 })]);
+
+    const result = await broker.submit(anOptionIntent());
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: "options are not simulated in-memory",
+    });
+    expect(await broker.getPortfolio()).toEqual({ cash: 100_000, positions: [] });
   });
 
   it("refuses a contract the cash cannot cover at 100 shares", async () => {

@@ -1,6 +1,6 @@
 import type { OrderIntent, PlaybookMode } from "../../src/domain/types.js";
 import { applyGuards, applyGuardsWithVerdicts } from "../../src/engine/guards.js";
-import { aContext, aPortfolio, aPosition } from "../support/builders.js";
+import { aContext, anOptionIntent, aPortfolio, aPosition } from "../support/builders.js";
 
 const buy = (symbol: string, quantity: number): OrderIntent => ({
   symbol,
@@ -38,33 +38,61 @@ describe("applyGuards", () => {
     });
   });
 
-  describe("a quoted option contract (#4643)", () => {
+  describe("an option contract", () => {
     const call = "NVDA261113C00240000";
 
-    it("is sized in contracts at 100 shares each, never at the per-share premium", () => {
-      const context = aContext({ [call]: { last: 5 } }); // ask ~5.05 per share = ~$505 per contract
+    it("refuses a share-shaped buy naming a quoted, affordable contract before anything sizes it", () => {
+      const context = aContext({ [call]: { last: 5 } }); // ~$505 per contract
       const portfolio = aPortfolio({ cash: 2_000 });
 
-      const [approved] = applyGuards([buy(call, 50)], portfolio, context, { maxPositionPct: 1 });
+      const result = applyGuardsWithVerdicts([buy(call, 1)], portfolio, context, {
+        maxPositionPct: 1,
+      });
 
-      // $2,000 buys 3 contracts at ~$505, not 396 "shares" of a $5.05 premium.
-      expect(approved?.quantity).toBe(3);
+      expect(result.approved).toEqual([]);
+      expect(result.refused).toEqual([{ intent: buy(call, 1), reason: "option-shape" }]);
     });
 
-    it("counts held contracts at 100 shares toward the per-position cap", () => {
-      const context = aContext({ [call]: { last: 5 } });
+    it("counts two held contracts at 100 shares each in the equity that caps a share buy", () => {
+      const context = aContext({ NVDA: { last: 100 }, [call]: { last: 5 } });
       const portfolio = aPortfolio({
-        cash: 100_000,
+        cash: 10_000,
         positions: [aPosition({ symbol: call, quantity: 2, avgPrice: 5 })],
       });
 
-      // Equity $101,000; a 1.5% cap is $1,515 — the two held contracts (~$1,010 at the ask) leave
-      // room for one more ~$505 contract. Unscaled, the held pair read as ~$10 and left room for 2.
-      const [approved] = applyGuards([buy(call, 10)], portfolio, context, {
-        maxPositionPct: 0.015,
+      // Equity $11,000 (the pair is $1,000, not $10); half of it buys 54 NVDA at ~$100.05.
+      // Unscaled, equity read $10,010 and the cap left room for 50.
+      const [approved] = applyGuards([buy("NVDA", 1_000)], portfolio, context, {
+        maxPositionPct: 0.5,
       });
 
-      expect(approved?.quantity).toBe(1);
+      expect(approved?.quantity).toBe(54);
+    });
+
+    it("refuses any intent carrying an option order, ahead of every other guard", () => {
+      const sold = anOptionIntent();
+      const bought = anOptionIntent({
+        side: "buy",
+        option: {
+          effect: "close",
+          structure: "close",
+          legs: [{ occSymbol: "CRWV261106P00085000", side: "buy", ratio: 1 }],
+          limitPrice: 0.4,
+        },
+      });
+
+      const result = applyGuardsWithVerdicts(
+        [sold, bought],
+        aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 100 })] }),
+        aContext({ CRWV: { last: 90 } }),
+        { maxPositionPct: 1, accountTier: "restricted" },
+      );
+
+      expect(result.approved).toEqual([]);
+      expect(result.refused).toEqual([
+        { intent: sold, reason: "option-shape" },
+        { intent: bought, reason: "option-shape" },
+      ]);
     });
   });
 

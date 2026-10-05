@@ -139,7 +139,14 @@ export class AutonomousTrader {
       this.config.onCooldownSet?.(intent.symbol, now);
       this.config.onResult?.(result);
       results.push(result);
-      outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
+      outcomes.push({
+        intent,
+        // `unfilled` ended with nothing traded, so it reads as rejected downstream; `working` may
+        // still fill, so it is a placed order.
+        action:
+          result.status === "rejected" || result.status === "unfilled" ? "rejected" : "placed",
+        result,
+      });
     }
 
     this.config.onDecision?.({
