@@ -34,6 +34,32 @@ const mode = (position: "halt" | "conserve" | "normal" | "surge", inFlightCap = 
   caps: { inFlightCap },
 });
 
+/**
+ * "No plan is waiting to continue" — the continuation context `claimNext` and `peekNext` BOTH
+ * consult. Every `deps` in this file injects it, so no suite falls back to `continuationContext()`,
+ * which reads live GitHub (`gatherContinuationDeps` → `ghRestAll`).
+ *
+ * Left uninjected, these suites read the real repo's open plans. Two ways that showed up on
+ * 2026-10-04: `peekNext` returned live issue #3913 where the fixture named #8, so the spec went red
+ * on a clean checkout of `main` — and the `claimNext` suites went green only by luck, because
+ * `nowMs = 0` makes `0 - mergedMs` negative so the 24h merge window filters nothing out, and
+ * `pickContinuation` handed back a real plan. What stopped a local `npm test` from acting on it was
+ * one branch: `continueNext` bails when the plan's claim tag is stamped later than its merge
+ * (`index.mjs:599`). The very next line is `releaseClaim(slug)` — a live `DELETE` of
+ * `refs/tags/claim/plan-<n>` — followed by a real `postContinuationReceipt` comment on the issue.
+ * So the suite was one expired lease away from a test run deleting a production claim and
+ * commenting on a live plan.
+ *
+ * That is the whole reason this is injected rather than tolerated, and it is what this file's own
+ * header already promised: "no `gh`, no network."
+ */
+const noContinuation = () => ({
+  continuations: { candidates: [], caps: { continuationsPerDay: 3 } },
+  inFlight: [],
+  mode: mode("normal"),
+  now: Date.parse("2026-10-04T00:00:00Z"),
+});
+
 describe("surfaceOf — the capsule's Surface cell", () => {
   it("reads and normalises the cell (lowercase, trimmed, markdown stripped)", () => {
     expect(surfaceOf(capsule("  The `/app/accounts` **Rail**  "))).toBe("the /app/accounts rail");
@@ -334,6 +360,7 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
       readReady: () => ready,
       readInFlight: () => inFlight,
       claims: { plan: fake("plan"), feedback: fake("feedback") },
+      continuation: noContinuation,
     };
     return { deps, called };
   };
@@ -393,6 +420,7 @@ describe("claimNext — a lease-held pick does not block the rest of the queue",
       readReady: () => ready,
       readInFlight: () => [],
       claims: { plan: claim, feedback: claim },
+      continuation: noContinuation,
     };
     return { r: claimNext(0, "abc", deps), tried };
   };
@@ -420,6 +448,7 @@ describe("claimNext — a lease-held pick does not block the rest of the queue",
         },
         feedback: () => ({ claimed: false, reason: "unused" }),
       },
+      continuation: noContinuation,
     };
     expect(claimNext(0, "abc", deps)).toMatchObject({ claimed: false, reason: "parked" });
     expect(tried).toEqual([1]);
@@ -449,6 +478,7 @@ describe("peekNext — the push pass asks, and claims nothing", () => {
     readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
     readReady: () => ready,
     readInFlight: () => [],
+    continuation: noContinuation,
   });
 
   it("returns the pick claimNext would take, without taking a lease", () => {
