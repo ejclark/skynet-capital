@@ -1,5 +1,12 @@
 import { heldQuantity } from "../domain/portfolio.js";
-import type { MarketContext, OrderIntent, PlaybookVerdict, Portfolio } from "../domain/types.js";
+import type {
+  ListedExpirations,
+  MarketContext,
+  OptionDemand,
+  OrderIntent,
+  PlaybookVerdict,
+  Portfolio,
+} from "../domain/types.js";
 
 /**
  * A trading persona: a named strategy with a point of view.
@@ -21,6 +28,12 @@ export interface Persona {
   /** What each composed playbook concluded for this context — present only on a persona wrapped
    *  by `withPlaybooks`, so the trader can record verdicts without knowing the playbook layer. */
   playbookVerdicts?(context: MarketContext): readonly PlaybookVerdict[];
+  /** The underlyings this persona's option plays trade — whose listed expirations the trader reads.
+   *  Present only on a persona composed with an option playbook. */
+  readonly optionUnderlyings?: readonly string[];
+  /** PURE: the option quotes this cycle needs, once the listed expirations are known. Present only
+   *  on a persona whose option plays (or expiry hygiene) may need a quote. */
+  optionDemand?(asOfIso: string, portfolio: Portfolio, listed: ListedExpirations): OptionDemand;
 }
 
 /** Read a symbol's momentum signal, defaulting to flat when absent. */

@@ -40,6 +40,7 @@ import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import { mergeRosters, subscriptionRoster } from "../subscriptions/subscription-roster.js";
+import { ownedOptionRoster } from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
 
 const HARDCORE_COOLDOWN_MS = 90_000;
@@ -258,7 +259,8 @@ export function buildBotRosters(
  * One bot's roster for a given subscription set. THE single definition, called both at boot (via
  * `buildBotRosters` above, off the local file) and on every live subscription swap (issue #3595,
  * off the snapshot the `/controls` poll carries) — a second copy is exactly how a swapped roster
- * would drift from what a restart would have produced.
+ * would drift from what a restart would have produced. An option playbook then claims its
+ * underlyings from every other playbook in the roster (`option-ownership.ts`).
  */
 export function resolveBotRoster(
   bot: Bot,
@@ -276,7 +278,8 @@ export function resolveBotRoster(
       `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
     );
   }
-  return { bot, subscriptions, enabled: mergeRosters(houseEnabled, acctRoster.enabled) };
+  const merged = mergeRosters(houseEnabled, acctRoster.enabled);
+  return { bot, subscriptions, enabled: ownedOptionRoster(bot.persona.id, merged) };
 }
 
 /** The two subscription-sensitive halves of a bot's trader config. */
