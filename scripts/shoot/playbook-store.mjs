@@ -308,6 +308,33 @@ const groups = {
   ],
 };
 
+// #4642 slices 5–6: the two option plays' cards, as the catalog shows them.
+groups.options = [
+  {
+    tag: "phone-option-crwv-wheel",
+    view: views.catalog,
+    expect: "CRWV-WHEEL",
+    viewport: PHONE,
+    scrollTo: "CRWV-WHEEL",
+    path: STORE,
+  },
+  {
+    tag: "phone-option-nvda-spread",
+    view: views.catalog,
+    expect: "NVDA-CALL-SPREAD",
+    viewport: PHONE,
+    scrollTo: "NVDA-CALL-SPREAD",
+    path: STORE,
+  },
+  {
+    tag: "desktop-option-plays",
+    view: views.catalog,
+    expect: "CRWV-WHEEL",
+    scrollTo: "CRWV-WHEEL",
+    path: STORE,
+  },
+];
+
 const only = process.env.FRAMES;
 for (const [group, frames] of Object.entries(groups)) {
   if (only && only !== group) continue;
