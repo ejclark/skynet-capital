@@ -14,11 +14,11 @@ import {
   claim,
   committedToPlaybook,
   openLedger,
-  promisedShares,
   soldShares,
   spendableCash,
   subscriptionTerms,
   unspentCash,
+  worsens,
 } from "./guard-batch.js";
 import { clampOption, type OptionBatch } from "./option-guards.js";
 
@@ -337,29 +337,47 @@ function clampBuy(
 
 /**
  * Clamp a sell so it never sells more than is actually held (no accidental shorting), and never the
- * shares a sold call is written against. Only an UNCAPPED short call holds shares back
- * (`coverNeeds`), so a debit spread never blocks selling the stock under it.
+ * shares a sold call stands on — judged against the best cover the book has, so a call a long caps
+ * (a debit spread's short) never blocks selling the stock under it.
  */
 function clampSell(
   intent: OrderIntent,
   portfolio: Portfolio,
-  { ledger, book }: OptionBatch,
+  { ledger }: OptionBatch,
 ): SellSizingOutcome {
   const held = heldQuantity(portfolio, intent.symbol);
   if (held <= 0) return { ok: false, reason: "nothing-held" };
-  // Shares a sold call stands on — at worst, counting the option orders approved earlier this batch
-  // — plus what earlier sells in the batch already took.
-  const callLock = promisedShares(ledger, book, intent.symbol);
-  const soldEarlier = soldShares(ledger, intent.symbol);
-  const quantity = Math.min(intent.quantity, Math.max(0, held - callLock - soldEarlier));
-  if (!(quantity > 0)) {
-    // Name the sold call only when its lock is what stopped the sell — without the lock, this sell
-    // would pass. A sell zeroed by an earlier sell in the batch is plain `nothing-held`.
-    const blockedByCall = callLock > 0 && Math.min(intent.quantity, held - soldEarlier) > 0;
-    return { ok: false, reason: blockedByCall ? "uncovers-short-call" : "nothing-held" };
-  }
+  const unsold = held - soldShares(ledger, intent.symbol);
+  const most = Math.min(intent.quantity, Math.max(0, unsold));
+  // Zeroed by an earlier sell in the batch: plain `nothing-held`, never the call.
+  if (!(most > 0)) return { ok: false, reason: "nothing-held" };
+  const quantity = ledger.active ? largestSale(portfolio, ledger, intent.symbol, most) : most;
+  if (!(quantity > 0)) return { ok: false, reason: "uncovers-short-call" };
   claim(ledger, { sold: { underlying: intent.symbol, shares: quantity } });
   return { ok: true, intent: { ...intent, quantity } };
+}
+
+/** The most of `most` shares a sale may take without leaving a sold call short of cover. Fewer
+ *  shares sold never needs more cover, so the answer is found by halving. */
+function largestSale(
+  portfolio: Portfolio,
+  ledger: OptionBatch["ledger"],
+  underlying: string,
+  most: number,
+): number {
+  const fits = (sells: number): boolean => {
+    const worse = worsens(portfolio, ledger, underlying, { sells });
+    return !(worse.shares || worse.cash);
+  };
+  if (fits(most)) return most;
+  let low = 0;
+  let high = Math.floor(most);
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (fits(mid)) low = mid;
+    else high = mid - 1;
+  }
+  return low;
 }
 
 /** The S2/E1 check for an intent that opens risk. `allowThroughPrint` is a share-only opt-out: an

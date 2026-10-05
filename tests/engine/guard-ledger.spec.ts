@@ -294,3 +294,141 @@ describe("the batch ledger — a held long caps one short, and approvals may not
     ]);
   });
 });
+
+// Found by the #4645 soundness fuzz (`guard-soundness.spec.ts`), each approved before the fix.
+describe("the batch ledger — cover judged on the best assignment, outcome by outcome", () => {
+  const C95_OCT = "CRWV261030C00095000";
+  const C90_NOV = "CRWV261106C00090000";
+  const C95_NOV = "CRWV261106C00095000";
+  const C105_NOV = "CRWV261106C00105000";
+  const book = (cash: number, ...positions: Parameters<typeof aPosition>[0][]): Portfolio =>
+    aPortfolio({ cash, positions: positions.map((p) => aPosition(p)) });
+  const quoted = withOptionQuotes(
+    aContext({ CRWV: { last: 90 } }, AS_OF),
+    [PUT, CALL, C95_OCT, C90_NOV, C95_NOV, C105_NOV].map((occ) =>
+      anOptionQuote(occ, { bid: 1.6, ask: 1.8, at: AS_OF }),
+    ),
+  );
+  const judge = (intents: readonly OrderIntent[], portfolio: Portfolio) =>
+    applyGuardsWithVerdicts(intents, portfolio, quoted, CONFIG);
+  const buyBack = (occ: string): OrderIntent =>
+    anOptionIntent({
+      side: "buy",
+      playbookId: undefined,
+      playbookMode: undefined,
+      option: {
+        effect: "close",
+        structure: "close",
+        legs: [{ occSymbol: occ, side: "buy", ratio: 1 }],
+        limitPrice: 1.7,
+      },
+    });
+
+  it("a buy-back is never paid out of the cash another sold put stands on", () => {
+    // $8,500 secures the put exactly; the covered call's $170 buy-back would leave it $170 short.
+    const wheel = (cash: number) =>
+      book(
+        cash,
+        { symbol: "CRWV", quantity: 100 },
+        { symbol: PUT, quantity: -1, avgPrice: 2 },
+        { symbol: CALL, quantity: -1, avgPrice: 1.7 },
+      );
+    expect(judge([buyBack(CALL)], wheel(8_500)).refused).toEqual([
+      { intent: buyBack(CALL), reason: "collateral-reserved" },
+    ]);
+    expect(judge([buyBack(CALL)], wheel(8_670)).approved).toHaveLength(1);
+    // Buying back the put itself frees its own collateral: never refused for its premium.
+    expect(judge([buyBack(PUT)], wheel(8_500)).approved).toHaveLength(1);
+  });
+
+  it("shares covering a call are not freed by a long call above it the account cannot pay the width of", () => {
+    // 200 shares cover both calls; the $100 long could cap one only with $500 of width cash, and there
+    // is none — so not one share may go.
+    const lots = (shares: number) =>
+      book(
+        0,
+        { symbol: "CRWV", quantity: shares },
+        { symbol: C95_OCT, quantity: -2, avgPrice: 2 },
+        { symbol: CALL, quantity: 1, avgPrice: 1 },
+      );
+    expect(judge([shares("sell", "CRWV", 1)], lots(200)).refused).toEqual([
+      { intent: shares("sell", "CRWV", 1), reason: "uncovers-short-call" },
+    ]);
+    // With 300, the extra 100 sell freely.
+    expect(judge([shares("sell", "CRWV", 150)], lots(300)).approved).toMatchObject([
+      { quantity: 100 },
+    ]);
+  });
+
+  it("a covered call never leans on a long call above it the account cannot pay the width of", () => {
+    const lot = book(
+      0,
+      { symbol: "CRWV", quantity: 100 },
+      { symbol: C90_NOV, quantity: -1, avgPrice: 2 },
+      { symbol: C105_NOV, quantity: 1, avgPrice: 1 },
+    );
+    const call = anOptionIntent({
+      option: {
+        structure: "covered-call",
+        legs: [{ occSymbol: C95_NOV, side: "sell", ratio: 1 }],
+        limitPrice: 1.7,
+      },
+    });
+    expect(judge([call], lot).refused).toEqual([{ intent: call, reason: "insufficient-cash" }]);
+  });
+});
+
+// Found while fixing the above: judging worst outcome against worst outcome counted the first
+// spread's debit as paid while reading its collateral from the outcome where it never filled.
+describe("the batch ledger — a premium counts only where its order fills", () => {
+  const NVDA_PRINT: EarningsPrint = {
+    symbol: "NVDA",
+    date: "2026-11-18",
+    status: "estimate",
+    source: "test",
+    window: { start: "2026-11-17", end: "2026-11-20" },
+  };
+  const spreads: RiskConfig = {
+    ...CONFIG,
+    optionsLevel: 3,
+    discipline: { calendar: [...CALENDAR, NVDA_PRINT] },
+  };
+  const C160 = "NVDA261030C00160000";
+  const C180 = "NVDA261030C00180000";
+  const C190 = "NVDA261030C00190000";
+  const nvda = withOptionQuotes(aContext({ NVDA: { last: 180 } }, AS_OF), [
+    anOptionQuote(C160, { bid: 25.8, ask: 26, at: AS_OF }),
+    anOptionQuote(C180, { bid: 10, ask: 10.2, at: AS_OF }),
+    anOptionQuote(C190, { bid: 7, ask: 7.2, at: AS_OF }),
+  ]);
+  const spread = (long: string, limitPrice: number): OrderIntent =>
+    anOptionIntent({
+      symbol: "NVDA",
+      side: "buy",
+      option: {
+        structure: "call-debit-spread",
+        legs: [
+          { occSymbol: long, side: "buy", ratio: 1 },
+          { occSymbol: C190, side: "sell", ratio: 1 },
+        ],
+        limitPrice,
+      },
+    });
+
+  it("a second spread cannot spend cash the first one's fill would need", () => {
+    // $4,000 caps the Oct 16 $170 short with the $210 long. Both spreads filling leaves one $190 short
+    // capped only by the $210 — $2,000 of width — with $1,834 left after both debits.
+    const portfolio = aPortfolio({
+      cash: 4_000,
+      positions: [
+        aPosition({ symbol: "NVDA261030C00210000", quantity: 1, avgPrice: 1 }),
+        aPosition({ symbol: "NVDA261016C00170000", quantity: -1, avgPrice: 12 }),
+      ],
+    });
+    const first = spread(C180, 2.97);
+    const second = spread(C160, 18.69);
+    const result = applyGuardsWithVerdicts([first, second], portfolio, nvda, spreads);
+    expect(result.approved).toEqual([first]);
+    expect(result.refused.map((r) => r.intent)).toEqual([second]);
+  });
+});

@@ -2,6 +2,7 @@ import {
   bookNeeds,
   type CoverLeg,
   coverNeeds,
+  coverShortfall,
   freeCash,
   freeShares,
   heldContracts,
@@ -261,5 +262,55 @@ describe("quoteBand", () => {
   it("a $0.00 bid is a real quote, not a missing one", () => {
     const quotes = { [CRWV_85P]: anOptionQuote(CRWV_85P, { bid: 0, ask: 0.05 }) };
     expect(quoteBand(anOptionIntent().option as OptionOrderIntent, quotes)?.low).toBe(0);
+  });
+});
+
+describe("coverShortfall — the best assignment, against the shares actually free", () => {
+  const twoCallsOneHighLong = [call(240, -2), call(250, 1)];
+
+  it("covers sold calls with free shares before paying a higher long's width in cash", () => {
+    // 200 shares cover both calls: no cash, though the $250 long could cap one at $1,000.
+    expect(coverShortfall(twoCallsOneHighLong, "NVDA", 200)).toEqual({
+      shares: 0,
+      cash: 0,
+      exact: true,
+    });
+  });
+
+  it("pays the width only for the call the free shares cannot cover", () => {
+    expect(coverShortfall(twoCallsOneHighLong, "NVDA", 100)).toEqual({
+      shares: 0,
+      cash: 1_000,
+      exact: true,
+    });
+    // No shares at all: one call capped, one short of its 100.
+    expect(coverShortfall(twoCallsOneHighLong, "NVDA", 0)).toEqual({
+      shares: 100,
+      cash: 1_000,
+      exact: true,
+    });
+  });
+
+  it("a debit spread's short is capped for free, shares or not", () => {
+    expect(coverShortfall([call(240, 1), call(250, -1)], "NVDA", 0)).toEqual({
+      shares: 0,
+      cash: 0,
+      exact: true,
+    });
+  });
+
+  it("finds the cheapest put caps — not the first that fits", () => {
+    // The Dec $85 long must cap the Dec $90 short; spending it on the Nov $90 short (which the Nov $80
+    // long can cap) would leave the Dec short bare at $9,000.
+    const legs = [put(90, -1, NOV), put(90, -1, DEC), put(80, 1, NOV), put(85, 1, DEC)];
+    expect(coverShortfall(legs, "NVDA", 0).cash).toBe(1_500);
+  });
+
+  it("past a dozen contracts on one side, falls back to the greedy assignment and says so", () => {
+    expect(coverShortfall([put(85, -13)], "NVDA", 0)).toEqual({
+      shares: 0,
+      cash: 13 * 8_500,
+      exact: false,
+    });
   });
 });
