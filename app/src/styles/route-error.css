@@ -1,0 +1,90 @@
+/* When a route fails (#4614, slice 2 of #4612) — `app/src/shell/route-error.tsx`.
+ *
+ * The panel renders in the route area under a live topbar, so it is calm: a surface card in the
+ * page's reading column, not an alarm. The red is a 3px bar and the icon's stroke, both beside the
+ * heading's words — colour never carries the meaning alone (docs/BRAND.md → Accessibility). Every
+ * text pair is one tests/ui/contrast.spec.ts already holds at AA in both palettes: --text on
+ * --surface, --muted on --surface-2, --accent-contrast on --accent (the primary button).
+ * Phone first: the base rules are the 390px layout; nothing here needs a wider break. */
+
+.route-fault {
+  display: grid;
+  gap: var(--space-3);
+  width: var(--col-read);
+  padding: var(--panel-p);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--neg);
+  border-radius: 10px;
+  box-shadow: var(--elev-base);
+}
+
+.route-fault-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.route-fault-icon {
+  flex: none;
+  color: var(--neg);
+}
+
+.route-fault-body {
+  margin: 0;
+  color: var(--text);
+}
+
+.route-fault-detail {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--text-md);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.route-fault-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* gate.css's .btn fills its row (the ticket's submit); here two buttons sit side by side. */
+.route-fault-actions .btn {
+  width: auto;
+  padding: 9px 18px;
+  text-align: center;
+}
+
+/* While the automatic reload is on its way — one quiet line, not a panel. */
+.route-fault-status {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* The root layout itself failed: no topbar to sit under, so the page centres its own column. */
+.route-fault-page {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--space-4);
+  min-height: 100vh;
+  padding: var(--space-5) var(--gutter);
+}
+
+.route-fault-brand {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
