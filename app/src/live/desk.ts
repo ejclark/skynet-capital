@@ -356,6 +356,10 @@ export interface DecisionOutcome {
   readonly forecast?: DecisionForecast;
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
+  /** The result in words when the status alone would mislead — a limit that never filled. */
+  readonly resultLabel?: string;
+  /** An option order's contracts and limit in one line; absent for shares. */
+  readonly contract?: string;
   readonly fill?: string;
   /** The cycle's market context at this symbol, when captured — see `decision-json-view.ts`. */
   readonly momentum?: number;
@@ -374,6 +378,10 @@ export interface RefusedIntent {
   readonly strategy?: string;
   readonly reason: string;
   readonly expectation?: string;
+  /** Which risk check refused it, in plain words; absent on a record that predates the capture. */
+  readonly guardReason?: string;
+  /** An option order's contracts and limit in one line; absent for shares. */
+  readonly contract?: string;
 }
 
 export interface DecisionCycle {

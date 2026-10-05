@@ -1,4 +1,5 @@
 import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
+import { isBareContractOrder } from "../domain/option-order.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
@@ -110,7 +111,29 @@ export type GuardRefusalReason =
   /** The subscription's own capital allocation leaves zero room. */
   | "subscription-budget"
   /** A sell against a symbol with nothing (or a non-positive quantity) held. */
-  | "nothing-held";
+  | "nothing-held"
+  /** Not a well-formed option order — or a share-shaped order naming a contract. Never sent. */
+  | "option-shape"
+  /** The account's options approval level is too low for this open, or could not be read. */
+  | "options-level"
+  /** An option open with no finite capital allocation behind it. */
+  | "option-unallocated"
+  /** No earnings date on file for the underlying, so the expiry can't be shown to clear it. */
+  | "option-print-unknown"
+  /** The contract would still be open across the underlying's earnings print. */
+  | "option-spans-print"
+  /** The option quote the limit was priced against is too old. */
+  | "option-quote-stale"
+  /** The limit price sits outside the quoted bid/ask. */
+  | "option-limit-outside-quote"
+  /** Not enough free cash to secure the sold put. */
+  | "put-not-secured"
+  /** Not enough free shares to cover the sold call. */
+  | "call-not-covered"
+  /** Selling these shares would leave a sold call uncovered. */
+  | "uncovers-short-call"
+  /** The cash this buy needs is set aside to secure a sold put. */
+  | "collateral-reserved";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
@@ -125,6 +148,17 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "position-cap",
   "subscription-budget",
   "nothing-held",
+  "option-shape",
+  "options-level",
+  "option-unallocated",
+  "option-print-unknown",
+  "option-spans-print",
+  "option-quote-stale",
+  "option-limit-outside-quote",
+  "put-not-secured",
+  "call-not-covered",
+  "uncovers-short-call",
+  "collateral-reserved",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
@@ -213,9 +247,9 @@ function clampBuy(
     return { ok: false, reason: "subscription-filter" };
   }
 
-  // Dollars for ONE unit of the order: a share, or a contract of 100 shares (#4643). Every bound
-  // below divides by this, so a quoted option is sized in contracts at its true cost — today no
-  // option intent reaches here (none carries a quote), but the day one does it must not be 100x.
+  // Dollars for ONE unit of the order. Every bound below divides by this. A share-shaped order
+  // naming a contract is refused before it gets here (`option-shape`), so this is a share price
+  // today; the multiplier stays so the unit rule has one spelling wherever a book is valued.
   const unitPrice = quote.ask * contractMultiplier(intent.symbol);
   const equity = computeEquity(portfolio, context.quotes);
   const existingValue = heldQuantity(portfolio, intent.symbol) * unitPrice;
@@ -300,6 +334,13 @@ export function applyGuardsWithVerdicts(
   const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   for (const intent of intents) {
+    // No option order clears these guards until the option clamp lands: an intent carrying `option`,
+    // or a share-shaped order naming a contract, is refused before anything sizes it. The second
+    // half is permanent — a contract only ever trades as a priced limit through `option`.
+    if (intent.option || isBareContractOrder(intent)) {
+      refused.push({ intent, reason: "option-shape" });
+      continue;
+    }
     // The ladder's BLOCK rung, ahead of everything else: no point sizing an order that is refused.
     //
     // A buy is the risk-INCREASING side here, and a sell can only ever be risk-reducing, because

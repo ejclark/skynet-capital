@@ -1,12 +1,33 @@
+import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import {
   DECISION_BATCH_KIND,
+  DECISION_BATCH_KIND_V2,
   MAX_DECISION_BATCH,
   parseDecisionBatch,
   parseDecisionRecord,
   parseDecisionsCursor,
+  recordWireKind,
 } from "../../src/autonomous/decision-wire.js";
+import type { OrderIntent } from "../../src/domain/types.js";
+import { GUARD_REFUSAL_REASONS } from "../../src/engine/guards.js";
+import { anOptionIntent } from "../support/builders.js";
 
 const rawIntent = { symbol: "NVDA", side: "buy", quantity: 10, type: "market", reason: "x" };
+
+/** The eleven refusal reasons an older dashboard has never heard of. */
+const OPTION_REFUSALS = [
+  "option-shape",
+  "options-level",
+  "option-unallocated",
+  "option-print-unknown",
+  "option-spans-print",
+  "option-quote-stale",
+  "option-limit-outside-quote",
+  "put-not-secured",
+  "call-not-covered",
+  "uncovers-short-call",
+  "collateral-reserved",
+] as const;
 
 const validRecord = () => ({
   at: 1_700_000_000_000,
@@ -94,9 +115,59 @@ describe("parseDecisionBatch", () => {
 
   it("rejects the wrong/missing kind — the version gate", () => {
     expect(
-      parseDecisionBatch({ kind: "decision.v2", personaId: "sauron", records: [validRecord()] }),
+      parseDecisionBatch({ kind: "decision.v3", personaId: "sauron", records: [validRecord()] }),
     ).toBeUndefined();
     expect(parseDecisionBatch({ personaId: "sauron", records: [validRecord()] })).toBeUndefined();
+  });
+
+  it("reads a v1 batch exactly as before", () => {
+    const batch = parseDecisionBatch({
+      kind: DECISION_BATCH_KIND,
+      personaId: "sauron",
+      records: [validRecord()],
+    });
+    expect(batch?.records).toEqual([
+      {
+        at: 1_700_000_000_000,
+        personaId: "sauron",
+        mode: "observe",
+        rawIntents: [rawIntent],
+        guardedIntents: [rawIntent],
+        outcomes: [{ intent: rawIntent, action: "observed" }],
+      },
+    ]);
+  });
+
+  it("reads a v2 batch: option orders, every refusal reason, and a limit's two other endings", () => {
+    const sold = anOptionIntent();
+    const submitted = { ...sold, clientOrderId: "sk1-sauron-CRWV-abc-0" };
+    const refused = rawIntent;
+    const record = {
+      ...validRecord(),
+      mode: "live",
+      rawIntents: [sold, sold, ...GUARD_REFUSAL_REASONS.map(() => refused)],
+      guardedIntents: [sold, sold],
+      outcomes: [
+        { intent: submitted, action: "placed", result: { intent: submitted, status: "unfilled" } },
+        { intent: submitted, action: "placed", result: { intent: submitted, status: "working" } },
+      ],
+      refusals: GUARD_REFUSAL_REASONS.map((reason) => ({ intent: refused, reason })),
+    };
+
+    const batch = parseDecisionBatch(
+      JSON.parse(
+        JSON.stringify({ kind: DECISION_BATCH_KIND_V2, personaId: "sauron", records: [record] }),
+      ),
+    );
+
+    expect(batch?.records[0]?.outcomes.map((o) => o.result?.status)).toEqual([
+      "unfilled",
+      "working",
+    ]);
+    expect(batch?.records[0]?.outcomes[0]?.intent).toEqual(submitted);
+    const reasons = batch?.records[0]?.refusals?.map((r) => r.reason);
+    expect(reasons).toEqual(GUARD_REFUSAL_REASONS);
+    expect(reasons).toEqual(expect.arrayContaining([...OPTION_REFUSALS]));
   });
 
   it("rejects a batch mixing another persona's record into this envelope", () => {
@@ -140,5 +211,110 @@ describe("parseDecisionsCursor", () => {
 
   it("drops a non-numeric entry rather than failing the whole cursor", () => {
     expect(parseDecisionsCursor({ sauron: 100, ghost: "not a number" })).toEqual({ sauron: 100 });
+  });
+});
+
+describe("recordWireKind — v2 only when an older dashboard would misread the record", () => {
+  const shares: OrderIntent = {
+    symbol: "NVDA",
+    side: "buy",
+    quantity: 10,
+    type: "market",
+    reason: "x",
+  };
+  const legacy = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
+    at: 1,
+    personaId: "sauron",
+    mode: "live",
+    rawIntents: [shares],
+    guardedIntents: [shares],
+    outcomes: [
+      {
+        intent: shares,
+        action: "placed",
+        result: { intent: shares, status: "filled", orderId: "o" },
+      },
+    ],
+    ...over,
+  });
+
+  it.each([
+    ["a filled share order", legacy()],
+    [
+      "a rejected share order",
+      legacy({
+        outcomes: [
+          { intent: shares, action: "rejected", result: { intent: shares, status: "rejected" } },
+        ],
+      }),
+    ],
+    ["an observed cycle", legacy({ outcomes: [{ intent: shares, action: "observed" }] })],
+    ["a quiet cycle", legacy({ rawIntents: [], guardedIntents: [], outcomes: [] })],
+    [
+      "a halted cycle",
+      legacy({ halted: "manual", rawIntents: [], guardedIntents: [], outcomes: [] }),
+    ],
+    [
+      "every legacy refusal",
+      legacy({
+        refusals: GUARD_REFUSAL_REASONS.filter(
+          (r) => !(OPTION_REFUSALS as readonly string[]).includes(r),
+        ).map((reason) => ({ intent: shares, reason })),
+      }),
+    ],
+    [
+      "a share-shaped order naming a contract",
+      legacy({ rawIntents: [{ ...shares, symbol: "NVDA261113C00185000" }] }),
+    ],
+  ])("keeps %s on decision.v1", (_name, record) => {
+    expect(recordWireKind(record)).toBe(DECISION_BATCH_KIND);
+  });
+
+  const sold = anOptionIntent();
+  it.each([
+    ["an option order", legacy({ rawIntents: [sold] })],
+    ["a limit order", legacy({ guardedIntents: [{ ...shares, type: "limit" }] })],
+    [
+      "a client order id",
+      legacy({ outcomes: [{ intent: { ...shares, clientOrderId: "c-1" }, action: "observed" }] }),
+    ],
+    [
+      "an unfilled limit",
+      legacy({
+        outcomes: [
+          { intent: shares, action: "placed", result: { intent: shares, status: "unfilled" } },
+        ],
+      }),
+    ],
+    [
+      "a working limit",
+      legacy({
+        outcomes: [
+          { intent: shares, action: "placed", result: { intent: shares, status: "working" } },
+        ],
+      }),
+    ],
+    [
+      "leg fills",
+      legacy({
+        outcomes: [
+          {
+            intent: shares,
+            action: "placed",
+            result: { intent: shares, status: "filled", legFills: [] },
+          },
+        ],
+      }),
+    ],
+    [
+      "an option refusal reason",
+      legacy({ refusals: [{ intent: shares, reason: "option-shape" }] }),
+    ],
+    [
+      "an option intent that was refused",
+      legacy({ refusals: [{ intent: sold, reason: "no-quote" }] }),
+    ],
+  ])("sends %s alone on decision.v2", (_name, record) => {
+    expect(recordWireKind(record)).toBe(DECISION_BATCH_KIND_V2);
   });
 });

@@ -3,6 +3,7 @@ import { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
+import { anOptionIntent } from "../support/builders.js";
 
 class FakeTradingTransport implements AlpacaTradingTransport {
   constructor(private readonly responses: Record<string, JsonResponse>) {}
@@ -128,6 +129,35 @@ describe("AlpacaBrokerAdapter", () => {
   });
 
   describe("submit", () => {
+    it("rejects an option order, and a share-shaped order naming a contract, without calling the broker", async () => {
+      let calls = 0;
+      const counting: AlpacaTradingTransport = {
+        get: () => {
+          calls++;
+          return Promise.resolve({ status: 404, body: null });
+        },
+        post: () => {
+          calls++;
+          return Promise.resolve({ status: 404, body: null });
+        },
+        delete: () => {
+          calls++;
+          return Promise.resolve({ status: 404, body: null });
+        },
+      };
+      const adapter = new AlpacaBrokerAdapter(new AlpacaTradingClient(counting));
+      const bare: OrderIntent = { ...buy, symbol: "EEM261120C00050000", quantity: 1 };
+
+      for (const order of [anOptionIntent(), bare]) {
+        expect(await adapter.submit(order)).toEqual({
+          intent: order,
+          status: "rejected",
+          reason: "option orders are not wired to the broker yet",
+        });
+      }
+      expect(calls).toBe(0);
+    });
+
     it("reports a filled result when the order is accepted, with no price when the fill poll never resolves", async () => {
       const adapter = adapterWith(
         {

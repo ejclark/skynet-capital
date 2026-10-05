@@ -37,6 +37,10 @@ export class InMemoryBroker implements BrokerPort {
   }
 
   submit(order: OrderIntent): Promise<OrderResult> {
+    // An option order names the UNDERLYING in `symbol`; filling it here would buy or sell shares.
+    if (order.option) {
+      return Promise.resolve(this.reject(order, "options are not simulated in-memory"));
+    }
     const quote = this.prices.get(order.symbol);
     if (!quote) {
       return Promise.resolve(this.reject(order, `no price for ${order.symbol}`));

@@ -1,7 +1,12 @@
 import { fetchJson } from "../http/fetch-json.js";
 import type { DecisionDb } from "./decision-db.js";
 import type { DecisionRecord } from "./decision-record.js";
-import { DECISION_BATCH_KIND, MAX_DECISION_BATCH } from "./decision-wire.js";
+import {
+  DECISION_BATCH_KIND,
+  DECISION_BATCH_KIND_V2,
+  MAX_DECISION_BATCH,
+  recordWireKind,
+} from "./decision-wire.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
@@ -18,8 +23,9 @@ import {
  * separate "known persona ids" plumbing needed. The `cursor` parameter (the app's own
  * `decisionsCursor`, riding the `/controls` poll this process already makes every 30s) is received
  * but deliberately NOT used to resume the ascending leg — see the bug note below for why. Never
- * throws — a dropped/rejected batch just resends whole on the next poll, since the ascending leg's
- * own local high-water mark only advances once a batch actually lands.
+ * throws. `sendOne` reports a dropped/rejected batch only as a warning, so the ascending leg's local
+ * high-water mark advances past it anyway: those rows come back through the preview leg (the newest
+ * few) or the next bots restart (everything) — which is why each batch is split by wire kind.
  *
  * SECOND, INDEPENDENT LEG (2026-09-23, found live in prod after issue #2287's own directory-
  * creation bug — #3576 — was fixed): the ascending leg above is strictly chronological and can
@@ -85,7 +91,11 @@ export function resolveDecisionReplication(
   if (!url) return NOOP_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}/decisions`;
 
-  const sendOne = async (personaId: string, records: readonly DecisionRecord[]): Promise<void> => {
+  const sendOne = async (
+    personaId: string,
+    kind: string,
+    records: readonly DecisionRecord[],
+  ): Promise<void> => {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
@@ -94,7 +104,7 @@ export function resolveDecisionReplication(
           "POST",
           endpoint,
           { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
-          { kind: DECISION_BATCH_KIND, personaId, records },
+          { kind, personaId, records },
           controller.signal,
         );
         if (response.status < 200 || response.status >= 300) {
@@ -114,6 +124,15 @@ export function resolveDecisionReplication(
     }
   };
 
+  // An older dashboard refuses decision.v2 outright; splitting by record keeps every share-only
+  // record flowing while it does (the ascending cursor below advances even on a refused batch).
+  const sendAll = async (personaId: string, records: readonly DecisionRecord[]): Promise<void> => {
+    const v1 = records.filter((r) => recordWireKind(r) === DECISION_BATCH_KIND);
+    const v2 = records.filter((r) => recordWireKind(r) === DECISION_BATCH_KIND_V2);
+    if (v1.length > 0) await sendOne(personaId, DECISION_BATCH_KIND, v1);
+    if (v2.length > 0) await sendOne(personaId, DECISION_BATCH_KIND_V2, v2);
+  };
+
   // The ascending leg's own resume point per persona, tracked ENTIRELY LOCALLY — see this
   // module's own doc for why blending in the app's echoed `decisionsCursor` (the `cursor`
   // parameter below, now otherwise unused) silently stalls this leg forever the moment the
@@ -130,14 +149,14 @@ export function resolveDecisionReplication(
         const after = ascendingCursor[personaId] ?? 0;
         const rows = decisionDb.listSince(personaId, after, MAX_DECISION_BATCH);
         if (rows.length > 0) {
-          await sendOne(personaId, rows);
+          await sendAll(personaId, rows);
           ascendingCursor[personaId] = Math.max(after, ...rows.map((r) => r.at));
         }
 
         // The preview leg — see this module's own doc for why it exists and why it's safe to run
         // unconditionally alongside the ascending leg above.
         const preview = decisionDb.listByPersona(personaId, { limit: LIVE_PREVIEW_BATCH });
-        if (preview.length > 0) await sendOne(personaId, preview);
+        if (preview.length > 0) await sendAll(personaId, preview);
       }
     },
   };

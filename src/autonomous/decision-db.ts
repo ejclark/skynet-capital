@@ -3,7 +3,8 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OrderIntent, PlaybookVerdict, Side } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
-import { decisionFrom, intentRowToStored, paramsForRawIntent } from "./decision-db-rows.js";
+import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
+import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decision-db-rows.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import type { DecisionRecord } from "./decision-record.js";
 import { type FilledIntentRow, pendingRetrospectives } from "./decision-retrospectives.js";
@@ -29,9 +30,11 @@ export type { DecisionFunnel } from "./decision-funnel.js";
  * Row shape (see `decision-db-rows.ts`): one `intents` row PER RAW INTENT, because that is the
  * count that matters for "why didn't it trade" — a raw intent either carries a `guard_reason`
  * (refused, never sized) or an `approved_quantity`/`action` (survived `applyGuardsWithVerdicts`).
- * `record()` is called with the SAME `DecisionRecord` object `autonomous-trader.ts`/`live-cycle.ts`
- * already build, before anything serializes, so a refusal matches its raw intent by reference; an
- * approved one falls back to the house's own symbol+side match (see `decision-db-rows.ts`).
+ * On the bots side `record()` gets the SAME `DecisionRecord` object `autonomous-trader.ts`/
+ * `live-cycle.ts` built, so a refusal matches its raw intent by reference; on the app side the
+ * record crossed the wire, so it matches structurally. An approved one matches on symbol + side +
+ * instrument (see `decision-db-rows.ts`'s `fateOf`). An option order's legs and limit live in the
+ * side tables `decision-db-options.ts` owns.
  */
 
 export interface DecisionDb {
@@ -196,6 +199,8 @@ export function openDecisionDb(path: string): DecisionDb {
     -- Idempotency is instead enforced in code (see recordOne below) against this index.
     CREATE INDEX IF NOT EXISTS retrospectives_entry_at ON retrospectives(entry_intent_id, at);
   `);
+  db.exec(OPTION_TABLES_SQL);
+  const optionTables = openOptionTables(db);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -238,9 +243,10 @@ export function openDecisionDb(path: string): DecisionDb {
     WHERE intents.order_id = ?
     LIMIT 1
   `);
-  // Every filled intent this persona has ever recorded for one symbol, oldest first — the
+  // Every filled SHARE intent this persona has ever recorded for one symbol, oldest first — the
   // retrospective writer's own read of its FIFO tape. `intents_symbol` + `decisions_persona_at`
-  // keep this bounded to one symbol's history, never a whole-table scan.
+  // keep this bounded to one symbol's history, never a whole-table scan. An option fill sits on
+  // the same underlying symbol but is never a share lot, so it is kept out of this tape.
   const selectFilledIntentsForSymbol = db.prepare(`
     SELECT intents.id AS intent_id, intents.order_id AS order_id, intents.side AS side,
            intents.filled_quantity AS filled_quantity, intents.filled_price AS filled_price,
@@ -248,6 +254,7 @@ export function openDecisionDb(path: string): DecisionDb {
            decisions.at AS at
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE decisions.persona_id = ? AND intents.symbol = ? AND intents.result_status = 'filled'
+      AND NOT EXISTS (SELECT 1 FROM intent_options o WHERE o.intent_id = intents.id)
     ORDER BY decisions.at ASC, intents.id ASC
   `);
   const selectRetrospectiveKeys = db.prepare(
@@ -342,7 +349,10 @@ export function openDecisionDb(path: string): DecisionDb {
   }
 
   function intentRowsFor(decisionId: number) {
-    return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map(intentRowToStored);
+    const options = optionTables.forDecision(decisionId);
+    return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map((row) =>
+      intentRowToStored(row, options.get(row.id as number)),
+    );
   }
 
   function verdictsFor(decisionId: number): PlaybookVerdict[] {
@@ -353,6 +363,17 @@ export function openDecisionDb(path: string): DecisionDb {
       mode: r.mode as PlaybookVerdict["mode"],
       state: r.state as PlaybookVerdict["state"],
     }));
+  }
+
+  /** One `intents` row per raw intent, each matched to its fate first (`fateOf`), plus an option
+   *  order's side-table rows. */
+  function insertIntents(decisionId: number, entry: DecisionRecord): void {
+    const used = { outcomes: new Set<number>(), refusals: new Set<number>() };
+    for (const raw of entry.rawIntents) {
+      const fate = fateOf(raw, entry, used);
+      const { lastInsertRowid } = insertIntent.run(decisionId, ...intentParams(raw, entry, fate));
+      if (raw.option) optionTables.write(Number(lastInsertRowid), raw, fate.outcome);
+    }
   }
 
   function recordOne(entry: DecisionRecord): void {
@@ -372,10 +393,7 @@ export function openDecisionDb(path: string): DecisionDb {
     }
     if (hasIntents.get(decisionId)) return;
 
-    const usedOutcomes = new Set<number>();
-    for (const raw of entry.rawIntents) {
-      insertIntent.run(decisionId, ...paramsForRawIntent(raw, entry, usedOutcomes));
-    }
+    insertIntents(decisionId, entry);
 
     if (entry.context) {
       for (const [symbol, quote] of Object.entries(entry.context.quotes)) {
@@ -399,7 +417,9 @@ export function openDecisionDb(path: string): DecisionDb {
    *  convenience, not the audit trail — split out of `recordOne` to keep its own complexity down. */
   function triggerRetrospectives(entry: DecisionRecord): void {
     const filledSymbols = new Set(
-      entry.outcomes.filter((o) => o.result?.status === "filled").map((o) => o.intent.symbol),
+      entry.outcomes
+        .filter((o) => o.result?.status === "filled" && !o.intent.option)
+        .map((o) => o.intent.symbol),
     );
     for (const symbol of filledSymbols) {
       try {

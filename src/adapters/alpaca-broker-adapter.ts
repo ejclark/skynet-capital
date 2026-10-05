@@ -1,4 +1,5 @@
 import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import { isBareContractOrder } from "../domain/option-order.js";
 import type { OrderIntent, OrderResult, Portfolio, Side } from "../domain/types.js";
 import type { BrokerPort } from "../ports/broker.js";
 
@@ -120,6 +121,15 @@ export class AlpacaBrokerAdapter implements BrokerPort {
   }
 
   async submit(order: OrderIntent): Promise<OrderResult> {
+    // Option orders are not wired to the broker yet — refused here so nothing can ever reach the
+    // share path below as a market order on the underlying or on a contract.
+    if (order.option || isBareContractOrder(order)) {
+      return {
+        intent: order,
+        status: "rejected",
+        reason: "option orders are not wired to the broker yet",
+      };
+    }
     try {
       const placed = await this.client.placeOrder({
         symbol: order.symbol,

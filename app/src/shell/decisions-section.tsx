@@ -56,13 +56,13 @@ export function OutcomeLine({
     <li className="cycle-outcome">
       <span className={`cycle-action cycle-action-${outcome.action}`}>{outcome.action}</span>
       <span className="cycle-intent num">
-        {outcome.side.toUpperCase()} {outcome.quantity} {outcome.symbol}
+        {outcome.contract ?? `${outcome.side.toUpperCase()} ${outcome.quantity} ${outcome.symbol}`}
       </span>
       {showPlaybook ? <PlaybookChip outcome={outcome} /> : null}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       {outcome.resultStatus && !outcome.fill ? (
-        <span className="cycle-fill">{outcome.resultStatus}</span>
+        <span className="cycle-fill">{outcome.resultLabel ?? outcome.resultStatus}</span>
       ) : null}
       <span className="cycle-reason">“{outcome.reason}”</span>
       {outcome.expectation ? (
@@ -93,8 +93,9 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
     <li className="cycle-outcome cycle-outcome-refused">
       <span className="cycle-action cycle-action-refused">refused</span>
       <span className="cycle-intent num">
-        {intent.side.toUpperCase()} {intent.quantity} {intent.symbol}
+        {intent.contract ?? `${intent.side.toUpperCase()} ${intent.quantity} ${intent.symbol}`}
       </span>
+      {intent.guardReason ? <span className="cycle-guard">{intent.guardReason}</span> : null}
       {intent.strategy ? <span className="chip chip-bot">{intent.strategy}</span> : null}
       <span className="cycle-reason">“{intent.reason}”</span>
       {intent.expectation ? (

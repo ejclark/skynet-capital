@@ -430,8 +430,8 @@
           {
             "id": "bridge",
             "label": "Bots bridge listener",
-            "path": "src/server/insights-listener.ts, src/scripts/dashboard-insights-bridge.ts, src/server/bot-credentials-gate.ts, src/server/bot-controls-store.ts, src/autonomous/bot-controls.ts, src/autonomous/decision-wire.ts, src/autonomous/controls-poll-wire.ts, src/autonomous/subscriptions-wire.ts, src/autonomous/insight-record.ts",
-            "responsibility": "Second node:http server on 8788 (6PN only): GET /controls returns Mission Control state + decisionsCursor + Playbook Store subscriptions and records the poll as liveness; GET /bot-credentials hands a bot its own rotated key; POST /insights and POST /decisions land in the app-side stores."
+            "path": "src/server/insights-listener.ts, src/scripts/dashboard-insights-bridge.ts, src/server/bot-credentials-gate.ts, src/server/bot-controls-store.ts, src/autonomous/bot-controls.ts, src/autonomous/decision-wire.ts, src/autonomous/decision-wire-parts.ts, src/autonomous/decision-wire-options.ts, src/autonomous/controls-poll-wire.ts, src/autonomous/subscriptions-wire.ts, src/autonomous/insight-record.ts",
+            "responsibility": "Second node:http server on 8788 (6PN only): GET /controls returns Mission Control state + decisionsCursor + Playbook Store subscriptions and records the poll as liveness; GET /bot-credentials hands a bot its own rotated key; POST /insights and POST /decisions (decision.v1 + decision.v2, kinded per record — v2 carries option orders) land in the app-side stores."
           },
           {
             "id": "stores",
@@ -495,8 +495,8 @@
           {
             "id": "clients",
             "label": "Bridge clients",
-            "path": "src/autonomous/bot-controls-client.ts, bot-credentials-client.ts, bot-credential-fingerprint.ts, insight-bridge-client.ts, decision-replication-client.ts, controls-poll-wire.ts, decision-wire.ts, subscriptions-wire.ts, insight-record.ts",
-            "responsibility": "Fail-open pollers against SKYNET_INSIGHTS_BRIDGE_URL: controls every 30s (carrying the app's decisionsCursor and subscriptions back), credential rotation, insight relay, and the two-leg decision replication (ascending + newest-rows preview)."
+            "path": "src/autonomous/bot-controls-client.ts, bot-credentials-client.ts, bot-credential-fingerprint.ts, insight-bridge-client.ts, decision-replication-client.ts, controls-poll-wire.ts, decision-wire.ts, decision-wire-parts.ts, decision-wire-options.ts, subscriptions-wire.ts, insight-record.ts",
+            "responsibility": "Fail-open pollers against SKYNET_INSIGHTS_BRIDGE_URL: controls every 30s (carrying the app's decisionsCursor and subscriptions back), credential rotation, insight relay, and the two-leg decision replication (ascending + newest-rows preview), each batch split into decision.v1 + decision.v2 by per-record kind so a dashboard that predates v2 still receives every share-only record."
           },
           {
             "id": "state",
@@ -507,8 +507,8 @@
           {
             "id": "decisions",
             "label": "Decision db and audit",
-            "path": "src/autonomous/decision-db.ts, decision-db-rows.ts, decision-db-migration.ts, decision-retrospectives.ts, jsonl-audit-store.ts, src/storage/jsonl-store.ts",
-            "responsibility": "Append-only decision journal (one intents row per raw intent, retrospectives, funnel) in a sibling SQLite file; JSONL audit under SKYNET_AUDIT_DIR as the backstop and migration source."
+            "path": "src/autonomous/decision-db.ts, decision-db-rows.ts, decision-db-options.ts, decision-db-migration.ts, decision-retrospectives.ts, jsonl-audit-store.ts, src/storage/jsonl-store.ts",
+            "responsibility": "Append-only decision journal (one intents row per raw intent, an option order's legs and limit in the intent_options/intent_option_legs side tables, retrospectives over share fills only, funnel) in a sibling SQLite file; JSONL audit under SKYNET_AUDIT_DIR as the backstop and migration source."
           },
           {
             "id": "health",

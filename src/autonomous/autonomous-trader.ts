@@ -139,7 +139,11 @@ export class AutonomousTrader {
       this.config.onCooldownSet?.(intent.symbol, now);
       this.config.onResult?.(result);
       results.push(result);
-      outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
+      outcomes.push({
+        intent,
+        action: result.status === "rejected" ? "rejected" : "placed",
+        result,
+      });
     }
 
     this.config.onDecision?.({

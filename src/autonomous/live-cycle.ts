@@ -260,7 +260,11 @@ export class LiveCycleRunner {
       const result = await scout.broker.submit(intent);
       this.deps.safety.recordOrder();
       this.deps.onResult?.(result);
-      outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
+      outcomes.push({
+        intent,
+        action: result.status === "rejected" ? "rejected" : "placed",
+        result,
+      });
     }
     this.deps.onDecision?.({
       at: now(),
