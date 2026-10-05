@@ -78,8 +78,9 @@ function chainQuote(
   };
 }
 
-/** A named contract's snapshot as a quote — strike, type and expiry from its OCC symbol. */
-function snapshotQuote(
+/** A named contract's snapshot as a quote — strike, type and expiry from its OCC symbol. Shared
+ *  with the order flow's fresh band check, so both read a snapshot the same way. */
+export function snapshotQuote(
   occSymbol: string,
   snapshot: ContractSnapshot,
   fetchedAt: string,

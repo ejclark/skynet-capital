@@ -214,9 +214,12 @@ export class AlpacaTradingClient {
   /** One order by id, with whatever fill data Alpaca has for it right now — the read
    *  `AlpacaBrokerAdapter.submit()`'s post-fill poll uses to learn the real `filled_avg_price`/
    *  `filled_qty` a market order's initial "accepted" response doesn't yet carry. An unknown id
-   *  throws `AlpacaApiError`, same as any other non-2xx response. */
-  async getOrder(id: string): Promise<AlpacaOrder> {
-    return ensureOk<AlpacaOrder>(await this.transport.get(`/v2/orders/${id}`));
+   *  throws `AlpacaApiError`, same as any other non-2xx response. `nested` rolls an `mleg`
+   *  order's legs (and their per-leg fills) up under it; off by default, so the path every
+   *  existing caller reads is unchanged. */
+  async getOrder(id: string, params: { nested?: boolean } = {}): Promise<AlpacaOrder> {
+    const query = params.nested ? "?nested=true" : "";
+    return ensureOk<AlpacaOrder>(await this.transport.get(`/v2/orders/${id}${query}`));
   }
 
   /** The order a submitter stamped with `clientOrderId`, legs included — how a bot finds out
