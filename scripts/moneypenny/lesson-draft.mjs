@@ -23,8 +23,9 @@
 //   would mark its runs learned with nothing learned.
 // - Re-cover a sha the ledger already names. A fix PR that banked its own entry drafts nothing.
 // - Turn `main` red because a draft could not be written. A failed PR path falls back to the same
-//   entry as a comment on the capsule, so a draft always appears; only if that comment also fails
-//   does the intent throw (the router then reports it — a write we could not make is a fault).
+//   entry as a comment on the capsule, and a failed read leaves a comment saying so — something
+//   always appears on the capsule; only if that comment also fails does the intent throw (the
+//   router then reports it — a write we could not make is a fault).
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,7 +34,10 @@ import { LABELS } from "./labels.mjs";
 
 /**
  * The two comments repair.mjs posts on a capsule that each name ONE failing run of this signature:
- * a recurrence and a stale echo. Only those count — a repair session's own "Root cause" comment
+ * a recurrence and a stale echo. A stale echo normally lands AFTER the close, so the draft built at
+ * close cannot see it — that run stays in the digest's learning count until a `/retro` folds it
+ * into the entry's `COVERS:`; it is matched here for a capsule closed, reopened and closed again.
+ * Only those two count — a repair session's own "Root cause" comment
  * links other runs as evidence (#4658's named a cancelled run from a different fault), and covering
  * those shas would mark an unrelated incident learned. The author check matters because this repo
  * is public: anyone can comment a lookalike.
@@ -273,7 +277,14 @@ function gather(number) {
   const comments = apiAll(`repos/{owner}/{repo}/issues/${number}/comments?per_page=100`);
   const timeline = apiAll(`repos/{owner}/{repo}/issues/${number}/timeline?per_page=100`);
   const runs = runIdsFrom(issue.body, comments).map((id) => {
-    const r = api(`repos/{owner}/{repo}/actions/runs/${id}`);
+    // A run deleted since (retention, a manual purge) has no sha left to cover; skip it, never
+    // fail the whole draft over one link.
+    let r = {};
+    try {
+      r = api(`repos/{owner}/{repo}/actions/runs/${id}`);
+    } catch {
+      console.log(`::warning::lesson draft: run ${id} is unreadable — left out of COVERS`);
+    }
     return { id, sha: r.head_sha ?? "", createdAt: r.created_at ?? "", url: r.html_url };
   });
   const prNumber = fixingPrNumber(timeline, issue.closed_at);
@@ -290,6 +301,13 @@ function gather(number) {
     };
   }
   const ledgerFile = api(`repos/{owner}/{repo}/contents/${LEDGER}?ref=main`);
+  // Past 1 MB the contents API returns the file with NO content (`encoding: "none"`). Writing the
+  // entry over that would replace the whole ledger with one entry — refuse instead, loudly.
+  if (ledgerFile?.encoding !== "base64" || !ledgerFile.content) {
+    throw new Error(
+      `${LEDGER} came back without its content (encoding ${ledgerFile?.encoding ?? "?"}) — too large for the contents API?`,
+    );
+  }
   return {
     capsule: {
       number,
@@ -299,7 +317,7 @@ function gather(number) {
     },
     runs: runs.filter((r) => r.sha).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     fix,
-    ledger: Buffer.from(ledgerFile.content ?? "", "base64").toString("utf8"),
+    ledger: Buffer.from(ledgerFile.content, "base64").toString("utf8"),
     ledgerSha: ledgerFile.sha,
   };
 }
@@ -343,6 +361,13 @@ function openDraftPr({ capsule, fix, ledger, ledgerSha, entry, covered }) {
   return pr.number;
 }
 
+/** The useful first line of a `gh` failure, bounded for a comment. */
+const firstLine = (err) =>
+  String(err?.stderr || err?.message || err)
+    .trim()
+    .split("\n")[0]
+    .slice(0, 200);
+
 const comment = (number, body) => sh("gh", ["issue", "comment", String(number), "--body", body]);
 
 /**
@@ -351,7 +376,18 @@ const comment = (number, body) => sh("gh", ["issue", "comment", String(number), 
  */
 export function draftLesson(intent) {
   const n = intent.issueNumber;
-  const g = gather(n);
+  let g;
+  try {
+    g = gather(n);
+  } catch (err) {
+    const why = firstLine(err);
+    comment(
+      n,
+      `**No ledger draft for this capsule** — reading it failed (${why}). Draft it by hand with \`node scripts/moneypenny/lesson-draft.mjs --preview ${n}\` and land the entry through \`/retro\`.\n\n— Moneypenny`,
+    );
+    return `📝 #${n} closed — draft read failed (${why}), noted on the capsule`;
+  }
+  if (!g.runs.length) return `· #${n} closed — no readable failing run to cover`;
   const draft = draftEntry(g);
   if (!draft) return `· #${n} closed — every failing run is already in the ledger`;
   if (!g.fix) {
@@ -372,9 +408,7 @@ export function draftLesson(intent) {
     );
     return `📝 #${n} closed — ledger draft opened as #${pr}`;
   } catch (err) {
-    const why = String(err?.stderr || err?.message || err)
-      .split("\n")[0]
-      .slice(0, 200);
+    const why = firstLine(err);
     console.log(
       `::warning::lesson draft PR for #${n} failed (${why}) — commenting the entry instead`,
     );
