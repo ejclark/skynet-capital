@@ -27,10 +27,16 @@ export interface StreamedQuote extends Quote {
   readonly asOf: string;
 }
 
-/** Open the channel for one symbol. Returns the disposer the caller owns (a React effect). */
-export function connectQuoteStream(queryClient: QueryClient, symbol: string): () => void {
+/** Open the channel for one symbol or a set of them — one connection either way, because a browser
+ *  allows six `EventSource`s per origin and a watchlist row each would starve the seventh name
+ *  (#4332). Returns the disposer the caller owns (a React effect). */
+export function connectQuoteStream(
+  queryClient: QueryClient,
+  symbols: string | readonly string[],
+): () => void {
   if (typeof EventSource === "undefined") return () => undefined;
-  const source = new EventSource(`/api/trade/quote-stream?symbol=${encodeURIComponent(symbol)}`, {
+  const asked = (typeof symbols === "string" ? [symbols] : symbols).join(",");
+  const source = new EventSource(`/api/trade/quote-stream?symbol=${encodeURIComponent(asked)}`, {
     withCredentials: true,
   });
   source.addEventListener("quote", (raw) => {
@@ -50,4 +56,19 @@ export function useQuoteStream(symbol: string, enabled = true): void {
     if (symbol === "" || !enabled) return undefined;
     return connectQuoteStream(queryClient, symbol);
   }, [queryClient, symbol, enabled]);
+}
+
+/**
+ * Mount ONE channel for a whole set of symbols — the watchlist's rows (#4332). Keyed on the joined
+ * set rather than the array, so a re-render that hands back an equal list does not tear the socket
+ * down and build it again (a new array literal every render would otherwise reconnect on every
+ * paint, and each reconnect costs the hub a fresh REST snapshot per symbol).
+ */
+export function useQuoteStreamSet(symbols: readonly string[]): void {
+  const queryClient = useQueryClient();
+  const key = symbols.join(",");
+  useEffect(() => {
+    if (key === "") return undefined;
+    return connectQuoteStream(queryClient, key.split(","));
+  }, [queryClient, key]);
 }
