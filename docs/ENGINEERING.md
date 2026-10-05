@@ -299,6 +299,36 @@ committed `package.json`, so the repo's `package.json` version will lag; that is
 To restore the committed bump, the release identity needs a branch-protection bypass on `main` (an
 Eric-only governance change) — then `@semantic-release/git` can be added back.
 
+### When `main` goes red
+
+`main` is red when a `Pipeline` run on a push to it fails: `integration tests` (two PRs, each green
+alone, that regress together — `pipeline.yml` runs the suite again after every merge for exactly
+this) or `release · deploy` / `release · deploy bots` (a failed smoke test rolls back to the
+previous image on its own). Both `verify` and
+`integration tests` are required checks, so a red on a PR blocks its merge; a red on `main` blocks
+nothing and reddens every branch cut from it. On 2026-09-30 one stale screenshot baseline on `main`
+turned 19 of the next 34 branches' first `integration tests` run red in six hours; outside that
+window it was 1 in 119 (#4211).
+
+Two things happen without anyone: the repair lane (`moneypenny-repair.yml`) files one
+`[ci] Pipeline — <job>` issue labelled `ci-failure` and starts a session on it, and
+`npm run incident:scan` counts the run until `docs/LESSONS.md` names the fixing sha. What a session
+does:
+
+1. **Check `main` before debugging your own red.** `gh run list --workflow pipeline.yml --branch
+   main --event push -L 3` — if `main` fails the same spec, your branch inherited it; don't fix it
+   there.
+2. **Look for the `ci-failure` issue before diagnosing.** If one is open, comment on it before you
+   start, or leave it to the repair session — two sessions once built the same fix in parallel
+   (`docs/LESSONS.md`, the #4359/#4360 entry).
+3. **Fix `main` with one PR.** Revert the culprit when the cause isn't obvious in minutes;
+   re-baseline a screenshot only after looking at the diff image and seeing the intended change.
+   Never skip the spec or re-run until green — since 2026-09-30, no commit has gone from red to
+   green on a re-run, so a red is a real red.
+4. **Unstick the branches.** Once `main` is green, merge `origin/main` into each branch that
+   inherited the red (a merge commit, never a rebase or force-push) so its checks run again.
+5. **Bank it.** `/retro`, ending in a `docs/LESSONS.md` entry that names the fixing sha.
+
 ## House gotchas (recurring traps, moved from CLAUDE.md 2026-08-28)
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever

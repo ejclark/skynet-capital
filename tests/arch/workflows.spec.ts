@@ -394,6 +394,29 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
   });
 });
 
+// #4211 (slice 6 of #4056): `integration tests` is a required check, and GitHub counts a SKIPPED
+// required check as a pass. A draft skips both suites, so the promotion to ready must run them
+// again — or the stale `skipped` is the last word and the PR merges untested (PR #322's shape).
+describe("pipeline — a draft promoted to ready runs both required suites", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const jobIf = (id: string, next: string) => {
+    const job = pipeline.slice(pipeline.indexOf(`\n  ${id}:`), pipeline.indexOf(`\n  ${next}:`));
+    return job.slice(job.indexOf("if:"), job.indexOf("runs-on:"));
+  };
+
+  it("triggers on ready_for_review", () => {
+    const typeList = pipeline.match(/^\s*types:\s*\[([^\]]+)\]/m)?.[1] ?? "";
+    expect(typeList.split(",").map((t) => t.trim())).toContain("ready_for_review");
+  });
+
+  it("gates verify and integration tests on draft state, never on which action fired", () => {
+    for (const condition of [jobIf("verify", "e2e"), jobIf("e2e", "arm-auto-merge")]) {
+      expect(condition).toContain("github.event.pull_request.draft == false");
+      expect(condition).not.toContain("github.event.action");
+    }
+  });
+});
+
 // Rule 8 (#2292): a self re-dispatch signed by one bot, landing on a claude-code-action job that
 // allow-lists another. Event research died in ~3s per leg for ~41h on exactly this drift.
 describe("workflow lint — a self-dispatch actor a dispatch-reachable job does not allow", () => {
