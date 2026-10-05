@@ -184,6 +184,15 @@ export function HeartbeatSection({
         <section className="hb-card">
           <h2 className="hb-h">Which playbooks this bot runs</h2>
           <RollCallList lines={heartbeat.rollCall} />
+          {/* Observe here, change there (#4642: configure on R&D → Playbooks, no new route). A
+              plain link with the /app base, like the shell's other cross-section links, so this
+              section needs no router to render. Owner-only, inside the same showPlaybooks gate. */}
+          <a
+            className="hb-link"
+            href={`/app/research?section=playbooks&account=${encodeURIComponent(deskId)}`}
+          >
+            Change this bot's playbooks →
+          </a>
         </section>
       ) : null}
       <section className="hb-card">

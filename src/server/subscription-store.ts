@@ -7,6 +7,16 @@ import {
 } from "../subscriptions/subscription-state.js";
 
 /**
+ * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions.v1
+ * wire carries except `enabled`. Absent capital = uncapped; absent or empty symbols = the whole
+ * basket; absent compounding = off. The same meanings `PlaybookSubscription` documents.
+ */
+export type SubscriptionTuning = Pick<
+  PlaybookSubscription,
+  "mode" | "capitalAllocated" | "symbols" | "compoundAllocation"
+>;
+
+/**
  * The durable state behind an account's Playbook Store — which playbooks an
  * account subscribed to and how much capital it reserved per subscription.
  *
@@ -91,6 +101,49 @@ export class SubscriptionStore {
       [accountId]: existing.map((s) =>
         s.playbookId === playbookId ? { ...s, enabled, updatedAt: at.toISOString() } : s,
       ),
+    };
+    this.file.write(nextState);
+    return nextState;
+  }
+
+  /**
+   * Re-tune an existing subscription without changing whether it runs (#4649). Mode, capital,
+   * symbols and compounding are replaced. `enabled` and `createdAt` are kept, so editing a paused
+   * subscription never resumes it. A resubscribe would, because `subscribe` writes whatever
+   * `enabled` it is handed. Returns undefined and writes nothing when the account has no such
+   * subscription: configure never creates one.
+   */
+  configure(
+    accountId: string,
+    playbookId: string,
+    tuning: SubscriptionTuning,
+    at = new Date(),
+  ): SubscriptionsState | undefined {
+    const state = this.load();
+    const existing = state[accountId] ?? [];
+    const prior = existing.find((s) => s.playbookId === playbookId);
+    if (!prior) return undefined;
+    // Drop the four tunables, keep everything else the record carries — including any field a
+    // later wire version adds, which a rebuilt literal would silently lose.
+    const {
+      capitalAllocated: _capital,
+      symbols: _symbols,
+      compoundAllocation: _compound,
+      ...kept
+    } = prior;
+    const next: PlaybookSubscription = {
+      ...kept,
+      mode: tuning.mode,
+      ...(tuning.capitalAllocated !== undefined
+        ? { capitalAllocated: tuning.capitalAllocated }
+        : {}),
+      ...(tuning.symbols && tuning.symbols.length > 0 ? { symbols: tuning.symbols } : {}),
+      ...(tuning.compoundAllocation ? { compoundAllocation: true } : {}),
+      updatedAt: at.toISOString(),
+    };
+    const nextState: SubscriptionsState = {
+      ...state,
+      [accountId]: existing.map((s) => (s === prior ? next : s)),
     };
     this.file.write(nextState);
     return nextState;

@@ -10,6 +10,7 @@ import {
   type PlaybookStoreEntry,
   playbookStoreCatalog,
 } from "../discovery/playbook-store.js";
+import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
@@ -45,6 +46,13 @@ export interface PlaybookStoreView {
    * Never gates unsubscribe, pause, or resume — an exit is not a lesson.
    */
   readonly delegation: DelegationGateView;
+  /**
+   * Only bot accounts subscribe for now (#4610): locked when the selected account is a human
+   * account the viewer owns. Always present, like `delegation`, so the client never invents the
+   * copy. Checked before the delegation fog, the server's own order. Never gates unsubscribe,
+   * pause or resume.
+   */
+  readonly botsOnly: BotsOnlyGateView;
 }
 
 /** "23% whipsaw (12 round trips)" once measured; "not yet measured (2/5 round trips)" below the
@@ -64,6 +72,8 @@ export function playbookStoreView(
    *  to none: a caller not yet passing them gets the bare catalog metrics, exactly as before this
    *  parameter existed. */
   roundTrips: readonly RoundTrip[] = [],
+  /** The selected account is a human account the viewer owns (#4610). Defaults to open. */
+  humanAccount = false,
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const whipsawByPlaybookId = new Map(
@@ -98,5 +108,6 @@ export function playbookStoreView(
     capitalUnderManagement,
     canManage: subscriptions !== undefined,
     delegation: delegationGateView(delegationLocked),
+    botsOnly: botsOnlyGateView(humanAccount),
   };
 }

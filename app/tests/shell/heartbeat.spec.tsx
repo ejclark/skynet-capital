@@ -200,5 +200,22 @@ describe("RollCallList — an On line says what it is waiting for", () => {
     await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
     expect(screen.queryByText("Which playbooks this bot runs")).not.toBeInTheDocument();
     expect(screen.queryByText(/^Next window: /)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Change this bot's playbooks/ })).toBeNull();
+  });
+
+  // #4649: observe here, change in the Store — one link, owner-only, landing on this bot.
+  it("links the owner to this bot's own playbooks in the Store", async () => {
+    next = staleDesk;
+    render(withClient(<HeartbeatSection deskId="sauron" />));
+    expect(
+      await screen.findByRole("link", { name: "Change this bot's playbooks →" }),
+    ).toHaveAttribute("href", "/app/research?section=playbooks&account=sauron");
+  });
+
+  it("offers no link when the viewer may not see the playbooks, even if a roll call came", async () => {
+    next = staleDesk;
+    render(withClient(<HeartbeatSection deskId="sauron" showPlaybooks={false} />));
+    await waitFor(() => expect(screen.getByText("Stale")).toBeInTheDocument());
+    expect(screen.queryByRole("link", { name: /Change this bot's playbooks/ })).toBeNull();
   });
 });

@@ -1,19 +1,21 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { playbookStoreCatalog } from "../discovery/playbook-store.js";
+import { BOTS_ONLY_NOTE } from "../domain/playbook-bots-only.js";
 import { DELEGATION_LOCKED_NOTE, delegationLocked } from "../domain/playbook-delegation.js";
-import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { readJsonPost, requireGet, sendJson } from "./page-shell.js";
 import {
-  boundedString,
-  parseJsonRecord,
-  readJsonPost,
-  requireGet,
-  sendJson,
-} from "./page-shell.js";
+  parseConfigureBody,
+  parsePlaybookRefBody,
+  parseSetEnabledBody,
+  parseSubscribeBody,
+} from "./subscriptions-api-bodies.js";
 
 /**
  * THE PLAYBOOK STORE API (issue #885) — an account's own subscriptions, never another's.
@@ -22,102 +24,28 @@ import {
  *                                                subscriptions IF the session owns it — otherwise
  *                                                the bare catalog (no cross-account visibility).
  *   POST /api/playbook-store/subscribe        → SubscriptionStore.subscribe (create or replace).
+ *   POST /api/playbook-store/configure        → SubscriptionStore.configure — re-tune an existing
+ *                                                subscription, never touching enabled (#4649).
  *   POST /api/playbook-store/unsubscribe      → SubscriptionStore.unsubscribe.
  *   POST /api/playbook-store/set-enabled      → SubscriptionStore.setEnabled.
  *
  * Same posture as settings-api-routes.ts: bodies must be application/json, strict shape gate
- * (400, never coerce), size-capped, identity from the session and nowhere else — ownership is
- * `resolveOwnedIds(session, config).includes(id)`, exactly like the bot-control write.
+ * (400, never coerce — `subscriptions-api-bodies.ts`), size-capped, identity from the session and
+ * nowhere else — ownership is `resolveOwnedIds(session, config).includes(id)`, exactly like the
+ * bot-control write.
  *
- * THE DELEGATION FOG (#1707): subscribe — and only subscribe — is held until the VIEWER'S own
- * ladder has earned rung 102 (`domain/playbook-delegation.ts`). It is the member's ladder, never
- * the subscribed account's: capital is delegated by a person, and a bot account has no ladder to
- * consult. The autonomous runner writes through `SubscriptionStore` directly rather than over
- * HTTP, so nothing here can gate a bot's own trading. Unsubscribe and set-enabled are untouched —
- * restricting how someone leaves or pauses a position would be a safety bug, not a lesson.
+ * THE TWO WRITES THAT DELEGATE CAPITAL — subscribe and configure — pass three gates, in #4610's
+ * order: ownership, then BOT ACCOUNTS ONLY (#4610, `domain/playbook-bots-only.ts`), then the
+ * delegation fog (#1707): held until the VIEWER'S own ladder has earned rung 102
+ * (`domain/playbook-delegation.ts`). The fog reads the member's ladder, never the subscribed
+ * account's: capital is delegated by a person, and a bot account has no ladder to consult. The
+ * autonomous runner writes through `SubscriptionStore` directly rather than over HTTP, so nothing
+ * here can gate a bot's own trading. Unsubscribe and set-enabled pass ownership only — on every
+ * owned account, human or bot — because restricting how someone leaves or pauses a position would
+ * be a safety bug, not a lesson.
  */
 
 const BODY_CAP_BYTES = 4_096;
-
-interface SubscribeBody {
-  readonly id: string;
-  readonly playbookId: string;
-  readonly mode: PlaybookMode;
-  readonly capitalAllocated: number;
-  /** Symbol-targeting filter (#885) — optional, absent/empty means unrestricted. */
-  readonly symbols?: readonly string[];
-  /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue #3527
-   *  slice 3). Absent/false means unchanged, flat-budget behavior. */
-  readonly compoundAllocation?: boolean;
-}
-
-const MAX_SYMBOLS = 20;
-
-/** An array of up to `MAX_SYMBOLS` non-empty tickers, uppercased; anything else (not an array, an
- *  empty array, a non-string entry, an over-long one) drops the whole filter to "unrestricted"
- *  rather than rejecting the request — the safe default (see `subscription-state.ts`'s parser). */
-function parseSymbols(raw: unknown): readonly string[] | undefined {
-  if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_SYMBOLS) return undefined;
-  const symbols = raw
-    .map((s) => boundedString(s, 12))
-    .filter((s): s is string => Boolean(s))
-    .map((s) => s.toUpperCase());
-  return symbols.length === raw.length ? symbols : undefined;
-}
-
-interface PlaybookRefBody {
-  readonly id: string;
-  readonly playbookId: string;
-}
-
-interface SetEnabledBody extends PlaybookRefBody {
-  readonly enabled: boolean;
-}
-
-function parseSubscribeBody(raw: string): SubscribeBody | undefined {
-  const body = parseJsonRecord(raw);
-  if (!body) return undefined;
-  const id = boundedString(body.id, 100);
-  const playbookId = boundedString(body.playbookId, 60);
-  const mode =
-    typeof body.mode === "string" && PLAYBOOK_MODES.includes(body.mode as PlaybookMode)
-      ? (body.mode as PlaybookMode)
-      : undefined;
-  const capitalAllocated =
-    typeof body.capitalAllocated === "number" &&
-    Number.isFinite(body.capitalAllocated) &&
-    body.capitalAllocated >= 0
-      ? body.capitalAllocated
-      : undefined;
-  const symbols = parseSymbols(body.symbols);
-  const compoundAllocation = body.compoundAllocation === true;
-  return id && playbookId && mode && capitalAllocated !== undefined
-    ? {
-        id,
-        playbookId,
-        mode,
-        capitalAllocated,
-        ...(symbols ? { symbols } : {}),
-        ...(compoundAllocation ? { compoundAllocation: true } : {}),
-      }
-    : undefined;
-}
-
-function parsePlaybookRefBody(raw: string): PlaybookRefBody | undefined {
-  const body = parseJsonRecord(raw);
-  if (!body) return undefined;
-  const id = boundedString(body.id, 100);
-  const playbookId = boundedString(body.playbookId, 60);
-  return id && playbookId ? { id, playbookId } : undefined;
-}
-
-function parseSetEnabledBody(raw: string): SetEnabledBody | undefined {
-  const ref = parsePlaybookRefBody(raw);
-  if (!ref) return undefined;
-  const body = parseJsonRecord(raw);
-  const enabled = typeof body?.enabled === "boolean" ? body.enabled : undefined;
-  return enabled === undefined ? undefined : { ...ref, enabled };
-}
 
 /**
  * The viewer's OWN delegation gate. Keyed on the signed-in member's ladder (`resolveCurrentId`),
@@ -136,6 +64,48 @@ async function viewerDelegationLocked(
     session ? opaqueMemberId(session.email) : undefined,
   );
   return delegationLocked(progression);
+}
+
+/** Only a positive "human" refuses — an account whose kind is unknown is let through
+ *  (`account-kind.ts` explains why each fallback leans that way). A config with no hub wired
+ *  reads as an empty board, never a throw. */
+function isHumanAccount(config: DashboardServerConfig, id: string): boolean {
+  return accountKind(id, config.hub?.getState().participants ?? []) === "human";
+}
+
+/**
+ * The gates a write that delegates capital passes, in #4610's order: ownership → bot account →
+ * the viewer's fog. Answers the sentence to refuse with, or undefined to go ahead.
+ */
+async function delegationRefusal(
+  id: string,
+  ownedIds: readonly string[],
+  notYours: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<string | undefined> {
+  if (!ownedIds.includes(id)) return notYours;
+  if (isHumanAccount(config, id)) return BOTS_ONLY_NOTE;
+  // The fog, enforced where it counts: the disabled control is rendering, this is the gate.
+  if (await viewerDelegationLocked(config, session)) return DELEGATION_LOCKED_NOTE;
+  return undefined;
+}
+
+/**
+ * A symbols filter only narrows a playbook's own basket — the guard refuses an entry outside it
+ * (`clampBuy`, entry side only) — so a ticker outside the basket would make a subscription that
+ * can never open anything. Refused in words rather than saved. An id the catalog does not know
+ * (a seeded or retired playbook) has no basket to check against, so it is not second-guessed.
+ */
+function basketRefusal(
+  playbookId: string,
+  symbols: readonly string[] | undefined,
+): string | undefined {
+  const basket = playbookStoreCatalog().find((entry) => entry.id === playbookId)?.symbols;
+  const outside = basket ? (symbols ?? []).filter((s) => !basket.includes(s)) : [];
+  return outside.length > 0
+    ? `${outside.join(", ")} ${outside.length === 1 ? "isn't" : "aren't"} in ${playbookId}'s basket — a symbol filter can only narrow it.`
+    : undefined;
 }
 
 /**
@@ -168,7 +138,12 @@ async function serveStoreIndex(
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
   const state = config.subscriptions?.load();
   const subscriptions = owns && id && state ? (state[id] ?? []) : undefined;
-  const view = playbookStoreView(subscriptions, await viewerDelegationLocked(config, session));
+  const view = playbookStoreView(
+    subscriptions,
+    await viewerDelegationLocked(config, session),
+    [],
+    Boolean(owns && id && isHumanAccount(config, id)),
+  );
   // Unwired store → no count at all, rather than a false "No subscribers yet".
   const counts = state ? subscriberCounts(state) : undefined;
   sendJson(
@@ -183,15 +158,13 @@ async function serveStoreIndex(
   );
 }
 
-/**
- * The one write the delegation fog gates. Its own function because the gate is an `await` inside
- * what was already the busiest branch of the router — extracted so the router stays readable and
- * under the complexity budget, with no change to the order of its refusals.
- */
+type Store = NonNullable<DashboardServerConfig["subscriptions"]>;
+
+/** Subscribe — an `await` inside the router's busiest branch, so its own function. */
 async function handleSubscribe(
   res: ServerResponse,
   raw: string,
-  store: NonNullable<DashboardServerConfig["subscriptions"]>,
+  store: Store,
   ownedIds: readonly string[],
   config: DashboardServerConfig,
   session: Session | undefined,
@@ -201,13 +174,15 @@ async function handleSubscribe(
     sendJson(res, 400, { error: "malformed subscribe body" });
     return;
   }
-  if (!ownedIds.includes(body.id)) {
-    sendJson(res, 200, { ok: false, error: "You can only subscribe your own account." });
-    return;
-  }
-  // The fog, enforced where it counts: the disabled control is rendering, this is the gate.
-  if (await viewerDelegationLocked(config, session)) {
-    sendJson(res, 200, { ok: false, error: DELEGATION_LOCKED_NOTE });
+  const refusal = await delegationRefusal(
+    body.id,
+    ownedIds,
+    "You can only subscribe your own account.",
+    config,
+    session,
+  );
+  if (refusal) {
+    sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
   store.subscribe(body.id, {
@@ -221,6 +196,53 @@ async function handleSubscribe(
   sendJson(res, 200, { ok: true });
 }
 
+/**
+ * Configure (#4649) — the Store's Edit. Gated exactly like subscribe, because raising a budget or
+ * widening a filter is more delegation. Never creates a subscription and never changes whether one
+ * runs: a paused subscription stays paused through an edit.
+ */
+async function handleConfigure(
+  res: ServerResponse,
+  raw: string,
+  store: Store,
+  ownedIds: readonly string[],
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const body = parseConfigureBody(raw);
+  if (!body) {
+    sendJson(res, 400, { error: "malformed configure body" });
+    return;
+  }
+  const refusal =
+    (await delegationRefusal(
+      body.id,
+      ownedIds,
+      "You can only change your own account's playbooks.",
+      config,
+      session,
+    )) ?? basketRefusal(body.playbookId, body.tuning.symbols);
+  if (refusal) {
+    sendJson(res, 200, { ok: false, error: refusal });
+    return;
+  }
+  const saved = store.configure(body.id, body.playbookId, body.tuning);
+  sendJson(
+    res,
+    200,
+    saved
+      ? { ok: true }
+      : { ok: false, error: `Not subscribed to ${body.playbookId} — subscribe first.` },
+  );
+}
+
+const WRITE_PATHS: readonly string[] = [
+  "/api/playbook-store/subscribe",
+  "/api/playbook-store/configure",
+  "/api/playbook-store/unsubscribe",
+  "/api/playbook-store/set-enabled",
+];
+
 /** Handle `/api/playbook-store*`. Returns true when the request was answered. */
 export async function serveSubscriptionsApi(
   req: IncomingMessage,
@@ -233,13 +255,7 @@ export async function serveSubscriptionsApi(
     await serveStoreIndex(req, res, config, session);
     return true;
   }
-  if (
-    path !== "/api/playbook-store/subscribe" &&
-    path !== "/api/playbook-store/unsubscribe" &&
-    path !== "/api/playbook-store/set-enabled"
-  ) {
-    return false;
-  }
+  if (!WRITE_PATHS.includes(path)) return false;
 
   const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
   if (raw === undefined) return true;
@@ -252,6 +268,10 @@ export async function serveSubscriptionsApi(
 
   if (path === "/api/playbook-store/subscribe") {
     await handleSubscribe(res, raw, store, ownedIds, config, session);
+    return true;
+  }
+  if (path === "/api/playbook-store/configure") {
+    await handleConfigure(res, raw, store, ownedIds, config, session);
     return true;
   }
 

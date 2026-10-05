@@ -32,10 +32,14 @@ export const DELEGATION_RUNG_NAME =
  * The one sentence the door is drawn with — the same words on the disabled control and in the
  * server's refusal, so a member can never be told two different things about one gate.
  * States what the rung teaches, never a warning (`docs/FOG-OF-WAR.md` criterion 9).
+ *
+ * "On its own", not "for you" (#4610 criterion 5): only a bot account can subscribe for now, so a
+ * playbook never trades for the member in person, and this sentence must stay true on every
+ * account it could ever be drawn on.
  */
 export const DELEGATION_LOCKED_NOTE =
   `Delegating capital opens after your first filled ${DELEGATION_RUNG} (${DELEGATION_RUNG_NAME}). ` +
-  "Every house playbook buys and then sells for you — the round trip by hand is the rung that proves it.";
+  "Every house playbook buys and then sells on its own — the round trip by hand is the rung that proves it.";
 
 /** The gate as data, for the JSON view and the UI that renders the door. */
 export interface DelegationGateView {

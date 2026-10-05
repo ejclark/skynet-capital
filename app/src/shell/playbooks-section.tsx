@@ -107,18 +107,32 @@ export function PlaybooksSection({
   if (store.isError) return <p className="note">The playbooks are unreachable.</p>;
 
   const view = store.data;
+  const human = view.botsOnly?.locked === true;
+  // An owner who opens an account is asking what it runs, so its subscriptions lead the deck
+  // (#4649). A stable sort: the catalog's own order holds inside each group.
+  const cards = manages
+    ? [...view.cards].sort(
+        (a, b) => Number(b.subscription !== undefined) - Number(a.subscription !== undefined),
+      )
+    : view.cards;
   return (
     <>
       <header className="page-header">
         <h1>Playbooks</h1>
         <p>
-          Every house playbook: what it does, when it enters, both exits. Pick one of your accounts
-          under <b>Subscribe as</b>, then back one playbook — or several, as separate experiments —
-          with that account's own capital. A subscription never touches another account's capital.
+          Every house playbook: what it does, when it enters, both exits. Pick one of your bot
+          accounts under <b>Subscribe as</b>, then back one playbook — or several, as separate
+          experiments — with that bot's own capital. A subscription never touches another account's
+          capital.
         </p>
       </header>
       {subscribeAs}
-      {accountId && view.canManage ? (
+      {manages && human ? (
+        // The rule once, at the top, before the cards each draw their disabled control (#4610).
+        <p className="note">
+          <b>{accountName ?? accountId}</b> — {view.botsOnly?.note}
+        </p>
+      ) : manages ? (
         <p className="note">
           <b>{accountName ?? accountId}</b> — capital under management across active subscriptions:
           ${view.capitalUnderManagement.toLocaleString()}
@@ -127,17 +141,18 @@ export function PlaybooksSection({
         <p className="note">
           {accountId
             ? "Viewing the catalog — subscribing is only available on your own accounts."
-            : "Viewing the catalog — pick an account under Subscribe as to subscribe."}
+            : "Viewing the catalog — pick a bot account under Subscribe as to subscribe."}
         </p>
       )}
       <div className="pb-deck">
-        {view.cards.map((card) => (
+        {cards.map((card) => (
           <PlaybookCard
             key={card.id}
             accountId={accountId ?? ""}
             card={card}
-            canManage={Boolean(accountId) && view.canManage}
+            canManage={manages}
             delegation={view.delegation}
+            {...(view.botsOnly ? { botsOnly: view.botsOnly } : {})}
             onChanged={onChanged}
             accountName={accountName ?? accountId ?? ""}
             metrics={metricsFor(card.id)}
