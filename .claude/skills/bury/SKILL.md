@@ -11,12 +11,11 @@ description: >-
 # Bury — the dead-code drill
 
 The *correction* half of the dead-code Coach: the eye (`scripts/dead-scan.mjs` + `dead-budget.json`,
-enforced by `tests/arch/dead.spec.ts`) says a symbol is unreferenced; this drill decides what that
-actually means and lands the safe disposition. It is the **one** copy of the procedure — the
-`mortician` agent preloads this file and follows it, and a `/grind` run points
-`{kind: "skill", name: "bury"}` at it. #1326: two hand-copies of this loop diverged within a day of
-being made, with nothing watching; the ladder in `docs/COACHES.md` says every coach has a drill, and
-this coach had skipped that rung.
+reported (advisory, non-blocking) by `tests/arch/dead.spec.ts`) says a symbol is unreferenced; this
+drill decides what that actually means and lands the safe disposition. It is the **one** copy of the
+procedure — the `mortician` agent preloads this file and follows it, and a `/grind` run points
+`{kind: "skill", name: "bury"}` at it. Keep it the only copy: hand copies of a drill drift apart with
+nothing watching them.
 
 ## The target
 

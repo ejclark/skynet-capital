@@ -11,10 +11,10 @@ description: >-
 # Backfill — the spec-gap drill
 
 The *correction* half of the spec-gap Coach: the eye (`scripts/spec-gap-scan.mjs` +
-`spec-gap-budget.json`, enforced by `tests/arch/spec-gap.spec.ts`) says a `src/` file has no spec
-importing it; this drill writes the behavioral coverage. It is the **one** copy of the procedure —
-the `test-backfiller` agent preloads this file and follows it, and a `/grind` run points
-`{kind: "skill", name: "backfill"}` at it (#1326 — see `/bury` for why the copies went away).
+`spec-gap-budget.json`, reported (advisory, non-blocking) by `tests/arch/spec-gap.spec.ts`) says a
+`src/` file has no spec importing it; this drill writes the behavioral coverage. It is the **one**
+copy of the procedure — the `test-backfiller` agent preloads this file and follows it, and a `/grind`
+run points `{kind: "skill", name: "backfill"}` at it (hand copies of a drill drift apart unwatched).
 
 ## The target
 
