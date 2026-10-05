@@ -25,16 +25,19 @@ screenshot against its vision passage. You do not choose the piece; the sheet's 
    variation deterministic), `params.ts` (the dial pattern to mirror).
 3. **Build ground-up, kit-first:** shape as a pure-data profile → geometry composed from greeble
    molecules → materials from the atoms → one new module in `src/three/pieces/<piece>.ts` exporting
-   a `build<Piece>(scene, params)` returning a `TowerBuild`-style record (root, meshes, seams the
-   next piece seats onto). Missing molecule? Add ONE to the kit, reusable, in the same rep — bigger
-   gaps go back to the art-director.
+   a `build<Piece>` that queues its geometry into the shared merge `Bucket` (`src/three/kit/bucket.ts`)
+   with the seeded `Rng`, the way `fortress.ts` and `crown.ts` do, and returns any seam the next piece
+   seats onto (as `buildShaft` returns the axis the crown sits on) — or, for a piece that owns its own
+   materials or motion, a record like `TowerBuild`/`EyeBuild` (its root group, seams, and per-frame
+   hooks). Missing molecule? Add ONE to the kit, reusable, in the same rep — bigger gaps go back to the
+   art-director.
 4. **Wire the dials** through a pure `resolve<Piece>Params` mirroring `params.ts`: honest inputs
    (prominence/health/mass) → render dials, non-linear where the reward curve wants it, unit-tested
-   without Babylon.
+   without a WebGL context.
 5. **Prove it:** `npm run typecheck && npm run lint && npm test` by exit status, then run the shot
    rig's **full default suite**, not a hand-picked subset — for `/tower` that's `npm run shoot:tower`,
-   which now includes side/behind/above/below by default specifically because two regressions once
-   reached production by only being checked head-on-and-oblique. If a claim in the passage or the
+   whose default includes side/behind/above/below because a head-on-and-oblique check alone has let
+   regressions reach production. If a claim in the passage or the
    translation table says a shape holds "in every direction," every angle in the suite is what proves
    it, not a sample of them. Check the bar: every salient detail the passage names must be visible in
    the named shots.

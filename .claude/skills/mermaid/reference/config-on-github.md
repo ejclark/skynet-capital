@@ -78,11 +78,11 @@ flowchart TD
   and the CI corpus run it). It is `mermaid.parse` under jsdom on 11.17.2, GitHub's exact version.
   - Catches: grammar errors in every type, frontmatter YAML errors, unknown or 12-only types, the
     500-edge flowchart limit, `accTitle` breaking mindmap/sankey/block. House problems: a theme,
-    an icon pack, the `journey` type. Notes: `%%{init}%%`, a non-dagre layout, `click`, over 40 lines.
-  - Cannot catch: malformed KaTeX, text over 50,000 characters, failures raised only at render or
-    layout time (state + `layout: elk` passes), misspelled keys or bad values (`theme: purple`),
-    config ignored after a leading blank line, `accTitle` dropped on timeline/kanban/C4,
-    legibility at 390px, contrast.
+    an icon pack, the `journey` type, a non-dagre layout on a state diagram (GitHub throws at
+    render). Notes: `%%{init}%%`, a non-dagre layout on other types, `click`, over 40 lines.
+  - Cannot catch: malformed KaTeX, text over 50,000 characters, other failures raised only at
+    render or layout time, misspelled keys or bad values (`theme: purple`), config ignored after a
+    leading blank line, `accTitle` dropped on timeline/kanban/C4, legibility at 390px, contrast.
 - **Mermaid Chart MCP** runs **11.13.0**, older than GitHub. Features from 11.14 on can false-red,
   and a `valid` can hide an ignored setting (unknown theme, scoped key, unresolved icon). Useful
   only for a real SVG (it does catch bad KaTeX); call it one diagram at a time, read the result with
@@ -101,7 +101,7 @@ info
 - Only `title`, `displayMode` and `config` are read at the top of frontmatter; other keys are inert.
 - A misspelled key is dropped and a bad value kept, both silently; a green parse proves nothing about config.
 - Frontmatter plus `%%{init}%%` on one diagram: the directive wins, hiding which value applies.
-- `layout: elk` on a state diagram errors on GitHub while the lint passes it.
+- `layout: elk` on a state diagram parses, then throws at render on GitHub; the lint fails it as a problem for that reason.
 - Frontmatter `title:` is visible text, not the accessible name; use `accTitle` for that.
 - The GitHub mobile app renders no Mermaid; a phone browser does, and scales a wide SVG (and its text) down to 390px.
 - Icons never fail a diagram: validators say valid while GitHub draws `?` or nothing.

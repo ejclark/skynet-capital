@@ -12,6 +12,13 @@ Ground rules:
 
 - **These are mirrors, not sources.** Never hand-edit; a refresh overwrites. Cite the upstream URL
   in prose (`https://code.claude.com/docs/en/<page>`), read the local file.
+- **Model facts never come from this mirror.** What the `opus` / `sonnet` / `fable` / `haiku`
+  aliases resolve to, default models and effort levels, fallback targets, and prices change with
+  model releases, and a snapshot can predate the current generation. Take API model IDs and prices
+  from the claude-api skill (`shared/models.md`). Take Claude Code's alias resolution, defaults and
+  fallbacks from `/model` in a live session or the live page
+  (`https://code.claude.com/docs/en/model-config`). Where the mirror disagrees, the mirror is stale.
+  Read the mirror for mechanics: hook events, frontmatter fields, CLI flags, settings keys.
 - **Refresh deliberately, as its own PR** — the diff *is* the deliverable ("what changed in Claude
   Code since we last looked"), and it feeds the token-efficiency playbook
   ([`docs/process/TOKEN-EFFICIENCY.md`](../process/TOKEN-EFFICIENCY.md)) and any process research

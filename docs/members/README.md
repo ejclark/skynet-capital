@@ -22,7 +22,8 @@ owner — the only one who walks the app as someone other than Eric), and Eric, 
 2. **What they own** — the fixture participant (or none), rungs earned, accounts, device.
 3. **What they are trying to do** — goals, ranked; **needs in their words**.
 4. **How they decide** — by outcome or by mechanism; what they read first; what they skip.
-5. **What frustrates them** — the dead ends they would hit, each tagged with its number below.
+5. **What frustrates them** — the dead ends they meet, each tagged with its number below; a fixed
+   one keeps its line, marked fixed.
 6. **Journeys** — numbered; each step is `goto` · what they see · an **EARS acceptance line**
    (`/ears`: ubiquitous · event · state · unwanted · optional) · the judge line ("can this reader
    tell what to do next in ten seconds?"). The journeys ARE the acceptance tests — see the schema.
@@ -32,8 +33,11 @@ owner — the only one who walks the app as someone other than Eric), and Eric, 
 ## The journey file — `e2e/journeys/<member>.journey.json` (schema v1)
 
 The machine-readable twin of `docs/members/<member>.md`. The prose file says what the member sees
-and why it matters; the JSON says what a browser can check. They are kept in step by hand: a step
-in one is a step in the other, same ids.
+and why it matters; the JSON says what a browser can check. A step in one is a step in the other,
+same ids, kept in step by hand. Whether a step's gap is still open belongs to the JSON: its
+`known_gap` turns the spec red the day the gap is fixed (below), while a "known gap" mark in prose
+goes stale silently. So the fix that deletes a `known_gap` flips its prose twin to _Fixed_ in the
+same change, and where the two disagree the JSON is right.
 
 ```jsonc
 {
@@ -117,11 +121,15 @@ refreshed after #3814, and is **hand-maintained** — change a verdict here, nev
 screen (`retire`, `redirect-only`) gets no phone work and is never a gap; a new screen with no
 verdict fails the run. How it reads the code: `scripts/crawl/README.md` → *Coverage*.
 
-## The eight dead ends run 0 must find
+## The eight dead ends the plan named (run 0, 2026-09-26)
 
-Found by reading the code before the crawl existed (the plan, 2026-09-26). Each is pinned as a
-`known_gap` on a journey step with its `file:line`; if a run misses one, **the crawl is wrong, not
-the app** — fix the probe or the step, never the ledger.
+Found by reading the code before the crawl existed (the plan, 2026-09-26). Each was pinned as a
+`known_gap` on a journey step, and the ratchet releases each one as it is fixed. The `where`
+column below is therefore the run-0 record and drifts as code moves. Whether a dead end is still
+open, and where it is now, lives in its step's `known_gap` and `where` in
+`e2e/journeys/*.journey.json`. If a run misses a dead end that is still pinned, **the crawl is
+wrong, not the app**: fix the probe or the step, never the ledger. A pinned step that starts
+passing becomes the `fixed?` row, and the fix deletes its `known_gap`.
 
 | # | the dead end | where |
 |---|---|---|

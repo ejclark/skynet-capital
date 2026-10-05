@@ -339,6 +339,22 @@ describe("the receipt is the lane's whole memory", () => {
     expect(body).toContain(CONTINUED_MODEL);
   });
 
+  // The receipt lands on ANY continued plan, but criteria 9 and 10 are #3818's — pointing a build
+  // session at "this plan's criterion 9" sends it looking for a criterion its plan may not have.
+  it("cites #3818 for the criteria it names, never the host plan's own numbering", () => {
+    const body = receiptBody({
+      pickup: "#4295",
+      target: 4295,
+      runId: "900",
+      fingerprint: "a",
+      model: CONTINUED_MODEL,
+    });
+
+    expect(body).not.toContain("this plan's criterion");
+    expect(body).toContain("(#3818, criterion 9)");
+    expect(body).toContain("(#3818, criterion 10)");
+  });
+
   it("ignores a comment carrying no marker", () => {
     expect(parseReceipt("ordinary prose")).toBeNull();
     expect(receiptsOf([{ body: "ordinary prose", created_at: "2026-10-03T00:00:00Z" }])).toEqual(
