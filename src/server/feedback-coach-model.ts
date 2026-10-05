@@ -13,7 +13,7 @@
  */
 
 /**
- * Claude Haiku 4.5 — $1/1M in, $5/1M out, versus Sonnet 5's $3/$15 ($2/$10 through 2026-08-31).
+ * Claude Haiku 4.5 — $1/1M in, $5/1M out, versus the Sonnet tier's $2/$10.
  * The coach's job is to ask one short question at a time against a fixed checklist and then emit
  * structured JSON; a small model is well suited to it. The safety property that makes this sound is
  * in `toSpec`: an unbacked `spec-complete` claim is downgraded to `partial`, and an unparseable
