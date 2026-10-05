@@ -424,8 +424,8 @@
           {
             "id": "progression",
             "label": "Progression and gates",
-            "path": "src/server/progression-service.ts, progression-store.ts, ladder-progress-log.ts, ladder-activity-detector.ts, community-progression-service.ts, community-progression-store.ts, onboarding-gates.ts, onboarding-api-routes.ts, desk-gate.ts, settings-api-routes.ts, src/domain/progression.ts, src/domain/community-progression.ts, src/domain/onboarding.ts, src/scripts/dashboard-ladder-progress.ts",
-            "responsibility": "Training-wheels ladder and community track derived from the activity/order-audit/feedback ledgers, onboarding gates, and the fog-of-war unlocks the shell renders as visible-named-disabled-counted doors."
+            "path": "src/server/progression-service.ts, progression-store.ts, ladder-progress-log.ts, ladder-activity-detector.ts, community-progression-service.ts, community-progression-store.ts, onboarding-gates.ts, onboarding-api-routes.ts, desk-gate.ts, settings-api-routes.ts, src/domain/progression.ts, src/domain/community-progression.ts, src/domain/onboarding.ts, src/domain/milestone-catalog.ts, src/scripts/dashboard-ladder-progress.ts",
+            "responsibility": "Training-wheels ladder and community track derived from the activity/order-audit/feedback ledgers, onboarding gates, and the fog-of-war unlocks the shell renders as visible-named-disabled-counted doors. Since #784 slice 5 a logged ladder earn also publishes milestone.earned onto the activity bus, and Activity's milestone rows derive the trade ladder from the same two ledgers at read time (src/observatory/milestone-event-feed.ts) — never stored."
           },
           {
             "id": "bridge",
