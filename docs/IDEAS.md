@@ -252,6 +252,20 @@ Eric-sourced.
   (`/-/media/documents/...` → `/-/media/Project/Atlanta/FRBA/Documents/...`, discovered this
   session) broke an automated re-fetch somewhere upstream. _(src: Claude · while:
   housing-starts-2026-09-17 close-out)_
+  **Update, `construction-spending-2026-10-01` close-out, 2026-10-05:** still frozen at 2026-07-28,
+  now **ten weeks** stale — confirmed across two independent close-outs seven weeks apart, so this
+  is a standing property of the data source, not a transient gap. The media path moved a **second**
+  time (`cqer/researchcq/gdpnow/` → `research-and-data/data/gdpnow/`, found via the current
+  `/cqer/research/gdpnow` landing page's own link list) — two moves in five weeks. One finding that
+  resolves half the housing-starts gap: the same workbook's **`ContribHistory`** sheet (singular,
+  "Evolution of component contributions ... for 2026q3," distinct from the 6-category
+  `Contributions`/`ChangeInContributions` the prior session used) is live, non-archived, and keeps
+  the full 8-way split — Equipment, Intellectual Property Products and Structures stay separate
+  columns. It only covers the *current* nowcast quarter (reset each quarter), so it does not help a
+  cross-quarter archive query, but it removes the "6-category only" caveat for any live-quarter
+  forward test — `housing-starts-10-20`'s `FT-…-10-20-1` should read `ContribHistory` directly
+  instead of falling back to the coarser sheet if `ContribArchives` is still stale on 2026-10-23.
+  _(src: Claude · while: construction-spending-2026-10-01 close-out)_
 - `quote-header` and the option chain fetch the underlying price independently; consolidate once
   the chain route is reshaped (Phase 0 tasks #11-13). _(src: Claude · while: quote-header review,
   #2017)_
