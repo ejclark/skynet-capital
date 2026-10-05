@@ -18,14 +18,16 @@ export function heldQuantity(portfolio: Portfolio, symbol: string): number {
 }
 
 /**
- * One holding in dollars. `lastPrice` is the per-share mark the caller trusts (a live quote's
- * last); without one, the broker's own `marketValue` is the next-best mark, and cost is the last
- * resort. Every per-share price is scaled by `contractMultiplier`, so an option contract counts at
+ * One holding in dollars. `lastPrice` is the per-share mark from a live quote's last; without a
+ * usable one (absent, zero, non-finite), the broker's own `marketValue` is the next-best mark, and
+ * cost is the last resort. Every per-share price is scaled by `contractMultiplier`, so an option contract counts at
  * 100 shares — the omission that made a bot's book read a $500 call as $5 (#4643).
  */
 export function positionValue(position: Position, lastPrice: number | undefined): number {
   const multiplier = contractMultiplier(position.symbol);
-  if (lastPrice !== undefined) {
+  // A zero or non-finite last is a data gap, not a price: it falls through to the next-best mark
+  // rather than valuing the holding at $0 (or poisoning the whole sum with NaN).
+  if (lastPrice !== undefined && Number.isFinite(lastPrice) && lastPrice > 0) {
     return position.quantity * lastPrice * multiplier;
   }
   if (position.marketValue !== undefined && Number.isFinite(position.marketValue)) {

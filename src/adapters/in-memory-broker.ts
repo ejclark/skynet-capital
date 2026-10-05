@@ -1,5 +1,6 @@
 import type { OrderIntent, OrderResult, Portfolio, Position, Quote } from "../domain/types.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { contractMultiplier } from "../trading/option-symbols.js";
 
 /**
  * A fully in-memory paper broker. Fills market orders against a price book:
@@ -7,7 +8,9 @@ import type { BrokerPort } from "../ports/broker.js";
  * one the tests drive and the local paper simulator will use — so its fill semantics
  * are the contract every other broker adapter should match.
  *
- * Not thread-safe and intentionally simple: one account, long-only, market orders.
+ * Not thread-safe and intentionally simple: one account, long-only, market orders. Prices are
+ * per share, as a broker quotes them, and an option contract moves 100 shares' worth of cash —
+ * the same unit rule `computeEquity` values the book by, so cash and equity never disagree (#4643).
  */
 export class InMemoryBroker implements BrokerPort {
   private cash: number;
@@ -44,7 +47,7 @@ export class InMemoryBroker implements BrokerPort {
   }
 
   private fillBuy(order: OrderIntent, quote: Quote): OrderResult {
-    const cost = order.quantity * quote.ask;
+    const cost = order.quantity * quote.ask * contractMultiplier(order.symbol);
     if (cost > this.cash) {
       return this.reject(order, "insufficient cash");
     }
@@ -88,12 +91,17 @@ export class InMemoryBroker implements BrokerPort {
       return this.reject(order, `no price for ${order.symbol}`);
     }
 
-    this.cash += order.quantity * quote.bid;
+    this.cash += order.quantity * quote.bid * contractMultiplier(order.symbol);
     const remaining = existing.quantity - order.quantity;
     if (remaining === 0) {
       this.positions.delete(order.symbol);
     } else {
-      this.positions.set(order.symbol, { ...existing, quantity: remaining });
+      // Rebuilt, not spread: a seeded `marketValue` is a dollar mark for the OLD quantity.
+      this.positions.set(order.symbol, {
+        symbol: existing.symbol,
+        quantity: remaining,
+        avgPrice: existing.avgPrice,
+      });
     }
 
     return {

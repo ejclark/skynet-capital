@@ -19,10 +19,7 @@ import type { MarketContext, Portfolio } from "../domain/types.js";
  *  cost, when unquoted), option contracts at 100 shares each. */
 export function markedEquity(portfolio: Portfolio, context: MarketContext): number {
   const positionsValue = portfolio.positions.reduce((sum, position) => {
-    const quote = context.quotes[position.symbol];
-    const last =
-      quote !== undefined && Number.isFinite(quote.last) && quote.last > 0 ? quote.last : undefined;
-    return sum + positionValue(position, last);
+    return sum + positionValue(position, context.quotes[position.symbol]?.last);
   }, 0);
   return portfolio.cash + positionsValue;
 }

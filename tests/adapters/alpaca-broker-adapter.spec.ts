@@ -112,13 +112,18 @@ describe("AlpacaBrokerAdapter", () => {
         },
         "/v2/positions": {
           status: 200,
-          body: [{ symbol: "EEM", qty: "5", avg_entry_price: "42.10", market_value: "" }],
+          body: [
+            { symbol: "EEM", qty: "5", avg_entry_price: "42.10", market_value: "" },
+            { symbol: "SPY", qty: "1", avg_entry_price: "500", market_value: null },
+          ],
         },
       });
 
-      const [position] = (await adapter.getPortfolio()).positions;
+      const [eem, spy] = (await adapter.getPortfolio()).positions;
 
-      expect(position).toEqual({ symbol: "EEM", quantity: 5, avgPrice: 42.1 });
+      // A null would otherwise parse to a $0 mark and value the holding at nothing.
+      expect(eem).toEqual({ symbol: "EEM", quantity: 5, avgPrice: 42.1 });
+      expect(spy).toEqual({ symbol: "SPY", quantity: 1, avgPrice: 500 });
     });
   });
 

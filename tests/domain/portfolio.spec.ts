@@ -150,6 +150,13 @@ describe("option contracts count at 100 shares (#4643)", () => {
     expect(positionValue(position, 1.5)).toBe(-150);
   });
 
+  it("treats a zero or non-finite last as a data gap, falling through to the next mark", () => {
+    const position = aPosition({ symbol: call, quantity: 1, avgPrice: 4.5, marketValue: 520 });
+
+    expect(positionValue(position, 0)).toBe(520);
+    expect(positionValue(position, Number.NaN)).toBe(520);
+  });
+
   it("leaves shares exactly as they were — no multiplier, quote first, then cost", () => {
     const shares = aPosition({ symbol: "NVDA", quantity: 10, avgPrice: 200 });
 

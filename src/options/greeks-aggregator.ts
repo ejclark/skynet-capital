@@ -1,5 +1,5 @@
 import { fin } from "../domain/finite.js";
-import { isOccSymbol, parseOccSymbol } from "../trading/option-symbols.js";
+import { isOccSymbol, OPTION_MULTIPLIER, parseOccSymbol } from "../trading/option-symbols.js";
 
 /**
  * PORTFOLIO GREEKS — one book's total exposure, and its delta beta-weighted to one benchmark.
@@ -56,9 +56,6 @@ export interface AggregateGreeks {
   readonly uncovered: readonly string[];
 }
 
-/** One option contract controls 100 shares; a share position is one delta each and nothing else. */
-const CONTRACT_MULTIPLIER = 100;
-
 /**
  * Sum a book's greeks.
  *
@@ -102,7 +99,7 @@ export function aggregateGreeks(
     }
 
     const underlying = parseOccSymbol(position.symbol)?.underlying ?? position.symbol;
-    const shares = qty * CONTRACT_MULTIPLIER;
+    const shares = qty * OPTION_MULTIPLIER;
     addDelta(underlying, shares * fin(greeks.delta));
     gamma += shares * fin(greeks.gamma);
     theta += shares * fin(greeks.theta);
