@@ -2672,7 +2672,8 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 
 ### Three PRs merged mid-integration-tests — `/ship` told every session to arm auto-merge the moment a PR opened
 
-- **SHA:** (this PR)   **DATE:** 2026-09-30   **STATUS:** partly closed — the required check is Eric's
+- **SHA:** (this PR)   **DATE:** 2026-09-30   **STATUS:** closed — `integration tests` is a required
+  check on `main` (`isRequired: true` on #4663's head, read 2026-10-05, #4211)
 - **SIGNAL:** Eric, looking at #4158's pipeline mid-run: "I take it integration tests don't really
   matter?" — then: "If a quality gate matters, you'd enforce it." #4151, #4155 and #4158 had each
   merged ~2–3 minutes after opening, on `verify` alone, while `integration tests` was still running.
