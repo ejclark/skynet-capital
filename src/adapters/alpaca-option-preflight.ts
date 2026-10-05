@@ -148,8 +148,6 @@ export function optionsBuyingPowerOf(raw: unknown): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
-const money = (x: number): string => x.toFixed(2);
-
 /**
  * The quote re-check: the band the legs quote NOW, in the limit's own sign convention
  * (`quoteBand`), each leg's feed stamp no older than `maxAgeMs` (an unstamped quote only on a
@@ -184,5 +182,5 @@ export function freshBandProblem(
     option.limitPrice >= band.low - LIMIT_EPSILON && option.limitPrice <= band.high + LIMIT_EPSILON;
   return inside
     ? undefined
-    : `quote moved: limit ${money(option.limitPrice)} outside [${money(band.low)}, ${money(band.high)}]`;
+    : `quote moved: limit ${option.limitPrice.toFixed(2)} outside [${band.low.toFixed(2)}, ${band.high.toFixed(2)}]`;
 }

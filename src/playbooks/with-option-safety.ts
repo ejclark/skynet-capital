@@ -18,10 +18,9 @@ import type { EnabledPlaybook } from "./playbook.js";
  * inner playbooks already close is simply not closed twice. Its option demand adds the quotes those
  * closes need. Verdicts and `optionUnderlyings` pass straight through.
  *
- * Meant to wrap `withPlaybooks` in the bots' trading roster, so a contract on any bot account is
- * looked after even when no option playbook is subscribed — the Alpaca option wiring applies it
- * (#4645's second PR); until then no live bot carries it. With no contracts held, the output is the
- * inner persona's own.
+ * Wraps `withPlaybooks` in every bot's trading roster (`tradingRoster`, #4642 slice 5), so a
+ * contract on any bot account is looked after even when no option playbook is subscribed. With no
+ * contracts held, the output is the inner persona's own.
  */
 export function withOptionSafety(
   inner: Persona,

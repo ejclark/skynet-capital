@@ -11,7 +11,6 @@ import { portfolioFromAlpaca } from "./alpaca-portfolio.js";
  *  ~3 tries at 300ms is a sub-second worst case per order, cheap against a 30s+ trading cycle. */
 const DEFAULT_FILL_POLL_ATTEMPTS = 3;
 const DEFAULT_FILL_POLL_DELAY_MS = 300;
-const NOTHING_LIVE: ReadonlySet<string> = new Set();
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -144,7 +143,7 @@ export class AlpacaBrokerAdapter implements BrokerPort, OptionOrderTracker {
 
   /** The option orders an earlier submit left working (`AlpacaOptionOrderFlow.settle`). */
   settle(): Promise<ReadonlySet<string>> {
-    return this.optionFlow ? this.optionFlow.settle() : Promise.resolve(NOTHING_LIVE);
+    return this.optionFlow ? this.optionFlow.settle() : Promise.resolve(new Set<string>());
   }
 
   /** Cancels every open order this bot stamped (`AlpacaOptionOrderFlow.sweepOrphans`). */

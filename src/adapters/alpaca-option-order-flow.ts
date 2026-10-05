@@ -79,7 +79,7 @@ export interface OptionOrderTiming {
   readonly quoteMaxAgeMs: number;
 }
 
-export const DEFAULT_OPTION_ORDER_TIMING: OptionOrderTiming = {
+const DEFAULT_OPTION_ORDER_TIMING: OptionOrderTiming = {
   waitMs: 15_000,
   pollMs: 1_000,
   settleAttempts: 6,
@@ -108,10 +108,9 @@ export interface AlpacaOptionOrderFlowDeps {
   readonly timing?: Partial<OptionOrderTiming>;
 }
 
-const NOTHING_LIVE: ReadonlySet<string> = new Set();
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const NOTHING_PENDING: ReadonlySet<string> = new Set();
 
-const refuse = (intent: OrderIntent, reason: string): OrderResult => ({
+const rejectedResult = (intent: OrderIntent, reason: string): OrderResult => ({
   intent,
   status: "rejected",
   reason,
@@ -137,24 +136,25 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
     this.prefix = deps.clientOrderIdPrefix;
     if (deps.onSubmitted) this.onSubmitted = deps.onSubmitted;
     this.now = deps.now ?? Date.now;
-    this.sleep = deps.sleep ?? sleep;
+    this.sleep = deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.timing = { ...DEFAULT_OPTION_ORDER_TIMING, ...deps.timing };
   }
 
   async submit(order: OrderIntent): Promise<OrderResult> {
     const option = order.option;
     const cid = order.clientOrderId;
-    if (!(cid && CLIENT_ORDER_ID_PATTERN.test(cid))) return refuse(order, "unstamped option order");
+    if (!(cid && CLIENT_ORDER_ID_PATTERN.test(cid)))
+      return rejectedResult(order, "unstamped option order");
     const problems = optionOrderProblems(order);
     if (!option || problems.length > 0) {
-      return refuse(order, `not a well-formed option order: ${problems.join("; ")}`);
+      return rejectedResult(order, `not a well-formed option order: ${problems.join("; ")}`);
     }
     let placed = await this.findByClientId(cid);
     if (!placed) {
       const refusal = await this.preflight(order, option);
-      if (refusal) return refuse(order, refusal);
+      if (refusal) return rejectedResult(order, refusal);
       const sent = await this.place(order, option, cid);
-      if (typeof sent === "string") return refuse(order, sent);
+      if (typeof sent === "string") return rejectedResult(order, sent);
       placed = sent;
     }
     if (DEAD_ON_ARRIVAL.has(placed.status) && filledQuantityOf(placed) === 0) {
@@ -183,7 +183,7 @@ export class AlpacaOptionOrderFlow implements OptionOrderTracker {
    */
   async settle(): Promise<ReadonlySet<string>> {
     const pending = this.pending.list();
-    if (pending.length === 0) return NOTHING_LIVE;
+    if (pending.length === 0) return NOTHING_PENDING;
     const live = new Set<string>();
     for (const entry of pending) {
       let order: AlpacaOrder;

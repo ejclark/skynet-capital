@@ -11,7 +11,7 @@ import type { OptionLegFill, OrderIntent, OrderResult } from "../domain/types.js
  */
 
 /** Alpaca statuses after which an order can never fill again. */
-const TERMINAL: ReadonlySet<string> = new Set([
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
   "filled",
   "canceled",
   "expired",
@@ -21,7 +21,7 @@ const TERMINAL: ReadonlySet<string> = new Set([
 ]);
 
 export function isTerminalOrder(order: AlpacaOrder): boolean {
-  return TERMINAL.has(order.status);
+  return TERMINAL_STATUSES.has(order.status);
 }
 
 /** A broker number that is really there: `null`, `""` and junk stay absent, never a fake 0. */
@@ -37,9 +37,6 @@ export function filledQuantityOf(order: AlpacaOrder): number {
   const filled = brokerNumber(order.filled_qty) ?? 0;
   return filled === 0 && order.status === "filled" ? (brokerNumber(order.qty) ?? 0) : filled;
 }
-
-/** Sums of per-share fills drift in the 15th decimal. */
-const tidy = (x: number): number => Math.round(x * 1e6) / 1e6;
 
 /**
  * Per share, in Alpaca's sign for a spread (+ debit paid, − credit received): the parent's own
@@ -57,7 +54,8 @@ export function netFillPrice(order: AlpacaOrder): number | undefined {
     if (price === undefined) return undefined;
     net += (leg.side === "buy" ? 1 : -1) * (brokerNumber(leg.ratio_qty) ?? 1) * price;
   }
-  return tidy(net);
+  // Sums of per-share fills drift in the 15th decimal.
+  return Math.round(net * 1e6) / 1e6;
 }
 
 /** Each contract's own fill: the broker's legs for a spread, the order itself for one leg. */
