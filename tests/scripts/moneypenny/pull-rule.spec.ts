@@ -55,6 +55,23 @@ describe("pullable — the board's Ready column, as one predicate", () => {
     expect(pullable(issue(6, ["ready", "plan", "next-slice"]))).toBe(true);
   });
 
+  // 2026-10-05: #4301 carried `ready` ahead of time behind an open `blocked-by` #4299, and the
+  // sweep's rank-order pick dispatched it anyway.
+  it("refuses an issue with an open blocker, and admits it once the blocker closes", () => {
+    const blocked = (open: number) =>
+      issue(7, ["ready", "plan"], {
+        issue_dependencies_summary: { blocked_by: open, total_blocked_by: 1 },
+      });
+    expect(notPullableReason(blocked(1))).toBe(
+      "#7 is blocked by 1 open issue — it starts when they close",
+    );
+    expect(pullable(blocked(0))).toBe(true);
+  });
+
+  it("reads a shape with no dependency summary as unblocked", () => {
+    expect(pullable({ number: 8, labels: ["ready"] })).toBe(true);
+  });
+
   it("refuses nothing at all", () => {
     expect(pullable(undefined)).toBe(false);
   });
@@ -119,6 +136,17 @@ describe("pullQueue / nextAdmissible — the sweep pulls only what pullable allo
     expect(pullQueue(rows).map((i) => i.number)).toEqual([5, 4]);
   });
 
+  it("steps past a blocked slice to the next pullable issue", () => {
+    const rows = [
+      issue(4301, ["ready", "plan"], {
+        createdAt: "2026-09-30T00:00:00Z",
+        issue_dependencies_summary: { blocked_by: 1 },
+      }),
+      issue(4400, ["ready", "feedback"], { createdAt: "2026-10-01T00:00:00Z" }),
+    ];
+    expect(nextAdmissible(rows, [], mode("normal"))?.number).toBe(4400);
+  });
+
   it("never picks a Backlog issue, even with free capacity", () => {
     expect(nextAdmissible([issue(1, ["feedback"])], [], mode("normal"))).toBeNull();
   });
@@ -149,6 +177,16 @@ describe("readIssue — one issue over REST", () => {
   it("maps the REST row and refuses a PR number", () => {
     const row = { number: 4, title: "t", state: "open", body: "b", labels: [], created_at: "x" };
     expect(readIssue(4, () => JSON.stringify(row))).toMatchObject({ number: 4, createdAt: "x" });
+    const blocked = {
+      ...row,
+      labels: [{ name: "ready" }],
+      issue_dependencies_summary: { blocked_by: 1 },
+    };
+    const v = checkAdmission({
+      issue: readIssue(4, () => JSON.stringify(blocked)),
+      mode: mode("normal"),
+    });
+    expect(v.reason).toContain("blocked by 1 open issue");
     expect(() => readIssue(5, () => JSON.stringify({ number: 5, pull_request: {} }))).toThrow(
       /pull request/,
     );
