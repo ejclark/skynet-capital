@@ -11,9 +11,10 @@ import { signedMoney } from "./option-preview";
  * dashed — a shape, not a hue), and the shared tile grid below renders one row, never two.
  *
  * Phone-first ranking (CLAUDE.md): the four numbers that answer "is this working for me" — trades,
- * net P/L (dollars and percent of capital), win rate, capital committed — then hold time. Every
- * sign is spelled out (+/−) so no reading leans on red vs green. An unmeasurable stat prints "—",
- * never 0 (`trade-stats.ts`'s honesty invariant), and zero closed trades says so in words.
+ * net P/L (dollars and percent of capital), win rate, capital committed — then hold time, then the
+ * expiration-cycle mix (slice 5). Every sign is spelled out (+/−) so no reading leans on red vs
+ * green. An unmeasurable stat prints "—", never 0 (`trade-stats.ts`'s honesty invariant), and zero
+ * closed trades says so in words.
  */
 
 export type MetricsScope =
@@ -41,6 +42,16 @@ export function mixLabel(counts: Readonly<Record<string, number>>): string {
     .filter(([, n]) => n > 0)
     .map(([kind, n]) => `${n} ${kind}`)
     .join(" · ");
+}
+
+/**
+ * "1 weekly · 2 monthly" — shortest-dated cycle first, which is how a chain reads. Counts option
+ * trips only, so a playbook that trades shares says that in words: three zeros would be a false
+ * reading (it did trade, just nothing with an expiration) and a bare "—" reads like a number we
+ * failed to compute rather than a thing that doesn't apply.
+ */
+export function cycleLabel(counts: PlaybookMetricsView["byCycle"]): string {
+  return mixLabel(counts) || "no option trades — shares carry no expiration";
 }
 
 function Metrics({ row }: { readonly row: PlaybookMetricsView }): ReactElement {
@@ -76,6 +87,10 @@ function Metrics({ row }: { readonly row: PlaybookMetricsView }): ReactElement {
           avg {holdLabel(row.avgHoldMs)} · longest {holdLabel(row.longestHold?.holdMs)} · shortest{" "}
           {holdLabel(row.shortestHold?.holdMs)}
         </dd>
+      </div>
+      <div className="pb-metrics-wide">
+        <dt>Expiration cycle</dt>
+        <dd>{cycleLabel(row.byCycle)}</dd>
       </div>
     </dl>
   );

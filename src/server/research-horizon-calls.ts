@@ -7,6 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { memoByCorpus } from "./research-corpus-memo.js";
 import {
   adjacentIdsOf,
   type HorizonCalls,
@@ -29,6 +30,10 @@ export interface LedgerDigest {
 
 /** Ledgers with a decision header, keyed by event id. `root` is injectable for specs. */
 export function ledgerDigests(root: string = RESEARCH_DIR()): ReadonlyMap<string, LedgerDigest> {
+  return memoByCorpus("ledgerDigests", root, () => digestLedgers(root));
+}
+
+function digestLedgers(root: string): ReadonlyMap<string, LedgerDigest> {
   const out = new Map<string, LedgerDigest>();
   for (const doc of listResearch(root).ledgers) {
     const md = readFileSync(join(root, `${doc.slug}.md`), "utf8");

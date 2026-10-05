@@ -3,7 +3,10 @@
 // moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { routeAssignments } from "./assignments.mjs";
+import { routeContinuation } from "./continuation.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
+import { routeRelay } from "./relay.mjs";
 import { routeShipped } from "./shipped.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
@@ -130,7 +133,12 @@ export function researchCapNow(readMode = readWorkMode, budgetCap = loadDispatch
 
 /** Something landed on main (or the `scan` command re-ran the sweep by hand — same path, never a
  *  second one that can drift). One issue per never-assessed event, deduped by exact open-issue
- *  title; plus the close-the-loop pass below. */
+ *  title; plus the close-the-loop pass below, and the relay that keeps a sliced issue's remainder
+ *  pullable after the issue itself closes (#3818 slice 4, relay.mjs), and the assignment lane that
+ *  puts a decision in front of Eric where GitHub will actually push it to him (slice 5,
+ *  assignments.mjs). Both of those fold in HERE, not as workflow steps, because this sweep already
+ *  rides every push with the App token — a `.github/**` step would cost one of Eric's merges for no
+ *  behavioural gain, the same reasoning `dueForResearch`'s default parameter records above. */
 export function routeSweep(deps) {
   const { dueEvents = [], openIssueTitles = [] } = deps;
   const intents = [];
@@ -141,7 +149,27 @@ export function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return [...intents, ...routeReceipts(deps), ...routeShipped(deps)];
+  // Continuation's STOP half goes before the assignment lane for the same reason the closes do:
+  // both can ask Eric about the same plan, and a stop already assigns him with the run link, so
+  // letting it land first means the generic `needs-eric` ask has nothing left to add (#3818
+  // criterion 10). Its CONTINUE half is not here — a claim only works in a run
+  // `claude-code-action` accepts, so `claimNext` asks `pickContinuation` instead.
+  const sweep = [
+    ...intents,
+    ...routeReceipts(deps),
+    ...routeShipped(deps),
+    ...routeRelay(deps),
+    ...routeContinuation(deps),
+  ];
+  // The assignment lane goes LAST and reads what the rest of this tick already decided to close.
+  // Every lane here plans from the same pre-write snapshot, so an issue carrying `needs-eric` whose
+  // PR merged would otherwise be asked about and closed in the same run — one interrupt spent on a
+  // question that stopped existing seconds later, then an unassign next tick. The closes win:
+  // `needs-eric` on a shipped issue is a stale label, not a live decision.
+  const closing = new Set(
+    sweep.filter((i) => i.kind?.startsWith("close-")).map((i) => i.issueNumber),
+  );
+  return [...sweep, ...routeAssignments(deps).filter((i) => !closing.has(i.number))];
 }
 
 /** `[event-research] <event-id>` — the receipt title this lane writes and reads back. */

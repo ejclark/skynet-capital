@@ -4,6 +4,11 @@ import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEvent } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import {
+  collapseDevelopmentEvents,
+  type DevelopmentFeedItem,
+  mergeMergesIntoEvents,
+} from "../observatory/development-event-feed.js";
+import {
   collapseFeedbackEvents,
   type FeedbackFeedItem,
   mergeFeedbackLogIntoEvents,
@@ -15,6 +20,7 @@ import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.j
 import { wireJsonView } from "../observatory/wire-json-view.js";
 import { attachWireReasoning } from "../observatory/wire-reasoning.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import type { FetchMergedPullRequests } from "./development-activity.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -60,6 +66,17 @@ export interface WireRouteDeps {
    */
   readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
+  /**
+   * Recently merged pull requests — the feed's third kind (#784 slice 4), and the one source that is
+   * NOT a local ledger: there is no development log in this app, so there is nothing to union here
+   * the way `readAllTradeActivity` and `readAllFeedback` are unioned above. Wired, this is also the
+   * bus's development emitter (`publishingMergedPullRequests`), so calling it both reads GitHub and
+   * publishes anything the bus has not seen.
+   *
+   * Omitted, the feed renders NO development kind at all and says so on the page — a deployment with
+   * no GitHub token is a deployment fact, never "the league has merged nothing".
+   */
+  readonly readMergedPullRequests?: FetchMergedPullRequests;
   /** The exact order-id join into the decision store (PR 6, issue #2287) — omit to render every
    *  row with no reasoning/vitals attached, never a fabricated one. */
   readonly findByOrderId?: (
@@ -90,6 +107,9 @@ interface AssembledWire {
   };
   readonly pnl: ReturnType<typeof buildWirePnlRows>;
   readonly feedback: readonly FeedbackFeedItem[];
+  /** Absent — not empty — when the development read is unwired, which is how the view tells "nothing
+   *  has merged" apart from "this deployment cannot see GitHub". */
+  readonly development?: readonly DevelopmentFeedItem[];
 }
 
 /**
@@ -120,6 +140,27 @@ async function assembleFeedbackPulse(
   return collapseFeedbackEvents(observed).slice(0, limit);
 }
 
+/**
+ * The development kind, off the same envelope (#784 slice 4). One phase, not two: a merge carries its
+ * own instant and never mutates, so there is no second call to refresh what the first one said.
+ *
+ * The poll is also the bus's emitter, so its result is folded back in on the same schema for the
+ * reason `assembleFeedbackPulse` folds its statuses — the write lands during this request, after the
+ * `list()` that produced `events` already returned.
+ */
+async function assembleDevelopment(
+  config: WireRouteDeps,
+  events: readonly ActivityEvent[],
+  limit: number,
+): Promise<readonly DevelopmentFeedItem[] | undefined> {
+  if (!config.readMergedPullRequests) return undefined;
+  const merges = await config.readMergedPullRequests();
+  // Narrow to the one kind that can contribute before the fold walks the list, the same reason
+  // `assembleFeedbackPulse` does: on a `no-store` page the bus is mostly trade events.
+  const developmentOnly = events.filter((event) => event.target.kind === "development");
+  return collapseDevelopmentEvents(mergeMergesIntoEvents(developmentOnly, merges)).slice(0, limit);
+}
+
 async function assembleWire(
   config: WireRouteDeps,
   limit: number,
@@ -138,9 +179,14 @@ async function assembleWire(
   const filings = config.readAllFeedback ? await config.readAllFeedback() : [];
   // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
   // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
-  // `published`, not `events`: the trade ledger's translated lines carry no feedback kind, so
-  // handing them to the pulse would only make its fold walk them for nothing.
-  const feedback = await assembleFeedbackPulse(config, published, filings, limit);
+  // `published`, not `events`: the trade ledger's translated lines carry no feedback or development
+  // kind, so handing them to either assembler would only make its fold walk them for nothing.
+  // Both in flight at once — each ends in an independent GitHub read, so serializing them would add
+  // one round trip to every render of a `no-store` page for nothing.
+  const [feedback, development] = await Promise.all([
+    assembleFeedbackPulse(config, published, filings, limit),
+    assembleDevelopment(config, published, limit),
+  ]);
   const page = buildWireTradeRows(events, participants, { limit, before }, underlyingFilter);
 
   // "the why" and "the vitals" (PR 6, issue #2287) — only bot rows can resolve either, and only
@@ -166,6 +212,7 @@ async function assembleWire(
     trades: { rows, ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}) },
     pnl: buildWirePnlRows(participants),
     feedback,
+    ...(development ? { development } : {}),
   };
 }
 
@@ -203,7 +250,13 @@ export async function serveWireJson(
   res.writeHead(200, headers);
   res.end(
     JSON.stringify({
-      wire: wireJsonView(assembled.trades.rows, assembled.pnl, assembled.feedback, feedbackEnabled),
+      wire: wireJsonView(
+        assembled.trades.rows,
+        assembled.pnl,
+        assembled.feedback,
+        feedbackEnabled,
+        assembled.development,
+      ),
     }),
   );
 }

@@ -26,7 +26,7 @@
 // projects-sync.mjs: the App token has no path to a personal-account project. THIS SCRIPT HAS NOT
 // BEEN RUN LIVE. It was written in a session whose token lacks the `project` scope, so its real IO
 // is unexercised; the spec drives `reconcileBoard` end to end through injected IO only. Its first
-// workflow run (slice 2's hourly cron) is the live test — and the one assumption that run checks is
+// workflow run (board-sync.yml, on every push to main — slice 2) is the live test — and the one assumption that run checks is
 // that `gh project item-list --format json` puts the Status option's name on each item as `status`.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-reconcile.mjs [--dry-run]

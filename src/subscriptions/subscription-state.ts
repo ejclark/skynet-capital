@@ -37,7 +37,14 @@ function parseSubscription(raw: unknown, accountId: string): PlaybookSubscriptio
   } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
-  if (typeof capitalAllocated !== "number" || !Number.isFinite(capitalAllocated)) return null;
+  // Absent is a real value — "uncapped" (`PlaybookSubscription.capitalAllocated`'s doc). Present
+  // but not a finite number is still malformed, never silently read as uncapped.
+  if (
+    capitalAllocated !== undefined &&
+    (typeof capitalAllocated !== "number" || !Number.isFinite(capitalAllocated))
+  ) {
+    return null;
+  }
   if (typeof enabled !== "boolean") return null;
   if (typeof createdAt !== "string" || typeof updatedAt !== "string") return null;
   const parsedSymbols = parseSymbols(symbols);
@@ -45,7 +52,7 @@ function parseSubscription(raw: unknown, accountId: string): PlaybookSubscriptio
     accountId,
     playbookId,
     mode: mode as PlaybookMode,
-    capitalAllocated,
+    ...(capitalAllocated !== undefined ? { capitalAllocated } : {}),
     enabled,
     createdAt,
     updatedAt,

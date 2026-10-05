@@ -70,6 +70,12 @@ export class SubscriptionStore {
     return nextState;
   }
 
+  /** Replace the whole state — the seeder's write (`subscription-seed-store.ts`), which computes
+   *  its next state purely and must land it in one atomic write. */
+  replace(state: SubscriptionsState): void {
+    this.file.write(state);
+  }
+
   /** Flip a subscription's enabled flag. A no-op (state unchanged) if no such subscription exists. */
   setEnabled(
     accountId: string,
@@ -96,8 +102,10 @@ export function createSubscriptionStore(
   env: NodeJS.ProcessEnv,
   onReadError?: (message: string) => void,
 ): SubscriptionStore {
-  return new SubscriptionStore(
-    env.SKYNET_SUBSCRIPTIONS_FILE ?? "data/playbook-subscriptions.json",
-    onReadError,
-  );
+  return new SubscriptionStore(subscriptionsFilePath(env), onReadError);
+}
+
+/** Where the subscription store lives — shared with the seed-marker file beside it. */
+export function subscriptionsFilePath(env: NodeJS.ProcessEnv): string {
+  return env.SKYNET_SUBSCRIPTIONS_FILE ?? "data/playbook-subscriptions.json";
 }

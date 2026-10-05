@@ -192,8 +192,11 @@ function SubscriptionRow({
   return (
     <div className="pb-subscription">
       <span className="pb-subscription-line">
-        Subscribed at <b>{sub.mode}</b>, ${sub.capitalAllocated.toLocaleString()} delegated —
-        currently <b>{sub.enabled ? "active" : "paused"}</b>.
+        Subscribed at <b>{sub.mode}</b>,{" "}
+        {sub.capitalAllocated === undefined
+          ? "uncapped (sized by cash and the position cap)"
+          : `$${sub.capitalAllocated.toLocaleString()} delegated`}{" "}
+        — currently <b>{sub.enabled ? "active" : "paused"}</b>.
         {sub.compoundAllocation ? " Compounding realized gains/losses into allocation." : ""}
       </span>
       <div className="pb-subscription-actions">

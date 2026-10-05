@@ -15,8 +15,15 @@ import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
 import { playbookPerformanceView, selectAccounts } from "./playbook-performance.js";
+import { corpusFingerprint } from "./research-corpus-memo.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
-import { docsMentioning, eventCalls, listResearch, shelfSymbols } from "./research-service.js";
+import {
+  docsMentioning,
+  eventCalls,
+  listResearch,
+  RESEARCH_DIR,
+  shelfSymbols,
+} from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
 /** Per-playbook trade performance (#2287, #885, #3665) — every closed trip any participant's fills
@@ -58,6 +65,27 @@ function shelfJson(): ResearchShelfJson {
   );
 }
 
+/**
+ * The shelf and its calendar slice, SERIALIZED once per minute per corpus state and shared by
+ * every request. Building the shelf costs ~18 MB of short-lived objects and the body is ~2.6 MB;
+ * per-request, 20 members opening Research together held 20 copies at once and exhausted the
+ * dashboard's heap (offline load test, 2026-10-01). The minute bucket bounds the staleness of the
+ * time-dependent parts (the as-of stamp, which events are upcoming) to under a minute.
+ */
+let shelfBodies: { key: string; shelf: string; calendar: string } | undefined;
+function cachedShelfBodies(): { shelf: string; calendar: string } {
+  const key = `${new Date().toISOString().slice(0, 16)}|${corpusFingerprint(RESEARCH_DIR())}`;
+  if (shelfBodies?.key !== key) {
+    const shelf = shelfJson();
+    shelfBodies = {
+      key,
+      shelf: JSON.stringify(shelf),
+      calendar: JSON.stringify(researchCalendarJson(shelf)),
+    };
+  }
+  return shelfBodies;
+}
+
 /** The shell's content JSON family: the wire, the research shelf, the
  *  journey, the discovery shelves, and fleet ops status — read-only twins of their server-rendered
  *  views, one producer each. Returns true when the request was answered. */
@@ -77,10 +105,15 @@ export async function serveContentApi(
     await serveWireJson(res, url, config, Boolean(config.submitFeedback));
     return true;
   }
-  if (path === "/api/research") return json(shelfJson());
+  const serialized = (body: string): true => {
+    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(body);
+    return true;
+  };
+  if (path === "/api/research") return serialized(cachedShelfBodies().shelf);
   // The calendar's slice (#3977 slice 5): the three surfaces that draw the market calendar read
   // this ~8% projection of the same view instead of the whole shelf. Same dispatcher, same gate.
-  if (path === "/api/research/calendar") return json(researchCalendarJson(shelfJson()));
+  if (path === "/api/research/calendar") return serialized(cachedShelfBodies().calendar);
   if (path === "/api/research/mentions") {
     // The `sym:` scope's second net (#3962). The shelf payload carries slugs and titles, never the
     // documents' text, so the board alone can only match a symbol against a slug — which is how a

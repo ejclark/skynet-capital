@@ -241,9 +241,13 @@ function clampBuy(
       ? (config.realizedPlForPlaybook?.(intent.playbookId) ?? 0)
       : 0;
 
-  const subscriptionBudgetShares = subscription
-    ? Math.floor(Math.max(0, subscription.capitalAllocated + realizedPl - basketValue) / quote.ask)
-    : undefined;
+  // An uncapped subscription (no `capitalAllocated` — #4535's seeded house roster) carries no
+  // budget at all: it sizes exactly like a house-roster entry, on cash and the position cap alone.
+  const capital = subscription?.capitalAllocated;
+  const subscriptionBudgetShares =
+    capital !== undefined
+      ? Math.floor(Math.max(0, capital + realizedPl - basketValue) / quote.ask)
+      : undefined;
 
   const bounds = [intent.quantity, affordable, withinPosition];
   if (subscriptionBudgetShares !== undefined) bounds.push(subscriptionBudgetShares);

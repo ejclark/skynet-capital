@@ -1,6 +1,8 @@
 import {
   activityEventFromAuditRecord,
   activityEventFromBotOrder,
+  activityEventFromFeedbackEntry,
+  activityEventFromMergedPullRequest,
   activityEventFromTradeRecord,
 } from "../../src/observatory/activity-event.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
@@ -135,5 +137,65 @@ describe("activityEventFromBotOrder", () => {
     });
     const filled = activityEventFromTradeRecord(tradeRecord());
     expect(submitted.correlationId).toBe(filled.correlationId);
+  });
+});
+
+describe("activityEventFromMergedPullRequest", () => {
+  const merge = {
+    number: 4272,
+    title: "feat(activity): development events for merged PRs",
+    author: "claude",
+    url: "https://github.com/ejclark/skynet-capital/pull/4272",
+    mergedAt: "2026-10-02T12:00:00.000Z",
+  };
+
+  it("maps a merged PR to development.pr-merged, public, attributed to the system (#784 slice 4)", () => {
+    expect(activityEventFromMergedPullRequest(merge)).toMatchObject({
+      eventType: "development.pr-merged",
+      actor: { participantId: "system", kind: "system" },
+      target: { kind: "development", id: "4272" },
+      at: "2026-10-02T12:00:00.000Z",
+      correlationId: "development:4272",
+      source: "github",
+      outcome: "success",
+      visibility: "public",
+      payload: { pullRequest: 4272, title: merge.title, author: "claude", url: merge.url },
+    });
+  });
+
+  it("times the event at the merge GitHub reported, not at the poll — a merge HAS a timestamp", () => {
+    expect(activityEventFromMergedPullRequest(merge).at).toBe(merge.mergedAt);
+  });
+
+  it("keys identity on the PR number alone, so re-reading the same merge cannot publish it twice", () => {
+    const again = activityEventFromMergedPullRequest({
+      ...merge,
+      // The same merge as GitHub might render it on a later read — a different string, one merge.
+      mergedAt: "2026-10-02T12:00:00Z",
+      title: merge.title,
+    });
+
+    expect(again.id).toBe(activityEventFromMergedPullRequest(merge).id);
+  });
+
+  it("omits the author rather than naming someone GitHub did not", () => {
+    const event = activityEventFromMergedPullRequest({ ...merge, author: undefined });
+
+    expect(event.payload).not.toHaveProperty("author");
+  });
+
+  it("never collides with a filing on the same number — an issue and a PR are different things", () => {
+    const filing = activityEventFromFeedbackEntry({
+      uuid: "u1",
+      issueNumber: 4272,
+      opaqueMemberId: "m1",
+      kind: "idea",
+      title: "a filing that happens to share the number",
+      url: "https://github.com/ejclark/skynet-capital/issues/4272",
+      filedAt: "2026-10-01T00:00:00.000Z",
+    });
+
+    expect(activityEventFromMergedPullRequest(merge).id).not.toBe(filing.id);
+    expect(activityEventFromMergedPullRequest(merge).target.kind).not.toBe(filing.target.kind);
   });
 });

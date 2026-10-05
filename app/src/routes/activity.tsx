@@ -7,6 +7,7 @@ import {
   type ActivityQualifier,
   buildActivityFeed,
   filingsInScope,
+  kindInScope,
   matchesActivity,
   parseActivityQuery,
   toggleActivityQualifier,
@@ -20,6 +21,7 @@ import { PageFrame } from "../shell/frame";
 import { PnlStrip } from "../shell/pnl-strip";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
+import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { TradeRow } from "../shell/wire-trade-row";
 
@@ -38,7 +40,9 @@ import { TradeRow } from "../shell/wire-trade-row";
  * fundamental overlap"), which is what slices 1 and 2 fixed by putting both on #1211's one event
  * envelope. So this page now spends its "section" concept on only what is genuinely a different
  * SHAPE of data, and expresses the rest as KINDS — `frame.tsx`'s three-word rule, applied:
- *   - Trades and filings are KINDS: chips on one list (`activity-feed.ts` owns the grammar).
+ *   - Trades, filings and merged pull requests are KINDS: chips on one list (`activity-feed.ts` owns
+ *     the grammar). The third one arrived in slice 4 as a chip and a row component — no new section,
+ *     no widget beside the feed, which is the test the shape was built to pass.
  *   - Booked P&L is a STRIP, not a section: a standing snapshot, always true, never paged to
  *     (#784's criterion — "never a fourth item competing for the same section concept").
  *   - The Council stays a SECTION: a composer plus this week's lines is not a record of something
@@ -55,6 +59,7 @@ import { TradeRow } from "../shell/wire-trade-row";
 const KIND_CHIPS = [
   ["is:trade", "Trades"],
   ["is:feedback", "Ideas"],
+  ["is:development", "Builds"],
 ] as const;
 const SIDE_CHIPS = [
   ["is:buy", "Buys"],
@@ -83,16 +88,19 @@ function WireControls({
   query,
   filter,
   feedbackEnabled,
+  developmentEnabled,
   onChange,
   section,
   onSection,
 }: {
   readonly query: string;
   readonly filter: ActivityFilter;
-  /** With the feedback lane unwired the feed has exactly ONE kind, so the kind and filings chips
-   *  are controls with nothing to do — and pressing "Ideas" would blame a member's filter for a
-   *  deployment fact. The feed says why in its own note instead. */
+  /** An unwired lane is a deployment fact, so its chip is not rendered at all — pressing "Ideas" or
+   *  "Builds" where nothing can ever arrive would blame a member's filter for that fact, and the Kind
+   *  group itself disappears when only one kind is left, because then it is a control with nothing to
+   *  do. The feed says why in its own note instead. */
   readonly feedbackEnabled: boolean;
+  readonly developmentEnabled: boolean;
   readonly onChange: (next: string) => void;
   readonly section: ActivitySection;
   readonly onSection: (next: ActivitySection) => void;
@@ -113,7 +121,14 @@ function WireControls({
       ))}
     </>
   );
-  const tradesInScope = !filter.qualifiers.includes("is:feedback");
+  const kinds = KIND_CHIPS.filter(([qualifier]) =>
+    qualifier === "is:feedback"
+      ? feedbackEnabled
+      : qualifier === "is:development"
+        ? developmentEnabled
+        : true,
+  );
+  const tradesInScope = kindInScope(filter, "trade");
   const filings = feedbackEnabled && filingsInScope(filter);
   return (
     <>
@@ -121,7 +136,7 @@ function WireControls({
       {section === "feed" ? (
         <>
           <hr />
-          {feedbackEnabled ? group("Kind", KIND_CHIPS) : null}
+          {kinds.length > 1 ? group("Kind", kinds) : null}
           {tradesInScope ? group("Side", SIDE_CHIPS) : null}
           {tradesInScope ? group("Desks", DESK_CHIPS) : null}
           {filings ? group("Filings", FILING_CHIPS) : null}
@@ -233,7 +248,11 @@ function FeedSection({
   const queryClient = useQueryClient();
   const comments = useQuery({ queryKey: ["filing-comments"], queryFn: fetchFilingComments });
   const threads = comments.data?.enabled ? comments.data : undefined;
-  const items = buildActivityFeed(wire.trades, wire.feedbackEnabled ? wire.feedback : []);
+  const items = buildActivityFeed(
+    wire.trades,
+    wire.feedbackEnabled ? wire.feedback : [],
+    wire.developmentEnabled ? (wire.development ?? []) : [],
+  );
   const shown = items.filter((item) => matchesActivity(item, filter));
   return (
     <section className="wire-panel">
@@ -242,15 +261,17 @@ function FeedSection({
       {shown.length === 0 ? (
         <p className="note">
           {items.length === 0
-            ? "Nothing yet — the first fill or filed idea lights it up."
+            ? "Nothing yet — the first fill, filed idea or merge lights it up."
             : "Nothing here matches this filter."}
         </p>
       ) : (
         <ul className="wire-feed">
-          {shown.map((item) =>
-            item.kind === "trade" ? (
-              <TradeRow key={item.key} trade={item.trade} />
-            ) : (
+          {shown.map((item) => {
+            if (item.kind === "trade") return <TradeRow key={item.key} trade={item.trade} />;
+            if (item.kind === "development") {
+              return <DevelopmentRow key={item.key} merge={item.merge} />;
+            }
+            return (
               <FilingRow
                 key={item.key}
                 filing={item.filing}
@@ -259,8 +280,8 @@ function FeedSection({
                   queryClient.invalidateQueries({ queryKey: ["filing-comments"] })
                 }
               />
-            ),
-          )}
+            );
+          })}
         </ul>
       )}
       {onLoadMore ? (
@@ -279,7 +300,15 @@ function FeedSection({
           is an invitation rather than a gap. Neither is the feed's own empty state, which is about
           the filter. */}
       {wire.feedbackEnabled ? null : (
-        <p className="note">Filing ideas isn't switched on yet, so only trades show here.</p>
+        <p className="note">Filing ideas isn't switched on yet, so no filed ideas show here.</p>
+      )}
+      {/* The same seam for the third kind. No matching "wired but empty" note: an empty build list
+          asserts nothing on its own, whereas claiming "nothing has merged yet" would be a guess about
+          a read that may simply have returned less than the repo holds. */}
+      {wire.developmentEnabled ? null : (
+        <p className="note">
+          The build record isn't switched on in this deployment, so merged work isn't listed here.
+        </p>
       )}
       {wire.feedbackEnabled && wire.feedback.length === 0 ? (
         <p className="note">
@@ -369,6 +398,7 @@ function WirePage(): ReactElement {
           query={query}
           filter={filter}
           feedbackEnabled={feed.feedbackEnabled}
+          developmentEnabled={Boolean(feed.developmentEnabled)}
           onChange={setFilter}
           section={section}
           onSection={setSection}
@@ -377,7 +407,10 @@ function WirePage(): ReactElement {
     >
       <header className="page-header">
         <h1>Activity</h1>
-        <p>Every trade, every open idea — the live pulse of the whole league, one feed.</p>
+        <p>
+          Every trade, every idea filed, every change merged — the live pulse of the whole league,
+          one feed.
+        </p>
       </header>
       {section === "feed" ? (
         <>

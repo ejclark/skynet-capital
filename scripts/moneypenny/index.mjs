@@ -14,6 +14,7 @@
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
+//   node scripts/moneypenny/index.mjs --check-callout          # needs-eric just landed: is the ask actually written?
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -53,8 +54,19 @@
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { gateAdmission, nextAdmissible, readInFlight, readOpenIssues } from "./admission.mjs";
+import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import {
+  CONTINUED_MODEL,
+  continuationContext,
+  executeStopContinuation,
+  gatherContinuationDeps,
+  pickContinuation,
+  postContinuationReceipt,
+  routeContinuation,
+} from "./continuation.mjs";
+import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -69,6 +81,7 @@ import {
 } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
+import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -87,6 +100,8 @@ export {
   mergedReference,
   modelTier,
   resolveShipped,
+  routeContinuation,
+  routeRelay,
   routeShipped,
 };
 
@@ -350,6 +365,51 @@ export function triageFeedback(ctx) {
 }
 
 /**
+ * #3913 SLICE 2b — THE DECISION-QUEUE CHECK, AFTER FILING. `needs-eric` means exactly one thing:
+ * a decision only Eric can make. `issue-lint` already demands the `Needs from you` callout that
+ * states WHAT the decision is, but only at filing time — and the 2026-09-28 audit found the label
+ * almost always lands later, from another lane (7 of 8 open `needs-eric` issues carried no callout;
+ * #4056's capture study traced 6 of those 7 to a post-filing relabel). `issues.mjs` refuses to add
+ * the label without one (slice 2a), and the board keeps a callout-less issue out of Blocked — this
+ * is the third consumer: the loud, reversible comment on the paths neither of those covers (a
+ * human or a lane labelling through `gh` or the GitHub UI).
+ *
+ * The rule itself is `decision-callout.mjs` and is pure; this function is only its I/O — the
+ * labelled issue straight from the event payload (no `gh issue view`, same discipline as
+ * `triageFeedback`), its comment bodies over REST, and one comment when the gap is real. `deps`
+ * injects both so the wiring is specced without a network.
+ *
+ * NEVER strips the label (a settled fork on #3913): silently removing a decision label would hide
+ * a real ask. A comment is loud, reversible, and leaves the ask where Eric can still see it.
+ */
+export function checkCallout(ctx, deps = {}) {
+  const issue = ctx.payload?.issue;
+  if (!issue) return { posted: false, reason: "no issue in the payload" };
+  const readComments =
+    deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`).map((c) => c?.body ?? ""));
+  const post =
+    deps.post ?? ((n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]));
+
+  const labels = (issue.labels ?? []).map((l) => l.name);
+  const gap = shouldPostCalloutGap({
+    labels,
+    body: issue.body ?? "",
+    author: issue.user?.login ?? "",
+    comments: readComments(issue.number),
+  });
+  if (!gap) {
+    console.log(`::notice::#${issue.number} — needs-eric callout check: nothing to say`);
+    return { posted: false, reason: "no gap, or already commented" };
+  }
+  const actor = ctx.payload?.sender?.login ?? ctx.actor;
+  post(issue.number, calloutGapComment({ actor }));
+  console.log(
+    `::notice::#${issue.number} — needs-eric with no decision callout (labelled by ${actor}); commented once`,
+  );
+  return { posted: true, actor };
+}
+
+/**
  * The plan lane's one step (#823) — mirrors `claimFeedback` exactly, one line down: decide whether
  * this `issue_comment` is a ready-flip on a plan issue (the pure `planReadyIntent`), and if so claim
  * the SAME lease mechanism (`claim/plan-<n>`) so a duplicate or retried ready-comment is a safe
@@ -376,7 +436,13 @@ export function claimPlan(
     console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);
     return result;
   }
-  const tier = modelTier(issue.body ?? "");
+  // #3818 criterion 9: a CONTINUED slice builds below the top tier. `modelTier` hands every plan
+  // Opus (no plan carries a `skynet-spec` block), which is right for a first slice off a brief and
+  // wrong for one whose scope is already written in the state block. `ctx.continuation` is set only
+  // by `claimNext`'s continuation branch — never by a label or comment event.
+  const tier = ctx.continuation
+    ? { model: CONTINUED_MODEL, reason: "continued slice — below the top tier (criterion 9)" }
+    : modelTier(issue.body ?? "");
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
@@ -407,11 +473,14 @@ export function peekNext(deps = {}) {
     readMode = () => readWorkMode(),
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
+    continuation = () => continuationContext(),
   } = deps;
   const mode = readMode();
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
   const ready = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
-  const pick = nextAdmissible(ready, inFlightOf(), mode);
+  // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
+  // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
+  const pick = continuationPick(continuation) ?? nextAdmissible(ready, inFlightOf(), mode);
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -426,6 +495,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readReady = () => readOpenIssues(LABELS.ready.name),
     readInFlight: inFlightOf = () => readInFlight(),
     claims = { plan: claimPlan, feedback: claimFeedback },
+    continuation = () => continuationContext({ now: nowMs }),
     ...admission
   } = deps;
   const mode = readMode();
@@ -433,6 +503,16 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const lanes = [LABELS.plan.name, LABELS.feedback.name];
   let pool = readReady().filter((i) => labelNames(i.labels).some((l) => lanes.includes(l)));
   const gateDeps = { readMode: () => mode, readInFlight: () => inFlight, ...admission };
+  // #3818 slice 8, criterion 9 — a plan whose slice just landed goes FIRST, ahead of rank order.
+  // Rank order cannot express it: the plan's lease is still held by the build that just finished,
+  // so the loop below would step past it for the lease's full TTL and claim something else.
+  const continued = continueNext(continuationPick(continuation), {
+    claims,
+    nowMs,
+    sha,
+    gateDeps,
+  });
+  if (continued) return continued;
   // A lease outlives a successful build (only a failed one releases it), so the top-ranked issue
   // can sit "held" for the whole TTL after its slice ships. Stopping there idled the sweep for up
   // to 2h behind #3960 on 2026-10-01; step past a held pick instead, a bounded number of times.
@@ -461,6 +541,92 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
+
+/**
+ * `pickContinuation` over a freshly gathered context, FAIL-OPEN — the same call `gatherDeps` wraps
+ * for the sweep, for the same reason. This gather is the chattiest read on a tick (a comments page
+ * and a run lookup per candidate plan) and `ghRest` throws on a 5xx; letting that throw would fail
+ * the `peek` step, and with it the whole `route` job — taking down the re-dispatch that carries the
+ * retry sweep AND the event-research legs for that merge. A continuation missed on one tick is
+ * picked up on the next push; a red `route` job costs everything the tick was for.
+ */
+function continuationPick(read) {
+  try {
+    return pickContinuation(read());
+  } catch (err) {
+    console.log(
+      `::warning::continuation — skipping this tick, the read failed: ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * The lease's own timestamp in ms, or null when nothing holds it. Same read and same stamp
+ * `isClaimed` uses; this one hands back the number a comparison needs rather than prose.
+ */
+function leaseStampMs(slug) {
+  try {
+    const ref = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/claim/${slug}`]));
+    const ms = Date.parse(claimAgeOf(ref.object.sha));
+    return Number.isNaN(ms) ? null : ms;
+  } catch {
+    return null; // 404 — nothing held, nothing to release
+  }
+}
+
+/**
+ * Claim a continuation pick, or return null so the caller falls through to rank order (#3818
+ * criterion 9).
+ *
+ * THE LEASE IS RELEASED FIRST, AND ONLY IF IT PREDATES THE MERGE — the one write here that needs
+ * its reasoning on the record. A lease outlives a SUCCESSFUL build, so a plan whose slice just
+ * merged is still held by the run that finished, which is exactly the state `claimNext`'s loop
+ * steps past; releasing that is safe, because `continuationDecision` has already proved the prior
+ * slice is done (pullable, no open PR naming it, the last run concluded, the state block moved).
+ *
+ * A lease stamped AFTER that merge is a different animal: it belongs to a claim taken since the
+ * gather's snapshot — a `ready` label event, a live session, another lane — and deleting it would
+ * defeat the compare-and-set the whole lease exists to be, putting two sessions on one plan and one
+ * state block. Those two runs sit in different concurrency groups, so nothing else serialises them.
+ * Unconditional release was the first draft of this function and it is the bug a `/code-review`
+ * pass caught before this slice shipped. So: compare, and leave a newer lease alone.
+ */
+function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
+  if (!pick) return null;
+  const slug = `plan-${pick.number}`;
+  const stamp = leaseStampMs(slug);
+  if (stamp !== null && pick.mergedMs && stamp > pick.mergedMs) {
+    console.log(
+      `::notice::continuation — #${pick.number} took a new lease after its slice merged; leaving it alone`,
+    );
+    return null;
+  }
+  releaseClaim(slug);
+  const ctx = {
+    continuation: true,
+    payload: { action: "labeled", label: { name: LABELS.ready.name }, issue: pick.issue },
+  };
+  const result = claims.plan(ctx, nowMs, sha, gateDeps);
+  if (!result.claimed) {
+    console.log(`::notice::continuation — not claiming #${pick.number}: ${result.reason}`);
+    return null;
+  }
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) appendFileSync(out, "lane=plan\n");
+  console.log(`::notice::continuing #${pick.number} — ${pick.reason} → ${pick.pickup}`);
+  try {
+    postContinuationReceipt(pick);
+  } catch (err) {
+    // The receipt is this lane's memory (the daily cap and criterion 10 both read it), but the
+    // build is already claimed and running — so a failed comment is a warning, never a reason to
+    // abandon the slice. The cost is one unjudged run, and the next tick sees no receipt to judge.
+    console.log(
+      `::warning::continuation — the receipt on #${pick.number} did not post: ${String(err?.message).slice(0, 200)}`,
+    );
+  }
+  return { ...result, lane: "plan", continued: true };
+}
 
 // ── the impure half ───────────────────────────────────────────────────────────
 
@@ -630,7 +796,47 @@ function gatherDeps(ctx) {
       : [],
     openIssueTitles: open.map((i) => i.title),
     openEventReceipts: needsScan ? readReceipts(open) : [],
+    // The dropped-remainder relay (#3818 slice 4). REST and paged, like the open-issue read above,
+    // and only on a sweep — nothing on a label or comment event can close an issue, so no other
+    // path has anything to relay.
+    closedWithRemainder: needsScan ? gatherRelayDeps() : [],
+    // The assignment lane (#3818 slice 5). Sweep-only for the same reason as the relay above: only
+    // a push can have changed what Eric holds since the last tick, and `null` (not `{}`) is what
+    // makes `routeAssignments` a no-op on every other event and in every pre-slice-5 fixture.
+    //
+    // FAIL OPEN HERE, unlike every other read in this function — the one deliberate exception. This
+    // read is the chattiest on the tick (a comments page per candidate) and so the likeliest to meet
+    // a transient 5xx, and a throw out of `gatherDeps` happens BEFORE `runIntents`' per-intent
+    // isolation: it would take the receipt closes, the relay and `has_next` down with it. Nothing is
+    // lost by skipping a tick, because the next push re-reads the same queue from GitHub — this lane
+    // keeps no state of its own. (Contrast `readReceipts`, which refuses outright: there a false
+    // empty would CLOSE the whole queue.)
+    assignments: needsScan ? gatherAssignmentsSafely() : null,
+    // Continuation's stop half (#3818 slice 8, criterion 10). Sweep-only and FAIL-OPEN, for both
+    // of the reasons the assignment read above records: only a push can have merged the slice that
+    // makes a plan continuable, and this read is chatty enough (a comments page and a run lookup
+    // per candidate plan) to meet a transient 5xx. A skipped tick costs nothing — the next push
+    // re-reads the same state, and the only thing waiting is a stop that was already late.
+    continuations: needsScan ? gatherSafely("continuations", gatherContinuationDeps) : null,
   };
+}
+
+/** `gatherAssignmentDeps` with the fail-open wrapper `gatherDeps` explains above. */
+function gatherAssignmentsSafely() {
+  return gatherSafely("assignments", gatherAssignmentDeps);
+}
+
+/** The fail-open gather `gatherDeps` explains: a read that throws warns and reads as "not this
+ *  tick" (`null`), never as an empty queue — the one shape that could make a lane act wrongly. */
+function gatherSafely(lane, read) {
+  try {
+    return read();
+  } catch (err) {
+    console.log(
+      `::warning::${lane} — skipping this tick, the read failed: ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
 }
 
 /**
@@ -889,6 +1095,62 @@ function dispatchEventStallRepair(issueNumbers) {
 }
 
 /**
+ * The push sweep's own three intents — the two closes and the dropped-remainder relay. Split out of
+ * `executeOne` when the relay landed (#3818 slice 4): that function was already one point under the
+ * cognitive-complexity ceiling, and a lane adding a branch to the shared dispatcher should pay for
+ * its own room rather than ratchet the budget up. Groups cleanly because all three are the *level*
+ * sweep's writes (a merged PR, a ledger on disk, a remainder with nowhere to live), where everything
+ * left in `executeOne` reacts to a single event.
+ *
+ * @returns the receipt line, or `undefined` when this is not one of the sweep's intents.
+ */
+function executeSweepIntent(i) {
+  if (i.kind === "close-shipped") {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
+    console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
+    return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
+  if (i.kind === "close-receipt") {
+    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
+    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
+    sh("gh", [
+      "issue",
+      "close",
+      String(i.issueNumber),
+      "--reason",
+      i.closeReason,
+      "--comment",
+      i.body,
+    ]);
+    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
+    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
+  }
+  if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
+    // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
+    // this router — the same cycle-avoidance as the relay below.
+    const line = executeAssignments(i);
+    console.log(`::notice::${line}`);
+    return line;
+  }
+  if (i.kind === "stop-continuation") {
+    // The label write and the assignment live in continuation.mjs so its own CLI can reuse them
+    // without importing this router — the same cycle-avoidance as the relay and the assignments.
+    const line = executeStopContinuation(i);
+    console.log(`::warning::${line}`);
+    return line;
+  }
+  if (i.kind === "relay-remainder") {
+    // The three writes (file the relay, receipt the source, clear the remainder label) live in
+    // relay.mjs so its own CLI can reuse them without importing this router.
+    const line = executeRelay(i);
+    console.log(`::notice::relayed #${i.source}'s remainder — ${i.title}`);
+    return line;
+  }
+  return undefined;
+}
+
+/**
  * @param i the intent to carry out.
  * @param stallRepairs collector for `flag-stall` issue numbers — the dispatch is fired once per
  *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
@@ -939,27 +1201,8 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
     return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber}, repair batched)` : ""}`;
   }
-  if (i.kind === "close-shipped") {
-    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-    sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
-    console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
-    return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
-  }
-  if (i.kind === "close-receipt") {
-    // ONE call, not comment-then-close: this drains a backlog, and halving the mutating calls per
-    // issue is what keeps a 20-per-tick batch clear of GitHub's secondary rate limits.
-    sh("gh", [
-      "issue",
-      "close",
-      String(i.issueNumber),
-      "--reason",
-      i.closeReason,
-      "--comment",
-      i.body,
-    ]);
-    console.log(`::notice::closed #${i.issueNumber} — ${i.why}`);
-    return `${i.why === "researched" ? "📄" : "🌙"} closed #${i.issueNumber} — \`${i.title}\` ${i.why}`;
-  }
+  const swept = executeSweepIntent(i);
+  if (swept !== undefined) return swept;
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
     console.log(
@@ -1041,6 +1284,13 @@ function runCliFlag(argv, ctx) {
   // or Backlog. Never touches the claim lease; that only starts once `ready` actually lands.
   if (argv.includes("--triage-feedback")) {
     triageFeedback(ctx);
+    return true;
+  }
+
+  // `--check-callout` (#3913 slice 2b): `needs-eric` just landed on an issue — say so once if the
+  // body never states what the decision is. Read-only but for that one comment; never relabels.
+  if (argv.includes("--check-callout")) {
+    checkCallout(ctx);
     return true;
   }
 

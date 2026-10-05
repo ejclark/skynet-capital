@@ -613,6 +613,7 @@ licenses an entry, and there is no instrument to enter.
 | 2026-09-17 | D-14 | **Pulse check, cadence-band transition (low:15+ → low:0+).** Re-verified the one live kill switch directly rather than assuming: fetched `census.gov/construction/c30/release.html` fresh today — the schedule table's August-reference row still reads **"August \| October 1 \| 10:00 a.m."**, unmoved from the 09-06 read; **no re-date, kill switch #1 not fired.** **Macro surprises since the last row:** August CPI printed **+0.4% m/m / 3.4% y/y** on 2026-09-11 (in line with this shelf's nowcast, no surprise to Leg 7's asterisk framing); the **FOMC hiked 25bp on 2026-09-16**, hawkish 12-0, with the SEP's 2026 median jumping to **4.1%** against a 3.8% prior read — a real equity reaction (S&P −0.45% to 7,551.81, Dow −1.21%) per the sibling `fomc-2026-09-16` close-out. None of this touches this event's kill switches (funding law, GDPNow footprint, tape attribution) or its `symbols: []` — a rate surprise is not a channel this ledger has an instrument on. **Volatility regime:** VIX **17.71** (2026-09-16 close, held flat into 09-17 per the sibling `unsc-iran-panel` pulse) against the 09-06 baseline of **14.53**, a **+3.18pt** move that would trip the deterministic screen's regime threshold on its own — carried here as a corridor-wide fact, not as a claim about this print, which has no volatility-shaped instrument. **Geopolitical:** the FY2027 funding law (PL 119-103) is unchanged and unchallenged — no rescission, impoundment or repeal proposed against it, so kill switch #2 stays unfired and `government-funding-deadline-2026-09-30` remains a formality; Hormuz/Iran tension is escalating per the sibling UNSC pulse (Saudi output lowest since 1990, transit trackers disagreed 2–4x) but reaches construction only through input costs, a channel Leg 6 already named as not attaching to this statistic's publication. **Event-specific tape:** no August construction consensus exists yet at D-14 in any source reachable this session; nothing to compare against. **Adjacency sweep — no new dated event discovered.** The corridor (Sep 26 – Oct 6, 57 tracked ids) is unchanged in composition from the 09-06 sweep; both of this event's own proposals (`housing-starts-2026-09-17`, `new-home-sales-2026-09-24`) are now canonical, confirmed files, and four confirmed high-impact entries sit in the 5-day corridor (`pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`), all already known. No proposal filed this pulse. **No forward test scoreable yet** — all four score by 2026-10-05, after this event's own date. `probe-ref.blocked` empty. | **No change.** Stand aside holds on every horizon; none of the four kill switches or four registered forward tests were touched by the CPI print, the hawkish FOMC surprise, or the VIX move — this event has no symbol, no macro-keyed playbook and no channel from a rate surprise to a Census construction-spending statistic. | 2026-09-24 (low, 0+ band: every 7d) |
 | 2026-09-24 | D-7 | **Pulse check, on schedule.** Both live kill switches re-verified directly today, neither fired. **Kill switch #1 (re-date):** re-fetched `census.gov/construction/c30/release.html` and `economic-indicators/calendar-listview.html` — the August-reference row is unmoved, **"August \| October 1 \| 10:00 a.m."** / `A202610011000`, period `A202608`, identical to the 09-06 and 09-17 reads. **Kill switch #2 (funding reopened):** cross-checked rather than re-derived — the sibling `government-funding-deadline-2026-09-30` ledger's own 09-23 pulse fetched CRFB's Appropriations Watch tracker direct and found **PL 119-103 unchanged for the fourth consecutive check**, funding through **Dec 11, 2026**, and a dedicated search for a rescission/impoundment/repeal action against FY2027 appropriations found none (the one rescission surfaced, a $4.9B foreign-aid clawback under P.L. 119-28, predates this CR and is off-topic). Neither switch fired. **Macro surprises since the last row:** none of CPI/FOMC/jobs — Employment Situation is 10-02, still ahead. The corridor print that has landed is this event's own proposed adjacency **`housing-starts-2026-09-17`** (August data, Census direct): **1,275K SAAR, −2.6% m/m, −1.2% y/y**, below the ~1.320M consensus, single-family **+7.6%** against multifamily **−21.7%** — residential is 40.4% of this print's own aggregate and its fastest-falling leg (Leg "This quarter"), so a soft supply-side August reading is consistent with, not contrary to, that call. **`new-home-sales-2026-09-24`** (the demand-side twin) releases today; its own ledger covers the figure, not duplicated here. **Volatility regime:** VIX **15.18** (2026-09-23 close, Yahoo daily bar, cross-checked byte-for-byte against the sibling funding-deadline ledger's own 09-24 probe-ref) against the **17.71** baseline carried in the last row — a **−2.53pt** move, inside the 3-point screen threshold, continuing the calming trend since the FOMC hike. **Geopolitical:** unchanged from 09-17; PL 119-103 is the corridor's dominant policy fact and it is re-confirmed resolved (above). **Adjacency-list correction, not a new discovery:** `mu-2026-09-30-print` (confirmed, **critical**, dated 09-30 — one day inside this event's 5-day corridor) belongs in `adjacentStrongIds` and was omitted from the 09-17 probe-ref despite being confirmed since 2026-09-08, before that pulse ran; corrected in today's probe-ref below (now 5 strong ids: `mu-2026-09-30-print`, `pce-2026-09-30`, `ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`), independently cross-checked against the funding-deadline sibling's own 09-23/09-24 reads which carry the identical five. No channel from an earnings print to this event's own construction-spending statistic — noted for corridor completeness only. **No new dated adjacent event discovered this sweep** — re-ran `event-scan.mjs --on-date` across 09-26 → 10-06 (the full 5-day corridor); every entry returned is already tracked, and this event's own two prior proposals (`housing-starts-2026-09-17`, `new-home-sales-2026-09-24`) remain the only ones it owns. No proposal filed this pulse. **No forward test scoreable yet** — all four score by 2026-10-05, still ahead of this event's own 10-01 date. `probe-ref.blocked` empty. | **No change.** Stand aside holds on every horizon; neither live kill switch fired, the one landed adjacency print (soft August housing starts) is consistent with the existing composition read rather than a surprise to it, and the VIX move is well inside the regime threshold. | 2026-10-01 (low, 0+ band: every 7d) |
 | 2026-10-01 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 16.3 (+1.2pt since last), band unchanged (low:0+), 59 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-08 |
+| 2026-10-05 | D+4 | **Close-out.** Scanner marked `event-passed-unscored`; all four forward tests score by **2026-10-05** (today), inside the 6-day `closeOutWithinDays` window, so nothing is held per #2988. Cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) touched nothing — `symbols: []`, neither instrument ever had a target. **Release**, re-fetched fresh (`census.gov/construction/c30/current/index.html`, `calendar-listview.html`): **CB26-158, August 2026 data, published 2026-10-01 10:00 a.m. ET** (`A202610011000`), on schedule, no lapse delay — Leg 6's finding held. Total **$2,203.1B SAAR, +0.9% (±1.0%)\*** m/m, asterisked, the 4th consecutive August-reference edition to carry it. **`FT-…-1` PASSES** (on-schedule publication); **`FT-…-2` PASSES** (asterisked). **GDPNow**, re-fetched direct: the Atlanta Fed media path moved a SECOND time since initial research (now `/research-and-data/data/gdpnow/`; the `cqer/researchcq/gdpnow/` path Method cited now 404s) — `ContribArchives`/`TrackingArchives` remain frozen at **2026-07-28, now 10 weeks stale**, confirming the `housing-starts-2026-09-17` sibling's staleness finding rather than a one-time gap (flagged to `IDEAS.md` this PR). The same workbook's live, non-archived **`ContribHistory`** sheet ("Evolution of component contributions ... for 2026q3") carries the full 8-way split with Structures separate, current through 2026-10-01 — finer than the housing-starts sibling could reach (6-category `Contributions`/`ChangeInContributions` only). Nonres.-Structures contribution **2026-09-30: 0.056802pp → 2026-10-01: 0.189217pp, \|Δ\| = 0.1324pp** — under the registered **0.1667pp** bar, so **`FT-…-3` PASSES**, but narrowly and worth stating plainly: the move clears Leg 4's own "loud" month-1 median (0.0742pp) and sits far above the "quiet" group (0.0438pp) that frame placed this edition in — a weak single live instance for that frame, not a reversal of it. Same vintage's \|ΔGDP\| = **0.021pp** (kill switch #6 not fired). **Tape**, re-fetched fresh (Yahoo, `period2` from `Date.now()`, last bar 2026-10-02 confirming a non-stale series): SPY 2026-10-01 O 764.36 / H 765.65 / L 758.79 / C 763.99 — range **0.898%** of close, well under the **1.818%** bar, so **`FT-…-4` PASSES**; VIX closed **16.39** (10-01), **15.31** (10-02). **All eight kill switches re-checked, none fired** (detail in `## Outcome`). No macro-keyed playbook exists (`trade-playbooks.md`, 0 hits, re-grepped). No adjacency sweep — close-out mode. `## Outcome` written below — this document goes quiet. | **All four forward tests PASS; the parent stand-aside stance holds unchanged and was never contingent on any of them.** Leg 4's reference-month frame had its first live test and underperformed it (a "quiet"-placed edition moved near the "loud" group's own median) even though the formal bar still cleared — carried forward as a caveat on that frame, not a reversal of it. | — (closed; `## Outcome` below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -629,3 +630,115 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":1} -->
+
+## Outcome
+
+**Assessed 2026-10-05 (D+4), inside the 6-day `closeOutWithinDays` window.** `symbols: []`, so the
+mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`)
+had no target of its own — this event never ran `earnings-cycle`/`intraday-edges`. Every figure
+below is a fresh fetch this session: Census's own release pages, the Atlanta Fed workbook (media
+path moved again, recorded below), and Yahoo daily bars with `period2` from `Date.now()`,
+cross-checked against the last bar's date per the trap this ledger's own initial research banked.
+
+### Leg 1 / Leg 7 — the release, re-read from the actual August 2026 content
+
+Fetched `census.gov/construction/c30/current/index.html` and `calendar-listview.html` fresh.
+**Release CB26-158, August 2026 data, published 2026-10-01 at 10:00 a.m. ET** (entry
+`A202610011000`) — on schedule, no delay, no deletion. Total construction **$2,203.1B SAAR, +0.9%
+(±1.0%)\* m/m**, asterisked as not statistically different from zero — the **fourth consecutive**
+August-reference edition to carry it (2023 +0.5%\*, 2024 −0.1%\*, 2025 +0.2%\*, 2026 +0.9%\*).
+Private $1,655.3B; residential $882.3B; nonresidential $773.0B; public $547.8B. Year-over-year,
+−1.7% (±1.5%) against August 2025's $2,242.0B; year-to-date −3.1% (±1.0%).
+
+**`FT-construction-spending-2026-10-01-1` — PASSES.** The release happened exactly where both
+Census primaries said it would, at the time they said it would: the funding-lapse exposure Leg 6
+found (two lapses, two kills — 2013 and 2025) stayed retired for 2026, exactly as PL 119-103 said.
+
+**`FT-construction-spending-2026-10-01-2` — PASSES.** The August 2026 figure carries the asterisk,
+extending the family's streak to 4 of 4 on this reference month and keeping the headline inside its
+own stated margin of error (\|0.9%\| < 1.0%).
+
+### Leg 2 / Leg 3 / Leg 4 — the GDPNow footprint, re-fetched direct (the media path moved a second time)
+
+The Atlanta Fed moved both workbooks' media path again since this event's own initial research:
+Method's `/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/gdpnow/` now 404s. The live path,
+confirmed via the current `/cqer/research/gdpnow` landing page, is
+`/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/gdpnow/<file>.xlsx` — a second move
+inside the five weeks since the `housing-starts-2026-09-17` sibling close-out recorded the first
+one. **`ContribArchives`/`TrackingArchives` — the sheets every prior leg's cross-quarter arithmetic
+was built from — remain frozen at 2026-07-28**, now **ten weeks** stale and unchanged since this
+event's own initial research, confirming the sibling's staleness finding rather than a one-time
+snapshot gap (updated to `IDEAS.md` this PR).
+
+**The same workbook's `ContribHistory` sheet — "Evolution of component contributions to GDP nowcast
+for 2026q3," live and non-archived — carries the full 8-way split (Equipment / Intellectual Property
+Products / Structures kept separate), current through 2026-10-01.** That is finer than the
+`housing-starts-2026-09-17` close-out could reach: that sibling only had the 6-category
+`Contributions`/`ChangeInContributions` aggregate, with Structures folded into "BFI." Reading the
+`Nonres. struct.` row directly:
+
+| Vintage | Nonres.-Structures contribution | Data releases |
+|---|---|---|
+| 2026-09-30 | 0.056802pp | GDP (Q2 3rd est.), Pers. inc. and outlays, NIPA tables, Adv. Econ. Indicators |
+| **2026-10-01** | **0.189217pp** | Construction spending, ISM Manufacturing Index |
+| **\|Δ\|** | **0.1324pp** | |
+
+**`FT-construction-spending-2026-10-01-3` — PASSES, narrowly, and the margin is itself the
+finding.** 0.1324pp stays under the registered 0.1667pp bar (the second-largest archived October
+reading) by **0.034pp** — so the test passes on its stated terms. But it clears the 0.0742pp
+month-1 ("loud") median Leg 4 placed *above* this edition and sits closer to the family's top than
+that reference-month frame predicted: the frame called this a quiet-group print (indistinguishable
+from base-setting at p=0.9116), and the live reading is roughly **3× the quiet-group median
+(0.0438pp) and nearly double the loud group's own median.** One live instance is not a reversal of
+a frame this ledger already flagged as a description rather than a demonstrated mechanism — but a
+single data point landing this close to a bar set at the slot's *upper tail*, on a frame that
+predicted the opposite end, is a weak result for that placement, not a confirming one. Cross-checked
+against `ChangeInContributions`'s own `ChgGDP` column for the same vintage: total GDP moved
+**−0.021pp**, so kill switch #6 (≥0.30pp on an isolated construction print) does not fire — the
+headline-null finding (the print does not move the aggregate) holds even as its own category moved
+more than the frame expected.
+
+### Leg 8 — the tape, re-fetched fresh (Yahoo, `period2` from `Date.now()`)
+
+| Symbol | Open | High | Low | Close | Range (% of close) |
+|---|---|---|---|---|---|
+| SPY, 2026-10-01 | 764.36 | 765.65 | 758.79 | 763.99 | **0.898%** |
+
+**`FT-construction-spending-2026-10-01-4` — PASSES.** 0.898% sits well under the 1.818%
+construction-day p75 bar, and under the 0.976% first-trading-day-of-October baseline this ledger's
+own Leg 8 established — the tape read this edition as an ordinary day, exactly as the declined-tape
+call anticipated. VIX closed **16.39** on 2026-10-01 and **15.31** the next session, inside this
+ledger's own baseline range and below the 11-year first-October median of 18.56.
+
+### Kill switches re-checked — none fired
+
+| # | Switch | Status |
+|---|---|---|
+| 1 | Census re-dates/delays/deletes 10-01 | **Not fired** — CB26-158 published on schedule |
+| 2 | FY2027 funding reopened before 10-01 | **Not fired** — no rescission/impoundment action found |
+| 3 | \|Δ structures\| ≥ 0.1667pp | **Not fired** — 0.1324pp (narrowly under; see Leg 2/3/4) |
+| 4 | Month-2 print exceeds the month-1 median in 3 consecutive editions | **Not evaluable yet** — n=1 this cycle |
+| 5 | Headline clears its own margin of error | **Not fired** — 0.9% < 1.0% stated margin |
+| 6 | Isolated-CS vintage moves \|ΔGDP\| ≥ 0.30pp | **Not fired** — 0.021pp |
+| 7 | CS release lands off the first trading day | **Not fired** — 2026-10-01 is the first trading day of October |
+| 8 | Macro-keyed playbook lands in `trade-playbooks.md` | **Not fired** — 0 hits, re-grepped this session |
+
+### What held, and what did not
+
+- **The parent stance — stand aside, no instrument — holds unchanged and was never contingent on
+  any of the above.** `symbols: []`; nothing here licensed a trade and nothing here cost one.
+- **Leg 6's finding is the one that mattered, and it held exactly as stated:** the slot a funding
+  lapse has twice destroyed printed on schedule in the one year a signed law covers it.
+- **Leg 4's reference-month frame had its first live test and did not do well by it**, though the
+  formal forward test still passes. A frame that places this edition in the "quiet" group produced a
+  reading nearer the "loud" group's own median — one data point, not a reversal of the frame (which
+  was always offered as a description, not a demonstrated mechanism, per this ledger's own Honest
+  limits), but the next construction-spending close-out that cites Leg 4 should carry this instance
+  alongside it rather than the frame alone.
+- **The Atlanta Fed media path moved a second time in five weeks**, and `ContribArchives` is now
+  confirmed stale across two independent close-outs seven weeks apart — flagged to `IDEAS.md`.
+
+**The stance holds unchanged: stand aside.** This document goes quiet.
+
+**Last assessed:** 2026-10-05
+<!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","eia-steo-2026-10-06","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-2y-auction-2026-09-30","jgb-40y-auction-2026-09-29","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","mu-2026-09-30-print","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-2y3y-2026-10-06","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","mu-2026-09-30-print","pce-2026-09-30"],"screenStreak":0} -->

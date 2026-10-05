@@ -63,6 +63,42 @@ export const FIELDS = [
   { name: "Target date", dataType: "DATE" },
 ];
 
+// THIS FUNCTION IS THE BOARD'S ONLY STATUS WRITER, ON PURPOSE — #3939 slice 4, the board half of
+// the 2026-10-03 sunset review (docs/COACHES.md). The plan's hypothesis was that GitHub Projects'
+// built-in workflows ("Item closed → Done", "Item reopened", "Auto-add to project") do part of this
+// natively, so the matching code here could be deleted. Three findings killed it; the next session
+// that has the same idea should read them before writing any:
+//
+//   1. NO LANE CAN TURN ONE ON. GitHub's GraphQL schema exposes `ProjectV2.workflows` read-only
+//      (`name`, `number`, `enabled`) and exactly one mutation, `deleteProjectV2Workflow` — no
+//      create, no update, no enable (introspected live 2026-10-05 against the real API). Enabling
+//      one is a click in the Projects UI: not in this repo, not covered by a spec, not readable from
+//      CI without Eric's PROJECTS_PAT. A board rule nothing here can set or assert is worse than a
+//      pure function, whatever it saves.
+//   2. THERE IS NOTHING LEFT TO SUBTRACT. projects-reconcile.mjs (#4393) landed after that plan was
+//      written and makes this rule the authority on every column INCLUDING Done — it exists because
+//      closed cards got stuck outside Done when the event job's run was dropped. `state === "closed"`
+//      below is read by that sweep, projects-backfill.mjs, issues.mjs's column preview and
+//      issue-lint.mjs. Deleting it breaks four callers to save one line, and the sweep already heals
+//      a dropped close event, which is the only thing the built-in would have covered.
+//   3. TWO OF THEM WOULD ACTIVELY DISAGREE. "Item reopened" writes one fixed value; the rule below
+//      derives Backlog/Ready/Blocked/In Progress from the labels a reopened issue still carries, so
+//      a reopened `ready` issue would sit in the wrong column until the next push-triggered sweep
+//      overwrote it. "Auto-add to project" filters on creation and cannot express
+//      `isBacklogCandidate` for a `ci-failure` label applied afterwards.
+//
+// Evidence the built-ins are not acting on project #2 today, independent of the schema: on
+// 2026-10-01 closed issues (#3953 among them) sat in In Progress until #4393 built the sweep. A live
+// "Item closed → Done" moves those on their own close event, regardless of our rate limit — it did
+// not. Verdict: keep projects-sync whole; leave the built-ins off.
+//
+// WHAT PROVES THIS WRONG, and it is one line Eric or any session holding the PAT can paste:
+//   gh api graphql -f query='query{user(login:"ejclark"){projectV2(number:2){
+//     workflows(first:20){nodes{name enabled}}}}}'
+// Any node with `enabled: true` means the board has a second writer and this block is stale — then
+// reconcile the two deliberately rather than leaving them to race. (This lane's App token is blind
+// to a personal-account project, so that read was NOT performed here. Said plainly, not "verified".)
+//
 /**
  * The sync rule from #3818 slice B, as one pure decision: given what's already knowable about an
  * issue from labels/state/linked PRs (never a network call itself), which Status column does it
@@ -321,6 +357,43 @@ export function runThroughRateLimit({
   }
 }
 
+// #4438 — THE BOARD IS A DISPLAY, SO A RATE LIMIT SKIPS THE SYNC INSTEAD OF REDDENING `main`.
+//
+// Run 36808329767 (sha 3c72dc5, 2026-10-01) went red on `sync project status` because the token's
+// GraphQL hour was spent — #3914's probe said so in as many words. Nothing was wrong with the code,
+// and the lane is level-based: the next `issues` event computes the Status from labels again and
+// writes it, so a skipped write costs a stale column for at most one hour. That is the same split
+// the work spigot's title sync draws (#3960 slice 4): a DISPLAY that cannot be written warns, a
+// CONTROL that cannot be read refuses. Only the CLI entry point uses this — `syncIssue` still
+// throws, so projects-backfill.mjs's abort-the-sweep check and every claim/lease/gate stay loud.
+// The split is on the CAUSE (the phrase every rate-limit explainer above deliberately keeps),
+// never on the step: a wrong owner, a missing project or a bad field id still exits non-zero.
+
+/** "the board catches up at …" — the reset is the moment the next event's sync can succeed. */
+function catchUpPhrase(reset, now) {
+  if (typeof reset !== "number" || !Number.isFinite(reset)) {
+    return "GitHub did not report a reset time; the hourly GraphQL window rolls over within the hour.";
+  }
+  const at = new Date(reset * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+  const mins = Math.max(0, Math.ceil((reset * 1000 - now) / 60_000));
+  return `The GraphQL budget resets at ${at} (${mins} min); the next issue event after that re-syncs the board.`;
+}
+
+/**
+ * Should this sync failure skip with a warning rather than fail the job? Returns the one-line
+ * `::warning::` to print when the failure is a rate limit, `null` for anything else (re-throw it).
+ * Pure: `budget` is the caller's free `ghRateLimit().graphql` read, `{}` when unreadable.
+ */
+export function boardSyncSkip({ issueNumber, error, budget = {}, now = Date.now() } = {}) {
+  const text = `${error?.message ?? ""} ${error?.stderr ?? ""}`.replace(/\s+/g, " ").trim();
+  if (!isRateLimitExhausted(text)) return null;
+  return (
+    `::warning title=Board sync skipped (rate limit)::issue #${issueNumber} was not synced to the ` +
+    `board — GitHub refused the GraphQL call for its rate limit, and the board is a display, not a ` +
+    `control (#4438). ${catchUpPhrase(budget.reset, now)} Cause: ${text}`
+  );
+}
+
 // The floor a whole-backlog sweep must clear before it starts. Once the per-run constants are read
 // once instead of once per issue (`cachedItems`, below), a ~90-issue backfill costs about one
 // `item-list` page (~100 points) plus a couple of points per issue for the REST read and the Status
@@ -522,6 +595,15 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
     return (
       `${head} A direct GraphQL call with the same GH_TOKEN succeeded, so the credential is ` +
       "good: a GitHub-side hiccup outlasted the retries, and re-running the job is the fix."
+    );
+  }
+  // #4438: checked BEFORE the credential branch — gh can word a spent hour with `HTTP 403`, and
+  // "re-save the secret" is the wrong repair for a quota. Keeps the probe's own phrase in the text,
+  // which is what `boardSyncSkip` keys the soft skip on.
+  if (isRateLimitExhausted(probe)) {
+    return (
+      `${head} The same GH_TOKEN's direct GraphQL call was refused for its rate limit: "${probe}" — ` +
+      "a spent or throttled budget, not a code fault and not a bad credential."
     );
   }
   if (/Bad credentials|HTTP 401|Resource not accessible|HTTP 403/i.test(probe)) {

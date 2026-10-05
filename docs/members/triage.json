@@ -148,6 +148,12 @@
     "mustBeSeenBy": "member with an account"
   },
   {
+    "screen": "/trade ?section=outlook",
+    "verdict": "keep",
+    "target": "an auxiliary entry into the bench, never its home (#3407's state block) — state a view, read the ranked structures, pick one and land on the chain with its legs outlined; it never docks on its own",
+    "mustBeSeenBy": "member with an account"
+  },
+  {
     "screen": "/trade ?section=orders (working orders + order alerts)",
     "verdict": "undecided",
     "target": "stay on Trade vs move to the book's Overview/Activity (IA fork, reverses #674)",

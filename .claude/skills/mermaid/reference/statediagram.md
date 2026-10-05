@@ -134,7 +134,7 @@
 - A token starting with '#' is a comment per the grammar (e.g. `A --> #123` loses its target). Put issue numbers in labels after ':', not in IDs.
 - `%%{` starts a directive, not a comment. Comments are `%%` followed by anything else.
 - YAML frontmatter title containing ': ' must be quoted, or the frontmatter breaks.
-- v12 defaults (redux-color categorical palette, neo look, ELK) change appearance from the same source. GitHub's version is unknown, so the Mermaid Chart MCP render may not match github.com.
+- v12 defaults (redux-color categorical palette, neo look, ELK) change appearance from the same source. GitHub renders 11.17.2 (v11 defaults: dagre, classic look) while the Mermaid Chart MCP renders 11.13, so the two can differ; the lint parses with GitHub's version.
 - Width on a phone: the validated 13-state rich example rendered at 846x1531 px. At 390 px it scales to roughly 46%, so labels shrink. Keep to ≤12 states, short labels, TB direction. Side-by-side concurrency regions and wide choice fan-outs shrink worst.
 - Only one edge style exists, so any design that needs dashed or bold transitions must use a flowchart instead.
 

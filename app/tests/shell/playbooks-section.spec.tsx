@@ -24,6 +24,7 @@ const row = (playbookId: string, trades: number, netRealized: number): PlaybookM
   shortestHold: null,
   byDirection: { long: trades, short: 0 },
   byInstrument: { stock: trades, call: 0, put: 0 },
+  byCycle: { weekly: 0, monthly: 0, quarterly: 0 },
 });
 
 const card = (id: string, subscribers?: number) => ({

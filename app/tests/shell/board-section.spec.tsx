@@ -69,6 +69,80 @@ describe("CallBoard — the hubs readout", () => {
 });
 
 /**
+ * THE SECTOR SCOPE (#3811) — the WHERE axis. It reads the event, so it reaches the calls and the
+ * ledgers and not the studies, and the board says which of the two it did, rather than leaving an
+ * empty list to be read as "no research here".
+ */
+describe("CallBoard under a sector scope", () => {
+  const call = (eventId: string): ResearchCall => ({
+    eventId,
+    call: "watch",
+    horizon: "today",
+    href: `/research/events/${eventId}`,
+  });
+  const data = shelf({
+    calls: [call("nvda-2026-11-19-print"), call("eia-steo-2026-10-06"), call("cpi-2026-10-15")],
+    events: [
+      {
+        id: "nvda-2026-11-19-print",
+        title: "NVDA print",
+        date: "2026-11-19",
+        symbols: ["NVDA"],
+        researched: true,
+      },
+      {
+        id: "eia-steo-2026-10-06",
+        title: "EIA STEO",
+        date: "2026-10-06",
+        symbols: [],
+        researched: true,
+      },
+      { id: "cpi-2026-10-15", title: "CPI", date: "2026-10-15", symbols: [], researched: true },
+    ],
+  });
+  const inRange = new Set(["nvda-2026-11-19-print", "eia-steo-2026-10-06", "cpi-2026-10-15"]);
+
+  it("keeps a sector's own macro series and drops the market-wide print", () => {
+    render(
+      <CallBoard
+        data={data}
+        filter={{ terms: [], symbols: [], sector: "Energy", lens: "all" }}
+        inRangeIds={inRange}
+        rangeName="all research"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "eia-steo-2026-10-06" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "cpi-2026-10-15" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "nvda-2026-11-19-print" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a name's own event when its sector is scoped", () => {
+    render(
+      <CallBoard
+        data={data}
+        filter={{ terms: [], symbols: [], sector: "Technology", lens: "all" }}
+        inRangeIds={inRange}
+        rangeName="all research"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "nvda-2026-11-19-print" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "eia-steo-2026-10-06" })).not.toBeInTheDocument();
+  });
+
+  it("says out loud that studies are not sector-keyed, so an empty list is not misread", () => {
+    render(
+      <CallBoard
+        data={data}
+        filter={{ terms: [], symbols: [], sector: "Energy", lens: "all" }}
+        inRangeIds={inRange}
+        rangeName="all research"
+      />,
+    );
+    expect(screen.getByText(/studies are not sector-keyed/)).toBeInTheDocument();
+  });
+});
+
+/**
  * THE `sym:` SCOPE'S MARK AND ORDER (#3962). A study that only mentions a symbol is the whole point
  * of the corpus search, so it must be visibly distinguishable from the documents the symbol is
  * actually about — by a WORD, since a standing reader is red/green colourblind and hue may never
