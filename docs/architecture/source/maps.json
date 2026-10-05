@@ -128,7 +128,7 @@
         "id": "appvol",
         "label": "Observatory volume",
         "technology": "Fly volume skynet_data mounted at /data; JSON files (src/storage/json-file-store.ts), JSONL per-key stores (src/storage/jsonl-store.ts), AES-256-GCM envelopes keyed by SKYNET_STORE_SECRET (src/storage/secure-envelope.ts), one node:sqlite decisions.db",
-        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger, plus activity/events/ \u2014 the unified ActivityEvent bus, which nests under the same pinned var rather than taking one of its own), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json, history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
+        "responsibility": "Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity ledger, plus activity/events/ \u2014 the unified ActivityEvent bus, which nests under the same pinned var rather than taking one of its own), feedback-log/, companion-message-log/, order-audit/, alert-dismissals/, watchlist/, owner-links.json, progression.json, ladder-progress/, playbook-subscriptions.json, history/ (equity samples), insights/ (insight JSONL + the app-side replicated decisions.db).",
         "code_roots": [
           "src/storage",
           "src/participants/participant-store.ts",
@@ -146,6 +146,7 @@
           "src/observatory/activity-bus.ts",
           "src/observatory/history-store.ts",
           "src/adapters/jsonl-alert-dismissals.ts",
+          "src/adapters/jsonl-watchlist-store.ts",
           "src/autonomous/jsonl-insight-store.ts",
           "src/runtime/volume-guard.ts"
         ],
@@ -394,7 +395,7 @@
             "id": "datasource",
             "label": "Data source and syncs",
             "path": "src/runtime/data-source.ts, src/alpaca/*, src/adapters/fixture-trading-transport.ts, src/adapters/replay-event-stream.ts, src/observatory/broker-sync.ts, src/observatory/month-return-sync.ts, src/observatory/history-sampler.ts, src/observatory/history-boot.ts, src/scripts/iv-clock-wiring.ts, src/research/iv-sampler.ts, src/adapters/alpaca-atm-quotes.ts, src/server/quote-stream-hub.ts, src/server/quote-stream-route.ts",
-            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; one market-data socket per MEMBER on that member's own credential, opened on demand by the quote hub and pushed to the trade surface over /api/trade/quote-stream (never the host credential \u2014 the bot loop holds that account's single allowed connection); the timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub, plus the IV clock: one at-the-money implied-volatility sample per tracked name in the session's last half hour, appended under SKYNET_IV_HISTORY_DIR for IV rank."
+            "responsibility": "The live/offline seam (SKYNET_DATA_SOURCE); per-participant Alpaca trading + options clients; held-symbol market-data and per-account trade_updates websockets; one market-data socket per MEMBER on that member's own credential, opened on demand by the quote hub and pushed to the trade surface over /api/trade/quote-stream, which carries one ticker or a comma-separated SET so the watchlist's rows ride one connection (never the host credential \u2014 the bot loop holds that account's single allowed connection); the timers (broker re-sync 60s, month-return 10m, equity sampler 5m) that write history and repair the hub, plus the IV clock: one at-the-money implied-volatility sample per tracked name in the session's last half hour, appended under SKYNET_IV_HISTORY_DIR for IV rank."
           },
           {
             "id": "desk",
@@ -435,7 +436,7 @@
           {
             "id": "stores",
             "label": "Durable stores",
-            "path": "src/storage/json-file-store.ts, jsonl-store.ts, secure-envelope.ts, parse-guards.ts, in-memory-keyed-store.ts; src/participants/participant-store.ts; src/server/auth/allowlist-store.ts; src/server/bot-controls-store.ts, subscription-store.ts, council-store.ts, owner-link-store.ts, progression-store.ts, feedback-log.ts, companion-message-log.ts, ladder-progress-log.ts, order-audit-log.ts; src/observatory/activity-store.ts, history-store.ts; src/adapters/jsonl-alert-dismissals.ts; src/autonomous/jsonl-insight-store.ts, decision-db.ts (app-side); src/runtime/volume-guard.ts",
+            "path": "src/storage/json-file-store.ts, jsonl-store.ts, secure-envelope.ts, parse-guards.ts, in-memory-keyed-store.ts; src/participants/participant-store.ts; src/server/auth/allowlist-store.ts; src/server/bot-controls-store.ts, subscription-store.ts, council-store.ts, owner-link-store.ts, progression-store.ts, feedback-log.ts, companion-message-log.ts, ladder-progress-log.ts, order-audit-log.ts; src/observatory/activity-store.ts, history-store.ts; src/adapters/jsonl-alert-dismissals.ts, jsonl-watchlist-store.ts; src/autonomous/jsonl-insight-store.ts, decision-db.ts (app-side); src/runtime/volume-guard.ts",
             "responsibility": "File-backed stores under /data on the skynet_data volume; credentials sealed with AES-256-GCM; every path pinned in fly.toml and gated by tests/arch/volume-persistence.spec.ts."
           }
         ]
