@@ -1,6 +1,6 @@
 // Visual harness for the owner's Mission Control switchboard — from the REAL built shell
 // (app/dist) over a stub API. One frame: the fleet rows plus the new "Moneypenny's model" dial
-// (#1672 slice 4), Sonnet 5 selected as the delivered default.
+// (#1672 slice 4), Sonnet selected as the delivered default.
 // Usage: npm run build --prefix app && npm run shoot:mission-control [outdir]
 import { openShell } from "./shell.mjs";
 
@@ -28,8 +28,8 @@ const controls = {
       { id: "sauron", displayName: "Sauron", suspended: false },
       { id: "banker", displayName: "The Banker", suspended: true },
     ],
-    companionModel: "claude-sonnet-5",
-    companionModels: ["claude-haiku-4-5", "claude-sonnet-5"],
+    companionModel: "claude-sonnet-5-5",
+    companionModels: ["claude-haiku-4-5", "claude-sonnet-5-5"],
     updatedAt: "2026-09-06T12:00:00.000Z",
     updatedBy: "eric@example.com",
   },

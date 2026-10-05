@@ -46,7 +46,7 @@ function controlsWith(calls: StoreCall[], allSuspended = false) {
       load: () => ({
         allSuspended,
         bots: { "bot-sauron": { suspended: true } },
-        companionModel: "claude-sonnet-5",
+        companionModel: "claude-sonnet-5-5",
         updatedAt: "2026-08-28T12:00:00Z",
         updatedBy: "eric@example.com",
       }),
