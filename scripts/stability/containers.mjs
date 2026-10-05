@@ -20,12 +20,19 @@ export const containerNames = (prefix) => ({
 /** Where the server reaches the stub broker, by container name on the private network. */
 export const brokerUrl = (names) => `http://${names.broker}:8080`;
 
+/**
+ * Where the runtime tree lands before it becomes /app: a directory the image does not have, which
+ * `docker create --workdir` makes empty. Copied to `/` instead, a tree whose folder name matches
+ * one of the image's own top-level dirs (`tmp`, `opt`, `srv`…) would merge into it.
+ */
+const STAGE = "/stage";
+
 export function removeContainers(names) {
   quiet("rm", "-f", names.server, names.broker);
   quiet("network", "rm", names.net);
 }
 
-/** Stream `paths` (relative to `from`; "" = all of it) into a stopped container as `/<base>/…`. */
+/** Stream `paths` (relative to `from`; "" = all of it) into a stopped container's /stage/<base>. */
 function copyInto(container, from, paths, excludes = []) {
   const base = basename(from);
   const tar = spawnSync(
@@ -42,7 +49,7 @@ function copyInto(container, from, paths, excludes = []) {
     { env: { ...process.env, COPYFILE_DISABLE: "1" }, maxBuffer: 1 << 30 },
   );
   if (tar.status !== 0) throw new Error(`tar failed: ${tar.stderr}`);
-  const cp = spawnSync("docker", ["cp", "-", `${container}:/`], { input: tar.stdout });
+  const cp = spawnSync("docker", ["cp", "-", `${container}:${STAGE}`], { input: tar.stdout });
   if (cp.status !== 0) throw new Error(`docker cp failed: ${cp.stderr}`);
 }
 
@@ -102,13 +109,15 @@ export function startContainers({
     names.net,
     `--memory=${memory}`,
     `--memory-swap=${memory}`,
+    "--workdir",
+    STAGE,
     "-p",
     `127.0.0.1:${port}:8787`,
     ...Object.entries(env).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
     image,
     "sh",
     "-c",
-    `[ -d /app ] || mv /${basename(root)} /app; cd /app && exec ${command}`,
+    `[ -d /app ] || mv '${STAGE}/${basename(root)}' /app; cd /app && exec ${command}`,
   );
   copyRuntimeTree(names.server, root);
   docker("cp", `${dataDir}/.`, `${names.server}:/data`);

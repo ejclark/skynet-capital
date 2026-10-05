@@ -15,20 +15,16 @@ export const MARKET_TIMEZONE = "America/New_York";
 
 /**
  * `YYYY-MM-DD` for `iso` in the given IANA timezone — lexically sortable, which day strips need.
- *
- * The formatter is the shared cached one (`intl-format.ts`): building one per call held ~27 KB of
- * native memory per instant, and keying a desk's whole history that way OOM-killed the 512 MB
- * server (#4612 slice 1, #4613). A caller keying many instants in one zone takes `marketDayKeyer`.
+ * Uses the shared formatter (`intl-format.ts`); a loop over many instants takes `marketDayKeyer`.
  */
 export function marketDayKey(iso: string, timezone: string = MARKET_TIMEZONE): string {
   return marketDayKeyer(timezone)(iso);
 }
 
 /**
- * `marketDayKey` bound to one zone — for a loop over a history (every 5-minute sample a desk ever
- * recorded, on each Pulse view): the shared formatter is resolved once, not once per instant. Same
- * answers and the same fallbacks: junk input keeps its leading date characters, and a zone the
- * runtime doesn't know degrades to the UTC date rather than throwing.
+ * `marketDayKey` bound to one zone, for a loop over a history: the formatter is resolved once, not
+ * once per instant. Same answers and the same fallbacks: junk input keeps its leading date
+ * characters, and a zone the runtime doesn't know degrades to the UTC date rather than throwing.
  */
 export function marketDayKeyer(timezone: string = MARKET_TIMEZONE): (iso: string) => string {
   let format: ((at: number) => string) | undefined;

@@ -17,6 +17,7 @@ export interface BudgetPhase {
 }
 export interface Budgets {
   peakMb: number;
+  pageMb: number;
   pulseMb: number;
   pulseMs: number;
 }

@@ -91,7 +91,7 @@ export interface DeskPulseView {
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEK_CAP = 12;
 
-/** "Aug 17" — through the shared cached formatter, never one per label (#4613). */
+/** "Aug 17" — through the shared formatter (`domain/intl-format.ts`). */
 const dayLabel = (iso: string): string =>
   formatDateTime(new Date(iso), "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 

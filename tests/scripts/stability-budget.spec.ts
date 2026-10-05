@@ -28,7 +28,7 @@ import { createOrderAuditLog } from "../../src/server/order-audit-log.js";
  */
 
 const FLY = readFileSync(new URL("../../fly.toml", import.meta.url), "utf8");
-const budgets = { peakMb: 300, pulseMb: 30, pulseMs: 150 };
+const budgets = { peakMb: 300, pageMb: 30, pulseMb: 30, pulseMs: 150 };
 const alive = { running: true, oomKilled: false, exitCode: 0 };
 const pulse = (addMb: number, ms: number) => ({
   path: "/api/desk/a/pulse",
@@ -126,6 +126,38 @@ describe("verdict", () => {
       "/api/desk/a/pulse added 31 MB > budget 30 MB",
       "/api/desk/a/pulse took 151 ms > budget 150 ms",
     ]);
+  });
+
+  it("holds the Accounts open itself to the page budget and its Pulse to the time budget", () => {
+    // The Done-when names the page: what the whole load adds, and the Pulse answering inside it
+    // while it shares the event loop with the page's other reads. Those other reads are not timed.
+    const rows = [
+      { path: "/api/ops-status", status: 200, ms: 208 },
+      { path: "/api/desk/a/pulse", status: 200, ms: 151 },
+    ];
+    const open = (peakMb: number) => phase({ name: "accounts-open", rows, beforeMb: 150, peakMb });
+    expect(verdict({ phases: [open(181)], state: alive, budgets }).failures).toEqual([
+      "accounts-open: the page added 31 MB > budget 30 MB",
+      "accounts-open: /api/desk/a/pulse took 151 ms > budget 150 ms",
+    ]);
+    const quick = phase({
+      name: "accounts-open",
+      rows: [pulse(0, 85)],
+      beforeMb: 150,
+      peakMb: 180,
+    });
+    expect(verdict({ phases: [quick], state: alive, budgets }).ok).toBe(true);
+  });
+
+  it("skips the page budget for a phase the server died in — it has no peak to read", () => {
+    const killed: BudgetPhase = {
+      name: "accounts-open",
+      note: "",
+      rows: [pulse(0, 40)],
+      beforeMb: 150,
+    };
+    const v = verdict({ phases: [killed], state: { ...alive, running: false }, budgets });
+    expect(v.failures).toEqual(["the server exited (exit 0)"]);
   });
 });
 

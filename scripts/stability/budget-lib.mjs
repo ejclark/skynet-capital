@@ -81,8 +81,9 @@ export function procMemory(status) {
 
 /**
  * The verdict. Fails on what kills or breaks the server — an OOM kill, an exit, a 5xx or a refused
- * connection — and on the three numbers the budget names: peak RSS for the whole run, and what one
- * pulse request adds and how long it takes (#4613: ≤ 30 MB, ≤ 150 ms at 180 days × 12).
+ * connection — and on the numbers the budget names: peak RSS for the whole run; what opening
+ * Accounts adds and how long its Pulse takes inside that load (#4613's Done-when: ≤ 30 MB,
+ * ≤ 150 ms at 180 days × 12); and the same two numbers for each Pulse fired alone.
  */
 export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
   const failures = [];
@@ -94,6 +95,12 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
         failures.push(`${phase.name}: ${row.path} answered ${row.status}`);
   const peak = Math.max(bootPeakMb, ...phases.map((p) => p.peakMb ?? 0));
   if (peak > budgets.peakMb) failures.push(`peak RSS ${peak} MB > budget ${budgets.peakMb} MB`);
+  failures.push(
+    ...pageFailures(
+      phases.find((p) => p.name === "accounts-open"),
+      budgets,
+    ),
+  );
   const pulses = phases.find((p) => p.name === "pulse-each")?.rows ?? [];
   for (const row of pulses) {
     if (row.addMb > budgets.pulseMb)
@@ -102,6 +109,19 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
       failures.push(`${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`);
   }
   return { ok: failures.length === 0, peakMb: peak, failures };
+}
+
+/** The Accounts open as one page: what the whole load added, and its Pulse's time within it. */
+function pageFailures(open, budgets) {
+  if (open?.peakMb === undefined || open.beforeMb === undefined) return []; // died: no peak to read
+  const out = [];
+  const added = open.peakMb - open.beforeMb;
+  if (added > budgets.pageMb)
+    out.push(`${open.name}: the page added ${added} MB > budget ${budgets.pageMb} MB`);
+  for (const row of open.rows)
+    if (row.path.endsWith("/pulse") && row.ms > budgets.pulseMs)
+      out.push(`${open.name}: ${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`);
+  return out;
 }
 
 /** One phase as a markdown table: every request, its status, time, size and memory added. */

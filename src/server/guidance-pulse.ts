@@ -321,8 +321,8 @@ export function sessionPulse(open: boolean | undefined, now: string): PulseItem 
 }
 
 /**
- * The fallback when the broker clock is unreachable: a weekday between 9:30 and 16:00 ET. The
- * formatter is the shared cached one (`domain/intl-format.ts`, #4613) — never one per call.
+ * The fallback when the broker clock is unreachable: a weekday between 9:30 and 16:00 ET, through
+ * the shared formatter (`domain/intl-format.ts`).
  */
 export function clockSessionOpen(now: string): boolean {
   const parts = cachedDateTimeFormat("en-US", {

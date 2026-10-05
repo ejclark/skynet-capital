@@ -1,10 +1,9 @@
 import { cachedDateTimeFormat, formatDateTime } from "../../src/domain/intl-format.js";
 
 /**
- * One formatter per shape (#4612 slice 1, #4613). Each `new Intl.DateTimeFormat` holds ~27 KB of
- * native ICU memory that the JS heap never sees, so building one per row is what OOM-killed the
- * 512 MB server; a reused one costs nothing. These specs pin the two halves of the contract: the
- * same shape is the same formatter, and the text is exactly what the per-call form printed.
+ * One formatter per shape (#4613; the why is in src/domain/intl-format.ts). These specs pin the two
+ * halves of the contract: the same shape is the same formatter, and the text is exactly what the
+ * per-call form printed.
  */
 
 const DAY = { month: "short", day: "numeric", timeZone: "UTC" } as const;

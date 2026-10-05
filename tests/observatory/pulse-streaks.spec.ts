@@ -38,8 +38,9 @@ const row = (samples: readonly EquitySample[], label: string) =>
 
 describe("pulseStreaks — trading-day runs", () => {
   it("keys each sample's market day once a request, not once per streak row (#4613)", () => {
-    // Three rows (running, longest green, longest red) used to re-key the whole history each —
-    // three passes over every 5-minute sample a desk ever recorded, on every Pulse view.
+    // Three rows (running, longest green, longest red) used to re-key the whole history each.
+    // The zone is one no other test here uses: a formatter already in intl-format's cache is the
+    // real class, not the counting one below, and would make `formatted` read 0.
     const samples = [3, 4, 5, 6, 7].map((day, i) => close(day, 100 + i));
     const Real = Intl.DateTimeFormat;
     let formatted = 0;
@@ -56,7 +57,7 @@ describe("pulseStreaks — trading-day runs", () => {
       }
     } as typeof Real;
     try {
-      pulseStreaks(samples, tradeStats([]), "America/Toronto");
+      pulseStreaks(samples, tradeStats([]), "America/Regina");
     } finally {
       Intl.DateTimeFormat = Real;
     }

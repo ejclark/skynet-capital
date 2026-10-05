@@ -246,8 +246,7 @@ export function longestDayStreak(
 
 /**
  * `longestDayStreak` over changes already keyed by `dailyChanges` — so a reader that wants several
- * streaks keys the history once (#4613: the Pulse page asked for three, and re-keyed every sample
- * of a desk's whole history for each).
+ * streaks keys the history once.
  */
 export function longestStreakIn(
   changes: readonly DayChange[],

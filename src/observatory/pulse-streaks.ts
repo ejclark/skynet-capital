@@ -55,11 +55,7 @@ function dayRow(label: string, streak: DayStreak | null): PulseStreakRow | null 
   };
 }
 
-/**
- * The three day rows read one keying of the history (#4612 slice 1, #4613): every sample a desk
- * ever recorded is bucketed into its market day ONCE per request. Asking each row to key it again
- * tripled the work on the Accounts page's busiest read.
- */
+/** The three day rows share one keying of the history: each sample is put in its day once. */
 function dayRows(samples: readonly EquitySample[], timezone: string | undefined): PulseStreakRow[] {
   const changes = dailyChanges(samples, timezone);
   const current = currentStreakIn(changes);

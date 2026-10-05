@@ -14,8 +14,7 @@ const EARLY_CLOSE_MINUTES = 13 * 60;
 
 /**
  * Every field `toLocaleString("en-US", { timeZone })` prints by default, spelled out so the shared
- * cached formatter prints the identical string — the desk heartbeat asks this every 30 s per open
- * tab, and a `toLocale*` call with options builds a fresh formatter each time (#4613).
+ * formatter (`intl-format.ts`) prints the identical string.
  */
 const NEW_YORK_CLOCK: Intl.DateTimeFormatOptions = {
   timeZone: "America/New_York",

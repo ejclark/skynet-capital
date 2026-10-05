@@ -49,8 +49,7 @@ export const HEADLINE_MACRO: ReadonlyArray<readonly [prefix: string, noun: strin
   ["jobs-2", "Jobs report"],
 ];
 
-/** "Oct 29". Through the shared cached formatter (`domain/intl-format.ts`, #4613): the same text
- *  `toLocaleDateString` printed, without building a formatter per call. */
+/** "Oct 29" — through the shared formatter (`domain/intl-format.ts`). */
 const shortDate = (date: string): string =>
   formatDateTime(new Date(`${date}T12:00:00Z`), "en-US", {
     month: "short",

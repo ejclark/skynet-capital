@@ -34,7 +34,7 @@ export function formatTimestamp(iso: string): string {
   return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
-/** The zone's short name right now ("EDT"), through the shared cached formatter (#4613). */
+/** The zone's short name right now ("EDT"); shared formatter, `domain/intl-format.ts`. */
 export function tzAbbrev(timezone?: string): string {
   if (!timezone) return "UTC";
   try {
@@ -48,11 +48,7 @@ export function tzAbbrev(timezone?: string): string {
   }
 }
 
-/**
- * An activity row's time, in the viewer's zone. Called once per row (the Wire's 30 a page), so the
- * formatter is the shared cached one: a fresh one per row held ~27 KB of native memory each until a
- * full GC (`domain/intl-format.ts`, #4612 slice 1, #4613).
- */
+/** An activity row's time in the viewer's zone; shared formatter, `domain/intl-format.ts`. */
 export function formatActivityTime(iso: string, timezone?: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;

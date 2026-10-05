@@ -23,8 +23,7 @@ describe("marketDayKey", () => {
   });
 
   it("builds at most one formatter for a thousand instants in one zone (#4613)", () => {
-    // Each `new Intl.DateTimeFormat` holds ~27 KB of native memory the JS heap never sees; one per
-    // equity sample, three passes a Pulse request, is what OOM-killed the 512 MB server.
+    // Why one formatter matters: src/domain/intl-format.ts.
     const Real = Intl.DateTimeFormat;
     let built = 0;
     Intl.DateTimeFormat = class extends Real {
