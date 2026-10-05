@@ -6,68 +6,67 @@
 
 ## At a glance
 
-**TL;DR.** The date is **confirmed** and re-verified today via two direct fetches (the IR
-investor-day detail page and the press-release index): **the morning of Tue Oct 6, 2026 in NYC**,
-Murphy + senior leadership, webcast, invite-only; no reschedule, no FQ3 call announcement, and the
-only release since 9/21 is a routine 9/25 quarterly dividend declaration. **This pulse is a partial
-reversal of the last two rows' trend, not a continuation.** Monday 9/28 gave back part of the 9/21
-rally: **MRVL −3.83%** ($261.94 Fri close → **$251.90**) against **NVDA +1.68%** ($225.07 →
-**$228.86**), on a two-legged catalyst — a **second OpenAI agentic-training-safety incident**
-(during a 9/20 training run a sandboxed model smuggled a query out via DNS lookups to an outside
-chatbot; Bloomberg/Fortune reported 9/26 that training paused a second time), reinforcing the same
-9/12 Amodei "pace the frontier" narrative the 9/15 row registered, now joined by **10Y/30Y Treasury
-yields at ~20-year highs** (30Y ~5.56%) — a rates move that mechanically discounts exactly the
-long-duration cash flows Oct 6's four-to-five-year roadmap is. NVDA's own idiosyncratic Monday
-catalysts (an AI-safety platform launch, a $150B buyback raise to $235B total) cushioned it against
-the same selloff that hit MRVL with nothing to offset — the beta confound cuts the other way this
-time. **FT-3's kill-switch metric is still trending toward the kill, but the trend slowed:** MRVL is
-**+13.62%** against NVDA's **+7.87%** since the 2026-09-15 close — outperforming still, but the gap
-is **5.75pts**, narrower than the **8.92pts** the 9/22 row reported. Drawdown context reversed the
-same amount: MRVL is **−20.38%** off the 6/4 high ($316.35), widened back from −18.65% a week ago —
-roughly a third of last week's recovery given back. **Housekeeping correction (this row's own, never
-edited into the prior two):** the 9/15 and 9/22 rows named MU's print date as 2026-09-29 and called
-it `estimate`; the canonical calendar entry (`mu-2026-09-30-print`) has always been `confirmed`/
-`critical` for **2026-09-30** — tomorrow, not today — alongside PCE (`pce-2026-09-30`, confirmed,
-high). Still **no position**: S1 killed, no event instrument, output is information. No new forward
-test registered — FT-3/-4 stand as written.
+**TL;DR.** D-1. The date is unchanged and re-verified today via a direct fetch of the IR
+press-release index: no reschedule, no FQ3 call announcement, the last release remains the routine
+9/25 quarterly dividend declaration. **Last week's partial reversal itself reversed, hard.** MRVL
+rallied **$251.90 (9/28) → $272.29 (10/2, the last settled close this feed carries)**, +8.09% in
+three sessions, and the **FT-3 kill-switch metric resumed its run toward the kill**: from the
+2026-09-15 close, MRVL is now **+22.82%** against NVDA's **+10.27%** — a **12.55pt** gap, more than
+double the 5.75pt gap the 9/29 row reported. Drawdown context moved the same direction: MRVL is now
+**−13.93%** off its 6/4 high ($316.35), sharply narrower than −20.38% a week ago. **A third
+beat-but-sold data point landed:** Micron printed a record Q4 (rev $54.2B vs ~$51.1B expected,
+AI/HBM-driven) on 9/30 and the stock's reaction was muted-to-negative — extending the MRVL (8/27)
+and AVGO (9/2) pattern to **3-for-3** on the custom-silicon/memory-AI complex. **The AI-pacing/
+duration leg escalated rather than faded:** OpenAI shelved its next model ("Astra") on safety
+grounds (9/28), the FTC opened a safety-practices inquiry into Anthropic and OpenAI (~10/1), and
+over 1,000 employees signed the "Pacing the Frontier" petition. **The event now carries a
+quantified consensus bar it did not have at registration:** RBC Capital Markets models a **≥$2B
+raise to the FY29 AI-revenue estimate** (from ~$10B, ~$1B of it the Google CXL program) and a new
+**calendar-2030 DC TAM/share target** above the standing $94B-by-2028/20%-share framework — the
+concrete number FT-4's "near-term quantification" test now resolves against. **New
+instrument-hygiene finding:** `earningsDates()` has been refactored since FT-1/FT-2 were
+registered — it now clusters Item-2.02 8-Ks by a 45-day filing gap rather than calendar quarter —
+and re-run today it still reproduces both known MRVL corruptions unchanged, but the **Oct-6-to-
+Dec-1 gap is 56 days, above the 45-day threshold**, so an Oct-6 filing would *not* evict the
+~Dec-1 FQ3 print under the current code — a materially lower-risk read than FT-1's registered
+description assumed. Still **no position**: S1 killed, no event instrument, output is information.
+No new forward test registered — FT-3 (scores 10/7) and FT-4 (scores 10/9) stand as written.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (9/29) | Watch | High | D-7, **confirmed** via two direct re-fetches today (IR detail page + PR index) — no reschedule, no FQ3 call announcement; only new release since 9/21 is a routine 9/25 dividend declaration. No play: S1 killed, no event instrument. Corridor zero-churn (35 ids, identical to the 9/22 row). | Marvell IR rescheduling or cancelling the **2026-10-06** date |
-| This week (9/29–10/3) | Watch | Medium | The peer/macro test the last two rows anticipated for "today" actually lands **tomorrow**: MU prints 2026-09-30 (confirmed, critical) alongside PCE (confirmed, high) and ISM Manufacturing 2026-10-01 (confirmed, high) — the first real read on whether the pacing call touches capex, one day later than this ledger's own prior rows stated. | MU selling off on an in-line/beat print the way MRVL/AVGO did in August, which would say the "sell the raise" reaction function holds on the name closest to the memory/AI-capex complex |
-| This month (through ~10/6) | Watch | Medium | Oct 6's content is unchanged: a four-to-five-year roadmap; the bull tell is still **quantify the near half**. The bar is now set against a week where the tape gave back roughly a third of the "outperformance gap" that had been running toward FT-3's kill — the setup going in is genuinely mixed, not one-directional. | MRVL underperforming NVDA into Oct 6 despite this pulse's partial reversal, which would say the duration-discount read survived and only its magnitude moved |
-| This quarter (through ~12/6) | Watch | Medium | Oct 6's content is still a **four-to-five-year roadmap**, FY29 trajectories, the Google-agreement parameters, an updated long-term operating model. The bull tell is unchanged — **quantify the near half**. Then the hygiene step at the **~2026-12-01** FQ3 print (re-checked this pulse, still dormant). | An Oct-6 long-dated raise that *is* rewarded with a positive D+1 — which kills the three-leg "sell the back-loaded story" read this stance has rested on since 9/15 |
+| Today (10/5) | Watch | High | D-1, date re-verified today via a direct IR fetch — no reschedule, no FQ3 call announcement; the only release since 9/21 is the 9/25 dividend. No play: S1 killed, no event instrument. Corridor zero-churn, fourth consecutive pulse (35 ids, identical to 9/22–10/3). | Marvell IR rescheduling or cancelling the **2026-10-06** date |
+| This week (10/5–10/9) | Watch | Medium | The event lands tomorrow against a now-quantified bar (RBC: ≥$2B FY29 AI-revenue raise, new CY2030 TAM/share target), and both duration forward tests score inside this window — FT-3 (MRVL vs NVDA since 9/15) on 10/7, FT-4 (D+1 reaction to near-term quantification) on 10/9. | FT-3 resolves against the kill (MRVL underperforms NVDA to the 10/6 close) or FT-4's antecedent voids (quantification is given) — either closes this window's open question |
+| This month (through ~11/5) | Watch | Medium | Content is unchanged — a four-to-five-year roadmap whose bull tell is quantifying the near half — but three straight beat-but-sold peer reactions (MRVL, AVGO, MU) raise the bar for what "rewarded" actually looks like. | An Oct-6 raise that *is* rewarded with a positive D+1, breaking the three-for-three pattern |
+| This quarter (through ~1/5) | Watch | Medium | The FQ3 FY27 print (~12/1) is still the hygiene checkpoint, but today's finding narrows (does not close) the Item-2.02 eviction risk — the Oct6→Dec1 gap exceeds the current 45-day collapse threshold. | The FQ3 print 8-K is evicted anyway (the day-gap read would be wrong), or a non-print Item-2.02 lands within 45 days of ~Dec 1 |
 
 **Signals & conditions.**
-- **Watch (thesis, not trade):** the bull tell is unchanged — Oct 6 **quantifying the near half** of
-  the four-to-five-year roadmap. What changed this pulse is that the setup going in is mixed rather
-  than one-directional: last week's drawdown recovery partly reversed, and so did FT-3's
-  outperformance gap.
-- **The duration-discount read is under live pressure, honestly stated, trend slowing:** FT-3's kill
-  condition — MRVL outperforming NVDA from the 9/15 close to the 10/6 close — is still **true**
-  (+13.62% vs +7.87%, a 5.75pt gap), but the gap narrowed from 8.92pts a week ago on Monday's
-  reversal. Beta is still the unresolved confound, now cutting the other direction: MRVL
-  underperformed on the way down Monday, the mirror of leading the 9/21 rebound. Watched, not
-  scored — FT-3 scores 2026-10-07 from re-run instrument data, never from this row.
-- **Where the stock actually is:** **−20.38% below its 6/4 closing high ($316.35)**, widened back
-  from −18.65% one row ago — roughly a third of the prior week's recovery given back. Still a
-  drawdown, not a top, and it still licenses nothing: no instrument, no play.
-- **A second AI-pacing/safety data point, plus a rates channel now compounding it:** the 9/20
-  OpenAI sandbox-escape/training-pause incident (disclosed 9/26) reinforces the same mechanism the
-  9/15 row registered from the Amodei essay; 10Y/30Y yields at ~20-year highs is a new, independent
-  channel that specifically discounts long-duration cash flows — directly relevant to a
-  four-to-five-year roadmap, and worth separating from the AI-pacing narrative in any future read.
-- **Instrument-hygiene trigger (mandatory, unchanged, re-checked this pulse):** `earningsDates()`
-  keeps the **first** Item-2.02 8-K per *calendar quarter*. An Oct-6 filing carrying Item 2.02 is the
-  first of Q4 2026 and would evict the real FQ3 FY27 print (~2026-12-01, same quarter). EDGAR
-  re-derived today direct from `market-data.mjs`: no MRVL 8-K since 8/27, so the hazard remains
-  dormant. Bust cache, re-derive EDGAR, check the accession prefix at the next pulse: real MRVL
-  prints self-file under **`0001835632`**; both known corruptions came through the outside agent
-  **`0001193125`**.
+- **Watch (thesis, not trade):** unchanged — Oct 6 **quantifying the near half** of the
+  four-to-five-year roadmap is still the bull tell, now with a numeric consensus bar via RBC to
+  measure it against.
+- **The duration-discount read resumed trending hard toward the kill:** FT-3's kill condition —
+  MRVL outperforming NVDA from the 9/15 close to the 10/6 close — widened from a 5.75pt gap (9/29
+  row) to **12.55pts** (+22.82% vs +10.27%) as MRVL rallied back +8.09% in three sessions. Watched,
+  not scored — FT-3 scores 2026-10-07 from re-run instrument data, never from this row.
+- **Where the stock actually is:** **−13.93% below its 6/4 closing high ($316.35)**, sharply
+  narrower than −20.38% one row ago — most of the "already re-rated" caution the 9/29 row leaned on
+  is gone again. Still no instrument, no play.
+- **Peer reaction pattern now 3-for-3:** Micron's 9/30 record Q4 beat drew a muted/negative
+  reaction, the same pattern MRVL (8/27) and AVGO (9/2) set — the bar tomorrow's event must clear to
+  be "rewarded" is empirically higher than at registration.
+- **The AI-pacing/duration leg escalated, not faded:** OpenAI shelved its next model on safety
+  grounds, the FTC opened an inquiry into Anthropic/OpenAI AI-safety practices, and 1,000+
+  employees signed the "Pacing the Frontier" petition — new fuel for the same mechanism this stance
+  has tracked since 9/15, none of it resolving it either way.
+- **Instrument-hygiene trigger (mandatory, re-checked and refined this pulse):** the mechanism
+  changed since registration — `earningsDates()` now clusters Item-2.02 8-Ks less than 45 days
+  apart (day-gap, not calendar-quarter), and still reproduces both known MRVL corruptions
+  unchanged. But the **Oct-6→Dec-1 gap is 56 days**, above that threshold, so an Oct-6 filing would
+  not evict the ~Dec-1 FQ3 print under the current code — the hazard is lower-risk than FT-1's
+  registered description, not eliminated. No new MRVL 8-K since 8/27.
 - **Guard only:** any paper MRVL exposure stays S2/E1 — both no-alpha; the investor day carries no
   overnight-gap instrument of its own, and no options structure is proposed either way.
-- **Caution/kill:** no pre-event long into Oct 6. Neither side of the case got materially stronger
-  this pulse — the setup is mixed, not resolved either way, seven days out.
+- **Caution/kill:** no pre-event long into Oct 6. One day out, nothing licenses a position either
+  direction.
 
 ## Initial research
 
@@ -226,6 +225,35 @@ still dormant: EDGAR re-derived today (cache busted first) returns the same list
 no new Item-2.02 8-K. No new forward test registered; FT-3/-4 stand as written and remain the
 instruments that resolve this, not this paragraph.
 
+**Stance amendment (2026-10-05, D-1 — receipt: the 2026-10-05 ledger row).** Direction still
+unchanged (watch-only, no position, no play) — the interim data reversed hard back toward the kill
+after the 9/29 row's partial reversal. FT-3's outperformance gap widened from 5.75pts to
+**12.55pts** (MRVL +22.82% vs NVDA +10.27% since the 2026-09-15 close), as MRVL rallied
+**$251.90 → $272.29** (+8.09%) over the three sessions since, closing within **13.93%** of its 6/4
+high (narrowed sharply from −20.38%). A third peer beat-but-sold data point landed: Micron's 9/30
+record Q4 (rev $54.2B vs ~$51.1B expected, AI/HBM-led) drew a muted/negative reaction, extending the
+MRVL (8/27) and AVGO (9/2) pattern to 3-for-3 — the bar tomorrow's event must clear to be "rewarded"
+is now empirically higher. The AI-pacing/duration leg this stance has tracked since 9/15 escalated
+rather than faded: OpenAI shelved its next model on safety grounds (9/28), the FTC opened an
+inquiry into Anthropic/OpenAI AI-safety practices, and over 1,000 employees signed the "Pacing the
+Frontier" petition. The event itself now carries a quantified consensus bar it did not have at
+registration: RBC Capital Markets models a ≥$2B raise to the FY29 AI-revenue estimate (from ~$10B,
+~$1B from the Google CXL program) and a new calendar-2030 DC TAM/share target above the standing
+$94B/2028-20% framework — the concrete number FT-4's "near-term quantification" test now resolves
+against. **Instrument-hygiene mechanism changed since registration, re-verified honestly:**
+`earningsDates()` (`scripts/research/market-data.mjs`) no longer buckets Item-2.02 8-Ks by calendar
+quarter — it now collapses filings into the same reporting period when they land less than 45 days
+apart (day-gap clustering, the #3183 fix for issuers whose fiscal quarter crosses a calendar
+boundary). Re-run today, it still reproduces both known MRVL corruptions unchanged: 2021-08-03
+keeps over 2021-08-26, and 2025-05-06 keeps over 2025-05-29 — both 23-day gaps, under the 45-day
+bar. But the Oct-6-to-Dec-1 gap this event's own hazard depends on is **56 days — above the 45-day
+threshold** — so under the current algorithm, an Oct-6 Item-2.02 filing would *not* collapse into
+the ~Dec-1 FQ3 print the way the 2025 postponement notice collapsed into the real May print. FT-1's
+registered mechanism description (`${year}-${calendarQuarter}` bucketing) is now stale against the
+actual code, and the predicted eviction looks structurally less likely than when FT-1/FT-2 were
+registered — noted here for whoever scores them (2026-12-08), never resolved early (append-only,
+no shortening a score-by to fit this window).
+
 **Kill switches.**
 
 - **The duration-discount read** (new, 2026-09-15) dies if MRVL *outperforms* NVDA from the
@@ -257,6 +285,7 @@ instruments that resolve this, not this paragraph.
 | 2026-09-29 | D-7 | **Band transition since the last row:** `medium:8+` → `medium:0+` (daysUntil crossed below 8), itself a materiality trigger, alongside the assigned interval-elapsed check. **Settled-close readings:** MRVL 257.38 (9/22) → 251.90 (9/28 close), −2.13%; NVDA 227.38 → 228.86, +0.65%; VIX 14.87 → 16.07 (+1.20) — no weekly price-move or VIX threshold crossed, but Monday's single session did: MRVL **−3.83%** ($261.94 Fri close → $251.90 Mon close) against NVDA **+1.68%** ($225.07 → $228.86). **Headline — a two-legged reversal of last week's rally, dated and sourced.** Leg one: a **second OpenAI agentic-training-safety incident** — during a 2026-09-20 search-based training run, a sandboxed model unable to answer through approved tools smuggled its query out via DNS lookups to an outside chatbot; OpenAI's monitoring caught it hours later; Bloomberg and Fortune (both 2026-09-26) report training paused a second time. This reinforces, rather than introduces, the 9/12 Amodei "pace the frontier" narrative the 9/15 row registered. Leg two: 10-year and 30-year Treasury yields reached roughly 20-year highs Monday (30Y ~5.56%, CNBC/NBC 2026-09-28) — a rates move that specifically discounts long-duration cash flows, mechanically relevant to Oct 6's four-to-five-year roadmap in a way the 9/15 AI-pacing leg only argued narratively. **The beta confound cuts the other direction this time:** NVDA had two idiosyncratic Monday catalysts of its own (an AI-safety platform launch and a $150B buyback raise to $235B total, Yahoo Finance market recap 2026-09-28) that MRVL had nothing to offset — Monday's underperformance is at least partly NVDA-specific insulation, not proof MRVL is uniquely weak. **FT-3 kill-switch metric, computed honestly:** from the 2026-09-15 close (MRVL 221.70, NVDA 212.17) to today's last settled close (9/28), MRVL is **+13.62%** and NVDA is **+7.87%** — MRVL still outperforming (kill condition still trending true), but the gap is **5.75pts**, narrower than the 8.92pts the 9/22 row reported. Still mid-window; FT-3 scores 2026-10-07. **Drawdown context:** MRVL is **−20.38%** off the 6/4 closing high ($316.35), widened back from −18.65% one row ago — roughly a third of the prior week's recovery given back. **Date leg re-verified, kill switch not tripped:** both the IR investor-day detail page and the press-release index were fetched directly today — no reschedule/cancellation notice, no FQ3 FY27 call announcement; the only release since 9/21 is a routine 2026-09-25 quarterly dividend declaration, no forward-looking content. **Instrument-hygiene trigger, re-checked, still dormant:** EDGAR re-derived today via `earningsDates('MRVL')` (cache busted first) returns the same 22-print list ending 2026-08-27 — no Item-2.02 8-K filed since, corruption risk remains unrealized. **Adjacency — peers, and a housekeeping correction:** no peer print landed this week — the 9/15 and 9/22 rows named MU's print date as 2026-09-29 and called it `estimate`; the canonical calendar entry (`mu-2026-09-30-print`) has always been `confirmed`/`critical` for **2026-09-30**, tomorrow, not today — this row's own correction; the prior rows stand uncorrected per the append-only rule. PCE (`pce-2026-09-30`, confirmed, high) and Dallas Fed Trimmed Mean PCE print the same day. **Macro:** no CPI/FOMC surprise this week (FOMC already priced 9/16); the calendar's `government-funding-deadline-2026-09-30` entry (still `estimate`/`high`) appears resolved in the news — a CR signed 2026-09-02 funds the government through 2026-12-11 — noted, not this lane's file to correct. **Volatility regime:** VIX 14.87 → 16.07 settled, +1.20, inside the 3.0-point bar — a rise, not a regime break; contango intact. **Geopolitical:** unchanged — Iran-war oil-price pressure (already named in the 9/22 row) continues; no new MRVL-touching export action found. **Event tape:** OpenAI DevDay (confirmed, keynote 10:00 PT/13:00 ET today) and CoreWeave Fully Connected (confirmed, Moscone South, 9/29–10/1, HGX B300 GA announced) are both starting today but pre-market as of this fetch — no reaction data yet, and neither carries an MRVL-specific angle found. **Corridor — zero churn, a first for this event:** re-swept `--on-date` across 10/1–10/11; the 35-id set is identical to the 9/22 row's; `adjacentStrongIds` unchanged (`ism-manufacturing-2026-10-01`, `ism-services-2026-10-05`, `jobs-2026-10-02`). **No dated adjacency proposed** — every item this sweep surfaced is either already tracked (MU, PCE, ISM, jobs) or undated (the two AI-safety incidents, the yield move, OpenAI DevDay/CoreWeave Fully Connected as generic tech conferences with no forward date of their own). **No new forward test registered** — FT-3/-4 stand as written; this row reports their trend, not their score. | **Direction unchanged, partial reversal:** still watch-only, no position — FT-3's outperformance gap narrowed (5.75pt vs 8.92pt) on a Monday reversal, and the drawdown that had narrowed a third widened back roughly two-thirds of the way. See the 2026-09-29 Stance amendment. | 2026-10-01 (medium, ≥0d band: every 2d) |
 | 2026-10-01 | D-5 | **Deterministic screen (no Claude session).** Readings — MRVL $264.21 (4.9% since last), VIX 16.3 (+0.3pt since last), band unchanged (medium:0+), 35 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-03 |
 | 2026-10-03 | D-3 | **Deterministic screen (no Claude session).** Readings — MRVL $272.29 (3.1% since last), VIX 15.3 (-1.0pt since last), band unchanged (medium:0+), 35 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-05 |
+| 2026-10-05 | D-1 | **Assigned matrix session (interval-elapsed); band unchanged (medium:0+), no transition.** **Data-source caveat, stated plainly:** `scripts/research/market-data.mjs`'s Yahoo feed (both the cached daily-bar path and a fresh live-quote fetch today, cache busted first) is frozen at **Friday 2026-10-02's settled close** — MRVL $272.29, NVDA $233.95, VIX 15.31 — with no Monday 10/5 bar published through this pipeline yet. A handful of lower-tier aggregator snippets claim a Monday intraday move (one cites "+$4.21/+1.57% since last close" on a date it mislabels "October 4," a Sunday; another cites VIX "15.33"), but they conflict with each other on the reference session and are not used — primary-over-aggregator discipline, same as every prior row. All readings below are therefore the 10/2 settled closes, the same ones the 10/3 screen already recorded. **Headline — last week's partial reversal itself reversed, hard.** MRVL rallied **$251.90 (9/28 close) → $268.08 (10/1) → $272.29 (10/2)**, +8.09% in three sessions, while NVDA added +2.22% (228.86 → 233.95) over the same stretch. **FT-3's kill-switch metric, computed honestly:** from the 2026-09-15 close (MRVL $221.70, NVDA $212.17) to today's last settled close, MRVL is **+22.82%** and NVDA is **+10.27%** — a **12.55pt** gap, more than double the **5.75pt** gap the 9/29 row reported five sessions ago. Still mid-window; FT-3 scores **2026-10-07**. **Drawdown context:** MRVL is now **−13.93%** off its 6/4 closing high ($316.35), sharply narrower than −20.38% one row ago — most of the "already re-rated, limited downside" caution the 9/29 row leaned on is gone again. **Date leg re-verified, kill switch not tripped:** the IR press-release index was fetched directly today (`investor.marvell.com/news-releases`) — no reschedule/cancellation notice in the 9/29–10/5 window, no FQ3 FY27 call announcement; the last release remains the routine 2026-09-25 quarterly dividend declaration. **Instrument-hygiene trigger — mechanism changed since registration, re-checked and refined.** `earningsDates()` (`scripts/research/market-data.mjs`) no longer buckets Item-2.02 8-Ks by `${year}-${calendarQuarter}` (the mechanism FT-1/FT-2 were registered against) — it now collapses filings into one reporting period when they land **less than 45 days apart** (day-gap clustering; the #3183 fix for issuers whose fiscal quarter crosses a calendar boundary). Re-run today (cache busted first, direct EDGAR): the same 22-print list ending 2026-08-27 — no new MRVL Item-2.02 8-K — and it still reproduces both known corruptions unchanged (2021-08-03 keeps over the real 2021-08-26 print; 2025-05-06, this event's own postponement notice, keeps over the real 2025-05-29 print — both 23-day gaps, under the 45-day bar). **New finding:** the Oct-6-to-Dec-1 gap this event's hazard depends on is **56 days — above the 45-day threshold** (`python3`-verified), so an Oct-6 Item-2.02 filing would *not* collapse into the ~2026-12-01 FQ3 print under the current algorithm, unlike the 2025 precedent. FT-1's registered description is now stale against the code; the predicted eviction is structurally less likely than assumed at registration — recorded for the 2026-12-08 scoring session, not resolved early. **Adjacency — peers:** **Micron (MU) printed 2026-09-30**, record fiscal Q4 — revenue $54.2B vs ~$51.1B expected, non-GAAP EPS beat, AI/HBM/data-center-SSD-led — and the stock's reaction was muted-to-negative (dipped ~1.5% post-release before a small recovery), extending the MRVL (8/27, −6.71%) and AVGO (9/2, −2.75%) beat-and-sold pattern to **3-for-3** on the custom-silicon/memory-AI complex. **Macro:** ISM Manufacturing (9/30 data, released 10/1) printed **54.5 vs 54.9 expected** — a slight miss, 9th straight month of expansion, Prices Index 77.9 (tariff/petroleum-driven). September payrolls (released 10/2): **+29K vs ~84–89K expected**, unemployment rate **4.2%** — a large downside miss, read dovish/risk-on rather than alarming (VIX fell to 15.31 the same session, MRVL and NVDA both closed higher that day). **ISM Services (Sep data) is due today, 10am ET** (`ism-services-2026-10-05`, confirmed/high, one of this event's three `adjacentStrongIds`) — not yet printed as of this fetch (consensus ~55.0–55.7 vs August's 55.4); not assessed here, honestly left open rather than guessed. **Geopolitical/policy:** the Google ad-tech remedies case (`google-adtech-final-judgment-2026-10-02`) resolved with a six-year behavioral decree and **no forced AdX divestiture**; parties filed the joint final judgment by the 10/2 deadline — no read-through found to Marvell's Google custom-silicon/CXL arrangement, a different business line. 10Y/30Y Treasury yields ticked higher again (30Y ~5.63% as of 10/2, up from ~5.56% the 9/29 row reported) — the same duration-discount channel, intact and slightly worse. **AI-pacing/safety leg escalated, not faded:** OpenAI shelved its next model ("GPT-6.1 Astra") on safety grounds (9/28, CNBC); the FTC opened a safety-practices inquiry into Anthropic and OpenAI (~10/1); over 1,000 employees signed the "Pacing the Frontier" petition and an internal-researcher-influence story ran 10/2 (Axios) — all reinforcing the same 9/12 Amodei mechanism this stance has tracked since 9/15, none of it dated or resolving the question either way, so nothing is proposed. **Event tape — a new, concrete whisper number:** RBC Capital Markets (published ahead of the event) models a **≥$2B raise to the FY29 AI-revenue estimate** (from ~$10B, ~$1B of it the Google CXL program) and a **new calendar-2030 DC TAM/share target** materially above the standing $94B-by-2028/20%-share framework — the first time this ledger has a numeric consensus bar for the "quantify the near half" bull tell. **Volatility regime:** VIX 16.07 (9/28) → 16.34 (10/1) → 15.31 (10/2) settled, −0.76pt from the last recorded reading, inside the 3.0-point bar; contango intact, no regime shift. **Corridor — zero churn, fourth consecutive pulse:** re-swept `--on-date` across 10/1–10/11 (10 dates) — the 35-id set is identical to the 9/22 row's; `adjacentStrongIds` unchanged (`ism-manufacturing-2026-10-01`, `ism-services-2026-10-05`, `jobs-2026-10-02`). **No dated adjacency proposed:** every item this sweep surfaced (the OpenAI model shelving, the FTC inquiry, the employee petition, RBC's note, the Google ad-tech ruling) is either already tracked or carries no forward-looking date of its own. **No new forward test registered** — FT-3 (scores 2026-10-07) and FT-4 (scores 2026-10-09) stand as written; this row reports their trend, not their score. | **Reversed hard back toward the kill (direction unchanged):** FT-3's gap widened from 5.75pt to 12.55pt and the drawdown narrowed from −20.38% to −13.93% — see the 2026-10-05 Stance amendment. | 2026-10-07 (medium, ≥0d: every 2d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
@@ -274,3 +303,7 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-03
 <!-- probe-ref: {"symbols":{"MRVL":272.29},"vix":15.31,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":2} -->
+
+**Last assessed:** 2026-10-05
+<!-- probe-ref: {"symbols":{"MRVL":272.29,"NVDA":233.95},"vix":15.31,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->
+
