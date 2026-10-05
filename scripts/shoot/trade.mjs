@@ -4,6 +4,7 @@
 // floating. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:trade [outdir]
 import { resolve } from "node:path";
+import { lifecycleRows } from "../../src/server/option-lifecycle-view.ts";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
 import { outlookAnswer } from "./trade-outlook-fixture.mjs";
@@ -585,6 +586,58 @@ const positionWatchAlerts = {
   ],
 };
 let currentAlerts = noAlerts;
+
+// Expiries and assignments (#3407 slice 4) — the events that end a contract with no order behind
+// them. The ROWS are built by the server's own view function rather than hand-written, so the
+// frame proves the real sentences a member reads, including every "not counted in your realized
+// P/L, because…" — the whole point of the card. One of each type: an expiry (counted), an
+// assignment (counted for the contract, the shares called out), an exercise (never counted) and
+// the share settlement that pairs with it (never counted).
+const LIFECYCLE_AS_OF = "2026-09-21T14:00:00.000Z";
+const lifecycleAnswer = {
+  available: true,
+  asOf: LIFECYCLE_AS_OF,
+  rows: lifecycleRows(
+    [
+      {
+        id: "lc-1",
+        type: "OPASN",
+        symbol: "NVDA260918P00175000",
+        quantity: 1,
+        at: "2026-09-18T23:59:59.999Z",
+      },
+      {
+        id: "lc-2",
+        type: "OPTRD",
+        symbol: "NVDA",
+        quantity: 100,
+        at: "2026-09-18T20:12:04.000Z",
+        price: 175,
+      },
+      {
+        id: "lc-3",
+        type: "OPEXC",
+        symbol: "MU260911C00120000",
+        quantity: 2,
+        at: "2026-09-11T23:59:59.999Z",
+      },
+      {
+        id: "lc-4",
+        type: "OPEXP",
+        symbol: "NVDA260904C00200000",
+        quantity: 3,
+        at: "2026-09-04T23:59:59.999Z",
+      },
+    ],
+    20,
+  ),
+  more: false,
+};
+const noLifecycle = { available: true, asOf: LIFECYCLE_AS_OF, rows: [], more: false };
+// Every other scene shows the honest empty state rather than an unstubbed `{}`, which the card
+// would (correctly) read as "we couldn't ask the broker" and put a degrade note in every frame.
+let currentLifecycle = noLifecycle;
+
 // A 2-lot NVDA 180/200 call credit spread walked add → validate → review → confirm, exactly the
 // states `draft-order.ts` produces; the confirm answer is the route's own shape with the
 // broker's echo (`executed: true`, order id, status, the working-orders note).
@@ -782,6 +835,8 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/option/review": () => currentOptionReview,
     // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
     "/api/trade/option-positions": () => currentOptionPositions,
+    // What happened without an order (#3407 slice 4) — pathname-matched like its siblings.
+    "/api/trade/option-lifecycle": () => currentLifecycle,
     "/api/trade/alerts": () => currentAlerts,
     "/api/trade/alerts/dismiss": { ok: true },
     "/api/trade/cancel": { ok: true, orderId: "wo-1" },
@@ -1454,6 +1509,26 @@ await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy(0, -120));
 await shootAlerts("desk-alerts-desktop");
 currentAlerts = noAlerts;
+
+// Expiries and assignments (#3407 slice 4) — the last card in the Orders pane: the four ways a
+// contract ends with no order behind it, each saying what it did to the realized P/L and, where it
+// did nothing, why not. The sentences in the frame are the server's own (`lifecycleRows` builds the
+// fixture). PHONE FIRST.
+currentLifecycle = lifecycleAnswer;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
+await page.getByRole("heading", { name: "Expiries and assignments" }).waitFor();
+await page.getByRole("heading", { name: "Expiries and assignments" }).scrollIntoViewIfNeeded();
+// Past the heading by a card's worth: the frame has to prove the CONTRAST between a counted row
+// and an uncounted one, which takes three rows, not the heading plus one.
+await page.evaluate(() => window.scrollBy(0, 230));
+await page.evaluate(() => window.scrollTo({ left: 0 }));
+const shootLifecycle = shooter(page, resolve("docs/shots/option-lifecycle"));
+await shootLifecycle("option-lifecycle-phone");
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.getByRole("heading", { name: "Expiries and assignments" }).scrollIntoViewIfNeeded();
+await shootLifecycle("option-lifecycle-desktop");
+currentLifecycle = noLifecycle;
 
 // Roll as one ticket (#3407 P3 slice 3) — the same held put, Roll… opened: target expiration
 // and strike from the chain, the two legs spelled out, then the reviewed Confirm naming the net

@@ -44,6 +44,7 @@ import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
 import {
   boardItemsFromProjectItems,
+  boardSyncSkip,
   explainMaskedOwnerFailure,
   isBacklogCandidate,
   isMaskedOwnerFailure,
@@ -403,7 +404,22 @@ function main() {
     process.exit(1);
   }
 
-  const result = syncIssue(issueNumber);
+  let result;
+  try {
+    result = syncIssue(issueNumber);
+  } catch (error) {
+    // #4438: a rate limit skips with a warning (the board is a display); anything else stays red.
+    let budget = {};
+    try {
+      budget = ghRateLimit().graphql ?? {};
+    } catch {
+      budget = {};
+    }
+    const warning = boardSyncSkip({ issueNumber, error, budget });
+    if (!warning) throw error;
+    console.log(warning);
+    return;
+  }
   if (result.skipped) {
     console.log(`issue #${issueNumber}: ${result.reason}, skipping`);
     return;

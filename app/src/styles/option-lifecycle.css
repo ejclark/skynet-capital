@@ -1,0 +1,72 @@
+/* Expiries and assignments (#3407 slice 4) — the Orders pane's third card. Same small-text
+ * register and `.wr-*` frame as the working-orders list; own file so the addition doesn't push
+ * `working-orders.css` over the line cap.
+ *
+ * MOBILE-FIRST: the row stacks at 390 — what happened, the contract, the consequence, the counted
+ * line. The only thing the wide viewport adds is room: the headline and the quantity/when meta
+ * share a line instead of wrapping. No concept appears that the phone did not carry.
+ *
+ * Every signal is a WORD plus a glyph (a standing reader is red/green colourblind): "Not counted"
+ * is said, and the row's left rule is a WEIGHT step, not a hue — a dotted rule for an event the
+ * ledger does not price, solid for one it does. */
+/* No marker: these rows carry their own left rule, and a bullet outside it would read as a second,
+   meaningless mark. (The working-orders rows lose theirs by being flex items; these are blocks.) */
+.lc-list {
+  list-style: none;
+}
+.lc-row {
+  padding: 10px 0 10px 10px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  font-size: var(--text-md);
+}
+.lc-row:last-child {
+  border-bottom: 0;
+}
+/* The two events the ledger cannot price (exercise, share settlement) wear a dotted rule — the
+   same "this number is incomplete" tell their own counted line spells out in words. */
+.lc-opexc,
+.lc-optrd {
+  border-left-style: dotted;
+}
+.lc-head {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 10px;
+}
+.lc-what {
+  font-weight: 700;
+}
+.lc-meta {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.lc-sym {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+.lc-detail {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.lc-counted {
+  margin: 4px 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.lc-uncounted {
+  font-weight: 500;
+  color: var(--muted);
+}
+.lc-price {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.lc-more {
+  margin-top: 8px;
+}

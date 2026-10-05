@@ -435,3 +435,33 @@ executed*: deleting the four agent files and adding sunset mode to `/charter` ar
 session). Until [#4526](https://github.com/ejclark/skynet-capital/issues/4526) lands, the four agent
 files still exist and still work — the roster table above is accurate as written, and `/governor`
 remains invokable exactly as before. Nothing is removed by a doc.
+
+### The board half, 2026-10-05 (#3939 slice 4)
+
+Same review, the other piece of machinery #3939 put on trial: the Orchestration board's Status
+column, which the plan suspected GitHub Projects' built-in workflows already maintain natively
+("keep the core; subtract what Projects does natively"). **Verdict: subtract nothing.** The reasoning
+lives next to the code it governs — `statusForIssue()` in
+[`scripts/moneypenny/projects.mjs`](../scripts/moneypenny/projects.mjs) — because that is where the
+next session has the same idea.
+
+| Candidate | Call | Conf. | Why | What proves it wrong |
+|---|---|---|---|---|
+| Built-in "Item closed → Done" replacing our `closed → Done` | **skip** | high | `projects-reconcile.mjs` (#4393) landed after the plan was written and made that line the authority for four callers — the sweep, the backfill, `issues.mjs`'s preview, `issue-lint.mjs`. The sweep already heals a dropped close event, which is all the built-in covered | The sweep is retired → the close line has one caller again, and the built-in is worth pricing |
+| Built-in "Item reopened" | **skip** | high | It writes one fixed value; our rule derives Backlog / Ready / Blocked / In Progress from the labels a reopened issue still carries | Reopens stop carrying meaningful labels → a fixed value is honest |
+| Built-in "Auto-add to project" replacing the `item-add` path | **skip** | med-high | Its filter runs on creation and cannot express `isBacklogCandidate` for a `ci-failure` label applied afterwards; the add-or-find path (#3954) is still needed by both sweeps regardless | `ci-failure` moves to filing-time → the filter can express it |
+| Any built-in workflow, as a mechanism | **skip** | high | GraphQL exposes `ProjectV2.workflows` read-only plus `deleteProjectV2Workflow` — no create/update/enable mutation (introspected live 2026-10-05). Enabling one is a UI click: unversioned, unspecced, unreadable from CI | GitHub ships an enable mutation → re-price every row above |
+
+**The method, since it differs from the coach half.** No usage counting was possible: this lane's App
+token cannot see a personal-account project at all (`projects-setup.yml`'s header says why), so the
+schema was introspected directly and the behavioural question answered from the repo's own incident
+record — on 2026-10-01 closed cards sat in In Progress until #4393 built the sweep, which a live
+"Item closed → Done" would have moved on its own close event. The live `workflows{enabled}` read is
+the falsifier, not the evidence, and the one-line probe to run it is in `projects.mjs`'s block.
+
+**The general lesson, which is why this is written down at all.** A plan's *"replace it with the
+off-the-shelf thing"* row needs a fourth question beside call, confidence and falsifier: **can we set
+and read the off-the-shelf thing from here?** A native feature that only a human can toggle in a UI
+is not a smaller system than a pure function with a spec — it is the same system with its
+configuration moved somewhere nothing can assert on it. Count that cost before counting the lines
+saved.

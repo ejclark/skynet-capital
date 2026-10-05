@@ -296,6 +296,20 @@ The outcome is his; only the path is on trial. No objection surviving is the com
 costs seconds; "compliance by default" was the measured failure (2 of 4 process directives that day
 were built straight from the prompt).
 
+**A system's spirit outlives its implementation — refactor the mechanism, keep the decision** (Eric,
+2026-09-28, with three rewires landing at once: "we are essentially rewiring new systems that have
+over old setup. I expect the spirit of past decisions/systems to remain relevant however i also
+expect implementation details may need refactored"). When a newer system lands over an older one —
+the Projects v2 board over label-only state, the `ready` label over #823's owner-comment trigger — a
+rule written against the old machinery is not thereby void, and it is not thereby binding either.
+Read it for the **decision** it recorded, re-point that decision at the new mechanism, and say in
+the diff which half you kept. Both failures cost: treating the old rule as dead discards a settled
+call nobody re-litigated, and treating its wording as the rule preserves a second code path nobody
+needs. This is the twin of the aligned-intent rule above — there his present intent authorizes
+acting without a fresh nod; here his past intent survives the machinery it was first written
+against. First instance: this file's own plan lane, whose write-access gate (#823's spirit) moved
+onto the `ready` label (#3818's mechanism) in #4165.
+
 **Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github
 issues, not in source code"_ — a correction he has had to repeat; #433 moved the committed ones). A
 plan is an issue in the house format (intent & end-state · EARS criteria · constraints · settled

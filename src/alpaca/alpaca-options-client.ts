@@ -454,11 +454,17 @@ export class AlpacaOptionsClient {
   /**
    * The four option lifecycle activity types: `OPEXP` (expired worthless),
    * `OPASN` (assigned), `OPEXC` (exercised), `OPTRD` (the paired underlying-share settlement
-   * trade). Read-only and never on the execution path, so this fails SOFT like `mergeQuotes` —
-   * an empty array on any error, rather than breaking history rendering over a broker hiccup.
+   * trade). Same read as `getOptionLifecycleActivities` below, but it SAYS whether the read
+   * worked, because on a member-facing surface the two outcomes are different sentences: an empty
+   * list means nothing happened to this account's contracts, a failed read means we do not know
+   * (#3407 slice 4 — "never an empty list that reads as 'nothing working'", `working-orders.tsx`).
    * `after` is the activity `id` cursor (Alpaca's own pagination token for this endpoint).
    */
-  async getOptionLifecycleActivities(after?: string): Promise<AlpacaAccountActivity[]> {
+  async readOptionLifecycleActivities(
+    after?: string,
+  ): Promise<
+    { readonly ok: true; readonly rows: AlpacaAccountActivity[] } | { readonly ok: false }
+  > {
     try {
       const query = new URLSearchParams({
         activity_types: "OPEXP,OPASN,OPEXC,OPTRD",
@@ -467,12 +473,26 @@ export class AlpacaOptionsClient {
         ...(after ? { page_token: after } : {}),
       });
       const response = await this.trading.get(`/v2/account/activities?${query.toString()}`);
-      if (response.status < 200 || response.status >= 300) return [];
+      if (response.status < 200 || response.status >= 300) return { ok: false };
       const body = response.body;
-      return Array.isArray(body) ? (body as AlpacaAccountActivity[]) : [];
+      // A 2xx whose body isn't a list is the broker answering in a shape this app doesn't know —
+      // reported as a failed read rather than as "nothing happened", same reasoning as a non-2xx.
+      if (!Array.isArray(body)) return { ok: false };
+      return { ok: true, rows: body as AlpacaAccountActivity[] };
     } catch {
-      return [];
+      return { ok: false };
     }
+  }
+
+  /**
+   * The fail-SOFT view of the same read, for the paging backfill sweep
+   * (`activity-backfill.ts`), which only ever APPENDS: an empty array on any error, so a broker
+   * hiccup stops the sweep rather than breaking history rendering. A caller that renders the
+   * result to a member wants `readOptionLifecycleActivities` above instead.
+   */
+  async getOptionLifecycleActivities(after?: string): Promise<AlpacaAccountActivity[]> {
+    const read = await this.readOptionLifecycleActivities(after);
+    return read.ok ? read.rows : [];
   }
 
   async placeOptionOrder(params: PlaceOptionOrderParams): Promise<AlpacaOrder> {

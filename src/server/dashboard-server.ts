@@ -28,6 +28,7 @@ import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
+import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
@@ -148,6 +149,7 @@ async function serveWriteApis(
   if (await serveTradeOrdersApi(req, res, path, config, session)) return true;
   if (serveStreamApis(req, res, path, config, session)) return true;
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
+  if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
