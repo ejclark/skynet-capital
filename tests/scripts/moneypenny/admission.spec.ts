@@ -13,6 +13,7 @@ import {
   claimNext,
   peekNext,
   SWEEP_HELD_SKIPS,
+  withoutOpenPr,
 } from "../../../scripts/moneypenny/index.mjs";
 
 // THE ADMISSION GATE (#3960 criteria 1, 2, 7). Between "ready" and "a build session starts":
@@ -59,6 +60,10 @@ const noContinuation = () => ({
   mode: mode("normal"),
   now: Date.parse("2026-10-04T00:00:00Z"),
 });
+
+/** "No open PR names anything" — injected beside `noContinuation`, for the same reason: the
+ *  default reads live GitHub (`ghRestAll("pulls?state=open")`). */
+const noOpenPrs = () => new Map<number, number>();
 
 describe("surfaceOf — the capsule's Surface cell", () => {
   it("reads and normalises the cell (lowercase, trimmed, markdown stripped)", () => {
@@ -361,6 +366,7 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
       readInFlight: () => inFlight,
       claims: { plan: fake("plan"), feedback: fake("feedback") },
       continuation: noContinuation,
+      readPrIssues: noOpenPrs,
     };
     return { deps, called };
   };
@@ -421,6 +427,7 @@ describe("claimNext — a lease-held pick does not block the rest of the queue",
       readInFlight: () => [],
       claims: { plan: claim, feedback: claim },
       continuation: noContinuation,
+      readPrIssues: noOpenPrs,
     };
     return { r: claimNext(0, "abc", deps), tried };
   };
@@ -449,6 +456,7 @@ describe("claimNext — a lease-held pick does not block the rest of the queue",
         feedback: () => ({ claimed: false, reason: "unused" }),
       },
       continuation: noContinuation,
+      readPrIssues: noOpenPrs,
     };
     expect(claimNext(0, "abc", deps)).toMatchObject({ claimed: false, reason: "parked" });
     expect(tried).toEqual([1]);
@@ -479,6 +487,7 @@ describe("peekNext — the push pass asks, and claims nothing", () => {
     readReady: () => ready,
     readInFlight: () => [],
     continuation: noContinuation,
+    readPrIssues: noOpenPrs,
   });
 
   it("returns the pick claimNext would take, without taking a lease", () => {
@@ -489,5 +498,57 @@ describe("peekNext — the push pass asks, and claims nothing", () => {
   it("returns null when nothing in either lane is admissible", () => {
     expect(peekNext(deps([issue(8, "a", ["ready", "enhancement"])]))).toBeNull();
     expect(peekNext(deps([]))).toBeNull();
+  });
+});
+
+// 2026-10-05: #3959's lane stripped `in-progress` at the end of a session while its slice PR #4605
+// sat open and held, and the sweep dispatched the plan twice that day into "nothing to build". An
+// open PR naming the issue is the in-flight evidence, so it counts even after the label is gone.
+describe("the sweep skips an issue an open PR already names", () => {
+  const deps = (ready: ReturnType<typeof issue>[], named: [number, number][]) => {
+    const tried: number[] = [];
+    const claim = (ctx: ClaimCtx) => {
+      const n = ctx.payload?.issue?.number ?? -1;
+      tried.push(n);
+      return { claimed: true, reason: "claimed", number: n };
+    };
+    return {
+      tried,
+      deps: {
+        readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+        readReady: () => ready,
+        readInFlight: () => [],
+        readPrIssues: () => new Map(named),
+        claims: { plan: claim, feedback: claim },
+        continuation: noContinuation,
+      },
+    };
+  };
+  const at = (n: number, day: number, lane = "plan") => ({
+    ...issue(n, `t${n}`, ["ready", lane]),
+    createdAt: `2026-09-${String(day).padStart(2, "0")}T00:00:00Z`,
+  });
+
+  it("claims the next ready issue, not the one whose held slice PR is still open", () => {
+    const { deps: d, tried } = deps([at(3959, 1), at(42, 2)], [[3959, 4605]]);
+    expect(claimNext(0, "abc", d)).toMatchObject({ claimed: true, number: 42 });
+    expect(tried).toEqual([42]);
+  });
+
+  it("applies to the feedback lane too — an open PR is that build's in-flight evidence", () => {
+    const { deps: d, tried } = deps([at(7, 1, "feedback")], [[7, 70]]);
+    expect(claimNext(0, "abc", d).claimed).toBe(false);
+    expect(tried).toEqual([]);
+  });
+
+  it("peeks nothing when the only ready issue is named by an open PR", () => {
+    const { deps: d } = deps([at(3959, 1)], [[3959, 4605]]);
+    expect(peekNext(d)).toBeNull();
+  });
+
+  it("withoutOpenPr keeps every issue no open PR names", () => {
+    const pool = [at(1, 1), at(2, 2)];
+    expect(withoutOpenPr(pool, new Map([[2, 9]])).map((i) => i.number)).toEqual([1]);
+    expect(withoutOpenPr(pool)).toEqual(pool);
   });
 });

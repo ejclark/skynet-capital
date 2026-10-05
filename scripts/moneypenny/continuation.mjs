@@ -365,7 +365,7 @@ const restOr = (path, fallback) => {
  * rules already cover every build path (`Closes #n`, `Part of #n`, a bare `#n` in the title, the
  * branch's own number), which is exactly the gap #4393 closed for the in-flight cap.
  */
-function openPrsByIssue(openPrs = []) {
+export function openPrsByIssue(openPrs = []) {
   const byIssue = new Map();
   for (const pr of openPrs) {
     const named = derivePrIssues({
