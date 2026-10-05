@@ -22,11 +22,10 @@ import {
   claim,
   closableContracts,
   committedToPlaybook,
-  coverWith,
   type GuardLedger,
-  soldShares,
   subscriptionTerms,
   unspentCash,
+  worsens,
 } from "./guard-batch.js";
 
 /**
@@ -149,7 +148,7 @@ function clampClose(
   intent: OrderIntent,
   option: OptionOrderIntent,
   portfolio: Portfolio,
-  { ledger, book }: OptionBatch,
+  { ledger }: OptionBatch,
 ): OptionOutcome {
   let units = intent.quantity;
   for (const leg of option.legs) {
@@ -160,30 +159,16 @@ function clampClose(
   if (!(units > 0)) return refuse("nothing-held");
 
   const underlying = intent.symbol;
-  const { before, after, elsewhere } = coverWith(
-    ledger,
-    book,
-    underlying,
-    orderLegs(option, units),
-  );
-  // Only a close that RAISES what the book promises can be refused: a book already short of cover
-  // must still be able to shed risk.
-  if (after.shares > before.shares && after.shares > shareRoom(portfolio, ledger, underlying)) {
-    return refuse("call-not-covered");
-  }
-  if (after.cash > before.cash && elsewhere + after.cash > unspentCash(portfolio, ledger)) {
-    return refuse("put-not-secured");
-  }
-  claim(ledger, {
-    spent: premiumOut(option) * units,
-    order: { underlying, option, units },
-  });
+  const pays = premiumOut(option) * units;
+  const worse = worsens(portfolio, ledger, underlying, { legs: orderLegs(option, units), pays });
+  // Only a close that makes cover WORSE is refused: a book already short of cover must still be able
+  // to shed risk. Worse means closing a long that capped a short — or paying a buy-back out of cash
+  // another short's collateral stands on (#4645 fuzz: a covered call bought back from a put's cash).
+  if (worse.shares) return refuse("call-not-covered");
+  if (worse.cash) return refuse(worse.newCash > pays ? "put-not-secured" : "collateral-reserved");
+  claim(ledger, { order: { underlying, option, units } });
   return { ok: true, intent: { ...intent, quantity: units } };
 }
-
-/** Shares of `underlying` held and not sold earlier this batch — what a sold call can stand on. */
-const shareRoom = (portfolio: Portfolio, ledger: GuardLedger, underlying: string): number =>
-  Math.max(0, heldQuantity(portfolio, underlying)) - soldShares(ledger, underlying);
 
 /** Rule 6: the open must close before the earliest live print blackout begins. */
 function printProblem(
@@ -203,37 +188,31 @@ function printProblem(
   return spans ? "option-spans-print" : undefined;
 }
 
-/** Rules 8–9: cash for collateral and premium, shares for a sold call — each judged against the
- *  worst case of what this batch already approved (`coverWith`). `cash` is what the order newly
- *  puts at risk: the collateral it adds at worst, plus its premium. */
+/** Rules 8–9: cash for collateral and premium, shares for a sold call — refused when the order makes
+ *  cover worse in any fill/no-fill combination of what this batch already approved (`worsens`).
+ *  `cash` is what the order newly puts at risk: the collateral it adds at worst, plus its premium. */
 function coverProblem(
   intent: OrderIntent,
   option: OptionOrderIntent,
   portfolio: Portfolio,
-  { ledger, book }: OptionBatch,
+  { ledger }: OptionBatch,
 ): { readonly reason?: OptionRefusalReason; readonly cash: number } {
-  const underlying = intent.symbol;
-  const { before, after, elsewhere } = coverWith(
-    ledger,
-    book,
-    underlying,
-    orderLegs(option, MAX_OPTION_OPEN_UNITS),
-  );
-  const premium = premiumOut(option) * MAX_OPTION_OPEN_UNITS;
-  const cash = Math.max(0, after.cash - before.cash) + premium;
-  const unspent = unspentCash(portfolio, ledger);
-  if (cash > 0 && elsewhere + after.cash + premium > unspent) {
+  const pays = premiumOut(option) * MAX_OPTION_OPEN_UNITS;
+  const worse = worsens(portfolio, ledger, intent.symbol, {
+    legs: orderLegs(option, MAX_OPTION_OPEN_UNITS),
+    pays,
+  });
+  const cash = worse.newCash;
+  if (worse.cash) {
     const reason =
       option.structure === "cash-secured-put"
         ? "put-not-secured"
-        : unspent >= cash
+        : unspentCash(portfolio, ledger) >= cash
           ? "collateral-reserved"
           : "insufficient-cash";
     return { reason, cash };
   }
-  if (after.shares > before.shares && after.shares > shareRoom(portfolio, ledger, underlying)) {
-    return { reason: "call-not-covered", cash };
-  }
+  if (worse.shares) return { reason: "call-not-covered", cash };
   return { cash };
 }
 
@@ -272,7 +251,6 @@ function clampOpen(
   }
 
   claim(batch.ledger, {
-    spent: premiumOut(option) * MAX_OPTION_OPEN_UNITS,
     order: { underlying: intent.symbol, option, units: MAX_OPTION_OPEN_UNITS },
     ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
     risk,
