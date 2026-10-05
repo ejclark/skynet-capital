@@ -256,10 +256,6 @@ export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
   "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
   "HC-SAURON":
     "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
-  "CRWV-WHEEL":
-    "Its option quotes and orders have no route to Alpaca until the option order flow lands (#4642).",
-  "NVDA-CALL-SPREAD":
-    "Its option quotes and orders have no route to Alpaca until the option order flow lands (#4642).",
 };
 
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:

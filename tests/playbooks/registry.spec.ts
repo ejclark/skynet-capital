@@ -110,10 +110,11 @@ describe("enabledPlaybooks env parsing", () => {
     expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
   });
 
-  it("arms no option play by default, and the roll call says why neither can fire yet", () => {
+  it("arms no option play by default — only a subscription does — and neither is marked unwired", () => {
     expect(enabledPlaybooks({}).enabled).toEqual([]);
-    expect(PLAYBOOK_WIRING_GAPS["CRWV-WHEEL"]).toBeDefined();
-    expect(PLAYBOOK_WIRING_GAPS["NVDA-CALL-SPREAD"]).toBeDefined();
+    // The Alpaca option order flow is live (#4679): nothing stands between a subscription and a trade.
+    expect(PLAYBOOK_WIRING_GAPS["CRWV-WHEEL"]).toBeUndefined();
+    expect(PLAYBOOK_WIRING_GAPS["NVDA-CALL-SPREAD"]).toBeUndefined();
   });
 
   it("recognises HC-SAURON — registered, but still dark unless named (issue #3527 plan, slice 3)", () => {
