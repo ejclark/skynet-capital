@@ -69,8 +69,8 @@ describe("applyGuards", () => {
       expect(approved?.quantity).toBe(54);
     });
 
-    it("refuses any intent carrying an option order, ahead of every other guard", () => {
-      const sold = anOptionIntent();
+    it("gates an option order by its effect, not its side: the ladder refuses a sold put, never a close", () => {
+      const sold = anOptionIntent(); // a SELL that opens risk
       const bought = anOptionIntent({
         side: "buy",
         option: {
@@ -80,9 +80,10 @@ describe("applyGuards", () => {
           limitPrice: 0.4,
         },
       });
+      const malformed = { ...anOptionIntent(), type: "market" as const };
 
       const result = applyGuardsWithVerdicts(
-        [sold, bought],
+        [sold, bought, malformed],
         aPortfolio({ positions: [aPosition({ symbol: "CRWV", quantity: 100 })] }),
         aContext({ CRWV: { last: 90 } }),
         { maxPositionPct: 1, accountTier: "restricted" },
@@ -90,8 +91,11 @@ describe("applyGuards", () => {
 
       expect(result.approved).toEqual([]);
       expect(result.refused).toEqual([
-        { intent: sold, reason: "option-shape" },
-        { intent: bought, reason: "option-shape" },
+        { intent: sold, reason: "ladder-block" },
+        // The close passes the ladder and reaches the option clamp, which has no quote to price it.
+        { intent: bought, reason: "no-quote" },
+        // A malformed option order is refused before any other rule sees it.
+        { intent: malformed, reason: "option-shape" },
       ]);
     });
   });

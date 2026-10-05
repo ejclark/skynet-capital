@@ -358,6 +358,65 @@ describe("LiveCycleRunner", () => {
     // The cycle still evaluated the bot despite the equity read failing.
     expect((await broker.getPortfolio()).positions[0]?.quantity).toBe(10);
   });
+
+  // The scout's day-rollover exits pass the guards like every other order: a scout lot is never
+  // sold out from under a call sold against the same shares — and the record says why.
+  it("never sells a scout lot out from under a sold call, and records the refusal", async () => {
+    const shares = new InMemoryBroker(1_000_000, [
+      { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const submitted: string[] = [];
+    const scoutBroker = {
+      getPortfolio: async (): Promise<Portfolio> => ({
+        cash: 1_000_000,
+        positions: [
+          { symbol: "MSFT", quantity: 50, avgPrice: 100 },
+          { symbol: "MSFT261120C00110000", quantity: -1, avgPrice: 2 },
+        ],
+      }),
+      submit: (intent: OrderIntent) => {
+        submitted.push(intent.symbol);
+        return shares.submit(intent);
+      },
+    };
+    const decisions: DecisionRecord[] = [];
+    const runner = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), shares)],
+      safety: new SafetyController(),
+      blockedReason: () => null,
+      scout: {
+        maxPicks: 1,
+        broker: scoutBroker,
+        universe: [],
+        managedSymbols: new Set(),
+        risk: RISK,
+        mode: "live",
+      },
+      scoutState: {
+        load: () => ({
+          day: "2026-07-23",
+          ranToday: true,
+          firedOrganicallyToday: false,
+          ownedSymbols: ["MSFT"],
+        }),
+        save: () => undefined,
+      },
+      onDecision: (r) => decisions.push(r),
+    });
+
+    await runner.runCycle(aContext({ MSFT: { last: 100 } }, "2026-07-24T14:30:00Z"));
+
+    expect(submitted).toEqual([]);
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]).toMatchObject({
+      personaId: "beta-scout",
+      rawIntents: [{ symbol: "MSFT", side: "sell", quantity: 50 }],
+      guardedIntents: [],
+      outcomes: [],
+      refusals: [{ reason: "uncovers-short-call" }],
+    });
+  });
+
   // Eric, 2026-09-04: "configuration that nudges sauron to put in an after hours trade that is
   // staged to be executed when the market opens (on tuesday, not monday)". Staging runs the
   // scout's one daily scan while the market is closed, for the session Alpaca's next_open names,

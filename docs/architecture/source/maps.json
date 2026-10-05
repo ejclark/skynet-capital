@@ -483,8 +483,8 @@
           {
             "id": "guards",
             "label": "Risk guards and safety",
-            "path": "src/engine/guards.ts, src/autonomous/safety.ts, src/autonomous/readiness.ts, src/autonomous/doctrine-effectiveness-breaker.ts, src/evals/scenarios/*, src/domain/earnings-calendar.ts",
-            "responsibility": "Position cap (SKYNET_MAX_POSITION_PCT), S2/E1 trade discipline around prints, daily-loss circuit breaker, halt file kill switch (SKYNET_HALT_FILE), owner suspend from Mission Control, readiness scenarios that pin an unready persona to observe."
+            "path": "src/engine/guards.ts, src/engine/option-guards.ts, src/engine/guard-batch.ts, src/domain/option-book.ts, src/autonomous/safety.ts, src/autonomous/readiness.ts, src/autonomous/doctrine-effectiveness-breaker.ts, src/evals/scenarios/*, src/domain/earnings-calendar.ts",
+            "responsibility": "Position cap (SKYNET_MAX_POSITION_PCT), S2/E1 trade discipline around prints, the option clamp (fresh quote, limit inside it, cash-secured, covered, print-clean expiry, options level, Store allocation) with a per-cycle ledger so two orders never spend the same cash or shares, daily-loss circuit breaker, halt file kill switch (SKYNET_HALT_FILE), owner suspend from Mission Control, readiness scenarios that pin an unready persona to observe."
           },
           {
             "id": "broker",
