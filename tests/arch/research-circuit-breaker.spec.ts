@@ -184,6 +184,72 @@ describe("recentResearchSpend", () => {
       /could not read run 1's log/,
     );
   });
+
+  // #4658 (2026-10-05): a cancelled job has no log, and `gh run view --log` then fails for the
+  // WHOLE run — even though no research leg ran, so the run cannot have spent anything.
+  describe("when a run's combined log is missing a job's log", () => {
+    const jobsOf = (jobs: { databaseId: number; name: string; conclusion: string }[]) =>
+      JSON.stringify({ jobs });
+    const runList = JSON.stringify([{ databaseId: 1, createdAt: nowIso, status: "completed" }]);
+    const isCombinedLog = (args: readonly string[]) =>
+      args[1] === "view" && args[3] === "--log" && !args.includes("--job");
+
+    it("counts $0 for a run whose research legs were all skipped", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (isCombinedLog(args)) throw new Error("log not found: 111976643626");
+        if (args.includes("--json"))
+          return jobsOf([
+            { databaseId: 111976643626, name: "route", conclusion: "cancelled" },
+            { databaseId: 111981832048, name: "research due events", conclusion: "skipped" },
+          ]);
+        throw new Error(`unexpected call: ${args.join(" ")}`); // proves no job log is fetched
+      };
+      expect(recentResearchSpend({ windowHours: 24, exec: custom })).toBe(0);
+    });
+
+    it("still sums the cost lines of research legs that ran, read one job at a time", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (isCombinedLog(args)) throw new Error("log not found: 9");
+        if (args.includes("--json"))
+          return jobsOf([
+            { databaseId: 9, name: "route", conclusion: "cancelled" },
+            { databaseId: 10, name: "research due events (alpha)", conclusion: "success" },
+            { databaseId: 11, name: "research due events (beta)", conclusion: "failure" },
+          ]);
+        if (args.at(-1) === "10") return "::notice::cost — event=alpha usd=2.50 turns=1\n";
+        if (args.at(-1) === "11") return "::notice::cost — event=beta usd=1.25 turns=1\n";
+        throw new Error(`unexpected call: ${args.join(" ")}`);
+      };
+      expect(recentResearchSpend({ windowHours: 24, exec: custom })).toBeCloseTo(3.75, 2);
+    });
+
+    it("refuses when a research leg that ran has no readable log", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (args.includes("--json"))
+          return jobsOf([
+            { databaseId: 10, name: "research due events (alpha)", conclusion: "cancelled" },
+          ]);
+        throw new Error("log not found: 10");
+      };
+      expect(() => recentResearchSpend({ windowHours: 24, exec: custom })).toThrow(
+        /could not read run 1's log .*job 10/,
+      );
+    });
+
+    it("refuses when the job list itself is unparseable", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (args.includes("--json")) return "not json";
+        throw new Error("log not found: 9");
+      };
+      expect(() => recentResearchSpend({ windowHours: 24, exec: custom })).toThrow(
+        /could not read run 1's log \(log not found: 9\)/,
+      );
+    });
+  });
 });
 
 describe("tripBreaker", () => {
