@@ -1,5 +1,5 @@
 /**
- * Activity's client model (#738 phase 5a) — mirrors `WireView` on the server: the two kinds of the
+ * Activity's client model (#738 phase 5a) — mirrors `WireView` on the server: the kinds of the
  * page's one feed, plus the standing P&L snapshot, plus the two fetches that get them.
  *
  * The filter grammar that used to live here moved to `activity-feed.ts` with the one-feed model
@@ -92,6 +92,25 @@ export interface WireDevelopmentItem {
   readonly at: string;
 }
 
+/** One member's earned milestone (#784 slice 5) — the fourth kind. Proved by a fill (or a fill's
+ *  expiry or close) on the server; the browser only ever displays it. */
+export interface WireMilestoneItem {
+  /** Participant + milestone — an earn happens once, so the pair is its identity. */
+  readonly key: string;
+  readonly icon: string;
+  /** The row's leading word ("Earned"). */
+  readonly kindLabel: string;
+  readonly who: string;
+  readonly whoId: string;
+  /** The achievement title, as the Learn page words it ("Buy your first stock"). */
+  readonly title: string;
+  /** Absent for a milestone the course score does not count. */
+  readonly points?: number;
+  readonly meta: string;
+  /** The proving instant, raw — the other kinds' `at` twin. */
+  readonly at: string;
+}
+
 export interface WireFeed {
   readonly trades: readonly WireTrade[];
   readonly pnl: readonly WirePnl[];
@@ -102,6 +121,10 @@ export interface WireFeed {
    *  reads as off: the honest answer for a server that cannot send the kind at all. */
   readonly developmentEnabled?: boolean;
   readonly development?: readonly WireDevelopmentItem[];
+  /** False when this deployment cannot read every milestone source; absent on a server older than
+   *  slice 5, which reads as off for the reason `developmentEnabled` does. */
+  readonly milestonesEnabled?: boolean;
+  readonly milestones?: readonly WireMilestoneItem[];
   /** Present only when the trade page was full — the `before` cursor for the next `/api/wire`
    *  request, read off the server's `Link: rel="next"` header (GitHub's own pagination
    *  convention, `src/server/pagination.ts`). Absent means there are no older trades to fetch. */

@@ -98,7 +98,11 @@ async function main(): Promise<void> {
     dataSource.mode,
   );
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
-  const { onActivity, sweep: sweepLadderProgress } = wireLadderProgress(process.env, activity);
+  const {
+    onActivity,
+    sweep: sweepLadderProgress,
+    readAll: readAllLadderProgress,
+  } = wireLadderProgress(process.env, activity, activityEventBus);
   void reconcileBrokerActivity(activity, initial.participants)
     .then((n) => {
       if (n > 0) console.log(`[activity] banked ${n} order update(s) from the broker window`);
@@ -336,6 +340,10 @@ async function main(): Promise<void> {
     readAllActivityEvents: () => activityEventBus.list(),
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
+    // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
+    // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
+    readAllLadderProgress,
+    readAllOrderAudit: () => orderAudit.list(),
     // Absent without a GitHub token: the feed then renders no development kind and says so, rather
     // than letting an empty list imply the league has never merged anything.
     ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),

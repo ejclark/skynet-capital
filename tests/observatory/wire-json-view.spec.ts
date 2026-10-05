@@ -1,5 +1,6 @@
 import type { DevelopmentFeedItem } from "../../src/observatory/development-event-feed.js";
 import type { FeedbackFeedItem } from "../../src/observatory/feedback-event-feed.js";
+import type { MemberMilestone } from "../../src/observatory/milestone-event-feed.js";
 import { wireJsonView } from "../../src/observatory/wire-json-view.js";
 
 /** The Wire's JSON twin: formatted figures, provenance kept, pseudonymous pulse, honest gates. */
@@ -34,6 +35,17 @@ const merged = (over: Partial<DevelopmentFeedItem> = {}): DevelopmentFeedItem =>
   author: "claude",
   url: "https://github.com/ejclark/skynet-capital/pull/4272",
   mergedAt: "2026-10-02T12:00:00Z",
+  ...over,
+});
+
+const earned = (over: Partial<MemberMilestone> = {}): MemberMilestone => ({
+  participantId: "eric",
+  participantName: "Eric",
+  milestoneId: "first-buy",
+  orderId: "ord-1",
+  title: "Buy your first stock",
+  points: 25,
+  at: "2026-10-01T14:00:00Z",
   ...over,
 });
 
@@ -126,5 +138,63 @@ describe("wireJsonView", () => {
   it("tells an unwired development read apart from a league that has merged nothing", () => {
     expect(wireJsonView([], [], [], true).developmentEnabled).toBe(false);
     expect(wireJsonView([], [], [], true, []).developmentEnabled).toBe(true);
+  });
+
+  it("formats a member's earn as the feed's fourth kind, newest first, naming who (#784 slice 5)", () => {
+    const view = wireJsonView(
+      [],
+      [],
+      [],
+      true,
+      [],
+      [
+        earned(),
+        earned({
+          milestoneId: "first-sell",
+          title: "Sell some shares",
+          at: "2026-10-02T14:00:00Z",
+        }),
+      ],
+    );
+    expect(view.milestones[0]).toMatchObject({
+      kindLabel: "Earned",
+      who: "Eric",
+      whoId: "eric",
+      title: "Sell some shares",
+      at: "2026-10-02T14:00:00Z",
+    });
+  });
+
+  it("puts points in the meta only when the course score counts them", () => {
+    const view = wireJsonView(
+      [],
+      [],
+      [],
+      true,
+      [],
+      [earned(), earned({ milestoneId: "first-realized-profit", points: undefined })],
+    );
+    const byId = new Map(view.milestones.map((m) => [m.key, m]));
+    expect(byId.get("eric:first-buy")?.meta.startsWith("+25 pts")).toBe(true);
+    expect(byId.get("eric:first-realized-profit")?.meta).not.toMatch(/pts/);
+    expect(byId.get("eric:first-realized-profit")).not.toHaveProperty("points");
+  });
+
+  it("wears a leading word no other kind's row or pill wears", () => {
+    const view = wireJsonView(
+      [],
+      [],
+      [filing({ status: "shipped" })],
+      true,
+      [merged()],
+      [earned()],
+    );
+    const word = view.milestones[0]?.kindLabel;
+    expect([view.development[0]?.kindLabel, view.feedback[0]?.status]).not.toContain(word);
+  });
+
+  it("tells unwired milestone sources apart from a league where nobody has earned anything", () => {
+    expect(wireJsonView([], [], [], true).milestonesEnabled).toBe(false);
+    expect(wireJsonView([], [], [], true, undefined, []).milestonesEnabled).toBe(true);
   });
 });

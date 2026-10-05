@@ -15,6 +15,14 @@ import {
   mergeFeedbackStatusesIntoEvents,
 } from "../observatory/feedback-event-feed.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import {
+  collapseMilestoneEvents,
+  deriveMilestoneEvents,
+  type MemberMilestone,
+  mergeLadderLogIntoEvents,
+  toMemberMilestones,
+} from "../observatory/milestone-event-feed.js";
+import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
@@ -23,7 +31,9 @@ import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { FetchMergedPullRequests } from "./development-activity.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
+import type { LadderProgressEntry } from "./ladder-progress-log.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import type { OrderAuditRecord } from "./order-audit-log.js";
 import { nextLinkHeader, resolvePageSize } from "./pagination.js";
 
 /**
@@ -77,6 +87,22 @@ export interface WireRouteDeps {
    * no GitHub token is a deployment fact, never "the league has merged nothing".
    */
   readonly readMergedPullRequests?: FetchMergedPullRequests;
+  /**
+   * Every participant's logged earns — the ladder detector's outcome milestones (#784 slice 5),
+   * read ALONGSIDE the bus for the reason `readAllTradeActivity` is: the detector only started
+   * publishing at this slice's deploy, so earlier earns live here and nowhere else.
+   */
+  readonly readAllLadderProgress?: () => Promise<readonly LadderProgressEntry[]>;
+  /**
+   * Every participant's tagged submissions — the input that classifies an option fill to a ladder
+   * rung (`deriveEarned`). With `readAllTradeActivity`, the two ledgers the Learn page derives the
+   * trade ladder from, so the feed's milestone rows are synthesized from exactly what that page reads.
+   *
+   * The milestone kind needs BOTH this and `readAllLadderProgress`, and is absent — not empty — with
+   * either missing: half the sources would render a record quietly missing real earns, which is the
+   * falsifier this kind exists not to trip.
+   */
+  readonly readAllOrderAudit?: () => Promise<readonly OrderAuditRecord[]>;
   /** The exact order-id join into the decision store (PR 6, issue #2287) — omit to render every
    *  row with no reasoning/vitals attached, never a fabricated one. */
   readonly findByOrderId?: (
@@ -110,6 +136,8 @@ interface AssembledWire {
   /** Absent — not empty — when the development read is unwired, which is how the view tells "nothing
    *  has merged" apart from "this deployment cannot see GitHub". */
   readonly development?: readonly DevelopmentFeedItem[];
+  /** Absent — not empty — when either milestone source is unwired; same reason as `development`. */
+  readonly milestones?: readonly MemberMilestone[];
 }
 
 /**
@@ -161,6 +189,33 @@ async function assembleDevelopment(
   return collapseDevelopmentEvents(mergeMergesIntoEvents(developmentOnly, merges)).slice(0, limit);
 }
 
+/**
+ * The milestone kind, off the same envelope (#784 slice 5). Both regimes fold into one list: logged
+ * earns from the bus unioned with the ladder log (the bridge), and fill-derived earns synthesized
+ * from the two ledgers the Learn page reads. Then only what the league-wide feed can honestly say —
+ * a named member's earn of a milestone this app can title (`toMemberMilestones`) — bounded by the
+ * same `per_page` every non-trade kind rides.
+ */
+async function assembleMilestones(
+  config: WireRouteDeps,
+  events: readonly ActivityEvent[],
+  records: readonly TradeActivityRecord[],
+  participants: readonly ParticipantSnapshot[],
+  limit: number,
+): Promise<readonly MemberMilestone[] | undefined> {
+  if (!(config.readAllLadderProgress && config.readAllOrderAudit)) return undefined;
+  const [logged, tags] = await Promise.all([
+    config.readAllLadderProgress(),
+    config.readAllOrderAudit(),
+  ]);
+  const milestoneOnly = events.filter((event) => event.target.kind === "milestone");
+  const all = [
+    ...mergeLadderLogIntoEvents(milestoneOnly, logged),
+    ...deriveMilestoneEvents(records, tags),
+  ];
+  return toMemberMilestones(collapseMilestoneEvents(all), participants).slice(0, limit);
+}
+
 async function assembleWire(
   config: WireRouteDeps,
   limit: number,
@@ -180,12 +235,14 @@ async function assembleWire(
   // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
   // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
   // `published`, not `events`: the trade ledger's translated lines carry no feedback or development
-  // kind, so handing them to either assembler would only make its fold walk them for nothing.
-  // Both in flight at once — each ends in an independent GitHub read, so serializing them would add
-  // one round trip to every render of a `no-store` page for nothing.
-  const [feedback, development] = await Promise.all([
+  // kind, so handing them to any assembler would only make its fold walk them for nothing (the
+  // milestone kind takes the ledger as its own second input, for the derived ladder).
+  // All in flight at once — two end in an independent GitHub read and one in two ledger reads, so
+  // serializing them would add round trips to every render of a `no-store` page for nothing.
+  const [feedback, development, milestones] = await Promise.all([
     assembleFeedbackPulse(config, published, filings, limit),
     assembleDevelopment(config, published, limit),
+    assembleMilestones(config, published, records, participants, limit),
   ]);
   const page = buildWireTradeRows(events, participants, { limit, before }, underlyingFilter);
 
@@ -213,6 +270,7 @@ async function assembleWire(
     pnl: buildWirePnlRows(participants),
     feedback,
     ...(development ? { development } : {}),
+    ...(milestones ? { milestones } : {}),
   };
 }
 
@@ -256,6 +314,7 @@ export async function serveWireJson(
         assembled.feedback,
         feedbackEnabled,
         assembled.development,
+        assembled.milestones,
       ),
     }),
   );
