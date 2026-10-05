@@ -118,6 +118,20 @@ one queue — and the third got buried under the first two.
 | Needs the member to clarify | `needs-info` | **the member** |
 | A decision only Eric can make | `needs-eric` | **Eric — and only this one** |
 
+### Replying to `needs-info` restarts the build (#3959 slice 1)
+
+`needs-info` used to be a one-way door: the lane asked a question, and the answer sat on the thread
+until someone noticed it and hand-cleared the label. Now **the reply itself is the trigger** — a
+comment from a repo member (`author_association` ∈ `OWNER`/`MEMBER`/`COLLABORATOR`, the same gate
+the plan lane's ready-flip uses) claims the lease, clears `needs-info`, and starts a build session
+with that comment as its input. Its first visible act is a comment saying what it understood and
+what happens next, so the thread still reads as a complete record.
+
+The board follows along without anyone touching it: clearing `needs-info` and applying
+`in-progress` are the two label events the Orchestration board's Status sync already listens to, so
+the issue moves Blocked → In Progress as the build starts. A reply on an issue that is *also*
+`needs-eric` does **not** resume — that one is still Eric's, and still waits.
+
 ### Is it working? — `npm run feedback:scan`
 
 The lane's record is measured, not recalled: `scripts/feedback-scan.mjs` joins every `feedback`

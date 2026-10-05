@@ -29,6 +29,16 @@ import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
  * directly rather than inferred from labels, since a human can close an issue without any label
  * ever landing.
  *
+ * SIGNAL 3 NEEDS A BASELINE ON A RESUMED RUN (#3959 slice 1). "More than one comment" assumes the
+ * run started on a fresh issue, where the receipt is comment #1. A reply-resumed build starts on an
+ * issue that already carries a receipt, a question and an answer — so the count is trivially > 1 and
+ * this guard would vouch for a session that said nothing at all, which is precisely the failure
+ * #1028 exists to catch. When `issue.since` is set (the reply's own timestamp), signal 3 becomes
+ * "more than one comment AFTER the reply that woke us" — the same question asked from the right
+ * starting line, and the same ">1" it has always been, because a resumed run's receipt is its first
+ * comment exactly as a fresh run's is. Strict `>` on the timestamp, so the reply is never counted
+ * as part of the answer to itself; receipt-then-silence stays a caught stall on both paths.
+ *
  * `needs-session` (#1357) is deliberately NOT in the terminal set even though it is one of this
  * lane's labels: this guard applies it itself, so counting it would let one run's own write vouch
  * for the next run's silence. Every hand-off carries `next-slice` anyway, which already does.
@@ -41,6 +51,11 @@ export function visibleOutcome(issue = {}, hasMatchingPR = false) {
   if (hasMatchingPR) return true;
   const terminal = new Set([LABELS.needsInfo.name, LABELS.nextSlice.name, LABELS.needsEric.name]);
   if ((issue.labels ?? []).some((l) => terminal.has(l?.name))) return true;
+  const since = Date.parse(issue.since ?? "");
+  if (!Number.isNaN(since)) {
+    const after = (issue.comments ?? []).filter((c) => Date.parse(c?.createdAt ?? "") > since);
+    return after.length > 1;
+  }
   return (issue.commentCount ?? 0) > 1;
 }
 
@@ -86,7 +101,7 @@ export function interactiveHandoff(issue = {}) {
  */
 export function stallGuardComment(issueNumber, runUrl) {
   const runLine = runUrl ? `Run: ${runUrl}` : "No run URL was available to this guard step.";
-  return `🔇 **Silent stall caught** — the \`build-feedback\` session for this issue finished without opening a PR, changing a label, or posting a comment beyond the receipt above. That breaks this lane's own contract (\`.github/prompts/feedback-build.md\`: "exactly one [of four visible endings], always, never silence") — and this run reached none of them.
+  return `🔇 **Silent stall caught** — the \`build-feedback\` session for this issue finished without opening a PR, changing a label, or saying anything further on this thread. That breaks this lane's own contract (\`.github/prompts/feedback-build.md\`: "exactly one [of four visible endings], always, never silence") — and this run reached none of them.
 
 This is a mechanical guard (#1028), not a verdict on the ask itself — the session may have found nothing to build, hit an error it never surfaced, or simply stopped early. \`claude-code-action\` hides the session's own reasoning, so there is no way to tell which from here.
 
@@ -98,13 +113,23 @@ ${FOOTER}`;
 }
 
 /**
+ * ALSO REPORTS `waitingOnMember` (#3959 slice 1) — the build ended on `needs-info`, so nothing is
+ * running and the lease should go back. It does not, today: `moneypenny-events.yml` releases
+ * `claim/feedback-<n>` only `if: failure()`, so a lease taken to ASK a question outlives the asking
+ * for the full 2h TTL (claim-lease.mjs). That was invisible while nothing could restart a parked
+ * issue — and it silently breaks the two paths that now can: a member replying inside two hours
+ * (this slice) and a hand-cleared `needs-info` (the #3960 unpark path), both of which would hit
+ * `claimHandoff`'s refusal and do nothing at all, with no comment and no label to show for it.
+ * Holding a lease on a parked issue protects nothing in any case — `notPullableReason` already
+ * refuses a parked issue to every puller there is.
+ *
  * The impure half: read what actually happened to this issue after a `build-feedback` attempt, and
  * — if nothing visible did — post the guard comment and apply `needs-eric` exactly as if the
  * session itself had reached that terminal state. Never called by the session; only by the
  * workflow step right after it, which is the one vantage point that can tell "the session said
  * nothing" apart from "the session said something and I haven't looked yet".
  */
-export function guardFeedbackOutcome(issueNumber, runUrl) {
+export function guardFeedbackOutcome(issueNumber, runUrl, since) {
   const n = Number(issueNumber);
   const view = JSON.parse(
     sh("gh", ["issue", "view", String(n), "--json", "state,labels,comments"]),
@@ -129,22 +154,29 @@ export function guardFeedbackOutcome(issueNumber, runUrl) {
     labels: view.labels,
     comments,
     commentCount: comments.length,
+    // #3959 slice 1: set only on a reply-resumed run — see `visibleOutcome`'s signal 3.
+    since,
   };
   // Runs before the visibility branch, not inside it, because the two questions are independent:
   // "did the member see anything" vs "who can build what's left". A hand-off is always visible
   // (it carries `next-slice`), so in practice this only ever fires on the happy path — but nothing
   // here depends on that staying true.
   const handedOff = markInteractiveHandoff(n, issue);
+  // #3959 slice 1: a build that ended on `needs-info` is WAITING, not running — see this module's
+  // `waitingOnMember` note. The caller releases the lease on this; the guard only reports it,
+  // because `releaseClaim` lives in index.mjs (which imports this file, so the dependency can only
+  // run that way).
+  const waitingOnMember = (view.labels ?? []).some((l) => l?.name === LABELS.needsInfo.name);
   const visible = visibleOutcome(issue, prs.length > 0);
   if (visible) {
     console.log(`::notice::feedback #${n} — visible outcome confirmed, nothing to guard`);
-    return { visible: true, handedOff };
+    return { visible: true, handedOff, waitingOnMember };
   }
   console.log(`::warning::feedback #${n} — silent stall caught, no visible outcome from the build`);
   ensureLabel(LABELS.needsEric);
   sh("gh", ["issue", "comment", String(n), "--body", stallGuardComment(n, runUrl)]);
   sh("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsEric.name]);
-  return { visible: false, handedOff };
+  return { visible: false, handedOff, waitingOnMember };
 }
 
 /**
