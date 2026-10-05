@@ -44,6 +44,7 @@ import { TicketNav } from "../shell/ticket-nav";
 import { TradeClock } from "../shell/trade-clock";
 import { TradeGate } from "../shell/trade-gate";
 import { useBenchWidth } from "../shell/use-bench-width";
+import { WatchlistSection } from "../shell/watchlist-section";
 
 /**
  * THE TRADE TICKET (#738, live-review round; options since phase 10b) — the dedicated trading
@@ -115,18 +116,21 @@ import { useBenchWidth } from "../shell/use-bench-width";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
-type TradeSection = "ticket" | "chart" | "chain" | "guidance" | "outlook" | "orders";
+type TradeSection = "ticket" | "chart" | "chain" | "guidance" | "outlook" | "watchlist" | "orders";
 
 // "ticket" stays first: `resolveSection` falls back to the first entry, and the ticket is the
 // untyped default. The chain joined as the bench's second tool (#3407, Workbench slice 2); Outlook
 // joined as an AUXILIARY entry (#3407 slice 4, placed by that plan's own state block — "never a
-// home"), which is why it sits beside Guidance in `shows` rather than docking on its own.
+// home"), which is why it sits beside Guidance in `shows` rather than docking on its own. Watchlist
+// joined on the same terms (#4332) and sits beside Outlook for the same reason: both are ways INTO
+// a symbol, and this one is about many symbols at once, which is the opposite of what a bench is.
 const SECTIONS: readonly PageSection<TradeSection>[] = [
   { id: "ticket", label: "Ticket" },
   { id: "chart", label: "Chart" },
   { id: "chain", label: "Chain" },
   { id: "guidance", label: "Guidance" },
   { id: "outlook", label: "Outlook" },
+  { id: "watchlist", label: "Watchlist" },
   { id: "orders", label: "Orders" },
 ];
 
@@ -323,6 +327,9 @@ interface StageProps {
   readonly onGuidanceUse: (row: LadderRow) => void;
   /** A structure picked on the Outlook tab — opens the chain on its legs (slice 4). */
   readonly onOutlookUse: (pick: OutlookPick) => void;
+  /** A row tapped on the Watchlist pane (#4332) — commits that symbol and, folded, lands the
+   *  member on the ticket, exactly as a chain tap does. */
+  readonly onWatchPick: (symbol: string) => void;
   /** A covered call the guidance's "Calls you've sold" handed off — opens it on the Orders pane. */
   readonly onManage: (call: ManageCall) => void;
   /** The held contract `?manage=` names, when there is one (see `PositionFocus`). */
@@ -381,6 +388,12 @@ function Pane({
         onSymbolCommit={ask}
       />
     );
+  }
+  if (id === "watchlist") {
+    // NOT keyed by symbol — unlike Guidance and Outlook, this pane is about the member's whole
+    // list, and remounting it per committed symbol would re-read the list (and tear its one
+    // socket down) every time a row was tapped.
+    return <WatchlistSection symbol={symbol} onPick={props.onWatchPick} />;
   }
   if (id === "outlook") {
     // Keyed by symbol for the same reason Guidance is: a view stated about one underlying must not
@@ -492,7 +505,7 @@ function Bench({
     document.getElementById(`bench-${asked}`)?.scrollIntoView({ block: "start" });
   }, [docked, asked]);
   const shows = (id: TradeSection) =>
-    id === "chain" || id === "guidance" || id === "outlook"
+    id === "chain" || id === "guidance" || id === "outlook" || id === "watchlist"
       ? asked === id
       : docked || section === id;
   const pane = (id: TradeSection, className?: string) =>
@@ -518,6 +531,7 @@ function Bench({
       {pane("chain", "bench-chain")}
       {pane("guidance", "bench-guidance")}
       {pane("outlook", "bench-outlook")}
+      {pane("watchlist", "bench-watchlist")}
       {shows("chart") && !ticketOwnsChart ? (
         <div className="bench-side">{pane("chart")}</div>
       ) : null}
@@ -675,6 +689,25 @@ function TradePage(): ReactElement {
     });
     void navigate({ resetScroll: false, search: (prev) => outlookSearch(prev, pick) });
   };
+  /** A row tapped on the Watchlist pane (#4332): the symbol commits and, folded, the member lands
+   *  on the TICKET rather than staying on a list they just chose from — the same move a chain tap
+   *  makes. `?strike=` goes with it for `commitSymbol`'s own reason (a strike picked against the
+   *  old underlying's chain means nothing on a new one); docked, deleting `?section=` costs
+   *  nothing because every pane is already on the page. */
+  const onWatchPick = (next: string) => {
+    const normalized = normalizeSymbol(next);
+    void navigate({
+      resetScroll: false,
+      search: (prev) => {
+        const nextSearch = { ...prev };
+        if (normalized) nextSearch.symbol = normalized;
+        else delete nextSearch.symbol;
+        if (prev.strike !== undefined) delete nextSearch.strike;
+        delete nextSearch.section;
+        return nextSearch;
+      },
+    });
+  };
   /** `?exp=` follows whichever tool changed it — the chain pane's browse or the ticket's own
    *  field — so the two never name different contracts. `replace: true`, a refinement. */
   const commitExpiration = (next: string) => {
@@ -728,6 +761,7 @@ function TradePage(): ReactElement {
     onChainPick,
     onGuidanceUse,
     onOutlookUse,
+    onWatchPick,
     onManage: (call) => void navigate({ search: (prev) => manageSearch(prev, call) }),
     focus: focusFrom(manage, rollTo),
     onExpirationCommit: commitExpiration,
