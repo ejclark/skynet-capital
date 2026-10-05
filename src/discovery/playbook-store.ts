@@ -116,7 +116,9 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "prices for finishing in the money (0.15 conservative, 0.25 aggressive) — on the latest " +
       "expiry 30 to 45 days out that ends before CRWV's next earnings blackout. Once assigned, " +
       "it sells one call at or above both the shares' cost and today's price, nearest 0.25 delta " +
-      "(0.20 / 0.30). One contract at a time, inside the capital you allocate.",
+      "(0.20 / 0.30). Either strike must sit within 0.05 delta of that aim and never above 0.30 " +
+      "— when CRWV's quotes are too wide for any strike that close to trade, it sells nothing " +
+      "that cycle. One contract at a time, inside the capital you allocate.",
     exitTakeProfit:
       "No early take-profit and no roll: each put or call is held to expiry. Expiring worthless " +
       "keeps the whole premium; a call that is exercised sells the shares at its strike, at or " +
@@ -144,7 +146,9 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "nearest 0.50 delta (about at the money) and sells the call nearest 0.25 delta above it " +
       "(0.30 conservative, 0.20 aggressive) — delta being roughly the market's odds the call " +
       "finishes in the money — on the latest expiry after its exit day that ends before the " +
-      "print. One spread at a time, inside the capital you allocate.",
+      "print. Each leg must sit near its aim — the long call between 0.40 and 0.60 delta, the " +
+      "short within 0.05 of its target; with none that close, it opens nothing. One spread at a " +
+      "time, inside the capital you allocate.",
     exitTakeProfit:
       "No price target — like S1-NVDA, the thesis is the window. It sells the spread back 5 " +
       "trading sessions before the print, whatever it is worth then.",
@@ -154,8 +158,11 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "— from D-5, each session it stays unsold moves the price toward the bid; after a print it " +
       "sells at the bid at once.",
     hold:
-      "No confirmed date, outside the window, or NVDA option positions it did not open: does " +
-      "nothing. While it is subscribed, S1-NVDA stops trading NVDA shares on the same bot.",
+      "With no spread held, no confirmed date or outside the window: does nothing. It treats " +
+      "this bot's NVDA options as its own — positions carry no record of who placed them: one " +
+      "call debit spread (a long call below a short call, same expiry and size) is sold back on " +
+      "the rules above, whoever placed it, and any other NVDA option position stops it opening " +
+      "and is left alone. While it is subscribed, S1-NVDA stops trading NVDA shares on the same bot.",
   },
 };
 

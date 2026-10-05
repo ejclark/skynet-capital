@@ -59,8 +59,14 @@ import { type Playbook, POST_PRINT_FLAT_DAYS } from "./playbook.js";
  */
 
 const SPREAD_SYMBOL = "NVDA";
-/** The long leg sits at the money: it carries the run-up's direction. */
+/** The long leg sits at the money: it carries the run-up's direction. It may sit up to
+ *  `LONG_DELTA_MISS` either side — a deep in-the-money long is a costlier stock substitute, not the
+ *  spread the Store card describes, so with none that close the play opens nothing. */
 const LONG_DELTA = 0.5;
+const LONG_DELTA_MISS = 0.1;
+/** How far the short leg's |delta| may sit from the mode's target: a strike just above the long
+ *  makes a spread too narrow to carry the run-up. */
+const SHORT_DELTA_MISS = 0.05;
 /** The short leg's |delta| by mode — lower sells a farther strike: a wider spread, a bigger debit. */
 export const SPREAD_SHORT_DELTA: Readonly<Record<PlaybookMode, number>> = {
   conservative: 0.3,
@@ -112,7 +118,11 @@ export function spreadWindow(
 }
 
 /** What NVDA contracts the bot holds: none; exactly one debit call spread (the long call below the
- *  short, same expiry, equal size); or anything else, which this playbook leaves alone. */
+ *  short, same expiry, equal size); or anything else, which this playbook leaves alone.
+ *
+ *  A vertical is read as the play's own whoever placed it — positions carry no record of their
+ *  opener, and narrowing by expiry would drop the play's own spread when NVIDIA moves its date
+ *  earlier (it must still sell that one back). The Store card says so. */
 export type SpreadShape =
   | { readonly kind: "none" }
   | {
@@ -195,11 +205,17 @@ function openIntent(context: MarketContext, entry: SpreadEntry, mode: PlaybookMo
   const spot = context.quotes[SPREAD_SYMBOL]?.last;
   if (!(spot !== undefined && spot > 0)) return [];
   const calls = chainQuotes(context.options, SPREAD_SYMBOL, entry.expiration, "call");
-  const long = pickByDelta(calls, LONG_DELTA, spot, context.asOf, { otm: false });
+  const long = pickByDelta(calls, LONG_DELTA, spot, context.asOf, {
+    otm: false,
+    maxDeltaMiss: LONG_DELTA_MISS,
+  });
   if (!long) return [];
   const higher = calls.filter((q) => q.strike > long.quote.strike);
   const target = SPREAD_SHORT_DELTA[mode];
-  const short = pickByDelta(higher, target, spot, context.asOf, { otm: false });
+  const short = pickByDelta(higher, target, spot, context.asOf, {
+    otm: false,
+    maxDeltaMiss: SHORT_DELTA_MISS,
+  });
   if (!short) return [];
   const legs: OptionLegSpec[] = [
     { occSymbol: long.quote.occSymbol, side: "buy" },
@@ -277,7 +293,8 @@ const CLOSE_WHY: Readonly<Record<Exclude<WindowCause, "open">, string>> = {
   "dead-week":
     "it is within five sessions of the print, when the run-up has historically been spent",
   "after-print": "NVIDIA has reported, and this spread is never meant to hold a print",
-  unconfirmed: "NVDA's next print date is not confirmed, so nothing keys this spread any more",
+  unconfirmed:
+    "NVDA's next print date is not confirmed, so the run-up window it trades has no date",
   "before-window": "its D-20 to D-6 window is not open on the confirmed date",
 };
 

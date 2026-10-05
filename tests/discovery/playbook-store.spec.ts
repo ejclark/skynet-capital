@@ -86,6 +86,20 @@ describe("playbookStoreCatalog", () => {
     expect(spread?.exitTakeProfit).toContain("5 trading sessions before the print");
   });
 
+  it("says each option play trades nothing when no strike sits near the delta it aims at", () => {
+    expect(byId("CRWV-WHEEL")?.enter).toContain("never above 0.30");
+    expect(byId("CRWV-WHEEL")?.enter).toContain("it sells nothing that cycle");
+    expect(byId("NVDA-CALL-SPREAD")?.enter).toContain("between 0.40 and 0.60 delta");
+    expect(byId("NVDA-CALL-SPREAD")?.enter).toContain("with none that close, it opens nothing");
+  });
+
+  it("says the NVDA spread sells back any NVDA call debit spread on its bot, whoever placed it", () => {
+    const hold = byId("NVDA-CALL-SPREAD")?.hold ?? "";
+    expect(hold).not.toContain("positions it did not open: does nothing");
+    expect(hold).toContain("whoever placed it");
+    expect(hold).toContain("any other NVDA option position stops it opening and is left alone");
+  });
+
   it("keeps an unevidenced playbook's honest note and links nowhere", () => {
     const taco = byId("TACO-DJT");
     expect(taco?.evidence.length).toBeGreaterThan(0);

@@ -23,6 +23,7 @@ import {
   priceInside,
   singleLegTick,
 } from "../options/contract-picker.js";
+import { MAX_SHORT_DELTA } from "../options/position-guidance-rules.js";
 import {
   humanizeOptionSymbol,
   OPTION_MULTIPLIER,
@@ -63,13 +64,19 @@ const MAX_DTE = 45;
 const RETIRE_RULE =
   "the play retires if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money";
 
-/** |delta| of the strike sold, by mode — roughly the market's odds it finishes in the money. Calls
- *  stop at 0.30, the house ceiling on a short option's delta. */
+/** |delta| of the strike sold, by mode — roughly the market's odds it finishes in the money. These
+ *  are targets: the pick may sit up to `DELTA_MISS` from one, and never above `MAX_SHORT_DELTA`
+ *  (0.30, the house ceiling on a sold option), so aggressive calls aim at the ceiling itself. */
 export const WHEEL_DELTAS: Readonly<Record<PlaybookMode, { put: number; call: number }>> = {
   conservative: { put: 0.15, call: 0.2 },
   standard: { put: 0.2, call: 0.25 },
   aggressive: { put: 0.25, call: 0.3 },
 };
+
+/** How far the sold strike's |delta| may sit from the mode's target. CRWV's wide quotes can leave
+ *  only near-the-money strikes tradeable; selling one of those would be a coin flip, not the
+ *  "1-in-5" the Store card states, so the wheel sells nothing that cycle instead. */
+const DELTA_MISS = 0.05;
 
 /**
  * Where the wheel is, read off CRWV's positions:
@@ -195,7 +202,11 @@ function wheelIntents(
   const target = WHEEL_DELTAS[mode][sale.type];
   // A call is struck at or above what the shares cost, so being called away never locks in a loss;
   // the picker keeps it above spot (out of the money) too.
-  const bounds = sale.type === "call" ? { minStrike: Math.max(shareCost ?? 0, spot) } : {};
+  const bounds = {
+    ...(sale.type === "call" ? { minStrike: Math.max(shareCost ?? 0, spot) } : {}),
+    maxDeltaMiss: DELTA_MISS,
+    maxAbsDelta: MAX_SHORT_DELTA,
+  };
   const rows = chainQuotes(context.options, WHEEL_SYMBOL, sale.expiration, sale.type);
   const pick = pickByDelta(rows, target, spot, context.asOf, bounds);
   if (!pick) return [];

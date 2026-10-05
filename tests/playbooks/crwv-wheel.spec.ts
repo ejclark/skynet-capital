@@ -327,6 +327,40 @@ describe("CRWV-WHEEL — when it sells nothing", () => {
     expect(decide(noSpot)).toEqual([]);
   });
 
+  it("sells no put far from its target delta when only the near-the-money strikes trade", () => {
+    // The 0.15–0.28 rungs quote too wide to trade; the tight 90 put is a 0.41-delta coin flip.
+    const thin: readonly Row[] = [
+      [75, -0.15, 1.5, 2],
+      [80, -0.21, 2, 2.6],
+      [85, -0.28, 3.1, 3.8],
+      [90, -0.41, 4.8, 5.1],
+    ];
+    expect(decide(market(NOV_18, chain("put", thin, NOV_18)))).toEqual([]);
+  });
+
+  it("never sells a strike above 0.30 delta, the house ceiling on a sold option", () => {
+    // Aggressive aims at 0.30: the 0.33 call sits nearer it than the 0.27, but is over the ceiling.
+    const calls: readonly Row[] = [
+      [95, 0.41, 5.1, 5.4],
+      [100, 0.33, 3.9, 4.15],
+      [105, 0.27, 2.7, 2.9],
+    ];
+    const [call] = decide(
+      market(NOV_18, chain("call", calls, NOV_18)),
+      book(shares(100)),
+      "aggressive",
+    );
+    expect(call?.option?.legs[0]?.occSymbol).toBe(occ("call", 105));
+    expect(call?.option?.selection?.pickedDelta).toBe(0.27);
+    // An aggressive put with only 0.33 and 0.18 strikes either side of 0.25: the 0.33 one is over
+    // the ceiling and the 0.18 one too far from the target, so nothing.
+    const puts: readonly Row[] = [
+      [78, -0.18, 1.9, 2.05],
+      [86, -0.33, 3.5, 3.7],
+    ];
+    expect(decide(market(NOV_18, chain("put", puts, NOV_18)), book(), "aggressive")).toEqual([]);
+  });
+
   it("sells nothing when no listed expiry is 30 to 45 days out", () => {
     expect(decide(market(NOV_18, chain("put", PUTS, NOV_18), ["2027-01-15"]))).toEqual([]);
   });

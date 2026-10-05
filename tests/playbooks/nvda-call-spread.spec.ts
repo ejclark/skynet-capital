@@ -333,6 +333,21 @@ describe("NVDA-CALL-SPREAD — closing the spread", () => {
     expect(decide(market(at("2026-11-11"), []), VERTICAL)).toEqual([]);
   });
 
+  it("sells back any NVDA call debit spread on its bot outside the window, whoever placed it", () => {
+    // A Dec-18 240/260 spans the print, so the play never opens it — but positions carry no record
+    // of who placed them, so on an estimated date it is read as the play's and sold at mid.
+    const dec18 = "2026-12-18";
+    const desk = book(contract(occ(240, dec18), 1), contract(occ(260, dec18), -1));
+    const oct5 = at("2026-10-05", "15:30:00Z");
+    const rows: readonly Row[] = [
+      [240, 0.55, 16, 16.4],
+      [260, 0.36, 8, 8.3],
+    ];
+    expect(decide(market(oct5, chain(oct5, rows, dec18)), desk, ESTIMATED)).toMatchObject([
+      { strategy: "nvda-spread-close", option: { selection: { phase: "unconfirmed" } } },
+    ]);
+  });
+
   it("holds a spread inside the window", () => {
     expect(decide(market(), VERTICAL)).toEqual([]);
   });
@@ -364,6 +379,27 @@ describe("NVDA-CALL-SPREAD — when it does nothing", () => {
       [255, 0.25, 1.1, 1.15],
     ];
     expect(decide(market(OCT_28, chain(OCT_28, crossed)))).toEqual([]);
+    // A net ask of exactly a cent (1.11 − 1.10): the floor alone would price a 1-cent debit.
+    const oneCent: readonly Row[] = [
+      [240, 0.5, 1, 1.11],
+      [255, 0.25, 1.1, 1.15],
+    ];
+    expect(decide(market(OCT_28, chain(OCT_28, oneCent)))).toEqual([]);
+  });
+
+  it("opens nothing when the only tradeable long call is deep in the money", () => {
+    // The 230–255 rows quote too wide to trade, so the call nearest 0.50 delta that does is the
+    // 0.78-delta 225 — deep in the money, not the "about at the money" leg the card promises.
+    const deep = CALLS.map(
+      ([k, d, b, a]): Row => (k >= 230 && k <= 255 ? [k, d, b, b * 1.3] : [k, d, b, a]),
+    );
+    expect(decide(market(OCT_28, chain(OCT_28, deep)))).toEqual([]);
+  });
+
+  it("opens nothing when no short call sits near the mode's delta", () => {
+    // Above the 240 call only a 0.42-delta strike trades: a spread a strike wide, not 0.25 delta.
+    const narrow = CALLS.filter(([k]) => k <= 245);
+    expect(decide(market(OCT_28, chain(OCT_28, narrow)))).toEqual([]);
   });
 });
 

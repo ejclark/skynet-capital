@@ -131,6 +131,29 @@ describe("pickByDelta", () => {
     expect([...picks]).toEqual(["CRWV261106P00082000"]);
   });
 
+  it("picks nothing rather than a strike far from the target when only near-the-money rows trade", () => {
+    // The 0.20 and 0.27 rungs quote too wide to trade; the tight rows sit at 0.42 and 0.46.
+    const nearMoney = [
+      put(76, 0.2, { bid: 2, ask: 2.6 }),
+      put(80, 0.27, { bid: 3.1, ask: 3.8 }),
+      put(88, 0.42, { bid: 6, ask: 6.4 }),
+      put(90, 0.46, { bid: 7, ask: 7.4 }),
+    ];
+    expect(pickByDelta(nearMoney, 0.2, spot, AS_OF, { maxDeltaMiss: 0.05 })).toBeUndefined();
+    // The window's edge counts as inside it, float noise or not.
+    expect(
+      pickByDelta([put(80, 0.15)], 0.2, spot, AS_OF, { maxDeltaMiss: 0.05 })?.quote.strike,
+    ).toBe(80);
+  });
+
+  it("never picks above the delta ceiling, even when the row over it sits nearer the target", () => {
+    const pick = pickByDelta([put(85, 0.33), put(82, 0.27)], 0.3, spot, AS_OF, {
+      maxAbsDelta: 0.3,
+    });
+    expect(pick).toMatchObject({ absDelta: 0.27, candidates: 2 });
+    expect(pickByDelta([put(85, 0.33)], 0.3, spot, AS_OF, { maxAbsDelta: 0.3 })).toBeUndefined();
+  });
+
   it("respects strike bounds, and finds nothing when nothing qualifies", () => {
     expect(pickByDelta(chain, 0.2, spot, AS_OF, { maxStrike: 80 })?.quote.strike).toBe(80);
     expect(pickByDelta(chain, 0.2, spot, AS_OF, { minStrike: 96 })).toBeUndefined();
