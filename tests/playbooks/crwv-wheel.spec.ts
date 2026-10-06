@@ -1,4 +1,5 @@
-import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
+import type { Bot } from "../../src/bots/bot.js";
+import { type EarningsPrint, UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
 import { optionBook } from "../../src/domain/option-book.js";
 import {
   type MarketContext,
@@ -6,11 +7,15 @@ import {
   type OptionContractQuote,
   type OrderIntent,
   type PlaybookMode,
+  type PlaybookSubscription,
   type Portfolio,
   type Position,
 } from "../../src/domain/types.js";
+import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/guards.js";
+import type { Persona } from "../../src/personas/persona.js";
 import { CRWV_WHEEL, WHEEL_DELTAS, wheelPhase } from "../../src/playbooks/crwv-wheel.js";
 import { type EnabledPlaybook, playbookIntents } from "../../src/playbooks/playbook.js";
+import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
@@ -408,5 +413,55 @@ describe("CRWV-WHEEL — paused", () => {
   it("sells no cash-secured put while flat", () => {
     expect(decide(market())).toHaveLength(1);
     expect(playbookIntents(paused, market(), book(), CALENDAR)).toEqual([]);
+  });
+
+  /** End to end through the production wiring and the real guards (#4651 final check): the guards
+   *  size a paused wheel's covered call under its paused subscription, exactly as they do running.
+   *  Before, they found no ENABLED subscription and refused it "option-unallocated", every time. */
+  describe("through the live roster and the guards", () => {
+    const quiet: Persona = { id: "sauron", name: "Sauron", thesis: "test", decide: () => [] };
+    const bot: Bot = { persona: quiet, credentials: { apiKey: "k", apiSecret: "s" } };
+    const wheelSub = (enabled: boolean): PlaybookSubscription => ({
+      accountId: "sauron",
+      playbookId: "CRWV-WHEEL",
+      mode: "aggressive",
+      capitalAllocated: 75_000,
+      enabled,
+      createdAt: "2026-10-01T00:00:00.000Z",
+      updatedAt: "2026-10-01T00:00:00.000Z",
+    });
+    // The live runner's base risk (run-autonomous: the print discipline) plus an account approved
+    // for covered calls and cash-secured puts (`OptionWiring.risk`).
+    const liveRisk = {
+      ...DEFAULT_RISK_CONFIG,
+      discipline: { calendar: UPCOMING_PRINTS },
+      optionsLevel: 1,
+    };
+    const trade = (enabled: boolean, portfolio: Portfolio) => {
+      const trading = tradingRoster(resolveBotRoster(bot, [], [wheelSub(enabled)]), liveRisk);
+      const raw = trading.persona.decide(market(), portfolio);
+      return { raw, ...applyGuardsWithVerdicts(raw, portfolio, market(), trading.risk) };
+    };
+
+    it("approves a paused wheel's covered call on its assigned shares, as it does running", () => {
+      const assigned = book(shares(100, 80));
+      const running = trade(true, assigned);
+      const paused = trade(false, assigned);
+      expect(paused.raw).toEqual([
+        expect.objectContaining({
+          playbookId: "CRWV-WHEEL",
+          option: expect.objectContaining({ structure: "covered-call", effect: "open" }),
+        }),
+      ]);
+      expect(paused.raw).toEqual(running.raw);
+      expect(running.approved).toHaveLength(1);
+      expect(paused.approved).toEqual(running.approved);
+      expect(paused.refused).toEqual([]);
+    });
+
+    it("never lets a paused wheel's cash-secured put reach the guards", () => {
+      expect(trade(true, book()).raw).toHaveLength(1);
+      expect(trade(false, book()).raw).toEqual([]);
+    });
   });
 });
